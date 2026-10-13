@@ -65,6 +65,8 @@ jobs:
             find fastlane/screenshots/mac -type f ! -name '*-mac.png' -delete
             rm -f shots/README.md
             mv shots/* fastlane/screenshots/ios/ 2>/dev/null || true
+            # Screens taken when a capture test failed are diagnostics, not listing images.
+            find fastlane/screenshots -type d -name failures -prune -exec rm -rf {} +
             find fastlane/screenshots -type f | sort
           fi
       - name: App Store listing

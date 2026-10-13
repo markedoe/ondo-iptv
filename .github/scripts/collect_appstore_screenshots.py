@@ -37,13 +37,25 @@ source, target, locale, device = sys.argv[1:5]
 source, target = pathlib.Path(source), pathlib.Path(target) / locale
 target.mkdir(parents=True, exist_ok=True)
 manifest = json.loads((source / "manifest.json").read_text())
+failures = 0
 for test in manifest:
     for attachment in test.get("attachments", []):
         exported = attachment.get("exportedFileName", "")
         human = attachment.get("suggestedHumanReadableName") or exported
+        if human.startswith("App UI hierarchy"):
+            # What XCTest saw when a test failed (windows, buttons…): printed for the CI log.
+            print("---", human)
+            print("\n".join((source / exported).read_text(errors="replace").splitlines()[:150]))
+            continue
         if not exported.lower().endswith((".png", ".jpg", ".jpeg")):
             continue
         name = re.sub(r"_\d+_[0-9A-F-]{36}", "", pathlib.Path(human).stem)
+        if name.startswith("Screenshot of main screen"):
+            # Taken by XCTest when a test fails: kept aside, never uploaded to the store.
+            failures += 1
+            (target / "failures").mkdir(exist_ok=True)
+            shutil.copy(source / exported, target / "failures" / f"{failures}-{device}{pathlib.Path(exported).suffix.lower()}")
+            continue
         out = target / f"{name}-{device}{pathlib.Path(exported).suffix.lower()}"
         shutil.copy(source / exported, out)
         if device == "mac" and out.suffix == ".png":

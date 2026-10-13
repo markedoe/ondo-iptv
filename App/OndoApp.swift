@@ -49,7 +49,7 @@ struct OndoApp: App {
         }
         .defaultSize(width: 960, height: 540)
         .windowToolbarStyle(.unifiedCompact(showsTitle: true))
-        .commands { PlaybackCommands() }
+        // The Playback menu is declared once, with the main window: commands are app-wide on macOS.
 
         Window("Multiview", id: "multiview") {
             MultiviewWindow()

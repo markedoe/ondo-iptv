@@ -27,7 +27,16 @@ final class MacAppStoreScreenshots: XCTestCase {
                                    "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
             app.launch()
             let window = app.windows.firstMatch
-            guard window.waitForExistence(timeout: 30) else {
+            if !window.waitForExistence(timeout: 30) {
+                // Diagnostics: what the app shows, then a new window as a user would open one (File > New Window).
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = "App UI hierarchy (\(name), state \(app.state.rawValue))"
+                hierarchy.lifetime = .keepAlways
+                add(hierarchy)
+                app.activate()
+                app.typeKey("n", modifierFlags: .command)
+            }
+            guard window.waitForExistence(timeout: 15) else {
                 XCTFail("\(name): no window")
                 add(XCTAttachment(screenshot: XCUIScreen.main.screenshot()))
                 app.terminate()
