@@ -25,6 +25,9 @@ struct OndoApp: App {
             RootView()
                 .environment(model)
                 .preferredColorScheme(model.settings.appearance.colorScheme)
+                #if os(macOS) && DEBUG
+                .background { if ScreenshotRoute.sizesWindow { ScreenshotWindowSizer() } }
+                #endif
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model.flush() }

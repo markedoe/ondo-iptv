@@ -111,6 +111,23 @@ platform :ios do
 end
 
 platform :mac do
+  desc "Upload the Mac App Store listing (texts, URLs, screenshots) without a binary"
+  lane :metadata do
+    deliver(
+      api_key: api_key,
+      app_identifier: APP_ID,
+      platform: "osx",
+      skip_binary_upload: true,
+      skip_screenshots: !File.directory?("screenshots/mac"),
+      screenshots_path: "fastlane/screenshots/mac",
+      overwrite_screenshots: true,
+      metadata_path: "fastlane/metadata",
+      force: true,
+      precheck_include_in_app_purchases: false,
+      submit_for_review: false
+    )
+  end
+
   desc "Build the macOS app and upload it to TestFlight / App Store Connect"
   lane :beta do
     generate_project

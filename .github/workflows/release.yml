@@ -56,14 +56,18 @@ jobs:
         run: |
           # Published by the "App Store screenshots" workflow; the listing is uploaded without them otherwise.
           if git fetch -q origin appstore-screenshots; then
-            mkdir -p fastlane/screenshots/ios
-            git archive origin/appstore-screenshots | tar -x -C fastlane/screenshots/ios
-            rm -f fastlane/screenshots/ios/README.md
-            find fastlane/screenshots/ios -type f | sort
+            mkdir -p shots fastlane/screenshots/ios fastlane/screenshots/mac
+            git archive origin/appstore-screenshots | tar -x -C shots
+            if [ -d shots/mac ]; then mv shots/mac/* fastlane/screenshots/mac/ && rmdir shots/mac; fi
+            rm -f shots/README.md
+            mv shots/* fastlane/screenshots/ios/ 2>/dev/null || true
+            find fastlane/screenshots -type f | sort
           fi
       - name: App Store listing
         if: env.TARGET == 'all' || env.TARGET == 'metadata'
-        run: bundle exec fastlane ios metadata
+        run: |
+          bundle exec fastlane ios metadata
+          bundle exec fastlane mac metadata
       - name: Keep build logs
         if: failure()
         uses: actions/upload-artifact@v4

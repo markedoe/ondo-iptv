@@ -1,8 +1,8 @@
 name: App Store screenshots
 
-# Captures the App Store screenshots (iPhone 6.9" and iPad 13", English and French) from the
-# fixture catalogue and publishes them on the `appstore-screenshots` branch; the release
-# workflow uploads them with the listing.
+# Captures the App Store screenshots (iPhone 6.9", iPad 13" and Mac, English and French) from the
+# fixture catalogue and publishes them on the `appstore-screenshots` branch (Mac ones under `mac/`);
+# the release workflow uploads them with the listing.
 on:
   workflow_dispatch:
   push:
@@ -13,6 +13,7 @@ on:
       - App/Features/Home/**
       - .github/workflows/appstore-screenshots.yml
       - .github/scripts/collect_appstore_screenshots.py
+      - .github/scripts/capture_mac_screenshots.py
 
 concurrency:
   group: appstore-screenshots
@@ -73,9 +74,47 @@ jobs:
           name: shots-${{ matrix.device }}-${{ matrix.locale }}
           path: out
 
+  mac:
+    name: mac · ${{ matrix.locale }}
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        locale: [en-US, fr-FR]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen xcbeautify || true
+          xcodegen generate
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: build/spm
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+      - name: Build (Debug, demo catalogue)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo \
+            -destination "platform=macOS" \
+            -configuration Debug \
+            -derivedDataPath build/macos \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+          codesign --force --deep --sign - --entitlements App/Resources/Ondo-macOS-Debug.entitlements \
+            build/macos/Build/Products/Debug/Ondo.app
+      - name: Capture
+        run: python3 .github/scripts/capture_mac_screenshots.py build/macos/Build/Products/Debug/Ondo.app out ${{ matrix.locale }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: shots-mac-${{ matrix.locale }}
+          path: out
+
   publish:
     name: Publish to the appstore-screenshots branch
-    needs: capture
+    needs: [capture, mac]
     runs-on: ubuntu-latest
     permissions:
       contents: write

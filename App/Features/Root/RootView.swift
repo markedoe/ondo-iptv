@@ -178,8 +178,16 @@ struct TabRootView: View {
 /// Mac and iPad: sidebar with sections and playlists.
 struct SidebarRootView: View {
     @Environment(AppModel.self) private var model
-    @State private var selection: AppSection? = .home
+    @State private var selection: AppSection? = Self.initialSection
     @State private var showingSettings = false
+
+    private static var initialSection: AppSection {
+        #if DEBUG
+        ScreenshotRoute.section ?? .home
+        #else
+        .home
+        #endif
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -223,6 +231,9 @@ struct SidebarRootView: View {
         } detail: {
             RoutedNavigationStack {
                 SectionView(section: selection ?? .home)
+                    #if DEBUG
+                    .modifier(ScreenshotRouteOpener())
+                    #endif
             }
             .id(selection)
         }
