@@ -13,7 +13,7 @@ on:
       - App/Features/Home/**
       - .github/workflows/appstore-screenshots.yml
       - .github/scripts/collect_appstore_screenshots.py
-      - .github/scripts/capture_mac_screenshots.py
+      - MacUITests/**
 
 concurrency:
   group: appstore-screenshots
@@ -92,20 +92,24 @@ jobs:
         with:
           path: build/spm
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
-      - name: Build (Debug, demo catalogue)
+      - name: Capture (macOS UI test, ad-hoc signed)
+        env:
+          TEST_RUNNER_SCREENSHOT_LANG: ${{ startsWith(matrix.locale, 'fr') && 'fr' || 'en' }}
         run: |
           set -o pipefail
-          xcodebuild build \
-            -project Ondo.xcodeproj -scheme Ondo \
+          xcodebuild test \
+            -project Ondo.xcodeproj -scheme OndoMacScreenshots \
             -destination "platform=macOS" \
-            -configuration Debug \
             -derivedDataPath build/macos \
             -clonedSourcePackagesDirPath build/spm \
-            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
-          codesign --force --deep --sign - --entitlements App/Resources/Ondo-macOS-Debug.entitlements \
-            build/macos/Build/Products/Debug/Ondo.app
-      - name: Capture
-        run: python3 .github/scripts/capture_mac_screenshots.py build/macos/Build/Products/Debug/Ondo.app out ${{ matrix.locale }}
+            -resultBundlePath build/MacShots.xcresult \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= | xcbeautify --renderer github-actions
+      - name: Export
+        if: always()
+        run: |
+          mkdir -p raw out
+          xcrun xcresulttool export attachments --path build/MacShots.xcresult --output-path raw
+          python3 .github/scripts/collect_appstore_screenshots.py raw out/mac ${{ matrix.locale }} mac
       - uses: actions/upload-artifact@v4
         if: always()
         with:
