@@ -41,6 +41,7 @@ class AppStore(private val directory: File) {
 
     @Synchronized
     private fun <T> write(name: String, serializer: KSerializer<T>, value: T) {
+        directory.mkdirs() // the folder can be removed while the app runs (storage cleared)
         val target = File(directory, name)
         val temporary = File(directory, "$name.tmp")
         temporary.writeText(json.encodeToString(serializer, value))

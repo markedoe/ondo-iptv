@@ -126,3 +126,12 @@ dependencies {
     testImplementation(libs.roborazzi.rule)
     testImplementation(libs.turbine)
 }
+
+// Failed tests are printed with their full message and stack trace (CI logs).
+tasks.withType<Test>().configureEach {
+    testLogging {
+        events("failed", "skipped")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStackTraces = true
+    }
+}

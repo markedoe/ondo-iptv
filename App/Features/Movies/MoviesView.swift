@@ -155,24 +155,36 @@ struct MovieDetailView: View {
     }
 }
 
+/// Credits: the label in a narrow column, the value right next to it (not pushed to the far edge).
 struct InfoLines: View {
     let details: MediaDetails?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let director = details?.director {
-                LabeledContent("Director", value: director)
+                line("Director", director)
             }
             if let cast = details?.cast {
-                LabeledContent("Cast", value: cast)
+                line("Cast", cast)
             }
             if let original = details?.originalTitle, original != details?.title {
-                LabeledContent("Original title", value: original)
+                line("Original title", original)
             }
             if let date = details?.releaseDate {
-                LabeledContent("Release", value: date)
+                line("Release", date)
             }
         }
         .font(.callout)
+    }
+
+    private func line(_ label: LocalizedStringKey, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(label)
+                .foregroundStyle(.secondary)
+                .frame(width: 104, alignment: .leading)
+            Text(value)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .accessibilityElement(children: .combine)
     }
 }

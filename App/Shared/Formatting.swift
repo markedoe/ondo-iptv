@@ -36,8 +36,9 @@ enum Formatting {
         date.formatted(.relative(presentation: .named))
     }
 
+    /// "7.8" / "7,8": the user's decimal separator, like the rest of the app.
     static func rating(_ value: Double) -> String {
-        String(format: "%.1f", value)
+        value.formatted(.number.precision(.fractionLength(1)))
     }
 
     static func bytes(_ count: Int64) -> String {

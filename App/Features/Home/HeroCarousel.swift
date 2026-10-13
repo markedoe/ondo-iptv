@@ -250,7 +250,7 @@ private struct HeroPage: View {
             parts.append(genre.trimmingCharacters(in: .whitespaces))
         }
         if let rating = details?.rating ?? item.rating, rating > 0 {
-            parts.append("★ " + rating.formatted(.number.precision(.fractionLength(1))))
+            parts.append("★ " + Formatting.rating(rating))
         }
         return parts.joined(separator: " · ")
     }
