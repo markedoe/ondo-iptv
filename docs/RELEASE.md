@@ -140,10 +140,16 @@ HTTP, Cast et notifications.
    version = le tag), puis la fiche FR/EN et les captures iPhone / iPad.
 2. **TestFlight** : les builds apparaissent après 10 à 30 min de traitement. Groupe de testeurs internes
    (jusqu'à 100 membres de l'équipe, sans review) pour essayer sur vos appareils.
-3. **Captures** : iPhone 6,9" et iPad 13" sont générées par le workflow *App Store screenshots* (FR/EN).
-   Le **Mac** demande ses propres captures 16:10 (2880×1800 ou 1440×900).
+3. **Captures** : iPhone 6,9" et iPad 13" sont générées par le workflow *App Store screenshots* (FR/EN),
+   le Mac aussi (16:10, dossier `mac/` de la branche `appstore-screenshots`). Si les captures Mac manquent,
+   on peut les faire à la main : lancer l'app sur un Mac, fenêtre de 1440×900, `⌘⇧4` puis espace pour
+   capturer la fenêtre, et les déposer dans la version macOS.
 4. Dans chaque version (iOS 1.0 et macOS 1.0) : choisissez le build → **Add for Review** →
-   **Submit for Review**.
+   **Submit for Review**. Les deux versions sont indépendantes : **iOS / iPadOS peut partir seul**, la
+   version macOS suivra quand ses captures seront prêtes.
+
+Le premier lancement du workflow *Release* n'a encore jamais tourné : s'il échoue (signature, export,
+envoi), le log du job dit pourquoi — il se corrige en général d'une ligne dans `fastlane/Fastfile`.
 
 ## E. Points à vérifier avant la review
 

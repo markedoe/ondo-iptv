@@ -2,14 +2,13 @@
 
 Usage: capture_mac_screenshots.py <Ondo.app> <output dir> <locale, e.g. en-US>
 
-Each page is opened at launch with `-uitest-route` on the demo catalogue; the app gives its window a 16:10
-frame and prints it (`WINDOW_RECT x,y,w,h SCALE s`). The window is captured with `screencapture` and
+Each page is opened at launch (through `open`, like a double click) with `-uitest-route` on the demo
+catalogue; the app gives its window a 16:10 frame and prints it (`WINDOW_RECT x,y,w,h SCALE s`). The window is captured with `screencapture` and
 resized to a size the App Store accepts (2880×1800, 2560×1600, 1440×900 or 1280×800)."""
 import pathlib
 import re
 import subprocess
 import sys
-import threading
 import time
 
 PAGES = [
@@ -30,45 +29,40 @@ target.mkdir(parents=True, exist_ok=True)
 
 
 def capture(name, route):
-    arguments = [str(executable), "-uitest-reset", "-uitest-fixture", "-uitest-showcase",
+    arguments = ["-uitest-reset", "-uitest-fixture", "-uitest-showcase",
                  "-uitest-route", route, "-uitest-window", "1",
                  "-AppleLanguages", f"({language})", "-AppleLocale", locale.replace("-", "_")]
-    process = subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    found = {}
-    output = []
-
-    def read():
-        for line in process.stdout:
-            output.append(line.rstrip())
-            match = re.search(r"WINDOW_RECT (\d+),(\d+),(\d+),(\d+) SCALE (\d+)", line)
-            if match:
-                found["rect"] = [int(value) for value in match.groups()]
-
-    threading.Thread(target=read, daemon=True).start()
+    log = target / f"{name}.log"
+    log.unlink(missing_ok=True)
+    # Launched through LaunchServices like a double click (activation, window), output kept in a file.
+    subprocess.run(["open", "-n", str(app), "--stdout", str(log), "--stderr", str(log),
+                    "--args", *arguments], check=True)
+    rect = None
     start = time.time()
-    deadline = start + 60
     early_shot = False
-    while "rect" not in found and time.time() < deadline and process.poll() is None:
+    while rect is None and time.time() - start < 60:
         time.sleep(0.5)
-        if not early_shot and time.time() - start > 15:
+        text = log.read_text(errors="replace") if log.exists() else ""
+        match = re.search(r"WINDOW_RECT (\d+),(\d+),(\d+),(\d+) SCALE (\d+)", text)
+        if match:
+            rect = [int(value) for value in match.groups()]
+        elif not early_shot and time.time() - start > 15:
             # What the screen looks like while waiting (kept only if the capture fails).
             subprocess.run(["screencapture", "-x", str(target / f"{name}-waiting.png")])
             early_shot = True
-    if "rect" not in found:
-        process.kill()
+    if rect is None:
         subprocess.run(["screencapture", "-x", str(target / f"{name}-failed.png")])
-        print("\n".join(output[-40:]))
-        sys.exit(f"{name}: the app did not report its window (exit code {process.poll()})")
+        subprocess.run(["pkill", "-x", "Ondo"])
+        print(log.read_text(errors="replace")[-4000:] if log.exists() else "(no output)")
+        sys.exit(f"{name}: the app did not report its window")
     (target / f"{name}-waiting.png").unlink(missing_ok=True)
     time.sleep(12)  # catalogue, artwork and guide
-    x, y, width, height, scale = found["rect"]
+    x, y, width, height, scale = rect
     raw = target / f"{name}-raw.png"
     subprocess.run(["screencapture", "-x", "-R", f"{x},{y},{width},{height}", str(raw)], check=True)
-    process.terminate()
-    try:
-        process.wait(timeout=10)
-    except subprocess.TimeoutExpired:
-        process.kill()
+    subprocess.run(["pkill", "-x", "Ondo"])
+    time.sleep(3)
+    log.unlink(missing_ok=True)
     pixels = width * scale
     out_width, out_height = next(((w, h) for w, h in ACCEPTED if w <= pixels), ACCEPTED[-1])
     out = target / f"{name}-mac.png"
