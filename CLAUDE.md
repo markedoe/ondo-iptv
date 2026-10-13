@@ -15,3 +15,6 @@ commit, ni dans les captures.
   il bloque l'écriture de secrets ou de données personnelles dans le dépôt et vérifie les changements avant
   `git commit` / `git push`. La CI le relance sur tout l'historique avec gitleaks. En cas de faux positif,
   ajouter une regex à `.leakguard-allow` plutôt que de contourner le hook.
+  Le garde-fou vérifie aussi l'adresse `git config user.email` (adresse `noreply` uniquement). Il ne lit
+  pas le contenu des fichiers binaires : avant d'ajouter une image, vérifier qu'elle ne contient pas de
+  métadonnées personnelles (position GPS, nom d'appareil).

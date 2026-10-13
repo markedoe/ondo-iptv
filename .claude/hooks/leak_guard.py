@@ -12,6 +12,7 @@ Modes:
 
 Findings can be allowed with a regex in `.leakguard-allow` (one per line) or with `leak-guard: allow`
 on the line itself. Only standard library: it runs on macOS, Linux and in CI as is.
+Limit: binary files (images, archives) are only checked by name, not by content or metadata.
 """
 import json
 import os
@@ -156,6 +157,14 @@ def scan_commits(root, revisions, allow):
     return findings
 
 
+def scan_identity(root, allow):
+    """The address a new commit would carry (public on GitHub)."""
+    email = git(root, "config", "user.email").strip()
+    if email and not ALLOWED_EMAIL.search(email) and not any(rule.search(email) for rule in allow):
+        return [("git config user.email", "commit identity is not a noreply address", redact(email))]
+    return []
+
+
 def scan_unpushed(root, allow):
     revisions = git(root, "rev-list", "HEAD", "--not", "--remotes").split()
     return scan_commits(root, revisions, allow)
@@ -182,7 +191,7 @@ def hook(event):
         command = data.get("command", "")
         findings += scan_text(command, "command", allow)
         if root and re.search(r"\bgit\b[^|;&]*\bcommit\b", command):
-            findings += scan_working_changes(root, allow)
+            findings += scan_working_changes(root, allow) + scan_identity(root, allow)
         if root and re.search(r"\bgit\b[^|;&]*\bpush\b", command):
             findings += scan_working_changes(root, allow) if "commit" in command else []
             findings += scan_unpushed(root, allow)
@@ -229,6 +238,7 @@ def main(argv):
     allow = load_allowlist(root)
     findings = []
     if "--staged" in argv:
+        findings += scan_identity(root, allow)
         findings += scan_diff(git(root, "diff", "--cached", "--no-color", "--no-ext-diff"), allow)
         findings += scan_names(git(root, "diff", "--cached", "--name-only", "--diff-filter=AR").split(), allow)
     if "--tree" in argv:
