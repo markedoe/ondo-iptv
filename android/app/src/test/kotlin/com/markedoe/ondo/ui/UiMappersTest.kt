@@ -7,13 +7,14 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class UiMappersTest {
-    private val labels = Labels("Movie", "Series")
+    private val labels = Labels("Movie", "Series", Locale.US)
     private val adultShown = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, showAdultCategories = true)
 
     @Test
@@ -40,6 +41,12 @@ class UiMappersTest {
         assertEquals("Northern Lights", home.movies.first().title)
         assertEquals("without favourites the first channels are shown", 4, home.channels.size)
         assertFalse(home.channelsAreFavorites)
+    }
+
+    @Test
+    fun ratingsUseTheUsersDecimalSeparator() {
+        val hero = UiMappers.home(Fixtures.state(), Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW).hero
+        assertEquals("Film · 2024 · ★ 7,8", hero.first { it.item.title == "Northern Lights" }.meta)
     }
 
     @Test

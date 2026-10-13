@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -82,10 +83,14 @@ fun HeroCarousel(
             pager.animateScrollToPage((pager.currentPage + 1) % pages.size)
         }
     }
+    // Most of the screen, leaving the next shelf in sight on phones.
+    val screenHeight = LocalConfiguration.current.screenHeightDp
+    val heroHeight = (screenHeight * 0.78f).coerceIn(440f, 600f).dp
+    val posterWidth = heroHeight * 0.33f
     Box(modifier.fillMaxWidth().testTag("hero")) {
         HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { index ->
             val page = pages[index]
-            Box(Modifier.fillMaxWidth().height(600.dp)) {
+            Box(Modifier.fillMaxWidth().height(heroHeight)) {
                 Artwork(
                     url = page.item.posterUrl,
                     title = page.item.title,
@@ -116,7 +121,7 @@ fun HeroCarousel(
                         url = page.item.posterUrl,
                         title = page.item.title,
                         modifier = Modifier
-                            .width(196.dp)
+                            .width(posterWidth)
                             .clip(PosterShape)
                             .clickable { onOpen(page.item) },
                     )

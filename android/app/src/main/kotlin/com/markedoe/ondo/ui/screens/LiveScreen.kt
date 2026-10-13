@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.MediaCategory
-import com.markedoe.ondo.ui.components.Artwork
+import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ProgressBar
 import com.markedoe.ondo.ui.model.ChannelRow
 
@@ -106,7 +105,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                     Modifier.size(width = 72.dp, height = 48.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(6.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Artwork(url = row.channel.logoUrl, title = row.channel.name, contentScale = ContentScale.Fit)
+                    ChannelLogo(url = row.channel.logoUrl, name = row.channel.name)
                 }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

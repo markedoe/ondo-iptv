@@ -26,7 +26,7 @@ import com.markedoe.ondo.ui.screens.WatchProgress
 import java.util.Locale
 
 /** Localised words the mappers need (resolved by the caller, so the mappers stay pure). */
-data class Labels(val movie: String = "Movie", val series: String = "Series")
+data class Labels(val movie: String = "Movie", val series: String = "Series", val locale: Locale = Locale.getDefault())
 
 /** Builds the screens' states from the app state. Pure functions, unit tested. */
 object UiMappers {
@@ -71,7 +71,7 @@ object UiMappers {
             if (item is ShowcaseItem.MovieItem) labels.movie else labels.series,
             item.year?.toString(),
             genre,
-            rating?.let { "★ " + String.format(Locale.ROOT, "%.1f", it) },
+            rating?.let { "★ " + String.format(labels.locale, "%.1f", it) },
         ).joinToString(" · ")
     }
 

@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.Artwork
+import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ContinueCard
 import com.markedoe.ondo.ui.components.HeroCarousel
 import com.markedoe.ondo.ui.components.HeroPage
@@ -178,7 +179,7 @@ fun ChannelTile(row: ChannelRow, onClick: () -> Unit) {
                 .padding(12.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Artwork(url = row.channel.logoUrl, title = row.channel.name, contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+            ChannelLogo(url = row.channel.logoUrl, name = row.channel.name)
         }
         Text(row.channel.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
         row.nowTitle?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }

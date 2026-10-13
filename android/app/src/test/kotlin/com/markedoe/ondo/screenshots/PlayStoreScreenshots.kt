@@ -24,6 +24,7 @@ import com.markedoe.ondo.ui.screens.SeriesDetailScreen
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
+import java.util.Locale
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.ParameterizedRobolectricTestRunner
@@ -51,7 +52,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
     }
 
     private val french get() = locale.startsWith("fr")
-    private val labels get() = if (french) Labels("Film", "Série") else Labels("Movie", "Series")
+    private val labels get() = if (french) Labels("Film", "Série", Locale.FRANCE) else Labels("Movie", "Series", Locale.US)
 
     /** Something in progress, My List and favourite channels, like a catalogue in use. */
     private val library: LibraryState
