@@ -65,12 +65,7 @@ struct PosterCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Color.secondary.opacity(0.12)
-                .aspectRatio(2 / 3, contentMode: .fit)
-                .overlay {
-                    RemoteImage(url: imageURL, placeholderText: title, contentMode: .fill, maxPixelSize: 400)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+            PosterArtwork(url: imageURL, title: title, progress: progress)
                 .overlay(alignment: .topTrailing) {
                     if let rating, rating > 0 {
                         Label(Formatting.rating(rating), systemImage: "star.fill")
@@ -82,19 +77,13 @@ struct PosterCard: View {
                             .padding(6)
                     }
                 }
-                .overlay(alignment: .bottom) {
-                    if let progress, progress > 0 {
-                        ProgressView(value: progress)
-                            .tint(.accentColor)
-                            .padding(.horizontal, 8)
-                            .padding(.bottom, 6)
-                    }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                if let subtitle {
+                    Text(subtitle).font(.caption2).foregroundStyle(.secondary)
                 }
-            Text(title)
-                .font(.caption.weight(.medium))
-                .lineLimit(2, reservesSpace: true)
-            if let subtitle {
-                Text(subtitle).font(.caption2).foregroundStyle(.secondary)
             }
         }
         .contentShape(Rectangle())

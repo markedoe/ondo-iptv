@@ -311,6 +311,26 @@
         }
       }
     },
+    "All Movies": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les films"
+          }
+        }
+      }
+    },
+    "All Series": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les séries"
+          }
+        }
+      }
+    },
     "All guide channels (%lld)": {
       "localizations": {
         "fr": {

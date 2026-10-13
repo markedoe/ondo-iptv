@@ -140,7 +140,7 @@ struct PrimaryPlayButton: View {
                     .frame(maxWidth: 420)
                     .padding(.vertical, 14)
                     .padding(.horizontal, 24)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.black)
                     .background(Color.accentColor, in: Capsule())
                     .contentShape(Capsule())
             }

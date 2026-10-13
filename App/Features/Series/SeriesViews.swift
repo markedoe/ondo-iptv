@@ -48,7 +48,7 @@ struct SeriesGridView: View {
             }
         }
         .searchable(text: $filter, prompt: Text("Search series"))
-        .navigationTitle(category.name)
+        .navigationTitle(category.id == PseudoCategory.all ? String(localized: "All Series") : category.name)
         .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu() } }
     }
 }

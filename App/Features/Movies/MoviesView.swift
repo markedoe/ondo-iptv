@@ -75,7 +75,7 @@ struct MovieGridView: View {
             }
         }
         .searchable(text: $filter, prompt: Text("Search movies"))
-        .navigationTitle(category.name)
+        .navigationTitle(category.id == PseudoCategory.all ? String(localized: "All Movies") : category.name)
         .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu() } }
     }
 }
