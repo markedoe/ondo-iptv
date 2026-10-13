@@ -76,6 +76,13 @@ android {
         }
     }
 
+    lint {
+        // Errors fail the build; the whole report (warnings too) is printed in the CI log.
+        abortOnError = true
+        textReport = true
+        textOutput = file("stdout")
+    }
+
     packaging.resources {
         excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }

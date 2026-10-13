@@ -19,6 +19,7 @@ import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.PlayRequest
 import java.util.UUID
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,6 +57,8 @@ class OndoRepository(
     private val http: HttpClient,
     private val scope: CoroutineScope,
     private val now: () -> Long = System::currentTimeMillis,
+    /** Files and network (tests pass their own dispatcher so that no write outlives a test). */
+    private val io: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private val _state = MutableStateFlow(OndoState())
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -63,14 +66,14 @@ class OndoRepository(
 
     /** Saves run one at a time, in order: the last change is the one on disk. */
     @OptIn(ExperimentalCoroutinesApi::class)
-    private val writer = Dispatchers.IO.limitedParallelism(1)
+    private val writer = io.limitedParallelism(1)
 
     fun bootstrap() {
         if (_state.value.isReady) return
         scope.launch {
-            val settings = withContext(Dispatchers.IO) { store.loadSettings() }
-            val playlists = withContext(Dispatchers.IO) { store.loadPlaylists() }
-            val library = withContext(Dispatchers.IO) { store.loadLibrary() }
+            val settings = withContext(io) { store.loadSettings() }
+            val playlists = withContext(io) { store.loadPlaylists() }
+            val library = withContext(io) { store.loadLibrary() }
             _state.update { it.copy(settings = settings, playlists = playlists, library = library, isReady = true) }
             _state.value.activePlaylist?.let { open(it) }
         }
@@ -90,7 +93,7 @@ class OndoRepository(
             addedAt = now(),
         )
         _state.update { it.copy(isLoading = true, error = null) }
-        return runCatching { withContext(Dispatchers.IO) { loader().load(saved.toCorePlaylist()) } }
+        return runCatching { withContext(io) { loader().load(saved.toCorePlaylist()) } }
             .map { content ->
                 val playlists = _state.value.playlists + saved
                 val settings = _state.value.settings.copy(activePlaylistId = saved.id)
@@ -149,7 +152,7 @@ class OndoRepository(
     /** Cached catalogue at once, then a refresh when it is a day old or missing. */
     private fun open(playlist: SavedPlaylist) {
         scope.launch {
-            val cached = withContext(Dispatchers.IO) { store.loadContent(playlist.id) }
+            val cached = withContext(io) { store.loadContent(playlist.id) }
             if (cached != null) {
                 _state.update { it.copy(content = cached) }
                 loadGuide(playlist, cached)
@@ -162,7 +165,7 @@ class OndoRepository(
         refreshJob?.cancel()
         refreshJob = scope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            runCatching { withContext(Dispatchers.IO) { loader().load(playlist.toCorePlaylist()) } }
+            runCatching { withContext(io) { loader().load(playlist.toCorePlaylist()) } }
                 .onSuccess { content ->
                     withContext(writer) { store.saveContent(playlist.id, content) }
                     if (_state.value.activePlaylistId == playlist.id) {
@@ -213,7 +216,7 @@ class OndoRepository(
         val playlist = _state.value.activePlaylist ?: return null
         val streamId = movie.xtreamStreamId ?: return null
         val credentials = playlist.credentials() ?: return null
-        val details = runCatching { withContext(Dispatchers.IO) { XtreamClient(credentials, http).movieDetails(streamId) } }.getOrNull() ?: return null
+        val details = runCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }.getOrNull() ?: return null
         _state.update { it.copy(movieDetails = it.movieDetails + (movie.id to details)) }
         return details
     }
@@ -224,7 +227,7 @@ class OndoRepository(
         val credentials = playlist?.credentials()
         val seriesId = series.xtreamSeriesId
         val details = if (credentials != null && seriesId != null) {
-            withContext(Dispatchers.IO) { XtreamClient(credentials, http).seriesDetails(seriesId) }
+            withContext(io) { XtreamClient(credentials, http).seriesDetails(seriesId) }
         } else {
             val seasons = series.episodes.groupBy { it.season }.toSortedMap().map { (number, episodes) ->
                 Season(number, "Season $number", episodes.sortedBy { it.number })

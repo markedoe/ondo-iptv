@@ -19,6 +19,7 @@ import com.markedoe.ondo.ui.theme.Appearance
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,7 +35,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.channels.Channel
 
 /** Live TV filter: one category, the favourites, or everything. */
 data class LiveFilter(val categoryId: String? = null, val favoritesOnly: Boolean = false)

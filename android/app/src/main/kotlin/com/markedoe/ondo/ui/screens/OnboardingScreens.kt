@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material3.Button
@@ -37,6 +39,7 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -142,10 +145,20 @@ sealed interface PlaylistForm {
     data class M3u(override val name: String, val url: String, val epgUrl: String) : PlaylistForm
 }
 
-/** Add a playlist: Xtream Codes login or M3U link (+ optional guide). */
+/** A playlist file chosen with the system picker, copied into the app's storage. */
+data class PickedFile(val url: String, val name: String)
+
+/** Add a playlist: Xtream Codes login, or M3U link or file (+ optional guide). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPlaylistScreen(onSave: (PlaylistForm) -> Unit, onBack: () -> Unit, isLoading: Boolean, error: String?) {
+fun AddPlaylistScreen(
+    onSave: (PlaylistForm) -> Unit,
+    onBack: () -> Unit,
+    isLoading: Boolean,
+    error: String?,
+    onPickFile: (() -> Unit)? = null,
+    pickedFile: PickedFile? = null,
+) {
     var kind by rememberSaveable { mutableStateOf(0) }
     var name by rememberSaveable { mutableStateOf("") }
     var server by rememberSaveable { mutableStateOf("") }
@@ -154,6 +167,12 @@ fun AddPlaylistScreen(onSave: (PlaylistForm) -> Unit, onBack: () -> Unit, isLoad
     var url by rememberSaveable { mutableStateOf("") }
     var epg by rememberSaveable { mutableStateOf("") }
     val valid = if (kind == 0) server.isNotBlank() && username.isNotBlank() && password.isNotBlank() else url.isNotBlank()
+    LaunchedEffect(pickedFile) {
+        pickedFile ?: return@LaunchedEffect
+        kind = 1
+        url = pickedFile.url
+        if (name.isBlank()) name = pickedFile.name
+    }
 
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).testTag("addPlaylistScreen")) {
         TopAppBar(
@@ -180,6 +199,13 @@ fun AddPlaylistScreen(onSave: (PlaylistForm) -> Unit, onBack: () -> Unit, isLoad
                 Text(stringResource(R.string.xtream_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 OutlinedTextField(url, { url = it }, label = { Text(stringResource(R.string.playlist_url)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().testTag("urlField"))
+                if (onPickFile != null) {
+                    OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag("pickFile")) {
+                        Icon(Icons.Rounded.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.choose_file))
+                    }
+                }
                 OutlinedTextField(epg, { epg = it }, label = { Text(stringResource(R.string.guide_url_optional)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth())
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }

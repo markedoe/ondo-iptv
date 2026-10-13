@@ -103,4 +103,5 @@
     <string name="kind_m3u">M3U playlist</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Season %1$d</string>
+    <string name="choose_file">Choose a file</string>
 </resources>

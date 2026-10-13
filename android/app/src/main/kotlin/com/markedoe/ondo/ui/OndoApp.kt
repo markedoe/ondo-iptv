@@ -45,6 +45,7 @@ import com.markedoe.ondo.ui.screens.HomeScreen
 import com.markedoe.ondo.ui.screens.LiveActions
 import com.markedoe.ondo.ui.screens.LiveScreen
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
+import com.markedoe.ondo.ui.screens.PickedFile
 import com.markedoe.ondo.ui.screens.PosterGridScreen
 import com.markedoe.ondo.ui.screens.SearchScreen
 import com.markedoe.ondo.ui.screens.SeriesDetailScreen
@@ -78,11 +79,14 @@ private fun Onboarding(viewModel: OndoViewModel) {
     var adding by rememberSaveable { mutableStateOf(false) }
     val demoName = stringResource(R.string.demo)
     if (adding) {
+        var picked by remember { mutableStateOf<PickedFile?>(null) }
         AddPlaylistScreen(
             onSave = { form -> viewModel.addPlaylist(form) { adding = false } },
             onBack = { adding = false; viewModel.clearError() },
             isLoading = state.isLoading,
             error = state.error,
+            onPickFile = rememberPlaylistFilePicker { picked = it },
+            pickedFile = picked,
         )
     } else {
         Box(Modifier.fillMaxSize()) {
@@ -115,11 +119,14 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 composable<Routes.Settings> { SettingsDestination(viewModel, navController) }
                 composable<Routes.AddPlaylist> {
                     val state by viewModel.state.collectAsStateWithLifecycle()
+                    var picked by remember { mutableStateOf<PickedFile?>(null) }
                     AddPlaylistScreen(
                         onSave = { form -> viewModel.addPlaylist(form) { navController.popBackStack() } },
                         onBack = { viewModel.clearError(); navController.popBackStack() },
                         isLoading = state.isLoading,
                         error = state.error,
+                        onPickFile = rememberPlaylistFilePicker { picked = it },
+                        pickedFile = picked,
                     )
                 }
             }

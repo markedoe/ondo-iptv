@@ -5,11 +5,12 @@ import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.screens.PlaylistForm
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -43,14 +44,16 @@ class OndoViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel(scope: CoroutineScope): OndoViewModel {
-        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue)), scope)
+    private fun TestScope.viewModel(): OndoViewModel {
+        val repository = OndoRepository(
+            AppStore(folder.root), FakeHttp(mapOf(list to catalogue)), backgroundScope, io = StandardTestDispatcher(testScheduler),
+        )
         return OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
     }
 
     @Test
     fun theDemoAddsAPlaylistAndTheHomeFollows() = runTest {
-        val viewModel = viewModel(backgroundScope)
+        val viewModel = viewModel()
         viewModel.state.first { it.isReady }
         viewModel.addPlaylist(PlaylistForm.M3u("Home", list, "")) {}
         viewModel.state.first { it.content.movies.isNotEmpty() }
@@ -65,7 +68,7 @@ class OndoViewModelTest {
 
     @Test
     fun searchWaitsForTypingToPause() = runTest {
-        val viewModel = viewModel(backgroundScope)
+        val viewModel = viewModel()
         viewModel.state.first { it.isReady }
         viewModel.addPlaylist(PlaylistForm.M3u("Home", list, "")) {}
         viewModel.state.first { it.content.movies.isNotEmpty() }
@@ -82,7 +85,7 @@ class OndoViewModelTest {
 
     @Test
     fun playingAMovieSendsAPlayRequest() = runTest {
-        val viewModel = viewModel(backgroundScope)
+        val viewModel = viewModel()
         viewModel.state.first { it.isReady }
         viewModel.addPlaylist(PlaylistForm.M3u("Home", list, "")) {}
         val movie = viewModel.state.first { it.content.movies.isNotEmpty() }.content.movies.single()

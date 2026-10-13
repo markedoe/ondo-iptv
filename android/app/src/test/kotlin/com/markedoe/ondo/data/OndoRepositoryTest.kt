@@ -3,9 +3,10 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.ui.theme.Appearance
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
@@ -48,8 +49,9 @@ class OndoRepositoryTest {
 
     private val clock = 1_760_000_000_000L
 
-    private fun repository(scope: CoroutineScope, http: HttpClient = FakeHttp(mapOf(list to catalogue))) =
-        OndoRepository(AppStore(folder.root), http, scope, now = { clock })
+    /** Files are read and written on the test's dispatcher: nothing outlives the test (its folder is deleted). */
+    private fun TestScope.repository(http: HttpClient = FakeHttp(mapOf(list to catalogue))) =
+        OndoRepository(AppStore(folder.root), http, backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler))
 
     // runTest skips virtual time, so waits on real work (files, parsing) must not use withTimeout / delay.
     private suspend fun OndoRepository.awaitState(condition: (OndoState) -> Boolean): OndoState = state.first(condition)
@@ -66,7 +68,7 @@ class OndoRepositoryTest {
 
     @Test
     fun addingAPlaylistLoadsSavesAndActivatesIt() = runTest {
-        val repository = repository(backgroundScope)
+        val repository = repository()
         repository.bootstrap()
         repository.awaitState { it.isReady }
 
@@ -82,7 +84,7 @@ class OndoRepositoryTest {
 
     @Test
     fun aRestartRestoresPlaylistsCatalogueAndLibraryWithoutDownloading() = runTest {
-        val first = repository(backgroundScope)
+        val first = repository()
         first.bootstrap()
         first.awaitState { it.isReady }
         first.addPlaylist("Home", list)
@@ -93,7 +95,7 @@ class OndoRepositoryTest {
         awaitDisk { it.loadLibrary().history.firstOrNull()?.position == 600.0 && it.loadLibrary().favorites.isNotEmpty() }
 
         val offline = FakeHttp(emptyMap())
-        val second = repository(backgroundScope, offline)
+        val second = repository(offline)
         second.bootstrap()
         val restored = second.awaitState { it.isReady && it.content.movies.isNotEmpty() }
         assertEquals("Home", restored.activePlaylist?.name)
@@ -104,7 +106,7 @@ class OndoRepositoryTest {
 
     @Test
     fun aFailedDownloadSavesNothingAndExplainsWhy() = runTest {
-        val repository = repository(backgroundScope, FakeHttp(emptyMap()))
+        val repository = repository(FakeHttp(emptyMap()))
         repository.bootstrap()
         repository.awaitState { it.isReady }
         val result = repository.addPlaylist("Broken", list)
@@ -118,7 +120,7 @@ class OndoRepositoryTest {
 
     @Test
     fun resumingAMovieStartsWhereItStopped() = runTest {
-        val repository = repository(backgroundScope)
+        val repository = repository()
         repository.bootstrap()
         repository.awaitState { it.isReady }
         repository.addPlaylist("Home", list)
@@ -133,7 +135,7 @@ class OndoRepositoryTest {
 
     @Test
     fun episodesHaveTheirOwnProgress() = runTest {
-        val repository = repository(backgroundScope)
+        val repository = repository()
         repository.bootstrap()
         repository.awaitState { it.isReady }
         repository.addPlaylist("Home", list)
@@ -149,7 +151,7 @@ class OndoRepositoryTest {
     @Test
     fun deletingTheActivePlaylistSwitchesToAnother() = runTest {
         val other = "http://other.example.com/list.m3u"
-        val repository = repository(backgroundScope, FakeHttp(mapOf(list to catalogue, other to catalogue)))
+        val repository = repository(FakeHttp(mapOf(list to catalogue, other to catalogue)))
         repository.bootstrap()
         repository.awaitState { it.isReady }
         repository.addPlaylist("First", list)
@@ -162,7 +164,7 @@ class OndoRepositoryTest {
 
     @Test
     fun settingsArePersisted() = runTest {
-        val repository = repository(backgroundScope)
+        val repository = repository()
         repository.bootstrap()
         repository.awaitState { it.isReady }
         repository.setShowAdultCategories(true)
