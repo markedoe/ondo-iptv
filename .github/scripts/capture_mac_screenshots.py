@@ -45,14 +45,21 @@ def capture(name, route):
                 found["rect"] = [int(value) for value in match.groups()]
 
     threading.Thread(target=read, daemon=True).start()
-    deadline = time.time() + 60
+    start = time.time()
+    deadline = start + 60
+    early_shot = False
     while "rect" not in found and time.time() < deadline and process.poll() is None:
         time.sleep(0.5)
+        if not early_shot and time.time() - start > 15:
+            # What the screen looks like while waiting (kept only if the capture fails).
+            subprocess.run(["screencapture", "-x", str(target / f"{name}-waiting.png")])
+            early_shot = True
     if "rect" not in found:
         process.kill()
         subprocess.run(["screencapture", "-x", str(target / f"{name}-failed.png")])
         print("\n".join(output[-40:]))
         sys.exit(f"{name}: the app did not report its window (exit code {process.poll()})")
+    (target / f"{name}-waiting.png").unlink(missing_ok=True)
     time.sleep(12)  # catalogue, artwork and guide
     x, y, width, height, scale = found["rect"]
     raw = target / f"{name}-raw.png"

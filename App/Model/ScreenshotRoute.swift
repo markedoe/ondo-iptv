@@ -63,9 +63,11 @@ struct ScreenshotWindowSizer: NSViewRepresentable {
             super.viewDidMoveToWindow()
             guard let window, !placed else { return }
             placed = true
-            ScreenshotWindowSizer.place(window)
-            // Placed again once SwiftUI has finished sizing the window, then reported.
+            NSLog("Screenshot window probe in %@", window.description)
+            // Resized once SwiftUI has finished setting the window up, then reported.
             Task { @MainActor in
+                try? await Task.sleep(for: .seconds(1))
+                ScreenshotWindowSizer.place(window)
                 try? await Task.sleep(for: .seconds(2))
                 ScreenshotWindowSizer.place(window, report: true)
             }
