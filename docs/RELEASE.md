@@ -33,7 +33,7 @@ GitHub Actions*, puis *Actions → Website → Run workflow*. Le site est publi�
 
 | Secret | Valeur |
 |---|---|
-| `ASC_KEY_ID` | Key ID de la clé API (B3), ex. `F6DYBYR395` |
+| `ASC_KEY_ID` | Key ID de la clé API (B3), 10 caractères |
 | `ASC_ISSUER_ID` | Issuer ID (UUID affiché en haut de *Users and Access → Integrations → App Store Connect API*) |
 | `ASC_KEY_P8` | tout le contenu du fichier `AuthKey_XXXX.p8`, lignes `-----BEGIN PRIVATE KEY-----` et `-----END PRIVATE KEY-----` comprises (le base64 du fichier est aussi accepté) |
 | `DEVELOPMENT_TEAM` | Team ID, 10 caractères (*developer.apple.com → Account → Membership details*) |

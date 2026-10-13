@@ -1,0 +1,3 @@
+# Regexes of findings that are known to be safe (see .claude/hooks/leak_guard.py).
+# Published before the guard existed: a Python cache of the Mac screenshot script (no data in it).
+^\.github/scripts/__pycache__/capture_mac_screenshots\.cpython-313\.pyc$

@@ -14,6 +14,20 @@ Package.resolved
 .DS_Store
 App/Resources/Info.plist
 
-# App Store Connect keys: GitHub secrets only, never in the repository
+# Python
+__pycache__/
+*.pyc
+
+# Keys, certificates and environment files: GitHub secrets only, never in the repository
 secrets/
 *.p8
+*.p12
+*.pem
+*.key
+*.cer
+*.mobileprovision
+*.provisionprofile
+*.keystore
+*.jks
+.env
+.env.*

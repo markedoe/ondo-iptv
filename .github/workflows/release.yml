@@ -16,6 +16,9 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deliver:
     name: TestFlight / App Store Connect
@@ -58,7 +61,8 @@ jobs:
           if git fetch -q origin appstore-screenshots; then
             mkdir -p shots fastlane/screenshots/ios fastlane/screenshots/mac
             git archive origin/appstore-screenshots | tar -x -C shots
-            if [ -d shots/mac ]; then mv shots/mac/* fastlane/screenshots/mac/ && rmdir shots/mac; fi
+            if [ -d shots/mac ]; then mv shots/mac/* fastlane/screenshots/mac/ && rm -rf shots/mac; fi
+            find fastlane/screenshots/mac -type f ! -name '*-mac.png' -delete
             rm -f shots/README.md
             mv shots/* fastlane/screenshots/ios/ 2>/dev/null || true
             find fastlane/screenshots -type f | sort
@@ -68,10 +72,7 @@ jobs:
         run: |
           bundle exec fastlane ios metadata
           bundle exec fastlane mac metadata
-      - name: Keep build logs
+      - name: Build log
         if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: release-logs
-          path: ~/Library/Logs/gym
-          if-no-files-found: ignore
+        # Printed in the job log, where GitHub masks the secrets (an uploaded file would not be masked).
+        run: tail -n 150 ~/Library/Logs/gym/*.log 2>/dev/null || true

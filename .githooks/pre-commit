@@ -1,0 +1,4 @@
+#!/bin/sh
+# Blocks commits that add secrets or personal data. Enable once per clone:
+#   git config core.hooksPath .githooks
+exec python3 "$(git rev-parse --show-toplevel)/.claude/hooks/leak_guard.py" --staged

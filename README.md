@@ -72,6 +72,13 @@ Tests du cœur :
 cd Packages/IPTVCore && swift test
 ```
 
+## Secrets et vie privée
+
+Le dépôt est public : les clés de publication vivent uniquement dans les secrets GitHub
+([docs/RELEASE.md](docs/RELEASE.md)). Un garde-fou bloque les secrets et données personnelles avant tout
+commit — hook Claude Code (`.claude/settings.json`), hook git (`git config core.hooksPath .githooks`) et
+CI (`.claude/hooks/leak_guard.py` + gitleaks sur tout l'historique).
+
 ## Licence
 
 MIT — voir [LICENSE](LICENSE).
