@@ -172,6 +172,11 @@ examen*. L'examen prend de quelques heures à quelques jours.
 - Testez l'APK de debug (artefact **android-builds** du workflow *Android*) sur un téléphone et une
   tablette : ajout d'une playlist Xtream et M3U, lecture d'un film avec reprise, épisode suivant, direct,
   image dans l'image, thème clair et sombre, rotation, et retour depuis le lecteur.
+- Puis installez **la version de test interne** (le bundle de release, réduit et optimisé par R8 — ce que
+  la CI ne fait qu'assembler, sans le lancer) depuis le lien de test de la Play Console, et refaites au
+  moins : premier lancement, ajout d'une playlist, ouverture d'une fiche, lecture, retour et réouverture
+  de l'app (les playlists et la progression doivent être conservées). C'est la version qu'utiliseront les
+  testeurs puis le public.
 
 ## G. Ce que fait la CI
 
