@@ -40,6 +40,20 @@ final class ContentBuilderTests: XCTestCase {
         XCTAssertEqual(Set(first.channels.map(\.id)).count, first.channels.count, "duplicate URLs still get unique ids")
     }
 
+    func testEpisodesSharingAURLGetUniqueIDs() throws {
+        let m3u = """
+        #EXTM3U
+        #EXTINF:-1 group-title="Series | Drama",Show S01E01
+        http://example.com/same.mp4
+        #EXTINF:-1 group-title="Series | Drama",Show S01E02
+        http://example.com/same.mp4
+        """
+        let content = try PlaylistLoader(http: MockHTTPClient(), localFileURL: { URL(fileURLWithPath: $0) }).parse(Data(m3u.utf8))
+        let episodes = try XCTUnwrap(content.series.first).episodes
+        XCTAssertEqual(episodes.map(\.code), ["S01E01", "S01E02"])
+        XCTAssertEqual(Set(episodes.map(\.id)).count, 2, "progress is kept per episode")
+    }
+
     func testCatchupAttributes() throws {
         let channels = try content().channels
         XCTAssertEqual(channels[0].catchup, CatchupInfo(mode: .shift, days: 2), "header defaults apply")

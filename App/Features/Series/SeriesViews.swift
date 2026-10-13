@@ -73,8 +73,8 @@ struct SeriesDetailView: View {
             posterURL: details?.info.posterURL ?? series.coverURL,
             backdropURL: details?.info.backdropURL ?? model.backdropURL(for: .series(series)),
             facts: facts
-        ) {
-            VStack(alignment: .leading, spacing: 18) {
+        ) { metrics in
+            metrics.actionsLayout {
                 if let next {
                     let code = next.episode.code
                     PrimaryPlayButton(
@@ -103,6 +103,7 @@ struct SeriesDetailView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .frame(maxWidth: metrics.textWidth, alignment: .leading)
             .padding(.horizontal, metrics.gutter)
             if let details, !details.seasons.isEmpty {
                 episodes(details, metrics: metrics)

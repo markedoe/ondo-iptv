@@ -94,8 +94,8 @@ struct MovieDetailView: View {
             posterURL: details?.posterURL ?? movie.posterURL,
             backdropURL: details?.backdropURL ?? model.backdropURL(for: .movie(movie)),
             facts: facts
-        ) {
-            VStack(alignment: .leading, spacing: 18) {
+        ) { metrics in
+            metrics.actionsLayout {
                 PrimaryPlayButton(
                     title: resumable ? "Resume" : "Play",
                     subtitle: progress?.timeLeftText,
@@ -127,6 +127,7 @@ struct MovieDetailView: View {
                 }
                 InfoLines(details: details)
             }
+            .frame(maxWidth: metrics.textWidth, alignment: .leading)
             .padding(.horizontal, metrics.gutter)
             let similar = model.similarMovies(to: movie)
             if !similar.isEmpty {

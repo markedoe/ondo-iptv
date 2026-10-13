@@ -86,7 +86,7 @@ public enum M3UContentBuilder {
                 let season = parsed?.season ?? 1
                 let number = parsed?.episode ?? (series.episodes.filter { $0.season == season }.count + 1)
                 series.episodes.append(Episode(
-                    id: "e" + StableHash.hex(entry.url.absoluteString),
+                    id: uniqueID("e" + StableHash.hex(entry.url.absoluteString)),
                     title: parsed?.episodeTitle ?? entry.title,
                     season: season,
                     number: number,

@@ -8,7 +8,7 @@ struct DetailScaffold<Actions: View, Content: View>: View {
     let posterURL: URL?
     let backdropURL: URL?
     let facts: [String]
-    @ViewBuilder var actions: () -> Actions
+    @ViewBuilder var actions: (ShelfMetrics) -> Actions
     @ViewBuilder var content: (ShelfMetrics) -> Content
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -30,7 +30,7 @@ struct DetailScaffold<Actions: View, Content: View>: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     header(width: proxy.size.width, topInset: topInset, metrics: metrics)
-                    actions()
+                    actions(metrics)
                         .padding(.horizontal, metrics.gutter)
                     content(metrics)
                 }
@@ -123,6 +123,16 @@ struct DetailScaffold<Actions: View, Content: View>: View {
             }
             .accessibilityHidden(true)
     }
+}
+
+extension ShelfMetrics {
+    /// Detail page actions: stacked on iPhone, on one line on iPad and Mac.
+    var actionsLayout: AnyLayout {
+        compact ? AnyLayout(VStackLayout(alignment: .leading, spacing: 18)) : AnyLayout(HStackLayout(alignment: .top, spacing: 28))
+    }
+
+    /// Plot and credits stay readable on wide screens.
+    var textWidth: CGFloat { compact ? .infinity : 640 }
 }
 
 /// Main action of a detail page: Play / Resume, full width on iPhone.
