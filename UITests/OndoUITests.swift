@@ -176,9 +176,10 @@ final class OndoUITests: XCTestCase {
             field.typeText("news")
             sleep(2)
             snapshot("11-search")
-            // The keyboard covers the tab bar.
+            // The keyboard covers the tab bar: cancel the search (iOS 18) or submit it (iOS 26 has no Cancel).
             let cancel = app.buttons["Cancel"]
-            if cancel.exists { cancel.tap() }
+            if cancel.exists { cancel.tap() } else { field.typeText("\n") }
+            sleep(1)
         }
 
         app.tabBars.buttons["Home"].tap()

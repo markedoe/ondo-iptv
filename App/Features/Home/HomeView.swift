@@ -59,9 +59,12 @@ struct HomeView: View {
         }
     }
 
+    /// Height of the bars above the carousel. Under the iOS 26 navigation bar the reader only reports the
+    /// status bar, so the bar itself is added on iPhone (on iPad the carousel text sits at the bottom).
     private func topInset(_ proxy: GeometryProxy) -> CGFloat {
         #if os(iOS)
-        proxy.safeAreaInsets.top
+        let inset = proxy.safeAreaInsets.top
+        return compact && inset < 80 ? inset + 44 : inset
         #else
         0
         #endif
