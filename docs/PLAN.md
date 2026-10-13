@@ -119,12 +119,12 @@ Fonctions jugées indispensables pour un lecteur moderne, traitées par jalons :
 - [ ] Portail Stalker/MAG et source Real-Debrid dans la version App Store — en attente de décision
 - [x] Remplacer le chargeur d'images maison par Nuke/NukeUI (cache disque, coalescence, sous-échantillonnage)
 
-## 4. Phase 7 — Expérience films et séries (en cours)
+## 4. Phase 7 — Expérience films et séries
 - [x] **M-A** textes : lecteur sans contenu, films et séries mis en avant
 - [x] **M-B** accueil : carrousel à la une, rangées (reprise, Ma liste, ajouts récents), thème sombre
-- [ ] **M-C** fiches film / série plein écran (image de fond, actions, distribution, saisons, épisodes)
-- [ ] **M-D** onglets Films / Séries en rangées par catégorie
-- [ ] Captures App Store du Mac
+- [x] **M-C** fiches film / série plein écran (image de fond, actions, distribution, saisons, épisodes)
+- [x] **M-D** onglets Films / Séries en rangées par catégorie (puces, reprise, Ma liste, recherche)
+- [x] Captures App Store du Mac (workflow *App Store screenshots*)
 
 ## 5. Risques
 
