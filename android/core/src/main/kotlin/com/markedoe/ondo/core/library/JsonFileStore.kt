@@ -69,7 +69,7 @@ class JsonFileStore(
             if (target.isFile) {
                 Files.copy(target.toPath(), backupFile(name).toPath(), StandardCopyOption.REPLACE_EXISTING)
             }
-            val temporary = File.createTempFile(".$name", ".tmp", directory)
+            val temporary = File.createTempFile("ondo-$name-", ".tmp", directory)
             try {
                 FileOutputStream(temporary).use { stream ->
                     stream.write(text.encodeToByteArray())

@@ -147,7 +147,8 @@ object CatchupUrlBuilder {
      * `{utc}` `{start}` `${start}` start (unix) · `{utcend}` `{end}` `${end}` end · `{lutc}` `{now}` `${now}`
      * `{timestamp}` now · `{duration}` seconds · `{duration:60}` minutes · `{offset}` / `{offset:60}` now - start ·
      * `{Y}` `{m}` `{d}` `{H}` `{M}` `{S}` start components (UTC) · `{utc:Y-m-d:H-M}` `{end:YmdHMS}` formatted.
-     * Unknown tokens are left as they are.
+     * Unknown tokens are left as they are. Token names are letters only (as in the Swift app), so
+     * `{timestamp_start}` is not a token.
      */
     fun fill(template: String, start: Long, end: Long, now: Long): String {
         val startTs = start / 1000
@@ -161,7 +162,7 @@ object CatchupUrlBuilder {
             val divider = argument?.toIntOrNull()?.let { maxOf(it, 1) }
             val pattern = if (argument != null && divider == null) argument else null
             when (name) {
-                "utc", "start", "timestamp_start" -> pattern?.let { format(start, it) } ?: startTs.toString()
+                "utc", "start" -> pattern?.let { format(start, it) } ?: startTs.toString()
                 "utcend", "end" -> pattern?.let { format(end, it) } ?: endTs.toString()
                 "lutc", "now", "timestamp", "current" -> pattern?.let { format(now, it) } ?: nowTs.toString()
                 "duration" -> (duration / (divider ?: 1)).toString()

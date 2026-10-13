@@ -12,6 +12,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -38,12 +39,7 @@ class OkHttpClientAdapter(
             return withContext(ioDispatcher) { file.readBytes() }
         }
         val httpUrl = url.toHttpUrlOrNull() ?: throw HttpException.InvalidUrl(url)
-        val request = Request.Builder().url(httpUrl).apply {
-            for ((name, value) in headers) header(name, value)
-            if (headers.keys.none { it.equals("User-Agent", ignoreCase = true) }) {
-                header("User-Agent", DEFAULT_IPTV_USER_AGENT)
-            }
-        }.build()
+        val request = Request.Builder().url(httpUrl).headers(requestHeaders(headers)).build()
         val call = client.newCall(request)
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { call.cancel() }
@@ -72,6 +68,26 @@ class OkHttpClientAdapter(
     }
 
     companion object {
+        /**
+         * Request headers. Provider values with accents (`#EXTVLCOPT:http-user-agent=Télé…`) are sent as-is
+         * instead of failing the request; headers with an invalid name are skipped.
+         */
+        internal fun requestHeaders(headers: Map<String, String>): Headers {
+            val builder = Headers.Builder()
+            for ((name, value) in headers) {
+                try {
+                    builder.set(name, value)
+                } catch (_: IllegalArgumentException) {
+                    try {
+                        builder.addUnsafeNonAscii(name, value)
+                    } catch (_: IllegalArgumentException) {
+                    }
+                }
+            }
+            if (builder["User-Agent"] == null) builder.set("User-Agent", DEFAULT_IPTV_USER_AGENT)
+            return builder.build()
+        }
+
         /** 60 s per read / connect (provider lists can be slow), 10 min for a whole download. */
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)

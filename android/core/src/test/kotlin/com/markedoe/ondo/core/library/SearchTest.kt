@@ -76,7 +76,7 @@ class SearchTest {
         assertEquals(StableHash.hex("http://x/1"), StableHash.hex("http://x/1"))
         assertNotEquals(StableHash.hex("http://x/1"), StableHash.hex("http://x/2"))
         // Reference values computed with FNV-1a 64 over UTF-8 (identical to the Swift ids).
-        assertEquals("af63bd4c8601b7be", StableHash.hex("a"))
+        assertEquals("af63dc4c8601ec8c", StableHash.hex("a"))
         assertEquals(StableHash.fnv1a("é"), fnv1aReference("é".encodeToByteArray()))
         assertEquals(StableHash.fnv1a("📺 TF1"), fnv1aReference("📺 TF1".encodeToByteArray()))
     }
