@@ -9,8 +9,8 @@ final class MacAppStoreScreenshots: XCTestCase {
         ("02-movie", "movie:Northern Lights"),
         ("03-series", "series:Harbor Lights"),
         ("04-movies", "movies"),
-        ("05-channels", "live"),
-        ("06-tv-guide", "guide"),
+        ("05-tv-guide", "guide"),
+        ("06-channels", "live"),
     ]
 
     override func setUp() {

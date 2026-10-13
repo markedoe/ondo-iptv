@@ -37,11 +37,34 @@ source, target, locale, device = sys.argv[1:5]
 source, target = pathlib.Path(source), pathlib.Path(target) / locale
 target.mkdir(parents=True, exist_ok=True)
 manifest = json.loads((source / "manifest.json").read_text())
+def print_crash(path):
+    """Exception and the crashed thread's frames of an .ips crash report (second JSON document)."""
+    try:
+        text = path.read_text(errors="replace")
+        body = json.loads(text[text.index("\n") + 1:])
+    except (ValueError, OSError) as error:
+        print("unreadable crash report:", error)
+        return
+    print("exception:", body.get("exception"), "| termination:", body.get("termination", {}).get("indicator"))
+    for key in ("asi", "lastExceptionBacktrace"):
+        if body.get(key):
+            print(key, json.dumps(body[key])[:1500])
+    images = body.get("usedImages", [])
+    thread = next((t for t in body.get("threads", []) if t.get("triggered")), None)
+    for frame in (thread or {}).get("frames", [])[:40]:
+        image = images[frame.get("imageIndex", 0)].get("name", "?") if images else "?"
+        print("  ", image, frame.get("symbol", hex(frame.get("imageOffset", 0))), frame.get("sourceFile", ""), frame.get("sourceLine", ""))
+
+
 failures = 0
 for test in manifest:
     for attachment in test.get("attachments", []):
         exported = attachment.get("exportedFileName", "")
         human = attachment.get("suggestedHumanReadableName") or exported
+        if exported.endswith(".ips"):
+            print("--- crash report", human)
+            print_crash(source / exported)
+            continue
         if human.startswith("App UI hierarchy"):
             # What XCTest saw when a test failed (windows, buttons…): printed for the CI log.
             print("---", human)
