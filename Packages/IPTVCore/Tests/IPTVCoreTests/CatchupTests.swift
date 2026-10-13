@@ -14,6 +14,8 @@ final class CatchupTests: XCTestCase {
         let template = "{utc}|${start}|{utcend}|{lutc}|{duration}|{duration:60}|{offset}|{offset:60}|{Y}-{m}-{d} {H}:{M}:{S}|{utc:Y-m-d:H-M}|{end:YmdHMS}|{unknown}"
         let filled = CatchupURLBuilder.fill(template: template, start: start, end: end, now: now)
         XCTAssertEqual(filled, "1760032800|1760032800|1760035500|1760040000|2700|45|7200|120|2025-10-09 18:00:00|2025-10-09:18-00|20251009184500|{unknown}")
+        XCTAssertEqual(CatchupURLBuilder.fill(template: "s={timestamp_start}&{no_such_token}", start: start, end: end, now: now),
+                       "s=1760032800&{no_such_token}")
     }
 
     func testDefaultMode() {

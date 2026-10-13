@@ -3,8 +3,9 @@
 Ce dépôt est **public**. Rien de privé ne doit y entrer, ni dans les fichiers, ni dans les messages de
 commit, ni dans les captures.
 
-- **Secrets** : clés App Store Connect (`.p8`), Key ID, Issuer ID, Team ID, mots de passe, jetons… vont
-  uniquement dans les secrets GitHub (`Settings → Secrets and variables → Actions`, voir `docs/RELEASE.md`).
+- **Secrets** : clés App Store Connect (`.p8`), Key ID, Issuer ID, Team ID, keystore Android (`.jks`) et
+  ses mots de passe, JSON du compte de service Google Play, jetons… vont uniquement dans les secrets GitHub
+  (`Settings → Secrets and variables → Actions`, voir `docs/RELEASE.md` et `docs/RELEASE-ANDROID.md`).
   Ne jamais les écrire dans un fichier du dépôt, un commit, un log ou un artefact de CI.
 - **Vie privée** : aucune adresse e-mail personnelle (seulement les adresses `noreply`), aucun nom réel,
   aucun chemin de dossier personnel, aucune adresse IP de réseau local, aucune donnée d'abonnement IPTV

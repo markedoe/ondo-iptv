@@ -127,7 +127,8 @@ final class XtreamTests: XCTestCase {
             builder.timeshiftURL(streamID: 101, start: start, durationMinutes: 45, serverTimeZone: paris, format: .ts).absoluteString,
             "http://panel.example.com:8080/timeshift/demo/se%2Fcr+et/45/2025-10-09:20-30/101.ts"
         )
-        XCTAssertEqual(builder.m3uURL(format: .ts).query, "username=demo&password=se/cr+et&type=m3u_plus&output=ts")
+        XCTAssertEqual(builder.m3uURL(format: .ts).query, "username=demo&password=se/cr%2Bet&type=m3u_plus&output=ts")
+        XCTAssertTrue(builder.xmltvURL.absoluteString.hasSuffix("password=se/cr%2Bet"), builder.xmltvURL.absoluteString)
     }
 
     func testCredentialsNormalisation() {

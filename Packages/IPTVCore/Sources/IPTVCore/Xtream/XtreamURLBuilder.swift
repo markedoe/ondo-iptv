@@ -24,7 +24,6 @@ public struct XtreamURLBuilder: Sendable {
     }
 
     public func apiURL(action: String? = nil, parameters: [String: String] = [:]) -> URL {
-        var components = URLComponents(string: base + "/player_api.php")!
         var items = [
             URLQueryItem(name: "username", value: credentials.username),
             URLQueryItem(name: "password", value: credentials.password),
@@ -33,8 +32,13 @@ public struct XtreamURLBuilder: Sendable {
         for key in parameters.keys.sorted() {
             items.append(URLQueryItem(name: key, value: parameters[key]))
         }
+        return Self.url(URLComponents(string: base + "/player_api.php")!, items)
+    }
+
+    /// `+` in passwords must be escaped: URLComponents leaves it alone and PHP panels read it as a space.
+    private static func url(_ base: URLComponents, _ items: [URLQueryItem]) -> URL {
+        var components = base
         components.queryItems = items
-        // `+` in passwords must be escaped, URLComponents leaves it alone.
         components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
         return components.url!
     }
@@ -60,35 +64,29 @@ public struct XtreamURLBuilder: Sendable {
     /// Alternative endpoint some panels expose instead of the path form.
     public func timeshiftPHPURL(streamID: Int, start: Date, durationMinutes: Int, serverTimeZone: TimeZone?) -> URL {
         let stamp = Self.timeshiftStamp(start, timeZone: serverTimeZone ?? TimeZone(identifier: "UTC")!)
-        var components = URLComponents(string: base + "/streaming/timeshift.php")!
-        components.queryItems = [
+        return Self.url(URLComponents(string: base + "/streaming/timeshift.php")!, [
             URLQueryItem(name: "username", value: credentials.username),
             URLQueryItem(name: "password", value: credentials.password),
             URLQueryItem(name: "stream", value: String(streamID)),
             URLQueryItem(name: "start", value: stamp),
             URLQueryItem(name: "duration", value: String(max(durationMinutes, 1))),
-        ]
-        return components.url!
+        ])
     }
 
     public var xmltvURL: URL {
-        var components = URLComponents(string: base + "/xmltv.php")!
-        components.queryItems = [
+        Self.url(URLComponents(string: base + "/xmltv.php")!, [
             URLQueryItem(name: "username", value: credentials.username),
             URLQueryItem(name: "password", value: credentials.password),
-        ]
-        return components.url!
+        ])
     }
 
     public func m3uURL(format: XtreamOutputFormat) -> URL {
-        var components = URLComponents(string: base + "/get.php")!
-        components.queryItems = [
+        Self.url(URLComponents(string: base + "/get.php")!, [
             URLQueryItem(name: "username", value: credentials.username),
             URLQueryItem(name: "password", value: credentials.password),
             URLQueryItem(name: "type", value: "m3u_plus"),
             URLQueryItem(name: "output", value: format.rawValue),
-        ]
-        return components.url!
+        ])
     }
 
     static func timeshiftStamp(_ date: Date, timeZone: TimeZone) -> String {

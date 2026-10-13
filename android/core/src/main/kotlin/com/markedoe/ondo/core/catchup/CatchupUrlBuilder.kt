@@ -140,7 +140,7 @@ object CatchupUrlBuilder {
 
     // Templates
 
-    private val tokenRegex = Regex("""\$?\{([a-zA-Z]+)(?::([^}]*))?\}""")
+    private val tokenRegex = Regex("""\$?\{([a-zA-Z_]+)(?::([^}]*))?\}""")
 
     /**
      * Replaces catch-up template tokens:
@@ -162,7 +162,7 @@ object CatchupUrlBuilder {
             val divider = argument?.toIntOrNull()?.let { maxOf(it, 1) }
             val pattern = if (argument != null && divider == null) argument else null
             when (name) {
-                "utc", "start" -> pattern?.let { format(start, it) } ?: startTs.toString()
+                "utc", "start", "timestamp_start" -> pattern?.let { format(start, it) } ?: startTs.toString()
                 "utcend", "end" -> pattern?.let { format(end, it) } ?: endTs.toString()
                 "lutc", "now", "timestamp", "current" -> pattern?.let { format(now, it) } ?: nowTs.toString()
                 "duration" -> (duration / (divider ?: 1)).toString()

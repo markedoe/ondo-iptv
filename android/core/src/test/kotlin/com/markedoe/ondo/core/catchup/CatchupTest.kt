@@ -40,7 +40,7 @@ class CatchupTest {
     @Test
     fun moreTemplateTokens() {
         assertEquals(
-            "1760035500|1760040000|1760040000|1760040000|2700|{timestamp_start}|2025|7200",
+            "1760035500|1760040000|1760040000|1760040000|2700|1760032800|2025|7200",
             CatchupUrlBuilder.fill("\${end}|{now}|{timestamp}|{current}|{duration:0}|{timestamp_start}|{utc:Y}|{offset:x}", start, end, now),
             "a non-numeric divider is ignored for durations; names are letters only",
         )

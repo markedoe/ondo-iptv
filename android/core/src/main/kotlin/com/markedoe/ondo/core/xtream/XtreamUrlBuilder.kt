@@ -22,7 +22,7 @@ class XtreamUrlBuilder(val credentials: XtreamCredentials) {
         val items = mutableListOf("username" to credentials.username, "password" to credentials.password)
         if (action != null) items.add("action" to action)
         for (key in parameters.keys.sorted()) items.add(key to parameters.getValue(key))
-        return "$base/player_api.php?" + Urls.query(items).replace("+", "%2B")
+        return "$base/player_api.php?" + query(items)
     }
 
     fun liveUrl(streamId: Int, format: XtreamOutputFormat): String = "$base/live/$user/$pass/$streamId.${format.rawValue}"
@@ -45,7 +45,7 @@ class XtreamUrlBuilder(val credentials: XtreamCredentials) {
     /** Alternative endpoint some panels expose instead of the path form. */
     fun timeshiftPhpUrl(streamId: Int, start: Long, durationMinutes: Int, serverTimeZone: ZoneId?): String {
         val stamp = timeshiftStamp(start, serverTimeZone ?: ZoneOffset.UTC)
-        return "$base/streaming/timeshift.php?" + Urls.query(
+        return "$base/streaming/timeshift.php?" + query(
             listOf(
                 "username" to credentials.username,
                 "password" to credentials.password,
@@ -58,10 +58,10 @@ class XtreamUrlBuilder(val credentials: XtreamCredentials) {
 
     /** The panel's XMLTV guide. */
     val xmltvUrl: String
-        get() = "$base/xmltv.php?" + Urls.query(listOf("username" to credentials.username, "password" to credentials.password))
+        get() = "$base/xmltv.php?" + query(listOf("username" to credentials.username, "password" to credentials.password))
 
     /** The panel's M3U export (`get.php`), used when "force M3U" is on. */
-    fun m3uUrl(format: XtreamOutputFormat): String = "$base/get.php?" + Urls.query(
+    fun m3uUrl(format: XtreamOutputFormat): String = "$base/get.php?" + query(
         listOf(
             "username" to credentials.username,
             "password" to credentials.password,
@@ -69,6 +69,9 @@ class XtreamUrlBuilder(val credentials: XtreamCredentials) {
             "output" to format.rawValue,
         ),
     )
+
+    /** Query string where `+` is escaped as `%2B`: PHP panels decode a bare `+` as a space. */
+    private fun query(items: List<Pair<String, String>>): String = Urls.query(items).replace("+", "%2B")
 
     /** A live URL recognised inside a plain M3U playlist. */
     data class ParsedLiveUrl(

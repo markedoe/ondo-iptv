@@ -115,7 +115,7 @@ public enum CatchupURLBuilder {
     // MARK: - Templates
 
     // swiftlint:disable:next force_try
-    private static let tokenRegex = try! NSRegularExpression(pattern: #"\$?\{([a-zA-Z]+)(?::([^}]*))?\}"#)
+    private static let tokenRegex = try! NSRegularExpression(pattern: #"\$?\{([a-zA-Z_]+)(?::([^}]*))?\}"#)
 
     /// Replaces catch-up template tokens:
     /// `{utc}` `{start}` `${start}` start (unix) · `{utcend}` `{end}` `${end}` end · `{lutc}` `{now}` `${now}`
