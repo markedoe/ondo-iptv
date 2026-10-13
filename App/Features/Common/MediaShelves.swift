@@ -10,29 +10,42 @@ struct ShelfMetrics {
     var gutter: CGFloat { compact ? 16 : 24 }
 }
 
+/// Value pushed to open the poster grid of a movie or series category.
+struct PosterCategoryRoute: Hashable {
+    let category: MediaCategory
+}
+
 /// A titled horizontal row ("shelf") with an optional "See All" link.
 struct Shelf<Content: View>: View {
-    let title: LocalizedStringKey
-    var seeAll: AppSection?
-    let metrics: ShelfMetrics
-    @ViewBuilder var content: () -> Content
+    private let title: Text
+    private let seeAll: AnyHashableRoute?
+    private let metrics: ShelfMetrics
+    private let content: () -> Content
+
+    init(title: LocalizedStringKey, seeAll: AppSection? = nil, metrics: ShelfMetrics, @ViewBuilder content: @escaping () -> Content) {
+        self.title = Text(title)
+        self.seeAll = seeAll.map(AnyHashableRoute.section)
+        self.metrics = metrics
+        self.content = content
+    }
+
+    /// A provider category: its name is shown as is and "See All" opens its grid.
+    init(category: MediaCategory, metrics: ShelfMetrics, @ViewBuilder content: @escaping () -> Content) {
+        self.title = Text(verbatim: category.name)
+        self.seeAll = .category(PosterCategoryRoute(category: category))
+        self.metrics = metrics
+        self.content = content
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Text(title)
+                title
                     .font(.title3.bold())
+                    .lineLimit(1)
                 Spacer()
                 if let seeAll {
-                    NavigationLink(value: seeAll) {
-                        HStack(spacing: 3) {
-                            Text("See All")
-                            Image(systemName: "chevron.right").font(.caption.weight(.bold))
-                        }
-                        .font(.subheadline.weight(.semibold))
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.accentColor)
+                    seeAllLink(seeAll)
                 }
             }
             .padding(.horizontal, metrics.gutter)
@@ -45,13 +58,38 @@ struct Shelf<Content: View>: View {
             .scrollClipDisabled()
         }
     }
+
+    @ViewBuilder
+    private func seeAllLink(_ route: AnyHashableRoute) -> some View {
+        let label = HStack(spacing: 3) {
+            Text("See All")
+            Image(systemName: "chevron.right").font(.caption.weight(.bold))
+        }
+        .font(.subheadline.weight(.semibold))
+        Group {
+            switch route {
+            case .section(let section): NavigationLink(value: section) { label }
+            case .category(let category): NavigationLink(value: category) { label }
+            }
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.accentColor)
+    }
+}
+
+/// Where a shelf's "See All" leads.
+enum AnyHashableRoute: Hashable {
+    case section(AppSection)
+    case category(PosterCategoryRoute)
 }
 
 /// Poster of a movie or series opening its detail page.
 struct ShowcasePoster: View {
     @Environment(AppModel.self) private var model
     let item: ShowcaseItem
-    let width: CGFloat
+    /// Fixed width in rows; `nil` fills a grid cell.
+    let width: CGFloat?
+    var showsTitle = false
 
     var body: some View {
         switch item {
@@ -71,9 +109,16 @@ struct ShowcasePoster: View {
             if case .movie(let movie) = item { return model.progress(movie: movie)?.progress }
             return nil
         }()
-        return PosterArtwork(url: item.posterURL, title: item.title, progress: progress)
-            .frame(width: width)
-            .accessibilityLabel(Text(item.title))
+        return VStack(alignment: .leading, spacing: 6) {
+            PosterArtwork(url: item.posterURL, title: item.title, progress: progress)
+            if showsTitle {
+                Text(item.title)
+                    .font(.caption.weight(.medium))
+                    .lineLimit(1)
+            }
+        }
+        .frame(width: width)
+        .accessibilityLabel(Text(item.title))
     }
 }
 

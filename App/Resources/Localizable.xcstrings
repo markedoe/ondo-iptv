@@ -2671,6 +2671,16 @@
         }
       }
     },
+    "Recently Added": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouts récents"
+          }
+        }
+      }
+    },
     "Recently Added Movies": {
       "localizations": {
         "fr": {

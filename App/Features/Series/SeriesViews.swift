@@ -3,10 +3,7 @@ import IPTVCore
 
 struct SeriesListView: View {
     var body: some View {
-        CategoryBrowser(type: .series, pseudoCategories: [PseudoCategory.all(.series), PseudoCategory.favorites(.series)]) { category in
-            SeriesGridView(category: category)
-        }
-        .navigationTitle("Series")
+        VODBrowser(type: .series)
     }
 }
 

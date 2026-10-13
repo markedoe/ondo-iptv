@@ -3,10 +3,7 @@ import IPTVCore
 
 struct MoviesView: View {
     var body: some View {
-        CategoryBrowser(type: .movie, pseudoCategories: [PseudoCategory.all(.movie), PseudoCategory.favorites(.movie)]) { category in
-            MovieGridView(category: category)
-        }
-        .navigationTitle("Movies")
+        VODBrowser(type: .movie)
     }
 }
 

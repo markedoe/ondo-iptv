@@ -319,21 +319,7 @@ struct CategoryBrowser<Detail: View>: View {
         }
         .buttonStyle(.plain)
         .listRowBackground(sideBySide && selected?.id == category.id ? Color.accentColor.opacity(0.18) : nil)
-        .contextMenu {
-            Button {
-                model.setHidden(true, category: category)
-            } label: {
-                Label("Hide Category", systemImage: "eye.slash")
-            }
-            if model.settings.parentalControlEnabled {
-                let isLockedSetting = model.isLockConfigured(category)
-                Button {
-                    model.setLocked(!isLockedSetting, category: category)
-                } label: {
-                    Label(isLockedSetting ? "Unlock Category" : "Lock Category", systemImage: isLockedSetting ? "lock.open" : "lock")
-                }
-            }
-        }
+        .contextMenu { CategoryMenu(category: category) }
     }
 
     private func open(_ category: MediaCategory) {
