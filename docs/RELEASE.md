@@ -18,14 +18,14 @@ increased »). Deux solutions :
 - **Rester privé** : *Settings (du compte) → Billing and plans* : ajoutez un moyen de paiement et un budget
   pour Actions. Les minutes macOS sont facturées ; GitHub Pages exige alors un compte Pro (voir A2).
 
-Conseil : renommez d'abord le dépôt (*Settings → General → Repository name*, par ex. `ondo`) et
-prévenez-moi : je mettrai à jour les adresses de la fiche (`fastlane/metadata/*/…_url.txt`) et du site.
+Le dépôt s'appelle `markedoe/ondo-iptv` ; les adresses de la fiche (`fastlane/metadata/*/…_url.txt`) et
+du site en dépendent : à mettre à jour s'il est renommé.
 
 ### A2. Activer le site (politique de confidentialité et assistance)
 
 Apple exige une URL de politique de confidentialité. *Settings → Pages → Build and deployment → Source :
 GitHub Actions*, puis *Actions → Website → Run workflow*. Le site est publié sur
-`https://markedoe.github.io/<nom-du-dépôt>/`.
+`https://markedoe.github.io/ondo-iptv/`.
 
 ### A3. Secrets du dépôt
 
@@ -99,7 +99,7 @@ Si l'app a été créée pour iOS seul : barre latérale → **Add Platform** �
   « This is not a trader account » si vous ne tirez aucun revenu de l'app. Sans réponse, l'app est retirée
   de l'UE.
 - **Digital Goods and Services** : « No » (rien ne se vend ni ne s'achète dans l'app).
-- **Privacy Policy URL** : `https://markedoe.github.io/<nom-du-dépôt>/privacy.html` (après A2).
+- **Privacy Policy URL** : `https://markedoe.github.io/ondo-iptv/privacy.html` (après A2).
 
 ### C3. App Privacy
 

@@ -20,7 +20,7 @@ sous licence MIT. Ondo ne fournit aucun contenu : il lit les sources ajoutées p
 ## 2. Architecture
 
 ```
-ondo/
+ondo-iptv/
 ├── project.yml                     # XcodeGen : cible "Ondo" iOS + macOS
 ├── Packages/IPTVCore/              # logique métier, sans UI
 │   ├── Models/        Playlist, Channel, Movie, Series, Episode, EPGProgram, Favorite, History, PlaybackItem
