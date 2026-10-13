@@ -53,10 +53,15 @@ final class AppStoreScreenshots: XCTestCase {
         sleep(6)
         capture("01-home")
 
-        // Movies.
+        // A movie page.
         open(section: 1, sidebarIndex: 1)
         openAllCategory()
-        capture("02-movies")
+        let movie = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Northern Lights'")).firstMatch
+        if movie.waitForExistence(timeout: 10) {
+            movie.tap()
+            sleep(3)
+        }
+        capture("02-movie")
 
         // A series with its seasons and episodes.
         open(section: 2, sidebarIndex: 2)

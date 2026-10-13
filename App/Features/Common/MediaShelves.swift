@@ -144,7 +144,7 @@ struct ContinueCard: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) {
                                 Image(systemName: "play.fill").font(.caption)
-                                Text(remaining).font(.caption.weight(.semibold))
+                                Text(entry.timeLeftText).font(.caption.weight(.semibold))
                             }
                             .foregroundStyle(.white)
                             ProgressBar(value: entry.progress)
@@ -171,11 +171,6 @@ struct ContinueCard: View {
         }
     }
 
-    private var remaining: String {
-        let seconds = max(entry.duration - entry.position, 0)
-        guard seconds > 60 else { return String(localized: "Resume") }
-        return String(localized: "\(Int(seconds / 60)) min left")
-    }
 }
 
 struct MovieContextMenu: View {
@@ -226,5 +221,14 @@ struct MyListLabel: View {
         } else {
             Label("Add to My List", systemImage: "plus")
         }
+    }
+}
+
+extension HistoryEntry {
+    /// "42 min left", or "Resume" for the last minute.
+    var timeLeftText: String {
+        let seconds = max(duration - position, 0)
+        guard seconds > 60 else { return String(localized: "Resume") }
+        return String(localized: "\(Int(seconds / 60)) min left")
     }
 }

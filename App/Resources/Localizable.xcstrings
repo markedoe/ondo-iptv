@@ -971,6 +971,16 @@
         }
       }
     },
+    "Episodes": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Épisodes"
+          }
+        }
+      }
+    },
     "Every 12 hours": {
       "localizations": {
         "fr": {
@@ -1461,6 +1471,16 @@
         }
       }
     },
+    "Less": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moins"
+          }
+        }
+      }
+    },
     "Light": {
       "localizations": {
         "fr": {
@@ -1747,6 +1767,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plus"
+          }
+        }
+      }
+    },
+    "More Like This": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titres similaires"
           }
         }
       }
@@ -3887,6 +3917,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Regardez jusqu'à 4 chaînes à la fois. Seule celle en surbrillance a le son."
+          }
+        }
+      }
+    },
+    "Watched": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vu"
           }
         }
       }

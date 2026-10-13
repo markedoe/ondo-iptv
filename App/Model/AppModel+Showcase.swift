@@ -162,3 +162,16 @@ extension AppModel {
         return (last.episode, last.season)
     }
 }
+
+/// "More like this": other titles of the same category (none from a locked or hidden category).
+extension AppModel {
+    func similarMovies(to movie: Movie, limit: Int = 15) -> [Movie] {
+        guard !excludedCategoryIDs.contains(movie.categoryID) else { return [] }
+        return Array((index.moviesByCategory[movie.categoryID] ?? []).lazy.filter { $0.id != movie.id }.prefix(limit))
+    }
+
+    func similarSeries(to series: Series, limit: Int = 15) -> [Series] {
+        guard !excludedCategoryIDs.contains(series.categoryID) else { return [] }
+        return Array((index.seriesByCategory[series.categoryID] ?? []).lazy.filter { $0.id != series.id }.prefix(limit))
+    }
+}

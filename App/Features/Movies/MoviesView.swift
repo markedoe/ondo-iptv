@@ -63,20 +63,7 @@ struct MovieGridView: View {
                         )
                     }
                     .buttonStyle(.plain)
-                    .contextMenu {
-                        Button {
-                            model.play(movie)
-                        } label: {
-                            Label("Play", systemImage: "play.fill")
-                        }
-                        Button {
-                            model.toggleFavorite(movie)
-                        } label: {
-                            Label(model.isFavorite(.movie, id: movie.id) ? "Remove from Favorites" : "Add to Favorites",
-                                  systemImage: model.isFavorite(.movie, id: movie.id) ? "star.slash" : "star")
-                        }
-                        AddToListMenu(item: .movie(movie))
-                    }
+                    .contextMenu { MovieContextMenu(movie: movie) }
                 }
             }
             .padding()
@@ -104,73 +91,56 @@ struct MovieDetailView: View {
 
     var body: some View {
         let progress = model.progress(movie: movie)
-        ScrollView {
+        let resumable = progress?.isResumable == true
+        DetailScaffold(
+            title: movie.name,
+            posterURL: details?.posterURL ?? movie.posterURL,
+            backdropURL: details?.backdropURL ?? model.backdropURL(for: .movie(movie)),
+            facts: facts
+        ) {
             VStack(alignment: .leading, spacing: 18) {
-                DetailHeader(
-                    title: details?.title.isEmpty == false ? details!.title : movie.name,
-                    posterURL: details?.posterURL ?? movie.posterURL,
-                    backdropURL: details?.backdropURL,
-                    facts: facts
-                )
-
-                HStack(spacing: 12) {
-                    Button {
-                        model.play(movie)
-                    } label: {
-                        Label(progress?.isResumable == true ? "Resume \(Formatting.clock(progress!.position))" : "Play",
-                              systemImage: "play.fill")
-                            .frame(minWidth: 140)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-
-                    if progress?.isResumable == true {
+                PrimaryPlayButton(
+                    title: resumable ? "Resume" : "Play",
+                    subtitle: progress?.timeLeftText,
+                    progress: resumable ? progress?.progress : nil
+                ) {
+                    model.play(movie)
+                }
+                HStack(alignment: .top, spacing: 14) {
+                    MyListAction(item: .movie(movie))
+                    if resumable {
                         Button {
                             model.play(movie, fromStart: true)
                         } label: {
-                            Label("From Start", systemImage: "backward.end.fill")
+                            CircleAction("From Start", systemImage: "backward.end.fill")
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
+                        .buttonStyle(.plain)
                     }
-
-                    Button {
-                        model.toggleFavorite(movie)
-                    } label: {
-                        Image(systemName: model.isFavorite(.movie, id: movie.id) ? "star.fill" : "star")
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .help("Favorite")
-
-                    if let trailer = details?.trailerYouTubeID, let url = URL(string: "https://www.youtube.com/watch?v=\(trailer)") {
-                        Link(destination: url) {
-                            Label("Trailer", systemImage: "play.rectangle")
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
-                    }
-
-                    DownloadButton(item: model.downloadItem(for: movie), compact: true)
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
+                    TrailerAction(youTubeID: details?.trailerYouTubeID)
+                    DownloadAction(item: model.downloadItem(for: movie))
                 }
-
+            }
+        } content: { metrics in
+            VStack(alignment: .leading, spacing: 16) {
                 if isLoading && details == nil && movie.xtreamStreamID != nil {
                     ProgressView()
                 }
-
-                if let plot = details?.plot ?? movie.plot {
-                    Text(plot).font(.body)
+                if let plot = details?.plot ?? movie.plot, !plot.isEmpty {
+                    ExpandablePlot(text: plot)
                 }
                 InfoLines(details: details)
             }
-            .padding()
-            .frame(maxWidth: 900, alignment: .leading)
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, metrics.gutter)
+            let similar = model.similarMovies(to: movie)
+            if !similar.isEmpty {
+                Shelf(title: "More Like This", metrics: metrics) {
+                    ForEach(similar) { other in
+                        ShowcasePoster(item: .movie(other), width: metrics.posterWidth)
+                    }
+                }
+                .padding(.top, 8)
+            }
         }
-        .navigationTitle(movie.name)
-        .inlineNavigationTitle()
         .task {
             details = await model.details(for: movie)
             isLoading = false
@@ -184,52 +154,6 @@ struct MovieDetailView: View {
         if let rating = details?.rating ?? movie.rating, rating > 0 { items.append("★ " + Formatting.rating(rating)) }
         if let genre = details?.genre { items.append(genre) }
         return items
-    }
-}
-
-/// Backdrop + poster + title + facts line shared by movie and series screens.
-struct DetailHeader: View {
-    let title: String
-    let posterURL: URL?
-    let backdropURL: URL?
-    let facts: [String]
-
-    var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            Color.secondary.opacity(0.1)
-                .frame(height: 230)
-                .overlay {
-                    RemoteImage(url: backdropURL ?? posterURL, placeholderText: title, contentMode: .fill, maxPixelSize: 1200)
-                        .blur(radius: backdropURL == nil ? 24 : 0)
-                }
-                .overlay {
-                    LinearGradient(colors: [.clear, .black.opacity(0.75)], startPoint: .center, endPoint: .bottom)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-
-            HStack(alignment: .bottom, spacing: 16) {
-                Color.secondary.opacity(0.2)
-                    .frame(width: 110, height: 165)
-                    .overlay {
-                        RemoteImage(url: posterURL, placeholderText: title, contentMode: .fill, maxPixelSize: 400)
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .shadow(radius: 10)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.title2.bold())
-                        .foregroundStyle(.white)
-                        .lineLimit(3)
-                    if !facts.isEmpty {
-                        Text(facts.joined(separator: " · "))
-                            .font(.subheadline)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .lineLimit(2)
-                    }
-                }
-            }
-            .padding(16)
-        }
     }
 }
 
