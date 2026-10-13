@@ -28,6 +28,27 @@ target = target / "mac" / locale
 target.mkdir(parents=True, exist_ok=True)
 
 
+def diagnose(log):
+    """Why no window: is the app running, did it crash, what did it log."""
+    print("--- app output ---")
+    print(log.read_text(errors="replace")[-4000:] if log.exists() else "(no output file)")
+    print("--- processes ---")
+    subprocess.run(["pgrep", "-lf", "Ondo"])
+    print("--- windows ---")
+    subprocess.run(["osascript", "-e", 'tell application "System Events" to get name of every window of '
+                    'every process whose name is "Ondo"'])
+    print("--- crash reports ---")
+    reports = sorted(pathlib.Path.home().glob("Library/Logs/DiagnosticReports/Ondo*"))
+    for report in reports[-2:]:
+        print(report.name)
+        print(report.read_text(errors="replace")[:6000])
+    print("--- system log ---")
+    system_log = subprocess.run(["log", "show", "--last", "2m", "--style", "compact", "--predicate",
+                                 'process == "Ondo" OR eventMessage CONTAINS "Ondo"'],
+                                capture_output=True, text=True, errors="replace").stdout
+    print("\n".join(system_log.splitlines()[-150:]))
+
+
 def capture(name, route):
     arguments = ["-uitest-reset", "-uitest-fixture", "-uitest-showcase",
                  "-uitest-route", route, "-uitest-window", "1",
@@ -52,8 +73,8 @@ def capture(name, route):
             early_shot = True
     if rect is None:
         subprocess.run(["screencapture", "-x", str(target / f"{name}-failed.png")])
+        diagnose(log)
         subprocess.run(["pkill", "-x", "Ondo"])
-        print(log.read_text(errors="replace")[-4000:] if log.exists() else "(no output)")
         sys.exit(f"{name}: the app did not report its window")
     (target / f"{name}-waiting.png").unlink(missing_ok=True)
     time.sleep(12)  # catalogue, artwork and guide
