@@ -248,7 +248,7 @@ struct CategoryBrowser<Detail: View>: View {
     }
 
     private var categoryList: some View {
-        List {
+        let list = List {
             if !pseudoCategories.isEmpty && filter.isEmpty {
                 Section {
                     ForEach(pseudoCategories) { category in
@@ -262,19 +262,20 @@ struct CategoryBrowser<Detail: View>: View {
                 }
             }
         }
-        .searchable(text: $filter, placement: searchPlacement, prompt: Text("Filter categories"))
         #if os(macOS)
-        .listStyle(.sidebar)
+        // On the Mac `.searchable` lives in the window toolbar, where the detail (the channel list) has its
+        // own search field: two of them in one toolbar make AppKit's layout loop and the app crash.
+        return VStack(spacing: 0) {
+            TextField("Filter categories", text: $filter)
+                .textFieldStyle(.roundedBorder)
+                .padding(8)
+            list.listStyle(.sidebar)
+        }
         #else
-        .modifier(AdaptiveListStyle(plain: sideBySide))
-        #endif
-    }
-
-    private var searchPlacement: SearchFieldPlacement {
-        #if os(macOS)
-        return .automatic
-        #else
-        return sideBySide ? .automatic : .navigationBarDrawer(displayMode: .automatic)
+        return list
+            .searchable(text: $filter, placement: sideBySide ? .automatic : .navigationBarDrawer(displayMode: .automatic),
+                        prompt: Text("Filter categories"))
+            .modifier(AdaptiveListStyle(plain: sideBySide))
         #endif
     }
 
