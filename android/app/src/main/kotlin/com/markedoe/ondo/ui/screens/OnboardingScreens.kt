@@ -111,10 +111,10 @@ fun WelcomeScreen(onAddPlaylist: () -> Unit, onTryDemo: () -> Unit, isLoading: B
             Feature(Icons.Rounded.Cast, R.string.feature_player_title, R.string.feature_player_text)
         }
         Spacer(Modifier.height(28.dp))
-        Button(onClick = onAddPlaylist, modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp).testTag("addPlaylist")) {
+        Button(onClick = onAddPlaylist, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().testTag("addPlaylist")) {
             Text(stringResource(R.string.add_playlist))
         }
-        OutlinedButton(onClick = onTryDemo, enabled = !isLoading, modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp).padding(top = 8.dp).testTag("demoButton")) {
+        OutlinedButton(onClick = onTryDemo, enabled = !isLoading, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().padding(top = 8.dp).testTag("demoButton")) {
             if (isLoading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.try_demo))
         }
         Text(

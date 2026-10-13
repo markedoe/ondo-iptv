@@ -43,6 +43,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -114,7 +116,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
     val facts = listOfNotNull(
         movie.year?.toString() ?: state.details?.releaseDate?.take(4),
         state.details?.durationSeconds?.takeIf { it > 0 }?.let { durationText(it) },
-        (state.details?.rating ?: movie.rating)?.takeIf { it > 0 }?.let { "★ " + "%.1f".format(it) },
+        (state.details?.rating ?: movie.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
         state.details?.genre,
     )
     val resumable = state.progress?.let { !it.finished && it.fraction > 0f } == true
@@ -145,7 +147,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
     val facts = listOfNotNull(
         series.year?.toString(),
         seasonCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.seasons, it, it) },
-        (state.details?.rating ?: series.rating)?.takeIf { it > 0 }?.let { "★ " + "%.1f".format(it) },
+        (state.details?.rating ?: series.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
         state.details?.genre ?: series.genre,
     )
     val season = state.seasons.firstOrNull { it.number == state.selectedSeason } ?: state.seasons.firstOrNull()
@@ -275,7 +277,7 @@ private fun PlayButton(title: String, progress: WatchProgress?, onClick: () -> U
             onClick = onClick,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
             contentPadding = PaddingValues(vertical = 14.dp, horizontal = 24.dp),
-            modifier = Modifier.fillMaxWidth().widthIn(max = 420.dp).testTag("detailPlay"),
+            modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().testTag("detailPlay"),
         ) {
             Icon(Icons.Rounded.PlayArrow, contentDescription = null)
             Spacer(Modifier.width(8.dp))
@@ -358,6 +360,11 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
 }
 
 /** "2 h 08 min" / "45 min". */
+/** "7.8" / "7,8", in the language of the interface. */
+@Composable
+@ReadOnlyComposable
+private fun ratingText(value: Double): String = String.format(LocalConfiguration.current.locales[0], "%.1f", value)
+
 fun durationText(seconds: Int): String {
     val minutes = seconds / 60
     return if (minutes >= 60) "%d h %02d min".format(minutes / 60, minutes % 60) else "$minutes min"
