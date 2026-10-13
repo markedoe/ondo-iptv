@@ -22,7 +22,9 @@ final class MacAppStoreScreenshots: XCTestCase {
         let locale = language == "fr" ? "fr_FR" : "en_US"
         for (name, route) in pages {
             let app = XCUIApplication()
-            app.launchArguments = ["-uitest-reset", "-uitest-fixture", "-uitest-showcase",
+            // Key / value pairs only: macOS reads `-key value`, and a leftover word (here the route) would be
+            // taken for a document to open, in which case the app starts without its main window.
+            app.launchArguments = ["-uitest-reset", "YES", "-uitest-fixture", "YES", "-uitest-showcase", "YES",
                                    "-uitest-route", route, "-uitest-window", "1",
                                    "-AppleLanguages", "(\(language))", "-AppleLocale", locale]
             app.launch()
