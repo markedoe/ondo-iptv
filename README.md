@@ -1,7 +1,8 @@
 # Ondo
 
-Lecteur IPTV pour **iPhone / iPad** et **macOS** — films, séries et TV en direct —, en Swift / SwiftUI natif.
-Conception et feuille de route : [docs/PLAN.md](docs/PLAN.md).
+Lecteur IPTV pour **iPhone / iPad**, **macOS** et **Android** — films, séries et TV en direct —, natif sur
+chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feuille de route :
+[docs/PLAN.md](docs/PLAN.md), version Android : [docs/ANDROID.md](docs/ANDROID.md).
 
 > Ondo est **uniquement un lecteur** : il n'héberge, ne fournit ni ne vend aucun contenu, chaîne, playlist
 > ou abonnement IPTV. Il lit les sources que l'utilisateur ajoute lui-même et qu'il est autorisé à regarder.
@@ -41,7 +42,10 @@ Conception et feuille de route : [docs/PLAN.md](docs/PLAN.md).
 ```
 App/                    Application SwiftUI (cible unique iOS + macOS)
 Packages/IPTVCore/      Logique métier (Foundation pur, testée sous Linux et macOS)
-docs/                   Plan, publication (App Store), version Android
+android/app/            Application Android (Jetpack Compose, Media3)
+android/core/           Logique métier en Kotlin pur (port d'IPTVCore, mêmes cas de test)
+fastlane/               Publication App Store et Google Play, fiches des deux stores
+docs/                   Plan, publication (App Store, Google Play), version Android
 project.yml             Projet XcodeGen
 ```
 
@@ -72,6 +76,21 @@ Tests du cœur :
 ```bash
 cd Packages/IPTVCore && swift test
 ```
+
+## Android
+
+Prérequis : JDK 17+ et le SDK Android (Android Studio). Ouvrez le dossier `android/` dans Android Studio,
+ou en ligne de commande :
+
+```bash
+cd android
+./gradlew -p core test                 # cœur Kotlin
+./gradlew :app:testDebugUnitTest       # tests unitaires et Compose (Robolectric)
+./gradlew :app:recordRoborazziDebug    # + captures de la fiche Google Play
+./gradlew :app:assembleDebug           # APK de debug
+```
+
+Publication sur Google Play : [docs/RELEASE-ANDROID.md](docs/RELEASE-ANDROID.md).
 
 ## Secrets et vie privée
 

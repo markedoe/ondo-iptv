@@ -1,5 +1,27 @@
 # Ondo pour Android — plan
 
+## État (v1, octobre 2026)
+
+La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.md](RELEASE-ANDROID.md) :
+
+- **Cœur** `android/core` : port Kotlin d'IPTVCore (M3U, XSPF, JSON, Xtream, XMLTV, catch-up, recherche,
+  éléments de lecture), testé avec les mêmes cas que les tests Swift.
+- **App** `android/app` (Compose, Material 3, Navigation type-safe, barre d'onglets ou rail selon l'écran) :
+  accueil (carrousel, Continuer à regarder, Ma liste, ajouts récents, chaînes), onglets Films et Séries
+  (une rangée par catégorie, grilles filtrables), fiches film et série (reprise, depuis le début, épisode
+  suivant, saisons, titres similaires), TV en direct (catégories, favoris, programme en cours et suivant),
+  recherche, réglages (playlists, apparence, catégories adultes masquées par défaut), accueil avec
+  démonstration et avertissement « lecteur sans contenu ».
+- **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
+  reprise, image dans l'image, MediaSession, retour au direct.
+- **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), captures
+  Roborazzi qui servent de captures Google Play (téléphone, tablettes 7" et 10", anglais et français).
+
+Prévu ensuite (non inclus en v1) : Android TV, guide en grille, replay depuis le guide, Chromecast,
+téléchargements, profils et PIN, synchronisation, second moteur libVLC.
+
+## Plan initial
+
 À démarrer une fois la version iPhone / iPad / Mac validée et publiée. Objectif : la même app, native,
 sans compromis sur la qualité, en réutilisant tout ce qui peut l'être (spécifications, jeux de test,
 textes, icône, fiche) plutôt que du code Swift.
