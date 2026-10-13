@@ -29,6 +29,14 @@ struct Shelf<Content: View>: View {
         self.content = content
     }
 
+    /// "See All" opening a route other than a section (My List → the favourite movies or series).
+    init(title: LocalizedStringKey, route: AnyHashableRoute, metrics: ShelfMetrics, @ViewBuilder content: @escaping () -> Content) {
+        self.title = Text(title)
+        self.seeAll = route
+        self.metrics = metrics
+        self.content = content
+    }
+
     /// A provider category: its name is shown as is and "See All" opens its grid.
     init(category: MediaCategory, metrics: ShelfMetrics, @ViewBuilder content: @escaping () -> Content) {
         self.title = Text(verbatim: category.name)
@@ -70,6 +78,7 @@ struct Shelf<Content: View>: View {
             switch route {
             case .section(let section): NavigationLink(value: section) { label }
             case .category(let category): NavigationLink(value: category) { label }
+            case .favorites(let favorites): NavigationLink(value: favorites) { label }
             }
         }
         .buttonStyle(.plain)
@@ -81,6 +90,7 @@ struct Shelf<Content: View>: View {
 enum AnyHashableRoute: Hashable {
     case section(AppSection)
     case category(PosterCategoryRoute)
+    case favorites(FavoritesRoute)
 }
 
 /// Poster of a movie or series opening its detail page.

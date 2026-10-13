@@ -1,4 +1,5 @@
 import SwiftUI
+import IPTVCore
 import Observation
 
 /// Owns the path of a navigation stack so programmatic pushes (after a PIN prompt, from a context menu…)
@@ -30,4 +31,9 @@ struct RoutedNavigationStack<Root: View>: View {
 /// Value pushed to open one of the user's custom lists.
 struct CustomListRoute: Hashable {
     let id: UUID
+}
+
+/// Value pushed to open the favourites on one kind of content (My List → See All).
+struct FavoritesRoute: Hashable {
+    let type: ContentType
 }

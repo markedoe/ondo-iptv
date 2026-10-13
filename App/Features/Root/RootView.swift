@@ -253,6 +253,9 @@ struct SectionView: View {
         .navigationDestination(for: CustomListRoute.self) { route in
             CustomListDetailView(listID: route.id)
         }
+        .navigationDestination(for: FavoritesRoute.self) { route in
+            FavoritesView(initialType: route.type)
+        }
         .navigationDestination(for: Movie.self) { movie in
             MovieDetailView(movie: movie)
         }

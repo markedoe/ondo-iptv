@@ -103,7 +103,7 @@ struct HomeView: View {
             }
 
             if !myList.isEmpty {
-                Shelf(title: "My List", seeAll: .favorites, metrics: metrics) {
+                Shelf(title: "My List", route: .favorites(FavoritesRoute(type: myList[0].contentType)), metrics: metrics) {
                     ForEach(myList) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }

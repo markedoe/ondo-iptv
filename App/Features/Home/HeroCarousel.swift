@@ -257,13 +257,6 @@ private struct HeroPage: View {
 }
 
 private extension ShowcaseItem {
-    var contentType: ContentType {
-        switch self {
-        case .movie: return .movie
-        case .series: return .series
-        }
-    }
-
     var itemID: String {
         switch self {
         case .movie(let movie): return movie.id

@@ -81,7 +81,7 @@ struct VODBrowser: View {
                 }
             }
             if !mine.isEmpty {
-                Shelf(title: "My List", seeAll: .favorites, metrics: metrics) {
+                Shelf(title: "My List", route: .favorites(FavoritesRoute(type: type)), metrics: metrics) {
                     ForEach(mine) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }

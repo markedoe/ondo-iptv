@@ -40,6 +40,13 @@ enum ShowcaseItem: Identifiable, Hashable {
         case .series(let series): return series.rating
         }
     }
+
+    var contentType: ContentType {
+        switch self {
+        case .movie: return .movie
+        case .series: return .series
+        }
+    }
 }
 
 /// What the home screen features: continue watching first, then trending and recent titles.

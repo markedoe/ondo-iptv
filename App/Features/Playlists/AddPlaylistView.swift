@@ -2,10 +2,21 @@ import SwiftUI
 import IPTVCore
 import UniformTypeIdentifiers
 
+/// Product switches of the App Store version: the code stays, ready to be turned back on.
+enum FeatureFlags {
+    /// Real-Debrid accounts as a source. Off: Ondo presents itself as an IPTV player only.
+    static let realDebrid = false
+}
+
 enum PlaylistKind: String, CaseIterable, Identifiable {
     case xtream, m3uURL, file, realDebrid
 
     var id: String { rawValue }
+
+    /// Kinds offered when adding a playlist.
+    static var available: [PlaylistKind] {
+        allCases.filter { $0 != .realDebrid || FeatureFlags.realDebrid }
+    }
 
     var label: LocalizedStringKey {
         switch self {
@@ -53,7 +64,7 @@ struct AddPlaylistView: View {
             if editing == nil {
                 Section {
                     Picker("Type", selection: $kind) {
-                        ForEach(PlaylistKind.allCases) { kind in
+                        ForEach(PlaylistKind.available) { kind in
                             Text(kind.label).tag(kind)
                         }
                     }

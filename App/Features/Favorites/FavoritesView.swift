@@ -3,8 +3,12 @@ import IPTVCore
 
 struct FavoritesView: View {
     @Environment(AppModel.self) private var model
-    @State private var type: ContentType = .live
+    @State private var type: ContentType
     @State private var showingLists = false
+
+    init(initialType: ContentType = .live) {
+        _type = State(initialValue: initialType)
+    }
 
     var body: some View {
         Group {
@@ -31,7 +35,13 @@ struct FavoritesView: View {
             .padding(.vertical, 8)
             .background(.bar)
         }
-        .navigationTitle("Favorites")
+        .navigationTitle(title)
+    }
+
+    /// Movies and series are "My List" everywhere else in the app.
+    private var title: Text {
+        if showingLists { return Text("Lists") }
+        return type == .live ? Text("Favorites") : Text("My List")
     }
 
     private var favoritesList: some View {

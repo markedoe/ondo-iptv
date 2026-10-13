@@ -13,7 +13,8 @@ Conception et feuille de route : [docs/PLAN.md](docs/PLAN.md).
 - **Films & séries** : grilles d'affiches, tri, fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb**.
 - **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
-  XSPF, JSON, compte Real-Debrid ; plusieurs playlists, actualisation automatique.
+  XSPF, JSON ; plusieurs playlists, actualisation automatique. (Une source Real-Debrid existe dans le
+  code mais est désactivée dans la version App Store : `FeatureFlags.realDebrid`.)
 - **Live TV** : catégories, numéros, logos, programme en cours + progression, favoris, récents, recherche ;
   chaînes masquées, renommées ou renumérotées.
 - **Guide TV** : XMLTV (gzip), guide du fournisseur et/ou URL personnalisées, grille aux titres
