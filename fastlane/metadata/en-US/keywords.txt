@@ -1,0 +1,1 @@
+iptv,player,m3u,xtream,movies,series,vod,catch up,epg,tv guide,chromecast,airplay,playlist,m3u8

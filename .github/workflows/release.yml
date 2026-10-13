@@ -1,0 +1,73 @@
+name: Release
+
+# Push a tag like v1.0.0 to build, sign and upload iOS + macOS builds to TestFlight and refresh the listing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to deliver
+        type: choice
+        default: all
+        options: [all, ios, mac, metadata]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deliver:
+    name: TestFlight / App Store Connect
+    runs-on: macos-26
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+      TARGET: ${{ github.event.inputs.target || 'all' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check signing secrets
+        run: |
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 DEVELOPMENT_TEAM; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name is missing. See docs/RELEASE.md."
+              exit 1
+            fi
+          done
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Tools
+        run: brew install xcodegen || true
+      - name: Core tests
+        working-directory: Packages/IPTVCore
+        run: swift test --parallel
+      - name: iOS → TestFlight
+        if: env.TARGET == 'all' || env.TARGET == 'ios'
+        run: bundle exec fastlane ios beta
+      - name: macOS → TestFlight
+        if: env.TARGET == 'all' || env.TARGET == 'mac'
+        run: bundle exec fastlane mac beta
+      - name: App Store screenshots
+        if: env.TARGET == 'all' || env.TARGET == 'metadata'
+        run: |
+          # Published by the "App Store screenshots" workflow; the listing is uploaded without them otherwise.
+          if git fetch -q origin appstore-screenshots; then
+            mkdir -p fastlane/screenshots/ios
+            git archive origin/appstore-screenshots | tar -x -C fastlane/screenshots/ios
+            rm -f fastlane/screenshots/ios/README.md
+            find fastlane/screenshots/ios -type f | sort
+          fi
+      - name: App Store listing
+        if: env.TARGET == 'all' || env.TARGET == 'metadata'
+        run: bundle exec fastlane ios metadata
+      - name: Keep build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-logs
+          path: ~/Library/Logs/gym
+          if-no-files-found: ignore

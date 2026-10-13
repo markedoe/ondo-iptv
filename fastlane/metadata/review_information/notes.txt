@@ -1,0 +1,7 @@
+Ondo is a player only: it does not host, provide or sell any content or IPTV subscription, ships no channels or playlists, and does not link to any provider. Users add the playlist or Xtream Codes login given by their own provider.
+
+How to test without an IPTV subscription: on the first screen tap "Try the demo". This adds a public demonstration playlist of channels curated by the open-source iptv-org project (https://github.com/iptv-org/iptv), whose streams are published by the broadcasters themselves.
+
+NSAllowsArbitraryLoads is required because the playlists, logos, guides and streams provided by IPTV services (and by the demonstration list) are very often served over plain HTTP from servers the app does not control.
+
+Chromecast and AirPlay are used to play the user's own streams on a TV or projector; the local network permission is requested only when the user taps the Cast button. Notifications are only used for programme reminders the user sets, and permission is requested with the first reminder.

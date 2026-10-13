@@ -1,0 +1,174 @@
+import Foundation
+import IPTVCore
+
+/// Favourites, history, resume positions and custom lists of the active profile.
+extension AppModel {
+    // MARK: - Favourites & history
+
+    private func reference(_ type: ContentType, _ id: String) -> MediaReference? {
+        activePlaylist.map { MediaReference(playlistID: $0.id, type: type, itemID: id) }
+    }
+
+    func isFavorite(_ type: ContentType, id: String) -> Bool {
+        guard let ref = reference(type, id) else { return false }
+        return library.isFavorite(ref)
+    }
+
+    func toggleFavorite(_ channel: Channel) {
+        guard let ref = reference(.live, channel.id) else { return }
+        updateLibrary { $0.toggleFavorite(ref, title: channel.name, imageURL: logoURL(for: channel)) }
+    }
+
+    func toggleFavorite(_ movie: Movie) {
+        guard let ref = reference(.movie, movie.id) else { return }
+        updateLibrary { $0.toggleFavorite(ref, title: movie.name, imageURL: movie.posterURL) }
+    }
+
+    func toggleFavorite(_ series: Series) {
+        guard let ref = reference(.series, series.id) else { return }
+        updateLibrary { $0.toggleFavorite(ref, title: series.name, imageURL: series.coverURL) }
+    }
+
+    func favorites(_ type: ContentType) -> [FavoriteEntry] {
+        guard let playlist = activePlaylist else { return [] }
+        let excluded = excludedCategoryIDs
+        return library.favorites(playlistID: playlist.id, type: type).filter { entry in
+            switch type {
+            case .live: return index.channelsByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
+            case .movie: return index.moviesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
+            case .series: return index.seriesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
+            }
+        }
+    }
+
+    // MARK: - Custom lists
+
+    @discardableResult
+    func createList(named name: String) -> UUID {
+        var id = UUID()
+        updateLibrary { id = $0.createList(named: name) }
+        return id
+    }
+
+    func renameList(_ id: UUID, to name: String) {
+        updateLibrary { $0.renameList(id, to: name) }
+    }
+
+    func deleteList(_ id: UUID) {
+        updateLibrary { $0.deleteList(id) }
+    }
+
+    func toggle(_ item: LibraryItem, inList id: UUID) {
+        guard let ref = reference(item.type, item.id) else { return }
+        let image = { () -> URL? in
+            if case .channel(let channel) = item { return self.logoURL(for: channel) }
+            return item.imageURL
+        }()
+        updateLibrary { $0.toggle(ref, title: item.title, imageURL: image, inList: id) }
+    }
+
+    func isInList(_ item: LibraryItem, list: CustomList) -> Bool {
+        guard let ref = reference(item.type, item.id) else { return false }
+        return list.contains(ref)
+    }
+
+    /// Items of a list that belong to the active playlist and are not locked.
+    func items(in list: CustomList) -> [FavoriteEntry] {
+        guard let playlist = activePlaylist else { return [] }
+        let excluded = excludedCategoryIDs
+        return list.items.filter { entry in
+            guard entry.reference.playlistID == playlist.id, let item = libraryItem(for: entry.reference) else { return false }
+            switch item {
+            case .channel(let channel): return !excluded.contains(channel.categoryID)
+            case .movie(let movie): return !excluded.contains(movie.categoryID)
+            case .series(let series): return !excluded.contains(series.categoryID)
+            }
+        }
+    }
+
+    func moveListItems(_ id: UUID, fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard let list = library.customLists.first(where: { $0.id == id }) else { return }
+        // Offsets are relative to the visible items; map them to the stored ones.
+        let visible = items(in: list)
+        let all = list.items
+        let sourceAll = IndexSet(source.compactMap { offset in all.firstIndex { $0.id == visible[offset].id } })
+        let destinationAll: Int
+        if destination < visible.count, let target = all.firstIndex(where: { $0.id == visible[destination].id }) {
+            destinationAll = target
+        } else {
+            destinationAll = all.count
+        }
+        updateLibrary { $0.moveItems(inList: id, fromOffsets: sourceAll, toOffset: destinationAll) }
+    }
+
+    func favoriteChannels() -> [Channel] {
+        let hidden = hiddenChannelIDs
+        return favorites(.live).compactMap { index.channelsByID[$0.reference.itemID] }.filter { !hidden.contains($0.id) }
+    }
+
+    func moveFavorites(_ type: ContentType, fromOffsets source: IndexSet, toOffset destination: Int) {
+        guard let playlist = activePlaylist else { return }
+        updateLibrary { $0.moveFavorites(playlistID: playlist.id, type: type, fromOffsets: source, toOffset: destination) }
+    }
+
+    func recentChannels() -> [Channel] {
+        guard let playlist = activePlaylist else { return [] }
+        let excluded = excludedCategoryIDs
+        let hidden = hiddenChannelIDs
+        return library.recentChannels(playlistID: playlist.id, limit: 20)
+            .compactMap { index.channelsByID[$0.reference.itemID] }
+            .filter { !excluded.contains($0.categoryID) && !hidden.contains($0.id) }
+    }
+
+    func continueWatching() -> [HistoryEntry] {
+        guard let playlist = activePlaylist else { return [] }
+        let excluded = excludedCategoryIDs
+        return library.continueWatching(playlistID: playlist.id).filter { entry in
+            switch entry.reference.type {
+            case .movie: return index.moviesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
+            case .series: return index.seriesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
+            case .live: return false
+            }
+        }
+    }
+
+    func progress(movie: Movie) -> HistoryEntry? {
+        reference(.movie, movie.id).flatMap { library.progress(for: $0) }
+    }
+
+    func progress(episode: Episode, in series: Series) -> HistoryEntry? {
+        guard let playlist = activePlaylist else { return nil }
+        return library.progress(for: MediaReference(playlistID: playlist.id, type: .series, itemID: series.id, episodeID: episode.id))
+    }
+
+    func removeFromHistory(_ entry: HistoryEntry) {
+        updateLibrary { $0.removeHistory(entry) }
+    }
+
+    func clearHistory() {
+        updateLibrary { $0.clearHistory() }
+    }
+
+    func recordStart(_ item: PlaybackItem) {
+        updateLibrary {
+            $0.recordPlayback(HistoryEntry(
+                reference: item.reference,
+                title: item.title,
+                subtitle: item.subtitle,
+                imageURL: item.artworkURL,
+                position: item.isLive ? 0 : (item.startPosition ?? 0)
+            ))
+        }
+    }
+
+    func recordProgress(_ item: PlaybackItem, position: Double, duration: Double) {
+        // Replays belong to the channel's history entry, not to a resumable position.
+        guard !item.isCatchup else { return }
+        updateLibrary { $0.updateProgress(item.reference, position: position, duration: duration) }
+    }
+
+    func resumePosition(for item: PlaybackItem) -> Double? {
+        guard settings.resumePlayback, !item.isLive, let entry = library.progress(for: item.reference), entry.isResumable else { return nil }
+        return entry.position
+    }
+}

@@ -1,0 +1,19 @@
+# Xcode
+*.xcodeproj
+xcuserdata/
+DerivedData/
+*.xcworkspace/xcuserdata/
+build/
+
+# SwiftPM
+.build/
+.swiftpm/
+Package.resolved
+
+# macOS
+.DS_Store
+App/Resources/Info.plist
+
+# App Store Connect keys: GitHub secrets only, never in the repository
+secrets/
+*.p8

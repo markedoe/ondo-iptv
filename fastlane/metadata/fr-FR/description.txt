@@ -1,0 +1,28 @@
+Ondo est uniquement un lecteur : il n’héberge, ne fournit ni ne vend aucun contenu ni abonnement IPTV. Utilisez-le seulement avec des sources que vous êtes autorisé à regarder.
+
+Ondo est un lecteur IPTV élégant pour iPhone, iPad et Mac. Ajoutez la playlist M3U ou l’identifiant Xtream Codes donné par votre fournisseur : ses films, ses séries et ses chaînes se retrouvent dans une bibliothèque claire, rapide et sans publicité.
+
+FILMS ET SÉRIES
+• Bibliothèque à affiches, catégories, tri et recherche instantanée
+• Fiches détaillées : synopsis, distribution, note, bande-annonce, saisons et épisodes
+• Continuer à regarder, reprise de lecture et épisode suivant automatique
+• Ma liste, favoris et listes personnalisées
+• Téléchargement des films et épisodes pour les regarder hors ligne
+
+UN LECTEUR QUI FONCTIONNE, TOUT SIMPLEMENT
+• Deux moteurs : le lecteur d’Apple (HDR, image dans l’image, AirPlay) et un moteur basé sur VLC pour MKV, AVI et TS
+• Diffusion sur votre TV ou vidéoprojecteur avec AirPlay ou Chromecast
+• Pistes audio et sous-titres, sous-titres SRT/VTT externes, format d’image, vitesse, minuterie, verrouillage
+• Messages d’erreur clairs : fournisseur, réseau ou application
+
+TV EN DIRECT
+• Chaînes, guide TV et replay quand votre fournisseur le propose
+• Favoris, rappels de programmes et multivue sur iPad et Mac
+
+POUR TOUTE LA FAMILLE
+• Profils avec leurs propres favoris et historique, code PIN facultatif et profils enfant
+• Contrôle parental : catégories adultes verrouillées par code PIN
+
+SOURCES
+• Playlists M3U / M3U8 (lien ou fichier), Xtream Codes, XSPF et JSON
+• Plusieurs playlists, actualisation automatique, sauvegardes

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<playlist version="1" xmlns="http://xspf.org/ns/0/">
+  <trackList>
+    <track><location>http://stream.example.com/a.m3u8</location><title>Channel A</title><image>http://img.example.com/a.png</image><album>News</album></track>
+    <track><location>http://stream.example.com/b.m3u8</location><title>Channel B</title></track>
+  </trackList>
+</playlist>

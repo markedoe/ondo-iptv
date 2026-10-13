@@ -1,0 +1,75 @@
+import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
+
+public enum HTTPClientError: Error, LocalizedError, Equatable {
+    case badStatus(Int)
+    case emptyResponse
+    case invalidURL
+
+    public var errorDescription: String? {
+        switch self {
+        case .badStatus(let code):
+            switch code {
+            case 401, 403: return "Access denied by the server (HTTP \(code)). Check your credentials or subscription."
+            case 404: return "Not found on the server (HTTP 404)."
+            case 512, 884: return "The provider refused the connection (HTTP \(code)). Too many connections?"
+            default: return "The server answered with HTTP \(code)."
+            }
+        case .emptyResponse: return "The server returned an empty response."
+        case .invalidURL: return "The address is not valid."
+        }
+    }
+}
+
+/// Minimal HTTP abstraction so loaders can be unit-tested with fixtures.
+public protocol HTTPClient: Sendable {
+    func data(from url: URL, headers: [String: String]) async throws -> Data
+}
+
+/// Default user agent: many panels block unknown agents, VLC's is widely accepted.
+public let defaultIPTVUserAgent = "VLC/3.0.20 LibVLC/3.0.20"
+
+public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
+    private let session: URLSession
+    private let timeout: TimeInterval
+
+    public init(session: URLSession? = nil, timeout: TimeInterval = 60) {
+        if let session {
+            self.session = session
+        } else {
+            let configuration = URLSessionConfiguration.default
+            configuration.timeoutIntervalForRequest = timeout
+            configuration.timeoutIntervalForResource = 600
+            configuration.httpAdditionalHeaders = ["User-Agent": defaultIPTVUserAgent]
+            self.session = URLSession(configuration: configuration)
+        }
+        self.timeout = timeout
+    }
+
+    public func data(from url: URL, headers: [String: String]) async throws -> Data {
+        if url.isFileURL {
+            return try Data(contentsOf: url)
+        }
+        var request = URLRequest(url: url, timeoutInterval: timeout)
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        let session = self.session
+        return try await withCheckedThrowingContinuation { continuation in
+            let task = session.dataTask(with: request) { data, response, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                    continuation.resume(throwing: HTTPClientError.badStatus(http.statusCode))
+                    return
+                }
+                continuation.resume(returning: data ?? Data())
+            }
+            task.resume()
+        }
+    }
+}

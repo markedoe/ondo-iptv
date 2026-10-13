@@ -1,0 +1,102 @@
+import Foundation
+
+/// Versioned JSON documents in a directory (Application Support on Apple platforms).
+///
+/// Every document is wrapped in `{ "version": n, "savedAt": …, "value": … }` and written atomically,
+/// and the previous file is kept as `.bak` so an update can never silently wipe user data.
+public final class FileStore: @unchecked Sendable {
+    public let directory: URL
+    private let lock = NSLock()
+
+    public static let currentVersion = 1
+
+    public init(directory: URL) {
+        self.directory = directory
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    private struct Envelope<T: Codable>: Codable {
+        var version: Int
+        var savedAt: Date
+        var value: T
+    }
+
+    public func url(for name: String) -> URL {
+        directory.appendingPathComponent(name).appendingPathExtension("json")
+    }
+
+    public func load<T: Codable>(_ type: T.Type, name: String) -> T? {
+        lock.lock()
+        defer { lock.unlock() }
+        let decoder = JSONDecoder()
+        for candidate in [url(for: name), url(for: name).appendingPathExtension("bak")] {
+            guard let data = try? Data(contentsOf: candidate) else { continue }
+            if let envelope = try? decoder.decode(Envelope<T>.self, from: data) {
+                return envelope.value
+            }
+        }
+        return nil
+    }
+
+    public func save<T: Codable>(_ value: T, name: String) throws {
+        let encoder = JSONEncoder()
+        let data = try encoder.encode(Envelope(version: Self.currentVersion, savedAt: Date(), value: value))
+        lock.lock()
+        defer { lock.unlock() }
+        let target = url(for: name)
+        let backup = target.appendingPathExtension("bak")
+        let fileManager = FileManager.default
+        if fileManager.fileExists(atPath: target.path) {
+            try? fileManager.removeItem(at: backup)
+            try? fileManager.copyItem(at: target, to: backup)
+        }
+        try data.write(to: target, options: .atomic)
+    }
+
+    public func remove(name: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        try? FileManager.default.removeItem(at: url(for: name))
+        try? FileManager.default.removeItem(at: url(for: name).appendingPathExtension("bak"))
+    }
+
+    public func modificationDate(name: String) -> Date? {
+        (try? FileManager.default.attributesOfItem(atPath: url(for: name).path))?[.modificationDate] as? Date
+    }
+
+    /// Total size of the store in bytes.
+    public func diskUsage() -> Int64 {
+        guard let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }
+        var total: Int64 = 0
+        for case let file as URL in enumerator {
+            total += Int64((try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+        }
+        return total
+    }
+}
+
+/// Portable backup of the user's setup (playlists without passwords + library), for export / import.
+public struct BackupArchive: Codable, Sendable {
+    public var version: Int
+    public var exportedAt: Date
+    public var playlists: [Playlist]
+    public var library: UserLibrary
+
+    public init(playlists: [Playlist], library: UserLibrary, exportedAt: Date = Date()) {
+        self.version = FileStore.currentVersion
+        self.exportedAt = exportedAt
+        self.playlists = playlists
+        self.library = library
+    }
+
+    public func encoded() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(self)
+    }
+
+    public static func decode(_ data: Data) throws -> BackupArchive {
+        let decoder = JSONDecoder()
+        return try decoder.decode(BackupArchive.self, from: data)
+    }
+}

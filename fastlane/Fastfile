@@ -1,0 +1,131 @@
+# Delivery lanes for Ondo (iOS + macOS share one bundle ID: universal purchase).
+#
+# Required environment (GitHub secrets in CI):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (the App Store Connect API key: a Team key with the Admin role, which
+#   cloud-managed signing needs; the .p8 file content as is, or base64 encoded)
+#   DEVELOPMENT_TEAM (Apple team ID)
+# Signing is automatic: Xcode uses the API key to create/download cloud-managed certificates and profiles.
+
+default_platform(:ios)
+
+APP_ID = "com.markedoe.ondo"
+PROJECT = "Ondo.xcodeproj"
+SCHEME = "Ondo"
+
+# The PEM text of the key, whether the secret holds the file content or its base64.
+def key_pem
+  value = ENV.fetch("ASC_KEY_P8").strip
+  value.include?("BEGIN PRIVATE KEY") ? "#{value}\n" : Base64.decode64(value)
+end
+
+def api_key
+  app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_content: key_pem,
+    is_key_content_base64: false,
+    in_house: false
+  )
+end
+
+def key_file
+  path = File.expand_path("../build/asc_key.p8", __dir__)
+  FileUtils.mkdir_p(File.dirname(path))
+  File.write(path, key_pem)
+  path
+end
+
+# Lets xcodebuild create and fetch cloud-managed certificates and profiles (archive and export).
+def authentication_xcargs
+  [
+    "-allowProvisioningUpdates",
+    "-authenticationKeyPath #{key_file}",
+    "-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')}",
+    "-authenticationKeyIssuerID #{ENV.fetch('ASC_ISSUER_ID')}"
+  ].join(" ")
+end
+
+def signing_xcargs
+  "#{authentication_xcargs} DEVELOPMENT_TEAM=#{ENV.fetch('DEVELOPMENT_TEAM')} CODE_SIGN_STYLE=Automatic"
+end
+
+def generate_project
+  sh("cd .. && xcodegen generate")
+end
+
+# Build numbers come from TestFlight so iOS and macOS uploads never collide.
+def next_build_number(platform)
+  latest = latest_testflight_build_number(api_key: api_key, app_identifier: APP_ID, platform: platform) rescue 0
+  latest.to_i + 1
+end
+
+def marketing_version
+  tag = ENV["GITHUB_REF_NAME"].to_s
+  tag.start_with?("v") ? tag.delete_prefix("v") : nil
+end
+
+def build_settings_args(build_number)
+  args = ["CURRENT_PROJECT_VERSION=#{build_number}"]
+  args << "MARKETING_VERSION=#{marketing_version}" if marketing_version
+  args.join(" ")
+end
+
+before_all do
+  setup_ci if ENV["CI"]
+end
+
+platform :ios do
+  desc "Build the iOS app and upload it to TestFlight"
+  lane :beta do
+    generate_project
+    number = next_build_number("ios")
+    build_app(
+      project: PROJECT,
+      scheme: SCHEME,
+      configuration: "Release",
+      destination: "generic/platform=iOS",
+      export_method: "app-store",
+      output_directory: "build/ios-release",
+      xcargs: "#{signing_xcargs} #{build_settings_args(number)}",
+      export_xcargs: authentication_xcargs
+    )
+    upload_to_testflight(api_key: api_key, skip_waiting_for_build_processing: true)
+  end
+
+  desc "Upload the App Store listing (texts, keywords, URLs, screenshots) without a binary; the age rating is set in App Store Connect"
+  lane :metadata do
+    deliver(
+      api_key: api_key,
+      app_identifier: APP_ID,
+      platform: "ios",
+      skip_binary_upload: true,
+      skip_screenshots: !File.directory?("screenshots/ios"),
+      screenshots_path: "fastlane/screenshots/ios",
+      overwrite_screenshots: true,
+      metadata_path: "fastlane/metadata",
+      force: true,
+      precheck_include_in_app_purchases: false,
+      submit_for_review: false
+    )
+  end
+end
+
+platform :mac do
+  desc "Build the macOS app and upload it to TestFlight / App Store Connect"
+  lane :beta do
+    generate_project
+    number = next_build_number("osx")
+    build_mac_app(
+      project: PROJECT,
+      scheme: SCHEME,
+      configuration: "Release",
+      destination: "generic/platform=macOS",
+      export_method: "app-store",
+      installer_cert_name: nil,
+      output_directory: "build/mac-release",
+      xcargs: "#{signing_xcargs} #{build_settings_args(number)}",
+      export_xcargs: authentication_xcargs
+    )
+    upload_to_testflight(api_key: api_key, app_platform: "osx", skip_waiting_for_build_processing: true)
+  end
+end

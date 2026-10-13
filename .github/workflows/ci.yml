@@ -1,0 +1,197 @@
+name: CI
+
+# Runs once per commit: on main (work branches are pushed to main too), pull requests and on demand.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-linux:
+    name: Lint + IPTVCore tests (Linux)
+    runs-on: ubuntu-latest
+    container: swift:6.0-noble
+    steps:
+      - uses: actions/checkout@v4
+      - name: SwiftLint
+        run: |
+          apt-get update -qq && apt-get install -y -qq unzip curl ca-certificates >/dev/null
+          curl -sSL -o /tmp/swiftlint.zip https://github.com/realm/SwiftLint/releases/download/0.57.1/swiftlint_linux.zip
+          unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint
+          /tmp/swiftlint/swiftlint lint --reporter github-actions-logging
+      - name: Tests with coverage
+        working-directory: Packages/IPTVCore
+        run: |
+          swift test --parallel --enable-code-coverage
+          BIN=$(swift build --show-bin-path)
+          llvm-cov report "$BIN/IPTVCorePackageTests.xctest" \
+            -instr-profile "$BIN/codecov/default.profdata" \
+            -ignore-filename-regex='(Tests|\.build)/' | tee coverage.txt | tail -25
+          echo "### IPTVCore coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -1 coverage.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  apple:
+    name: Build iOS + macOS
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Core tests (macOS)
+        working-directory: Packages/IPTVCore
+        run: swift test --parallel
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen xcbeautify || true
+          xcodegen generate
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: build/spm
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+      - name: Build for iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions || \
+          (echo "::error::iOS build failed"; exit 1)
+      - name: Build for macOS
+        if: success() || failure()
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/macos \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions || \
+          (echo "::error::macOS build failed"; exit 1)
+      - name: Verify VLC and Google Cast are compiled in
+        run: |
+          # VLCBackend.swift is wrapped in `#if canImport(VLCKitSPM)`: make sure it really referenced VLCKit.
+          for dir in build/ios build/macos; do
+            OBJ=$(find "$dir" -name "VLCBackend.o" | head -1)
+            if [ -n "$OBJ" ] && nm -u "$OBJ" | grep -q "VLCMediaPlayer"; then
+              echo "$dir: VLC engine compiled ($OBJ)"
+            else
+              echo "::error::VLC engine missing in $dir"; exit 1
+            fi
+          done
+          # Chromecast (iOS only): CastManager must reference the Google Cast SDK.
+          OBJ=$(find build/ios -name "CastManager.o" | head -1)
+          if nm -u "$OBJ" | grep -q "GCKCastContext"; then echo "iOS: Google Cast compiled"; else echo "::error::Google Cast missing"; exit 1; fi
+
+      - name: Launch macOS app (smoke test)
+        run: |
+          APP="build/macos/Build/Products/Debug/Ondo.app"
+          codesign --force --deep --sign - --entitlements App/Resources/Ondo-macOS-Debug.entitlements "$APP"
+          "$APP/Contents/MacOS/Ondo" -uitest-reset > macos-launch.log 2>&1 &
+          PID=$!
+          sleep 20
+          mkdir -p screenshots
+          screencapture -x screenshots/macos-launch.png || true
+          if kill -0 $PID 2>/dev/null; then
+            echo "macOS app still running after 20 s"
+            kill $PID
+          else
+            echo "::error::macOS app exited early"; cat macos-launch.log; exit 1
+          fi
+          tail -20 macos-launch.log || true
+      - name: Upload macOS screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-screenshot
+          path: screenshots
+          if-no-files-found: ignore
+
+  ui-tests:
+    name: App tests — unit + UI (iPhone simulator)
+    runs-on: macos-26
+    needs: apple
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen xcbeautify || true
+          xcodegen generate
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: build/spm
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+      - name: Pick a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 .github/scripts/pick_simulator.py)
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices | grep "$UDID"
+      - name: Run unit and UI tests
+        run: |
+          set -o pipefail
+          xcodebuild test -enableCodeCoverage YES \
+            -project Ondo.xcodeproj -scheme Ondo \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build/uitests \
+            -clonedSourcePackagesDirPath build/spm \
+            -resultBundlePath build/UITests.xcresult \
+            -skip-testing:OndoUITests/AppStoreScreenshots \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: App coverage
+        if: always()
+        run: |
+          xcrun xccov view --report --only-targets build/UITests.xcresult | tee app-coverage.txt || true
+          echo "### App coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat app-coverage.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Export screenshots
+        if: always()
+        run: |
+          mkdir -p raw screenshots
+          xcrun xcresulttool export attachments --path build/UITests.xcresult --output-path raw || true
+          python3 .github/scripts/collect_screenshots.py raw screenshots
+      - name: Fetch macOS screenshot
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-screenshot
+          path: macos-shot
+        continue-on-error: true
+      - name: Publish screenshots to the ci-screenshots branch
+        if: always() && github.event_name == 'push'
+        run: |
+          if [ -f macos-shot/macos-launch.png ]; then
+            sips -s format jpeg -s formatOptions 70 -Z 1400 macos-shot/macos-launch.png --out screenshots/99-macos-launch.jpg >/dev/null
+          fi
+          ls -la screenshots
+          cd screenshots
+          echo "Screenshots of ${GITHUB_REF_NAME} @ ${GITHUB_SHA} (run ${GITHUB_RUN_ID})" > README.md
+          git init -q
+          git checkout -q -b ci-screenshots
+          git config user.name "ci"
+          git config user.email "ci@users.noreply.github.com"
+          git add .
+          git commit -q -m "UI screenshots for ${GITHUB_SHA}"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-screenshots
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: screenshots

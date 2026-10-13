@@ -1,0 +1,1 @@
+iptv,lecteur,m3u,xtream,films,séries,vod,replay,guide tv,epg,chromecast,airplay,playlist,m3u8

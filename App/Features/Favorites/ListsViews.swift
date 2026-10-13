@@ -1,0 +1,212 @@
+import SwiftUI
+import IPTVCore
+
+/// Anything that can be put in favourites or in a custom list.
+enum LibraryItem {
+    case channel(Channel)
+    case movie(Movie)
+    case series(Series)
+
+    var type: ContentType {
+        switch self {
+        case .channel: return .live
+        case .movie: return .movie
+        case .series: return .series
+        }
+    }
+
+    var id: String {
+        switch self {
+        case .channel(let channel): return channel.id
+        case .movie(let movie): return movie.id
+        case .series(let series): return series.id
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .channel(let channel): return channel.name
+        case .movie(let movie): return movie.name
+        case .series(let series): return series.name
+        }
+    }
+
+    var imageURL: URL? {
+        switch self {
+        case .channel(let channel): return channel.logoURL
+        case .movie(let movie): return movie.posterURL
+        case .series(let series): return series.coverURL
+        }
+    }
+}
+
+extension AppModel {
+    func libraryItem(for reference: MediaReference) -> LibraryItem? {
+        switch reference.type {
+        case .live: return index.channelsByID[reference.itemID].map(LibraryItem.channel)
+        case .movie: return index.moviesByID[reference.itemID].map(LibraryItem.movie)
+        case .series: return index.seriesByID[reference.itemID].map(LibraryItem.series)
+        }
+    }
+}
+
+/// "Add to list" submenu used in context menus.
+struct AddToListMenu: View {
+    @Environment(AppModel.self) private var model
+    let item: LibraryItem
+
+    var body: some View {
+        Menu {
+            ForEach(model.library.customLists) { list in
+                Button {
+                    model.toggle(item, inList: list.id)
+                } label: {
+                    if model.isInList(item, list: list) {
+                        Label(list.name, systemImage: "checkmark")
+                    } else {
+                        Text(list.name)
+                    }
+                }
+            }
+            if !model.library.customLists.isEmpty { Divider() }
+            Button {
+                let id = model.createList(named: String(localized: "My List \(model.library.customLists.count + 1)"))
+                model.toggle(item, inList: id)
+            } label: {
+                Label("New List with This Item", systemImage: "plus")
+            }
+        } label: {
+            Label("Add to List", systemImage: "text.badge.plus")
+        }
+    }
+}
+
+/// Custom lists of the user (list manager).
+struct CustomListsView: View {
+    @Environment(AppModel.self) private var model
+    @State private var showingNewList = false
+    @State private var newListName = ""
+
+    var body: some View {
+        List {
+            ForEach(model.library.customLists) { list in
+                NavigationLink(value: CustomListRoute(id: list.id)) {
+                    LabeledContent {
+                        Text("\(model.items(in: list).count)")
+                    } label: {
+                        Label(list.name, systemImage: "list.star")
+                    }
+                }
+            }
+            .onDelete { offsets in
+                let lists = model.library.customLists
+                for offset in offsets { model.deleteList(lists[offset].id) }
+            }
+        }
+        .overlay {
+            if model.library.customLists.isEmpty {
+                ContentUnavailableView {
+                    Label("No lists", systemImage: "list.star")
+                } description: {
+                    Text("Group channels, movies and series your way. Use “Add to List” in their menus.")
+                } actions: {
+                    Button("New List") { showingNewList = true }
+                }
+            }
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showingNewList = true
+                } label: {
+                    Label("New List", systemImage: "plus")
+                }
+            }
+        }
+        .alert("New List", isPresented: $showingNewList) {
+            TextField("Name", text: $newListName)
+            Button("Create") {
+                let name = newListName.trimmingCharacters(in: .whitespaces)
+                if !name.isEmpty { model.createList(named: name) }
+                newListName = ""
+            }
+            Button("Cancel", role: .cancel) { newListName = "" }
+        }
+    }
+}
+
+struct CustomListDetailView: View {
+    @Environment(AppModel.self) private var model
+    let listID: UUID
+    @State private var showingRename = false
+    @State private var name = ""
+
+    private var list: CustomList? { model.library.customLists.first { $0.id == listID } }
+
+    var body: some View {
+        let entries = list.map { model.items(in: $0) } ?? []
+        List {
+            ForEach(entries) { entry in
+                if let item = model.libraryItem(for: entry.reference) {
+                    row(item)
+                }
+            }
+            .onMove { model.moveListItems(listID, fromOffsets: $0, toOffset: $1) }
+            .onDelete { offsets in
+                for offset in offsets {
+                    if let item = model.libraryItem(for: entries[offset].reference) {
+                        model.toggle(item, inList: listID)
+                    }
+                }
+            }
+        }
+        .overlay {
+            if entries.isEmpty {
+                ContentUnavailableView("Empty list", systemImage: "list.star", description: Text("Use “Add to List” on a channel, movie or series."))
+            }
+        }
+        .navigationTitle(list?.name ?? "")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    name = list?.name ?? ""
+                    showingRename = true
+                } label: {
+                    Label("Rename", systemImage: "pencil")
+                }
+            }
+            #if os(iOS)
+            ToolbarItem(placement: .primaryAction) { EditButton() }
+            #endif
+        }
+        .alert("Rename List", isPresented: $showingRename) {
+            TextField("Name", text: $name)
+            Button("Save") {
+                let trimmed = name.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty { model.renameList(listID, to: trimmed) }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    @ViewBuilder
+    private func row(_ item: LibraryItem) -> some View {
+        switch item {
+        case .channel(let channel):
+            Button {
+                model.play(channel)
+            } label: {
+                ChannelRow(channel: channel)
+            }
+            .buttonStyle(.plain)
+        case .movie(let movie):
+            NavigationLink(value: movie) {
+                SearchResultRow(title: movie.name, subtitle: movie.year.map(String.init), imageURL: movie.posterURL, icon: "film")
+            }
+        case .series(let series):
+            NavigationLink(value: series) {
+                SearchResultRow(title: series.name, subtitle: series.year.map(String.init), imageURL: series.coverURL, icon: "play.rectangle.on.rectangle")
+            }
+        }
+    }
+}
