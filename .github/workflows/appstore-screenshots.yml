@@ -115,6 +115,8 @@ jobs:
   publish:
     name: Publish to the appstore-screenshots branch
     needs: [capture, mac]
+    # The iPhone / iPad captures are published even if the Mac ones failed.
+    if: ${{ !cancelled() && needs.capture.result == 'success' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write

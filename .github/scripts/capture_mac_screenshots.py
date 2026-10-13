@@ -35,9 +35,11 @@ def capture(name, route):
                  "-AppleLanguages", f"({language})", "-AppleLocale", locale.replace("-", "_")]
     process = subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     found = {}
+    output = []
 
     def read():
         for line in process.stdout:
+            output.append(line.rstrip())
             match = re.search(r"WINDOW_RECT (\d+),(\d+),(\d+),(\d+) SCALE (\d+)", line)
             if match:
                 found["rect"] = [int(value) for value in match.groups()]
@@ -48,7 +50,9 @@ def capture(name, route):
         time.sleep(0.5)
     if "rect" not in found:
         process.kill()
-        sys.exit(f"{name}: the app did not report its window")
+        subprocess.run(["screencapture", "-x", str(target / f"{name}-failed.png")])
+        print("\n".join(output[-40:]))
+        sys.exit(f"{name}: the app did not report its window (exit code {process.poll()})")
     time.sleep(12)  # catalogue, artwork and guide
     x, y, width, height, scale = found["rect"]
     raw = target / f"{name}-raw.png"

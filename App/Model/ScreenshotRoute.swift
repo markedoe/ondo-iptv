@@ -55,24 +55,40 @@ import AppKit
 
 /// Gives the window the largest 16:10 frame that fits the screen and prints where it is.
 struct ScreenshotWindowSizer: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async { [weak view] in
-            guard let window = view?.window, let screen = window.screen ?? NSScreen.main else { return }
-            let visible = screen.visibleFrame
-            let sizes = [CGSize(width: 1440, height: 900), CGSize(width: 1280, height: 800),
-                         CGSize(width: 1152, height: 720), CGSize(width: 1024, height: 640)]
-            let size = sizes.first { $0.width <= visible.width && $0.height <= visible.height } ?? sizes[sizes.count - 1]
-            window.setFrame(NSRect(x: visible.minX, y: visible.maxY - size.height, width: size.width, height: size.height), display: true)
-            // screencapture -R takes points from the top left corner of the main screen.
-            let top = screen.frame.maxY - visible.maxY
-            let line = "WINDOW_RECT \(Int(visible.minX)),\(Int(top)),\(Int(size.width)),\(Int(size.height)) SCALE \(Int(screen.backingScaleFactor))\n"
-            FileHandle.standardOutput.write(Data(line.utf8))
+    /// Acts once the view is in its window (it is created before).
+    final class Probe: NSView {
+        private var placed = false
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window, !placed else { return }
+            placed = true
+            ScreenshotWindowSizer.place(window)
+            // Placed again once SwiftUI has finished sizing the window, then reported.
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                ScreenshotWindowSizer.place(window, report: true)
+            }
         }
-        return view
     }
 
+    func makeNSView(context: Context) -> NSView { Probe() }
+
     func updateNSView(_ nsView: NSView, context: Context) {}
+
+    static func place(_ window: NSWindow, report: Bool = false) {
+        guard let screen = window.screen ?? NSScreen.main else { return }
+        let visible = screen.visibleFrame
+        let sizes = [CGSize(width: 1440, height: 900), CGSize(width: 1280, height: 800),
+                     CGSize(width: 1152, height: 720), CGSize(width: 1024, height: 640)]
+        let size = sizes.first { $0.width <= visible.width && $0.height <= visible.height } ?? sizes[sizes.count - 1]
+        window.setFrame(NSRect(x: visible.minX, y: visible.maxY - size.height, width: size.width, height: size.height), display: true)
+        guard report else { return }
+        // screencapture -R takes points from the top left corner of the main screen.
+        let top = screen.frame.maxY - visible.maxY
+        let line = "WINDOW_RECT \(Int(visible.minX)),\(Int(top)),\(Int(size.width)),\(Int(size.height)) SCALE \(Int(screen.backingScaleFactor))\n"
+        FileHandle.standardOutput.write(Data(line.utf8))
+    }
 }
 #endif
 #endif
