@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="brand_background">#FF0B1F1A</color>
+    <color name="brand_top">#FF1C4F45</color>
+    <color name="brand_bottom">#FF081C17</color>
+    <color name="lime">#FFD6FF3D</color>
+    <color name="cream">#FFFFF6DE</color>
+</resources>

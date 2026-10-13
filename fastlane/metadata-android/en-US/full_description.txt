@@ -1,0 +1,27 @@
+Ondo is a player only: it does not host, provide or sell any content or IPTV subscription. Use it only with sources you are authorised to watch.
+
+Ondo is an elegant IPTV player for Android phones and tablets. Add the M3U playlist or the Xtream Codes login given by your provider: its movies, series and channels become a clean, fast library with no ads.
+
+MOVIES & SERIES
+• Featured carousel, rows by category, posters and instant search
+• Rich details: plot, cast, rating, seasons and episodes
+• Continue watching, resume where you left off, next episode
+• My List for the titles you want to watch
+
+A PLAYER THAT JUST WORKS
+• Built on Android's media player (HLS, MPEG-TS, MP4, MKV)
+• Audio tracks and subtitles, Picture-in-Picture
+• Clear error messages: provider, network or app
+
+LIVE TV
+• Channels by category with what is on now and next
+• Favourite channels
+
+SOURCES
+• M3U / M3U8 playlists (link or file) and Xtream Codes accounts
+• Several playlists, automatic refresh
+
+PRIVATE BY DESIGN
+• No account, no tracking, no ads: your playlists stay on your device.
+
+Ondo does not include any channel, playlist or subscription and is not affiliated with any IPTV provider.

@@ -1,10 +1,26 @@
 name: CI
 
-# Runs once per commit: on main (work branches are pushed to main too), pull requests and on demand.
+# Apple app and its Swift core: once per commit on main (work branches are pushed to main too), pull
+# requests and on demand. Android-only and documentation-only changes skip it (they have their own checks;
+# the leak scan runs on every commit, see security.yml).
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - android/**
+      - fastlane/metadata-android/**
+      - docs/**
+      - .github/workflows/android.yml
+      - .github/workflows/release-android.yml
+      - .github/workflows/security.yml
   pull_request:
+    paths-ignore:
+      - android/**
+      - fastlane/metadata-android/**
+      - docs/**
+      - .github/workflows/android.yml
+      - .github/workflows/release-android.yml
+      - .github/workflows/security.yml
   workflow_dispatch:
 
 concurrency:
@@ -15,24 +31,6 @@ permissions:
   contents: read
 
 jobs:
-  leaks:
-    name: Secrets and personal data
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Leak guard (files and every commit)
-        run: |
-          git fetch -q origin '+refs/heads/*:refs/remotes/origin/*'
-          python3 .claude/hooks/leak_guard.py --tree --history
-      - name: Gitleaks (every commit of every branch)
-        run: |
-          curl -sSfL -o /tmp/gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.28.0/gitleaks_8.28.0_linux_x64.tar.gz
-          echo "a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb  /tmp/gitleaks.tgz" | sha256sum -c -
-          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
-          /tmp/gitleaks git --redact --no-banner --log-opts="--all" .
-
   core-linux:
     name: Lint + IPTVCore tests (Linux)
     runs-on: ubuntu-latest

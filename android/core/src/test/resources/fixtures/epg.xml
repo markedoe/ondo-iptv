@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tv SYSTEM "xmltv.dtd">
+<tv generator-info-name="test">
+  <channel id="TF1.fr">
+    <display-name lang="fr">TF1</display-name>
+    <icon src="http://epg.example.com/tf1.png"/>
+  </channel>
+  <channel id="france2">
+    <display-name>France 2 HD</display-name>
+    <display-name>France 2</display-name>
+  </channel>
+  <channel id="unused.fr"><display-name>Unused</display-name></channel>
+  <programme start="20251009200000 +0200" stop="20251009204500 +0200" channel="TF1.fr">
+    <title lang="fr">Le JT</title>
+    <desc lang="fr">L'actualité &amp; la météo</desc>
+    <category>News</category>
+  </programme>
+  <programme start="20251009204500 +0200" stop="20251009230000 +0200" channel="TF1.fr">
+    <title>Film du soir</title>
+    <sub-title>Inception</sub-title>
+    <episode-num system="xmltv_ns">1.4.0/1</episode-num>
+    <icon src="http://epg.example.com/film.jpg"/>
+    <rating system="CSA"><value>-12</value></rating>
+  </programme>
+  <programme start="20251009180000 +0000" stop="20251009190000 +0000" channel="france2">
+    <title><![CDATA[N'oubliez pas les paroles]]></title>
+  </programme>
+  <programme start="20251009180000 +0000" stop="20251009190000 +0000" channel="unused.fr">
+    <title>Ignored</title>
+  </programme>
+  <programme start="20200101000000 +0000" stop="20200101010000 +0000" channel="TF1.fr">
+    <title>Too old</title>
+  </programme>
+</tv>

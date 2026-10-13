@@ -1,0 +1,85 @@
+name: Release Android
+
+# Builds the signed release bundle and sends it to Google Play (internal testing track) with the listing.
+on:
+  push:
+    tags: ["android-v*"]
+  workflow_dispatch:
+    inputs:
+      track:
+        description: Google Play track
+        type: choice
+        default: internal
+        options: [internal, alpha, beta, production]
+      status:
+        description: "Release status (draft while the app has never been published)"
+        type: choice
+        default: completed
+        options: [completed, draft]
+
+concurrency:
+  group: release-android-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deliver:
+    name: Google Play
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+      TRACK: ${{ github.event.inputs.track || 'internal' }}
+      RELEASE_STATUS: ${{ github.event.inputs.status || 'completed' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check secrets
+        run: |
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD PLAY_SERVICE_ACCOUNT_JSON; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Secret $name is missing. See docs/RELEASE-ANDROID.md."
+              exit 1
+            fi
+          done
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Signed release bundle
+        working-directory: android
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
+          export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
+          # Version code: always increasing (Play refuses reuse); version name from the tag.
+          export ANDROID_VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))
+          case "$GITHUB_REF_NAME" in android-v*) export ANDROID_VERSION_NAME="${GITHUB_REF_NAME#android-v}";; esac
+          ./gradlew -p core test
+          # Unit, Compose and screenshot tests; the screenshots become the store listing images.
+          ./gradlew :app:recordRoborazziDebug :app:bundleRelease --stacktrace
+          rm -f "$RUNNER_TEMP/upload.jks"
+      - name: Listing screenshots
+        run: |
+          for dir in android/app/src/test/screenshots/play/*/*/; do
+            locale=$(basename "$(dirname "$dir")")
+            kind=$(basename "$dir")
+            mkdir -p "fastlane/metadata-android/$locale/images/$kind"
+            cp "$dir"*.png "fastlane/metadata-android/$locale/images/$kind/"
+          done
+          find fastlane/metadata-android -name "*.png" | sort
+      - name: Release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ondo-release-bundle
+          path: android/app/build/outputs/bundle/release/*.aab
+      - name: Upload to Google Play
+        run: bundle exec fastlane android deploy

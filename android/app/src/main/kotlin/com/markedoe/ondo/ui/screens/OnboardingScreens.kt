@@ -1,0 +1,201 @@
+package com.markedoe.ondo.ui.screens
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.markedoe.ondo.R
+import kotlin.math.PI
+import kotlin.math.sin
+
+/** The Ondo mark: lime ring and cream wave (same geometry as the app icon). */
+@Composable
+fun OndoLogo(size: Dp = 96.dp) {
+    Canvas(Modifier.size(size)) {
+        val s = this.size.minDimension
+        drawCircle(Color(0xFFD6FF3D), radius = 0.586f * s / 2, style = Stroke(width = 0.115f * s))
+        val path = Path()
+        val width = 0.707f * s
+        val height = 0.14f * s
+        for (step in 0..120) {
+            val t = step / 120f
+            val x = center.x - width / 2 + width * t
+            val y = center.y + height / 2 * sin(2 * PI * 1.5 * t).toFloat()
+            if (step == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        drawPath(path, Color(0xFFFFF6DE), style = Stroke(width = 0.0625f * s, cap = StrokeCap.Round))
+    }
+}
+
+/** First launch: what Ondo is, the player-only disclaimer, add a playlist or try the demo. */
+@Composable
+fun WelcomeScreen(onAddPlaylist: () -> Unit, onTryDemo: () -> Unit, isLoading: Boolean) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 24.dp, vertical = 32.dp)
+            .testTag("welcome"),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        OndoLogo(104.dp)
+        Spacer(Modifier.height(20.dp))
+        Text(stringResource(R.string.welcome_title), style = MaterialTheme.typography.displaySmall, textAlign = TextAlign.Center)
+        Text(
+            stringResource(R.string.welcome_subtitle),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp).widthIn(max = 480.dp),
+        )
+        Spacer(Modifier.height(28.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.widthIn(max = 480.dp)) {
+            Feature(Icons.Rounded.Movie, R.string.feature_vod_title, R.string.feature_vod_text)
+            Feature(Icons.AutoMirrored.Rounded.PlaylistAdd, R.string.feature_sources_title, R.string.feature_sources_text)
+            Feature(Icons.Rounded.LiveTv, R.string.feature_live_title, R.string.feature_live_text)
+            Feature(Icons.Rounded.Cast, R.string.feature_player_title, R.string.feature_player_text)
+        }
+        Spacer(Modifier.height(28.dp))
+        Button(onClick = onAddPlaylist, modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp).testTag("addPlaylist")) {
+            Text(stringResource(R.string.add_playlist))
+        }
+        OutlinedButton(onClick = onTryDemo, enabled = !isLoading, modifier = Modifier.fillMaxWidth().widthIn(max = 480.dp).padding(top = 8.dp).testTag("demoButton")) {
+            if (isLoading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.try_demo))
+        }
+        Text(
+            stringResource(R.string.disclaimer),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 24.dp).widthIn(max = 480.dp),
+        )
+    }
+}
+
+@Composable
+private fun Feature(icon: ImageVector, title: Int, text: Int) {
+    Row(verticalAlignment = Alignment.Top) {
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 2.dp))
+        Column(Modifier.padding(start = 14.dp)) {
+            Text(stringResource(title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(text), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** What the user typed to add a playlist. */
+sealed interface PlaylistForm {
+    val name: String
+    data class Xtream(override val name: String, val server: String, val username: String, val password: String) : PlaylistForm
+    data class M3u(override val name: String, val url: String, val epgUrl: String) : PlaylistForm
+}
+
+/** Add a playlist: Xtream Codes login or M3U link (+ optional guide). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddPlaylistScreen(onSave: (PlaylistForm) -> Unit, onBack: () -> Unit, isLoading: Boolean, error: String?) {
+    var kind by rememberSaveable { mutableStateOf(0) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var server by rememberSaveable { mutableStateOf("") }
+    var username by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var url by rememberSaveable { mutableStateOf("") }
+    var epg by rememberSaveable { mutableStateOf("") }
+    val valid = if (kind == 0) server.isNotBlank() && username.isNotBlank() && password.isNotBlank() else url.isNotBlank()
+
+    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).testTag("addPlaylistScreen")) {
+        TopAppBar(
+            title = { Text(stringResource(R.string.add_playlist)) },
+            navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) } },
+            windowInsets = WindowInsets(0),
+        )
+        Column(
+            Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp).widthIn(max = 560.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                listOf(R.string.xtream_codes, R.string.m3u_link).forEachIndexed { index, label ->
+                    SegmentedButton(selected = kind == index, onClick = { kind = index }, shape = SegmentedButtonDefaults.itemShape(index, 2)) {
+                        Text(stringResource(label))
+                    }
+                }
+            }
+            OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            if (kind == 0) {
+                OutlinedTextField(server, { server = it }, label = { Text(stringResource(R.string.server)) }, placeholder = { Text("http://provider.example:8080") }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().testTag("serverField"))
+                OutlinedTextField(username, { username = it }, label = { Text(stringResource(R.string.username)) }, singleLine = true, modifier = Modifier.fillMaxWidth().testTag("usernameField"))
+                OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.password)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().testTag("passwordField"))
+                Text(stringResource(R.string.xtream_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                OutlinedTextField(url, { url = it }, label = { Text(stringResource(R.string.playlist_url)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().testTag("urlField"))
+                OutlinedTextField(epg, { epg = it }, label = { Text(stringResource(R.string.guide_url_optional)) }, singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth())
+            }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+            Button(
+                onClick = {
+                    onSave(
+                        if (kind == 0) PlaylistForm.Xtream(name.trim(), server.trim(), username.trim(), password)
+                        else PlaylistForm.M3u(name.trim(), url.trim(), epg.trim()),
+                    )
+                },
+                enabled = valid && !isLoading,
+                modifier = Modifier.fillMaxWidth().testTag("savePlaylist"),
+            ) {
+                if (isLoading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.add))
+            }
+            Text(stringResource(R.string.disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
