@@ -1,82 +1,84 @@
-# Ondo pour Android — plan
+# Ondo for Android — plan
 
-## État (v1, octobre 2026)
+**English** · [Français](ANDROID.fr.md)
 
-La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.md](RELEASE-ANDROID.md) :
+## Status (v1, October 2026)
 
-- **Cœur** `android/core` : port Kotlin d'IPTVCore (M3U, XSPF, JSON, Xtream, XMLTV, catch-up, recherche,
-  éléments de lecture), testé avec les mêmes cas que les tests Swift.
-- **App** `android/app` (Compose, Material 3, Navigation type-safe, barre d'onglets ou rail selon l'écran) :
-  accueil (carrousel, Continuer à regarder, Ma liste, ajouts récents, chaînes), onglets Films et Séries
-  (une rangée par catégorie, grilles filtrables), fiches film et série (reprise, depuis le début, épisode
-  suivant, saisons, titres similaires), TV en direct (catégories, favoris, programme en cours et suivant),
-  recherche, réglages (playlists, apparence, catégories adultes masquées par défaut), accueil avec
-  démonstration et avertissement « lecteur sans contenu ».
-- **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
-  reprise, image dans l'image, MediaSession, retour au direct.
-- **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), captures
-  Roborazzi qui servent de captures Google Play (téléphone, tablettes 7" et 10", anglais et français).
+v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-ANDROID.md):
 
-Prévu ensuite (non inclus en v1) : Android TV, guide en grille, replay depuis le guide, Chromecast,
-téléchargements, profils et PIN, synchronisation, second moteur libVLC.
+- **Core** `android/core`: Kotlin port of IPTVCore (M3U, XSPF, JSON, Xtream, XMLTV, catch-up, search,
+  playback items), tested with the same cases as the Swift tests.
+- **App** `android/app` (Compose, Material 3, type-safe Navigation, tab bar or rail depending on the screen):
+  home (carousel, Continue Watching, My List, Recently Added, channels), Movies and Series tabs
+  (one row per category, filterable grids), movie and series pages (Resume, From Start, next
+  episode, seasons, More Like This), live TV (categories, favorites, current and next programme),
+  search, settings (playlists, appearance, adult categories hidden by default), welcome screen with a
+  demo and a "player without content" disclaimer.
+- **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
+  resume, picture-in-picture, MediaSession, Back to Live.
+- **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), Roborazzi
+  screenshots that double as Google Play screenshots (phone, 7" and 10" tablets, English and French).
 
-## Plan initial
+Planned next (not included in v1): Android TV, grid guide, catch-up from the guide, Chromecast,
+downloads, profiles and PIN, sync, second libVLC engine.
 
-À démarrer une fois la version iPhone / iPad / Mac validée et publiée. Objectif : la même app, native,
-sans compromis sur la qualité, en réutilisant tout ce qui peut l'être (spécifications, jeux de test,
-textes, icône, fiche) plutôt que du code Swift.
+## Initial plan
 
-## 1. Choix techniques
+To be started once the iPhone / iPad / Mac version is validated and published. Goal: the same app, native,
+with no compromise on quality, reusing everything that can be reused (specifications, test suites,
+texts, icon, store listing) rather than Swift code.
 
-| Sujet | Choix | Pourquoi |
+## 1. Technical choices
+
+| Topic | Choice | Why |
 |---|---|---|
-| Langage / UI | Kotlin, Jetpack Compose, Material 3 (thème Ondo) | standard Android actuel |
-| Cibles | téléphones et tablettes Android 8+ (API 26), **Android TV / Google TV** (Compose for TV) | l'IPTV se regarde surtout sur la TV |
-| Lecture | **AndroidX Media3 / ExoPlayer** (HLS, DASH, MPEG-TS, sous-titres), extension FFmpeg pour les codecs audio | lecteur standard d'Android, PiP, MediaSession |
-| Second moteur | libVLC Android (LGPL) en repli, comme sur iOS | MKV / AVI / flux exotiques |
-| Diffusion | Google Cast (Media3 `CastPlayer`) | Chromecast natif |
-| Réseau | OkHttp + Kotlin coroutines / Flow | |
-| Stockage | Room (catalogue, guide), DataStore (réglages), Android Keystore (mots de passe) | |
-| Images | Coil 3 | équivalent de Nuke |
-| Synchro | Google Drive *appDataFolder* (optionnelle) au lieu d'iCloud, même format JSON | |
+| Language / UI | Kotlin, Jetpack Compose, Material 3 (Ondo theme) | current Android standard |
+| Targets | Android 8+ phones and tablets (API 26), **Android TV / Google TV** (Compose for TV) | IPTV is mostly watched on TV |
+| Playback | **AndroidX Media3 / ExoPlayer** (HLS, DASH, MPEG-TS, subtitles), FFmpeg extension for audio codecs | Android's standard player, PiP, MediaSession |
+| Second engine | libVLC Android (LGPL) as a fallback, as on iOS | MKV / AVI / exotic streams |
+| Casting | Google Cast (Media3 `CastPlayer`) | native Chromecast |
+| Networking | OkHttp + Kotlin coroutines / Flow | |
+| Storage | Room (catalogue, guide), DataStore (settings), Android Keystore (passwords) | |
+| Images | Coil 3 | equivalent of Nuke |
+| Sync | Google Drive *appDataFolder* (optional) instead of iCloud, same JSON format | |
 | Injection | Hilt | |
-| Tests | JUnit 5 + Turbine (cœur), Compose UI tests, Roborazzi (captures) | |
-| CI/CD | GitHub Actions (lint, tests, build), Gradle Play Publisher → Google Play (piste interne puis production) | |
+| Tests | JUnit 5 + Turbine (core), Compose UI tests, Roborazzi (screenshots) | |
+| CI/CD | GitHub Actions (lint, tests, build), Gradle Play Publisher → Google Play (internal track then production) | |
 
-## 2. Cœur `core` (Kotlin pur, sans Android)
+## 2. Core: `core` (pure Kotlin, no Android)
 
-Port fidèle d'`IPTVCore`, piloté par les **mêmes fichiers de test** (`Packages/IPTVCore/Tests/IPTVCoreTests/Fixtures`
-et les cas des tests Swift) pour garantir un comportement identique :
+Faithful port of `IPTVCore`, driven by the **same test files** (`Packages/IPTVCore/Tests/IPTVCoreTests/Fixtures`
+and the Swift test cases) to guarantee identical behavior:
 
-- M3U (parseur octet par octet, attributs `tvg-*`, `catchup*`, en-têtes `#EXTVLCOPT`), XSPF, JSON
-- Xtream Codes (décodage tolérant), XMLTV en flux (gzip, filtres fenêtre / chaînes)
-- URL de catch-up (default, append, shift, flussonic, Xtream), numérotation, correspondance EPG
-  (automatique, suggestions, choix manuel), recherche
-- Bibliothèque : favoris, historique, listes, rappels, chaînes masquées — avec la **même fusion
-  déterministe** (marqueurs datés) pour que la synchro reste compatible
+- M3U (byte-by-byte parser, `tvg-*` and `catchup*` attributes, `#EXTVLCOPT` headers), XSPF, JSON
+- Xtream Codes (tolerant decoding), streaming XMLTV (gzip, window / channel filters)
+- Catch-up URLs (default, append, shift, flussonic, Xtream), numbering, EPG matching
+  (automatic, suggestions, manual choice), search
+- Library: favorites, history, lists, reminders, hidden channels — with the **same deterministic
+  merge** (timestamped markers) so that sync stays compatible
 
-## 3. Écrans (parité avec iOS)
+## 3. Screens (parity with iOS)
 
-Accueil, Live TV, Guide (grille + guide de chaîne), Films, Séries, Recherche (dont programmes), Favoris
-et listes, Téléchargements, Réglages, Profils / contrôle parental, Lecteur (panneau chaînes / guide,
-redémarrer / revoir / direct, dernière chaîne, zapping par numéro y compris télécommande, pistes,
-sous-titres, PiP, minuterie), Multivue (tablette / TV).
+Home, Live TV, Guide (grid + channel guide), Movies, Series, Search (including programmes), Favorites
+and lists, Downloads, Settings, Profiles / parental control, Player (channels / guide panel,
+restart / rewatch / live, Last Channel, zapping by number including from the remote, tracks,
+subtitles, PiP, sleep timer), Multiview (tablet / TV).
 
-Spécifique Android TV : navigation au D-pad, guide plein écran, touches CH+/CH−, chiffres, « Info »,
-lancement depuis l'écran d'accueil (chaînes recommandées).
+Android TV specifics: D-pad navigation, full-screen guide, CH+/CH− keys, digits, "Info",
+launch from the home screen (recommended channels).
 
-## 4. Jalons
+## 4. Milestones
 
-1. `core` + tests portés depuis la suite Swift (CI Linux)
-2. App téléphone : sources, Live TV, lecteur Media3, guide
-3. Films / séries, recherche, bibliothèque, profils, rappels (WorkManager + notifications)
-4. Android TV (Compose for TV), multivue, Cast
-5. Synchro, sauvegarde / restauration compatibles avec iOS
-6. Fiche Google Play (textes et captures réutilisés), politique de confidentialité (même page), publication
+1. `core` + tests ported from the Swift suite (Linux CI)
+2. Phone app: sources, Live TV, Media3 player, guide
+3. Movies / series, search, library, profiles, reminders (WorkManager + notifications)
+4. Android TV (Compose for TV), multiview, Cast
+5. Sync, backup / restore compatible with iOS
+6. Google Play listing (texts and screenshots reused), privacy policy (same page), release
 
-## 5. Points d'attention Google Play
+## 5. Google Play considerations
 
-- Politique « Contenu non autorisé / propriété intellectuelle » : comme sur l'App Store, aucune chaîne
-  fournie, avertissement clair, playlist de démonstration légale.
-- Déclarations : pas de collecte de données (formulaire *Data safety*), autorisations minimales
-  (réseau, notifications, premier plan pour la lecture).
+- "Unauthorized content / intellectual property" policy: as on the App Store, no channels
+  provided, clear disclaimer, legal demo playlist.
+- Declarations: no data collection (*Data safety* form), minimal permissions
+  (network, notifications, foreground for playback).

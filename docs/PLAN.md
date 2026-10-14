@@ -1,151 +1,153 @@
-# Plan de réalisation — « Ondo »
+# Implementation plan — "Ondo"
 
-Lecteur IPTV (films, séries, TV en direct) pour **iPhone**, **iPad** et **macOS**, en Swift/SwiftUI natif,
-sous licence MIT. Ondo ne fournit aucun contenu : il lit les sources ajoutées par l'utilisateur.
+**English** · [Français](PLAN.fr.md)
 
-## 1. Choix techniques
+IPTV player (movies, series, live TV) for **iPhone**, **iPad** and **macOS**, in native Swift/SwiftUI,
+under the MIT license. Ondo provides no content: it plays the sources added by the user.
 
-| Sujet | Choix | Pourquoi |
+## 1. Technical choices
+
+| Topic | Choice | Why |
 |---|---|---|
-| Langage / UI | Swift 5.10+ (compilateur Swift 6), SwiftUI, Observation (`@Observable`) | une seule base de code iPhone + Mac natif |
-| Cibles | **iOS 17+**, **macOS 14+** (iPad inclus via la cible iOS) | `@Observable`, `NavigationSplitView`, `ContentUnavailableView` |
-| Projet Xcode | **XcodeGen** (`project.yml`) | projet lisible et versionnable, pas de `.pbxproj` à la main |
-| Logique métier | package SPM **`IPTVCore`** (Foundation pur) | testable sous Linux et en CI, réutilisable (tvOS plus tard) |
-| Lecture | AVFoundation (`AVPlayer` + `AVPlayerLayer`) derrière un protocole `PlayerEngine` | PiP, AirPlay, HDR natifs ; moteur VLCKit ajoutable |
-| Stockage | fichiers JSON versionnés dans *Application Support* + Trousseau pour les mots de passe | simple, robuste, exportable ; SQLite si besoin de perf |
-| Réseau | `URLSession`, en-têtes UA/Referer par playlist, gzip via zlib | |
-| Tests | XCTest (`swift test` sous Linux/Docker et macOS) | |
-| CI | GitHub Actions : tests Linux + build iOS Simulator + build macOS | détecte aussi les régressions de la version Mac |
+| Language / UI | Swift 5.10+ (Swift 6 compiler), SwiftUI, Observation (`@Observable`) | a single codebase for iPhone + native Mac |
+| Targets | **iOS 17+**, **macOS 14+** (iPad included via the iOS target) | `@Observable`, `NavigationSplitView`, `ContentUnavailableView` |
+| Xcode project | **XcodeGen** (`project.yml`) | readable, versionable project, no hand-written `.pbxproj` |
+| Business logic | SPM package **`IPTVCore`** (pure Foundation) | testable on Linux and in CI, reusable (tvOS later) |
+| Playback | AVFoundation (`AVPlayer` + `AVPlayerLayer`) behind a `PlayerEngine` protocol | native PiP, AirPlay, HDR; a VLCKit engine can be added |
+| Storage | versioned JSON files in *Application Support* + Keychain for passwords | simple, robust, exportable; SQLite if performance requires it |
+| Networking | `URLSession`, per-playlist UA/Referer headers, gzip via zlib | |
+| Tests | XCTest (`swift test` on Linux/Docker and macOS) | |
+| CI | GitHub Actions: Linux tests + iOS Simulator build + macOS build | also catches regressions in the Mac version |
 
 ## 2. Architecture
 
 ```
 ondo-iptv/
-├── project.yml                     # XcodeGen : cible "Ondo" iOS + macOS
-├── Packages/IPTVCore/              # logique métier, sans UI
+├── project.yml                     # XcodeGen: "Ondo" target, iOS + macOS
+├── Packages/IPTVCore/              # business logic, no UI
 │   ├── Models/        Playlist, Channel, Movie, Series, Episode, EPGProgram, Favorite, History, PlaybackItem
 │   ├── Parsing/       M3UParser, M3UContentBuilder, XSPFParser, JSONPlaylistParser, PlaylistFormat
-│   ├── Xtream/        XtreamClient (API), DTO tolérants, XtreamURLBuilder (live/vod/series/timeshift)
-│   ├── EPG/           XMLTVParser (SAX + gzip), EPGIndex (now/next, rapprochement des chaînes)
+│   ├── Xtream/        XtreamClient (API), tolerant DTOs, XtreamURLBuilder (live/vod/series/timeshift)
+│   ├── EPG/           XMLTVParser (SAX + gzip), EPGIndex (now/next, channel matching)
 │   ├── Catchup/       CatchupURLBuilder (default/append/shift/flussonic/xtream)
-│   ├── Library/       PlaylistLoader, SearchEngine, LibraryStore (favoris, historique, reprise)
+│   ├── Library/       PlaylistLoader, SearchEngine, LibraryStore (favorites, history, resume)
 │   └── Networking/    HTTPClient, Gzip (CZlib)
 ├── App/
-│   ├── OndoApp.swift               # scènes : fenêtre principale, fenêtres lecteur (Mac), Réglages (Mac)
-│   ├── Model/         AppModel (état global), PlaylistRepository (Trousseau), EPGService, Settings
+│   ├── OndoApp.swift               # scenes: main window, player windows (Mac), Settings (Mac)
+│   ├── Model/         AppModel (global state), PlaylistRepository (Keychain), EPGService, Settings
 │   ├── Features/      Onboarding, Home, Live, Movies, Series, Guide, Search, Favorites, Playlists, Settings
-│   ├── Player/        PlayerEngine, AVPlayerEngine, PlayerView, contrôles, PiP, AirPlay, zapping, overlay EPG
-│   └── Shared/        composants (logo/affiche en cache, PIN, états vides), plateformes (#if os)
+│   ├── Player/        PlayerEngine, AVPlayerEngine, PlayerView, controls, PiP, AirPlay, zapping, EPG overlay
+│   └── Shared/        components (cached logo/poster, PIN, empty states), platforms (#if os)
 └── .github/workflows/ci.yml
 ```
 
-Flux de données : `Playlist` → `PlaylistLoader` (M3U/Xtream) → `PlaylistContent` mis en cache sur disque →
-`AppModel` (`@Observable`) → vues. L'EPG est chargé en tâche de fond → `EPGIndex` → now/next, grille, replay.
+Data flow: `Playlist` → `PlaylistLoader` (M3U/Xtream) → `PlaylistContent` cached on disk →
+`AppModel` (`@Observable`) → views. The EPG is loaded in the background → `EPGIndex` → now/next, grid, catch-up.
 
-Navigation : **iPhone** = `TabView` (Accueil, Live, Films, Séries, Recherche) + Réglages ; **Mac** =
-`NavigationSplitView` avec barre latérale (mêmes sections + Guide TV, Favoris, Playlists), menu « Lecture »
-avec raccourcis, lecteur dans sa propre fenêtre (plusieurs fenêtres = multi-écran), `Settings` natif.
+Navigation: **iPhone** = `TabView` (Home, Live, Movies, Series, Search) + Settings; **Mac** =
+`NavigationSplitView` with a sidebar (same sections + TV Guide, Favorites, Playlists), "Playback" menu
+with shortcuts, player in its own window (several windows = multi-screen), native `Settings`.
 
-## 3. Phases et livrables
+## 3. Phases and deliverables
 
-### Phase 0 — Cadrage ✅
-- [x] Inventaire des fonctions attendues d'un lecteur IPTV, formats et protocoles (M3U, Xtream, XMLTV, replay)
-- [x] Plan, architecture, priorités → ce document
+### Phase 0 — Scoping ✅
+- [x] Inventory of the features expected from an IPTV player, formats and protocols (M3U, Xtream, XMLTV, catch-up)
+- [x] Plan, architecture, priorities → this document
 
-### Phase 1 — Cœur `IPTVCore` (P1) ✅
-- [x] Modèles de données + identifiants stables (hash FNV, pour favoris/historique persistants)
-- [x] Parseur M3U étendu au niveau octets (attributs, en-têtes, `EXTVLCOPT`, `EXTGRP`, `KODIPROP`, `|User-Agent=`)
-- [x] Classement Live/Films/Séries + regroupement des épisodes (`S01E02`, `1x02`, « Saison 2 Épisode 3 »)
-- [x] Parseurs XSPF, JSON et listes d'URL simples
-- [x] Client Xtream Codes complet + décodage tolérant + construction des URL + « forcer M3U »
-- [x] Parseur XMLTV en flux (gzip, filtre de fenêtre et de chaînes, décalage) + `EPGIndex` (id, casse, nom)
-- [x] Générateur d'URL de replay (default, append, shift, flussonic, xtream + jetons)
-- [x] Recherche normalisée (accents, casse, préfixes, classement)
-- [x] Stockage JSON versionné avec copie de secours, décodage tolérant, sauvegarde/restauration
-- [x] Sous-titres SRT / WebVTT, tendances TMDb + rapprochement avec le catalogue
-- [x] 66 tests unitaires (+ garde-fous de performance : 60 000 entrées, 100 000 programmes)
+### Phase 1 — `IPTVCore` core (P1) ✅
+- [x] Data models + stable identifiers (FNV hash, for persistent favorites/history)
+- [x] Extended M3U parser at byte level (attributes, headers, `EXTVLCOPT`, `EXTGRP`, `KODIPROP`, `|User-Agent=`)
+- [x] Live/Movies/Series classification + episode grouping (`S01E02`, `1x02`, "Saison 2 Épisode 3")
+- [x] XSPF, JSON and plain URL list parsers
+- [x] Full Xtream Codes client + tolerant decoding + URL building + "Force M3U"
+- [x] Streaming XMLTV parser (gzip, time window and channel filters, offset) + `EPGIndex` (id, case, name)
+- [x] Catch-up URL builder (default, append, shift, flussonic, xtream + tokens)
+- [x] Normalized search (accents, case, prefixes, ranking)
+- [x] Versioned JSON storage with a fallback copy, tolerant decoding, backup/restore
+- [x] SRT / WebVTT subtitles, TMDb trending + matching against the catalogue
+- [x] 66 unit tests (+ performance guards: 60,000 entries, 100,000 programmes)
 
-### Phase 2 — App MVP iPhone + Mac (P1) ✅
-- [x] Projet XcodeGen, Info.plist (ATS, audio en arrière-plan), sandbox Mac, icône originale
-- [x] Onboarding + ajout de playlist (Xtream, URL M3U, fichier, démo publique) avec détection des liens Xtream
-- [x] Gestion des playlists : modifier, actualiser (auto), supprimer, réordonner, EPG additionnels, UA/Referer
-- [x] Accueil : continuer à regarder, tendances, favoris, chaînes récentes, ajouts récents, statut du compte
-- [x] Live : catégories → chaînes (logo, numéro, programme en cours + progression, badge replay)
-- [x] Films / séries : grilles d'affiches, tri, fiches détaillées, saisons, épisodes, reprise, épisode suivant auto
-- [x] Recherche globale (portées), favoris réordonnables, historique
-- [x] Lecteur : zapping (liste + ↑/↓), overlay EPG, pistes, ratio, vitesse, PiP, AirPlay, verrou, minuterie,
-      reprise, raccourcis clavier Mac, une fenêtre par flux sur Mac, « À l'écoute » / touches média
-- [x] Bascule d'URL (`.ts → .m3u8`) et vers une autre version de la chaîne (HD/FHD/backup), reconnexion auto,
-      relance sur blocage, erreurs attribuées
-- [x] Guide TV en grille + fiche programme + replay
-- [x] Contrôle parental : PIN, catégories adultes verrouillées automatiquement
-- [x] Infos du compte Xtream + test de connexion
-- [x] Réglages complets ; localisation anglais + français
+### Phase 2 — iPhone + Mac MVP app (P1) ✅
+- [x] XcodeGen project, Info.plist (ATS, background audio), Mac sandbox, original icon
+- [x] Onboarding + adding a playlist (Xtream, M3U URL, file, public demo) with detection of Xtream links
+- [x] Playlist management: edit, refresh (auto), delete, reorder, additional EPGs, UA/Referer
+- [x] Home: Continue Watching, Trending, Favorites, recent channels, Recently Added, account status
+- [x] Live: categories → channels (logo, number, current programme + progress, catch-up badge)
+- [x] Movies / series: poster grids, sorting, detail pages, seasons, episodes, resume, auto next episode
+- [x] Global search (scopes), reorderable favorites, history
+- [x] Player: zapping (list + ↑/↓), EPG overlay, tracks, aspect ratio, speed, PiP, AirPlay, lock, sleep timer,
+      resume, Mac keyboard shortcuts, one window per stream on Mac, "Now Playing" / media keys
+- [x] URL fallback (`.ts → .m3u8`) and switch to another version of the channel (HD/FHD/backup), auto reconnect,
+      restart when stalled, errors attributed to their source
+- [x] Grid TV Guide + programme details + catch-up
+- [x] Parental control: PIN, adult categories locked automatically
+- [x] Xtream account info + connection test
+- [x] Full settings; English + French localization
 
-### Phase 3 — Lecteur avancé (P2) ✅
-- [x] Moteur **VLCKit** 3.6 (LGPL) : MKV, AVI, `.ts` brut… ; mode automatique avec repli si AVPlayer échoue
-- [x] Sous-titres SRT/WebVTT externes avec décalage ; préférences audio/sous-titres conservées
-- [x] Gestes iPhone (double-tap ±10 s, glisser pour avancer, luminosité), paysage forcé par type de contenu
-- [x] « Forcer M3U » pour les comptes Xtream
+### Phase 3 — Advanced player (P2) ✅
+- [x] **VLCKit** 3.6 engine (LGPL): MKV, AVI, raw `.ts`…; automatic mode with fallback if AVPlayer fails
+- [x] External SRT/WebVTT subtitles with offset; audio/subtitle preferences remembered
+- [x] iPhone gestures (double-tap ±10 s, swipe to seek, brightness), landscape forced by content type
+- [x] "Force M3U" for Xtream accounts
 
-### Phase 4 — Bibliothèque et synchro (P2) ✅
-- ~~Synchro iCloud~~ : retirée (décision du 13/10) ; la bibliothèque garde sa fusion déterministe
-      (marqueurs de suppression), utile pour une future synchro ou la restauration de sauvegardes
-- [x] Profils (« Qui regarde ? »), PIN de profil, profils enfant
-- [x] Gestionnaire de listes personnalisées, catégories masquées
+### Phase 4 — Library and sync (P2) ✅
+- ~~iCloud sync~~: removed (decision of 13 Oct); the library keeps its deterministic merge
+      (deletion markers), useful for a future sync or for restoring backups
+- [x] Profiles ("Who's watching?"), profile PIN, kids profiles
+- [x] Custom list manager, hidden categories
 
 ### Phase 5 — Extras (P3)
-- [x] Téléchargements hors ligne des films/épisodes (session d'arrière-plan, pause/reprise)
-- [x] Tendances TMDb (clé API fournie par l'utilisateur)
-- [x] Chromecast (Google Cast SDK officiel, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
-- [x] Source Real-Debrid (liste des téléchargements du compte → films / séries), masquée dans la version App Store
-- [ ] Monétisation StoreKit 2 optionnelle — volontairement non faite (app libre)
-- [ ] Cibles tvOS / visionOS (le cœur est déjà compatible)
+- [x] Offline downloads of movies/episodes (background session, pause/resume)
+- [x] TMDb trending (API key supplied by the user)
+- [x] Chromecast (official Google Cast SDK, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
+- [x] Real-Debrid source (the account's list of downloads → movies / series), hidden in the App Store version
+- [ ] Optional StoreKit 2 monetization — deliberately not done (open-source app)
+- [ ] tvOS / visionOS targets (the core is already compatible)
 
-### Phase 6 — Fonctions avancées ✅ en partie
-Fonctions jugées indispensables pour un lecteur moderne, traitées par jalons :
-- [x] **M1** dernière chaîne (bouton, ⌫ / ⌘⌫), zapping par numéro au clavier, panneau latéral
-      chaînes (recherche nom/numéro) + guide de la chaîne dans le lecteur
-- [x] **M2** redémarrer le programme en cours, revoir un programme passé depuis le lecteur, retour au
-      direct ; pause/retour arrière du direct (fenêtre DVR HLS, sinon reprise via l'archive du fournisseur)
-- [x] **M3** rappels de programmes (notifications locales, délai réglable) ; titres
-      « collants » dans la grille EPG
-- [x] **M4** association manuelle chaîne ↔ guide (suggestions, aperçu, « pas de guide ») ; recherche
-      dans les programmes (en cours, à venir, replay)
-- [x] **M5** gestion des chaînes : masquer (par profil), renommer, renuméroter (par playlist)
-- [x] Multivue (iPad / Mac : 2 à 4 flux, un seul audio)
-- [x] Téléchargements hors ligne : conservés dans la version App Store (décision du 13/10)
-- ~~Enregistrement~~ : non retenu (décision du 13/10)
-- Source Real-Debrid : désactivée dans la version App Store (`FeatureFlags.realDebrid`, code conservé) ;
-  portail Stalker/MAG : hors v1 (décision du 13/10, Ondo reste un lecteur M3U / Xtream)
-- [x] Remplacer le chargeur d'images maison par Nuke/NukeUI (cache disque, coalescence, sous-échantillonnage)
+### Phase 6 — Advanced features ✅ in part
+Features deemed essential for a modern player, handled in milestones:
+- [x] **M1** Last Channel (button, ⌫ / ⌘⌫), zapping by number from the keyboard, channel side panel
+      (search by name/number) + the channel's guide in the player
+- [x] **M2** restart the current programme, rewatch a past programme from the player, Back to
+      Live; pause/rewind live TV (HLS DVR window, otherwise resume via the provider's archive)
+- [x] **M3** programme reminders (local notifications, adjustable lead time); "sticky"
+      titles in the EPG grid
+- [x] **M4** manual channel ↔ guide matching (suggestions, preview, "No guide"); search
+      in programmes (on now, upcoming, catch-up)
+- [x] **M5** channel management: hide (per profile), rename, renumber (per playlist)
+- [x] Multiview (iPad / Mac: 2 to 4 streams, only one with audio)
+- [x] Offline downloads: kept in the App Store version (decision of 13 Oct)
+- ~~Recording~~: not retained (decision of 13 Oct)
+- Real-Debrid source: disabled in the App Store version (`FeatureFlags.realDebrid`, code kept);
+  Stalker/MAG portal: out of v1 (decision of 13 Oct, Ondo remains an M3U / Xtream player)
+- [x] Replace the home-made image loader with Nuke/NukeUI (disk cache, coalescing, downsampling)
 
-## 4. Phase 7 — Expérience films et séries
-- [x] **M-A** textes : lecteur sans contenu, films et séries mis en avant
-- [x] **M-B** accueil : carrousel à la une, rangées (reprise, Ma liste, ajouts récents), thème sombre
-- [x] **M-C** fiches film / série plein écran (image de fond, actions, distribution, saisons, épisodes)
-- [x] **M-D** onglets Films / Séries en rangées par catégorie (puces, reprise, Ma liste, recherche)
-- [x] Captures App Store du Mac (workflow *App Store screenshots*)
+## 4. Phase 7 — Movies and series experience
+- [x] **M-A** texts: a player without content, movies and series put forward
+- [x] **M-B** home: featured carousel, rows (resume, My List, recently added), dark theme
+- [x] **M-C** full-screen movie / series pages (backdrop image, actions, cast, seasons, episodes)
+- [x] **M-D** Movies / Series tabs in rows by category (chips, resume, My List, search)
+- [x] Mac App Store screenshots (*App Store screenshots* workflow)
 
-## 5. Risques
+## 5. Risks
 
-| Risque | Parade |
+| Risk | Mitigation |
 |---|---|
-| AVPlayer ne lit pas le `.ts` brut | sortie `m3u8` Xtream par défaut, URL de secours, moteur VLCKit (phase 3) |
-| Playlists énormes (50 000+ entrées) | parsing en tâche de fond, index de recherche pré-normalisé, listes paresseuses, cache disque |
-| Guides XMLTV de centaines de Mo | SAX en flux, filtrage chaînes/fenêtre, cache élagué |
-| Panels Xtream non conformes | décodage JSON tolérant, tests sur réponses réelles |
-| Validation App Store (apps IPTV) | aucun contenu fourni, avertissement clair, playlist de démo légale |
-| Licences | dépendances MIT/BSD/LGPL uniquement |
-| Pas de Mac dans l'environnement de dev | cœur testé sous Linux (Docker Swift 6) ; app compilée par la CI macOS |
+| AVPlayer does not play raw `.ts` | Xtream `m3u8` output by default, fallback URL, VLCKit engine (phase 3) |
+| Huge playlists (50,000+ entries) | background parsing, pre-normalized search index, lazy lists, disk cache |
+| XMLTV guides of hundreds of MB | streaming SAX, channel/window filtering, pruned cache |
+| Non-compliant Xtream panels | tolerant JSON decoding, tests on real responses |
+| App Store review (IPTV apps) | no content provided, clear disclaimer, legal demo playlist |
+| Licenses | MIT/BSD/LGPL dependencies only |
+| No Mac in the development environment | core tested on Linux (Docker Swift 6); app built by the macOS CI |
 
-## 6. Construire et lancer
+## 6. Build and run
 
 ```bash
 brew install xcodegen
-xcodegen generate          # crée Ondo.xcodeproj
-open Ondo.xcodeproj        # schéma "Ondo", destination iPhone ou "My Mac"
+xcodegen generate          # creates Ondo.xcodeproj
+open Ondo.xcodeproj        # "Ondo" scheme, iPhone or "My Mac" destination
 
-# Tests du cœur (macOS ou Linux)
+# Core tests (macOS or Linux)
 cd Packages/IPTVCore && swift test
 ```
