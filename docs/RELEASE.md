@@ -61,6 +61,10 @@ Un seul App ID sert pour l'iPhone, l'iPad et le Mac.
    - Une **Team key** (pas une *Individual key*) avec le rôle **Admin** : la signature automatique en CI
      crée des certificats gérés dans le cloud, ce qu'une clé App Manager ou Developer ne peut pas faire.
      Le nom et le rôle ne sont plus modifiables : en cas d'erreur, révoquez la clé et recréez-la.
+   - Le rôle d'une clé existante se lit dans la colonne *Access* de la liste. Si le workflow *Release*
+     échoue à l'export avec `Cloud signing permission error` / `No signing certificate "iOS Distribution"
+     found`, la clé n'a pas ce rôle : créez-en une avec l'accès **Admin** et remplacez les secrets
+     `ASC_KEY_ID` et `ASC_KEY_P8` (l'Issuer ID ne change pas).
 3. **Download API Key** : le `.p8` ne se télécharge qu'une fois. Notez le *Key ID* et l'*Issuer ID*.
 
 ## C. App Store Connect (appstoreconnect.apple.com)
