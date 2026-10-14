@@ -51,6 +51,8 @@ jobs:
         # an undeclared API, a Mac app whose sandbox blocks the network.
         run: |
           status=0
+          # The checks' own tests first: each must reject the defect it exists for (.github/scripts/tests).
+          python3 -m unittest discover -s .github/scripts/tests || status=1
           for check in translations privacy_manifest mac_entitlements; do
             python3 .github/scripts/check_$check.py || status=1
           done
