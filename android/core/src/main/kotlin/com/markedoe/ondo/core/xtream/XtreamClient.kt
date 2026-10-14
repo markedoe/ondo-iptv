@@ -118,7 +118,7 @@ class XtreamClient(
                 catchup = if (dto.tvArchive) CatchupInfo(CatchupInfo.Mode.XTREAM, maxOf(dto.tvArchiveDuration ?: 1, 1)) else null,
                 xtreamStreamId = dto.streamId,
             )
-        }
+        }.distinctBy { it.id }  // a panel listing a stream twice would break the lists (one key per row)
 
     suspend fun movies(): List<Movie> =
         getJson("get_vod_streams").lossyList(XtreamVodStreamDto::from).map { dto ->
@@ -136,7 +136,7 @@ class XtreamClient(
                 xtreamStreamId = dto.streamId,
                 containerExtension = dto.containerExtension,
             )
-        }
+        }.distinctBy { it.id }
 
     suspend fun series(): List<Series> =
         getJson("get_series").lossyList(XtreamSeriesDto::from).map { dto ->
@@ -153,7 +153,7 @@ class XtreamClient(
                 addedAt = dto.lastModified,
                 xtreamSeriesId = dto.seriesId,
             )
-        }
+        }.distinctBy { it.id }
 
     /**
      * Downloads the whole catalogue: account first, then the six lists in parallel. A section the panel

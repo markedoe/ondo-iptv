@@ -74,12 +74,18 @@ struct ProfilePickerView: View {
             SecureField("PIN", text: $pin)
             Button("Open") {
                 guard let profile = pinFor else { return }
+                pinFor = nil
                 if model.verifyPIN(pin, for: profile) {
                     model.switchProfile(to: profile)
                 } else {
+                    // The alert closes with its button: ask again, saying the PIN was wrong.
+                    pin = ""
                     wrongPIN = true
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        pinFor = profile
+                    }
                 }
-                pinFor = nil
             }
             Button("Cancel", role: .cancel) { pinFor = nil }
         } message: {
@@ -106,6 +112,8 @@ struct ProfileMenu: View {
             }
             .buttonStyle(.plain)
             .help("Switch profile")
+            .accessibilityLabel("Switch profile")
+            .accessibilityValue(Text(verbatim: model.activeProfile.name))
         }
     }
 }

@@ -43,15 +43,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
-import com.markedoe.ondo.ui.screens.myListState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.screens.myListState
 import kotlinx.coroutines.delay
 
 /** Off when the system's animations are turned off (accessibility) and in screenshots. */
@@ -126,7 +127,9 @@ fun HeroCarousel(
                         modifier = Modifier
                             .width(posterWidth)
                             .clip(PosterShape)
-                            .clickable { onOpen(page.item) },
+                            // TalkBack reads the title and offers to open it.
+                            .clickable(onClickLabel = page.item.title) { onOpen(page.item) }
+                            .semantics { contentDescription = page.item.title },
                     )
                     Spacer(Modifier.height(16.dp))
                     Text(

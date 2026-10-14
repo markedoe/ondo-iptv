@@ -11,8 +11,13 @@ extension AppModel {
         reminderID(for: program, on: channel).map(library.hasReminder(id:)) ?? false
     }
 
+    /// Reminders of locked or hidden categories are left out, like their channels.
     var upcomingReminders: [ProgramReminder] {
-        library.upcomingReminders()
+        let excluded = excludedCategoryIDs
+        return library.upcomingReminders().filter { reminder in
+            guard reminder.playlistID == activePlaylist?.id, let channel = index.channelsByID[reminder.channelID] else { return true }
+            return !excluded.contains(channel.categoryID)
+        }
     }
 
     /// Adds or removes the reminder of a future programme. Permission is requested with the first one.

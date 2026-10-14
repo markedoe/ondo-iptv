@@ -97,6 +97,7 @@ struct PlayerSidePanel: View {
                 if !filter.isEmpty {
                     Button { filter = "" } label: { Image(systemName: "xmark.circle.fill") }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Clear")
                         .foregroundStyle(.secondary)
                 }
             }

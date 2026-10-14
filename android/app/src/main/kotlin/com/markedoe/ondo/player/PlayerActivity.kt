@@ -298,7 +298,10 @@ class PlayerActivity : ComponentActivity() {
         inPictureInPicture = isInPictureInPictureMode
         playerView?.useController = !isInPictureInPictureMode
         if (!isInPictureInPictureMode && !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
+            // The PiP window was closed (not expanded): the player goes away with it instead of staying allocated.
+            saveProgress()
             player?.pause()
+            finish()
         }
     }
 

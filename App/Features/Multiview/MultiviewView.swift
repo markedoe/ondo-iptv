@@ -30,7 +30,8 @@ struct MultiviewView: View {
                                 session: tiles[index],
                                 hasSound: index == multiview.audioIndex,
                                 onSelect: { multiview.focusAudio(at: index) },
-                                onExpand: { model.expandMultiviewTile(index) },
+                                // The tile goes to the player; the multiview (a window on the Mac) closes.
+                                onExpand: { model.expandMultiviewTile(index); onClose() },
                                 onChange: { picker = PickerRequest(tile: index) },
                                 onRemove: { remove(at: index) }
                             )
@@ -178,7 +179,7 @@ struct MultiviewTile: View {
 
     private var menu: some View {
         Menu {
-            Button(action: onExpand) { Label("Full Screen", systemImage: "arrow.up.left.and.arrow.down.right") }
+            Button(action: onExpand) { Label("Open in Player", systemImage: "arrow.up.left.and.arrow.down.right") }
             Button(action: onChange) { Label("Change Channel", systemImage: "arrow.left.arrow.right") }
             Button(role: .destructive, action: onRemove) { Label("Remove", systemImage: "xmark") }
         } label: {
@@ -191,6 +192,7 @@ struct MultiviewTile: View {
         .menuStyle(.button)
         .menuIndicator(.hidden)
         .buttonStyle(.plain)
+        .accessibilityLabel("More")
         .padding(8)
     }
 }

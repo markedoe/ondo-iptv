@@ -20,22 +20,26 @@ struct GuideView: View {
         categoryID ?? (model.favoriteChannels().isEmpty ? PseudoCategory.all : PseudoCategory.favorites)
     }
 
+    /// Rows drawn at most: the grid is not lazy. Beyond, a note asks to choose a category.
+    private static let rowLimit = 300
+
     private var channels: [Channel] {
         switch selectedCategoryID {
         case PseudoCategory.favorites:
             return model.favoriteChannels()
         case PseudoCategory.all:
-            return Array(model.channels(in: nil).prefix(300))
+            return model.channels(in: nil)
         default:
             let category = categories.first { $0.id == selectedCategoryID }
-            return Array(model.channels(in: category).prefix(300))
+            return model.channels(in: category)
         }
     }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let window = Self.window(around: context.date)
-            let list = channels
+            let all = channels
+            let list = Array(all.prefix(Self.rowLimit))
             ScrollView(.vertical) {
                 HStack(alignment: .top, spacing: 0) {
                     channelColumn(list)
@@ -66,6 +70,16 @@ struct GuideView: View {
                     } actions: {
                         Button("Reload Guide") { model.loadEPG(force: true) }
                     }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if all.count > Self.rowLimit {
+                    Text("Showing the first \(Self.rowLimit) of \(all.count) channels. Choose a category to see the others.")
+                        .font(.footnote)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(.regularMaterial, in: Capsule())
+                        .padding(.bottom, 8)
                 }
             }
         }

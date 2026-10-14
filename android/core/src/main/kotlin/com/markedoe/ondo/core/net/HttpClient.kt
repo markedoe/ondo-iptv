@@ -25,6 +25,9 @@ sealed class HttpException(message: String) : IOException(message) {
     /** The address cannot be requested. */
     class InvalidUrl(val url: String) : HttpException("The address is not valid.")
 
+    /** The answer is larger than any real playlist or guide (or never ends). */
+    class TooLarge(val limit: Long) : HttpException("The server sent more than ${limit / (1024 * 1024)} MB.")
+
     private companion object {
         fun messageFor(code: Int): String = when (code) {
             401, 403 -> "Access denied by the server (HTTP $code). Check your credentials or subscription."

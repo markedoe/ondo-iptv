@@ -152,4 +152,7 @@
     <string name="help_playback_body">O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.</string>
     <string name="help_privacy_title">Privacidade</string>
     <string name="help_privacy_body">O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho e ficam fora dos backups dele.\n\nO Ondo se conecta apenas aos servidores que você adiciona.</string>
+    <string name="error_load_denied">O provedor recusou o acesso (HTTP %1$d). Verifique o usuário, a senha e a sua assinatura.</string>
+    <string name="error_load_provider">O provedor não enviou uma playlist. Verifique o endereço e a sua assinatura.</string>
+    <string name="error_load_format">Esta não é uma playlist que o Ondo consiga ler (M3U, Xtream Codes, XSPF ou JSON).</string>
 </resources>

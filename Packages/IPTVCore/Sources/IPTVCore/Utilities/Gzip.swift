@@ -16,8 +16,9 @@ public enum GzipError: Error, Equatable, LocalizedError {
 
 extension Data {
     /// Largest decompressed size accepted: more than any real guide, and a ceiling for files that inflate
-    /// without end (a few megabytes of gzip can expand to gigabytes).
-    public static let maxGunzippedSize = 1 << 30
+    /// without end (a few megabytes of gzip can expand to gigabytes). Low enough for an iPhone to parse what
+    /// it decompressed without being stopped for using too much memory.
+    public static let maxGunzippedSize = 320 << 20
 
     /// gzip magic number 1f 8b.
     public var isGzipped: Bool {

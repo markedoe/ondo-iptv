@@ -125,6 +125,31 @@ final class AppModelTests: XCTestCase {
         XCTAssertFalse(model.isLocked(adult))
     }
 
+    /// A reminder, a download or the last channel at launch can reach a locked channel without its list: playing it
+    /// still asks for the PIN.
+    func testPlayingALockedChannelWaitsForThePIN() async throws {
+        let model = try await modelWithPlaylist()
+        model.setParentalPIN("1234")
+        let adult = try XCTUnwrap(model.content.channels.first { $0.name == "Late Night" })
+        model.play(adult)
+        XCTAssertNil(model.playbackRequest)
+        let pending = try XCTUnwrap(model.pendingLockedPlayback)
+
+        model.resumeLockedPlayback(pending)
+        XCTAssertNil(model.playbackRequest, "still locked: nothing plays")
+        XCTAssertTrue(model.verifyParentalPIN("1234"))
+        model.resumeLockedPlayback(pending)
+        XCTAssertNotNil(model.playbackRequest)
+        XCTAssertNil(model.pendingLockedPlayback)
+        model.playbackRequest.map(model.endSession)
+
+        let news = try XCTUnwrap(model.content.channels.first { $0.name == "Test News" })
+        model.lockParentalControl()
+        model.play(news)
+        XCTAssertNotNil(model.playbackRequest, "an open category plays at once")
+        model.playbackRequest.map(model.endSession)
+    }
+
     func testWrongPINsMakeTheNextAttemptWait() async throws {
         let model = makeModel()
         await model.bootstrap()

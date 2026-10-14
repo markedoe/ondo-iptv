@@ -15,6 +15,9 @@ struct PlayerView: View {
     var onClose: () -> Void
 
     @State private var controlsVisible = true
+    #if os(macOS)
+    @State private var lastPointerMove = Date.distantPast
+    #endif
     @State private var hideTask: Task<Void, Never>?
     @State private var isLocked = false
     @State private var panelTab: PlayerPanelTab?
@@ -110,6 +113,16 @@ struct PlayerView: View {
         .accessibilityAction(.escape) { onClose() }
         #if os(iOS)
         .accessibilityAction(.magicTap) { session.togglePlayPause() }
+        #else
+        // Moving the pointer over the picture brings the controls back, like the Mac's own players.
+        .onContinuousHover { phase in
+            guard case .active = phase else { return }
+            // Shown again at once; kept while the pointer moves (the hide timer restarts at most once a second).
+            if !controlsVisible || Date().timeIntervalSince(lastPointerMove) > 1 {
+                lastPointerMove = Date()
+                showControls()
+            }
+        }
         #endif
         .animation(.easeInOut(duration: 0.2), value: controlsVisible)
         .animation(.easeInOut(duration: 0.25), value: panelTab)

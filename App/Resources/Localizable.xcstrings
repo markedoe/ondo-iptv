@@ -3299,6 +3299,46 @@
         }
       }
     },
+    "Clear": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مسح"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "साफ़ करें"
+          }
+        }
+      }
+    },
     "Clear Cache": {
       "localizations": {
         "fr": {
@@ -3819,6 +3859,126 @@
         }
       }
     },
+    "Control-click a channel and choose Hide Channel to remove it from lists, search and the guide.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contrôle-cliquez sur une chaîne et choisissez Masquer la chaîne pour la retirer des listes, de la recherche et du guide."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz Control-clic en un canal y elige Ocultar canal para quitarlo de las listas, la búsqueda y la guía."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Control-clique em um canal e escolha Ocultar canal para tirá-lo das listas, da busca e do guia."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住 Control 点按频道并选择“隐藏频道”，即可将其从列表、搜索和节目指南中移除。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انقر مع الضغط على Control على قناة واختر إخفاء القناة لإزالتها من القوائم والبحث والدليل."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "किसी चैनल को सूचियों, खोज और गाइड से हटाने के लिए उस पर Control-क्लिक करें और चैनल छिपाएँ चुनें।"
+          }
+        }
+      }
+    },
+    "Control-click a channel and choose “Add to My List”.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contrôle-cliquez sur une chaîne et choisissez « Ajouter à Ma liste »."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz Control-clic en un canal y elige «Añadir a Mi lista»."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Control-clique em um canal e escolha “Adicionar à Minha lista”."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住 Control 点按频道，然后选择“添加到我的片单”。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انقر مع الضغط على Control على قناة واختر «إضافة إلى قائمتي»."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "किसी चैनल पर Control-क्लिक करें और “मेरी सूची में जोड़ें” चुनें।"
+          }
+        }
+      }
+    },
+    "Control-click a channel and choose “Add to My List”; it will appear here.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contrôle-cliquez sur une chaîne et choisissez « Ajouter à Ma liste » ; elle apparaîtra ici."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz Control-clic en un canal y elige «Añadir a Mi lista»; aparecerá aquí."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Control-clique em um canal e escolha “Adicionar à Minha lista”; ele aparecerá aqui."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按住 Control 点按频道并选择“添加到我的片单”，之后它会显示在这里。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "انقر مع الضغط على Control على قناة واختر «إضافة إلى قائمتي»، وستظهر هنا."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "किसी चैनल पर Control-क्लिक करें और “मेरी सूची में जोड़ें” चुनें; वह यहाँ दिखेगा।"
+          }
+        }
+      }
+    },
     "Copy Stream URL": {
       "localizations": {
         "fr": {
@@ -4299,6 +4459,46 @@
         }
       }
     },
+    "Delete Collection": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer la collection"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar colección"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar coleção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除合集"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف المجموعة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संग्रह हटाएँ"
+          }
+        }
+      }
+    },
     "Delete Download": {
       "localizations": {
         "fr": {
@@ -4375,6 +4575,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "प्रोफ़ाइल डिलीट करें"
+          }
+        }
+      }
+    },
+    "Delete this collection?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer cette collection ?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar esta colección?"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar esta coleção?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除此合集？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف هذه المجموعة؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह संग्रह हटाएँ?"
           }
         }
       }
@@ -7139,42 +7379,42 @@
         }
       }
     },
-    "Its My List, collections and history will be removed too.": {
+    "Its items in My List, collections and history will be removed too.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sa liste, ses collections et son historique seront aussi supprimés."
+            "value": "Ses éléments de Ma liste, des collections et de l’historique seront aussi supprimés."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "También se eliminarán su lista, sus colecciones y su historial."
+            "value": "También se eliminarán sus elementos de Mi lista, de las colecciones y del historial."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "A lista, as coleções e o histórico desse perfil também serão removidos."
+            "value": "Os itens dela em Minha lista, nas coleções e no histórico também serão removidos."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "其片单、合集和历史记录也将被移除。"
+            "value": "它在“我的片单”、合集和观看记录中的内容也将被移除。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "ستُحذف قائمته ومجموعاته وسجله أيضًا."
+            "value": "ستُحذف أيضًا عناصرها في قائمتي والمجموعات والسجل."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "इसकी सूची, संग्रह और इतिहास भी हटा दिए जाएँगे।"
+            "value": "मेरी सूची, संग्रह और इतिहास में इसके आइटम भी हटा दिए जाएँगे।"
           }
         }
       }
@@ -11819,6 +12059,46 @@
         }
       }
     },
+    "Open in Player": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir dans le lecteur"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir en el reproductor"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir no player"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在播放器中打开"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح في المشغّل"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेयर में खोलें"
+          }
+        }
+      }
+    },
     "Opening playlist…": {
       "localizations": {
         "fr": {
@@ -14499,6 +14779,46 @@
         }
       }
     },
+    "Remove from Collection": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer de la collection"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitar de la colección"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remover da coleção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从合集中移除"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إزالة من المجموعة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संग्रह से हटाएँ"
+          }
+        }
+      }
+    },
     "Remove from History": {
       "localizations": {
         "fr": {
@@ -16465,6 +16785,46 @@
         }
       }
     },
+    "Showing the first %lld of %lld channels. Choose a category to see the others.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affichage des %1$lld premières chaînes sur %2$lld. Choisissez une catégorie pour voir les autres."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se muestran los primeros %1$lld de %2$lld canales. Elige una categoría para ver los demás."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrando os primeiros %1$lld de %2$lld canais. Escolha uma categoria para ver os outros."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示 %2$lld 个频道中的前 %1$lld 个。选择一个分类以查看其他频道。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُعرض أول %1$lld من %2$lld قناة. اختر فئة لرؤية البقية."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$lld में से पहले %1$lld चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।"
+          }
+        }
+      }
+    },
     "Skip Back 10 s": {
       "localizations": {
         "fr": {
@@ -17265,6 +17625,46 @@
         }
       }
     },
+    "Switch Playlist": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changer de playlist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cambiar de lista"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trocar de playlist"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换播放列表"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تبديل قائمة التشغيل"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेलिस्ट बदलें"
+          }
+        }
+      }
+    },
     "Switch profile": {
       "localizations": {
         "fr": {
@@ -17781,6 +18181,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "आपके IPTV प्रोवाइडर की फ़िल्में, सीरीज़ और चैनल, एक साफ़-सुथरी लाइब्रेरी में।"
+          }
+        }
+      }
+    },
+    "The movies, series and channels stay in your playlist.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les films, séries et chaînes restent dans votre playlist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las películas, series y canales siguen en tu lista."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os filmes, séries e canais continuam na sua playlist."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电影、剧集和频道仍会保留在你的播放列表中。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تبقى الأفلام والمسلسلات والقنوات في قائمة التشغيل."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िल्में, सीरीज़ और चैनल आपकी प्लेलिस्ट में बने रहते हैं।"
           }
         }
       }
@@ -19785,42 +20225,42 @@
         }
       }
     },
-    "Video: %lld×%lld": {
+    "Video: %@×%@": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vidéo : %lld×%lld"
+            "value": "Vidéo : %@×%@"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Video: %lld×%lld"
+            "value": "Video: %@×%@"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vídeo: %lld×%lld"
+            "value": "Vídeo: %@×%@"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "视频：%lld×%lld"
+            "value": "视频：%@×%@"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "الفيديو: %lld×%lld"
+            "value": "الفيديو: %@×%@"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "वीडियो: %lld×%lld"
+            "value": "वीडियो: %@×%@"
           }
         }
       }

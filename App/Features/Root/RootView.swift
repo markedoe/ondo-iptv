@@ -56,6 +56,7 @@ struct RootView: View {
 struct PlaylistStateGate<Content: View>: View {
     @Environment(AppModel.self) private var model
     @ViewBuilder var content: () -> Content
+    @State private var showingSettings = false
 
     var body: some View {
         switch model.phase {
@@ -75,6 +76,20 @@ struct PlaylistStateGate<Content: View>: View {
                     Task { await model.refreshActivePlaylist() }
                 }
                 .buttonStyle(.borderedProminent)
+                // This screen replaces every tab: the way out (another playlist, the login to fix) must be here.
+                if model.playlists.count > 1 {
+                    Menu("Switch Playlist") {
+                        ForEach(model.playlists.filter { $0.id != model.activePlaylist?.id }) { playlist in
+                            Button(playlist.name) { Task { await model.activate(playlist) } }
+                        }
+                    }
+                }
+                #if os(iOS)
+                Button("Settings") { showingSettings = true }
+                #endif
+            }
+            .sheet(isPresented: $showingSettings) {
+                NavigationStack { SettingsView() }
             }
         default:
             content()
@@ -97,6 +112,9 @@ struct MainView: View {
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                         .accessibilityLabel("Opening…")
                 }
+            }
+            .sheet(item: $model.pendingLockedPlayback) { pending in
+                PINPromptView { model.resumeLockedPlayback(pending) }
             }
             .onChange(of: ReminderNotificationRouter.shared.pendingTarget, initial: true) { _, target in
                 guard let target else { return }
@@ -141,7 +159,8 @@ private struct PlayerWindowOpener: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: model.playbackRequest?.id) { _, id in
+            // `initial`: a playback requested before this window existed (the last channel at launch) opens too.
+            .onChange(of: model.playbackRequest?.id, initial: true) { _, id in
                 guard let id else { return }
                 openWindow(id: "player", value: id)
                 model.playbackRequest = nil

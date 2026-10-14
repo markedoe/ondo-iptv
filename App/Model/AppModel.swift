@@ -104,6 +104,11 @@ final class AppModel {
     var isMultiviewPresented = false
     /// Session kept alive while playing in Picture in Picture with the player UI closed.
     var pictureInPictureSession: PlaybackSession?
+    /// Playback of a locked category reached without going through its lock (a reminder, a download, the last
+    /// channel at launch): it waits for the parental PIN.
+    var pendingLockedPlayback: PendingPlayback?
+    /// "Play last channel at launch" waits for the profile to be chosen ("Who's watching?").
+    @ObservationIgnored var autoplayPending = false
     @ObservationIgnored var sessions: [UUID: PlaybackSession] = [:]
 
     @ObservationIgnored private var librarySaveTask: Task<Void, Never>?
@@ -151,6 +156,7 @@ final class AppModel {
 
     func bootstrap() async {
         guard !isReady else { return }
+        #if DEBUG  // only in test builds: an argument must not be able to wipe a user's data
         if ProcessInfo.processInfo.arguments.contains("-uitest-reset") {
             // UI tests start from a clean install.
             for directory in [userStore.directory, cacheStore.directory] {
@@ -159,6 +165,7 @@ final class AppModel {
             }
             try? FileManager.default.createDirectory(at: AppPaths.importedPlaylists, withIntermediateDirectories: true)
         }
+        #endif
         settings = userStore.load(AppSettings.self, name: "settings") ?? AppSettings()
         profiles = userStore.load([Profile].self, name: "profiles") ?? []
         if profiles.isEmpty {
@@ -187,10 +194,16 @@ final class AppModel {
         scheduleReminderSync()
         if let playlist = activePlaylist {
             await activate(playlist)
-            if settings.autoplayLastChannel, let last = library.lastChannel(playlistID: playlist.id) {
-                resume(last)
+            if settings.autoplayLastChannel {
+                // With several profiles, the channel is the chosen profile's, once it is chosen.
+                if needsProfileSelection { autoplayPending = true } else { autoplayLastChannel() }
             }
         }
+    }
+
+    func autoplayLastChannel() {
+        guard let playlist = activePlaylist, let last = library.lastChannel(playlistID: playlist.id) else { return }
+        resume(last)
     }
 
     var activePlaylist: Playlist? {
@@ -268,6 +281,10 @@ final class AppModel {
         isParentalUnlocked = false
         needsProfileSelection = false
         scheduleReminderSync()
+        if autoplayPending {
+            autoplayPending = false
+            autoplayLastChannel()
+        }
     }
 
     func verifyPIN(_ pin: String, for profile: Profile, now: Date = Date()) -> Bool {

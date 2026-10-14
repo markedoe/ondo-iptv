@@ -108,6 +108,10 @@ struct CustomListsView: View {
                         Label(list.name, systemImage: "rectangle.stack")
                     }
                 }
+                // Swipe to delete is iOS only: the menu works everywhere (Control-click on the Mac).
+                .contextMenu {
+                    Button("Delete Collection", systemImage: "trash", role: .destructive) { model.deleteList(list.id) }
+                }
             }
             .onDelete { offsets in
                 let lists = model.library.customLists
@@ -148,8 +152,10 @@ struct CustomListsView: View {
 
 struct CustomListDetailView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
     let listID: UUID
     @State private var showingRename = false
+    @State private var showingDelete = false
     @State private var name = ""
 
     private var list: CustomList? { model.library.customLists.first { $0.id == listID } }
@@ -160,6 +166,11 @@ struct CustomListDetailView: View {
             ForEach(entries) { entry in
                 if let item = model.libraryItem(for: entry.reference) {
                     row(item)
+                        .contextMenu {
+                            Button("Remove from Collection", systemImage: "minus.circle", role: .destructive) {
+                                model.toggle(item, inList: listID)
+                            }
+                        }
                 }
             }
             .onMove { model.moveListItems(listID, fromOffsets: $0, toOffset: $1) }
@@ -186,9 +197,24 @@ struct CustomListDetailView: View {
                     Label("Rename", systemImage: "pencil")
                 }
             }
+            ToolbarItem(placement: .primaryAction) {
+                Button(role: .destructive) {
+                    showingDelete = true
+                } label: {
+                    Label("Delete Collection", systemImage: "trash")
+                }
+            }
             #if os(iOS)
             ToolbarItem(placement: .primaryAction) { EditButton() }
             #endif
+        }
+        .confirmationDialog("Delete this collection?", isPresented: $showingDelete, titleVisibility: .visible) {
+            Button("Delete Collection", role: .destructive) {
+                model.deleteList(listID)
+                dismiss()
+            }
+        } message: {
+            Text("The movies, series and channels stay in your playlist.")
         }
         .alert("Rename Collection", isPresented: $showingRename) {
             TextField("Name", text: $name)

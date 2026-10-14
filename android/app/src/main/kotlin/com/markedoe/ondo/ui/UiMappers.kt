@@ -163,6 +163,8 @@ object UiMappers {
      * year, then by name.
      */
     fun sorted(items: List<ShowcaseItem>, sort: PosterSort): List<ShowcaseItem> {
+        // One collator per sort, not per comparison (getInstance() is costly, and a sort compares n log n times).
+        val collator = java.text.Collator.getInstance().apply { strength = java.text.Collator.PRIMARY }
         val byName = Comparator<ShowcaseItem> { a, b -> collator.compare(a.title, b.title) }
         return when (sort) {
             PosterSort.PLAYLIST -> items
@@ -177,7 +179,6 @@ object UiMappers {
         }
     }
 
-    private val collator: java.text.Collator get() = java.text.Collator.getInstance().apply { strength = java.text.Collator.PRIMARY }
 
     fun categoryName(state: OndoState, series: Boolean, categoryId: String?): String? =
         (if (series) state.content.seriesCategories else state.content.movieCategories).firstOrNull { it.id == categoryId }?.name

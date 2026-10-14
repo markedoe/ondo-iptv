@@ -148,4 +148,7 @@
     <string name="help_playback_body">Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.</string>
     <string name="help_privacy_title">Privacy</string>
     <string name="help_privacy_body">Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device and are left out of device backups.\n\nOndo connects only to the servers you add.</string>
+    <string name="error_load_denied">The provider refused access (HTTP %1$d). Check the user name, the password and your subscription.</string>
+    <string name="error_load_provider">The provider did not send a playlist. Check the address and your subscription.</string>
+    <string name="error_load_format">This is not a playlist Ondo can read (M3U, Xtream Codes, XSPF or JSON).</string>
 </resources>

@@ -79,7 +79,8 @@ public final class FileStore: Sendable {
     }
 }
 
-/// Portable backup of the user's setup (playlists without passwords + library), for export / import.
+/// Portable backup of the user's setup (playlists, their logins included, and the library), for export / import:
+/// the app asks for the parental PIN to export it and tells the user to keep it private.
 public struct BackupArchive: Codable, Sendable {
     public var version: Int
     public var exportedAt: Date

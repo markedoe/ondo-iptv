@@ -71,7 +71,7 @@ struct Shelf<Content: View>: View {
     private func seeAllLink(_ route: AnyHashableRoute) -> some View {
         let label = HStack(spacing: 3) {
             Text("See All")
-            Image(systemName: "chevron.right").font(.caption.weight(.bold))
+            Image(systemName: "chevron.forward").font(.caption.weight(.bold))
         }
         .font(.subheadline.weight(.semibold))
         Group {

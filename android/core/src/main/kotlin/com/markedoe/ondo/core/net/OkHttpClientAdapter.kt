@@ -55,7 +55,7 @@ class OkHttpClientAdapter(
                             return
                         }
                         val body = try {
-                            it.body.bytes()
+                            readLimited(it.body.byteStream(), MAX_BODY_SIZE)
                         } catch (e: IOException) {
                             continuation.resumeWithException(e)
                             return
@@ -68,6 +68,23 @@ class OkHttpClientAdapter(
     }
 
     companion object {
+        /** Largest response read into memory: far above any real playlist or guide, below what would stop the app. */
+        const val MAX_BODY_SIZE = 256L * 1024 * 1024
+
+        internal fun readLimited(input: java.io.InputStream, limit: Long): ByteArray {
+            val output = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(256 * 1024)
+            input.use { stream ->
+                while (true) {
+                    val read = stream.read(buffer)
+                    if (read < 0) break
+                    if (output.size() + read > limit) throw HttpException.TooLarge(limit)
+                    output.write(buffer, 0, read)
+                }
+            }
+            return output.toByteArray()
+        }
+
         /**
          * Request headers. Provider values with accents (`#EXTVLCOPT:http-user-agent=Télé…`) are sent as-is
          * instead of failing the request; headers with an invalid name are skipped.

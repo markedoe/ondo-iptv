@@ -152,4 +152,7 @@
     <string name="help_playback_body">Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.</string>
     <string name="help_privacy_title">Privacidad</string>
     <string name="help_privacy_body">Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus listas, tu historial y tus ajustes se quedan en tu dispositivo y no se incluyen en sus copias de seguridad.\n\nOndo solo se conecta a los servidores que añades.</string>
+    <string name="error_load_denied">El proveedor denegó el acceso (HTTP %1$d). Comprueba el usuario, la contraseña y tu suscripción.</string>
+    <string name="error_load_provider">El proveedor no envió ninguna lista. Comprueba la dirección y tu suscripción.</string>
+    <string name="error_load_format">No es una lista que Ondo pueda leer (M3U, Xtream Codes, XSPF o JSON).</string>
 </resources>

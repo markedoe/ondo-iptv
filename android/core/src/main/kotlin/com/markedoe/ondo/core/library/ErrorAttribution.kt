@@ -2,6 +2,7 @@ package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.epg.XmltvParseException
 import com.markedoe.ondo.core.net.GzipException
+import com.markedoe.ondo.core.net.GzipTooLargeException
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.xtream.XtreamException
 import java.io.FileNotFoundException
@@ -21,7 +22,8 @@ enum class ErrorAttribution {
 
     companion object {
         fun classify(error: Throwable): ErrorAttribution = when (error) {
-            is HttpException, is XtreamException, is PlaylistLoaderException -> PROVIDER
+            // A file far too large comes from the provider (or the guide host), like the other bad answers.
+            is HttpException, is XtreamException, is PlaylistLoaderException, is GzipTooLargeException -> PROVIDER
             // Data we could not decode is reported as an app problem, as on Apple platforms.
             is XmltvParseException, is GzipException -> APP
             // Host not found / refused / bad server answer / bad address / missing file.

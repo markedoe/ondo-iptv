@@ -142,4 +142,7 @@
     <string name="help_playback_body">Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。</string>
     <string name="help_privacy_title">隐私</string>
     <string name="help_privacy_body">Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上，并且不会包含在设备备份中。\n\nOndo 只连接你添加的服务器。</string>
+    <string name="error_load_denied">提供商拒绝了访问（HTTP %1$d）。请检查用户名、密码和你的订阅。</string>
+    <string name="error_load_provider">提供商没有发送播放列表。请检查地址和你的订阅。</string>
+    <string name="error_load_format">这不是 Ondo 能读取的播放列表（M3U、Xtream Codes、XSPF 或 JSON）。</string>
 </resources>

@@ -173,7 +173,46 @@ extension AppModel {
         }
     }
 
+    /// Category of a playlist item (nil for an item of another playlist).
+    func categoryID(of item: PlaybackItem) -> String? {
+        guard item.reference.playlistID == activePlaylist?.id else { return nil }
+        switch item.reference.type {
+        case .live: return index.channelsByID[item.reference.itemID]?.categoryID
+        case .movie: return index.moviesByID[item.reference.itemID]?.categoryID
+        case .series: return index.seriesByID[item.reference.itemID]?.categoryID
+        }
+    }
+
+    /// Whether playing this item needs the parental PIN first: a locked category, or one a kids profile does not see.
+    func needsPIN(for item: PlaybackItem) -> Bool {
+        guard let categoryID = categoryID(of: item) else { return false }
+        if isLocked(categoryID: categoryID) { return true }
+        let category = content.liveCategories.first { $0.id == categoryID }
+            ?? content.movieCategories.first { $0.id == categoryID }
+            ?? content.seriesCategories.first { $0.id == categoryID }
+        return category.map(isHiddenForKids) ?? false
+    }
+
+    /// Downloads of locked or hidden categories are left out of the Downloads list, like their category.
+    func isVisible(_ record: DownloadRecord) -> Bool {
+        guard let categoryID = categoryID(of: record.item) else { return true }
+        return !excludedCategoryIDs.contains(categoryID)
+    }
+
+    /// Plays what waited for the PIN (called once it was entered).
+    func resumeLockedPlayback(_ pending: PendingPlayback) {
+        pendingLockedPlayback = nil
+        guard !needsPIN(for: pending.item) else { return }
+        present(pending.session, startingAt: pending.program)
+    }
+
     private func present(_ session: PlaybackSession, startingAt program: EPGProgram? = nil) {
+        // Every way to play goes through here: the lists already leave locked categories out, but a reminder, a
+        // download or the last channel at launch could reach one.
+        if let item = session.queue.indices.contains(session.index) ? session.queue[session.index] : nil, needsPIN(for: item) {
+            pendingLockedPlayback = PendingPlayback(session: session, item: item, program: program)
+            return
+        }
         let controller = session.controller
         controller.autoRetry = settings.autoRetryStreams
         controller.aspect = settings.defaultAspect
@@ -251,4 +290,12 @@ extension AppModel {
         if session.controller.isPictureInPictureActive { return }
         endSession(session)
     }
+}
+
+/// A playback waiting for the parental PIN.
+struct PendingPlayback: Identifiable {
+    let id = UUID()
+    let session: PlaybackSession
+    let item: PlaybackItem
+    let program: EPGProgram?
 }

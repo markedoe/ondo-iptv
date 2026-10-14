@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -17,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -40,7 +42,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.model.ContentType
+import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.player.PlayerActivity
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
@@ -62,6 +66,8 @@ import com.markedoe.ondo.ui.screens.SettingsScreen
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 const val PRIVACY_URL = "https://markedoe.github.io/ondo-iptv/privacy.html"
 const val SUPPORT_URL = "https://markedoe.github.io/ondo-iptv/support.html"
@@ -88,11 +94,13 @@ private fun Onboarding(viewModel: OndoViewModel) {
     val demoName = stringResource(R.string.demo)
     if (adding) {
         var picked by remember { mutableStateOf<PickedFile?>(null) }
+        // System back returns to the welcome screen (without it, back closed the app).
+        BackHandler { adding = false; viewModel.clearError() }
         AddPlaylistScreen(
             onSave = { form -> viewModel.addPlaylist(form) { adding = false } },
             onBack = { adding = false; viewModel.clearError() },
             isLoading = state.isLoading,
-            error = state.error,
+            error = state.error?.let { loadErrorText(it) },
             onPickFile = rememberPlaylistFilePicker { picked = it },
             pickedFile = picked,
         )
@@ -137,7 +145,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                         onSave = { form -> viewModel.addPlaylist(form) { navController.popBackStack() } },
                         onBack = { viewModel.clearError(); navController.popBackStack() },
                         isLoading = state.isLoading,
-                        error = state.error,
+                        error = state.error?.let { loadErrorText(it) },
                         onPickFile = rememberPlaylistFilePicker { picked = it },
                         pickedFile = picked,
                     )
@@ -174,7 +182,7 @@ fun OndoNavigationFrame(selected: TopLevel, onSelect: (TopLevel) -> Unit, conten
 private fun ErrorSnackbar(viewModel: OndoViewModel, modifier: Modifier, onRetry: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val host = remember { SnackbarHostState() }
-    val message = state.error?.let { stringResource(R.string.error_playlist, it) }
+    val message = state.error?.let { stringResource(R.string.error_playlist, loadErrorText(it)) }
     val retry = stringResource(R.string.try_again)
     LaunchedEffect(message) {
         if (message == null) return@LaunchedEffect
@@ -303,7 +311,8 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
     var season by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(id) { viewModel.loadSeries(id) }
     val series = state.content.series.firstOrNull { it.id == id } ?: return Loading()
-    val ui = remember(state, series, season, errors) { UiMappers.seriesDetail(state, series, season, errors[id]) }
+    val errorText = errors[id]?.let { loadErrorText(it) }
+    val ui = remember(state, series, season, errorText) { UiMappers.seriesDetail(state, series, season, errorText) }
     SeriesDetailScreen(
         state = ui,
         actions = DetailActions(
@@ -328,8 +337,11 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
         else -> stringResource(R.string.all_movies)
     }
     val sort = state.settings.posterSort
-    val items = remember(state, route, filter) {
-        UiMappers.grid(state, route.series, route.categoryId, route.myList, filter, route.anyType, sort)
+    // Off the main thread: sorting a hundred thousand titles must not freeze the screen while typing.
+    val items by produceState(emptyList<ShowcaseItem>(), state, route, filter, sort) {
+        value = withContext(Dispatchers.Default) {
+            UiMappers.grid(state, route.series, route.categoryId, route.myList, filter, route.anyType, sort)
+        }
     }
     PosterGridScreen(
         title = title,
@@ -397,4 +409,13 @@ private fun Context.browse(url: String) {
     } catch (_: ActivityNotFoundException) {
         // No browser on the device: nothing to open.
     }
+}
+
+/** The reason a playlist could not be loaded, in the viewer's language. */
+@Composable
+fun loadErrorText(error: LoadError): String = when {
+    error.status == 401 || error.status == 403 -> stringResource(R.string.error_load_denied, error.status)
+    error.kind == ErrorAttribution.PROVIDER -> stringResource(R.string.error_load_provider)
+    error.kind == ErrorAttribution.NETWORK -> stringResource(R.string.error_network)
+    else -> stringResource(R.string.error_load_format)
 }

@@ -118,7 +118,11 @@ struct ChannelListView: View {
         .overlay {
             if list.isEmpty {
                 if category.id == PseudoCategory.favorites {
+                    #if os(macOS)
+                    ContentUnavailableView("No channels in My List", systemImage: "list.star", description: Text("Control-click a channel and choose “Add to My List”."))
+                    #else
                     ContentUnavailableView("No channels in My List", systemImage: "list.star", description: Text("Long-press a channel and choose “Add to My List”."))
+                    #endif
                 } else if !filter.isEmpty {
                     ContentUnavailableView.search(text: filter)
                 } else {
@@ -176,10 +180,13 @@ struct ChannelContextMenu: View {
         } label: {
             Label("Hide Channel", systemImage: "eye.slash")
         }
-        Button {
-            Pasteboard.copy(channel.streamURL.absoluteString)
-        } label: {
-            Label("Copy Stream URL", systemImage: "doc.on.doc")
+        // The address carries the provider login: not under parental control (it could re-add the playlist).
+        if !model.isParentalControlActive {
+            Button {
+                Pasteboard.copy(channel.streamURL.absoluteString)
+            } label: {
+                Label("Copy Stream URL", systemImage: "doc.on.doc")
+            }
         }
     }
 }

@@ -102,7 +102,9 @@ struct HiddenChannelsView: View {
                 ContentUnavailableView(
                     "No hidden channels",
                     systemImage: "eye",
-                    description: Text("Long-press a channel and choose Hide Channel to remove it from lists, search and the guide.")
+                    description: Platform.isMac
+                        ? Text("Control-click a channel and choose Hide Channel to remove it from lists, search and the guide.")
+                        : Text("Long-press a channel and choose Hide Channel to remove it from lists, search and the guide.")
                 )
             }
         }

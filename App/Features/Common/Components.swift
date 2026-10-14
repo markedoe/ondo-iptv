@@ -11,7 +11,7 @@ struct ChannelRow: View {
         let program = model.epg.current(for: channel, at: date)
         HStack(spacing: 12) {
             if model.settings.showChannelNumbers, let number = channel.number {
-                Text("\(number)")
+                Text(verbatim: String(number))  // 1001, not "1,001"
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
                     .frame(minWidth: 26, alignment: .trailing)
@@ -342,7 +342,7 @@ struct CategoryBrowser<Detail: View>: View {
                         .foregroundStyle(.secondary)
                 }
                 if !sideBySide {
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "chevron.forward")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
                 }

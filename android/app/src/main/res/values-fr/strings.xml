@@ -152,4 +152,7 @@
     <string name="help_playback_body">Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.</string>
     <string name="help_privacy_title">Confidentialité</string>
     <string name="help_privacy_body">Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil et sont exclus des sauvegardes de l’appareil.\n\nOndo se connecte uniquement aux serveurs que vous ajoutez.</string>
+    <string name="error_load_denied">Le fournisseur a refusé l’accès (HTTP %1$d). Vérifiez le nom d’utilisateur, le mot de passe et votre abonnement.</string>
+    <string name="error_load_provider">Le fournisseur n’a pas envoyé de playlist. Vérifiez l’adresse et votre abonnement.</string>
+    <string name="error_load_format">Ce n’est pas une playlist qu’Ondo sait lire (M3U, Xtream Codes, XSPF ou JSON).</string>
 </resources>

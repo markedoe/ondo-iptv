@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.data.ItemKind
+import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
@@ -93,8 +94,8 @@ class OndoViewModel(
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, SearchUiState())
 
-    private val _seriesErrors = MutableStateFlow<Map<String, String>>(emptyMap())
-    val seriesErrors: StateFlow<Map<String, String>> = _seriesErrors.asStateFlow()
+    private val _seriesErrors = MutableStateFlow<Map<String, LoadError>>(emptyMap())
+    val seriesErrors: StateFlow<Map<String, LoadError>> = _seriesErrors.asStateFlow()
 
     private val _playRequests = Channel<PlayRequest>(Channel.BUFFERED)
     val playRequests: Flow<PlayRequest> = _playRequests.receiveAsFlow()
@@ -123,7 +124,7 @@ class OndoViewModel(
         viewModelScope.launch {
             runCatching { repository.details(series) }
                 .onSuccess { _seriesErrors.value -= id }
-                .onFailure { error -> _seriesErrors.value += (id to (error.message ?: error.toString())) }
+                .onFailure { error -> _seriesErrors.value += (id to LoadError.of(error)) }
         }
     }
 

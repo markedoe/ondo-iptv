@@ -26,7 +26,8 @@ struct SettingsView: View {
         Form {
             Section("Playlists") {
                 NavigationLink {
-                    PlaylistsSettingsView()
+                    // Re-adding a playlist would bring it back without its locks: behind the PIN like backups.
+                    ParentalGate { PlaylistsSettingsView() }
                 } label: {
                     LabeledContent {
                         Text("\(model.playlists.count)")
@@ -427,7 +428,7 @@ struct PlaylistsSettingsView: View {
                 Task { await model.deletePlaylist(playlist) }
             }
         } message: { _ in
-            Text("Its My List, collections and history will be removed too.")
+            Text("Its items in My List, collections and history will be removed too.")
         }
     }
 }

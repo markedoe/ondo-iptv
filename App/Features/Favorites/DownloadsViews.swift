@@ -58,7 +58,8 @@ struct DownloadButton: View {
     @ViewBuilder
     private func label(_ title: LocalizedStringKey, icon: String) -> some View {
         if compact {
-            Image(systemName: icon)
+            // Only the icon is drawn; VoiceOver still says what the button does.
+            Image(systemName: icon).accessibilityLabel(Text(title))
         } else {
             Label(title, systemImage: icon)
         }
@@ -70,8 +71,9 @@ struct DownloadsView: View {
     private var manager: DownloadManager { DownloadManager.shared }
 
     var body: some View {
+        let records = manager.records.filter(model.isVisible)
         List {
-            ForEach(manager.records) { record in
+            ForEach(records) { record in
                 HStack(spacing: 12) {
                     Color.secondary.opacity(0.12)
                         .frame(width: 48, height: 72)
@@ -103,12 +105,11 @@ struct DownloadsView: View {
                 }
             }
             .onDelete { offsets in
-                let records = manager.records
                 for offset in offsets { manager.delete(records[offset]) }
             }
         }
         .overlay {
-            if manager.records.isEmpty {
+            if records.isEmpty {
                 ContentUnavailableView("No downloads", systemImage: "arrow.down.circle", description: Text("Download movies and episodes to watch them without a connection."))
             }
         }

@@ -117,7 +117,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
     val movie = state.item.movie
     val facts = listOfNotNull(
         movie.year?.toString() ?: state.details?.releaseDate?.take(4),
-        state.details?.durationSeconds?.takeIf { it > 0 }?.let { durationText(it) },
+        state.details?.durationSeconds?.takeIf { it > 0 }?.let { durationText(it, LocalConfiguration.current.locales[0]) },
         (state.details?.rating ?: movie.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
         state.details?.genre,
     )
@@ -362,7 +362,7 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
         Column(Modifier.weight(1f)) {
             Text("${episode.number}. ${episode.title}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                episode.durationSeconds?.takeIf { it > 0 }?.let { Text(durationText(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                episode.durationSeconds?.takeIf { it > 0 }?.let { Text(durationText(it, LocalConfiguration.current.locales[0]), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 if (progress?.finished == true) {
                     Icon(Icons.Rounded.CheckCircle, contentDescription = stringResource(R.string.watched), tint = Color(0xFF4CAF50), modifier = Modifier.padding(start = 6.dp).size(14.dp))
                 }
@@ -377,8 +377,11 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
 @ReadOnlyComposable
 private fun ratingText(value: Double): String = String.format(LocalConfiguration.current.locales[0], "%.1f", value)
 
-/** "2 h 08 min" / "45 min". */
-fun durationText(seconds: Int): String {
+/** "2 hr, 8 min" / "2 h et 8 min" / "45 min": hours and minutes in the language of the interface. */
+fun durationText(seconds: Int, locale: java.util.Locale = java.util.Locale.getDefault()): String {
     val minutes = seconds / 60
-    return if (minutes >= 60) "%d h %02d min".format(minutes / 60, minutes % 60) else "$minutes min"
+    val format = android.icu.text.MeasureFormat.getInstance(locale, android.icu.text.MeasureFormat.FormatWidth.SHORT)
+    val minute = android.icu.util.Measure(minutes % 60, android.icu.util.MeasureUnit.MINUTE)
+    return if (minutes >= 60) format.formatMeasures(android.icu.util.Measure(minutes / 60, android.icu.util.MeasureUnit.HOUR), minute)
+    else format.formatMeasures(android.icu.util.Measure(minutes, android.icu.util.MeasureUnit.MINUTE))
 }

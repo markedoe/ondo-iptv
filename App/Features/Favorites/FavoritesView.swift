@@ -39,6 +39,12 @@ struct FavoritesView: View {
             .background(.bar)
         }
         .navigationTitle("My List")
+        .onAppear {
+            // Opened on an empty type while another has items: show the one with items.
+            guard !showingLists, model.favorites(type).isEmpty,
+                  let filled = [ContentType.movie, .series, .live].first(where: { !model.favorites($0).isEmpty }) else { return }
+            type = filled
+        }
     }
 
     private var favoritesList: some View {
@@ -46,6 +52,10 @@ struct FavoritesView: View {
         return List {
             ForEach(entries) { entry in
                 row(entry)
+                    // Swipe to delete is iOS only: the menu works everywhere (Control-click on the Mac).
+                    .contextMenu {
+                        Button("Remove from My List", systemImage: "minus.circle", role: .destructive) { toggle(entry) }
+                    }
             }
             .onMove { source, destination in
                 model.moveFavorites(type, fromOffsets: source, toOffset: destination)

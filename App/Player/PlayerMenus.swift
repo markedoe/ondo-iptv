@@ -78,6 +78,7 @@ struct PlayerTracksMenu: View {
 
 /// Speed, aspect ratio, sleep timer, engine and stream information.
 struct PlayerMoreMenu: View {
+    @Environment(AppModel.self) private var model
     let controller: PlayerController
     let item: PlaybackItem?
 
@@ -86,7 +87,8 @@ struct PlayerMoreMenu: View {
             if controller.canSeek {
                 Picker("Speed", selection: Binding(get: { controller.rate }, set: { controller.rate = $0 })) {
                     ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 2.0] as [Float], id: \.self) { rate in
-                        Text(rate == 1 ? String(localized: "Normal") : String(format: "%.2gx", rate)).tag(rate)
+                        // 1.25 as "1.25×" (not "1.2x"), with the viewer's decimal separator.
+                        Text(rate == 1 ? String(localized: "Normal") : rate.formatted(.number.precision(.fractionLength(0...2))) + "×").tag(rate)
                     }
                 }
             }
@@ -111,9 +113,10 @@ struct PlayerMoreMenu: View {
                 }
             }
             if let size = controller.videoResolution {
-                Text("Video: \(Int(size.width))×\(Int(size.height))")
+                Text("Video: \(String(Int(size.width)))×\(String(Int(size.height)))")
             }
-            if let item {
+            // The address carries the provider login: not under parental control (it could re-add the playlist).
+            if let item, !model.isParentalControlActive {
                 Button("Copy Stream URL") { Pasteboard.copy(item.streamURL.absoluteString) }
             }
         } label: {

@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.epg.EpgIndex
+import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.PlaybackFactory
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.Channel
@@ -16,6 +17,7 @@ import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.HttpClient
+import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.PlayRequest
 import java.util.UUID
@@ -41,12 +43,19 @@ data class OndoState(
     val library: LibraryState = LibraryState(),
     val guide: EpgIndex? = null,
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: LoadError? = null,
     val movieDetails: Map<String, MediaDetails> = emptyMap(),
     val seriesDetails: Map<String, SeriesDetails> = emptyMap(),
 ) {
     val activePlaylist: SavedPlaylist? get() = playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull()
     val activePlaylistId: String? get() = activePlaylist?.id
+}
+
+/** Why a playlist could not be loaded: shown in the viewer's language (see `loadErrorText`), not as the exception's text. */
+data class LoadError(val kind: ErrorAttribution, val status: Int? = null) {
+    companion object {
+        fun of(error: Throwable) = LoadError(ErrorAttribution.classify(error), (error as? HttpException.BadStatus)?.code)
+    }
 }
 
 /**
@@ -64,6 +73,7 @@ class OndoRepository(
     private val _state = MutableStateFlow(OndoState())
     val state: StateFlow<OndoState> = _state.asStateFlow()
     private var refreshJob: Job? = null
+    private var openJob: Job? = null
     private var guideJob: Job? = null
     private var bootstrapping = false
 
@@ -127,13 +137,14 @@ class OndoRepository(
                 _state.update { it.copy(playlists = playlists, settings = settings, content = content, isLoading = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap()) }
                 loadGuide(saved, content)
             }
-            .onFailure { error -> _state.update { it.copy(isLoading = false, error = error.message ?: error.toString()) } }
+            .onFailure { error -> _state.update { it.copy(isLoading = false, error = LoadError.of(error)) } }
     }
 
     fun activate(id: String) {
         val playlist = _state.value.playlists.firstOrNull { it.id == id } ?: return
         updateSettings { it.copy(activePlaylistId = id) }
         // The previous playlist's downloads stop: they could only land on the wrong playlist.
+        openJob?.cancel()
         refreshJob?.cancel()
         guideJob?.cancel()
         _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), error = null, isLoading = false) }
@@ -157,7 +168,10 @@ class OndoRepository(
         val wasActive = _state.value.activePlaylistId == id
         _state.update { it.copy(playlists = playlists, library = library, settings = settings) }
         if (wasActive) {
-            _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null) }
+            openJob?.cancel()
+            refreshJob?.cancel()
+            guideJob?.cancel()
+            _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, isLoading = false) }
             _state.value.activePlaylist?.let { open(it) }
         }
     }
@@ -194,8 +208,11 @@ class OndoRepository(
 
     /** Cached catalogue at once, then a refresh when it is a day old or missing. */
     private fun open(playlist: SavedPlaylist) {
-        scope.launch {
+        openJob?.cancel()
+        openJob = scope.launch {
             val cached = withContext(io) { store.loadContent(playlist.id) }
+            // Another playlist was opened while this one was read: its catalogue must not replace that one.
+            if (_state.value.activePlaylistId != playlist.id) return@launch
             if (cached != null) {
                 _state.update { it.copy(content = cached) }
                 loadGuide(playlist, cached)
@@ -214,9 +231,14 @@ class OndoRepository(
                     if (_state.value.activePlaylistId == playlist.id) {
                         _state.update { it.copy(content = content, isLoading = false) }
                         loadGuide(playlist, content)
+                    } else {
+                        _state.update { it.copy(isLoading = false) }
                     }
                 }
-                .onFailure { error -> _state.update { it.copy(isLoading = false, error = error.message ?: error.toString()) } }
+                .onFailure { error ->
+                    // The error of a playlist that is no longer shown is not this one's.
+                    _state.update { if (it.activePlaylistId == playlist.id) it.copy(isLoading = false, error = LoadError.of(error)) else it.copy(isLoading = false) }
+                }
         }
     }
 

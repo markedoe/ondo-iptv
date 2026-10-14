@@ -171,7 +171,9 @@ struct HomeView: View {
         if emphasised && favorites.isEmpty && recent.isEmpty && !model.content.channels.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Your channels").font(.title3.bold())
-                Text("Long-press a channel and choose “Add to My List”; it will appear here.")
+                (Platform.isMac
+                    ? Text("Control-click a channel and choose “Add to My List”; it will appear here.")
+                    : Text("Long-press a channel and choose “Add to My List”; it will appear here."))
                     .foregroundStyle(.secondary)
                 HStack(spacing: 12) {
                     NavigationLink(value: AppSection.live) {
@@ -199,7 +201,7 @@ struct HomeView: View {
 
     @ViewBuilder
     private func customLists(metrics: ShelfMetrics) -> some View {
-        let lists = model.library.customLists.filter { !$0.items.isEmpty }
+        let lists = model.library.customLists.filter { !model.items(in: $0).isEmpty }
         if !lists.isEmpty {
             Shelf(title: "Collections", route: .favorites(FavoritesRoute(type: nil)), metrics: metrics) {
                 ForEach(lists) { list in
@@ -210,7 +212,7 @@ struct HomeView: View {
                                 .foregroundStyle(Color.accentColor)
                             Spacer(minLength: 8)
                             Text(list.name).font(.headline).lineLimit(2)
-                            Text("\(list.items.count) items").font(.caption).foregroundStyle(.secondary)
+                            Text("\(model.items(in: list).count) items").font(.caption).foregroundStyle(.secondary)
                         }
                         .padding(14)
                         .frame(width: 150, height: 120, alignment: .leading)
@@ -257,7 +259,7 @@ struct HomeView: View {
                     .frame(width: 20)
                 Text(title)
                 Spacer()
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
