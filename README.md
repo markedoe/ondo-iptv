@@ -11,6 +11,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Features
 
+### iPhone, iPad and Mac
+
 - **Home**: carousel of featured movies and series, "Continue Watching", My List, new releases, trending;
   live TV last.
 - **Movies & series**: poster grids, sorting, detail pages (plot, cast, trailer), seasons / episodes,
@@ -41,6 +43,20 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Offline downloads** (movies, episodes), with the reason in plain words when the provider refuses,
   limits connections or sends nothing.
 - **Data**: JSON backup / restore, clearable cache. Interface in English and French.
+
+### Android (phones and tablets)
+
+- **Home**: carousel, "Continue Watching", My List, recently added, channels.
+- **Movies & series**: one row per category, filterable grids, detail pages (Resume, From Start, next
+  episode, seasons, More Like This).
+- **Live TV**: categories, favorites, current and next programme; **search**.
+- **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin
+  and tested with the same cases).
+- **Player** (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses, resume,
+  picture-in-picture, media controls, back to live.
+- **Settings**: playlists, appearance, adult categories hidden by default; welcome screen with a demo.
+- Coming next: Android TV, grid guide and catch-up, Chromecast, downloads, profiles and PIN, online
+  subtitles. Details: [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Structure
 

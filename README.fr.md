@@ -11,6 +11,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 
 ## Fonctionnalités
 
+### iPhone, iPad et Mac
+
 - **Accueil** : carrousel de films et séries à la une, « Continuer à regarder », Ma liste, ajouts récents,
   tendances ; le direct en dernier.
 - **Films & séries** : grilles d'affiches, tri, fiches (synopsis, casting, bande-annonce), saisons /
@@ -42,6 +44,20 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
   limite les connexions ou n'envoie rien.
 - **Données** : sauvegarde / restauration JSON, cache vidable. Interface en français et en anglais.
+
+### Android (téléphones et tablettes)
+
+- **Accueil** : carrousel, « Continuer à regarder », Ma liste, ajouts récents, chaînes.
+- **Films & séries** : une rangée par catégorie, grilles filtrables, fiches (Reprendre, Depuis le début,
+  épisode suivant, saisons, Titres similaires).
+- **Live TV** : catégories, favoris, programme en cours et suivant ; **recherche**.
+- **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
+  testé avec les mêmes cas).
+- **Lecteur** (Media3 / ExoPlayer) : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
+  reprise, image dans l'image, commandes multimédia, retour au direct.
+- **Réglages** : playlists, apparence, catégories adultes masquées par défaut ; écran d'accueil avec démo.
+- À venir : Android TV, grille du guide et replay, Chromecast, téléchargements, profils et PIN,
+  sous-titres en ligne. Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
 ## Structure
 
