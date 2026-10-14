@@ -108,4 +108,25 @@
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">第 %1$d 季</string>
     <string name="choose_file">选择文件</string>
+    <string name="categories">分类</string>
+    <string name="categories_hint">按语言或国家/地区，或逐个选择要显示的分类。</string>
+    <string name="filter_categories">筛选分类</string>
+    <string name="languages_and_countries">语言和国家/地区</string>
+    <string name="tags_explanation">许多提供商会在分类名称前加上代码，例如 |PT| 或 FR:。隐藏某个代码会隐藏它在所有播放列表中的全部分类，包括以后新增的分类。</string>
+    <string name="show_all">全部显示</string>
+    <string name="hide_all">全部隐藏</string>
+    <string name="hidden_with">已随 %1$s 隐藏</string>
+    <string name="tag_suggestion_title">只显示你的语言？</string>
+    <string name="keep_only_these">只保留这些</string>
+    <string name="choose">选择…</string>
+    <string name="not_now">以后再说</string>
+    <plurals name="category_count">
+        <item quantity="other">%d 个分类</item>
+    </plurals>
+    <plurals name="item_count">
+        <item quantity="other">%d 项</item>
+    </plurals>
+    <plurals name="tag_suggestion_message">
+        <item quantity="other">此播放列表包含 %1$d 种语言和国家/地区的分类。保留%2$s并隐藏其他的？你可以随时在“设置”&gt;“分类”中更改。</item>
+    </plurals>
 </resources>

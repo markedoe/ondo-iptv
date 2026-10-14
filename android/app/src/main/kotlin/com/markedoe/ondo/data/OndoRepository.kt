@@ -168,6 +168,22 @@ class OndoRepository(
 
     fun setPosterSort(sort: PosterSort) = updateSettings { it.copy(posterSort = sort) }
 
+    fun setCategoryHidden(categoryId: String, hidden: Boolean) {
+        val playlistId = _state.value.activePlaylistId ?: return
+        updateLibrary { it.settingCategoryHidden(playlistId, categoryId, hidden) }
+    }
+
+    /** A choice about tags answers the "show only your languages?" suggestion too. */
+    fun setTagsHidden(tags: Collection<String>, hidden: Boolean) {
+        updateLibrary { it.settingTagsHidden(tags, hidden) }
+        dismissTagSuggestion()
+    }
+
+    fun dismissTagSuggestion() {
+        val playlistId = _state.value.activePlaylistId ?: return
+        updateSettings { it.copy(dismissedTagSuggestions = it.dismissedTagSuggestions + playlistId) }
+    }
+
     fun clearError() = _state.update { it.copy(error = null) }
 
     private fun updateSettings(change: (AppSettings) -> AppSettings) {

@@ -112,4 +112,31 @@
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Temporada %1$d</string>
     <string name="choose_file">Escolher um arquivo</string>
+    <string name="categories">Categorias</string>
+    <string name="categories_hint">Escolha as categorias exibidas, por idioma ou país, ou uma a uma.</string>
+    <string name="filter_categories">Filtrar categorias</string>
+    <string name="languages_and_countries">Idiomas e países</string>
+    <string name="tags_explanation">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. Ocultar um código oculta todas as categorias dele, em todas as playlists, inclusive as adicionadas depois.</string>
+    <string name="show_all">Mostrar todas</string>
+    <string name="hide_all">Ocultar todas</string>
+    <string name="hidden_with">Oculta com %1$s</string>
+    <string name="tag_suggestion_title">Mostrar só os seus idiomas?</string>
+    <string name="keep_only_these">Manter só estes</string>
+    <string name="choose">Escolher…</string>
+    <string name="not_now">Agora não</string>
+    <plurals name="category_count">
+        <item quantity="one">%d categoria</item>
+        <item quantity="many">%d categorias</item>
+        <item quantity="other">%d categorias</item>
+    </plurals>
+    <plurals name="item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="many">%d itens</item>
+        <item quantity="other">%d itens</item>
+    </plurals>
+    <plurals name="tag_suggestion_message">
+        <item quantity="one">Esta playlist tem categorias para %1$d idioma ou país. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias.</item>
+        <item quantity="many">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias.</item>
+        <item quantity="other">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias.</item>
+    </plurals>
 </resources>

@@ -50,6 +50,10 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     /// `playlistID|channelID` -> when it was hidden; unhiding leaves a dated marker for sync.
     public var hiddenChannels: [String: Date]
     public var unhiddenChannels: [String: Date]
+    /// Category tags ("PT", see `CategoryTags`) hidden in every playlist -> when; showing one again leaves a
+    /// dated marker for sync.
+    public var hiddenCategoryTags: [String: Date]
+    public var shownCategoryTags: [String: Date]
 
     public static let maxHistory = 500
 
@@ -73,12 +77,15 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         self.reminderTombstones = [:]
         self.hiddenChannels = [:]
         self.unhiddenChannels = [:]
+        self.hiddenCategoryTags = [:]
+        self.shownCategoryTags = [:]
     }
 
     enum CodingKeys: String, CodingKey {
         case favorites, history, hiddenCategoryKeys, lockedCategoryKeys, customLists
         case favoriteTombstones, historyTombstones, historyClearedAt, deletedListIDs
         case reminders, reminderTombstones, hiddenChannels, unhiddenChannels
+        case hiddenCategoryTags, shownCategoryTags
     }
 
     /// Tolerant decoding: data saved by older versions keeps working.
@@ -97,6 +104,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         reminderTombstones = (try? c.decodeIfPresent([String: Date].self, forKey: .reminderTombstones)) ?? [:]
         hiddenChannels = (try? c.decodeIfPresent([String: Date].self, forKey: .hiddenChannels)) ?? [:]
         unhiddenChannels = (try? c.decodeIfPresent([String: Date].self, forKey: .unhiddenChannels)) ?? [:]
+        hiddenCategoryTags = (try? c.decodeIfPresent([String: Date].self, forKey: .hiddenCategoryTags)) ?? [:]
+        shownCategoryTags = (try? c.decodeIfPresent([String: Date].self, forKey: .shownCategoryTags)) ?? [:]
     }
 
     public static func categoryKey(playlistID: UUID, categoryID: String) -> String {
@@ -224,6 +233,20 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         if hidden { hiddenCategoryKeys.insert(key) } else { hiddenCategoryKeys.remove(key) }
     }
 
+    /// Whether every category carrying this tag is hidden, in all playlists.
+    public func isHidden(tag: String) -> Bool {
+        hiddenCategoryTags[tag] != nil
+    }
+
+    public mutating func setHidden(_ hidden: Bool, tag: String, now: Date = Date()) {
+        if hidden {
+            hiddenCategoryTags[tag] = now
+            shownCategoryTags[tag] = nil
+        } else if hiddenCategoryTags.removeValue(forKey: tag) != nil {
+            shownCategoryTags[tag] = now
+        }
+    }
+
     public func isHidden(playlistID: UUID, channelID: String) -> Bool {
         hiddenChannels[Self.categoryKey(playlistID: playlistID, categoryID: channelID)] != nil
     }
@@ -345,6 +368,10 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         result.unhiddenChannels = unhiddenChannels.merging(other.unhiddenChannels) { max($0, $1) }
         result.hiddenChannels = hiddenChannels.merging(other.hiddenChannels) { max($0, $1) }
             .filter { key, hiddenAt in result.unhiddenChannels[key].map { $0 < hiddenAt } ?? true }
+
+        result.shownCategoryTags = shownCategoryTags.merging(other.shownCategoryTags) { max($0, $1) }
+        result.hiddenCategoryTags = hiddenCategoryTags.merging(other.hiddenCategoryTags) { max($0, $1) }
+            .filter { tag, hiddenAt in result.shownCategoryTags[tag].map { $0 < hiddenAt } ?? true }
 
         result.hiddenCategoryKeys.formUnion(other.hiddenCategoryKeys)
         result.lockedCategoryKeys.formUnion(other.lockedCategoryKeys)

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AssistChip
@@ -69,6 +70,7 @@ class VodActions(
     val onCategory: (MediaCategory?) -> Unit = {},
     val onSeeAllMyList: () -> Unit = {},
     val onSearch: () -> Unit = {},
+    val onCategories: () -> Unit = {},
 )
 
 /** Movies or Series tab: category chips, continue watching, My List, recently added, one row per category. */
@@ -85,6 +87,9 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
             TopAppBar(
                 title = { Text(state.title, style = MaterialTheme.typography.headlineSmall) },
                 actions = {
+                    IconButton(onClick = actions.onCategories, modifier = Modifier.testTag("categoryFilter")) {
+                        Icon(Icons.Rounded.FilterList, contentDescription = stringResource(R.string.categories))
+                    }
                     IconButton(onClick = actions.onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search)) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),

@@ -23,6 +23,9 @@ struct LiveView: View {
             ToolbarItem(placement: .primaryAction) {
                 EPGStatusButton()
             }
+            ToolbarItem(placement: .primaryAction) {
+                CategoryFilterButton(type: .live)
+            }
         }
     }
 }

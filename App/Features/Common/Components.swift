@@ -300,6 +300,8 @@ struct CategoryBrowser<Detail: View>: View {
                 ForEach(categories) { category in
                     row(category, count: model.count(in: category))
                 }
+            } footer: {
+                if filter.isEmpty { HiddenCategoriesNote(type: type) }
             }
         }
         #if os(macOS)

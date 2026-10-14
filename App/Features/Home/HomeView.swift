@@ -94,6 +94,11 @@ struct HomeView: View {
             accountNotice
                 .padding(.horizontal, metrics.gutter)
 
+            if let suggestion = model.tagSuggestion() {
+                TagSuggestionCard(suggestion: suggestion)
+                    .padding(.horizontal, metrics.gutter)
+            }
+
             if !resume.isEmpty {
                 Shelf(title: "Continue Watching", metrics: metrics) {
                     ForEach(resume) { entry in

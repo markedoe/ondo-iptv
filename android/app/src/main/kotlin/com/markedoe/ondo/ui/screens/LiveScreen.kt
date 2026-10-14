@@ -18,10 +18,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -56,6 +58,7 @@ class LiveActions(
     val onFavorites: () -> Unit = {},
     val onPlay: (ChannelRow) -> Unit = {},
     val onToggleFavorite: (ChannelRow) -> Unit = {},
+    val onCategories: () -> Unit = {},
 )
 
 /** Live TV: category chips and channels with what is on now (long press: favourite). */
@@ -66,6 +69,11 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
         item {
             TopAppBar(
                 title = { Text(stringResource(R.string.live_tv), style = MaterialTheme.typography.headlineSmall) },
+                actions = {
+                    IconButton(onClick = actions.onCategories, modifier = Modifier.testTag("categoryFilter")) {
+                        Icon(Icons.Rounded.FilterList, contentDescription = stringResource(R.string.categories))
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
             )
         }

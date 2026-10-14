@@ -45,12 +45,29 @@ data class WatchEntry(
     }
 }
 
-/** Favourites and watch history, persisted as one JSON document. Pure: every change returns a new value. */
+/**
+ * Favourites, watch history and hidden categories, persisted as one JSON document. Pure: every change returns a
+ * new value.
+ */
 @Serializable
 data class LibraryState(
     val favorites: List<Favorite> = emptyList(),
     val history: List<WatchEntry> = emptyList(),
+    /** `playlistId|categoryId` hidden by the user. */
+    val hiddenCategories: Set<String> = emptySet(),
+    /** Language or country tags ("PT", see `CategoryTags`) hidden in every playlist. */
+    val hiddenTags: Set<String> = emptySet(),
 ) {
+    fun isCategoryHidden(playlistId: String, categoryId: String): Boolean = "$playlistId|$categoryId" in hiddenCategories
+
+    fun settingCategoryHidden(playlistId: String, categoryId: String, hidden: Boolean): LibraryState {
+        val key = "$playlistId|$categoryId"
+        return copy(hiddenCategories = if (hidden) hiddenCategories + key else hiddenCategories - key)
+    }
+
+    fun settingTagsHidden(tags: Collection<String>, hidden: Boolean): LibraryState =
+        copy(hiddenTags = if (hidden) hiddenTags + tags else hiddenTags - tags.toSet())
+
     fun isFavorite(playlistId: String, kind: ItemKind, itemId: String): Boolean =
         favorites.any { it.playlistId == playlistId && it.kind == kind && it.itemId == itemId }
 
@@ -94,8 +111,11 @@ data class LibraryState(
     fun recentChannels(playlistId: String, limit: Int = 20): List<WatchEntry> =
         history.filter { it.playlistId == playlistId && it.kind == ItemKind.CHANNEL }.sortedByDescending { it.lastWatchedAt }.take(limit)
 
-    fun removingPlaylist(playlistId: String): LibraryState =
-        LibraryState(favorites.filterNot { it.playlistId == playlistId }, history.filterNot { it.playlistId == playlistId })
+    fun removingPlaylist(playlistId: String): LibraryState = copy(
+        favorites = favorites.filterNot { it.playlistId == playlistId },
+        history = history.filterNot { it.playlistId == playlistId },
+        hiddenCategories = hiddenCategories.filterNot { it.startsWith("$playlistId|") }.toSet(),
+    )
 
     private fun trimmed(): LibraryState = if (history.size <= MAX_HISTORY) this else copy(history = history.sortedByDescending { it.lastWatchedAt }.take(MAX_HISTORY))
 

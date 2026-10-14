@@ -118,4 +118,40 @@
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">الموسم %1$d</string>
     <string name="choose_file">اختيار ملف</string>
+    <string name="categories">الفئات</string>
+    <string name="categories_hint">اختر الفئات المعروضة حسب اللغة أو البلد أو واحدة تلو الأخرى.</string>
+    <string name="filter_categories">تصفية الفئات</string>
+    <string name="languages_and_countries">اللغات والبلدان</string>
+    <string name="tags_explanation">يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:. إخفاء رمز يُخفي كل فئاته في جميع قوائم التشغيل، بما فيها الفئات التي تُضاف لاحقًا.</string>
+    <string name="show_all">إظهار الكل</string>
+    <string name="hide_all">إخفاء الكل</string>
+    <string name="hidden_with">مخفية مع %1$s</string>
+    <string name="tag_suggestion_title">عرض لغاتك فقط؟</string>
+    <string name="keep_only_these">إبقاء هذه فقط</string>
+    <string name="choose">اختيار…</string>
+    <string name="not_now">ليس الآن</string>
+    <plurals name="category_count">
+        <item quantity="zero">%d فئة</item>
+        <item quantity="one">%d فئة</item>
+        <item quantity="two">%d فئة</item>
+        <item quantity="few">%d فئات</item>
+        <item quantity="many">%d فئة</item>
+        <item quantity="other">%d فئة</item>
+    </plurals>
+    <plurals name="item_count">
+        <item quantity="zero">%d عنصر</item>
+        <item quantity="one">%d عنصر</item>
+        <item quantity="two">%d عنصر</item>
+        <item quantity="few">%d عناصر</item>
+        <item quantity="many">%d عنصرًا</item>
+        <item quantity="other">%d عنصر</item>
+    </plurals>
+    <plurals name="tag_suggestion_message">
+        <item quantity="zero">تحتوي قائمة التشغيل هذه على فئات لـ %1$d من اللغات والبلدان. هل تريد إبقاء %2$s وإخفاء البقية؟ يمكنك تغيير ذلك في أي وقت من الإعدادات، الفئات.</item>
+        <item quantity="one">تحتوي قائمة التشغيل هذه على فئات لـ %1$d من اللغات والبلدان. هل تريد إبقاء %2$s وإخفاء البقية؟ يمكنك تغيير ذلك في أي وقت من الإعدادات، الفئات.</item>
+        <item quantity="two">تحتوي قائمة التشغيل هذه على فئات لـ %1$d من اللغات والبلدان. هل تريد إبقاء %2$s وإخفاء البقية؟ يمكنك تغيير ذلك في أي وقت من الإعدادات، الفئات.</item>
+        <item quantity="few">تحتوي قائمة التشغيل هذه على فئات لـ %1$d من اللغات والبلدان. هل تريد إبقاء %2$s وإخفاء البقية؟ يمكنك تغيير ذلك في أي وقت من الإعدادات، الفئات.</item>
+        <item quantity="many">تحتوي قائمة التشغيل هذه على فئات لـ %1$d من اللغات والبلدان. هل تريد إبقاء %2$s وإخفاء البقية؟ يمكنك تغيير ذلك في أي وقت من الإعدادات، الفئات.</item>
+        <item quantity="other">تحتوي قائمة التشغيل هذه على فئات لـ %1$d من اللغات والبلدان. هل تريد إبقاء %2$s وإخفاء البقية؟ يمكنك تغيير ذلك في أي وقت من الإعدادات، الفئات.</item>
+    </plurals>
 </resources>

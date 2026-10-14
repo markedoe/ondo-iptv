@@ -29,4 +29,6 @@ data class AppSettings(
     /** Categories that look adult (see `AdultContentDetector`) are hidden unless this is on. */
     val showAdultCategories: Boolean = false,
     val posterSort: PosterSort = PosterSort.PLAYLIST,
+    /** Playlists whose "show only your languages?" suggestion was answered or dismissed. */
+    val dismissedTagSuggestions: Set<String> = emptySet(),
 )

@@ -81,6 +81,338 @@
         }
       }
     },
+    "%lld categories": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld category"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categories"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld catégorie"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld catégories"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld catégories"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categoría"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categorías"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categorías"
+                }
+              }
+            }
+          }
+        },
+        "pt": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categoria"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categorias"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categorias"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 个分类"
+                }
+              }
+            }
+          }
+        },
+        "ar": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "لا فئات"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "فئة واحدة"
+                }
+              },
+              "two": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "فئتان"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld فئات"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld فئة"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld فئة"
+                }
+              }
+            }
+          }
+        },
+        "hi": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld श्रेणी"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld श्रेणियाँ"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld hidden categories": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld hidden category"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld hidden categories"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld catégorie masquée"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld catégories masquées"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld catégories masquées"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categoría oculta"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categorías ocultas"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categorías ocultas"
+                }
+              }
+            }
+          }
+        },
+        "pt": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categoria oculta"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categorias ocultas"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld categorias ocultas"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 个隐藏的分类"
+                }
+              }
+            }
+          }
+        },
+        "ar": {
+          "variations": {
+            "plural": {
+              "zero": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "لا فئات مخفية"
+                }
+              },
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "فئة مخفية واحدة"
+                }
+              },
+              "two": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "فئتان مخفيتان"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld فئات مخفية"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld فئة مخفية"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld فئة مخفية"
+                }
+              }
+            }
+          }
+        },
+        "hi": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld छिपी श्रेणी"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld छिपी श्रेणियाँ"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld items": {
       "localizations": {
         "en": {
@@ -2367,6 +2699,46 @@
         }
       }
     },
+    "Categories": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catégories"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categorías"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Categorias"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分类"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفئات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "श्रेणियाँ"
+          }
+        }
+      }
+    },
     "Category": {
       "localizations": {
         "fr": {
@@ -2723,6 +3095,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "फ़ाइल चुनें…"
+          }
+        }
+      }
+    },
+    "Choose the categories shown": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir les catégories affichées"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir las categorías que se muestran"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher as categorias exibidas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择要显示的分类"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اختيار الفئات المعروضة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "दिखाई जाने वाली श्रेणियाँ चुनें"
+          }
+        }
+      }
+    },
+    "Choose…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir…"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolher…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اختيار…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "चुनें…"
           }
         }
       }
@@ -5967,46 +6419,6 @@
         }
       }
     },
-    "Hidden Categories": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Catégories masquées"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Categorías ocultas"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Categorias ocultas"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已隐藏的分类"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "الفئات المخفية"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "छिपी हुई श्रेणियाँ"
-          }
-        }
-      }
-    },
     "Hidden Channels": {
       "localizations": {
         "fr": {
@@ -6083,6 +6495,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "इस प्रोफ़ाइल के लिए छिपे हुए चैनल सिर्फ़ सेटिंग्स > छिपे हुए चैनल में दिखते हैं।"
+          }
+        }
+      }
+    },
+    "Hidden with %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquée avec %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculta con %@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculta com %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已随 %@ 隐藏"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مخفية مع %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ के साथ छिपी"
+          }
+        }
+      }
+    },
+    "Hide All": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout masquer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar todas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar todas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部隐藏"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إخفاء الكل"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सभी छिपाएँ"
           }
         }
       }
@@ -6407,6 +6899,46 @@
         }
       }
     },
+    "Keep Only These": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne garder que celles-ci"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantener solo estos"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manter só estes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只保留这些"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إبقاء هذه فقط"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "केवल ये रखें"
+          }
+        }
+      }
+    },
     "Kids": {
       "localizations": {
         "fr": {
@@ -6683,6 +7215,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "भाषा"
+          }
+        }
+      }
+    },
+    "Languages and Countries": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langues et pays"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idiomas y países"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Idiomas e países"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言和国家/地区"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اللغات والبلدان"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "भाषाएँ और देश"
           }
         }
       }
@@ -7723,6 +8295,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "मैन्युअल"
+          }
+        }
+      }
+    },
+    "Many providers start category names with a code such as |PT| or FR:. Hiding a code hides all its categories, in every playlist, including those added later.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Masquer un code masque toutes ses catégories, dans toutes les playlists, y compris celles ajoutées plus tard."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. Ocultar un código oculta todas sus categorías, en todas las listas, incluidas las que se añadan más adelante."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. Ocultar um código oculta todas as categorias dele, em todas as playlists, inclusive as adicionadas depois."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "许多提供商会在分类名称前加上代码，例如 |PT| 或 FR:。隐藏某个代码会隐藏它在所有播放列表中的全部分类，包括以后新增的分类。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:. إخفاء رمز يُخفي كل فئاته في جميع قوائم التشغيل، بما فيها الفئات التي تُضاف لاحقًا."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कई प्रदाता श्रेणियों के नाम |PT| या FR: जैसे कोड से शुरू करते हैं। किसी कोड को छिपाने से उसकी सभी श्रेणियाँ हर प्लेलिस्ट में छिप जाती हैं, बाद में जोड़ी गई श्रेणियाँ भी।"
           }
         }
       }
@@ -9883,6 +10495,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "सामान्य"
+          }
+        }
+      }
+    },
+    "Not Now": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus tard"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ahora no"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agora não"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "以后再说"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ليس الآن"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी नहीं"
           }
         }
       }
@@ -14933,6 +15585,46 @@
         }
       }
     },
+    "Show All": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout afficher"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar todas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar todas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部显示"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار الكل"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सभी दिखाएँ"
+          }
+        }
+      }
+    },
     "Show channel numbers": {
       "localizations": {
         "fr": {
@@ -14969,6 +15661,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "चैनल नंबर दिखाएँ"
+          }
+        }
+      }
+    },
+    "Show only your languages?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "N’afficher que vos langues ?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Mostrar solo tus idiomas?"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar só os seus idiomas?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只显示你的语言？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عرض لغاتك فقط؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "केवल आपकी भाषाएँ दिखाएँ?"
           }
         }
       }
@@ -16773,6 +17505,46 @@
         }
       }
     },
+    "This playlist has categories for %lld languages and countries. Keep %@ and hide the others? You can change this at any time in Settings, Categories.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette playlist a des catégories pour %lld langues et pays. Garder %@ et masquer les autres ? Vous pourrez changer cela à tout moment dans Réglages, Catégories."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta lista tiene categorías para %lld idiomas y países. ¿Mantener %@ y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Categorías."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta playlist tem categorias para %lld idiomas e países. Manter %@ e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此播放列表包含 %lld 种语言和国家/地区的分类。保留%@并隐藏其他的？你可以随时在“设置”>“分类”中更改。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحتوي قائمة التشغيل هذه على فئات لـ %lld من اللغات والبلدان. هل تريد إبقاء %@ وإخفاء البقية؟ يمكنك تغيير ذلك في أي وقت من الإعدادات، الفئات."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस प्लेलिस्ट में %lld भाषाओं और देशों की श्रेणियाँ हैं। %@ रखें और बाकी छिपा दें? आप इसे कभी भी सेटिंग्स, श्रेणियाँ में बदल सकते हैं।"
+          }
+        }
+      }
+    },
     "This provider requires custom headers that a Chromecast can't send. The stream may not play.": {
       "localizations": {
         "fr": {
@@ -18129,46 +18901,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "वीडियो: %lld×%lld"
-          }
-        }
-      }
-    },
-    "Visible Categories": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Catégories visibles"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Categorías visibles"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Categorias visíveis"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可见分类"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "الفئات الظاهرة"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "दिखने वाली श्रेणियाँ"
           }
         }
       }

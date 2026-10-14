@@ -93,6 +93,8 @@ struct AppSettings: Codable, Equatable {
     var addic7edSubtitles = true
     /// Languages of the last subtitle search (ISO 639-1), preferred first.
     var subtitleSearchLanguages: [String] = []
+    /// Playlists whose "show only your languages?" suggestion was answered or dismissed.
+    var dismissedTagSuggestions: Set<UUID> = []
 
     init() {}
 
@@ -122,5 +124,6 @@ struct AppSettings: Codable, Equatable {
         reminderLeadMinutes = (try? c.decodeIfPresent(Int.self, forKey: .reminderLeadMinutes)) ?? d.reminderLeadMinutes
         addic7edSubtitles = (try? c.decodeIfPresent(Bool.self, forKey: .addic7edSubtitles)) ?? d.addic7edSubtitles
         subtitleSearchLanguages = (try? c.decodeIfPresent([String].self, forKey: .subtitleSearchLanguages)) ?? d.subtitleSearchLanguages
+        dismissedTagSuggestions = (try? c.decodeIfPresent(Set<UUID>.self, forKey: .dismissedTagSuggestions)) ?? d.dismissedTagSuggestions
     }
 }

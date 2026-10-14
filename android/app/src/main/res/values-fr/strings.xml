@@ -112,4 +112,31 @@
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Saison %1$d</string>
     <string name="choose_file">Choisir un fichier</string>
+    <string name="categories">Catégories</string>
+    <string name="categories_hint">Choisissez les catégories affichées, par langue ou pays, ou une par une.</string>
+    <string name="filter_categories">Filtrer les catégories</string>
+    <string name="languages_and_countries">Langues et pays</string>
+    <string name="tags_explanation">Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Masquer un code masque toutes ses catégories, dans toutes les playlists, y compris celles ajoutées plus tard.</string>
+    <string name="show_all">Tout afficher</string>
+    <string name="hide_all">Tout masquer</string>
+    <string name="hidden_with">Masquée avec %1$s</string>
+    <string name="tag_suggestion_title">N’afficher que vos langues ?</string>
+    <string name="keep_only_these">Ne garder que celles-ci</string>
+    <string name="choose">Choisir…</string>
+    <string name="not_now">Plus tard</string>
+    <plurals name="category_count">
+        <item quantity="one">%d catégorie</item>
+        <item quantity="many">%d catégories</item>
+        <item quantity="other">%d catégories</item>
+    </plurals>
+    <plurals name="item_count">
+        <item quantity="one">%d élément</item>
+        <item quantity="many">%d éléments</item>
+        <item quantity="other">%d éléments</item>
+    </plurals>
+    <plurals name="tag_suggestion_message">
+        <item quantity="one">Cette playlist a des catégories pour %1$d langue ou pays. Garder %2$s et masquer les autres ? Vous pourrez changer cela à tout moment dans Réglages, Catégories.</item>
+        <item quantity="many">Cette playlist a des catégories pour %1$d langues et pays. Garder %2$s et masquer les autres ? Vous pourrez changer cela à tout moment dans Réglages, Catégories.</item>
+        <item quantity="other">Cette playlist a des catégories pour %1$d langues et pays. Garder %2$s et masquer les autres ? Vous pourrez changer cela à tout moment dans Réglages, Catégories.</item>
+    </plurals>
 </resources>

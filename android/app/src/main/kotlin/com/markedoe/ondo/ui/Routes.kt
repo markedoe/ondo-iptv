@@ -24,6 +24,9 @@ object Routes {
     /** Poster grid: every movie or series, one category, or My List (of one type, or both with [anyType]). */
     @Serializable data class Grid(val series: Boolean, val categoryId: String? = null, val myList: Boolean = false, val anyType: Boolean = false)
     @Serializable data object Settings
+
+    /** Which categories are shown, opened on one type (`ContentType.rawValue`). */
+    @Serializable data class Categories(val type: String = "movie")
     @Serializable data object AddPlaylist
 }
 

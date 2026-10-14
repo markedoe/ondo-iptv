@@ -21,6 +21,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -38,9 +39,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.player.PlayerActivity
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
+import com.markedoe.ondo.ui.screens.CategoriesActions
+import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
@@ -113,12 +117,13 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 composable<Routes.Home> { HomeDestination(viewModel, navController) }
                 composable<Routes.Movies> { VodDestination(viewModel, navController, series = false) }
                 composable<Routes.Series> { VodDestination(viewModel, navController, series = true) }
-                composable<Routes.Live> { LiveDestination(viewModel) }
+                composable<Routes.Live> { LiveDestination(viewModel, navController) }
                 composable<Routes.Search> { SearchDestination(viewModel, navController) }
                 composable<Routes.MovieDetail> { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                 composable<Routes.SeriesDetail> { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
                 composable<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
                 composable<Routes.Settings> { SettingsDestination(viewModel, navController) }
+                composable<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
                 composable<Routes.AddPlaylist> {
                     val state by viewModel.state.collectAsStateWithLifecycle()
                     var picked by remember { mutableStateOf<PickedFile?>(null) }
@@ -210,6 +215,12 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onPlayChannel = viewModel::playChannel,
             onPlaylists = { navController.navigate(Routes.Settings) },
             onSettings = { navController.navigate(Routes.Settings) },
+            onAcceptSuggestion = viewModel::acceptSuggestion,
+            onChooseCategories = {
+                viewModel.dismissTagSuggestion()
+                navController.navigate(Routes.Categories())
+            },
+            onDismissSuggestion = viewModel::dismissTagSuggestion,
         ),
     )
 }
@@ -228,12 +239,13 @@ private fun VodDestination(viewModel: OndoViewModel, navController: NavHostContr
             onCategory = { category -> navController.navigate(Routes.Grid(series = series, categoryId = category?.id)) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = series, myList = true)) },
             onSearch = { navController.openTab(TopLevel.SEARCH) },
+            onCategories = { navController.navigate(Routes.Categories(if (series) "series" else "movie")) },
         ),
     )
 }
 
 @Composable
-private fun LiveDestination(viewModel: OndoViewModel) {
+private fun LiveDestination(viewModel: OndoViewModel, navController: NavHostController) {
     val live by viewModel.live.collectAsStateWithLifecycle()
     val filter by viewModel.liveFilter.collectAsStateWithLifecycle()
     val state = live ?: return Loading()
@@ -244,6 +256,7 @@ private fun LiveDestination(viewModel: OndoViewModel) {
             onFavorites = { viewModel.setLiveFilter(LiveFilter(favoritesOnly = !filter.favoritesOnly)) },
             onPlay = viewModel::playChannel,
             onToggleFavorite = viewModel::toggleFavorite,
+            onCategories = { navController.navigate(Routes.Categories("live")) },
         ),
     )
 }
@@ -347,8 +360,31 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onDelete = viewModel::delete,
             onAppearance = viewModel::setAppearance,
             onShowAdultCategories = viewModel::setShowAdultCategories,
+            onCategories = { navController.navigate(Routes.Categories()) },
             onPrivacy = { browse(PRIVACY_URL) },
             onSupport = { browse(SUPPORT_URL) },
+        ),
+    )
+}
+
+@Composable
+private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHostController, route: Routes.Categories) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    var type by rememberSaveable { mutableStateOf(ContentType.fromRawValue(route.type) ?: ContentType.MOVIE) }
+    var filter by rememberSaveable { mutableStateOf("") }
+    val locale = LocalConfiguration.current.locales[0]
+    val ui = remember(state, type, filter, locale) { CategoryFilter.categories(state, type, filter, locale) }
+    CategoriesScreen(
+        state = ui,
+        type = type,
+        filter = filter,
+        actions = CategoriesActions(
+            onBack = { navController.popBackStack() },
+            onType = { type = it },
+            onFilter = { filter = it },
+            onTag = { tag, hidden -> viewModel.setTagsHidden(listOf(tag), hidden) },
+            onCategory = viewModel::setCategoryHidden,
+            onAll = { hidden -> ui.categories.filter { it.hiddenWith == null }.forEach { viewModel.setCategoryHidden(it.id, hidden) } },
         ),
     )
 }

@@ -1,1 +1,1 @@
-Ondo is now available in Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi, as well as English and French. It follows your device language; on Android 13 and later you can also choose Ondo’s language in the system settings.
+Hide a whole language or country in one go: categories whose names start with |PT|, FR: and the like, those the provider adds later included (filter button on Movies, Series and Live TV). Movie and series grids sort by release date. Ondo speaks English, French, Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi.

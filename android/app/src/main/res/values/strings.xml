@@ -111,4 +111,28 @@
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Season %1$d</string>
     <string name="choose_file">Choose a file</string>
+    <string name="categories">Categories</string>
+    <string name="categories_hint">Choose the categories shown, by language or country or one by one.</string>
+    <string name="filter_categories">Filter categories</string>
+    <string name="languages_and_countries">Languages and countries</string>
+    <string name="tags_explanation">Many providers start category names with a code such as |PT| or FR:. Hiding a code hides all its categories, in every playlist, including those added later.</string>
+    <string name="show_all">Show all</string>
+    <string name="hide_all">Hide all</string>
+    <string name="hidden_with">Hidden with %1$s</string>
+    <string name="tag_suggestion_title">Show only your languages?</string>
+    <string name="keep_only_these">Keep only these</string>
+    <string name="choose">Choose…</string>
+    <string name="not_now">Not now</string>
+    <plurals name="category_count">
+        <item quantity="one">%d category</item>
+        <item quantity="other">%d categories</item>
+    </plurals>
+    <plurals name="item_count">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <plurals name="tag_suggestion_message">
+        <item quantity="one">This playlist has categories for %1$d language or country. Keep %2$s and hide the others? You can change this at any time in Settings, Categories.</item>
+        <item quantity="other">This playlist has categories for %1$d languages and countries. Keep %2$s and hide the others? You can change this at any time in Settings, Categories.</item>
+    </plurals>
 </resources>

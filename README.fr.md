@@ -46,7 +46,11 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Multivue** (iPad, Mac) : jusqu'à 4 chaînes, un seul son actif.
 - **Profils** (« Qui regarde ? »), PIN de profil, **profils enfant**, contrôle parental par PIN.
 - **Ma liste** (un onglet sur iPhone) : films, séries et chaînes au même endroit, réordonnables ;
-  **collections** pour les regrouper à votre façon ; catégories masquées.
+  **collections** pour les regrouper à votre façon.
+- **Catégories** : masquez d'un coup une langue ou un pays (les fournisseurs commencent le nom des catégories
+  par des codes comme `|PT|` ou `FR:`), une règle qui couvre aussi les catégories ajoutées plus tard ;
+  proposé une fois quand une playlist en compte beaucoup (garder vos langues, choisir, ou plus tard) ; ou
+  masquez les catégories une par une. Le bouton de filtre est sur les écrans Films, Séries et Live TV.
 - **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
   limite les connexions ou n'envoie rien.
 - **Données** : sauvegarde / restauration JSON, cache vidable.
@@ -60,6 +64,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   sortie comprise), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires).
 - **Live TV** : catégories, favoris, programme en cours et suivant ; **recherche**.
+- **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…) ou une par une, comme sur Apple.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
   testé avec les mêmes cas).
 - **Lecteur** (Media3 / ExoPlayer) : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,

@@ -43,6 +43,9 @@ struct VODBrowser: View {
                     Label("All", systemImage: "square.grid.2x2")
                 }
             }
+            ToolbarItem(placement: .primaryAction) {
+                CategoryFilterButton(type: type)
+            }
         }
         .navigationDestination(for: PosterCategoryRoute.self) { route in
             if type == .movie {
@@ -101,6 +104,8 @@ struct VODBrowser: View {
                     }
                 }
             }
+            HiddenCategoriesNote(type: type)
+                .padding(.horizontal, metrics.gutter)
         }
         .padding(.vertical, 12)
         .overlay {

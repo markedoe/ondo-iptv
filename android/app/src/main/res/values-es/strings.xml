@@ -112,4 +112,31 @@
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Temporada %1$d</string>
     <string name="choose_file">Elegir un archivo</string>
+    <string name="categories">Categorías</string>
+    <string name="categories_hint">Elige las categorías que se muestran, por idioma o país, o una por una.</string>
+    <string name="filter_categories">Filtrar categorías</string>
+    <string name="languages_and_countries">Idiomas y países</string>
+    <string name="tags_explanation">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. Ocultar un código oculta todas sus categorías, en todas las listas, incluidas las que se añadan más adelante.</string>
+    <string name="show_all">Mostrar todas</string>
+    <string name="hide_all">Ocultar todas</string>
+    <string name="hidden_with">Oculta con %1$s</string>
+    <string name="tag_suggestion_title">¿Mostrar solo tus idiomas?</string>
+    <string name="keep_only_these">Mantener solo estos</string>
+    <string name="choose">Elegir…</string>
+    <string name="not_now">Ahora no</string>
+    <plurals name="category_count">
+        <item quantity="one">%d categoría</item>
+        <item quantity="many">%d categorías</item>
+        <item quantity="other">%d categorías</item>
+    </plurals>
+    <plurals name="item_count">
+        <item quantity="one">%d elemento</item>
+        <item quantity="many">%d elementos</item>
+        <item quantity="other">%d elementos</item>
+    </plurals>
+    <plurals name="tag_suggestion_message">
+        <item quantity="one">Esta lista tiene categorías para %1$d idioma o país. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Categorías.</item>
+        <item quantity="many">Esta lista tiene categorías para %1$d idiomas y países. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Categorías.</item>
+        <item quantity="other">Esta lista tiene categorías para %1$d idiomas y países. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Categorías.</item>
+    </plurals>
 </resources>

@@ -44,7 +44,7 @@ struct SettingsView: View {
                 NavigationLink {
                     CategoryManagerView()
                 } label: {
-                    Label("Hidden Categories", systemImage: "eye.slash")
+                    Label("Categories", systemImage: "line.3.horizontal.decrease.circle")
                 }
                 NavigationLink {
                     HiddenChannelsView()
@@ -497,35 +497,6 @@ struct AccountInfoView: View {
 }
 
 // MARK: - Categories & parental control
-
-struct CategoryManagerView: View {
-    @Environment(AppModel.self) private var model
-    @State private var type: ContentType = .live
-
-    var body: some View {
-        List {
-            Picker("Type", selection: $type) {
-                Text("Live TV").tag(ContentType.live)
-                Text("Movies").tag(ContentType.movie)
-                Text("Series").tag(ContentType.series)
-            }
-            .pickerStyle(.segmented)
-            ForEach(model.content.categories(for: type)) { category in
-                Toggle(isOn: Binding(
-                    get: { !model.isHidden(category) },
-                    set: { model.setHidden(!$0, category: category) }
-                )) {
-                    HStack {
-                        Text(category.name)
-                        Spacer()
-                        Text("\(model.count(in: category))").font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-        .navigationTitle("Visible Categories")
-    }
-}
 
 struct ParentalControlView: View {
     @Environment(AppModel.self) private var model

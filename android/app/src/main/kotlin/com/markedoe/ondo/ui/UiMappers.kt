@@ -27,16 +27,27 @@ import com.markedoe.ondo.ui.screens.WatchProgress
 import java.util.Locale
 
 /** Localised words the mappers need (resolved by the caller, so the mappers stay pure). */
-data class Labels(val movie: String = "Movie", val series: String = "Series", val locale: Locale = Locale.getDefault())
+data class Labels(
+    val movie: String = "Movie",
+    val series: String = "Series",
+    val locale: Locale = Locale.getDefault(),
+    /** The viewer's language and country codes, for the "show only your languages?" suggestion. */
+    val viewerCodes: Set<String> = CategoryFilter.viewerCodes(listOf(locale)),
+)
 
 /** Builds the screens' states from the app state. Pure functions, unit tested. */
 object UiMappers {
     private const val ROW_LENGTH = 20
 
-    /** Adult-looking categories stay hidden unless the user shows them in Settings. */
-    fun hiddenCategoryIds(state: OndoState): Set<String> =
-        if (state.settings.showAdultCategories) emptySet()
-        else with(state.content) { (movieCategories + seriesCategories + liveCategories).filter { it.looksAdult }.mapTo(HashSet()) { it.id } }
+    /**
+     * Categories hidden by the user, on their own or with their language tag, and adult-looking ones unless the
+     * user shows them in Settings.
+     */
+    fun hiddenCategoryIds(state: OndoState): Set<String> = with(state.content) {
+        (movieCategories + seriesCategories + liveCategories)
+            .filter { (!state.settings.showAdultCategories && it.looksAdult) || CategoryFilter.isHidden(state, it) }
+            .mapTo(HashSet()) { it.id }
+    }
 
     fun showcase(state: OndoState): Showcase =
         Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state))
@@ -99,6 +110,7 @@ object UiMappers {
             channels = channels.map { channelRow(it, state, now) },
             channelsAreFavorites = favoriteChannels.isNotEmpty(),
             isLoading = state.isLoading,
+            tagSuggestion = CategoryFilter.suggestion(state, labels.viewerCodes, labels.locale),
         )
     }
 

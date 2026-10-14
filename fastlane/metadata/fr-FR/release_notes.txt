@@ -7,3 +7,4 @@
 • Ma liste a maintenant son onglet sur iPhone, avec vos films, séries et chaînes au même endroit ; vos propres listes s’appellent désormais des collections.
 • Touchez un acteur ou un réalisateur sur la fiche d’un film ou d’une série pour voir ses autres films et séries de votre playlist.
 • La recherche se filtre par années de sortie, et les grilles se trient par date de sortie.
+• Masquez d’un coup une langue ou un pays (catégories qui commencent par |PT|, FR:…) : les catégories ajoutées plus tard suivent. Le bouton de filtre est sur Films, Séries et Live TV.

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.screens
 
+import android.icu.text.ListFormatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,21 +23,29 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.TagSuggestion
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ContinueCard
@@ -63,6 +72,8 @@ data class HomeUiState(
     val channels: List<ChannelRow> = emptyList(),
     val channelsAreFavorites: Boolean = false,
     val isLoading: Boolean = false,
+    /** "Show only your languages?", offered once on a playlist with categories for many languages. */
+    val tagSuggestion: TagSuggestion? = null,
 )
 
 class HomeActions(
@@ -75,6 +86,9 @@ class HomeActions(
     val onPlayChannel: (ChannelRow) -> Unit = {},
     val onPlaylists: () -> Unit = {},
     val onSettings: () -> Unit = {},
+    val onAcceptSuggestion: (TagSuggestion) -> Unit = {},
+    val onChooseCategories: () -> Unit = {},
+    val onDismissSuggestion: () -> Unit = {},
 )
 
 /** Home: carousel of featured titles, then rows; live TV last (first on a live-only playlist). */
@@ -100,6 +114,9 @@ fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = 
             } else {
                 Box(Modifier.windowInsetsPadding(WindowInsets.statusBars)) { HomeTopBar(state.playlistName, actions, onArtwork = false) }
             }
+        }
+        state.tagSuggestion?.let { suggestion ->
+            item { TagSuggestionCard(suggestion, actions, Modifier.padding(horizontal = metrics.gutter)) }
         }
         if (state.continueWatching.isNotEmpty()) {
             item {
@@ -188,6 +205,37 @@ private fun HomeTopBar(playlistName: String, actions: HomeActions, onArtwork: Bo
         }
         IconButton(onClick = actions.onSettings, modifier = Modifier.align(Alignment.CenterEnd).testTag("settingsButton")) {
             Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings), tint = tint)
+        }
+    }
+}
+
+/** Offered once after opening a playlist with categories for many languages and countries. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TagSuggestionCard(suggestion: TagSuggestion, actions: HomeActions, modifier: Modifier = Modifier) {
+    val kept = remember(suggestion) { ListFormatter.getInstance().format(suggestion.keptNames) }
+    val count = suggestion.kept.size + suggestion.hidden.size
+    Column(
+        modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp)
+            .testTag("tagSuggestion"),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(stringResource(R.string.tag_suggestion_title), style = MaterialTheme.typography.titleMedium)
+        Text(
+            pluralStringResource(R.plurals.tag_suggestion_message, count, count, kept),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Button(onClick = { actions.onAcceptSuggestion(suggestion) }, modifier = Modifier.testTag("keepMyLanguages")) {
+                Text(stringResource(R.string.keep_only_these))
+            }
+            OutlinedButton(onClick = actions.onChooseCategories) { Text(stringResource(R.string.choose)) }
+            TextButton(onClick = actions.onDismissSuggestion) { Text(stringResource(R.string.not_now)) }
         }
     }
 }

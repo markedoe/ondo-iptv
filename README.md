@@ -45,7 +45,11 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Multiview** (iPad, Mac): up to 4 channels, a single active sound.
 - **Profiles** ("Who's watching?"), profile PIN, **kids profiles**, parental control by PIN.
 - **My List** (a tab on iPhone): movies, series and channels kept in one place, reorderable; **collections**
-  to group them your way; hidden categories.
+  to group them your way.
+- **Categories**: hide a whole language or country in one go (providers start category names with codes
+  such as `|PT|` or `FR:`), a rule that also covers the categories added later; offered once when a playlist
+  has many of them (keep your languages, choose, or not now); or hide categories one by one. The filter
+  button is on the Movies, Series and Live TV screens.
 - **Offline downloads** (movies, episodes), with the reason in plain words when the provider refuses,
   limits connections or sends nothing.
 - **Data**: JSON backup / restore, clearable cache.
@@ -58,6 +62,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   included), detail pages (Resume, From Start, next
   episode, seasons, More Like This).
 - **Live TV**: categories, favorites, current and next programme; **search**.
+- **Categories**: hidden by language or country code (`|PT|`, `FR:`…) or one by one, like on Apple.
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin
   and tested with the same cases).
 - **Player** (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses, resume,

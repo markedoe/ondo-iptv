@@ -86,6 +86,8 @@ final class AppModel {
     /// The catalogue as loaded, before the user's channel edits (kept to undo them).
     @ObservationIgnored private(set) var rawContent = PlaylistContent.empty
     private(set) var index = ContentIndex()
+    /// Language and country tags of the catalogue's categories ("|PT| Filmes").
+    private(set) var categoryTags = CategoryTagIndex()
     private(set) var epg = EPGIndex.empty
     private(set) var phase: LoadPhase = .idle
     private(set) var epgPhase: LoadPhase = .idle
@@ -400,6 +402,7 @@ final class AppModel {
                 content = .empty
                 rawContent = .empty
                 index = ContentIndex()
+                categoryTags = CategoryTagIndex()
                 epg = .empty
                 phase = .idle
                 epgPhase = .idle
@@ -451,6 +454,7 @@ final class AppModel {
                 content = .empty
                 rawContent = .empty
                 index = ContentIndex()
+                categoryTags = CategoryTagIndex()
             }
         } else {
             hasCache = !content.isEmpty
@@ -501,9 +505,9 @@ final class AppModel {
 
     private func apply(_ newContent: PlaylistContent, for playlist: Playlist) async {
         let edits = playlist.channelEdits
-        let (edited, built) = await Task.detached {
+        let (edited, built, tags) = await Task.detached {
             let edited = newContent.applying(edits)
-            return (edited, ContentIndex(content: edited))
+            return (edited, ContentIndex(content: edited), CategoryTagIndex(content: edited))
         }.value
         // While the catalogue was being built, another playlist may have been opened (its catalogue must
         // not be replaced by this one), or this one edited (build again with the current edits).
@@ -515,6 +519,7 @@ final class AppModel {
         rawContent = newContent
         content = edited
         index = built
+        categoryTags = tags
     }
 
     private func saveContentCache(_ content: PlaylistContent, for id: UUID) async {
@@ -635,7 +640,12 @@ final class AppModel {
         return lockedCategoryKeys.contains(UserLibrary.categoryKey(playlistID: playlist.id, categoryID: categoryID))
     }
 
+    /// Hidden by the viewer, on its own or with its tag ("PT").
     func isHidden(_ category: MediaCategory) -> Bool {
+        isHiddenOnItsOwn(category) || hiddenTag(of: category) != nil
+    }
+
+    func isHiddenOnItsOwn(_ category: MediaCategory) -> Bool {
         guard let playlist = activePlaylist else { return false }
         return library.isHidden(playlistID: playlist.id, categoryID: category.id)
     }
@@ -662,10 +672,10 @@ final class AppModel {
 
     /// Category ids excluded from aggregated lists (search, home, "all channels").
     var excludedCategoryIDs: Set<String> {
-        guard let playlist = activePlaylist else { return [] }
+        guard activePlaylist != nil else { return [] }
         var excluded = Set<String>()
         for category in content.liveCategories + content.movieCategories + content.seriesCategories {
-            if library.isHidden(playlistID: playlist.id, categoryID: category.id) || isLocked(category) || isHiddenForKids(category) {
+            if isHidden(category) || isLocked(category) || isHiddenForKids(category) {
                 excluded.insert(category.id)
             }
         }

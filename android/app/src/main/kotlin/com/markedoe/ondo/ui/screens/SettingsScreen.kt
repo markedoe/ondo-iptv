@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,6 +65,7 @@ class SettingsActions(
     val onDelete: (String) -> Unit = {},
     val onAppearance: (Appearance) -> Unit = {},
     val onShowAdultCategories: (Boolean) -> Unit = {},
+    val onCategories: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
     val onSupport: () -> Unit = {},
 )
@@ -123,6 +125,14 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                             modifier = Modifier.testTag("adultSwitch"),
                         )
                     },
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.categories)) },
+                    supportingContent = { Text(stringResource(R.string.categories_hint)) },
+                    leadingContent = { Icon(Icons.Rounded.FilterList, contentDescription = null) },
+                    modifier = Modifier.clickable(onClick = actions.onCategories).testTag("categoriesRow"),
                 )
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }

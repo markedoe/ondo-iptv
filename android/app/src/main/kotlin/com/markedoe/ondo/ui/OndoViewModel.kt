@@ -206,6 +206,10 @@ class OndoViewModel(
     fun setAppearance(appearance: Appearance) = repository.setAppearance(appearance)
     fun setShowAdultCategories(show: Boolean) = repository.setShowAdultCategories(show)
     fun setPosterSort(sort: PosterSort) = repository.setPosterSort(sort)
+    fun setCategoryHidden(categoryId: String, hidden: Boolean) = repository.setCategoryHidden(categoryId, hidden)
+    fun setTagsHidden(tags: Collection<String>, hidden: Boolean) = repository.setTagsHidden(tags, hidden)
+    fun acceptSuggestion(suggestion: TagSuggestion) = repository.setTagsHidden(suggestion.hidden, hidden = true)
+    fun dismissTagSuggestion() = repository.dismissTagSuggestion()
     fun clearError() = repository.clearError()
 
     companion object {
