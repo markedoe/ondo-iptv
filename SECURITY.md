@@ -1,4 +1,29 @@
-# Sécurité
+# Security
+
+**English** · [Français](#sécurité-français)
+
+## Reporting a vulnerability
+
+Please **do not open a public issue**. Use GitHub's private reporting: the **Security → Report a
+vulnerability** tab of this repository. Say which platform (iPhone, iPad, Mac, Android), the app version and
+the steps to reproduce.
+
+Reports get a first answer within 7 days. A published fix is mentioned in the release notes, crediting you if
+you agree.
+
+## Scope
+
+- The Ondo apps (iOS, iPadOS, macOS, Android) and the code of this repository.
+- Ondo is a player: it provides no content and has no server. Problems with an IPTV provider or a third-party
+  playlist are out of scope.
+
+## Supported versions
+
+Only the latest published version receives security fixes.
+
+---
+
+# Sécurité (français)
 
 ## Signaler une vulnérabilité
 

@@ -1,61 +1,62 @@
 # Ondo
 
-Lecteur IPTV pour **iPhone / iPad**, **macOS** et **Android** — films, séries et TV en direct —, natif sur
-chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feuille de route :
-[docs/PLAN.md](docs/PLAN.md), version Android : [docs/ANDROID.md](docs/ANDROID.md).
+**English** · [Français](README.fr.md)
 
-> Ondo est **uniquement un lecteur** : il n'héberge, ne fournit ni ne vend aucun contenu, chaîne, playlist
-> ou abonnement IPTV. Il lit les sources que l'utilisateur ajoute lui-même et qu'il est autorisé à regarder.
+IPTV player for **iPhone / iPad**, **macOS** and **Android** (movies, series and live TV), native on each
+platform (Swift / SwiftUI, Kotlin / Jetpack Compose). Design and roadmap: [docs/PLAN.md](docs/PLAN.md),
+Android version: [docs/ANDROID.md](docs/ANDROID.md).
 
-## Fonctionnalités
+> Ondo is **only a player**: it does not host, provide or sell any content, channel, playlist or IPTV
+> subscription. It plays the sources that users add themselves and are allowed to watch.
 
-- **Accueil** : carrousel de films et séries à la une, « Continuer à regarder », Ma liste, ajouts récents,
-  tendances ; le direct en dernier.
-- **Films & séries** : grilles d'affiches, tri, fiches (synopsis, casting, bande-annonce), saisons /
-  épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb**.
-- **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
-  XSPF, JSON ; plusieurs playlists, actualisation automatique. (Une source Real-Debrid existe dans le
-  code mais est désactivée dans la version App Store : `FeatureFlags.realDebrid`.)
-- **Live TV** : catégories, numéros, logos, programme en cours + progression, favoris, récents, recherche ;
-  chaînes masquées, renommées ou renumérotées.
-- **Guide TV** : XMLTV (gzip), guide du fournisseur et/ou URL personnalisées, grille aux titres
-  « collants », fiche programme, décalage horaire, repli sur l'EPG court Xtream, **association manuelle
-  chaîne ↔ guide**, **recherche dans les programmes**, **rappels** (notifications locales).
-- **Replay** (catch-up) : Xtream `timeshift`, modes M3U `default`, `append`, `shift`, `flussonic` ;
-  **redémarrer le programme en cours**, revoir un programme passé et revenir au direct depuis le lecteur,
-  **pause du direct** (fenêtre DVR HLS, sinon reprise via l'archive).
-- **Lecteur** : deux moteurs — **AVPlayer** (PiP, AirPlay, HDR) et **VLC** (MKV, AVI, TS…) avec bascule
-  automatique —, zapping, pistes audio / sous-titres, **sous-titres SRT externes**, **recherche de
-  sous-titres en ligne** (OpenSubtitles, SubDL et SubSource avec votre clé, Addic7ed sans clé), format d'image,
-  vitesse, minuterie, verrouillage, gestes (iPhone), paysage forcé, reconnexion automatique, bascule vers
-  une autre version d'une chaîne morte, erreurs expliquées, écran verrouillé / touches média, raccourcis
-  clavier, menu Lecture, une fenêtre par flux et **plein écran** (bouton, touche F, double-clic) sur Mac ;
-  **reprise** au point exact, **dernière chaîne**, **zapping par numéro**,
-  panneau chaînes / guide dans le lecteur.
-- **Diffusion** : **AirPlay** (iPhone, iPad, Mac : la vidéo part vers la TV, pas seulement le son) et
+## Features
+
+- **Home**: carousel of featured movies and series, "Continue Watching", My List, new releases, trending;
+  live TV last.
+- **Movies & series**: poster grids, sorting, detail pages (plot, cast, trailer), seasons / episodes,
+  "Continue Watching", resume, automatic next episode, **TMDb trending**.
+- **Sources**: M3U / M3U8 playlists (URL or file), **Xtream Codes** accounts (API or "force M3U"), XSPF,
+  JSON; several playlists, automatic refresh. (A Real-Debrid source exists in the code but is turned off in
+  the App Store version: `FeatureFlags.realDebrid`.)
+- **Live TV**: categories, numbers, logos, current programme and its progress, favorites, recents, search;
+  hidden, renamed or renumbered channels.
+- **TV Guide**: XMLTV (gzip), the provider's guide and/or custom URLs, grid with sticky titles, programme
+  details, time offset, fallback to the Xtream short EPG, **manual channel ↔ guide matching**, **programme
+  search**, **reminders** (local notifications).
+- **Catch-up**: Xtream `timeshift`, M3U modes `default`, `append`, `shift`, `flussonic`; **restart the
+  current programme**, watch a past programme and go back to live from the player, **live pause** (HLS DVR
+  window, otherwise resumed from the archive).
+- **Player**: two engines, **AVPlayer** (PiP, AirPlay, HDR) and **VLC** (MKV, AVI, TS…), with automatic
+  switching; zapping, audio / subtitle tracks, **external SRT subtitles**, **online subtitle search**
+  (OpenSubtitles, SubDL and SubSource with your key, Addic7ed without one), aspect ratio, speed, sleep timer,
+  lock, gestures (iPhone), forced landscape, automatic reconnection, switch to another version of a dead
+  channel, explained errors, lock screen / media keys, keyboard shortcuts, Playback menu, one window per
+  stream and **full screen** (button, F key, double-click) on the Mac; **exact resume**, **last channel**,
+  **zapping by number**, channels / guide panel in the player.
+- **Casting**: **AirPlay** (iPhone, iPad, Mac: the video goes to the TV, not only the sound) and
   **Chromecast** (iPhone, iPad).
-- **Multivue** (iPad, Mac) : jusqu'à 4 chaînes, un seul son actif.
-- **Profils** (« Qui regarde ? »), PIN de profil, **profils enfant**, contrôle parental par PIN.
-- **Listes personnalisées**, favoris réordonnables, catégories masquées.
-- **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
-  limite les connexions ou n'envoie rien.
-- **Données** : sauvegarde / restauration JSON, cache vidable. Interface en français et en anglais.
+- **Multiview** (iPad, Mac): up to 4 channels, a single active sound.
+- **Profiles** ("Who's watching?"), profile PIN, **kids profiles**, parental control by PIN.
+- **Custom lists**, reorderable favorites, hidden categories.
+- **Offline downloads** (movies, episodes), with the reason in plain words when the provider refuses,
+  limits connections or sends nothing.
+- **Data**: JSON backup / restore, clearable cache. Interface in English and French.
 
 ## Structure
 
 ```
-App/                    Application SwiftUI (cible unique iOS + macOS)
-Packages/IPTVCore/      Logique métier (Foundation pur, testée sous Linux et macOS)
-android/app/            Application Android (Jetpack Compose, Media3)
-android/core/           Logique métier en Kotlin pur (port d'IPTVCore, mêmes cas de test)
-fastlane/               Publication App Store et Google Play, fiches des deux stores
-docs/                   Plan, publication (App Store, Google Play), version Android
-project.yml             Projet XcodeGen
+App/                    SwiftUI app (single iOS + macOS target)
+Packages/IPTVCore/      Business logic (pure Foundation, tested on Linux and macOS)
+android/app/            Android app (Jetpack Compose, Media3)
+android/core/           Business logic in pure Kotlin (port of IPTVCore, same test cases)
+fastlane/               App Store and Google Play publishing, listings of both stores
+docs/                   Plan, publishing (App Store, Google Play), Android version
+project.yml             XcodeGen project
 ```
 
-## Compiler
+## Building
 
-Prérequis : Xcode 16+ et [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+Requirements: Xcode 16+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```bash
 brew install xcodegen
@@ -63,65 +64,65 @@ xcodegen generate
 open Ondo.xcodeproj
 ```
 
-Choisissez le schéma **Ondo** puis un iPhone (simulateur ou appareil) ou **My Mac**. Pour un appareil,
-sélectionnez votre équipe de signature dans l'onglet *Signing & Capabilities*.
+Choose the **Ondo** scheme, then an iPhone (simulator or device) or **My Mac**. For a device, select your
+signing team in the *Signing & Capabilities* tab.
 
-### Dépendances
+### Dependencies
 
-- [IPTVCore](Packages/IPTVCore) (ce dépôt)
+- [IPTVCore](Packages/IPTVCore) (this repository)
 - [VLCKit](https://code.videolan.org/videolan/VLCKit) 3.6 (LGPL 2.1) via
-  [vlckit-spm](https://github.com/tylerjonesio/vlckit-spm), pour les formats non pris en charge par AVFoundation.
+  [vlckit-spm](https://github.com/tylerjonesio/vlckit-spm), for the formats AVFoundation does not support.
 - [Google Cast SDK](https://developers.google.com/cast) 4.8 (iPhone/iPad) via
-  [google-cast-sdk](https://github.com/SRGSSR/google-cast-sdk), pour diffuser sur Chromecast.
-- [Nuke / NukeUI](https://github.com/kean/Nuke) 12 (MIT), chargement et cache des logos et affiches.
+  [google-cast-sdk](https://github.com/SRGSSR/google-cast-sdk), to cast to Chromecast.
+- [Nuke / NukeUI](https://github.com/kean/Nuke) 12 (MIT), loading and caching of logos and posters.
 
-Tests du cœur :
+Core tests:
 
 ```bash
 cd Packages/IPTVCore && swift test
 ```
 
-### Ce que vérifie la CI en plus des tests unitaires
+### What CI checks beyond unit tests
 
-Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur données simulées ne les voient pas :
+Some defects only show up in real conditions, where tests on simulated data cannot see them:
 
-- **Ajout d'une playlist de bout en bout** (`AppTests/PlaylistOverHTTPTests.swift`, test UI
-  `testAddingAPlaylistByURL`) : un vrai serveur HTTP local, une redirection, l'identité « lecteur »
-  envoyée aux serveurs, les erreurs HTTP, et un panel Xtream qui décode comme PHP. Un mot de passe avec
-  `+ / & =` doit arriver intact.
-- **HTTP en clair autorisé partout** (`AppTransportSecurityTests`, `NetworkSecurityConfigTest` sur Android).
-- **Configuration livrée** (`ShippedConfigurationTests`) : découverte Chromecast, son écran verrouillé,
-  question d'export, manifeste de confidentialité.
-- **Scripts** (`.github/scripts/check_*.py`, exécutables en local) : textes traduits en français,
-  manifeste de confidentialité couvrant les API utilisées par le code livré, entitlements du bac à sable Mac,
-  neutralité du dépôt (aucune autre app IPTV citée, jamais « gratuit » pour qualifier l’IPTV, chaînes fictives
-  dans les tests).
-- **Compilation Release** (le code `#if DEBUG` est exclu de la version App Store).
-- **Avant chaque publication** : la playlist de démonstration utilisée par la review d'Apple et de Google
-  doit répondre.
+- **Adding a playlist end to end** (`AppTests/PlaylistOverHTTPTests.swift`, UI test
+  `testAddingAPlaylistByURL`): a real local HTTP server, a redirect, the "player" identity sent to servers,
+  HTTP errors, and an Xtream panel that decodes like PHP. A password with `+ / & =` must arrive intact.
+- **Resume on a real stream** (`ResumePlaybackTests`): playback starts at the saved position, a pause made
+  while the film opens stays paused, and the beginning of the film never overwrites the resume point.
+- **Plain HTTP allowed everywhere** (`AppTransportSecurityTests`, `NetworkSecurityConfigTest` on Android).
+- **Shipped configuration** (`ShippedConfigurationTests`): Chromecast discovery, lock screen audio, export
+  compliance question, privacy manifest.
+- **Scripts** (`.github/scripts/check_*.py`, runnable locally): texts translated into French, a privacy
+  manifest covering the APIs used by the shipped code, Mac sandbox entitlements, repository neutrality (no
+  other IPTV app named, IPTV never called free, fictional channels in tests).
+- **Release build** (`#if DEBUG` code is left out of the App Store version).
+- **Before each release**: the demo playlist used by Apple's and Google's review must answer.
 
 ## Android
 
-Prérequis : JDK 17+ et le SDK Android (Android Studio). Ouvrez le dossier `android/` dans Android Studio,
-ou en ligne de commande :
+Requirements: JDK 17+ and the Android SDK (Android Studio). Open the `android/` folder in Android Studio, or
+from the command line:
 
 ```bash
 cd android
-./gradlew -p core test                 # cœur Kotlin
-./gradlew :app:testDebugUnitTest       # tests unitaires et Compose (Robolectric)
-./gradlew :app:recordRoborazziDebug    # + captures de la fiche Google Play
-./gradlew :app:assembleDebug           # APK de debug
+./gradlew -p core test                 # Kotlin core
+./gradlew :app:testDebugUnitTest       # unit and Compose tests (Robolectric)
+./gradlew :app:recordRoborazziDebug    # + Google Play listing screenshots
+./gradlew :app:assembleDebug           # debug APK
 ```
 
-Publication sur Google Play : [docs/RELEASE-ANDROID.md](docs/RELEASE-ANDROID.md).
+To test the app on a phone without Google Play, install the debug APK from the **android-builds** artifact
+of the latest *Android* workflow run. Publishing to Google Play: [docs/RELEASE-ANDROID.md](docs/RELEASE-ANDROID.md).
 
-## Secrets et vie privée
+## Secrets and privacy
 
-Le dépôt est public : les clés de publication vivent uniquement dans les secrets GitHub
-([docs/RELEASE.md](docs/RELEASE.md)). Un garde-fou bloque les secrets et données personnelles avant tout
-commit — hook Claude Code (`.claude/settings.json`), hook git (`git config core.hooksPath .githooks`) et
-CI (`.claude/hooks/leak_guard.py` + gitleaks sur tout l'historique).
+The repository is public: publishing keys live only in GitHub secrets ([docs/RELEASE.md](docs/RELEASE.md)).
+A guard blocks secrets and personal data before any commit: a Claude Code hook (`.claude/settings.json`), a
+git hook (`git config core.hooksPath .githooks`) and CI (`.claude/hooks/leak_guard.py` + gitleaks on the
+whole history).
 
-## Licence
+## License
 
-MIT — voir [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).

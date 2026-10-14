@@ -1,21 +1,23 @@
-# Règles du dépôt Ondo
+# Ondo repository rules
 
-Ce dépôt est **public**. Rien de privé ne doit y entrer, ni dans les fichiers, ni dans les messages de
-commit, ni dans les captures.
+This repository is **public**. Nothing private may enter it: not in files, not in commit messages, not in
+screenshots.
 
-- **Secrets** : clés App Store Connect (`.p8`), Key ID, Issuer ID, Team ID, keystore Android (`.jks`) et
-  ses mots de passe, JSON du compte de service Google Play, jetons… vont uniquement dans les secrets GitHub
-  (`Settings → Secrets and variables → Actions`, voir `docs/RELEASE.md` et `docs/RELEASE-ANDROID.md`).
-  Ne jamais les écrire dans un fichier du dépôt, un commit, un log ou un artefact de CI.
-- **Vie privée** : aucune adresse e-mail personnelle (seulement les adresses `noreply`), aucun nom réel,
-  aucun chemin de dossier personnel, aucune adresse IP de réseau local, aucune donnée d'abonnement IPTV
-  réelle (URL de panel, identifiants). Les tests et la démo utilisent `example.com` et des flux publics.
-- **Neutralité** : ne pas citer d'autres applications IPTV ; Ondo est un lecteur, il ne fournit aucun
-  contenu ; ne jamais employer « free » / « gratuit » pour qualifier l'IPTV.
-- **Garde-fou** : `.claude/hooks/leak_guard.py` est branché en hook `PreToolUse` (`.claude/settings.json`) :
-  il bloque l'écriture de secrets ou de données personnelles dans le dépôt et vérifie les changements avant
-  `git commit` / `git push`. La CI le relance sur tout l'historique avec gitleaks. En cas de faux positif,
-  ajouter une regex à `.leakguard-allow` plutôt que de contourner le hook.
-  Le garde-fou vérifie aussi l'adresse `git config user.email` (adresse `noreply` uniquement). Il ne lit
-  pas le contenu des fichiers binaires : avant d'ajouter une image, vérifier qu'elle ne contient pas de
-  métadonnées personnelles (position GPS, nom d'appareil).
+- **Secrets**: App Store Connect keys (`.p8`), Key ID, Issuer ID, Team ID, the Android keystore (`.jks`) and
+  its passwords, the Google Play service account JSON, tokens… go only into GitHub secrets
+  (`Settings → Secrets and variables → Actions`, see `docs/RELEASE.md` and `docs/RELEASE-ANDROID.md`).
+  Never write them in a repository file, a commit, a log or a CI artifact.
+- **Privacy**: no personal email address (only `noreply` addresses), no real name, no personal folder path,
+  no local network IP address, no real IPTV subscription data (panel URL, credentials). Tests and the demo
+  use `example.com` and public streams.
+- **Neutrality**: do not name other IPTV applications; Ondo is a player, it provides no content; never use
+  "free" / "gratuit" to describe IPTV.
+- **Documentation**: in English, with a French version next to it (`README.fr.md`, `docs/*.fr.md`); update
+  both. App strings, store listings and the website keep their own French translations.
+- **Guard**: `.claude/hooks/leak_guard.py` is wired as a `PreToolUse` hook (`.claude/settings.json`): it
+  blocks writing secrets or personal data into the repository and checks the changes before `git commit` /
+  `git push`. CI runs it again on the whole history with gitleaks. For a false positive, add a regex to
+  `.leakguard-allow` instead of bypassing the hook.
+  The guard also checks the `git config user.email` address (`noreply` addresses only). It does not read the
+  content of binary files: before adding an image, check that it holds no personal metadata (GPS position,
+  device name).
