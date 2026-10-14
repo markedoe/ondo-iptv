@@ -37,6 +37,7 @@ tasks.test {
 // Kotlin compiler generates are left out: their mutants only add noise.
 pitest {
     targetClasses.set(listOf("com.markedoe.ondo.core.*"))
+    excludedClasses.set(listOf("*\$\$serializer", "*\$Companion"))
     excludedMethods.set(listOf("equals", "hashCode", "toString", "copy", "copy\$default", "component*"))
     threads.set(4)
     outputFormats.set(listOf("HTML", "XML"))
