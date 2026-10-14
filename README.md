@@ -53,6 +53,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Offline downloads** (movies, episodes), with the reason in plain words when the provider refuses,
   limits connections or sends nothing.
 - **Data**: JSON backup / restore, clearable cache.
+- **Help** in the app (Settings, and Help, Ondo Help on the Mac): one page per feature, in every language.
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi.
 
 ### Android (phones and tablets)
@@ -63,6 +64,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   episode, seasons, More Like This).
 - **Live TV**: categories, favorites, current and next programme; **search**.
 - **Categories**: hidden by language or country code (`|PT|`, `FR:`…) or one by one, like on Apple.
+- **Help** in Settings.
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin
   and tested with the same cases).
 - **Player** (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses, resume,

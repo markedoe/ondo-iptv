@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
@@ -66,6 +67,7 @@ class SettingsActions(
     val onAppearance: (Appearance) -> Unit = {},
     val onShowAdultCategories: (Boolean) -> Unit = {},
     val onCategories: () -> Unit = {},
+    val onHelp: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
     val onSupport: () -> Unit = {},
 )
@@ -137,6 +139,13 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
             item { SectionTitle(stringResource(R.string.about)) }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.help)) },
+                    leadingContent = { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null) },
+                    modifier = Modifier.clickable(onClick = actions.onHelp).testTag("helpRow"),
+                )
+            }
             item { Text(stringResource(R.string.disclaimer), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
             item { ListItem(headlineContent = { Text(stringResource(R.string.privacy_policy)) }, modifier = Modifier.clickable(onClick = actions.onPrivacy)) }
             item { ListItem(headlineContent = { Text(stringResource(R.string.support)) }, modifier = Modifier.clickable(onClick = actions.onSupport)) }

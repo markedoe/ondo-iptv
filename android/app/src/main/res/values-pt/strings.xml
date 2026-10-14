@@ -139,4 +139,17 @@
         <item quantity="many">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias.</item>
         <item quantity="other">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias.</item>
     </plurals>
+    <string name="help">Ajuda</string>
+    <string name="help_playlists_title">Adicionar uma playlist</string>
+    <string name="help_playlists_body">O Ondo é um player: ele mostra os filmes, séries e canais da assinatura que o seu provedor oferece, e não fornece nenhum conteúdo próprio.\n\nPara adicionar sua assinatura, abra Ajustes, Adicionar uma playlist: um link ou arquivo M3U, ou um login Xtream Codes (endereço do servidor, usuário e senha). Toque em uma playlist em Ajustes para mudar para ela.</string>
+    <string name="help_search_title">Encontrar o que assistir</string>
+    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A aba Buscar percorre canais, filmes e séries.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.</string>
+    <string name="help_categories_title">Ocultar idiomas e categorias</string>
+    <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.</string>
+    <string name="help_mylist_title">Minha lista e canais favoritos</string>
+    <string name="help_mylist_body">Na página de um filme ou série, Minha lista deixa o título à mão: ele aparece no Início e no topo de Filmes e Séries.\n\nEm TV ao vivo, toque e segure um canal para adicioná-lo aos favoritos; o filtro da estrela mostra só eles.</string>
+    <string name="help_playback_title">Quando um stream não toca</string>
+    <string name="help_playback_body">O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.</string>
+    <string name="help_privacy_title">Privacidade</string>
+    <string name="help_privacy_body">O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho e ficam fora dos backups dele.\n\nO Ondo se conecta apenas aos servidores que você adiciona.</string>
 </resources>

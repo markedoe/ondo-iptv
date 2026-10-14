@@ -12,16 +12,21 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
+import com.markedoe.ondo.ui.screens.CategoriesActions
+import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.DetailActions
+import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
@@ -43,6 +48,39 @@ import org.robolectric.annotation.Config
 class ScreensTest {
     @get:Rule val compose = createComposeRule()
     private val labels = Labels("Movie", "Series")
+
+    @Test
+    fun helpOpensATopicAndLinksToSupport() {
+        var support = 0
+        compose.setContent { OndoTheme { HelpScreen(onBack = {}, onSupport = { support++ }) } }
+        compose.onNodeWithText("|PT|", substring = true).assertDoesNotExist()
+        compose.onNodeWithTag("help-categories").performClick()
+        compose.onNodeWithText("|PT|", substring = true).assertExists()
+        compose.onNodeWithText("Support").performScrollTo().performClick()
+        assertEquals(1, support)
+    }
+
+    @Test
+    fun categoriesScreenTogglesATagAndACategory() {
+        val tags = mutableListOf<Pair<String, Boolean>>()
+        val categories = mutableListOf<Pair<String, Boolean>>()
+        val state = CategoriesUiState(
+            tags = listOf(TagRow("PT", "PT · Portuguese", 2, hidden = false)),
+            categories = listOf(CategoryToggle("m-1", "|PT| Filmes", 3, hidden = false, hiddenWith = null)),
+        )
+        compose.setContent {
+            OndoTheme {
+                CategoriesScreen(state, ContentType.MOVIE, filter = "", actions = CategoriesActions(
+                    onTag = { tag, hidden -> tags += tag to hidden },
+                    onCategory = { id, hidden -> categories += id to hidden },
+                ))
+            }
+        }
+        compose.onNodeWithTag("tag-PT").performClick()
+        assertEquals(listOf("PT" to true), tags)
+        compose.onNodeWithText("Hide all").performScrollTo().performClick()
+        compose.onNodeWithText("|PT| Filmes").assertExists()
+    }
 
     @Test
     fun welcomeOffersAPlaylistOrTheDemoAndSaysOndoHasNoContent() {

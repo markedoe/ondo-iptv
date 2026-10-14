@@ -1310,7 +1310,7 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir una playlist"
+            "value": "Añadir una lista"
           }
         },
         "pt": {
@@ -1495,6 +1495,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "मेरी सूची में जोड़ें"
+          }
+        }
+      }
+    },
+    "Add to My List keeps a movie, a series or a channel at hand. On iPhone, My List is a tab with Movies, Series, Channels and Collections; on iPad and Mac, it is in the sidebar.\n\nCollections are your own groups, such as Weekend or Kids: use Collection on a movie or series page, or Add to Collection in a menu.\n\nEach profile has its own My List, collections and history.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter à Ma liste garde un film, une série ou une chaîne à portée de main. Sur iPhone, Ma liste est un onglet avec Films, Séries, Chaînes et Collections ; sur iPad et Mac, elle est dans la barre latérale.\n\nLes collections sont vos propres groupes, comme Week-end ou Enfants : utilisez Collection sur la fiche d’un film ou d’une série, ou Ajouter à une collection dans un menu.\n\nChaque profil a sa propre Ma liste, ses collections et son historique."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir a Mi lista mantiene a mano una película, una serie o un canal. En iPhone, Mi lista es una pestaña con Películas, Series, Canales y Colecciones; en iPad y Mac, está en la barra lateral.\n\nLas colecciones son tus propios grupos, como Fin de semana o Niños: usa Colección en la ficha de una película o serie, o Añadir a una colección en un menú.\n\nCada perfil tiene su propia Mi lista, sus colecciones y su historial."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar à Minha lista deixa um filme, uma série ou um canal à mão. No iPhone, Minha lista é uma aba com Filmes, Séries, Canais e Coleções; no iPad e no Mac, fica na barra lateral.\n\nColeções são seus próprios grupos, como Fim de semana ou Crianças: use Coleção na página de um filme ou série, ou Adicionar a uma coleção em um menu.\n\nCada perfil tem sua própria Minha lista, suas coleções e seu histórico."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“添加到我的片单”可将电影、剧集或频道放在手边。在 iPhone 上，“我的片单”是一个标签页，包含电影、剧集、频道和合集；在 iPad 和 Mac 上，它位于边栏中。\n\n合集是你自己的分组，例如“周末”或“儿童”：在电影或剧集页面上使用“合集”，或在菜单中使用“添加到合集”。\n\n每个个人资料都有自己的“我的片单”、合集和观看记录。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تُبقي «إضافة إلى قائمتي» فيلمًا أو مسلسلًا أو قناة في متناول يدك. على iPhone، قائمتي علامة تبويب فيها الأفلام والمسلسلات والقنوات والمجموعات؛ وعلى iPad وMac توجد في الشريط الجانبي.\n\nالمجموعات هي مجموعاتك الخاصة، مثل عطلة نهاية الأسبوع أو الأطفال: استخدم «مجموعة» في صفحة فيلم أو مسلسل، أو «إضافة إلى مجموعة» في قائمة.\n\nلكل ملف شخصي قائمته ومجموعاته وسجله الخاص."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरी सूची में जोड़ें किसी फ़िल्म, सीरीज़ या चैनल को हाथ के पास रखता है। iPhone पर मेरी सूची एक टैब है जिसमें फ़िल्में, सीरीज़, चैनल और संग्रह हैं; iPad और Mac पर यह साइडबार में है।\n\nसंग्रह आपके अपने समूह हैं, जैसे वीकेंड या बच्चे: फ़िल्म या सीरीज़ के पेज पर संग्रह का इस्तेमाल करें, या किसी मेनू में संग्रह में जोड़ें चुनें।\n\nहर प्रोफ़ाइल की अपनी मेरी सूची, संग्रह और इतिहास होता है।"
           }
         }
       }
@@ -1695,6 +1735,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "AirPlay के लिए Apple इंजन ज़रूरी है"
+          }
+        }
+      }
+    },
+    "AirPlay sends the video to an Apple TV or an AirPlay TV, from iPhone, iPad and Mac. Chromecast works from iPhone and iPad.\n\nOn iPad and Mac, Multiview plays up to four channels side by side, with the sound of one.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPlay envoie la vidéo vers une Apple TV ou une TV AirPlay, depuis l’iPhone, l’iPad et le Mac. Chromecast fonctionne depuis l’iPhone et l’iPad.\n\nSur iPad et Mac, la Multivue lit jusqu’à quatre chaînes côte à côte, avec le son de l’une d’elles."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPlay envía el vídeo a un Apple TV o a una TV AirPlay, desde iPhone, iPad y Mac. Chromecast funciona desde iPhone y iPad.\n\nEn iPad y Mac, Multivista reproduce hasta cuatro canales uno al lado del otro, con el sonido de uno de ellos."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O AirPlay envia o vídeo para uma Apple TV ou uma TV com AirPlay, a partir do iPhone, iPad e Mac. O Chromecast funciona a partir do iPhone e do iPad.\n\nNo iPad e no Mac, a Multitela reproduz até quatro canais lado a lado, com o som de um deles."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPlay 可从 iPhone、iPad 和 Mac 将视频发送到 Apple TV 或支持 AirPlay 的电视。Chromecast 可在 iPhone 和 iPad 上使用。\n\n在 iPad 和 Mac 上，多画面可并排播放最多四个频道，并播放其中一个的声音。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يرسل AirPlay الفيديو إلى Apple TV أو تلفاز يدعم AirPlay، من iPhone وiPad وMac. ويعمل Chromecast من iPhone وiPad.\n\nعلى iPad وMac، يشغّل العرض المتعدد حتى أربع قنوات جنبًا إلى جنب، مع صوت إحداها."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPlay वीडियो को iPhone, iPad और Mac से Apple TV या AirPlay टीवी पर भेजता है। Chromecast iPhone और iPad से काम करता है।\n\niPad और Mac पर, मल्टीव्यू चार तक चैनल साथ-साथ चलाता है, उनमें से एक की आवाज़ के साथ।"
           }
         }
       }
@@ -3099,6 +3179,46 @@
         }
       }
     },
+    "Choose the audio and subtitle tracks from the player. You can also open an SRT or VTT file, or search subtitles online: Addic7ed works without an account for series, and OpenSubtitles, SubDL and SubSource work with your own key (Settings, Online Subtitles).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez les pistes audio et de sous-titres depuis le lecteur. Vous pouvez aussi ouvrir un fichier SRT ou VTT, ou chercher des sous-titres en ligne : Addic7ed fonctionne sans compte pour les séries, et OpenSubtitles, SubDL et SubSource avec votre propre clé (Réglages, Sous-titres en ligne)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige las pistas de audio y de subtítulos desde el reproductor. También puedes abrir un archivo SRT o VTT, o buscar subtítulos en línea: Addic7ed funciona sin cuenta para las series, y OpenSubtitles, SubDL y SubSource con tu propia clave (Ajustes, Subtítulos en línea)."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escolha as faixas de áudio e de legendas pelo player. Você também pode abrir um arquivo SRT ou VTT, ou buscar legendas online: o Addic7ed funciona sem conta para séries, e OpenSubtitles, SubDL e SubSource com sua própria chave (Ajustes, Legendas online)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在播放器中选择音轨和字幕轨。你也可以打开 SRT 或 VTT 文件，或在线搜索字幕：Addic7ed 无需账户即可用于剧集，OpenSubtitles、SubDL 和 SubSource 需使用你自己的密钥（“设置”>“在线字幕”）。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اختر مسارات الصوت والترجمة من المشغّل. يمكنك أيضًا فتح ملف SRT أو VTT، أو البحث عن ترجمات عبر الإنترنت: يعمل Addic7ed دون حساب للمسلسلات، وتعمل OpenSubtitles وSubDL وSubSource بمفتاحك الخاص (الإعدادات، الترجمة عبر الإنترنت)."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेयर से ऑडियो और सबटाइटल ट्रैक चुनें। आप SRT या VTT फ़ाइल भी खोल सकते हैं, या ऑनलाइन सबटाइटल खोज सकते हैं: सीरीज़ के लिए Addic7ed बिना अकाउंट के काम करता है, और OpenSubtitles, SubDL और SubSource आपकी अपनी कुंजी से (सेटिंग्स, ऑनलाइन सबटाइटल)।"
+          }
+        }
+      }
+    },
     "Choose the categories shown": {
       "localizations": {
         "fr": {
@@ -4459,6 +4579,46 @@
         }
       }
     },
+    "Download a movie or an episode from its page to watch it offline, when your provider allows it. Your downloads are in Downloads.\n\nIf a download stays stuck, Ondo tells you why: refused by the provider, connection limit reached, or nothing received. Many providers count a download as one of your connections.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargez un film ou un épisode depuis sa fiche pour le regarder hors ligne, quand votre fournisseur le permet. Vos téléchargements sont dans Téléchargements.\n\nSi un téléchargement reste bloqué, Ondo vous dit pourquoi : refusé par le fournisseur, limite de connexions atteinte, ou rien reçu. Beaucoup de fournisseurs comptent un téléchargement comme l’une de vos connexions."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descarga una película o un episodio desde su ficha para verlo sin conexión, cuando tu proveedor lo permita. Tus descargas están en Descargas.\n\nSi una descarga se queda bloqueada, Ondo te dice por qué: rechazada por el proveedor, límite de conexiones alcanzado o no se recibió nada. Muchos proveedores cuentan una descarga como una de tus conexiones."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Baixe um filme ou um episódio pela página dele para assistir offline, quando o seu provedor permitir. Seus downloads ficam em Downloads.\n\nSe um download ficar travado, o Ondo diz por quê: recusado pelo provedor, limite de conexões atingido ou nada recebido. Muitos provedores contam um download como uma das suas conexões."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在电影或剧集单集的页面上下载，即可离线观看（需提供商允许）。你的下载内容在“下载内容”中。\n\n如果下载卡住，Ondo 会告诉你原因：被提供商拒绝、达到连接数上限，或未收到任何数据。许多提供商会把一次下载算作你的一个连接。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نزّل فيلمًا أو حلقة من صفحته لمشاهدته دون اتصال، عندما يسمح مزوّدك بذلك. تجد تنزيلاتك في التنزيلات.\n\nإذا توقف تنزيل، يخبرك Ondo بالسبب: رفضه المزوّد، أو بلوغ حد الاتصالات، أو لم يصل شيء. يحتسب كثير من المزوّدين التنزيل كأحد اتصالاتك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जब आपका प्रदाता अनुमति दे, तो किसी फ़िल्म या एपिसोड को उसके पेज से डाउनलोड करें और ऑफ़लाइन देखें। आपके डाउनलोड, डाउनलोड में हैं।\n\nअगर कोई डाउनलोड अटक जाए, तो Ondo कारण बताता है: प्रदाता ने मना किया, कनेक्शन की सीमा पूरी हो गई, या कुछ नहीं मिला। कई प्रदाता डाउनलोड को आपके कनेक्शनों में से एक गिनते हैं।"
+          }
+        }
+      }
+    },
     "Download movies and episodes to watch them without a connection.": {
       "localizations": {
         "fr": {
@@ -5619,6 +5779,46 @@
         }
       }
     },
+    "Find Something to Watch": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trouver quoi regarder"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontrar qué ver"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontrar o que assistir"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查找要看的内容"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العثور على ما تشاهده"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "देखने के लिए कुछ खोजें"
+          }
+        }
+      }
+    },
     "Find Subtitles": {
       "localizations": {
         "fr": {
@@ -6379,6 +6579,46 @@
         }
       }
     },
+    "Help": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aide"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayuda"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajuda"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帮助"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المساعدة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सहायता"
+          }
+        }
+      }
+    },
     "Hidden": {
       "localizations": {
         "fr": {
@@ -6655,6 +6895,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "चैनल छिपाएँ"
+          }
+        }
+      }
+    },
+    "Hide Languages and Categories": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer des langues et des catégories"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar idiomas y categorías"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar idiomas e categorias"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏语言和分类"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إخفاء اللغات والفئات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "भाषाएँ और श्रेणियाँ छिपाएँ"
           }
         }
       }
@@ -8339,6 +8619,46 @@
         }
       }
     },
+    "Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nYou can also hide categories one by one there, or from a category's menu (long-press, or Control-click on a Mac). The number of hidden categories is shown at the end of the list, so you can bring them back at any time.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Le bouton de filtre de Films, Séries et TV en direct (aussi dans Réglages, Catégories) masque d’un coup une langue ou un pays entier, dans toutes les playlists ; les catégories que le fournisseur ajoute plus tard suivent la même règle.\n\nVous pouvez aussi y masquer les catégories une par une, ou depuis le menu d’une catégorie (appui long, ou Contrôle-clic sur Mac). Le nombre de catégories masquées est indiqué au bas de la liste, pour les faire revenir à tout moment."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. El botón de filtro de Películas, Series y TV en directo (también en Ajustes, Categorías) oculta de una vez un idioma o un país entero, en todas las listas; las categorías que el proveedor añada después siguen la misma regla.\n\nTambién puedes ocultar ahí las categorías una por una, o desde el menú de una categoría (mantener pulsado, o Control-clic en un Mac). El número de categorías ocultas aparece al final de la lista, para recuperarlas cuando quieras."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nVocê também pode ocultar ali as categorias uma a uma, ou pelo menu de uma categoria (toque e segure, ou Control-clique no Mac). O número de categorias ocultas aparece no fim da lista, para trazê-las de volta quando quiser."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "许多提供商会在分类名称前加上代码，例如 |PT| 或 FR:。“电影”“剧集”和“直播”上的筛选按钮（也在“设置”>“分类”中）可一次隐藏整个语言或国家/地区，适用于所有播放列表；提供商以后新增的分类也遵循同一规则。\n\n你也可以在那里逐个隐藏分类，或通过分类的菜单隐藏（长按，在 Mac 上按住 Control 点按）。列表底部会显示已隐藏的分类数量，方便你随时恢复。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:. يُخفي زر التصفية في الأفلام والمسلسلات والبث المباشر (وأيضًا في الإعدادات، الفئات) لغة أو بلدًا بالكامل دفعة واحدة، في جميع قوائم التشغيل؛ وتتبع الفئات التي يضيفها المزوّد لاحقًا القاعدة نفسها.\n\nيمكنك أيضًا إخفاء الفئات واحدة تلو الأخرى هناك، أو من قائمة الفئة (بالضغط المطوّل، أو Control مع النقر على Mac). يظهر عدد الفئات المخفية في آخر القائمة لتعيدها متى شئت."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कई प्रदाता श्रेणियों के नाम |PT| या FR: जैसे कोड से शुरू करते हैं। फ़िल्में, सीरीज़ और लाइव टीवी पर फ़िल्टर बटन (सेटिंग्स, श्रेणियाँ में भी) एक साथ पूरी भाषा या देश को हर प्लेलिस्ट में छिपा देता है; प्रदाता बाद में जो श्रेणियाँ जोड़ता है, वे भी इसी नियम का पालन करती हैं।\n\nआप वहाँ श्रेणियाँ एक-एक करके भी छिपा सकते हैं, या किसी श्रेणी के मेनू से (देर तक दबाएँ, या Mac पर Control-क्लिक करें)। छिपी श्रेणियों की संख्या सूची के अंत में दिखती है, ताकि आप उन्हें कभी भी वापस ला सकें।"
+          }
+        }
+      }
+    },
     "Match TV Guide": {
       "localizations": {
         "fr": {
@@ -8779,6 +9099,46 @@
         }
       }
     },
+    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose. The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With a TMDb key (Settings), all of them are found; without one, only among the pages you have already opened.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez. Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec une clé TMDb (Réglages), tous sont trouvés ; sans clé, seulement parmi les fiches que vous avez déjà ouvertes."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas. Las cuadrículas se ordenan por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu lista. Con una clave de TMDb (Ajustes) se encuentran todas; sin ella, solo entre las fichas que ya abriste."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher. As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com uma chave do TMDb (Ajustes), todos são encontrados; sem ela, só entre as páginas que você já abriu."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“电影”“剧集”和“直播”会显示提供商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。设置 TMDb 密钥（“设置”）后可找到全部作品；没有密钥时，只在你已打开过的页面中查找。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها. تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. مع مفتاح TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث فقط في الصفحات التي فتحتها من قبل."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। TMDb कुंजी (सेटिंग्स) होने पर सब मिलती हैं; उसके बिना, केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं।"
+          }
+        }
+      }
+    },
     "Multiview": {
       "localizations": {
         "fr": {
@@ -8935,6 +9295,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "मेरी सूची"
+          }
+        }
+      }
+    },
+    "My List and Collections": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ma liste et collections"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mi lista y colecciones"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Minha lista e coleções"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的片单和合集"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قائمتي والمجموعات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरी सूची और संग्रह"
           }
         }
       }
@@ -10899,6 +11299,46 @@
         }
       }
     },
+    "On Your TV": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur votre TV"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En tu TV"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Na sua TV"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在电视上观看"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "على تلفازك"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके टीवी पर"
+          }
+        }
+      }
+    },
     "On now": {
       "localizations": {
         "fr": {
@@ -10939,6 +11379,86 @@
         }
       }
     },
+    "Ondo Help": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aide Ondo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayuda de Ondo"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajuda do Ondo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 帮助"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مساعدة Ondo"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo सहायता"
+          }
+        }
+      }
+    },
+    "Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device; passwords and keys are kept in the system keychain.\n\nOndo connects only to the servers you add and, if you enter a key, to TMDb and to the subtitle services you choose. Backups contain your logins: keep them private.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil ; les mots de passe et les clés sont gardés dans le trousseau du système.\n\nOndo se connecte uniquement aux serveurs que vous ajoutez et, si vous saisissez une clé, à TMDb et aux services de sous-titres que vous choisissez. Les sauvegardes contiennent vos identifiants : gardez-les privées."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus listas, tu historial y tus ajustes se quedan en tu dispositivo; las contraseñas y las claves se guardan en el llavero del sistema.\n\nOndo solo se conecta a los servidores que añades y, si introduces una clave, a TMDb y a los servicios de subtítulos que elijas. Las copias de seguridad contienen tus datos de acceso: guárdalas en privado."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho; senhas e chaves são guardadas nas chaves do sistema.\n\nO Ondo se conecta apenas aos servidores que você adiciona e, se você inserir uma chave, ao TMDb e aos serviços de legendas que escolher. Os backups contêm seus logins: mantenha-os privados."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上；密码和密钥保存在系统钥匙串中。\n\nOndo 只连接你添加的服务器；如果你输入了密钥，还会连接 TMDb 和你选择的字幕服务。备份包含你的登录信息：请妥善保管，切勿公开。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يحتوي Ondo على حساب ولا إعلانات ولا إحصاءات خاصة به. تبقى قوائم التشغيل والسجل والإعدادات على جهازك؛ وتُحفظ كلمات المرور والمفاتيح في سلسلة مفاتيح النظام.\n\nلا يتصل Ondo إلا بالخوادم التي تضيفها، وإذا أدخلت مفتاحًا، بـ TMDb وبخدمات الترجمة التي تختارها. تحتوي النسخ الاحتياطية على بيانات دخولك: لا تشاركها مع أحد."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo में न अकाउंट है, न विज्ञापन, न अपना कोई विश्लेषण। आपकी प्लेलिस्ट, इतिहास और सेटिंग्स आपके डिवाइस पर रहती हैं; पासवर्ड और कुंजियाँ सिस्टम कीचेन में रखी जाती हैं।\n\nOndo केवल उन सर्वरों से जुड़ता है जिन्हें आप जोड़ते हैं, और अगर आप कुंजी डालते हैं तो TMDb और आपकी चुनी सबटाइटल सेवाओं से। बैकअप में आपकी लॉगिन जानकारी होती है: इन्हें निजी रखें।"
+          }
+        }
+      }
+    },
     "Ondo is a player only: it does not host, provide or sell any content or IPTV subscription. Use it only with sources you are authorised to watch.": {
       "localizations": {
         "fr": {
@@ -10975,6 +11495,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ondo सिर्फ़ एक प्लेयर है: यह कोई कॉन्टेंट या IPTV सब्सक्रिप्शन होस्ट नहीं करता, न देता है, न बेचता है। इसे सिर्फ़ उन्हीं स्रोतों के साथ इस्तेमाल करें जिन्हें देखने की आपको अनुमति है।"
+          }
+        }
+      }
+    },
+    "Ondo is a player: it provides no content.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo est un lecteur : il ne fournit aucun contenu."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo es un reproductor: no ofrece ningún contenido."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ondo é um player: não fornece nenhum conteúdo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 是一款播放器：不提供任何内容。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo مشغّل: لا يقدّم أي محتوى."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo एक प्लेयर है: यह कोई सामग्री नहीं देता।"
+          }
+        }
+      }
+    },
+    "Ondo is a player: it shows the movies, series and channels of the subscription your provider gives you, and provides no content of its own.\n\nTo add your subscription, open Settings, Manage Playlists, and add an M3U link or file, or an Xtream Codes login (server address, user name and password). You can add several playlists and switch between them from the menu at the top of Home, or from the sidebar on iPad and Mac.\n\nIf the provider's TV guide is missing, add an XMLTV address to the playlist (Additional EPG URLs).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo est un lecteur : il affiche les films, séries et chaînes de l’abonnement que vous donne votre fournisseur, et ne fournit aucun contenu lui-même.\n\nPour ajouter votre abonnement, ouvrez Réglages, Gérer les playlists, puis ajoutez un lien ou un fichier M3U, ou un identifiant Xtream Codes (adresse du serveur, nom d’utilisateur et mot de passe). Vous pouvez ajouter plusieurs playlists et passer de l’une à l’autre depuis le menu en haut de l’Accueil, ou depuis la barre latérale sur iPad et Mac.\n\nSi le guide TV du fournisseur manque, ajoutez une adresse XMLTV à la playlist (URL EPG supplémentaires)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo es un reproductor: muestra las películas, series y canales de la suscripción que te da tu proveedor, y no ofrece ningún contenido propio.\n\nPara añadir tu suscripción, abre Ajustes, Gestionar playlists, y añade un enlace o un archivo M3U, o un acceso Xtream Codes (dirección del servidor, usuario y contraseña). Puedes añadir varias listas y cambiar entre ellas desde el menú de la parte superior de Inicio, o desde la barra lateral en iPad y Mac.\n\nSi falta la guía de TV del proveedor, añade una dirección XMLTV a la lista (URL de EPG adicionales)."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ondo é um player: ele mostra os filmes, séries e canais da assinatura que o seu provedor oferece, e não fornece nenhum conteúdo próprio.\n\nPara adicionar sua assinatura, abra Ajustes, Gerenciar playlists, e adicione um link ou arquivo M3U, ou um login Xtream Codes (endereço do servidor, usuário e senha). Você pode adicionar várias playlists e trocar entre elas pelo menu no topo do Início, ou pela barra lateral no iPad e no Mac.\n\nSe faltar o guia de TV do provedor, adicione um endereço XMLTV à playlist (URLs de EPG adicionais)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 是一款播放器：它显示提供商为你提供的订阅中的电影、剧集和频道，本身不提供任何内容。\n\n要添加你的订阅，请打开“设置”>“管理播放列表”，然后添加 M3U 链接或文件，或 Xtream Codes 登录信息（服务器地址、用户名和密码）。你可以添加多个播放列表，并通过首页顶部的菜单切换；在 iPad 和 Mac 上也可以通过边栏切换。\n\n如果缺少提供商的节目指南，请为播放列表添加 XMLTV 地址（其他 EPG URL）。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo مشغّل: يعرض الأفلام والمسلسلات والقنوات من الاشتراك الذي يمنحك إياه مزوّدك، ولا يقدّم أي محتوى من عنده.\n\nلإضافة اشتراكك، افتح الإعدادات، إدارة قوائم التشغيل، ثم أضف رابطًا أو ملف M3U، أو بيانات دخول Xtream Codes (عنوان الخادم واسم المستخدم وكلمة المرور). يمكنك إضافة عدة قوائم تشغيل والتنقل بينها من القائمة أعلى الصفحة الرئيسية، أو من الشريط الجانبي على iPad وMac.\n\nإذا كان دليل البرامج من المزوّد غير متوفر، أضف عنوان XMLTV إلى قائمة التشغيل (عناوين URL إضافية لـ EPG)."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo एक प्लेयर है: यह आपके प्रदाता द्वारा दी गई सदस्यता की फ़िल्में, सीरीज़ और चैनल दिखाता है, और खुद कोई सामग्री नहीं देता।\n\nअपनी सदस्यता जोड़ने के लिए सेटिंग्स, प्लेलिस्ट मैनेज करें खोलें और M3U लिंक या फ़ाइल, या Xtream Codes लॉगिन (सर्वर पता, यूज़रनेम और पासवर्ड) जोड़ें। आप कई प्लेलिस्ट जोड़ सकते हैं और होम के ऊपर वाले मेनू से, या iPad और Mac पर साइडबार से, उनके बीच बदल सकते हैं।\n\nअगर प्रदाता का टीवी गाइड नहीं है, तो प्लेलिस्ट में XMLTV पता जोड़ें (अतिरिक्त EPG URL)।"
+          }
+        }
+      }
+    },
+    "Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nIf the format is not supported, choose the other engine in Settings, Player Engine: the VLC-based engine plays MKV, AVI and TS. Reconnect dropped streams (Settings) restarts a live channel that cuts out.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.\n\nSi le format n’est pas pris en charge, choisissez l’autre moteur dans Réglages, Moteur de lecture : le moteur basé sur VLC lit le MKV, l’AVI et le TS. Reconnecter les flux coupés (Réglages) relance une chaîne en direct qui coupe."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.\n\nSi el formato no es compatible, elige el otro motor en Ajustes, Motor de reproducción: el motor basado en VLC reproduce MKV, AVI y TS. Reconectar transmisiones cortadas (Ajustes) reanuda un canal en directo que se corta."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.\n\nSe o formato não for compatível, escolha o outro motor em Ajustes, Motor do player: o motor baseado no VLC reproduz MKV, AVI e TS. Reconectar streams interrompidos (Ajustes) retoma um canal ao vivo que cai."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果格式不受支持，请在“设置”>“播放引擎”中选择另一个引擎：基于 VLC 的引擎可播放 MKV、AVI 和 TS。“自动重连中断的流”（“设置”）会重新连接中断的直播频道。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يوضح Ondo ما إذا كانت المشكلة من المزوّد أو الشبكة أو الصيغة.\n\nإذا رفض المزوّد البث، فربما انتهى الاشتراك أو أن عدد الأجهزة التي تشاهد في الوقت نفسه كبير: يسمح معظم المزوّدين ببث أو اثنين في المرة الواحدة.\n\nإذا تعذّر الوصول إلى الخادم، تحقّق من اتصالك ثم أعد المحاولة.\n\nإذا كانت الصيغة غير مدعومة، اختر المحرك الآخر في الإعدادات، محرك التشغيل: يشغّل المحرك المبني على VLC ملفات MKV وAVI وTS. يعيد خيار إعادة الاتصال عند انقطاع البث (الإعدادات) تشغيل قناة مباشرة تنقطع."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo बताता है कि समस्या प्रदाता, नेटवर्क या फ़ॉर्मैट में से किसकी है।\n\nअगर प्रदाता स्ट्रीम से मना करता है, तो हो सकता है सदस्यता खत्म हो गई हो या एक साथ बहुत सारे डिवाइस देख रहे हों: ज़्यादातर प्रदाता एक समय में एक या दो स्ट्रीम की अनुमति देते हैं।\n\nअगर सर्वर तक नहीं पहुँचा जा सकता, तो अपना कनेक्शन जाँचें और फिर कोशिश करें।\n\nअगर फ़ॉर्मैट समर्थित नहीं है, तो सेटिंग्स, प्लेयर इंजन में दूसरा इंजन चुनें: VLC पर आधारित इंजन MKV, AVI और TS चलाता है। टूटी स्ट्रीम फिर से कनेक्ट करें (सेटिंग्स) कटने वाले लाइव चैनल को फिर शुरू करता है।"
           }
         }
       }
@@ -12419,6 +13059,46 @@
         }
       }
     },
+    "Privacy": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confidentialité"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacidad"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacidade"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐私"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الخصوصية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "गोपनीयता"
+          }
+        }
+      }
+    },
     "Problem in the app": {
       "localizations": {
         "fr": {
@@ -12575,6 +13255,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "प्रोफ़ाइल"
+          }
+        }
+      }
+    },
+    "Profiles (Settings, Profiles) keep their own My List, collections and history, and can have a PIN. A kids profile never sees adult or locked categories.\n\nParental control (Settings) locks the categories you choose behind a PIN; categories whose name looks adult are locked automatically. Locked categories stay out of Home, search and My List.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les profils (Réglages, Profils) gardent leur propre Ma liste, leurs collections et leur historique, et peuvent avoir un code PIN. Un profil enfant ne voit jamais les catégories adultes ou verrouillées.\n\nLe contrôle parental (Réglages) verrouille par un code PIN les catégories que vous choisissez ; les catégories dont le nom semble adulte sont verrouillées automatiquement. Les catégories verrouillées restent hors de l’Accueil, de la recherche et de Ma liste."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los perfiles (Ajustes, Perfiles) tienen su propia Mi lista, sus colecciones y su historial, y pueden tener un PIN. Un perfil infantil nunca ve las categorías para adultos ni las bloqueadas.\n\nEl control parental (Ajustes) bloquea con un PIN las categorías que elijas; las categorías cuyo nombre parece para adultos se bloquean automáticamente. Las categorías bloqueadas no aparecen en Inicio, la búsqueda ni Mi lista."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os perfis (Ajustes, Perfis) têm sua própria Minha lista, suas coleções e seu histórico, e podem ter um PIN. Um perfil infantil nunca vê categorias adultas ou bloqueadas.\n\nO controle parental (Ajustes) bloqueia com um PIN as categorias que você escolher; as categorias cujo nome parece adulto são bloqueadas automaticamente. As categorias bloqueadas ficam fora do Início, da busca e da Minha lista."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料（“设置”>“个人资料”）各自拥有自己的“我的片单”、合集和观看记录，并可设置 PIN。儿童个人资料永远看不到成人或已锁定的分类。\n\n家长控制（“设置”）会用 PIN 锁定你选择的分类；名称看起来像成人内容的分类会被自动锁定。已锁定的分类不会出现在首页、搜索和“我的片单”中。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحتفظ الملفات الشخصية (الإعدادات، الملفات الشخصية) بقائمتها ومجموعاتها وسجلها الخاص، ويمكن أن يكون لها رمز PIN. لا يرى ملف الأطفال أبدًا فئات البالغين أو الفئات المقفلة.\n\nتقفل الرقابة الأبوية (الإعدادات) الفئات التي تختارها برمز PIN؛ وتُقفل تلقائيًا الفئات التي يبدو اسمها للبالغين. تبقى الفئات المقفلة خارج الرئيسية والبحث وقائمتي."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्रोफ़ाइल (सेटिंग्स, प्रोफ़ाइल) की अपनी मेरी सूची, संग्रह और इतिहास होते हैं, और उनमें PIN हो सकता है। बच्चों की प्रोफ़ाइल कभी भी वयस्क या लॉक की गई श्रेणियाँ नहीं देखती।\n\nपैरेंटल कंट्रोल (सेटिंग्स) आपकी चुनी श्रेणियों को PIN से लॉक करता है; जिन श्रेणियों का नाम वयस्क जैसा लगता है, वे अपने-आप लॉक होती हैं। लॉक की गई श्रेणियाँ होम, खोज और मेरी सूची से बाहर रहती हैं।"
+          }
+        }
+      }
+    },
+    "Profiles and Parental Control": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profils et contrôle parental"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfiles y control parental"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perfis e controle parental"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "个人资料和家长控制"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الملفات الشخصية والرقابة الأبوية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्रोफ़ाइल और पैरेंटल कंट्रोल"
           }
         }
       }
@@ -16385,6 +17145,46 @@
         }
       }
     },
+    "Subtitles and Audio": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sous-titres et audio"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subtítulos y audio"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legendas e áudio"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字幕和音频"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الترجمة والصوت"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सबटाइटल और ऑडियो"
+          }
+        }
+      }
+    },
     "Suggestions": {
       "localizations": {
         "fr": {
@@ -16421,6 +17221,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "सुझाव"
+          }
+        }
+      }
+    },
+    "Support Website": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site d’assistance"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sitio de asistencia"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site de suporte"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支持网站"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موقع الدعم"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सहायता वेबसाइट"
           }
         }
       }
@@ -16665,6 +17505,46 @@
         }
       }
     },
+    "TV Guide, Replay and Reminders": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guide TV, replay et rappels"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guía de TV, repetición y recordatorios"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guia de TV, replay e lembretes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "节目指南、回看和提醒"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "دليل البرامج والإعادة والتذكيرات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टीवी गाइड, रीप्ले और रिमाइंडर"
+          }
+        }
+      }
+    },
     "Test Connection": {
       "localizations": {
         "fr": {
@@ -16781,6 +17661,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "प्रोवाइडर से कनेक्शन टूट गया। आगे बढ़ने के लिए डाउनलोड जारी रखें।"
+          }
+        }
+      }
+    },
+    "The guide comes from your provider or from the XMLTV addresses added to the playlist. If a channel shows no programmes, open its menu and choose Match TV Guide.\n\nWhen your provider offers replay, you can restart the programme on now or watch a past one, from the guide or from the player.\n\nOpen an upcoming programme and set a reminder: a notification arrives a few minutes before it starts.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le guide vient de votre fournisseur ou des adresses XMLTV ajoutées à la playlist. Si une chaîne n’affiche aucun programme, ouvrez son menu et choisissez Associer au guide TV.\n\nQuand votre fournisseur propose le replay, vous pouvez reprendre le programme en cours au début ou regarder un programme passé, depuis le guide ou depuis le lecteur.\n\nOuvrez un programme à venir et créez un rappel : une notification arrive quelques minutes avant le début."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La guía viene de tu proveedor o de las direcciones XMLTV añadidas a la lista. Si un canal no muestra programas, abre su menú y elige Asociar a la guía de TV.\n\nCuando tu proveedor ofrece repetición, puedes empezar desde el principio el programa en emisión o ver uno pasado, desde la guía o desde el reproductor.\n\nAbre un programa próximo y crea un recordatorio: llega una notificación unos minutos antes de que empiece."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O guia vem do seu provedor ou dos endereços XMLTV adicionados à playlist. Se um canal não mostrar programas, abra o menu dele e escolha Associar ao guia de TV.\n\nQuando seu provedor oferece replay, você pode recomeçar o programa no ar ou assistir a um programa passado, pelo guia ou pelo player.\n\nAbra um programa futuro e crie um lembrete: uma notificação chega alguns minutos antes do início."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "节目指南来自你的提供商，或来自添加到播放列表的 XMLTV 地址。如果某个频道没有显示节目，请打开它的菜单并选择“匹配节目指南”。\n\n当提供商提供回看功能时，你可以从头重播正在播出的节目，或观看已播出的节目，可在节目指南或播放器中操作。\n\n打开即将播出的节目并设置提醒：节目开始前几分钟会收到通知。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يأتي الدليل من مزوّدك أو من عناوين XMLTV المضافة إلى قائمة التشغيل. إذا لم تعرض قناة أي برامج، افتح قائمتها واختر مطابقة دليل البرامج.\n\nعندما يوفّر مزوّدك الإعادة، يمكنك إعادة تشغيل البرنامج الحالي من بدايته أو مشاهدة برنامج سابق، من الدليل أو من المشغّل.\n\nافتح برنامجًا قادمًا واضبط تذكيرًا: يصلك إشعار قبل بدايته ببضع دقائق."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "गाइड आपके प्रदाता से या प्लेलिस्ट में जोड़े गए XMLTV पतों से आता है। अगर किसी चैनल पर कोई कार्यक्रम नहीं दिखता, तो उसका मेनू खोलें और टीवी गाइड से मिलाएँ चुनें।\n\nजब आपका प्रदाता रीप्ले देता है, तो आप चल रहे कार्यक्रम को शुरू से देख सकते हैं या कोई पिछला कार्यक्रम देख सकते हैं, गाइड से या प्लेयर से।\n\nकोई आने वाला कार्यक्रम खोलें और रिमाइंडर सेट करें: शुरू होने से कुछ मिनट पहले सूचना आती है।"
           }
         }
       }
@@ -19181,6 +20101,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ondo में आपका स्वागत है"
+          }
+        }
+      }
+    },
+    "When a Stream Does Not Play": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand un flux ne se lit pas"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuando una emisión no se reproduce"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quando um stream não toca"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法播放时"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عندما لا يعمل البث"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जब स्ट्रीम नहीं चलती"
           }
         }
       }

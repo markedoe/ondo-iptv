@@ -54,6 +54,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
   limite les connexions ou n'envoie rien.
 - **Données** : sauvegarde / restauration JSON, cache vidable.
+- **Aide** dans l'app (Réglages, et Aide, Aide Ondo sur Mac) : une page par fonctionnalité, dans chaque langue.
 - **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi.
 
@@ -65,6 +66,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   épisode suivant, saisons, Titres similaires).
 - **Live TV** : catégories, favoris, programme en cours et suivant ; **recherche**.
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…) ou une par une, comme sur Apple.
+- **Aide** dans les Réglages.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
   testé avec les mêmes cas).
 - **Lecteur** (Media3 / ExoPlayer) : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,

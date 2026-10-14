@@ -245,6 +245,12 @@ struct SettingsView: View {
             }
 
             Section("About") {
+                NavigationLink {
+                    HelpView()
+                } label: {
+                    Label("Help", systemImage: "questionmark.circle")
+                }
+                .accessibilityIdentifier("helpLink")
                 LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0")
                 Legal.disclaimer
                     .font(.footnote)

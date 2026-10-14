@@ -27,6 +27,7 @@ object Routes {
 
     /** Which categories are shown, opened on one type (`ContentType.rawValue`). */
     @Serializable data class Categories(val type: String = "movie")
+    @Serializable data object Help
     @Serializable data object AddPlaylist
 }
 

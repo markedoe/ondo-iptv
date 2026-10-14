@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -46,6 +47,7 @@ import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.CategoriesActions
 import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.DetailActions
+import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
 import com.markedoe.ondo.ui.screens.LiveActions
@@ -124,6 +126,10 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 composable<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
                 composable<Routes.Settings> { SettingsDestination(viewModel, navController) }
                 composable<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
+                composable<Routes.Help> {
+                    val context = LocalContext.current
+                    HelpScreen(onBack = { navController.popBackStack() }, onSupport = { context.browse(SUPPORT_URL) })
+                }
                 composable<Routes.AddPlaylist> {
                     val state by viewModel.state.collectAsStateWithLifecycle()
                     var picked by remember { mutableStateOf<PickedFile?>(null) }
@@ -343,13 +349,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
     val context = LocalContext.current
     val m3u = stringResource(R.string.kind_m3u)
     val xtream = stringResource(R.string.kind_xtream)
-    fun browse(url: String) {
-        try {
-            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
-        } catch (_: ActivityNotFoundException) {
-            // No browser on the device: nothing to open.
-        }
-    }
+    fun browse(url: String) = context.browse(url)
     SettingsScreen(
         state = UiMappers.settings(state, BuildConfig.VERSION_NAME) { isXtream -> if (isXtream) xtream else m3u },
         actions = SettingsActions(
@@ -361,6 +361,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onAppearance = viewModel::setAppearance,
             onShowAdultCategories = viewModel::setShowAdultCategories,
             onCategories = { navController.navigate(Routes.Categories()) },
+            onHelp = { navController.navigate(Routes.Help) },
             onPrivacy = { browse(PRIVACY_URL) },
             onSupport = { browse(SUPPORT_URL) },
         ),
@@ -387,4 +388,13 @@ private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHo
             onAll = { hidden -> ui.categories.filter { it.hiddenWith == null }.forEach { viewModel.setCategoryHidden(it.id, hidden) } },
         ),
     )
+}
+
+/** Opens a web page in the browser (nothing happens on a device without one). */
+private fun Context.browse(url: String) {
+    try {
+        startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
+    } catch (_: ActivityNotFoundException) {
+        // No browser on the device: nothing to open.
+    }
 }

@@ -38,6 +38,7 @@ struct OndoApp: App {
         .commands {
             AppCommands(model: model)
             PlaybackCommands()
+            HelpCommands()
         }
         #endif
 
@@ -57,6 +58,12 @@ struct OndoApp: App {
                 .preferredColorScheme(.dark)
         }
         .defaultSize(width: 1280, height: 720)
+
+        Window("Ondo Help", id: "help") {
+            NavigationStack { HelpView() }
+                .preferredColorScheme(model.settings.appearance.colorScheme)
+        }
+        .defaultSize(width: 720, height: 560)
 
         Settings {
             NavigationStack { SettingsView() }

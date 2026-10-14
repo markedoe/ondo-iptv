@@ -139,4 +139,17 @@
         <item quantity="many">Cette playlist a des catégories pour %1$d langues et pays. Garder %2$s et masquer les autres ? Vous pourrez changer cela à tout moment dans Réglages, Catégories.</item>
         <item quantity="other">Cette playlist a des catégories pour %1$d langues et pays. Garder %2$s et masquer les autres ? Vous pourrez changer cela à tout moment dans Réglages, Catégories.</item>
     </plurals>
+    <string name="help">Aide</string>
+    <string name="help_playlists_title">Ajouter une playlist</string>
+    <string name="help_playlists_body">Ondo est un lecteur : il affiche les films, séries et chaînes de l’abonnement que vous donne votre fournisseur, et ne fournit aucun contenu lui-même.\n\nPour ajouter votre abonnement, ouvrez Réglages, Ajouter une playlist : un lien ou un fichier M3U, ou un identifiant Xtream Codes (adresse du serveur, nom d’utilisateur et mot de passe). Touchez une playlist dans Réglages pour passer sur elle.</string>
+    <string name="help_search_title">Trouver quoi regarder</string>
+    <string name="help_search_body">Films, Séries et TV en direct affichent les catégories de votre fournisseur. L’onglet Recherche parcourt les chaînes, les films et les séries.\n\nDans une catégorie, le bouton de tri range les affiches par ordre de la playlist, nom, date d’ajout, date de sortie ou note.</string>
+    <string name="help_categories_title">Masquer des langues et des catégories</string>
+    <string name="help_categories_body">Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Le bouton de filtre de Films, Séries et TV en direct (aussi dans Réglages, Catégories) masque d’un coup une langue ou un pays entier, dans toutes les playlists ; les catégories que le fournisseur ajoute plus tard suivent la même règle.\n\nVous pouvez aussi y masquer les catégories une par une, et les réafficher à tout moment.</string>
+    <string name="help_mylist_title">Ma liste et chaînes favorites</string>
+    <string name="help_mylist_body">Sur la fiche d’un film ou d’une série, Ma liste le garde à portée de main : il apparaît sur l’Accueil et en haut de Films et Séries.\n\nDans TV en direct, appuyez longuement sur une chaîne pour l’ajouter à vos favoris ; le filtre étoile n’affiche qu’elles.</string>
+    <string name="help_playback_title">Quand un flux ne se lit pas</string>
+    <string name="help_playback_body">Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.</string>
+    <string name="help_privacy_title">Confidentialité</string>
+    <string name="help_privacy_body">Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil et sont exclus des sauvegardes de l’appareil.\n\nOndo se connecte uniquement aux serveurs que vous ajoutez.</string>
 </resources>
