@@ -9,7 +9,9 @@ final class HelpTests: XCTestCase {
             let bundle = try XCTUnwrap(Bundle(path: path))
             for topic in HelpTopic.all {
                 for key in [topic.title.key, topic.body.key] {
-                    XCTAssertNotEqual(bundle.localizedString(forKey: key, value: nil, table: nil), key, "\(topic.id) in \(language)")
+                    // A missing key returns `value`; a translation may equal the English text ("Downloads" in pt).
+                    let missing = "⟨missing⟩"
+                    XCTAssertNotEqual(bundle.localizedString(forKey: key, value: missing, table: nil), missing, "\(topic.id) in \(language)")
                 }
             }
         }
