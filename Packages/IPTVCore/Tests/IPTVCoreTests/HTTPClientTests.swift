@@ -26,9 +26,12 @@ final class HTTPClientTests: XCTestCase {
             address.sin_family = sa_family_t(AF_INET)
             address.sin_addr.s_addr = inet_addr("127.0.0.1")
             address.sin_port = 0
+            #if canImport(Darwin)
+            address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+            #endif
             let length = socklen_t(MemoryLayout<sockaddr_in>.size)
             let bound = withUnsafePointer(to: &address) {
-                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(fd, $0, length) }
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bindSocket(fd, $0, length) }
             }
             guard fd >= 0, bound == 0, listen(fd, 8) == 0 else { throw URLError(.cannotConnectToHost) }
             var assigned = sockaddr_in()
@@ -80,6 +83,15 @@ final class HTTPClientTests: XCTestCase {
         let data = try await URLSessionHTTPClient().data(from: file, headers: [:])
         XCTAssertEqual(String(decoding: data, as: UTF8.self), "#EXTM3U\n")
     }
+}
+
+/// `bind` alone can resolve to an instance method on Apple platforms: name the C function's module.
+private func bindSocket(_ fd: Int32, _ address: UnsafePointer<sockaddr>, _ length: socklen_t) -> Int32 {
+    #if canImport(Glibc)
+    return Glibc.bind(fd, address, length)
+    #else
+    return Darwin.bind(fd, address, length)
+    #endif
 }
 
 func XCTAssertThrowsErrorAsync<T>(_ expression: @autoclosure () async throws -> T, file: StaticString = #filePath, line: UInt = #line) async {
