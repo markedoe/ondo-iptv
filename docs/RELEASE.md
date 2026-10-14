@@ -10,10 +10,9 @@ votre compte Apple ou GitHub. Comptez environ une heure la première fois.
 
 Le dépôt `markedoe/ondo-iptv` est public : Actions (y compris les machines macOS) et Pages sont gratuits.
 Les adresses de la fiche (`fastlane/metadata/*/…_url.txt`) et du site en dépendent : à mettre à jour si le
-dépôt est renommé. Réglages de sécurité à activer une fois (*Settings*) :
-
-- *Code security* → **Secret scanning** et **Push protection** ;
-- *Actions → General → Fork pull request workflows* → **Require approval for all external contributors**.
+dépôt est renommé. Rien d'autre à régler : sur un dépôt public, la détection de secrets et la protection
+des pushes sont actives par défaut (vérifiable dans *Settings → Advanced Security*), et les workflows des
+pull requests de nouveaux contributeurs attendent votre approbation (*Settings → Actions → General*).
 
 ### A2. Activer le site (politique de confidentialité et assistance)
 
