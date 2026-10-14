@@ -272,18 +272,9 @@ final class PlayerController: NSObject {
     private func handleFailure(_ error: Error?, item playerItem: AVPlayerItem) {
         guard playerItem == player.currentItem, activeEngine == .apple else { return }
         keepPositionForFallback()
-        // AirPlay: the TV plays the stream itself. VLC would play it on this device only, leaving the TV
-        // connected without a picture: say why instead.
-        if isExternalPlaybackActive || player.isExternalPlaybackActive {
-            if candidateIndex + 1 < candidates.count {
-                candidateIndex += 1
-                loadCurrentCandidate()
-                return
-            }
-            let message = String(localized: "Your TV could not open this stream over AirPlay. Some providers only accept the device that opened it; for Xtream, the HLS (m3u8) format works best.")
-            state = .failed(message: message, attribution: .provider)
-            return
-        }
+        // AirPlay: the TV plays the stream itself, so VLC (which plays on this device only) is no fallback:
+        // it would leave the TV connected without a picture.
+        let onTV = isExternalPlaybackActive || player.isExternalPlaybackActive
         // 1. Next candidate URL (e.g. `.m3u8` variant of a `.ts` stream, other catch-up endpoint).
         if candidateIndex + 1 < candidates.count {
             candidateIndex += 1
@@ -291,7 +282,7 @@ final class PlayerController: NSObject {
             return
         }
         // 1b. Format AVFoundation cannot play: hand the stream over to VLC.
-        if PlayerEngine.isVLCAvailable && enginePreference == .automatic && !forceVLCForItem {
+        if !onTV, PlayerEngine.isVLCAvailable && enginePreference == .automatic && !forceVLCForItem {
             forceVLCForItem = true
             candidateIndex = 0
             loadCurrentCandidate()
@@ -308,6 +299,11 @@ final class PlayerController: NSObject {
                 guard !Task.isCancelled else { return }
                 self?.loadCurrentCandidate()
             }
+            return
+        }
+        if onTV {
+            let message = String(localized: "Your TV could not open this stream over AirPlay. Some providers only accept the device that opened it; for Xtream, the HLS (m3u8) format works best.")
+            state = .failed(message: message, attribution: .provider)
             return
         }
         let (message, attribution) = Self.describe(error, item: playerItem)
@@ -614,6 +610,17 @@ final class PlayerController: NSObject {
         externalSubtitles = cues
         externalSubtitleName = cues.isEmpty ? nil : url.lastPathComponent
         if !cues.isEmpty { selectSubtitleTrack(nil) }
+    }
+
+    /// A subtitle downloaded from a subtitle service.
+    func loadExternalSubtitles(data: Data, name: String) -> Bool {
+        let cues = SubtitleParser.parse(data)
+        guard !cues.isEmpty else { return false }
+        externalSubtitles = cues
+        externalSubtitleName = name
+        subtitleDelay = 0
+        selectSubtitleTrack(nil)
+        return true
     }
 
     func removeExternalSubtitles() {

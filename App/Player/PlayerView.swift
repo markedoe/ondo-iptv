@@ -23,6 +23,7 @@ struct PlayerView: View {
     @State private var isScrubbingLive = false
     @State private var showingSubtitleImporter = false
     @State private var explainingAirPlay = false
+    @State private var searchingSubtitles = false
     #if os(macOS)
     @State private var window = PlayerWindowState()
     #endif
@@ -153,6 +154,11 @@ struct PlayerView: View {
         #if os(macOS)
         .background(WindowReader { window.attach($0) })
         #endif
+        .sheet(isPresented: $searchingSubtitles) {
+            if let item = session.playingItem {
+                SubtitleSearchView(controller: controller, item: item)
+            }
+        }
         .alert("AirPlay needs the Apple engine", isPresented: $explainingAirPlay) {
             Button("Use the Apple Engine") { controller.switchEngine(to: .apple) }
             Button("Cancel", role: .cancel) {}
@@ -383,7 +389,7 @@ struct PlayerView: View {
             .accessibilityIdentifier("playerGuide")
             gap(spread)
         }
-        PlayerTracksMenu(controller: controller) { showingSubtitleImporter = true }
+        PlayerTracksMenu(controller: controller, onImportSubtitles: { showingSubtitleImporter = true }, onSearchSubtitles: { searchingSubtitles = true })
         gap(spread)
         Button {
             controller.aspect = controller.aspect.next

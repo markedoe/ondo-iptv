@@ -5,6 +5,7 @@ import IPTVCore
 struct PlayerTracksMenu: View {
     let controller: PlayerController
     var onImportSubtitles: () -> Void
+    var onSearchSubtitles: () -> Void
 
     var body: some View {
         Menu {
@@ -24,6 +25,11 @@ struct PlayerTracksMenu: View {
                 }
             }
             Section("Subtitles") {
+                Button {
+                    onSearchSubtitles()
+                } label: {
+                    Label("Find Subtitles Online…", systemImage: "magnifyingglass")
+                }
                 Button {
                     onImportSubtitles()
                 } label: {
