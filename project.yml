@@ -57,10 +57,11 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.entertainment
         ITSAppUsesNonExemptEncryption: false
-        # IPTV providers overwhelmingly serve plain HTTP streams and logos.
+        # IPTV providers overwhelmingly serve plain HTTP playlists, APIs, guides, streams and logos.
+        # NSAllowsArbitraryLoads alone: adding ...ForMedia, ...InWebContent or NSAllowsLocalNetworking
+        # makes the system ignore it, and every non-media HTTP request fails (AppTransportSecurityTests).
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
-          NSAllowsArbitraryLoadsForMedia: true
         NSLocalNetworkUsageDescription: Ondo looks for Chromecast and AirPlay devices on your network so you can watch on a TV or projector, and plays streams served from your local network.
         NSBonjourServices:
           - _googlecast._tcp
