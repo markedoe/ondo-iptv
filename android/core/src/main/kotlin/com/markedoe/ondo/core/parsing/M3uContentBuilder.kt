@@ -91,7 +91,9 @@ object M3uContentBuilder {
                     val normalizedName = normalizedSeriesNames.getOrPut(seriesName) { TextNormalizer.normalize(seriesName) }
                     val key = category.id + "|" + normalizedName
                     val series = seriesByKey.getOrPut(key) {
-                        SeriesAccumulator("s" + StableHash.hex(key), seriesName, entry.logo, category.id)
+                        // The key (and so the id) keeps the full name; the year in it is shown apart.
+                        val (cleanName, year) = TitleParser.splitYear(seriesName)
+                        SeriesAccumulator("s" + StableHash.hex(key), cleanName, year, entry.logo, category.id)
                     }
                     val season = parsed?.season ?: 1
                     val number = parsed?.episode ?: (series.episodes.count { it.season == season } + 1)
@@ -117,6 +119,7 @@ object M3uContentBuilder {
                 name = accumulator.name,
                 coverUrl = accumulator.coverUrl,
                 categoryId = accumulator.categoryId,
+                year = accumulator.year,
                 episodes = accumulator.episodes.sortedWith(compareBy({ it.season }, { it.number })),
             )
         }
@@ -132,7 +135,7 @@ object M3uContentBuilder {
         )
     }
 
-    private class SeriesAccumulator(val id: String, val name: String, var coverUrl: String?, val categoryId: String) {
+    private class SeriesAccumulator(val id: String, val name: String, val year: Int?, var coverUrl: String?, val categoryId: String) {
         val episodes = ArrayList<Episode>()
     }
 

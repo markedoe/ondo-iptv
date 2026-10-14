@@ -15,8 +15,7 @@
     <string name="resume_episode">Reprendre %1$s</string>
     <string name="continue_watching">Continuer à regarder</string>
     <string name="recently_added">Ajouts récents</string>
-    <string name="recently_added_movies">Films ajoutés récemment</string>
-    <string name="recently_added_series">Séries ajoutées récemment</string>
+    <string name="new_releases">Nouveautés</string>
     <string name="favorite_channels">Chaînes favorites</string>
     <string name="favorites">Favoris</string>
     <string name="favorite">Favori</string>

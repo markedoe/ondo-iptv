@@ -52,6 +52,23 @@ class ContentBuilderTest {
     }
 
     @Test
+    fun seriesTakeTheirYearFromTheTitle() {
+        val m3u = """
+            #EXTM3U
+            #EXTINF:-1 group-title="Series | Drama",The Archive (2025) S01E01
+            http://example.com/a101.mp4
+            #EXTINF:-1 group-title="Series | Drama",The Archive (2025) S01E02
+            http://example.com/a102.mp4
+        """.trimIndent()
+        val content = loader.parse(m3u.toByteArray())
+        assertEquals(1, content.series.size)
+        val series = content.series.first()
+        assertEquals("The Archive", series.name)
+        assertEquals(2025, series.year)
+        assertEquals(listOf("S01E01", "S01E02"), series.episodes.map { it.code })
+    }
+
+    @Test
     fun stableAndUniqueIds() {
         val first = content()
         val second = content()

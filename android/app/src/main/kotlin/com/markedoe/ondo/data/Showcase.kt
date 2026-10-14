@@ -7,6 +7,8 @@ import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import java.time.Instant
+import java.time.ZoneId
 
 /**
  * What the home screen and detail pages feature, as pure functions of the catalogue and the library
@@ -23,10 +25,36 @@ class Showcase(
     private val moviesById by lazy { movies.associateBy { it.id } }
     private val seriesById by lazy { series.associateBy { it.id } }
 
+    val hasVod: Boolean get() = movies.isNotEmpty() || series.isNotEmpty()
     val moviesAreDated: Boolean get() = movies.any { it.addedAt != null }
     val seriesAreDated: Boolean get() = series.any { it.addedAt != null }
 
-    /** Newest first when the provider dates them, otherwise in playlist order. */
+    /**
+     * New releases: movies and series released this year or last year, by release year and not by the
+     * date the provider added them (an old film added yesterday is not new). Movies and series
+     * alternate; each newest first, then the latest additions, then the best rated. Titles without a
+     * known year never appear.
+     */
+    fun newReleases(now: Long, limit: Int = 20): List<ShowcaseItem> {
+        val thisYear = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).year
+        val window = (thisYear - 1)..thisYear
+        fun isNew(year: Int?) = year != null && year in window
+        val newer = compareByDescending<ShowcaseItem> { it.year ?: 0 }
+            .thenByDescending { it.addedAt ?: Long.MIN_VALUE }
+            .thenByDescending { it.rating ?: 0.0 }
+            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
+        val newMovies = movies.filter { isNew(it.year) }.map { ShowcaseItem.MovieItem(it) }.sortedWith(newer)
+        val newSeries = series.filter { isNew(it.year) }.map { ShowcaseItem.SeriesItem(it) }.sortedWith(newer)
+        val result = ArrayList<ShowcaseItem>()
+        for (index in 0 until maxOf(newMovies.size, newSeries.size)) {
+            if (result.size >= limit) break
+            newMovies.getOrNull(index)?.let { result.add(it) }
+            if (result.size < limit) newSeries.getOrNull(index)?.let { result.add(it) }
+        }
+        return result
+    }
+
+    /** Newest first when the provider dates them, otherwise in playlist order (Movies and Series tabs). */
     fun featuredMovies(limit: Int = 20): List<Movie> =
         if (moviesAreDated) movies.filter { it.addedAt != null }.sortedByDescending { it.addedAt }.take(limit) else movies.take(limit)
 
@@ -48,19 +76,14 @@ class Showcase(
         ItemKind.CHANNEL -> null
     }
 
-    /** Up to [limit] titles for the carousel: what is being watched first, then featured titles, no duplicates. */
-    fun heroItems(limit: Int = 5): List<ShowcaseItem> {
+    /** Up to [limit] titles for the carousel: what is being watched first, then new releases, no duplicates. */
+    fun heroItems(now: Long, limit: Int = 5): List<ShowcaseItem> {
         val result = LinkedHashMap<String, ShowcaseItem>()
         fun add(item: ShowcaseItem?) {
             if (item != null && result.size < limit) result.putIfAbsent(item.key, item)
         }
         continueWatching().take(2).forEach { add(item(it.kind, it.itemId)) }
-        val featuredMovies = featuredMovies(limit)
-        val featuredSeries = featuredSeries(limit)
-        for (index in 0 until maxOf(featuredMovies.size, featuredSeries.size)) {
-            featuredMovies.getOrNull(index)?.let { add(ShowcaseItem.MovieItem(it)) }
-            featuredSeries.getOrNull(index)?.let { add(ShowcaseItem.SeriesItem(it)) }
-        }
+        newReleases(now, limit * 2).forEach { add(it) }
         return result.values.toList()
     }
 

@@ -79,7 +79,7 @@ object UiMappers {
         val showcase = showcase(state)
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
-        val hero = showcase.heroItems().map { item ->
+        val hero = showcase.heroItems(now).map { item ->
             val resumable = (item as? ShowcaseItem.MovieItem)?.let { showcase.progress(it.movie)?.isResumable } == true
             HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable)
         }
@@ -92,10 +92,8 @@ object UiMappers {
             hero = hero,
             continueWatching = showcase.continueWatching().map { resume(it, state) },
             myList = showcase.myList(),
-            movies = showcase.featuredMovies().map { ShowcaseItem.MovieItem(it) },
-            moviesAreRecent = showcase.moviesAreDated,
-            series = showcase.featuredSeries().map { ShowcaseItem.SeriesItem(it) },
-            seriesAreRecent = showcase.seriesAreDated,
+            newReleases = showcase.newReleases(now),
+            hasVod = showcase.hasVod,
             channels = channels.map { channelRow(it, state, now) },
             channelsAreFavorites = favoriteChannels.isNotEmpty(),
             isLoading = state.isLoading,

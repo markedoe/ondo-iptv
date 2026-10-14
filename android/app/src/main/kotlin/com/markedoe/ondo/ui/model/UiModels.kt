@@ -12,6 +12,8 @@ sealed interface ShowcaseItem {
     val posterUrl: String?
     val year: Int?
     val rating: Double?
+    /** When the provider added it, in epoch seconds. */
+    val addedAt: Long?
 
     data class MovieItem(val movie: Movie) : ShowcaseItem {
         override val key get() = "m-" + movie.id
@@ -19,6 +21,7 @@ sealed interface ShowcaseItem {
         override val posterUrl get() = movie.posterUrl
         override val year get() = movie.year
         override val rating get() = movie.rating
+        override val addedAt get() = movie.addedAt
     }
 
     data class SeriesItem(val series: Series) : ShowcaseItem {
@@ -27,6 +30,7 @@ sealed interface ShowcaseItem {
         override val posterUrl get() = series.coverUrl
         override val year get() = series.year
         override val rating get() = series.rating
+        override val addedAt get() = series.addedAt
     }
 }
 

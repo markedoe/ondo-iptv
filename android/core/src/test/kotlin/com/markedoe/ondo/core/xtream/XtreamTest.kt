@@ -93,6 +93,8 @@ class XtreamTest {
 
         assertEquals(9000, content.series.first().xtreamSeriesId)
         assertEquals(2008, content.series.first().year)
+        assertEquals("The Archive", content.series[1].name, "the year in the title is not part of the name")
+        assertEquals(2025, content.series[1].year, "no year from the provider: the one in the title")
         assertEquals(1_700_000_000L, content.series.first().addedAt, "epoch seconds")
         assertEquals("/xmltv.php", Urls.parse(content.providerEpgUrls.first())?.path)
         assertNotNull(content.account)

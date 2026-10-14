@@ -140,14 +140,15 @@ class XtreamClient(
 
     suspend fun series(): List<Series> =
         getJson("get_series").lossyList(XtreamSeriesDto::from).map { dto ->
+            val (name, yearInTitle) = TitleParser.splitYear(dto.name)
             Series(
                 id = "x${dto.seriesId}",
-                name = dto.name,
+                name = name,
                 coverUrl = Urls.lenient(dto.cover),
                 categoryId = "series-${dto.categoryId ?: "0"}",
                 plot = dto.plot,
                 rating = dto.rating,
-                year = dto.year,
+                year = dto.year ?: yearInTitle,
                 genre = dto.genre,
                 addedAt = dto.lastModified,
                 xtreamSeriesId = dto.seriesId,

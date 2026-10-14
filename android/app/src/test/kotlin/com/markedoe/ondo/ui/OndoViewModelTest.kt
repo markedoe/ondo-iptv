@@ -32,9 +32,9 @@ class OndoViewModelTest {
         #EXTM3U
         #EXTINF:-1 tvg-id="news.test" group-title="News",Test News
         http://provider.example.com/news.m3u8
-        #EXTINF:6000 group-title="Movies | Drama",Long Road (2020)
+        #EXTINF:6000 group-title="Movies | Drama",Long Road (2025)
         http://provider.example.com/road.mp4
-        #EXTINF:2700 group-title="Series | Drama",Harbor S01E01
+        #EXTINF:2700 group-title="Series | Drama",Harbor (2025) S01E01
         http://provider.example.com/h101.mp4
     """.trimIndent()
 
@@ -61,7 +61,7 @@ class OndoViewModelTest {
             var home = awaitItem()
             while (home == null || home.hero.isEmpty()) home = awaitItem()
             assertEquals("Home", home.playlistName)
-            assertEquals(listOf("Long Road"), home.movies.map { it.title })
+            assertEquals(listOf("Long Road", "Harbor"), home.newReleases.map { it.title })
             cancelAndIgnoreRemainingEvents()
         }
     }

@@ -40,14 +40,14 @@ object Fixtures {
         plot = "$name: a fictional film used for tests and screenshots.",
     )
 
-    val northernLights = movie("1", "Northern Lights", drama, 2024, 7.8, 1)
-    val glassCity = movie("2", "Glass City", sciFi, 2023, 7.1, 2)
-    val silentHarbor = movie("3", "Silent Harbor", thriller, 2022, 6.9, 3)
-    val lastSignal = movie("4", "The Last Signal", sciFi, 2024, 8.1, 4)
-    val summerInLisbon = movie("5", "Summer in Lisbon", drama, 2021, 7.3, 5)
-    val midnightOrchard = movie("6", "Midnight Orchard", thriller, 2023, 6.8, 6)
-    val longRoad = movie("7", "The Long Road", drama, 2020, 7.0, 7)
-    val adultMovie = movie("8", "Late Show", adultMovies, 2020, 5.0, 0)
+    val northernLights = movie("1", "Northern Lights", drama, 2025, 7.8, 1)
+    val glassCity = movie("2", "Glass City", sciFi, 2024, 7.1, 2)
+    val silentHarbor = movie("3", "Silent Harbor", thriller, 2023, 6.9, 3)
+    val lastSignal = movie("4", "The Last Signal", sciFi, 2025, 8.1, 4)
+    val summerInLisbon = movie("5", "Summer in Lisbon", drama, 2022, 7.3, 5)
+    val midnightOrchard = movie("6", "Midnight Orchard", thriller, 2024, 6.8, 6)
+    val longRoad = movie("7", "The Long Road", drama, 2021, 7.0, 7)
+    val adultMovie = movie("8", "Late Show", adultMovies, 2025, 5.0, 0)
 
     private fun episodes(seriesId: String, seasons: Int, perSeason: Int) = (1..seasons).flatMap { season ->
         (1..perSeason).map { number ->
@@ -64,15 +64,15 @@ object Fixtures {
 
     val harborLights = Series(
         id = "s1", name = "Harbor Lights", categoryId = seriesDrama.id, plot = "A fishing town keeps its secrets.",
-        rating = 8.2, year = 2024, genre = "Drama", addedAt = NOW / 1000 - 86_400, episodes = episodes("s1", 2, 3),
+        rating = 8.2, year = 2025, genre = "Drama", addedAt = NOW / 1000 - 86_400, episodes = episodes("s1", 2, 3),
     )
     val theArchive = Series(
         id = "s2", name = "The Archive", categoryId = seriesMystery.id, plot = "Missing pages, missing people.",
-        rating = 7.6, year = 2023, genre = "Mystery", addedAt = NOW / 1000 - 2 * 86_400, episodes = episodes("s2", 1, 4),
+        rating = 7.6, year = 2024, genre = "Mystery", addedAt = NOW / 1000 - 2 * 86_400, episodes = episodes("s2", 1, 4),
     )
     val blueHorizon = Series(
         id = "s3", name = "Blue Horizon", categoryId = seriesMystery.id, plot = "A signal from beyond the horizon.",
-        rating = 7.2, year = 2022, genre = "Mystery, Science Fiction", addedAt = NOW / 1000 - 3 * 86_400, episodes = episodes("s3", 1, 3),
+        rating = 7.2, year = 2023, genre = "Mystery, Science Fiction", addedAt = NOW / 1000 - 3 * 86_400, episodes = episodes("s3", 1, 3),
     )
 
     private fun channel(id: String, name: String, number: Int, category: MediaCategory) =

@@ -56,10 +56,9 @@ data class HomeUiState(
     val hero: List<HeroPage> = emptyList(),
     val continueWatching: List<ResumeItem> = emptyList(),
     val myList: List<ShowcaseItem> = emptyList(),
-    val movies: List<ShowcaseItem> = emptyList(),
-    val moviesAreRecent: Boolean = false,
-    val series: List<ShowcaseItem> = emptyList(),
-    val seriesAreRecent: Boolean = false,
+    /** Movies and series together, by release year (see `Showcase.newReleases`). */
+    val newReleases: List<ShowcaseItem> = emptyList(),
+    val hasVod: Boolean = false,
     val channels: List<ChannelRow> = emptyList(),
     val channelsAreFavorites: Boolean = false,
     val isLoading: Boolean = false,
@@ -70,8 +69,6 @@ class HomeActions(
     val onPlay: (ShowcaseItem) -> Unit = {},
     val onToggleMyList: (ShowcaseItem) -> Unit = {},
     val onResume: (ResumeItem) -> Unit = {},
-    val onSeeAllMovies: () -> Unit = {},
-    val onSeeAllSeries: () -> Unit = {},
     val onSeeAllMyList: () -> Unit = {},
     val onSeeAllLive: () -> Unit = {},
     val onPlayChannel: (ChannelRow) -> Unit = {},
@@ -83,7 +80,7 @@ class HomeActions(
 @Composable
 fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = LocalCarouselAutoAdvance.current) {
     val metrics = rememberShelfMetrics()
-    val hasVod = state.movies.isNotEmpty() || state.series.isNotEmpty()
+    val hasVod = state.hasVod
     LazyColumn(
         modifier = Modifier.testTag("home"),
         verticalArrangement = Arrangement.spacedBy(if (metrics.compact) 26.dp else 34.dp),
@@ -116,21 +113,8 @@ fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = 
         if (!hasVod) {
             item { ChannelShelf(state, metrics, actions) }
         }
-        if (state.movies.isNotEmpty()) {
-            item {
-                PosterShelf(
-                    stringResource(if (state.moviesAreRecent) R.string.recently_added_movies else R.string.movies),
-                    state.movies, metrics, actions, actions.onSeeAllMovies,
-                )
-            }
-        }
-        if (state.series.isNotEmpty()) {
-            item {
-                PosterShelf(
-                    stringResource(if (state.seriesAreRecent) R.string.recently_added_series else R.string.series),
-                    state.series, metrics, actions, actions.onSeeAllSeries,
-                )
-            }
+        if (state.newReleases.isNotEmpty()) {
+            item { PosterShelf(stringResource(R.string.new_releases), state.newReleases, metrics, actions) }
         }
         if (hasVod) {
             item { ChannelShelf(state, metrics, actions) }
@@ -149,7 +133,7 @@ fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = 
 }
 
 @Composable
-private fun PosterShelf(title: String, items: List<ShowcaseItem>, metrics: ShelfMetrics, actions: HomeActions, onSeeAll: () -> Unit) {
+private fun PosterShelf(title: String, items: List<ShowcaseItem>, metrics: ShelfMetrics, actions: HomeActions, onSeeAll: (() -> Unit)? = null) {
     Shelf(title, metrics, onSeeAll = onSeeAll) {
         items(items, key = { it.key }) { item -> PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }) }
     }

@@ -200,8 +200,6 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onPlay = viewModel::play,
             onToggleMyList = viewModel::toggleMyList,
             onResume = { viewModel.resume(it.key) },
-            onSeeAllMovies = { navController.navigate(Routes.Grid(series = false)) },
-            onSeeAllSeries = { navController.navigate(Routes.Grid(series = true)) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = false, myList = true, anyType = true)) },
             onSeeAllLive = { navController.openTab(TopLevel.LIVE) },
             onPlayChannel = viewModel::playChannel,

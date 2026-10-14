@@ -21,12 +21,13 @@ class UiMappersTest {
     fun adultCategoriesAreHiddenUnlessShown() {
         val hidden = Fixtures.state()
         assertEquals(setOf(Fixtures.adultMovies.id), UiMappers.hiddenCategoryIds(hidden))
-        assertFalse(UiMappers.home(hidden, labels, Fixtures.NOW).movies.any { it.title == "Late Show" })
+        assertFalse(UiMappers.home(hidden, labels, Fixtures.NOW).newReleases.any { it.title == "Late Show" })
         assertFalse(UiMappers.vod(hidden, series = false, title = "").categories.contains(Fixtures.adultMovies))
         assertTrue(UiMappers.grid(hidden, series = false, categoryId = null, myList = false, filter = "late").isEmpty())
 
         val shown = Fixtures.state(settings = adultShown)
         assertTrue(UiMappers.hiddenCategoryIds(shown).isEmpty())
+        assertTrue(UiMappers.home(shown, labels, Fixtures.NOW).newReleases.any { it.title == "Late Show" })
         assertTrue(UiMappers.vod(shown, series = false, title = "").categories.contains(Fixtures.adultMovies))
     }
 
@@ -35,10 +36,14 @@ class UiMappersTest {
         val home = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
         assertEquals("Home", home.playlistName)
         assertEquals(5, home.hero.size)
-        assertEquals("Movie · 2024 · ★ 7.8", home.hero.first { it.item.title == "Northern Lights" }.meta)
-        assertEquals("Series · 2024 · Drama · ★ 8.2", home.hero.first { it.item.title == "Harbor Lights" }.meta)
-        assertTrue(home.moviesAreRecent)
-        assertEquals("Northern Lights", home.movies.first().title)
+        assertEquals("Movie · 2025 · ★ 7.8", home.hero.first { it.item.title == "Northern Lights" }.meta)
+        assertEquals("Series · 2025 · Drama · ★ 8.2", home.hero.first { it.item.title == "Harbor Lights" }.meta)
+        assertTrue(home.hasVod)
+        assertEquals(
+            "one row, movies and series together, by release year",
+            listOf("Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
+            home.newReleases.map { it.title },
+        )
         assertEquals("without favourites the first channels are shown", 4, home.channels.size)
         assertFalse(home.channelsAreFavorites)
     }
@@ -46,7 +51,7 @@ class UiMappersTest {
     @Test
     fun ratingsUseTheUsersDecimalSeparator() {
         val hero = UiMappers.home(Fixtures.state(), Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW).hero
-        assertEquals("Film · 2024 · ★ 7,8", hero.first { it.item.title == "Northern Lights" }.meta)
+        assertEquals("Film · 2025 · ★ 7,8", hero.first { it.item.title == "Northern Lights" }.meta)
     }
 
     @Test
