@@ -9,7 +9,10 @@ data class MediaCategory(
     val name: String,
     val type: ContentType,
 ) {
-    /** Heuristic used by parental control to lock adult groups by default. */
+    /**
+     * Name-based guess that the group is adult-only: the Android app hides such groups until the user shows
+     * them; [com.markedoe.ondo.core.library.UserLibrary.lockAdultCategories] locks them.
+     */
     val looksAdult: Boolean
         get() = AdultContentDetector.isAdult(name)
 }

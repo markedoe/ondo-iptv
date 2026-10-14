@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- IPTV providers overwhelmingly serve playlists, logos and streams over plain HTTP from their own servers. -->
-<network-security-config>
-    <base-config cleartextTrafficPermitted="true">
+<!--
+    Plain HTTP is allowed on purpose (lint: InsecureBaseConfiguration). IPTV providers overwhelmingly serve
+    playlists, Xtream APIs, guides, logos and streams over plain HTTP from their own servers, and Ondo only
+    connects to the servers the user enters: blocking cleartext would make most subscriptions unplayable.
+    HTTPS addresses still use HTTPS with the system's certificates. Same choice as the iPhone app's App
+    Transport Security setting; NetworkSecurityConfigTest checks it.
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
         <trust-anchors>
             <certificates src="system" />
         </trust-anchors>

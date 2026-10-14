@@ -2,7 +2,6 @@ package com.markedoe.ondo.ui
 
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,6 +24,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -186,7 +188,10 @@ private fun NavHostController.open(item: ShowcaseItem) = when (item) {
 
 @Composable
 private fun Loading() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+    val label = stringResource(R.string.loading)
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(Modifier.semantics { contentDescription = label })
+    }
 }
 
 @Composable
@@ -322,7 +327,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
     val xtream = stringResource(R.string.kind_xtream)
     fun browse(url: String) {
         try {
-            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
         } catch (_: ActivityNotFoundException) {
             // No browser on the device: nothing to open.
         }

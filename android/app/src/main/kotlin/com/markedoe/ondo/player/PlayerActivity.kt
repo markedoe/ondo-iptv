@@ -3,7 +3,9 @@ package com.markedoe.ondo.player
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
@@ -64,7 +66,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * Full-screen player (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV; fallback addresses, resume position,
- * Picture-in-Picture, media session (headset and remote buttons). Progress is saved every 10 s.
+ * Picture-in-Picture (entered when the user leaves while a video plays), media session (headset and remote
+ * buttons). Progress is saved every 10 s.
  */
 @OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
@@ -75,6 +78,7 @@ class PlayerActivity : ComponentActivity() {
     private var errorMessage by mutableStateOf<String?>(null)
     private var inPictureInPicture by mutableStateOf(false)
     private var playerView: PlayerView? = null
+    private val supportsPictureInPicture by lazy { packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,6 +106,8 @@ class PlayerActivity : ComponentActivity() {
                                 setShowNextButton(false)
                                 setShowPreviousButton(false)
                                 keepScreenOn = true
+                                // The video's place on screen, for the animation into Picture-in-Picture.
+                                videoSurfaceView?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updatePictureInPictureParams() }
                             }.also { playerView = it }
                         },
                         modifier = Modifier.fillMaxSize(),
@@ -158,6 +164,8 @@ class PlayerActivity : ComponentActivity() {
             .apply {
                 addListener(object : Player.Listener {
                     override fun onPlayerError(error: PlaybackException) = handleError(error)
+
+                    override fun onIsPlayingChanged(isPlaying: Boolean) = updatePictureInPictureParams()
 
                     override fun onPlaybackStateChanged(state: Int) {
                         // The end of a movie or an episode: it counts as watched, back to the app.
@@ -251,10 +259,37 @@ class PlayerActivity : ComponentActivity() {
         (application as OndoApplication).repository.recordProgress(key, position / 1000.0, duration / 1000.0)
     }
 
+    /**
+     * Picture-in-Picture settings, kept up to date: the video's bounds (the window shrinks from them) and its
+     * shape. From Android 12 the system enters Picture-in-Picture by itself when the user leaves while a
+     * video plays (auto-enter); before, [onUserLeaveHint] does it.
+     */
+    private fun pictureInPictureParams(): PictureInPictureParams {
+        val builder = PictureInPictureParams.Builder()
+        val bounds = Rect()
+        if (playerView?.videoSurfaceView?.getGlobalVisibleRect(bounds) == true && !bounds.isEmpty) {
+            // The system refuses shapes wider than 2.39:1 or taller than 1:2.39.
+            val aspectRatio = when {
+                bounds.width() > bounds.height() * 2.38f -> Rational(238, 100)
+                bounds.height() > bounds.width() * 2.38f -> Rational(100, 238)
+                else -> Rational(bounds.width(), bounds.height())
+            }
+            builder.setAspectRatio(aspectRatio).setSourceRectHint(bounds)
+        } else {
+            builder.setAspectRatio(Rational(16, 9))
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) builder.setAutoEnterEnabled(player?.isPlaying == true)
+        return builder.build()
+    }
+
+    private fun updatePictureInPictureParams() {
+        if (supportsPictureInPicture) runCatching { setPictureInPictureParams(pictureInPictureParams()) }
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (player?.isPlaying == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            runCatching { enterPictureInPictureMode(PictureInPictureParams.Builder().setAspectRatio(Rational(16, 9)).build()) }
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && supportsPictureInPicture && player?.isPlaying == true) {
+            runCatching { enterPictureInPictureMode(pictureInPictureParams()) }
         }
     }
 

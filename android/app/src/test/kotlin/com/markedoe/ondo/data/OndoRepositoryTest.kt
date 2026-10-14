@@ -3,12 +3,10 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.ui.theme.Appearance
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withContext
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -56,14 +54,13 @@ class OndoRepositoryTest {
     // runTest skips virtual time, so waits on real work (files, parsing) must not use withTimeout / delay.
     private suspend fun OndoRepository.awaitState(condition: (OndoState) -> Boolean): OndoState = state.first(condition)
 
-    /** Saves run on a background thread: polls the disk in real time. */
-    private suspend fun awaitDisk(condition: (AppStore) -> Boolean) = withContext(Dispatchers.IO) {
-        val store = AppStore(folder.root)
-        repeat(500) {
-            if (condition(store)) return@withContext
-            Thread.sleep(20)
-        }
-        error("the change never reached the disk")
+    /**
+     * What is on disk once the pending saves ran. They are queued on the test's dispatcher (the repository's
+     * `io`), so running every pending task writes them: no polling, no sleep.
+     */
+    private fun TestScope.disk(): AppStore {
+        testScheduler.advanceUntilIdle()
+        return AppStore(folder.root)
     }
 
     @Test
@@ -92,7 +89,9 @@ class OndoRepositoryTest {
         first.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
         val request = first.playRequest(movie)!!
         first.recordProgress(request.progressKey!!, 600.0, 5_400.0)
-        awaitDisk { it.loadLibrary().history.firstOrNull()?.position == 600.0 && it.loadLibrary().favorites.isNotEmpty() }
+        val saved = disk().loadLibrary()
+        assertEquals(600.0, saved.history.first().position, 0.0)
+        assertTrue(saved.isFavorite(first.state.value.activePlaylistId!!, ItemKind.MOVIE, movie.id))
 
         val offline = FakeHttp(emptyMap())
         val second = repository(offline)
@@ -120,7 +119,9 @@ class OndoRepositoryTest {
         val state = repository.awaitState { it.isReady }
         assertEquals(listOf(favorite), state.library.favorites)
         assertEquals(1_200.0, state.library.progress(watched.key)!!.position, 0.0)
-        awaitDisk { it.loadLibrary().favorites == listOf(favorite) && it.loadLibrary().progress(watched.key)?.position == 1_200.0 }
+        val saved = disk().loadLibrary()
+        assertEquals(listOf(favorite), saved.favorites)
+        assertEquals(1_200.0, saved.progress(watched.key)!!.position, 0.0)
     }
 
     @Test
@@ -182,14 +183,33 @@ class OndoRepositoryTest {
     }
 
     @Test
+    fun activatingAnotherPlaylistShowsItsCatalogueAndIsRemembered() = runTest {
+        val other = "http://other.example.com/list.m3u"
+        val news = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",Other News\nhttp://other.example.com/news.m3u8\n"
+        val repository = repository(FakeHttp(mapOf(list to catalogue, other to news)))
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        repository.addPlaylist("First", list)
+        repository.addPlaylist("Second", other)
+        val first = repository.state.value.playlists.first { it.name == "First" }
+
+        repository.activate(first.id)
+        val state = repository.awaitState { it.content.movies.isNotEmpty() }
+        assertEquals("First", state.activePlaylist?.name)
+        assertEquals(listOf("Test News"), state.content.channels.map { it.name })
+        assertEquals(first.id, disk().loadSettings().activePlaylistId)
+    }
+
+    @Test
     fun settingsArePersisted() = runTest {
         val repository = repository()
         repository.bootstrap()
         repository.awaitState { it.isReady }
         repository.setShowAdultCategories(true)
         repository.setAppearance(Appearance.LIGHT)
-        awaitDisk { it.loadSettings().appearance == Appearance.LIGHT }
-        assertTrue(AppStore(folder.root).loadSettings().showAdultCategories)
+        val saved = disk().loadSettings()
+        assertEquals(Appearance.LIGHT, saved.appearance)
+        assertTrue(saved.showAdultCategories)
     }
 
     @Test

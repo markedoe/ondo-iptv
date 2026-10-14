@@ -92,10 +92,12 @@
     <string name="error_playlist">La playlist n\'a pas pu être chargée : %1$s</string>
     <plurals name="minutes_left">
         <item quantity="one">%d min restante</item>
+        <item quantity="many">%d min restantes</item>
         <item quantity="other">%d min restantes</item>
     </plurals>
     <plurals name="seasons">
         <item quantity="one">%d saison</item>
+        <item quantity="many">%d de saisons</item>
         <item quantity="other">%d saisons</item>
     </plurals>
     <string name="adult_categories">Afficher les catégories adultes</string>

@@ -1,12 +1,13 @@
 name: Android
 
-# Core tests, lint, unit and Compose UI tests (Robolectric), screenshots (Roborazzi) and a release bundle.
+# Core tests, lint, unit and Compose UI tests (Robolectric), screenshots (Roborazzi), a release bundle and
+# the Google Play listing's length limits.
 on:
   push:
     branches: [main]
     paths: [android/**, fastlane/metadata-android/**, .github/workflows/android.yml]
   pull_request:
-    paths: [android/**, .github/workflows/android.yml]
+    paths: [android/**, fastlane/metadata-android/**, .github/workflows/android.yml]
   workflow_dispatch:
 
 concurrency:
@@ -47,8 +48,6 @@ jobs:
     name: App — lint, tests, screenshots, bundle
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    permissions:
-      contents: write
     defaults:
       run:
         working-directory: android
@@ -66,15 +65,21 @@ jobs:
       - name: Lint
         run: ./gradlew :app:lintRelease --stacktrace
       - name: Debug APK and release bundle
+        # Signed with the debug key (no upload key here): the bundle only proves that R8 and shrinking work.
         run: ./gradlew :app:assembleDebug :app:bundleRelease --stacktrace
       - name: Reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: app-reports
-          path: |
-            android/app/build/reports
-            android/app/src/test/screenshots
+          path: android/app/build/reports
+          if-no-files-found: ignore
+      - name: Screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-screenshots
+          path: android/app/src/test/screenshots
           if-no-files-found: ignore
       - name: Builds
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -83,10 +88,27 @@ jobs:
           path: |
             android/app/build/outputs/apk/debug/*.apk
             android/app/build/outputs/bundle/release/*.aab
-      - name: Publish screenshots to the android-screenshots branch
-        if: github.event_name == 'push'
+
+  screenshots:
+    # Its own job: only this one can write to the repository, and it runs no Gradle or project code.
+    name: Publish screenshots to the android-screenshots branch
+    needs: app
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: android-screenshots
+          path: screenshots
+      - name: Push
+        working-directory: screenshots
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          cd app/src/test/screenshots
+          find . -name "*.png" | grep -q . || { echo "::error::No screenshot to publish"; exit 1; }
           echo "Android screenshots of ${GITHUB_SHA} (run ${GITHUB_RUN_ID})" > README.md
           git init -q
           git checkout -q -b android-screenshots
@@ -94,4 +116,35 @@ jobs:
           git config user.email "ci@users.noreply.github.com"
           git add .
           git commit -q -m "Android screenshots for ${GITHUB_SHA}"
-          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" android-screenshots
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" android-screenshots
+
+  listing:
+    # Google Play rejects the whole upload when one text is too long; better to know before a release.
+    name: Google Play listing limits
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Text lengths
+        run: |
+          python3 - <<'PY'
+          import pathlib, sys
+          limits = {"title.txt": 30, "short_description.txt": 80, "full_description.txt": 4000}
+          failed = False
+          for locale in sorted(p for p in pathlib.Path("fastlane/metadata-android").iterdir() if p.is_dir()):
+              files = [(locale / name, limit) for name, limit in limits.items()]
+              files += [(path, 500) for path in sorted(locale.glob("changelogs/*.txt"))]
+              for path, limit in files:
+                  if not path.is_file():
+                      print(f"::error file={path}::missing")
+                      failed = True
+                      continue
+                  length = len(path.read_text(encoding="utf-8").rstrip("\n"))
+                  print(f"{path}: {length}/{limit}")
+                  if length > limit:
+                      print(f"::error file={path}::{length} characters, Google Play allows {limit}")
+                      failed = True
+          sys.exit(1 if failed else 0)
+          PY

@@ -73,12 +73,12 @@ class EpgMatchingTest {
 
     @Test
     fun optionsIncludeChannelsWithoutLoadedProgrammes() {
-        val withM6 = EpgIndex(data.copy(channels = data.channels + ("q9.fr" to EpgChannel("q9.fr", listOf("Q9")))))
-        val options = withM6.guideChannelOptions()
+        val withQ9 = EpgIndex(data.copy(channels = data.channels + ("q9.fr" to EpgChannel("q9.fr", listOf("Q9")))))
+        val options = withQ9.guideChannelOptions()
         assertEquals(listOf("Aria", "Nation 2", "Q9", "TV1", "TV1 Séries Films"), options.map { it.name })
         assertEquals(0, options.first { it.id == "q9.fr" }.programCount)
-        assertEquals("q9.fr", withM6.suggestions(channel("Q9 HD")).firstOrNull()?.id, "suggested before its programmes are loaded")
-        assertEquals("Journal de 20h", withM6.current("tv1.fr", start + 60_000)?.title)
+        assertEquals("q9.fr", withQ9.suggestions(channel("Q9 HD")).firstOrNull()?.id, "suggested before its programmes are loaded")
+        assertEquals("Journal de 20h", withQ9.current("tv1.fr", start + 60_000)?.title)
     }
 
     @Test

@@ -1,24 +1,26 @@
 name: Release Android
 
-# Builds the signed release bundle and sends it to Google Play (internal testing track) with the listing.
+# Tests, builds the signed release bundle and sends it to Google Play with the listing: internal testing for
+# an android-v* tag, the chosen track when run by hand.
 on:
   push:
     tags: ["android-v*"]
   workflow_dispatch:
     inputs:
       track:
-        description: Google Play track
+        description: "Google Play track (alpha = closed testing, beta = open testing)"
         type: choice
         default: internal
         options: [internal, alpha, beta, production]
       status:
-        description: "Release status (draft while the app has never been published)"
+        description: "Release status, internal track only (draft while the app has never been published; other tracks are always drafts)"
         type: choice
         default: completed
         options: [completed, draft]
 
+# One release at a time, whatever the tag: two uploads at once would race on the same Google Play app.
 concurrency:
-  group: release-android-${{ github.ref }}
+  group: release-android
   cancel-in-progress: false
 
 permissions:
@@ -53,8 +55,8 @@ jobs:
             fi
           done
       - name: Demo playlist answers
-        # App Review taps "Try the demo": if the public list moved or broke, the review fails for a reason
-        # no test sees. The address is read from the app's code.
+        # The Google Play reviewer taps "Try the demo": if the public list moved or broke, the review fails
+        # for a reason no test sees. The address is read from the app's code.
         run: |
           URL=$(grep -o 'https://[^"]*\.m3u' android/app/src/main/kotlin/com/markedoe/ondo/ui/OndoViewModel.kt | head -1)
           curl -fsSL --retry 2 --max-time 60 "$URL" -o demo.m3u
@@ -69,6 +71,13 @@ jobs:
         with:
           ruby-version: "3.3"
           bundler-cache: true
+      - name: Tests and listing screenshots
+        # No secret here: the tests run third-party code (test libraries, Robolectric).
+        working-directory: android
+        run: |
+          ./gradlew -p core test --stacktrace
+          # Unit, Compose and screenshot tests; the screenshots become the store listing images.
+          ./gradlew :app:recordRoborazziDebug --stacktrace
       - name: Signed release bundle
         working-directory: android
         env:
@@ -82,10 +91,10 @@ jobs:
           # Version code: always increasing (Play refuses reuse); version name from the tag.
           export ANDROID_VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))
           case "$GITHUB_REF_NAME" in android-v*) export ANDROID_VERSION_NAME="${GITHUB_REF_NAME#android-v}";; esac
-          ./gradlew -p core test
-          # Unit, Compose and screenshot tests; the screenshots become the store listing images.
-          ./gradlew :app:recordRoborazziDebug :app:bundleRelease --stacktrace
+          status=0
+          ./gradlew :app:bundleRelease --stacktrace || status=$?
           rm -f "$RUNNER_TEMP/upload.jks"
+          [ "$status" -eq 0 ] || exit "$status"
           # Without the upload key, Gradle would quietly sign with the debug key, which Play refuses.
           certificate=$(keytool -printcert -jarfile app/build/outputs/bundle/release/*.aab 2>&1 || true)
           echo "$certificate" | grep -q "Owner:" || { echo "::error::The bundle is not signed"; exit 1; }

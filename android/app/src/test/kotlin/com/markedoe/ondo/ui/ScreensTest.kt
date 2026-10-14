@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui
 
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -31,7 +32,6 @@ import com.markedoe.ondo.ui.screens.SettingsScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -72,13 +72,12 @@ class ScreensTest {
 
     @Test
     fun homeShowsTheCarouselAndItsActionsWork() {
-        val opened = mutableListOf<ShowcaseItem>()
         val listed = mutableListOf<ShowcaseItem>()
         val played = mutableListOf<ShowcaseItem>()
         val state = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
         compose.setContent {
             OndoTheme {
-                HomeScreen(state, HomeActions(onOpen = { opened += it }, onPlay = { played += it }, onToggleMyList = { listed += it }), autoAdvance = false)
+                HomeScreen(state, HomeActions(onPlay = { played += it }, onToggleMyList = { listed += it }), autoAdvance = false)
             }
         }
         compose.onNodeWithTag("hero").assertIsDisplayed()
@@ -87,7 +86,10 @@ class ScreensTest {
         compose.onAllNodesWithText("My List").onFirst().performClick()
         assertEquals(ShowcaseItem.MovieItem(Fixtures.northernLights), played.single())
         assertEquals(ShowcaseItem.MovieItem(Fixtures.northernLights), listed.single())
-        compose.onNodeWithTag("home").performScrollToNode(hasText("Live TV", substring = true))
+        // The channels come last, under "Live TV" (no favourite channel yet).
+        compose.onNodeWithTag("home").performScrollToNode(hasText("Live TV"))
+        compose.onNodeWithText("Live TV").assertIsDisplayed()
+        compose.onNodeWithText("Ondo News").assertIsDisplayed()
     }
 
     @Test
@@ -115,24 +117,26 @@ class ScreensTest {
     fun seriesDetailPlaysTheNextEpisodeAndSwitchesSeasons() {
         val series = Fixtures.harborLights
         var season: Int? = null
+        var play = 0
         compose.setContent {
             OndoTheme {
-                SeriesDetailScreen(UiMappers.seriesDetail(Fixtures.state(), series, null, null), DetailActions(onSeason = { season = it }))
+                SeriesDetailScreen(UiMappers.seriesDetail(Fixtures.state(), series, null, null), DetailActions(onPlay = { play++ }, onSeason = { season = it }))
             }
         }
-        compose.onNodeWithText("Play S01E01", substring = true).assertExists()
+        compose.onNodeWithTag("detailPlay").assert(hasText("Play S01E01", substring = true)).performClick()
+        assertEquals(1, play)
         compose.onNodeWithTag("detail").performScrollToNode(hasText("Season 2"))
         compose.onNodeWithText("Season 2").performClick()
         assertEquals(2, season)
     }
 
     @Test
-    fun settingsShowAdultCategoriesSwitch() {
+    fun settingsListThePlaylistAndSwitchAdultCategoriesOn() {
         var shown: Boolean? = null
         val state = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
         compose.setContent { OndoTheme { SettingsScreen(state, SettingsActions(onShowAdultCategories = { shown = it })) } }
         compose.onNodeWithText("M3U playlist · example.com").assertExists()
         compose.onNodeWithTag("adultSwitch").performClick()
-        assertTrue(shown == true)
+        assertEquals(true, shown)
     }
 }

@@ -372,12 +372,12 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
     }
 }
 
-/** "2 h 08 min" / "45 min". */
 /** "7.8" / "7,8", in the language of the interface. */
 @Composable
 @ReadOnlyComposable
 private fun ratingText(value: Double): String = String.format(LocalConfiguration.current.locales[0], "%.1f", value)
 
+/** "2 h 08 min" / "45 min". */
 fun durationText(seconds: Int): String {
     val minutes = seconds / 60
     return if (minutes >= 60) "%d h %02d min".format(minutes / 60, minutes % 60) else "$minutes min"

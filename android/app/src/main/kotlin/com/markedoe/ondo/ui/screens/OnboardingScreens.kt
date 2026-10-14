@@ -21,10 +21,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
-import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Movie
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,6 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -54,6 +55,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -109,14 +112,14 @@ fun WelcomeScreen(onAddPlaylist: () -> Unit, onTryDemo: () -> Unit, isLoading: B
             Feature(Icons.Rounded.Movie, R.string.feature_vod_title, R.string.feature_vod_text)
             Feature(Icons.AutoMirrored.Rounded.PlaylistAdd, R.string.feature_sources_title, R.string.feature_sources_text)
             Feature(Icons.Rounded.LiveTv, R.string.feature_live_title, R.string.feature_live_text)
-            Feature(Icons.Rounded.Cast, R.string.feature_player_title, R.string.feature_player_text)
+            Feature(Icons.Rounded.PlayCircle, R.string.feature_player_title, R.string.feature_player_text)
         }
         Spacer(Modifier.height(28.dp))
         Button(onClick = onAddPlaylist, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().testTag("addPlaylist")) {
             Text(stringResource(R.string.add_playlist))
         }
         OutlinedButton(onClick = onTryDemo, enabled = !isLoading, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().padding(top = 8.dp).testTag("demoButton")) {
-            if (isLoading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.try_demo))
+            if (isLoading) ButtonProgress() else Text(stringResource(R.string.try_demo))
         }
         Text(
             stringResource(R.string.disclaimer),
@@ -126,6 +129,13 @@ fun WelcomeScreen(onAddPlaylist: () -> Unit, onTryDemo: () -> Unit, isLoading: B
             modifier = Modifier.padding(top = 24.dp).widthIn(max = 480.dp),
         )
     }
+}
+
+/** The spinner that replaces a button's title while it works; TalkBack reads "Loading…". */
+@Composable
+private fun ButtonProgress() {
+    val label = stringResource(R.string.loading)
+    CircularProgressIndicator(Modifier.size(18.dp).semantics { contentDescription = label }, strokeWidth = 2.dp)
 }
 
 @Composable
@@ -160,7 +170,7 @@ fun AddPlaylistScreen(
     onPickFile: (() -> Unit)? = null,
     pickedFile: PickedFile? = null,
 ) {
-    var kind by rememberSaveable { mutableStateOf(0) }
+    var kind by rememberSaveable { mutableIntStateOf(0) }
     var name by rememberSaveable { mutableStateOf("") }
     var server by rememberSaveable { mutableStateOf("") }
     var username by rememberSaveable { mutableStateOf("") }
@@ -221,7 +231,7 @@ fun AddPlaylistScreen(
                 enabled = valid && !isLoading,
                 modifier = Modifier.fillMaxWidth().testTag("savePlaylist"),
             ) {
-                if (isLoading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text(stringResource(R.string.add))
+                if (isLoading) ButtonProgress() else Text(stringResource(R.string.add))
             }
             Text(stringResource(R.string.disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

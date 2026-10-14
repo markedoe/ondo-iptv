@@ -97,7 +97,7 @@
     </plurals>
     <plurals name="seasons">
         <item quantity="one">%d temporada</item>
-        <item quantity="many">%d temporadas</item>
+        <item quantity="many">%d de temporadas</item>
         <item quantity="other">%d temporadas</item>
     </plurals>
     <string name="adult_categories">Mostrar categorias adultas</string>

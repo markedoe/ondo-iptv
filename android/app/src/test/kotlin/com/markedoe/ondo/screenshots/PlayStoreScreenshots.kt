@@ -59,8 +59,9 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
         get() {
             val movie = Fixtures.glassCity
             val episode = Fixtures.harborLights.episodes[1]
-            val watchedMovie = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, movie.id, title = movie.name, subtitle = "2023", lastWatchedAt = 2)
-            val watchedEpisode = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, Fixtures.harborLights.id, episode.id, title = Fixtures.harborLights.name, subtitle = "S01E02 · Episode 2", lastWatchedAt = 1)
+            // Subtitles as the repository writes them: the movie's year, the episode's code and title.
+            val watchedMovie = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, movie.id, title = movie.name, subtitle = movie.year?.toString(), lastWatchedAt = 2)
+            val watchedEpisode = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, Fixtures.harborLights.id, episode.id, title = Fixtures.harborLights.name, subtitle = "${episode.code} · ${episode.title}", lastWatchedAt = 1)
             return LibraryState()
                 .recordStart(watchedMovie).updateProgress(watchedMovie.key, 2_400.0, 6_000.0, now = 3)
                 .recordStart(watchedEpisode).updateProgress(watchedEpisode.key, 900.0, 2_700.0, now = 2)

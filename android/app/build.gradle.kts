@@ -93,7 +93,7 @@ roborazzi {
 }
 
 dependencies {
-    implementation("com.markedoe.ondo:core")
+    implementation(libs.ondo.core)
 
     val composeBom = platform(libs.androidx.compose.bom)
     implementation(composeBom)

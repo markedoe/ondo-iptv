@@ -102,7 +102,7 @@ class Showcase(
         return result.values.toList()
     }
 
-    /** Other titles of the same category (none from a hidden or locked one). */
+    /** Other titles of the same category (none when that category is excluded, such as a hidden adult one). */
     fun similarMovies(movie: Movie, limit: Int = 15): List<Movie> =
         if (movie.categoryId in excludedCategoryIds) emptyList()
         else movies.asSequence().filter { it.categoryId == movie.categoryId && it.id != movie.id }.take(limit).toList()
