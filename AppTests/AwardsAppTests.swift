@@ -35,6 +35,7 @@ final class AwardsAppTests: XCTestCase {
         let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
         await model.bootstrap()
         try await model.addPlaylist(Playlist(name: "Test", source: .remote(file), autoRefreshHours: 0))
+        await model.awardsTask?.value  // matched after the catalogue is shown
 
         let pulp = try XCTUnwrap(model.content.movies.first { $0.name == "Pulp Fiction" })
         let awards = model.awards(for: pulp)

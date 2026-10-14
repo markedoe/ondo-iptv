@@ -90,6 +90,7 @@ final class AppModel {
     private(set) var categoryTags = CategoryTagIndex()
     /// Awards and festival selections of the catalogue's movies, by movie id (bundled data, matched on the device).
     private(set) var movieAwards: [String: [AwardsCatalogue.Entry]] = [:]
+    @ObservationIgnored var awardsTask: Task<Void, Never>?
     private(set) var epg = EPGIndex.empty
     private(set) var phase: LoadPhase = .idle
     private(set) var epgPhase: LoadPhase = .idle
@@ -521,10 +522,9 @@ final class AppModel {
 
     private func apply(_ newContent: PlaylistContent, for playlist: Playlist) async {
         let edits = playlist.channelEdits
-        let (edited, built, tags, awards) = await Task.detached {
+        let (edited, built, tags) = await Task.detached {
             let edited = newContent.applying(edits)
-            let awards = AwardsCatalogue.bundled.match(edited.movies)
-            return (edited, ContentIndex(content: edited), CategoryTagIndex(content: edited), awards)
+            return (edited, ContentIndex(content: edited), CategoryTagIndex(content: edited))
         }.value
         // While the catalogue was being built, another playlist may have been opened (its catalogue must
         // not be replaced by this one), or this one edited (build again with the current edits).
@@ -537,7 +537,13 @@ final class AppModel {
         content = edited
         index = built
         categoryTags = tags
-        movieAwards = awards
+        // Awards once the catalogue is on screen: matching every title takes a moment on a large playlist.
+        awardsTask?.cancel()
+        awardsTask = Task {
+            let awards = await Task.detached { AwardsCatalogue.bundled.match(edited.movies) }.value
+            guard !Task.isCancelled, activePlaylist?.id == playlist.id else { return }
+            movieAwards = awards
+        }
     }
 
     private func saveContentCache(_ content: PlaylistContent, for id: UUID) async {
@@ -656,16 +662,6 @@ final class AppModel {
     func isLocked(categoryID: String) -> Bool {
         guard isParentalControlActive, let playlist = activePlaylist else { return false }
         return lockedCategoryKeys.contains(UserLibrary.categoryKey(playlistID: playlist.id, categoryID: categoryID))
-    }
-
-    /// Hidden by the viewer, on its own or with its tag ("PT").
-    func isHidden(_ category: MediaCategory) -> Bool {
-        isHiddenOnItsOwn(category) || hiddenTag(of: category) != nil
-    }
-
-    func isHiddenOnItsOwn(_ category: MediaCategory) -> Bool {
-        guard let playlist = activePlaylist else { return false }
-        return library.isHidden(playlistID: playlist.id, categoryID: category.id)
     }
 
     /// Categories shown in browse screens (hidden ones removed, empty ones skipped).

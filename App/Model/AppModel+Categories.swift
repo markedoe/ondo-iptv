@@ -80,6 +80,16 @@ struct TagSuggestion: Equatable {
 }
 
 extension AppModel {
+    /// Hidden by the viewer, on its own or with its tag ("PT").
+    func isHidden(_ category: MediaCategory) -> Bool {
+        isHiddenOnItsOwn(category) || hiddenTag(of: category) != nil
+    }
+
+    func isHiddenOnItsOwn(_ category: MediaCategory) -> Bool {
+        guard let playlist = activePlaylist else { return false }
+        return library.isHidden(playlistID: playlist.id, categoryID: category.id)
+    }
+
     /// The tag of a category, when several categories share it.
     func tag(of category: MediaCategory) -> String? {
         categoryTags.tagOfCategory[category.id]
