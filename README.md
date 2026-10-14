@@ -89,7 +89,9 @@ Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur donné
 - **Configuration livrée** (`ShippedConfigurationTests`) : découverte Chromecast, son écran verrouillé,
   question d'export, manifeste de confidentialité.
 - **Scripts** (`.github/scripts/check_*.py`, exécutables en local) : textes traduits en français,
-  manifeste de confidentialité couvrant les API utilisées par le code livré, entitlements du bac à sable Mac.
+  manifeste de confidentialité couvrant les API utilisées par le code livré, entitlements du bac à sable Mac,
+  neutralité du dépôt (aucune autre app IPTV citée, jamais « gratuit » pour qualifier l’IPTV, chaînes fictives
+  dans les tests).
 - **Compilation Release** (le code `#if DEBUG` est exclu de la version App Store).
 - **Avant chaque publication** : la playlist de démonstration utilisée par la review d'Apple et de Google
   doit répondre.

@@ -47,7 +47,7 @@ class CheckTestCase(unittest.TestCase):
 
 class RepositoryTests(unittest.TestCase):
     def test_the_repository_passes_every_check(self):
-        for check in ("translations", "privacy_manifest", "mac_entitlements"):
+        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality"):
             code, output = run(check, REPOSITORY)
             self.assertEqual(code, 0, f"{check}: {output}")
 
@@ -154,6 +154,26 @@ class MacEntitlementsTests(CheckTestCase):
     def test_the_release_build_must_be_signed_with_that_file(self):
         self.project(self.COMPLETE, referenced=False)
         self.assertFails("mac_entitlements", "project.yml does not sign")
+
+
+class NeutralityTests(CheckTestCase):
+    def test_fictional_names_pass(self):
+        self.write("Tests/Search.swift", 'let channel = "FR: TV1 HD" // being watched\nlet header = "#KODIPROP:inputstream"\n')
+        self.write("README.md", "Ondo est un lecteur : il ne fournit aucun contenu.\n")
+        self.assertPasses("neutrality")
+
+    def test_another_iptv_app_fails(self):
+        self.write("App/Catchup.swift", "// Same rules as TiviMate\n")
+        self.assertFails("neutrality", "App/Catchup.swift:1", "another IPTV app")
+
+    def test_free_iptv_fails_in_both_languages(self):
+        self.write("fastlane/metadata/en-US/description.txt", "The best free IPTV player.\n")
+        self.write("fastlane/metadata/fr-FR/description.txt", "Un lecteur IPTV gratuit.\n")
+        self.assertFails("neutrality", "en-US/description.txt:1", "fr-FR/description.txt:1", "calls IPTV free")
+
+    def test_a_real_channel_fails(self):
+        self.write("Tests/Fixtures/sample.m3u", "#EXTM3U\n#EXTINF:-1,France 2 HD\nhttp://example.com/2.m3u8\n")
+        self.assertFails("neutrality", "sample.m3u:2", "real channel")
 
 
 if __name__ == "__main__":

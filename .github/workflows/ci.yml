@@ -48,7 +48,7 @@ jobs:
           curl -sSL -o /tmp/swiftlint.zip https://github.com/realm/SwiftLint/releases/download/0.57.1/swiftlint_linux.zip
           unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint
           /tmp/swiftlint/swiftlint lint --reporter github-actions-logging
-      - name: Shipped configuration (French texts, privacy manifest, Mac sandbox)
+      - name: Shipped configuration (French texts, privacy manifest, Mac sandbox, neutrality)
         if: success() || failure()
         # What tests on simulated data cannot see: an untranslated text, an App Store upload rejected for
         # an undeclared API, a Mac app whose sandbox blocks the network.
@@ -56,7 +56,7 @@ jobs:
           status=0
           # The checks' own tests first: each must reject the defect it exists for (.github/scripts/tests).
           python3 -m unittest discover -s .github/scripts/tests || status=1
-          for check in translations privacy_manifest mac_entitlements; do
+          for check in translations privacy_manifest mac_entitlements neutrality; do
             python3 .github/scripts/check_$check.py || status=1
           done
           exit $status
