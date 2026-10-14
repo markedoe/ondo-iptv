@@ -33,8 +33,8 @@ final class AppModelTests: XCTestCase {
         try? FileManager.default.removeItem(at: root)
     }
 
-    private func makeModel() -> AppModel {
-        AppModel(storageRoot: root, secrets: secrets, reminderScheduler: notifications)
+    private func makeModel(reminders: ReminderScheduling? = nil) -> AppModel {
+        AppModel(storageRoot: root, secrets: secrets, reminderScheduler: reminders ?? notifications)
     }
 
     private func playlistFile() throws -> URL {
@@ -43,8 +43,8 @@ final class AppModelTests: XCTestCase {
         return url
     }
 
-    private func modelWithPlaylist() async throws -> AppModel {
-        let model = makeModel()
+    private func modelWithPlaylist(reminders: ReminderScheduling? = nil) async throws -> AppModel {
+        let model = makeModel(reminders: reminders)
         await model.bootstrap()
         try await model.addPlaylist(Playlist(name: "Test", source: .remote(try playlistFile()), autoRefreshHours: 0))
         return model
@@ -166,6 +166,24 @@ final class AppModelTests: XCTestCase {
         await model.toggleReminder(for: program, on: channel, now: now)
         XCTAssertFalse(model.hasReminder(for: program, on: channel))
         XCTAssertNil(notifications.scheduled[id])
+    }
+
+    /// Changing the lead time syncs in the background; removing the reminder right after syncs again. When
+    /// the first sync is the slower one, it must not bring the removed reminder back.
+    func testARemovedReminderStaysRemovedWhenAnEarlierSyncFinishesLast() async throws {
+        let slow = SlowReminderScheduler()
+        let model = try await modelWithPlaylist(reminders: slow)
+        let channel = try XCTUnwrap(model.content.channels.first { $0.name == "Test News" })
+        let now = Date()
+        let program = EPGProgram(channelID: "news.test", title: "Late Edition", start: now.addingTimeInterval(3600), end: now.addingTimeInterval(5400))
+        await model.toggleReminder(for: program, on: channel, now: now)
+        XCTAssertEqual(slow.scheduled.count, 1)
+
+        model.setReminderLeadMinutes(10)
+        try await Task.sleep(for: .milliseconds(50))  // the background sync has read the reminder and is scheduling
+        await model.toggleReminder(for: program, on: channel, now: now)
+        try await Task.sleep(for: .milliseconds(500))  // longer than the slow sync
+        XCTAssertTrue(slow.scheduled.isEmpty, "a notification is left for a removed reminder: \(slow.scheduled)")
     }
 
     func testReminderWithoutNotificationPermissionIsKeptAndExplained() async throws {
@@ -321,5 +339,21 @@ final class CastabilityTests: XCTestCase {
 
     func testDownloadedFilesAreNotCastable() {
         guard case .impossible = CastManager.castability(of: item(["file:///tmp/movie.mp4"], live: false)) else { return XCTFail("file URLs cannot be cast") }
+    }
+}
+
+/// Takes longer to schedule notifications than to cancel them all, like a busy notification centre.
+private final class SlowReminderScheduler: ReminderScheduling, @unchecked Sendable {
+    private let lock = NSLock()
+    private var pending: [String: Date] = [:]
+
+    var scheduled: [String: Date] { lock.withLock { pending } }
+
+    func requestAuthorization() async -> Bool { true }
+
+    func reschedule(_ reminders: [ProgramReminder], leadTime: TimeInterval, now: Date) async {
+        if !reminders.isEmpty { try? await Task.sleep(for: .milliseconds(300)) }
+        let wanted = Dictionary(reminders.map { ($0.id, $0.start.addingTimeInterval(-leadTime)) }, uniquingKeysWith: { first, _ in first })
+        lock.withLock { pending = wanted }
     }
 }

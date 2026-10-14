@@ -44,13 +44,21 @@ extension AppModel {
         scheduleReminderSync()
     }
 
-    /// Makes the pending notifications match the reminders of the active profile.
+    /// Makes the pending notifications match the reminders of the active profile. Syncs run one after the
+    /// other and each reads the reminders once the previous one is done: a sync started earlier (a lead
+    /// time change) finishing after a later one (a removal) would bring the removed reminder back.
     func syncReminders(now: Date = Date()) async {
-        await reminderScheduler.reschedule(
-            library.upcomingReminders(at: now),
-            leadTime: TimeInterval(settings.reminderLeadMinutes * 60),
-            now: now
-        )
+        let previous = reminderSync
+        let sync = Task {
+            await previous?.value
+            await self.reminderScheduler.reschedule(
+                self.library.upcomingReminders(at: now),
+                leadTime: TimeInterval(self.settings.reminderLeadMinutes * 60),
+                now: now
+            )
+        }
+        reminderSync = sync
+        await sync.value
     }
 
     func scheduleReminderSync() {

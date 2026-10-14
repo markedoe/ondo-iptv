@@ -67,6 +67,8 @@ final class AppModel {
     @ObservationIgnored private let cacheStore: FileStore
     @ObservationIgnored private let secrets: SecretStore
     @ObservationIgnored let reminderScheduler: ReminderScheduling
+    /// The latest reminder sync; the next one waits for it (see `syncReminders`).
+    @ObservationIgnored var reminderSync: Task<Void, Never>?
     @ObservationIgnored let http: URLSessionHTTPClient
     @ObservationIgnored let loader: PlaylistLoader
 
