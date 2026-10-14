@@ -31,7 +31,7 @@ public protocol HTTPClient: Sendable {
 /// Default user agent: many panels block unknown agents, VLC's is widely accepted.
 public let defaultIPTVUserAgent = "VLC/3.0.20 LibVLC/3.0.20"
 
-public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
+public final class URLSessionHTTPClient: HTTPClient, Sendable {
     private let session: URLSession
     private let timeout: TimeInterval
 

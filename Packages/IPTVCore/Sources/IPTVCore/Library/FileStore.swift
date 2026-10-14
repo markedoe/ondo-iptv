@@ -6,7 +6,7 @@ import Foundation
 /// and the previous file is kept as `.bak` so an update can never silently wipe user data. A file that
 /// cannot be read is moved aside as `name.corrupt-<time>.json`: left in place, the next save would rotate
 /// it over the good `.bak`, and the one after would lose the data for good.
-public final class FileStore: @unchecked Sendable {
+public final class FileStore: Sendable {
     public let directory: URL
     private let lock = NSLock()
 
