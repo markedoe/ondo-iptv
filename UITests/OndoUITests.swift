@@ -78,11 +78,9 @@ final class OndoUITests: XCTestCase {
         app.segmentedControls.buttons["M3U URL"].tap()
         let name = app.textFields["playlistName"]
         XCTAssertTrue(name.waitForExistence(timeout: 5))
-        name.tap()
-        name.typeText("Home")
+        type("Home", into: name)
         let url = app.descendants(matching: .any).matching(identifier: "playlistURL").firstMatch
-        url.tap()
-        url.typeText(address)
+        type(address, into: url)
         snapshot("08-add-playlist")
         app.buttons["confirmAddPlaylist"].tap()
 
@@ -90,6 +88,18 @@ final class OndoUITests: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout: 20), "the playlist's new release shows on the home screen")
         snapshot("09-playlist-added")
         XCTAssertEqual(server.requests.first?.path, "/list.m3u")
+    }
+
+    /// Taps a field until it has the keyboard focus, then types: the form redraws after the source type changes
+    /// and a tap made meanwhile can be lost ("Neither element nor any descendant has keyboard focus").
+    private func type(_ text: String, into field: XCUIElement) {
+        let focused = NSPredicate(format: "hasKeyboardFocus == true")
+        for _ in 0..<3 {
+            field.tap()
+            let expectation = XCTNSPredicateExpectation(predicate: focused, object: field)
+            if XCTWaiter.wait(for: [expectation], timeout: 2) == .completed { break }
+        }
+        field.typeText(text)
     }
 
     func testWelcomeScreen() {
