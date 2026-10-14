@@ -113,8 +113,10 @@ final class PlayerController: NSObject {
     /// Resume position not reached yet. Until then the player's own clock (still at 0) is neither shown
     /// nor saved: saving it would replace the resume point with the beginning of the film.
     @ObservationIgnored private var pendingStart: Double?
-    /// Whether playback starts once the resume seek lands (false when the user paused meanwhile).
+    /// Whether playback starts once the item is ready (false when the user paused meanwhile).
     @ObservationIgnored private var playsWhenReady = true
+    /// The resume seek was sent (the item is ready); until then a seek only moves `pendingStart`.
+    @ObservationIgnored private var startSeekSent = false
     #if canImport(VLCKitSPM)
     /// VLC sometimes ignores `:start-time` (servers without byte ranges): one explicit seek follows.
     @ObservationIgnored private var vlcStartSeekSent = false
@@ -218,10 +220,11 @@ final class PlayerController: NSObject {
         observe(playerItem)
         player.replaceCurrentItem(with: playerItem)
         playsWhenReady = true
+        startSeekSent = false
         if let start = Self.resumeStart(for: item) {
-            // Seek once the item is ready, then play: playing first buffers the beginning for nothing and
-            // the seek then has to buffer again (slow resumes), and a seek sent before the item is ready
-            // can be dropped (resumes that restart from the beginning).
+            // Seek once the item is ready: playing first buffers the beginning for nothing and the seek then
+            // has to buffer again (slow resumes), and a seek sent before the item is ready can be dropped
+            // (resumes that restart from the beginning).
             pendingStart = start
             currentTime = start
             return
@@ -364,8 +367,8 @@ final class PlayerController: NSObject {
             playVLC()
             return
         }
-        // The resume seek is still running: it starts playback when it lands.
-        if pendingStart != nil { return }
+        // The item is not ready yet: playback starts with the resume seek.
+        if pendingStart != nil && !startSeekSent { return }
         if state == .ended { seek(to: 0) }
         if isLive && !hasLiveWindow {
             // Without a DVR window a paused live stream can only resume at the live edge.
@@ -401,11 +404,12 @@ final class PlayerController: NSObject {
             seekVLC(to: target)
             return
         }
-        if pendingStart != nil {
+        if pendingStart != nil && !startSeekSent {
             // Before the item is ready: this becomes the position it starts at.
             pendingStart = target
             return
         }
+        pendingStart = nil
         player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
             Task { @MainActor in self?.updateNowPlaying() }
         }
@@ -463,8 +467,13 @@ final class PlayerController: NSObject {
     }
 
     private func tick(_ time: CMTime) {
-        guard activeEngine == .apple, pendingStart == nil else { return }
+        guard activeEngine == .apple else { return }
         let seconds = time.seconds
+        if let start = pendingStart {
+            // The clock is not at the resume point yet: neither shown nor saved.
+            guard startSeekSent, seconds.isFinite, seconds >= start - 2 else { return }
+            pendingStart = nil
+        }
         if seconds.isFinite { currentTime = seconds }
         if let playerItem = player.currentItem {
             let total = playerItem.duration.seconds
@@ -503,7 +512,8 @@ final class PlayerController: NSObject {
             stallTask?.cancel()
         case .paused:
             isBuffering = false
-            if state == .playing { state = .paused }
+            // Also when the viewer paused while it was still loading (no endless spinner).
+            if state == .playing || (state == .loading && !playsWhenReady) { state = .paused }
         case .waitingToPlayAtSpecifiedRate:
             isBuffering = true
             if state == .paused { state = .loading }
@@ -704,21 +714,24 @@ extension PlayerController {
         return start
     }
 
-    /// The resume seek of a ready item, then playback.
+    /// The resume seek of a ready item, and playback right away: it starts where the seek lands, after a
+    /// single buffering. Playing only once the seek landed never played: a paused player does not always
+    /// load anything, so the seek did not land either.
     private func seekToPendingStart(_ playerItem: AVPlayerItem) {
-        guard let start = pendingStart else { return }
+        guard let start = pendingStart, !startSeekSent else { return }
+        startSeekSent = true
         player.seek(to: CMTime(seconds: start, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .positiveInfinity) { [weak self] _ in
             Task { @MainActor in
                 guard let self, playerItem == self.player.currentItem else { return }
                 self.pendingStart = nil
-                if self.playsWhenReady {
-                    self.player.play()
-                    self.player.rate = self.rate
-                } else {
-                    self.state = .paused
-                }
                 self.updateNowPlaying()
             }
+        }
+        if playsWhenReady {
+            player.play()
+            player.rate = rate
+        } else {
+            state = .paused
         }
     }
 
