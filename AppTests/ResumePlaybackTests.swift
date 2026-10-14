@@ -110,22 +110,36 @@ final class ResumePlaybackTests: XCTestCase {
         controller.stop()
     }
 
+    /// Paused while it opens: it stays paused at the resume point, and Play then starts it there (Play used to
+    /// be ignored until a seek that a paused player never finished).
     func testAPauseBeforeTheResumeSeekLandsKeepsThePlayerPaused() async throws {
         defer { attachTimeline("resume-pause-timeline") }
         let controller = PlayerController()
         controller.isMuted = true
         controller.load(film(startingAt: 120))
         controller.pause()
-        try await wait(controller, seconds: 45) { controller.state != .loading }
+        // Shown as paused at once; the resume seek is sent once the item is ready.
+        try await wait(controller, seconds: 45) {
+            controller.player.currentItem?.status == .readyToPlay && controller.player.currentTime().seconds >= 115
+        }
         XCTAssertNotEqual(controller.state, .playing, "the viewer paused while it was opening")
-        guard controller.state == .paused else {
+        guard controller.player.currentItem?.status == .readyToPlay else {
             controller.stop()
             if try await samplePlaysFromTheBeginning() {
                 return XCTFail("The stream plays from the beginning but the paused resume never got ready")
             }
             throw XCTSkip("The sample stream cannot be played here")
         }
-        XCTAssertGreaterThanOrEqual(controller.player.currentTime().seconds, 115, "the resume seek landed")
+        XCTAssertEqual(controller.state, .paused)
+        XCTAssertGreaterThanOrEqual(controller.player.currentTime().seconds, 115, "the resume seek was sent")
+        try await Task.sleep(for: .seconds(1))
+        XCTAssertEqual(controller.state, .paused, "it does not start on its own")
+        XCTAssertEqual(controller.player.rate, 0)
+
+        controller.play()
+        try await wait(controller, seconds: 30) { controller.state == .playing }
+        XCTAssertEqual(controller.state, .playing, "Play starts the paused resume")
+        XCTAssertGreaterThanOrEqual(controller.player.currentTime().seconds, 115, "from the resume point")
         controller.stop()
     }
 
