@@ -86,6 +86,7 @@ struct DownloadsView: View {
                             Image(systemName: "play.circle.fill").font(.title2)
                         }
                         .buttonStyle(.borderless)
+                        .accessibilityLabel("Play")
                     } else {
                         DownloadButton(item: record.item, compact: true)
                             .buttonStyle(.borderless)

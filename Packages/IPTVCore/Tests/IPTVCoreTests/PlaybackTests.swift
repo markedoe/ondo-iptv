@@ -21,6 +21,13 @@ final class PlaybackTests: XCTestCase {
         XCTAssertNil(ChannelNumbering.position(of: 1, numbers: []))
     }
 
+    func testAWholeListIsNumberedLikeEachChannel() {
+        for numbers: [Int?] in [[101, nil, 7, 250], [nil, nil, nil], []] {
+            let one = numbers.indices.map { ChannelNumbering.displayNumber(at: $0, numbers: numbers) }
+            XCTAssertEqual(ChannelNumbering.displayNumbers(numbers), one)
+        }
+    }
+
     private let playlist = Playlist(name: "P", source: .remote(URL(string: "http://example.com/list.m3u")!))
 
     private func channel(catchup: CatchupInfo?) -> Channel {

@@ -10,6 +10,12 @@ public enum ChannelNumbering {
         return usesExplicitNumbers(numbers) ? numbers[position] : position + 1
     }
 
+    /// Numbers displayed for a whole list, in one pass: calling `displayNumber(at:numbers:)` for each
+    /// channel would scan the list once per channel.
+    public static func displayNumbers(_ numbers: [Int?]) -> [Int?] {
+        usesExplicitNumbers(numbers) ? numbers : numbers.indices.map { $0 + 1 }
+    }
+
     /// Position of the channel the user typed `number` for, matching `displayNumber(at:numbers:)`.
     public static func position(of number: Int, numbers: [Int?]) -> Int? {
         if usesExplicitNumbers(numbers) {

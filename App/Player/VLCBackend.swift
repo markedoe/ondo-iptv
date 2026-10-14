@@ -157,13 +157,17 @@ final class VLCBackend: NSObject {
         clearAspect()
         guard viewSize.width > 0, viewSize.height > 0 else { return }
         let ratio = Self.ratioString(viewSize)
-        switch aspect {
-        case .fit:
-            break
-        case .fill:
-            player.videoCropGeometry = strdup(ratio)
-        case .stretch:
-            player.videoAspectRatio = strdup(ratio)
+        // libVLC copies the string, so a temporary C buffer is enough (strdup leaked one per resize).
+        ratio.withCString { pointer in
+            let value = UnsafeMutablePointer(mutating: pointer)
+            switch aspect {
+            case .fit:
+                break
+            case .fill:
+                player.videoCropGeometry = value
+            case .stretch:
+                player.videoAspectRatio = value
+            }
         }
     }
 

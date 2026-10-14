@@ -77,6 +77,7 @@ struct MultiviewView: View {
             }
             .keyboardShortcut(.cancelAction)
             .help("Close")
+            .accessibilityLabel("Close")
             .accessibilityIdentifier("multiviewClose")
             if !multiview.isFull && !multiview.tiles.isEmpty {
                 Button {

@@ -9,6 +9,7 @@ import AppKit
 /// Full-screen player UI: video, auto-hiding controls, zapping list, EPG overlay, lock mode.
 struct PlayerView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
     let session: PlaybackSession
     var onClose: () -> Void
 
@@ -96,6 +97,9 @@ struct PlayerView: View {
             }
         }
         .focusedSceneValue(\.playbackSession, session)
+        // VoiceOver: a two-finger double tap plays or pauses, the escape gesture closes the player.
+        .accessibilityAction(.magicTap) { session.togglePlayPause() }
+        .accessibilityAction(.escape) { onClose() }
         .animation(.easeInOut(duration: 0.2), value: controlsVisible)
         .animation(.easeInOut(duration: 0.25), value: panelTab)
         .immersive()
@@ -250,6 +254,7 @@ struct PlayerView: View {
             }
             .keyboardShortcut(.cancelAction)
             .help("Close")
+            .accessibilityLabel("Close")
             .accessibilityIdentifier("playerClose")
 
             titleBlock
@@ -392,11 +397,13 @@ struct PlayerView: View {
                 }
                 .disabled(session.queue.count < 2)
                 .help("Previous channel")
+                .accessibilityLabel("Previous channel")
             } else {
                 Button { controller.skip(by: -10); scheduleHide() } label: {
                     Image(systemName: "gobackward.10").font(.system(size: 34))
                 }
                 .disabled(!controller.canSkip)
+                .accessibilityLabel("Back 10 seconds")
             }
 
             Button {
@@ -407,6 +414,7 @@ struct PlayerView: View {
                     .font(.system(size: 46))
                     .frame(width: 64, height: 64)
             }
+            .accessibilityLabel(controller.isPlaying ? Text("Pause") : Text("Play"))
             .accessibilityIdentifier("playPause")
 
             if zapsFromCenter {
@@ -415,11 +423,13 @@ struct PlayerView: View {
                 }
                 .disabled(session.queue.count < 2)
                 .help("Next channel")
+                .accessibilityLabel("Next channel")
             } else {
                 Button { controller.skip(by: 30); scheduleHide() } label: {
                     Image(systemName: "goforward.30").font(.system(size: 34))
                 }
                 .disabled(!controller.canSkip)
+                .accessibilityLabel("Forward 30 seconds")
             }
         }
         .shadow(radius: 8)
@@ -573,7 +583,8 @@ struct PlayerView: View {
 
     private func scheduleHide() {
         hideTask?.cancel()
-        guard !Self.controlsStayVisible else { return }
+        // With VoiceOver the controls never fade: there would be no way to bring them back.
+        guard !Self.controlsStayVisible, !voiceOverEnabled else { return }
         hideTask = Task {
             try? await Task.sleep(for: .seconds(4))
             guard !Task.isCancelled, controller.isPlaying, scrubPosition == nil, !isScrubbingLive, panelTab == nil else { return }
@@ -691,10 +702,13 @@ struct CastingOverlay: View {
             }
             HStack(spacing: 36) {
                 Button { cast.seek(by: -30) } label: { Image(systemName: "gobackward.30") }
+                    .accessibilityLabel("Back 30 seconds")
                 Button { cast.togglePlayPause() } label: {
                     Image(systemName: cast.isPlaying ? "pause.circle.fill" : "play.circle.fill").font(.system(size: 52))
                 }
+                .accessibilityLabel(cast.isPlaying ? Text("Pause") : Text("Play"))
                 Button { cast.seek(by: 30) } label: { Image(systemName: "goforward.30") }
+                    .accessibilityLabel("Forward 30 seconds")
             }
             .font(.title)
             Button("Stop Casting", role: .destructive, action: onStop)

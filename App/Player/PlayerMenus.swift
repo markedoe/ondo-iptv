@@ -66,6 +66,7 @@ struct PlayerTracksMenu: View {
             Image(systemName: "captions.bubble")
         }
         .help("Audio & subtitles")
+        .accessibilityLabel("Audio & subtitles")
     }
 }
 
@@ -113,5 +114,6 @@ struct PlayerMoreMenu: View {
             Image(systemName: "ellipsis.circle")
         }
         .help("More")
+        .accessibilityLabel("More")
     }
 }

@@ -441,6 +441,26 @@
         }
       }
     },
+    "Back 10 seconds": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reculer de 10 secondes"
+          }
+        }
+      }
+    },
+    "Back 30 seconds": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reculer de 30 secondes"
+          }
+        }
+      }
+    },
     "Back to Live": {
       "localizations": {
         "fr": {
@@ -1207,6 +1227,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Formats"
+          }
+        }
+      }
+    },
+    "Forward 30 seconds": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avancer de 30 secondes"
           }
         }
       }

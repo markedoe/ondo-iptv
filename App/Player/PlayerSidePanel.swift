@@ -73,9 +73,9 @@ struct PlayerSidePanel: View {
     }
 
     private var entries: [Entry] {
-        let numbers = numbers
+        let numbers = ChannelNumbering.displayNumbers(numbers)
         let all = session.queue.enumerated().map { position, item in
-            Entry(position: position, item: item, number: ChannelNumbering.displayNumber(at: position, numbers: numbers))
+            Entry(position: position, item: item, number: numbers[position])
         }
         let query = filter.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return all }

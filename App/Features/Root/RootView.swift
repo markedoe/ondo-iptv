@@ -299,6 +299,7 @@ struct BannerView: View {
                     Image(systemName: "xmark").font(.callout.weight(.semibold))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Close")
             }
             .padding(12)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -306,6 +307,7 @@ struct BannerView: View {
             .padding(.top, 8)
             .transition(.move(edge: .top).combined(with: .opacity))
             .task(id: message) {
+                AccessibilityNotification.Announcement(message).post()  // VoiceOver reads it, it fades out
                 try? await Task.sleep(for: .seconds(6))
                 model.bannerMessage = nil
             }
