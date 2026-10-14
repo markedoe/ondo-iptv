@@ -127,6 +127,7 @@ struct MovieDetailView: View {
                     ExpandablePlot(text: plot)
                 }
                 InfoLines(details: details)
+                AwardsList(awards: model.awards(for: movie))
             }
             .frame(maxWidth: metrics.textWidth, alignment: .leading)
             .padding(.horizontal, metrics.gutter)
@@ -224,5 +225,44 @@ struct InfoLines: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Awards and festival selections of a movie (wins first), the first few then "and N more".
+struct AwardsList: View {
+    let awards: [MovieAward]
+    @State private var showsAll = false
+    private static let shortLength = 4
+
+    var body: some View {
+        if !awards.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Awards").font(.headline)
+                ForEach(showsAll ? awards : Array(awards.prefix(Self.shortLength))) { award in
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Image(systemName: award.won ? "trophy.fill" : "rosette")
+                            .foregroundStyle(award.won ? Color.yellow : Color.secondary)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(verbatim: award.name)
+                            Text(status(award)).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+                if !showsAll && awards.count > Self.shortLength {
+                    Button("And \(awards.count - Self.shortLength) more") { showsAll = true }
+                        .buttonStyle(.borderless)
+                        .font(.callout)
+                }
+            }
+            .font(.callout)
+        }
+    }
+
+    private func status(_ award: MovieAward) -> String {
+        let year = String(award.year)
+        if award.won { return String(localized: "Winner, \(year)") }
+        return award.isFestival ? String(localized: "In competition, \(year)") : String(localized: "Nominated, \(year)")
     }
 }

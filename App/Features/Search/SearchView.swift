@@ -11,6 +11,9 @@ struct SearchView: View {
     @State private var fromYear: Int?
     @State private var toYear: Int?
     @State private var releaseYears: [Int] = []
+    @State private var awardGroup: String?
+    @State private var winnersOnly = false
+    @State private var awardGroups: [String] = []
 
     enum SearchScope: String, CaseIterable, Identifiable {
         case all, live, guide, movies, series
@@ -34,15 +37,19 @@ struct SearchView: View {
         return min(lower, upper)...max(lower, upper)
     }
 
+    private var isFiltered: Bool { years != nil || awardGroup != nil }
+
     private struct Request: Equatable {
         let query: String
         let years: ClosedRange<Int>?
+        let awardGroup: String?
+        let winnersOnly: Bool
     }
 
     var body: some View {
         List {
-            if let years {
-                yearsRow(years)
+            if isFiltered {
+                filtersRow
             }
             if (scope == .all || scope == .live) && !results.channels.isEmpty {
                 Section("Channels (\(results.channels.count))") {
@@ -88,11 +95,11 @@ struct SearchView: View {
             }
         }
         .overlay {
-            if query.isEmpty && years == nil {
+            if query.isEmpty && !isFiltered {
                 ContentUnavailableView("Search", systemImage: "magnifyingglass", description: Text("Find channels, TV programmes, movies and series in the current playlist."))
             } else if results.isEmpty && programs.isEmpty {
                 if query.isEmpty {
-                    ContentUnavailableView("No movie or series", systemImage: "calendar", description: Text("Nothing in this playlist was released in these years."))
+                    ContentUnavailableView("No movie or series", systemImage: "line.3.horizontal.decrease.circle", description: Text("Nothing in this playlist matches these filters."))
                 } else {
                     ContentUnavailableView.search(text: query)
                 }
@@ -104,21 +111,22 @@ struct SearchView: View {
                 Text(scope.label).tag(scope)
             }
         }
-        .task(id: Request(query: query, years: years)) {
+        .task(id: Request(query: query, years: years, awardGroup: awardGroup, winnersOnly: winnersOnly)) {
             // Debounce typing.
             try? await Task.sleep(for: .milliseconds(250))
             guard !Task.isCancelled else { return }
-            if let years {
-                // Release years only exist for movies and series: channels and programmes are left out.
-                results = model.search(query, releasedIn: years)
+            if isFiltered {
+                // Release years and awards only exist for movies and series: channels and programmes are left out.
+                results = model.search(query, releasedIn: years, awardGroup: awardGroup, winnersOnly: winnersOnly)
                 programs = []
             } else {
                 results = model.search(query)
                 programs = query.count >= 2 ? model.searchPrograms(query) : []
             }
         }
-        .task(id: [model.content.movies.count, model.content.series.count]) {
+        .task(id: [model.content.movies.count, model.content.series.count, model.movieAwards.count]) {
             releaseYears = model.releaseYears()
+            awardGroups = model.awardGroups()
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) { yearsMenu }
@@ -146,21 +154,40 @@ struct SearchView: View {
                 }
             }
             .pickerStyle(.menu)
-            if years != nil {
-                Button("Clear Filters", systemImage: "xmark.circle", role: .destructive) { clearYears() }
+            if !awardGroups.isEmpty {
+                Picker("Awards", selection: $awardGroup) {
+                    Text("Any Movie").tag(String?.none)
+                    ForEach(awardGroups, id: \.self) { group in
+                        Text(verbatim: AwardGroup.name(group)).tag(String?.some(group))
+                    }
+                }
+                .pickerStyle(.menu)
+                Toggle("Winners Only", isOn: $winnersOnly)
+                    .disabled(awardGroup == nil)
+            }
+            if isFiltered {
+                Button("Clear Filters", systemImage: "xmark.circle", role: .destructive) { clearFilters() }
             }
         } label: {
-            Label("Release Years", systemImage: years == nil ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+            Label("Filters", systemImage: isFiltered ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
         }
         .accessibilityIdentifier("releaseYears")
     }
 
-    private func yearsRow(_ years: ClosedRange<Int>) -> some View {
+    private var filtersRow: some View {
         HStack {
-            Label(yearsText(years), systemImage: "calendar")
-                .font(.subheadline)
+            VStack(alignment: .leading, spacing: 4) {
+                if let years {
+                    Label(yearsText(years), systemImage: "calendar")
+                }
+                if let awardGroup {
+                    Label(winnersOnly ? String(localized: "Winners: \(AwardGroup.name(awardGroup))") : AwardGroup.name(awardGroup),
+                          systemImage: "trophy")
+                }
+            }
+            .font(.subheadline)
             Spacer()
-            Button("Clear Filters", systemImage: "xmark.circle.fill") { clearYears() }
+            Button("Clear Filters", systemImage: "xmark.circle.fill") { clearFilters() }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
@@ -178,9 +205,11 @@ struct SearchView: View {
         }
     }
 
-    private func clearYears() {
+    private func clearFilters() {
         fromYear = nil
         toYear = nil
+        awardGroup = nil
+        winnersOnly = false
     }
 }
 

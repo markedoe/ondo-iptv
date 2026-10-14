@@ -6,6 +6,7 @@ FILMS ET SÉRIES
 • Bibliothèque à affiches, catégories, tri (date de sortie, note, nom…) et recherche instantanée filtrable par années de sortie
 • Fiches détaillées : synopsis, distribution, note, bande-annonce, saisons et épisodes
 • Touchez un acteur ou un réalisateur pour voir ses autres films et séries de votre playlist
+• Prix et sélections en festival sur les fiches des films (Cannes, Oscars, Berlin, Venise, César…), et les films primés de votre playlist
 • Continuer à regarder : la lecture reprend exactement là où vous vous êtes arrêté, et l’épisode suivant démarre automatiquement
 • Ma liste réunit vos films, séries et chaînes au même endroit, et les collections les regroupent à votre façon
 • Téléchargement des films et épisodes pour les regarder hors ligne ; quand un téléchargement bloque, Ondo vous dit pourquoi en clair (refus du fournisseur, limite de connexions, rien reçu)

@@ -12,7 +12,6 @@
     <string name="my_list">قائمتي</string>
     <string name="in_my_list">في قائمتي</string>
     <string name="not_in_my_list">ليس في قائمتي</string>
-    <string name="toggle_favorite_action">إضافة إلى المفضلة أو إزالة منها</string>
     <string name="from_start">من البداية</string>
     <string name="play_episode">تشغيل %1$s</string>
     <string name="resume_episode">استئناف %1$s</string>
@@ -20,9 +19,6 @@
     <string name="recently_added">أُضيف مؤخرًا</string>
     <string name="new_movies">أفلام جديدة</string>
     <string name="new_series">مسلسلات جديدة</string>
-    <string name="favorite_channels">القنوات المفضلة</string>
-    <string name="favorites">المفضلة</string>
-    <string name="favorite">تفضيل</string>
     <string name="more_like_this">عناوين مشابهة</string>
     <string name="episodes">الحلقات</string>
     <string name="watched">تمت المشاهدة</string>
@@ -48,7 +44,6 @@
     <string name="active">نشطة</string>
     <string name="next_program">التالي: %1$s</string>
     <string name="nothing_here">لا يوجد شيء هنا بعد.</string>
-    <string name="no_favorite_channels">اضغط مطولًا على قناة لإضافتها إلى المفضلة.</string>
     <string name="home_empty">قائمة التشغيل قيد التحميل أو فارغة. حدّثها من الإعدادات إذا لم تظهر.</string>
     <string name="search_prompt">الأفلام والمسلسلات والقنوات</string>
     <string name="search_hint">ابحث عن الأفلام والمسلسلات والقنوات في قائمة التشغيل الحالية.</string>
@@ -158,11 +153,8 @@
     <string name="help_playlists_title">إضافة قائمة تشغيل</string>
     <string name="help_playlists_body">Ondo مشغّل: يعرض الأفلام والمسلسلات والقنوات من الاشتراك الذي يمنحك إياه مزوّدك، ولا يقدّم أي محتوى من عنده.\n\nلإضافة اشتراكك، افتح الإعدادات، إضافة قائمة تشغيل: رابط أو ملف M3U، أو بيانات دخول Xtream Codes (عنوان الخادم واسم المستخدم وكلمة المرور). اضغط على قائمة تشغيل في الإعدادات للانتقال إليها.</string>
     <string name="help_search_title">العثور على ما تشاهده</string>
-    <string name="help_search_body">تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. تبحث علامة تبويب البحث في القنوات والأفلام والمسلسلات.\n\nفي فئة ما، يرتّب زر الترتيب الملصقات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.</string>
     <string name="help_categories_title">إخفاء اللغات والفئات</string>
     <string name="help_categories_body">يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:. يُخفي زر التصفية في الأفلام والمسلسلات والبث المباشر (وأيضًا في الإعدادات، الفئات) لغة أو بلدًا بالكامل دفعة واحدة، في جميع قوائم التشغيل؛ وتتبع الفئات التي يضيفها المزوّد لاحقًا القاعدة نفسها.\n\nيمكنك أيضًا إخفاء الفئات واحدة تلو الأخرى هناك، وإظهارها مجددًا متى شئت.</string>
-    <string name="help_mylist_title">قائمتي والقنوات المفضلة</string>
-    <string name="help_mylist_body">في صفحة فيلم أو مسلسل، تُبقيه «قائمتي» في متناول يدك: يظهر في الرئيسية وأعلى الأفلام والمسلسلات.\n\nفي البث المباشر، اضغط مطولًا على قناة لإضافتها إلى المفضلة؛ ويعرض فلتر النجمة القنوات المفضلة وحدها.</string>
     <string name="help_playback_title">عندما لا يعمل البث</string>
     <string name="help_playback_body">يوضح Ondo ما إذا كانت المشكلة من المزوّد أو الشبكة أو الصيغة.\n\nإذا رفض المزوّد البث، فربما انتهى الاشتراك أو أن عدد الأجهزة التي تشاهد في الوقت نفسه كبير: يسمح معظم المزوّدين ببث أو اثنين في المرة الواحدة.\n\nإذا تعذّر الوصول إلى الخادم، تحقّق من اتصالك ثم أعد المحاولة.</string>
     <string name="help_privacy_title">الخصوصية</string>
@@ -170,4 +162,26 @@
     <string name="error_load_denied">رفض المزوّد الوصول (HTTP %1$d). تحقّق من اسم المستخدم وكلمة المرور واشتراكك.</string>
     <string name="error_load_provider">لم يرسل المزوّد قائمة تشغيل. تحقّق من العنوان ومن اشتراكك.</string>
     <string name="error_load_format">هذه ليست قائمة تشغيل يستطيع Ondo قراءتها (M3U أو Xtream Codes أو XSPF أو JSON).</string>
+    <string name="awards">الجوائز</string>
+    <string name="award_winners">أفلام فائزة بجوائز</string>
+    <string name="award_winner">فائز، %1$s</string>
+    <string name="award_in_competition">في المسابقة، %1$s</string>
+    <string name="award_nominated">مرشّح، %1$s</string>
+    <plurals name="and_more">
+        <item quantity="zero">و%d أخرى</item>
+        <item quantity="one">و%d أخرى</item>
+        <item quantity="two">و%d أخرى</item>
+        <item quantity="few">و%d أخرى</item>
+        <item quantity="many">و%d أخرى</item>
+        <item quantity="other">و%d أخرى</item>
+    </plurals>
+    <string name="favorite_channels">القنوات في قائمتي</string>
+    <string name="favorite">في قائمتي</string>
+    <string name="toggle_favorite_action">إضافة إلى قائمتي أو إزالتها منها</string>
+    <string name="no_favorite_channels">في البث المباشر، اضغط مطولًا على قناة لإضافتها إلى قائمتي.</string>
+    <string name="my_list_empty">لا شيء هنا بعد</string>
+    <string name="my_list_empty_hint">استخدم «قائمتي» في صفحة فيلم أو مسلسل لتجده هنا.</string>
+    <string name="help_mylist_title">قائمتي</string>
+    <string name="help_mylist_body">في صفحة فيلم أو مسلسل، تُبقيه «قائمتي» في متناول يدك. في البث المباشر، اضغط مطولًا على قناة لإضافتها إلى قائمتي.\n\nتجمع علامة تبويب قائمتي أفلامك ومسلسلاتك وقنواتك؛ والبحث هو العدسة المكبّرة أعلى كل شاشة.</string>
+    <string name="help_search_body">تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث، وهو العدسة المكبّرة أعلى كل شاشة، في القنوات والأفلام والمسلسلات.\n\nفي فئة ما، يرتّب زر الترتيب الملصقات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم. وتعرض صفحات الأفلام جوائزها واختياراتها في المهرجانات.</string>
 </resources>

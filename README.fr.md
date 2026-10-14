@@ -21,7 +21,11 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (parmi les fiches déjà
   ouvertes, ou tous avec une clé TMDb).
 - **Recherche** (la loupe en haut de chaque onglet sur iPhone) : chaînes, programmes, films et séries,
-  **filtrables par années de sortie**.
+  **filtrables par années de sortie** et **par festival ou cérémonie** (lauréats seulement si vous voulez).
+- **Prix** : Palme d'or, Oscars, Lion d'or, Ours d'or, César, BAFTA, Golden Globes… sur les fiches des films
+  (lauréat, en compétition ou nommé) et une rangée « Films primés » dans Films. Les données viennent de
+  [Wikidata](https://www.wikidata.org) (CC0), sont embarquées dans l'app et rapprochées sur l'appareil
+  ([tools/awards](tools/awards/README.fr.md)).
 - **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
   XSPF, JSON ; plusieurs playlists, actualisation automatique. (Une source Real-Debrid existe dans le
   code mais est désactivée dans la version App Store : `FeatureFlags.realDebrid`.)
@@ -64,9 +68,11 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires).
-- **Live TV** : catégories, favoris, programme en cours et suivant ; **recherche**.
+- **Live TV** : catégories, Ma liste, programme en cours et suivant ; **recherche** (la loupe de chaque écran).
+- Onglet **Ma liste** : les films, séries et chaînes gardés, comme sur Apple.
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…) ou une par une, comme sur Apple.
 - **Aide** dans les Réglages.
+- **Prix** sur les fiches des films et une rangée « Films primés » dans Films, avec les mêmes données embarquées.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
   testé avec les mêmes cas).
 - **Lecteur** (Media3 / ExoPlayer) : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,

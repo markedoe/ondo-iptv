@@ -27,6 +27,7 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             store = AppStore(filesDir.resolve("ondo")),
             http = OkHttpClientAdapter(okHttp),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+            awardsSource = { assets.open("awards.json").bufferedReader().use { it.readText() } },
         )
     }
 

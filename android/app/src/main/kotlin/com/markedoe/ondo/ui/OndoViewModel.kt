@@ -14,6 +14,7 @@ import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.LiveUiState
+import com.markedoe.ondo.ui.screens.MyListUiState
 import com.markedoe.ondo.ui.screens.PlaylistForm
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.VodUiState
@@ -67,6 +68,10 @@ class OndoViewModel(
         .stateIn(viewModelScope, sharing, null)
 
     val series: StateFlow<VodUiState?> = state.map { UiMappers.vod(it, series = true, title = "") }
+        .flowOn(computation)
+        .stateIn(viewModelScope, sharing, null)
+
+    val myList: StateFlow<MyListUiState?> = combine(state, minutes) { state, now -> UiMappers.myList(state, now) }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 

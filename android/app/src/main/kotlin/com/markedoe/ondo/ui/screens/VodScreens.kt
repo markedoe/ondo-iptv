@@ -62,6 +62,8 @@ data class VodUiState(
     val myList: List<ShowcaseItem> = emptyList(),
     val recent: List<ShowcaseItem> = emptyList(),
     val rows: List<CategoryRow> = emptyList(),
+    /** Movies that won an award (Palme d'Or, Oscars…), the most recent first. */
+    val awardWinners: List<ShowcaseItem> = emptyList(),
 )
 
 class VodActions(
@@ -126,6 +128,13 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
             item {
                 Shelf(stringResource(R.string.recently_added), metrics) {
                     items(state.recent, key = { it.key }) { PosterCard(it, metrics.posterWidth, onClick = { actions.onOpen(it) }) }
+                }
+            }
+        }
+        if (state.awardWinners.isNotEmpty()) {
+            item {
+                Shelf(stringResource(R.string.award_winners), metrics) {
+                    items(state.awardWinners, key = { it.key }) { PosterCard(it, metrics.posterWidth, onClick = { actions.onOpen(it) }) }
                 }
             }
         }

@@ -173,6 +173,12 @@ extension AppModel {
         }
     }
 
+    /// "Play last channel at launch".
+    func autoplayLastChannel() {
+        guard let playlist = activePlaylist, let last = library.lastChannel(playlistID: playlist.id) else { return }
+        resume(last)
+    }
+
     /// Category of a playlist item (nil for an item of another playlist).
     func categoryID(of item: PlaybackItem) -> String? {
         guard item.reference.playlistID == activePlaylist?.id else { return nil }

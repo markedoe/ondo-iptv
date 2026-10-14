@@ -18,6 +18,7 @@ import com.markedoe.ondo.ui.screens.CategoryRow
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.LiveUiState
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
+import com.markedoe.ondo.ui.screens.MyListUiState
 import com.markedoe.ondo.ui.screens.PlaylistSummary
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailUiState
@@ -135,6 +136,7 @@ object UiMappers {
                 else -> showcase.featuredMovies().map { ShowcaseItem.MovieItem(it) }
             },
             rows = rows,
+            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH).map { ShowcaseItem.MovieItem(it) },
         )
     }
 
@@ -205,6 +207,18 @@ object UiMappers {
         )
     }
 
+    /** The My List tab: the movies and series kept (latest addition first), and the channels. */
+    fun myList(state: OndoState, now: Long): MyListUiState {
+        val hidden = hiddenCategoryIds(state)
+        val playlistId = state.activePlaylistId.orEmpty()
+        val channelsById = state.content.channels.filter { it.categoryId !in hidden }.associateBy { it.id }
+        return MyListUiState(
+            movies = grid(state, series = false, categoryId = null, myList = true, filter = ""),
+            series = grid(state, series = true, categoryId = null, myList = true, filter = ""),
+            channels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }.map { channelRow(it, state, now) },
+        )
+    }
+
     fun channelRow(channel: Channel, state: OndoState, now: Long): ChannelRow {
         val guide = state.guide ?: return ChannelRow(channel, null, null, null)
         val current = guide.current(channel, now)
@@ -220,7 +234,7 @@ object UiMappers {
         }
     }
 
-    fun movieDetail(state: OndoState, movie: Movie): MovieDetailUiState {
+    fun movieDetail(state: OndoState, movie: Movie, locale: Locale = Locale.getDefault()): MovieDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.MovieItem(movie)
         return MovieDetailUiState(
@@ -229,6 +243,7 @@ object UiMappers {
             progress = progress(showcase.progress(movie)),
             inMyList = isFavorite(state, item),
             similar = showcase.similarMovies(movie).map { ShowcaseItem.MovieItem(it) },
+            awards = MovieAwards.rows(state, movie, locale),
         )
     }
 

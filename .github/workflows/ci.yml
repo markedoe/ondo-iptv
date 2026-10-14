@@ -56,7 +56,7 @@ jobs:
           echo "81cb02135897dc982b4d1049dba8510db3e982b0b0e8e138293982d77e4154e0  /tmp/swiftlint.zip" | sha256sum -c -
           unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint
           /tmp/swiftlint/swiftlint lint --reporter github-actions-logging
-      - name: Shipped configuration (translations in seven languages, privacy manifest, Mac sandbox)
+      - name: Shipped configuration (translations in seven languages, privacy manifest, Mac sandbox, awards data)
         if: success() || failure()
         # What tests on simulated data cannot see: an untranslated text, an App Store upload rejected for
         # an undeclared API, a Mac app whose sandbox blocks the network or the file pickers. The neutrality
@@ -65,7 +65,7 @@ jobs:
           status=0
           # The checks' own tests first: each must reject the defect it exists for (.github/scripts/tests).
           python3 -m unittest discover -s .github/scripts/tests || status=1
-          for check in translations privacy_manifest mac_entitlements; do
+          for check in translations privacy_manifest mac_entitlements awards; do
             python3 .github/scripts/check_$check.py || status=1
           done
           exit $status

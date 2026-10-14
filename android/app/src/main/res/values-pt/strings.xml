@@ -12,7 +12,6 @@
     <string name="my_list">Minha lista</string>
     <string name="in_my_list">Na Minha lista</string>
     <string name="not_in_my_list">Fora da Minha lista</string>
-    <string name="toggle_favorite_action">Adicionar ou remover dos favoritos</string>
     <string name="from_start">Do início</string>
     <string name="play_episode">Reproduzir %1$s</string>
     <string name="resume_episode">Retomar %1$s</string>
@@ -20,9 +19,6 @@
     <string name="recently_added">Adicionados recentemente</string>
     <string name="new_movies">Novos filmes</string>
     <string name="new_series">Novas séries</string>
-    <string name="favorite_channels">Canais favoritos</string>
-    <string name="favorites">Favoritos</string>
-    <string name="favorite">Favorito</string>
     <string name="more_like_this">Títulos semelhantes</string>
     <string name="episodes">Episódios</string>
     <string name="watched">Assistido</string>
@@ -48,7 +44,6 @@
     <string name="active">Ativa</string>
     <string name="next_program">A seguir: %1$s</string>
     <string name="nothing_here">Nada aqui ainda.</string>
-    <string name="no_favorite_channels">Toque e mantenha pressionado um canal para adicioná-lo aos favoritos.</string>
     <string name="home_empty">Sua playlist está carregando ou vazia. Atualize-a em Configurações se ela não aparecer.</string>
     <string name="search_prompt">Filmes, séries, canais</string>
     <string name="search_hint">Encontre filmes, séries e canais na playlist atual.</string>
@@ -143,11 +138,8 @@
     <string name="help_playlists_title">Adicionar uma playlist</string>
     <string name="help_playlists_body">O Ondo é um player: ele mostra os filmes, séries e canais da assinatura que o seu provedor oferece, e não fornece nenhum conteúdo próprio.\n\nPara adicionar sua assinatura, abra Ajustes, Adicionar uma playlist: um link ou arquivo M3U, ou um login Xtream Codes (endereço do servidor, usuário e senha). Toque em uma playlist em Ajustes para mudar para ela.</string>
     <string name="help_search_title">Encontrar o que assistir</string>
-    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A aba Buscar percorre canais, filmes e séries.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.</string>
     <string name="help_categories_title">Ocultar idiomas e categorias</string>
     <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.</string>
-    <string name="help_mylist_title">Minha lista e canais favoritos</string>
-    <string name="help_mylist_body">Na página de um filme ou série, Minha lista deixa o título à mão: ele aparece no Início e no topo de Filmes e Séries.\n\nEm TV ao vivo, toque e segure um canal para adicioná-lo aos favoritos; o filtro da estrela mostra só eles.</string>
     <string name="help_playback_title">Quando um stream não toca</string>
     <string name="help_playback_body">O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.</string>
     <string name="help_privacy_title">Privacidade</string>
@@ -155,4 +147,23 @@
     <string name="error_load_denied">O provedor recusou o acesso (HTTP %1$d). Verifique o usuário, a senha e a sua assinatura.</string>
     <string name="error_load_provider">O provedor não enviou uma playlist. Verifique o endereço e a sua assinatura.</string>
     <string name="error_load_format">Esta não é uma playlist que o Ondo consiga ler (M3U, Xtream Codes, XSPF ou JSON).</string>
+    <string name="awards">Prêmios</string>
+    <string name="award_winners">Filmes premiados</string>
+    <string name="award_winner">Vencedor, %1$s</string>
+    <string name="award_in_competition">Em competição, %1$s</string>
+    <string name="award_nominated">Indicado, %1$s</string>
+    <plurals name="and_more">
+        <item quantity="one">E mais %d</item>
+        <item quantity="many">E mais %d</item>
+        <item quantity="other">E mais %d</item>
+    </plurals>
+    <string name="favorite_channels">Canais da Minha lista</string>
+    <string name="favorite">Na Minha lista</string>
+    <string name="toggle_favorite_action">Adicionar à Minha lista ou remover</string>
+    <string name="no_favorite_channels">Em TV ao vivo, toque e segure um canal para adicioná-lo à Minha lista.</string>
+    <string name="my_list_empty">Nada aqui ainda</string>
+    <string name="my_list_empty_hint">Use Minha lista na página de um filme ou série para encontrá-lo aqui.</string>
+    <string name="help_mylist_title">Minha lista</string>
+    <string name="help_mylist_body">Na página de um filme ou série, Minha lista deixa o título à mão. Em TV ao vivo, toque e segure um canal para adicioná-lo à Minha lista.\n\nA aba Minha lista reúne seus filmes, séries e canais; a busca é a lupa no topo de cada tela.</string>
+    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca, a lupa no topo de cada tela, percorre canais, filmes e séries.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota. As páginas dos filmes mostram seus prêmios e seleções em festivais.</string>
 </resources>

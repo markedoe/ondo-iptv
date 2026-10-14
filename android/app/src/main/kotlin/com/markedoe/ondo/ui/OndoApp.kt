@@ -57,6 +57,9 @@ import com.markedoe.ondo.ui.screens.HomeScreen
 import com.markedoe.ondo.ui.screens.LiveActions
 import com.markedoe.ondo.ui.screens.LiveScreen
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
+import com.markedoe.ondo.ui.screens.MyListActions
+import com.markedoe.ondo.ui.screens.MyListKind
+import com.markedoe.ondo.ui.screens.MyListScreen
 import com.markedoe.ondo.ui.screens.PickedFile
 import com.markedoe.ondo.ui.screens.PosterGridScreen
 import com.markedoe.ondo.ui.screens.SearchScreen
@@ -129,6 +132,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 composable<Routes.Series> { VodDestination(viewModel, navController, series = true) }
                 composable<Routes.Live> { LiveDestination(viewModel, navController) }
                 composable<Routes.Search> { SearchDestination(viewModel, navController) }
+                composable<Routes.MyList> { MyListDestination(viewModel, navController) }
                 composable<Routes.MovieDetail> { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                 composable<Routes.SeriesDetail> { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
                 composable<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
@@ -229,6 +233,7 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onPlayChannel = viewModel::playChannel,
             onPlaylists = { navController.navigate(Routes.Settings) },
             onSettings = { navController.navigate(Routes.Settings) },
+            onSearch = { navController.navigate(Routes.Search) },
             onAcceptSuggestion = viewModel::acceptSuggestion,
             onChooseCategories = {
                 viewModel.dismissTagSuggestion()
@@ -252,7 +257,7 @@ private fun VodDestination(viewModel: OndoViewModel, navController: NavHostContr
             onResume = { viewModel.resume(it.key) },
             onCategory = { category -> navController.navigate(Routes.Grid(series = series, categoryId = category?.id)) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = series, myList = true)) },
-            onSearch = { navController.openTab(TopLevel.SEARCH) },
+            onSearch = { navController.navigate(Routes.Search) },
             onCategories = { navController.navigate(Routes.Categories(if (series) "series" else "movie")) },
         ),
     )
@@ -271,6 +276,7 @@ private fun LiveDestination(viewModel: OndoViewModel, navController: NavHostCont
             onPlay = viewModel::playChannel,
             onToggleFavorite = viewModel::toggleFavorite,
             onCategories = { navController.navigate(Routes.Categories("live")) },
+            onSearch = { navController.navigate(Routes.Search) },
         ),
     )
 }
@@ -292,8 +298,9 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(id) { viewModel.loadMovie(id) }
     val movie = state.content.movies.firstOrNull { it.id == id } ?: return Loading()
+    val locale = LocalConfiguration.current.locales[0]
     MovieDetailScreen(
-        state = remember(state, movie) { UiMappers.movieDetail(state, movie) },
+        state = remember(state, movie, locale) { UiMappers.movieDetail(state, movie, locale) },
         actions = DetailActions(
             onBack = { navController.popBackStack() },
             onPlay = { viewModel.playMovie(id) },
@@ -418,4 +425,31 @@ fun loadErrorText(error: LoadError): String = when {
     error.kind == ErrorAttribution.PROVIDER -> stringResource(R.string.error_load_provider)
     error.kind == ErrorAttribution.NETWORK -> stringResource(R.string.error_network)
     else -> stringResource(R.string.error_load_format)
+}
+
+@Composable
+private fun MyListDestination(viewModel: OndoViewModel, navController: NavHostController) {
+    val myList by viewModel.myList.collectAsStateWithLifecycle()
+    val state = myList ?: return Loading()
+    // Opens on a kind that has something, movies first.
+    var kind by rememberSaveable {
+        mutableStateOf(
+            when {
+                state.movies.isNotEmpty() -> MyListKind.MOVIES
+                state.series.isNotEmpty() -> MyListKind.SERIES
+                state.channels.isNotEmpty() -> MyListKind.CHANNELS
+                else -> MyListKind.MOVIES
+            },
+        )
+    }
+    MyListScreen(
+        state = state,
+        kind = kind,
+        actions = MyListActions(
+            onKind = { kind = it },
+            onOpen = navController::open,
+            onPlayChannel = viewModel::playChannel,
+            onSearch = { navController.navigate(Routes.Search) },
+        ),
+    )
 }

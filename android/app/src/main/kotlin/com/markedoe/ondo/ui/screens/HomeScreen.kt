@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,16 +24,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -86,6 +87,7 @@ class HomeActions(
     val onPlayChannel: (ChannelRow) -> Unit = {},
     val onPlaylists: () -> Unit = {},
     val onSettings: () -> Unit = {},
+    val onSearch: () -> Unit = {},
     val onAcceptSuggestion: (TagSuggestion) -> Unit = {},
     val onChooseCategories: () -> Unit = {},
     val onDismissSuggestion: () -> Unit = {},
@@ -203,8 +205,13 @@ private fun HomeTopBar(playlistName: String, actions: HomeActions, onArtwork: Bo
             Spacer(Modifier.width(4.dp))
             Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = stringResource(R.string.playlists), tint = tint.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
         }
-        IconButton(onClick = actions.onSettings, modifier = Modifier.align(Alignment.CenterEnd).testTag("settingsButton")) {
-            Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings), tint = tint)
+        Row(Modifier.align(Alignment.CenterEnd)) {
+            IconButton(onClick = actions.onSearch, modifier = Modifier.testTag("searchButton")) {
+                Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search), tint = tint)
+            }
+            IconButton(onClick = actions.onSettings, modifier = Modifier.testTag("settingsButton")) {
+                Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings), tint = tint)
+            }
         }
     }
 }

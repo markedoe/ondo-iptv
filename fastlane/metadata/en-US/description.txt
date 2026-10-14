@@ -6,6 +6,7 @@ MOVIES & SERIES
 • Poster library, categories, sorting (release date, rating, name…) and instant search filtered by release years
 • Rich details: plot, cast, rating, trailer, seasons and episodes
 • Tap an actor or a director to see their other movies and series in your playlist
+• Awards and festival selections on movie pages (Cannes, Oscars, Berlin, Venice, Césars…), and the award winners of your playlist
 • Continue Watching: playback resumes exactly where you stopped, and the next episode starts automatically
 • My List keeps your movies, series and channels in one place, and collections group them your way
 • Download movies and episodes to watch offline; when a download stalls, Ondo tells you why in plain words (provider refusal, connection limit, nothing received)

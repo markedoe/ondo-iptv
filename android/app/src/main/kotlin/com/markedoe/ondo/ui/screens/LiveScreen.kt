@@ -18,8 +18,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -59,6 +60,7 @@ class LiveActions(
     val onPlay: (ChannelRow) -> Unit = {},
     val onToggleFavorite: (ChannelRow) -> Unit = {},
     val onCategories: () -> Unit = {},
+    val onSearch: () -> Unit = {},
 )
 
 /** Live TV: category chips and channels with what is on now (long press: favourite). */
@@ -70,6 +72,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
             TopAppBar(
                 title = { Text(stringResource(R.string.live_tv), style = MaterialTheme.typography.headlineSmall) },
                 actions = {
+                    IconButton(onClick = actions.onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search)) }
                     IconButton(onClick = actions.onCategories, modifier = Modifier.testTag("categoryFilter")) {
                         Icon(Icons.Rounded.FilterList, contentDescription = stringResource(R.string.categories))
                     }
@@ -86,8 +89,8 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                     FilterChip(
                         selected = state.showingFavorites,
                         onClick = actions.onFavorites,
-                        label = { Text(stringResource(R.string.favorites)) },
-                        leadingIcon = { Icon(Icons.Rounded.Star, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        label = { Text(stringResource(R.string.my_list)) },
+                        leadingIcon = { Icon(Icons.Rounded.Bookmarks, contentDescription = null, modifier = Modifier.size(18.dp)) },
                     )
                 }
                 items(state.categories, key = { it.id }) { category ->
@@ -124,7 +127,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(row.channel.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                         if (row.channel.id in state.favoriteIds) {
-                            Icon(Icons.Rounded.Star, contentDescription = stringResource(R.string.favorite), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp).size(14.dp))
+                            Icon(Icons.Rounded.Bookmarks, contentDescription = stringResource(R.string.favorite), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp).size(14.dp))
                         }
                     }
                     row.nowTitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }

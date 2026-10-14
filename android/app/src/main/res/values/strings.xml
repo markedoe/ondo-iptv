@@ -13,7 +13,6 @@
     <string name="my_list">My List</string>
     <string name="in_my_list">In My List</string>
     <string name="not_in_my_list">Not in My List</string>
-    <string name="toggle_favorite_action">Add to or remove from favorites</string>
     <string name="from_start">From Start</string>
     <string name="play_episode">Play %1$s</string>
     <string name="resume_episode">Resume %1$s</string>
@@ -21,9 +20,6 @@
     <string name="recently_added">Recently Added</string>
     <string name="new_movies">New Movies</string>
     <string name="new_series">New Series</string>
-    <string name="favorite_channels">Favorite Channels</string>
-    <string name="favorites">Favorites</string>
-    <string name="favorite">Favorite</string>
     <string name="more_like_this">More Like This</string>
     <string name="episodes">Episodes</string>
     <string name="watched">Watched</string>
@@ -49,7 +45,6 @@
     <string name="active">Active</string>
     <string name="next_program">Next: %1$s</string>
     <string name="nothing_here">Nothing here yet.</string>
-    <string name="no_favorite_channels">Long-press a channel to add it to your favorites.</string>
     <string name="home_empty">Your playlist is loading or empty. Pull a refresh from Settings if it does not appear.</string>
     <string name="search_prompt">Movies, series, channels</string>
     <string name="search_hint">Find movies, series and channels in the current playlist.</string>
@@ -139,11 +134,8 @@
     <string name="help_playlists_title">Add a playlist</string>
     <string name="help_playlists_body">Ondo is a player: it shows the movies, series and channels of the subscription your provider gives you, and provides no content of its own.\n\nTo add your subscription, open Settings, Add playlist: an M3U link or file, or an Xtream Codes login (server address, user name and password). Tap a playlist in Settings to switch to it.</string>
     <string name="help_search_title">Find something to watch</string>
-    <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. The Search tab looks through channels, movies and series.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating.</string>
     <string name="help_categories_title">Hide languages and categories</string>
     <string name="help_categories_body">Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nYou can also hide categories one by one there, and show them again at any time.</string>
-    <string name="help_mylist_title">My List and favorite channels</string>
-    <string name="help_mylist_body">On a movie or series page, My List keeps it at hand: it appears on Home and at the top of Movies and Series.\n\nIn Live TV, long-press a channel to add it to your favorites; the star filter shows only them.</string>
     <string name="help_playback_title">When a stream does not play</string>
     <string name="help_playback_body">Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.</string>
     <string name="help_privacy_title">Privacy</string>
@@ -151,4 +143,22 @@
     <string name="error_load_denied">The provider refused access (HTTP %1$d). Check the user name, the password and your subscription.</string>
     <string name="error_load_provider">The provider did not send a playlist. Check the address and your subscription.</string>
     <string name="error_load_format">This is not a playlist Ondo can read (M3U, Xtream Codes, XSPF or JSON).</string>
+    <string name="awards">Awards</string>
+    <string name="award_winners">Award winners</string>
+    <string name="award_winner">Winner, %1$s</string>
+    <string name="award_in_competition">In competition, %1$s</string>
+    <string name="award_nominated">Nominated, %1$s</string>
+    <plurals name="and_more">
+        <item quantity="one">And %d more</item>
+        <item quantity="other">And %d more</item>
+    </plurals>
+    <string name="favorite_channels">Channels in My List</string>
+    <string name="favorite">In My List</string>
+    <string name="toggle_favorite_action">Add to or remove from My List</string>
+    <string name="no_favorite_channels">In Live TV, long-press a channel to add it to My List.</string>
+    <string name="my_list_empty">Nothing here yet</string>
+    <string name="my_list_empty_hint">Use My List on a movie or series page to find it here.</string>
+    <string name="help_mylist_title">My List</string>
+    <string name="help_mylist_body">On a movie or series page, My List keeps it at hand. In Live TV, long-press a channel to add it to My List.\n\nThe My List tab gathers your movies, series and channels; search is the magnifying glass at the top of each screen.</string>
+    <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. Search, the magnifying glass at the top of each screen, looks through channels, movies and series.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating. Movie pages show their awards and festival selections.</string>
 </resources>

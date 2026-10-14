@@ -88,6 +88,8 @@ final class AppModel {
     private(set) var index = ContentIndex()
     /// Language and country tags of the catalogue's categories ("|PT| Filmes").
     private(set) var categoryTags = CategoryTagIndex()
+    /// Awards and festival selections of the catalogue's movies, by movie id (bundled data, matched on the device).
+    private(set) var movieAwards: [String: [AwardsCatalogue.Entry]] = [:]
     private(set) var epg = EPGIndex.empty
     private(set) var phase: LoadPhase = .idle
     private(set) var epgPhase: LoadPhase = .idle
@@ -199,11 +201,6 @@ final class AppModel {
                 if needsProfileSelection { autoplayPending = true } else { autoplayLastChannel() }
             }
         }
-    }
-
-    func autoplayLastChannel() {
-        guard let playlist = activePlaylist, let last = library.lastChannel(playlistID: playlist.id) else { return }
-        resume(last)
     }
 
     var activePlaylist: Playlist? {
@@ -420,6 +417,7 @@ final class AppModel {
                 rawContent = .empty
                 index = ContentIndex()
                 categoryTags = CategoryTagIndex()
+                movieAwards = [:]
                 epg = .empty
                 phase = .idle
                 epgPhase = .idle
@@ -472,6 +470,7 @@ final class AppModel {
                 rawContent = .empty
                 index = ContentIndex()
                 categoryTags = CategoryTagIndex()
+                movieAwards = [:]
             }
         } else {
             hasCache = !content.isEmpty
@@ -522,9 +521,10 @@ final class AppModel {
 
     private func apply(_ newContent: PlaylistContent, for playlist: Playlist) async {
         let edits = playlist.channelEdits
-        let (edited, built, tags) = await Task.detached {
+        let (edited, built, tags, awards) = await Task.detached {
             let edited = newContent.applying(edits)
-            return (edited, ContentIndex(content: edited), CategoryTagIndex(content: edited))
+            let awards = AwardsCatalogue.bundled.match(edited.movies)
+            return (edited, ContentIndex(content: edited), CategoryTagIndex(content: edited), awards)
         }.value
         // While the catalogue was being built, another playlist may have been opened (its catalogue must
         // not be replaced by this one), or this one edited (build again with the current edits).
@@ -537,6 +537,7 @@ final class AppModel {
         content = edited
         index = built
         categoryTags = tags
+        movieAwards = awards
     }
 
     private func saveContentCache(_ content: PlaylistContent, for id: UUID) async {

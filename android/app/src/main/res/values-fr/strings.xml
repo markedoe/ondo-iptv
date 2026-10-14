@@ -12,7 +12,6 @@
     <string name="my_list">Ma liste</string>
     <string name="in_my_list">Dans ma liste</string>
     <string name="not_in_my_list">Pas dans ma liste</string>
-    <string name="toggle_favorite_action">Ajouter aux favoris ou en retirer</string>
     <string name="from_start">Depuis le début</string>
     <string name="play_episode">Lire %1$s</string>
     <string name="resume_episode">Reprendre %1$s</string>
@@ -20,9 +19,6 @@
     <string name="recently_added">Ajouts récents</string>
     <string name="new_movies">Nouveaux films</string>
     <string name="new_series">Nouvelles séries</string>
-    <string name="favorite_channels">Chaînes favorites</string>
-    <string name="favorites">Favoris</string>
-    <string name="favorite">Favori</string>
     <string name="more_like_this">Titres similaires</string>
     <string name="episodes">Épisodes</string>
     <string name="watched">Vu</string>
@@ -48,7 +44,6 @@
     <string name="active">Active</string>
     <string name="next_program">Ensuite : %1$s</string>
     <string name="nothing_here">Rien pour le moment.</string>
-    <string name="no_favorite_channels">Appuyez longuement sur une chaîne pour l\'ajouter à vos favoris.</string>
     <string name="home_empty">Votre playlist se charge ou est vide. Actualisez-la depuis les Réglages si elle n\'apparaît pas.</string>
     <string name="search_prompt">Films, séries, chaînes</string>
     <string name="search_hint">Trouvez films, séries et chaînes dans la playlist actuelle.</string>
@@ -143,11 +138,8 @@
     <string name="help_playlists_title">Ajouter une playlist</string>
     <string name="help_playlists_body">Ondo est un lecteur : il affiche les films, séries et chaînes de l’abonnement que vous donne votre fournisseur, et ne fournit aucun contenu lui-même.\n\nPour ajouter votre abonnement, ouvrez Réglages, Ajouter une playlist : un lien ou un fichier M3U, ou un identifiant Xtream Codes (adresse du serveur, nom d’utilisateur et mot de passe). Touchez une playlist dans Réglages pour passer sur elle.</string>
     <string name="help_search_title">Trouver quoi regarder</string>
-    <string name="help_search_body">Films, Séries et TV en direct affichent les catégories de votre fournisseur. L’onglet Recherche parcourt les chaînes, les films et les séries.\n\nDans une catégorie, le bouton de tri range les affiches par ordre de la playlist, nom, date d’ajout, date de sortie ou note.</string>
     <string name="help_categories_title">Masquer des langues et des catégories</string>
     <string name="help_categories_body">Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Le bouton de filtre de Films, Séries et TV en direct (aussi dans Réglages, Catégories) masque d’un coup une langue ou un pays entier, dans toutes les playlists ; les catégories que le fournisseur ajoute plus tard suivent la même règle.\n\nVous pouvez aussi y masquer les catégories une par une, et les réafficher à tout moment.</string>
-    <string name="help_mylist_title">Ma liste et chaînes favorites</string>
-    <string name="help_mylist_body">Sur la fiche d’un film ou d’une série, Ma liste le garde à portée de main : il apparaît sur l’Accueil et en haut de Films et Séries.\n\nDans TV en direct, appuyez longuement sur une chaîne pour l’ajouter à vos favoris ; le filtre étoile n’affiche qu’elles.</string>
     <string name="help_playback_title">Quand un flux ne se lit pas</string>
     <string name="help_playback_body">Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.</string>
     <string name="help_privacy_title">Confidentialité</string>
@@ -155,4 +147,23 @@
     <string name="error_load_denied">Le fournisseur a refusé l’accès (HTTP %1$d). Vérifiez le nom d’utilisateur, le mot de passe et votre abonnement.</string>
     <string name="error_load_provider">Le fournisseur n’a pas envoyé de playlist. Vérifiez l’adresse et votre abonnement.</string>
     <string name="error_load_format">Ce n’est pas une playlist qu’Ondo sait lire (M3U, Xtream Codes, XSPF ou JSON).</string>
+    <string name="awards">Prix</string>
+    <string name="award_winners">Films primés</string>
+    <string name="award_winner">Lauréat, %1$s</string>
+    <string name="award_in_competition">En compétition, %1$s</string>
+    <string name="award_nominated">Nommé, %1$s</string>
+    <plurals name="and_more">
+        <item quantity="one">Et %d autre</item>
+        <item quantity="many">Et %d autres</item>
+        <item quantity="other">Et %d autres</item>
+    </plurals>
+    <string name="favorite_channels">Chaînes de Ma liste</string>
+    <string name="favorite">Dans Ma liste</string>
+    <string name="toggle_favorite_action">Ajouter à Ma liste ou l’en retirer</string>
+    <string name="no_favorite_channels">Dans TV en direct, appuyez longuement sur une chaîne pour l’ajouter à Ma liste.</string>
+    <string name="my_list_empty">Rien pour l’instant</string>
+    <string name="my_list_empty_hint">Utilisez Ma liste sur la fiche d’un film ou d’une série pour le retrouver ici.</string>
+    <string name="help_mylist_title">Ma liste</string>
+    <string name="help_mylist_body">Sur la fiche d’un film ou d’une série, Ma liste le garde à portée de main. Dans TV en direct, appuyez longuement sur une chaîne pour l’ajouter à Ma liste.\n\nL’onglet Ma liste réunit vos films, séries et chaînes ; la recherche est la loupe en haut de chaque écran.</string>
+    <string name="help_search_body">Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche, la loupe en haut de chaque écran, parcourt les chaînes, les films et les séries.\n\nDans une catégorie, le bouton de tri range les affiches par ordre de la playlist, nom, date d’ajout, date de sortie ou note. Les fiches des films montrent leurs prix et sélections en festival.</string>
 </resources>

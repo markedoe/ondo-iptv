@@ -167,7 +167,8 @@ struct SeriesDetailView: View {
                             episode: episode,
                             progress: model.progress(episode: episode, in: series),
                             compact: metrics.compact,
-                            downloadItem: model.downloadItem(for: episode, in: series)
+                            downloadItem: model.downloadItem(for: episode, in: series),
+                            playFromStart: { model.play(episode, in: series, season: season.episodes, fromStart: true) }
                         ) {
                             model.play(episode, in: series, season: season.episodes)
                         }
@@ -197,6 +198,7 @@ struct EpisodeRow: View {
     let progress: HistoryEntry?
     var compact = true
     var downloadItem: PlaybackItem?
+    var playFromStart: (() -> Void)?
     let play: () -> Void
 
     var body: some View {
@@ -232,6 +234,12 @@ struct EpisodeRow: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .contextMenu {
+                Button("Play", systemImage: "play.fill", action: play)
+                if progress?.isResumable == true, let playFromStart {
+                    Button("From Start", systemImage: "backward.end", action: playFromStart)
+                }
+            }
             if let downloadItem {
                 DownloadButton(item: downloadItem, compact: true)
                     .buttonStyle(.borderless)

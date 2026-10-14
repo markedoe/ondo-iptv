@@ -5,7 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Movie
-import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Bookmarks
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.markedoe.ondo.R
@@ -18,6 +18,7 @@ object Routes {
     @Serializable data object Series
     @Serializable data object Live
     @Serializable data object Search
+    @Serializable data object MyList
     @Serializable data class MovieDetail(val id: String)
     @Serializable data class SeriesDetail(val id: String)
 
@@ -31,11 +32,11 @@ object Routes {
     @Serializable data object AddPlaylist
 }
 
-/** The tabs: bottom bar on phones, rail on tablets and Chromebooks. */
+/** The tabs: bottom bar on phones, rail on tablets and Chromebooks. Search is the magnifying glass of each screen. */
 enum class TopLevel(val route: Any, @StringRes val label: Int, val icon: ImageVector, val tag: String) {
     HOME(Routes.Home, R.string.home, Icons.Rounded.Home, "tabHome"),
     MOVIES(Routes.Movies, R.string.movies, Icons.Rounded.Movie, "tabMovies"),
     SERIES(Routes.Series, R.string.series, Icons.Rounded.VideoLibrary, "tabSeries"),
     LIVE(Routes.Live, R.string.live_tv, Icons.Rounded.LiveTv, "tabLive"),
-    SEARCH(Routes.Search, R.string.search, Icons.Rounded.Search, "tabSearch"),
+    MY_LIST(Routes.MyList, R.string.my_list, Icons.Rounded.Bookmarks, "tabMyList"),
 }

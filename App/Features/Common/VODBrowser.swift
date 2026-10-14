@@ -97,6 +97,16 @@ struct VODBrowser: View {
                     }
                 }
             }
+            if type == .movie {
+                let winners = model.awardWinners(limit: Self.rowLength)
+                if !winners.isEmpty {
+                    Shelf(title: "Award Winners", metrics: metrics) {
+                        ForEach(winners) { movie in
+                            ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
+                        }
+                    }
+                }
+            }
             ForEach(categories.filter { !model.isLocked($0) }) { category in
                 Shelf(category: category, metrics: metrics) {
                     ForEach(items(in: category)) { item in

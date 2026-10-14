@@ -21,7 +21,11 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   see their other movies and series in the playlist (from the pages already opened, or all of them with a
   TMDb key).
 - **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
-  **filtered by release years**.
+  **filtered by release years** and **by festival or ceremony** (winners only if you like).
+- **Awards**: Palme d'Or, Oscars, Golden Lion, Golden Bear, Césars, BAFTAs, Golden Globes… on movie pages
+  (won, in competition or nominated) and an "Award Winners" row in Movies. The data comes from
+  [Wikidata](https://www.wikidata.org) (CC0), is bundled with the app and matched on the device
+  ([tools/awards](tools/awards/README.md)).
 - **Sources**: M3U / M3U8 playlists (URL or file), **Xtream Codes** accounts (API or "force M3U"), XSPF,
   JSON; several playlists, automatic refresh. (A Real-Debrid source exists in the code but is turned off in
   the App Store version: `FeatureFlags.realDebrid`.)
@@ -62,9 +66,11 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), detail pages (Resume, From Start, next
   episode, seasons, More Like This).
-- **Live TV**: categories, favorites, current and next programme; **search**.
+- **Live TV**: categories, My List, current and next programme; **search** (the magnifying glass of each screen).
+- **My List** tab: the movies, series and channels kept, as on Apple.
 - **Categories**: hidden by language or country code (`|PT|`, `FR:`…) or one by one, like on Apple.
 - **Help** in Settings.
+- **Awards** on movie pages and an "Award winners" row in Movies, from the same bundled data.
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin
   and tested with the same cases).
 - **Player** (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses, resume,

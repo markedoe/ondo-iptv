@@ -47,7 +47,7 @@ class CheckTestCase(unittest.TestCase):
 
 class RepositoryTests(unittest.TestCase):
     def test_the_repository_passes_every_check(self):
-        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality"):
+        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality", "awards"):
             code, output = run(check, REPOSITORY)
             self.assertEqual(code, 0, f"{check}: {output}")
 
@@ -243,3 +243,38 @@ class NeutralityTests(CheckTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class AwardsTests(CheckTestCase):
+    AWARDS = {"awards": [{"id": "palme-dor", "group": "cannes", "names": {"en": "Palme d'Or", "fr": "Palme d'or"}}],
+              "films": [{"titles": ["Pulp Fiction"], "year": 1994, "awards": [["palme-dor", 1994, 1]]}]}
+
+    def both(self, document: dict, android: dict | None = None):
+        self.write("App/Resources/awards.json", json.dumps(document))
+        self.write("android/app/src/main/assets/awards.json", json.dumps(android or document))
+
+    def test_accepts_the_same_well_formed_file(self):
+        self.both(self.AWARDS)
+        self.assertPasses("awards")
+
+    def test_rejects_copies_that_differ(self):
+        changed = json.loads(json.dumps(self.AWARDS))
+        changed["films"][0]["year"] = 1995
+        self.both(self.AWARDS, changed)
+        self.assertFails("awards", "copies differ")
+
+    def test_rejects_an_award_id_that_points_elsewhere(self):
+        wrong = json.loads(json.dumps(self.AWARDS))
+        wrong["films"][0]["awards"] = [["palme-dor", 1994, 0]]
+        self.both(wrong)
+        self.assertFails("awards", "Pulp Fiction should have won palme-dor in 1994")
+
+    def test_rejects_an_entry_for_an_unknown_award(self):
+        wrong = json.loads(json.dumps(self.AWARDS))
+        wrong["films"].append({"titles": ["Other"], "awards": [["golden-raspberry", 2000, 1]]})
+        self.both(wrong)
+        self.assertFails("awards", "bad award entry")
+
+    def test_rejects_a_missing_copy(self):
+        self.write("App/Resources/awards.json", json.dumps(self.AWARDS))
+        self.assertFails("awards", "missing awards data")

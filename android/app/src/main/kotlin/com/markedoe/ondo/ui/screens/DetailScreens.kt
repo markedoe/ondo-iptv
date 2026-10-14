@@ -32,8 +32,10 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilterChip
@@ -68,6 +70,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Season
+import com.markedoe.ondo.ui.AwardRow
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.Poster
 import com.markedoe.ondo.ui.components.PosterCard
@@ -86,6 +89,8 @@ data class MovieDetailUiState(
     val progress: WatchProgress? = null,
     val inMyList: Boolean = false,
     val similar: List<ShowcaseItem> = emptyList(),
+    /** Awards and festival selections, wins first. */
+    val awards: List<AwardRow> = emptyList(),
 )
 
 data class SeriesDetailUiState(
@@ -137,9 +142,43 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         },
         content = { metrics ->
             item { TextBlock(state.details?.plot ?: movie.plot, state.details, metrics) }
+            if (state.awards.isNotEmpty()) item { AwardsBlock(state.awards, metrics) }
             similarRow(state.similar, metrics, actions)
         },
     )
+}
+
+/** Awards and festival selections of a movie: the first few, then "And N more". */
+@Composable
+private fun AwardsBlock(awards: List<AwardRow>, metrics: ShelfMetrics) {
+    var all by remember { mutableStateOf(false) }
+    Column(Modifier.padding(horizontal = metrics.gutter).widthIn(max = 680.dp).animateContentSize().testTag("awards")) {
+        Text(stringResource(R.string.awards), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
+        (if (all) awards else awards.take(4)).forEach { award ->
+            Row(Modifier.padding(top = 6.dp).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Top) {
+                Icon(
+                    if (award.won) Icons.Rounded.EmojiEvents else Icons.Rounded.WorkspacePremium,
+                    contentDescription = null,
+                    tint = if (award.won) Color(0xFFE6B422) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = 8.dp).size(18.dp),
+                )
+                Column {
+                    Text(award.name, style = MaterialTheme.typography.bodyMedium)
+                    val status = when {
+                        award.won -> R.string.award_winner
+                        award.festival -> R.string.award_in_competition
+                        else -> R.string.award_nominated
+                    }
+                    Text(stringResource(status, award.year.toString()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
+        if (!all && awards.size > 4) {
+            TextButton(onClick = { all = true }, contentPadding = PaddingValues(0.dp)) {
+                Text(pluralStringResource(R.plurals.and_more, awards.size - 4, awards.size - 4))
+            }
+        }
+    }
 }
 
 @Composable

@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.epg.EpgIndex
+import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.PlaybackFactory
 import com.markedoe.ondo.core.library.PlaylistLoader
@@ -46,6 +47,8 @@ data class OndoState(
     val error: LoadError? = null,
     val movieDetails: Map<String, MediaDetails> = emptyMap(),
     val seriesDetails: Map<String, SeriesDetails> = emptyMap(),
+    /** The awards bundled with the app (read once, see `awardsSource`). */
+    val awards: AwardsCatalogue = AwardsCatalogue.EMPTY,
 ) {
     val activePlaylist: SavedPlaylist? get() = playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull()
     val activePlaylistId: String? get() = activePlaylist?.id
@@ -69,6 +72,8 @@ class OndoRepository(
     private val now: () -> Long = System::currentTimeMillis,
     /** Files and network (tests pass their own dispatcher so that no write outlives a test). */
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    /** The bundled `awards.json` (Palme d'Or, Oscars…, from Wikidata), or null without it. */
+    private val awardsSource: (() -> String?)? = null,
 ) {
     private val _state = MutableStateFlow(OndoState())
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -101,6 +106,10 @@ class OndoRepository(
             _state.update { it.copy(settings = settings, playlists = playlists, library = library, isReady = true) }
             if (pending.isNotEmpty()) persist { saveLibrary(library) }
             _state.value.activePlaylist?.let { open(it) }
+            awardsSource?.let { source ->
+                val awards = withContext(io) { runCatching { source()?.let(AwardsCatalogue::parse) }.getOrNull() }
+                if (awards != null) _state.update { it.copy(awards = awards) }
+            }
         }
     }
 

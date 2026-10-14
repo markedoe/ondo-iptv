@@ -1,0 +1,8 @@
+{"source":"test","generated":"2026-10-14","awards":[{"id":"palme-dor","group":"cannes","names":{"en":"Palme d'Or","fr":"Palme d'or"}},{"id":"oscar-best-picture","group":"oscars","names":{"en":"Academy Award for Best Picture","fr":"Oscar du meilleur film"}},{"id":"cesar-best-film","group":"cesars","names":{"en":"César Award for Best Film"}}],
+"films":[
+{"titles":["Pulp Fiction"],"year":1994,"tmdb":680,"awards":[["oscar-best-picture",1995,0],["palme-dor",1994,1]]},
+{"titles":["Anatomie d'une chute","Anatomy of a Fall"],"year":2023,"awards":[["cesar-best-film",2024,1],["palme-dor",2023,1],["oscar-best-picture",2024,0]]},
+{"titles":["Parasite","기생충"],"year":2019,"tmdb":496243,"awards":[["oscar-best-picture",2020,1],["palme-dor",2019,1]]},
+{"titles":["Parasite"],"year":1982,"awards":[["palme-dor",1982,0]]},
+{"titles":["The Third Man"],"year":1949,"awards":[["palme-dor",1949,1]]}
+]}

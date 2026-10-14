@@ -33,6 +33,19 @@ struct HeroCarousel: View {
         .overlay(alignment: .bottom) {
             if items.count > 1 { pageDots.padding(.bottom, 10) }
         }
+        #if os(macOS)
+        // A mouse cannot swipe: previous and next buttons on the sides.
+        .overlay {
+            if items.count > 1 {
+                HStack {
+                    pageButton("Previous", systemImage: "chevron.backward", step: -1)
+                    Spacer()
+                    pageButton("Next", systemImage: "chevron.forward", step: 1)
+                }
+                .padding(.horizontal, 12)
+            }
+        }
+        #endif
         .environment(\.colorScheme, .dark)
         .task(id: current) {
             guard Self.autoAdvances, !reduceMotion, items.count > 1 else { return }
@@ -46,6 +59,24 @@ struct HeroCarousel: View {
     private var height: CGFloat {
         compact ? topInset + 520 : topInset + min(max(width * 0.42, 380), 500)
     }
+
+    #if os(macOS)
+    private func pageButton(_ title: LocalizedStringKey, systemImage: String, step: Int) -> some View {
+        Button {
+            let index = items.firstIndex { $0.id == current } ?? 0
+            withAnimation(.easeInOut(duration: 0.4)) { current = items[(index + step + items.count) % items.count].id }
+        } label: {
+            Image(systemName: systemImage)
+                .font(.title2.weight(.semibold))
+                .frame(width: 36, height: 36)
+                .background(.black.opacity(0.35), in: Circle())
+                .foregroundStyle(.white)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(title))
+        .help(Text(title))
+    }
+    #endif
 
     private var pageDots: some View {
         HStack(spacing: 6) {

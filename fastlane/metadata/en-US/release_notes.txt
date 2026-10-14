@@ -8,3 +8,4 @@
 • Tap an actor or a director on a movie or series page to see their other movies and series in your playlist.
 • Search can be filtered by release years, and the grids sort by release date.
 • Hide a whole language or country in one go (category names that start with |PT|, FR:…): the categories added later follow. The filter button is on Movies, Series and Live TV.
+• Awards and festival selections (Cannes, Oscars, Berlin, Venice, Césars…) on movie pages, an Award Winners row, and a search filter by festival or ceremony.

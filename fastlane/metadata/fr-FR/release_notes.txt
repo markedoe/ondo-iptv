@@ -8,3 +8,4 @@
 • Touchez un acteur ou un réalisateur sur la fiche d’un film ou d’une série pour voir ses autres films et séries de votre playlist.
 • La recherche se filtre par années de sortie, et les grilles se trient par date de sortie.
 • Masquez d’un coup une langue ou un pays (catégories qui commencent par |PT|, FR:…) : les catégories ajoutées plus tard suivent. Le bouton de filtre est sur Films, Séries et Live TV.
+• Prix et sélections (Cannes, Oscars, Berlin, Venise, César…) sur les fiches des films, une rangée Films primés, et un filtre de recherche par festival ou cérémonie.
