@@ -79,7 +79,7 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleLocalizations: [en, fr]
+        CFBundleLocalizations: [en, fr, es, pt, zh-Hans, ar, hi]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.markedoe.ondo

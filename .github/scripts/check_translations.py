@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Every interface text of the Apple app must be translated into French.
+"""Every interface text of the Apple app must be translated into every language of the app.
 
-1. Every key of App/Resources/Localizable.xcstrings has a French translation marked "translated"
-   (plural variations included). Stale keys (no longer in the code) are ignored.
+1. Every key of App/Resources/Localizable.xcstrings has a translation marked "translated" in each language
+   of LANGUAGES (plural variations included). Stale keys (no longer in the code) are ignored.
 2. Every literal shown by a localizing SwiftUI API in App/ (Text("…"), Label("…", …), Button("…"),
    .navigationTitle("…"), String(localized: "…"), Shelf(title: "…"), …) exists in the catalogue:
-   a string added in the code but not in the catalogue appears in English in the French app.
+   a string added in the code but not in the catalogue appears in English in the other languages.
    Literals with interpolation are listed but not checked (their catalogue key uses %@ / %lld).
 
 Usage: check_translations.py [repository root]. Exit code 1 lists what is missing.
@@ -31,6 +31,10 @@ PATTERNS = [
     re.compile(r'\bShelf\(\s*title:\s*' + STRING),
 ]
 
+# The app's languages besides English (its development language): a new text is translated into all of them.
+LANGUAGES = {"fr": "French", "es": "Spanish", "pt": "Portuguese", "zh-Hans": "Chinese (Simplified)",
+             "ar": "Arabic", "hi": "Hindi"}
+
 # Shown as is in every language: names and units.
 UNTRANSLATED = {"Ondo", "VLC", "+0.5 s", "\u22120.5 s"}
 
@@ -50,9 +54,10 @@ def main() -> int:
     for key, entry in strings.items():
         if entry.get("shouldTranslate") is False or entry.get("extractionState") == "stale":
             continue
-        french = entry.get("localizations", {}).get("fr")
-        if french is None or not translated(french):
-            problems.append(f"no French translation in Localizable.xcstrings: {key!r}")
+        for code, name in LANGUAGES.items():
+            unit = entry.get("localizations", {}).get(code)
+            if unit is None or not translated(unit):
+                problems.append(f"no {name} translation in Localizable.xcstrings: {key!r}")
 
     interpolated = set()
     for path in sorted(SOURCES.rglob("*.swift")):

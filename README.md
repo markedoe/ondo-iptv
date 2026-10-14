@@ -42,7 +42,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Custom lists**, reorderable favorites, hidden categories.
 - **Offline downloads** (movies, episodes), with the reason in plain words when the provider refuses,
   limits connections or sends nothing.
-- **Data**: JSON backup / restore, clearable cache. Interface in English and French.
+- **Data**: JSON backup / restore, clearable cache.
+- **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi.
 
 ### Android (phones and tablets)
 

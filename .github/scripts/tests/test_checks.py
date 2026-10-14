@@ -52,8 +52,12 @@ class RepositoryTests(unittest.TestCase):
             self.assertEqual(code, 0, f"{check}: {output}")
 
 
+LANGUAGES = ("fr", "es", "pt", "zh-Hans", "ar", "hi")
+
+
 def french(value: str) -> dict:
-    return {"localizations": {"fr": {"stringUnit": {"state": "translated", "value": value}}}}
+    """A text translated into every language of the app (the French value stands for all of them)."""
+    return {"localizations": {code: {"stringUnit": {"state": "translated", "value": value}} for code in LANGUAGES}}
 
 
 class TranslationsTests(CheckTestCase):
@@ -79,6 +83,12 @@ class TranslationsTests(CheckTestCase):
         plural = {"one": {"stringUnit": {"state": "translated", "value": "%lld élément"}}, "other": {"stringUnit": {"state": "new", "value": ""}}}
         self.catalogue({"%lld items": {"localizations": {"fr": {"variations": {"plural": plural}}}}})
         self.assertFails("translations", "%lld items")
+
+    def test_a_key_missing_one_language_fails(self):
+        entry = french("Nouveaux films")
+        del entry["localizations"]["hi"]
+        self.catalogue({"New Movies": entry})
+        self.assertFails("translations", "no Hindi translation", "New Movies")
 
     def test_stale_keys_are_ignored(self):
         self.catalogue({"Old Row": {"extractionState": "stale", "localizations": {}}})

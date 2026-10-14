@@ -43,7 +43,9 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Listes personnalisées**, favoris réordonnables, catégories masquées.
 - **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
   limite les connexions ou n'envoie rien.
-- **Données** : sauvegarde / restauration JSON, cache vidable. Interface en français et en anglais.
+- **Données** : sauvegarde / restauration JSON, cache vidable.
+- **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
+  hindi.
 
 ### Android (téléphones et tablettes)
 

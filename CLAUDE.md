@@ -14,8 +14,13 @@ screenshots.
   "free" / "gratuit" to describe IPTV.
 - **Always bilingual, English and French**: everything written for people exists in both languages and both
   are updated together: documentation in English with a French version next to it (`README.fr.md`,
-  `docs/*.fr.md`), app strings (`Localizable.xcstrings`, Android `values-fr`), store listings (`en-US` and
-  `fr-FR`), the website, release notes. Code, comments and commit messages stay in English.
+  `docs/*.fr.md`), store listings (`en-US` and `fr-FR`), the website, release notes. Code, comments and
+  commit messages stay in English.
+- **The apps speak seven languages**: English, French, Spanish, Portuguese (Brazilian wording), Chinese
+  (Simplified), Arabic (right to left) and Hindi. Every text of a new feature is translated into all of them
+  in the same change: Apple `App/Resources/Localizable.xcstrings` (`fr`, `es`, `pt`, `zh-Hans`, `ar`, `hi`)
+  and Android `res/values-{fr,es,pt,zh-rCN,ar,hi}/strings.xml`. `check_translations.py` (CI) fails on a
+  missing Apple translation and Android lint on a missing Android one.
 - **Guard**: `.claude/hooks/leak_guard.py` is wired as a `PreToolUse` hook (`.claude/settings.json`): it
   blocks writing secrets or personal data into the repository and checks the changes before `git commit` /
   `git push`. CI runs it again on the whole history with gitleaks. For a false positive, add a regex to
