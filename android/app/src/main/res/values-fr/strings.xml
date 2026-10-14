@@ -35,6 +35,10 @@
     <string name="all_series">Toutes les séries</string>
     <string name="channels">Chaînes</string>
     <string name="filter">Filtrer</string>
+    <string name="sort">Trier</string>
+    <string name="sort_playlist_order">Ordre de la playlist</string>
+    <string name="sort_release_date">Date de sortie</string>
+    <string name="sort_rating">Note</string>
     <string name="back">Retour</string>
     <string name="close">Fermer</string>
     <string name="cancel">Annuler</string>

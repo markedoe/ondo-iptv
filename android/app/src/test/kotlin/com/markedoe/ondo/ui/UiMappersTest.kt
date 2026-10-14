@@ -1,10 +1,12 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import java.util.Locale
@@ -149,5 +151,24 @@ class UiMappersTest {
         val home = UiMappers.home(Fixtures.state(library), labels, Fixtures.NOW)
         assertEquals(listOf(ShowcaseItem.SeriesItem(Fixtures.theArchive)), home.myList)
         assertTrue(home.hero.first { it.item == ShowcaseItem.SeriesItem(Fixtures.theArchive) }.inMyList)
+    }
+
+    @Test
+    fun releaseDateSortPutsTheNewestFirstAndUndatedLast() {
+        fun movie(name: String, year: Int?, addedAt: Long) =
+            ShowcaseItem.MovieItem(Movie(id = name, name = name, categoryId = "c", streamUrl = "http://example.com/$name.mp4", year = year, addedAt = addedAt))
+        val items = listOf(
+            movie("Quiet Water", 2019, 100),
+            movie("Harbor Lights", null, 500),
+            movie("Glass City", 2024, 100),
+            movie("Northern Lights", 2024, 200),
+            movie("Bright Field", 2024, 100),
+        )
+        assertEquals(
+            listOf("Northern Lights", "Bright Field", "Glass City", "Quiet Water", "Harbor Lights"),
+            UiMappers.sorted(items, PosterSort.RELEASE).map { it.title },
+        )
+        assertEquals("playlist order is kept", items, UiMappers.sorted(items, PosterSort.PLAYLIST))
+        assertEquals("Bright Field", UiMappers.sorted(items, PosterSort.NAME).first().title)
     }
 }

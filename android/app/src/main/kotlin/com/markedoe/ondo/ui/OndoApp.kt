@@ -308,7 +308,10 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
         route.series -> stringResource(R.string.all_series)
         else -> stringResource(R.string.all_movies)
     }
-    val items = remember(state, route, filter) { UiMappers.grid(state, route.series, route.categoryId, route.myList, filter, route.anyType) }
+    val sort = state.settings.posterSort
+    val items = remember(state, route, filter) {
+        UiMappers.grid(state, route.series, route.categoryId, route.myList, filter, route.anyType, sort)
+    }
     PosterGridScreen(
         title = title,
         items = items,
@@ -316,6 +319,8 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
         onFilter = { filter = it },
         onOpen = navController::open,
         onBack = { navController.popBackStack() },
+        sort = sort,
+        onSort = viewModel::setPosterSort,
     )
 }
 

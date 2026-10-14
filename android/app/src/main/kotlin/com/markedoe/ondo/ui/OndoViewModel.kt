@@ -7,6 +7,7 @@ import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.player.PlayRequest
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -204,6 +205,7 @@ class OndoViewModel(
     fun delete(id: String) = repository.delete(id)
     fun setAppearance(appearance: Appearance) = repository.setAppearance(appearance)
     fun setShowAdultCategories(show: Boolean) = repository.setShowAdultCategories(show)
+    fun setPosterSort(sort: PosterSort) = repository.setPosterSort(sort)
     fun clearError() = repository.clearError()
 
     companion object {

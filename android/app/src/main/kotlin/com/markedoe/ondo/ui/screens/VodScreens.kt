@@ -16,9 +16,13 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -35,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.MediaCategory
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.components.ContinueCard
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
@@ -132,7 +141,7 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
     }
 }
 
-/** Poster grid of a category (or of everything), with a filter. */
+/** Poster grid of a category (or of everything), with a filter and a sort menu. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PosterGridScreen(
@@ -142,7 +151,10 @@ fun PosterGridScreen(
     onFilter: (String) -> Unit,
     onOpen: (ShowcaseItem) -> Unit,
     onBack: () -> Unit,
+    sort: PosterSort = PosterSort.PLAYLIST,
+    onSort: (PosterSort) -> Unit = {},
 ) {
+    var sorting by remember { mutableStateOf(false) }
     val metrics = rememberShelfMetrics()
     LazyVerticalGrid(
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
@@ -156,6 +168,23 @@ fun PosterGridScreen(
                 title = { Text(title, maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                },
+                actions = {
+                    IconButton(onClick = { sorting = true }, modifier = Modifier.testTag("sort")) {
+                        Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = stringResource(R.string.sort))
+                    }
+                    DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }) {
+                        PosterSort.entries.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(option.label)) },
+                                leadingIcon = { if (option == sort) Icon(Icons.Rounded.Check, contentDescription = null) },
+                                onClick = {
+                                    sorting = false
+                                    onSort(option)
+                                },
+                            )
+                        }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 windowInsets = WindowInsets(0),
@@ -179,3 +208,12 @@ fun PosterGridScreen(
         }
     }
 }
+
+private val PosterSort.label: Int
+    get() = when (this) {
+        PosterSort.PLAYLIST -> R.string.sort_playlist_order
+        PosterSort.NAME -> R.string.name
+        PosterSort.RECENT -> R.string.recently_added
+        PosterSort.RELEASE -> R.string.sort_release_date
+        PosterSort.RATING -> R.string.sort_rating
+    }

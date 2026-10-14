@@ -18,10 +18,15 @@ data class SavedPlaylist(
     val isXtream: Boolean get() = username != null && password != null
 }
 
+/** Order of the movie and series grids. */
+@Serializable
+enum class PosterSort { PLAYLIST, NAME, RECENT, RELEASE, RATING }
+
 @Serializable
 data class AppSettings(
     val appearance: Appearance = Appearance.DARK,
     val activePlaylistId: String? = null,
     /** Categories that look adult (see `AdultContentDetector`) are hidden unless this is on. */
     val showAdultCategories: Boolean = false,
+    val posterSort: PosterSort = PosterSort.PLAYLIST,
 )

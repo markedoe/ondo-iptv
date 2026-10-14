@@ -7,6 +7,7 @@ import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Showcase
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.components.HeroPage
@@ -125,8 +126,16 @@ object UiMappers {
         )
     }
 
-    /** Items of a poster grid, filtered by [filter] (accent and case insensitive). */
-    fun grid(state: OndoState, series: Boolean, categoryId: String?, myList: Boolean, filter: String, anyType: Boolean = false): List<ShowcaseItem> {
+    /** Items of a poster grid, filtered by [filter] (accent and case insensitive), in the order [sort]. */
+    fun grid(
+        state: OndoState,
+        series: Boolean,
+        categoryId: String?,
+        myList: Boolean,
+        filter: String,
+        anyType: Boolean = false,
+        sort: PosterSort = PosterSort.PLAYLIST,
+    ): List<ShowcaseItem> {
         val hidden = hiddenCategoryIds(state)
         val items: List<ShowcaseItem> = when {
             myList -> showcase(state).myList().filter { anyType || (it is ShowcaseItem.SeriesItem) == series }
@@ -134,8 +143,29 @@ object UiMappers {
             else -> state.content.movies.filter { it.categoryId !in hidden && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.MovieItem(it) }
         }
         val query = TextNormalizer.normalize(filter)
-        return if (query.isEmpty()) items else items.filter { TextNormalizer.normalize(it.title).contains(query) }
+        return sorted(if (query.isEmpty()) items else items.filter { TextNormalizer.normalize(it.title).contains(query) }, sort)
     }
+
+    /**
+     * Grid order. Release date: newest year first, titles without a year last, the latest addition first within a
+     * year, then by name.
+     */
+    fun sorted(items: List<ShowcaseItem>, sort: PosterSort): List<ShowcaseItem> {
+        val byName = Comparator<ShowcaseItem> { a, b -> collator.compare(a.title, b.title) }
+        return when (sort) {
+            PosterSort.PLAYLIST -> items
+            PosterSort.NAME -> items.sortedWith(byName)
+            PosterSort.RECENT -> items.sortedByDescending { it.addedAt ?: Long.MIN_VALUE }
+            PosterSort.RELEASE -> items.sortedWith(
+                compareByDescending<ShowcaseItem> { it.year ?: Int.MIN_VALUE }
+                    .thenByDescending { it.addedAt ?: Long.MIN_VALUE }
+                    .then(byName),
+            )
+            PosterSort.RATING -> items.sortedByDescending { it.rating ?: 0.0 }
+        }
+    }
+
+    private val collator: java.text.Collator get() = java.text.Collator.getInstance().apply { strength = java.text.Collator.PRIMARY }
 
     fun categoryName(state: OndoState, series: Boolean, categoryId: String?): String? =
         (if (series) state.content.seriesCategories else state.content.movieCategories).firstOrNull { it.id == categoryId }?.name

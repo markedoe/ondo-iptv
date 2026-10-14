@@ -166,6 +166,8 @@ class OndoRepository(
 
     fun setShowAdultCategories(show: Boolean) = updateSettings { it.copy(showAdultCategories = show) }
 
+    fun setPosterSort(sort: PosterSort) = updateSettings { it.copy(posterSort = sort) }
+
     fun clearError() = _state.update { it.copy(error = null) }
 
     private fun updateSettings(change: (AppSettings) -> AppSettings) {
