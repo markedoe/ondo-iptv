@@ -27,7 +27,7 @@ final class AppStoreScreenshots: XCTestCase {
         add(attachment)
     }
 
-    /// Tab (iPhone: Home, Movies, Series, Live TV, Search) or sidebar row (iPad: Home, Movies, Series,
+    /// Tab (iPhone: Home, Movies, Series, Live TV, My List) or sidebar row (iPad: Home, Movies, Series,
     /// Live TV, TV Guide, …) by index.
     private func open(section index: Int, sidebarIndex: Int) {
         if isPad {

@@ -105,6 +105,7 @@ struct MovieDetailView: View {
                 }
                 HStack(alignment: .top, spacing: 14) {
                     MyListAction(item: .movie(movie))
+                    CollectionAction(item: .movie(movie))
                     if resumable {
                         Button {
                             model.play(movie, fromStart: true)
@@ -155,17 +156,19 @@ struct MovieDetailView: View {
     }
 }
 
-/// Credits: the label in a narrow column, the value right next to it (not pushed to the far edge).
+/// Credits: the label in a narrow column, the value right next to it (not pushed to the far edge). Each name of
+/// the director and cast is a link to the movies and series of the playlist with that person.
 struct InfoLines: View {
+    @Environment(NavigationRouter.self) private var router: NavigationRouter?
     let details: MediaDetails?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let director = details?.director {
-                line("Director", director)
+                people("Director", director)
             }
             if let cast = details?.cast {
-                line("Cast", cast)
+                people("Cast", cast)
             }
             if let original = details?.originalTitle, original != details?.title {
                 line("Original title", original)
@@ -175,6 +178,41 @@ struct InfoLines: View {
             }
         }
         .font(.callout)
+    }
+
+    /// Names as links (`ondo-person://<index>`), opened in this navigation stack.
+    @ViewBuilder
+    private func people(_ label: LocalizedStringKey, _ field: String) -> some View {
+        let names = People.names(in: field)
+        if names.isEmpty || router == nil {
+            line(label, field)
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(label)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 104, alignment: .leading)
+                Text(Self.links(names))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .environment(\.openURL, OpenURLAction { url in
+                        guard url.scheme == "ondo-person", let index = Int(url.host() ?? ""), names.indices.contains(index) else {
+                            return .systemAction
+                        }
+                        router?.push(PersonRoute(name: names[index]))
+                        return .handled
+                    })
+            }
+        }
+    }
+
+    private static func links(_ names: [String]) -> AttributedString {
+        var text = AttributedString()
+        for (index, name) in names.enumerated() {
+            if index > 0 { text += AttributedString(", ") }
+            var part = AttributedString(name)
+            part.link = URL(string: "ondo-person://\(index)")
+            text += part
+        }
+        return text
     }
 
     private func line(_ label: LocalizedStringKey, _ value: String) -> some View {

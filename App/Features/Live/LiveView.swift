@@ -97,9 +97,9 @@ struct ChannelListView: View {
                         Button {
                             model.toggleFavorite(channel)
                         } label: {
-                            Label("Favorite", systemImage: model.isFavorite(.live, id: channel.id) ? "star.slash" : "star")
+                            MyListLabel(inList: model.isFavorite(.live, id: channel.id))
                         }
-                        .tint(.yellow)
+                        .tint(.accentColor)
                         Button {
                             router?.push(channel)
                         } label: {
@@ -115,7 +115,7 @@ struct ChannelListView: View {
         .overlay {
             if list.isEmpty {
                 if category.id == PseudoCategory.favorites {
-                    ContentUnavailableView("No favorite channels", systemImage: "star", description: Text("Long-press a channel to add it to your favorites."))
+                    ContentUnavailableView("No channels in My List", systemImage: "list.star", description: Text("Long-press a channel and choose “Add to My List”."))
                 } else if !filter.isEmpty {
                     ContentUnavailableView.search(text: filter)
                 } else {
@@ -145,11 +145,7 @@ struct ChannelContextMenu: View {
         Button {
             model.toggleFavorite(channel)
         } label: {
-            if model.isFavorite(.live, id: channel.id) {
-                Label("Remove from Favorites", systemImage: "star.slash")
-            } else {
-                Label("Add to Favorites", systemImage: "star")
-            }
+            MyListLabel(inList: model.isFavorite(.live, id: channel.id))
         }
         AddToListMenu(item: .channel(channel))
         Button(action: showGuide) {

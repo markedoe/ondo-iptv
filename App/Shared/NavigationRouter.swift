@@ -33,7 +33,7 @@ struct CustomListRoute: Hashable {
     let id: UUID
 }
 
-/// Value pushed to open the favourites on one kind of content (My List → See All).
+/// Value pushed to open My List on one kind of content (My List → See All), or on its collections (nil).
 struct FavoritesRoute: Hashable {
-    let type: ContentType
+    let type: ContentType?
 }

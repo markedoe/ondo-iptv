@@ -1,13 +1,16 @@
 import SwiftUI
 import IPTVCore
 
+/// My List: the movies, series and channels the viewer keeps, and their collections.
 struct FavoritesView: View {
     @Environment(AppModel.self) private var model
     @State private var type: ContentType
     @State private var showingLists = false
 
-    init(initialType: ContentType = .live) {
-        _type = State(initialValue: initialType)
+    /// `nil` opens the collections.
+    init(initialType: ContentType? = .movie) {
+        _type = State(initialValue: initialType ?? .movie)
+        _showingLists = State(initialValue: initialType == nil)
     }
 
     var body: some View {
@@ -25,23 +28,17 @@ struct FavoritesView: View {
                     if let value { type = value; showingLists = false } else { showingLists = true }
                 }
             )) {
-                Text("Channels").tag(ContentType?.some(.live))
                 Text("Movies").tag(ContentType?.some(.movie))
                 Text("Series").tag(ContentType?.some(.series))
-                Text("Lists").tag(ContentType?.none)
+                Text("Channels").tag(ContentType?.some(.live))
+                Text("Collections").tag(ContentType?.none)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.vertical, 8)
             .background(.bar)
         }
-        .navigationTitle(title)
-    }
-
-    /// Movies and series are "My List" everywhere else in the app.
-    private var title: Text {
-        if showingLists { return Text("Lists") }
-        return type == .live ? Text("Favorites") : Text("My List")
+        .navigationTitle("My List")
     }
 
     private var favoritesList: some View {
@@ -61,7 +58,7 @@ struct FavoritesView: View {
         }
         .overlay {
             if entries.isEmpty {
-                ContentUnavailableView("No favorites", systemImage: "star", description: Text("Add channels, movies and series to your favorites to find them here."))
+                ContentUnavailableView("My List is empty", systemImage: "list.star", description: Text("Use “Add to My List” on a movie, a series or a channel to find it here."))
             }
         }
         #if os(iOS)

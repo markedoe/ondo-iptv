@@ -1,7 +1,7 @@
 import SwiftUI
 import IPTVCore
 
-/// Anything that can be put in favourites or in a custom list.
+/// Anything that can be put in My List or in a collection.
 enum LibraryItem {
     case channel(Channel)
     case movie(Movie)
@@ -50,13 +50,26 @@ extension AppModel {
     }
 }
 
-/// "Add to list" submenu used in context menus.
+/// "Add to Collection" submenu used in context menus.
 struct AddToListMenu: View {
-    @Environment(AppModel.self) private var model
     let item: LibraryItem
 
     var body: some View {
         Menu {
+            CollectionMenuItems(item: item)
+        } label: {
+            Label("Add to Collection", systemImage: "rectangle.stack.badge.plus")
+        }
+    }
+}
+
+/// The viewer's collections (checked when the item is in one) and a new one with the item.
+struct CollectionMenuItems: View {
+    @Environment(AppModel.self) private var model
+    let item: LibraryItem
+
+    var body: some View {
+        Group {
             ForEach(model.library.customLists) { list in
                 Button {
                     model.toggle(item, inList: list.id)
@@ -70,18 +83,16 @@ struct AddToListMenu: View {
             }
             if !model.library.customLists.isEmpty { Divider() }
             Button {
-                let id = model.createList(named: String(localized: "My List \(model.library.customLists.count + 1)"))
+                let id = model.createList(named: String(localized: "Collection \(model.library.customLists.count + 1)"))
                 model.toggle(item, inList: id)
             } label: {
-                Label("New List with This Item", systemImage: "plus")
+                Label("New Collection with This Item", systemImage: "plus")
             }
-        } label: {
-            Label("Add to List", systemImage: "text.badge.plus")
         }
     }
 }
 
-/// Custom lists of the user (list manager).
+/// The viewer's collections (custom lists of channels, movies and series).
 struct CustomListsView: View {
     @Environment(AppModel.self) private var model
     @State private var showingNewList = false
@@ -94,7 +105,7 @@ struct CustomListsView: View {
                     LabeledContent {
                         Text("\(model.items(in: list).count)")
                     } label: {
-                        Label(list.name, systemImage: "list.star")
+                        Label(list.name, systemImage: "rectangle.stack")
                     }
                 }
             }
@@ -106,11 +117,11 @@ struct CustomListsView: View {
         .overlay {
             if model.library.customLists.isEmpty {
                 ContentUnavailableView {
-                    Label("No lists", systemImage: "list.star")
+                    Label("No collections", systemImage: "rectangle.stack")
                 } description: {
-                    Text("Group channels, movies and series your way. Use “Add to List” in their menus.")
+                    Text("Group movies, series and channels your way. Use “Add to Collection” on their page or in their menu.")
                 } actions: {
-                    Button("New List") { showingNewList = true }
+                    Button("New Collection") { showingNewList = true }
                 }
             }
         }
@@ -119,11 +130,11 @@ struct CustomListsView: View {
                 Button {
                     showingNewList = true
                 } label: {
-                    Label("New List", systemImage: "plus")
+                    Label("New Collection", systemImage: "plus")
                 }
             }
         }
-        .alert("New List", isPresented: $showingNewList) {
+        .alert("New Collection", isPresented: $showingNewList) {
             TextField("Name", text: $newListName)
             Button("Create") {
                 let name = newListName.trimmingCharacters(in: .whitespaces)
@@ -162,7 +173,7 @@ struct CustomListDetailView: View {
         }
         .overlay {
             if entries.isEmpty {
-                ContentUnavailableView("Empty list", systemImage: "list.star", description: Text("Use “Add to List” on a channel, movie or series."))
+                ContentUnavailableView("Empty collection", systemImage: "rectangle.stack", description: Text("Use “Add to Collection” on a movie, a series or a channel."))
             }
         }
         .navigationTitle(list?.name ?? "")
@@ -179,7 +190,7 @@ struct CustomListDetailView: View {
             ToolbarItem(placement: .primaryAction) { EditButton() }
             #endif
         }
-        .alert("Rename List", isPresented: $showingRename) {
+        .alert("Rename Collection", isPresented: $showingRename) {
             TextField("Name", text: $name)
             Button("Save") {
                 let trimmed = name.trimmingCharacters(in: .whitespaces)

@@ -3,10 +3,11 @@ Ondo est uniquement un lecteur : il n’héberge, ne fournit ni ne vend aucun co
 Ondo est un lecteur IPTV élégant pour iPhone, iPad et Mac. Ajoutez la playlist M3U ou l’identifiant Xtream Codes donné par votre fournisseur : ses films, ses séries et ses chaînes se retrouvent dans une bibliothèque claire, rapide et sans publicité.
 
 FILMS ET SÉRIES
-• Bibliothèque à affiches, catégories, tri et recherche instantanée
+• Bibliothèque à affiches, catégories, tri (date de sortie, note, nom…) et recherche instantanée filtrable par années de sortie
 • Fiches détaillées : synopsis, distribution, note, bande-annonce, saisons et épisodes
+• Touchez un acteur ou un réalisateur pour voir ses autres films et séries de votre playlist
 • Continuer à regarder : la lecture reprend exactement là où vous vous êtes arrêté, et l’épisode suivant démarre automatiquement
-• Ma liste, favoris et listes personnalisées
+• Ma liste réunit vos films, séries et chaînes au même endroit, et les collections les regroupent à votre façon
 • Téléchargement des films et épisodes pour les regarder hors ligne ; quand un téléchargement bloque, Ondo vous dit pourquoi en clair (refus du fournisseur, limite de connexions, rien reçu)
 
 UN LECTEUR QUI FONCTIONNE, TOUT SIMPLEMENT
@@ -24,11 +25,11 @@ SUR MAC
 
 TV EN DIRECT
 • Chaînes, guide TV et replay quand votre fournisseur le propose : reprendre le programme en cours depuis le début, revoir un programme passé, mettre le direct en pause
-• Favoris et rappels de programmes
+• Chaînes de Ma liste et rappels de programmes
 • Multivue jusqu’à 4 chaînes sur iPad et Mac
 
 POUR TOUTE LA FAMILLE
-• Profils avec leurs propres favoris et historique, code PIN facultatif et profils enfant
+• Profils avec leur propre Ma liste et leur historique, code PIN facultatif et profils enfant
 • Contrôle parental : catégories adultes verrouillées par code PIN
 
 SOURCES

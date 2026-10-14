@@ -222,7 +222,11 @@ final class OndoUITests: XCTestCase {
         sleep(1)
         snapshot("10-series-detail")
 
-        app.tabBars.buttons["Search"].tap()
+        // Search is the magnifying glass at the top of each tab's first screen.
+        app.tabBars.buttons["Home"].tap()
+        let searchButton = app.buttons["searchButton"]
+        XCTAssertTrue(searchButton.waitForExistence(timeout: 5), "search button")
+        searchButton.tap()
         let field = app.searchFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 10), "search field")
         field.tap()
@@ -234,7 +238,9 @@ final class OndoUITests: XCTestCase {
         if cancel.exists { cancel.tap() } else { field.typeText("\n") }
         sleep(1)
 
+        // A second tap on the current tab goes back to its first screen; the back button if it does not.
         app.tabBars.buttons["Home"].tap()
+        if !searchButton.waitForExistence(timeout: 3) { app.navigationBars.buttons.firstMatch.tap() }
         sleep(1)
         snapshot("12-home-after-watching")
         let settings = app.buttons["Settings"].firstMatch

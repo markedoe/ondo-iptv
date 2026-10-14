@@ -220,6 +220,22 @@ struct MyListAction: View {
     }
 }
 
+/// "Collection" menu for a movie or series: put it in one of the viewer's collections, or in a new one.
+struct CollectionAction: View {
+    let item: LibraryItem
+
+    var body: some View {
+        Menu {
+            CollectionMenuItems(item: item)
+        } label: {
+            CircleAction("Collection", systemImage: "rectangle.stack.badge.plus")
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+    }
+}
+
 /// Download control in the round style; nothing when the stream cannot be downloaded.
 struct DownloadAction: View {
     let item: PlaybackItem?

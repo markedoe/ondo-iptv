@@ -158,7 +158,7 @@ struct HomeView: View {
         let favorites = model.favoriteChannels()
         let recent = model.recentChannels()
         if !favorites.isEmpty {
-            channelShelf(title: "Favorite Channels", channels: favorites, metrics: metrics)
+            channelShelf(title: "Channels in My List", channels: favorites, metrics: metrics)
         }
         if !recent.isEmpty && (emphasised || favorites.isEmpty) {
             channelShelf(title: "Recently Watched", channels: recent, metrics: metrics)
@@ -166,7 +166,7 @@ struct HomeView: View {
         if emphasised && favorites.isEmpty && recent.isEmpty && !model.content.channels.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Your channels").font(.title3.bold())
-                Text("Long-press a channel to add it to your favorites; it will appear here.")
+                Text("Long-press a channel and choose “Add to My List”; it will appear here.")
                     .foregroundStyle(.secondary)
                 HStack(spacing: 12) {
                     NavigationLink(value: AppSection.live) {
@@ -196,11 +196,11 @@ struct HomeView: View {
     private func customLists(metrics: ShelfMetrics) -> some View {
         let lists = model.library.customLists.filter { !$0.items.isEmpty }
         if !lists.isEmpty {
-            Shelf(title: "Lists", seeAll: .favorites, metrics: metrics) {
+            Shelf(title: "Collections", route: .favorites(FavoritesRoute(type: nil)), metrics: metrics) {
                 ForEach(lists) { list in
                     NavigationLink(value: CustomListRoute(id: list.id)) {
                         VStack(alignment: .leading, spacing: 4) {
-                            Image(systemName: "list.bullet.rectangle.portrait")
+                            Image(systemName: "rectangle.stack")
                                 .font(.title2)
                                 .foregroundStyle(Color.accentColor)
                             Spacer(minLength: 8)
@@ -236,11 +236,9 @@ struct HomeView: View {
         }
     }
 
-    /// iPhone has no sidebar: favorites, lists and downloads stay one tap away.
+    /// iPhone has no sidebar: downloads stay one tap away (My List has its own tab).
     private var libraryLinks: some View {
         VStack(spacing: 0) {
-            libraryLink(.favorites, title: "Favorites & Lists")
-            Divider().padding(.leading, 44)
             libraryLink(.downloads, title: "Downloads")
         }
         .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))

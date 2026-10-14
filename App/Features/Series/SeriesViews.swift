@@ -89,6 +89,7 @@ struct SeriesDetailView: View {
                 }
                 HStack(alignment: .top, spacing: 14) {
                     MyListAction(item: .series(series))
+                    CollectionAction(item: .series(series))
                     TrailerAction(youTubeID: details?.info.trailerYouTubeID)
                 }
             }

@@ -241,7 +241,7 @@ struct SettingsView: View {
             } header: {
                 Text("Data")
             } footer: {
-                Text("Backups contain your playlists (including logins), favorites and history. Keep them private.")
+                Text("Backups contain your playlists (including logins), My List, collections and history. Keep them private.")
             }
 
             Section("About") {
@@ -421,7 +421,7 @@ struct PlaylistsSettingsView: View {
                 Task { await model.deletePlaylist(playlist) }
             }
         } message: { _ in
-            Text("Its favorites and history will be removed too.")
+            Text("Its My List, collections and history will be removed too.")
         }
     }
 }
@@ -556,7 +556,7 @@ struct ParentalControlView: View {
                     set: { value in model.updateSettings { $0.lockAdultCategoriesAutomatically = value } }
                 ))
             } footer: {
-                Text("Locked categories are hidden from home, search and favorites, and ask for the PIN when opened.")
+                Text("Locked categories are hidden from home, search and My List, and ask for the PIN when opened.")
             }
 
             if model.settings.parentalControlEnabled && model.hasParentalPIN {

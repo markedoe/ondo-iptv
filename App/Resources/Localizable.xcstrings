@@ -1007,46 +1007,6 @@
         }
       }
     },
-    "Add channels, movies and series to your favorites to find them here.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajoutez des chaînes, films et séries à vos favoris pour les retrouver ici."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añade canales, películas y series a tus favoritos para encontrarlos aquí."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adicione canais, filmes e séries aos favoritos para encontrá-los aqui."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "将频道、电影和剧集添加到收藏，即可在这里找到它们。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "أضف القنوات والأفلام والمسلسلات إلى المفضلة لتجدها هنا."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "चैनल, फ़िल्में और सीरीज़ पसंदीदा में जोड़ें, ताकि वे यहाँ मिलें।"
-          }
-        }
-      }
-    },
     "Add the playlists given by your provider.": {
       "localizations": {
         "fr": {
@@ -1087,82 +1047,42 @@
         }
       }
     },
-    "Add to Favorites": {
+    "Add to Collection": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter aux favoris"
+            "value": "Ajouter à une collection"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir a favoritos"
+            "value": "Añadir a una colección"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Adicionar aos favoritos"
+            "value": "Adicionar a uma coleção"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "添加到收藏"
+            "value": "添加到合集"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "إضافة إلى المفضلة"
+            "value": "إضافة إلى مجموعة"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "पसंदीदा में जोड़ें"
-          }
-        }
-      }
-    },
-    "Add to List": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajouter à une liste"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Añadir a una lista"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adicionar à lista"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加到清单"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "إضافة إلى قائمة"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "सूची में जोड़ें"
+            "value": "संग्रह में जोड़ें"
           }
         }
       }
@@ -1643,6 +1563,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "गाइड के सभी चैनल (%lld)"
+          }
+        }
+      }
+    },
+    "Any Year": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les années"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cualquier año"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qualquer ano"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任何年份"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أي سنة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई भी वर्ष"
           }
         }
       }
@@ -2207,42 +2167,42 @@
         }
       }
     },
-    "Backups contain your playlists (including logins), favorites and history. Keep them private.": {
+    "Backups contain your playlists (including logins), My List, collections and history. Keep them private.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les sauvegardes contiennent vos playlists (identifiants compris), favoris et historique. Gardez-les privées."
+            "value": "Les sauvegardes contiennent vos playlists (identifiants compris), Ma liste, vos collections et votre historique. Gardez-les privées."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las copias de seguridad contienen tus playlists (con los datos de acceso), favoritos e historial. Guárdalas en privado."
+            "value": "Las copias de seguridad contienen tus playlists (con los datos de acceso), Mi lista, tus colecciones y tu historial. Guárdalas en privado."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os backups contêm suas playlists (incluindo logins), favoritos e histórico. Mantenha-os privados."
+            "value": "Os backups contêm suas playlists (incluindo logins), a Minha lista, suas coleções e seu histórico. Mantenha-os privados."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "备份包含你的播放列表（含登录信息）、收藏和历史记录。请妥善保管，切勿公开。"
+            "value": "备份包含你的播放列表（含登录信息）、我的片单、合集和历史记录。请妥善保管，切勿公开。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تحتوي النسخ الاحتياطية على قوائم التشغيل (بما فيها بيانات تسجيل الدخول) والمفضلة والسجل. لا تشاركها مع أحد."
+            "value": "تحتوي النسخ الاحتياطية على قوائم التشغيل (بما فيها بيانات تسجيل الدخول) وقائمتي والمجموعات والسجل. لا تشاركها مع أحد."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "बैकअप में आपकी प्लेलिस्ट (लॉगिन सहित), पसंदीदा और इतिहास होते हैं। इन्हें निजी रखें।"
+            "value": "बैकअप में आपकी प्लेलिस्ट (लॉगिन सहित), मेरी सूची, संग्रह और इतिहास होते हैं। इन्हें निजी रखें।"
           }
         }
       }
@@ -2607,6 +2567,46 @@
         }
       }
     },
+    "Channels in My List": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaînes de Ma liste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canales de Mi lista"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Canais da Minha lista"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的片单中的频道"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القنوات في قائمتي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरी सूची के चैनल"
+          }
+        }
+      }
+    },
     "Channels, TV guide and replay when your provider offers it.": {
       "localizations": {
         "fr": {
@@ -2643,46 +2643,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "चैनल, टीवी गाइड और रीप्ले, जब आपका प्रोवाइडर यह सुविधा दे।"
-          }
-        }
-      }
-    },
-    "Channels, movies, series": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chaînes, films, séries"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Canales, películas, series"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Canais, filmes, séries"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "频道、电影、剧集"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "القنوات والأفلام والمسلسلات"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "चैनल, फ़िल्में, सीरीज़"
           }
         }
       }
@@ -2803,6 +2763,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "कैश साफ़ करें"
+          }
+        }
+      }
+    },
+    "Clear Filters": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer les filtres"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borrar filtros"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limpar filtros"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除筛选"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مسح عوامل التصفية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िल्टर हटाएँ"
           }
         }
       }
@@ -2963,6 +2963,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "बंद करें"
+          }
+        }
+      }
+    },
+    "Collection": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collection"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colección"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coleção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合集"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مجموعة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संग्रह"
+          }
+        }
+      }
+    },
+    "Collection %lld": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collection %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colección %lld"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coleção %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合集 %lld"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مجموعة %lld"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संग्रह %lld"
+          }
+        }
+      }
+    },
+    "Collections": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collections"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Colecciones"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coleções"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合集"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المجموعات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संग्रह"
           }
         }
       }
@@ -4247,42 +4367,42 @@
         }
       }
     },
-    "Empty list": {
+    "Empty collection": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Liste vide"
+            "value": "Collection vide"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lista vacía"
+            "value": "Colección vacía"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lista vazia"
+            "value": "Coleção vazia"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清单为空"
+            "value": "空合集"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "قائمة فارغة"
+            "value": "مجموعة فارغة"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "खाली सूची"
+            "value": "खाली संग्रह"
           }
         }
       }
@@ -4887,166 +5007,6 @@
         }
       }
     },
-    "Favorite": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favori"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favorito"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favorito"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收藏"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تفضيل"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "पसंदीदा"
-          }
-        }
-      }
-    },
-    "Favorite Channels": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chaînes favorites"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Canales favoritos"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Canais favoritos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收藏的频道"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "القنوات المفضلة"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "पसंदीदा चैनल"
-          }
-        }
-      }
-    },
-    "Favorites": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favoris"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favoritos"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favoritos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收藏"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "المفضلة"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "पसंदीदा"
-          }
-        }
-      }
-    },
-    "Favorites & Lists": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favoris et listes"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favoritos y listas"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Favoritos e listas"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "收藏与清单"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "المفضلة والقوائم"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "पसंदीदा और सूचियाँ"
-          }
-        }
-      }
-    },
     "File": {
       "localizations": {
         "fr": {
@@ -5327,46 +5287,6 @@
         }
       }
     },
-    "Find channels, movies and series in the current playlist.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trouvez chaînes, films et séries dans la playlist actuelle."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Encuentra canales, películas y series en la playlist actual."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Encontre canais, filmes e séries na playlist atual."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在当前播放列表中查找频道、电影和剧集。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ابحث عن القنوات والأفلام والمسلسلات في قائمة التشغيل الحالية."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "मौजूदा प्लेलिस्ट में चैनल, फ़िल्में और सीरीज़ खोजें।"
-          }
-        }
-      }
-    },
     "Fit": {
       "localizations": {
         "fr": {
@@ -5567,6 +5487,46 @@
         }
       }
     },
+    "From": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desde"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "من"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "से"
+          }
+        }
+      }
+    },
     "From Start": {
       "localizations": {
         "fr": {
@@ -5687,82 +5647,42 @@
         }
       }
     },
-    "Get started": {
+    "Group movies, series and channels your way. Use “Add to Collection” on their page or in their menu.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pour commencer"
+            "value": "Regroupez films, séries et chaînes à votre façon. Utilisez « Ajouter à une collection » sur leur page ou dans leur menu."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Para empezar"
+            "value": "Agrupa películas, series y canales a tu manera. Usa «Añadir a una colección» en su página o en su menú."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Começar"
+            "value": "Agrupe filmes, séries e canais do seu jeito. Use “Adicionar a uma coleção” na página ou no menu deles."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "开始使用"
+            "value": "按你的方式整理电影、剧集和频道。在它们的页面或菜单中使用“添加到合集”。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "للبدء"
+            "value": "رتّب الأفلام والمسلسلات والقنوات على طريقتك. استخدم «إضافة إلى مجموعة» في صفحتها أو قائمتها."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "शुरू करें"
-          }
-        }
-      }
-    },
-    "Group channels, movies and series your way. Use “Add to List” in their menus.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Regroupez chaînes, films et séries à votre façon. Utilisez « Ajouter à une liste » dans leurs menus."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupa canales, películas y series a tu manera. Usa “Añadir a una lista” en sus menús."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrupe canais, filmes e séries do seu jeito. Use “Adicionar à lista” nos menus deles."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "按你的方式整理频道、电影和剧集。在它们的菜单中使用“添加到清单”。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "جمّع القنوات والأفلام والمسلسلات على طريقتك. استخدم «إضافة إلى قائمة» من خياراتها."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "चैनल, फ़िल्में और सीरीज़ अपने तरीके से ग्रुप करें। उनके मेन्यू में “सूची में जोड़ें” इस्तेमाल करें।"
+            "value": "फ़िल्मों, सीरीज़ और चैनलों को अपने तरीके से समूहित करें। उनके पेज या मेनू में “संग्रह में जोड़ें” चुनें।"
           }
         }
       }
@@ -6447,42 +6367,42 @@
         }
       }
     },
-    "Its favorites and history will be removed too.": {
+    "Its My List, collections and history will be removed too.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ses favoris et son historique seront aussi supprimés."
+            "value": "Sa liste, ses collections et son historique seront aussi supprimés."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "También se eliminarán sus favoritos y su historial."
+            "value": "También se eliminarán su lista, sus colecciones y su historial."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Seus favoritos e histórico também serão removidos."
+            "value": "A lista, as coleções e o histórico desse perfil também serão removidos."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "其收藏和历史记录也将被移除。"
+            "value": "其片单、合集和历史记录也将被移除。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "ستُحذف مفضلته وسجله أيضًا."
+            "value": "ستُحذف قائمته ومجموعاته وسجله أيضًا."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "इसके पसंदीदा और इतिहास भी हटा दिए जाएँगे।"
+            "value": "इसकी सूची, संग्रह और इतिहास भी हटा दिए जाएँगे।"
           }
         }
       }
@@ -6923,46 +6843,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "हल्का"
-          }
-        }
-      }
-    },
-    "Lists": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Listes"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Listas"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Listas"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "清单"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "القوائم"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "सूचियाँ"
           }
         }
       }
@@ -7487,42 +7367,42 @@
         }
       }
     },
-    "Locked categories are hidden from home, search and favorites, and ask for the PIN when opened.": {
+    "Locked categories are hidden from home, search and My List, and ask for the PIN when opened.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les catégories verrouillées sont masquées de l'accueil, de la recherche et des favoris, et demandent le code PIN à l'ouverture."
+            "value": "Les catégories verrouillées sont masquées de l'accueil, de la recherche et de Ma liste, et demandent le code PIN à l'ouverture."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las categorías bloqueadas no aparecen en Inicio, la búsqueda ni los favoritos, y piden el PIN al abrirlas."
+            "value": "Las categorías bloqueadas no aparecen en Inicio, la búsqueda ni Mi lista, y piden el PIN al abrirlas."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Categorias bloqueadas ficam ocultas no Início, na busca e nos favoritos, e pedem o PIN ao serem abertas."
+            "value": "Categorias bloqueadas ficam ocultas no Início, na busca e na Minha lista, e pedem o PIN ao serem abertas."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已锁定的分类不会显示在首页、搜索和收藏中，打开时需要输入 PIN。"
+            "value": "已锁定的分类不会显示在首页、搜索和我的片单中，打开时需要输入 PIN。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تُخفى الفئات المقفلة من الرئيسية والبحث والمفضلة، ويُطلب رمز PIN عند فتحها."
+            "value": "تُخفى الفئات المقفلة من الرئيسية والبحث وقائمتي، ويُطلب رمز PIN عند فتحها."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "लॉक की गई श्रेणियाँ होम, खोज और पसंदीदा में नहीं दिखतीं, और खोलने पर PIN माँगती हैं।"
+            "value": "लॉक की गई श्रेणियाँ होम, खोज और मेरी सूची में नहीं दिखतीं, और खोलने पर PIN माँगती हैं।"
           }
         }
       }
@@ -7567,82 +7447,82 @@
         }
       }
     },
-    "Long-press a channel to add it to your favorites.": {
+    "Long-press a channel and choose “Add to My List”.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appui long sur une chaîne pour l'ajouter à vos favoris."
+            "value": "Appuyez longuement sur une chaîne et choisissez « Ajouter à Ma liste »."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mantén presionado un canal para añadirlo a tus favoritos."
+            "value": "Mantén pulsado un canal y elige «Añadir a Mi lista»."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toque e segure um canal para adicioná-lo aos favoritos."
+            "value": "Toque e segure um canal e escolha “Adicionar à Minha lista”."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "长按频道即可将其添加到收藏。"
+            "value": "长按频道，然后选择“添加到我的片单”。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اضغط مطولًا على قناة لإضافتها إلى المفضلة."
+            "value": "اضغط مطولًا على قناة واختر «إضافة إلى قائمتي»."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "किसी चैनल को पसंदीदा में जोड़ने के लिए उसे देर तक दबाएँ।"
+            "value": "किसी चैनल को देर तक दबाएँ और “मेरी सूची में जोड़ें” चुनें।"
           }
         }
       }
     },
-    "Long-press a channel to add it to your favorites; it will appear here.": {
+    "Long-press a channel and choose “Add to My List”; it will appear here.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appuyez longuement sur une chaîne pour l'ajouter à vos favoris ; elle apparaîtra ici."
+            "value": "Appuyez longuement sur une chaîne et choisissez « Ajouter à Ma liste » ; elle apparaîtra ici."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mantén presionado un canal para añadirlo a tus favoritos; aparecerá aquí."
+            "value": "Mantén presionado un canal y elige «Añadir a Mi lista»; aparecerá aquí."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Toque e segure um canal para adicioná-lo aos favoritos; ele aparecerá aqui."
+            "value": "Toque e segure um canal e escolha “Adicionar à Minha lista”; ele aparecerá aqui."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "长按频道即可将其添加到收藏，之后它会显示在这里。"
+            "value": "长按频道并选择“添加到我的片单”，之后它会显示在这里。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اضغط مطولًا على قناة لإضافتها إلى المفضلة، وستظهر هنا."
+            "value": "اضغط مطولًا على قناة واختر «إضافة إلى قائمتي»، وستظهر هنا."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "किसी चैनल को पसंदीदा में जोड़ने के लिए उसे देर तक दबाएँ; वह यहाँ दिखेगा।"
+            "value": "किसी चैनल को देर तक दबाएँ और “मेरी सूची में जोड़ें” चुनें; वह यहाँ दिखेगा।"
           }
         }
       }
@@ -8447,42 +8327,42 @@
         }
       }
     },
-    "My List %lld": {
+    "My List is empty": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ma liste %lld"
+            "value": "Ma liste est vide"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mi lista %lld"
+            "value": "Mi lista está vacía"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Minha lista %lld"
+            "value": "Minha lista está vazia"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "我的清单 %lld"
+            "value": "我的片单是空的"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "قائمتي %lld"
+            "value": "قائمتي فارغة"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "मेरी सूची %lld"
+            "value": "मेरी सूची खाली है"
           }
         }
       }
@@ -8727,82 +8607,82 @@
         }
       }
     },
-    "New List": {
+    "New Collection": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nouvelle liste"
+            "value": "Nouvelle collection"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nueva lista"
+            "value": "Nueva colección"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nova lista"
+            "value": "Nova coleção"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新建清单"
+            "value": "新建合集"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "قائمة جديدة"
+            "value": "مجموعة جديدة"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "नई सूची"
+            "value": "नया संग्रह"
           }
         }
       }
     },
-    "New List with This Item": {
+    "New Collection with This Item": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nouvelle liste avec cet élément"
+            "value": "Nouvelle collection avec cet élément"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nueva lista con este elemento"
+            "value": "Nueva colección con este elemento"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nova lista com este item"
+            "value": "Nova coleção com este item"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "以此项新建清单"
+            "value": "用此项新建合集"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "قائمة جديدة بهذا العنصر"
+            "value": "مجموعة جديدة بهذا العنصر"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "इस आइटम के साथ नई सूची"
+            "value": "इस आइटम के साथ नया संग्रह"
           }
         }
       }
@@ -9247,6 +9127,86 @@
         }
       }
     },
+    "No channels in My List": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune chaîne dans Ma liste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay canales en Mi lista"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum canal na Minha lista"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的片单中没有频道"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد قنوات في قائمتي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मेरी सूची में कोई चैनल नहीं"
+          }
+        }
+      }
+    },
+    "No collections": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune collection"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay colecciones"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhuma coleção"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有合集"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد مجموعات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई संग्रह नहीं"
+          }
+        }
+      }
+    },
     "No downloads": {
       "localizations": {
         "fr": {
@@ -9283,86 +9243,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "कोई डाउनलोड नहीं"
-          }
-        }
-      }
-    },
-    "No favorite channels": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucune chaîne favorite"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No hay canales favoritos"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nenhum canal favorito"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无收藏的频道"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "لا توجد قنوات مفضلة"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "कोई पसंदीदा चैनल नहीं"
-          }
-        }
-      }
-    },
-    "No favorites": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun favori"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No hay favoritos"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nenhum favorito"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无收藏"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "لا توجد عناصر مفضلة"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "कोई पसंदीदा नहीं"
           }
         }
       }
@@ -9607,46 +9487,6 @@
         }
       }
     },
-    "No lists": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucune liste"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No hay listas"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nenhuma lista"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无清单"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "لا توجد قوائم"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "कोई सूची नहीं"
-          }
-        }
-      }
-    },
     "No match found": {
       "localizations": {
         "fr": {
@@ -9683,6 +9523,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "कोई मिलान नहीं मिला"
+          }
+        }
+      }
+    },
+    "No movie or series": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun film ni série"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ninguna película ni serie"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum filme ou série"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有电影或剧集"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا أفلام ولا مسلسلات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई फ़िल्म या सीरीज़ नहीं"
+          }
+        }
+      }
+    },
+    "No movie or series of this playlist is known to feature %@.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On ne connaît aucun film ni aucune série de cette playlist avec %@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se conoce ninguna película ni serie de esta lista con %@."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nenhum filme ou série desta playlist é conhecido por ter %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此播放列表中没有已知包含 %@ 的电影或剧集。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يُعرف فيلم أو مسلسل في قائمة التشغيل هذه يشارك فيه %@."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस प्लेलिस्ट की कोई फ़िल्म या सीरीज़ %@ के साथ ज्ञात नहीं है।"
           }
         }
       }
@@ -9963,6 +9883,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "सामान्य"
+          }
+        }
+      }
+    },
+    "Nothing in this playlist": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien dans cette playlist"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada en esta lista"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada nesta playlist"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此播放列表中没有"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء في قائمة التشغيل هذه"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस प्लेलिस्ट में कुछ नहीं"
+          }
+        }
+      }
+    },
+    "Nothing in this playlist was released in these years.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien dans cette playlist n’est sorti ces années-là."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada de esta lista se estrenó en esos años."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nada desta playlist foi lançado nesses anos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此播放列表中没有在这些年份上映的内容。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا شيء في قائمة التشغيل هذه صدر في هذه السنوات."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस प्लेलिस्ट में इन वर्षों में रिलीज़ हुआ कुछ नहीं है।"
           }
         }
       }
@@ -10407,6 +10407,46 @@
         }
       }
     },
+    "Only the pages you have opened are searched. Add a TMDb key in Settings to find all their movies and series.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seules les fiches déjà ouvertes sont parcourues. Ajoutez une clé TMDb dans les Réglages pour trouver tous ses films et séries."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se buscan las fichas que ya abriste. Añade una clave de TMDb en Ajustes para encontrar todas sus películas y series."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só as páginas que você já abriu são pesquisadas. Adicione uma chave do TMDb em Ajustes para encontrar todos os filmes e séries dessa pessoa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只会搜索你打开过的页面。在“设置”中添加 TMDb 密钥即可找到此人的所有电影和剧集。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُبحث فقط في الصفحات التي فتحتها. أضف مفتاح TMDb في الإعدادات للعثور على كل أفلامه ومسلسلاته."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "केवल वही पेज खोजे जाते हैं जो आपने खोले हैं। उनकी सभी फ़िल्में और सीरीज़ ढूँढने के लिए सेटिंग्स में TMDb कुंजी जोड़ें।"
+          }
+        }
+      }
+    },
     "Open": {
       "localizations": {
         "fr": {
@@ -10443,46 +10483,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "खोलें"
-          }
-        }
-      }
-    },
-    "Open Live TV to browse channels. Long-press a channel to add it to your favorites; it will appear here.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvrez TV en direct pour parcourir les chaînes. Appui long sur une chaîne pour l'ajouter aux favoris : elle apparaîtra ici."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abre TV en directo para explorar los canales. Mantén presionado un canal para añadirlo a tus favoritos; aparecerá aquí."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abra TV ao vivo para navegar pelos canais. Toque e segure um canal para adicioná-lo aos favoritos; ele aparecerá aqui."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开“直播”浏览频道。长按频道即可将其添加到收藏，之后它会显示在这里。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "افتح البث المباشر لتصفح القنوات. اضغط مطولًا على قناة لإضافتها إلى المفضلة، وستظهر هنا."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "चैनल ब्राउज़ करने के लिए लाइव टीवी खोलें। किसी चैनल को पसंदीदा में जोड़ने के लिए उसे देर तक दबाएँ; वह यहाँ दिखेगा।"
           }
         }
       }
@@ -12487,6 +12487,46 @@
         }
       }
     },
+    "Release Years": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Années de sortie"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Años de estreno"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anos de lançamento"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上映年份"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سنوات الإصدار"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिलीज़ वर्ष"
+          }
+        }
+      }
+    },
     "Release date": {
       "localizations": {
         "fr": {
@@ -12523,6 +12563,166 @@
           "stringUnit": {
             "state": "translated",
             "value": "रिलीज़ की तारीख"
+          }
+        }
+      }
+    },
+    "Released from %@ to %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortis de %1$@ à %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estrenados de %1$@ a %2$@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lançados de %1$@ a %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 年至 %2$@ 年上映"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صدرت من %1$@ إلى %2$@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ से %2$@ तक रिलीज़"
+          }
+        }
+      }
+    },
+    "Released in %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortis en %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estrenados en %@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lançados em %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 年上映"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صدرت في %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ में रिलीज़"
+          }
+        }
+      }
+    },
+    "Released in or after %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortis en %@ ou après"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estrenados en %@ o después"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lançados em %@ ou depois"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 年或之后上映"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صدرت في %@ أو بعدها"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ या उसके बाद रिलीज़"
+          }
+        }
+      }
+    },
+    "Released in or before %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sortis en %@ ou avant"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estrenados en %@ o antes"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lançados em %@ ou antes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 年或之前上映"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صدرت في %@ أو قبلها"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ या उससे पहले रिलीज़"
           }
         }
       }
@@ -12687,42 +12887,42 @@
         }
       }
     },
-    "Reminders are kept with your favorites, in your profile.": {
+    "Reminders are kept with My List, in your profile.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les rappels sont gardés avec vos favoris, dans votre profil."
+            "value": "Les rappels sont gardés avec Ma liste, dans votre profil."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los recordatorios se guardan con tus favoritos, en tu perfil."
+            "value": "Los recordatorios se guardan con Mi lista, en tu perfil."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os lembretes ficam com seus favoritos, no seu perfil."
+            "value": "Os lembretes ficam com a Minha lista, no seu perfil."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "提醒与收藏一同保存在你的个人资料中。"
+            "value": "提醒与“我的片单”一同保存在你的个人资料中。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تُحفظ التذكيرات مع المفضلة في ملفك الشخصي."
+            "value": "تُحفظ التذكيرات مع قائمتي في ملفك الشخصي."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "रिमाइंडर आपकी प्रोफ़ाइल में आपके पसंदीदा के साथ रखे जाते हैं।"
+            "value": "रिमाइंडर आपकी प्रोफ़ाइल में मेरी सूची के साथ रखे जाते हैं।"
           }
         }
       }
@@ -12887,46 +13087,6 @@
         }
       }
     },
-    "Remove from Favorites": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Retirer des favoris"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quitar de favoritos"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remover dos favoritos"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从收藏中移除"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "إزالة من المفضلة"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "पसंदीदा से हटाएँ"
-          }
-        }
-      }
-    },
     "Remove from History": {
       "localizations": {
         "fr": {
@@ -13047,42 +13207,42 @@
         }
       }
     },
-    "Rename List": {
+    "Rename Collection": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renommer la liste"
+            "value": "Renommer la collection"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renombrar lista"
+            "value": "Renombrar colección"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renomear lista"
+            "value": "Renomear coleção"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "重命名清单"
+            "value": "重命名合集"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "إعادة تسمية القائمة"
+            "value": "إعادة تسمية المجموعة"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "सूची का नाम बदलें"
+            "value": "संग्रह का नाम बदलें"
           }
         }
       }
@@ -16853,6 +17013,46 @@
         }
       }
     },
+    "To": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hasta"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Até"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "到"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إلى"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "तक"
+          }
+        }
+      }
+    },
     "Today": {
       "localizations": {
         "fr": {
@@ -17613,42 +17813,82 @@
         }
       }
     },
-    "Use “Add to List” on a channel, movie or series.": {
+    "Use “Add to Collection” on a movie, a series or a channel.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Utilisez « Ajouter à une liste » sur une chaîne, un film ou une série."
+            "value": "Utilisez « Ajouter à une collection » sur un film, une série ou une chaîne."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usa “Añadir a una lista” en un canal, una película o una serie."
+            "value": "Usa «Añadir a una colección» en una película, una serie o un canal."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use “Adicionar à lista” em um canal, filme ou série."
+            "value": "Use “Adicionar a uma coleção” em um filme, uma série ou um canal."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "对频道、电影或剧集使用“添加到清单”。"
+            "value": "在电影、剧集或频道上使用“添加到合集”。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "استخدم «إضافة إلى قائمة» على قناة أو فيلم أو مسلسل."
+            "value": "استخدم «إضافة إلى مجموعة» على فيلم أو مسلسل أو قناة."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "किसी चैनल, फ़िल्म या सीरीज़ पर “सूची में जोड़ें” इस्तेमाल करें।"
+            "value": "किसी फ़िल्म, सीरीज़ या चैनल पर “संग्रह में जोड़ें” चुनें।"
+          }
+        }
+      }
+    },
+    "Use “Add to My List” on a movie, a series or a channel to find it here.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilisez « Ajouter à Ma liste » sur un film, une série ou une chaîne pour le retrouver ici."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa «Añadir a Mi lista» en una película, una serie o un canal para encontrarlo aquí."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use “Adicionar à Minha lista” em um filme, uma série ou um canal para encontrá-lo aqui."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在电影、剧集或频道上使用“添加到我的片单”，即可在这里找到它。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استخدم «إضافة إلى قائمتي» على فيلم أو مسلسل أو قناة لتجده هنا."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "किसी फ़िल्म, सीरीज़ या चैनल पर “मेरी सूची में जोड़ें” चुनें, वह यहाँ दिखेगा।"
           }
         }
       }

@@ -38,7 +38,7 @@ struct RemindersView: View {
                     Label("Notify", systemImage: "bell.badge")
                 }
             } footer: {
-                Text("Reminders are kept with your favorites, in your profile.")
+                Text("Reminders are kept with My List, in your profile.")
             }
 
             Section {

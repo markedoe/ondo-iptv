@@ -76,7 +76,7 @@ struct GuideView: View {
                     get: { selectedCategoryID },
                     set: { categoryID = $0 }
                 )) {
-                    Text("Favorites").tag(PseudoCategory.favorites)
+                    Text("My List").tag(PseudoCategory.favorites)
                     Text("All Channels").tag(PseudoCategory.all)
                     ForEach(categories) { category in
                         Text(category.name).tag(category.id)

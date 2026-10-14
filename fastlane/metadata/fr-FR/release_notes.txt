@@ -4,3 +4,6 @@
 • Cherchez des sous-titres en ligne depuis le lecteur : OpenSubtitles, SubDL et SubSource avec votre propre clé, Addic7ed pour les séries sans clé.
 • Les téléchargements qui bloquent disent maintenant pourquoi (refus du fournisseur, limite de connexions, rien reçu) et quoi faire.
 • Ondo parle désormais espagnol, portugais, chinois (simplifié), arabe et hindi, en plus du français et de l’anglais.
+• Ma liste a maintenant son onglet sur iPhone, avec vos films, séries et chaînes au même endroit ; vos propres listes s’appellent désormais des collections.
+• Touchez un acteur ou un réalisateur sur la fiche d’un film ou d’une série pour voir ses autres films et séries de votre playlist.
+• La recherche se filtre par années de sortie, et les grilles se trient par date de sortie.

@@ -45,9 +45,10 @@ struct ChannelRow: View {
             }
             Spacer(minLength: 0)
             if model.isFavorite(.live, id: channel.id) {
-                Image(systemName: "star.fill")
+                Image(systemName: "checkmark.circle.fill")
                     .font(.caption)
-                    .foregroundStyle(.yellow)
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityLabel("In My List")
             }
         }
         .padding(.vertical, 2)
@@ -362,7 +363,7 @@ struct CategoryBrowser<Detail: View>: View {
     private func icon(for category: MediaCategory) -> String {
         switch category.id {
         case PseudoCategory.all: return "square.grid.2x2"
-        case PseudoCategory.favorites: return "star"
+        case PseudoCategory.favorites: return "list.star"
         case PseudoCategory.recent: return "clock"
         default:
             switch category.type {
@@ -384,7 +385,7 @@ enum PseudoCategory {
     }
 
     static func favorites(_ type: ContentType) -> MediaCategory {
-        MediaCategory(id: favorites, name: String(localized: "Favorites"), type: type)
+        MediaCategory(id: favorites, name: String(localized: "My List"), type: type)
     }
 
     static func recent(_ type: ContentType) -> MediaCategory {

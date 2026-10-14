@@ -346,10 +346,11 @@ struct PlayerView: View {
             Button {
                 model.toggleFavorite(channel)
             } label: {
-                Image(systemName: model.isFavorite(.live, id: channel.id) ? "star.fill" : "star")
+                Image(systemName: model.isFavorite(.live, id: channel.id) ? "checkmark" : "plus")
             }
-            .help("Favorite")
-            .accessibilityLabel("Favorite")
+            .help("My List")
+            .accessibilityLabel("My List")
+            .accessibilityValue(model.isFavorite(.live, id: channel.id) ? Text("In My List") : Text(""))
             gap(spread)
         }
         if session.isLiveChannel && session.queue.count > 1 {

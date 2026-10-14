@@ -215,7 +215,7 @@ struct MultiviewChannelPicker: View {
             List {
                 let favorites = filter.isEmpty ? model.favoriteChannels() : []
                 if !favorites.isEmpty {
-                    Section("Favorites") {
+                    Section("My List") {
                         ForEach(favorites) { channel in row(channel) }
                     }
                 }

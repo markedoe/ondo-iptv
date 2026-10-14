@@ -17,11 +17,15 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   live TV last.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
   detail pages (plot, cast, trailer), seasons / episodes,
-  "Continue Watching", resume, automatic next episode, **TMDb trending**.
+  "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
+  see their other movies and series in the playlist (from the pages already opened, or all of them with a
+  TMDb key).
+- **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
+  **filtered by release years**.
 - **Sources**: M3U / M3U8 playlists (URL or file), **Xtream Codes** accounts (API or "force M3U"), XSPF,
   JSON; several playlists, automatic refresh. (A Real-Debrid source exists in the code but is turned off in
   the App Store version: `FeatureFlags.realDebrid`.)
-- **Live TV**: categories, numbers, logos, current programme and its progress, favorites, recents, search;
+- **Live TV**: categories, numbers, logos, current programme and its progress, My List, recents, search;
   hidden, renamed or renumbered channels.
 - **TV Guide**: XMLTV (gzip), the provider's guide and/or custom URLs, grid with sticky titles, programme
   details, time offset, fallback to the Xtream short EPG, **manual channel ↔ guide matching**, **programme
@@ -40,7 +44,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   **Chromecast** (iPhone, iPad).
 - **Multiview** (iPad, Mac): up to 4 channels, a single active sound.
 - **Profiles** ("Who's watching?"), profile PIN, **kids profiles**, parental control by PIN.
-- **Custom lists**, reorderable favorites, hidden categories.
+- **My List** (a tab on iPhone): movies, series and channels kept in one place, reorderable; **collections**
+  to group them your way; hidden categories.
 - **Offline downloads** (movies, episodes), with the reason in plain words when the provider refuses,
   limits connections or sends nothing.
 - **Data**: JSON backup / restore, clearable cache.

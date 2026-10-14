@@ -13,7 +13,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .guide: return "TV Guide"
         case .movies: return "Movies"
         case .series: return "Series"
-        case .favorites: return "Favorites"
+        case .favorites: return "My List"
         case .downloads: return "Downloads"
         case .search: return "Search"
         }
@@ -26,7 +26,7 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .guide: return "calendar.day.timeline.left"
         case .movies: return "film"
         case .series: return "play.rectangle.on.rectangle"
-        case .favorites: return "star"
+        case .favorites: return "list.star"
         case .downloads: return "arrow.down.circle"
         case .search: return "magnifyingglass"
         }
@@ -167,15 +167,26 @@ struct MultiviewWindow: View {
 }
 #endif
 
-/// iPhone: five tabs, movies and series first (Guide is in Live TV, Settings on Home).
+/// iPhone: five tabs, movies and series first, My List last (Guide is in Live TV, Settings on Home); search is the
+/// magnifying glass at the top of every tab.
 struct TabRootView: View {
     @State private var selection: AppSection = .home
 
     var body: some View {
         TabView(selection: $selection) {
-            ForEach([AppSection.home, .movies, .series, .live, .search]) { section in
+            ForEach([AppSection.home, .movies, .series, .live, .favorites]) { section in
                 RoutedNavigationStack {
                     SectionView(section: section)
+                        #if os(iOS)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                NavigationLink(value: AppSection.search) {
+                                    Label("Search", systemImage: "magnifyingglass")
+                                }
+                                .accessibilityIdentifier("searchButton")
+                            }
+                        }
+                        #endif
                 }
                 .tabItem { Label(section.title, systemImage: section.systemImage) }
                 .tag(section)
@@ -273,6 +284,9 @@ struct SectionView: View {
         }
         .navigationDestination(for: Channel.self) { channel in
             ChannelGuideView(channel: channel)
+        }
+        .navigationDestination(for: PersonRoute.self) { route in
+            PersonView(name: route.name)
         }
     }
 }

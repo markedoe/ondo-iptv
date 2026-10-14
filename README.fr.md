@@ -17,11 +17,15 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   tendances ; le direct en dernier.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
   ou note, fiches (synopsis, casting, bande-annonce), saisons /
-  épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb**.
+  épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
+  acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (parmi les fiches déjà
+  ouvertes, ou tous avec une clé TMDb).
+- **Recherche** (la loupe en haut de chaque onglet sur iPhone) : chaînes, programmes, films et séries,
+  **filtrables par années de sortie**.
 - **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
   XSPF, JSON ; plusieurs playlists, actualisation automatique. (Une source Real-Debrid existe dans le
   code mais est désactivée dans la version App Store : `FeatureFlags.realDebrid`.)
-- **Live TV** : catégories, numéros, logos, programme en cours + progression, favoris, récents, recherche ;
+- **Live TV** : catégories, numéros, logos, programme en cours + progression, Ma liste, récents, recherche ;
   chaînes masquées, renommées ou renumérotées.
 - **Guide TV** : XMLTV (gzip), guide du fournisseur et/ou URL personnalisées, grille aux titres
   « collants », fiche programme, décalage horaire, repli sur l'EPG court Xtream, **association manuelle
@@ -41,7 +45,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   **Chromecast** (iPhone, iPad).
 - **Multivue** (iPad, Mac) : jusqu'à 4 chaînes, un seul son actif.
 - **Profils** (« Qui regarde ? »), PIN de profil, **profils enfant**, contrôle parental par PIN.
-- **Listes personnalisées**, favoris réordonnables, catégories masquées.
+- **Ma liste** (un onglet sur iPhone) : films, séries et chaînes au même endroit, réordonnables ;
+  **collections** pour les regrouper à votre façon ; catégories masquées.
 - **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
   limite les connexions ou n'envoie rien.
 - **Données** : sauvegarde / restauration JSON, cache vidable.
