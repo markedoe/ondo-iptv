@@ -91,8 +91,8 @@ URL: `https://markedoe.github.io/ondo-iptv/privacy.html` (the site is published 
 ### D2. App access
 
 *All functionality in my app is available without any access restrictions*. For the review, add an
-instruction: "On the home screen, tap **Try the demo**: a playlist of public channels (iptv-org project)
-is loaded. Ondo does not provide any content; users add their own sources."
+instruction: "On the welcome screen shown at first launch, tap **Try the demo**: a playlist of public
+channels (iptv-org project) is loaded. Ondo does not provide any content; users add their own sources."
 
 ### D3. Ads
 

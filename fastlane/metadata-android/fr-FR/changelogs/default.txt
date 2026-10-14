@@ -1,1 +1,1 @@
-Première version : films, séries et TV en direct de vos propres playlists.
+Ondo est désormais disponible en espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et hindi, en plus du français et de l’anglais. Il suit la langue de votre appareil ; à partir d’Android 13, vous pouvez aussi choisir la langue d’Ondo dans les réglages du système.

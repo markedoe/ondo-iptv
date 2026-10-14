@@ -1,1 +1,6 @@
-First release.
+• Mac: full screen, from the button, the F key or a double-click.
+• AirPlay from the Mac now sends the video to your TV, not only the sound.
+• Resume starts exactly where you stopped, and a pause made while a movie opens stays paused.
+• Find subtitles online from the player: OpenSubtitles, SubDL and SubSource with your own key, Addic7ed for series without a key.
+• Downloads that stall now say why (provider refusal, connection limit, nothing received) and what to do.
+• Ondo now speaks Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi, as well as English and French.

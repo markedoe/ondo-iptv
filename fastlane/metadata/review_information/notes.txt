@@ -1,7 +1,15 @@
-Ondo is a player only: it does not host, provide or sell any content or IPTV subscription, ships no channels or playlists, and does not link to any provider. Users add the playlist or Xtream Codes login given by their own provider.
+Ondo is a player only: it does not host, provide or sell any content or IPTV subscription, ships no channels or playlists, and does not link to or promote any provider. Users add the M3U playlist or the Xtream Codes login given by their own provider. There is no sign-in, no account, no in-app purchase and no advertising. The screenshots show a generated demo catalogue (drawn posters, fictional channels).
 
-How to test without an IPTV subscription: on the first screen tap "Try the demo". This adds a public demonstration playlist of channels curated by the open-source iptv-org project (https://github.com/iptv-org/iptv), whose streams are published by the broadcasters themselves.
+HOW TO TEST WITHOUT AN IPTV SUBSCRIPTION
+1. Launch the app. The first screen is "Welcome to Ondo".
+2. Tap "Try the demo" (the button below "Add a Playlist"). This adds a playlist named "Demo" that loads https://iptv-org.github.io/iptv/countries/fr.m3u, a list of publicly available channels maintained by the open-source iptv-org project (https://github.com/iptv-org/iptv). Ondo is not affiliated with it.
+3. Open Live TV (tab bar on iPhone, sidebar on iPad and Mac) and choose a channel. On the Mac the player opens in its own window: use the Full Screen button or the F key for full screen.
+The demo list contains live channels only, so Movies, Series and Downloads stay empty: they fill in when a provider's playlist includes movies and series. Some channels may be offline or limited to their country; any other channel in the list can be used.
 
-NSAllowsArbitraryLoads is required because the playlists, logos, guides and streams provided by IPTV services (and by the demonstration list) are very often served over plain HTTP from servers the app does not control.
+WHY NSAllowsArbitraryLoads
+IPTV providers very often serve their playlists, Xtream Codes API, TV guides (XMLTV), logos and streams over plain HTTP, from servers the user types in and the app cannot know in advance, so exception domains cannot be listed. The demo list also contains HTTP streams. NSAllowsArbitraryLoadsForMedia alone is not enough: playlists, the API, guides and logos are not media requests, and adding it next to NSAllowsArbitraryLoads makes the system ignore NSAllowsArbitraryLoads. The app only connects to the servers the user adds, to TMDb if the user enters a TMDb key, and to subtitle services when the user searches for subtitles.
 
-Chromecast and AirPlay are used to play the user's own streams on a TV or projector; the local network permission is requested only when the user taps the Cast button. Notifications are only used for programme reminders the user sets, and permission is requested with the first reminder.
+PERMISSIONS
+- Local network: asked the first time the user taps the Cast button (to find Chromecast and AirPlay devices), or plays a stream served from a server on the user's own network.
+- Notifications: only for the programme reminders the user sets; asked with the first reminder.
+- AirPlay (iPhone, iPad, Mac) and Chromecast (iPhone, iPad) play the user's own streams on a TV or projector.

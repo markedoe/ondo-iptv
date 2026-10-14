@@ -91,8 +91,8 @@ URL : `https://markedoe.github.io/ondo-iptv/privacy.html` (le site est publié p
 ### D2. Accès à l'application
 
 *Toutes les fonctionnalités sont disponibles sans accès particulier*. Pour la review, ajoutez une
-instruction : « Sur l'écran d'accueil, touchez **Try the demo** : une playlist de chaînes publiques
-(projet iptv-org) est chargée. Ondo ne fournit aucun contenu ; l'utilisateur ajoute ses propres sources. »
+instruction : « Sur l'écran de bienvenue affiché au premier lancement, touchez **Try the demo** : une
+playlist de chaînes publiques (projet iptv-org) est chargée. Ondo ne fournit aucun contenu ; l'utilisateur ajoute ses propres sources. »
 
 ### D3. Annonces
 

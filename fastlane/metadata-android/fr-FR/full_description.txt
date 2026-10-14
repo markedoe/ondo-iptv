@@ -18,8 +18,12 @@ TV EN DIRECT
 • Chaînes favorites
 
 SOURCES
-• Playlists M3U / M3U8 (lien ou fichier) et comptes Xtream Codes
+• Playlists M3U / M3U8, XSPF et JSON (lien ou fichier) et comptes Xtream Codes
 • Plusieurs playlists, actualisation automatique
+• Les catégories adultes restent masquées tant que vous ne choisissez pas de les afficher
+
+DANS VOTRE LANGUE
+• Français, anglais, espagnol, portugais, chinois (simplifié), arabe et hindi
 
 CONFIDENTIEL PAR NATURE
 • Pas de compte, pas de pistage, pas de publicité : vos playlists restent sur votre appareil.

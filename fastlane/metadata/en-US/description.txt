@@ -5,19 +5,27 @@ Ondo is an elegant IPTV player for iPhone, iPad and Mac. Add the M3U playlist or
 MOVIES & SERIES
 • Poster library, categories, sorting and instant search
 • Rich details: plot, cast, rating, trailer, seasons and episodes
-• Continue watching, resume where you left off, next episode automatically
+• Continue Watching: playback resumes exactly where you stopped, and the next episode starts automatically
 • My List, favourites and custom lists
-• Download movies and episodes to watch offline
+• Download movies and episodes to watch offline; when a download stalls, Ondo tells you why in plain words (provider refusal, connection limit, nothing received)
 
 A PLAYER THAT JUST WORKS
 • Two engines: Apple’s player (HDR, Picture in Picture, AirPlay) and a VLC-based engine for MKV, AVI and TS
-• Cast to your TV or projector with AirPlay or Chromecast
-• Audio and subtitle tracks, external SRT/VTT subtitles, aspect ratio, speed, sleep timer, screen lock
+• Audio and subtitle tracks, SRT/VTT subtitle files, aspect ratio, speed, sleep timer, control lock
+• Online subtitle search from the player: OpenSubtitles, SubDL and SubSource with your own key, Addic7ed for series without a key
 • Clear error messages that say whether the provider, the network or the app is at fault
 
+ON YOUR TV
+• AirPlay from iPhone, iPad and Mac: the video goes to your TV, not only the sound
+• Chromecast from iPhone and iPad
+
+ON THE MAC
+• One window per stream, full screen (button, F key or double-click), keyboard shortcuts and a Playback menu
+
 LIVE TV
-• Channels, TV guide and replay when your provider offers it
-• Favourites, programme reminders and multiview on iPad and Mac
+• Channels, TV guide and replay when your provider offers it: restart the current programme, watch a past one, pause live TV
+• Favourites and programme reminders
+• Multiview of up to 4 channels on iPad and Mac
 
 FOR THE WHOLE FAMILY
 • Profiles with their own favourites and history, optional PIN and kids profiles
@@ -26,3 +34,9 @@ FOR THE WHOLE FAMILY
 SOURCES
 • M3U / M3U8 playlists (link or file), Xtream Codes, XSPF and JSON playlists
 • Several playlists, automatic refresh, backups
+
+LANGUAGES
+• English, French, Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi
+
+PRIVACY
+• No account, no ads and no analytics of its own: your playlists and history stay on your device.

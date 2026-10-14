@@ -1,1 +1,6 @@
-Première version.
+• Mac : plein écran, avec le bouton, la touche F ou un double-clic.
+• AirPlay depuis le Mac envoie maintenant la vidéo vers la TV, pas seulement le son.
+• La reprise démarre exactement là où vous vous êtes arrêté, et une pause faite pendant l’ouverture d’un film est respectée.
+• Cherchez des sous-titres en ligne depuis le lecteur : OpenSubtitles, SubDL et SubSource avec votre propre clé, Addic7ed pour les séries sans clé.
+• Les téléchargements qui bloquent disent maintenant pourquoi (refus du fournisseur, limite de connexions, rien reçu) et quoi faire.
+• Ondo parle désormais espagnol, portugais, chinois (simplifié), arabe et hindi, en plus du français et de l’anglais.

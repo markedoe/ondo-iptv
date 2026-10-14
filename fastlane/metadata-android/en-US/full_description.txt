@@ -9,7 +9,7 @@ MOVIES & SERIES
 • My List for the titles you want to watch
 
 A PLAYER THAT JUST WORKS
-• Built on Android's media player (HLS, MPEG-TS, MP4, MKV)
+• Built on Android’s media player (HLS, MPEG-TS, MP4, MKV)
 • Audio tracks and subtitles, Picture-in-Picture
 • Clear error messages: provider, network or app
 
@@ -18,8 +18,12 @@ LIVE TV
 • Favourite channels
 
 SOURCES
-• M3U / M3U8 playlists (link or file) and Xtream Codes accounts
+• M3U / M3U8, XSPF and JSON playlists (link or file) and Xtream Codes accounts
 • Several playlists, automatic refresh
+• Adult categories stay hidden until you choose to show them
+
+IN YOUR LANGUAGE
+• English, French, Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi
 
 PRIVATE BY DESIGN
 • No account, no tracking, no ads: your playlists stay on your device.

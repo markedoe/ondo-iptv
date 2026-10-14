@@ -1,1 +1,1 @@
-iptv,lecteur,m3u,xtream,films,séries,vod,replay,guide tv,epg,chromecast,airplay,playlist,m3u8
+m3u,m3u8,xtream,codes,direct,epg,guide,replay,vod,playlist,airplay,sous-titres,multivue,chaînes

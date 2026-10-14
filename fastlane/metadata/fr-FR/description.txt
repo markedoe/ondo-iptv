@@ -5,19 +5,27 @@ Ondo est un lecteur IPTV élégant pour iPhone, iPad et Mac. Ajoutez la playlist
 FILMS ET SÉRIES
 • Bibliothèque à affiches, catégories, tri et recherche instantanée
 • Fiches détaillées : synopsis, distribution, note, bande-annonce, saisons et épisodes
-• Continuer à regarder, reprise de lecture et épisode suivant automatique
+• Continuer à regarder : la lecture reprend exactement là où vous vous êtes arrêté, et l’épisode suivant démarre automatiquement
 • Ma liste, favoris et listes personnalisées
-• Téléchargement des films et épisodes pour les regarder hors ligne
+• Téléchargement des films et épisodes pour les regarder hors ligne ; quand un téléchargement bloque, Ondo vous dit pourquoi en clair (refus du fournisseur, limite de connexions, rien reçu)
 
 UN LECTEUR QUI FONCTIONNE, TOUT SIMPLEMENT
 • Deux moteurs : le lecteur d’Apple (HDR, image dans l’image, AirPlay) et un moteur basé sur VLC pour MKV, AVI et TS
-• Diffusion sur votre TV ou vidéoprojecteur avec AirPlay ou Chromecast
-• Pistes audio et sous-titres, sous-titres SRT/VTT externes, format d’image, vitesse, minuterie, verrouillage
+• Pistes audio et sous-titres, fichiers de sous-titres SRT/VTT, format d’image, vitesse, minuterie, verrouillage des commandes
+• Recherche de sous-titres en ligne depuis le lecteur : OpenSubtitles, SubDL et SubSource avec votre propre clé, Addic7ed pour les séries sans clé
 • Messages d’erreur clairs : fournisseur, réseau ou application
 
+SUR VOTRE TV
+• AirPlay depuis l’iPhone, l’iPad et le Mac : la vidéo part vers la TV, pas seulement le son
+• Chromecast depuis l’iPhone et l’iPad
+
+SUR MAC
+• Une fenêtre par flux, plein écran (bouton, touche F ou double-clic), raccourcis clavier et menu Lecture
+
 TV EN DIRECT
-• Chaînes, guide TV et replay quand votre fournisseur le propose
-• Favoris, rappels de programmes et multivue sur iPad et Mac
+• Chaînes, guide TV et replay quand votre fournisseur le propose : reprendre le programme en cours depuis le début, revoir un programme passé, mettre le direct en pause
+• Favoris et rappels de programmes
+• Multivue jusqu’à 4 chaînes sur iPad et Mac
 
 POUR TOUTE LA FAMILLE
 • Profils avec leurs propres favoris et historique, code PIN facultatif et profils enfant
@@ -26,3 +34,9 @@ POUR TOUTE LA FAMILLE
 SOURCES
 • Playlists M3U / M3U8 (lien ou fichier), Xtream Codes, XSPF et JSON
 • Plusieurs playlists, actualisation automatique, sauvegardes
+
+LANGUES
+• Français, anglais, espagnol, portugais, chinois (simplifié), arabe et hindi
+
+CONFIDENTIALITÉ
+• Pas de compte, pas de publicité, aucune statistique propre à l’app : vos playlists et votre historique restent sur votre appareil.
