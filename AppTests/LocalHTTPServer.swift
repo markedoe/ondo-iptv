@@ -86,12 +86,12 @@ final class LocalHTTPServer: @unchecked Sendable {
             if let data { buffer.append(data) }
             if let end = buffer.range(of: Data("\r\n\r\n".utf8)), let head = String(data: buffer[..<end.lowerBound], encoding: .utf8),
                let request = Self.parse(head) {
-                lock.withLock { recorded.append(request) }
-                send(handler(request), on: connection)
+                self.lock.withLock { self.recorded.append(request) }
+                self.send(self.handler(request), on: connection)
             } else if isComplete || error != nil {
                 connection.cancel()
             } else {
-                receive(on: connection, buffer: buffer)
+                self.receive(on: connection, buffer: buffer)
             }
         }
     }
