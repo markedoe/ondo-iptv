@@ -35,7 +35,8 @@ def key_file
   path
 end
 
-# Lets xcodebuild create and fetch cloud-managed certificates and profiles (archive and export).
+# Lets xcodebuild create and fetch cloud-managed certificates and profiles. gym passes xcargs to both
+# the archive and the export, so these flags must not be repeated in export_xcargs (xcodebuild rejects them twice).
 def authentication_xcargs
   [
     "-allowProvisioningUpdates",
@@ -86,8 +87,7 @@ platform :ios do
       destination: "generic/platform=iOS",
       export_method: "app-store",
       output_directory: "build/ios-release",
-      xcargs: "#{signing_xcargs} #{build_settings_args(number)}",
-      export_xcargs: authentication_xcargs
+      xcargs: "#{signing_xcargs} #{build_settings_args(number)}"
     )
     upload_to_testflight(api_key: api_key, skip_waiting_for_build_processing: true)
   end
@@ -140,8 +140,7 @@ platform :mac do
       export_method: "app-store",
       installer_cert_name: nil,
       output_directory: "build/mac-release",
-      xcargs: "#{signing_xcargs} #{build_settings_args(number)}",
-      export_xcargs: authentication_xcargs
+      xcargs: "#{signing_xcargs} #{build_settings_args(number)}"
     )
     upload_to_testflight(api_key: api_key, app_platform: "osx", skip_waiting_for_build_processing: true)
   end
