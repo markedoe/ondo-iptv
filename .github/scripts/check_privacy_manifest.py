@@ -2,8 +2,9 @@
 """The privacy manifest must give a reason for every "required reason" API the shipped code uses.
 
 App Store Connect rejects an upload that uses one of these APIs without declaring it in
-App/Resources/PrivacyInfo.xcprivacy (ITMS-91053). The app's own code (App/ and the IPTVCore package) is
-scanned without its `#if DEBUG` blocks; VLCKit and the Google Cast SDK ship their own manifests.
+App/Resources/PrivacyInfo.xcprivacy (ITMS-91053). The app's own code (App/ and the IPTVCore package, Swift
+and C) is scanned without its `#if DEBUG` blocks; VLCKit, Nuke and the Google Cast SDK ship their own
+manifests.
 
 Usage: check_privacy_manifest.py [repository root]. Exit code 1 lists the undeclared categories.
 """
@@ -18,24 +19,30 @@ SOURCES = [ROOT / "App", ROOT / "Packages/IPTVCore/Sources"]
 
 # https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api
 CATEGORIES = {
-    "NSPrivacyAccessedAPICategoryUserDefaults": r"\bUserDefaults\b|@AppStorage\b|NSUbiquitousKeyValueStore",
+    "NSPrivacyAccessedAPICategoryUserDefaults": r"\b(?:NS)?UserDefaults\b|@AppStorage\b|NSUbiquitousKeyValueStore",
+    # stat, fstat, lstat, fstatat; getattrlist, fgetattrlist, getattrlistbulk, getattrlistat.
     "NSPrivacyAccessedAPICategoryFileTimestamp":
-        r"attributesOfItem|\.(?:creation|modification|contentModification|contentAccess)Date\b|"
-        r"(?:creation|contentModification|contentAccess|attributeModification)DateKey|\bstat\(|\bfstat\(|\bgetattrlist\(",
+        r"attributesOfItem|\.(?:creation|modification|contentModification|contentAccess)Date\b|fileModificationDate|"
+        r"(?:creation|contentModification|contentAccess|attributeModification)DateKey|"
+        r"\b[fl]?stat(?:at)?\(|\bf?getattrlist(?:bulk|at)?\(",
     "NSPrivacyAccessedAPICategorySystemBootTime": r"systemUptime|mach_absolute_time|CLOCK_UPTIME",
+    # statfs, statvfs, fstatfs, fstatvfs; FileManager's attributesOfFileSystem gives systemFreeSize / systemSize.
     "NSPrivacyAccessedAPICategoryDiskSpace":
-        r"volume(?:Available|Total)Capacity|systemFreeSize|systemSize\b|\bstatfs\(|\bstatvfs\(",
+        r"volume(?:Available|Total)Capacity|systemFreeSize|systemSize\b|attributesOfFileSystem|\bf?statv?fs\(",
     "NSPrivacyAccessedAPICategoryActiveKeyboards": r"activeInputModes",
 }
+# Swift and the C / Objective-C sources next to it (IPTVCore's zlib wrapper).
+SOURCE_SUFFIXES = {".swift", ".c", ".h", ".m", ".mm"}
 
 
 def without_debug_blocks(text: str) -> str:
-    """Drops `#if DEBUG … #endif` (nested conditions included, `#else` branches kept)."""
+    """Drops `#if DEBUG … #endif` (nested conditions included, `#else` branches kept); Swift and C alike."""
     kept, stack = [], []  # stack: is each open #if a DEBUG block currently being skipped
     for line in text.splitlines():
         directive = line.strip()
         if directive.startswith("#if"):
-            stack.append(directive.split()[1:2] == ["DEBUG"])
+            words = directive.split()  # `#ifndef DEBUG` (C) is release code: scanned
+            stack.append(words[0] in ("#if", "#ifdef") and words[1:2] == ["DEBUG"])
             continue
         if directive.startswith("#else") and stack and stack[-1]:
             stack[-1] = False
@@ -57,7 +64,7 @@ def main() -> int:
     for category, pattern in CATEGORIES.items():
         uses = []
         for folder in SOURCES:
-            for path in sorted(folder.rglob("*.swift")):
+            for path in sorted(p for p in folder.rglob("*") if p.suffix in SOURCE_SUFFIXES and p.is_file()):
                 if re.search(pattern, without_debug_blocks(path.read_text(encoding="utf-8"))):
                     uses.append(str(path.relative_to(ROOT)))
         if uses and category not in declared:

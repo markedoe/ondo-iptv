@@ -2,7 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Ondo's own code collects no data and does not track; the Google Cast SDK ships its own manifest. -->
+	<!-- Ondo's own code collects no data and does not track (site/privacy.html). The Google Cast SDK ships its own
+	     manifest; what it collects is declared in App Store Connect (docs/RELEASE.md, App Privacy). -->
 	<key>NSPrivacyTracking</key>
 	<false/>
 	<key>NSPrivacyTrackingDomains</key>
@@ -11,7 +12,8 @@
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
-		<!-- FileStore reads modification dates of its own files in the app container. -->
+		<!-- C617.1: FileStore (IPTVCore) reads modification dates, and DownloadManager sizes, of the app's own
+		     files in its container. -->
 		<dict>
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>

@@ -139,7 +139,7 @@ HTTP, Cast et notifications.
    ```
    Le workflow (macOS 26, Xcode 26 — exigé par Apple depuis avril 2026) lance les tests du cœur,
    construit, signe et envoie **iOS** puis **macOS** sur TestFlight (build = dernier build TestFlight + 1,
-   version = le tag), puis la fiche FR/EN et les captures iPhone / iPad.
+   version = le tag), puis la fiche FR/EN et les captures iPhone, iPad et Mac.
 2. **TestFlight** : les builds apparaissent après 10 à 30 min de traitement. Groupe de testeurs internes
    (jusqu'à 100 membres de l'équipe, sans review) pour essayer sur vos appareils.
 3. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store

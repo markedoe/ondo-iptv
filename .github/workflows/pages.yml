@@ -1,24 +1,30 @@
 name: Website
 
+# Publishes site/ on GitHub Pages: the home, support and privacy policy pages the App Store listing links to
+# (fastlane/metadata/*_url.txt) and the privacy policy URL given to Google Play.
 on:
   push:
     branches: [main]
-    paths: [site/**]
+    paths: [site/**, .github/workflows/pages.yml]
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
+# One deployment at a time; a deployment in progress is never cancelled (GitHub's Pages template), the
+# latest queued one follows it.
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""The Mac App Store build must keep the sandbox entitlements its features need.
+"""The Mac App Store build must keep the sandbox entitlements its features need, and only those.
 
 In the App Store sandbox, a missing entitlement fails silently: without network.client no playlist,
-guide or stream loads; without files.user-selected.read-write a playlist file cannot be imported.
-CI builds are not signed, so the check reads the entitlements file the release build is signed with.
+guide or stream loads; without files.user-selected.read-write the file pickers cannot open a playlist,
+subtitle or backup file, nor save a backup (read-only would be enough to open, not to save).
+An entitlement no feature needs widens the sandbox for nothing (and App Review rejects entitlements an
+app does not use), so anything outside REQUIRED fails too. CI builds are not signed, so the check reads the entitlements file
+the release build is signed with.
 
-Usage: check_mac_entitlements.py [repository root]. Exit code 1 lists what is missing.
+Usage: check_mac_entitlements.py [repository root]. Exit code 1 lists what is missing or not needed.
 """
 import plistlib
 import re
@@ -17,7 +20,8 @@ RELEASE = "App/Resources/Ondo-macOS.entitlements"
 REQUIRED = {
     "com.apple.security.app-sandbox": "the Mac App Store requires the sandbox",
     "com.apple.security.network.client": "playlists, guides and streams are downloaded",
-    "com.apple.security.files.user-selected.read-write": "playlist files are imported and backups saved",
+    "com.apple.security.files.user-selected.read-write":
+        "playlist, subtitle and backup files are opened with file pickers, and backups saved",
 }
 # Debug only: never in the build sent to the App Store.
 FORBIDDEN = {
@@ -38,9 +42,12 @@ def main() -> int:
     for key, why in FORBIDDEN.items():
         if key in entitlements:
             problems.append(f"{RELEASE} has {key} ({why})")
+    for key in sorted(set(entitlements) - set(REQUIRED) - set(FORBIDDEN)):
+        problems.append(f"{RELEASE} has {key}, which no feature needs (add it to REQUIRED with its reason if one does)")
     for problem in problems:
         print(f"::error::{problem}")
-    print(f"{len(REQUIRED)} required and {len(FORBIDDEN)} forbidden entitlements checked, {len(problems)} problem(s).")
+    print(f"{len(REQUIRED)} required and {len(FORBIDDEN)} forbidden entitlements checked (nothing else allowed), "
+          f"{len(problems)} problem(s).")
     return 1 if problems else 0
 
 

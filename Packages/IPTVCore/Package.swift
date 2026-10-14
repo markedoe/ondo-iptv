@@ -1,8 +1,10 @@
 // swift-tools-version:6.0
 import PackageDescription
 
+// Tools version 6.0: every target compiles in the Swift 6 language mode (complete concurrency checking).
 let package = Package(
     name: "IPTVCore",
+    // The app's deployment targets (project.yml), and tvOS for a later target (docs/PLAN.md).
     platforms: [.iOS(.v17), .macOS(.v14), .tvOS(.v17)],
     products: [
         .library(name: "IPTVCore", targets: ["IPTVCore"]),

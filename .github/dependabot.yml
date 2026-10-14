@@ -1,5 +1,6 @@
-# Weekly update proposals, one grouped pull request per ecosystem. The Apple packages (VLCKit, Nuke,
-# Google Cast) are pinned in project.yml, which Dependabot cannot read: bump them by hand.
+# Update proposals, one grouped pull request per ecosystem: GitHub Actions and Gradle weekly, the fastlane
+# bundle monthly. Swift packages are not listed: IPTVCore has no dependency, and the Apple app's packages
+# (VLCKit, Nuke, Google Cast) are pinned in project.yml, which Dependabot cannot read: bump them by hand.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -20,3 +21,6 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    groups:
+      fastlane:
+        patterns: ["*"]

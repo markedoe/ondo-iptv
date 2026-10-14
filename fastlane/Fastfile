@@ -1,10 +1,18 @@
-# Delivery lanes for Ondo (iOS + macOS share one bundle ID: universal purchase).
+# Delivery lanes for Ondo: App Store (iOS + macOS share one bundle ID: universal purchase), run by
+# .github/workflows/release.yml, and Google Play, run by .github/workflows/release-android.yml.
 #
-# Required environment (GitHub secrets in CI):
-#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (the App Store Connect API key: a Team key with the Admin role, which
-#   cloud-managed signing needs; the .p8 file content as is, or base64 encoded)
-#   DEVELOPMENT_TEAM (Apple team ID)
-# Signing is automatic: Xcode uses the API key to create/download cloud-managed certificates and profiles.
+# Required environment (GitHub secrets in CI, see docs/RELEASE.md and docs/RELEASE-ANDROID.md):
+#   ios / mac lanes: ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 (the App Store Connect API key: a Team key with the
+#   Admin role, which cloud-managed signing needs; the .p8 file content as is, or base64 encoded), and for the
+#   beta lanes DEVELOPMENT_TEAM (Apple team ID).
+#   android lanes: PLAY_SERVICE_ACCOUNT_JSON (Google Play service account key); deploy also reads TRACK
+#   (default internal) and RELEASE_STATUS (default completed, internal track only).
+# Apple signing is automatic: Xcode uses the API key to create/download cloud-managed certificates and profiles.
+#
+# Paths: Ruby code and `sh` run in fastlane/, actions (deliver, gym…) from the repository root.
+
+require "base64"
+require "tmpdir"
 
 default_platform(:ios)
 
@@ -28,11 +36,18 @@ def api_key
   )
 end
 
+# The key as a file, for xcodebuild's -authenticationKeyPath: outside the checkout (the runner's temporary
+# folder in CI), readable by this user only, deleted when the lane ends (after_all / error below).
+KEY_FILE = File.join(ENV["RUNNER_TEMP"] || Dir.tmpdir, "ondo_asc_key.p8")
+
 def key_file
-  path = File.expand_path("../build/asc_key.p8", __dir__)
-  FileUtils.mkdir_p(File.dirname(path))
-  File.write(path, key_pem)
-  path
+  File.delete(KEY_FILE) if File.exist?(KEY_FILE)
+  File.write(KEY_FILE, key_pem, perm: 0o600)
+  KEY_FILE
+end
+
+def remove_key_file
+  File.delete(KEY_FILE) if File.exist?(KEY_FILE)
 end
 
 # Lets xcodebuild create and fetch cloud-managed certificates and profiles. gym passes xcargs to both
@@ -54,12 +69,16 @@ def generate_project
   sh("cd .. && xcodegen generate")
 end
 
-# Build numbers come from TestFlight so iOS and macOS uploads never collide.
+# Build number: the platform's latest upload on App Store Connect + 1 (1 for the first one), so a re-run or
+# an upload made by hand is never reused. An API error (key, missing app) stops the lane here, before a long
+# build that App Store Connect would refuse.
 def next_build_number(platform)
-  latest = latest_testflight_build_number(api_key: api_key, app_identifier: APP_ID, platform: platform) rescue 0
+  latest = latest_testflight_build_number(api_key: api_key, app_identifier: APP_ID, platform: platform, initial_build_number: 0)
   latest.to_i + 1
 end
 
+# The version comes from the tag (v1.2.3 → 1.2.3); without one (a manual run on main), project.yml's
+# MARKETING_VERSION is kept.
 def marketing_version
   tag = ENV["GITHUB_REF_NAME"].to_s
   tag.start_with?("v") ? tag.delete_prefix("v") : nil
@@ -73,6 +92,14 @@ end
 
 before_all do
   setup_ci if ENV["CI"]
+end
+
+after_all do |_lane|
+  remove_key_file
+end
+
+error do |_lane, _exception|
+  remove_key_file
 end
 
 platform :ios do
@@ -99,6 +126,7 @@ platform :ios do
       app_identifier: APP_ID,
       platform: "ios",
       skip_binary_upload: true,
+      # Both name fastlane/screenshots/ios: File.directory? runs in fastlane/, deliver from the repository root.
       skip_screenshots: !File.directory?("screenshots/ios"),
       screenshots_path: "fastlane/screenshots/ios",
       overwrite_screenshots: true,
@@ -118,6 +146,7 @@ platform :mac do
       app_identifier: APP_ID,
       platform: "osx",
       skip_binary_upload: true,
+      # Both name fastlane/screenshots/mac (see the iOS lane).
       skip_screenshots: !File.directory?("screenshots/mac"),
       screenshots_path: "fastlane/screenshots/mac",
       overwrite_screenshots: true,
@@ -139,6 +168,8 @@ platform :mac do
       destination: "generic/platform=macOS",
       # One multiplatform target: gym only packages a .pkg (not an .ipa) when the SDK says macOS.
       sdk: "macosx",
+      # The export signs automatically (-allowProvisioningUpdates in xcargs), the .pkg too: no installer certificate
+      # is looked up in the keychain. Kept explicit since the release that shipped build 6 used it.
       export_method: "app-store",
       installer_cert_name: nil,
       output_directory: "build/mac-release",

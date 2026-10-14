@@ -1,6 +1,8 @@
 name: Security
 
-# Secrets and personal data: every commit of every branch, whatever the change (this repository is public).
+# Secrets and personal data (every commit of every branch), and the neutrality rules of CLAUDE.md: on every
+# change, whatever it touches (this repository is public). The neutrality check lives here because CI skips
+# documentation, Android and store listing changes, where a forbidden word would land.
 on:
   push:
     branches: [main]
@@ -34,3 +36,14 @@ jobs:
           echo "a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb  /tmp/gitleaks.tgz" | sha256sum -c -
           tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
           /tmp/gitleaks git --redact --no-banner --log-opts="--all" .
+
+  neutrality:
+    name: Neutrality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: No other IPTV app named, IPTV never called free (seven languages), fictional channels only
+        run: python3 .github/scripts/check_neutrality.py

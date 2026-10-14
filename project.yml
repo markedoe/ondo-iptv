@@ -10,7 +10,11 @@ options:
 
 settings:
   base:
+    # The app compiles in the Swift 5 language mode (minimal concurrency checking); IPTVCore is in Swift 6
+    # mode (Packages/IPTVCore/Package.swift).
     SWIFT_VERSION: "5.0"
+    # Defaults for local builds: the release lanes (fastlane/Fastfile) set the version from the tag and the
+    # build number from App Store Connect.
     MARKETING_VERSION: "1.0.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
@@ -56,6 +60,8 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.entertainment
+        # About window of the Mac app; same holder as LICENSE and fastlane/metadata/copyright.txt.
+        NSHumanReadableCopyright: © 2026 markedoe
         ITSAppUsesNonExemptEncryption: false
         # IPTV providers overwhelmingly serve plain HTTP playlists, APIs, guides, streams and logos.
         # NSAllowsArbitraryLoads alone: adding ...ForMedia, ...InWebContent or NSAllowsLocalNetworking
@@ -126,6 +132,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1,2"
 
+  # Mac App Store screenshots only (OndoMacScreenshots scheme, App Store screenshots workflow): CI tests the
+  # Mac app with a launch smoke test, not with these.
   OndoMacUITests:
     type: bundle.ui-testing
     supportedDestinations: [macOS]

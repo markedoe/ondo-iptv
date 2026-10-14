@@ -90,6 +90,14 @@ class TranslationsTests(CheckTestCase):
         self.catalogue({"New Movies": entry})
         self.assertFails("translations", "no Hindi translation", "New Movies")
 
+    def test_a_permission_prompt_missing_one_language_fails(self):
+        self.catalogue({"New Movies": french("Nouveaux films")})
+        prompt = french("Ondo recherche les appareils de votre réseau.")
+        del prompt["localizations"]["ar"]
+        self.write("App/Resources/InfoPlist.xcstrings",
+                   json.dumps({"sourceLanguage": "en", "strings": {"NSLocalNetworkUsageDescription": prompt}, "version": "1.0"}))
+        self.assertFails("translations", "no Arabic translation in InfoPlist.xcstrings", "NSLocalNetworkUsageDescription")
+
     def test_stale_keys_are_ignored(self):
         self.catalogue({"Old Row": {"extractionState": "stale", "localizations": {}}})
         self.assertPasses("translations")
@@ -131,6 +139,18 @@ class PrivacyManifestTests(CheckTestCase):
         self.write("App/Model/Clock.swift", "#if DEBUG\nlet up = 0.0\n#else\nlet up = ProcessInfo.processInfo.systemUptime\n#endif\n")
         self.assertFails("privacy_manifest", "NSPrivacyAccessedAPICategorySystemBootTime")
 
+    def test_c_code_of_the_core_package_is_checked_too(self):
+        self.manifest()
+        self.write("Packages/IPTVCore/Sources/CZlib/czlib.c", "struct stat info;\nint ok = lstat(path, &info) == 0;\n")
+        self.assertFails("privacy_manifest", "NSPrivacyAccessedAPICategoryFileTimestamp", "Packages/IPTVCore/Sources/CZlib/czlib.c")
+
+    def test_c_debug_only_code_is_ignored_but_not_its_opposite(self):
+        self.manifest()
+        self.write("Packages/IPTVCore/Sources/CZlib/debug.c", "#ifdef DEBUG\nint ok = stat(path, &info);\n#endif\n")
+        self.assertPasses("privacy_manifest")
+        self.write("Packages/IPTVCore/Sources/CZlib/release.c", "#ifndef DEBUG\nint ok = fstatfs(fd, &info);\n#endif\n")
+        self.assertFails("privacy_manifest", "NSPrivacyAccessedAPICategoryDiskSpace", "release.c")
+
     def test_a_category_needs_a_reason(self):
         self.manifest("NSPrivacyAccessedAPICategoryFileTimestamp", reasons=())
         self.assertFails("privacy_manifest", "declared without a reason")
@@ -157,6 +177,19 @@ class MacEntitlementsTests(CheckTestCase):
         self.project({key: value for key, value in self.COMPLETE.items() if key != "com.apple.security.network.client"})
         self.assertFails("mac_entitlements", "com.apple.security.network.client")
 
+    def test_without_user_selected_files_nothing_imports(self):
+        self.project({key: value for key, value in self.COMPLETE.items() if key != "com.apple.security.files.user-selected.read-write"})
+        self.assertFails("mac_entitlements", "com.apple.security.files.user-selected.read-write")
+
+    def test_read_only_file_access_is_not_enough(self):
+        self.project({key: value for key, value in self.COMPLETE.items() if key != "com.apple.security.files.user-selected.read-write"}
+                     | {"com.apple.security.files.user-selected.read-only": True})
+        self.assertFails("mac_entitlements", "com.apple.security.files.user-selected.read-write")
+
+    def test_an_entitlement_no_feature_needs_fails(self):
+        self.project(self.COMPLETE | {"com.apple.security.device.camera": True})
+        self.assertFails("mac_entitlements", "com.apple.security.device.camera, which no feature needs")
+
     def test_a_debug_entitlement_must_not_ship(self):
         self.project(self.COMPLETE | {"com.apple.security.cs.disable-library-validation": True})
         self.assertFails("mac_entitlements", "disable-library-validation")
@@ -180,6 +213,28 @@ class NeutralityTests(CheckTestCase):
         self.write("fastlane/metadata/en-US/description.txt", "The best free IPTV player.\n")
         self.write("fastlane/metadata/fr-FR/description.txt", "Un lecteur IPTV gratuit.\n")
         self.assertFails("neutrality", "en-US/description.txt:1", "fr-FR/description.txt:1", "calls IPTV free")
+
+    def test_free_iptv_fails_in_every_language_of_the_apps(self):
+        texts = {
+            "es": "El mejor reproductor de IPTV gratis.",
+            "es-gratuito": "Un reproductor IPTV gratuito.",
+            "pt": "Assista IPTV grátis no seu celular.",
+            "zh": "最佳免费IPTV播放器",
+            "zh-de": "免费的 IPTV 播放器",
+            "ar": "أفضل مشغل IPTV مجاني",
+            "hi": "सबसे अच्छा मुफ़्त IPTV प्लेयर",
+            "hi-precomposed": "सबसे अच्छा मु\u095e\u094dत IPTV प्लेयर",  # फ़ as one code point (U+095E)
+            "hi-without-nukta": "मुफ्त IPTV देखें",
+        }
+        for name, text in texts.items():
+            self.write(f"android/app/src/main/res/values-{name}/strings.xml", f"<string name=\"tagline\">{text}</string>\n")
+        self.assertFails("neutrality", "calls IPTV free",
+                         *(f"values-{name}/strings.xml:1" for name in texts))
+
+    def test_a_free_app_is_not_free_iptv(self):
+        self.write("fastlane/metadata/es-ES/description.txt", "Ondo es gratis. Es un reproductor IPTV: no incluye contenido.\n")
+        self.write("App/Resources/Notes.txt", "免费下载。IPTV 播放器，不提供内容。\n")
+        self.assertPasses("neutrality")
 
     def test_a_real_channel_fails(self):
         self.write("Tests/Fixtures/sample.m3u", "#EXTM3U\n#EXTINF:-1,France 2 HD\nhttp://example.com/2.m3u8\n")

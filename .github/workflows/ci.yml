@@ -1,15 +1,19 @@
 name: CI
 
 # Apple app and its Swift core: once per commit on main (work branches are pushed to main too), pull
-# requests and on demand. Android-only and documentation-only changes skip it (they have their own checks;
-# the leak scan runs on every commit, see security.yml).
+# requests and on demand. Android-only, documentation-only, website-only and store-listing-only changes skip
+# it: nothing here reads them (Android has its own workflow; the leak scan and the neutrality check run on
+# every commit, see security.yml). The string catalogue (App/Resources/Localizable.xcstrings) is app code:
+# a change to it runs CI.
 on:
   push:
     branches: [main]
     paths-ignore:
       - android/**
+      - fastlane/metadata/**
       - fastlane/metadata-android/**
       - docs/**
+      - site/**
       - '**/*.md'
       - .github/workflows/android.yml
       - .github/workflows/release-android.yml
@@ -17,8 +21,10 @@ on:
   pull_request:
     paths-ignore:
       - android/**
+      - fastlane/metadata/**
       - fastlane/metadata-android/**
       - docs/**
+      - site/**
       - '**/*.md'
       - .github/workflows/android.yml
       - .github/workflows/release-android.yml
@@ -45,18 +51,21 @@ jobs:
       - name: SwiftLint
         run: |
           apt-get update -qq && apt-get install -y -qq unzip curl ca-certificates python3 >/dev/null
-          curl -sSL -o /tmp/swiftlint.zip https://github.com/realm/SwiftLint/releases/download/0.57.1/swiftlint_linux.zip
+          curl -sSfL -o /tmp/swiftlint.zip https://github.com/realm/SwiftLint/releases/download/0.57.1/swiftlint_linux.zip
+          # The 0.57.1 release asset: a replaced or corrupted download stops here instead of running.
+          echo "81cb02135897dc982b4d1049dba8510db3e982b0b0e8e138293982d77e4154e0  /tmp/swiftlint.zip" | sha256sum -c -
           unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint
           /tmp/swiftlint/swiftlint lint --reporter github-actions-logging
-      - name: Shipped configuration (French texts, privacy manifest, Mac sandbox, neutrality)
+      - name: Shipped configuration (translations in seven languages, privacy manifest, Mac sandbox)
         if: success() || failure()
         # What tests on simulated data cannot see: an untranslated text, an App Store upload rejected for
-        # an undeclared API, a Mac app whose sandbox blocks the network.
+        # an undeclared API, a Mac app whose sandbox blocks the network or the file pickers. The neutrality
+        # check runs on every commit in security.yml (this workflow skips documentation and Android changes).
         run: |
           status=0
           # The checks' own tests first: each must reject the defect it exists for (.github/scripts/tests).
           python3 -m unittest discover -s .github/scripts/tests || status=1
-          for check in translations privacy_manifest mac_entitlements neutrality; do
+          for check in translations privacy_manifest mac_entitlements; do
             python3 .github/scripts/check_$check.py || status=1
           done
           exit $status
@@ -96,7 +105,10 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/spm
+          # project.yml pins the package versions (Package.resolved is not committed); any other edit to it
+          # still starts from the previous checkouts.
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
       - name: Build for iOS Simulator
         run: |
           set -o pipefail
@@ -175,7 +187,10 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/spm
+          # project.yml pins the package versions (Package.resolved is not committed); any other edit to it
+          # still starts from the previous checkouts.
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
       - name: Build for iOS Simulator (Release)
         run: |
           set -o pipefail
@@ -191,8 +206,6 @@ jobs:
     runs-on: macos-26
     timeout-minutes: 75
     needs: apple
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -205,7 +218,10 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/spm
+          # project.yml pins the package versions (Package.resolved is not committed); any other edit to it
+          # still starts from the previous checkouts.
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
       - name: Pick a simulator
         id: sim
         run: |
@@ -248,13 +264,40 @@ jobs:
           name: macos-screenshot
           path: macos-shot
         continue-on-error: true
-      - name: Publish screenshots to the ci-screenshots branch
-        if: always() && github.event_name == 'push'
+      - name: Add the macOS screenshot
+        if: always()
         run: |
+          mkdir -p screenshots
           if [ -f macos-shot/macos-launch.png ]; then
             sips -s format jpeg -s formatOptions 70 -Z 1400 macos-shot/macos-launch.png --out screenshots/99-macos-launch.jpg >/dev/null
           fi
           ls -la screenshots
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-screenshots
+          path: screenshots
+
+  publish-screenshots:
+    name: Publish screenshots to the ci-screenshots branch
+    needs: ui-tests
+    # Failed runs too: the screens and the debug/ texts explain a UI test failure. A job of its own, so the
+    # write token is never in reach of the build and its dependencies.
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.ui-tests.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-screenshots
+          path: screenshots
+      - name: Push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
           cd screenshots
           echo "Screenshots of ${GITHUB_REF_NAME} @ ${GITHUB_SHA} (run ${GITHUB_RUN_ID})" > README.md
           git init -q
@@ -263,10 +306,4 @@ jobs:
           git config user.email "ci@users.noreply.github.com"
           git add .
           git commit -q -m "UI screenshots for ${GITHUB_SHA}"
-          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-screenshots
-      - name: Upload screenshots
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ui-screenshots
-          path: screenshots
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-screenshots
