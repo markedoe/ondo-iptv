@@ -51,7 +51,7 @@ enum VideoAspect: String, Codable, CaseIterable, Identifiable {
 }
 
 enum PosterSort: String, Codable, CaseIterable, Identifiable {
-    case playlist, name, recent, rating
+    case playlist, name, recent, release, rating
 
     var id: String { rawValue }
 
@@ -60,6 +60,7 @@ enum PosterSort: String, Codable, CaseIterable, Identifiable {
         case .playlist: return "Playlist order"
         case .name: return "Name"
         case .recent: return "Recently added"
+        case .release: return "Release date"
         case .rating: return "Rating"
         }
     }

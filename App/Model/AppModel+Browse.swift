@@ -27,6 +27,7 @@ extension AppModel {
         case .playlist: return list
         case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         case .recent: return list.sorted { ($0.addedAt ?? .distantPast) > ($1.addedAt ?? .distantPast) }
+        case .release: return list.sorted { Self.releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
         case .rating: return list.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
         }
     }
@@ -43,8 +44,19 @@ extension AppModel {
         case .playlist: return list
         case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         case .recent: return list.sorted { ($0.addedAt ?? .distantPast) > ($1.addedAt ?? .distantPast) }
+        case .release: return list.sorted { Self.releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
         case .rating: return list.sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }
         }
+    }
+
+    typealias ReleaseKey = (year: Int?, added: Date?, name: String)
+
+    /// Newest release first (the year the provider or the title gives); titles without a year last; within a
+    /// year, the latest addition first, then by name.
+    static func releasedFirst(_ lhs: ReleaseKey, _ rhs: ReleaseKey) -> Bool {
+        if lhs.year != rhs.year { return (lhs.year ?? Int.min) > (rhs.year ?? Int.min) }
+        if lhs.added != rhs.added { return (lhs.added ?? .distantPast) > (rhs.added ?? .distantPast) }
+        return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
     }
 
     func recentlyAddedMovies(limit: Int = 20) -> [Movie] {
