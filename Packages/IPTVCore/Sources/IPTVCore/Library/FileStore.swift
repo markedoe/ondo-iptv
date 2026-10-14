@@ -3,7 +3,9 @@ import Foundation
 /// Versioned JSON documents in a directory (Application Support on Apple platforms).
 ///
 /// Every document is wrapped in `{ "version": n, "savedAt": …, "value": … }` and written atomically,
-/// and the previous file is kept as `.bak` so an update can never silently wipe user data.
+/// and the previous file is kept as `.bak` so an update can never silently wipe user data. A file that
+/// cannot be read is moved aside as `name.corrupt-<time>.json`: left in place, the next save would rotate
+/// it over the good `.bak`, and the one after would lose the data for good.
 public final class FileStore: @unchecked Sendable {
     public let directory: URL
     private let lock = NSLock()
@@ -25,7 +27,7 @@ public final class FileStore: @unchecked Sendable {
         directory.appendingPathComponent(name).appendingPathExtension("json")
     }
 
-    public func load<T: Codable>(_ type: T.Type, name: String) -> T? {
+    public func load<T: Codable>(_ type: T.Type, name: String, now: Date = Date()) -> T? {
         lock.lock()
         defer { lock.unlock() }
         let decoder = JSONDecoder()
@@ -34,6 +36,8 @@ public final class FileStore: @unchecked Sendable {
             if let envelope = try? decoder.decode(Envelope<T>.self, from: data) {
                 return envelope.value
             }
+            let aside = directory.appendingPathComponent("\(candidate.lastPathComponent).corrupt-\(Int(now.timeIntervalSince1970)).json")
+            try? FileManager.default.moveItem(at: candidate, to: aside)
         }
         return nil
     }

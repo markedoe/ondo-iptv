@@ -106,6 +106,38 @@ final class LibraryTests: XCTestCase {
         XCTAssertNil(store.load(UserLibrary.self, name: "library"))
     }
 
+    /// The damaged file must not replace the good backup on the next saves, and must stay recoverable.
+    func testADamagedFileIsKeptAsideAndNeverRotatedOverTheBackup() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory)
+        var library = UserLibrary()
+        library.toggleFavorite(ref(.live, "a"), title: "A", imageURL: nil)
+        try store.save(library, name: "library")
+        try store.save(library, name: "library")
+        try Data("{corrupt".utf8).write(to: store.url(for: "library"))
+
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        XCTAssertEqual(store.load(UserLibrary.self, name: "library", now: now), library)
+        let aside = directory.appendingPathComponent("library.json.corrupt-1800000000.json")
+        XCTAssertEqual(try Data(contentsOf: aside), Data("{corrupt".utf8))
+
+        // The next save does not rotate the damaged file into `.bak`: the good version is still there.
+        try store.save(UserLibrary(), name: "library")
+        try FileManager.default.removeItem(at: store.url(for: "library"))
+        XCTAssertEqual(store.load(UserLibrary.self, name: "library"), library)
+    }
+
+    func testWithoutAnyReadableVersionNothingIsLost() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory)
+        try Data("garbage".utf8).write(to: store.url(for: "playlists"))
+        XCTAssertNil(store.load([Playlist].self, name: "playlists", now: Date(timeIntervalSince1970: 7)))
+        try store.save([Playlist](), name: "playlists")
+        XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("playlists.json.corrupt-7.json")), Data("garbage".utf8))
+    }
+
     func testBackupArchive() throws {
         let playlist = Playlist(name: "Mine", source: .xtream(XtreamCredentials(server: URL(string: "http://p")!, username: "u", password: "")))
         var library = UserLibrary()
