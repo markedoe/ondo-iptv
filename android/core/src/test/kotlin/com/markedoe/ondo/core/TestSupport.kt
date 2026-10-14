@@ -21,6 +21,9 @@ class MockHttpClient : HttpClient {
     val requested = CopyOnWriteArrayList<String>()
     val requestHeaders = CopyOnWriteArrayList<Map<String, String>>()
 
+    /** Errors thrown, one per request, before the route answers (a flaky or busy server). */
+    val failures = ConcurrentHashMap<String, MutableList<Exception>>()
+
     override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
         requested.add(url)
         requestHeaders.add(headers)
@@ -30,6 +33,7 @@ class MockHttpClient : HttpClient {
         } else {
             url
         }
+        synchronized(failures) { failures[key]?.removeFirstOrNull() }?.let { throw it }
         return routes[key] ?: throw HttpException.BadStatus(404)
     }
 }

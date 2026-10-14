@@ -4,7 +4,13 @@ import com.markedoe.ondo.core.Fixtures
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.model.CatchupInfo
 import com.markedoe.ondo.core.model.XtreamCredentials
+import com.markedoe.ondo.core.library.PlaylistLoader
+import com.markedoe.ondo.core.library.PlaylistLoaderException
+import com.markedoe.ondo.core.model.Playlist
+import com.markedoe.ondo.core.model.PlaylistSource
 import com.markedoe.ondo.core.model.XtreamOutputFormat
+import com.markedoe.ondo.core.net.HttpException
+import java.net.SocketTimeoutException
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.utc
 import java.time.ZoneId
@@ -216,5 +222,42 @@ class XtreamTest {
         assertNull(XtreamUrlBuilder.parseLiveUrl("http://h.example.com/hls/stream.m3u8"))
         assertEquals("http://h.example.com:8080/live/u/p/42.m3u8", XtreamUrlBuilder.alternateFormatUrl("http://h.example.com:8080/live/u/p/42.ts"))
         assertEquals("http://h.example.com:8080/live/u/p/42.ts", XtreamUrlBuilder.alternateFormatUrl("http://h.example.com:8080/live/u/p/42.m3u8"))
+    }
+
+    @Test
+    fun aSectionThePanelDoesNotOfferIsEmpty() = runTest {
+        val http = mock().apply {
+            routes.remove("api:get_vod_streams") // 404
+            routes["api:get_series"] = """{"error":"disabled"}""".encodeToByteArray()
+        }
+        val content = XtreamClient(credentials, http).fetchContent(XtreamOutputFormat.M3U8)
+        assertEquals(4, content.channels.size)
+        assertTrue(content.movies.isEmpty())
+        assertTrue(content.series.isEmpty())
+    }
+
+    @Test
+    fun aSectionThatFailsOnceIsAskedAgain() = runTest {
+        val http = mock().apply { failures["api:get_live_streams"] = mutableListOf(HttpException.BadStatus(884)) }
+        val content = XtreamClient(credentials, http).fetchContent(XtreamOutputFormat.M3U8)
+        assertEquals(4, content.channels.size)
+        assertEquals(2, http.requested.count { "get_live_streams" in it })
+    }
+
+    /** A refresh that lost its channels to a timeout must fail, or the app saves an empty catalogue. */
+    @Test
+    fun aSectionThatKeepsFailingFailsTheRefresh() = runTest {
+        val http = mock().apply {
+            failures["api:get_live_streams"] = mutableListOf(SocketTimeoutException("slow"), SocketTimeoutException("slow"))
+        }
+        assertFailsWith<SocketTimeoutException> { XtreamClient(credentials, http).fetchContent(XtreamOutputFormat.M3U8) }
+    }
+
+    @Test
+    fun anAccountThatListsNothingIsAnError() = runTest {
+        val http = MockHttpClient().apply { routes["api:"] = Fixtures.bytes("xtream_auth.json") }
+        assertFailsWith<PlaylistLoaderException.EmptyPlaylist> {
+            PlaylistLoader(http).load(Playlist(name = "Empty", source = PlaylistSource.Xtream(credentials)))
+        }
     }
 }

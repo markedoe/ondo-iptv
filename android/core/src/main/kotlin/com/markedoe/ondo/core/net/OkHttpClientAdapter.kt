@@ -88,8 +88,18 @@ class OkHttpClientAdapter(
             return builder.build()
         }
 
-        /** 60 s per read / connect (provider lists can be slow), 10 min for a whole download. */
+        /**
+         * 60 s per read / connect (provider lists can be slow), 10 min for a whole download. Every request
+         * without a `User-Agent` (artwork too, which the image loader sends through this client) uses
+         * [DEFAULT_IPTV_USER_AGENT]: providers that filter on it would otherwise refuse some of them.
+         */
         fun defaultClient(): OkHttpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val request = chain.request()
+                chain.proceed(
+                    if (request.header("User-Agent") == null) request.newBuilder().header("User-Agent", DEFAULT_IPTV_USER_AGENT).build() else request,
+                )
+            }
             .connectTimeout(60, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
             .callTimeout(600, TimeUnit.SECONDS)

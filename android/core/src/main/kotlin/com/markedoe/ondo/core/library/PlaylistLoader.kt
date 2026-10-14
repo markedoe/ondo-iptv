@@ -57,19 +57,30 @@ class PlaylistLoader(
                     null
                 }
                 val data = http.get(client.urls.m3uUrl(playlist.xtreamOutput), playlist.headers.toMap())
-                val content = parseInBackground(data).copy(account = account)
+                val content = parseInBackground(data).withoutDeviceGuides().copy(account = account)
                 if (content.providerEpgUrls.isEmpty()) content.copy(providerEpgUrls = listOf(client.urls.xmltvUrl)) else content
             } else {
-                client.fetchContent(playlist.xtreamOutput).copy(fetchedAt = clock())
+                val content = client.fetchContent(playlist.xtreamOutput)
+                // An account that lists nothing at all is a provider fault: keep the saved catalogue.
+                if (content.channels.isEmpty() && content.movies.isEmpty() && content.series.isEmpty()) {
+                    throw PlaylistLoaderException.EmptyPlaylist()
+                }
+                content.copy(fetchedAt = clock())
             }
         }
 
-        is PlaylistSource.Remote -> parseInBackground(http.get(source.url, playlist.headers.toMap()))
+        is PlaylistSource.Remote -> parseInBackground(http.get(source.url, playlist.headers.toMap())).let { content ->
+            // A playlist from the internet cannot make the app read files on the device as its guide.
+            if (source.url.startsWith("file:", ignoreCase = true)) content else content.withoutDeviceGuides()
+        }
 
         is PlaylistSource.LocalFile -> parseInBackground(withContext(ioDispatcher) { File(source.path).readBytes() })
     }
 
     private suspend fun parseInBackground(bytes: ByteArray): PlaylistContent = withContext(parsingDispatcher) { parse(bytes) }
+
+    private fun PlaylistContent.withoutDeviceGuides(): PlaylistContent =
+        copy(providerEpgUrls = providerEpgUrls.filterNot { it.startsWith("file:", ignoreCase = true) })
 
     /**
      * Parses M3U, XSPF, JSON or plain URL lists (gzip compressed or not).

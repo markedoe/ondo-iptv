@@ -43,6 +43,23 @@ class PlaylistLoaderTest {
     }
 
     @Test
+    fun aDownloadedPlaylistCannotPointTheGuideAtDeviceFiles() = runTest {
+        val text = "#EXTM3U url-tvg=\"file:///etc/hosts,http://epg.example.com/guide.xml\"\n#EXTINF:-1,News\nhttp://example.com/news.m3u8\n"
+        val http = MockHttpClient().apply { routes["http://example.com/list.m3u"] = text.encodeToByteArray() }
+        val remote = PlaylistLoader(http).load(Playlist(name = "P", source = PlaylistSource.Remote("http://example.com/list.m3u")))
+        assertEquals(listOf("http://epg.example.com/guide.xml"), remote.providerEpgUrls)
+
+        // An imported file may use a guide file next to it.
+        val file = Files.createTempFile("ondo", ".m3u").toFile().apply { writeText(text) }
+        try {
+            val local = PlaylistLoader(MockHttpClient()).load(Playlist(name = "F", source = PlaylistSource.LocalFile(file.path)))
+            assertEquals(2, local.providerEpgUrls.size)
+        } finally {
+            file.delete()
+        }
+    }
+
+    @Test
     fun localFilesAreRead() = runTest {
         val file = Files.createTempFile("ondo", ".m3u").toFile()
         try {

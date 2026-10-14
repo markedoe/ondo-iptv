@@ -40,6 +40,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -54,6 +55,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.net.DEFAULT_IPTV_USER_AGENT
 import com.markedoe.ondo.ui.theme.OndoTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -71,6 +73,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var request: PlayRequest
     private var urlIndex = 0
     private var errorMessage by mutableStateOf<String?>(null)
+    private var inPictureInPicture by mutableStateOf(false)
     private var playerView: PlayerView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,13 +106,16 @@ class PlayerActivity : ComponentActivity() {
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
-                    IconButton(
-                        onClick = { finish() },
-                        modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp),
-                    ) {
-                        Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
+                    // The small Picture-in-Picture window shows the video only: the system draws its own controls.
+                    if (!inPictureInPicture) {
+                        IconButton(
+                            onClick = { finish() },
+                            modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp),
+                        ) {
+                            Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
+                        }
                     }
-                    errorMessage?.let { message ->
+                    errorMessage?.takeIf { !inPictureInPicture }?.let { message ->
                         Column(
                             modifier = Modifier.align(Alignment.Center).padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -133,7 +139,10 @@ class PlayerActivity : ComponentActivity() {
     }
 
     private fun buildPlayer(): ExoPlayer {
+        // Streams go out with the same player identity as the catalogue (providers filter on it), unless
+        // the playlist sets its own.
         val http = DefaultHttpDataSource.Factory()
+            .setUserAgent(DEFAULT_IPTV_USER_AGENT)
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000)
@@ -141,6 +150,9 @@ class PlayerActivity : ComponentActivity() {
         request.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
         return ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(http))
+            // Audio focus: pause for a call, lower the volume under a navigation prompt, stop when another
+            // app starts playing.
+            .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .build()
             .apply {
@@ -248,6 +260,8 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        inPictureInPicture = isInPictureInPictureMode
+        playerView?.useController = !isInPictureInPictureMode
         if (!isInPictureInPictureMode && !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
             player?.pause()
         }

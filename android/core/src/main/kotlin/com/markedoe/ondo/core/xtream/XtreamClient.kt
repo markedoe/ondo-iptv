@@ -156,8 +156,8 @@ class XtreamClient(
         }
 
     /**
-     * Downloads the whole catalogue: account first, then the six lists in parallel. A failing section
-     * (some panels disable VOD) yields an empty list instead of failing the whole load.
+     * Downloads the whole catalogue: account first, then the six lists in parallel. A section the panel
+     * does not offer is empty; any other failure fails the load (see [section]).
      */
     suspend fun fetchContent(format: XtreamOutputFormat): PlaylistContent {
         val account = authenticate()
@@ -169,22 +169,22 @@ class XtreamClient(
             format
         }
         return coroutineScope {
-            val liveCats = async { orEmpty { liveCategories() } }
-            val movieCats = async { orEmpty { movieCategories() } }
-            val seriesCats = async { orEmpty { seriesCategories() } }
-            val channels = async { orEmpty { liveStreams(effectiveFormat) } }
-            val movies = async { orEmpty { movies() } }
-            val series = async { orEmpty { series() } }
-            val resolvedChannels = channels.await()
-            val resolvedMovies = movies.await()
-            val resolvedSeries = series.await()
+            val liveCats = async { attempt { liveCategories() } }
+            val movieCats = async { attempt { movieCategories() } }
+            val seriesCats = async { attempt { seriesCategories() } }
+            val channels = async { attempt { liveStreams(effectiveFormat) } }
+            val movies = async { attempt { movies() } }
+            val series = async { attempt { series() } }
+            val resolvedChannels = section(channels.await()) { liveStreams(effectiveFormat) }
+            val resolvedMovies = section(movies.await()) { movies() }
+            val resolvedSeries = section(series.await()) { series() }
             PlaylistContent(
                 channels = resolvedChannels,
                 movies = resolvedMovies,
                 series = resolvedSeries,
-                liveCategories = categoriesWithOrphans(liveCats.await(), resolvedChannels.map { it.categoryId }, ContentType.LIVE),
-                movieCategories = categoriesWithOrphans(movieCats.await(), resolvedMovies.map { it.categoryId }, ContentType.MOVIE),
-                seriesCategories = categoriesWithOrphans(seriesCats.await(), resolvedSeries.map { it.categoryId }, ContentType.SERIES),
+                liveCategories = categoriesWithOrphans(section(liveCats.await()) { liveCategories() }, resolvedChannels.map { it.categoryId }, ContentType.LIVE),
+                movieCategories = categoriesWithOrphans(section(movieCats.await()) { movieCategories() }, resolvedMovies.map { it.categoryId }, ContentType.MOVIE),
+                seriesCategories = categoriesWithOrphans(section(seriesCats.await()) { seriesCategories() }, resolvedSeries.map { it.categoryId }, ContentType.SERIES),
                 providerEpgUrls = listOf(urls.xmltvUrl),
                 account = account,
                 fetchedAt = clock(),
@@ -192,12 +192,34 @@ class XtreamClient(
         }
     }
 
-    private suspend fun <T> orEmpty(block: suspend () -> List<T>): List<T> = try {
-        block()
+    internal fun isMissingSection(error: Throwable): Boolean =
+        (error is HttpException.BadStatus && error.code == 404) || error is HttpException.EmptyResponse ||
+            error is XtreamException.InvalidResponse
+
+    private suspend fun <T> attempt(block: suspend () -> List<T>): Result<List<T>> = try {
+        Result.success(block())
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        emptyList()
+        Result.failure(e)
+    }
+
+    /**
+     * One list of the catalogue. A section the panel does not offer (some disable VOD or series: 404, an
+     * empty or non-list answer) is empty. Any other failure (network, server error, refusal) is retried
+     * once on its own, as busy panels refuse parallel requests, then thrown: a refresh that quietly lost a
+     * section would replace the saved catalogue with a partial one.
+     */
+    private suspend fun <T> section(first: Result<List<T>>, retry: suspend () -> List<T>): List<T> {
+        val error = first.exceptionOrNull() ?: return first.getOrThrow()
+        if (isMissingSection(error)) return emptyList()
+        return try {
+            retry()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (isMissingSection(e)) emptyList() else throw e
+        }
     }
 
     // Details

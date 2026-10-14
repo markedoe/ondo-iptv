@@ -40,6 +40,14 @@ class OkHttpClientAdapterTest {
         assertEquals(DEFAULT_IPTV_USER_AGENT, request.getHeader("User-Agent"), "default user agent")
     }
 
+    /** The image loader calls the shared client directly, without the adapter's headers. */
+    @Test
+    fun theSharedClientSendsThePlayerUserAgentToo(): Unit = runBlocking(Dispatchers.IO) {
+        server.enqueue(MockResponse().setBody("png"))
+        OkHttpClientAdapter.defaultClient().newCall(okhttp3.Request.Builder().url(server.url("/logo.png")).build()).execute().close()
+        assertEquals(DEFAULT_IPTV_USER_AGENT, server.takeRequest(5, TimeUnit.SECONDS)!!.getHeader("User-Agent"))
+    }
+
     @Test
     fun customUserAgentWins(): Unit = runBlocking(Dispatchers.IO) {
         server.enqueue(MockResponse().setBody("ok"))
