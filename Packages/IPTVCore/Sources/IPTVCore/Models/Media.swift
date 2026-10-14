@@ -23,7 +23,7 @@ public struct CatchupInfo: Codable, Hashable, Sendable {
         case `default`
         /// `catchup-source` is appended to the live URL.
         case append
-        /// `?utc={start}&lutc={now}` appended to the live URL (SIPTV style).
+        /// `?utc={start}&lutc={now}` appended to the live URL (the `utc` / `lutc` convention).
         case shift
         /// Flussonic `timeshift_abs` / `index-{start}-{duration}` URLs.
         case flussonic

@@ -1,7 +1,7 @@
 import Foundation
 
-/// Builds replay URLs for past programmes, following the common M3U conventions (Kodi's IPTV Simple
-/// client: `catchup`, `catchup-source`, `catchup-days` attributes) and Xtream Codes `timeshift`.
+/// Builds replay URLs for past programmes, following the common M3U conventions (the
+/// `catchup`, `catchup-source`, `catchup-days` attributes) and Xtream Codes `timeshift`.
 public enum CatchupURLBuilder {
     public struct Context: Sendable {
         /// Credentials when the playlist is an Xtream account.

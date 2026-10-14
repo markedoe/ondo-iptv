@@ -236,22 +236,22 @@ class ChannelManagementTest {
     fun editsRenameAndRenumberButKeepGuideMatching() {
         val content = PlaylistContent(
             channels = listOf(
-                Channel(id = "1", name = "FR: TF1 FHD", number = 1, categoryId = "a", streamUrl = "http://h/1"),
-                Channel(id = "2", name = "France 2", categoryId = "a", streamUrl = "http://h/2", epgName = "france2"),
-                Channel(id = "3", name = "Arte", categoryId = "a", streamUrl = "http://h/3"),
+                Channel(id = "1", name = "FR: TV1 FHD", number = 1, categoryId = "a", streamUrl = "http://h/1"),
+                Channel(id = "2", name = "Nation 2", categoryId = "a", streamUrl = "http://h/2", epgName = "nation2"),
+                Channel(id = "3", name = "Aria", categoryId = "a", streamUrl = "http://h/3"),
             ),
         )
         val edited = content.applying(
             mapOf(
-                "1" to ChannelEdit(name = "TF1", number = 101),
+                "1" to ChannelEdit(name = "TV1", number = 101),
                 "2" to ChannelEdit(number = 2),
                 "x" to ChannelEdit(name = "Ghost"),
             ),
         )
-        assertEquals(listOf("TF1", "France 2", "Arte"), edited.channels.map { it.name })
+        assertEquals(listOf("TV1", "Nation 2", "Aria"), edited.channels.map { it.name })
         assertEquals(listOf(101, 2, null), edited.channels.map { it.number })
-        assertEquals("FR: TF1 FHD", edited.channels[0].epgName, "the provider name still matches the guide")
-        assertEquals("france2", edited.channels[1].epgName)
+        assertEquals("FR: TV1 FHD", edited.channels[0].epgName, "the provider name still matches the guide")
+        assertEquals("nation2", edited.channels[1].epgName)
         assertEquals(content, content.applying(emptyMap()))
         assertTrue(ChannelEdit().isEmpty)
     }
@@ -281,8 +281,8 @@ class ChannelManagementTest {
     @Test
     fun playlistChannelEditsDecode() {
         val playlist = Playlist(name = "P", source = PlaylistSource.Remote("http://h/p.m3u"))
-            .copy(channelEdits = mapOf("1" to ChannelEdit(name = "TF1", number = 101)))
+            .copy(channelEdits = mapOf("1" to ChannelEdit(name = "TV1", number = 101)))
         val decoded = CoreJson.decodeFromString(Playlist.serializer(), CoreJson.encodeToString(Playlist.serializer(), playlist))
-        assertEquals(ChannelEdit(name = "TF1", number = 101), decoded.channelEdits["1"])
+        assertEquals(ChannelEdit(name = "TV1", number = 101), decoded.channelEdits["1"])
     }
 }

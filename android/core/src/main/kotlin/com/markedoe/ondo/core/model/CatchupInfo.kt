@@ -19,7 +19,7 @@ data class CatchupInfo(
         /** `catchup-source` is appended to the live URL. */
         @SerialName("append") APPEND,
 
-        /** `?utc={start}&lutc={now}` appended to the live URL (SIPTV style). */
+        /** `?utc={start}&lutc={now}` appended to the live URL (the `utc` / `lutc` convention). */
         @SerialName("shift") SHIFT,
 
         /** Flussonic `timeshift_abs` / `index-{start}-{duration}` URLs. */

@@ -19,9 +19,9 @@ final class CatchupTests: XCTestCase {
     }
 
     func testDefaultMode() {
-        let c = channel("http://a.example.com/live.m3u8", CatchupInfo(mode: .default, days: 3, source: "http://archive.example.com/arte?start={utc}&end={utcend}"))
+        let c = channel("http://a.example.com/live.m3u8", CatchupInfo(mode: .default, days: 3, source: "http://archive.example.com/aria?start={utc}&end={utcend}"))
         XCTAssertEqual(CatchupURLBuilder.urls(channel: c, start: start, end: end, now: now).map(\.absoluteString),
-                       ["http://archive.example.com/arte?start=1760032800&end=1760035500"])
+                       ["http://archive.example.com/aria?start=1760032800&end=1760035500"])
     }
 
     func testAppendMode() {
@@ -37,12 +37,12 @@ final class CatchupTests: XCTestCase {
     }
 
     func testFlussonicModes() {
-        let hls = channel("http://fl.example.com/france2/index.m3u8?token=abc", CatchupInfo(mode: .flussonic, days: 3))
+        let hls = channel("http://fl.example.com/nation2/index.m3u8?token=abc", CatchupInfo(mode: .flussonic, days: 3))
         XCTAssertEqual(CatchupURLBuilder.urls(channel: hls, start: start, end: end, now: now).first?.absoluteString,
-                       "http://fl.example.com/france2/index-1760032800-2700.m3u8?token=abc")
-        let ts = channel("http://fl.example.com/france2/mpegts?token=abc", CatchupInfo(mode: .flussonic, days: 3))
+                       "http://fl.example.com/nation2/index-1760032800-2700.m3u8?token=abc")
+        let ts = channel("http://fl.example.com/nation2/mpegts?token=abc", CatchupInfo(mode: .flussonic, days: 3))
         XCTAssertEqual(CatchupURLBuilder.urls(channel: ts, start: start, end: end, now: now).first?.absoluteString,
-                       "http://fl.example.com/france2/timeshift_abs-1760032800.ts?token=abc")
+                       "http://fl.example.com/nation2/timeshift_abs-1760032800.ts?token=abc")
     }
 
     func testXtreamModeFromAccount() {
@@ -86,13 +86,13 @@ final class CatchupTests: XCTestCase {
         XCTAssertEqual(item.headers.dictionary, ["User-Agent": "Global", "Referer": "http://ref"])
         XCTAssertEqual(item.reference.type, .live)
 
-        var backup = channel("http://backup.example.com/tf1.m3u8", nil)
+        var backup = channel("http://backup.example.com/tv1.m3u8", nil)
         backup.id = "backup"
         let withAlternates = factory.item(for: c, alternates: [c, backup])
         XCTAssertEqual(withAlternates.candidateURLs.map(\.absoluteString), [
             "http://p.example.com:8080/live/u/p/101.ts",
             "http://p.example.com:8080/live/u/p/101.m3u8",
-            "http://backup.example.com/tf1.m3u8",
+            "http://backup.example.com/tv1.m3u8",
         ])
     }
 }

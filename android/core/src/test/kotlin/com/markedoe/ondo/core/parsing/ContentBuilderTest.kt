@@ -23,8 +23,8 @@ class ContentBuilderTest {
     @Test
     fun classification() {
         val content = content()
-        assertEquals(listOf("TF1 HD", "France 2", "beIN Sports 1", "Arte", "FIP Radio", "Hot channel", "TF1 HD"), content.channels.map { it.name })
-        assertEquals(listOf("Inception", "Mad Max Fury Road"), content.movies.map { it.name })
+        assertEquals(listOf("TV1 HD", "Nation 2", "Stadia Sports 1", "Aria", "Wave Radio", "Hot channel", "TV1 HD"), content.channels.map { it.name })
+        assertEquals(listOf("Lighthouse", "Mad Max Fury Road"), content.movies.map { it.name })
         assertEquals(2010, content.movies.first().year)
         assertEquals(1, content.series.size)
         assertEquals(2, content.providerEpgUrls.size)
@@ -44,7 +44,7 @@ class ContentBuilderTest {
     @Test
     fun seriesGrouping() {
         val series = assertNotNull(content().series.firstOrNull())
-        assertEquals("Breaking Bad", series.name)
+        assertEquals("Copper Valley", series.name)
         assertEquals("http://img.example.com/bb.jpg", series.coverUrl)
         assertEquals(listOf("S01E01", "S01E02", "S02E01"), series.episodes.map { it.code })
         assertEquals("Pilot", series.episodes[0].title)
@@ -117,7 +117,7 @@ class ContentBuilderTest {
         assertEquals(CatchupInfo.Mode.FLUSSONIC, channels[1].catchup?.mode)
         assertEquals(5, channels[1].catchup?.days)
         assertEquals(CatchupInfo.Mode.DEFAULT, channels[3].catchup?.mode)
-        assertEquals("http://archive.example.com/arte?start={utc}&end={utcend}", channels[3].catchup?.source)
+        assertEquals("http://archive.example.com/aria?start={utc}&end={utcend}", channels[3].catchup?.source)
     }
 
     @Test
@@ -125,7 +125,7 @@ class ContentBuilderTest {
         fun info(vararg pairs: Pair<String, String>, url: String? = null) = M3uContentBuilder.catchupInfo(mapOf(*pairs), url)
         assertNull(info())
         assertEquals(CatchupInfo(CatchupInfo.Mode.APPEND, 7), info("catchup" to "append"), "type without days: one week")
-        assertEquals(CatchupInfo(CatchupInfo.Mode.SHIFT, 3), info("timeshift" to "3"), "SIPTV timeshift")
+        assertEquals(CatchupInfo(CatchupInfo.Mode.SHIFT, 3), info("timeshift" to "3"), "timeshift attribute")
         assertEquals(
             CatchupInfo(CatchupInfo.Mode.XTREAM, 3),
             info("tvg-rec" to "3", url = "http://h.example.com/live/u/p/1.ts"),
@@ -138,29 +138,29 @@ class ContentBuilderTest {
 
     @Test
     fun xtreamStreamIdDetectedInPlainM3u() {
-        val tf1 = content().channels[0]
-        assertEquals(101, tf1.xtreamStreamId)
-        assertEquals("TF1.fr", tf1.epgId)
-        assertEquals("TF1", tf1.epgName)
+        val tv1 = content().channels[0]
+        assertEquals(101, tv1.xtreamStreamId)
+        assertEquals("TV1.fr", tv1.epgId)
+        assertEquals("TV1", tv1.epgName)
     }
 
     @Test
     fun titleParser() {
-        assertEquals("The Office (US)", TitleParser.parseEpisode("The Office (US) S03E12 Traveling Salesmen")?.seriesName)
-        assertEquals(2, TitleParser.parseEpisode("Lost 2x05")?.season)
-        assertEquals(5, TitleParser.parseEpisode("Lost 2x05")?.episode)
-        assertEquals(3, TitleParser.parseEpisode("Dix pour cent Saison 2 Episode 3")?.episode)
-        assertNull(TitleParser.parseEpisode("TF1 HD"))
-        assertEquals("Dune", TitleParser.splitYear("Dune [2021]").name)
-        assertEquals(2021, TitleParser.splitYear("Dune [2021]").year)
-        assertEquals(2049, TitleParser.splitYear("Blade Runner 2049").year)
-        assertNull(TitleParser.splitYear("Matrix").year)
+        assertEquals("The Workshop (US)", TitleParser.parseEpisode("The Workshop (US) S03E12 Traveling Salesmen")?.seriesName)
+        assertEquals(2, TitleParser.parseEpisode("Adrift 2x05")?.season)
+        assertEquals(5, TitleParser.parseEpisode("Adrift 2x05")?.episode)
+        assertEquals(3, TitleParser.parseEpisode("Dix sur dix Saison 2 Episode 3")?.episode)
+        assertNull(TitleParser.parseEpisode("TV1 HD"))
+        assertEquals("Sandstorm", TitleParser.splitYear("Sandstorm [2021]").name)
+        assertEquals(2021, TitleParser.splitYear("Sandstorm [2021]").year)
+        assertEquals(2049, TitleParser.splitYear("Star Runner 2049").year)
+        assertNull(TitleParser.splitYear("Lattice").year)
     }
 
     @Test
     fun titleParserUnicodeAndSeparators() {
-        val accented = assertNotNull(TitleParser.parseEpisode("Dix pour cent - saison 2 - épisode 4 - Le final"))
-        assertEquals("Dix pour cent", accented.seriesName)
+        val accented = assertNotNull(TitleParser.parseEpisode("Dix sur dix - saison 2 - épisode 4 - Le final"))
+        assertEquals("Dix sur dix", accented.seriesName)
         assertEquals(2, accented.season)
         assertEquals(4, accented.episode)
         assertEquals("Le final", accented.episodeTitle)

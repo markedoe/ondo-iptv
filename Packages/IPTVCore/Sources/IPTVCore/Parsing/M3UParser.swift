@@ -9,7 +9,7 @@ public struct M3UEntry: Hashable, Sendable {
     public var url: URL
     /// `#EXTGRP:` value when present.
     public var extGroup: String?
-    /// Headers from `#EXTVLCOPT`, `#KODIPROP` and Kodi style `url|User-Agent=…` suffixes.
+    /// Headers from `#EXTVLCOPT`, `#KODIPROP` and `url|User-Agent=…` suffixes.
     public var headers: HTTPHeaders
 
     public var groupTitle: String? { attributes["group-title"]?.nilIfBlank ?? extGroup?.nilIfBlank }

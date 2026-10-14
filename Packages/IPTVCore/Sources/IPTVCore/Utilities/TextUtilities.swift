@@ -54,10 +54,10 @@ public enum TextNormalizer {
     }
 
     /// Key used to match a playlist channel to a guide channel when ids differ:
-    /// "FR: TF1 FHD" / "TF1 HD" / "tf1" -> "tf1"
+    /// "FR: TV1 FHD" / "TV1 HD" / "tv1" -> "tv1"
     public static func channelMatchKey(_ name: String) -> String {
         var tokens = normalize(name).split(separator: " ").map(String.init)
-        // Leading "FR", "UK"... country tags ("FR: TF1", "FR | TF1").
+        // Leading "FR", "UK"... country tags ("FR: TV1", "FR | TV1").
         if tokens.count > 1, let first = tokens.first, countryPrefixes.contains(first) {
             tokens.removeFirst()
         }

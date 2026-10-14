@@ -1,29 +1,29 @@
 #EXTM3U url-tvg="http://epg.example.com/guide.xml.gz,http://epg2.example.com/g.xml" catchup="shift" catchup-days="2"
-#EXTINF:-1 tvg-id="TF1.fr" tvg-name="TF1" tvg-logo="http://logos.example.com/tf1.png" tvg-chno="1" group-title="France, TNT",TF1 HD
+#EXTINF:-1 tvg-id="TV1.fr" tvg-name="TV1" tvg-logo="http://logos.example.com/tv1.png" tvg-chno="1" group-title="France, TNT",TV1 HD
 http://host.example.com:8080/live/user/pass/101.ts
-#EXTINF:-1 tvg-id="France2.fr" tvg-logo='http://logos.example.com/f2.png' group-title="France, TNT" catchup="flussonic" catchup-days="5",France 2
-http://fl.example.com/france2/index.m3u8?token=abc
-#EXTINF:-1 tvg-id="" group-title=Sports,beIN Sports 1
+#EXTINF:-1 tvg-id="Nation2.fr" tvg-logo='http://logos.example.com/f2.png' group-title="France, TNT" catchup="flussonic" catchup-days="5",Nation 2
+http://fl.example.com/nation2/index.m3u8?token=abc
+#EXTINF:-1 tvg-id="" group-title=Sports,Stadia Sports 1
 #EXTVLCOPT:http-user-agent=MyAgent/1.0
 #EXTVLCOPT:http-referrer=http://ref.example.com/
-http://sport.example.com/bein1/playlist.m3u8
-#EXTINF:-1 tvg-name="Arte" group-title="France, TNT" catchup="default" catchup-source="http://archive.example.com/arte?start={utc}&end={utcend}",Arte
-http://arte.example.com/live.m3u8|User-Agent=Kodi%2F20&Referer=http%3A%2F%2Farte.example.com
+http://sport.example.com/stadia1/playlist.m3u8
+#EXTINF:-1 tvg-name="Aria" group-title="France, TNT" catchup="default" catchup-source="http://archive.example.com/aria?start={utc}&end={utcend}",Aria
+http://aria.example.com/live.m3u8|User-Agent=ExamplePlayer%2F20&Referer=http%3A%2F%2Faria.example.com
 #EXTGRP:Radio
-#EXTINF:-1,FIP Radio
-http://radio.example.com/fip.mp3
-#EXTINF:-1 tvg-logo="http://img.example.com/inception.jpg" group-title="VOD | Films",Inception (2010)
+#EXTINF:-1,Wave Radio
+http://radio.example.com/wave.mp3
+#EXTINF:-1 tvg-logo="http://img.example.com/lighthouse.jpg" group-title="VOD | Films",Lighthouse (2010)
 http://host.example.com:8080/movie/user/pass/5001.mkv
 #EXTINF:7200 group-title="Films Action",Mad Max Fury Road
 http://cdn.example.com/films/madmax.mp4
-#EXTINF:-1 tvg-logo="http://img.example.com/bb.jpg" group-title="Séries US",Breaking Bad S01 E01 Pilot
+#EXTINF:-1 tvg-logo="http://img.example.com/bb.jpg" group-title="Séries US",Copper Valley S01 E01 Pilot
 http://host.example.com:8080/series/user/pass/9001.mkv
-#EXTINF:-1 tvg-logo="http://img.example.com/bb.jpg" group-title="Séries US",Breaking Bad S01 E02
+#EXTINF:-1 tvg-logo="http://img.example.com/bb.jpg" group-title="Séries US",Copper Valley S01 E02
 http://host.example.com:8080/series/user/pass/9002.mkv
-#EXTINF:-1 group-title="Séries US",Breaking Bad S02E01 - Seven Thirty-Seven
+#EXTINF:-1 group-title="Séries US",Copper Valley S02E01 - Seven Thirty-Seven
 http://host.example.com:8080/series/user/pass/9010.mkv
 #EXTINF:-1 group-title="XXX Adults",Hot channel
 http://host.example.com:8080/live/user/pass/666.ts
 
-#EXTINF:-1 tvg-id="TF1.fr" group-title="France, TNT",TF1 HD
+#EXTINF:-1 tvg-id="TV1.fr" group-title="France, TNT",TV1 HD
 http://host.example.com:8080/live/user/pass/101.ts

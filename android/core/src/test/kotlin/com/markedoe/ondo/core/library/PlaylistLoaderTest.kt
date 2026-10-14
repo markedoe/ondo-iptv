@@ -110,8 +110,8 @@ class PlaylistLoaderTest {
     fun guidesAreMergedFilteredAndFailuresReported() = runTest {
         val http = MockHttpClient()
         http.routes["http://user/epg.xml"] = """
-            <tv><channel id="TF1.fr"><display-name>TF1</display-name></channel>
-            <programme start="20251009180000 +0000" stop="20251009183000 +0000" channel="TF1.fr"><title>User JT</title></programme></tv>
+            <tv><channel id="TV1.fr"><display-name>TV1</display-name></channel>
+            <programme start="20251009180000 +0000" stop="20251009183000 +0000" channel="TV1.fr"><title>User JT</title></programme></tv>
         """.trimIndent().encodeToByteArray()
         http.routes["http://epg.example.com/guide.xml.gz"] = Fixtures.bytes("epg.xml.gz")
         val playlist = Playlist(
@@ -123,8 +123,8 @@ class PlaylistLoaderTest {
         )
         val content = PlaylistContent(
             channels = listOf(
-                Channel(id = "1", name = "TF1 HD", categoryId = "c", streamUrl = "http://h/1", epgId = "TF1.fr"),
-                Channel(id = "2", name = "FR: France 2", categoryId = "c", streamUrl = "http://h/2"),
+                Channel(id = "1", name = "TV1 HD", categoryId = "c", streamUrl = "http://h/1", epgId = "TV1.fr"),
+                Channel(id = "2", name = "FR: Nation 2", categoryId = "c", streamUrl = "http://h/2"),
             ),
             providerEpgUrls = listOf("http://epg.example.com/guide.xml.gz", "http://user/epg.xml", "http://epg2.example.com/g.xml"),
         )
@@ -137,8 +137,8 @@ class PlaylistLoaderTest {
         )
         assertEquals(setOf("http://broken/epg.xml", "http://epg2.example.com/g.xml"), result.failures.keys)
         assertIs<HttpException.BadStatus>(result.failures["http://broken/epg.xml"])
-        assertEquals(listOf("User JT", "Film du soir"), assertNotNull(result.data.programs["TF1.fr"]).map { it.title }, "first source wins on overlaps")
-        assertEquals(1, result.data.programs["france2"]?.size, "matched by name")
+        assertEquals(listOf("User JT", "Film du soir"), assertNotNull(result.data.programs["TV1.fr"]).map { it.title }, "first source wins on overlaps")
+        assertEquals(1, result.data.programs["nation2"]?.size, "matched by name")
         assertEquals(1, result.data.programs["unused.fr"]?.size, "kept because the user picked it by hand")
         assertEquals(1_234L, result.data.fetchedAt)
 

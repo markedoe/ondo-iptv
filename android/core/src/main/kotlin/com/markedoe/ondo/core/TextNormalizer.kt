@@ -73,11 +73,11 @@ object TextNormalizer {
 
     /**
      * Key used to match a playlist channel to a guide channel when ids differ:
-     * `"FR: TF1 FHD"` / `"TF1 HD"` / `"tf1"` -> `"tf1"`.
+     * `"FR: TV1 FHD"` / `"TV1 HD"` / `"tv1"` -> `"tv1"`.
      */
     fun channelMatchKey(name: String): String {
         val tokens = normalize(name).split(' ').filter { it.isNotEmpty() }.toMutableList()
-        // Leading "FR", "UK"... country tags ("FR: TF1", "FR | TF1").
+        // Leading "FR", "UK"... country tags ("FR: TV1", "FR | TV1").
         if (tokens.size > 1 && tokens.first() in countryPrefixes) tokens.removeAt(0)
         tokens.removeAll { it in qualityTokens }
         return tokens.joinToString("")

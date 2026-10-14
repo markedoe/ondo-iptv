@@ -51,10 +51,10 @@ class CatchupTest {
     fun defaultMode() {
         val c = channel(
             "http://a.example.com/live.m3u8",
-            CatchupInfo(CatchupInfo.Mode.DEFAULT, 3, "http://archive.example.com/arte?start={utc}&end={utcend}"),
+            CatchupInfo(CatchupInfo.Mode.DEFAULT, 3, "http://archive.example.com/aria?start={utc}&end={utcend}"),
         )
         assertEquals(
-            listOf("http://archive.example.com/arte?start=1760032800&end=1760035500"),
+            listOf("http://archive.example.com/aria?start=1760032800&end=1760035500"),
             CatchupUrlBuilder.urls(c, start, end, now),
         )
     }
@@ -86,12 +86,12 @@ class CatchupTest {
 
     @Test
     fun flussonicModes() {
-        val hls = channel("http://fl.example.com/france2/index.m3u8?token=abc", CatchupInfo(CatchupInfo.Mode.FLUSSONIC, 3))
-        assertEquals("http://fl.example.com/france2/index-1760032800-2700.m3u8?token=abc", CatchupUrlBuilder.urls(hls, start, end, now).first())
-        val ts = channel("http://fl.example.com/france2/mpegts?token=abc", CatchupInfo(CatchupInfo.Mode.FLUSSONIC, 3))
-        assertEquals("http://fl.example.com/france2/timeshift_abs-1760032800.ts?token=abc", CatchupUrlBuilder.urls(ts, start, end, now).first())
-        val other = channel("http://fl.example.com/france2/", CatchupInfo(CatchupInfo.Mode.FLUSSONIC, 3))
-        assertEquals("http://fl.example.com/france2/timeshift_abs-1760032800.ts", CatchupUrlBuilder.urls(other, start, end, now).first())
+        val hls = channel("http://fl.example.com/nation2/index.m3u8?token=abc", CatchupInfo(CatchupInfo.Mode.FLUSSONIC, 3))
+        assertEquals("http://fl.example.com/nation2/index-1760032800-2700.m3u8?token=abc", CatchupUrlBuilder.urls(hls, start, end, now).first())
+        val ts = channel("http://fl.example.com/nation2/mpegts?token=abc", CatchupInfo(CatchupInfo.Mode.FLUSSONIC, 3))
+        assertEquals("http://fl.example.com/nation2/timeshift_abs-1760032800.ts?token=abc", CatchupUrlBuilder.urls(ts, start, end, now).first())
+        val other = channel("http://fl.example.com/nation2/", CatchupInfo(CatchupInfo.Mode.FLUSSONIC, 3))
+        assertEquals("http://fl.example.com/nation2/timeshift_abs-1760032800.ts", CatchupUrlBuilder.urls(other, start, end, now).first())
     }
 
     @Test
@@ -149,13 +149,13 @@ class CatchupTest {
         assertEquals(mapOf("User-Agent" to "Global", "Referer" to "http://ref"), item.headers?.toMap())
         assertEquals(ContentType.LIVE, item.reference.type)
 
-        val backup = channel("http://backup.example.com/tf1.m3u8", null).copy(id = "backup")
+        val backup = channel("http://backup.example.com/tv1.m3u8", null).copy(id = "backup")
         val withAlternates = factory.item(c, alternates = listOf(c, backup))
         assertEquals(
             listOf(
                 "http://p.example.com:8080/live/u/p/101.ts",
                 "http://p.example.com:8080/live/u/p/101.m3u8",
-                "http://backup.example.com/tf1.m3u8",
+                "http://backup.example.com/tv1.m3u8",
             ),
             withAlternates.urls,
         )

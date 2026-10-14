@@ -8,8 +8,8 @@ final class ContentBuilderTests: XCTestCase {
 
     func testClassification() throws {
         let content = try content()
-        XCTAssertEqual(content.channels.map(\.name), ["TF1 HD", "France 2", "beIN Sports 1", "Arte", "FIP Radio", "Hot channel", "TF1 HD"])
-        XCTAssertEqual(content.movies.map(\.name), ["Inception", "Mad Max Fury Road"])
+        XCTAssertEqual(content.channels.map(\.name), ["TV1 HD", "Nation 2", "Stadia Sports 1", "Aria", "Wave Radio", "Hot channel", "TV1 HD"])
+        XCTAssertEqual(content.movies.map(\.name), ["Lighthouse", "Mad Max Fury Road"])
         XCTAssertEqual(content.movies.first?.year, 2010)
         XCTAssertEqual(content.series.count, 1)
         XCTAssertEqual(content.providerEPGURLs.count, 2)
@@ -26,7 +26,7 @@ final class ContentBuilderTests: XCTestCase {
 
     func testSeriesGrouping() throws {
         let series = try XCTUnwrap(try content().series.first)
-        XCTAssertEqual(series.name, "Breaking Bad")
+        XCTAssertEqual(series.name, "Copper Valley")
         XCTAssertEqual(series.coverURL?.absoluteString, "http://img.example.com/bb.jpg")
         XCTAssertEqual(series.episodes.map(\.code), ["S01E01", "S01E02", "S02E01"])
         XCTAssertEqual(series.episodes[0].title, "Pilot")
@@ -76,25 +76,25 @@ final class ContentBuilderTests: XCTestCase {
         XCTAssertEqual(channels[1].catchup?.mode, .flussonic)
         XCTAssertEqual(channels[1].catchup?.days, 5)
         XCTAssertEqual(channels[3].catchup?.mode, .default)
-        XCTAssertEqual(channels[3].catchup?.source, "http://archive.example.com/arte?start={utc}&end={utcend}")
+        XCTAssertEqual(channels[3].catchup?.source, "http://archive.example.com/aria?start={utc}&end={utcend}")
     }
 
     func testXtreamStreamIDDetectedInPlainM3U() throws {
-        let tf1 = try content().channels[0]
-        XCTAssertEqual(tf1.xtreamStreamID, 101)
-        XCTAssertEqual(tf1.epgID, "TF1.fr")
+        let tv1 = try content().channels[0]
+        XCTAssertEqual(tv1.xtreamStreamID, 101)
+        XCTAssertEqual(tv1.epgID, "TV1.fr")
     }
 
     func testTitleParser() {
-        XCTAssertEqual(TitleParser.parseEpisode("The Office (US) S03E12 Traveling Salesmen")?.seriesName, "The Office (US)")
-        XCTAssertEqual(TitleParser.parseEpisode("Lost 2x05")?.season, 2)
-        XCTAssertEqual(TitleParser.parseEpisode("Lost 2x05")?.episode, 5)
-        XCTAssertEqual(TitleParser.parseEpisode("Dix pour cent Saison 2 Episode 3")?.episode, 3)
-        XCTAssertNil(TitleParser.parseEpisode("TF1 HD"))
-        XCTAssertEqual(TitleParser.splitYear("Dune [2021]").0, "Dune")
-        XCTAssertEqual(TitleParser.splitYear("Dune [2021]").1, 2021)
-        XCTAssertEqual(TitleParser.splitYear("Blade Runner 2049").1, 2049)
-        XCTAssertNil(TitleParser.splitYear("Matrix").1)
+        XCTAssertEqual(TitleParser.parseEpisode("The Workshop (US) S03E12 Traveling Salesmen")?.seriesName, "The Workshop (US)")
+        XCTAssertEqual(TitleParser.parseEpisode("Adrift 2x05")?.season, 2)
+        XCTAssertEqual(TitleParser.parseEpisode("Adrift 2x05")?.episode, 5)
+        XCTAssertEqual(TitleParser.parseEpisode("Dix sur dix Saison 2 Episode 3")?.episode, 3)
+        XCTAssertNil(TitleParser.parseEpisode("TV1 HD"))
+        XCTAssertEqual(TitleParser.splitYear("Sandstorm [2021]").0, "Sandstorm")
+        XCTAssertEqual(TitleParser.splitYear("Sandstorm [2021]").1, 2021)
+        XCTAssertEqual(TitleParser.splitYear("Star Runner 2049").1, 2049)
+        XCTAssertNil(TitleParser.splitYear("Lattice").1)
     }
 
     func testXSPFAndJSON() throws {

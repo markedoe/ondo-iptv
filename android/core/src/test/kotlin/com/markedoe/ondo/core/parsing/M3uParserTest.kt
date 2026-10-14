@@ -13,13 +13,13 @@ class M3uParserTest {
         assertEquals(12, playlist.entries.size)
         assertEquals(listOf("http://epg.example.com/guide.xml.gz", "http://epg2.example.com/g.xml"), playlist.epgUrls)
 
-        val tf1 = playlist.entries[0]
-        assertEquals("TF1 HD", tf1.title)
-        assertEquals("TF1.fr", tf1.tvgId)
-        assertEquals("TF1", tf1.tvgName)
-        assertEquals("France, TNT", tf1.groupTitle, "commas inside quoted attributes must not end the attribute list")
-        assertEquals(1, tf1.channelNumber)
-        assertEquals("http://logos.example.com/tf1.png", tf1.logo)
+        val tv1 = playlist.entries[0]
+        assertEquals("TV1 HD", tv1.title)
+        assertEquals("TV1.fr", tv1.tvgId)
+        assertEquals("TV1", tv1.tvgName)
+        assertEquals("France, TNT", tv1.groupTitle, "commas inside quoted attributes must not end the attribute list")
+        assertEquals(1, tv1.channelNumber)
+        assertEquals("http://logos.example.com/tv1.png", tv1.logo)
     }
 
     @Test
@@ -27,23 +27,23 @@ class M3uParserTest {
         val entries = M3uParser.parse(Fixtures.bytes("sample.m3u")).entries
         assertEquals("http://logos.example.com/f2.png", entries[1].logo)
 
-        val bein = entries[2]
-        assertEquals("Sports", bein.groupTitle)
-        assertNull(bein.tvgId, "empty tvg-id is treated as missing")
-        assertEquals("MyAgent/1.0", bein.headers.userAgent)
-        assertEquals("http://ref.example.com/", bein.headers.referrer)
+        val stadia = entries[2]
+        assertEquals("Sports", stadia.groupTitle)
+        assertNull(stadia.tvgId, "empty tvg-id is treated as missing")
+        assertEquals("MyAgent/1.0", stadia.headers.userAgent)
+        assertEquals("http://ref.example.com/", stadia.headers.referrer)
 
-        val arte = entries[3]
-        assertEquals("http://arte.example.com/live.m3u8", arte.url)
-        assertEquals("Kodi/20", arte.headers.userAgent)
-        assertEquals("http://arte.example.com", arte.headers.referrer)
+        val aria = entries[3]
+        assertEquals("http://aria.example.com/live.m3u8", aria.url)
+        assertEquals("ExamplePlayer/20", aria.headers.userAgent)
+        assertEquals("http://aria.example.com", aria.headers.referrer)
     }
 
     @Test
     fun extGroupAndBareExtInf() {
         val entries = M3uParser.parse(Fixtures.bytes("sample.m3u")).entries
         val radio = entries[4]
-        assertEquals("FIP Radio", radio.title)
+        assertEquals("Wave Radio", radio.title)
         assertEquals("Radio", radio.groupTitle)
     }
 
@@ -79,7 +79,7 @@ class M3uParserTest {
             #EXTINF:-1 http-user-agent="AttrAgent" http-referrer="http://attr/",With attributes
             http://h.example.com/1.m3u8
             #EXTINF:-1,Kodi props
-            #KODIPROP:inputstream.adaptive.stream_headers=User-Agent=Kodi%2F21&X-Token=abc+def
+            #KODIPROP:inputstream.adaptive.stream_headers=User-Agent=ExamplePlayer%2F21&X-Token=abc+def
             #EXTVLCOPT:http-origin=http://origin
             #EXTVLCOPT:http-cookie=a=b
             http://h.example.com/2.m3u8
@@ -94,7 +94,7 @@ class M3uParserTest {
         val (attributes, kodi, extHttp, pipe) = playlist.entries
         assertEquals("AttrAgent", attributes.headers.userAgent)
         assertEquals("http://attr/", attributes.headers.referrer)
-        assertEquals("Kodi/21", kodi.headers.userAgent)
+        assertEquals("ExamplePlayer/21", kodi.headers.userAgent)
         assertEquals(mapOf("X-Token" to "abc+def", "Origin" to "http://origin", "Cookie" to "a=b"), kodi.headers.extra)
         assertEquals("JsonAgent", extHttp.headers.userAgent)
         assertEquals("http://json/", extHttp.headers.referrer)

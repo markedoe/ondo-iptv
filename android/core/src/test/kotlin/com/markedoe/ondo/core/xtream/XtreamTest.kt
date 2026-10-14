@@ -78,11 +78,11 @@ class XtreamTest {
     fun fetchContentWithMessyTypes() = runTest {
         val content = XtreamClient(credentials, mock(), clock = { 42L }).fetchContent(XtreamOutputFormat.M3U8)
         assertEquals(4, content.channels.size, "entries without stream_id and non-objects are skipped")
-        val tf1 = content.channels[0]
-        assertEquals("x101", tf1.id)
-        assertEquals("TF1.fr", tf1.epgId)
-        assertEquals(CatchupInfo(CatchupInfo.Mode.XTREAM, 7), tf1.catchup)
-        assertEquals("http://panel.example.com:8080/live/demo/se%2Fcr+et/101.m3u8", tf1.streamUrl)
+        val tv1 = content.channels[0]
+        assertEquals("x101", tv1.id)
+        assertEquals("TV1.fr", tv1.epgId)
+        assertEquals(CatchupInfo(CatchupInfo.Mode.XTREAM, 7), tv1.catchup)
+        assertEquals("http://panel.example.com:8080/live/demo/se%2Fcr+et/101.m3u8", tv1.streamUrl)
         assertEquals(102, content.channels[1].xtreamStreamId)
         assertNull(content.channels[1].logoUrl)
         assertNull(content.channels[1].catchup)
@@ -90,7 +90,7 @@ class XtreamTest {
         assertEquals(listOf("FR | Généralistes", "FR | Sport", "XXX | Adult", "Other"), content.liveCategories.map { it.name })
         assertEquals("live-55", content.channels[3].categoryId)
 
-        assertEquals(listOf("Inception", "Dune: Part Two"), content.movies.map { it.name })
+        assertEquals(listOf("Lighthouse", "Sandstorm: Part Two"), content.movies.map { it.name })
         assertEquals(2010, content.movies[0].year)
         assertEquals(8.8, content.movies[0].rating)
         assertEquals(8.2, content.movies[1].rating ?: 0.0, 0.001, "rating_5based is converted to /10")
@@ -124,7 +124,7 @@ class XtreamTest {
     @Test
     fun seriesDetailsWithDictionaryEpisodes() = runTest {
         val details = XtreamClient(credentials, mock()).seriesDetails(9000)
-        assertEquals("Breaking Bad", details.info.title)
+        assertEquals("Copper Valley", details.info.title)
         assertEquals("http://img.example.com/bb_back.jpg", details.info.backdropUrl)
         assertEquals(listOf(1, 2), details.seasons.map { it.number })
         assertEquals("Saison 1", details.seasons[0].name)
@@ -148,23 +148,23 @@ class XtreamTest {
     @Test
     fun movieDetails() = runTest {
         val details = XtreamClient(credentials, mock()).movieDetails(5001)
-        assertEquals("Inception", details.title)
-        assertEquals("Christopher Nolan", details.director)
+        assertEquals("Lighthouse", details.title)
+        assertEquals("Jordan Vale", details.director)
         assertEquals(8880, details.durationSeconds)
-        assertEquals("YoHD9XEInc0", details.trailerYouTubeId)
-        assertEquals("27205", details.tmdbId)
-        assertEquals("http://img.example.com/inception.jpg", details.posterUrl)
+        assertEquals("trailer0001", details.trailerYouTubeId)
+        assertEquals("910001", details.tmdbId)
+        assertEquals("http://img.example.com/lighthouse.jpg", details.posterUrl)
         assertEquals("http://img.example.com/inception_back.jpg", details.backdropUrl)
     }
 
     @Test
     fun shortEpgDecodesBase64() = runTest {
-        val programs = XtreamClient(credentials, mock()).shortEpg(101, "TF1.fr")
+        val programs = XtreamClient(credentials, mock()).shortEpg(101, "TV1.fr")
         assertEquals(listOf("Le JT", "Film"), programs.map { it.title })
         assertEquals("L'actualité", programs[0].description)
         assertNull(programs[1].description)
         assertEquals(1_760_032_800_000L, programs[0].start)
-        assertTrue(programs.all { it.channelId == "TF1.fr" })
+        assertTrue(programs.all { it.channelId == "TV1.fr" })
     }
 
     @Test

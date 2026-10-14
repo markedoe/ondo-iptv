@@ -357,19 +357,19 @@ final class ChannelManagementTests: XCTestCase {
 
     func testEditsRenameAndRenumberButKeepGuideMatching() {
         let content = PlaylistContent(channels: [
-            Channel(id: "1", name: "FR: TF1 FHD", number: 1, categoryID: "a", streamURL: URL(string: "http://h/1")!),
-            Channel(id: "2", name: "France 2", categoryID: "a", streamURL: URL(string: "http://h/2")!, epgName: "france2"),
-            Channel(id: "3", name: "Arte", categoryID: "a", streamURL: URL(string: "http://h/3")!),
+            Channel(id: "1", name: "FR: TV1 FHD", number: 1, categoryID: "a", streamURL: URL(string: "http://h/1")!),
+            Channel(id: "2", name: "Nation 2", categoryID: "a", streamURL: URL(string: "http://h/2")!, epgName: "nation2"),
+            Channel(id: "3", name: "Aria", categoryID: "a", streamURL: URL(string: "http://h/3")!),
         ])
         let edited = content.applying([
-            "1": ChannelEdit(name: "TF1", number: 101),
+            "1": ChannelEdit(name: "TV1", number: 101),
             "2": ChannelEdit(number: 2),
             "x": ChannelEdit(name: "Ghost"),
         ])
-        XCTAssertEqual(edited.channels.map(\.name), ["TF1", "France 2", "Arte"])
+        XCTAssertEqual(edited.channels.map(\.name), ["TV1", "Nation 2", "Aria"])
         XCTAssertEqual(edited.channels.map(\.number), [101, 2, nil])
-        XCTAssertEqual(edited.channels[0].epgName, "FR: TF1 FHD", "the provider name still matches the guide")
-        XCTAssertEqual(edited.channels[1].epgName, "france2")
+        XCTAssertEqual(edited.channels[0].epgName, "FR: TV1 FHD", "the provider name still matches the guide")
+        XCTAssertEqual(edited.channels[1].epgName, "nation2")
         XCTAssertEqual(content.applying([:]), content)
     }
 
@@ -397,8 +397,8 @@ final class ChannelManagementTests: XCTestCase {
 
     func testPlaylistChannelEditsDecode() throws {
         var playlist = Playlist(name: "P", source: .remote(URL(string: "http://h/p.m3u")!))
-        playlist.channelEdits = ["1": ChannelEdit(name: "TF1", number: 101)]
+        playlist.channelEdits = ["1": ChannelEdit(name: "TV1", number: 101)]
         let decoded = try JSONDecoder().decode(Playlist.self, from: JSONEncoder().encode(playlist))
-        XCTAssertEqual(decoded.channelEdits["1"], ChannelEdit(name: "TF1", number: 101))
+        XCTAssertEqual(decoded.channelEdits["1"], ChannelEdit(name: "TV1", number: 101))
     }
 }

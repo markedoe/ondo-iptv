@@ -174,7 +174,7 @@ public struct EPGIndex: Sendable {
             .map(\.option)
     }
 
-    /// Words of a channel name without quality / country tags ("FR: TF1 HD" -> ["tf1"]).
+    /// Words of a channel name without quality / country tags ("FR: TV1 HD" -> ["tv1"]).
     static func words(_ name: String) -> [String] {
         TextNormalizer.normalize(name)
             .split(separator: " ")

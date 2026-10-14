@@ -209,7 +209,7 @@ class EpgIndex private constructor(
             return null
         }
 
-        /** Words of a channel name without quality / country tags (`"FR: TF1 HD"` -> `["tf1"]`). */
+        /** Words of a channel name without quality / country tags (`"FR: TV1 HD"` -> `["tv1"]`). */
         internal fun words(name: String): List<String> =
             TextNormalizer.tokens(TextNormalizer.normalize(name)).filter { !TextNormalizer.isChannelTag(it) }
     }

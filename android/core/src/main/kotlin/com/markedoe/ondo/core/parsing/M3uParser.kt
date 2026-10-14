@@ -17,7 +17,7 @@ data class M3uEntry(
     val url: String,
     /** `#EXTGRP:` value when present. */
     val extGroup: String? = null,
-    /** Headers from `#EXTVLCOPT`, `#KODIPROP`, `#EXTHTTP` and Kodi style `url|User-Agent=…` suffixes. */
+    /** Headers from `#EXTVLCOPT`, `#KODIPROP`, `#EXTHTTP` and `url|User-Agent=…` suffixes. */
     val headers: HttpHeaders = HttpHeaders.NONE,
 ) {
     val groupTitle: String?

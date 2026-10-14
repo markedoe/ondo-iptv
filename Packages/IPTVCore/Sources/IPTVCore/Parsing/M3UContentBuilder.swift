@@ -133,7 +133,7 @@ public enum M3UContentBuilder {
         case "default":
             mode = source == nil ? fallbackMode(for: url) : .default
         case nil:
-            // Only `timeshift=` / `tvg-rec=`: SIPTV semantics are "shift", unless it is an Xtream URL.
+            // Only `timeshift=` / `tvg-rec=`: the usual meaning is "shift", unless it is an Xtream URL.
             mode = source != nil ? .default : fallbackMode(for: url)
         default:
             mode = source != nil ? .default : fallbackMode(for: url)
@@ -340,7 +340,7 @@ public enum TitleParser {
     // swiftlint:disable:next force_try
     private static let yearRegex = try! NSRegularExpression(pattern: #"^(.*?)[\s\-_.]*[\(\[]?((?:19|20)\d{2})[\)\]]?\s*$"#)
 
-    /// "Inception (2010)" -> ("Inception", 2010)
+    /// "Lighthouse (2010)" -> ("Lighthouse", 2010)
     public static func splitYear(_ title: String) -> (String, Int?) {
         guard title.utf8.count >= 4, title.utf8.contains(where: { $0 >= 0x30 && $0 <= 0x39 }) else { return (title, nil) }
         let range = NSRange(title.startIndex..., in: title)

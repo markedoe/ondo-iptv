@@ -10,35 +10,35 @@ final class M3UParserTests: XCTestCase {
             "http://epg2.example.com/g.xml",
         ])
 
-        let tf1 = playlist.entries[0]
-        XCTAssertEqual(tf1.title, "TF1 HD")
-        XCTAssertEqual(tf1.tvgID, "TF1.fr")
-        XCTAssertEqual(tf1.tvgName, "TF1")
-        XCTAssertEqual(tf1.groupTitle, "France, TNT", "commas inside quoted attributes must not end the attribute list")
-        XCTAssertEqual(tf1.channelNumber, 1)
-        XCTAssertEqual(tf1.logo?.absoluteString, "http://logos.example.com/tf1.png")
+        let tv1 = playlist.entries[0]
+        XCTAssertEqual(tv1.title, "TV1 HD")
+        XCTAssertEqual(tv1.tvgID, "TV1.fr")
+        XCTAssertEqual(tv1.tvgName, "TV1")
+        XCTAssertEqual(tv1.groupTitle, "France, TNT", "commas inside quoted attributes must not end the attribute list")
+        XCTAssertEqual(tv1.channelNumber, 1)
+        XCTAssertEqual(tv1.logo?.absoluteString, "http://logos.example.com/tv1.png")
     }
 
     func testSingleQuotesUnquotedValuesAndHeaders() throws {
         let entries = M3UParser.parse(try Fixture.data("sample.m3u")).entries
         XCTAssertEqual(entries[1].logo?.absoluteString, "http://logos.example.com/f2.png")
 
-        let bein = entries[2]
-        XCTAssertEqual(bein.groupTitle, "Sports")
-        XCTAssertNil(bein.tvgID, "empty tvg-id is treated as missing")
-        XCTAssertEqual(bein.headers.userAgent, "MyAgent/1.0")
-        XCTAssertEqual(bein.headers.referrer, "http://ref.example.com/")
+        let stadia = entries[2]
+        XCTAssertEqual(stadia.groupTitle, "Sports")
+        XCTAssertNil(stadia.tvgID, "empty tvg-id is treated as missing")
+        XCTAssertEqual(stadia.headers.userAgent, "MyAgent/1.0")
+        XCTAssertEqual(stadia.headers.referrer, "http://ref.example.com/")
 
-        let arte = entries[3]
-        XCTAssertEqual(arte.url.absoluteString, "http://arte.example.com/live.m3u8")
-        XCTAssertEqual(arte.headers.userAgent, "Kodi/20")
-        XCTAssertEqual(arte.headers.referrer, "http://arte.example.com")
+        let aria = entries[3]
+        XCTAssertEqual(aria.url.absoluteString, "http://aria.example.com/live.m3u8")
+        XCTAssertEqual(aria.headers.userAgent, "ExamplePlayer/20")
+        XCTAssertEqual(aria.headers.referrer, "http://aria.example.com")
     }
 
     func testExtGroupAndBareExtInf() throws {
         let entries = M3UParser.parse(try Fixture.data("sample.m3u")).entries
         let radio = entries[4]
-        XCTAssertEqual(radio.title, "FIP Radio")
+        XCTAssertEqual(radio.title, "Wave Radio")
         XCTAssertEqual(radio.groupTitle, "Radio")
     }
 

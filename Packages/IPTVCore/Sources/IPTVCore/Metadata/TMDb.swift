@@ -102,7 +102,7 @@ public enum TrendingMatch: Hashable, Sendable, Identifiable {
     }
 }
 
-/// Finds which trending titles exist in the user's catalogue ("FR - Dune (2021) 4K" ↔ "Dune").
+/// Finds which trending titles exist in the user's catalogue ("FR - Sandstorm (2021) 4K" ↔ "Sandstorm").
 public enum CatalogueMatcher {
     static func key(_ title: String) -> String {
         var name = title

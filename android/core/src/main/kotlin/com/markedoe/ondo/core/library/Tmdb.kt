@@ -111,7 +111,7 @@ sealed interface TrendingMatch {
     }
 }
 
-/** Finds which trending titles exist in the user's catalogue (`"FR - Dune (2021) 4K"` <-> `"Dune"`). */
+/** Finds which trending titles exist in the user's catalogue (`"FR - Sandstorm (2021) 4K"` <-> `"Sandstorm"`). */
 object CatalogueMatcher {
     private val bracketed = Regex("""\[[^\]]*]""")
     private val parenthesized = Regex("""\([^)]*\)""")

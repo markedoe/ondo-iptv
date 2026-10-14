@@ -61,7 +61,7 @@ object TitleParser {
 
     private val yearPattern: Pattern = Pattern.compile("""^(.*?)[\s\-_.]*[(\[]?((?:19|20)\d{2})[)\]]?\s*$""")
 
-    /** `"Inception (2010)"` -> (`"Inception"`, 2010). */
+    /** `"Lighthouse (2010)"` -> (`"Lighthouse"`, 2010). */
     fun splitYear(title: String): TitleAndYear {
         if (title.length < 4 || title.none { it in '0'..'9' }) return TitleAndYear(title, null)
         val match = yearPattern.matcher(title)

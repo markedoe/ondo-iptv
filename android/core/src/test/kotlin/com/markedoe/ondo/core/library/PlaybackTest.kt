@@ -91,13 +91,13 @@ class PlaybackTest {
         val account = AccountInfo(username = "u", status = "Active", serverTimeZone = "Europe/Paris")
         val c = Channel(
             id = "x1",
-            name = "TF1",
+            name = "TV1",
             categoryId = "live-1",
             streamUrl = "http://p.example.com/live/u/p/1.ts",
             catchup = CatchupInfo(CatchupInfo.Mode.XTREAM, 3),
             xtreamStreamId = 1,
         )
-        val program = EpgProgram("TF1.fr", utc(2025, 10, 9, 18), utc(2025, 10, 9, 19), "JT", iconUrl = "http://img/jt.png")
+        val program = EpgProgram("TV1.fr", utc(2025, 10, 9, 18), utc(2025, 10, 9, 19), "JT", iconUrl = "http://img/jt.png")
         val item = assertNotNull(PlaybackFactory(xtream, account).catchupItem(c, program, now = utc(2025, 10, 9, 20)))
         assertEquals(
             listOf(
@@ -118,7 +118,7 @@ class PlaybackTest {
         val factory = PlaybackFactory(playlist.copy(userAgent = "Global"))
         val movie = Movie(
             id = "m",
-            name = "Inception",
+            name = "Lighthouse",
             posterUrl = "http://img/m.jpg",
             categoryId = "c",
             streamUrl = "http://x/m.mkv",
@@ -133,9 +133,9 @@ class PlaybackTest {
         assertEquals("${playlist.id}|movie|m|", movieItem.id)
 
         val episode = Episode(id = "e1", title = "Pilot", season = 1, number = 1, streamUrl = "http://x/e1.mkv")
-        val series = Series(id = "s", name = "Breaking Bad", coverUrl = "http://img/s.jpg", categoryId = "c", episodes = listOf(episode))
+        val series = Series(id = "s", name = "Copper Valley", coverUrl = "http://img/s.jpg", categoryId = "c", episodes = listOf(episode))
         val episodeItem = factory.item(episode, series)
-        assertEquals("Breaking Bad", episodeItem.title)
+        assertEquals("Copper Valley", episodeItem.title)
         assertEquals("S01E01 · Pilot", episodeItem.subtitle)
         assertEquals("http://img/s.jpg", episodeItem.artworkUrl, "series cover when the episode has none")
         assertEquals("e1", episodeItem.reference.episodeId)

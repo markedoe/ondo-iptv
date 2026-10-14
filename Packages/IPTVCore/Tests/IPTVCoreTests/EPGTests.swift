@@ -23,49 +23,49 @@ final class EPGTests: XCTestCase {
 
     func testProgrammeFields() throws {
         let data = try XMLTVParser.parse(try Fixture.data("epg.xml"))
-        let tf1 = try XCTUnwrap(data.programs["TF1.fr"])
-        XCTAssertEqual(tf1.map(\.title), ["Too old", "Le JT", "Film du soir"], "sorted by start")
-        let jt = tf1[1]
+        let tv1 = try XCTUnwrap(data.programs["TV1.fr"])
+        XCTAssertEqual(tv1.map(\.title), ["Too old", "Le JT", "Film du soir"], "sorted by start")
+        let jt = tv1[1]
         XCTAssertEqual(jt.summary, "L'actualité & la météo")
         XCTAssertEqual(jt.category, "News")
         XCTAssertEqual(jt.start, Date.utc(2025, 10, 9, 18))
         XCTAssertEqual(jt.end, Date.utc(2025, 10, 9, 18, 45))
-        let film = tf1[2]
-        XCTAssertEqual(film.subtitle, "Inception")
+        let film = tv1[2]
+        XCTAssertEqual(film.subtitle, "Lighthouse")
         XCTAssertEqual(film.episode, "S02E05")
         XCTAssertEqual(film.rating, "-12")
         XCTAssertEqual(film.iconURL?.absoluteString, "http://epg.example.com/film.jpg")
-        XCTAssertEqual(data.programs["france2"]?.first?.title, "N'oubliez pas les paroles", "CDATA")
-        XCTAssertEqual(data.channels["TF1.fr"]?.iconURL?.absoluteString, "http://epg.example.com/tf1.png")
+        XCTAssertEqual(data.programs["nation2"]?.first?.title, "Chantez maintenant", "CDATA")
+        XCTAssertEqual(data.channels["TV1.fr"]?.iconURL?.absoluteString, "http://epg.example.com/tv1.png")
     }
 
     func testFilteringByWindowAndChannels() throws {
         let filter = EPGFilter(
             window: DateInterval(start: Date.utc(2025, 10, 9, 0), end: Date.utc(2025, 10, 10, 0)),
-            channelIDs: ["tf1.FR"],
-            channelNameKeys: [TextNormalizer.channelMatchKey("FR: France 2 FHD")]
+            channelIDs: ["tv1.FR"],
+            channelNameKeys: [TextNormalizer.channelMatchKey("FR: Nation 2 FHD")]
         )
         let data = try XMLTVParser.parse(try Fixture.data("epg.xml.gz"), filter: filter)
-        XCTAssertEqual(data.programs["TF1.fr"]?.count, 2, "old programme dropped by the window")
-        XCTAssertEqual(data.programs["france2"]?.count, 1, "matched by display name")
+        XCTAssertEqual(data.programs["TV1.fr"]?.count, 2, "old programme dropped by the window")
+        XCTAssertEqual(data.programs["nation2"]?.count, 1, "matched by display name")
         XCTAssertNil(data.programs["unused.fr"])
     }
 
     func testTimeShift() throws {
         let data = try XMLTVParser.parse(try Fixture.data("epg.xml"), timeShift: 3600)
-        XCTAssertEqual(data.programs["france2"]?.first?.start, Date.utc(2025, 10, 9, 19))
+        XCTAssertEqual(data.programs["nation2"]?.first?.start, Date.utc(2025, 10, 9, 19))
     }
 
     func testIndexMatchingAndLookups() throws {
         let index = EPGIndex(data: try XMLTVParser.parse(try Fixture.data("epg.xml")))
-        let byID = Channel(id: "1", name: "Whatever", categoryID: "c", streamURL: URL(string: "http://x/1")!, epgID: "tf1.fr")
-        let byName = Channel(id: "2", name: "FR | France 2 HD", categoryID: "c", streamURL: URL(string: "http://x/2")!)
+        let byID = Channel(id: "1", name: "Whatever", categoryID: "c", streamURL: URL(string: "http://x/1")!, epgID: "tv1.fr")
+        let byName = Channel(id: "2", name: "FR | Nation 2 HD", categoryID: "c", streamURL: URL(string: "http://x/2")!)
         let unknown = Channel(id: "3", name: "Nope", categoryID: "c", streamURL: URL(string: "http://x/3")!)
 
-        XCTAssertEqual(index.guideID(for: byID), "TF1.fr")
-        XCTAssertEqual(index.guideID(for: byName), "france2")
+        XCTAssertEqual(index.guideID(for: byID), "TV1.fr")
+        XCTAssertEqual(index.guideID(for: byName), "nation2")
         XCTAssertNil(index.guideID(for: unknown))
-        XCTAssertEqual(index.iconURL(for: byID)?.absoluteString, "http://epg.example.com/tf1.png")
+        XCTAssertEqual(index.iconURL(for: byID)?.absoluteString, "http://epg.example.com/tv1.png")
 
         let now = Date.utc(2025, 10, 9, 18, 50)
         XCTAssertEqual(index.current(for: byID, at: now)?.title, "Film du soir")
@@ -98,8 +98,8 @@ final class EPGTests: XCTestCase {
 
     func testInsertShortEPG() {
         var index = EPGIndex.empty
-        let channel = Channel(id: "x1", name: "TF1", categoryID: "c", streamURL: URL(string: "http://x/1")!, epgID: "TF1.fr")
-        index.insert([EPGProgram(channelID: "TF1.fr", title: "JT", start: .utc(2025, 1, 1, 10), end: .utc(2025, 1, 1, 11))], for: channel)
+        let channel = Channel(id: "x1", name: "TV1", categoryID: "c", streamURL: URL(string: "http://x/1")!, epgID: "TV1.fr")
+        index.insert([EPGProgram(channelID: "TV1.fr", title: "JT", start: .utc(2025, 1, 1, 10), end: .utc(2025, 1, 1, 11))], for: channel)
         XCTAssertEqual(index.current(for: channel, at: .utc(2025, 1, 1, 10, 30))?.title, "JT")
     }
 
@@ -139,16 +139,16 @@ final class EPGMatchingTests: XCTestCase {
     private var index: EPGIndex {
         var data = EPGData()
         data.channels = [
-            "tf1.fr": EPGChannel(id: "tf1.fr", displayNames: ["TF1"]),
-            "tf1series.fr": EPGChannel(id: "tf1series.fr", displayNames: ["TF1 Séries Films"]),
-            "france2.fr": EPGChannel(id: "france2.fr", displayNames: ["France 2"]),
-            "arte.fr": EPGChannel(id: "arte.fr", displayNames: ["Arte"]),
+            "tv1.fr": EPGChannel(id: "tv1.fr", displayNames: ["TV1"]),
+            "tv1series.fr": EPGChannel(id: "tv1series.fr", displayNames: ["TV1 Séries Films"]),
+            "nation2.fr": EPGChannel(id: "nation2.fr", displayNames: ["Nation 2"]),
+            "aria.fr": EPGChannel(id: "aria.fr", displayNames: ["Aria"]),
         ]
         data.programs = [
-            "tf1.fr": [program("tf1.fr", "Journal de 20h", hour: 0), program("tf1.fr", "Le Grand Match", hour: 1)],
-            "tf1series.fr": [program("tf1series.fr", "Série policière", hour: 0)],
-            "france2.fr": [program("france2.fr", "Journal", hour: 0, subtitle: "Édition du soir")],
-            "arte.fr": [program("arte.fr", "Documentaire", hour: 3)],
+            "tv1.fr": [program("tv1.fr", "Journal de 20h", hour: 0), program("tv1.fr", "Le Grand Match", hour: 1)],
+            "tv1series.fr": [program("tv1series.fr", "Série policière", hour: 0)],
+            "nation2.fr": [program("nation2.fr", "Journal", hour: 0, subtitle: "Édition du soir")],
+            "aria.fr": [program("aria.fr", "Documentaire", hour: 3)],
         ]
         return EPGIndex(data: data)
     }
@@ -159,42 +159,42 @@ final class EPGMatchingTests: XCTestCase {
 
     func testOverridesWinAndCanDisableTheGuide() {
         var index = self.index
-        let tf1 = channel("FR: TF1 HD", id: "1")
-        XCTAssertEqual(index.guideID(for: tf1), "tf1.fr", "automatic name match")
+        let tv1 = channel("FR: TV1 HD", id: "1")
+        XCTAssertEqual(index.guideID(for: tv1), "tv1.fr", "automatic name match")
 
-        index.overrides = ["1": "france2.fr"]
-        XCTAssertEqual(index.guideID(for: tf1), "france2.fr")
-        XCTAssertEqual(index.automaticGuideID(for: tf1), "tf1.fr")
-        XCTAssertEqual(index.current(for: tf1, at: start.addingTimeInterval(60))?.title, "Journal")
+        index.overrides = ["1": "nation2.fr"]
+        XCTAssertEqual(index.guideID(for: tv1), "nation2.fr")
+        XCTAssertEqual(index.automaticGuideID(for: tv1), "tv1.fr")
+        XCTAssertEqual(index.current(for: tv1, at: start.addingTimeInterval(60))?.title, "Journal")
 
         index.overrides = ["1": ""]
-        XCTAssertNil(index.guideID(for: tf1))
-        XCTAssertTrue(index.programs(for: tf1).isEmpty)
+        XCTAssertNil(index.guideID(for: tv1))
+        XCTAssertTrue(index.programs(for: tv1).isEmpty)
     }
 
     func testSuggestionsRankSimilarNamesFirst() {
-        let suggestions = index.suggestions(for: channel("FR | TF1 FHD (backup)"))
-        XCTAssertEqual(suggestions.first?.id, "tf1.fr")
-        XCTAssertTrue(suggestions.contains { $0.id == "tf1series.fr" })
-        XCTAssertFalse(suggestions.contains { $0.id == "arte.fr" })
+        let suggestions = index.suggestions(for: channel("FR | TV1 FHD (backup)"))
+        XCTAssertEqual(suggestions.first?.id, "tv1.fr")
+        XCTAssertTrue(suggestions.contains { $0.id == "tv1series.fr" })
+        XCTAssertFalse(suggestions.contains { $0.id == "aria.fr" })
         XCTAssertTrue(index.suggestions(for: channel("HD")).isEmpty, "tags alone identify nothing")
     }
 
     func testOptionsIncludeChannelsWithoutLoadedProgrammes() {
         var data = index.data
-        data.channels["m6.fr"] = EPGChannel(id: "m6.fr", displayNames: ["M6"])
+        data.channels["q9.fr"] = EPGChannel(id: "q9.fr", displayNames: ["Q9"])
         let index = EPGIndex(data: data)
         let options = index.guideChannelOptions()
-        XCTAssertEqual(options.map(\.name), ["Arte", "France 2", "M6", "TF1", "TF1 Séries Films"])
-        XCTAssertEqual(options.first { $0.id == "m6.fr" }?.programCount, 0)
-        XCTAssertEqual(index.suggestions(for: channel("M6 HD")).first?.id, "m6.fr", "suggested before its programmes are loaded")
+        XCTAssertEqual(options.map(\.name), ["Aria", "Nation 2", "Q9", "TV1", "TV1 Séries Films"])
+        XCTAssertEqual(options.first { $0.id == "q9.fr" }?.programCount, 0)
+        XCTAssertEqual(index.suggestions(for: channel("Q9 HD")).first?.id, "q9.fr", "suggested before its programmes are loaded")
     }
 
     func testProgrammeSearch() {
         let window = DateInterval(start: start, duration: 2 * 3600)
         let journal = index.searchPrograms("journal", in: window)
-        XCTAssertEqual(Set(journal.map(\.guideID)), ["tf1.fr", "france2.fr"])
-        XCTAssertEqual(index.searchPrograms("edition soir", in: window).map(\.guideID), ["france2.fr"], "subtitle, accents folded")
+        XCTAssertEqual(Set(journal.map(\.guideID)), ["tv1.fr", "nation2.fr"])
+        XCTAssertEqual(index.searchPrograms("edition soir", in: window).map(\.guideID), ["nation2.fr"], "subtitle, accents folded")
         XCTAssertTrue(index.searchPrograms("documentaire", in: window).isEmpty, "outside the window")
         XCTAssertEqual(index.searchPrograms("grand match", in: window).first?.program.title, "Le Grand Match")
         XCTAssertTrue(index.searchPrograms("  ", in: window).isEmpty)
@@ -202,8 +202,8 @@ final class EPGMatchingTests: XCTestCase {
 
     func testPlaylistOverridesSurviveEncoding() throws {
         var playlist = Playlist(name: "P", source: .remote(URL(string: "http://example.com/p.m3u")!))
-        playlist.epgChannelOverrides = ["1": "tf1.fr", "2": ""]
+        playlist.epgChannelOverrides = ["1": "tv1.fr", "2": ""]
         let decoded = try JSONDecoder().decode(Playlist.self, from: JSONEncoder().encode(playlist))
-        XCTAssertEqual(decoded.epgChannelOverrides, ["1": "tf1.fr", "2": ""])
+        XCTAssertEqual(decoded.epgChannelOverrides, ["1": "tv1.fr", "2": ""])
     }
 }

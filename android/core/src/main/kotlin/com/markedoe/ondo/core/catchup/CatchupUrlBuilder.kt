@@ -23,8 +23,8 @@ data class CatchupContext(
 )
 
 /**
- * Builds replay URLs for past programmes, following the common M3U conventions (Kodi's IPTV Simple
- * client: `catchup`, `catchup-source`, `catchup-days` attributes) and Xtream Codes `timeshift`.
+ * Builds replay URLs for past programmes, following the common M3U conventions (the
+ * `catchup`, `catchup-source`, `catchup-days` attributes) and Xtream Codes `timeshift`.
  * Times are epoch millis.
  */
 object CatchupUrlBuilder {

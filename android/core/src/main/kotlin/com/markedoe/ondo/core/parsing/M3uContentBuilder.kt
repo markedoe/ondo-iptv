@@ -155,7 +155,7 @@ object M3uContentBuilder {
             "flussonic", "flussonic-hls", "flussonic-ts", "fs" -> CatchupInfo.Mode.FLUSSONIC
             "xc", "xtream" -> CatchupInfo.Mode.XTREAM
             "default" -> if (source == null) fallbackMode(url) else CatchupInfo.Mode.DEFAULT
-            // Only `timeshift=` / `tvg-rec=`: SIPTV semantics are "shift", unless it is an Xtream URL.
+            // Only `timeshift=` / `tvg-rec=`: the usual meaning is "shift", unless it is an Xtream URL.
             else -> if (source != null) CatchupInfo.Mode.DEFAULT else fallbackMode(url)
         }
         return CatchupInfo(mode, days, source)

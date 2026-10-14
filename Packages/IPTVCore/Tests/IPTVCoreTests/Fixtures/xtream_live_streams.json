@@ -1,6 +1,6 @@
-[{"num":1,"name":"FR: TF1 FHD","stream_type":"live","stream_id":101,"stream_icon":"http://logos.example.com/tf1.png","epg_channel_id":"TF1.fr","added":"1600000000","category_id":"1","custom_sid":"","tv_archive":1,"direct_source":"","tv_archive_duration":"7"},
-{"num":"2","name":"FR: France 2","stream_type":"live","stream_id":"102","stream_icon":"","epg_channel_id":null,"added":"1600000000","category_id":"1","tv_archive":0,"direct_source":"","tv_archive_duration":0},
-{"num":3,"name":"FR: beIN Sports 1","stream_type":"live","stream_id":103,"stream_icon":null,"epg_channel_id":"bein1.fr","category_id":"2","tv_archive":"0"},
+[{"num":1,"name":"FR: TV1 FHD","stream_type":"live","stream_id":101,"stream_icon":"http://logos.example.com/tv1.png","epg_channel_id":"TV1.fr","added":"1600000000","category_id":"1","custom_sid":"","tv_archive":1,"direct_source":"","tv_archive_duration":"7"},
+{"num":"2","name":"FR: Nation 2","stream_type":"live","stream_id":"102","stream_icon":"","epg_channel_id":null,"added":"1600000000","category_id":"1","tv_archive":0,"direct_source":"","tv_archive_duration":0},
+{"num":3,"name":"FR: Stadia Sports 1","stream_type":"live","stream_id":103,"stream_icon":null,"epg_channel_id":"stadia1.fr","category_id":"2","tv_archive":"0"},
 {"num":4,"name":"Orphan channel","stream_id":104,"category_id":"55"},
 {"name":"Broken entry without id"},
 42]

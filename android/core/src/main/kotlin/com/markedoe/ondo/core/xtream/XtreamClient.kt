@@ -329,7 +329,7 @@ class XtreamClient(
             return result
         }
 
-        /** `"Breaking Bad - S01E01 - Pilot"` -> `"Pilot"`. */
+        /** `"Copper Valley - S01E01 - Pilot"` -> `"Pilot"`. */
         internal fun cleanEpisodeTitle(title: String): String {
             val parsed = TitleParser.parseEpisode(title)
             return if (parsed != null && !parsed.episodeTitle.startsWith("Episode ")) parsed.episodeTitle else title

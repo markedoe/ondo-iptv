@@ -295,7 +295,7 @@ public struct XtreamClient: Sendable {
         return SeriesDetails(info: details, seasons: seasons)
     }
 
-    /// "Breaking Bad - S01E01 - Pilot" -> "Pilot"
+    /// "Copper Valley - S01E01 - Pilot" -> "Pilot"
     static func cleanEpisodeTitle(_ title: String) -> String {
         if let parsed = TitleParser.parseEpisode(title), !parsed.episodeTitle.hasPrefix("Episode ") {
             return parsed.episodeTitle

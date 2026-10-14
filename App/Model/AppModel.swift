@@ -40,7 +40,7 @@ struct ContentIndex: Sendable {
     var channelsByID: [String: Channel] = [:]
     var moviesByID: [String: Movie] = [:]
     var seriesByID: [String: Series] = [:]
-    /// Versions of the same channel ("TF1 HD", "FR: TF1 FHD"…) for automatic failover.
+    /// Versions of the same channel ("TV1 HD", "FR: TV1 FHD"…) for automatic failover.
     var channelsByMatchKey: [String: [Channel]] = [:]
     var search = SearchEngine(content: .empty)
 

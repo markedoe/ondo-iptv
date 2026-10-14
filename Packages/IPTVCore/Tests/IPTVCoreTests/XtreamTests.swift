@@ -52,11 +52,11 @@ final class XtreamTests: XCTestCase {
     func testFetchContentWithMessyTypes() async throws {
         let content = try await XtreamClient(credentials: credentials, http: try mock()).fetchContent(format: .m3u8)
         XCTAssertEqual(content.channels.count, 4, "entries without stream_id and non-objects are skipped")
-        let tf1 = content.channels[0]
-        XCTAssertEqual(tf1.id, "x101")
-        XCTAssertEqual(tf1.epgID, "TF1.fr")
-        XCTAssertEqual(tf1.catchup, CatchupInfo(mode: .xtream, days: 7))
-        XCTAssertEqual(tf1.streamURL.absoluteString, "http://panel.example.com:8080/live/demo/se%2Fcr+et/101.m3u8")
+        let tv1 = content.channels[0]
+        XCTAssertEqual(tv1.id, "x101")
+        XCTAssertEqual(tv1.epgID, "TV1.fr")
+        XCTAssertEqual(tv1.catchup, CatchupInfo(mode: .xtream, days: 7))
+        XCTAssertEqual(tv1.streamURL.absoluteString, "http://panel.example.com:8080/live/demo/se%2Fcr+et/101.m3u8")
         XCTAssertEqual(content.channels[1].xtreamStreamID, 102)
         XCTAssertNil(content.channels[1].logoURL)
         XCTAssertNil(content.channels[1].catchup)
@@ -64,7 +64,7 @@ final class XtreamTests: XCTestCase {
         XCTAssertEqual(content.liveCategories.map(\.name), ["FR | Généralistes", "FR | Sport", "XXX | Adult", "Other"])
         XCTAssertEqual(content.channels[3].categoryID, "live-55")
 
-        XCTAssertEqual(content.movies.map(\.name), ["Inception", "Dune: Part Two"])
+        XCTAssertEqual(content.movies.map(\.name), ["Lighthouse", "Sandstorm: Part Two"])
         XCTAssertEqual(content.movies[0].year, 2010)
         XCTAssertEqual(content.movies[0].rating, 8.8)
         XCTAssertEqual(content.movies[1].rating ?? 0, 8.2, accuracy: 0.001, "rating_5based is converted to /10")
@@ -123,7 +123,7 @@ final class XtreamTests: XCTestCase {
 
     func testSeriesDetailsWithDictionaryEpisodes() async throws {
         let details = try await XtreamClient(credentials: credentials, http: try mock()).seriesDetails(seriesID: 9000)
-        XCTAssertEqual(details.info.title, "Breaking Bad")
+        XCTAssertEqual(details.info.title, "Copper Valley")
         XCTAssertEqual(details.info.backdropURL?.absoluteString, "http://img.example.com/bb_back.jpg")
         XCTAssertEqual(details.seasons.map(\.number), [1, 2])
         XCTAssertEqual(details.seasons[0].name, "Saison 1")
@@ -145,15 +145,15 @@ final class XtreamTests: XCTestCase {
 
     func testMovieDetails() async throws {
         let details = try await XtreamClient(credentials: credentials, http: try mock()).movieDetails(streamID: 5001)
-        XCTAssertEqual(details.title, "Inception")
-        XCTAssertEqual(details.director, "Christopher Nolan")
+        XCTAssertEqual(details.title, "Lighthouse")
+        XCTAssertEqual(details.director, "Jordan Vale")
         XCTAssertEqual(details.durationSeconds, 8880)
-        XCTAssertEqual(details.trailerYouTubeID, "YoHD9XEInc0")
-        XCTAssertEqual(details.tmdbID, "27205")
+        XCTAssertEqual(details.trailerYouTubeID, "trailer0001")
+        XCTAssertEqual(details.tmdbID, "910001")
     }
 
     func testShortEPGDecodesBase64() async throws {
-        let programs = try await XtreamClient(credentials: credentials, http: try mock()).shortEPG(streamID: 101, epgChannelID: "TF1.fr")
+        let programs = try await XtreamClient(credentials: credentials, http: try mock()).shortEPG(streamID: 101, epgChannelID: "TV1.fr")
         XCTAssertEqual(programs.map(\.title), ["Le JT", "Film"])
         XCTAssertEqual(programs[0].summary, "L'actualité")
         XCTAssertNil(programs[1].summary)

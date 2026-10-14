@@ -18,7 +18,7 @@ class UrlsTest {
         assertNull(Urls.lenient("   "))
         assertNull(Urls.lenient("no scheme here"))
         assertNull(Urls.lenient("http://a.example.com/bad%zzescape"), "invalid escapes are not repaired")
-        assertNull(Urls.lenient("TF1 HD: live"))
+        assertNull(Urls.lenient("TV1 HD: live"))
     }
 
     @Test

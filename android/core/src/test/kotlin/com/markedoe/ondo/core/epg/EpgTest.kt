@@ -50,33 +50,33 @@ class EpgTest {
     @Test
     fun programmeFields() {
         val data = parser.parseGuide(Fixtures.bytes("epg.xml"))
-        val tf1 = assertNotNull(data.programs["TF1.fr"])
-        assertEquals(listOf("Too old", "Le JT", "Film du soir"), tf1.map { it.title }, "sorted by start")
-        val jt = tf1[1]
+        val tv1 = assertNotNull(data.programs["TV1.fr"])
+        assertEquals(listOf("Too old", "Le JT", "Film du soir"), tv1.map { it.title }, "sorted by start")
+        val jt = tv1[1]
         assertEquals("L'actualité & la météo", jt.description)
         assertEquals("News", jt.category)
         assertEquals(utc(2025, 10, 9, 18), jt.start)
         assertEquals(utc(2025, 10, 9, 18, 45), jt.end)
-        val film = tf1[2]
-        assertEquals("Inception", film.subtitle)
+        val film = tv1[2]
+        assertEquals("Lighthouse", film.subtitle)
         assertEquals("S02E05", film.episode)
         assertEquals("-12", film.rating)
         assertEquals("http://epg.example.com/film.jpg", film.iconUrl)
-        assertEquals("N'oubliez pas les paroles", data.programs["france2"]?.first()?.title, "CDATA")
-        assertEquals("http://epg.example.com/tf1.png", data.channels["TF1.fr"]?.iconUrl)
-        assertEquals(listOf("France 2 HD", "France 2"), data.channels["france2"]?.displayNames)
+        assertEquals("Chantez maintenant", data.programs["nation2"]?.first()?.title, "CDATA")
+        assertEquals("http://epg.example.com/tv1.png", data.channels["TV1.fr"]?.iconUrl)
+        assertEquals(listOf("Nation 2 HD", "Nation 2"), data.channels["nation2"]?.displayNames)
     }
 
     @Test
     fun filteringByWindowAndChannels() {
         val filter = EpgFilter(
             window = TimeWindow(utc(2025, 10, 9, 0), utc(2025, 10, 10, 0)),
-            channelIds = setOf("tf1.FR"),
-            channelNameKeys = setOf(TextNormalizer.channelMatchKey("FR: France 2 FHD")),
+            channelIds = setOf("tv1.FR"),
+            channelNameKeys = setOf(TextNormalizer.channelMatchKey("FR: Nation 2 FHD")),
         )
         val data = parser.parseGuide(Fixtures.bytes("epg.xml.gz"), filter)
-        assertEquals(2, data.programs["TF1.fr"]?.size, "old programme dropped by the window")
-        assertEquals(1, data.programs["france2"]?.size, "matched by display name")
+        assertEquals(2, data.programs["TV1.fr"]?.size, "old programme dropped by the window")
+        assertEquals(1, data.programs["nation2"]?.size, "matched by display name")
         assertNull(data.programs["unused.fr"])
     }
 
@@ -85,17 +85,17 @@ class EpgTest {
         val programs = parser.parse(
             ByteArrayInputStream(Fixtures.bytes("epg.xml.gz")),
             window = TimeWindow(utc(2025, 10, 9, 0), utc(2025, 10, 10, 0)),
-            channels = setOf("tf1.fr", "UNUSED.FR"),
+            channels = setOf("tv1.fr", "UNUSED.FR"),
         )
         assertEquals(listOf("Le JT", "Film du soir", "Ignored"), programs.map { it.title })
-        assertEquals(setOf("TF1.fr", "unused.fr"), programs.map { it.channelId }.toSet())
+        assertEquals(setOf("TV1.fr", "unused.fr"), programs.map { it.channelId }.toSet())
         assertEquals(5, parser.parse(ByteArrayInputStream(Fixtures.bytes("epg.xml"))).size)
     }
 
     @Test
     fun timeShift() {
         val data = parser.parseGuide(Fixtures.bytes("epg.xml"), timeShiftMillis = HOUR)
-        assertEquals(utc(2025, 10, 9, 19), data.programs["france2"]?.first()?.start)
+        assertEquals(utc(2025, 10, 9, 19), data.programs["nation2"]?.first()?.start)
     }
 
     @Test
@@ -129,14 +129,14 @@ class EpgTest {
     @Test
     fun indexMatchingAndLookups() {
         val index = EpgIndex(parser.parseGuide(Fixtures.bytes("epg.xml")))
-        val byId = Channel(id = "1", name = "Whatever", categoryId = "c", streamUrl = "http://x/1", epgId = "tf1.fr")
-        val byName = Channel(id = "2", name = "FR | France 2 HD", categoryId = "c", streamUrl = "http://x/2")
+        val byId = Channel(id = "1", name = "Whatever", categoryId = "c", streamUrl = "http://x/1", epgId = "tv1.fr")
+        val byName = Channel(id = "2", name = "FR | Nation 2 HD", categoryId = "c", streamUrl = "http://x/2")
         val unknown = Channel(id = "3", name = "Nope", categoryId = "c", streamUrl = "http://x/3")
 
-        assertEquals("TF1.fr", index.guideId(byId))
-        assertEquals("france2", index.guideId(byName))
+        assertEquals("TV1.fr", index.guideId(byId))
+        assertEquals("nation2", index.guideId(byName))
         assertNull(index.guideId(unknown))
-        assertEquals("http://epg.example.com/tf1.png", index.iconUrl(byId))
+        assertEquals("http://epg.example.com/tv1.png", index.iconUrl(byId))
 
         val now = utc(2025, 10, 9, 18, 50)
         assertEquals("Film du soir", index.current(byId, now)?.title)
@@ -185,9 +185,9 @@ class EpgTest {
 
     @Test
     fun insertShortEpg() {
-        val channel = Channel(id = "x1", name = "TF1", categoryId = "c", streamUrl = "http://x/1", epgId = "TF1.fr")
+        val channel = Channel(id = "x1", name = "TV1", categoryId = "c", streamUrl = "http://x/1", epgId = "TV1.fr")
         val index = EpgIndex.EMPTY.inserting(
-            listOf(EpgProgram("TF1.fr", utc(2025, 1, 1, 10), utc(2025, 1, 1, 11), "JT")),
+            listOf(EpgProgram("TV1.fr", utc(2025, 1, 1, 10), utc(2025, 1, 1, 11), "JT")),
             channel,
         )
         assertEquals("JT", index.current(channel, utc(2025, 1, 1, 10, 30))?.title)

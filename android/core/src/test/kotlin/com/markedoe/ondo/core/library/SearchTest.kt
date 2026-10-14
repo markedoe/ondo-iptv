@@ -17,27 +17,27 @@ class SearchTest {
         return PlaylistContent(
             channels = listOf(
                 Channel(id = "1", name = "FR: Télé Loisirs HD", categoryId = "a", streamUrl = url),
-                Channel(id = "2", name = "TF1", categoryId = "a", streamUrl = url),
-                Channel(id = "3", name = "TF1 Séries Films", categoryId = "a", streamUrl = url),
-                Channel(id = "4", name = "Hidden TF1", categoryId = "hidden", streamUrl = url),
+                Channel(id = "2", name = "TV1", categoryId = "a", streamUrl = url),
+                Channel(id = "3", name = "TV1 Séries Films", categoryId = "a", streamUrl = url),
+                Channel(id = "4", name = "Hidden TV1", categoryId = "hidden", streamUrl = url),
             ),
-            movies = listOf(Movie(id = "m", name = "Le Fabuleux Destin d'Amélie Poulain", categoryId = "m", streamUrl = url)),
-            series = listOf(Series(id = "s", name = "Les Revenants", categoryId = "s")),
+            movies = listOf(Movie(id = "m", name = "Le Fabuleux Destin d'Amélie Lagarde", categoryId = "m", streamUrl = url)),
+            series = listOf(Series(id = "s", name = "Les Voisins", categoryId = "s")),
         )
     }
 
     @Test
     fun normalisation() {
         assertEquals("tele loisirs hd", TextNormalizer.normalize("  Télé-Loisirs  HD! "))
-        assertEquals("tf1", TextNormalizer.channelMatchKey("FR: TF1 FHD"))
-        assertEquals("tf1", TextNormalizer.channelMatchKey("TF1 HD"))
-        assertEquals("france2", TextNormalizer.channelMatchKey("France 2"))
+        assertEquals("tv1", TextNormalizer.channelMatchKey("FR: TV1 FHD"))
+        assertEquals("tv1", TextNormalizer.channelMatchKey("TV1 HD"))
+        assertEquals("nation2", TextNormalizer.channelMatchKey("Nation 2"))
         assertEquals("fr", TextNormalizer.channelMatchKey("FR"), "a lone country token is kept")
     }
 
     @Test
     fun normalisationOfWidthLigaturesAndScripts() {
-        assertEquals("tf1 hd", TextNormalizer.normalize("ＴＦ１　ＨＤ"), "full-width forms")
+        assertEquals("tv1 hd", TextNormalizer.normalize("ＴＶ１　ＨＤ"), "full-width forms")
         assertEquals("strasse", TextNormalizer.normalize("Straße"))
         assertEquals("cafe creme", TextNormalizer.normalize("CAFÉ_CRÈME"))
         assertEquals("канал 1", TextNormalizer.normalize("Канал-1"))
@@ -51,10 +51,10 @@ class SearchTest {
         val engine = SearchEngine(makeContent())
         assertEquals(listOf("1"), engine.search("tele").channels.map { it.id })
         assertEquals(1, engine.search("amelie").movies.size)
-        assertEquals(1, engine.search("revenant").series.size)
-        assertEquals(listOf("2", "3", "4"), engine.search("tf1").channels.map { it.id }, "exact first, then prefix, then contains")
-        assertEquals(listOf("2", "3"), engine.search("tf1", excludedCategoryIds = setOf("hidden")).channels.map { it.id })
-        assertEquals(listOf("3"), engine.search("films tf1").channels.map { it.id }, "all words must match")
+        assertEquals(1, engine.search("voisin").series.size)
+        assertEquals(listOf("2", "3", "4"), engine.search("tv1").channels.map { it.id }, "exact first, then prefix, then contains")
+        assertEquals(listOf("2", "3"), engine.search("tv1", excludedCategoryIds = setOf("hidden")).channels.map { it.id })
+        assertEquals(listOf("3"), engine.search("films tv1").channels.map { it.id }, "all words must match")
         assertTrue(engine.search("   ").isEmpty)
         assertEquals(0, engine.search("zzz").totalCount)
     }
@@ -78,7 +78,7 @@ class SearchTest {
         // Reference values computed with FNV-1a 64 over UTF-8 (identical to the Swift ids).
         assertEquals("af63dc4c8601ec8c", StableHash.hex("a"))
         assertEquals(StableHash.fnv1a("é"), fnv1aReference("é".encodeToByteArray()))
-        assertEquals(StableHash.fnv1a("📺 TF1"), fnv1aReference("📺 TF1".encodeToByteArray()))
+        assertEquals(StableHash.fnv1a("📺 TV1"), fnv1aReference("📺 TV1".encodeToByteArray()))
     }
 
     private fun fnv1aReference(bytes: ByteArray): ULong {

@@ -89,7 +89,7 @@ internal object Urls {
         val groups = match.groups
         val scheme = groups[2]?.value?.takeIf { isValidScheme(it) }
         if (groups[2] != null && scheme == null) {
-            // "TF1 HD:x" is not a scheme: the whole string is a relative reference.
+            // "TV1 HD:x" is not a scheme: the whole string is a relative reference.
             return ParsedUrl(null, null, url.substringBefore('?').substringBefore('#'), null, null)
         }
         return ParsedUrl(

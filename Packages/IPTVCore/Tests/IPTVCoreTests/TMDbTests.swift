@@ -7,19 +7,19 @@ final class TMDbTests: XCTestCase {
         http.routes["https://api.themoviedb.org/3/trending/all/week?language=fr-FR&api_key=KEY"] = try Fixture.data("tmdb_trending.json")
         let items = try await TMDbClient(credential: " KEY ", http: http, language: "fr-FR").trending()
         XCTAssertEqual(items.count, 4, "people are filtered out")
-        XCTAssertEqual(items[1].title, "Breaking Bad")
+        XCTAssertEqual(items[1].title, "Copper Valley")
         XCTAssertEqual(items[1].year, 2008)
-        XCTAssertEqual(items[0].posterURL?.absoluteString, "https://image.tmdb.org/t/p/w342/czembW0Rk1Ke7lCJGahbOhdCuhV.jpg")
+        XCTAssertEqual(items[0].posterURL?.absoluteString, "https://image.tmdb.org/t/p/w342/poster-sandstorm.jpg")
 
         let url = URL(string: "http://x/1.mp4")!
         let movies = [
-            Movie(id: "1", name: "FR - Dune: Part Two [MULTI] 4K", categoryID: "c", streamURL: url, year: 2024),
-            Movie(id: "2", name: "Inception", categoryID: "c", streamURL: url, year: 1990),
-            Movie(id: "3", name: "Fight Club (1999)", categoryID: "c", streamURL: url),
+            Movie(id: "1", name: "FR - Sandstorm: Part Two [MULTI] 4K", categoryID: "c", streamURL: url, year: 2024),
+            Movie(id: "2", name: "Lighthouse", categoryID: "c", streamURL: url, year: 1990),
+            Movie(id: "3", name: "Paper Trail (1999)", categoryID: "c", streamURL: url),
         ]
-        let series = [Series(id: "s", name: "Breaking Bad (US)", categoryID: "c")]
+        let series = [Series(id: "s", name: "Copper Valley (US)", categoryID: "c")]
         let matches = CatalogueMatcher.match(items, movies: movies, series: series)
-        XCTAssertEqual(matches.map(\.id), ["m-1", "s-s", "m-3"], "Inception rejected: year too far apart")
+        XCTAssertEqual(matches.map(\.id), ["m-1", "s-s", "m-3"], "Lighthouse rejected: year too far apart")
     }
 
     func testBearerTokenUsesHeader() async throws {
@@ -36,20 +36,20 @@ final class RealDebridTests: XCTestCase {
         XCTAssertEqual(ReleaseName.clean("The.Movie.2021.1080p.WEB-DL.x264.mkv").0, "The Movie (2021)")
         XCTAssertEqual(ReleaseName.clean("Show.Name.S02E05.720p.HDTV.mkv").0, "Show Name S02E05")
         XCTAssertTrue(ReleaseName.clean("Show.Name.S02E05.720p.HDTV.mkv").1)
-        XCTAssertEqual(ReleaseName.clean("Blade Runner 2049 (2017) [MULTI].mp4").0, "Blade Runner 2049 (2017)")
+        XCTAssertEqual(ReleaseName.clean("Star Runner 2049 (2017) [MULTI].mp4").0, "Star Runner 2049 (2017)")
         XCTAssertEqual(ReleaseName.clean("holiday_video.mp4").0, "holiday video")
     }
 
     func testDownloadsBecomeMoviesAndSeries() async throws {
         let http = MockHTTPClient()
         http.routes["https://api.real-debrid.com/rest/1.0/downloads?page=1&limit=100"] = Data("""
-        [{"id":"A","filename":"Dune.Part.Two.2024.2160p.WEB.mkv","mimeType":"video/x-matroska","download":"https://x.download.real-debrid.com/d/A/Dune.mkv","streamable":1},
+        [{"id":"A","filename":"Sandstorm.Part.Two.2024.2160p.WEB.mkv","mimeType":"video/x-matroska","download":"https://x.download.real-debrid.com/d/A/Sandstorm.mkv","streamable":1},
          {"id":"B","filename":"Show.S01E01.1080p.mkv","mimeType":"video/x-matroska","download":"https://x.download.real-debrid.com/d/B/s1e1.mkv"},
          {"id":"C","filename":"Show.S01E02.1080p.mkv","download":"https://x.download.real-debrid.com/d/C/s1e2.mkv"},
          {"id":"D","filename":"archive.zip","mimeType":"application/zip","download":"https://x.download.real-debrid.com/d/D/a.zip"}]
         """.utf8)
         let content = try await RealDebridClient(token: "T", http: http).fetchContent()
-        XCTAssertEqual(content.movies.map(\.name), ["Dune Part Two"])
+        XCTAssertEqual(content.movies.map(\.name), ["Sandstorm Part Two"])
         XCTAssertEqual(content.movies.first?.year, 2024)
         XCTAssertEqual(content.series.first?.name, "Show")
         XCTAssertEqual(content.series.first?.episodes.map(\.code), ["S01E01", "S01E02"])

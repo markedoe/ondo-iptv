@@ -109,7 +109,7 @@ public enum ReleaseName {
             if stopTokens.contains(lower) || lower.hasPrefix("[") { break }
             kept.append(word)
         }
-        // The release year is the last year-like token ("Blade Runner 2049 (2017)").
+        // The release year is the last year-like token ("Star Runner 2049 (2017)").
         var year: Int?
         if !isEpisode, let index = kept.indices.last(where: { $0 > 0 && Self.year(kept[$0]) != nil }) {
             year = Self.year(kept[index])
