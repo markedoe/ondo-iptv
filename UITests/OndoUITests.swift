@@ -165,8 +165,9 @@ final class OndoUITests: XCTestCase {
         // times of day every next programme is long enough to start off screen: scroll the grid forward.
         var upcoming = upcomingProgrammeCell()
         for _ in 0..<3 where upcoming == nil {
-            app.swipeLeft()
-            sleep(1)
+            // Slowly, and let the grid stop: a cell found while it still glides is not where the tap lands.
+            app.swipeLeft(velocity: .slow)
+            sleep(2)
             upcoming = upcomingProgrammeCell()
         }
         if let later = upcoming {
