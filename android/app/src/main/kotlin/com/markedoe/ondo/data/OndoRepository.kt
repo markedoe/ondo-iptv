@@ -19,6 +19,7 @@ import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.PlayRequest
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -63,20 +64,39 @@ class OndoRepository(
     private val _state = MutableStateFlow(OndoState())
     val state: StateFlow<OndoState> = _state.asStateFlow()
     private var refreshJob: Job? = null
+    private var guideJob: Job? = null
+    private var bootstrapping = false
+
+    /**
+     * Library changes made before the saved data is loaded: when the system recreates only the player after
+     * the process was killed, its progress arrives first. They are applied on top of the saved library
+     * once it is loaded; writing them alone would replace the favourites and history with an empty library.
+     */
+    private val pendingLibraryChanges = mutableListOf<(LibraryState) -> LibraryState>()
 
     /** Saves run one at a time, in order: the last change is the one on disk. */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val writer = io.limitedParallelism(1)
 
     fun bootstrap() {
-        if (_state.value.isReady) return
+        if (_state.value.isReady || bootstrapping) return
+        bootstrapping = true
         scope.launch {
             val settings = withContext(io) { store.loadSettings() }
             val playlists = withContext(io) { store.loadPlaylists() }
-            val library = withContext(io) { store.loadLibrary() }
+            val saved = withContext(io) { store.loadLibrary() }
+            val pending = pendingLibraryChanges.toList()
+            pendingLibraryChanges.clear()
+            val library = pending.fold(saved) { library, change -> change(library) }
             _state.update { it.copy(settings = settings, playlists = playlists, library = library, isReady = true) }
+            if (pending.isNotEmpty()) persist { saveLibrary(library) }
             _state.value.activePlaylist?.let { open(it) }
         }
+    }
+
+    /** Saves in order, off the main thread. A failed save (disk full) keeps the app running. */
+    private fun persist(save: AppStore.() -> Unit) {
+        scope.launch(writer) { runCatching { store.save() } }
     }
 
     // MARK: Playlists
@@ -93,14 +113,16 @@ class OndoRepository(
             addedAt = now(),
         )
         _state.update { it.copy(isLoading = true, error = null) }
-        return runCatching { withContext(io) { loader().load(saved.toCorePlaylist()) } }
+        return loadCatching { withContext(io) { loader().load(saved.toCorePlaylist()) } }
             .map { content ->
                 val playlists = _state.value.playlists + saved
                 val settings = _state.value.settings.copy(activePlaylistId = saved.id)
                 withContext(writer) {
-                    store.savePlaylists(playlists)
-                    store.saveSettings(settings)
-                    store.saveContent(saved.id, content)
+                    runCatching {
+                        store.savePlaylists(playlists)
+                        store.saveSettings(settings)
+                        store.saveContent(saved.id, content)
+                    }
                 }
                 _state.update { it.copy(playlists = playlists, settings = settings, content = content, isLoading = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap()) }
                 loadGuide(saved, content)
@@ -111,7 +133,10 @@ class OndoRepository(
     fun activate(id: String) {
         val playlist = _state.value.playlists.firstOrNull { it.id == id } ?: return
         updateSettings { it.copy(activePlaylistId = id) }
-        _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), error = null) }
+        // The previous playlist's downloads stop: they could only land on the wrong playlist.
+        refreshJob?.cancel()
+        guideJob?.cancel()
+        _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), error = null, isLoading = false) }
         open(playlist)
     }
 
@@ -123,11 +148,11 @@ class OndoRepository(
         val playlists = _state.value.playlists.filterNot { it.id == id }
         val library = _state.value.library.removingPlaylist(id)
         val settings = _state.value.settings.let { if (it.activePlaylistId == id) it.copy(activePlaylistId = playlists.firstOrNull()?.id) else it }
-        scope.launch(writer) {
-            store.savePlaylists(playlists)
-            store.saveLibrary(library)
-            store.saveSettings(settings)
-            store.deleteContent(id)
+        persist {
+            savePlaylists(playlists)
+            saveLibrary(library)
+            saveSettings(settings)
+            deleteContent(id)
         }
         val wasActive = _state.value.activePlaylistId == id
         _state.update { it.copy(playlists = playlists, library = library, settings = settings) }
@@ -146,7 +171,7 @@ class OndoRepository(
     private fun updateSettings(change: (AppSettings) -> AppSettings) {
         val settings = change(_state.value.settings)
         _state.update { it.copy(settings = settings) }
-        scope.launch(writer) { store.saveSettings(settings) }
+        persist { saveSettings(settings) }
     }
 
     /** Cached catalogue at once, then a refresh when it is a day old or missing. */
@@ -165,9 +190,9 @@ class OndoRepository(
         refreshJob?.cancel()
         refreshJob = scope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-            runCatching { withContext(io) { loader().load(playlist.toCorePlaylist()) } }
+            loadCatching { withContext(io) { loader().load(playlist.toCorePlaylist()) } }
                 .onSuccess { content ->
-                    withContext(writer) { store.saveContent(playlist.id, content) }
+                    withContext(writer) { runCatching { store.saveContent(playlist.id, content) } }
                     if (_state.value.activePlaylistId == playlist.id) {
                         _state.update { it.copy(content = content, isLoading = false) }
                         loadGuide(playlist, content)
@@ -181,13 +206,27 @@ class OndoRepository(
     private fun loadGuide(playlist: SavedPlaylist, content: PlaylistContent) {
         val core = playlist.toCorePlaylist()
         if (core.epgUrls.isEmpty() && content.providerEpgUrls.isEmpty()) return
-        scope.launch {
-            val guide = runCatching {
+        // A newer catalogue or another playlist replaces the guide being loaded.
+        guideJob?.cancel()
+        guideJob = scope.launch {
+            val guide = loadCatching {
                 val result = loader().loadEpg(core, content)
                 withContext(Dispatchers.Default) { EpgIndex(result.data) }
             }.getOrNull() ?: return@launch
             if (_state.value.activePlaylistId == playlist.id) _state.update { it.copy(guide = guide) }
         }
+    }
+
+    /**
+     * Like `runCatching`, but a cancelled load (another playlist opened meanwhile) stays a cancellation: it
+     * must not reach the screen as a loading error.
+     */
+    private suspend fun <T> loadCatching(block: suspend () -> T): Result<T> = try {
+        Result.success(block())
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(error)
     }
 
     // MARK: Library
@@ -204,9 +243,14 @@ class OndoRepository(
     fun removeFromHistory(entry: WatchEntry) = updateLibrary { it.remove(entry) }
 
     private fun updateLibrary(change: (LibraryState) -> LibraryState) {
+        if (!_state.value.isReady) {
+            pendingLibraryChanges += change
+            bootstrap()
+            return
+        }
         _state.update { it.copy(library = change(it.library)) }
         val library = _state.value.library
-        scope.launch(writer) { store.saveLibrary(library) }
+        persist { saveLibrary(library) }
     }
 
     // MARK: Details

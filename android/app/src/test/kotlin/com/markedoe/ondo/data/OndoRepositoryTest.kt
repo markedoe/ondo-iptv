@@ -104,6 +104,25 @@ class OndoRepositoryTest {
         assertTrue("the cached catalogue is fresh: no download", offline.requests.isEmpty())
     }
 
+    /**
+     * After the system killed the app in the background, it can recreate the player alone: the progress it
+     * saves before the library is loaded must not replace the favourites and the history.
+     */
+    @Test
+    fun progressSavedBeforeTheLibraryLoadsKeepsTheLibrary() = runTest {
+        val favorite = Favorite("p1", ItemKind.MOVIE, "m1", "Quiet Water", addedAt = clock)
+        val watched = WatchEntry("p1", ItemKind.MOVIE, "m2", title = "Long Road", position = 60.0, duration = 6_000.0, lastWatchedAt = clock)
+        AppStore(folder.root).saveLibrary(LibraryState(favorites = listOf(favorite), history = listOf(watched)))
+
+        val repository = repository() // nobody called bootstrap(): only the player exists
+        repository.recordProgress(watched.key, 1_200.0, 6_000.0)
+
+        val state = repository.awaitState { it.isReady }
+        assertEquals(listOf(favorite), state.library.favorites)
+        assertEquals(1_200.0, state.library.progress(watched.key)!!.position, 0.0)
+        awaitDisk { it.loadLibrary().favorites == listOf(favorite) && it.loadLibrary().progress(watched.key)?.position == 1_200.0 }
+    }
+
     @Test
     fun aFailedDownloadSavesNothingAndExplainsWhy() = runTest {
         val repository = repository(FakeHttp(emptyMap()))
