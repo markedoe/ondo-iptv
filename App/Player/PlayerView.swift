@@ -97,9 +97,12 @@ struct PlayerView: View {
             }
         }
         .focusedSceneValue(\.playbackSession, session)
-        // VoiceOver: a two-finger double tap plays or pauses, the escape gesture closes the player.
-        .accessibilityAction(.magicTap) { session.togglePlayPause() }
+        // VoiceOver: the escape gesture closes the player; on iPhone and iPad a two-finger double tap
+        // plays or pauses (the Mac has no magic tap).
         .accessibilityAction(.escape) { onClose() }
+        #if os(iOS)
+        .accessibilityAction(.magicTap) { session.togglePlayPause() }
+        #endif
         .animation(.easeInOut(duration: 0.2), value: controlsVisible)
         .animation(.easeInOut(duration: 0.25), value: panelTab)
         .immersive()
