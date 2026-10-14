@@ -39,6 +39,9 @@ enum Keychain {
     static func passwordKey(for playlistID: UUID) -> String { "xtream-password-\(playlistID.uuidString)" }
 
     static let parentalPINKey = "parental-pin-sha256"
+    /// Wrong PIN count and the date before which no PIN is checked (see `AppModel.verifyParentalPIN`).
+    static let pinFailuresKey = "pin-failures"
+    static let pinRetryKey = "pin-retry-after"
     static let tmdbKey = "tmdb-credential"
 
     static func hash(pin: String) -> String {

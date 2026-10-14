@@ -124,6 +124,138 @@ final class AppModelTests: XCTestCase {
         XCTAssertFalse(model.isLocked(adult))
     }
 
+    func testWrongPINsMakeTheNextAttemptWait() async throws {
+        let model = makeModel()
+        await model.bootstrap()
+        model.setParentalPIN("1234")
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+
+        for attempt in 1...4 {
+            XCTAssertFalse(model.verifyParentalPIN("0000", now: start))
+            XCTAssertNil(model.pinRetryDate(now: start), "attempt \(attempt) does not wait yet")
+        }
+        XCTAssertFalse(model.verifyParentalPIN("0000", now: start))
+        XCTAssertEqual(model.pinRetryDate(now: start), start.addingTimeInterval(30))
+        XCTAssertFalse(model.verifyParentalPIN("1234", now: start.addingTimeInterval(10)), "even the right PIN waits")
+        XCTAssertFalse(model.isParentalUnlocked)
+
+        // Relaunching the app does not reset the count.
+        let relaunched = makeModel()
+        await relaunched.bootstrap()
+        XCTAssertNotNil(relaunched.pinRetryDate(now: start.addingTimeInterval(10)))
+        XCTAssertFalse(relaunched.verifyParentalPIN("0000", now: start.addingTimeInterval(31)))
+        XCTAssertEqual(relaunched.pinRetryDate(now: start.addingTimeInterval(31)), start.addingTimeInterval(31 + 60), "the wait doubles")
+
+        XCTAssertTrue(relaunched.verifyParentalPIN("1234", now: start.addingTimeInterval(200)))
+        XCTAssertNil(relaunched.pinRetryDate(now: start.addingTimeInterval(200)))
+        XCTAssertFalse(relaunched.verifyParentalPIN("0000", now: start.addingTimeInterval(200)))
+        XCTAssertNil(relaunched.pinRetryDate(now: start.addingTimeInterval(200)), "a right PIN starts the count again")
+    }
+
+    func testPINWaitsDoubleUpToAnHour() {
+        XCTAssertNil(AppModel.pinDelay(afterFailures: 4))
+        XCTAssertEqual(AppModel.pinDelay(afterFailures: 5), 30)
+        XCTAssertEqual(AppModel.pinDelay(afterFailures: 6), 60)
+        XCTAssertEqual(AppModel.pinDelay(afterFailures: 12), 3600)
+        XCTAssertEqual(AppModel.pinDelay(afterFailures: 1000), 3600)
+    }
+
+    func testProfilePINsWaitAfterWrongAttemptsToo() async throws {
+        let model = makeModel()
+        await model.bootstrap()
+        let guarded = model.addProfile(name: "Parent", colorIndex: 1, symbol: "star.fill", isKids: false, pin: "4321")
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        for _ in 1...5 { XCTAssertFalse(model.verifyPIN("0000", for: guarded, now: now)) }
+        XCTAssertFalse(model.verifyPIN("4321", for: guarded, now: now))
+        XCTAssertTrue(model.verifyPIN("4321", for: guarded, now: now.addingTimeInterval(31)))
+    }
+
+    func testSettingsThatCouldSwitchParentalControlOffNeedThePIN() async throws {
+        let model = makeModel()
+        await model.bootstrap()
+        XCTAssertFalse(model.settingsNeedParentalUnlock, "no PIN: nothing to protect")
+
+        model.setParentalPIN("1234")
+        XCTAssertTrue(model.settingsNeedParentalUnlock)
+        XCTAssertTrue(model.verifyParentalPIN("1234"))
+        XCTAssertFalse(model.settingsNeedParentalUnlock)
+        model.lockParentalControl()
+        XCTAssertTrue(model.settingsNeedParentalUnlock)
+    }
+
+    func testAKidsProfileCannotUnlockItselfWithoutAPIN() async throws {
+        let model = makeModel()
+        await model.bootstrap()
+        let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
+        model.switchProfile(to: kid)
+        XCTAssertTrue(model.settingsNeedParentalUnlock, "a parent's profile exists: the kid switches to it, or stays")
+        XCTAssertFalse(model.verifyParentalPIN("1234"), "without a PIN, no PIN unlocks")
+        XCTAssertTrue(model.isParentalControlActive)
+
+        // A single kids profile and no PIN: nobody could ever leave it, so its settings stay open.
+        model.deleteProfile(try XCTUnwrap(model.profiles.first { $0.id != kid.id }))
+        XCTAssertEqual(model.profiles.map(\.id), [kid.id])
+        XCTAssertFalse(model.settingsNeedParentalUnlock)
+    }
+
+    func testABackupBringsBackLocksHiddenChannelsAndReminders() async throws {
+        let model = try await modelWithPlaylist()
+        let sports = try XCTUnwrap(model.content.liveCategories.first { $0.name == "Sports" })
+        model.setLocked(true, category: sports)
+        let news = try XCTUnwrap(model.content.channels.first { $0.name == "Test News" })
+        let sport = try XCTUnwrap(model.content.channels.first { $0.name == "Test Sport" })
+        model.setHidden(true, channel: sport)
+        let now = Date()
+        let program = EPGProgram(channelID: "news.test", title: "Late Edition", start: now.addingTimeInterval(3600), end: now.addingTimeInterval(5400))
+        await model.toggleReminder(for: program, on: news, now: now)
+        let backup = try model.exportBackup()
+
+        // Another device.
+        let otherRoot = root.appendingPathComponent("OtherDevice", isDirectory: true)
+        try FileManager.default.createDirectory(at: otherRoot, withIntermediateDirectories: true)
+        let otherNotifications = InMemoryReminderScheduler()
+        let other = AppModel(storageRoot: otherRoot, secrets: InMemorySecretStore(), reminderScheduler: otherNotifications)
+        await other.bootstrap()
+        try await other.importBackup(backup)
+
+        XCTAssertTrue(other.isLockConfigured(sports), "locks are kept for the device, outside the library")
+        XCTAssertTrue(other.isHidden(try XCTUnwrap(other.content.channels.first { $0.name == "Test Sport" })))
+        let restoredNews = try XCTUnwrap(other.content.channels.first { $0.name == "Test News" })
+        XCTAssertTrue(other.hasReminder(for: program, on: restoredNews))
+        await other.syncReminders(now: now)
+        XCTAssertEqual(otherNotifications.scheduled.count, 1, "restored reminders notify")
+    }
+
+    func testReorderingFavoritesMovesTheItemShownNotTheOneStoredAtThatPlace() async throws {
+        let model = try await modelWithPlaylist()
+        let channels = model.content.channels
+        let news = try XCTUnwrap(channels.first { $0.name == "Test News" })
+        let sport = try XCTUnwrap(channels.first { $0.name == "Test Sport" })
+        let late = try XCTUnwrap(channels.first { $0.name == "Late Night" })
+        for channel in [late, news, sport] { model.toggleFavorite(channel) }
+        model.setParentalPIN("1234")  // the adult category locks: "Late Night" is no longer shown
+        XCTAssertEqual(model.favorites(.live).map(\.title), ["Test News", "Test Sport"])
+
+        model.moveFavorites(.live, fromOffsets: [1], toOffset: 0)  // drag "Test Sport" above "Test News"
+
+        XCTAssertEqual(model.favorites(.live).map(\.title), ["Test Sport", "Test News"])
+    }
+
+    func testRestoredFileNamesStayInTheImportFolder() {
+        let folder = AppPaths.importedPlaylists.standardizedFileURL
+        for name in ["..", ".", "", "/", "../Ondo", "../../Library", "a/../../b.m3u"] {
+            let url = AppPaths.importedPlaylist(name).standardizedFileURL
+            XCTAssertEqual(url.deletingLastPathComponent(), folder, name)
+            XCTAssertNotEqual(url, folder, name)
+        }
+        XCTAssertEqual(AppPaths.importedPlaylist("list.m3u").lastPathComponent, "list.m3u")
+    }
+
+    func testDownloadsStayOutOfDeviceBackups() throws {
+        let values = try DownloadManager.directory.resourceValues(forKeys: [.isExcludedFromBackupKey])
+        XCTAssertEqual(values.isExcludedFromBackup, true)
+    }
+
     func testKidsProfileHidesAdultCategories() async throws {
         let model = try await modelWithPlaylist()
         let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)

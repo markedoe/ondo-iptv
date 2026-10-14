@@ -43,9 +43,14 @@ final class DownloadManager: NSObject {
     /// Set by the iOS app delegate when the system relaunches the app for finished downloads.
     @ObservationIgnored var backgroundCompletionHandler: (() -> Void)?
 
+    /// Downloaded films can weigh gigabytes and can be downloaded again: they stay out of iCloud and computer
+    /// backups (Apple's storage guidelines).
     nonisolated static let directory: URL = {
-        let url = AppPaths.support.appendingPathComponent("Downloads", isDirectory: true)
+        var url = AppPaths.support.appendingPathComponent("Downloads", isDirectory: true)
         try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
         return url
     }()
 

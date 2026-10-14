@@ -88,17 +88,19 @@ extension AppModel {
 
     func moveListItems(_ id: UUID, fromOffsets source: IndexSet, toOffset destination: Int) {
         guard let list = library.customLists.first(where: { $0.id == id }) else { return }
-        // Offsets are relative to the visible items; map them to the stored ones.
-        let visible = items(in: list)
-        let all = list.items
-        let sourceAll = IndexSet(source.compactMap { offset in all.firstIndex { $0.id == visible[offset].id } })
-        let destinationAll: Int
-        if destination < visible.count, let target = all.firstIndex(where: { $0.id == visible[destination].id }) {
-            destinationAll = target
-        } else {
-            destinationAll = all.count
+        let move = Self.storedMove(visible: items(in: list), stored: list.items, fromOffsets: source, toOffset: destination)
+        updateLibrary { $0.moveItems(inList: id, fromOffsets: move.source, toOffset: move.destination) }
+    }
+
+    /// Screens show a filtered list (locked, hidden and vanished items left out), so the offsets of a move
+    /// are relative to it: this maps them to the stored list.
+    static func storedMove(visible: [FavoriteEntry], stored: [FavoriteEntry], fromOffsets source: IndexSet,
+                           toOffset destination: Int) -> (source: IndexSet, destination: Int) {
+        let storedSource = IndexSet(source.compactMap { offset in stored.firstIndex { $0.id == visible[offset].id } })
+        if destination < visible.count, let target = stored.firstIndex(where: { $0.id == visible[destination].id }) {
+            return (storedSource, target)
         }
-        updateLibrary { $0.moveItems(inList: id, fromOffsets: sourceAll, toOffset: destinationAll) }
+        return (storedSource, stored.count)
     }
 
     func favoriteChannels() -> [Channel] {
@@ -108,7 +110,9 @@ extension AppModel {
 
     func moveFavorites(_ type: ContentType, fromOffsets source: IndexSet, toOffset destination: Int) {
         guard let playlist = activePlaylist else { return }
-        updateLibrary { $0.moveFavorites(playlistID: playlist.id, type: type, fromOffsets: source, toOffset: destination) }
+        let move = Self.storedMove(visible: favorites(type), stored: library.favorites(playlistID: playlist.id, type: type),
+                                   fromOffsets: source, toOffset: destination)
+        updateLibrary { $0.moveFavorites(playlistID: playlist.id, type: type, fromOffsets: move.source, toOffset: move.destination) }
     }
 
     func recentChannels() -> [Channel] {

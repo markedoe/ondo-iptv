@@ -258,9 +258,9 @@ final class AppModel {
         scheduleReminderSync()
     }
 
-    func verifyPIN(_ pin: String, for profile: Profile) -> Bool {
+    func verifyPIN(_ pin: String, for profile: Profile, now: Date = Date()) -> Bool {
         guard let hash = profile.pinHash else { return true }
-        return Keychain.hash(pin: pin) == hash
+        return checkPIN(pin, against: hash, now: now)
     }
 
     @discardableResult
@@ -576,6 +576,14 @@ final class AppModel {
         return settings.parentalControlEnabled && hasParentalPIN && !isParentalUnlocked
     }
 
+    /// Whether the settings that could weaken parental control (the control itself, profiles, backups) must
+    /// be unlocked first. A kids profile on a device where no parent can unlock (no PIN, no other profile)
+    /// stays editable, or nobody could ever leave it.
+    var settingsNeedParentalUnlock: Bool {
+        guard isParentalControlActive else { return false }
+        return hasParentalPIN || profiles.contains { !$0.isKids }
+    }
+
     private func saveLocks() {
         try? userStore.save(lockedCategoryKeys, name: "parental-locks")
     }
@@ -659,11 +667,43 @@ final class AppModel {
         isParentalUnlocked = false
     }
 
-    func verifyParentalPIN(_ pin: String) -> Bool {
-        guard let stored = secrets.get(Keychain.parentalPINKey) else { return true }
-        let ok = Keychain.hash(pin: pin) == stored
+    /// Unlocks parental control for this session. Without a PIN nothing can unlock it.
+    func verifyParentalPIN(_ pin: String, now: Date = Date()) -> Bool {
+        guard let stored = secrets.get(Keychain.parentalPINKey) else { return false }
+        let ok = checkPIN(pin, against: stored, now: now)
         if ok { isParentalUnlocked = true }
         return ok
+    }
+
+    /// When the next PIN may be tried, if wrong PINs made it wait.
+    func pinRetryDate(now: Date = Date()) -> Date? {
+        guard let raw = secrets.get(Keychain.pinRetryKey), let seconds = TimeInterval(raw) else { return nil }
+        let date = Date(timeIntervalSince1970: seconds)
+        return date > now ? date : nil
+    }
+
+    /// Wait imposed after `failures` wrong PINs in a row: none for the first four, then 30 s, doubling up to
+    /// an hour, so a 4-digit PIN cannot be found by trying them all.
+    static func pinDelay(afterFailures failures: Int) -> TimeInterval? {
+        guard failures >= 5 else { return nil }
+        return min(30 * pow(2, Double(min(failures - 5, 12))), 3600)
+    }
+
+    /// Compares a PIN with its hash, refusing while a wait is running. The count of wrong PINs is kept with
+    /// the secrets, so relaunching the app does not reset it.
+    private func checkPIN(_ pin: String, against hash: String, now: Date) -> Bool {
+        guard pinRetryDate(now: now) == nil else { return false }
+        if Keychain.hash(pin: pin) == hash {
+            secrets.set(nil, for: Keychain.pinFailuresKey)
+            secrets.set(nil, for: Keychain.pinRetryKey)
+            return true
+        }
+        let failures = (secrets.get(Keychain.pinFailuresKey).flatMap(Int.init) ?? 0) + 1
+        secrets.set(String(failures), for: Keychain.pinFailuresKey)
+        if let delay = Self.pinDelay(afterFailures: failures) {
+            secrets.set(String(now.addingTimeInterval(delay).timeIntervalSince1970), for: Keychain.pinRetryKey)
+        }
+        return false
     }
 
     func lockParentalControl() {
@@ -686,7 +726,10 @@ final class AppModel {
     }
 
     func exportBackup() throws -> Data {
-        try BackupArchive(playlists: playlists, library: library).encoded()
+        // Category locks are kept for the whole device, outside the profile's library: they travel with it.
+        var archived = library
+        archived.lockedCategoryKeys.formUnion(lockedCategoryKeys)
+        return try BackupArchive(playlists: playlists, library: archived).encoded()
     }
 
     func importBackup(_ data: Data) async throws {
@@ -695,20 +738,16 @@ final class AppModel {
             playlists.append(playlist)
         }
         savePlaylists()
-        updateLibrary { library in
-            for favorite in archive.library.favorites where !library.favorites.contains(where: { $0.id == favorite.id }) {
-                library.favorites.append(favorite)
-            }
-            for entry in archive.library.history where !library.history.contains(where: { $0.id == entry.id }) {
-                library.history.append(entry)
-            }
-            library.history.sort { $0.lastWatchedAt > $1.lastWatchedAt }
-            library.hiddenCategoryKeys.formUnion(archive.library.hiddenCategoryKeys)
-            library.lockedCategoryKeys.formUnion(archive.library.lockedCategoryKeys)
-            for list in archive.library.customLists where !library.customLists.contains(where: { $0.id == list.id }) {
-                library.customLists.append(list)
-            }
+        // The same merge as between devices: favourites, lists, history, reminders and hidden channels,
+        // with deletions respected.
+        updateLibrary { $0 = $0.merged(with: archive.library) }
+        // A restore adds the backup's locks, it never removes one.
+        let locks = lockedCategoryKeys.union(archive.library.lockedCategoryKeys)
+        if locks != lockedCategoryKeys {
+            lockedCategoryKeys = locks
+            saveLocks()
         }
+        scheduleReminderSync()
         updateSettings { $0.hasCompletedOnboarding = true }
         if let playlist = activePlaylist {
             await activate(playlist)

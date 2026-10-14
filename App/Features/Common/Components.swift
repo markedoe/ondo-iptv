@@ -158,7 +158,11 @@ struct PINPromptView: View {
                 .keyboardType(.numberPad)
                 #endif
                 .onSubmit(check)
-            if failed {
+            if model.pinRetryDate() != nil {
+                Text("Too many wrong PINs. Wait a moment and try again.")
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            } else if failed {
                 Text("Wrong PIN").foregroundStyle(.red)
             }
             HStack {
@@ -180,6 +184,41 @@ struct PINPromptView: View {
         } else {
             failed = true
             pin = ""
+        }
+    }
+}
+
+/// Settings that could switch parental control off (the control itself, profiles) open only once it is
+/// unlocked. A screen that was open stays open when it locks again, so setting a new PIN or "Lock Now" does
+/// not shut the person who did it out.
+struct ParentalGate<Content: View>: View {
+    @Environment(AppModel.self) private var model
+    @ViewBuilder var content: Content
+
+    @State private var opened = false
+    @State private var askingPIN = false
+
+    var body: some View {
+        if opened || !model.settingsNeedParentalUnlock {
+            content.onAppear { opened = true }
+        } else {
+            ContentUnavailableView {
+                Label("Locked", systemImage: "lock.shield")
+            } description: {
+                if model.hasParentalPIN {
+                    Text("Enter the parental control PIN to change these settings.")
+                } else {
+                    Text("Switch to a parent's profile to change these settings.")
+                }
+            } actions: {
+                if model.hasParentalPIN {
+                    Button("Unlock") { askingPIN = true }
+                        .buttonStyle(.borderedProminent)
+                }
+            }
+            .sheet(isPresented: $askingPIN) {
+                PINPromptView {}
+            }
         }
     }
 }

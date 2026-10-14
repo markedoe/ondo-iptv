@@ -12,6 +12,8 @@ struct SettingsView: View {
     @State private var cacheSize: Int64 = 0
     @State private var confirmClearHistory = false
     @State private var tmdbKey = ""
+    @State private var awaitingUnlock: BackupAction?
+    @State private var unlockedAction: BackupAction?
 
     private func binding<T>(_ keyPath: WritableKeyPath<AppSettings, T>) -> Binding<T> {
         Binding(
@@ -129,7 +131,7 @@ struct SettingsView: View {
 
             Section("Profiles") {
                 NavigationLink {
-                    ProfilesSettingsView()
+                    ParentalGate { ProfilesSettingsView() }
                 } label: {
                     LabeledContent {
                         Text(model.activeProfile.name)
@@ -141,7 +143,7 @@ struct SettingsView: View {
 
             Section("Parental Control") {
                 NavigationLink {
-                    ParentalControlView()
+                    ParentalGate { ParentalControlView() }
                 } label: {
                     LabeledContent {
                         Text(model.settings.parentalControlEnabled ? "On" : "Off")
@@ -188,20 +190,17 @@ struct SettingsView: View {
 
             Section {
                 Button {
-                    do {
-                        backupDocument = BackupDocument(data: try model.exportBackup())
-                        showingExporter = true
-                    } catch {
-                        message = error.localizedDescription
-                    }
+                    guarded(.export)
                 } label: {
                     Label("Export Backup…", systemImage: "square.and.arrow.up")
                 }
+                .disabled(backupsBlocked)
                 Button {
-                    showingImporter = true
+                    guarded(.restore)
                 } label: {
                     Label("Restore Backup…", systemImage: "square.and.arrow.down")
                 }
+                .disabled(backupsBlocked)
                 Button {
                     Task {
                         await model.clearCaches()
@@ -265,6 +264,48 @@ struct SettingsView: View {
         .confirmationDialog("Clear the watch history?", isPresented: $confirmClearHistory, titleVisibility: .visible) {
             Button("Clear History", role: .destructive) { model.clearHistory() }
         }
+        .sheet(item: $awaitingUnlock, onDismiss: {
+            if let action = unlockedAction {
+                unlockedAction = nil
+                perform(action)
+            }
+        }) { action in
+            PINPromptView { unlockedAction = action }
+        }
+    }
+
+    /// A backup holds the provider logins, and restoring one changes the playlists: under parental control,
+    /// both need the PIN.
+    private enum BackupAction: String, Identifiable {
+        case export, restore
+        var id: String { rawValue }
+    }
+
+    /// No PIN can unlock (a kids profile on a device without one): backups wait for a parent's profile.
+    private var backupsBlocked: Bool {
+        model.settingsNeedParentalUnlock && !model.hasParentalPIN
+    }
+
+    private func guarded(_ action: BackupAction) {
+        if model.settingsNeedParentalUnlock {
+            awaitingUnlock = action
+        } else {
+            perform(action)
+        }
+    }
+
+    private func perform(_ action: BackupAction) {
+        switch action {
+        case .export:
+            do {
+                backupDocument = BackupDocument(data: try model.exportBackup())
+                showingExporter = true
+            } catch {
+                message = error.localizedDescription
+            }
+        case .restore:
+            showingImporter = true
+        }
     }
 }
 
@@ -310,6 +351,7 @@ struct PlaylistsSettingsView: View {
                         Image(systemName: "pencil")
                     }
                     .buttonStyle(.borderless)
+                    .accessibilityLabel("Edit")
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {

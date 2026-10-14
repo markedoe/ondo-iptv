@@ -83,7 +83,11 @@ struct ProfilePickerView: View {
             }
             Button("Cancel", role: .cancel) { pinFor = nil }
         } message: {
-            Text(wrongPIN ? "Wrong PIN" : "Enter the PIN of this profile.")
+            if model.pinRetryDate() != nil {
+                Text("Too many wrong PINs. Wait a moment and try again.")
+            } else {
+                Text(wrongPIN ? "Wrong PIN" : "Enter the PIN of this profile.")
+            }
         }
     }
 }

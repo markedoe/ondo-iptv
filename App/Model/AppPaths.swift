@@ -24,8 +24,16 @@ enum AppPaths {
         return url
     }()
 
+    /// The copy of an imported playlist. Only the last component of the name counts: a name read from a
+    /// backup file ("..", "../Ondo") never points outside the folder, so deleting the playlist cannot delete
+    /// anything else.
     static func importedPlaylist(_ fileName: String) -> URL {
-        importedPlaylists.appendingPathComponent(fileName)
+        importedPlaylists.appendingPathComponent(safeFileName(fileName), isDirectory: false)
+    }
+
+    static func safeFileName(_ name: String) -> String {
+        let last = (name as NSString).lastPathComponent
+        return ["", ".", "..", "/"].contains(last) ? "_" : last
     }
 
     /// Public demonstration channels curated by the iptv-org project, used by "Try the demo".

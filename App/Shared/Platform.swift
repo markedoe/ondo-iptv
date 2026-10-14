@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 #if os(iOS)
 import UIKit
@@ -71,12 +72,17 @@ extension View {
 
 /// Copies text to the system pasteboard.
 enum Pasteboard {
+    /// Copies text that may hold provider logins (stream addresses do): it stays on this device (no
+    /// Universal Clipboard), expires after ten minutes on iPhone and iPad, and is marked concealed on the Mac
+    /// so clipboard history tools skip it.
     static func copy(_ string: String) {
         #if os(iOS)
-        UIPasteboard.general.string = string
+        UIPasteboard.general.setItems([[UTType.plainText.identifier: string]],
+                                      options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(600)])
         #else
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(string, forType: .string)
+        NSPasteboard.general.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
         #endif
     }
 

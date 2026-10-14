@@ -981,6 +981,16 @@
         }
       }
     },
+    "Enter the parental control PIN to change these settings.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisissez le PIN du contrôle parental pour modifier ces réglages."
+          }
+        }
+      }
+    },
     "Enter your PIN to open locked content.": {
       "localizations": {
         "fr": {
@@ -1627,6 +1637,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verrouiller automatiquement les catégories adultes"
+          }
+        }
+      }
+    },
+    "Locked": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrouillé"
           }
         }
       }
@@ -3491,6 +3511,16 @@
         }
       }
     },
+    "Switch to a parent's profile to change these settings.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passez sur le profil d'un parent pour modifier ces réglages."
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "fr": {
@@ -3687,6 +3717,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Demain"
+          }
+        }
+      }
+    },
+    "Too many wrong PINs. Wait a moment and try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop de PIN erronés. Patientez un moment avant de réessayer."
           }
         }
       }
