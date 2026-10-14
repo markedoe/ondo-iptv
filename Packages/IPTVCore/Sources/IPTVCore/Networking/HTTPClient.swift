@@ -7,6 +7,8 @@ public enum HTTPClientError: Error, LocalizedError, Equatable {
     case badStatus(Int)
     case emptyResponse
     case invalidURL
+    /// A request this client cannot send (a POST to a client that only downloads).
+    case unsupportedRequest
 
     public var errorDescription: String? {
         switch self {
@@ -19,13 +21,38 @@ public enum HTTPClientError: Error, LocalizedError, Equatable {
             }
         case .emptyResponse: return "The server returned an empty response."
         case .invalidURL: return "The address is not valid."
+        case .unsupportedRequest: return "This request cannot be sent."
         }
+    }
+}
+
+/// A request with a method and a body; most of the app only downloads (`HTTPClient.data(from:headers:)`).
+public struct HTTPRequest: Sendable, Equatable {
+    public var url: URL
+    public var method: String
+    public var headers: [String: String]
+    public var body: Data?
+
+    public init(url: URL, method: String = "GET", headers: [String: String] = [:], body: Data? = nil) {
+        self.url = url
+        self.method = method
+        self.headers = headers
+        self.body = body
     }
 }
 
 /// Minimal HTTP abstraction so loaders can be unit-tested with fixtures.
 public protocol HTTPClient: Sendable {
     func data(from url: URL, headers: [String: String]) async throws -> Data
+    func send(_ request: HTTPRequest) async throws -> Data
+}
+
+extension HTTPClient {
+    /// Clients that only download send GET requests; anything else is refused clearly.
+    public func send(_ request: HTTPRequest) async throws -> Data {
+        guard request.method == "GET", request.body == nil else { throw HTTPClientError.unsupportedRequest }
+        return try await data(from: request.url, headers: request.headers)
+    }
 }
 
 /// Default user agent: many panels block unknown agents, VLC's is widely accepted.
@@ -52,8 +79,14 @@ public final class URLSessionHTTPClient: HTTPClient, Sendable {
         if url.isFileURL {
             return try Data(contentsOf: url)
         }
-        var request = URLRequest(url: url, timeoutInterval: timeout)
-        for (key, value) in headers {
+        return try await send(HTTPRequest(url: url, headers: headers))
+    }
+
+    public func send(_ httpRequest: HTTPRequest) async throws -> Data {
+        var request = URLRequest(url: httpRequest.url, timeoutInterval: timeout)
+        request.httpMethod = httpRequest.method
+        request.httpBody = httpRequest.body
+        for (key, value) in httpRequest.headers {
             request.setValue(value, forHTTPHeaderField: key)
         }
         let session = self.session

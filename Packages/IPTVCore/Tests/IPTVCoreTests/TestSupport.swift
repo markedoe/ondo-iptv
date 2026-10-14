@@ -31,12 +31,38 @@ final class MockHTTPClient: HTTPClient, @unchecked Sendable {
         return error
     }
 
+    /// Every request, with its method, headers and body.
+    private(set) var sent: [HTTPRequest] = []
+
+    /// POST (and other non-GET) requests answer from `routes["POST <url>"]`.
+    func send(_ request: HTTPRequest) async throws -> Data {
+        guard request.method != "GET" else { return try await data(from: request.url, headers: request.headers) }
+        let key = "\(request.method) \(request.url.absoluteString)"
+        let failure: Error? = lock.withLock {
+            sent.append(request)
+            requested.append(request.url)
+            guard var queue = failures[key], !queue.isEmpty else { return nil }
+            let error = queue.removeFirst()
+            failures[key] = queue
+            return error
+        }
+        if let failure { throw failure }
+        guard let data = route(key) else { throw HTTPClientError.badStatus(404) }
+        return data
+    }
+
+    /// The exact route, else the longest route the address starts with (`https://host/path?` for any query).
+    private func route(_ key: String) -> Data? {
+        routes[key] ?? routes.filter { $0.key.contains("://") && key.hasPrefix($0.key) }.max { $0.key.count < $1.key.count }?.value
+    }
+
     func data(from url: URL, headers: [String: String]) async throws -> Data {
+        lock.withLock { sent.append(HTTPRequest(url: url, headers: headers)) }
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let action = components?.queryItems?.first(where: { $0.name == "action" })?.value ?? ""
         let key = url.path.hasSuffix("player_api.php") ? "api:\(action)" : url.absoluteString
         if let error = record(url, key: key) { throw error }
-        guard let data = routes[key] else { throw HTTPClientError.badStatus(404) }
+        guard let data = route(key) else { throw HTTPClientError.badStatus(404) }
         return data
     }
 }

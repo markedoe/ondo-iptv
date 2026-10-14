@@ -15,11 +15,27 @@ public struct SubtitleCue: Hashable, Sendable {
 /// External subtitles (SRT and WebVTT) rendered by the app on top of the video.
 public enum SubtitleParser {
     public static func parse(_ data: Data) -> [SubtitleCue] {
-        let text = String(data: data, encoding: .utf8)
-            ?? String(data: data, encoding: .isoLatin1)
-            ?? ""
-        return parse(text)
+        parse(decode(data))
     }
+
+    /// Subtitle files come in UTF-8 or, very often for French and other Western languages, Windows-1252:
+    /// read as Latin-1 its curly apostrophes and "œ" turn into control characters. Decoded here rather than
+    /// by Foundation, which does not on every platform.
+    public static func decode(_ data: Data) -> String {
+        if let text = String(data: data, encoding: .utf8) { return text }
+        var scalars = String.UnicodeScalarView()
+        for byte in data {
+            let value = (0x80...0x9F).contains(byte) ? windows1252High[Int(byte) - 0x80] : UInt32(byte)
+            scalars.append(Unicode.Scalar(value) ?? "\u{FFFD}")
+        }
+        return String(scalars)
+    }
+
+    /// Characters of bytes 0x80–0x9F in Windows-1252 (the rest matches Latin-1).
+    private static let windows1252High: [UInt32] = [
+        0x20AC, 0xFFFD, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0xFFFD, 0x017D, 0xFFFD,
+        0xFFFD, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0xFFFD, 0x017E, 0x0178,
+    ]
 
     public static func parse(_ text: String) -> [SubtitleCue] {
         let normalized = text

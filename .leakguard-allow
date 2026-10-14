@@ -3,3 +3,5 @@
 ^\.github/scripts/__pycache__/capture_mac_screenshots\.cpython-313\.pyc$
 # GitHub's own address in the sign-off of Dependabot's commits (its update branches are scanned too).
 \bsupport@github\.com\b
+# Fictitious subtitle service keys of the IPTVCore tests ("key-example-0001"…).
+\bkey-example-\d{4}\b
