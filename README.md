@@ -77,6 +77,23 @@ Tests du cœur :
 cd Packages/IPTVCore && swift test
 ```
 
+### Ce que vérifie la CI en plus des tests unitaires
+
+Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur données simulées ne les voient pas :
+
+- **Ajout d'une playlist de bout en bout** (`AppTests/PlaylistOverHTTPTests.swift`, test UI
+  `testAddingAPlaylistByURL`) : un vrai serveur HTTP local, une redirection, l'identité « lecteur »
+  envoyée aux serveurs, les erreurs HTTP, et un panel Xtream qui décode comme PHP. Un mot de passe avec
+  `+ / & =` doit arriver intact.
+- **HTTP en clair autorisé partout** (`AppTransportSecurityTests`, `NetworkSecurityConfigTest` sur Android).
+- **Configuration livrée** (`ShippedConfigurationTests`) : découverte Chromecast, son écran verrouillé,
+  question d'export, manifeste de confidentialité.
+- **Scripts** (`.github/scripts/check_*.py`, exécutables en local) : textes traduits en français,
+  manifeste de confidentialité couvrant les API utilisées par le code livré, entitlements du bac à sable Mac.
+- **Compilation Release** (le code `#if DEBUG` est exclu de la version App Store).
+- **Avant chaque publication** : la playlist de démonstration utilisée par la review d'Apple et de Google
+  doit répondre.
+
 ## Android
 
 Prérequis : JDK 17+ et le SDK Android (Android Studio). Ouvrez le dossier `android/` dans Android Studio,
