@@ -29,8 +29,14 @@ public struct EPGFilter: Sendable {
 }
 
 public enum XMLTVParser {
-    public enum ParseError: Error {
+    public enum ParseError: Error, LocalizedError {
         case invalidXML(String)
+
+        public var errorDescription: String? {
+            switch self {
+            case .invalidXML(let detail): return "The guide is not a valid XMLTV file (\(detail))."
+            }
+        }
     }
 
     public static func parse(_ data: Data, filter: EPGFilter = .none, timeShift: TimeInterval = 0) throws -> EPGData {

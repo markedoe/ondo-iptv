@@ -19,7 +19,8 @@ public enum ErrorAttribution: String, Sendable {
     case app
 
     public static func classify(_ error: Error) -> ErrorAttribution {
-        if error is HTTPClientError || error is XtreamError || error is PlaylistLoaderError { return .provider }
+        if error is HTTPClientError || error is XtreamError || error is PlaylistLoaderError
+            || error is GzipError || error is XMLTVParser.ParseError { return .provider }
         let nsError = error as NSError
         if nsError.domain == NSURLErrorDomain {
             switch nsError.code {
@@ -55,17 +56,25 @@ public struct PlaylistLoader: Sendable {
                 let account = try? await client.authenticate()
                 let data = try await http.data(from: client.urls.m3uURL(format: playlist.xtreamOutput), headers: playlist.headers.dictionary)
                 var content = try parse(data, playlistHeaders: playlist.headers)
+                content.providerEPGURLs.removeAll(where: \.isFileURL)
                 content.account = account
                 if content.providerEPGURLs.isEmpty { content.providerEPGURLs = [client.urls.xmltvURL] }
                 return content
             }
             var content = try await client.fetchContent(format: playlist.xtreamOutput)
+            // An account that lists nothing at all is a provider fault: keep the saved catalogue.
+            guard !content.channels.isEmpty || !content.movies.isEmpty || !content.series.isEmpty else {
+                throw PlaylistLoaderError.emptyPlaylist
+            }
             content.fetchedAt = Date()
             return content
 
         case .remote(let url):
             let data = try await http.data(from: url, headers: playlist.headers.dictionary)
-            return try parse(data, playlistHeaders: playlist.headers)
+            var content = try parse(data, playlistHeaders: playlist.headers)
+            // A playlist from the internet cannot make the app read files on the device as its guide.
+            if !url.isFileURL { content.providerEPGURLs.removeAll(where: \.isFileURL) }
+            return content
 
         case .realDebrid(let token):
             var content = try await RealDebridClient(token: token, http: http).fetchContent()

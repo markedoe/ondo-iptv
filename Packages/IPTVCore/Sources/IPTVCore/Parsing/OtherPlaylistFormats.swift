@@ -30,7 +30,7 @@ public enum XSPFParser {
         let delegate = XSPFDelegate()
         let parser = XMLParser(data: data)
         parser.delegate = delegate
-        parser.parse()
+        _ = parser.parse()  // a damaged file keeps the tracks read before the damage
         return M3UPlaylist(headerAttributes: [:], entries: delegate.entries)
     }
 

@@ -78,6 +78,49 @@ final class XtreamTests: XCTestCase {
         XCTAssertNotNil(content.account)
     }
 
+    func testASectionThePanelDoesNotOfferIsEmpty() async throws {
+        let http = try mock()
+        http.routes["api:get_vod_streams"] = nil  // 404
+        http.routes["api:get_series"] = Data("{\"error\":\"disabled\"}".utf8)
+        let content = try await XtreamClient(credentials: credentials, http: http).fetchContent(format: .m3u8)
+        XCTAssertEqual(content.channels.count, 4)
+        XCTAssertTrue(content.movies.isEmpty)
+        XCTAssertTrue(content.series.isEmpty)
+    }
+
+    func testASectionThatFailsOnceIsAskedAgain() async throws {
+        let http = try mock()
+        http.failures["api:get_live_streams"] = [HTTPClientError.badStatus(884)]
+        let content = try await XtreamClient(credentials: credentials, http: http).fetchContent(format: .m3u8)
+        XCTAssertEqual(content.channels.count, 4)
+        XCTAssertEqual(http.requested.filter { $0.query?.contains("get_live_streams") == true }.count, 2)
+    }
+
+    /// A refresh that lost its channels to a timeout must fail, or the app saves an empty catalogue over the
+    /// good one.
+    func testASectionThatKeepsFailingFailsTheRefresh() async throws {
+        let http = try mock()
+        http.failures["api:get_live_streams"] = [URLError(.timedOut), URLError(.timedOut)]
+        do {
+            _ = try await XtreamClient(credentials: credentials, http: http).fetchContent(format: .m3u8)
+            XCTFail("expected the timeout")
+        } catch {
+            XCTAssertEqual((error as? URLError)?.code, .timedOut)
+        }
+    }
+
+    func testAnAccountThatListsNothingIsAnError() async throws {
+        let http = MockHTTPClient()
+        http.routes["api:"] = try Fixture.data("xtream_auth.json")
+        let playlist = Playlist(name: "Empty", source: .xtream(credentials))
+        do {
+            _ = try await PlaylistLoader(http: http, localFileURL: { URL(fileURLWithPath: $0) }).load(playlist)
+            XCTFail("expected an error")
+        } catch {
+            XCTAssertEqual(error as? PlaylistLoaderError, .emptyPlaylist)
+        }
+    }
+
     func testSeriesDetailsWithDictionaryEpisodes() async throws {
         let details = try await XtreamClient(credentials: credentials, http: try mock()).seriesDetails(seriesID: 9000)
         XCTAssertEqual(details.info.title, "Breaking Bad")

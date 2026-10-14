@@ -16,20 +16,26 @@ enum Fixture {
 /// Serves fixtures based on the Xtream `action` query item or the URL path.
 final class MockHTTPClient: HTTPClient, @unchecked Sendable {
     var routes: [String: Data] = [:]
+    /// Errors thrown, one per request, before the route answers (a flaky or busy server).
+    var failures: [String: [Error]] = [:]
     private(set) var requested: [URL] = []
     private let lock = NSLock()
 
-    private func record(_ url: URL) {
+    private func record(_ url: URL, key: String) -> Error? {
         lock.lock()
+        defer { lock.unlock() }
         requested.append(url)
-        lock.unlock()
+        guard var queue = failures[key], !queue.isEmpty else { return nil }
+        let error = queue.removeFirst()
+        failures[key] = queue
+        return error
     }
 
     func data(from url: URL, headers: [String: String]) async throws -> Data {
-        record(url)
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let action = components?.queryItems?.first(where: { $0.name == "action" })?.value ?? ""
         let key = url.path.hasSuffix("player_api.php") ? "api:\(action)" : url.absoluteString
+        if let error = record(url, key: key) { throw error }
         guard let data = routes[key] else { throw HTTPClientError.badStatus(404) }
         return data
     }

@@ -108,6 +108,24 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(try Data("plain".utf8).gunzippedIfNeeded(), Data("plain".utf8))
         XCTAssertThrowsError(try Data([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xff]).gunzipped())
     }
+
+    func testGzipMembersPaddingAndJunk() throws {
+        let compressed = try Fixture.data("epg.xml.gz")
+        let xml = try Fixture.data("epg.xml")
+        XCTAssertEqual(try compressed.gunzipped(), xml)
+        XCTAssertEqual(try (compressed + compressed).gunzipped(), xml + xml, "concatenated members")
+        XCTAssertEqual(try (compressed + Data(count: 16)).gunzipped(), xml, "padding after the file")
+        XCTAssertEqual(try (compressed + Data("<html>junk</html>".utf8)).gunzipped(), xml, "junk after the file")
+    }
+
+    func testGzipStopsAtTheSizeLimit() throws {
+        let compressed = try Fixture.data("epg.xml.gz")
+        XCTAssertThrowsError(try compressed.gunzipped(limit: 100)) { error in
+            XCTAssertEqual(error as? GzipError, .outputTooLarge(100))
+        }
+        XCTAssertEqual(ErrorAttribution.classify(GzipError.inflateFailed(-3)), .provider, "a broken file is the provider's")
+        XCTAssertEqual(ErrorAttribution.classify(XMLTVParser.ParseError.invalidXML("x")), .provider)
+    }
 }
 
 final class EPGMatchingTests: XCTestCase {

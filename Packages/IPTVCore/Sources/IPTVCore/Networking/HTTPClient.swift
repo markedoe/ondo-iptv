@@ -57,19 +57,49 @@ public final class URLSessionHTTPClient: HTTPClient, @unchecked Sendable {
             request.setValue(value, forHTTPHeaderField: key)
         }
         let session = self.session
-        return try await withCheckedThrowingContinuation { continuation in
-            let task = session.dataTask(with: request) { data, response, error in
-                if let error {
-                    continuation.resume(throwing: error)
-                    return
+        let running = RunningTask()
+        // Cancelling the calling task (switching playlist, leaving a screen) stops the download.
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                let task = session.dataTask(with: request) { data, response, error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
+                        continuation.resume(throwing: HTTPClientError.badStatus(http.statusCode))
+                        return
+                    }
+                    continuation.resume(returning: data ?? Data())
                 }
-                if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-                    continuation.resume(throwing: HTTPClientError.badStatus(http.statusCode))
-                    return
-                }
-                continuation.resume(returning: data ?? Data())
+                running.start(task)
             }
-            task.resume()
+        } onCancel: {
+            running.cancel()
         }
+    }
+}
+
+/// The data task of a request, cancelled even when the cancellation arrives before the task exists.
+private final class RunningTask: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: URLSessionDataTask?
+    private var cancelled = false
+
+    func start(_ task: URLSessionDataTask) {
+        lock.lock()
+        self.task = task
+        let cancelled = cancelled
+        lock.unlock()
+        task.resume()
+        if cancelled { task.cancel() }
+    }
+
+    func cancel() {
+        lock.lock()
+        cancelled = true
+        let task = task
+        lock.unlock()
+        task?.cancel()
     }
 }

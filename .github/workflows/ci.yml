@@ -61,7 +61,7 @@ jobs:
       - name: Tests with coverage
         working-directory: Packages/IPTVCore
         run: |
-          swift test --parallel --enable-code-coverage
+          swift test --parallel --enable-code-coverage -Xswiftc -warnings-as-errors
           BIN=$(swift build --show-bin-path)
           llvm-cov report "$BIN/IPTVCorePackageTests.xctest" \
             -instr-profile "$BIN/codecov/default.profdata" \

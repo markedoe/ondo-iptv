@@ -157,20 +157,20 @@ public struct XtreamClient: Sendable {
             format = preferredFormat
         }
 
-        async let liveCats = liveCategories()
-        async let movieCats = movieCategories()
-        async let seriesCats = seriesCategories()
-        async let channels = liveStreams(format: format)
-        async let movies = movies()
-        async let series = series()
+        // The lists load in parallel; `section` decides what a failure means.
+        async let liveCategoryList = Self.attempt { try await liveCategories() }
+        async let movieCategoryList = Self.attempt { try await movieCategories() }
+        async let seriesCategoryList = Self.attempt { try await seriesCategories() }
+        async let channelList = Self.attempt { try await liveStreams(format: format) }
+        async let movieList = Self.attempt { try await movies() }
+        async let seriesList = Self.attempt { try await series() }
 
-        // A failing section (some panels disable VOD) must not break the others.
-        let resolvedLiveCats = (try? await liveCats) ?? []
-        let resolvedMovieCats = (try? await movieCats) ?? []
-        let resolvedSeriesCats = (try? await seriesCats) ?? []
-        let resolvedChannels = (try? await channels) ?? []
-        let resolvedMovies = (try? await movies) ?? []
-        let resolvedSeries = (try? await series) ?? []
+        let resolvedLiveCats = try await Self.section(await liveCategoryList) { try await liveCategories() }
+        let resolvedMovieCats = try await Self.section(await movieCategoryList) { try await movieCategories() }
+        let resolvedSeriesCats = try await Self.section(await seriesCategoryList) { try await seriesCategories() }
+        let resolvedChannels = try await Self.section(await channelList) { try await liveStreams(format: format) }
+        let resolvedMovies = try await Self.section(await movieList) { try await movies() }
+        let resolvedSeries = try await Self.section(await seriesList) { try await series() }
 
         return PlaylistContent(
             liveCategories: Self.categoriesWithOrphans(resolvedLiveCats, itemCategoryIDs: resolvedChannels.map(\.categoryID), type: .live),
@@ -182,6 +182,40 @@ public struct XtreamClient: Sendable {
             providerEPGURLs: [urls.xmltvURL],
             account: account
         )
+    }
+
+    private static func attempt<T>(_ load: () async throws -> [T]) async -> Result<[T], Error> {
+        do {
+            return .success(try await load())
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    /// One list of the catalogue. A section the panel does not offer (some disable VOD or series: 404, an
+    /// empty or non-list answer) is empty. Any other failure (network, server error, refusal) is retried once
+    /// on its own, as busy panels refuse parallel requests, then thrown: a refresh that quietly lost a section
+    /// would replace the saved catalogue with a partial one.
+    private static func section<T>(_ first: Result<[T], Error>, retry: () async throws -> [T]) async throws -> [T] {
+        switch first {
+        case .success(let items):
+            return items
+        case .failure(let error):
+            if isMissingSection(error) { return [] }
+            try Task.checkCancellation()
+            do {
+                return try await retry()
+            } catch let error where isMissingSection(error) {
+                return []
+            }
+        }
+    }
+
+    static func isMissingSection(_ error: Error) -> Bool {
+        switch error {
+        case HTTPClientError.badStatus(404), HTTPClientError.emptyResponse, XtreamError.invalidResponse: return true
+        default: return false
+        }
     }
 
     /// Items sometimes reference categories the panel does not list: add an "Other" bucket for them.

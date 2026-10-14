@@ -166,6 +166,22 @@ final class PlaylistDecodingTests: XCTestCase {
         XCTAssertEqual(content.channels.count, 7)
         XCTAssertEqual(content.account?.maxConnections, 2)
     }
+
+    func testADownloadedPlaylistCannotPointTheGuideAtDeviceFiles() async throws {
+        let text = "#EXTM3U url-tvg=\"file:///etc/hosts,http://epg.example.com/guide.xml\"\n#EXTINF:-1,News\nhttp://example.com/news.m3u8\n"
+        let http = MockHTTPClient()
+        http.routes["http://example.com/list.m3u"] = Data(text.utf8)
+        let loader = PlaylistLoader(http: http, localFileURL: { URL(fileURLWithPath: $0) })
+        let remote = try await loader.load(Playlist(name: "P", source: .remote(URL(string: "http://example.com/list.m3u")!)))
+        XCTAssertEqual(remote.providerEPGURLs.map(\.absoluteString), ["http://epg.example.com/guide.xml"])
+
+        // A playlist file on the device may use a guide file next to it.
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("ondo-\(UUID().uuidString).m3u")
+        try Data(text.utf8).write(to: file)
+        defer { try? FileManager.default.removeItem(at: file) }
+        let local = try await loader.load(Playlist(name: "P", source: .local(fileName: file.path)))
+        XCTAssertEqual(local.providerEPGURLs.count, 2)
+    }
 }
 
 final class LibraryMergeTests: XCTestCase {
