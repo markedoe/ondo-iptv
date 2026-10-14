@@ -39,6 +39,9 @@ pitest {
     targetClasses.set(listOf("com.markedoe.ondo.core.*"))
     excludedClasses.set(listOf("*\$\$serializer", "*\$Companion"))
     excludedMethods.set(listOf("equals", "hashCode", "toString", "copy", "copy\$default", "component*"))
+    // Kotlin's generated null checks; and the timing test, which would time out on every mutant.
+    avoidCallsTo.set(setOf("kotlin.jvm.internal"))
+    excludedTestClasses.set(listOf("com.markedoe.ondo.core.PerformanceTest"))
     threads.set(4)
     outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
