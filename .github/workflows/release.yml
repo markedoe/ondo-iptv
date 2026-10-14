@@ -60,7 +60,8 @@ jobs:
           # Published by the "App Store screenshots" workflow; the listing is uploaded without them otherwise.
           if git fetch -q origin appstore-screenshots; then
             mkdir -p shots fastlane/screenshots/ios fastlane/screenshots/mac
-            git archive origin/appstore-screenshots | tar -x -C shots
+            # FETCH_HEAD: the checkout only maps main, so origin/appstore-screenshots may not exist.
+            git archive FETCH_HEAD | tar -x -C shots
             if [ -d shots/mac ]; then mv shots/mac/* fastlane/screenshots/mac/ && rm -rf shots/mac; fi
             find fastlane/screenshots/mac -type f ! -name '*-mac.png' -delete
             rm -f shots/README.md
