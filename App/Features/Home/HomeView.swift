@@ -2,7 +2,7 @@ import SwiftUI
 import IPTVCore
 
 /// Home: a carousel of featured movies and series, then shelves (continue watching, My List,
-/// recent movies and series), with live TV last.
+/// new releases with movies and series together), with live TV last.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     #if os(iOS)
@@ -77,9 +77,8 @@ struct HomeView: View {
         let metrics = ShelfMetrics(compact: compact)
         let resume = model.continueWatching()
         let myList = model.myList()
-        let movies = model.featuredMovies()
-        let series = model.featuredSeries()
-        let hasVOD = !movies.isEmpty || !series.isEmpty
+        let newReleases = model.newReleases()
+        let hasVOD = !model.content.movies.isEmpty || !model.content.series.isEmpty
 
         VStack(alignment: .leading, spacing: compact ? 26 : 34) {
             if !hero.isEmpty {
@@ -112,18 +111,10 @@ struct HomeView: View {
 
             if !hasVOD { liveShelves(metrics: metrics, emphasised: true) }
 
-            if !movies.isEmpty {
-                Shelf(title: model.moviesAreDated ? "Recently Added Movies" : "Movies", seeAll: .movies, metrics: metrics) {
-                    ForEach(movies) { movie in
-                        ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
-                    }
-                }
-            }
-
-            if !series.isEmpty {
-                Shelf(title: model.seriesAreDated ? "Recently Added Series" : "Series", seeAll: .series, metrics: metrics) {
-                    ForEach(series) { series in
-                        ShowcasePoster(item: .series(series), width: metrics.posterWidth)
+            if !newReleases.isEmpty {
+                Shelf(title: "New Releases", metrics: metrics) {
+                    ForEach(newReleases) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
                 }
             }

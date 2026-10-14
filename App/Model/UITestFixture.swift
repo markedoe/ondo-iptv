@@ -52,59 +52,62 @@ enum UITestFixture {
         var slug: String { UITestFixture.slug(title) }
     }
 
+    /// Years are relative to today so the catalogue always has new releases (home screen, screenshots).
+    static let thisYear = Calendar.current.component(.year, from: .now)
+
     static let movies: [FixtureMovie] = [
-        FixtureMovie(title: "Northern Lights", year: 2024, category: "Drama", genre: "Drama", rating: 7.8, minutes: 128,
+        FixtureMovie(title: "Northern Lights", year: thisYear, category: "Drama", genre: "Drama", rating: 7.8, minutes: 128,
                      director: "Maren Holt", cast: "Ingrid Saelen, Tomas Vik, Ada Lunde",
                      plot: "On a remote Arctic island, a lighthouse keeper finds a letter that rewrites everything she knew about her family.", hue: 0.55),
-        FixtureMovie(title: "Glass City", year: 2024, category: "Science Fiction", genre: "Science Fiction, Thriller", rating: 8.1, minutes: 134,
+        FixtureMovie(title: "Glass City", year: thisYear, category: "Science Fiction", genre: "Science Fiction, Thriller", rating: 8.1, minutes: 134,
                      director: "Imani Cole", cast: "Rafael Ortiz, Mei Tanaka, Jonah Price",
                      plot: "In a city where every wall is a screen, an engineer discovers the one place no camera can see.", hue: 0.5, font: "Futura-CondensedExtraBold"),
-        FixtureMovie(title: "Silent Harbor", year: 2023, category: "Thriller", genre: "Thriller", rating: 7.2, minutes: 112,
+        FixtureMovie(title: "Silent Harbor", year: thisYear - 1, category: "Thriller", genre: "Thriller", rating: 7.2, minutes: 112,
                      director: "Luca Ferri", cast: "Nora Kade, Elias Brandt",
                      plot: "When a cargo ship drifts into a sleeping port with no crew aboard, a harbor pilot is the only one who wants answers.", hue: 0.62, font: "Didot-Bold"),
-        FixtureMovie(title: "The Last Signal", year: 2024, category: "Science Fiction", genre: "Science Fiction", rating: 7.6, minutes: 126,
+        FixtureMovie(title: "The Last Signal", year: thisYear, category: "Science Fiction", genre: "Science Fiction", rating: 7.6, minutes: 126,
                      director: "Sora Kim", cast: "Leah Moreau, Daniel Okafor",
                      plot: "A radio astronomer receives a message from a probe that was lost forty years ago.", hue: 0.72, font: "Futura-CondensedExtraBold"),
-        FixtureMovie(title: "Summer in Lisbon", year: 2023, category: "Drama", genre: "Romance, Comedy", rating: 7.0, minutes: 102,
+        FixtureMovie(title: "Summer in Lisbon", year: thisYear - 1, category: "Drama", genre: "Romance, Comedy", rating: 7.0, minutes: 102,
                      director: "Ines Duarte", cast: "Clara Mendes, Hugo Lambert",
                      plot: "Two strangers share a rented flat by mistake, and a summer they will never forget.", hue: 0.08, font: "Georgia-Bold"),
-        FixtureMovie(title: "Midnight Orchard", year: 2021, category: "Thriller", genre: "Mystery", rating: 6.9, minutes: 104,
+        FixtureMovie(title: "Midnight Orchard", year: thisYear - 3, category: "Thriller", genre: "Mystery", rating: 6.9, minutes: 104,
                      director: "Paul Archer", cast: "Grace Whitfield, Owen Hart",
                      plot: "A family returns to its abandoned orchard, where the trees still bear fruit every night.", hue: 0.78, font: "Didot-Bold"),
-        FixtureMovie(title: "The Long Road", year: 2022, category: "Drama", genre: "Adventure, Drama", rating: 7.5, minutes: 121,
+        FixtureMovie(title: "The Long Road", year: thisYear - 2, category: "Drama", genre: "Adventure, Drama", rating: 7.5, minutes: 121,
                      director: "Amara Diallo", cast: "Samuel Reyes, Lina Novak",
                      plot: "A father and his daughter cross a continent in an old van to keep a promise.", hue: 0.1),
-        FixtureMovie(title: "Echoes of Jade", year: 2021, category: "Science Fiction", genre: "Fantasy", rating: 7.1, minutes: 131,
+        FixtureMovie(title: "Echoes of Jade", year: thisYear - 3, category: "Science Fiction", genre: "Fantasy", rating: 7.1, minutes: 131,
                      director: "Wei Lin", cast: "Hana Mori, Kai Chen",
                      plot: "An apprentice cartographer maps a valley that changes shape every time she looks away.", hue: 0.38, font: "Georgia-Bold"),
-        FixtureMovie(title: "Iron Tide", year: 2024, category: "Thriller", genre: "Action", rating: 6.7, minutes: 115,
+        FixtureMovie(title: "Iron Tide", year: thisYear, category: "Thriller", genre: "Action", rating: 6.7, minutes: 115,
                      director: "Max Keller", cast: "Ruben Stone, Ayla Gray",
                      plot: "A disgraced diver has one night to stop a heist planned beneath a storm-battered oil rig.", hue: 0.6, font: "Futura-CondensedExtraBold"),
-        FixtureMovie(title: "Quiet Hours", year: 2022, category: "Drama", genre: "Drama", rating: 7.3, minutes: 99,
+        FixtureMovie(title: "Quiet Hours", year: thisYear - 2, category: "Drama", genre: "Drama", rating: 7.3, minutes: 99,
                      director: "Elsa Brun", cast: "Margot Lys, Theo Blanc",
                      plot: "A night nurse and an insomniac radio host keep each other company until dawn.", hue: 0.68, font: "Didot-Bold"),
-        FixtureMovie(title: "Red Canyon", year: 2022, category: "Thriller", genre: "Western", rating: 6.8, minutes: 118,
+        FixtureMovie(title: "Red Canyon", year: thisYear - 2, category: "Thriller", genre: "Western", rating: 6.8, minutes: 118,
                      director: "Cody Rivers", cast: "Jake Turner, Rosa Delgado",
                      plot: "A sheriff and an outlaw are stranded together when a flash flood cuts the only road out of the canyon.", hue: 0.02),
-        FixtureMovie(title: "Paper Wings", year: 2023, category: "Science Fiction", genre: "Animation, Family", rating: 7.4, minutes: 96,
+        FixtureMovie(title: "Paper Wings", year: thisYear - 1, category: "Science Fiction", genre: "Animation, Family", rating: 7.4, minutes: 96,
                      director: "Noa Levi", cast: "Voices of Mia Russo, Leo Park",
                      plot: "A shy origami crane comes to life and sets off to find the girl who folded it.", hue: 0.88, font: "AvenirNext-Bold"),
     ]
 
     static let series: [FixtureSeries] = [
-        FixtureSeries(title: "Harbor Lights", year: 2023, category: "Drama", genre: "Drama", rating: 8.2, cast: "Ada Lunde, Tomas Vik, Grace Whitfield",
+        FixtureSeries(title: "Harbor Lights", year: thisYear - 1, category: "Drama", genre: "Drama", rating: 8.2, cast: "Ada Lunde, Tomas Vik, Grace Whitfield",
                       plot: "A fishing town, a missing boat and three families who all have something to hide.", hue: 0.58,
                       seasons: [["The Storm", "Low Tide", "Old Debts", "Lanterns"], ["Return", "Undertow", "The Inquiry", "Safe Harbor"]]),
-        FixtureSeries(title: "The Archive", year: 2024, category: "Mystery", genre: "Mystery", rating: 7.9, cast: "Clara Mendes, Owen Hart",
+        FixtureSeries(title: "The Archive", year: thisYear, category: "Mystery", genre: "Mystery", rating: 7.9, cast: "Clara Mendes, Owen Hart",
                       plot: "A young archivist uncovers a box of letters that should not exist.", hue: 0.11,
                       seasons: [["Box 117", "Ink", "The Reader"], ["Missing Pages", "Copies", "The Original"]], font: "Didot-Bold"),
-        FixtureSeries(title: "Blue Horizon", year: 2022, category: "Mystery", genre: "Science Fiction", rating: 7.7, cast: "Leah Moreau, Kai Chen",
+        FixtureSeries(title: "Blue Horizon", year: thisYear - 2, category: "Mystery", genre: "Science Fiction", rating: 7.7, cast: "Leah Moreau, Kai Chen",
                       plot: "The crew of a research station at the edge of the solar system loses contact with Earth.", hue: 0.63,
                       seasons: [["Signal Lost", "Drift", "The Visitor", "Pressure", "Horizon"]], font: "Futura-CondensedExtraBold"),
-        FixtureSeries(title: "Kitchen Stories", year: 2023, category: "Drama", genre: "Comedy", rating: 7.4, cast: "Hugo Lambert, Rosa Delgado",
+        FixtureSeries(title: "Kitchen Stories", year: thisYear - 1, category: "Drama", genre: "Comedy", rating: 7.4, cast: "Hugo Lambert, Rosa Delgado",
                       plot: "A tiny restaurant, a stubborn chef and a team that never stops arguing.", hue: 0.04,
                       seasons: [["Opening Night", "The Critic", "Family Meal", "Last Service"]], font: "Georgia-Bold"),
-        FixtureSeries(title: "Wild North", year: 2021, category: "Documentary", genre: "Documentary", rating: 8.5, cast: "Narrated by Maren Holt",
+        FixtureSeries(title: "Wild North", year: thisYear - 3, category: "Documentary", genre: "Documentary", rating: 8.5, cast: "Narrated by Maren Holt",
                       plot: "A year in the wildest landscapes of the far north, from the polar night to the midnight sun.", hue: 0.47,
                       seasons: [["Winter", "Spring", "Summer", "Autumn"]]),
     ]
@@ -152,7 +155,7 @@ enum UITestFixture {
             for (seasonIndex, season) in show.seasons.enumerated() {
                 for episode in season.indices {
                     let code = String(format: "S%02dE%02d", seasonIndex + 1, episode + 1)
-                    lines.append("#EXTINF:2700\(logo("poster-\(show.slug).png")) group-title=\"Series | \(show.category)\",\(show.title) \(code)")
+                    lines.append("#EXTINF:2700\(logo("poster-\(show.slug).png")) group-title=\"Series | \(show.category)\",\(show.title) (\(show.year)) \(code)")
                     lines.append(hls)
                 }
             }

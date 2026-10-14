@@ -2,27 +2,51 @@ import XCTest
 import IPTVCore
 @testable import Ondo
 
-/// Home carousel, next episode, "More like this" and My List.
+/// Home carousel and new releases, next episode, "More like this" and My List.
 @MainActor
 final class ShowcaseTests: XCTestCase {
     private var root: URL!
+
+    /// Release years are relative to today: "new releases" are this year's and last year's.
+    private static let thisYear = Calendar.current.component(.year, from: .now)
 
     private static let catalogue = """
     #EXTM3U
     #EXTINF:-1 tvg-id="news.test" group-title="News",Test News
     http://127.0.0.1:9/news.m3u8
-    #EXTINF:5400 group-title="Movies | Drama",Quiet Water (2021)
+    #EXTINF:5400 group-title="Movies | Drama",Quiet Water (\(thisYear - 1))
     http://127.0.0.1:9/quiet.mp4
-    #EXTINF:6000 group-title="Movies | Drama",Long Road (2020)
+    #EXTINF:6000 group-title="Movies | Drama",Long Road (\(thisYear - 2))
     http://127.0.0.1:9/road.mp4
-    #EXTINF:6000 group-title="Movies | Comedy",Bright Side (2022)
+    #EXTINF:6000 group-title="Movies | Comedy",Bright Side (\(thisYear))
     http://127.0.0.1:9/bright.mp4
-    #EXTINF:2700 group-title="Series | Drama",Harbor S01E01
+    #EXTINF:2700 group-title="Series | Drama",Harbor (\(thisYear)) S01E01
     http://127.0.0.1:9/h101.mp4
-    #EXTINF:2700 group-title="Series | Drama",Harbor S01E02
+    #EXTINF:2700 group-title="Series | Drama",Harbor (\(thisYear)) S01E02
     http://127.0.0.1:9/h102.mp4
-    #EXTINF:2700 group-title="Series | Drama",Harbor S02E01
+    #EXTINF:2700 group-title="Series | Drama",Harbor (\(thisYear)) S02E01
     http://127.0.0.1:9/h201.mp4
+    """
+
+    /// New releases against everything that must stay out of them.
+    private static let releases = """
+    #EXTM3U
+    #EXTINF:6000 group-title="Movies | Drama",Old Classic (\(thisYear - 5))
+    http://127.0.0.1:9/old.mp4
+    #EXTINF:6000 group-title="Movies | Drama",Last Year Film (\(thisYear - 1))
+    http://127.0.0.1:9/last.mp4
+    #EXTINF:6000 group-title="Movies | Drama",This Year Film (\(thisYear))
+    http://127.0.0.1:9/this.mp4
+    #EXTINF:6000 group-title="Movies | Comedy",Undated Film
+    http://127.0.0.1:9/undated.mp4
+    #EXTINF:6000 group-title="Movies | Comedy",Coming Soon (\(thisYear + 1))
+    http://127.0.0.1:9/soon.mp4
+    #EXTINF:6000 group-title="Movies | Horror",Hidden New Film (\(thisYear))
+    http://127.0.0.1:9/hidden.mp4
+    #EXTINF:2700 group-title="Series | Drama",New Show (\(thisYear)) S01E01
+    http://127.0.0.1:9/new101.mp4
+    #EXTINF:2700 group-title="Series | Drama",Old Show (\(thisYear - 3)) S01E01
+    http://127.0.0.1:9/old101.mp4
     """
 
     private static let liveOnly = """
@@ -86,18 +110,34 @@ final class ShowcaseTests: XCTestCase {
         let road = try movie("Long Road", in: model)
         try await watch(model.downloadItem(for: road), in: model, fraction: 0.2, duration: 6_000)
 
+        let bright = try movie("Bright Side", in: model)
+        let quiet = try movie("Quiet Water", in: model)
+        let harbor = try XCTUnwrap(model.content.series.first)
+
         let hero = model.heroItems(limit: 5)
-        XCTAssertEqual(hero.first, .movie(road), "what is being watched comes first")
-        XCTAssertEqual(Set(hero.map(\.id)).count, hero.count, "no title twice")
-        XCTAssertEqual(hero.count, 4, "three movies and one series")
+        XCTAssertEqual(hero, [.movie(road), .movie(bright), .series(harbor), .movie(quiet)],
+                       "what is being watched comes first, then new releases (movies and series), never twice")
         XCTAssertEqual(model.heroItems(limit: 2).count, 2)
+    }
+
+    func testNewReleasesGoByReleaseYearAndMixMoviesAndSeries() async throws {
+        let model = try await model(with: Self.releases)
+        let horror = try XCTUnwrap(model.content.movieCategories.first { $0.name.contains("Horror") })
+        model.setHidden(true, category: horror)
+
+        XCTAssertEqual(model.newReleases().map(\.title), ["This Year Film", "New Show", "Last Year Film"],
+                       "this year's and last year's releases, newest first, movies and series alternating; "
+                       + "not an old, undated, upcoming or hidden title")
+        XCTAssertEqual(model.newReleases(limit: 2).map(\.title), ["This Year Film", "New Show"])
+
+        let inThreeYears = try XCTUnwrap(Calendar.current.date(byAdding: .year, value: 3, to: .now))
+        XCTAssertTrue(model.newReleases(now: inThreeYears).isEmpty, "the same titles are no longer new three years later")
     }
 
     func testLiveOnlyPlaylistHasNoCarousel() async throws {
         let model = try await model(with: Self.liveOnly)
         XCTAssertTrue(model.heroItems().isEmpty, "the home screen falls back to live TV")
-        XCTAssertTrue(model.featuredMovies().isEmpty)
-        XCTAssertTrue(model.featuredSeries().isEmpty)
+        XCTAssertTrue(model.newReleases().isEmpty)
     }
 
     func testSimilarTitlesStayInTheCategoryAndSkipHiddenOnes() async throws {

@@ -129,14 +129,15 @@ public struct XtreamClient: Sendable {
     public func series() async throws -> [Series] {
         let list = try await get(LossyArray<XtreamSeriesDTO>.self, action: "get_series").elements
         return list.map { dto in
-            Series(
+            let (name, yearInTitle) = TitleParser.splitYear(dto.name)
+            return Series(
                 id: "x\(dto.seriesID)",
-                name: dto.name,
+                name: name,
                 coverURL: URL.lenient(dto.cover),
                 categoryID: "series-\(dto.categoryID ?? "0")",
                 plot: dto.plot,
                 rating: dto.rating,
-                year: dto.year,
+                year: dto.year ?? yearInTitle,
                 genre: dto.genre,
                 addedAt: dto.lastModified,
                 xtreamSeriesID: dto.seriesID

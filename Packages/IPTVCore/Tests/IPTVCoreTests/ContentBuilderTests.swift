@@ -33,6 +33,22 @@ final class ContentBuilderTests: XCTestCase {
         XCTAssertEqual(series.episodes[2].title, "Seven Thirty-Seven")
     }
 
+    func testSeriesTakeTheirYearFromTheTitle() throws {
+        let m3u = """
+        #EXTM3U
+        #EXTINF:-1 group-title="Series | Drama",The Archive (2025) S01E01
+        http://example.com/a101.mp4
+        #EXTINF:-1 group-title="Series | Drama",The Archive (2025) S01E02
+        http://example.com/a102.mp4
+        """
+        let content = try PlaylistLoader(http: MockHTTPClient(), localFileURL: { URL(fileURLWithPath: $0) }).parse(Data(m3u.utf8))
+        let series = try XCTUnwrap(content.series.first)
+        XCTAssertEqual(content.series.count, 1)
+        XCTAssertEqual(series.name, "The Archive")
+        XCTAssertEqual(series.year, 2025)
+        XCTAssertEqual(series.episodes.map(\.code), ["S01E01", "S01E02"])
+    }
+
     func testStableAndUniqueIDs() throws {
         let first = try content()
         let second = try content()

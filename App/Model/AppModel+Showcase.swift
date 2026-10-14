@@ -41,6 +41,13 @@ enum ShowcaseItem: Identifiable, Hashable {
         }
     }
 
+    var addedAt: Date? {
+        switch self {
+        case .movie(let movie): return movie.addedAt
+        case .series(let series): return series.addedAt
+        }
+    }
+
     var contentType: ContentType {
         switch self {
         case .movie: return .movie
@@ -49,21 +56,32 @@ enum ShowcaseItem: Identifiable, Hashable {
     }
 }
 
-/// What the home screen features: continue watching first, then trending and recent titles.
+/// What the home screen features: continue watching first, then trending titles and new releases.
 extension AppModel {
-    /// Movies newest first when the provider dates them, otherwise in playlist order.
-    func featuredMovies(limit: Int = 20) -> [Movie] {
-        let recent = recentlyAddedMovies(limit: limit)
-        return recent.isEmpty ? Array(movies(in: nil, sort: .playlist).prefix(limit)) : recent
+    /// New releases: movies and series released this year or last year, by release year and not by the
+    /// date the provider added them (an old film added yesterday is not new). Movies and series
+    /// alternate; each newest first, then the latest additions, then the best rated. Titles without a
+    /// known year never appear, and nothing from a hidden or locked category.
+    func newReleases(limit: Int = 20, now: Date = .now) -> [ShowcaseItem] {
+        let thisYear = Calendar.current.component(.year, from: now)
+        let window = (thisYear - 1)...thisYear
+        func isNew(_ year: Int?) -> Bool { year.map { window.contains($0) } ?? false }
+        let movies = self.movies(in: nil, sort: .playlist).filter { isNew($0.year) }.map(ShowcaseItem.movie).sorted(by: Self.isNewer)
+        let series = self.series(in: nil, sort: .playlist).filter { isNew($0.year) }.map(ShowcaseItem.series).sorted(by: Self.isNewer)
+        var items: [ShowcaseItem] = []
+        for index in 0..<max(movies.count, series.count) where items.count < limit {
+            if index < movies.count { items.append(movies[index]) }
+            if index < series.count, items.count < limit { items.append(series[index]) }
+        }
+        return items
     }
 
-    func featuredSeries(limit: Int = 20) -> [Series] {
-        let recent = recentlyAddedSeries(limit: limit)
-        return recent.isEmpty ? Array(series(in: nil, sort: .playlist).prefix(limit)) : recent
+    private static func isNewer(_ a: ShowcaseItem, _ b: ShowcaseItem) -> Bool {
+        if a.year != b.year { return (a.year ?? 0) > (b.year ?? 0) }
+        if a.addedAt != b.addedAt { return (a.addedAt ?? .distantPast) > (b.addedAt ?? .distantPast) }
+        if a.rating != b.rating { return (a.rating ?? 0) > (b.rating ?? 0) }
+        return a.title.localizedStandardCompare(b.title) == .orderedAscending
     }
-
-    var moviesAreDated: Bool { content.movies.contains { $0.addedAt != nil } }
-    var seriesAreDated: Bool { content.series.contains { $0.addedAt != nil } }
 
     /// Movies and series of the user's favourites (My List), most recently added first.
     func myList() -> [ShowcaseItem] {
@@ -96,12 +114,7 @@ extension AppModel {
             case .series(let series, _): append(.series(series))
             }
         }
-        let movies = featuredMovies(limit: limit)
-        let series = featuredSeries(limit: limit)
-        for index in 0..<max(movies.count, series.count) where items.count < limit {
-            if index < movies.count { append(.movie(movies[index])) }
-            if index < series.count { append(.series(series[index])) }
-        }
+        for item in newReleases(limit: limit * 2) { append(item) }
         return items
     }
 

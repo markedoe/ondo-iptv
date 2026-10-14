@@ -2001,6 +2001,16 @@
         }
       }
     },
+    "New Releases": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveautés"
+          }
+        }
+      }
+    },
     "Next Aspect Ratio": {
       "localizations": {
         "fr": {
@@ -2697,26 +2707,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajouts récents"
-          }
-        }
-      }
-    },
-    "Recently Added Movies": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Films ajoutés récemment"
-          }
-        }
-      }
-    },
-    "Recently Added Series": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Séries ajoutées récemment"
           }
         }
       }

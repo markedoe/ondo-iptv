@@ -76,12 +76,10 @@ public enum M3UContentBuilder {
                     normalizedSeriesNames[seriesName] = normalizedName
                 }
                 let key = category.id + "|" + normalizedName
-                var series = seriesByKey[key] ?? Series(
-                    id: "s" + StableHash.hex(key),
-                    name: seriesName,
-                    coverURL: entry.logo,
-                    categoryID: category.id
-                )
+                var series = seriesByKey[key] ?? {
+                    let (cleanName, year) = TitleParser.splitYear(seriesName)
+                    return Series(id: "s" + StableHash.hex(key), name: cleanName, coverURL: entry.logo, categoryID: category.id, year: year)
+                }()
                 if seriesByKey[key] == nil { seriesOrder.append(key) }
                 let season = parsed?.season ?? 1
                 let number = parsed?.episode ?? (series.episodes.filter { $0.season == season }.count + 1)
