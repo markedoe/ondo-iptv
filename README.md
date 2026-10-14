@@ -15,7 +15,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 
 - **Home**: carousel of featured movies and series, "Continue Watching", My List, new releases, trending;
   live TV last.
-- **Movies & series**: poster grids, sorting, detail pages (plot, cast, trailer), seasons / episodes,
+- **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
+  detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**.
 - **Sources**: M3U / M3U8 playlists (URL or file), **Xtream Codes** accounts (API or "force M3U"), XSPF,
   JSON; several playlists, automatic refresh. (A Real-Debrid source exists in the code but is turned off in
@@ -48,7 +49,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 ### Android (phones and tablets)
 
 - **Home**: carousel, "Continue Watching", My List, recently added, channels.
-- **Movies & series**: one row per category, filterable grids, detail pages (Resume, From Start, next
+- **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
+  included), detail pages (Resume, From Start, next
   episode, seasons, More Like This).
 - **Live TV**: categories, favorites, current and next programme; **search**.
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin

@@ -15,7 +15,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 
 - **Accueil** : carrousel de films et séries à la une, « Continuer à regarder », Ma liste, ajouts récents,
   tendances ; le direct en dernier.
-- **Films & séries** : grilles d'affiches, tri, fiches (synopsis, casting, bande-annonce), saisons /
+- **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
+  ou note, fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb**.
 - **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
   XSPF, JSON ; plusieurs playlists, actualisation automatique. (Une source Real-Debrid existe dans le
@@ -50,7 +51,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 ### Android (téléphones et tablettes)
 
 - **Accueil** : carrousel, « Continuer à regarder », Ma liste, ajouts récents, chaînes.
-- **Films & séries** : une rangée par catégorie, grilles filtrables, fiches (Reprendre, Depuis le début,
+- **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
+  sortie comprise), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires).
 - **Live TV** : catégories, favoris, programme en cours et suivant ; **recherche**.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
