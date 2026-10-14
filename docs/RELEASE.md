@@ -6,20 +6,14 @@ votre compte Apple ou GitHub. Comptez environ une heure la première fois.
 
 ## A. GitHub
 
-### A1. Débloquer GitHub Actions (bloquant)
+### A1. GitHub Actions
 
-Le dépôt est privé : les minutes gratuites sont épuisées (les machines macOS comptent ×10) et GitHub
-refuse de lancer les jobs (« recent account payments have failed or your spending limit needs to be
-increased »). Deux solutions :
+Le dépôt `markedoe/ondo-iptv` est public : Actions (y compris les machines macOS) et Pages sont gratuits.
+Les adresses de la fiche (`fastlane/metadata/*/…_url.txt`) et du site en dépendent : à mettre à jour si le
+dépôt est renommé. Réglages de sécurité à activer une fois (*Settings*) :
 
-- **Rendre le dépôt public** (recommandé, le code est déjà sous licence MIT) : Actions et Pages deviennent
-  gratuits et illimités. *Settings → General → Danger Zone → Change visibility → Public*. Aucun secret
-  n'est dans le code (les clés sont dans les secrets GitHub, voir A3).
-- **Rester privé** : *Settings (du compte) → Billing and plans* : ajoutez un moyen de paiement et un budget
-  pour Actions. Les minutes macOS sont facturées ; GitHub Pages exige alors un compte Pro (voir A2).
-
-Le dépôt s'appelle `markedoe/ondo-iptv` ; les adresses de la fiche (`fastlane/metadata/*/…_url.txt`) et
-du site en dépendent : à mettre à jour s'il est renommé.
+- *Code security* → **Secret scanning** et **Push protection** ;
+- *Actions → General → Fork pull request workflows* → **Require approval for all external contributors**.
 
 ### A2. Activer le site (politique de confidentialité et assistance)
 
@@ -140,13 +134,12 @@ HTTP, Cast et notifications.
    version = le tag), puis la fiche FR/EN et les captures iPhone / iPad.
 2. **TestFlight** : les builds apparaissent après 10 à 30 min de traitement. Groupe de testeurs internes
    (jusqu'à 100 membres de l'équipe, sans review) pour essayer sur vos appareils.
-3. **Captures** : iPhone 6,9" et iPad 13" sont générées par le workflow *App Store screenshots* (FR/EN),
-   le Mac aussi (16:10, dossier `mac/` de la branche `appstore-screenshots`). Si les captures Mac manquent,
-   on peut les faire à la main : lancer l'app sur un Mac, fenêtre de 1440×900, `⌘⇧4` puis espace pour
-   capturer la fenêtre, et les déposer dans la version macOS.
+3. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
+   screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
+   fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.
 4. Dans chaque version (iOS 1.0 et macOS 1.0) : choisissez le build → **Add for Review** →
-   **Submit for Review**. Les deux versions sont indépendantes : **iOS / iPadOS peut partir seul**, la
-   version macOS suivra quand ses captures seront prêtes.
+   **Submit for Review**. Les deux versions sont indépendantes : **iOS / iPadOS peut partir seul** ;
+   lancez au moins une fois le build Mac de TestFlight sur votre Mac avant de soumettre la version macOS.
 
 Le premier lancement du workflow *Release* n'a encore jamais tourné : s'il échoue (signature, export,
 envoi), le log du job dit pourquoi — il se corrige en général d'une ligne dans `fastlane/Fastfile`.
