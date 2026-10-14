@@ -36,9 +36,10 @@ jobs:
   core-linux:
     name: Lint + IPTVCore tests (Linux)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     container: swift:6.0-noble
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: SwiftLint
         run: |
           apt-get update -qq && apt-get install -y -qq unzip curl ca-certificates python3 >/dev/null
@@ -73,8 +74,9 @@ jobs:
   apple:
     name: Build iOS + macOS
     runs-on: macos-26
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Show toolchain
         run: |
           xcodebuild -version
@@ -87,7 +89,7 @@ jobs:
           brew install xcodegen xcbeautify || true
           xcodegen generate
       - name: Cache Swift packages
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/spm
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
@@ -145,7 +147,7 @@ jobs:
           tail -20 macos-launch.log || true
       - name: Upload macOS screenshot
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: macos-screenshot
           path: screenshots
@@ -154,16 +156,17 @@ jobs:
   release-build:
     name: Release build (iOS)
     runs-on: macos-26
+    timeout-minutes: 45
     # Debug is what the other jobs build and test; the App Store gets Release, without the `#if DEBUG`
     # code (UI test catalogue, screenshot routes). A Release-only break shows here, not at archive time.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Generate Xcode project
         run: |
           brew install xcodegen xcbeautify || true
           xcodegen generate
       - name: Cache Swift packages
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/spm
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
@@ -180,17 +183,18 @@ jobs:
   ui-tests:
     name: App tests — unit + UI (iPhone simulator)
     runs-on: macos-26
+    timeout-minutes: 75
     needs: apple
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Generate Xcode project
         run: |
           brew install xcodegen xcbeautify || true
           xcodegen generate
       - name: Cache Swift packages
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: build/spm
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
@@ -227,7 +231,7 @@ jobs:
           python3 .github/scripts/collect_screenshots.py raw screenshots
       - name: Fetch macOS screenshot
         if: always()
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: macos-screenshot
           path: macos-shot
@@ -250,7 +254,7 @@ jobs:
           git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" ci-screenshots
       - name: Upload screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: ui-screenshots
           path: screenshots
