@@ -21,13 +21,13 @@ class UiMappersTest {
     fun adultCategoriesAreHiddenUnlessShown() {
         val hidden = Fixtures.state()
         assertEquals(setOf(Fixtures.adultMovies.id), UiMappers.hiddenCategoryIds(hidden))
-        assertFalse(UiMappers.home(hidden, labels, Fixtures.NOW).newReleases.any { it.title == "Late Show" })
+        assertFalse(UiMappers.home(hidden, labels, Fixtures.NOW).newMovies.any { it.title == "Late Show" })
         assertFalse(UiMappers.vod(hidden, series = false, title = "").categories.contains(Fixtures.adultMovies))
         assertTrue(UiMappers.grid(hidden, series = false, categoryId = null, myList = false, filter = "late").isEmpty())
 
         val shown = Fixtures.state(settings = adultShown)
         assertTrue(UiMappers.hiddenCategoryIds(shown).isEmpty())
-        assertTrue(UiMappers.home(shown, labels, Fixtures.NOW).newReleases.any { it.title == "Late Show" })
+        assertTrue(UiMappers.home(shown, labels, Fixtures.NOW).newMovies.any { it.title == "Late Show" })
         assertTrue(UiMappers.vod(shown, series = false, title = "").categories.contains(Fixtures.adultMovies))
     }
 
@@ -40,10 +40,11 @@ class UiMappersTest {
         assertEquals("Series · 2025 · Drama · ★ 8.2", home.hero.first { it.item.title == "Harbor Lights" }.meta)
         assertTrue(home.hasVod)
         assertEquals(
-            "one row, movies and series together, by release year",
-            listOf("Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
-            home.newReleases.map { it.title },
+            "new movies by release year",
+            listOf("Northern Lights", "The Last Signal", "Glass City", "Midnight Orchard"),
+            home.newMovies.map { it.title },
         )
+        assertEquals("new series in their own row", listOf("Harbor Lights", "The Archive"), home.newSeries.map { it.title })
         assertEquals("without favourites the first channels are shown", 4, home.channels.size)
         assertFalse(home.channelsAreFavorites)
     }

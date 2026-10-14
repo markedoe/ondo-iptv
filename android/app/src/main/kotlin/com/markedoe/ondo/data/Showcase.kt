@@ -30,21 +30,25 @@ class Showcase(
     val seriesAreDated: Boolean get() = series.any { it.addedAt != null }
 
     /**
-     * New releases: movies and series released this year or last year, by release year and not by the
-     * date the provider added them (an old film added yesterday is not new). Movies and series
-     * alternate; each newest first, then the latest additions, then the best rated. Titles without a
-     * known year never appear.
+     * New movies: released this year or last year, by release year and not by the date the provider added
+     * them (an old film added yesterday is not new). Newest first, then the latest additions, then the
+     * best rated. Titles without a known year never appear.
      */
+    fun newMovies(now: Long, limit: Int = 20): List<ShowcaseItem> {
+        val window = releaseWindow(now)
+        return movies.filter { it.year?.let { year -> year in window } == true }.map { ShowcaseItem.MovieItem(it) }.sortedWith(newer).take(limit)
+    }
+
+    /** New series, by the same rule as [newMovies]. */
+    fun newSeries(now: Long, limit: Int = 20): List<ShowcaseItem> {
+        val window = releaseWindow(now)
+        return series.filter { it.year?.let { year -> year in window } == true }.map { ShowcaseItem.SeriesItem(it) }.sortedWith(newer).take(limit)
+    }
+
+    /** New movies and series alternating (the carousel). */
     fun newReleases(now: Long, limit: Int = 20): List<ShowcaseItem> {
-        val thisYear = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).year
-        val window = (thisYear - 1)..thisYear
-        fun isNew(year: Int?) = year != null && year in window
-        val newer = compareByDescending<ShowcaseItem> { it.year ?: 0 }
-            .thenByDescending { it.addedAt ?: Long.MIN_VALUE }
-            .thenByDescending { it.rating ?: 0.0 }
-            .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
-        val newMovies = movies.filter { isNew(it.year) }.map { ShowcaseItem.MovieItem(it) }.sortedWith(newer)
-        val newSeries = series.filter { isNew(it.year) }.map { ShowcaseItem.SeriesItem(it) }.sortedWith(newer)
+        val newMovies = newMovies(now, limit)
+        val newSeries = newSeries(now, limit)
         val result = ArrayList<ShowcaseItem>()
         for (index in 0 until maxOf(newMovies.size, newSeries.size)) {
             if (result.size >= limit) break
@@ -53,6 +57,17 @@ class Showcase(
         }
         return result
     }
+
+    /** This year and last year. */
+    private fun releaseWindow(now: Long): IntRange {
+        val thisYear = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).year
+        return (thisYear - 1)..thisYear
+    }
+
+    private val newer = compareByDescending<ShowcaseItem> { it.year ?: 0 }
+        .thenByDescending { it.addedAt ?: Long.MIN_VALUE }
+        .thenByDescending { it.rating ?: 0.0 }
+        .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
 
     /** Newest first when the provider dates them, otherwise in playlist order (Movies and Series tabs). */
     fun featuredMovies(limit: Int = 20): List<Movie> =

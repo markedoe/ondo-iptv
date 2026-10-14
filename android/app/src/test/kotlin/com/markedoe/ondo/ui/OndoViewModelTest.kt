@@ -61,7 +61,8 @@ class OndoViewModelTest {
             var home = awaitItem()
             while (home == null || home.hero.isEmpty()) home = awaitItem()
             assertEquals("Home", home.playlistName)
-            assertEquals(listOf("Long Road", "Harbor"), home.newReleases.map { it.title })
+            assertEquals(listOf("Long Road"), home.newMovies.map { it.title })
+            assertEquals(listOf("Harbor"), home.newSeries.map { it.title })
             cancelAndIgnoreRemainingEvents()
         }
     }

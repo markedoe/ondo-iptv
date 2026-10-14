@@ -58,22 +58,38 @@ enum ShowcaseItem: Identifiable, Hashable {
 
 /// What the home screen features: continue watching first, then trending titles and new releases.
 extension AppModel {
-    /// New releases: movies and series released this year or last year, by release year and not by the
-    /// date the provider added them (an old film added yesterday is not new). Movies and series
-    /// alternate; each newest first, then the latest additions, then the best rated. Titles without a
-    /// known year never appear, and nothing from a hidden or locked category.
+    /// New movies: released this year or last year, by release year and not by the date the provider
+    /// added them (an old film added yesterday is not new). Newest first, then the latest additions, then
+    /// the best rated. Titles without a known year never appear, and nothing from a hidden or locked category.
+    func newMovies(limit: Int = 20, now: Date = .now) -> [ShowcaseItem] {
+        let window = Self.releaseWindow(now)
+        let movies = self.movies(in: nil, sort: .playlist).filter { movie in movie.year.map { window.contains($0) } ?? false }
+        return Array(movies.map(ShowcaseItem.movie).sorted(by: Self.isNewer).prefix(limit))
+    }
+
+    /// New series, by the same rule as `newMovies`.
+    func newSeries(limit: Int = 20, now: Date = .now) -> [ShowcaseItem] {
+        let window = Self.releaseWindow(now)
+        let series = self.series(in: nil, sort: .playlist).filter { show in show.year.map { window.contains($0) } ?? false }
+        return Array(series.map(ShowcaseItem.series).sorted(by: Self.isNewer).prefix(limit))
+    }
+
+    /// New movies and series alternating (the carousel).
     func newReleases(limit: Int = 20, now: Date = .now) -> [ShowcaseItem] {
-        let thisYear = Calendar.current.component(.year, from: now)
-        let window = (thisYear - 1)...thisYear
-        func isNew(_ year: Int?) -> Bool { year.map { window.contains($0) } ?? false }
-        let movies = self.movies(in: nil, sort: .playlist).filter { isNew($0.year) }.map(ShowcaseItem.movie).sorted(by: Self.isNewer)
-        let series = self.series(in: nil, sort: .playlist).filter { isNew($0.year) }.map(ShowcaseItem.series).sorted(by: Self.isNewer)
+        let movies = newMovies(limit: limit, now: now)
+        let series = newSeries(limit: limit, now: now)
         var items: [ShowcaseItem] = []
         for index in 0..<max(movies.count, series.count) where items.count < limit {
             if index < movies.count { items.append(movies[index]) }
             if index < series.count, items.count < limit { items.append(series[index]) }
         }
         return items
+    }
+
+    /// This year and last year.
+    private static func releaseWindow(_ now: Date) -> ClosedRange<Int> {
+        let thisYear = Calendar.current.component(.year, from: now)
+        return (thisYear - 1)...thisYear
     }
 
     private static func isNewer(_ a: ShowcaseItem, _ b: ShowcaseItem) -> Bool {

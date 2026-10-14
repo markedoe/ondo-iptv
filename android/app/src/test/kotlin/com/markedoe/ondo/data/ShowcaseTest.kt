@@ -52,18 +52,25 @@ class ShowcaseTest {
     }
 
     @Test
-    fun newReleasesGoByReleaseYearAndMixMoviesAndSeries() {
-        val hidden = setOf(Fixtures.adultMovies.id)
+    fun newMoviesAndSeriesGoByReleaseYear() {
+        val showcase = showcase(hidden = setOf(Fixtures.adultMovies.id))
         assertEquals(
-            "2024 and 2025 releases, newest first then latest added, movies and series alternating; not older or hidden ones",
-            listOf("Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
-            showcase(hidden = hidden).newReleases(Fixtures.NOW).map { it.title },
+            "2024 and 2025 releases, newest first then latest added; not older or hidden ones",
+            listOf("Northern Lights", "The Last Signal", "Glass City", "Midnight Orchard"),
+            showcase.newMovies(Fixtures.NOW).map { it.title },
         )
-        assertEquals(listOf("Northern Lights", "Harbor Lights"), showcase(hidden = hidden).newReleases(Fixtures.NOW, limit = 2).map { it.title })
+        assertEquals("series in their own row", listOf("Harbor Lights", "The Archive"), showcase.newSeries(Fixtures.NOW).map { it.title })
+        assertEquals(listOf("Northern Lights"), showcase.newMovies(Fixtures.NOW, limit = 1).map { it.title })
+        assertEquals(
+            "the carousel alternates movies and series",
+            listOf("Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
+            showcase.newReleases(Fixtures.NOW).map { it.title },
+        )
         val threeYearsLater = Fixtures.NOW + 3 * 366 * 86_400_000L
-        assertTrue("the same titles are no longer new three years later", showcase().newReleases(threeYearsLater).isEmpty())
+        assertTrue("the same titles are no longer new three years later", showcase().newMovies(threeYearsLater).isEmpty())
+        assertTrue(showcase().newSeries(threeYearsLater).isEmpty())
         val undated = Fixtures.content.copy(movies = Fixtures.content.movies.map { it.copy(year = null) }, series = emptyList())
-        assertTrue("titles without a known year never appear", showcase(content = undated).newReleases(Fixtures.NOW).isEmpty())
+        assertTrue("titles without a known year never appear", showcase(content = undated).newMovies(Fixtures.NOW).isEmpty())
     }
 
     @Test
@@ -77,7 +84,8 @@ class ShowcaseTest {
     fun liveOnlyPlaylistHasNoCarousel() {
         val live = Fixtures.content.copy(movies = emptyList(), series = emptyList())
         assertTrue(showcase(content = live).heroItems(Fixtures.NOW).isEmpty())
-        assertTrue(showcase(content = live).newReleases(Fixtures.NOW).isEmpty())
+        assertTrue(showcase(content = live).newMovies(Fixtures.NOW).isEmpty())
+        assertTrue(showcase(content = live).newSeries(Fixtures.NOW).isEmpty())
         assertTrue(showcase(content = live).featuredMovies().isEmpty())
     }
 

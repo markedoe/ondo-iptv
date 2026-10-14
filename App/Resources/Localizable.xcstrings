@@ -1971,6 +1971,16 @@
         }
       }
     },
+    "New Movies": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveaux films"
+          }
+        }
+      }
+    },
     "New PIN (4 to 8 digits)": {
       "localizations": {
         "fr": {
@@ -2001,12 +2011,12 @@
         }
       }
     },
-    "New Releases": {
+    "New Series": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nouveautés"
+            "value": "Nouvelles séries"
           }
         }
       }

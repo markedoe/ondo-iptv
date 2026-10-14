@@ -56,8 +56,9 @@ data class HomeUiState(
     val hero: List<HeroPage> = emptyList(),
     val continueWatching: List<ResumeItem> = emptyList(),
     val myList: List<ShowcaseItem> = emptyList(),
-    /** Movies and series together, by release year (see `Showcase.newReleases`). */
-    val newReleases: List<ShowcaseItem> = emptyList(),
+    /** By release year, not date added (see `Showcase.newMovies`). */
+    val newMovies: List<ShowcaseItem> = emptyList(),
+    val newSeries: List<ShowcaseItem> = emptyList(),
     val hasVod: Boolean = false,
     val channels: List<ChannelRow> = emptyList(),
     val channelsAreFavorites: Boolean = false,
@@ -113,8 +114,11 @@ fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = 
         if (!hasVod) {
             item { ChannelShelf(state, metrics, actions) }
         }
-        if (state.newReleases.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.new_releases), state.newReleases, metrics, actions) }
+        if (state.newMovies.isNotEmpty()) {
+            item { PosterShelf(stringResource(R.string.new_movies), state.newMovies, metrics, actions) }
+        }
+        if (state.newSeries.isNotEmpty()) {
+            item { PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions) }
         }
         if (hasVod) {
             item { ChannelShelf(state, metrics, actions) }

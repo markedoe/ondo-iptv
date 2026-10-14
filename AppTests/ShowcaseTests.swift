@@ -120,24 +120,28 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(model.heroItems(limit: 2).count, 2)
     }
 
-    func testNewReleasesGoByReleaseYearAndMixMoviesAndSeries() async throws {
+    func testNewMoviesAndSeriesGoByReleaseYear() async throws {
         let model = try await model(with: Self.releases)
         let horror = try XCTUnwrap(model.content.movieCategories.first { $0.name.contains("Horror") })
         model.setHidden(true, category: horror)
 
+        XCTAssertEqual(model.newMovies().map(\.title), ["This Year Film", "Last Year Film"],
+                       "this year's and last year's releases, newest first; not an old, undated, upcoming or hidden title")
+        XCTAssertEqual(model.newSeries().map(\.title), ["New Show"], "series in their own row; not an old one")
+        XCTAssertEqual(model.newMovies(limit: 1).map(\.title), ["This Year Film"])
         XCTAssertEqual(model.newReleases().map(\.title), ["This Year Film", "New Show", "Last Year Film"],
-                       "this year's and last year's releases, newest first, movies and series alternating; "
-                       + "not an old, undated, upcoming or hidden title")
-        XCTAssertEqual(model.newReleases(limit: 2).map(\.title), ["This Year Film", "New Show"])
+                       "the carousel alternates movies and series")
 
         let inThreeYears = try XCTUnwrap(Calendar.current.date(byAdding: .year, value: 3, to: .now))
-        XCTAssertTrue(model.newReleases(now: inThreeYears).isEmpty, "the same titles are no longer new three years later")
+        XCTAssertTrue(model.newMovies(now: inThreeYears).isEmpty, "the same titles are no longer new three years later")
+        XCTAssertTrue(model.newSeries(now: inThreeYears).isEmpty)
     }
 
     func testLiveOnlyPlaylistHasNoCarousel() async throws {
         let model = try await model(with: Self.liveOnly)
         XCTAssertTrue(model.heroItems().isEmpty, "the home screen falls back to live TV")
-        XCTAssertTrue(model.newReleases().isEmpty)
+        XCTAssertTrue(model.newMovies().isEmpty)
+        XCTAssertTrue(model.newSeries().isEmpty)
     }
 
     func testSimilarTitlesStayInTheCategoryAndSkipHiddenOnes() async throws {

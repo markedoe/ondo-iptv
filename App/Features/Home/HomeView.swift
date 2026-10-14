@@ -2,7 +2,7 @@ import SwiftUI
 import IPTVCore
 
 /// Home: a carousel of featured movies and series, then shelves (continue watching, My List,
-/// new releases with movies and series together), with live TV last.
+/// new movies, new series), with live TV last.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     #if os(iOS)
@@ -77,7 +77,8 @@ struct HomeView: View {
         let metrics = ShelfMetrics(compact: compact)
         let resume = model.continueWatching()
         let myList = model.myList()
-        let newReleases = model.newReleases()
+        let newMovies = model.newMovies()
+        let newSeries = model.newSeries()
         let hasVOD = !model.content.movies.isEmpty || !model.content.series.isEmpty
 
         VStack(alignment: .leading, spacing: compact ? 26 : 34) {
@@ -111,9 +112,17 @@ struct HomeView: View {
 
             if !hasVOD { liveShelves(metrics: metrics, emphasised: true) }
 
-            if !newReleases.isEmpty {
-                Shelf(title: "New Releases", metrics: metrics) {
-                    ForEach(newReleases) { item in
+            if !newMovies.isEmpty {
+                Shelf(title: "New Movies", metrics: metrics) {
+                    ForEach(newMovies) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
+                    }
+                }
+            }
+
+            if !newSeries.isEmpty {
+                Shelf(title: "New Series", metrics: metrics) {
+                    ForEach(newSeries) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
                 }
