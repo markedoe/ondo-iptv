@@ -32,6 +32,54 @@ final class TMDbTests: XCTestCase {
         XCTAssertEqual(request.headers["Authorization"], "Bearer \(token)")
         XCTAssertEqual(request.url.query, "language=en-US", "a token never goes into the address")
     }
+
+    /// Tapping a name in a movie's details: the person's credits, then what of it the catalogue has.
+    func testAPersonsCreditsAreFoundInTheCatalogue() async throws {
+        let http = MockHTTPClient()
+        http.routes["https://api.themoviedb.org/3/search/person?query=Ada%20Vance&language=en-US&api_key=KEY"] = try Fixture.data("tmdb_person_search.json")
+        http.routes["https://api.themoviedb.org/3/person/902/combined_credits?language=en-US&api_key=KEY"] = try Fixture.data("tmdb_person_credits.json")
+        let client = TMDbClient(credential: "KEY", http: http)
+
+        let found = try await client.person(named: " Ada Vance ")
+        let person = try XCTUnwrap(found)
+        XCTAssertEqual(person.id, 902, "the most popular person of that name")
+        XCTAssertEqual(person.profileURL?.absoluteString, "https://image.tmdb.org/t/p/w185/ada-vance.jpg")
+
+        let credits = try await client.credits(ofPerson: person.id)
+        XCTAssertEqual(credits.map(\.title), ["Sandstorm: Part Two", "Lighthouse", "Copper Valley", "Paper Trail", "Unreleased Story"],
+                       "cast and crew, each once, newest first, undated last")
+
+        let url = URL(string: "http://x/1.mp4")!
+        let movies = [
+            Movie(id: "1", name: "FR - Sandstorm: Part Two [MULTI] 4K", categoryID: "c", streamURL: url, year: 2024),
+            Movie(id: "2", name: "Paper Trail (1999)", categoryID: "c", streamURL: url),
+            Movie(id: "3", name: "Another Film", categoryID: "c", streamURL: url, year: 2015),
+        ]
+        let series = [Series(id: "s", name: "Copper Valley (US)", categoryID: "c")]
+        let matches = CatalogueMatcher.match(credits, movies: movies, series: series)
+        XCTAssertEqual(matches.map(\.id), ["m-1", "s-s", "m-2"])
+    }
+
+    func testNobodyIsSearchedForAnEmptyName() async throws {
+        let http = MockHTTPClient()
+        let person = try await TMDbClient(credential: "KEY", http: http).person(named: "  ")
+        XCTAssertNil(person)
+        XCTAssertTrue(http.sent.isEmpty)
+    }
+}
+
+final class PeopleTests: XCTestCase {
+    func testNamesAreSplitCleanedAndKeptOnce() {
+        XCTAssertEqual(People.names(in: "Ada Vance, Tom Reyes (voice), Lena Moss / Ada Vance; Jo Park..."),
+                       ["Ada Vance", "Tom Reyes", "Lena Moss", "Jo Park"])
+        XCTAssertEqual(People.names(in: "N/A"), [])
+        XCTAssertEqual(People.names(in: nil), [])
+    }
+
+    func testAFieldNamesAPersonWhateverTheAccents() {
+        XCTAssertTrue(People.field("Lena Moss, Élodie Marçeau", names: "elodie marceau"))
+        XCTAssertFalse(People.field("Lena Mossberg", names: "Lena Moss"))
+    }
 }
 
 final class RealDebridTests: XCTestCase {

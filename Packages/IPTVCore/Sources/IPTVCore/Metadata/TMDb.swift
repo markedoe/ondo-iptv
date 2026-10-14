@@ -72,15 +72,72 @@ public struct TMDbClient: Sendable {
 
     private var usesBearerToken: Bool { credential.count > 40 }
 
-    public func trending(window: String = "week") async throws -> [TMDbItem] {
-        var components = URLComponents(string: "https://api.themoviedb.org/3/trending/all/\(window)")!
-        var items = [URLQueryItem(name: "language", value: language)]
+    /// GET on the v3 API: the key goes in the query, a v4 token in the Authorization header (never in the address).
+    private func get(_ path: String, query: [URLQueryItem] = []) async throws -> Data {
+        var components = URLComponents(string: "https://api.themoviedb.org/3/" + path)!
+        var items = query + [URLQueryItem(name: "language", value: language)]
         if !usesBearerToken { items.append(URLQueryItem(name: "api_key", value: credential)) }
         components.queryItems = items
         let headers = usesBearerToken ? ["Authorization": "Bearer \(credential)", "Accept": "application/json"] : ["Accept": "application/json"]
-        let data = try await http.data(from: components.url!, headers: headers)
+        return try await http.data(from: components.url!, headers: headers)
+    }
+
+    public func trending(window: String = "week") async throws -> [TMDbItem] {
+        let data = try await get("trending/all/\(window)")
         struct Page: Decodable { var results: [TMDbItem] }
         return try JSONDecoder().decode(Page.self, from: data).results.filter { $0.mediaType == .movie || $0.mediaType == .tv }
+    }
+
+    /// The person TMDb knows best by this name (its most popular match), if any.
+    public func person(named name: String) async throws -> TMDbPerson? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let data = try await get("search/person", query: [URLQueryItem(name: "query", value: trimmed)])
+        struct Page: Decodable { var results: [TMDbPerson] }
+        return try JSONDecoder().decode(Page.self, from: data).results.max { $0.popularity < $1.popularity }
+    }
+
+    /// Movies and series a person played in or worked on (directing, writing…), newest first, each once.
+    public func credits(ofPerson id: Int) async throws -> [TMDbItem] {
+        let data = try await get("person/\(id)/combined_credits")
+        struct Credits: Decodable {
+            var cast: [TMDbItem]?
+            var crew: [TMDbItem]?
+        }
+        let credits = try JSONDecoder().decode(Credits.self, from: data)
+        var seen = Set<String>()
+        return ((credits.cast ?? []) + (credits.crew ?? []))
+            .filter { ($0.mediaType == .movie || $0.mediaType == .tv) && seen.insert("\($0.mediaType.rawValue)-\($0.id)").inserted }
+            .sorted { ($0.year ?? Int.min) > ($1.year ?? Int.min) }
+    }
+}
+
+/// A person on TMDb (actor, director…).
+public struct TMDbPerson: Decodable, Hashable, Sendable {
+    public var id: Int
+    public var name: String
+    /// "Acting", "Directing"…
+    public var department: String?
+    public var profilePath: String?
+    public var popularity: Double
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, popularity
+        case department = "known_for_department"
+        case profilePath = "profile_path"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? ""
+        department = try? c.decodeIfPresent(String.self, forKey: .department)
+        profilePath = try? c.decodeIfPresent(String.self, forKey: .profilePath)
+        popularity = (try? c.decodeIfPresent(Double.self, forKey: .popularity)) ?? 0
+    }
+
+    public var profileURL: URL? {
+        profilePath.flatMap { URL(string: "https://image.tmdb.org/t/p/w185" + $0) }
     }
 }
 
