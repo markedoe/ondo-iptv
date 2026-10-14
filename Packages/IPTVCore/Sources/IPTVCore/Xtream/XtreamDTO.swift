@@ -401,6 +401,14 @@ struct XtreamShortEPGResponse: Decodable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         listings = (try? c.decodeIfPresent(LossyArray<XtreamEPGListingDTO>.self, forKey: .listings))?.elements ?? []
+        // Panels send every title and description in base64, a few send them all as plain text. Deciding for the
+        // whole answer keeps a plain "Film" or "Show", which is valid base64 too, from turning into garbage.
+        let texts = listings.flatMap { [$0.title, $0.description ?? ""] }.filter { !$0.isEmpty }
+        guard texts.allSatisfy({ XtreamEPGListingDTO.base64Text($0) != nil }) else { return }
+        for index in listings.indices {
+            listings[index].title = XtreamEPGListingDTO.base64Text(listings[index].title) ?? listings[index].title
+            listings[index].description = listings[index].description.flatMap(XtreamEPGListingDTO.base64Text)?.nilIfBlank
+        }
     }
 }
 
@@ -427,19 +435,21 @@ struct XtreamEPGListingDTO: Decodable {
         }
         self.start = start
         self.end = end
-        title = Self.decodeBase64(c.lenientString(.title)) ?? ""
-        description = Self.decodeBase64(c.lenientString(.description))?.nilIfBlank
+        // As sent: `XtreamShortEPGResponse` decodes them once it knows whether the panel uses base64.
+        title = c.lenientString(.title) ?? ""
+        description = c.lenientString(.description)?.nilIfBlank
         channelID = c.lenientString(.channelID)
         hasArchive = c.lenientBool(.hasArchive) ?? false
     }
 
-    /// Titles and descriptions are base64 encoded; fall back to the raw text when they are not.
-    static func decodeBase64(_ value: String?) -> String? {
-        guard let value, !value.isEmpty else { return value }
-        if let data = Data(base64Encoded: value, options: .ignoreUnknownCharacters),
-           let text = String(data: data, encoding: .utf8), !text.isEmpty {
-            return text
-        }
-        return value
+    /// The text `value` holds in base64, or nil when it is not base64 of readable UTF-8 text. Strict: a plain
+    /// title has spaces or punctuation that base64 does not, and garbage decoded from one often has control
+    /// characters.
+    static func base64Text(_ value: String) -> String? {
+        guard let data = Data(base64Encoded: value.trimmingCharacters(in: .whitespacesAndNewlines).filter { !$0.isNewline }),
+              let text = String(data: data, encoding: .utf8), !text.isEmpty,
+              !text.unicodeScalars.contains(where: { ($0.value < 0x20 && !"\t\n\r".unicodeScalars.contains($0)) || (0x7F...0x9F).contains($0.value) })
+        else { return nil }
+        return text
     }
 }

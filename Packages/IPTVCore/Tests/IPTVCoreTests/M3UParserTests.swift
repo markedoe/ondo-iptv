@@ -56,6 +56,27 @@ final class M3UParserTests: XCTestCase {
         XCTAssertEqual(playlist.entries.first?.groupTitle, "A")
     }
 
+    /// Header locks written as Kodi properties or `#EXTHTTP` JSON apply to the next entry only.
+    func testKodiAndEXTHTTPHeaders() {
+        let text = """
+        #EXTM3U
+        #EXTINF:-1,One
+        #KODIPROP:inputstream.adaptive.stream_headers=User-Agent=Box%2F1&Referer=http%3A%2F%2Fref.example.com%2F
+        http://a.example.com/1.m3u8
+        #EXTINF:-1,Two
+        #EXTHTTP:{"User-Agent":"Box/2","Cookie":"session=abc"}
+        http://a.example.com/2.m3u8
+        #EXTINF:-1,Three
+        http://a.example.com/3.m3u8
+        """
+        let entries = M3UParser.parse(text).entries
+        XCTAssertEqual(entries.map(\.title), ["One", "Two", "Three"])
+        XCTAssertEqual(entries[0].headers.userAgent, "Box/1")
+        XCTAssertEqual(entries[0].headers.referrer, "http://ref.example.com/")
+        XCTAssertEqual(entries[1].headers.dictionary, ["User-Agent": "Box/2", "Cookie": "session=abc"])
+        XCTAssertTrue(entries[2].headers.isEmpty)
+    }
+
     func testFormatDetection() throws {
         XCTAssertEqual(PlaylistFormat.detect(try Fixture.data("sample.m3u")), .m3u)
         XCTAssertEqual(PlaylistFormat.detect(try Fixture.data("sample.xspf")), .xspf)

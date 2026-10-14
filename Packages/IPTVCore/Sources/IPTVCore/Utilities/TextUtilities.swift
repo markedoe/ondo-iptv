@@ -19,7 +19,7 @@ public enum StableHash {
 
 public enum TextNormalizer {
     /// Lowercased, accent-free, alphanumerics separated by single spaces.
-    /// "Télé-Loisirs  HD" -> "tele loisirs hd"
+    /// "Télé-Évasion  HD" -> "tele evasion hd"
     public static func normalize(_ text: String) -> String {
         let folded = text.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive], locale: nil)
         var result = ""
@@ -65,7 +65,8 @@ public enum TextNormalizer {
         return tokens.joined()
     }
 
-    /// Does `text` (already normalised) contain every word of the (normalised) query, by prefix?
+    /// Does `text` (already normalised) contain every word of the (normalised) query, anywhere in it?
+    /// Checking word prefixes first is only the fast path: "match" finds "rematch" too.
     public static func matches(normalizedText: String, queryTokens: [Substring]) -> Bool {
         guard !queryTokens.isEmpty else { return true }
         let words = normalizedText.split(separator: " ")
@@ -82,19 +83,21 @@ extension String {
     var nilIfBlank: String? {
         guard let first = utf8.first, let last = utf8.last else { return nil }
         // Fast path (hot in parsers): nothing to trim.
-        if !Self.isASCIIWhitespace(first) && !Self.isASCIIWhitespace(last) { return self }
+        if !Self.mayBeWhitespace(first) && !Self.mayBeWhitespace(last) { return self }
         let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
     }
 
     var trimmedFast: String {
         guard let first = utf8.first, let last = utf8.last else { return self }
-        if !Self.isASCIIWhitespace(first) && !Self.isASCIIWhitespace(last) { return self }
+        if !Self.mayBeWhitespace(first) && !Self.mayBeWhitespace(last) { return self }
         return trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func isASCIIWhitespace(_ byte: UInt8) -> Bool {
-        byte == 0x20 || byte == 0x09 || byte == 0x0A || byte == 0x0D || byte == 0xC2 || byte == 0xA0 /* NBSP */
+    /// Whether a first or last UTF-8 byte can belong to whitespace: ASCII spaces and controls, or any non-ASCII
+    /// byte (no-break and ideographic spaces…), which the slow path then checks for real.
+    private static func mayBeWhitespace(_ byte: UInt8) -> Bool {
+        byte <= 0x20 || byte >= 0x7F
     }
 }
 

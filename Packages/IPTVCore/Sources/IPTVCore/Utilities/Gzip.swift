@@ -24,11 +24,12 @@ extension Data {
         count >= 2 && self[startIndex] == 0x1f && self[startIndex + 1] == 0x8b
     }
 
-    /// Inflates gzip or zlib data. Returns `self` unchanged when it is not compressed.
+    /// Inflates gzip data (it starts with 1f 8b). Anything else, zlib streams included, is returned unchanged.
     public func gunzippedIfNeeded(limit: Int = Data.maxGunzippedSize) throws -> Data {
         isGzipped ? try gunzipped(limit: limit) : self
     }
 
+    /// Inflates gzip or zlib data (the header says which), throwing past `limit` bytes.
     public func gunzipped(limit: Int = Data.maxGunzippedSize) throws -> Data {
         guard !isEmpty else { return self }
         var stream = z_stream()

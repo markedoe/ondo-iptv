@@ -43,7 +43,8 @@ public actor OpenSubtitlesClient: SubtitleProvider {
 
     public func search(_ query: SubtitleQuery) async throws -> [OnlineSubtitle] {
         var items: [(String, String?)] = [
-            ("languages", query.languages.map { $0.lowercased() }.joined(separator: ",")),
+            // The service wants the codes sorted too; results are ranked by preference afterwards anyway.
+            ("languages", query.languages.map { $0.lowercased() }.sorted().joined(separator: ",")),
             ("query", query.title.lowercased()),
         ]
         if query.isEpisode {
@@ -81,7 +82,11 @@ public actor OpenSubtitlesClient: SubtitleProvider {
             // Expired session: sign in once more.
             session = nil
             try await logIn()
-            link = try await requestLink(fileID: subtitle.reference)
+            do {
+                link = try await requestLink(fileID: subtitle.reference)
+            } catch {
+                throw SubtitleHTTP.translate(error, service: service)
+            }
         } catch {
             throw SubtitleHTTP.translate(error, service: service)
         }

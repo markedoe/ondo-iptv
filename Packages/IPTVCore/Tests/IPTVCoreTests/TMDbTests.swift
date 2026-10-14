@@ -28,6 +28,9 @@ final class TMDbTests: XCTestCase {
         http.routes["https://api.themoviedb.org/3/trending/all/week?language=en-US"] = Data(#"{"results":[]}"#.utf8)
         let items = try await TMDbClient(credential: token, http: http).trending()
         XCTAssertTrue(items.isEmpty)
+        let request = try XCTUnwrap(http.sent.first)
+        XCTAssertEqual(request.headers["Authorization"], "Bearer \(token)")
+        XCTAssertEqual(request.url.query, "language=en-US", "a token never goes into the address")
     }
 }
 
@@ -43,10 +46,10 @@ final class RealDebridTests: XCTestCase {
     func testDownloadsBecomeMoviesAndSeries() async throws {
         let http = MockHTTPClient()
         http.routes["https://api.real-debrid.com/rest/1.0/downloads?page=1&limit=100"] = Data("""
-        [{"id":"A","filename":"Sandstorm.Part.Two.2024.2160p.WEB.mkv","mimeType":"video/x-matroska","download":"https://x.download.real-debrid.com/d/A/Sandstorm.mkv","streamable":1},
-         {"id":"B","filename":"Show.S01E01.1080p.mkv","mimeType":"video/x-matroska","download":"https://x.download.real-debrid.com/d/B/s1e1.mkv"},
-         {"id":"C","filename":"Show.S01E02.1080p.mkv","download":"https://x.download.real-debrid.com/d/C/s1e2.mkv"},
-         {"id":"D","filename":"archive.zip","mimeType":"application/zip","download":"https://x.download.real-debrid.com/d/D/a.zip"}]
+        [{"id":"A","filename":"Sandstorm.Part.Two.2024.2160p.WEB.mkv","mimeType":"video/x-matroska","download":"https://dl.example.com/d/A/Sandstorm.mkv","streamable":1},
+         {"id":"B","filename":"Show.S01E01.1080p.mkv","mimeType":"video/x-matroska","download":"https://dl.example.com/d/B/s1e1.mkv"},
+         {"id":"C","filename":"Show.S01E02.1080p.mkv","download":"https://dl.example.com/d/C/s1e2.mkv"},
+         {"id":"D","filename":"archive.zip","mimeType":"application/zip","download":"https://dl.example.com/d/D/a.zip"}]
         """.utf8)
         let content = try await RealDebridClient(token: "T", http: http).fetchContent()
         XCTAssertEqual(content.movies.map(\.name), ["Sandstorm Part Two"])

@@ -97,12 +97,16 @@ public enum JSONPlaylistParser {
         guard let object = try? JSONSerialization.jsonObject(with: data) else {
             return M3UPlaylist(headerAttributes: [:], entries: [])
         }
+        // Objects of the list; a stray `null` or string among them is skipped rather than failing the whole cast.
+        func objects(_ value: Any?) -> [[String: Any]]? {
+            (value as? [Any]).map { $0.compactMap { $0 as? [String: Any] } }
+        }
         var items: [[String: Any]] = []
-        if let array = object as? [[String: Any]] {
+        if let array = objects(object) {
             items = array
         } else if let dictionary = object as? [String: Any] {
             for key in ["channels", "items", "streams", "playlist", "data", "list"] {
-                if let array = dictionary[key] as? [[String: Any]] {
+                if let array = objects(dictionary[key]) {
                     items = array
                     break
                 }

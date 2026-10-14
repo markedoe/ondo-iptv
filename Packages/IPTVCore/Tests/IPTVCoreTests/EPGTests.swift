@@ -96,6 +96,34 @@ final class EPGTests: XCTestCase {
         XCTAssertNil(merged.programs["d"])
     }
 
+    /// A long programme holding a short one (a film around a news flash) still blocks what overlaps its end.
+    func testMergeSeesOverlapsBehindANestedProgramme() {
+        var merged = EPGData(programs: ["c": [
+            EPGProgram(channelID: "c", title: "Long", start: .utc(2025, 1, 1, 10), end: .utc(2025, 1, 1, 14)),
+            EPGProgram(channelID: "c", title: "Flash", start: .utc(2025, 1, 1, 11), end: .utc(2025, 1, 1, 12)),
+        ]])
+        merged.merge(EPGData(programs: ["c": [
+            EPGProgram(channelID: "c", title: "Inside", start: .utc(2025, 1, 1, 12, 30), end: .utc(2025, 1, 1, 13)),
+            EPGProgram(channelID: "c", title: "Before", start: .utc(2025, 1, 1, 9), end: .utc(2025, 1, 1, 10)),
+            EPGProgram(channelID: "c", title: "After", start: .utc(2025, 1, 1, 14), end: .utc(2025, 1, 1, 15)),
+        ]]))
+        XCTAssertEqual(merged.programs["c"]?.map(\.title), ["Before", "Long", "Flash", "After"])
+    }
+
+    /// An error page answered with a 200 is reported, not taken for an empty guide; a damaged guide keeps what
+    /// could be read.
+    func testDamagedGuides() throws {
+        for page in ["<html><body>Forbidden</body></html>", "<html><body>Forbidden</body>", "Forbidden", ""] {
+            XCTAssertThrowsError(try XMLTVParser.parse(Data(page.utf8)), page) { error in
+                XCTAssertTrue(error is XMLTVParser.ParseError, "\(error)")
+            }
+        }
+        XCTAssertEqual(try XMLTVParser.parse(Data("<?xml version=\"1.0\"?><tv></tv>".utf8)).programCount, 0, "an empty guide is not an error")
+        let xml = try Fixture.data("epg.xml")
+        let truncated = try XMLTVParser.parse(xml.prefix(xml.count - 200))
+        XCTAssertEqual(truncated.programs["TV1.fr"]?.map(\.title), ["Le JT", "Film du soir"], "what was read before the damage is kept")
+    }
+
     func testInsertShortEPG() {
         var index = EPGIndex.empty
         let channel = Channel(id: "x1", name: "TV1", categoryID: "c", streamURL: URL(string: "http://x/1")!, epgID: "TV1.fr")
@@ -103,7 +131,7 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(index.current(for: channel, at: .utc(2025, 1, 1, 10, 30))?.title, "JT")
     }
 
-    func testGzipRoundTripErrors() throws {
+    func testPlainDataIsLeftAloneAndBrokenGzipThrows() throws {
         XCTAssertFalse(Data("plain".utf8).isGzipped)
         XCTAssertEqual(try Data("plain".utf8).gunzippedIfNeeded(), Data("plain".utf8))
         XCTAssertThrowsError(try Data([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xff]).gunzipped())
@@ -123,6 +151,9 @@ final class EPGTests: XCTestCase {
         XCTAssertThrowsError(try compressed.gunzipped(limit: 100)) { error in
             XCTAssertEqual(error as? GzipError, .outputTooLarge(100))
         }
+    }
+
+    func testABrokenGuideIsTheProvidersFault() {
         XCTAssertEqual(ErrorAttribution.classify(GzipError.inflateFailed(-3)), .provider, "a broken file is the provider's")
         XCTAssertEqual(ErrorAttribution.classify(XMLTVParser.ParseError.invalidXML("x")), .provider)
     }
@@ -170,6 +201,34 @@ final class EPGMatchingTests: XCTestCase {
         index.overrides = ["1": ""]
         XCTAssertNil(index.guideID(for: tv1))
         XCTAssertTrue(index.programs(for: tv1).isEmpty)
+    }
+
+    /// Guide channels sharing a name ("TV1 HD", "TV1 FHD") or an id up to case must not take turns from one
+    /// launch to the next: the index is built from dictionaries, whose order changes every time.
+    func testMatchingIsTheSameAtEveryBuild() {
+        for _ in 0..<30 {
+            var data = EPGData()
+            for (id, name) in [("b.tv1", "TV1 HD"), ("a.tv1", "TV1 FHD"), ("c.tv1", "TV1")] {
+                data.channels[id] = EPGChannel(id: id, displayNames: [name])
+            }
+            for id in ["b.tv1", "c.tv1", "a.tv1", "nation2.FR", "Nation2.fr", "aria.hd", "aria-hd"] {
+                data.programs[id] = [program(id, "News", hour: 0)]
+            }
+            let index = EPGIndex(data: data)
+            XCTAssertEqual(index.guideID(for: channel("FR: TV1 HD")), "a.tv1", "same display name: the smallest id")
+            XCTAssertEqual(index.guideID(for: channel("Nation", epgID: "NATION2.fr")), "Nation2.fr", "same id up to case")
+            XCTAssertEqual(index.guideID(for: channel("Aria")), "aria-hd", "same name from the id")
+        }
+    }
+
+    func testInsertingProgrammesMatchesLikeABuild() {
+        var inserted = EPGIndex(data: EPGData(channels: ["tv1.fr": EPGChannel(id: "tv1.fr", displayNames: ["TV1"])]))
+        let tv1 = channel("FR: TV1 HD", id: "1", epgID: "x-tv1")
+        XCTAssertNil(inserted.guideID(for: tv1), "a guide channel without programmes is not matched by its name")
+        inserted.insert([program("tv1.fr", "Journal", hour: 0)], for: channel("TV1", id: "2", epgID: "tv1.fr"))
+        XCTAssertEqual(inserted.guideID(for: tv1), "tv1.fr", "its programmes make its display name count")
+        XCTAssertEqual(inserted.current(for: tv1, at: start.addingTimeInterval(60))?.title, "Journal")
+        XCTAssertEqual(EPGIndex(data: inserted.data).guideID(for: tv1), "tv1.fr")
     }
 
     func testSuggestionsRankSimilarNamesFirst() {

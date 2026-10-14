@@ -114,7 +114,8 @@ public enum M3UContentBuilder {
         )
     }
 
-    /// Reads `catchup`, `catchup-type`, `catchup-days`, `catchup-source`, `timeshift`, `tvg-rec`, `tv_archive`.
+    /// Reads `catchup` / `catchup-type`, `catchup-days` / `timeshift` / `tvg-rec` / `tv_archive_duration`, and
+    /// `catchup-source`. A type without a number of days means a week.
     static func catchupInfo(from attributes: [String: String], url: URL?) -> CatchupInfo? {
         let typeValue = (attributes["catchup"] ?? attributes["catchup-type"])?.lowercased().nilIfBlank
         let daysValue = attributes["catchup-days"] ?? attributes["timeshift"] ?? attributes["tvg-rec"]
@@ -236,8 +237,14 @@ public struct ContentClassifier {
         let utf8 = Array(url.absoluteString.utf8)
         var end = utf8.count
         if let query = utf8.firstIndex(where: { $0 == 0x3F || $0 == 0x23 }) { end = query } // ? or #
+        // Start at the path: the host's name is not an extension ("http://example.com" has none).
+        var pathStart = -1
+        if let colon = utf8[..<end].firstIndex(of: 0x3A), colon + 2 < end, utf8[colon + 1] == 0x2F, utf8[colon + 2] == 0x2F {
+            guard let slash = utf8[(colon + 3)..<end].firstIndex(of: 0x2F) else { return "" }
+            pathStart = slash
+        }
         var index = end - 1
-        while index >= 0 {
+        while index > pathStart {
             let c = utf8[index]
             if c == 0x2E { // '.'
                 let ext = utf8[(index + 1)..<end]
@@ -307,7 +314,7 @@ public enum TitleParser {
             guard !name.isEmpty else { continue }
             var rest = ""
             if let restRange = Range(match.range(at: 4), in: title) {
-                // Strip leading separators only: "... - Cat's in the Bag..." keeps its ellipsis.
+                // Strip leading separators only: "... - Down the Drain..." keeps its ellipsis.
                 let separators = CharacterSet(charactersIn: " -–|:._")
                 rest = String(String(title[restRange]).unicodeScalars.drop(while: { separators.contains($0) }))
                     .trimmingCharacters(in: .whitespaces)

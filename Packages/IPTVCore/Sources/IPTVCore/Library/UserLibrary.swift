@@ -292,7 +292,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         reminders.filter { $0.end > date }
     }
 
-    /// Drops reminders (and their markers) of programmes that ended before `date`.
+    /// Drops reminders of programmes that ended before `date`, and deletion markers over two weeks old: other
+    /// devices have had time to sync the deletion, and the programme is over anyway.
     public mutating func pruneReminders(endedBefore date: Date) {
         reminders.removeAll { $0.end < date }
         let stale = date.addingTimeInterval(-14 * 86_400)

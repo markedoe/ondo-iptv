@@ -290,7 +290,6 @@ public struct SeriesDetails: Codable, Hashable, Sendable {
     }
 }
 
-/// Everything a playlist contains, as cached on disk.
 /// The user's changes to a playlist channel.
 public struct ChannelEdit: Codable, Hashable, Sendable {
     public var name: String?
@@ -304,6 +303,7 @@ public struct ChannelEdit: Codable, Hashable, Sendable {
     public var isEmpty: Bool { name == nil && number == nil }
 }
 
+/// Everything a playlist contains, as cached on disk.
 public struct PlaylistContent: Codable, Hashable, Sendable {
     public var liveCategories: [MediaCategory]
     public var channels: [Channel]

@@ -124,11 +124,11 @@ final class XtreamTests: XCTestCase {
     func testSeriesDetailsWithDictionaryEpisodes() async throws {
         let details = try await XtreamClient(credentials: credentials, http: try mock()).seriesDetails(seriesID: 9000)
         XCTAssertEqual(details.info.title, "Copper Valley")
-        XCTAssertEqual(details.info.backdropURL?.absoluteString, "http://img.example.com/bb_back.jpg")
+        XCTAssertEqual(details.info.backdropURL?.absoluteString, "http://img.example.com/copper_back.jpg")
         XCTAssertEqual(details.seasons.map(\.number), [1, 2])
         XCTAssertEqual(details.seasons[0].name, "Saison 1")
         XCTAssertEqual(details.seasons[0].coverURL?.absoluteString, "http://img.example.com/s1_big.jpg")
-        XCTAssertEqual(details.seasons[0].episodes.map(\.title), ["Pilot", "Cat's in the Bag..."])
+        XCTAssertEqual(details.seasons[0].episodes.map(\.title), ["Pilot", "Down the Drain..."])
         XCTAssertEqual(details.seasons[0].episodes[0].durationSeconds, 3480)
         XCTAssertEqual(details.seasons[1].episodes[0].durationSeconds, 2820)
         XCTAssertEqual(details.seasons[1].episodes[0].streamURL.absoluteString, "http://panel.example.com:8080/series/demo/se%2Fcr+et/9010.mp4")
@@ -160,6 +160,20 @@ final class XtreamTests: XCTestCase {
         XCTAssertEqual(programs[0].start, Date(timeIntervalSince1970: 1_760_032_800))
     }
 
+    /// A few panels send the guide as plain text: short titles such as "Film" or "Show" are valid base64 as well
+    /// and must stay as sent instead of turning into garbage.
+    func testShortEPGInPlainTextStaysReadable() async throws {
+        let http = MockHTTPClient()
+        http.routes["api:get_short_epg"] = Data(#"""
+        {"epg_listings":[{"title":"Film","description":"","start_timestamp":1760032800,"stop_timestamp":1760035500},
+        {"title":"Show","description":"Le magazine du soir","start_timestamp":1760035500,"stop_timestamp":1760039100}]}
+        """#.utf8)
+        let programs = try await XtreamClient(credentials: credentials, http: http).shortEPG(streamID: 101, epgChannelID: "TV1.fr")
+        XCTAssertEqual(programs.map(\.title), ["Film", "Show"])
+        XCTAssertNil(programs[0].summary)
+        XCTAssertEqual(programs[1].summary, "Le magazine du soir")
+    }
+
     func testURLBuilder() {
         let builder = XtreamURLBuilder(credentials: credentials)
         let api = builder.apiURL(action: "get_series_info", parameters: ["series_id": "3"])
@@ -184,6 +198,43 @@ final class XtreamTests: XCTestCase {
         let fromLink = XtreamCredentials.fromM3ULink(URL(string: "http://p.example.com:80/get.php?username=u1&password=p1&type=m3u_plus&output=ts")!)
         XCTAssertEqual(fromLink, XtreamCredentials(server: URL(string: "http://p.example.com:80")!, username: "u1", password: "p1"))
         XCTAssertNil(XtreamCredentials.fromM3ULink(URL(string: "http://p.example.com/list.m3u")!))
+    }
+
+    /// Reserved characters in the login survive both URL forms, there and back: a live URL parsed again (for
+    /// the HLS fallback and catch-up of a plain M3U) must give back the very same password.
+    func testCredentialsWithReservedCharactersRoundTrip() throws {
+        let password = "p/a%20s+s&w=o#r?d"  // leak-guard: allow (fictional, made of reserved characters)
+        let tricky = XtreamCredentials(server: URL(string: "http://panel.example.com:8080")!, username: "user name", password: password)
+        let builder = XtreamURLBuilder(credentials: tricky)
+        let live = builder.liveURL(streamID: 42, format: .ts)
+        let parsed = try XCTUnwrap(XtreamURLBuilder.parseLiveURL(live), live.absoluteString)
+        XCTAssertEqual(parsed.username, tricky.username)
+        XCTAssertEqual(parsed.password, tricky.password)
+        XCTAssertEqual(parsed.streamID, 42)
+        XCTAssertEqual(XtreamURLBuilder.alternateFormatURL(for: live), builder.liveURL(streamID: 42, format: .m3u8))
+
+        let query = try XCTUnwrap(URLComponents(url: builder.apiURL(action: "get_live_streams"), resolvingAgainstBaseURL: false)?.queryItems)
+        XCTAssertEqual(query.map(\.name), ["username", "password", "action"], "`&` and `=` in the password do not split it")
+        XCTAssertEqual(query[0].value, tricky.username)
+        XCTAssertEqual(query[1].value, tricky.password)
+    }
+
+    /// Numbers a panel writes out of range ("nan", 1e300…) are dropped like any other bad value, never trapped on.
+    func testOutOfRangeNumbersAreIgnored() throws {
+        let json = #"""
+        [{"stream_id":"nan","name":"No id"},
+         {"stream_id":101,"name":1e300,"num":"inf","tv_archive":"NaN","tv_archive_duration":1e300,"added":"1e30"},
+         {"stream_id":102,"name":"Nation 2","num":-1e19,"tv_archive_duration":"7.9"}]
+        """#
+        let list = try JSONDecoder().decode(LossyArray<XtreamLiveStreamDTO>.self, from: Data(json.utf8)).elements
+        XCTAssertEqual(list.map(\.streamID), [101, 102], "an id that is not a number skips the entry")
+        XCTAssertFalse(list[0].name.isEmpty)
+        XCTAssertNil(list[0].number)
+        XCTAssertFalse(list[0].tvArchive)
+        XCTAssertNil(list[0].tvArchiveDuration)
+        XCTAssertNil(list[0].added)
+        XCTAssertNil(list[1].number)
+        XCTAssertEqual(list[1].tvArchiveDuration, 7)
     }
 
     func testLiveURLRecognition() {

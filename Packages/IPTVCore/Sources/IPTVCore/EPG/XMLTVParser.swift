@@ -46,9 +46,13 @@ public enum XMLTVParser {
         parser.shouldProcessNamespaces = false
         parser.shouldResolveExternalEntities = false
         parser.delegate = delegate
-        let ok = parser.parse()
-        if !ok, delegate.programCount == 0, delegate.channels.isEmpty {
-            throw ParseError.invalidXML(parser.parserError?.localizedDescription ?? "unknown error")
+        // Some platforms report a premature end only through `parserError`, with `parse()` returning true.
+        let failed = !parser.parse() || parser.parserError != nil
+        // A guide cut short or damaged near its end keeps what was read before the damage. A file that yields
+        // nothing is an error when it is broken or is not a guide at all: providers answer some refusals with an
+        // HTML page and a 200, which must not pass for an empty guide.
+        if delegate.programCount == 0, delegate.channels.isEmpty, failed || !delegate.sawGuideElement {
+            throw ParseError.invalidXML(parser.parserError?.localizedDescription ?? "no <tv> element")
         }
         return delegate.result()
     }
@@ -111,6 +115,8 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
     var channels: [String: EPGChannel] = [:]
     var programs: [String: [EPGProgram]] = [:]
     var programCount = 0
+    /// Whether the document has the `<tv>` element of an XMLTV guide.
+    private(set) var sawGuideElement = false
 
     // Channel being parsed.
     private var channelID: String?
@@ -159,6 +165,8 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
 
     func parser(_ parser: XMLParser, didStartElement elementName: String, namespaceURI: String?, qualifiedName qName: String?, attributes: [String: String] = [:]) {
         switch elementName {
+        case "tv":
+            sawGuideElement = true
         case "programme":
             guard let channel = attributes["channel"],
                   let start = attributes["start"].flatMap(XMLTVParser.parseDate) else {

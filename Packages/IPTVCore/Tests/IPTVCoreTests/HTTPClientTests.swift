@@ -72,7 +72,12 @@ final class HTTPClientTests: XCTestCase {
             return try await client.data(from: url, headers: [:])
         }
         let started = Date()
-        await XCTAssertThrowsErrorAsync(try await download.value)
+        do {
+            _ = try await download.value
+            XCTFail("a cancelled caller cannot receive data")
+        } catch {
+            XCTAssertEqual((error as? URLError)?.code, .cancelled, "\(error)")
+        }
         XCTAssertLessThan(Date().timeIntervalSince(started), 5)
     }
 
@@ -92,11 +97,4 @@ private func bindSocket(_ fd: Int32, _ address: UnsafePointer<sockaddr>, _ lengt
     #else
     return Darwin.bind(fd, address, length)
     #endif
-}
-
-func XCTAssertThrowsErrorAsync<T>(_ expression: @autoclosure () async throws -> T, file: StaticString = #filePath, line: UInt = #line) async {
-    do {
-        _ = try await expression()
-        XCTFail("expected an error", file: file, line: line)
-    } catch {}
 }

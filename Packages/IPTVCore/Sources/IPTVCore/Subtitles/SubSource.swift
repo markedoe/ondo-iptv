@@ -67,7 +67,7 @@ public struct SubSourceClient: SubtitleProvider {
         return try SubtitleArchive.pick(from: data, episodeCode: query.episodeCode)
     }
 
-    /// Same season for a series; the release year when known; else the first answer.
+    /// Same season for a series; then the release year when known; else the exact title; else the first answer.
     static func bestMatch(_ titles: [Title], for query: SubtitleQuery) -> Title? {
         var candidates = titles
         if let season = query.season {

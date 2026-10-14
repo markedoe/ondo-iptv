@@ -20,8 +20,10 @@ public enum SubtitleParser {
 
     /// Subtitle files come in UTF-8 or, very often for French and other Western languages, Windows-1252:
     /// read as Latin-1 its curly apostrophes and "œ" turn into control characters. Decoded here rather than
-    /// by Foundation, which does not on every platform.
+    /// by Foundation, which does not on every platform. Some editors save UTF-16, always with a byte order mark.
     public static func decode(_ data: Data) -> String {
+        if data.starts(with: [0xFF, 0xFE]), let text = String(data: data.dropFirst(2), encoding: .utf16LittleEndian) { return text }
+        if data.starts(with: [0xFE, 0xFF]), let text = String(data: data.dropFirst(2), encoding: .utf16BigEndian) { return text }
         if let text = String(data: data, encoding: .utf8) { return text }
         var scalars = String.UnicodeScalarView()
         for byte in data {
@@ -42,6 +44,10 @@ public enum SubtitleParser {
             .replacingOccurrences(of: "\r\n", with: "\n")
             .replacingOccurrences(of: "\r", with: "\n")
             .replacingOccurrences(of: "\u{FEFF}", with: "")
+            // A line holding only spaces still separates two cues.
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces).isEmpty ? "" : $0 }
+            .joined(separator: "\n")
         var cues: [SubtitleCue] = []
         for block in normalized.components(separatedBy: "\n\n") {
             let lines = block.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)

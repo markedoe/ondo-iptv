@@ -74,7 +74,7 @@ final class SubtitleSearchTests: XCTestCase {
         XCTAssertEqual(request.headers["Api-Key"], "key-example-0001")
         XCTAssertEqual(request.headers["User-Agent"], userAgent)
         XCTAssertNil(request.headers["Authorization"], "searching never signs in")
-        XCTAssertEqual(request.url.query, "languages=fr,en&query=quiet%20water&type=movie&year=2021")
+        XCTAssertEqual(request.url.query, "languages=en,fr&query=quiet%20water&type=movie&year=2021")
     }
 
     func testOpenSubtitlesSignsInOnceForDownloadsAndUsesTheReturnedServer() async throws {
@@ -111,13 +111,13 @@ final class SubtitleSearchTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? SubtitleSearchError, .invalidCredentials(.openSubtitles))
         }
-        _ = try await client.download(subtitle, for: movie)  // without the account, within the free limit
+        _ = try await client.download(subtitle, for: movie)  // without the account, within the anonymous download limit
         XCTAssertEqual(http.sent.filter { $0.url.path.hasSuffix("/login") }.count, 1, "the service asks not to retry a refused login")
     }
 
     func testOpenSubtitlesExplainsARefusedKeyAndAnExhaustedQuota() async throws {
         let http = MockHTTPClient()
-        http.failures["https://api.opensubtitles.com/api/v1/subtitles?languages=fr,en&query=quiet%20water&type=movie&year=2021"] = [HTTPClientError.badStatus(403)]
+        http.failures["https://api.opensubtitles.com/api/v1/subtitles?languages=en,fr&query=quiet%20water&type=movie&year=2021"] = [HTTPClientError.badStatus(403)]
         http.failures["POST https://api.opensubtitles.com/api/v1/download"] = [HTTPClientError.badStatus(406)]
         let client = OpenSubtitlesClient(apiKey: "bad", userAgent: userAgent, http: http)
         do {
@@ -132,6 +132,21 @@ final class SubtitleSearchTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? SubtitleSearchError, .quotaReached(.openSubtitles))
         }
+    }
+
+    /// An expired session is opened again once; what goes wrong after that is explained like a first failure.
+    func testOpenSubtitlesExplainsAFailureAfterSigningInAgain() async throws {
+        let http = MockHTTPClient()
+        http.routes["POST https://api.opensubtitles.com/api/v1/login"] = json(#"{"token":"jwt-example","base_url":"vip-api.opensubtitles.com"}"#)
+        http.failures["POST https://vip-api.opensubtitles.com/api/v1/download"] = [HTTPClientError.badStatus(401), HTTPClientError.badStatus(406)]
+        let client = OpenSubtitlesClient(apiKey: "key-example-0001", username: "viewer", password: "pass-example", userAgent: userAgent, http: http)
+        do {
+            _ = try await client.download(OnlineSubtitle(service: .openSubtitles, reference: "5001", language: "fr", release: "r"), for: movie)
+            XCTFail("expected an error")
+        } catch {
+            XCTAssertEqual(error as? SubtitleSearchError, .quotaReached(.openSubtitles), "\(error)")
+        }
+        XCTAssertEqual(http.sent.filter { $0.url.path.hasSuffix("/login") }.count, 2, "signed in again once, after the 401")
     }
 
     // MARK: SubDL

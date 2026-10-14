@@ -21,8 +21,11 @@ final class PerformanceTests: XCTestCase {
 
         let searchStart = Date()
         let engine = SearchEngine(content: content)
-        _ = engine.search("item 59")
-        print("search index + query in \(Date().timeIntervalSince(searchStart))s")
+        let results = engine.search("item 59999")
+        let searchElapsed = Date().timeIntervalSince(searchStart)
+        print("search index + query in \(searchElapsed)s")
+        XCTAssertEqual(results.channels.map(\.name), ["Item 59999"])
+        XCTAssertLessThan(searchElapsed, 10)
     }
 
     func testLargeGuideParsesQuickly() throws {
@@ -45,6 +48,30 @@ final class PerformanceTests: XCTestCase {
         XCTAssertEqual(data.programCount, 250 * 200)
         print("100k programmes parsed (50k kept) in \(elapsed)s")
         XCTAssertLessThan(elapsed, 30)
+    }
+
+    /// A user guide and the provider's covering the same channels: overlap checks must not scan every programme.
+    func testMergingTwoLargeGuidesIsQuick() {
+        let base = Date.utc(2025, 10, 9, 0)
+        func guide(from first: Int) -> EPGData {
+            var data = EPGData()
+            for c in 0..<200 {
+                data.programs["ch\(c)"] = (first..<(first + 1000)).map { p in
+                    EPGProgram(channelID: "ch\(c)", title: "Show \(p)",
+                               start: base.addingTimeInterval(Double(p) * 1800), end: base.addingTimeInterval(Double(p + 1) * 1800))
+                }
+            }
+            return data
+        }
+        var merged = guide(from: 0)
+        let later = guide(from: 500)  // half of it overlaps, half is new
+        let start = Date()
+        merged.merge(later)
+        let elapsed = Date().timeIntervalSince(start)
+        print("200 channels x 1000 programmes merged in \(elapsed)s")
+        XCTAssertEqual(merged.programCount, 200 * 1500)
+        XCTAssertEqual(merged.programs["ch0"]?.map(\.title).suffix(2), ["Show 1498", "Show 1499"])
+        XCTAssertLessThan(elapsed, 5)
     }
 
     private func stamp(_ date: Date) -> String {

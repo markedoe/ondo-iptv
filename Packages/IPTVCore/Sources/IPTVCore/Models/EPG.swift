@@ -99,12 +99,42 @@ public struct EPGData: Codable, Hashable, Sendable {
                 programs[id] = incoming
                 continue
             }
+            let taken = TakenSlots(existing)
             var combined = existing
-            for program in incoming where !existing.contains(where: { $0.start < program.end && program.start < $0.end }) {
+            for program in incoming where !taken.overlaps(program) {
                 combined.append(program)
             }
             combined.sort { $0.start < $1.start }
             programs[id] = combined
+        }
+    }
+
+    /// The time a channel's programmes take, to tell in O(log n) whether another programme overlaps one of
+    /// them: scanning the list for each programme of a second guide took seconds on full-size guides.
+    private struct TakenSlots {
+        let starts: [Date]
+        /// Latest end among the programmes up to each index (programmes can overlap, so ends are not sorted).
+        let latestEnds: [Date]
+
+        init(_ programs: [EPGProgram]) {
+            let sorted = programs.sorted { $0.start < $1.start }
+            starts = sorted.map(\.start)
+            var latest = Date.distantPast
+            latestEnds = sorted.map { program in
+                latest = max(latest, program.end)
+                return latest
+            }
+        }
+
+        /// Whether one of the programmes starting before `program` ends is still on when it starts.
+        func overlaps(_ program: EPGProgram) -> Bool {
+            var low = 0
+            var high = starts.count
+            while low < high {
+                let mid = (low + high) / 2
+                if starts[mid] < program.end { low = mid + 1 } else { high = mid }
+            }
+            return low > 0 && latestEnds[low - 1] > program.start
         }
     }
 

@@ -14,13 +14,13 @@ http://aria.example.com/live.m3u8|User-Agent=ExamplePlayer%2F20&Referer=http%3A%
 http://radio.example.com/wave.mp3
 #EXTINF:-1 tvg-logo="http://img.example.com/lighthouse.jpg" group-title="VOD | Films",Lighthouse (2010)
 http://host.example.com:8080/movie/user/pass/5001.mkv
-#EXTINF:7200 group-title="Films Action",Mad Max Fury Road
-http://cdn.example.com/films/madmax.mp4
-#EXTINF:-1 tvg-logo="http://img.example.com/bb.jpg" group-title="Séries US",Copper Valley S01 E01 Pilot
+#EXTINF:7200 group-title="Films Action",Dust Road Fury
+http://cdn.example.com/films/dust-road.mp4
+#EXTINF:-1 tvg-logo="http://img.example.com/copper.jpg" group-title="Séries US",Copper Valley S01 E01 Pilot
 http://host.example.com:8080/series/user/pass/9001.mkv
-#EXTINF:-1 tvg-logo="http://img.example.com/bb.jpg" group-title="Séries US",Copper Valley S01 E02
+#EXTINF:-1 tvg-logo="http://img.example.com/copper.jpg" group-title="Séries US",Copper Valley S01 E02
 http://host.example.com:8080/series/user/pass/9002.mkv
-#EXTINF:-1 group-title="Séries US",Copper Valley S02E01 - Seven Thirty-Seven
+#EXTINF:-1 group-title="Séries US",Copper Valley S02E01 - Seven Bridges
 http://host.example.com:8080/series/user/pass/9010.mkv
 #EXTINF:-1 group-title="XXX Adults",Hot channel
 http://host.example.com:8080/live/user/pass/666.ts

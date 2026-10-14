@@ -3,13 +3,18 @@ import Foundation
 /// Fast guide lookups for playlist channels.
 ///
 /// Matching order: the user's manual choice, exact `tvg-id`, case-insensitive `tvg-id`, then normalised
-/// names (`tvg-name` / channel name vs. XMLTV `display-name` / id).
+/// names (`tvg-name` / channel name vs. XMLTV `display-name`, then vs. guide id). When several guide channels
+/// fit equally, the smallest id wins, so a channel gets the same guide at every launch.
 public struct EPGIndex: Sendable {
     public private(set) var data: EPGData
     /// Playlist channel id -> guide channel id chosen by the user ("" = no guide).
     public var overrides: [String: String]
+    /// Lowercased guide id -> guide id.
     private var lowercasedIDs: [String: String] = [:]
-    private var nameKeys: [String: String] = [:]
+    /// Name key -> guide id, from the display names of guide channels that have programmes.
+    private var displayNameKeys: [String: String] = [:]
+    /// Name key -> guide id, from the guide ids themselves (used when no display name matches).
+    private var idNameKeys: [String: String] = [:]
 
     public init(data: EPGData, overrides: [String: String] = [:]) {
         self.data = data
@@ -23,20 +28,30 @@ public struct EPGIndex: Sendable {
 
     private mutating func rebuildLookups() {
         lowercasedIDs = [:]
-        nameKeys = [:]
-        let ids = Set(data.programs.keys).union(data.channels.keys)
-        for id in ids {
-            lowercasedIDs[id.lowercased()] = lowercasedIDs[id.lowercased()] ?? id
-            let idKey = TextNormalizer.channelMatchKey(id)
-            if !idKey.isEmpty, nameKeys[idKey] == nil { nameKeys[idKey] = id }
+        displayNameKeys = [:]
+        idNameKeys = [:]
+        for id in data.programs.keys { addLookups(for: id) }
+        for id in data.channels.keys where data.programs[id] == nil { addLookups(for: id) }
+    }
+
+    /// Registers one guide id. A key several ids claim goes to the smallest, whatever order they come in:
+    /// dictionaries iterate in a different order at every launch, and this also lets `insert` update the
+    /// lookups for one id instead of rebuilding them.
+    private mutating func addLookups(for id: String) {
+        Self.claim(&lowercasedIDs, id.lowercased(), for: id)
+        Self.claim(&idNameKeys, TextNormalizer.channelMatchKey(id), for: id)
+        // Display names count only for guide channels with programmes: matching a name to a channel with
+        // nothing to show would hide one that has some. `suggestions(for:)` still offers it.
+        guard data.programs[id] != nil, let channel = data.channels[id] else { return }
+        for name in channel.displayNames {
+            Self.claim(&displayNameKeys, TextNormalizer.channelMatchKey(name), for: id)
         }
-        // Display names take precedence over ids for name matching.
-        for (id, channel) in data.channels where data.programs[id] != nil {
-            for name in channel.displayNames {
-                let key = TextNormalizer.channelMatchKey(name)
-                if !key.isEmpty { nameKeys[key] = id }
-            }
-        }
+    }
+
+    private static func claim(_ table: inout [String: String], _ key: String, for id: String) {
+        guard !key.isEmpty else { return }
+        if let holder = table[key], holder <= id { return }
+        table[key] = id
     }
 
     /// Guide channel id for a playlist channel, if any.
@@ -55,7 +70,7 @@ public struct EPGIndex: Sendable {
         }
         for candidate in [channel.epgName, channel.name, channel.epgID].compactMap({ $0 }) {
             let key = TextNormalizer.channelMatchKey(candidate)
-            if !key.isEmpty, let id = nameKeys[key] { return id }
+            if !key.isEmpty, let id = displayNameKeys[key] ?? idNameKeys[key] { return id }
         }
         return nil
     }
@@ -212,6 +227,7 @@ public struct EPGIndex: Sendable {
         var addition = EPGData()
         addition.programs[id] = programs.map { var p = $0; p.channelID = id; return p }
         data.merge(addition)
-        rebuildLookups()
+        // Only `id` changed: rebuilding every lookup here would normalise the whole guide on each insert.
+        addLookups(for: id)
     }
 }

@@ -7,7 +7,7 @@ extension KeyedDecodingContainer {
         if let value = try? decodeIfPresent(String.self, forKey: key) { return value }
         if let value = try? decodeIfPresent(Int.self, forKey: key) { return String(value) }
         if let value = try? decodeIfPresent(Double.self, forKey: key) {
-            return value.rounded() == value ? String(Int(value)) : String(value)
+            return Int(exactly: value).map(String.init) ?? String(value)
         }
         if let value = try? decodeIfPresent(Bool.self, forKey: key) { return value ? "1" : "0" }
         if let values = try? decodeIfPresent([String].self, forKey: key) { return values.first }
@@ -19,12 +19,17 @@ extension KeyedDecodingContainer {
         if let value = try? decodeIfPresent(String.self, forKey: key) {
             let trimmed = value.trimmingCharacters(in: .whitespaces)
             if let int = Int(trimmed) { return int }
-            if let double = Double(trimmed) { return Int(double) }
-            return nil
+            return Double(trimmed).flatMap(Self.truncatedInt)
         }
-        if let value = try? decodeIfPresent(Double.self, forKey: key) { return Int(value) }
+        if let value = try? decodeIfPresent(Double.self, forKey: key) { return Self.truncatedInt(value) }
         if let value = try? decodeIfPresent(Bool.self, forKey: key) { return value ? 1 : 0 }
         return nil
+    }
+
+    /// `Int(_: Double)` traps on NaN, infinity and values beyond `Int`'s range, all of which a panel can send
+    /// ("nan", 1e300): those are dropped instead.
+    private static func truncatedInt(_ value: Double) -> Int? {
+        Int(exactly: value.rounded(.towardZero))
     }
 
     func lenientDouble(_ key: Key) -> Double? {

@@ -15,7 +15,8 @@ public struct SearchResults: Sendable {
     public var totalCount: Int { channels.count + movies.count + series.count }
 }
 
-/// Accent / case insensitive, word-prefix search over a playlist. Names are normalised once at init.
+/// Accent and case insensitive search over a playlist: every query word must appear in the name. Exact names
+/// rank first, then names starting with the query, then the others. Names are normalised once at init.
 public struct SearchEngine: Sendable {
     private let channels: [(key: String, item: Channel)]
     private let movies: [(key: String, item: Movie)]

@@ -118,8 +118,9 @@ public enum CatchupURLBuilder {
     private static let tokenRegex = try! NSRegularExpression(pattern: #"\$?\{([a-zA-Z_]+)(?::([^}]*))?\}"#)
 
     /// Replaces catch-up template tokens:
-    /// `{utc}` `{start}` `${start}` start (unix) · `{utcend}` `{end}` `${end}` end · `{lutc}` `{now}` `${now}`
-    /// `{timestamp}` now · `{duration}` seconds · `{duration:60}` minutes · `{offset}` / `{offset:60}` now - start ·
+    /// `{utc}` `{start}` `{timestamp_start}` start (unix) · `{utcend}` `{end}` end · `{lutc}` `{now}` `{timestamp}`
+    /// `{current}` now · `{duration}` seconds · `{duration:60}` minutes · `{offset}` / `{offset:60}` now - start ·
+    /// a `$` before the brace is accepted (`${start}`) ·
     /// `{Y}` `{m}` `{d}` `{H}` `{M}` `{S}` start components (UTC) · `{utc:Y-m-d:H-M}` `{end:YmdHMS}` formatted.
     public static func fill(template: String, start: Date, end: Date, now: Date) -> String {
         let startTS = Int(start.timeIntervalSince1970)

@@ -9,7 +9,7 @@ public enum DownloadProblem: Equatable, Sendable {
     case refused(status: Int)
     /// 404 / 410: the file is no longer on the provider's server.
     case notFound(status: Int)
-    /// 429, 458, 509…: too many connections or requests for the subscription.
+    /// 429, 456, 458, 509: too many connections or requests for the subscription.
     case tooManyConnections(status: Int)
     /// Any other HTTP error.
     case httpError(status: Int)

@@ -113,8 +113,11 @@ public struct XtreamURLBuilder: Sendable {
         guard let lastSlash = string.lastIndex(of: "/"),
               let first = string[string.index(after: lastSlash)...].first, first.isASCII, first.isNumber
         else { return nil }
-        guard let scheme = url.scheme, let host = url.host else { return nil }
-        var parts = url.path.split(separator: "/").map(String.init)
+        guard let scheme = url.scheme, let host = url.host,
+              let encodedPath = URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedPath else { return nil }
+        // Split the encoded path, then decode each part once: `url.path` is already decoded, so a `/` in the
+        // password would split it and a `%` would be decoded twice.
+        var parts = encodedPath.split(separator: "/").map(String.init)
         if parts.first == "live" { parts.removeFirst() }
         guard parts.count == 3 else { return nil }
         let last = parts[2]
