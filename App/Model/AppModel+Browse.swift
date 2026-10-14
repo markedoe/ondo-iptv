@@ -70,6 +70,7 @@ extension AppModel {
         let client = XtreamClient(credentials: credentials, http: http, headers: activePlaylist?.headers ?? .none)
         guard let details = try? await client.movieDetails(streamID: streamID) else { return nil }
         movieDetailsCache[movie.id] = details
+        detailsRevision += 1
         return details
     }
 
@@ -90,6 +91,7 @@ extension AppModel {
             )
         }
         seriesDetailsCache[series.id] = details
+        detailsRevision += 1
         return details
     }
 }

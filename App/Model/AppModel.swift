@@ -108,6 +108,10 @@ final class AppModel {
     @ObservationIgnored private var epgTask: Task<Void, Never>?
     @ObservationIgnored var movieDetailsCache: [String: MediaDetails] = [:]
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]
+    /// Bumped when details arrive. The caches are not observed (one change per entry would redraw every
+    /// list); screens that show cached details (hero, continue watching) read this instead, so a backdrop
+    /// or a plot that arrives after them appears.
+    var detailsRevision = 0
     @ObservationIgnored private var shortEPGRequested = Set<String>()
     /// Playlist channels per guide channel, rebuilt when the catalogue or the guide changes.
     @ObservationIgnored var channelsByGuideIDCache: (key: String, map: [String: [Channel]])?

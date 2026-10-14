@@ -136,6 +136,7 @@ extension AppModel {
 
     /// Details already loaded (no network).
     func cachedDetails(for item: ShowcaseItem) -> MediaDetails? {
+        _ = detailsRevision  // redraw the caller when details arrive
         switch item {
         case .movie(let movie): return movieDetailsCache[movie.id]
         case .series(let series): return seriesDetailsCache[series.id]?.info

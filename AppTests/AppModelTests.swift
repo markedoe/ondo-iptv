@@ -1,5 +1,6 @@
 import XCTest
 import IPTVCore
+import Observation
 @testable import Ondo
 
 /// Tests of the app layer (state, persistence, profiles, parental control) with an isolated
@@ -256,6 +257,19 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(values.isExcludedFromBackup, true)
     }
 
+    /// The hero and the continue-watching cards show cached details: when the details arrive after them
+    /// (Xtream info calls), they must redraw, or they keep the blurred poster and no plot.
+    func testDetailsThatArriveRedrawTheScreensShowingThem() async throws {
+        let model = try await modelWithPlaylist()
+        let series = Series(id: "harbor", name: "Harbor", categoryID: "c")
+        let item = ShowcaseItem.series(series)
+        let redrawn = Flag()
+        withObservationTracking { _ = model.cachedDetails(for: item) } onChange: { redrawn.set() }
+        _ = try await model.details(for: series)
+        XCTAssertTrue(redrawn.value)
+        XCTAssertEqual(model.cachedDetails(for: item)?.title, "Harbor")
+    }
+
     func testKidsProfileHidesAdultCategories() async throws {
         let model = try await modelWithPlaylist()
         let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
@@ -488,4 +502,12 @@ private final class SlowReminderScheduler: ReminderScheduling, @unchecked Sendab
         let wanted = Dictionary(reminders.map { ($0.id, $0.start.addingTimeInterval(-leadTime)) }, uniquingKeysWith: { first, _ in first })
         lock.withLock { pending = wanted }
     }
+}
+
+/// Set from an observation callback, which may run on any thread.
+private final class Flag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var isSet = false
+    var value: Bool { lock.withLock { isSet } }
+    func set() { lock.withLock { isSet = true } }
 }
