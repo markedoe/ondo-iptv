@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.pitest)
 }
 
 group = "com.markedoe.ondo"
@@ -29,4 +30,15 @@ dependencies {
 tasks.test {
     useJUnit()
     testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+}
+
+// Mutation testing (`./gradlew :core:pitest`, weekly in CI): Pitest plants small bugs in the compiled core
+// (inverted conditions, removed calls, changed boundaries) and lists those no test catches. Methods the
+// Kotlin compiler generates are left out: their mutants only add noise.
+pitest {
+    targetClasses.set(listOf("com.markedoe.ondo.core.*"))
+    excludedMethods.set(listOf("equals", "hashCode", "toString", "copy", "copy\$default", "component*"))
+    threads.set(4)
+    outputFormats.set(listOf("HTML", "XML"))
+    timestampedReports.set(false)
 }
