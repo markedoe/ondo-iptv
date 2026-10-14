@@ -200,44 +200,39 @@ final class OndoUITests: XCTestCase {
 
         app.tabBars.buttons["Movies"].tap()
         let allMovies = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'All'")).firstMatch
-        if allMovies.waitForExistence(timeout: 10) {
-            allMovies.tap()
-            sleep(2)
-            snapshot("08-movies")
-            let poster = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Northern Lights'")).firstMatch
-            if poster.waitForExistence(timeout: 5) {
-                poster.tap()
-                XCTAssertTrue(app.navigationBars["Northern Lights"].waitForExistence(timeout: 5), "movie detail on top")
-                sleep(1)
-                snapshot("09-movie-detail")
-            }
-        }
+        XCTAssertTrue(allMovies.waitForExistence(timeout: 10), "all movies")
+        allMovies.tap()
+        sleep(2)
+        snapshot("08-movies")
+        let poster = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Northern Lights'")).firstMatch
+        XCTAssertTrue(poster.waitForExistence(timeout: 5), "movie poster")
+        poster.tap()
+        XCTAssertTrue(app.navigationBars["Northern Lights"].waitForExistence(timeout: 5), "movie detail on top")
+        sleep(1)
+        snapshot("09-movie-detail")
 
         app.tabBars.buttons["Series"].tap()
         let allSeries = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'All'")).firstMatch
-        if allSeries.waitForExistence(timeout: 10) {
-            allSeries.tap()
-            let show = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Harbor Lights'")).firstMatch
-            if show.waitForExistence(timeout: 5) {
-                show.tap()
-                XCTAssertTrue(app.navigationBars["Harbor Lights"].waitForExistence(timeout: 5), "series detail on top")
-                sleep(1)
-                snapshot("10-series-detail")
-            }
-        }
+        XCTAssertTrue(allSeries.waitForExistence(timeout: 10), "all series")
+        allSeries.tap()
+        let show = app.buttons.matching(NSPredicate(format: "label CONTAINS 'Harbor Lights'")).firstMatch
+        XCTAssertTrue(show.waitForExistence(timeout: 5), "series poster")
+        show.tap()
+        XCTAssertTrue(app.navigationBars["Harbor Lights"].waitForExistence(timeout: 5), "series detail on top")
+        sleep(1)
+        snapshot("10-series-detail")
 
         app.tabBars.buttons["Search"].tap()
         let field = app.searchFields.firstMatch
-        if field.waitForExistence(timeout: 10) {
-            field.tap()
-            field.typeText("news")
-            sleep(2)
-            snapshot("11-search")
-            // The keyboard covers the tab bar: cancel the search (iOS 18) or submit it (iOS 26 has no Cancel).
-            let cancel = app.buttons["Cancel"]
-            if cancel.exists { cancel.tap() } else { field.typeText("\n") }
-            sleep(1)
-        }
+        XCTAssertTrue(field.waitForExistence(timeout: 10), "search field")
+        field.tap()
+        field.typeText("news")
+        sleep(2)
+        snapshot("11-search")
+        // The keyboard covers the tab bar: cancel the search (iOS 18) or submit it (iOS 26 has no Cancel).
+        let cancel = app.buttons["Cancel"]
+        if cancel.exists { cancel.tap() } else { field.typeText("\n") }
+        sleep(1)
 
         app.tabBars.buttons["Home"].tap()
         sleep(1)

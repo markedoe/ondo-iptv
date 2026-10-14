@@ -3,7 +3,8 @@ import SwiftUI
 #if os(iOS)
 import UIKit
 
-/// Lets the player force landscape on iPhone ("rotation per content type").
+/// Lets the player force landscape on iPhone ("rotation per content type") and hands the events of finished
+/// background downloads to `DownloadManager`.
 final class AppDelegate: NSObject, UIApplicationDelegate {
     static var orientationLock: UIInterfaceOrientationMask = .all
 
@@ -55,8 +56,9 @@ enum OrientationController {
 }
 #endif
 
-/// Touch layer of the player: tap shows controls, double tap on the sides seeks (or toggles fill),
-/// horizontal drag scrubs, vertical drag on the left adjusts brightness (iPhone / iPad).
+/// Touch layer of the player: tap shows or hides the controls, double tap seeks on the sides; in the middle (or
+/// when the stream cannot seek) it toggles fill, full screen on the Mac. Horizontal drag scrubs, vertical drag
+/// on the left adjusts brightness (iPhone / iPad).
 struct PlayerGestureLayer: View {
     let controller: PlayerController
     var onTap: () -> Void

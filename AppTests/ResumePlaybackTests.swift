@@ -3,7 +3,7 @@ import XCTest
 import IPTVCore
 @testable import Ondo
 
-/// "Resume" against a real stream (Apple's public HLS sample, as in the demo): AVPlayer, its timing and its
+/// "Resume" against a real stream (Apple's public HLS sample, as in the UI test fixture): AVPlayer, its timing and its
 /// seeks cannot be faked. When the resume does not start, the same stream is played from the beginning: the
 /// test fails if that works (the resume path stalls) and is skipped if it does not (no network here).
 /// What the player went through is attached to the result (published with the CI screenshots, in `debug/`).
@@ -118,7 +118,7 @@ final class ResumePlaybackTests: XCTestCase {
         controller.isMuted = true
         controller.load(film(startingAt: 120))
         controller.pause()
-        // Shown as paused at once; the resume seek is sent once the item is ready.
+        // The resume seek is sent once the item is ready; playback must not start with it.
         try await wait(controller, seconds: 45) {
             controller.player.currentItem?.status == .readyToPlay && controller.player.currentTime().seconds >= 115
         }

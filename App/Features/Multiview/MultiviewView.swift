@@ -1,7 +1,7 @@
 import SwiftUI
 import IPTVCore
 
-/// Up to four live channels side by side. Tap a tile to hear it, double-tap to open it full screen.
+/// Up to four live channels side by side. Tap a tile to hear it, double-tap to open it in the player.
 struct MultiviewView: View {
     @Environment(AppModel.self) private var model
     var onClose: () -> Void

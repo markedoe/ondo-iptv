@@ -31,7 +31,11 @@ struct WelcomeView: View {
                     FeatureRow(icon: "film.stack", title: "Movies & series", text: "Posters, details, seasons, continue watching and next episode.")
                     FeatureRow(icon: "list.bullet.rectangle", title: "M3U & Xtream Codes", text: "Add the playlists given by your provider.")
                     FeatureRow(icon: "tv", title: "Live TV & guide", text: "Channels, TV guide and replay when your provider offers it.")
+                    #if os(macOS)
+                    FeatureRow(icon: "airplayvideo", title: "AirPlay", text: "Watch on your TV or projector, or in Picture in Picture.")
+                    #else
                     FeatureRow(icon: "airplayvideo", title: "AirPlay & Chromecast", text: "Watch on your TV or projector, or in Picture in Picture.")
+                    #endif
                 }
                 .frame(maxWidth: 480)
 

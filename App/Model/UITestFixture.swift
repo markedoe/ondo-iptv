@@ -125,7 +125,7 @@ enum UITestFixture {
         ("ondo.arena", "Arena HD", "Sports", 4),
         ("ondo.cinema", "Cinema Club", "Entertainment", 5),
         ("ondo.kids", "Kids Planet", "Kids", 6),
-        ("ondo.docs", "Discovery Docs", "Documentaries", 7),
+        ("ondo.docs", "Curio Docs", "Documentaries", 7),
         ("ondo.music", "Music Wave", "Music", 8),
     ]
 

@@ -85,12 +85,4 @@ enum Pasteboard {
         NSPasteboard.general.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
         #endif
     }
-
-    static var string: String? {
-        #if os(iOS)
-        return UIPasteboard.general.string
-        #else
-        return NSPasteboard.general.string(forType: .string)
-        #endif
-    }
 }

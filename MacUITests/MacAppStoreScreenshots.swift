@@ -1,7 +1,7 @@
 import XCTest
 
 /// Captures the Mac App Store screenshots (run by the "App Store screenshots" workflow only).
-/// Each page is opened at launch with `-uitest-route` on the demo catalogue; `-uitest-window` gives the
+/// Each page is opened at launch with `-uitest-route` on the fixture catalogue; `-uitest-window` gives the
 /// window a 16:10 frame. The language comes from `SCREENSHOT_LANG` (set with `TEST_RUNNER_SCREENSHOT_LANG`).
 final class MacAppStoreScreenshots: XCTestCase {
     private let pages = [

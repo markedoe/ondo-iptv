@@ -3,6 +3,7 @@ included:
   - App
   - AppTests
   - UITests
+  - MacUITests
   - Packages/IPTVCore/Sources
   - Packages/IPTVCore/Tests
 excluded:

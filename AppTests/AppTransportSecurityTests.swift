@@ -27,6 +27,8 @@ final class AppTransportSecurityTests: XCTestCase {
             _ = try await URLSessionHTTPClient(timeout: 20).data(from: url, headers: [:])
         } catch let error as URLError where error.code == .appTransportSecurityRequiresSecureConnection {
             XCTFail("App Transport Security refused \(url): \(error.localizedDescription)")
+        } catch is HTTPClientError {
+            return  // the server answered (an HTTP error): App Transport Security let the request through
         } catch {
             throw XCTSkip("No network to reach \(url): \(error.localizedDescription)")
         }

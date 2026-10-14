@@ -6,7 +6,8 @@ import UniformTypeIdentifiers
 import AppKit
 #endif
 
-/// Full-screen player UI: video, auto-hiding controls, zapping list, EPG overlay, lock mode.
+/// Player UI (full screen on iPhone and iPad, a window on the Mac): video, auto-hiding controls, zapping list,
+/// in-player guide, lock mode (iPhone and iPad).
 struct PlayerView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
@@ -138,12 +139,8 @@ struct PlayerView: View {
             if let channel { await model.ensureGuide(for: channel) }
         }
         .onChange(of: cast.isConnected) { _, connected in
-            if connected {
-                castCurrentItem()
-            } else if let position = resumeAfterCastPosition {
-                controller.seek(to: position)
-                controller.play()
-            }
+            // Stopping from the player resumes here (stopCasting); a cast ended elsewhere leaves the player paused.
+            if connected { castCurrentItem() }
         }
         .onChange(of: session.playingItem) { _, _ in
             if cast.isConnected { castCurrentItem() }
@@ -587,8 +584,6 @@ struct PlayerView: View {
 
     // MARK: - Casting
 
-    @State private var resumeAfterCastPosition: Double?
-
     private func castCurrentItem() {
         guard let item = session.playingItem else { return }
         if cast.cast(item, from: controller.isLive ? nil : controller.currentTime) {
@@ -598,7 +593,6 @@ struct PlayerView: View {
 
     private func stopCasting() {
         let position = cast.stopCasting()
-        resumeAfterCastPosition = position
         if let position, !controller.isLive { controller.seek(to: position) }
         controller.play()
     }
@@ -687,7 +681,7 @@ extension PlayerView {
         case .delete where isLiveChannel:
             session.returnToPreviousChannel()
         case .escape:
-            if panelTab != nil { panelTab = nil } else { onClose() }
+            if panelTab != nil { panelTab = nil } else { closeOrLeaveFullScreen() }
         default:
             guard handleShortcut(press.characters.lowercased()) else { return .ignored }
         }
@@ -695,7 +689,8 @@ extension PlayerView {
         return .handled
     }
 
-    /// Single-letter shortcuts (F full screen, M mute, L channels, G guide, R restart programme).
+    /// Single-letter shortcuts (F full screen on the Mac, fit / fill on iPhone and iPad, M mute, L channels,
+    /// G guide, R restart programme).
     private func handleShortcut(_ key: String) -> Bool {
         switch key {
         case "f":

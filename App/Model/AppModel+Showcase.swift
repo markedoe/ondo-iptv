@@ -175,7 +175,7 @@ extension AppModel {
     }
 
     /// The seasons of a series before playing it, with a visible wait and a message when the provider fails
-    /// (the tap used to do nothing at all).
+    /// (otherwise the tap would seem to do nothing).
     func episodes(of series: Series) async -> SeriesDetails? {
         isPreparingPlayback = true
         defer { isPreparingPlayback = false }

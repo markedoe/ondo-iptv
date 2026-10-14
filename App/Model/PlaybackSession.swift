@@ -50,7 +50,6 @@ final class PlaybackSession: Identifiable {
     var current: PlaybackItem? { queue.indices.contains(index) ? queue[index] : nil }
     /// The item the player is actually playing (the replay while time-shifted).
     var playingItem: PlaybackItem? { timeshift?.item ?? current }
-    var hasPrevious: Bool { index > 0 }
     var hasNext: Bool { index + 1 < queue.count }
     var isLiveChannel: Bool { current?.isLive == true }
     var isTimeshifted: Bool { timeshift != nil }

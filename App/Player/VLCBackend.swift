@@ -74,7 +74,7 @@ final class VLCBackend: NSObject {
         player.drawable = view
     }
 
-    func load(url: URL, headers: HTTPHeaders, startPosition: Double?, isLive: Bool) {
+    func load(url: URL, headers: HTTPHeaders, startPosition: Double?, isLive: Bool, autoplay: Bool = true) {
         let media = VLCMedia(url: url)
         if let userAgent = headers.userAgent, !userAgent.isEmpty {
             media.addOption(":http-user-agent=\(userAgent)")
@@ -87,7 +87,7 @@ final class VLCBackend: NSObject {
             media.addOption(":start-time=\(Int(startPosition))")
         }
         player.media = media
-        player.play()
+        if autoplay { player.play() }
     }
 
     func play() { player.play() }
@@ -101,8 +101,6 @@ final class VLCBackend: NSObject {
         player.stop()
         player.media = nil
     }
-
-    var isPlaying: Bool { player.isPlaying }
 
     func seek(to seconds: Double) {
         player.time = VLCTime(int: Int32(max(seconds, 0) * 1000))
@@ -178,10 +176,6 @@ final class VLCBackend: NSObject {
 
     private static func ratioString(_ size: CGSize) -> String {
         "\(Int(size.width.rounded())):\(Int(size.height.rounded()))"
-    }
-
-    func addSubtitleFile(_ url: URL) {
-        player.addPlaybackSlave(url, type: .subtitle, enforce: true)
     }
 
     // MARK: Events

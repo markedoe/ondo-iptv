@@ -70,7 +70,7 @@ final class AppModelTests: XCTestCase {
         await model.bootstrap()
         let credentials = XtreamCredentials(server: URL(string: "http://127.0.0.1:9")!, username: "user", password: "s3cret")
         let backup = BackupArchive(playlists: [Playlist(name: "X", source: .xtream(credentials))], library: UserLibrary())
-        try? await model.importBackup(backup.encoded())
+        try await model.importBackup(backup.encoded())
 
         let saved = try String(contentsOf: root.appendingPathComponent("Support/playlists.json"), encoding: .utf8)
         XCTAssertFalse(saved.contains("s3cret"), "password must not be written to disk")
@@ -87,7 +87,7 @@ final class AppModelTests: XCTestCase {
         let model = makeModel()
         await model.bootstrap()
         let backup = BackupArchive(playlists: [Playlist(name: "RD", source: .realDebrid(token: "TOKEN-123"))], library: UserLibrary())
-        try? await model.importBackup(backup.encoded())
+        try await model.importBackup(backup.encoded())
 
         let relaunched = makeModel()
         await relaunched.bootstrap()
@@ -370,8 +370,10 @@ final class AppModelTests: XCTestCase {
         await model.toggleReminder(for: program, on: channel, now: now)
         XCTAssertEqual(slow.scheduled.count, 1)
 
+        let before = slow.startedSyncs
         model.setReminderLeadMinutes(10)
-        try await Task.sleep(for: .milliseconds(50))  // the background sync has read the reminder and is scheduling
+        await waitUntil { slow.startedSyncs > before }  // the background sync has read the reminder and is scheduling
+        XCTAssertGreaterThan(slow.startedSyncs, before, "the lead time change started its sync")
         await model.toggleReminder(for: program, on: channel, now: now)
         try await Task.sleep(for: .milliseconds(500))  // longer than the slow sync
         XCTAssertTrue(slow.scheduled.isEmpty, "a notification is left for a removed reminder: \(slow.scheduled)")
@@ -406,7 +408,7 @@ final class AppModelTests: XCTestCase {
         <?xml version="1.0" encoding="UTF-8"?>
         <tv>
         <channel id="news.test"><display-name>Test News</display-name></channel>
-        <channel id="other.guide"><display-name>Cooking Channel</display-name></channel>
+        <channel id="other.guide"><display-name>Kitchen Guide</display-name></channel>
         <programme start="\(stamp(-600))" stop="\(stamp(1200))" channel="news.test"><title>Evening Bulletin</title></programme>
         <programme start="\(stamp(3600))" stop="\(stamp(5400))" channel="other.guide"><title>Cooking Show</title></programme>
         </tv>
@@ -537,13 +539,19 @@ final class CastabilityTests: XCTestCase {
 private final class SlowReminderScheduler: ReminderScheduling, @unchecked Sendable {
     private let lock = NSLock()
     private var pending: [String: Date] = [:]
+    private var started = 0
 
     var scheduled: [String: Date] { lock.withLock { pending } }
+    /// Syncs with reminders that have started (each then takes 300 ms).
+    var startedSyncs: Int { lock.withLock { started } }
 
     func requestAuthorization() async -> Bool { true }
 
     func reschedule(_ reminders: [ProgramReminder], leadTime: TimeInterval, now: Date) async {
-        if !reminders.isEmpty { try? await Task.sleep(for: .milliseconds(300)) }
+        if !reminders.isEmpty {
+            lock.withLock { started += 1 }
+            try? await Task.sleep(for: .milliseconds(300))
+        }
         let wanted = Dictionary(reminders.map { ($0.id, $0.start.addingTimeInterval(-leadTime)) }, uniquingKeysWith: { first, _ in first })
         lock.withLock { pending = wanted }
     }

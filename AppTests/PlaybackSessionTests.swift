@@ -2,7 +2,7 @@ import XCTest
 import IPTVCore
 @testable import Ondo
 
-/// Zapping, last channel and time shifting of a player session (no network: the URLs never resolve).
+/// Zapping, last channel and time shifting of a player session (no network: the URLs point at a closed local port).
 @MainActor
 final class PlaybackSessionTests: XCTestCase {
     private let playlistID = UUID()

@@ -11,7 +11,7 @@ enum Formatting {
         return h > 0 ? String(format: "%d:%02d:%02d", h, m, s) : String(format: "%d:%02d", m, s)
     }
 
-    /// 5400 -> "1 h 30 min"
+    /// 5400 -> "1 hr, 30 min" (the system's localized short units)
     static func duration(_ seconds: Int) -> String {
         let formatter = DateComponentsFormatter()
         formatter.allowedUnits = seconds >= 3600 ? [.hour, .minute] : [.minute]

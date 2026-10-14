@@ -186,6 +186,8 @@ final class DownloadManager: NSObject {
     // MARK: Delegate callbacks (main actor)
 
     fileprivate func progressChanged(id: String, written: Int64, expected: Int64) {
+        // A late callback of a task paused or deleted meanwhile must not mark it as downloading again.
+        guard tasks[id] != nil else { return }
         update(id) { record in
             record.status = .downloading
             record.totalBytes = max(expected, 0)
@@ -212,10 +214,6 @@ final class DownloadManager: NSObject {
         save(force: true)
     }
 
-    fileprivate func destination(for id: String) -> URL? {
-        records.first { $0.id == id }.map { localURL(for: $0) }
-    }
-
     private func update(_ id: String, _ change: (inout DownloadRecord) -> Void) {
         guard let index = records.firstIndex(where: { $0.id == id }) else { return }
         change(&records[index])
@@ -235,11 +233,16 @@ final class DownloadManager: NSObject {
             }
             Task { @MainActor in
                 guard let self else { return }
-                for (id, task) in pairs { self.tasks[id] = task }
+                for (id, task) in pairs {
+                    self.tasks[id] = task
+                    self.lastProgress[id] = Date()
+                }
                 // Downloads interrupted by the app being killed can be restarted by the user.
                 for record in self.records where record.isActive && self.tasks[record.id] == nil {
                     self.update(record.id) { $0.status = .paused }
                 }
+                // Downloads that went on while the app was closed are diagnosed like new ones.
+                if !pairs.isEmpty { self.startWatchdog() }
             }
         }
     }
@@ -248,7 +251,7 @@ final class DownloadManager: NSObject {
 
     /// Every few seconds while downloads run: counts what arrived and, after `stallDelay` without data,
     /// says what the download waits for. A system download that the provider refuses or never answers
-    /// does not fail: it waits, and used to show "Starting…" forever.
+    /// does not fail: it waits, and without this would show "Starting…" forever.
     private func startWatchdog() {
         guard watchdog == nil else { return }
         watchdog = Task { [weak self] in
@@ -368,8 +371,6 @@ final class DownloadManager: NSObject {
 /// URLSession delegate living off the main actor; files must be moved before the callback returns.
 private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     weak var manager: DownloadManager?
-    private let lock = NSLock()
-    private var destinations: [String: URL] = [:]
 
     init(manager: DownloadManager) {
         self.manager = manager

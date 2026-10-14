@@ -11,8 +11,9 @@ struct MediaTrack: Identifiable, Hashable {
     let languageCode: String?
 }
 
-/// Wraps an `AVPlayer` with what an IPTV player needs on top: URL fallbacks, automatic retries,
-/// stall recovery on live streams, track selection, aspect ratio, PiP, sleep timer and progress reporting.
+/// Wraps an `AVPlayer` (and VLC for what AVFoundation cannot play) with what an IPTV player needs on top: URL
+/// fallbacks, automatic retries, stall recovery on live streams, resume positions, track selection, aspect ratio,
+/// PiP, sleep timer and progress reporting.
 @MainActor
 @Observable
 final class PlayerController: NSObject {
@@ -183,6 +184,8 @@ final class PlayerController: NSObject {
         subtitleDelay = 0
         forceVLCForItem = false
         rate = 1
+        // A new item plays; the automatic fallbacks below keep a pause the viewer made while it opened.
+        playsWhenReady = true
         loadCurrentCandidate()
     }
 
@@ -219,7 +222,6 @@ final class PlayerController: NSObject {
         }
         observe(playerItem)
         player.replaceCurrentItem(with: playerItem)
-        playsWhenReady = true
         startSeekSent = false
         if let start = Self.resumeStart(for: item) {
             // Seek once the item is ready: playing first buffers the beginning for nothing and the seek then
@@ -230,6 +232,11 @@ final class PlayerController: NSObject {
             return
         }
         pendingStart = nil
+        guard playsWhenReady else {
+            // Paused while a previous address was opening (casting started, remote pause): stay paused.
+            state = .paused
+            return
+        }
         player.play()
         player.rate = item.isLive ? 1 : rate
     }
@@ -356,6 +363,7 @@ final class PlayerController: NSObject {
         keepPositionForFallback()
         retries = 0
         candidateIndex = 0
+        playsWhenReady = true
         loadCurrentCandidate()
     }
 
@@ -714,9 +722,9 @@ extension PlayerController {
         return start
     }
 
-    /// The resume seek of a ready item, and playback right away: it starts where the seek lands, after a
-    /// single buffering. Playing only once the seek landed never played: a paused player does not always
-    /// load anything, so the seek did not land either.
+    /// The resume seek of a ready item, with playback started right away unless the viewer paused while it
+    /// opened: it starts where the seek lands, after a single buffering. Waiting for the seek to land before
+    /// playing does not work: a paused player does not always load anything, so the seek never lands.
     private func seekToPendingStart(_ playerItem: AVPlayerItem) {
         guard let start = pendingStart, !startSeekSent else { return }
         startSeekSent = true
@@ -815,7 +823,9 @@ extension PlayerController {
         case .playing:
             isBuffering = false
             retries = 0
-            state = .playing
+            // A pause made while VLC was opening may have been ignored by it.
+            if !playsWhenReady { backend.pause() }
+            state = playsWhenReady ? .playing : .paused
             audioTracks = backend.audioTracks
             subtitleTracks = backend.subtitleTracks
             selectedAudioTrackID = backend.selectedAudioTrackID
@@ -876,6 +886,7 @@ extension PlayerController {
         if autoRetry, isLive, retries < 3 {
             retries += 1
             candidateIndex = 0
+            state = .loading
             let delay = Double(retries) * 2
             retryTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(delay))
@@ -895,9 +906,11 @@ extension PlayerController {
         pendingStart = Self.resumeStart(for: item)
         vlcStartSeekSent = false
         if let pendingStart { currentTime = pendingStart }
-        backend.load(url: url, headers: item.headers, startPosition: item.startPosition, isLive: item.isLive)
+        backend.load(url: url, headers: item.headers, startPosition: item.startPosition, isLive: item.isLive, autoplay: playsWhenReady)
         backend.setRate(item.isLive ? 1 : rate)
         backend.setMuted(isMuted)
+        // VLC reports nothing until it plays.
+        if !playsWhenReady { state = .paused }
     }
 
     private func stopVLC() {

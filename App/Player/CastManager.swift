@@ -31,14 +31,6 @@ final class CastManager {
     @ObservationIgnored private var listener: CastSessionListener?
     #endif
 
-    static var isSupported: Bool {
-        #if canImport(GoogleCast)
-        return true
-        #else
-        return false
-        #endif
-    }
-
     /// Picks the URL a Chromecast is most likely to play and explains the caveats.
     nonisolated static func castability(of item: PlaybackItem) -> Castability {
         let candidates = item.candidateURLs.filter { !$0.isFileURL }

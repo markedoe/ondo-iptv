@@ -289,10 +289,13 @@ final class AppModel {
 
     func deleteProfile(_ profile: Profile) {
         guard profiles.count > 1 else { return }
+        let wasActive = settings.activeProfileID == profile.id || activeProfile.id == profile.id
         profiles.removeAll { $0.id == profile.id }
         saveProfiles()
+        // A pending save of the deleted profile's library would write its file again.
+        if wasActive { librarySaveTask?.cancel() }
         userStore.remove(name: profile.libraryDocumentName)
-        if settings.activeProfileID == profile.id || activeProfile.id == profile.id, let first = profiles.first {
+        if wasActive, let first = profiles.first {
             library = userStore.load(UserLibrary.self, name: first.libraryDocumentName) ?? UserLibrary()
             updateSettings { $0.activeProfileID = first.id }
         }
@@ -584,10 +587,6 @@ final class AppModel {
         let programs = (try? await client.fullEPG(streamID: streamID, epgChannelID: channel.epgID ?? channel.id)) ?? []
         if !programs.isEmpty { epg.insert(programs, for: channel) }
         return programs
-    }
-
-    func currentProgram(for channel: Channel) -> EPGProgram? {
-        epg.current(for: channel)
     }
 
     func logoURL(for channel: Channel) -> URL? {

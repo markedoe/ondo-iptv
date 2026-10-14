@@ -161,7 +161,7 @@ struct PlayerGuideList: View {
     let channel: Channel
     @State private var showingMatch = false
 
-    /// How far back the list goes: the archive when the channel has one, a few hours otherwise.
+    /// How far back the list goes: the archive when the channel has one (two days at most), a few hours otherwise.
     private var lookBack: TimeInterval {
         channel.catchup.map { min(Double($0.days), 2) * 86_400 } ?? 3 * 3600
     }

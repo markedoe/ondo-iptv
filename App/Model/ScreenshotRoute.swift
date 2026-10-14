@@ -2,9 +2,9 @@
 import SwiftUI
 import IPTVCore
 
-/// Mac App Store screenshots (`.github/scripts/capture_mac_screenshots.py`): `-uitest-route` opens a page
+/// Mac App Store screenshots (`MacUITests/MacAppStoreScreenshots.swift`): `-uitest-route` opens a page
 /// (`home`, `movies`, `series`, `live`, `guide`, `movie:<name>`, `series:<name>`) and `-uitest-window`
-/// gives the main window a 16:10 frame at the top left of the screen, printed as `WINDOW_RECT x,y,w,h`.
+/// gives the main window a 16:10 frame at the top left of the screen.
 enum ScreenshotRoute {
     enum Detail {
         case movie(String)
@@ -64,12 +64,12 @@ struct ScreenshotWindowSizer: NSViewRepresentable {
             guard let window, !placed else { return }
             placed = true
             NSLog("Screenshot window probe in %@", window.description)
-            // Resized once SwiftUI has finished setting the window up, then reported.
+            // Resized once SwiftUI has finished setting the window up, and again once its content has settled.
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(1))
                 ScreenshotWindowSizer.place(window)
                 try? await Task.sleep(for: .seconds(2))
-                ScreenshotWindowSizer.place(window, report: true)
+                ScreenshotWindowSizer.place(window)
             }
         }
     }
@@ -78,18 +78,13 @@ struct ScreenshotWindowSizer: NSViewRepresentable {
 
     func updateNSView(_ nsView: NSView, context: Context) {}
 
-    static func place(_ window: NSWindow, report: Bool = false) {
+    static func place(_ window: NSWindow) {
         guard let screen = window.screen ?? NSScreen.main else { return }
         let visible = screen.visibleFrame
         let sizes = [CGSize(width: 1440, height: 900), CGSize(width: 1280, height: 800),
                      CGSize(width: 1152, height: 720), CGSize(width: 1024, height: 640)]
         let size = sizes.first { $0.width <= visible.width && $0.height <= visible.height } ?? sizes[sizes.count - 1]
         window.setFrame(NSRect(x: visible.minX, y: visible.maxY - size.height, width: size.width, height: size.height), display: true)
-        guard report else { return }
-        // screencapture -R takes points from the top left corner of the main screen.
-        let top = screen.frame.maxY - visible.maxY
-        let line = "WINDOW_RECT \(Int(visible.minX)),\(Int(top)),\(Int(size.width)),\(Int(size.height)) SCALE \(Int(screen.backingScaleFactor))\n"
-        FileHandle.standardOutput.write(Data(line.utf8))
     }
 }
 #endif

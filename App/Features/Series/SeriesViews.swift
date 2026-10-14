@@ -182,7 +182,7 @@ struct SeriesDetailView: View {
         var items: [String] = []
         if let year = series.year { items.append(String(year)) }
         if let seasons = details?.seasons, !seasons.isEmpty {
-            items.append(seasons.count == 1 ? String(localized: "1 season") : String(localized: "\(seasons.count) seasons"))
+            items.append(String(localized: "\(seasons.count) seasons"))
         }
         if let rating = details?.info.rating ?? series.rating, rating > 0 { items.append("★ " + Formatting.rating(rating)) }
         if let genre = details?.info.genre ?? series.genre { items.append(genre) }

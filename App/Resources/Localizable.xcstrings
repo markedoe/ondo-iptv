@@ -527,46 +527,6 @@
         }
       }
     },
-    "1 season": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 saison"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 temporada"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 temporada"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 季"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "موسم واحد"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 सीज़न"
-          }
-        }
-      }
-    },
     "API key": {
       "localizations": {
         "fr": {
@@ -12687,42 +12647,42 @@
         }
       }
     },
-    "Reminders are kept with your favorites and follow your profile on your other devices.": {
+    "Reminders are kept with your favorites, in your profile.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les rappels sont gardés avec vos favoris et suivent votre profil sur vos autres appareils."
+            "value": "Les rappels sont gardés avec vos favoris, dans votre profil."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los recordatorios se guardan con tus favoritos y siguen a tu perfil en tus otros dispositivos."
+            "value": "Los recordatorios se guardan con tus favoritos, en tu perfil."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Os lembretes ficam com seus favoritos e acompanham seu perfil nos seus outros dispositivos."
+            "value": "Os lembretes ficam com seus favoritos, no seu perfil."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "提醒与收藏一同保存，并随你的个人资料同步到其他设备。"
+            "value": "提醒与收藏一同保存在你的个人资料中。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تُحفظ التذكيرات مع المفضلة وتتبع ملفك الشخصي على أجهزتك الأخرى."
+            "value": "تُحفظ التذكيرات مع المفضلة في ملفك الشخصي."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "रिमाइंडर आपके पसंदीदा के साथ रखे जाते हैं और आपके दूसरे डिवाइस पर भी आपकी प्रोफ़ाइल के साथ रहते हैं।"
+            "value": "रिमाइंडर आपकी प्रोफ़ाइल में आपके पसंदीदा के साथ रखे जाते हैं।"
           }
         }
       }
