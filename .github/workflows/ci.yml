@@ -212,6 +212,10 @@ jobs:
           UDID=$(xcrun simctl list devices available -j | python3 .github/scripts/pick_simulator.py)
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
           xcrun simctl list devices | grep "$UDID"
+          # Booted before the tests: a simulator still starting made the first UI test time out at launch
+          # ("Timed out while requesting launch progress").
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
       - name: Run unit and UI tests
         run: |
           set -o pipefail
