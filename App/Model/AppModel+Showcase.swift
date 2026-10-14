@@ -169,8 +169,21 @@ extension AppModel {
         case .movie(let movie):
             play(movie)
         case .series(let series):
-            guard let details = try? await details(for: series), let next = nextEpisode(in: series, details: details) else { return }
+            guard let details = await episodes(of: series), let next = nextEpisode(in: series, details: details) else { return }
             play(next.episode, in: series, season: next.season.episodes)
+        }
+    }
+
+    /// The seasons of a series before playing it, with a visible wait and a message when the provider fails
+    /// (the tap used to do nothing at all).
+    func episodes(of series: Series) async -> SeriesDetails? {
+        isPreparingPlayback = true
+        defer { isPreparingPlayback = false }
+        do {
+            return try await details(for: series)
+        } catch {
+            bannerMessage = String(localized: "Could not load the episodes: \(error.localizedDescription)")
+            return nil
         }
     }
 

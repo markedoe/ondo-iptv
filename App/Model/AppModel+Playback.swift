@@ -158,12 +158,16 @@ extension AppModel {
         case .series:
             guard let series = index.seriesByID[entry.reference.itemID] else { return }
             Task {
-                guard let seriesDetails = try? await details(for: series) else { return }
+                guard let seriesDetails = await episodes(of: series) else { return }
                 for season in seriesDetails.seasons {
                     if let episode = season.episodes.first(where: { $0.id == entry.reference.episodeID }) {
                         play(episode, in: series, season: season.episodes)
                         return
                     }
+                }
+                // The provider renumbered its episodes: the next one to watch rather than nothing.
+                if let next = nextEpisode(in: series, details: seriesDetails) {
+                    play(next.episode, in: series, season: next.season.episodes)
                 }
             }
         }

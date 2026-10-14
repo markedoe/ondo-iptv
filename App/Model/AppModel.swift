@@ -108,6 +108,9 @@ final class AppModel {
     @ObservationIgnored private var epgTask: Task<Void, Never>?
     @ObservationIgnored var movieDetailsCache: [String: MediaDetails] = [:]
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]
+    /// Episodes are being fetched before a series starts ("Resume" on a series): shown, so the tap visibly
+    /// did something while the provider answers.
+    var isPreparingPlayback = false
     /// Bumped when details arrive. The caches are not observed (one change per entry would redraw every
     /// list); screens that show cached details (hero, continue watching) read this instead, so a backdrop
     /// or a plot that arrives after them appears.

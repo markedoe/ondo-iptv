@@ -110,6 +110,15 @@ final class PlayerController: NSObject {
     @ObservationIgnored private var lastReportedProgress = Date.distantPast
     @ObservationIgnored private var audioGroup: AVMediaSelectionGroup?
     @ObservationIgnored private var subtitleGroup: AVMediaSelectionGroup?
+    /// Resume position not reached yet. Until then the player's own clock (still at 0) is neither shown
+    /// nor saved: saving it would replace the resume point with the beginning of the film.
+    @ObservationIgnored private var pendingStart: Double?
+    /// Whether playback starts once the resume seek lands (false when the user paused meanwhile).
+    @ObservationIgnored private var playsWhenReady = true
+    #if canImport(VLCKitSPM)
+    /// VLC sometimes ignores `:start-time` (servers without byte ranges): one explicit seek follows.
+    @ObservationIgnored private var vlcStartSeekSent = false
+    #endif
 
     override init() {
         super.init()
@@ -208,9 +217,16 @@ final class PlayerController: NSObject {
         }
         observe(playerItem)
         player.replaceCurrentItem(with: playerItem)
-        if let start = item.startPosition, start > 5, !item.isLive {
-            player.seek(to: CMTime(seconds: start, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .positiveInfinity)
+        playsWhenReady = true
+        if let start = Self.resumeStart(for: item) {
+            // Seek once the item is ready, then play: playing first buffers the beginning for nothing and
+            // the seek then has to buffer again (slow resumes), and a seek sent before the item is ready
+            // can be dropped (resumes that restart from the beginning).
+            pendingStart = start
+            currentTime = start
+            return
         }
+        pendingStart = nil
         player.play()
         player.rate = item.isLive ? 1 : rate
     }
@@ -243,6 +259,7 @@ final class PlayerController: NSObject {
             retries = 0
             let seconds = playerItem.duration.seconds
             duration = seconds.isFinite ? seconds : 0
+            seekToPendingStart(playerItem)
             updateNowPlaying()
             Task { await loadTracks(for: playerItem) }
         case .failed:
@@ -254,6 +271,19 @@ final class PlayerController: NSObject {
 
     private func handleFailure(_ error: Error?, item playerItem: AVPlayerItem) {
         guard playerItem == player.currentItem, activeEngine == .apple else { return }
+        keepPositionForFallback()
+        // AirPlay: the TV plays the stream itself. VLC would play it on this device only, leaving the TV
+        // connected without a picture: say why instead.
+        if isExternalPlaybackActive || player.isExternalPlaybackActive {
+            if candidateIndex + 1 < candidates.count {
+                candidateIndex += 1
+                loadCurrentCandidate()
+                return
+            }
+            let message = String(localized: "Your TV could not open this stream over AirPlay. Some providers only accept the device that opened it; for Xtream, the HLS (m3u8) format works best.")
+            state = .failed(message: message, attribution: .provider)
+            return
+        }
         // 1. Next candidate URL (e.g. `.m3u8` variant of a `.ts` stream, other catch-up endpoint).
         if candidateIndex + 1 < candidates.count {
             candidateIndex += 1
@@ -324,6 +354,7 @@ final class PlayerController: NSObject {
 
     func retry() {
         guard item != nil else { return }
+        keepPositionForFallback()
         retries = 0
         candidateIndex = 0
         loadCurrentCandidate()
@@ -332,10 +363,13 @@ final class PlayerController: NSObject {
     // MARK: - Transport
 
     func play() {
+        playsWhenReady = true
         if activeEngine == .vlc {
             playVLC()
             return
         }
+        // The resume seek is still running: it starts playback when it lands.
+        if pendingStart != nil { return }
         if state == .ended { seek(to: 0) }
         if isLive && !hasLiveWindow {
             // Without a DVR window a paused live stream can only resume at the live edge.
@@ -346,6 +380,7 @@ final class PlayerController: NSObject {
     }
 
     func pause() {
+        playsWhenReady = false
         if activeEngine == .vlc {
             pauseVLC()
         } else {
@@ -366,7 +401,13 @@ final class PlayerController: NSObject {
         let target = max(0, duration > 0 ? min(seconds, duration - 1) : seconds)
         currentTime = target
         if activeEngine == .vlc {
+            pendingStart = nil
             seekVLC(to: target)
+            return
+        }
+        if pendingStart != nil {
+            // Before the item is ready: this becomes the position it starts at.
+            pendingStart = target
             return
         }
         player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
@@ -396,6 +437,7 @@ final class PlayerController: NSObject {
 
     func stop() {
         reportProgress(force: true)
+        pendingStart = nil
         retryTask?.cancel()
         stallTask?.cancel()
         sleepTask?.cancel()
@@ -425,7 +467,7 @@ final class PlayerController: NSObject {
     }
 
     private func tick(_ time: CMTime) {
-        guard activeEngine == .apple else { return }
+        guard activeEngine == .apple, pendingStart == nil else { return }
         let seconds = time.seconds
         if seconds.isFinite { currentTime = seconds }
         if let playerItem = player.currentItem {
@@ -477,17 +519,19 @@ final class PlayerController: NSObject {
 
     /// A live stream stuck buffering for 12 s gets reconnected.
     private func scheduleStallRecovery() {
-        guard isLive, autoRetry else { return }
+        // During AirPlay the TV buffers and this player waits: reconnecting would restart the TV's stream
+        // every 12 s (the AirPlay icon blinking, no picture).
+        guard isLive, autoRetry, !player.isExternalPlaybackActive else { return }
         stallTask?.cancel()
         stallTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(12))
-            guard !Task.isCancelled, let self, self.isBuffering, self.isLive else { return }
+            guard !Task.isCancelled, let self, self.isBuffering, self.isLive, !self.player.isExternalPlaybackActive else { return }
             self.retry()
         }
     }
 
     private func reportProgress(force: Bool) {
-        guard let item, !item.isLive else { return }
+        guard let item, !item.isLive, pendingStart == nil else { return }
         guard force || Date().timeIntervalSince(lastReportedProgress) > 10 else { return }
         guard currentTime > 0 else { return }
         lastReportedProgress = Date()
@@ -644,6 +688,41 @@ final class PlayerController: NSObject {
     }
 }
 
+// MARK: - Resume
+
+extension PlayerController {
+    /// Where a VOD item resumes (positions in the first seconds start from the beginning).
+    static func resumeStart(for item: PlaybackItem) -> Double? {
+        guard !item.isLive, let start = item.startPosition, start > 5 else { return nil }
+        return start
+    }
+
+    /// The resume seek of a ready item, then playback.
+    private func seekToPendingStart(_ playerItem: AVPlayerItem) {
+        guard let start = pendingStart else { return }
+        player.seek(to: CMTime(seconds: start, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .positiveInfinity) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, playerItem == self.player.currentItem else { return }
+                self.pendingStart = nil
+                if self.playsWhenReady {
+                    self.player.play()
+                    self.player.rate = self.rate
+                } else {
+                    self.state = .paused
+                }
+                self.updateNowPlaying()
+            }
+        }
+    }
+
+    /// A film that fails after a while restarts where it was, not at the position it was opened at.
+    private func keepPositionForFallback() {
+        guard var current = item, !current.isLive, pendingStart == nil, currentTime > 5 else { return }
+        current.startPosition = currentTime
+        item = current
+    }
+}
+
 extension PlayerController: AVPictureInPictureControllerDelegate {
     nonisolated func pictureInPictureControllerDidStartPictureInPicture(_ controller: AVPictureInPictureController) {
         Task { @MainActor in
@@ -747,6 +826,21 @@ extension PlayerController {
 
     private func handleVLCTime(_ current: Double, _ total: Double) {
         guard activeEngine == .vlc else { return }
+        if let start = pendingStart {
+            guard current < start - 15 else {
+                pendingStart = nil
+                currentTime = current
+                return
+            }
+            // Still near the beginning: `:start-time` was ignored. Seek once; past that, take what plays.
+            if !vlcStartSeekSent {
+                vlcStartSeekSent = true
+                vlcBackend?.seek(to: start)
+                return
+            }
+            if current < 10 { return }
+            pendingStart = nil
+        }
         currentTime = current
         if total > 0 { duration = total }
         if state == .loading { state = .playing }
@@ -778,6 +872,9 @@ extension PlayerController {
         player.replaceCurrentItem(with: nil)
         activeEngine = .vlc
         let backend = vlc()
+        pendingStart = Self.resumeStart(for: item)
+        vlcStartSeekSent = false
+        if let pendingStart { currentTime = pendingStart }
         backend.load(url: url, headers: item.headers, startPosition: item.startPosition, isLive: item.isLive)
         backend.setRate(item.isLive ? 1 : rate)
         backend.setMuted(isMuted)

@@ -22,6 +22,10 @@ struct PlayerView: View {
     @State private var scrubPosition: Double?
     @State private var isScrubbingLive = false
     @State private var showingSubtitleImporter = false
+    @State private var explainingAirPlay = false
+    #if os(macOS)
+    @State private var window = PlayerWindowState()
+    #endif
     @FocusState private var focused: Bool
 
     private var controller: PlayerController { session.controller }
@@ -52,6 +56,8 @@ struct PlayerView: View {
 
             if let item = session.playingItem, cast.castingItemID == item.id {
                 CastingOverlay(cast: cast, onStop: stopCasting)
+            } else if controller.isExternalPlaybackActive {
+                AirPlayOverlay()
             }
 
             if let cue = controller.currentExternalCue {
@@ -143,6 +149,15 @@ struct PlayerView: View {
         }
         .onAppear {
             if cast.isConnected { castCurrentItem() }
+        }
+        #if os(macOS)
+        .background(WindowReader { window.attach($0) })
+        #endif
+        .alert("AirPlay needs the Apple engine", isPresented: $explainingAirPlay) {
+            Button("Use the Apple Engine") { controller.switchEngine(to: .apple) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This stream is played by VLC, which shows the picture on this device only. The Apple engine can send it to your TV if it can open the stream.")
         }
         .fileImporter(isPresented: $showingSubtitleImporter, allowedContentTypes: Self.subtitleTypes) { result in
             guard case .success(let url) = result else { return }
@@ -250,7 +265,7 @@ struct PlayerView: View {
 
     private func topBar(compact: Bool) -> some View {
         HStack(spacing: 18) {
-            Button(action: onClose) {
+            Button(action: closeOrLeaveFullScreen) {
                 Image(systemName: Platform.isMac ? "xmark" : "chevron.down")
                     .font(.title3.weight(.semibold))
                     .frame(width: 36, height: 36)
@@ -272,8 +287,30 @@ struct PlayerView: View {
             CastButton()
                 .frame(width: 30, height: 30)
             #endif
-            RoutePickerButton()
-                .frame(width: 30, height: 30)
+            if controller.activeEngine == .vlc {
+                // VLC draws on this device only: AirPlay would connect the TV without a picture.
+                Button {
+                    explainingAirPlay = true
+                } label: {
+                    Image(systemName: "airplayvideo")
+                }
+                .help("AirPlay")
+                .accessibilityLabel("AirPlay")
+            } else {
+                RoutePickerButton(player: controller.player)
+                    .frame(width: 30, height: 30)
+                    .help("AirPlay")
+            }
+            #if os(macOS)
+            Button {
+                window.toggleFullScreen()
+            } label: {
+                Image(systemName: window.isFullScreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+            }
+            .help(window.isFullScreen ? Text("Exit Full Screen (F)") : Text("Full Screen (F)"))
+            .accessibilityLabel(window.isFullScreen ? Text("Exit Full Screen") : Text("Full Screen"))
+            .accessibilityIdentifier("playerFullScreen")
+            #endif
             PlayerMoreMenu(controller: controller, item: session.playingItem)
         }
         .font(.title3)
@@ -592,12 +629,30 @@ struct PlayerView: View {
             try? await Task.sleep(for: .seconds(4))
             guard !Task.isCancelled, controller.isPlaying, scrubPosition == nil, !isScrubbingLive, panelTab == nil else { return }
             controlsVisible = false
+            #if os(macOS)
+            NSCursor.setHiddenUntilMouseMoves(true)  // nothing over the picture, the pointer included
+            #endif
         }
+    }
+}
+
+// MARK: - Keyboard, double click, full screen
+
+extension PlayerView {
+    /// Esc (and the close button) leave full screen first, like the Mac's own players; then close.
+    private func closeOrLeaveFullScreen() {
+        #if os(macOS)
+        if window.isFullScreen {
+            window.toggleFullScreen()
+            return
+        }
+        #endif
+        onClose()
     }
 
     private func handleDoubleTap() {
         #if os(macOS)
-        NSApp.keyWindow?.toggleFullScreen(nil)
+        window.toggleFullScreen()
         #else
         controller.aspect = controller.aspect == .fit ? .fill : .fit
         #endif
@@ -684,6 +739,26 @@ struct PlayerWindow: View {
     }
 }
 #endif
+
+/// Shown while AirPlay plays the stream on a TV: the picture is there, not here.
+struct AirPlayOverlay: View {
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "airplayvideo")
+                .font(.system(size: 44))
+            Text("Playing on AirPlay")
+                .font(.headline)
+            Text("The picture is on your TV. The controls here still work.")
+                .font(.callout)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.white.opacity(0.75))
+        }
+        .foregroundStyle(.white)
+        .padding(28)
+        .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 22))
+        .allowsHitTesting(false)
+    }
+}
 
 /// Shown over the (paused) local player while the stream plays on a Chromecast.
 struct CastingOverlay: View {

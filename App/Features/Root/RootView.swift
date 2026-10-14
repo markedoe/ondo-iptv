@@ -89,6 +89,15 @@ struct MainView: View {
         @Bindable var model = model
         content
             .overlay(alignment: .top) { BannerView() }
+            .overlay {
+                if model.isPreparingPlayback {
+                    ProgressView()
+                        .controlSize(.large)
+                        .padding(24)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                        .accessibilityLabel("Opening…")
+                }
+            }
             .onChange(of: ReminderNotificationRouter.shared.pendingTarget, initial: true) { _, target in
                 guard let target else { return }
                 ReminderNotificationRouter.shared.pendingTarget = nil

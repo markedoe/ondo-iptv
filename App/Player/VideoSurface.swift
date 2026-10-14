@@ -29,8 +29,10 @@ struct VideoSurface: UIViewRepresentable {
     }
 }
 
-/// System AirPlay route picker.
+/// System AirPlay route picker. On iPhone and iPad the route is system-wide and the player follows it.
 struct RoutePickerButton: UIViewRepresentable {
+    let player: AVPlayer
+
     func makeUIView(context: Context) -> AVRoutePickerView {
         let view = AVRoutePickerView()
         view.tintColor = .white
@@ -82,15 +84,22 @@ struct VideoSurface: NSViewRepresentable {
     }
 }
 
+/// AirPlay route picker for the player's video. On the Mac a picker without a player only routes the
+/// system sound: the TV then says "AirPlay connected to Mac" and shows no picture.
 struct RoutePickerButton: NSViewRepresentable {
+    let player: AVPlayer
+
     func makeNSView(context: Context) -> AVRoutePickerView {
         let view = AVRoutePickerView()
+        view.player = player
         view.isRoutePickerButtonBordered = false
         view.setRoutePickerButtonColor(.white, for: .normal)
         view.setRoutePickerButtonColor(.controlAccentColor, for: .active)
         return view
     }
 
-    func updateNSView(_ nsView: AVRoutePickerView, context: Context) {}
+    func updateNSView(_ nsView: AVRoutePickerView, context: Context) {
+        if nsView.player !== player { nsView.player = player }
+    }
 }
 #endif

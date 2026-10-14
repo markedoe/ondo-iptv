@@ -281,12 +281,32 @@
         }
       }
     },
+    "AirPlay": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPlay"
+          }
+        }
+      }
+    },
     "AirPlay & Chromecast": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "AirPlay et Chromecast"
+          }
+        }
+      }
+    },
+    "AirPlay needs the Apple engine": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AirPlay nécessite le moteur Apple"
           }
         }
       }
@@ -721,6 +741,16 @@
         }
       }
     },
+    "Could not load the episodes: %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de charger les épisodes : %@"
+          }
+        }
+      }
+    },
     "Could not refresh the playlist: %@": {
       "localizations": {
         "fr": {
@@ -1071,6 +1101,26 @@
         }
       }
     },
+    "Exit Full Screen": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitter le plein écran"
+          }
+        }
+      }
+    },
+    "Exit Full Screen (F)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitter le plein écran (F)"
+          }
+        }
+      }
+    },
     "Expires": {
       "localizations": {
         "fr": {
@@ -1257,6 +1307,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plein écran"
+          }
+        }
+      }
+    },
+    "Full Screen (F)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plein écran (F)"
           }
         }
       }
@@ -2411,6 +2471,16 @@
         }
       }
     },
+    "Opening…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouverture…"
+          }
+        }
+      }
+    },
     "Optional. Create a key on themoviedb.org. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
       "localizations": {
         "fr": {
@@ -2607,6 +2677,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Moteur de lecture"
+          }
+        }
+      }
+    },
+    "Playing on AirPlay": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture sur AirPlay"
           }
         }
       }
@@ -3621,6 +3701,16 @@
         }
       }
     },
+    "The picture is on your TV. The controls here still work.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’image est sur votre téléviseur. Les commandes d’ici fonctionnent toujours."
+          }
+        }
+      }
+    },
     "The provider refused access to this stream (HTTP %lld). Your subscription may have expired or the connection limit is reached.": {
       "localizations": {
         "fr": {
@@ -3727,6 +3817,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ce format de flux n'est pas pris en charge par le lecteur intégré. Pour une playlist Xtream, choisissez le format HLS (m3u8) dans les réglages de la playlist."
+          }
+        }
+      }
+    },
+    "This stream is played by VLC, which shows the picture on this device only. The Apple engine can send it to your TV if it can open the stream.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce flux est lu par VLC, qui n’affiche l’image que sur cet appareil. Le moteur Apple peut l’envoyer sur votre téléviseur s’il sait ouvrir le flux."
           }
         }
       }
@@ -3877,6 +3977,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rétablir le son"
+          }
+        }
+      }
+    },
+    "Use the Apple Engine": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser le moteur Apple"
           }
         }
       }
@@ -4087,6 +4197,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hier"
+          }
+        }
+      }
+    },
+    "Your TV could not open this stream over AirPlay. Some providers only accept the device that opened it; for Xtream, the HLS (m3u8) format works best.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre téléviseur n’a pas pu ouvrir ce flux en AirPlay. Certains fournisseurs n’acceptent que l’appareil qui l’a ouvert ; pour Xtream, le format HLS (m3u8) fonctionne le mieux."
           }
         }
       }
