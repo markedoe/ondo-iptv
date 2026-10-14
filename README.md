@@ -25,16 +25,20 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   **redémarrer le programme en cours**, revoir un programme passé et revenir au direct depuis le lecteur,
   **pause du direct** (fenêtre DVR HLS, sinon reprise via l'archive).
 - **Lecteur** : deux moteurs — **AVPlayer** (PiP, AirPlay, HDR) et **VLC** (MKV, AVI, TS…) avec bascule
-  automatique —, zapping, pistes audio / sous-titres, **sous-titres SRT externes**, format d'image,
+  automatique —, zapping, pistes audio / sous-titres, **sous-titres SRT externes**, **recherche de
+  sous-titres en ligne** (OpenSubtitles, SubDL et SubSource avec votre clé, Addic7ed sans clé), format d'image,
   vitesse, minuterie, verrouillage, gestes (iPhone), paysage forcé, reconnexion automatique, bascule vers
   une autre version d'une chaîne morte, erreurs expliquées, écran verrouillé / touches média, raccourcis
-  clavier, menu Lecture et une fenêtre par flux sur Mac ; **dernière chaîne**, **zapping par numéro**,
+  clavier, menu Lecture, une fenêtre par flux et **plein écran** (bouton, touche F, double-clic) sur Mac ;
+  **reprise** au point exact, **dernière chaîne**, **zapping par numéro**,
   panneau chaînes / guide dans le lecteur.
-- **Diffusion** : **AirPlay** (iPhone, iPad, Mac) et **Chromecast** (iPhone, iPad).
+- **Diffusion** : **AirPlay** (iPhone, iPad, Mac : la vidéo part vers la TV, pas seulement le son) et
+  **Chromecast** (iPhone, iPad).
 - **Multivue** (iPad, Mac) : jusqu'à 4 chaînes, un seul son actif.
 - **Profils** (« Qui regarde ? »), PIN de profil, **profils enfant**, contrôle parental par PIN.
 - **Listes personnalisées**, favoris réordonnables, catégories masquées.
-- **Téléchargements** hors ligne (films, épisodes).
+- **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
+  limite les connexions ou n'envoie rien.
 - **Données** : sauvegarde / restauration JSON, cache vidable. Interface en français et en anglais.
 
 ## Structure
