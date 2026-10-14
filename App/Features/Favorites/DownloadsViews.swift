@@ -22,7 +22,13 @@ struct DownloadButton: View {
                     Button {
                         if let record { manager.pause(record) }
                     } label: {
-                        if compact {
+                        if let record, record.totalBytes <= 0 {
+                            // Size not given by the provider: a spinner and what arrived, not a frozen 0 %.
+                            HStack {
+                                ProgressView().controlSize(.small)
+                                if !compact { Text(DownloadsView.progressText(record)).monospacedDigit() }
+                            }
+                        } else if compact {
                             ProgressView(value: record?.progress ?? 0).progressViewStyle(.circular)
                         } else {
                             HStack {
@@ -120,16 +126,32 @@ struct DownloadsView: View {
         case .completed:
             Label("Downloaded", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
         case .downloading, .queued:
-            ProgressView(value: record.progress)
-            Text(record.totalBytes > 0
-                 ? "\(record.progress.formatted(.percent.precision(.fractionLength(0)))) · \(Formatting.bytes(record.totalBytes))"
-                 : String(localized: "Starting…"))
+            if record.totalBytes > 0 { ProgressView(value: record.progress) }
+            Text(Self.progressText(record))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+            if let problem = manager.stalls[record.id] {
+                Label(DownloadManager.message(for: problem), systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .lineLimit(5)
+            }
         case .paused:
             Label("Paused", systemImage: "pause.circle").font(.caption).foregroundStyle(.secondary)
         case .failed(let message):
-            Label(message, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red).lineLimit(2)
+            Label(message, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red).lineLimit(5)
         }
+    }
+
+    /// Percentage and size when the provider gives the size, otherwise what arrived so far.
+    static func progressText(_ record: DownloadRecord) -> String {
+        if record.totalBytes > 0 {
+            let percent = record.progress.formatted(.percent.precision(.fractionLength(0)))
+            return "\(percent) · \(Formatting.bytes(record.totalBytes))"
+        }
+        if let received = record.receivedBytes, received > 0 {
+            return String(localized: "\(Formatting.bytes(received)) received")
+        }
+        return String(localized: "Starting…")
     }
 }

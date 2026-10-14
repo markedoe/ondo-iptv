@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ received": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ reçus"
+          }
+        }
+      }
+    },
     "%lld": {
       "localizations": {
         "fr": {
@@ -2361,6 +2371,16 @@
         }
       }
     },
+    "No internet connection.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas de connexion Internet."
+          }
+        }
+      }
+    },
     "No lists": {
       "localizations": {
         "fr": {
@@ -2447,6 +2467,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Normale"
+          }
+        }
+      }
+    },
+    "Nothing received yet: the provider has not answered. Its connection limit may be reached (stop playback on this and your other devices).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien reçu pour l'instant : le fournisseur n'a pas répondu. Sa limite de connexions est peut-être atteinte (arrêtez la lecture sur cet appareil et les autres)."
           }
         }
       }
@@ -3871,6 +3901,16 @@
         }
       }
     },
+    "The connection to the provider was lost. Resume the download to continue.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La connexion au fournisseur a été perdue. Reprenez le téléchargement pour continuer."
+          }
+        }
+      }
+    },
     "The largest collection, all languages. Get a key by creating an API consumer in your account. Without signing in, 5 downloads a day; your account raises the limit.": {
       "localizations": {
         "fr": {
@@ -3901,12 +3941,72 @@
         }
       }
     },
+    "The provider accepted the download but sends nothing yet. It may limit connections or downloads.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fournisseur a accepté le téléchargement mais n'envoie encore rien. Il limite peut-être les connexions ou les téléchargements."
+          }
+        }
+      }
+    },
+    "The provider answered with an error (HTTP %lld).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fournisseur a répondu par une erreur (HTTP %lld)."
+          }
+        }
+      }
+    },
+    "The provider answers normally, but this download receives nothing. Pause it, then resume it.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fournisseur répond normalement, mais ce téléchargement ne reçoit rien. Mettez-le en pause, puis reprenez-le."
+          }
+        }
+      }
+    },
     "The provider refused access to this stream (HTTP %lld). Your subscription may have expired or the connection limit is reached.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Le fournisseur a refusé l'accès à ce flux (HTTP %lld). Votre abonnement a peut-être expiré ou la limite de connexions est atteinte."
+          }
+        }
+      }
+    },
+    "The provider refused the download (HTTP %lld): expired subscription, connection limit reached (stop other playback) or downloads not allowed.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fournisseur refuse le téléchargement (HTTP %lld) : abonnement expiré, limite de connexions atteinte (arrêtez les autres lectures) ou téléchargements non autorisés."
+          }
+        }
+      }
+    },
+    "The provider sent a message instead of the video: its connection limit may be reached, or it does not allow downloads.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fournisseur a envoyé un message au lieu de la vidéo : sa limite de connexions est peut-être atteinte, ou il n'autorise pas les téléchargements."
+          }
+        }
+      }
+    },
+    "The provider takes too long to answer.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fournisseur met trop de temps à répondre."
           }
         }
       }
@@ -3967,6 +4067,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ce fichier ne contient aucun sous-titre affichable."
+          }
+        }
+      }
+    },
+    "This file is no longer on the provider's server (HTTP %lld).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier n'est plus sur le serveur du fournisseur (HTTP %lld)."
           }
         }
       }
@@ -4057,6 +4167,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Demain"
+          }
+        }
+      }
+    },
+    "Too many connections for this subscription (HTTP %lld). Stop playback on this and your other devices, then resume the download.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop de connexions pour cet abonnement (HTTP %lld). Arrêtez la lecture sur cet appareil et les autres, puis reprenez le téléchargement."
           }
         }
       }

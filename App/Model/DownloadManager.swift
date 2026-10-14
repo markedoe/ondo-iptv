@@ -21,6 +21,8 @@ struct DownloadRecord: Identifiable, Codable, Hashable {
     var progress: Double
     var totalBytes: Int64
     var createdAt: Date
+    /// What arrived so far: shown when the provider does not give the size (the percentage stays at 0).
+    var receivedBytes: Int64?
 
     var isCompleted: Bool { status == .completed }
     var isActive: Bool { status == .queued || status == .downloading }
@@ -34,12 +36,19 @@ final class DownloadManager: NSObject {
     static let sessionIdentifier = "com.markedoe.ondo.downloads"
 
     private(set) var records: [DownloadRecord] = []
+    /// Why a running download has received nothing for a while (what it waits for).
+    private(set) var stalls: [String: DownloadProblem] = [:]
+    /// Time without data after which a download says what it waits for.
+    static let stallDelay: TimeInterval = 30
 
     @ObservationIgnored private let store = FileStore(directory: AppPaths.support)
     @ObservationIgnored private var session: URLSession!
     @ObservationIgnored private var tasks: [String: URLSessionDownloadTask] = [:]
     @ObservationIgnored private var resumeData: [String: Data] = [:]
     @ObservationIgnored private var lastSave = Date.distantPast
+    @ObservationIgnored private var lastProgress: [String: Date] = [:]
+    @ObservationIgnored private var probed: Set<String> = []
+    @ObservationIgnored private var watchdog: Task<Void, Never>?
     /// Set by the iOS app delegate when the system relaunches the app for finished downloads.
     @ObservationIgnored var backgroundCompletionHandler: (() -> Void)?
 
@@ -124,17 +133,25 @@ final class DownloadManager: NSObject {
         if let data = resumeData.removeValue(forKey: record.id) {
             task = session.downloadTask(withResumeData: data)
         } else {
-            var request = URLRequest(url: record.remoteURL)
-            for (key, value) in record.item.headers.dictionary { request.setValue(value, forHTTPHeaderField: key) }
-            if request.value(forHTTPHeaderField: "User-Agent") == nil {
-                request.setValue(defaultIPTVUserAgent, forHTTPHeaderField: "User-Agent")
-            }
-            task = session.downloadTask(with: request)
+            task = session.downloadTask(with: Self.request(for: record))
         }
         task.taskDescription = record.id
         tasks[record.id] = task
         update(record.id) { $0.status = .downloading }
+        lastProgress[record.id] = Date()
+        stalls[record.id] = nil
+        probed.remove(record.id)
         task.resume()
+        startWatchdog()
+    }
+
+    private static func request(for record: DownloadRecord) -> URLRequest {
+        var request = URLRequest(url: record.remoteURL)
+        for (key, value) in record.item.headers.dictionary { request.setValue(value, forHTTPHeaderField: key) }
+        if request.value(forHTTPHeaderField: "User-Agent") == nil {
+            request.setValue(defaultIPTVUserAgent, forHTTPHeaderField: "User-Agent")
+        }
+        return request
     }
 
     func pause(_ record: DownloadRecord) {
@@ -144,6 +161,7 @@ final class DownloadManager: NSObject {
                 guard let self else { return }
                 if let data { self.resumeData[record.id] = data }
                 self.tasks[record.id] = nil
+                self.stalls[record.id] = nil
                 self.update(record.id) { $0.status = .paused }
                 self.save(force: true)
             }
@@ -159,6 +177,7 @@ final class DownloadManager: NSObject {
         tasks[record.id]?.cancel()
         tasks[record.id] = nil
         resumeData[record.id] = nil
+        stalls[record.id] = nil
         try? FileManager.default.removeItem(at: localURL(for: record))
         records.removeAll { $0.id == record.id }
         save(force: true)
@@ -171,12 +190,17 @@ final class DownloadManager: NSObject {
             record.status = .downloading
             record.totalBytes = max(expected, 0)
             record.progress = expected > 0 ? Double(written) / Double(expected) : 0
+            record.receivedBytes = written
         }
+        lastProgress[id] = Date()
+        if stalls[id] != nil { stalls[id] = nil }
         save(force: false)
     }
 
     fileprivate func finished(id: String, movedTo url: URL?, error: String?) {
         tasks[id] = nil
+        stalls[id] = nil
+        lastProgress[id] = nil
         update(id) { record in
             if let error {
                 record.status = .failed(error)
@@ -220,6 +244,121 @@ final class DownloadManager: NSObject {
         }
     }
 
+    // MARK: Diagnosis
+
+    /// Every few seconds while downloads run: counts what arrived and, after `stallDelay` without data,
+    /// says what the download waits for. A system download that the provider refuses or never answers
+    /// does not fail: it waits, and used to show "Starting…" forever.
+    private func startWatchdog() {
+        guard watchdog == nil else { return }
+        watchdog = Task { [weak self] in
+            while true {
+                try? await Task.sleep(for: .seconds(5))
+                guard let manager = self, !Task.isCancelled else { return }
+                if !manager.checkRunningDownloads() {
+                    manager.watchdog = nil
+                    return
+                }
+            }
+        }
+    }
+
+    /// Returns whether downloads are still running.
+    private func checkRunningDownloads() -> Bool {
+        let now = Date()
+        var running = false
+        for record in records where record.isActive {
+            guard let task = tasks[record.id] else { continue }
+            running = true
+            let received = task.countOfBytesReceived
+            if received > (record.receivedBytes ?? 0) {
+                update(record.id) { $0.receivedBytes = received }
+                lastProgress[record.id] = now
+                stalls[record.id] = nil
+                continue
+            }
+            let since = lastProgress[record.id] ?? now
+            guard now.timeIntervalSince(since) >= Self.stallDelay, stalls[record.id] == nil else { continue }
+            stalls[record.id] = DownloadDiagnosis.stall(status: (task.response as? HTTPURLResponse)?.statusCode)
+            if !probed.contains(record.id) {
+                probed.insert(record.id)
+                probe(record)
+            }
+        }
+        return running
+    }
+
+    /// Asks the provider for the start of the file with an ordinary request, once per stalled download: tells
+    /// a refusal (connection limit, downloads not allowed) from a download the system has not started.
+    private func probe(_ record: DownloadRecord) {
+        let request = Self.request(for: record)
+        Task { [weak self] in
+            let problem = await Self.probe(request)
+            // Data arrived meanwhile: nothing to explain any more.
+            guard let self, self.stalls[record.id] != nil else { return }
+            self.stalls[record.id] = problem
+        }
+    }
+
+    nonisolated static func probe(_ request: URLRequest) async -> DownloadProblem {
+        var request = request
+        request.setValue("bytes=0-511", forHTTPHeaderField: "Range")
+        request.timeoutInterval = 20
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.invalidateAndCancel() }
+        do {
+            let (bytes, response) = try await session.bytes(for: request)
+            defer { bytes.task.cancel() }
+            guard let http = response as? HTTPURLResponse else { return .noData }
+            if let problem = DownloadDiagnosis.problem(status: http.statusCode) { return problem }
+            var prefix = Data()
+            for try await byte in bytes {
+                prefix.append(byte)
+                if prefix.count >= 512 { break }
+            }
+            let size = DownloadDiagnosis.totalSize(
+                contentRange: http.value(forHTTPHeaderField: "Content-Range"),
+                contentLength: http.expectedContentLength
+            ) ?? Int64(prefix.count)
+            if DownloadDiagnosis.isErrorPage(contentType: http.value(forHTTPHeaderField: "Content-Type"), prefix: prefix, size: size) {
+                return .errorPage
+            }
+            return .downloadStalled
+        } catch {
+            return (error as? URLError).flatMap { DownloadDiagnosis.problem(urlErrorCode: $0.code.rawValue) } ?? .noResponse
+        }
+    }
+
+    /// What the viewer reads about a download problem.
+    nonisolated static func message(for problem: DownloadProblem) -> String {
+        switch problem {
+        case .refused(let status):
+            return String(localized: "The provider refused the download (HTTP \(status)): expired subscription, connection limit reached (stop other playback) or downloads not allowed.")
+        case .notFound(let status):
+            return String(localized: "This file is no longer on the provider's server (HTTP \(status)).")
+        case .tooManyConnections(let status):
+            return String(localized: "Too many connections for this subscription (HTTP \(status)). Stop playback on this and your other devices, then resume the download.")
+        case .httpError(let status):
+            return String(localized: "The provider answered with an error (HTTP \(status)).")
+        case .errorPage:
+            return String(localized: "The provider sent a message instead of the video: its connection limit may be reached, or it does not allow downloads.")
+        case .noResponse:
+            return String(localized: "Nothing received yet: the provider has not answered. Its connection limit may be reached (stop playback on this and your other devices).")
+        case .noData:
+            return String(localized: "The provider accepted the download but sends nothing yet. It may limit connections or downloads.")
+        case .downloadStalled:
+            return String(localized: "The provider answers normally, but this download receives nothing. Pause it, then resume it.")
+        case .offline:
+            return String(localized: "No internet connection.")
+        case .unreachable:
+            return String(localized: "The provider's server cannot be reached.")
+        case .timedOut:
+            return String(localized: "The provider takes too long to answer.")
+        case .connectionLost:
+            return String(localized: "The connection to the provider was lost. Resume the download to continue.")
+        }
+    }
+
     fileprivate func backgroundEventsFinished() {
         backgroundCompletionHandler?()
         backgroundCompletionHandler = nil
@@ -245,10 +384,15 @@ private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unc
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         guard let id = downloadTask.taskDescription else { return }
-        if let http = downloadTask.response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            Task { @MainActor [weak manager] in
-                manager?.finished(id: id, movedTo: nil, error: "HTTP \(http.statusCode)")
-            }
+        let http = downloadTask.response as? HTTPURLResponse
+        if let http, let problem = DownloadDiagnosis.problem(status: http.statusCode) {
+            let message = DownloadManager.message(for: problem)
+            Task { @MainActor [weak manager] in manager?.finished(id: id, movedTo: nil, error: message) }
+            return
+        }
+        if Self.holdsAMessage(location, contentType: http?.value(forHTTPHeaderField: "Content-Type")) {
+            let message = DownloadManager.message(for: .errorPage)
+            Task { @MainActor [weak manager] in manager?.finished(id: id, movedTo: nil, error: message) }
             return
         }
         // The destination is derived from the id, without touching the main actor.
@@ -268,8 +412,18 @@ private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unc
         guard let error, let id = task.taskDescription else { return }
         let nsError = error as NSError
         if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return }
-        let message = error.localizedDescription
+        let problem = nsError.domain == NSURLErrorDomain ? DownloadDiagnosis.problem(urlErrorCode: nsError.code) : nil
+        let message = problem.map { DownloadManager.message(for: $0) } ?? error.localizedDescription
         Task { @MainActor [weak manager] in manager?.finished(id: id, movedTo: nil, error: message) }
+    }
+
+    /// A short text received instead of the film ("Max connections reached", a web page) is not kept.
+    private static func holdsAMessage(_ file: URL, contentType: String?) -> Bool {
+        guard let handle = try? FileHandle(forReadingFrom: file) else { return false }
+        defer { try? handle.close() }
+        let prefix = (try? handle.read(upToCount: 512)) ?? Data()
+        let size = ((try? FileManager.default.attributesOfItem(atPath: file.path))?[.size] as? NSNumber)?.int64Value ?? 0
+        return DownloadDiagnosis.isErrorPage(contentType: contentType, prefix: prefix, size: size)
     }
 
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {
