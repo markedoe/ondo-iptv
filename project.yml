@@ -115,6 +115,8 @@ targets:
     supportedDestinations: [iOS]
     sources:
       - path: UITests
+      # The playlist test serves its playlist from the test runner, on the same simulator.
+      - path: AppTests/LocalHTTPServer.swift
     dependencies:
       - target: Ondo
     settings:

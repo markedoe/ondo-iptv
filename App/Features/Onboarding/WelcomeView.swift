@@ -44,6 +44,7 @@ struct WelcomeView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .accessibilityIdentifier("addPlaylistButton")
 
                     Button {
                         Task { await addDemo() }

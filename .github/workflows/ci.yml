@@ -39,10 +39,20 @@ jobs:
       - uses: actions/checkout@v4
       - name: SwiftLint
         run: |
-          apt-get update -qq && apt-get install -y -qq unzip curl ca-certificates >/dev/null
+          apt-get update -qq && apt-get install -y -qq unzip curl ca-certificates python3 >/dev/null
           curl -sSL -o /tmp/swiftlint.zip https://github.com/realm/SwiftLint/releases/download/0.57.1/swiftlint_linux.zip
           unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint
           /tmp/swiftlint/swiftlint lint --reporter github-actions-logging
+      - name: Shipped configuration (French texts, privacy manifest, Mac sandbox)
+        if: success() || failure()
+        # What tests on simulated data cannot see: an untranslated text, an App Store upload rejected for
+        # an undeclared API, a Mac app whose sandbox blocks the network.
+        run: |
+          status=0
+          for check in translations privacy_manifest mac_entitlements; do
+            python3 .github/scripts/check_$check.py || status=1
+          done
+          exit $status
       - name: Tests with coverage
         working-directory: Packages/IPTVCore
         run: |
@@ -136,6 +146,32 @@ jobs:
           name: macos-screenshot
           path: screenshots
           if-no-files-found: ignore
+
+  release-build:
+    name: Release build (iOS)
+    runs-on: macos-26
+    # Debug is what the other jobs build and test; the App Store gets Release, without the `#if DEBUG`
+    # code (UI test catalogue, screenshot routes). A Release-only break shows here, not at archive time.
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen xcbeautify || true
+          xcodegen generate
+      - name: Cache Swift packages
+        uses: actions/cache@v4
+        with:
+          path: build/spm
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+      - name: Build for iOS Simulator (Release)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/release \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
 
   ui-tests:
     name: App tests — unit + UI (iPhone simulator)

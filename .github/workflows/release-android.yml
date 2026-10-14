@@ -46,6 +46,14 @@ jobs:
               exit 1
             fi
           done
+      - name: Demo playlist answers
+        # App Review taps "Try the demo": if the public list moved or broke, the review fails for a reason
+        # no test sees. The address is read from the app's code.
+        run: |
+          URL=$(grep -o 'https://[^"]*\.m3u' android/app/src/main/kotlin/com/markedoe/ondo/ui/OndoViewModel.kt | head -1)
+          curl -fsSL --retry 2 --max-time 60 "$URL" -o demo.m3u
+          head -c 7 demo.m3u | grep -q '#EXTM3U' || { echo "::error::$URL is not an M3U playlist"; exit 1; }
+          echo "$(grep -c '^#EXTINF' demo.m3u) entries in $URL"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

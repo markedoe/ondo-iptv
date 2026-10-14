@@ -74,6 +74,7 @@ struct AddPlaylistView: View {
 
             Section {
                 TextField("Name", text: $name, prompt: Text("My provider"))
+                    .accessibilityIdentifier("playlistName")
                 switch kind {
                 case .xtream:
                     TextField("Server", text: $server, prompt: Text("http://example.com:8080"))
@@ -94,6 +95,7 @@ struct AddPlaylistView: View {
                 case .m3uURL:
                     TextField("Playlist URL", text: $m3uURL, prompt: Text("http://…/playlist.m3u"), axis: .vertical)
                         .lineLimit(1...4)
+                        .accessibilityIdentifier("playlistURL")
                         .autocorrectionDisabled()
                         #if os(iOS)
                         .keyboardType(.URL)
@@ -209,6 +211,7 @@ struct AddPlaylistView: View {
                         Task { await submit() }
                     }
                     .disabled(!isValid)
+                    .accessibilityIdentifier("confirmAddPlaylist")
                 }
             }
         }

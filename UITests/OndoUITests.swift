@@ -53,6 +53,45 @@ final class OndoUITests: XCTestCase {
         return nil
     }
 
+    /// What a user does first, end to end: add an M3U playlist by its URL through the form. The playlist
+    /// is served over plain HTTP by a server in the test runner (same simulator) and its new release must
+    /// show on the home screen.
+    @MainActor
+    func testAddingAPlaylistByURL() async throws {
+        let year = Calendar.current.component(.year, from: .now)
+        let playlist = """
+        #EXTM3U
+        #EXTINF:-1 tvg-id="harbor.news" group-title="News",Harbor News
+        http://127.0.0.1:9/news.m3u8
+        #EXTINF:5400 group-title="Movies | Drama",Quiet Water (\(year))
+        http://127.0.0.1:9/quiet.mp4
+        """
+        let server = try LocalHTTPServer { request in
+            request.path == "/list.m3u" ? .text(playlist, type: "audio/x-mpegurl") : .notFound
+        }
+        let address = try await server.start().appending(path: "list.m3u").absoluteString
+
+        launch(["-uitest-reset"])
+        let add = app.buttons["addPlaylistButton"]
+        XCTAssertTrue(add.waitForExistence(timeout: 15))
+        add.tap()
+        app.segmentedControls.buttons["M3U URL"].tap()
+        let name = app.textFields["playlistName"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("Home")
+        let url = app.descendants(matching: .any).matching(identifier: "playlistURL").firstMatch
+        url.tap()
+        url.typeText(address)
+        snapshot("08-add-playlist")
+        app.buttons["confirmAddPlaylist"].tap()
+
+        let title = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Quiet Water'")).firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 20), "the playlist's new release shows on the home screen")
+        snapshot("09-playlist-added")
+        XCTAssertEqual(server.requests.first?.path, "/list.m3u")
+    }
+
     func testWelcomeScreen() {
         launch(["-uitest-reset"])
         XCTAssertTrue(app.buttons["demoButton"].waitForExistence(timeout: 15))
@@ -122,8 +161,15 @@ final class OndoUITests: XCTestCase {
         sleep(3)
         snapshot("07-guide")
 
-        // An upcoming programme: its sheet offers a reminder (in-memory notifications in UI tests).
-        if let later = upcomingProgrammeCell() {
+        // An upcoming programme: its sheet offers a reminder (in-memory notifications in UI tests). At some
+        // times of day every next programme is long enough to start off screen: scroll the grid forward.
+        var upcoming = upcomingProgrammeCell()
+        for _ in 0..<3 where upcoming == nil {
+            app.swipeLeft()
+            sleep(1)
+            upcoming = upcomingProgrammeCell()
+        }
+        if let later = upcoming {
             later.tap()
             let remind = app.buttons["reminderButton"]
             if remind.waitForExistence(timeout: 5) {
