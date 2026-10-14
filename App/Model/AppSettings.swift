@@ -88,6 +88,10 @@ struct AppSettings: Codable, Equatable {
     var hasCompletedOnboarding = false
     /// Minutes before the start of a programme a reminder is delivered.
     var reminderLeadMinutes = 2
+    /// Addic7ed needs no account: searched unless switched off.
+    var addic7edSubtitles = true
+    /// Languages of the last subtitle search (ISO 639-1), preferred first.
+    var subtitleSearchLanguages: [String] = []
 
     init() {}
 
@@ -115,5 +119,7 @@ struct AppSettings: Codable, Equatable {
         landscapeForVOD = (try? c.decodeIfPresent(Bool.self, forKey: .landscapeForVOD)) ?? d.landscapeForVOD
         hasCompletedOnboarding = (try? c.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)) ?? d.hasCompletedOnboarding
         reminderLeadMinutes = (try? c.decodeIfPresent(Int.self, forKey: .reminderLeadMinutes)) ?? d.reminderLeadMinutes
+        addic7edSubtitles = (try? c.decodeIfPresent(Bool.self, forKey: .addic7edSubtitles)) ?? d.addic7edSubtitles
+        subtitleSearchLanguages = (try? c.decodeIfPresent([String].self, forKey: .subtitleSearchLanguages)) ?? d.subtitleSearchLanguages
     }
 }

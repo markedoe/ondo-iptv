@@ -65,7 +65,7 @@ struct ContentIndex: Sendable {
 final class AppModel {
     @ObservationIgnored private let userStore: FileStore
     @ObservationIgnored private let cacheStore: FileStore
-    @ObservationIgnored private let secrets: SecretStore
+    @ObservationIgnored let secrets: SecretStore
     @ObservationIgnored let reminderScheduler: ReminderScheduling
     /// The latest reminder sync; the next one waits for it (see `syncReminders`).
     @ObservationIgnored var reminderSync: Task<Void, Never>?
@@ -108,6 +108,9 @@ final class AppModel {
     @ObservationIgnored private var epgTask: Task<Void, Never>?
     @ObservationIgnored var movieDetailsCache: [String: MediaDetails] = [:]
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]
+    /// Subtitle services built from the saved keys; rebuilt when a key changes (OpenSubtitles keeps its
+    /// signed-in session in its client, so it lives as long as the credentials).
+    @ObservationIgnored var subtitleProviders: [any SubtitleProvider]?
     /// Episodes are being fetched before a series starts ("Resume" on a series): shown, so the tap visibly
     /// did something while the provider answers.
     var isPreparingPlayback = false

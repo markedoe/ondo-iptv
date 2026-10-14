@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld"
+          }
+        }
+      }
+    },
     "%lld items": {
       "localizations": {
         "en": {
@@ -87,6 +97,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "1 saison"
+          }
+        }
+      }
+    },
+    "API key": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé API"
           }
         }
       }
@@ -1051,6 +1071,16 @@
         }
       }
     },
+    "Episode": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Épisode"
+          }
+        }
+      }
+    },
     "Episodes": {
       "localizations": {
         "fr": {
@@ -1221,12 +1251,42 @@
         }
       }
     },
+    "Films and series, many languages. Generate the key in your SubSource profile.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Films et séries, de nombreuses langues. Générez la clé dans votre profil SubSource."
+          }
+        }
+      }
+    },
     "Filter categories": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
             "value": "Filtrer les catégories"
+          }
+        }
+      }
+    },
+    "Find Subtitles": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chercher des sous-titres"
+          }
+        }
+      }
+    },
+    "Find Subtitles Online…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chercher des sous-titres en ligne…"
           }
         }
       }
@@ -1257,6 +1317,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajuster"
+          }
+        }
+      }
+    },
+    "For the deaf and hard of hearing": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour sourds et malentendants"
           }
         }
       }
@@ -1577,6 +1647,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Paysage pour les films et séries"
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue"
+          }
+        }
+      }
+    },
+    "Large collection of films and series. The key is in your SubDL account, under API.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grande collection de films et de séries. La clé se trouve dans votre compte SubDL, rubrique API."
           }
         }
       }
@@ -2321,6 +2411,26 @@
         }
       }
     },
+    "No subtitle service is set up. Add a key in Settings > Subtitles.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun service de sous-titres n’est configuré. Ajoutez une clé dans Réglages > Sous-titres."
+          }
+        }
+      }
+    },
+    "No subtitles found. Check the title, or try another language.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun sous-titre trouvé. Vérifiez le titre ou essayez une autre langue."
+          }
+        }
+      }
+    },
     "None": {
       "localizations": {
         "fr": {
@@ -2427,6 +2537,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Une URL par ligne. Les guides compressés gzip (.xml.gz) sont pris en charge."
+          }
+        }
+      }
+    },
+    "Online Subtitles": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sous-titres en ligne"
           }
         }
       }
@@ -2557,6 +2677,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mot de passe"
+          }
+        }
+      }
+    },
+    "Password (optional)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot de passe (facultatif)"
           }
         }
       }
@@ -3281,6 +3411,16 @@
         }
       }
     },
+    "Search Addic7ed": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chercher sur Addic7ed"
+          }
+        }
+      }
+    },
     "Search channels": {
       "localizations": {
         "fr": {
@@ -3311,6 +3451,26 @@
         }
       }
     },
+    "Searched on: %@. More services in Settings > Subtitles.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche sur : %@. D’autres services dans Réglages > Sous-titres."
+          }
+        }
+      }
+    },
+    "Searching sends the title you are watching to the services above, with your own key or account. Nothing is sent until you search.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une recherche envoie le titre que vous regardez aux services ci-dessus, avec votre propre clé ou compte. Rien n’est envoyé tant que vous ne cherchez pas."
+          }
+        }
+      }
+    },
     "Season": {
       "localizations": {
         "fr": {
@@ -3327,6 +3487,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saison %lld"
+          }
+        }
+      }
+    },
+    "Second Language": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deuxième langue"
           }
         }
       }
@@ -3367,6 +3537,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Séries (%lld)"
+          }
+        }
+      }
+    },
+    "Series only, no account needed (through the public Gestdown service).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Séries uniquement, sans compte (via le service public Gestdown)."
           }
         }
       }
@@ -3691,6 +3871,16 @@
         }
       }
     },
+    "The largest collection, all languages. Get a key by creating an API consumer in your account. Without signing in, 5 downloads a day; your account raises the limit.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La plus grande collection, toutes langues. Obtenez une clé en créant un « API consumer » dans votre compte. Sans connexion, 5 téléchargements par jour ; votre compte relève cette limite."
+          }
+        }
+      }
+    },
     "The movies, series and channels of your IPTV provider, in a clean library.": {
       "localizations": {
         "fr": {
@@ -3771,6 +3961,16 @@
         }
       }
     },
+    "This file holds no subtitles that can be shown.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier ne contient aucun sous-titre affichable."
+          }
+        }
+      }
+    },
     "This is an Xtream link: use the Xtream API (faster, with movie and series details)": {
       "localizations": {
         "fr": {
@@ -3827,6 +4027,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ce flux est lu par VLC, qui n’affiche l’image que sur cet appareil. Le moteur Apple peut l’envoyer sur votre téléviseur s’il sait ouvrir le flux."
+          }
+        }
+      }
+    },
+    "Title": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titre"
           }
         }
       }
@@ -4051,6 +4261,16 @@
         }
       }
     },
+    "Username (optional)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Identifiant (facultatif)"
+          }
+        }
+      }
+    },
     "Version": {
       "localizations": {
         "fr": {
@@ -4181,6 +4401,16 @@
         }
       }
     },
+    "Year": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Année"
+          }
+        }
+      }
+    },
     "Yes": {
       "localizations": {
         "fr": {
@@ -4217,6 +4447,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vos chaînes"
+          }
+        }
+      }
+    },
+    "Your own keys for OpenSubtitles, SubDL and SubSource, to find subtitles from the player.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos propres clés OpenSubtitles, SubDL et SubSource, pour trouver des sous-titres depuis le lecteur."
           }
         }
       }

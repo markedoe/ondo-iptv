@@ -154,6 +154,22 @@ struct SettingsView: View {
             }
 
             Section {
+                NavigationLink {
+                    SubtitleServicesView()
+                } label: {
+                    LabeledContent {
+                        Text(model.subtitleServices.isEmpty ? String(localized: "Off") : "\(model.subtitleServices.count)")
+                    } label: {
+                        Label("Online Subtitles", systemImage: "captions.bubble")
+                    }
+                }
+            } header: {
+                Text("Subtitles")
+            } footer: {
+                Text("Your own keys for OpenSubtitles, SubDL and SubSource, to find subtitles from the player.")
+            }
+
+            Section {
                 SecureField("TMDb API key or read access token", text: $tmdbKey)
                     .onSubmit { model.setTMDbCredential(tmdbKey) }
                 HStack {

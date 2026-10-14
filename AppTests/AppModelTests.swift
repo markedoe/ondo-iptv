@@ -270,6 +270,51 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(model.cachedDetails(for: item)?.title, "Harbor")
     }
 
+    func testSubtitleKeysGoToTheKeychainAndEnableTheirService() async throws {
+        let model = makeModel()
+        await model.bootstrap()
+        XCTAssertEqual(model.subtitleServices, [.addic7ed], "no key yet: only the service that needs none")
+
+        model.setSubtitleCredential("  key-example-0001 \n", for: .openSubtitlesKey)
+        model.setSubtitleCredential("key-example-0002", for: .subSourceKey)
+        XCTAssertEqual(secrets.values[SubtitleCredential.openSubtitlesKey.rawValue], "key-example-0001", "trimmed, kept with the secrets")
+        XCTAssertEqual(model.subtitleServices, [.openSubtitles, .subSource, .addic7ed])
+
+        model.setSubtitleCredential("", for: .subSourceKey)
+        model.setAddic7edSubtitles(false)
+        XCTAssertNil(secrets.values[SubtitleCredential.subSourceKey.rawValue], "an empty field removes the key")
+        XCTAssertEqual(model.subtitleServices, [.openSubtitles])
+        let saved = try String(contentsOf: root.appendingPathComponent("Support/settings.json"), encoding: .utf8)
+        XCTAssertFalse(saved.contains("key-example"), "keys never reach the settings file")
+    }
+
+    func testTheSubtitleSearchStartsFromWhatIsPlaying() async throws {
+        let model = try await modelWithPlaylist()
+        let movie = try XCTUnwrap(model.content.movies.first)
+        let item = PlaybackItem(reference: MediaReference(playlistID: UUID(), type: .movie, itemID: movie.id), title: "Quiet Water",
+                                streamURL: movie.streamURL, isLive: false)
+        let query = model.subtitleQuery(for: item)
+        XCTAssertEqual(query.title, "Quiet Water")
+        XCTAssertEqual(query.year, 2021)
+        XCTAssertNil(query.season)
+
+        let episode = PlaybackItem(reference: MediaReference(playlistID: UUID(), type: .series, itemID: "unknown", episodeID: "e"),
+                                   title: "Harbor Lights", subtitle: "S02E05 · Tide", streamURL: movie.streamURL, isLive: false)
+        let episodeQuery = model.subtitleQuery(for: episode)
+        XCTAssertEqual(episodeQuery.title, "Harbor Lights")
+        XCTAssertEqual(episodeQuery.season, 2)
+        XCTAssertEqual(episodeQuery.episode, 5)
+    }
+
+    func testSubtitleLanguagesFollowTheLastSearchThenThePreferences() {
+        XCTAssertEqual(AppModel.subtitleLanguages(saved: ["es"], preferred: "fr", device: ["fr-FR"]), ["es"])
+        XCTAssertEqual(AppModel.subtitleLanguages(saved: [], preferred: nil, device: ["fr-FR", "en-GB"]), ["fr", "en"])
+        XCTAssertEqual(AppModel.subtitleLanguages(saved: [], preferred: "de", device: ["fr-FR"]), ["de", "fr"])
+        XCTAssertEqual(AppModel.subtitleLanguages(saved: [], preferred: nil, device: ["en-US"]), ["en"])
+        XCTAssertNil(AppModel.episodeNumbers(in: "Arrival"))
+        XCTAssertEqual(AppModel.episodeNumbers(in: "s1e12 · Storm").map { [$0.season, $0.episode] }, [1, 12])
+    }
+
     func testKidsProfileHidesAdultCategories() async throws {
         let model = try await modelWithPlaylist()
         let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
