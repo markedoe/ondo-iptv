@@ -87,7 +87,9 @@ jobs:
           ./gradlew :app:recordRoborazziDebug :app:bundleRelease --stacktrace
           rm -f "$RUNNER_TEMP/upload.jks"
           # Without the upload key, Gradle would quietly sign with the debug key, which Play refuses.
-          if keytool -printcert -jarfile app/build/outputs/bundle/release/*.aab | grep -q "CN=Android Debug"; then
+          certificate=$(keytool -printcert -jarfile app/build/outputs/bundle/release/*.aab 2>&1 || true)
+          echo "$certificate" | grep -q "Owner:" || { echo "::error::The bundle is not signed"; exit 1; }
+          if echo "$certificate" | grep -q "CN=Android Debug"; then
             echo "::error::The bundle is signed with the debug key"; exit 1
           fi
       - name: Listing screenshots
