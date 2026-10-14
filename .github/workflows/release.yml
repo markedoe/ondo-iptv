@@ -24,15 +24,20 @@ jobs:
     name: TestFlight / App Store Connect
     runs-on: macos-26
     timeout-minutes: 120
+    # The signing secrets are given only to the steps that sign or upload, not to the tools installed
+    # before them (gems, Homebrew).
     env:
-      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
-      DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
       TARGET: ${{ github.event.inputs.target || 'all' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Check signing secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: |
           for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 DEVELOPMENT_TEAM; do
             if [ -z "${!name}" ]; then
@@ -59,9 +64,19 @@ jobs:
           echo "$(grep -c '^#EXTINF' demo.m3u) entries in $URL"
       - name: iOS → TestFlight
         if: env.TARGET == 'all' || env.TARGET == 'ios'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: bundle exec fastlane ios beta
       - name: macOS → TestFlight
         if: env.TARGET == 'all' || env.TARGET == 'mac'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: bundle exec fastlane mac beta
       - name: App Store screenshots
         if: env.TARGET == 'all' || env.TARGET == 'metadata'
@@ -81,6 +96,11 @@ jobs:
           fi
       - name: App Store listing
         if: env.TARGET == 'all' || env.TARGET == 'metadata'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: |
           bundle exec fastlane ios metadata
           bundle exec fastlane mac metadata

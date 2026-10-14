@@ -29,17 +29,22 @@ jobs:
     name: Google Play
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    # Each secret is given only to the step that uses it, not to the tools installed before (gems, Gradle
+    # plugins download their own code).
     env:
-      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-      PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
       TRACK: ${{ github.event.inputs.track || 'internal' }}
       RELEASE_STATUS: ${{ github.event.inputs.status || 'completed' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - name: Check secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: |
           for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD PLAY_SERVICE_ACCOUNT_JSON; do
             if [ -z "${!name}" ]; then
@@ -66,6 +71,11 @@ jobs:
           bundler-cache: true
       - name: Signed release bundle
         working-directory: android
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/upload.jks"
           export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
@@ -76,6 +86,10 @@ jobs:
           # Unit, Compose and screenshot tests; the screenshots become the store listing images.
           ./gradlew :app:recordRoborazziDebug :app:bundleRelease --stacktrace
           rm -f "$RUNNER_TEMP/upload.jks"
+          # Without the upload key, Gradle would quietly sign with the debug key, which Play refuses.
+          if keytool -printcert -jarfile app/build/outputs/bundle/release/*.aab | grep -q "CN=Android Debug"; then
+            echo "::error::The bundle is signed with the debug key"; exit 1
+          fi
       - name: Listing screenshots
         run: |
           for dir in android/app/src/test/screenshots/play/*/*/; do
@@ -91,4 +105,6 @@ jobs:
           name: ondo-release-bundle
           path: android/app/build/outputs/bundle/release/*.aab
       - name: Upload to Google Play
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
         run: bundle exec fastlane android deploy
