@@ -137,6 +137,8 @@ platform :mac do
       scheme: SCHEME,
       configuration: "Release",
       destination: "generic/platform=macOS",
+      # One multiplatform target: gym only packages a .pkg (not an .ipa) when the SDK says macOS.
+      sdk: "macosx",
       export_method: "app-store",
       installer_cert_name: nil,
       output_directory: "build/mac-release",
