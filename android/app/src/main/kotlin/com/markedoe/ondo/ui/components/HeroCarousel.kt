@@ -43,6 +43,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import com.markedoe.ondo.ui.screens.myListState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -155,8 +158,10 @@ fun HeroCarousel(
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(if (page.resumable) R.string.resume else R.string.play), fontWeight = FontWeight.SemiBold)
                         }
+                        val listState = myListState(page.inMyList)
                         FilledTonalButton(
                             onClick = { onToggleMyList(page.item) },
+                            modifier = Modifier.semantics { stateDescription = listState },
                             colors = ButtonDefaults.filledTonalButtonColors(containerColor = Color.White.copy(alpha = 0.16f), contentColor = Color.White),
                             contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                         ) {

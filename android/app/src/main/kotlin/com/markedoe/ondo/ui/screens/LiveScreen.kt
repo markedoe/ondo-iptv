@@ -91,7 +91,12 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .combinedClickable(onClick = { actions.onPlay(row) }, onLongClick = { actions.onToggleFavorite(row) })
+                    // TalkBack offers the long press under this name ("double-tap and hold to …").
+                    .combinedClickable(
+                        onClick = { actions.onPlay(row) },
+                        onLongClickLabel = stringResource(R.string.toggle_favorite_action),
+                        onLongClick = { actions.onToggleFavorite(row) },
+                    )
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

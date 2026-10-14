@@ -11,6 +11,9 @@
     <string name="play">Play</string>
     <string name="resume">Resume</string>
     <string name="my_list">My List</string>
+    <string name="in_my_list">In My List</string>
+    <string name="not_in_my_list">Not in My List</string>
+    <string name="toggle_favorite_action">Add to or remove from favorites</string>
     <string name="from_start">From Start</string>
     <string name="play_episode">Play %1$s</string>
     <string name="resume_episode">Resume %1$s</string>

@@ -59,6 +59,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -129,7 +131,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         actions = { metrics ->
             PlayButton(if (resumable) stringResource(R.string.resume) else stringResource(R.string.play), state.progress.takeIf { resumable }, actions.onPlay)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
-                CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList)
+                CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
                 if (resumable) CircleAction(stringResource(R.string.from_start), Icons.Rounded.Replay, actions.onPlayFromStart)
             }
         },
@@ -167,7 +169,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
-                CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList)
+                CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
             }
         },
         content = { metrics ->
@@ -293,9 +295,20 @@ private fun PlayButton(title: String, progress: WatchProgress?, onClick: () -> U
     }
 }
 
+/** What TalkBack says after "My List": the check mark alone is visual only. */
 @Composable
-private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(4.dp)) {
+internal fun myListState(inMyList: Boolean): String = stringResource(if (inMyList) R.string.in_my_list else R.string.not_in_my_list)
+
+@Composable
+private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit, state: String? = null) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { if (state != null) stateDescription = state }
+            .padding(4.dp),
+    ) {
         Box(Modifier.size(50.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null)
         }

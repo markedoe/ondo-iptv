@@ -10,6 +10,9 @@
     <string name="play">Lire</string>
     <string name="resume">Reprendre</string>
     <string name="my_list">Ma liste</string>
+    <string name="in_my_list">Dans ma liste</string>
+    <string name="not_in_my_list">Pas dans ma liste</string>
+    <string name="toggle_favorite_action">Ajouter aux favoris ou en retirer</string>
     <string name="from_start">Depuis le début</string>
     <string name="play_episode">Lire %1$s</string>
     <string name="resume_episode">Reprendre %1$s</string>

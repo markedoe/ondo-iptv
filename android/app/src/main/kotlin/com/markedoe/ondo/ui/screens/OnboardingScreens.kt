@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -163,7 +164,8 @@ fun AddPlaylistScreen(
     var name by rememberSaveable { mutableStateOf("") }
     var server by rememberSaveable { mutableStateOf("") }
     var username by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
+    // Not saved with the screen's state: the system can write that state to disk.
+    var password by remember { mutableStateOf("") }
     var url by rememberSaveable { mutableStateOf("") }
     var epg by rememberSaveable { mutableStateOf("") }
     val valid = if (kind == 0) server.isNotBlank() && username.isNotBlank() && password.isNotBlank() else url.isNotBlank()

@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -106,6 +107,8 @@ class ScreensTest {
         compose.onNodeWithText("70 min left", substring = true).assertExists()
         assertEquals(1, play)
         assertEquals(1, fromStart)
+        // TalkBack hears whether the title is in My List, not only "My List".
+        compose.onNode(hasText("My List") and hasStateDescription("Not in My List"), useUnmergedTree = false).assertExists()
     }
 
     @Test
