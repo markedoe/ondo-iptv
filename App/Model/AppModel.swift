@@ -422,11 +422,14 @@ final class AppModel {
         var hasCache = false
         if switching || forceRefresh {
             phase = .loading(String(localized: "Opening playlist…"))
+            epgTask?.cancel()  // the previous playlist's guide must not land on this one
             epg = .empty
             epgPhase = .idle
             let store = cacheStore
             let name = "content-\(playlist.id.uuidString)"
             let cached = await Task.detached { store.load(PlaylistContent.self, name: name) }.value
+            // Another playlist was opened meanwhile: that activation owns the screen now.
+            guard activePlaylist?.id == playlist.id else { return }
             if let cached, !cached.isEmpty {
                 await apply(cached, for: playlist)
                 phase = .loaded
@@ -443,6 +446,7 @@ final class AppModel {
         if forceRefresh || !hasCache || playlist.needsRefresh() {
             await refreshContent(of: playlist, silent: hasCache)
         }
+        guard activePlaylist?.id == playlist.id else { return }
         loadEPG(for: playlist, force: false)
     }
 
@@ -488,6 +492,13 @@ final class AppModel {
             let edited = newContent.applying(edits)
             return (edited, ContentIndex(content: edited))
         }.value
+        // While the catalogue was being built, another playlist may have been opened (its catalogue must
+        // not be replaced by this one), or this one edited (build again with the current edits).
+        guard let current = activePlaylist, current.id == playlist.id else { return }
+        guard current.channelEdits == edits else {
+            await apply(newContent, for: current)
+            return
+        }
         rawContent = newContent
         content = edited
         index = built
@@ -514,7 +525,9 @@ final class AppModel {
             let cached = await Task.detached { store.load(EPGData.self, name: name) }.value
             let overrides = playlist.epgChannelOverrides
             if let cached, !Task.isCancelled {
-                epg = await Task.detached { EPGIndex(data: cached, overrides: overrides) }.value
+                let index = await Task.detached { EPGIndex(data: cached, overrides: overrides) }.value
+                guard !Task.isCancelled else { return }
+                epg = index
             }
             let isStale = cached.map { Date().timeIntervalSince($0.fetchedAt) > 6 * 3600 } ?? true
             guard force || isStale else {
@@ -523,7 +536,9 @@ final class AppModel {
             }
             let daysBack = min(max(content.channels.compactMap { $0.catchup?.days }.max() ?? 1, 1), 14)
             let window = EPGFilter.standard(daysBack: daysBack, daysAhead: daysAhead)
-            let result = await Task.detached { await loader.loadEPG(for: playlist, content: content, window: window) }.value
+            let loading = Task.detached { await loader.loadEPG(for: playlist, content: content, window: window) }
+            // Opening another playlist cancels this load: the downloads stop instead of finishing unseen.
+            let result = await withTaskCancellationHandler { await loading.value } onCancel: { loading.cancel() }
             guard !Task.isCancelled, activePlaylist?.id == playlist.id else { return }
             if !result.data.programs.isEmpty {
                 let data = result.data
