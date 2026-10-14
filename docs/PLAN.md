@@ -82,7 +82,7 @@ with shortcuts, player in its own window (several windows = multi-screen), nativ
 - [x] Grid TV Guide + programme details + catch-up
 - [x] Parental control: PIN, adult categories locked automatically
 - [x] Xtream account info + connection test
-- [x] Full settings; English + French localization
+- [x] Full settings; localization in English, French, Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi
 
 ### Phase 3 — Advanced player (P2) ✅
 - [x] **VLCKit** 3.6 engine (LGPL): MKV, AVI, raw `.ts`…; automatic mode with fallback if AVPlayer fails

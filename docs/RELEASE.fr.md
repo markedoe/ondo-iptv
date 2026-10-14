@@ -77,7 +77,10 @@ Un seul App ID sert pour l'iPhone, l'iPad et le Mac.
 
 - Plateformes : **iOS** et **macOS** (une seule fiche, achat universel)
 - Nom : `Ondo – IPTV Player` (s'il est pris, prévenez-moi : le nom vient de `fastlane/metadata/*/name.txt`)
-- Langue principale : **English (U.S.)**
+- Langue principale : **English (U.S.)**. La fiche est traduite en anglais et en français
+  (`fastlane/metadata/en-US`, `fr-FR`) ; l'App Store affiche les sept langues de l'app elle-même (anglais,
+  français, espagnol, portugais, chinois, arabe, hindi) d'après le binaire. Des fiches dans les cinq autres
+  langues pourront être ajoutées plus tard sous forme de dossiers `fastlane/metadata/<langue>/`.
 - Bundle ID : `com.markedoe.ondo` (la liste ne montre que les App ID créés en B2)
 - SKU : `ONDO001` (définitif)
 - User Access : Full Access

@@ -82,7 +82,7 @@ avec raccourcis, lecteur dans sa propre fenêtre (plusieurs fenêtres = multi-é
 - [x] Guide TV en grille + fiche programme + replay
 - [x] Contrôle parental : PIN, catégories adultes verrouillées automatiquement
 - [x] Infos du compte Xtream + test de connexion
-- [x] Réglages complets ; localisation anglais + français
+- [x] Réglages complets ; localisation en anglais, français, espagnol, portugais, chinois (simplifié), arabe et hindi
 
 ### Phase 3 — Lecteur avancé (P2) ✅
 - [x] Moteur **VLCKit** 3.6 (LGPL) : MKV, AVI, `.ts` brut… ; mode automatique avec repli si AVPlayer échoue

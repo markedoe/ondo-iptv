@@ -79,7 +79,8 @@ and rejected by the leak guard (`.claude/hooks/leak_guard.py`).
 ## D. Store listing and declarations (Play Console → *Monitor and improve* / *Policy and programs*)
 
 The store listing (title, descriptions, icon, feature graphic, phone and tablet screenshots in English and
-French) is uploaded by fastlane from `fastlane/metadata-android/`; the screenshots are produced by the
+French; the app itself is in seven languages, see the README) is uploaded by fastlane from
+`fastlane/metadata-android/`; the screenshots are produced by the
 Roborazzi tests on every release. The rest is declared once in the console, in the *Set up your app*
 section of the dashboard:
 

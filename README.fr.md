@@ -61,6 +61,25 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - À venir : Android TV, grille du guide et replay, Chromecast, téléchargements, profils et PIN,
   sous-titres en ligne. Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
+## Langues
+
+Les apps (iPhone, iPad, Mac et Android) existent en sept langues, choisies d'après les réglages de l'appareil
+(et, sur Android 13 et plus, d'après le réglage de langue propre à l'app) :
+
+| Langue | Apple (`App/Resources/Localizable.xcstrings`) | Android (`android/app/src/main/res/`) |
+|---|---|---|
+| Anglais (langue de développement) | `en` | `values/` |
+| Français | `fr` | `values-fr/` |
+| Espagnol | `es` | `values-es/` |
+| Portugais (formulations brésiliennes) | `pt` | `values-pt/` |
+| Chinois (simplifié) | `zh-Hans` | `values-zh-rCN/` |
+| Arabe (de droite à gauche) | `ar` | `values-ar/` |
+| Hindi | `hi` | `values-hi/` |
+
+Chaque texte d'une nouvelle fonctionnalité est traduit dans les sept langues dans le même changement, pluriels
+compris. La CI y veille : `check_translations.py` échoue s'il manque une traduction Apple, le lint Android s'il
+en manque une sur Android. Les fiches des stores, le site et cette documentation sont en anglais et en français.
+
 ## Structure
 
 ```
@@ -114,7 +133,7 @@ Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur donné
 - **HTTP en clair autorisé partout** (`AppTransportSecurityTests`, `NetworkSecurityConfigTest` sur Android).
 - **Configuration livrée** (`ShippedConfigurationTests`) : découverte Chromecast, son écran verrouillé,
   question d'export, manifeste de confidentialité.
-- **Scripts** (`.github/scripts/check_*.py`, exécutables en local) : textes traduits en français,
+- **Scripts** (`.github/scripts/check_*.py`, exécutables en local) : textes traduits dans toutes les langues,
   manifeste de confidentialité couvrant les API utilisées par le code livré, entitlements du bac à sable Mac,
   neutralité du dépôt (aucune autre app IPTV citée, jamais « gratuit » pour qualifier l’IPTV, chaînes fictives
   dans les tests).

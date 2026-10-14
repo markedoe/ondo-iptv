@@ -16,6 +16,9 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   démonstration et avertissement « lecteur sans contenu ».
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
   reprise, image dans l'image, MediaSession, retour au direct.
+- **Langues** : anglais, français, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
+  hindi (`res/values-*`), proposées aussi dans le réglage de langue par app d'Android 13
+  (`res/xml/locales_config.xml`).
 - **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), captures
   Roborazzi qui servent de captures Google Play (téléphone, tablettes 7" et 10", anglais et français).
 

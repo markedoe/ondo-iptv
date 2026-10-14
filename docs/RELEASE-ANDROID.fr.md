@@ -79,7 +79,8 @@ par git et refusés par le garde anti-fuite (`.claude/hooks/leak_guard.py`).
 ## D. Fiche et déclarations (Play Console → *Surveiller et améliorer* / *Règles et programmes*)
 
 La fiche (titre, descriptions, icône, image de présentation, captures téléphone et tablettes en anglais
-et en français) est envoyée par fastlane depuis `fastlane/metadata-android/` ; les captures sont produites
+et en français ; l'app elle-même est en sept langues, voir le README) est envoyée par fastlane depuis
+`fastlane/metadata-android/` ; les captures sont produites
 par les tests Roborazzi à chaque release. Le reste se déclare une fois dans la console, section
 *Configurer votre application* du tableau de bord :
 

@@ -16,6 +16,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   demo and a "player without content" disclaimer.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
   resume, picture-in-picture, MediaSession, Back to Live.
+- **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi
+  (`res/values-*`), also offered in Android 13's per-app language setting (`res/xml/locales_config.xml`).
 - **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), Roborazzi
   screenshots that double as Google Play screenshots (phone, 7" and 10" tablets, English and French).
 

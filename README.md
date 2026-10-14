@@ -59,6 +59,25 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - Coming next: Android TV, grid guide and catch-up, Chromecast, downloads, profiles and PIN, online
   subtitles. Details: [docs/ANDROID.md](docs/ANDROID.md).
 
+## Languages
+
+The apps (iPhone, iPad, Mac and Android) are available in seven languages, picked from the device settings
+(and, on Android 13+, from the app's own language setting):
+
+| Language | Apple (`App/Resources/Localizable.xcstrings`) | Android (`android/app/src/main/res/`) |
+|---|---|---|
+| English (development language) | `en` | `values/` |
+| French | `fr` | `values-fr/` |
+| Spanish | `es` | `values-es/` |
+| Portuguese (Brazilian wording) | `pt` | `values-pt/` |
+| Chinese (Simplified) | `zh-Hans` | `values-zh-rCN/` |
+| Arabic (right to left) | `ar` | `values-ar/` |
+| Hindi | `hi` | `values-hi/` |
+
+Every text of a new feature is translated into all seven languages in the same change, plural forms included.
+CI enforces it: `check_translations.py` fails on a missing Apple translation and Android lint on a missing
+Android one. The store listings, the website and this documentation are in English and French.
+
 ## Structure
 
 ```
@@ -111,7 +130,7 @@ Some defects only show up in real conditions, where tests on simulated data cann
 - **Plain HTTP allowed everywhere** (`AppTransportSecurityTests`, `NetworkSecurityConfigTest` on Android).
 - **Shipped configuration** (`ShippedConfigurationTests`): Chromecast discovery, lock screen audio, export
   compliance question, privacy manifest.
-- **Scripts** (`.github/scripts/check_*.py`, runnable locally): texts translated into French, a privacy
+- **Scripts** (`.github/scripts/check_*.py`, runnable locally): texts translated into every language, a privacy
   manifest covering the APIs used by the shipped code, Mac sandbox entitlements, repository neutrality (no
   other IPTV app named, IPTV never called free, fictional channels in tests).
 - **Release build** (`#if DEBUG` code is left out of the App Store version).
