@@ -12,8 +12,10 @@ screenshots.
   use `example.com` and public streams.
 - **Neutrality**: do not name other IPTV applications; Ondo is a player, it provides no content; never use
   "free" / "gratuit" to describe IPTV.
-- **Documentation**: in English, with a French version next to it (`README.fr.md`, `docs/*.fr.md`); update
-  both. App strings, store listings and the website keep their own French translations.
+- **Always bilingual, English and French**: everything written for people exists in both languages and both
+  are updated together: documentation in English with a French version next to it (`README.fr.md`,
+  `docs/*.fr.md`), app strings (`Localizable.xcstrings`, Android `values-fr`), store listings (`en-US` and
+  `fr-FR`), the website, release notes. Code, comments and commit messages stay in English.
 - **Guard**: `.claude/hooks/leak_guard.py` is wired as a `PreToolUse` hook (`.claude/settings.json`): it
   blocks writing secrets or personal data into the repository and checks the changes before `git commit` /
   `git push`. CI runs it again on the whole history with gitleaks. For a false positive, add a regex to
