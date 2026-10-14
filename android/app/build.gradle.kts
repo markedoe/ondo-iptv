@@ -80,7 +80,7 @@ android {
         // Errors fail the build; the whole report (warnings too) is printed in the CI log.
         abortOnError = true
         textReport = true
-        textOutput = file("stdout")
+        textOutput = File("stdout") // a relative "stdout" is the console; file("stdout") wrote android/app/stdout
     }
 
     packaging.resources {
