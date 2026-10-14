@@ -1,186 +1,185 @@
-# Publier Ondo sur Google Play (Android)
+# Publishing Ondo on Google Play (Android)
 
-La compilation, les tests, les captures de la fiche, la signature et l'envoi sur Google Play sont
-automatisés (Gradle + fastlane + GitHub Actions). Ce qui reste manuel dépend de votre compte Google Play
-et ne se fait qu'une fois. Comptez une heure, plus les délais de Google (vérification du compte, test
-fermé de 14 jours pour un compte personnel récent).
+**English** · [Français](RELEASE-ANDROID.fr.md)
 
-Procédure établie le 13/10/2026. Les libellés de la Play Console changent souvent : en cas de doute, suivez
-l'aide de la Play Console, qui fait foi.
+Building, testing, store listing screenshots, signing and uploading to Google Play are automated
+(Gradle + fastlane + GitHub Actions). What remains manual depends on your Google Play account and only has
+to be done once. Allow an hour, plus Google's delays (account verification, 14-day closed test for a recent
+personal account).
 
-## A. Compte Google Play Console
+Procedure written on October 13, 2026. Play Console labels change often: when in doubt, follow the Play
+Console help, which is authoritative.
 
-1. Créez le compte sur <https://play.google.com/console/signup> (frais d'inscription uniques de 25 $).
-   - **Compte personnel** : vérification d'identité (pièce d'identité, téléphone). Pour un compte
-     personnel créé après le 13/11/2023, Google impose un **test fermé avec au moins 12 testeurs inscrits
-     pendant 14 jours d'affilée** avant d'ouvrir la production (voir E2).
-   - **Compte organisation** : numéro D-U-N-S requis, pas de test fermé obligatoire.
-2. Activez la validation en deux étapes du compte Google utilisé.
+## A. Google Play Console account
 
-## B. Créer l'app dans la Play Console
+1. Create the account at <https://play.google.com/console/signup> (one-time registration fee of $25).
+   - **Personal account**: identity verification (ID document, phone). For a personal account created
+     after November 13, 2023, Google requires a **closed test with at least 12 opted-in testers for
+     14 consecutive days** before production can be opened (see E2).
+   - **Organization account**: D-U-N-S number required, no mandatory closed test.
+2. Turn on 2-Step Verification for the Google account you use.
 
-*Accueil → Créer une application* :
+## B. Create the app in the Play Console
 
-| Champ | Valeur |
+*Home → Create app*:
+
+| Field | Value |
 |---|---|
-| Nom de l'application | `Ondo` |
-| Langue par défaut | Anglais (États-Unis) – en-US |
-| Application ou jeu | Application |
-| Gratuite ou payante | Gratuite (définitif) |
-| Déclarations | cocher les règles du programme pour les développeurs et les lois d'exportation des États-Unis |
+| App name | `Ondo` |
+| Default language | English (United States) – en-US |
+| App or game | App |
+| Free or paid | Free (cannot be changed later) |
+| Declarations | check the Developer Program Policies and the US export laws |
 
-Le nom du package est fixé au premier envoi : `com.markedoe.ondo` (les versions de debug utilisent
-`com.markedoe.ondo.debug` et ne vont jamais sur le Play Store).
+The package name is set on the first upload: `com.markedoe.ondo` (debug builds use `com.markedoe.ondo.debug`
+and never go to the Play Store).
 
-## C. Clé d'importation et secrets GitHub
+## C. Upload key and GitHub secrets
 
-Google Play signe l'app distribuée (**signature d'application par Google Play**, imposée pour les AAB).
-Vous ne gardez que la **clé d'importation** (upload key), qui signe le bundle envoyé.
+Google Play signs the distributed app (**Play App Signing**, mandatory for AABs). You only keep the
+**upload key**, which signs the bundle you upload.
 
-### C1. Créer la clé d'importation (une fois, sur votre ordinateur)
+### C1. Create the upload key (once, on your computer)
 
 ```sh
 keytool -genkeypair -v -keystore ondo-upload.jks -alias upload -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-`keytool` est fourni avec Java (Android Studio l'inclut). Choisissez un mot de passe fort, conservez le
-fichier `.jks` et son mot de passe **hors du dépôt** (gestionnaire de mots de passe). Si la clé est perdue,
-elle peut être réinitialisée depuis la Play Console (*Intégrité de l'application*), sans republier l'app.
+`keytool` ships with Java (Android Studio includes it). Choose a strong password, and keep the `.jks` file
+and its password **outside the repository** (password manager). If the key is lost, it can be reset from
+the Play Console (*App integrity*), without republishing the app.
 
-### C2. Compte de service pour l'API Google Play
+### C2. Service account for the Google Play API
 
-1. *Play Console → Paramètres → Accès à l'API* (ou *Utilisateurs et autorisations*, selon la version de
-   la console) : suivez le lien vers Google Cloud, créez un projet si besoin et activez la
+1. *Play Console → Setup → API access* (or *Users and permissions*, depending on the console version):
+   follow the link to Google Cloud, create a project if needed and enable the
    **Google Play Android Developer API**.
-2. Dans Google Cloud : *IAM et administration → Comptes de service → Créer un compte de service*
-   (`ondo-release`), sans rôle Cloud. Onglet *Clés → Ajouter une clé → JSON* : un fichier JSON est
-   téléchargé.
-3. Dans la Play Console : *Utilisateurs et autorisations → Inviter de nouveaux utilisateurs* : l'adresse du
-   compte de service, autorisations **pour l'app Ondo** : *Publier sur les canaux de test*, *Gérer la
-   fiche Play Store*, *Publier en production* (si vous voulez publier en production depuis GitHub).
+2. In Google Cloud: *IAM & Admin → Service accounts → Create service account* (`ondo-release`), with no
+   Cloud role. In the *Keys* tab, *Add key → JSON*: a JSON file is downloaded.
+3. In the Play Console: *Users and permissions → Invite new users*: the service account's address, with
+   permissions **for the Ondo app**: *Release apps to testing tracks*, *Manage store presence*, *Release to
+   production, exclude devices, and use Play App Signing* (if you want to release to production from
+   GitHub).
 
-### C3. Secrets du dépôt
+### C3. Repository secrets
 
-*GitHub → Settings → Secrets and variables → Actions → New repository secret* :
+*GitHub → Settings → Secrets and variables → Actions → New repository secret*:
 
-| Secret | Valeur |
+| Secret | Value |
 |---|---|
-| `ANDROID_KEYSTORE_BASE64` | le fichier `.jks` en base64 : `base64 -i ondo-upload.jks \| pbcopy` (macOS) ou `base64 -w0 ondo-upload.jks` (Linux) |
-| `ANDROID_KEYSTORE_PASSWORD` | mot de passe du keystore |
-| `ANDROID_KEY_ALIAS` | `upload` (l'alias choisi en C1) |
-| `ANDROID_KEY_PASSWORD` | mot de passe de la clé (souvent le même) |
-| `PLAY_SERVICE_ACCOUNT_JSON` | tout le contenu du fichier JSON du compte de service |
+| `ANDROID_KEYSTORE_BASE64` | the `.jks` file in base64: `base64 -i ondo-upload.jks \| pbcopy` (macOS) or `base64 -w0 ondo-upload.jks` (Linux) |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
+| `ANDROID_KEY_ALIAS` | `upload` (the alias chosen in C1) |
+| `ANDROID_KEY_PASSWORD` | key password (often the same) |
+| `PLAY_SERVICE_ACCOUNT_JSON` | the whole content of the service account's JSON file |
 
-Ne mettez jamais le `.jks` ni le JSON dans le dépôt : `*.jks`, `*.keystore` et `secrets/` sont ignorés
-par git et refusés par le garde anti-fuite (`.claude/hooks/leak_guard.py`).
+Never put the `.jks` or the JSON in the repository: `*.jks`, `*.keystore` and `secrets/` are ignored by git
+and rejected by the leak guard (`.claude/hooks/leak_guard.py`).
 
-## D. Fiche et déclarations (Play Console → *Surveiller et améliorer* / *Règles et programmes*)
+## D. Store listing and declarations (Play Console → *Monitor and improve* / *Policy and programs*)
 
-La fiche (titre, descriptions, icône, image de présentation, captures téléphone et tablettes en anglais
-et en français) est envoyée par fastlane depuis `fastlane/metadata-android/` ; les captures sont produites
-par les tests Roborazzi à chaque release. Le reste se déclare une fois dans la console, section
-*Configurer votre application* du tableau de bord :
+The store listing (title, descriptions, icon, feature graphic, phone and tablet screenshots in English and
+French) is uploaded by fastlane from `fastlane/metadata-android/`; the screenshots are produced by the
+Roborazzi tests on every release. The rest is declared once in the console, in the *Set up your app*
+section of the dashboard:
 
-### D1. Règles de confidentialité
+### D1. Privacy policy
 
-URL : `https://markedoe.github.io/ondo-iptv/privacy.html` (le site est publié par le workflow *Website*).
+URL: `https://markedoe.github.io/ondo-iptv/privacy.html` (the site is published by the *Website* workflow).
 
-### D2. Accès à l'application
+### D2. App access
 
-*Toutes les fonctionnalités sont disponibles sans accès particulier*. Pour la review, ajoutez une
-instruction : « Sur l'écran d'accueil, touchez **Try the demo** : une playlist de chaînes publiques
-(projet iptv-org) est chargée. Ondo ne fournit aucun contenu ; l'utilisateur ajoute ses propres sources. »
+*All functionality in my app is available without any access restrictions*. For the review, add an
+instruction: "On the home screen, tap **Try the demo**: a playlist of public channels (iptv-org project)
+is loaded. Ondo does not provide any content; users add their own sources."
 
-### D3. Annonces
+### D3. Ads
 
-*Non, mon application ne contient pas d'annonces.*
+*No, my app does not contain ads.*
 
-### D4. Classification du contenu (questionnaire IARC)
+### D4. Content rating (IARC questionnaire)
 
-Catégorie : **Tous les autres types d'applications** (pas un jeu). Répondez honnêtement : pas de violence,
-de sexualité, de langage grossier, de substances, de jeux d'argent ni de partage de position dans l'app
-elle-même. À la question sur les contenus générés ou fournis par les utilisateurs / l'accès à des contenus
-non filtrés, indiquez que l'app lit des flux choisis par l'utilisateur. Les catégories dont le nom semble
-réservé aux adultes sont masquées par défaut (réglage *Afficher les catégories adultes*).
+Category: **All Other App Types** (not a game). Answer honestly: no violence, sexuality, crude language,
+substances, gambling or location sharing in the app itself. For the question about user-generated or
+user-provided content / access to unfiltered content, state that the app plays streams chosen by the user.
+Categories whose name looks adult-only are hidden by default (*Show adult categories* setting).
 
-### D5. Public cible
+### D5. Target audience
 
-**18 ans et plus** : le contenu dépend des sources de l'utilisateur. Cela écarte les obligations du
-programme Familles.
+**18 and over**: the content depends on the user's sources. This rules out the Families program
+requirements.
 
-### D6. Sécurité des données
+### D6. Data safety
 
-Ondo n'a ni serveur, ni compte, ni statistiques, ni publicité, ni rapport de plantage : toutes les données
-restent sur l'appareil, et les requêtes réseau vont uniquement aux serveurs que l'utilisateur a saisis.
+Ondo has no server, no account, no analytics, no ads and no crash reporting: all data stays on the device,
+and network requests only go to the servers the user has entered.
 
-- *Votre application collecte-t-elle ou partage-t-elle des types de données utilisateur requis ?* **Non.**
-- Le formulaire demande alors seulement de confirmer. (Pas de Google Cast sur Android, contrairement à
-  l'iPhone : rien à déclarer à ce titre.)
+- *Does your app collect or share any of the required user data types?* **No.**
+- The form then only asks you to confirm. (No Google Cast on Android, unlike the iPhone: nothing to
+  declare on that front.)
 
-### D7. Autres déclarations
+### D7. Other declarations
 
-Application d'actualités : **non**. Applications gouvernementales, financières, de santé : **non**.
-Identifiant publicitaire : **non** (l'app ne l'utilise pas). Fonctionnalités financières : **aucune**.
+News app: **no**. Government, financial and health apps: **no**.
+Advertising ID: **no** (the app does not use it). Financial features: **none**.
 
-### D8. Fiche principale
+### D8. Main store listing
 
-Catégorie : **Vidéo et éditeurs vidéo** (ou *Divertissement*). Adresse e-mail de contact : une adresse
-dédiée au support (publique sur la fiche). Site web : `https://markedoe.github.io/ondo-iptv/`.
+Category: **Video Players & Editors** (or *Entertainment*). Contact email address: an address dedicated to
+support (public on the store listing). Website: `https://markedoe.github.io/ondo-iptv/`.
 
-## E. Premier envoi et tests
+## E. First upload and testing
 
-### E1. Premier bundle (manuel)
+### E1. First bundle (manual)
 
-Google n'autorise pas l'API à créer la première version : le premier AAB s'envoie à la main.
+Google does not let the API create the first release: the first AAB is uploaded by hand.
 
-1. *GitHub → Actions → Release Android → Run workflow* (piste `internal`, statut `draft`). Si l'envoi
-   fastlane échoue parce que l'app n'a encore aucune version, ce n'est pas grave : téléchargez l'artefact
-   **ondo-release-bundle** (fichier `app-release.aab`) de l'exécution.
-2. *Play Console → Tester et publier → Tests internes → Créer une version* : acceptez la signature
-   d'application par Google Play, importez `app-release.aab`, ajoutez des testeurs (liste d'e-mails) et
-   déployez.
-3. Les versions suivantes partent de GitHub : `git tag android-v1.0.1 && git push origin android-v1.0.1`
-   (piste interne, version déployée), ou *Run workflow* avec la piste voulue. Le `versionCode` augmente à
-   chaque exécution (1000 + numéro d'exécution), le `versionName` vient du tag.
+1. *GitHub → Actions → Release Android → Run workflow* (track `internal`, status `draft`). If the fastlane
+   upload fails because the app has no release yet, that's fine: download the **ondo-release-bundle**
+   artifact (file `app-release.aab`) from the run.
+2. *Play Console → Test and release → Internal testing → Create new release*: accept Play App Signing,
+   upload `app-release.aab`, add testers (email list) and roll out.
+3. Subsequent releases go out from GitHub: `git tag android-v1.0.1 && git push origin android-v1.0.1`
+   (internal track, release rolled out), or *Run workflow* with the desired track. The `versionCode`
+   increases on every run (1000 + run number), the `versionName` comes from the tag.
 
-### E2. Test fermé (compte personnel récent)
+### E2. Closed test (recent personal account)
 
-*Tester et publier → Tests fermés → Créer un canal* : ajoutez au moins **12 testeurs** (liste d'e-mails ou
-groupe Google), envoyez-leur le lien d'inscription, et gardez-les inscrits **14 jours d'affilée** (si le
-nombre passe sous 12, le compteur repart à zéro). Demandez-leur d'utiliser réellement l'app (mode démo,
-leurs propres playlists). Ensuite : *Tableau de bord → Demander l'accès à la production* et répondez au
-questionnaire sur le test.
+*Test and release → Closed testing → Create track*: add at least **12 testers** (email list or Google
+Group), send them the opt-in link, and keep them opted in for **14 consecutive days** (if the number drops
+below 12, the counter restarts from zero). Ask them to actually use the app (demo mode, their own
+playlists). Then: *Dashboard → Apply for production* and answer the questionnaire about the test.
 
-Le workflow publie aussi sur ce canal : *Run workflow* avec la piste `alpha` (= test fermé dans fastlane).
+The workflow also publishes to this track: *Run workflow* with the `alpha` track (= closed testing in
+fastlane).
 
 ### E3. Production
 
-*Production → Créer une version* (ou workflow avec la piste `production` : la version est créée en
-brouillon, à vérifier et envoyer en examen dans la console). Choisissez les pays, puis *Envoyer pour
-examen*. L'examen prend de quelques heures à quelques jours.
+*Production → Create new release* (or the workflow with the `production` track: the release is created as
+a draft, to check and send for review in the console). Choose the countries, then *Send changes for
+review*. The review takes from a few hours to a few days.
 
-## F. Points à vérifier avant l'examen
+## F. Things to check before the review
 
-- La fiche dit clairement qu'Ondo **ne fournit aucun contenu** et ne vend pas d'abonnement (déjà dans les
-  descriptions et sur l'écran d'accueil de l'app). N'employez aucun terme laissant penser à des chaînes ou
-  films « gratuits » : c'est la principale cause de refus des lecteurs IPTV.
-- Aucune capture ne montre de logo de chaîne, d'affiche de film ou de marque réelle : les captures
-  utilisent le catalogue fictif des tests.
-- `targetSdk` = 36 : c'est le minimum demandé par Google Play pour les nouvelles apps et mises à jour
-  depuis le 31/08/2026. Sur les grands écrans (≥ 600 dp), Android 16 ignore les verrouillages
-  d'orientation : Ondo n'en utilise aucun.
-- Testez l'APK de debug (artefact **android-builds** du workflow *Android*) sur un téléphone et une
-  tablette : ajout d'une playlist Xtream et M3U, lecture d'un film avec reprise, épisode suivant, direct,
-  image dans l'image, thème clair et sombre, rotation, et retour depuis le lecteur.
-- Puis installez **la version de test interne** (le bundle de release, réduit et optimisé par R8 — ce que
-  la CI ne fait qu'assembler, sans le lancer) depuis le lien de test de la Play Console, et refaites au
-  moins : premier lancement, ajout d'une playlist, ouverture d'une fiche, lecture, retour et réouverture
-  de l'app (les playlists et la progression doivent être conservées). C'est la version qu'utiliseront les
-  testeurs puis le public.
+- The store listing clearly states that Ondo **does not provide any content** and does not sell
+  subscriptions (already in the descriptions and on the app's home screen). Do not use any wording that
+  suggests "free" channels or movies: it is the main reason IPTV players get rejected.
+- No screenshot shows a channel logo, a movie poster or a real brand: the screenshots use the tests'
+  fictitious catalog.
+- `targetSdk` = 36: this is the minimum Google Play requires for new apps and updates since
+  August 31, 2026. On large screens (≥ 600 dp), Android 16 ignores orientation locks: Ondo does not use
+  any.
+- Test the debug APK (**android-builds** artifact of the *Android* workflow) on a phone and a tablet:
+  adding an Xtream and an M3U playlist, playing a movie with resume, next episode, live, picture-in-picture,
+  light and dark theme, rotation, and going back from the player.
+- Then install **the internal test release** (the release bundle, shrunk and optimized by R8, which CI only
+  assembles without running it) from the Play Console test link, and redo at least: first launch, adding
+  a playlist, opening a detail page, playback, going back and reopening the app (playlists and progress
+  must be kept). This is the version testers and then the public will use.
 
-## G. Ce que fait la CI
+## G. What CI does
 
-| Workflow | Quand | Ce qu'il fait |
+| Workflow | When | What it does |
 |---|---|---|
-| *Android* | chaque push touchant `android/` | tests du cœur Kotlin, tests unitaires et Compose (Robolectric), captures Roborazzi (publiées sur la branche `android-screenshots`), lint, APK de debug et bundle de release |
-| *Release Android* | tag `android-v*` ou manuel | tests, bundle signé avec la clé d'importation, captures copiées dans la fiche, envoi sur Google Play avec la fiche |
+| *Android* | every push touching `android/` | Kotlin core tests, unit and Compose tests (Robolectric), Roborazzi screenshots (published to the `android-screenshots` branch), lint, debug APK and release bundle |
+| *Release Android* | `android-v*` tag or manual | tests, bundle signed with the upload key, screenshots copied into the store listing, upload to Google Play with the store listing |
