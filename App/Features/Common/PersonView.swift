@@ -60,10 +60,6 @@ struct PersonView: View {
 
     /// Without TMDb, only the pages already opened know their cast.
     private var onlineHint: Text {
-        if AppModel.builtInTMDbToken != nil {
-            Text("Only the pages you have opened are searched. Turn on TMDb in Settings to find all their movies and series.")
-        } else {
-            Text("Only the pages you have opened are searched. Add a TMDb key in Settings to find all their movies and series.")
-        }
+        Text("Only the pages you have opened are searched. Add a TMDb key in Settings to find all their movies and series.")
     }
 }

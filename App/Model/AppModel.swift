@@ -331,10 +331,9 @@ final class AppModel {
     }
 
     func loadTrending(force: Bool = false) async {
-        guard let playlist = activePlaylist, let credential = tmdbCredential(),
+        guard let playlist = activePlaylist, let credential = secrets.get(Keychain.tmdbKey),
               !content.movies.isEmpty || !content.series.isEmpty else {
             trending = []
-            trendingLoadedFor = nil
             return
         }
         if !force, let loaded = trendingLoadedFor, loaded.playlist == playlist.id, Date().timeIntervalSince(loaded.date) < 6 * 3600 {

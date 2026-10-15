@@ -22,49 +22,6 @@ struct SettingsView: View {
         )
     }
 
-    /// Ondo's own token: a switch. A build made without it: the viewer's key.
-    @ViewBuilder
-    private var tmdbSection: some View {
-        if AppModel.builtInTMDbToken != nil {
-            Section {
-                Toggle("Use TMDb", isOn: binding(\.useTMDb))
-            } header: {
-                Text(verbatim: "TMDb")
-            } footer: {
-                Text("""
-                Trending titles, background images your playlist lacks and the other movies and series of an actor or \
-                a director come from TMDb: only titles and names are sent. This product uses the TMDB API but is not \
-                endorsed or certified by TMDB.
-                """)
-            }
-        } else {
-            Section {
-                SecureField("TMDb API key or read access token", text: $tmdbKey)
-                    .onSubmit { model.setTMDbCredential(tmdbKey) }
-                HStack {
-                    Button("Save Key") { model.setTMDbCredential(tmdbKey) }
-                        .disabled(tmdbKey.isEmpty)
-                    if model.hasTMDbKey {
-                        Spacer()
-                        Button("Remove", role: .destructive) {
-                            tmdbKey = ""
-                            model.setTMDbCredential(nil)
-                        }
-                    }
-                }
-                if model.hasTMDbKey {
-                    Label("Trending titles are shown on the home screen.", systemImage: "checkmark.circle")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                }
-            } header: {
-                Text("Trending (TMDb)")
-            } footer: {
-                Text("Optional. Create a key on themoviedb.org. This product uses the TMDB API but is not endorsed or certified by TMDB.")
-            }
-        }
-    }
-
     var body: some View {
         Form {
             Section("Playlists") {
@@ -213,7 +170,30 @@ struct SettingsView: View {
                 Text("Your own keys for OpenSubtitles, SubDL and SubSource, to find subtitles from the player.")
             }
 
-            tmdbSection
+            Section {
+                SecureField("TMDb API key or read access token", text: $tmdbKey)
+                    .onSubmit { model.setTMDbCredential(tmdbKey) }
+                HStack {
+                    Button("Save Key") { model.setTMDbCredential(tmdbKey) }
+                        .disabled(tmdbKey.isEmpty)
+                    if model.hasTMDbKey {
+                        Spacer()
+                        Button("Remove", role: .destructive) {
+                            tmdbKey = ""
+                            model.setTMDbCredential(nil)
+                        }
+                    }
+                }
+                if model.hasTMDbKey {
+                    Label("Trending titles are shown on the home screen.", systemImage: "checkmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
+            } header: {
+                Text("Trending (TMDb)")
+            } footer: {
+                Text("Optional. Create a key on themoviedb.org. This product uses the TMDB API but is not endorsed or certified by TMDB.")
+            }
 
             Section {
                 Toggle("Update Awards Automatically", isOn: binding(\.updateAwards))

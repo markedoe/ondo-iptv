@@ -31,7 +31,7 @@ extension AppModel {
     /// The pages already opened, then the person's credits on TMDb (when a key is set) that the playlist has.
     func works(of name: String) async -> PersonWorks {
         var works = knownWorks(of: name)
-        guard let credential = tmdbCredential() else { return works }
+        guard let credential = secrets.get(Keychain.tmdbKey) else { return works }
         let client = TMDbClient(credential: credential, http: http, language: Locale.preferredLanguages.first ?? "en-US")
         guard let person = try? await client.person(named: name),
               let credits = try? await client.credits(ofPerson: person.id) else { return works }

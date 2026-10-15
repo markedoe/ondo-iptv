@@ -35,23 +35,6 @@ GitHub Actions*, puis *Actions → Website → Run workflow*. Le site est publi�
 
 Ne mettez jamais le `.p8` dans le dépôt (`secrets/` et `*.p8` sont ignorés par git).
 
-Facultatif, un cinquième : `TMDB_READ_TOKEN`, le jeton TMDb d'Ondo. Avec lui, les tendances, les images de fond
-manquantes et les filmographies des acteurs et réalisateurs marchent sans que l'utilisateur saisisse quoi que ce
-soit (un interrupteur *Utiliser TMDb* dans les Réglages les coupe). Sans lui, les Réglages demandent à chacun sa
-propre clé TMDb. Pour le créer, une seule fois :
-
-1. Connectez-vous (ou inscrivez-vous) sur [themoviedb.org](https://www.themoviedb.org), puis *avatar → Paramètres
-   → API*.
-2. *Créer* (ou *Demander une clé d'API*), type **Développeur**, acceptez les conditions d'utilisation.
-3. Nom de l'application `Ondo`, URL `https://markedoe.github.io/ondo-iptv/`, résumé : « IPTV player for iPhone,
-   iPad and Mac; shows trending titles, background images and filmographies from TMDb ». Vos coordonnées ne vont
-   qu'à TMDb.
-4. Copiez le **jeton d'accès en lecture à l'API** (« API Read Access Token », le long, qui commence par `eyJ`)
-   dans le secret `TMDB_READ_TOKEN`.
-
-fastlane l'écrit dans l'`Info.plist` généré de l'app au moment du build : il ne va jamais dans le dépôt, un commit
-ou un journal. Le build TestFlight suivant le prend en compte.
-
 ## B. Apple Developer (developer.apple.com)
 
 ### B1. Accord

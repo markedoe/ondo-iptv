@@ -38,7 +38,7 @@ struct HomeView: View {
         #endif
         .background(Color.appBackground)
         .refreshable { await model.refreshActivePlaylist() }
-        .task(id: "\(model.content.fetchedAt.timeIntervalSince1970)-\(model.usesTMDb)") {
+        .task(id: "\(model.content.fetchedAt.timeIntervalSince1970)-\(model.hasTMDbKey)") {
             await model.loadTrending()
         }
         .task(id: prefetchKey(hero)) {

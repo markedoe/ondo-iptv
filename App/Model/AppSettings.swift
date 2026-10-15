@@ -98,8 +98,6 @@ struct AppSettings: Codable, Equatable {
     /// Newer awards and festival selections downloaded once a week (see `AwardsUpdate`).
     var updateAwards = true
     var awardsCheckedAt: Date?
-    /// Trending titles, missing backdrops and people's credits from TMDb (with Ondo's token or the viewer's key).
-    var useTMDb = true
 
     init() {}
 
@@ -132,6 +130,5 @@ struct AppSettings: Codable, Equatable {
         dismissedTagSuggestions = (try? c.decodeIfPresent(Set<UUID>.self, forKey: .dismissedTagSuggestions)) ?? d.dismissedTagSuggestions
         updateAwards = (try? c.decodeIfPresent(Bool.self, forKey: .updateAwards)) ?? d.updateAwards
         awardsCheckedAt = try? c.decodeIfPresent(Date.self, forKey: .awardsCheckedAt)
-        useTMDb = (try? c.decodeIfPresent(Bool.self, forKey: .useTMDb)) ?? d.useTMDb
     }
 }
