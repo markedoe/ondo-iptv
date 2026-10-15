@@ -52,6 +52,8 @@ final class VLCBackend: NSObject {
         case paused
         case ended
         case error
+        /// An audio, video or subtitle track appeared (VLC finds them while it plays).
+        case tracksChanged
     }
 
     let player = VLCMediaPlayer()
@@ -59,6 +61,15 @@ final class VLCBackend: NSObject {
     var onTime: ((Double, Double) -> Void)?
     private var bridge: VLCDelegateBridge?
     private weak var drawable: AnyObject?
+    /// Seconds of a live channel VLC buffers, for every channel of this run of the app (see `LiveBufferPolicy`).
+    static var liveBuffer = LiveBufferPolicy()
+    /// Seconds of a film VLC buffers: on a fast connection it fills at once, on a slow one it covers more.
+    static let vodCaching = 5.0
+    /// The network caching of the current media.
+    private(set) var cachingSeconds = 0.0
+    /// The last state reported. VLC posts "buffering" several times a second while it plays (each time its cache
+    /// level changes): only real changes are passed on, or the player would redo its work five times a second.
+    private var lastEvent: Event?
 
     override init() {
         super.init()
@@ -82,10 +93,12 @@ final class VLCBackend: NSObject {
         if let referrer = headers.referrer, !referrer.isEmpty {
             media.addOption(":http-referrer=\(referrer)")
         }
-        media.addOption(":network-caching=\(isLive ? 2000 : 3000)")
+        cachingSeconds = isLive ? Self.liveBuffer.seconds : Self.vodCaching
+        media.addOption(":network-caching=\(Int(cachingSeconds * 1000))")
         if let startPosition, startPosition > 5, !isLive {
             media.addOption(":start-time=\(Int(startPosition))")
         }
+        lastEvent = nil
         player.media = media
         if autoplay { player.play() }
     }
@@ -100,6 +113,7 @@ final class VLCBackend: NSObject {
     func stop() {
         player.stop()
         player.media = nil
+        lastEvent = nil
     }
 
     func seek(to seconds: Double) {
@@ -111,6 +125,13 @@ final class VLCBackend: NSObject {
     }
 
     var currentTime: Double { Double(player.time.intValue) / 1000 }
+
+    /// Counters of the current media: bytes received and demuxed, pictures shown and lost.
+    var statistics: (received: Int, consumed: Int, displayed: Int, lost: Int)? {
+        guard let media = player.media else { return nil }
+        let stats = media.statistics
+        return (Int(stats.readBytes), Int(stats.demuxReadBytes), Int(stats.displayedPictures), Int(stats.lostPictures))
+    }
     var duration: Double { Double(player.media?.length.intValue ?? 0) / 1000 }
     var videoSize: CGSize { player.videoSize }
 
@@ -181,15 +202,22 @@ final class VLCBackend: NSObject {
     // MARK: Events
 
     private func stateChanged() {
+        let event: Event
         switch player.state {
-        case .opening: onEvent?(.opening)
-        case .buffering: onEvent?(player.isPlaying ? .playing : .buffering)
-        case .playing, .esAdded: onEvent?(.playing)
-        case .paused: onEvent?(.paused)
-        case .ended, .stopped: onEvent?(.ended)
-        case .error: onEvent?(.error)
-        @unknown default: break
+        case .opening: event = .opening
+        case .buffering: event = player.isPlaying ? .playing : .buffering
+        case .playing: event = .playing
+        case .esAdded:
+            onEvent?(.tracksChanged)
+            return
+        case .paused: event = .paused
+        case .ended, .stopped: event = .ended
+        case .error: event = .error
+        @unknown default: return
         }
+        guard event != lastEvent else { return }
+        lastEvent = event
+        onEvent?(event)
     }
 
     private func timeChanged() {

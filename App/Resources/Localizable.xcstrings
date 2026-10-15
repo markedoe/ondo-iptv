@@ -6025,6 +6025,46 @@
         }
       }
     },
+    "Engine": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moteur"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motor"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mecanismo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引擎"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المحرّك"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इंजन"
+          }
+        }
+      }
+    },
     "Enter the PIN of this profile.": {
       "localizations": {
         "fr": {
@@ -7221,6 +7261,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "30 सेकंड आगे"
+          }
+        }
+      }
+    },
+    "Freezes": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gels"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Congelaciones"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Travamentos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡顿"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التجمّدات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रुकावटें"
           }
         }
       }
@@ -9785,6 +9865,46 @@
         }
       }
     },
+    "Lost pictures": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images perdues"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imágenes perdidas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quadros perdidos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "丢帧"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الصور المفقودة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "छूटे फ़्रेम"
+          }
+        }
+      }
+    },
     "M3U & Xtream Codes": {
       "localizations": {
         "fr": {
@@ -10261,6 +10381,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "मैं"
+          }
+        }
+      }
+    },
+    "Measuring…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mesure en cours…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Midiendo…"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medindo…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在测量…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ القياس…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "माप रहे हैं…"
           }
         }
       }
@@ -11865,6 +12025,46 @@
         }
       }
     },
+    "No freeze: the stream plays smoothly.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun gel : le flux est fluide."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin congelaciones: el flujo va fluido."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sem travamentos: o stream está fluido."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有卡顿：播放流畅。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا تجمّد: البث سلس."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "कोई रुकावट नहीं: स्ट्रीम सुचारू रूप से चल रही है।"
+          }
+        }
+      }
+    },
     "No guide": {
       "localizations": {
         "fr": {
@@ -13305,42 +13505,42 @@
         }
       }
     },
-    "Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nIf the format is not supported, choose the other engine in Settings, Player Engine: the VLC-based engine plays MKV, AVI and TS. Reconnect dropped streams (Settings) restarts a live channel that cuts out.": {
+    "Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nIf the format is not supported, choose the other engine in Settings, Player Engine: the VLC-based engine plays MKV, AVI and TS. Reconnect dropped streams (Settings) restarts a live channel that cuts out.\n\nIf the picture freezes now and then, More, Stream Statistics shows what arrives, what the video needs and whether the freezes come from the network or the provider, or from the player. With the VLC-based engine, a live channel keeps 3 seconds in reserve; when a provider stops sending for longer, the next channels keep 6.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.\n\nSi le format n’est pas pris en charge, choisissez l’autre moteur dans Réglages, Moteur de lecture : le moteur basé sur VLC lit le MKV, l’AVI et le TS. Reconnecter les flux coupés (Réglages) relance une chaîne en direct qui coupe."
+            "value": "Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.\n\nSi le format n’est pas pris en charge, choisissez l’autre moteur dans Réglages, Moteur de lecture : le moteur basé sur VLC lit le MKV, l’AVI et le TS. Reconnecter les flux coupés (Réglages) relance une chaîne en direct qui coupe.\n\nSi l’image se fige par moments, Plus, Statistiques du flux montre ce qui arrive, ce dont la vidéo a besoin, et si les gels viennent du réseau ou du fournisseur, ou du lecteur. Avec le moteur basé sur VLC, une chaîne en direct garde 3 secondes d’avance ; quand un fournisseur s’arrête d’envoyer plus longtemps, les chaînes suivantes en gardent 6."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.\n\nSi el formato no es compatible, elige el otro motor en Ajustes, Motor de reproducción: el motor basado en VLC reproduce MKV, AVI y TS. Reconectar transmisiones cortadas (Ajustes) reanuda un canal en directo que se corta."
+            "value": "Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.\n\nSi el formato no es compatible, elige el otro motor en Ajustes, Motor de reproducción: el motor basado en VLC reproduce MKV, AVI y TS. Reconectar transmisiones cortadas (Ajustes) reanuda un canal en directo que se corta.\n\nSi la imagen se congela a ratos, Más, Estadísticas del flujo muestra lo que llega, lo que el vídeo necesita y si las congelaciones vienen de la red o del proveedor, o del reproductor. Con el motor basado en VLC, un canal en directo guarda 3 segundos de reserva; cuando un proveedor deja de enviar durante más tiempo, los canales siguientes guardan 6."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.\n\nSe o formato não for compatível, escolha o outro motor em Ajustes, Motor do player: o motor baseado no VLC reproduz MKV, AVI e TS. Reconectar streams interrompidos (Ajustes) retoma um canal ao vivo que cai."
+            "value": "O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.\n\nSe o formato não for compatível, escolha o outro motor em Ajustes, Motor do player: o motor baseado no VLC reproduz MKV, AVI e TS. Reconectar streams interrompidos (Ajustes) retoma um canal ao vivo que cai.\n\nSe a imagem trava de vez em quando, Mais, Estatísticas do stream mostra o que chega, o que o vídeo precisa e se os travamentos vêm da rede ou do provedor, ou do player. Com o motor baseado no VLC, um canal ao vivo guarda 3 segundos de reserva; quando um provedor para de enviar por mais tempo, os canais seguintes guardam 6."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果格式不受支持，请在“设置”>“播放引擎”中选择另一个引擎：基于 VLC 的引擎可播放 MKV、AVI 和 TS。“自动重连中断的流”（“设置”）会重新连接中断的直播频道。"
+            "value": "Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果格式不受支持，请在“设置”>“播放引擎”中选择另一个引擎：基于 VLC 的引擎可播放 MKV、AVI 和 TS。“自动重连中断的流”（“设置”）会重新连接中断的直播频道。\n\n如果画面时不时卡住，“更多”>“流统计信息”会显示收到的数据、视频所需的数据，以及卡顿来自网络或提供商，还是来自播放器。使用基于 VLC 的引擎时，直播频道会预留 3 秒；如果提供商停止发送的时间更长，之后的频道会预留 6 秒。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يوضح Ondo ما إذا كانت المشكلة من المزوّد أو الشبكة أو الصيغة.\n\nإذا رفض المزوّد البث، فربما انتهى الاشتراك أو أن عدد الأجهزة التي تشاهد في الوقت نفسه كبير: يسمح معظم المزوّدين ببث أو اثنين في المرة الواحدة.\n\nإذا تعذّر الوصول إلى الخادم، تحقّق من اتصالك ثم أعد المحاولة.\n\nإذا كانت الصيغة غير مدعومة، اختر المحرك الآخر في الإعدادات، محرك التشغيل: يشغّل المحرك المبني على VLC ملفات MKV وAVI وTS. يعيد خيار إعادة الاتصال عند انقطاع البث (الإعدادات) تشغيل قناة مباشرة تنقطع."
+            "value": "يوضح Ondo ما إذا كانت المشكلة من المزوّد أو الشبكة أو الصيغة.\n\nإذا رفض المزوّد البث، فربما انتهى الاشتراك أو أن عدد الأجهزة التي تشاهد في الوقت نفسه كبير: يسمح معظم المزوّدين ببث أو اثنين في المرة الواحدة.\n\nإذا تعذّر الوصول إلى الخادم، تحقّق من اتصالك ثم أعد المحاولة.\n\nإذا كانت الصيغة غير مدعومة، اختر المحرك الآخر في الإعدادات، محرك التشغيل: يشغّل المحرك المبني على VLC ملفات MKV وAVI وTS. يعيد خيار إعادة الاتصال عند انقطاع البث (الإعدادات) تشغيل قناة مباشرة تنقطع.\n\nإذا تجمّدت الصورة أحيانًا، فإن المزيد، إحصاءات البث يعرض ما يصل وما يحتاجه الفيديو، وما إذا كانت التجمّدات سببها الشبكة أو المزوّد، أم المشغّل. مع المحرك المبني على VLC، تحتفظ القناة المباشرة باحتياطي 3 ثوانٍ؛ وعندما يتوقف المزوّد عن الإرسال لمدة أطول، تحتفظ القنوات التالية بـ 6 ثوانٍ."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo बताता है कि समस्या प्रदाता, नेटवर्क या फ़ॉर्मैट में से किसकी है।\n\nअगर प्रदाता स्ट्रीम से मना करता है, तो हो सकता है सदस्यता खत्म हो गई हो या एक साथ बहुत सारे डिवाइस देख रहे हों: ज़्यादातर प्रदाता एक समय में एक या दो स्ट्रीम की अनुमति देते हैं।\n\nअगर सर्वर तक नहीं पहुँचा जा सकता, तो अपना कनेक्शन जाँचें और फिर कोशिश करें।\n\nअगर फ़ॉर्मैट समर्थित नहीं है, तो सेटिंग्स, प्लेयर इंजन में दूसरा इंजन चुनें: VLC पर आधारित इंजन MKV, AVI और TS चलाता है। टूटी स्ट्रीम फिर से कनेक्ट करें (सेटिंग्स) कटने वाले लाइव चैनल को फिर शुरू करता है।"
+            "value": "Ondo बताता है कि समस्या प्रदाता, नेटवर्क या फ़ॉर्मैट में से किसकी है।\n\nअगर प्रदाता स्ट्रीम से मना करता है, तो हो सकता है सदस्यता खत्म हो गई हो या एक साथ बहुत सारे डिवाइस देख रहे हों: ज़्यादातर प्रदाता एक समय में एक या दो स्ट्रीम की अनुमति देते हैं।\n\nअगर सर्वर तक नहीं पहुँचा जा सकता, तो अपना कनेक्शन जाँचें और फिर कोशिश करें।\n\nअगर फ़ॉर्मैट समर्थित नहीं है, तो सेटिंग्स, प्लेयर इंजन में दूसरा इंजन चुनें: VLC पर आधारित इंजन MKV, AVI और TS चलाता है। टूटी स्ट्रीम फिर से कनेक्ट करें (सेटिंग्स) कटने वाले लाइव चैनल को फिर शुरू करता है।\n\nअगर तस्वीर बीच-बीच में रुक जाती है, तो ज़्यादा, स्ट्रीम आँकड़े दिखाता है कि क्या आ रहा है, वीडियो को क्या चाहिए, और रुकावटें नेटवर्क या प्रदाता से हैं या प्लेयर से। VLC पर आधारित इंजन के साथ, लाइव चैनल 3 सेकंड का रिज़र्व रखता है; जब कोई प्रदाता इससे ज़्यादा देर तक भेजना बंद कर दे, तो अगले चैनल 6 सेकंड रखते हैं।"
           }
         }
       }
@@ -15381,6 +15581,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "रेटिंग"
+          }
+        }
+      }
+    },
+    "Received": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reçu"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recibido"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recebido"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "接收速率"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المستلَم"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्राप्त"
           }
         }
       }
@@ -18511,6 +18751,46 @@
         }
       }
     },
+    "Smoothness": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fluidité"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fluidez"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fluidez"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流畅度"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "السلاسة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सुचारुता"
+          }
+        }
+      }
+    },
     "Some Chromecast devices refuse unencrypted (HTTP) live streams. If nothing plays, use AirPlay.": {
       "localizations": {
         "fr": {
@@ -18907,6 +19187,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "कास्ट करना बंद करें"
+          }
+        }
+      }
+    },
+    "Stream Statistics": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistiques du flux"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estadísticas del flujo"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estatísticas do stream"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "流统计信息"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إحصاءات البث"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्ट्रीम आँकड़े"
           }
         }
       }
@@ -19747,6 +20067,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "प्रोवाइडर से कनेक्शन टूट गया। आगे बढ़ने के लिए डाउनलोड जारी रखें।"
+          }
+        }
+      }
+    },
+    "The data arrives on time: the freezes or lost pictures come from the player. Try the other engine (More, Player Engine).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les données arrivent à temps : les gels ou images perdues viennent du lecteur. Essayez l'autre moteur (Plus, Moteur de lecture)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los datos llegan a tiempo: las congelaciones o imágenes perdidas vienen del reproductor. Prueba el otro motor (Más, Motor de reproducción)."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os dados chegam a tempo: os travamentos ou quadros perdidos vêm do player. Experimente o outro mecanismo (Mais, Motor do player)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数据按时到达：卡顿或丢帧来自播放器。请试试另一个引擎（更多 > 播放引擎）。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تصل البيانات في وقتها: التجمّدات أو الصور المفقودة سببها المشغّل. جرّب المحرّك الآخر (المزيد، محرك التشغيل)."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डेटा समय पर आ रहा है: रुकावटें या छूटे फ़्रेम प्लेयर की वजह से हैं। दूसरा इंजन आज़माएँ (ज़्यादा, प्लेयर इंजन)।"
+          }
+        }
+      }
+    },
+    "The data arrives too slowly or stops: the network or the provider is the cause.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les données arrivent trop lentement ou s'interrompent : la cause est le réseau ou le fournisseur."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los datos llegan demasiado despacio o se interrumpen: la causa es la red o el proveedor."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os dados chegam devagar demais ou são interrompidos: a causa é a rede ou o provedor."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数据到达太慢或中断：原因在于网络或提供商。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تصل البيانات ببطء شديد أو تنقطع: السبب هو الشبكة أو المزوّد."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डेटा बहुत धीमा आ रहा है या रुक जाता है: कारण नेटवर्क या प्रदाता है।"
           }
         }
       }
@@ -21947,6 +22347,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "वर्शन"
+          }
+        }
+      }
+    },
+    "Video": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vidéo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vídeo"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vídeo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفيديو"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वीडियो"
+          }
+        }
+      }
+    },
+    "Video bitrate": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Débit de la vidéo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasa de bits del vídeo"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taxa de bits do vídeo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "视频码率"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "معدل بت الفيديو"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वीडियो बिटरेट"
           }
         }
       }

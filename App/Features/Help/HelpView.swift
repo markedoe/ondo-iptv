@@ -92,6 +92,11 @@ extension HelpTopic {
             If the format is not supported, choose the other engine in Settings, Player Engine: the VLC-based \
             engine plays MKV, AVI and TS. Reconnect dropped streams (Settings) restarts a live channel that cuts \
             out.
+
+            If the picture freezes now and then, More, Stream Statistics shows what arrives, what the video needs \
+            and whether the freezes come from the network or the provider, or from the player. With the VLC-based \
+            engine, a live channel keeps 3 seconds in reserve; when a provider stops sending for longer, the next \
+            channels keep 6.
             """
         ),
         HelpTopic(

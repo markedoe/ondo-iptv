@@ -32,7 +32,8 @@ final class PlayerController: NSObject {
     private(set) var state: State = .idle
     private(set) var currentTime: Double = 0
     private(set) var duration: Double = 0
-    private(set) var isBuffering = false
+    /// Set by the engines' observers, and by the freeze watch for VLC (PlayerController+Health).
+    var isBuffering = false
     private(set) var audioTracks: [MediaTrack] = []
     private(set) var subtitleTracks: [MediaTrack] = []
     private(set) var selectedAudioTrackID: Int?
@@ -87,8 +88,15 @@ final class PlayerController: NSObject {
     @ObservationIgnored var enginePreference: PlayerEngine = .automatic
     /// Set when AVPlayer failed on the current item and VLC takes over.
     @ObservationIgnored private var forceVLCForItem = false
+    /// Freezes and lost pictures of this playback, explained (sampled twice a second, PlayerController+Health).
+    var health = PlaybackHealth()
+    /// The statistics panel is shown over the picture.
+    var showsStatistics = false
+    @ObservationIgnored var healthTask: Task<Void, Never>?
+    /// The spinner is shown for a freeze VLC did not report (PlayerController+Health).
+    @ObservationIgnored var freezeShown = false
     #if canImport(VLCKitSPM)
-    @ObservationIgnored private var vlcBackend: VLCBackend?
+    @ObservationIgnored var vlcBackend: VLCBackend?
     @ObservationIgnored private var vlcViewSize: CGSize = .zero
     @ObservationIgnored private weak var vlcDrawable: AnyObject?
     #endif
@@ -184,9 +192,12 @@ final class PlayerController: NSObject {
         subtitleDelay = 0
         forceVLCForItem = false
         rate = 1
+        health = PlaybackHealth()
+        freezeShown = false
         // A new item plays; the automatic fallbacks below keep a pause the viewer made while it opened.
         playsWhenReady = true
         loadCurrentCandidate()
+        startHealthMonitoring()
     }
 
     /// Reloads the current item with another engine, keeping the position.
@@ -407,6 +418,8 @@ final class PlayerController: NSObject {
     func seek(to seconds: Double) {
         let target = max(0, duration > 0 ? min(seconds, duration - 1) : seconds)
         currentTime = target
+        // The wait until the picture moves again is not a freeze.
+        health.restart()
         if activeEngine == .vlc {
             pendingStart = nil
             seekVLC(to: target)
@@ -426,7 +439,9 @@ final class PlayerController: NSObject {
     private func updateNowPlaying() {
         if NowPlayingCenter.shared.isCurrent(self) { NowPlayingCenter.shared.refresh() }
     }
+}
 
+extension PlayerController {
     func skip(by seconds: Double) {
         if hasLiveWindow, let liveWindow {
             seek(to: min(max(currentTime + seconds, liveWindow.lowerBound), liveWindow.upperBound))
@@ -449,6 +464,7 @@ final class PlayerController: NSObject {
         retryTask?.cancel()
         stallTask?.cancel()
         sleepTask?.cancel()
+        healthTask?.cancel()
         sleepTimerEnd = nil
         player.pause()
         player.replaceCurrentItem(with: nil)
@@ -826,13 +842,10 @@ extension PlayerController {
             // A pause made while VLC was opening may have been ignored by it.
             if !playsWhenReady { backend.pause() }
             state = playsWhenReady ? .playing : .paused
-            audioTracks = backend.audioTracks
-            subtitleTracks = backend.subtitleTracks
-            selectedAudioTrackID = backend.selectedAudioTrackID
-            selectedSubtitleTrackID = backend.selectedSubtitleTrackID
-            let size = backend.videoSize
-            videoResolution = size == .zero ? nil : size
+            refreshVLCTracks(backend)
             applyVLCAspect()
+        case .tracksChanged:
+            refreshVLCTracks(backend)
         case .paused:
             isBuffering = false
             state = .paused
@@ -852,6 +865,22 @@ extension PlayerController {
             handleVLCFailure()
         }
         updateNowPlaying()
+    }
+
+    /// Tracks and size as VLC sees them now; only what changed is set, so the player's controls are not redrawn
+    /// for nothing.
+    private func refreshVLCTracks(_ backend: VLCBackend) {
+        let audio = backend.audioTracks
+        if audio != audioTracks { audioTracks = audio }
+        let subtitles = backend.subtitleTracks
+        if subtitles != subtitleTracks { subtitleTracks = subtitles }
+        let audioID = backend.selectedAudioTrackID
+        if audioID != selectedAudioTrackID { selectedAudioTrackID = audioID }
+        let subtitleID = backend.selectedSubtitleTrackID
+        if subtitleID != selectedSubtitleTrackID { selectedSubtitleTrackID = subtitleID }
+        let size = backend.videoSize
+        let resolution: CGSize? = size == .zero ? nil : size
+        if resolution != videoResolution { videoResolution = resolution }
     }
 
     private func handleVLCTime(_ current: Double, _ total: Double) {

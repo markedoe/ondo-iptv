@@ -115,6 +115,7 @@ struct PlayerMoreMenu: View {
             if let size = controller.videoResolution {
                 Text("Video: \(String(Int(size.width)))×\(String(Int(size.height)))")
             }
+            Toggle("Stream Statistics", isOn: Binding(get: { controller.showsStatistics }, set: { controller.showsStatistics = $0 }))
             // The address carries the provider login: not under parental control (it could re-add the playlist).
             if let item, !model.isParentalControlActive {
                 Button("Copy Stream URL") { Pasteboard.copy(item.streamURL.absoluteString) }

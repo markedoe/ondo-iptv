@@ -59,6 +59,18 @@ struct PlayerView: View {
 
             statusOverlay
 
+            if controller.showsStatistics {
+                VStack {
+                    HStack {
+                        PlayerStatsView(controller: controller)
+                        Spacer()
+                    }
+                    Spacer()
+                }
+                .padding(.top, controlsVisible ? 70 : 16)
+                .padding(.horizontal, 16)
+            }
+
             if let item = session.playingItem, cast.castingItemID == item.id {
                 CastingOverlay(cast: cast, onStop: stopCasting)
             } else if controller.isExternalPlaybackActive {

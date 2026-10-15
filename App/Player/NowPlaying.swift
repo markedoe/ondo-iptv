@@ -27,6 +27,7 @@ final class NowPlayingCenter {
         guard self.session === session else { return }
         self.session = nil
         artworkTask?.cancel()
+        artworkTask = nil
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         #if os(macOS)
         MPNowPlayingInfoCenter.default().playbackState = .stopped
@@ -50,7 +51,8 @@ final class NowPlayingCenter {
         }
         if let artwork, artworkURL == item.artworkURL {
             info[MPMediaItemPropertyArtwork] = artwork
-        } else {
+        } else if artworkURL != item.artworkURL || artworkTask == nil {
+            // A logo still loading keeps loading: restarting it at each refresh, it never arrived.
             loadArtwork(item.artworkURL)
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
