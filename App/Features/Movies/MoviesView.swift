@@ -158,9 +158,9 @@ struct MovieDetailView: View {
 }
 
 /// Credits: the label in a narrow column, the value right next to it (not pushed to the far edge). Each name of
-/// the director and cast, each genre and the release year is a link to the titles of the playlist sharing it.
+/// the director and cast, each genre and the release year opens the titles of the playlist sharing it, through a
+/// navigation link like the posters of the page (text links did not open anything in a pushed page on the Mac).
 struct InfoLines: View {
-    @Environment(NavigationRouter.self) private var router: NavigationRouter?
     let details: MediaDetails?
     /// From the catalogue when the page gave none.
     var year: Int?
@@ -196,41 +196,39 @@ struct InfoLines: View {
         .font(.callout)
     }
 
-    /// Values as links (`ondo-link://<index>`), opened in this navigation stack.
+    /// Values as links, wrapping like text, separated by commas.
     @ViewBuilder
     private func linked(_ label: LocalizedStringKey, field: String, _ items: [(String, Target)]) -> some View {
-        if items.isEmpty || router == nil {
+        if items.isEmpty {
             line(label, field)
         } else {
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
                 Text(label)
                     .foregroundStyle(.secondary)
                     .frame(width: 104, alignment: .leading)
-                Text(Self.links(items.map(\.0)))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .environment(\.openURL, OpenURLAction { url in
-                        guard url.scheme == "ondo-link", let index = Int(url.host() ?? ""), items.indices.contains(index) else {
-                            return .systemAction
+                FlowLayout {
+                    ForEach(Array(items.enumerated()), id: \.offset) { index, item in
+                        HStack(spacing: 0) {
+                            link(item.0, to: item.1)
+                            if index < items.count - 1 { Text(verbatim: ",") }
                         }
-                        switch items[index].1 {
-                        case .person(let name): router?.push(PersonRoute(name: name))
-                        case .metadata(let route): router?.push(route)
-                        }
-                        return .handled
-                    })
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
-    private static func links(_ texts: [String]) -> AttributedString {
-        var text = AttributedString()
-        for (index, value) in texts.enumerated() {
-            if index > 0 { text += AttributedString(", ") }
-            var part = AttributedString(value)
-            part.link = URL(string: "ondo-link://\(index)")
-            text += part
+    private func link(_ text: String, to target: Target) -> some View {
+        Group {
+            switch target {
+            case .person(let name): NavigationLink(value: PersonRoute(name: name)) { Text(verbatim: text) }
+            case .metadata(let route): NavigationLink(value: route) { Text(verbatim: text) }
+            }
         }
-        return text
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.accentColor)
+        .accessibilityIdentifier("credit-\(text)")
     }
 
     private func line(_ label: LocalizedStringKey, _ value: String) -> some View {
@@ -247,7 +245,6 @@ struct InfoLines: View {
 
 /// Awards and festival selections of a movie (wins first), the first few then "and N more".
 struct AwardsList: View {
-    @Environment(NavigationRouter.self) private var router: NavigationRouter?
     let awards: [MovieAward]
     @State private var showsAll = false
     private static let shortLength = 4
@@ -258,9 +255,7 @@ struct AwardsList: View {
                 Text("Awards").font(.headline)
                 ForEach(showsAll ? awards : Array(awards.prefix(Self.shortLength))) { award in
                     // An award opens the other movies of the playlist that won it or competed for it.
-                    Button {
-                        router?.push(MetadataRoute.award(award.awardID))
-                    } label: {
+                    NavigationLink(value: MetadataRoute.award(award.awardID)) {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Image(systemName: award.won ? "trophy.fill" : "rosette")
                                 .foregroundStyle(award.won ? Color.yellow : Color.secondary)
@@ -273,8 +268,8 @@ struct AwardsList: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .disabled(router == nil)
                     .accessibilityElement(children: .combine)
+                    .accessibilityIdentifier("award-\(award.awardID)")
                 }
                 if !showsAll && awards.count > Self.shortLength {
                     Button("And \(awards.count - Self.shortLength) more") { showsAll = true }

@@ -31,15 +31,13 @@ final class OndoUITests: XCTestCase {
         if close.exists { close.tap() }
     }
 
-    /// A value of a page's credits, scrolled into view. SwiftUI exposes the links of a text as links; a static
-    /// text is the fallback (a single value fills its whole text).
+    /// A value of a page's credits (director, cast, genre, year), scrolled into view.
     private func creditLink(_ value: String) -> XCUIElement {
-        var element = app.links[value].firstMatch
-        for _ in 0..<4 where !(element.exists && element.isHittable) {
+        let link = app.buttons["credit-\(value)"].firstMatch
+        for _ in 0..<4 where !(link.exists && link.isHittable) {
             app.swipeUp(velocity: .slow)
-            element = app.links[value].exists ? app.links[value].firstMatch : app.staticTexts[value].firstMatch
         }
-        return element
+        return link
     }
 
     /// Credits are links: the director opens their page, the genre and the release year the titles sharing them.

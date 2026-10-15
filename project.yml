@@ -132,8 +132,8 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         TARGETED_DEVICE_FAMILY: "1,2"
 
-  # Mac App Store screenshots only (OndoMacScreenshots scheme, App Store screenshots workflow): CI tests the
-  # Mac app with a launch smoke test, not with these.
+  # Mac App Store screenshots and the Mac check of a movie page's credit links (OndoMacScreenshots scheme, App
+  # Store screenshots workflow): CI tests the Mac app with a launch smoke test, not with these.
   OndoMacUITests:
     type: bundle.ui-testing
     supportedDestinations: [macOS]
