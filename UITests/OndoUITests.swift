@@ -31,6 +31,31 @@ final class OndoUITests: XCTestCase {
         if close.exists { close.tap() }
     }
 
+    /// A value of a page's credits, scrolled into view. SwiftUI exposes the links of a text as links; a static
+    /// text is the fallback (a single value fills its whole text).
+    private func creditLink(_ value: String) -> XCUIElement {
+        var element = app.links[value].firstMatch
+        for _ in 0..<4 where !(element.exists && element.isHittable) {
+            app.swipeUp(velocity: .slow)
+            element = app.links[value].exists ? app.links[value].firstMatch : app.staticTexts[value].firstMatch
+        }
+        return element
+    }
+
+    /// Credits are links: the director opens their page, the genre and the release year the titles sharing them.
+    private func openCreditLinks(of movie: String) {
+        let year = String(Calendar.current.component(.year, from: .now))
+        for (value, page) in [("Maren Holt", "Maren Holt"), ("Drama", "Drama"), (year, "Released in \(year)")] {
+            let link = creditLink(value)
+            XCTAssertTrue(link.waitForExistence(timeout: 5), "\(value) link")
+            link.tap()
+            XCTAssertTrue(app.navigationBars[page].waitForExistence(timeout: 5), "\(page) page")
+            if value == "Maren Holt" { snapshot("09b-person") }
+            app.navigationBars.buttons.element(boundBy: 0).tap()
+            XCTAssertTrue(app.navigationBars[movie].waitForExistence(timeout: 5), "back on the movie")
+        }
+    }
+
     /// First visible guide cell ("Title, 4:30 PM – 5:00 PM") starting at least two minutes from now.
     private func upcomingProgrammeCell() -> XCUIElement? {
         let formatter = DateFormatter()
@@ -210,6 +235,8 @@ final class OndoUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Northern Lights"].waitForExistence(timeout: 5), "movie detail on top")
         sleep(1)
         snapshot("09-movie-detail")
+
+        openCreditLinks(of: "Northern Lights")
 
         app.tabBars.buttons["Series"].tap()
         let allSeries = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'All'")).firstMatch

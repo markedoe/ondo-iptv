@@ -50,8 +50,11 @@ struct RootView: View {
         }
         .task {
             await model.bootstrap()
+            #if DEBUG
             // UI tests and screenshots keep the bundled awards: what they show must not change with the data.
-            if !UITestFixture.isEnabled { await model.updateAwardsIfNeeded() }
+            if UITestFixture.isEnabled { return }
+            #endif
+            await model.updateAwardsIfNeeded()
         }
     }
 }
