@@ -20,7 +20,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
   acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (parmi les fiches déjà
   ouvertes, ou tous avec une clé TMDb) ; un genre, l'année de sortie ou un prix (puis son festival) ouvre les
-  titres qui le partagent.
+  titres qui le partagent ; quand l'image de fond du fournisseur manque ou ne se charge pas, la fiche affiche
+  celle de TMDb (avec une clé) ou l'affiche floutée.
 - **Recherche** (la loupe en haut de chaque onglet sur iPhone) : chaînes, programmes, films et séries,
   **filtrables par années de sortie** et **par festival ou cérémonie** (lauréats seulement si vous voulez).
 - **Prix** : Palme d'or, Oscars, Lion d'or, Ours d'or, César, BAFTA, Golden Globes… sur les fiches des films

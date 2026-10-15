@@ -88,6 +88,29 @@ public struct TMDbClient: Sendable {
         return try JSONDecoder().decode(Page.self, from: data).results.filter { $0.mediaType == .movie || $0.mediaType == .tv }
     }
 
+    /// The backdrop TMDb has for a movie or a series whose provider gave none that loads: by its TMDb id when the
+    /// provider gave one, otherwise the search result with the same title (and a year one apart at most, when
+    /// known). Nil rather than another title's picture.
+    public func backdropURL(of type: ContentType, tmdbID: String?, title: String, year: Int?) async throws -> URL? {
+        let kind = type == .series ? "tv" : "movie"
+        if let id = tmdbID.flatMap({ Int($0.trimmingCharacters(in: .whitespaces)) }), let data = try? await get("\(kind)/\(id)"),
+           let url = (try? JSONDecoder().decode(TMDbItem.self, from: data))?.backdropURL {
+            return url
+        }
+        let key = CatalogueMatcher.key(title)
+        guard !key.isEmpty else { return nil }
+        let data = try await get("search/\(kind)", query: [URLQueryItem(name: "query", value: CatalogueMatcher.searchQuery(title))])
+        struct Page: Decodable { var results: [TMDbItem] }
+        return try JSONDecoder().decode(Page.self, from: data).results.lazy
+            .filter { item in
+                guard [item.title, item.originalTitle].compactMap({ $0 }).map(CatalogueMatcher.key).contains(key) else { return false }
+                guard let year, let released = item.year else { return true }
+                return abs(year - released) <= 1
+            }
+            .compactMap(\.backdropURL)
+            .first
+    }
+
     /// The person TMDb knows best by this name (its most popular match), if any.
     public func person(named name: String) async throws -> TMDbPerson? {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -162,12 +185,21 @@ public enum TrendingMatch: Hashable, Sendable, Identifiable {
 /// Finds which trending titles exist in the user's catalogue ("FR - Sandstorm (2021) 4K" ↔ "Sandstorm").
 public enum CatalogueMatcher {
     static func key(_ title: String) -> String {
+        words(of: title).joined()
+    }
+
+    /// The words to search a title with: "FR - Sandstorm (2021) 4K" -> "sandstorm".
+    static func searchQuery(_ title: String) -> String {
+        words(of: title).joined(separator: " ")
+    }
+
+    private static func words(of title: String) -> [String] {
         var name = title
         // Remove bracketed tags: [MULTI], (VOSTFR)…
         name = name.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
         name = TitleParser.splitYear(name).0
         name = name.replacingOccurrences(of: #"\([^)]*\)"#, with: " ", options: .regularExpression)
-        return TextNormalizer.channelMatchKey(name)
+        return TextNormalizer.channelMatchWords(name)
     }
 
     public static func match(_ trending: [TMDbItem], movies: [Movie], series: [Series]) -> [TrendingMatch] {

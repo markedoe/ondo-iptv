@@ -8,6 +8,8 @@ struct DetailScaffold<Actions: View, Content: View>: View {
     let posterURL: URL?
     let backdropURL: URL?
     let facts: [String]
+    /// The backdrop did not load.
+    var onBackdropFailure: ((URL) -> Void)?
     @ViewBuilder var actions: (ShelfMetrics) -> Actions
     @ViewBuilder var content: (ShelfMetrics) -> Content
     #if os(iOS)
@@ -104,7 +106,7 @@ struct DetailScaffold<Actions: View, Content: View>: View {
 
     private var artwork: some View {
         Color.black
-            .overlay { BackdropImage(backdropURL: backdropURL, posterURL: posterURL) }
+            .overlay { BackdropImage(backdropURL: backdropURL, posterURL: posterURL, onFailure: onBackdropFailure) }
             .overlay {
                 LinearGradient(
                     stops: [.init(color: .black.opacity(0.55), location: 0), .init(color: .clear, location: 0.3),

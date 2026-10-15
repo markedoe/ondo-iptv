@@ -117,6 +117,8 @@ final class AppModel {
     @ObservationIgnored private var librarySaveTask: Task<Void, Never>?
     @ObservationIgnored private var epgTask: Task<Void, Never>?
     @ObservationIgnored var movieDetailsCache: [String: MediaDetails] = [:]
+    /// TMDb backdrops and dead provider backdrops (AppModel+Backdrops).
+    let backdrops = BackdropStore()
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]
     /// Subtitle services built from the saved keys; rebuilt when a key changes (OpenSubtitles keeps its
     /// signed-in session in its client, so it lives as long as the credentials).

@@ -92,8 +92,9 @@ struct MovieDetailView: View {
         DetailScaffold(
             title: movie.name,
             posterURL: details?.posterURL ?? movie.posterURL,
-            backdropURL: details?.backdropURL ?? model.backdropURL(for: .movie(movie)),
-            facts: facts
+            backdropURL: model.backdropURL(for: .movie(movie)),
+            facts: facts,
+            onBackdropFailure: { model.backdropFailed($0, for: .movie(movie)) }
         ) { metrics in
             metrics.actionsLayout {
                 PrimaryPlayButton(
@@ -144,6 +145,7 @@ struct MovieDetailView: View {
         .task {
             details = await model.details(for: movie)
             isLoading = false
+            await model.loadTMDbBackdropIfNeeded(for: .movie(movie))
         }
     }
 

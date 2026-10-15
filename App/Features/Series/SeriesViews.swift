@@ -71,8 +71,9 @@ struct SeriesDetailView: View {
         DetailScaffold(
             title: series.name,
             posterURL: details?.info.posterURL ?? series.coverURL,
-            backdropURL: details?.info.backdropURL ?? model.backdropURL(for: .series(series)),
-            facts: facts
+            backdropURL: model.backdropURL(for: .series(series)),
+            facts: facts,
+            onBackdropFailure: { model.backdropFailed($0, for: .series(series)) }
         ) { metrics in
             metrics.actionsLayout {
                 if let next {
@@ -127,6 +128,7 @@ struct SeriesDetailView: View {
             } catch {
                 errorMessage = error.localizedDescription
             }
+            await model.loadTMDbBackdropIfNeeded(for: .series(series))
         }
     }
 

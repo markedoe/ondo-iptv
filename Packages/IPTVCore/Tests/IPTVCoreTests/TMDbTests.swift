@@ -33,6 +33,27 @@ final class TMDbTests: XCTestCase {
         XCTAssertEqual(request.url.query, "language=en-US", "a token never goes into the address")
     }
 
+    /// A page whose provider gave no backdrop that loads: TMDb's, by id first, else by title and year.
+    func testABackdropIsFoundByIDOrByTitle() async throws {
+        let http = MockHTTPClient()
+        http.routes["https://api.themoviedb.org/3/movie/910001?language=en-US&api_key=KEY"] =
+            Data(#"{"id":910001,"title":"Lighthouse","backdrop_path":"/lighthouse-wide.jpg"}"#.utf8)
+        http.routes["https://api.themoviedb.org/3/search/movie?query=sandstorm&language=en-US&api_key=KEY"] =
+            Data((#"{"results":[{"id":1,"title":"Sandstorm Rising","backdrop_path":"/rising.jpg","release_date":"2021-01-01"},"#
+                  + #"{"id":2,"title":"Sandstorm","backdrop_path":"/old.jpg","release_date":"1988-05-01"},"#
+                  + #"{"id":3,"title":"Sandstorm","backdrop_path":"/sandstorm.jpg","release_date":"2021-03-01"}]}"#).utf8)
+        http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
+            Data(#"{"results":[{"id":7,"name":"Copper Valley","backdrop_path":null}]}"#.utf8)
+        let client = TMDbClient(credential: "KEY", http: http)
+
+        let byID = try await client.backdropURL(of: .movie, tmdbID: "910001", title: "Lighthouse", year: 2010)
+        XCTAssertEqual(byID?.absoluteString, "https://image.tmdb.org/t/p/w1280/lighthouse-wide.jpg")
+        let byTitle = try await client.backdropURL(of: .movie, tmdbID: nil, title: "FR - Sandstorm (2020) [4K]", year: 2020)
+        XCTAssertEqual(byTitle?.absoluteString, "https://image.tmdb.org/t/p/w1280/sandstorm.jpg", "same title, a year apart at most")
+        let none = try await client.backdropURL(of: .series, tmdbID: nil, title: "Copper Valley", year: nil)
+        XCTAssertNil(none, "TMDb has no backdrop either")
+    }
+
     /// Tapping a name in a movie's details: the person's credits, then what of it the catalogue has.
     func testAPersonsCreditsAreFoundInTheCatalogue() async throws {
         let http = MockHTTPClient()

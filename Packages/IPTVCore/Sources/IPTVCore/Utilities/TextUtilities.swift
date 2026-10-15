@@ -56,13 +56,18 @@ public enum TextNormalizer {
     /// Key used to match a playlist channel to a guide channel when ids differ:
     /// "FR: TV1 FHD" / "TV1 HD" / "tv1" -> "tv1"
     public static func channelMatchKey(_ name: String) -> String {
+        channelMatchWords(name).joined()
+    }
+
+    /// The words `channelMatchKey` is made of, without a leading country tag or quality words.
+    static func channelMatchWords(_ name: String) -> [String] {
         var tokens = normalize(name).split(separator: " ").map(String.init)
         // Leading "FR", "UK"... country tags ("FR: TV1", "FR | TV1").
         if tokens.count > 1, let first = tokens.first, countryPrefixes.contains(first) {
             tokens.removeFirst()
         }
         tokens.removeAll { qualityTokens.contains($0) }
-        return tokens.joined()
+        return tokens
     }
 
     /// Does `text` (already normalised) contain every word of the (normalised) query, anywhere in it?

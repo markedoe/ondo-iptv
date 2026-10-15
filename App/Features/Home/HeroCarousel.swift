@@ -111,13 +111,18 @@ private struct HeroPage: View {
             }
         }
         .foregroundStyle(.white)
+        .task(id: isCurrent) {
+            if isCurrent && !compact { await model.loadTMDbBackdropIfNeeded(for: item) }
+        }
     }
 
     // MARK: Background
 
     private func background(backdrop: URL?) -> some View {
         Color.black
-            .overlay { BackdropImage(backdropURL: backdrop, posterURL: item.posterURL, dimming: 0.3) }
+            .overlay {
+                BackdropImage(backdropURL: backdrop, posterURL: item.posterURL, dimming: 0.3) { model.backdropFailed($0, for: item) }
+            }
             .overlay {
                 // Keeps the toolbar legible and the text readable.
                 LinearGradient(

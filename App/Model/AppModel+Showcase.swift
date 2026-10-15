@@ -151,18 +151,6 @@ extension AppModel {
         }
     }
 
-    /// Wide artwork: the provider's backdrop, else the trending one from TMDb.
-    func backdropURL(for item: ShowcaseItem) -> URL? {
-        if let url = cachedDetails(for: item)?.backdropURL { return url }
-        return trending.first { match in
-            switch (match, item) {
-            case (.movie(let a, _), .movie(let b)): return a.id == b.id
-            case (.series(let a, _), .series(let b)): return a.id == b.id
-            default: return false
-            }
-        }?.trending.backdropURL
-    }
-
     /// Plays a movie (resuming it) or the next episode of a series.
     func playShowcase(_ item: ShowcaseItem) async {
         switch item {

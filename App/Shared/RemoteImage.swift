@@ -53,6 +53,8 @@ struct BackdropImage: View {
     let backdropURL: URL?
     let posterURL: URL?
     var dimming = 0.25
+    /// Called when the backdrop does not load, so the title can be given another one.
+    var onFailure: ((URL) -> Void)?
 
     var body: some View {
         LazyImage(request: backdropURL.map { Artwork.request($0, maxPixelSize: 1600) }) { state in
@@ -66,6 +68,10 @@ struct BackdropImage: View {
                     .scaleEffect(1.2)
                     .overlay { Color.black.opacity(dimming) }
             }
+        }
+        // A cancelled request (scrolled away) reports nothing.
+        .onCompletion { result in
+            if case .failure = result, let backdropURL { onFailure?(backdropURL) }
         }
     }
 }
