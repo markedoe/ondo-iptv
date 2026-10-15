@@ -53,6 +53,8 @@ import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.CollectionActions
 import com.markedoe.ondo.ui.screens.CollectionScreen
 import com.markedoe.ondo.ui.screens.DetailActions
+import com.markedoe.ondo.ui.screens.GuideActions
+import com.markedoe.ondo.ui.screens.GuideScreen
 import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
@@ -66,6 +68,7 @@ import com.markedoe.ondo.ui.screens.PersonScreen
 import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PickedFile
 import com.markedoe.ondo.ui.screens.PosterGridScreen
+import com.markedoe.ondo.ui.screens.RemindersScreen
 import com.markedoe.ondo.ui.screens.SearchScreen
 import com.markedoe.ondo.ui.screens.SeriesDetailScreen
 import com.markedoe.ondo.ui.screens.SettingsActions
@@ -140,6 +143,8 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 composable<Routes.MovieDetail> { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                 composable<Routes.SeriesDetail> { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
                 composable<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
+                composable<Routes.Guide> { GuideDestination(viewModel, navController) }
+                composable<Routes.Reminders> { RemindersDestination(viewModel, navController) }
                 composable<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
                 composable<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
                 composable<Routes.Settings> { SettingsDestination(viewModel, navController) }
@@ -283,6 +288,7 @@ private fun LiveDestination(viewModel: OndoViewModel, navController: NavHostCont
             onToggleFavorite = viewModel::toggleFavorite,
             onCategories = { navController.navigate(Routes.Categories("live")) },
             onSearch = { navController.navigate(Routes.Search) },
+            onGuide = { navController.navigate(Routes.Guide) },
         ),
     )
 }
@@ -345,6 +351,30 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onNewCollection = { viewModel.newCollection(it, ui.item) },
         ),
     )
+}
+
+@Composable
+private fun GuideDestination(viewModel: OndoViewModel, navController: NavHostController) {
+    val guide by viewModel.guide.collectAsStateWithLifecycle()
+    val state = guide ?: return Loading()
+    GuideScreen(
+        state = state,
+        actions = GuideActions(
+            onBack = { navController.popBackStack() },
+            onCategory = { viewModel.setLiveFilter(LiveFilter(categoryId = it)) },
+            onFavorites = { viewModel.setLiveFilter(LiveFilter(favoritesOnly = true)) },
+            onPlay = { channel -> state.rows.firstOrNull { it.channel.id == channel.id }?.let { viewModel.playChannel(UiMappers.channelRow(it.channel, viewModel.state.value, state.now)) } },
+            onToggleReminder = viewModel::toggleReminder,
+            onReminders = { navController.navigate(Routes.Reminders) },
+        ),
+    )
+}
+
+@Composable
+private fun RemindersDestination(viewModel: OndoViewModel, navController: NavHostController) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val reminders = remember(state.library.reminders, state.activePlaylistId) { viewModel.upcomingReminders() }
+    RemindersScreen(reminders, onRemove = viewModel::removeReminder, onBack = { navController.popBackStack() })
 }
 
 @Composable

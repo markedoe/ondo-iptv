@@ -69,6 +69,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   (among the pages already opened).
 - **Live TV**: categories, My List, current and next programme; **search** (the magnifying glass of each screen),
   filtered by release years or by festival / ceremony (winners only, if you like), like on Apple.
+- **TV guide** (the calendar button of Live TV): a grid of the channels chosen there, and **reminders**, a
+  notification a few minutes before a programme starts.
 - **My List** tab: the movies, series and channels kept, and your **collections** (Collection on a movie or series
   page), as on Apple.
 - **Categories**: hidden by language or country code (`|PT|`, `FR:`…) or one by one, like on Apple.
@@ -79,8 +81,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Player** (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses, resume,
   picture-in-picture, media controls, back to live.
 - **Settings**: playlists, appearance, adult categories hidden by default; welcome screen with a demo.
-- Coming next: Android TV, grid guide and catch-up, Chromecast, downloads, profiles and PIN, online
-  subtitles. Details: [docs/ANDROID.md](docs/ANDROID.md).
+- Coming next: Android TV, catch-up, Chromecast, downloads, profiles and PIN, online subtitles. Details: [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Languages
 

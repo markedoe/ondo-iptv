@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
@@ -20,6 +21,8 @@ import com.markedoe.ondo.ui.screens.CategoryRow
 import com.markedoe.ondo.ui.screens.CollectionChoice
 import com.markedoe.ondo.ui.screens.CollectionRow
 import com.markedoe.ondo.ui.screens.CollectionUiState
+import com.markedoe.ondo.ui.screens.GuideRow
+import com.markedoe.ondo.ui.screens.GuideUiState
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.LiveUiState
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
@@ -193,6 +196,20 @@ object UiMappers {
         (if (series) state.content.seriesCategories else state.content.movieCategories).firstOrNull { it.id == categoryId }?.name
 
     fun live(state: OndoState, categoryId: String?, favoritesOnly: Boolean, now: Long): LiveUiState {
+        val selection = liveChannels(state, categoryId, favoritesOnly)
+        return LiveUiState(
+            categories = selection.categories,
+            selectedCategoryId = categoryId,
+            showingFavorites = favoritesOnly,
+            channels = selection.channels.map { channelRow(it, state, now) },
+            favoriteIds = selection.favoriteIds,
+        )
+    }
+
+    /** The channels of a Live TV choice (My List, a category or all), the categories that have some, the favourites. */
+    private class ChannelSelection(val channels: List<Channel>, val categories: List<MediaCategory>, val favoriteIds: Set<String>)
+
+    private fun liveChannels(state: OndoState, categoryId: String?, favoritesOnly: Boolean): ChannelSelection {
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val favoriteIds = state.library.favorites(playlistId, ItemKind.CHANNEL).mapTo(HashSet()) { it.itemId }
@@ -205,12 +222,37 @@ object UiMappers {
             }
         }
         val used = visible.mapTo(HashSet()) { it.categoryId }
-        return LiveUiState(
-            categories = state.content.liveCategories.filter { it.id in used },
+        return ChannelSelection(channels, state.content.liveCategories.filter { it.id in used }, favoriteIds)
+    }
+
+    /** Rows of the TV guide at most: each row lays out its programmes. Beyond, a note asks to choose a category. */
+    const val GUIDE_ROW_LIMIT = 300
+
+    /** Two hours back and twelve ahead, from the half hour. */
+    fun guideWindow(now: Long): LongRange {
+        val halfHour = 30 * 60_000L
+        val start = (now - 2 * 3_600_000L) / halfHour * halfHour
+        return start..(start + 14 * 3_600_000L)
+    }
+
+    /** The TV guide of the Live TV choice: its channels (at most [GUIDE_ROW_LIMIT]) and their programmes. */
+    fun guide(state: OndoState, categoryId: String?, favoritesOnly: Boolean, now: Long): GuideUiState {
+        val selection = liveChannels(state, categoryId, favoritesOnly)
+        val window = guideWindow(now)
+        val guide = state.guide
+        val playlistId = state.activePlaylistId.orEmpty()
+        return GuideUiState(
+            rows = selection.channels.take(GUIDE_ROW_LIMIT).map { GuideRow(it, guide?.programs(it, window.first, window.last).orEmpty()) },
+            total = selection.channels.size,
+            start = window.first,
+            end = window.last,
+            now = now,
+            hasGuide = guide != null,
+            isLoading = state.isLoading,
+            categories = selection.categories,
             selectedCategoryId = categoryId,
             showingFavorites = favoritesOnly,
-            channels = channels.map { channelRow(it, state, now) },
-            favoriteIds = favoriteIds,
+            reminders = state.library.upcomingReminders(playlistId, now).mapTo(HashSet()) { "${it.channelId}|${it.start}" },
         )
     }
 

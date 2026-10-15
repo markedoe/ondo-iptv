@@ -2,6 +2,7 @@ package com.markedoe.ondo.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.data.ItemKind
@@ -9,9 +10,11 @@ import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.data.Reminder
 import com.markedoe.ondo.player.PlayRequest
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.screens.GuideUiState
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.LiveUiState
 import com.markedoe.ondo.ui.screens.MyListUiState
@@ -85,6 +88,13 @@ class OndoViewModel(
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
+    /** The TV guide of the channels chosen on Live TV. */
+    val guide: StateFlow<GuideUiState?> = combine(state, _liveFilter, minutes) { state, filter, now ->
+        UiMappers.guide(state, filter.categoryId, filter.favoritesOnly, now)
+    }
+        .flowOn(computation)
+        .stateIn(viewModelScope, sharing, null)
+
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
@@ -147,6 +157,15 @@ class OndoViewModel(
         is ShowcaseItem.MovieItem -> repository.toggleFavorite(ItemKind.MOVIE, item.movie.id, item.title, item.posterUrl)
         is ShowcaseItem.SeriesItem -> repository.toggleFavorite(ItemKind.SERIES, item.series.id, item.title, item.posterUrl)
     }
+
+    // Reminders
+
+    fun toggleReminder(channel: com.markedoe.ondo.core.model.Channel, program: EpgProgram) = repository.toggleReminder(channel, program)
+
+    fun removeReminder(reminder: Reminder) = repository.removeReminder(reminder)
+
+    /** Upcoming reminders of the current playlist, soonest first. */
+    fun upcomingReminders(): List<Reminder> = state.value.let { it.library.upcomingReminders(it.activePlaylistId.orEmpty(), clock()) }
 
     // Collections
 

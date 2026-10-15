@@ -208,4 +208,24 @@
     <string name="rename">Renomear</string>
     <string name="no_collections_hint">Agrupe filmes e séries do seu jeito: use Coleção na página deles.</string>
     <string name="empty_collection_hint">Use Coleção na página de um filme ou série para adicioná-lo aqui.</string>
+    <string name="tv_guide">Guia de TV</string>
+    <string name="no_tv_guide">Sem guia de TV</string>
+    <string name="no_tv_guide_hint">Seu provedor não publica um guia, ou não foi possível carregá-lo.</string>
+    <string name="no_information">Sem informações</string>
+    <string name="watch_live">Assistir ao vivo</string>
+    <string name="remind_me">Lembrar-me</string>
+    <string name="reminder_set">Lembrete definido</string>
+    <string name="reminders">Lembretes</string>
+    <string name="no_reminders">Nenhum lembrete</string>
+    <string name="no_reminders_hint">Abra um programa no guia de TV e escolha Lembrar-me.</string>
+    <string name="reminder_body">Começa às %1$s em %2$s</string>
+    <string name="all_channels">Todos os canais</string>
+    <string name="notifications_off">As notificações do Ondo estão desativadas: permita-as em Ajustes para receber lembretes.</string>
+    <string name="help_guide_title">Guia de TV e lembretes</string>
+    <string name="help_guide_body">O botão de guia da TV ao vivo mostra os programas dos canais escolhidos ali (Minha lista, uma categoria ou todos). O guia vem do seu provedor, ou do endereço XMLTV informado ao adicionar uma playlist M3U.\n\nAbra um programa futuro e crie um lembrete: uma notificação chega alguns minutos antes do início. O sino do guia lista seus lembretes.</string>
+    <plurals name="guide_row_limit">
+        <item quantity="one">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>
+        <item quantity="many">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>
+        <item quantity="other">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>
+    </plurals>
 </resources>

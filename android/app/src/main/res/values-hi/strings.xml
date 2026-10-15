@@ -202,4 +202,23 @@
     <string name="rename">नाम बदलें</string>
     <string name="no_collections_hint">फ़िल्मों और सीरीज़ को अपने तरीके से समूहित करें: उनके पेज पर संग्रह का उपयोग करें।</string>
     <string name="empty_collection_hint">किसी फ़िल्म या सीरीज़ को यहाँ जोड़ने के लिए उसके पेज पर संग्रह का उपयोग करें।</string>
+    <string name="tv_guide">टीवी गाइड</string>
+    <string name="no_tv_guide">टीवी गाइड नहीं है</string>
+    <string name="no_tv_guide_hint">आपका प्रोवाइडर गाइड पब्लिश नहीं करता, या वह लोड नहीं हो सका।</string>
+    <string name="no_information">कोई जानकारी नहीं</string>
+    <string name="watch_live">लाइव देखें</string>
+    <string name="remind_me">याद दिलाएँ</string>
+    <string name="reminder_set">रिमाइंडर सेट है</string>
+    <string name="reminders">रिमाइंडर</string>
+    <string name="no_reminders">कोई रिमाइंडर नहीं</string>
+    <string name="no_reminders_hint">टीवी गाइड में कोई कार्यक्रम खोलें और याद दिलाएँ चुनें।</string>
+    <string name="reminder_body">%1$s से %2$s पर शुरू</string>
+    <string name="all_channels">सभी चैनल</string>
+    <string name="notifications_off">Ondo के लिए सूचनाएँ बंद हैं: रिमाइंडर पाने के लिए सेटिंग्स में इनकी अनुमति दें।</string>
+    <string name="help_guide_title">टीवी गाइड और रिमाइंडर</string>
+    <string name="help_guide_body">लाइव टीवी का गाइड बटन वहाँ चुने गए चैनलों (मेरी सूची, कोई श्रेणी या सभी) के कार्यक्रम दिखाता है। गाइड आपके प्रोवाइडर से आता है, या M3U प्लेलिस्ट जोड़ते समय दिए गए XMLTV पते से।\n\nकोई आने वाला कार्यक्रम खोलें और रिमाइंडर सेट करें: शुरू होने से कुछ मिनट पहले सूचना आती है। गाइड की घंटी आपके रिमाइंडर दिखाती है।</string>
+    <plurals name="guide_row_limit">
+        <item quantity="one">%2$d में से पहले %1$d चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।</item>
+        <item quantity="other">%2$d में से पहले %1$d चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।</item>
+    </plurals>
 </resources>

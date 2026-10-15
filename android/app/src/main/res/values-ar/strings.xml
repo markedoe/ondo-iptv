@@ -226,4 +226,27 @@
     <string name="rename">إعادة التسمية</string>
     <string name="no_collections_hint">جمّع الأفلام والمسلسلات على طريقتك: استخدم «مجموعة» في صفحتها.</string>
     <string name="empty_collection_hint">استخدم «مجموعة» في صفحة فيلم أو مسلسل لإضافته هنا.</string>
+    <string name="tv_guide">دليل البرامج</string>
+    <string name="no_tv_guide">لا يوجد دليل برامج</string>
+    <string name="no_tv_guide_hint">لا ينشر مزوّدك دليل برامج، أو تعذّر تحميله.</string>
+    <string name="no_information">لا توجد معلومات</string>
+    <string name="watch_live">مشاهدة البث المباشر</string>
+    <string name="remind_me">ذكّرني</string>
+    <string name="reminder_set">تم ضبط التذكير</string>
+    <string name="reminders">التذكيرات</string>
+    <string name="no_reminders">لا توجد تذكيرات</string>
+    <string name="no_reminders_hint">افتح برنامجًا في دليل البرامج واختر «ذكّرني».</string>
+    <string name="reminder_body">يبدأ الساعة %1$s على %2$s</string>
+    <string name="all_channels">كل القنوات</string>
+    <string name="notifications_off">الإشعارات متوقفة لـ Ondo: اسمح بها في الإعدادات لتلقي التذكيرات.</string>
+    <string name="help_guide_title">دليل البرامج والتذكيرات</string>
+    <string name="help_guide_body">يعرض زر الدليل في البث المباشر برامج القنوات المختارة هناك (قائمتي أو فئة أو كلها). يأتي الدليل من مزوّدك، أو من عنوان XMLTV المُدخل عند إضافة قائمة تشغيل M3U.\n\nافتح برنامجًا قادمًا واضبط تذكيرًا: يصلك إشعار قبل بدايته ببضع دقائق. ويعرض الجرس في الدليل تذكيراتك.</string>
+    <plurals name="guide_row_limit">
+        <item quantity="zero">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
+        <item quantity="one">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
+        <item quantity="two">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
+        <item quantity="few">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
+        <item quantity="many">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
+        <item quantity="other">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
+    </plurals>
 </resources>

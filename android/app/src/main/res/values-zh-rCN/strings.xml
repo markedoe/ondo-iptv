@@ -196,4 +196,22 @@
     <string name="rename">重命名</string>
     <string name="no_collections_hint">按你的方式整理电影和剧集：在其页面上使用“合集”。</string>
     <string name="empty_collection_hint">在电影或剧集页面上使用“合集”即可添加到这里。</string>
+    <string name="tv_guide">节目指南</string>
+    <string name="no_tv_guide">无节目指南</string>
+    <string name="no_tv_guide_hint">你的服务商未发布节目指南，或节目指南无法加载。</string>
+    <string name="no_information">无信息</string>
+    <string name="watch_live">观看直播</string>
+    <string name="remind_me">提醒我</string>
+    <string name="reminder_set">已设提醒</string>
+    <string name="reminders">提醒</string>
+    <string name="no_reminders">无提醒</string>
+    <string name="no_reminders_hint">在节目指南中打开一个节目，然后选择“提醒我”。</string>
+    <string name="reminder_body">将于 %1$s 在 %2$s 播出</string>
+    <string name="all_channels">所有频道</string>
+    <string name="notifications_off">Ondo 的通知已关闭：请在“设置”中允许通知以接收提醒。</string>
+    <string name="help_guide_title">节目指南和提醒</string>
+    <string name="help_guide_body">“直播”中的指南按钮会显示在那里所选频道（我的片单、某个分类或全部）的节目。节目指南来自你的服务商，或来自添加 M3U 播放列表时填写的 XMLTV 地址。\n\n打开即将播出的节目并设置提醒：节目开始前几分钟会收到通知。指南中的铃铛会列出你的提醒。</string>
+    <plurals name="guide_row_limit">
+        <item quantity="other">显示 %2$d 个频道中的前 %1$d 个。选择一个分类以查看其他频道。</item>
+    </plurals>
 </resources>

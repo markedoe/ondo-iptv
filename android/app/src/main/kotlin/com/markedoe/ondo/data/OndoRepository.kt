@@ -6,6 +6,7 @@ import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.PlaybackFactory
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
@@ -74,6 +75,8 @@ class OndoRepository(
     private val io: CoroutineDispatcher = Dispatchers.IO,
     /** The bundled `awards.json` (Palme d'Or, Oscars…, from Wikidata), or null without it. */
     private val awardsSource: (() -> String?)? = null,
+    /** Delivers programme reminders (WorkManager in the app). */
+    private val reminderScheduler: ReminderScheduler = NoReminderScheduler,
 ) {
     private val _state = MutableStateFlow(OndoState())
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -166,6 +169,7 @@ class OndoRepository(
 
     fun delete(id: String) {
         val playlists = _state.value.playlists.filterNot { it.id == id }
+        _state.value.library.reminders.filter { it.playlistId == id }.forEach(reminderScheduler::cancel)
         val library = _state.value.library.removingPlaylist(id)
         val settings = _state.value.settings.let { if (it.activePlaylistId == id) it.copy(activePlaylistId = playlists.firstOrNull()?.id) else it }
         persist {
@@ -290,6 +294,22 @@ class OndoRepository(
     }
 
     fun removeFromHistory(entry: WatchEntry) = updateLibrary { it.remove(entry) }
+
+    // MARK: Reminders
+
+    /** Sets a reminder for a programme of the current playlist, or takes it away. */
+    fun toggleReminder(channel: Channel, program: EpgProgram) {
+        val playlistId = _state.value.activePlaylistId ?: return
+        val reminder = Reminder(playlistId, channel.id, channel.name, program.title, program.start, program.end)
+        val wasSet = _state.value.library.reminders.any { it.key == reminder.key }
+        updateLibrary { it.togglingReminder(reminder, now()) }
+        if (wasSet) reminderScheduler.cancel(reminder) else reminderScheduler.schedule(reminder, now())
+    }
+
+    fun removeReminder(reminder: Reminder) {
+        reminderScheduler.cancel(reminder)
+        updateLibrary { library -> library.copy(reminders = library.reminders.filterNot { it.key == reminder.key }) }
+    }
 
     // MARK: Collections
 

@@ -12,6 +12,7 @@ import coil3.request.crossfade
 import com.markedoe.ondo.core.net.OkHttpClientAdapter
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.OndoRepository
+import com.markedoe.ondo.data.WorkManagerReminderScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -28,6 +29,7 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             http = OkHttpClientAdapter(okHttp),
             scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
             awardsSource = { assets.open("awards.json").bufferedReader().use { it.readText() } },
+            reminderScheduler = WorkManagerReminderScheduler(this),
         )
     }
 

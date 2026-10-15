@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmarks
+import androidx.compose.material.icons.rounded.CalendarViewDay
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -61,6 +62,7 @@ class LiveActions(
     val onToggleFavorite: (ChannelRow) -> Unit = {},
     val onCategories: () -> Unit = {},
     val onSearch: () -> Unit = {},
+    val onGuide: () -> Unit = {},
 )
 
 /** Live TV: category chips and channels with what is on now (long press: favourite). */
@@ -73,6 +75,9 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                 title = { Text(stringResource(R.string.live_tv), style = MaterialTheme.typography.headlineSmall) },
                 actions = {
                     IconButton(onClick = actions.onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search)) }
+                    IconButton(onClick = actions.onGuide, modifier = Modifier.testTag("openGuide")) {
+                        Icon(Icons.Rounded.CalendarViewDay, contentDescription = stringResource(R.string.tv_guide))
+                    }
                     IconButton(onClick = actions.onCategories, modifier = Modifier.testTag("categoryFilter")) {
                         Icon(Icons.Rounded.FilterList, contentDescription = stringResource(R.string.categories))
                     }

@@ -25,6 +25,9 @@ object Routes {
     /** The movies and series of an actor or director (a name tapped on a detail page). */
     @Serializable data class Person(val name: String)
 
+    @Serializable data object Guide
+    @Serializable data object Reminders
+
     /** A collection of My List. */
     @Serializable data class Collection(val id: String)
 

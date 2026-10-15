@@ -208,4 +208,24 @@
     <string name="rename">Renombrar</string>
     <string name="no_collections_hint">Agrupa películas y series a tu manera: usa Colección en su ficha.</string>
     <string name="empty_collection_hint">Usa Colección en la ficha de una película o serie para añadirla aquí.</string>
+    <string name="tv_guide">Guía de TV</string>
+    <string name="no_tv_guide">Sin guía de TV</string>
+    <string name="no_tv_guide_hint">Tu proveedor no publica ninguna guía, o no se pudo cargar.</string>
+    <string name="no_information">Sin información</string>
+    <string name="watch_live">Ver en directo</string>
+    <string name="remind_me">Recordármelo</string>
+    <string name="reminder_set">Recordatorio activado</string>
+    <string name="reminders">Recordatorios</string>
+    <string name="no_reminders">No hay recordatorios</string>
+    <string name="no_reminders_hint">Abre un programa en la guía de TV y elige Recordármelo.</string>
+    <string name="reminder_body">Empieza a las %1$s en %2$s</string>
+    <string name="all_channels">Todos los canales</string>
+    <string name="notifications_off">Las notificaciones de Ondo están desactivadas: permítelas en Ajustes para recibir recordatorios.</string>
+    <string name="help_guide_title">Guía de TV y recordatorios</string>
+    <string name="help_guide_body">El botón de guía de TV en directo muestra los programas de los canales elegidos allí (Mi lista, una categoría o todos). La guía viene de tu proveedor, o de la dirección XMLTV indicada al añadir una lista M3U.\n\nAbre un programa próximo y crea un recordatorio: llega una notificación unos minutos antes de que empiece. La campana de la guía muestra tus recordatorios.</string>
+    <plurals name="guide_row_limit">
+        <item quantity="one">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
+        <item quantity="many">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
+        <item quantity="other">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
+    </plurals>
 </resources>

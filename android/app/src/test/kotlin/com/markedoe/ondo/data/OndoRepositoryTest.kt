@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.ui.theme.Appearance
@@ -122,6 +123,35 @@ class OndoRepositoryTest {
         val saved = disk().loadLibrary()
         assertEquals(listOf(favorite), saved.favorites)
         assertEquals(1_200.0, saved.progress(watched.key)!!.position, 0.0)
+    }
+
+    @Test
+    fun aReminderIsScheduledThenCancelled() = runTest {
+        val scheduler = RecordingScheduler()
+        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue)), backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler), reminderScheduler = scheduler)
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        repository.addPlaylist("Home", list)
+        val channel = repository.state.value.content.channels.first()
+        val program = EpgProgram("test.news", clock + 3_600_000, clock + 7_200_000, "Evening News")
+        repository.toggleReminder(channel, program)
+        assertEquals(listOf("Evening News"), repository.state.value.library.reminders.map { it.title })
+        assertEquals(listOf("schedule Evening News"), scheduler.calls)
+        repository.toggleReminder(channel, program)
+        assertTrue(repository.state.value.library.reminders.isEmpty())
+        assertEquals(listOf("schedule Evening News", "cancel Evening News"), scheduler.calls)
+    }
+
+    private class RecordingScheduler : ReminderScheduler {
+        val calls = mutableListOf<String>()
+
+        override fun schedule(reminder: Reminder, now: Long) {
+            calls += "schedule ${reminder.title}"
+        }
+
+        override fun cancel(reminder: Reminder) {
+            calls += "cancel ${reminder.title}"
+        }
     }
 
     @Test

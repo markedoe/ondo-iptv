@@ -11,9 +11,12 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **App** `android/app` (Compose, Material 3, Navigation type-safe, barre d'onglets ou rail selon l'écran) :
   accueil (carrousel, Continuer à regarder, Ma liste, ajouts récents, chaînes), onglets Films et Séries
   (une rangée par catégorie, grilles filtrables), fiches film et série (reprise, depuis le début, épisode
-  suivant, saisons, titres similaires), TV en direct (catégories, favoris, programme en cours et suivant),
-  recherche, réglages (playlists, apparence, catégories adultes masquées par défaut), accueil avec
-  démonstration et avertissement « lecteur sans contenu ».
+  suivant, saisons, titres similaires, prix, casting et réalisation cliquables), TV en direct (catégories,
+  favoris, programme en cours et suivant), grille du guide TV avec rappels de programmes (notifications
+  WorkManager), onglet Ma liste avec collections, recherche (filtres par années de sortie et par festival ou
+  cérémonie), catégories masquées par code de langue ou de pays, aide, réglages (playlists, apparence,
+  catégories adultes masquées par défaut), accueil avec démonstration et avertissement « lecteur sans
+  contenu ».
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
   reprise, image dans l'image, MediaSession, retour au direct.
 - **Langues** : anglais, français, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
@@ -22,8 +25,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), captures
   Roborazzi qui servent de captures Google Play (téléphone, tablettes 7" et 10", anglais et français).
 
-Prévu ensuite (non inclus en v1) : Android TV, guide en grille, replay depuis le guide, Chromecast,
-téléchargements, profils et PIN, synchronisation, second moteur libVLC.
+Prévu ensuite (non inclus en v1) : Android TV, replay depuis le guide, Chromecast, téléchargements,
+profils et PIN, synchronisation, second moteur libVLC.
 
 ## Plan initial
 

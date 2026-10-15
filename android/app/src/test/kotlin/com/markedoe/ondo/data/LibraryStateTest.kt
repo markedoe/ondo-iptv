@@ -93,6 +93,19 @@ class LibraryStateTest {
     }
 
     @Test
+    fun remindersToggleAndForgetEndedProgrammes() {
+        val ended = Reminder("p1", "c1", "News", "Old", start = 10, end = 20)
+        val next = Reminder("p1", "c1", "News", "Next", start = 200, end = 300)
+        val soon = Reminder("p1", "c2", "Sport", "Soon", start = 100, end = 150)
+        var library = LibraryState(reminders = listOf(ended)).togglingReminder(next, now = 50).togglingReminder(soon, now = 50)
+        assertEquals("soonest first, ended ones forgotten", listOf("Soon", "Next"), library.reminders.map { it.title })
+        library = library.togglingReminder(next, now = 60)
+        assertEquals(listOf("Soon"), library.reminders.map { it.title })
+        assertTrue(library.upcomingReminders("p2", now = 60).isEmpty())
+        assertTrue(library.removingPlaylist("p1").reminders.isEmpty())
+    }
+
+    @Test
     fun historyIsCapped() {
         var library = LibraryState()
         repeat(LibraryState.MAX_HISTORY + 20) { library = library.recordStart(entry("m$it", at = it.toLong())) }

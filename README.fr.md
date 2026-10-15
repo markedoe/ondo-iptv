@@ -71,6 +71,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   films et séries (parmi les fiches déjà ouvertes).
 - **Live TV** : catégories, Ma liste, programme en cours et suivant ; **recherche** (la loupe de chaque écran),
   filtrable par années de sortie ou par festival / cérémonie (lauréats seulement, au choix), comme sur Apple.
+- **Guide TV** (le bouton calendrier de TV en direct) : une grille des chaînes choisies à cet endroit, et des
+  **rappels**, une notification quelques minutes avant le début d'un programme.
 - Onglet **Ma liste** : les films, séries et chaînes gardés, et vos **collections** (Collection sur la fiche d'un film
   ou d'une série), comme sur Apple.
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…) ou une par une, comme sur Apple.
@@ -81,8 +83,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Lecteur** (Media3 / ExoPlayer) : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
   reprise, image dans l'image, commandes multimédia, retour au direct.
 - **Réglages** : playlists, apparence, catégories adultes masquées par défaut ; écran d'accueil avec démo.
-- À venir : Android TV, grille du guide et replay, Chromecast, téléchargements, profils et PIN,
-  sous-titres en ligne. Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
+- À venir : Android TV, replay, Chromecast, téléchargements, profils et PIN, sous-titres en ligne. Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
 ## Langues
 

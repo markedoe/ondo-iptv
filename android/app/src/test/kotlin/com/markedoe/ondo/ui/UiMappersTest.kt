@@ -1,7 +1,9 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.SeriesDetails
@@ -10,6 +12,7 @@ import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.data.Reminder
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.CollectionChoice
@@ -185,6 +188,26 @@ class UiMappersTest {
         assertEquals(listOf(CollectionChoice("c1", "Weekend", contains = true)), UiMappers.movieDetail(state, Fixtures.glassCity).collections)
         assertEquals(listOf(CollectionChoice("c1", "Weekend", contains = false)), UiMappers.movieDetail(state, Fixtures.lastSignal).collections)
         assertNull("deleted", UiMappers.collection(state.copy(library = library.deletingCollection("c1")), "c1", Fixtures.NOW))
+    }
+
+    @Test
+    fun theGuideShowsTheProgrammesOfTheLiveChoiceAndItsReminders() {
+        val now = Fixtures.NOW
+        val morning = EpgProgram("c1.test", now - 30 * 60_000, now + 30 * 60_000, "Morning News")
+        val evening = EpgProgram("c1.test", now + 3 * 3_600_000, now + 4 * 3_600_000, "Evening News")
+        val tomorrow = EpgProgram("c1.test", now + 20 * 3_600_000, now + 21 * 3_600_000, "Tomorrow")
+        val reminder = Reminder(Fixtures.PLAYLIST_ID, "c1", "Ondo News", "Evening News", evening.start, evening.end)
+        val state = Fixtures.state().copy(guide = EpgIndex(listOf(morning, evening, tomorrow)), library = LibraryState().togglingReminder(reminder, now))
+        val guide = UiMappers.guide(state, categoryId = Fixtures.news.id, favoritesOnly = false, now = now)
+        assertEquals(listOf("Ondo News", "World Report"), guide.rows.map { it.channel.name })
+        assertEquals("two hours back, twelve ahead", listOf("Morning News", "Evening News"), guide.rows.first().programs.map { it.title })
+        assertTrue(guide.rows[1].programs.isEmpty())
+        assertTrue(guide.start <= now - 2 * 3_600_000 && guide.start % (30 * 60_000) == 0L)
+        assertEquals(guide.start + 14 * 3_600_000, guide.end)
+        assertEquals(setOf("c1|${evening.start}"), guide.reminders)
+        assertTrue(guide.hasGuide)
+        assertFalse(UiMappers.guide(state.copy(guide = null), null, false, now).hasGuide)
+        assertEquals(4, UiMappers.guide(state, null, false, now).total)
     }
 
     @Test

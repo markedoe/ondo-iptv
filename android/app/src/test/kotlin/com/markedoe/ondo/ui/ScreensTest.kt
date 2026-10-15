@@ -21,6 +21,7 @@ import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.model.ContentType
+import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
@@ -35,6 +36,10 @@ import com.markedoe.ondo.ui.screens.CollectionRow
 import com.markedoe.ondo.ui.screens.CollectionScreen
 import com.markedoe.ondo.ui.screens.CollectionUiState
 import com.markedoe.ondo.ui.screens.DetailActions
+import com.markedoe.ondo.ui.screens.GuideActions
+import com.markedoe.ondo.ui.screens.GuideRow
+import com.markedoe.ondo.ui.screens.GuideScreen
+import com.markedoe.ondo.ui.screens.GuideUiState
 import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
@@ -46,6 +51,7 @@ import com.markedoe.ondo.ui.screens.MyListUiState
 import com.markedoe.ondo.ui.screens.PersonScreen
 import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PlaylistForm
+import com.markedoe.ondo.ui.screens.RemindersScreen
 import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchScreen
 import com.markedoe.ondo.ui.screens.SearchUiState
@@ -175,6 +181,33 @@ class ScreensTest {
         compose.onNodeWithTag("newCollection").assertExists()
         compose.onNodeWithTag("collection-Weekend").assert(hasText("3")).performClick()
         assertEquals("c1", opened)
+    }
+
+    @Test
+    fun theGuideOpensAProgrammeToWatchItOrBeReminded() {
+        val now = Fixtures.NOW
+        val channel = Fixtures.channels.first()
+        val airing = EpgProgram("c1.test", now - 600_000, now + 1_200_000, "Morning News")
+        val later = EpgProgram("c1.test", now + 1_200_000, now + 3_000_000, "Weather")
+        val window = UiMappers.guideWindow(now)
+        val state = GuideUiState(rows = listOf(GuideRow(channel, listOf(airing, later))), total = 1, start = window.first, end = window.last, now = now, hasGuide = true)
+        val played = mutableListOf<String>()
+        val reminded = mutableListOf<String>()
+        compose.setContent {
+            OndoTheme { GuideScreen(state, GuideActions(onPlay = { played += it.name }, onToggleReminder = { _, program -> reminded += program.title })) }
+        }
+        compose.onNodeWithText("Weather").performClick()
+        compose.onNodeWithTag("programSheet").assertExists()
+        compose.onNodeWithText("Watch live").assertDoesNotExist()
+        compose.onNodeWithTag("reminderButton").assert(hasText("Remind me")).performClick()
+        assertEquals(listOf("Weather"), reminded)
+    }
+
+    @Test
+    fun remindersSayHowToSetOne() {
+        compose.setContent { OndoTheme { RemindersScreen(emptyList(), onRemove = {}, onBack = {}) } }
+        compose.onNodeWithText("No reminders").assertExists()
+        compose.onNodeWithText("choose Remind me", substring = true).assertExists()
     }
 
     @Test

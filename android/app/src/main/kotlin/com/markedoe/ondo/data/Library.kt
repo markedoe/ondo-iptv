@@ -45,6 +45,19 @@ data class WatchEntry(
     }
 }
 
+/** A programme the viewer wants to be told about, a few minutes before it starts (times in milliseconds). */
+@Serializable
+data class Reminder(
+    val playlistId: String,
+    val channelId: String,
+    val channelName: String,
+    val title: String,
+    val start: Long,
+    val end: Long,
+) {
+    val key: String get() = "$playlistId|$channelId|$start"
+}
+
 /** A collection the viewer made: movies, series and channels kept together under a name, as on Apple. */
 @Serializable
 data class UserCollection(
@@ -71,6 +84,8 @@ data class LibraryState(
     val hiddenTags: Set<String> = emptySet(),
     /** By name. */
     val collections: List<UserCollection> = emptyList(),
+    /** Soonest first. */
+    val reminders: List<Reminder> = emptyList(),
 ) {
     fun isCategoryHidden(playlistId: String, categoryId: String): Boolean = "$playlistId|$categoryId" in hiddenCategories
 
@@ -130,7 +145,19 @@ data class LibraryState(
         history = history.filterNot { it.playlistId == playlistId },
         hiddenCategories = hiddenCategories.filterNot { it.startsWith("$playlistId|") }.toSet(),
         collections = collections.map { list -> list.copy(items = list.items.filterNot { it.playlistId == playlistId }) },
+        reminders = reminders.filterNot { it.playlistId == playlistId },
     )
+
+    // Reminders
+
+    /** Sets the reminder, or takes it away if it is set; programmes that ended are forgotten. */
+    fun togglingReminder(reminder: Reminder, now: Long): LibraryState {
+        val others = reminders.filter { it.key != reminder.key && it.end > now }
+        val toggled = if (reminders.any { it.key == reminder.key }) others else others + reminder
+        return copy(reminders = toggled.sortedBy { it.start })
+    }
+
+    fun upcomingReminders(playlistId: String, now: Long): List<Reminder> = reminders.filter { it.playlistId == playlistId && it.end > now }
 
     // Collections
 

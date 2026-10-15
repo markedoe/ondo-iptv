@@ -11,9 +11,11 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **App** `android/app` (Compose, Material 3, type-safe Navigation, tab bar or rail depending on the screen):
   home (carousel, Continue Watching, My List, Recently Added, channels), Movies and Series tabs
   (one row per category, filterable grids), movie and series pages (Resume, From Start, next
-  episode, seasons, More Like This), live TV (categories, favorites, current and next programme),
-  search, settings (playlists, appearance, adult categories hidden by default), welcome screen with a
-  demo and a "player without content" disclaimer.
+  episode, seasons, More Like This, awards, tappable cast and director), live TV (categories, favorites,
+  current and next programme), TV guide grid with programme reminders (WorkManager notifications), My List
+  tab with collections, search (filters by release years and by festival or ceremony), categories hidden by
+  language or country code, help, settings (playlists, appearance, adult categories hidden by default),
+  welcome screen with a demo and a "player without content" disclaimer.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
   resume, picture-in-picture, MediaSession, Back to Live.
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi
@@ -21,8 +23,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), Roborazzi
   screenshots that double as Google Play screenshots (phone, 7" and 10" tablets, English and French).
 
-Planned next (not included in v1): Android TV, grid guide, catch-up from the guide, Chromecast,
-downloads, profiles and PIN, sync, second libVLC engine.
+Planned next (not included in v1): Android TV, catch-up from the guide, Chromecast, downloads, profiles
+and PIN, sync, second libVLC engine.
 
 ## Initial plan
 

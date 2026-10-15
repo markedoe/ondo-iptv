@@ -208,4 +208,24 @@
     <string name="rename">Renommer</string>
     <string name="no_collections_hint">Regroupez films et séries à votre façon : utilisez Collection sur leur fiche.</string>
     <string name="empty_collection_hint">Utilisez Collection sur la fiche d’un film ou d’une série pour l’ajouter ici.</string>
+    <string name="tv_guide">Guide TV</string>
+    <string name="no_tv_guide">Pas de guide TV</string>
+    <string name="no_tv_guide_hint">Votre fournisseur ne publie pas de guide, ou il n\'a pas pu être chargé.</string>
+    <string name="no_information">Pas d\'information</string>
+    <string name="watch_live">Regarder en direct</string>
+    <string name="remind_me">Me le rappeler</string>
+    <string name="reminder_set">Rappel activé</string>
+    <string name="reminders">Rappels</string>
+    <string name="no_reminders">Aucun rappel</string>
+    <string name="no_reminders_hint">Ouvrez un programme dans le guide TV et choisissez Me le rappeler.</string>
+    <string name="reminder_body">Commence à %1$s sur %2$s</string>
+    <string name="all_channels">Toutes les chaînes</string>
+    <string name="notifications_off">Les notifications d\'Ondo sont désactivées : autorisez-les dans Réglages pour être prévenu.</string>
+    <string name="help_guide_title">Guide TV et rappels</string>
+    <string name="help_guide_body">Le bouton de guide de TV en direct montre les programmes des chaînes choisies à cet endroit (Ma liste, une catégorie ou toutes). Le guide vient de votre fournisseur, ou de l’adresse XMLTV donnée à l’ajout d’une playlist M3U.\n\nOuvrez un programme à venir et créez un rappel : une notification arrive quelques minutes avant le début. La cloche du guide liste vos rappels.</string>
+    <plurals name="guide_row_limit">
+        <item quantity="one">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
+        <item quantity="many">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
+        <item quantity="other">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
+    </plurals>
 </resources>

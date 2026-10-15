@@ -203,4 +203,23 @@
     <string name="rename">Rename</string>
     <string name="no_collections_hint">Group movies and series your way: use Collection on their page.</string>
     <string name="empty_collection_hint">Use Collection on a movie or series page to add it here.</string>
+    <string name="tv_guide">TV guide</string>
+    <string name="no_tv_guide">No TV guide</string>
+    <string name="no_tv_guide_hint">Your provider does not publish a guide, or it could not be loaded.</string>
+    <string name="no_information">No information</string>
+    <string name="watch_live">Watch live</string>
+    <string name="remind_me">Remind me</string>
+    <string name="reminder_set">Reminder set</string>
+    <string name="reminders">Reminders</string>
+    <string name="no_reminders">No reminders</string>
+    <string name="no_reminders_hint">Open a programme in the TV guide and choose Remind me.</string>
+    <string name="reminder_body">Starts at %1$s on %2$s</string>
+    <string name="all_channels">All channels</string>
+    <string name="notifications_off">Notifications are off for Ondo: allow them in Settings to be reminded.</string>
+    <string name="help_guide_title">TV guide and reminders</string>
+    <string name="help_guide_body">The guide button on Live TV shows the programmes of the channels chosen there (My List, a category or all of them). The guide comes from your provider, or from the XMLTV address given when adding an M3U playlist.\n\nOpen an upcoming programme and set a reminder: a notification arrives a few minutes before it starts. The bell of the guide lists your reminders.</string>
+    <plurals name="guide_row_limit">
+        <item quantity="one">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
+        <item quantity="other">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
+    </plurals>
 </resources>
