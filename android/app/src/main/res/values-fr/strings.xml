@@ -165,7 +165,7 @@
     <string name="my_list_empty_hint">Utilisez Ma liste sur la fiche d’un film ou d’une série pour le retrouver ici.</string>
     <string name="help_mylist_title">Ma liste</string>
     <string name="help_mylist_body">Sur la fiche d’un film ou d’une série, Ma liste le garde à portée de main. Dans TV en direct, appuyez longuement sur une chaîne pour l’ajouter à Ma liste.\n\nL’onglet Ma liste réunit vos films, séries et chaînes ; la recherche est la loupe en haut de chaque écran.\n\nLes collections sont vos propres groupes, comme Week-end ou Enfants : utilisez Collection sur la fiche d’un film ou d’une série, puis retrouvez-les dans Ma liste, sous Collections.</string>
-    <string name="help_search_body">Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche, la loupe en haut de chaque écran, parcourt les chaînes, les films et les séries. Dans la recherche, le bouton de filtre garde les films et séries sortis dans les années choisies, ou les films d’un festival ou d’une cérémonie.\n\nDans une catégorie, le bouton de tri range les affiches par ordre de la playlist, nom, date d’ajout, date de sortie ou note. Les fiches des films montrent leurs prix et sélections en festival. Touchez le nom d’un réalisateur ou d’un acteur sur une fiche pour voir ses autres films et séries parmi les fiches déjà ouvertes.</string>
+    <string name="help_search_body">Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche, la loupe en haut de chaque écran, parcourt les chaînes, les films et les séries. Dans la recherche, le bouton de filtre garde les films et séries sortis dans les années choisies, ou les films d’un festival ou d’une cérémonie.\n\nDans une catégorie, le bouton de tri range les affiches par ordre de la playlist, nom, date d’ajout, date de sortie ou note. Les fiches des films montrent leurs prix et sélections en festival. Touchez le nom d’un réalisateur ou d’un acteur sur une fiche pour voir ses autres films et séries parmi les fiches déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent.</string>
     <string name="search_filters">Filtres</string>
     <string name="filter_from">De</string>
     <string name="filter_to">À</string>
@@ -242,4 +242,7 @@
     <string name="styles_explanation">Masque les catégories dont le nom contient un style ou un mot (Manga, Bollywood…), dans toutes les playlists, y compris celles ajoutées plus tard. Seuls les noms de catégories comptent, pas le genre de chaque film.</string>
     <string name="update_awards">Mettre à jour les prix automatiquement</string>
     <string name="update_awards_hint">Une fois par semaine, Ondo télécharge les derniers prix et sélections en festival (issus de Wikidata) depuis GitHub, où le projet est hébergé. Rien vous concernant n’est envoyé.</string>
+    <string name="genre_label">Genre</string>
+    <string name="year_label">Année</string>
+    <string name="genre_hint">Les films apparaissent une fois leur fiche ouverte ; les séries, toujours.</string>
 </resources>

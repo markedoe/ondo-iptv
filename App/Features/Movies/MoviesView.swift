@@ -126,7 +126,7 @@ struct MovieDetailView: View {
                 if let plot = details?.plot ?? movie.plot, !plot.isEmpty {
                     ExpandablePlot(text: plot)
                 }
-                InfoLines(details: details)
+                InfoLines(details: details, year: movie.year)
                 AwardsList(awards: model.awards(for: movie))
             }
             .frame(maxWidth: metrics.textWidth, alignment: .leading)
@@ -158,59 +158,76 @@ struct MovieDetailView: View {
 }
 
 /// Credits: the label in a narrow column, the value right next to it (not pushed to the far edge). Each name of
-/// the director and cast is a link to the movies and series of the playlist with that person.
+/// the director and cast, each genre and the release year is a link to the titles of the playlist sharing it.
 struct InfoLines: View {
     @Environment(NavigationRouter.self) private var router: NavigationRouter?
     let details: MediaDetails?
+    /// From the catalogue when the page gave none.
+    var year: Int?
+    var genre: String?
+
+    /// Where a link goes.
+    private enum Target {
+        case person(String)
+        case metadata(MetadataRoute)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             if let director = details?.director {
-                people("Director", director)
+                linked("Director", field: director, People.names(in: director).map { ($0, Target.person($0)) })
             }
             if let cast = details?.cast {
-                people("Cast", cast)
+                linked("Cast", field: cast, People.names(in: cast).map { ($0, Target.person($0)) })
+            }
+            if let genre = genre ?? details?.genre {
+                linked("Genre", field: genre, AppModel.genres(in: genre).map { ($0, Target.metadata(.genre($0))) })
             }
             if let original = details?.originalTitle, original != details?.title {
                 line("Original title", original)
             }
             if let date = details?.releaseDate {
-                line("Release", date)
+                let releaseYear = Int(date.prefix(4)) ?? year
+                linked("Release", field: date, releaseYear.map { [(date, Target.metadata(.year($0)))] } ?? [])
+            } else if let year {
+                linked("Year", field: String(year), [(String(year), Target.metadata(.year(year)))])
             }
         }
         .font(.callout)
     }
 
-    /// Names as links (`ondo-person://<index>`), opened in this navigation stack.
+    /// Values as links (`ondo-link://<index>`), opened in this navigation stack.
     @ViewBuilder
-    private func people(_ label: LocalizedStringKey, _ field: String) -> some View {
-        let names = People.names(in: field)
-        if names.isEmpty || router == nil {
+    private func linked(_ label: LocalizedStringKey, field: String, _ items: [(String, Target)]) -> some View {
+        if items.isEmpty || router == nil {
             line(label, field)
         } else {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Text(label)
                     .foregroundStyle(.secondary)
                     .frame(width: 104, alignment: .leading)
-                Text(Self.links(names))
+                Text(Self.links(items.map(\.0)))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .environment(\.openURL, OpenURLAction { url in
-                        guard url.scheme == "ondo-person", let index = Int(url.host() ?? ""), names.indices.contains(index) else {
+                        guard url.scheme == "ondo-link", let index = Int(url.host() ?? ""), items.indices.contains(index) else {
                             return .systemAction
                         }
-                        router?.push(PersonRoute(name: names[index]))
+                        switch items[index].1 {
+                        case .person(let name): router?.push(PersonRoute(name: name))
+                        case .metadata(let route): router?.push(route)
+                        }
                         return .handled
                     })
             }
         }
     }
 
-    private static func links(_ names: [String]) -> AttributedString {
+    private static func links(_ texts: [String]) -> AttributedString {
         var text = AttributedString()
-        for (index, name) in names.enumerated() {
+        for (index, value) in texts.enumerated() {
             if index > 0 { text += AttributedString(", ") }
-            var part = AttributedString(name)
-            part.link = URL(string: "ondo-person://\(index)")
+            var part = AttributedString(value)
+            part.link = URL(string: "ondo-link://\(index)")
             text += part
         }
         return text
@@ -230,6 +247,7 @@ struct InfoLines: View {
 
 /// Awards and festival selections of a movie (wins first), the first few then "and N more".
 struct AwardsList: View {
+    @Environment(NavigationRouter.self) private var router: NavigationRouter?
     let awards: [MovieAward]
     @State private var showsAll = false
     private static let shortLength = 4
@@ -239,15 +257,23 @@ struct AwardsList: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Awards").font(.headline)
                 ForEach(showsAll ? awards : Array(awards.prefix(Self.shortLength))) { award in
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Image(systemName: award.won ? "trophy.fill" : "rosette")
-                            .foregroundStyle(award.won ? Color.yellow : Color.secondary)
-                            .accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(verbatim: award.name)
-                            Text(status(award)).font(.caption).foregroundStyle(.secondary)
+                    // An award opens the other movies of the playlist that won it or competed for it.
+                    Button {
+                        router?.push(MetadataRoute.award(award.awardID))
+                    } label: {
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: award.won ? "trophy.fill" : "rosette")
+                                .foregroundStyle(award.won ? Color.yellow : Color.secondary)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(verbatim: award.name).foregroundStyle(Color.accentColor)
+                                Text(status(award)).font(.caption).foregroundStyle(.secondary)
+                            }
                         }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
+                    .disabled(router == nil)
                     .accessibilityElement(children: .combine)
                 }
                 if !showsAll && awards.count > Self.shortLength {

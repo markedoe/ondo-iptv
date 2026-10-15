@@ -19,7 +19,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
   see their other movies and series in the playlist (from the pages already opened, or all of them with a
-  TMDb key).
+  TMDb key); a genre, the release year or an award (then its festival) opens the titles that share it.
 - **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
   **filtered by release years** and **by festival or ceremony** (winners only if you like).
 - **Awards**: Palme d'Or, Oscars, Golden Lion, Golden Bear, Césars, BAFTAs, Golden Globes… on movie pages
@@ -69,7 +69,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), detail pages (Resume, From Start, next
   episode, seasons, More Like This); a director's or an actor's name opens their other movies and series
-  (among the pages already opened).
+  (among the pages already opened), and a genre, the year or an award the titles that share it.
 - **Live TV**: categories, My List, current and next programme; **search** (the magnifying glass of each screen),
   filtered by release years or by festival / ceremony (winners only, if you like), like on Apple.
 - **TV guide** (the calendar button of Live TV): a grid of the channels chosen there, and **reminders**, a

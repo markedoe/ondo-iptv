@@ -160,7 +160,7 @@
     <string name="my_list_empty_hint">Use My List on a movie or series page to find it here.</string>
     <string name="help_mylist_title">My List</string>
     <string name="help_mylist_body">On a movie or series page, My List keeps it at hand. In Live TV, long-press a channel to add it to My List.\n\nThe My List tab gathers your movies, series and channels; search is the magnifying glass at the top of each screen.\n\nCollections are your own groups, such as Weekend or Kids: use Collection on a movie or series page, then find them in My List, under Collections.</string>
-    <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. Search, the magnifying glass at the top of each screen, looks through channels, movies and series. In Search, the filter button keeps the movies and series released in the years you choose, or the movies of a festival or ceremony.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating. Movie pages show their awards and festival selections. Tap the name of a director or an actor on a movie or series page to see their other movies and series among the pages you have opened.</string>
+    <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. Search, the magnifying glass at the top of each screen, looks through channels, movies and series. In Search, the filter button keeps the movies and series released in the years you choose, or the movies of a festival or ceremony.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating. Movie pages show their awards and festival selections. Tap the name of a director or an actor on a movie or series page to see their other movies and series among the pages you have opened. Genres, the year and awards open the titles of your playlist that share them the same way.</string>
     <string name="search_filters">Filters</string>
     <string name="filter_from">From</string>
     <string name="filter_to">To</string>
@@ -236,4 +236,7 @@
     <string name="styles_explanation">Hides the categories whose name holds a style or a word (Manga, Bollywood…), in every playlist, including those added later. Only category names count, not the genre of each movie.</string>
     <string name="update_awards">Update awards automatically</string>
     <string name="update_awards_hint">Once a week, Ondo downloads the latest awards and festival selections (made from Wikidata) from GitHub, where the project is hosted. Nothing about you is sent.</string>
+    <string name="genre_label">Genre</string>
+    <string name="year_label">Year</string>
+    <string name="genre_hint">Movies are listed once their page has been opened; series always.</string>
 </resources>

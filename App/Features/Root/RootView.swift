@@ -311,6 +311,9 @@ struct SectionView: View {
         .navigationDestination(for: PersonRoute.self) { route in
             PersonView(name: route.name)
         }
+        .navigationDestination(for: MetadataRoute.self) { route in
+            MetadataView(route: route)
+        }
     }
 }
 

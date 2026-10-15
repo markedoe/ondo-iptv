@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.core.TextNormalizer
+import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.MediaCategory
@@ -17,6 +18,8 @@ import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.screens.BrowseKind
+import com.markedoe.ondo.ui.screens.BrowseUiState
 import com.markedoe.ondo.ui.screens.CategoryRow
 import com.markedoe.ondo.ui.screens.CollectionChoice
 import com.markedoe.ondo.ui.screens.CollectionRow
@@ -374,6 +377,50 @@ object UiMappers {
         version = version,
         isRefreshing = state.isLoading,
     )
+
+    /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"). */
+    fun genres(field: String?): List<String> = field.orEmpty().split(',', '/', '|', '&').map { it.trim() }.filter { it.isNotEmpty() }
+
+    /** The titles of the playlist sharing a value of a movie's or a series' page, hidden categories left out. */
+    fun browse(state: OndoState, kind: BrowseKind, value: String, locale: Locale = Locale.getDefault()): BrowseUiState {
+        val hidden = hiddenCategoryIds(state)
+        val movies = state.content.movies.filter { it.categoryId !in hidden }
+        val series = state.content.series.filter { it.categoryId !in hidden }
+        val awards = MovieAwards.of(state)
+        fun items(list: List<Movie>) = list.map { ShowcaseItem.MovieItem(it) }
+        return when (kind) {
+            BrowseKind.AWARD -> {
+                val award = state.awards.award(value)
+                val language = if (locale.language == "zh") "zh-Hans" else locale.language
+                // Winners first, then the most recent.
+                val found = movies.mapNotNull { movie -> awards[movie.id]?.firstOrNull { it.awardId == value }?.let { movie to it } }
+                    .sortedWith(compareByDescending<Pair<Movie, AwardsCatalogue.Entry>> { it.second.won }.thenByDescending { it.second.year }.thenBy { it.first.name })
+                BrowseUiState(kind, value, award?.name(language) ?: value, movies = items(found.map { it.first }), festival = award?.group)
+            }
+            BrowseKind.FESTIVAL -> {
+                val found = movies.filter { movie -> awards[movie.id].orEmpty().any { state.awards.award(it.awardId)?.group == value } }
+                BrowseUiState(kind, value, movies = sorted(items(found), PosterSort.RELEASE))
+            }
+            BrowseKind.YEAR -> {
+                val year = value.toIntOrNull()
+                BrowseUiState(
+                    kind, value,
+                    movies = sorted(items(movies.filter { it.year == year }), PosterSort.RELEASE),
+                    series = sorted(series.filter { it.year == year }.map { ShowcaseItem.SeriesItem(it) }, PosterSort.RELEASE),
+                )
+            }
+            BrowseKind.GENRE -> {
+                val wanted = TextNormalizer.normalize(value)
+                fun has(field: String?) = genres(field).any { TextNormalizer.normalize(it) == wanted }
+                // A movie's genre is known once its page was opened; a series' comes with the catalogue.
+                BrowseUiState(
+                    kind, value,
+                    movies = sorted(items(movies.filter { has(state.movieDetails[it.id]?.genre) }), PosterSort.NAME),
+                    series = sorted(series.filter { has(it.genre) || has(state.seriesDetails[it.id]?.info?.genre) }.map { ShowcaseItem.SeriesItem(it) }, PosterSort.NAME),
+                )
+            }
+        }
+    }
 
     /** The movies and series whose opened page names this person (cast or director), newest first. */
     fun person(state: OndoState, name: String): PersonUiState {

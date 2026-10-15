@@ -19,7 +19,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   ou note, fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
   acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (parmi les fiches déjà
-  ouvertes, ou tous avec une clé TMDb).
+  ouvertes, ou tous avec une clé TMDb) ; un genre, l'année de sortie ou un prix (puis son festival) ouvre les
+  titres qui le partagent.
 - **Recherche** (la loupe en haut de chaque onglet sur iPhone) : chaînes, programmes, films et séries,
   **filtrables par années de sortie** et **par festival ou cérémonie** (lauréats seulement si vous voulez).
 - **Prix** : Palme d'or, Oscars, Lion d'or, Ours d'or, César, BAFTA, Golden Globes… sur les fiches des films
@@ -72,7 +73,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
-  films et séries (parmi les fiches déjà ouvertes).
+  films et séries (parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
+  partagent.
 - **Live TV** : catégories, Ma liste, programme en cours et suivant ; **recherche** (la loupe de chaque écran),
   filtrable par années de sortie ou par festival / cérémonie (lauréats seulement, au choix), comme sur Apple.
 - **Guide TV** (le bouton calendrier de TV en direct) : une grille des chaînes choisies à cet endroit, et des

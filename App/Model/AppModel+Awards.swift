@@ -52,6 +52,8 @@ enum AwardGroup {
 /// An award of a movie, ready to show.
 struct MovieAward: Identifiable, Hashable {
     let id: String
+    /// "palme-dor": opens the movies of the playlist with this award.
+    let awardID: String
     let name: String
     let year: Int
     let won: Bool
@@ -110,6 +112,7 @@ extension AppModel {
             guard let award = catalogue.award(entry.awardID) else { return nil }
             return MovieAward(
                 id: "\(entry.awardID)-\(entry.year)",
+                awardID: entry.awardID,
                 name: award.name(language: language),
                 year: entry.year,
                 won: entry.won,

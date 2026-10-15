@@ -7,7 +7,7 @@ import com.markedoe.ondo.data.OndoState
 import java.util.Locale
 
 /** An award of a movie, ready to show: won, in competition (festivals) or nominated. */
-data class AwardRow(val name: String, val year: Int, val won: Boolean, val festival: Boolean)
+data class AwardRow(val name: String, val year: Int, val won: Boolean, val festival: Boolean, val awardId: String = "")
 
 /** Awards and festival selections of the catalogue's movies (bundled data, matched on the device). */
 object MovieAwards {
@@ -26,7 +26,7 @@ object MovieAwards {
         val language = if (locale.language == "zh") "zh-Hans" else locale.language
         return of(state)[movie.id].orEmpty().mapNotNull { entry ->
             val award = state.awards.award(entry.awardId) ?: return@mapNotNull null
-            AwardRow(award.name(language), entry.year, entry.won, award.group in festivals)
+            AwardRow(award.name(language), entry.year, entry.won, award.group in festivals, award.id)
         }
     }
 

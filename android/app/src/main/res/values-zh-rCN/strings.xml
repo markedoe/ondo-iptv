@@ -153,7 +153,7 @@
     <string name="my_list_empty_hint">在电影或剧集页面上使用“我的片单”，即可在这里找到它。</string>
     <string name="help_mylist_title">我的片单</string>
     <string name="help_mylist_body">在电影或剧集页面上，“我的片单”可将其放在手边。在“直播”中，长按频道即可将其添加到我的片单。\n\n“我的片单”标签页汇集你的电影、剧集和频道；搜索是每个页面顶部的放大镜。\n\n合集是你自己的分组，例如“周末”或“儿童”：在电影或剧集页面上使用“合集”，然后在“我的片单”的“合集”中找到它们。</string>
-    <string name="help_search_body">“电影”“剧集”和“直播”会显示提供商的分类。搜索（每个页面顶部的放大镜）会查找频道、电影和剧集。在搜索中，筛选按钮可只保留所选年份上映的电影和剧集，或某个电影节或颁奖典礼的电影。\n\n在分类中，排序按钮可按播放列表顺序、名称、添加日期、上映日期或评分排列海报。电影页面会显示其获奖和电影节入选情况。在电影或剧集页面上点按导演或演员的名字，即可在你打开过的页面中查看其其他电影和剧集。</string>
+    <string name="help_search_body">“电影”“剧集”和“直播”会显示提供商的分类。搜索（每个页面顶部的放大镜）会查找频道、电影和剧集。在搜索中，筛选按钮可只保留所选年份上映的电影和剧集，或某个电影节或颁奖典礼的电影。\n\n在分类中，排序按钮可按播放列表顺序、名称、添加日期、上映日期或评分排列海报。电影页面会显示其获奖和电影节入选情况。在电影或剧集页面上点按导演或演员的名字，即可在你打开过的页面中查看其其他电影和剧集。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。</string>
     <string name="search_filters">筛选</string>
     <string name="filter_from">从</string>
     <string name="filter_to">到</string>
@@ -228,4 +228,7 @@
     <string name="styles_explanation">隐藏名称中包含某种风格或某个词（如 Manga、Bollywood…）的分类，适用于所有播放列表，包括以后添加的分类。只看分类名称，不看每部电影的类型。</string>
     <string name="update_awards">自动更新获奖信息</string>
     <string name="update_awards_hint">Ondo 每周从托管本项目的 GitHub 下载一次最新的获奖和电影节入选信息（来自 Wikidata）。不会发送任何关于你的信息。</string>
+    <string name="genre_label">类型</string>
+    <string name="year_label">年份</string>
+    <string name="genre_hint">电影在打开过其页面后才会列出；剧集则始终列出。</string>
 </resources>

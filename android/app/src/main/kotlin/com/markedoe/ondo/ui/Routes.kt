@@ -25,6 +25,9 @@ object Routes {
     /** The movies and series of an actor or director (a name tapped on a detail page). */
     @Serializable data class Person(val name: String)
 
+    /** The titles sharing an award, a festival, a year or a genre (`BrowseKind` name, value). */
+    @Serializable data class Browse(val kind: String, val value: String)
+
     @Serializable data object Guide
     @Serializable data object Reminders
 

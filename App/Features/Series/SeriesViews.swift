@@ -98,7 +98,7 @@ struct SeriesDetailView: View {
                 if let plot = details?.info.plot ?? series.plot, !plot.isEmpty {
                     ExpandablePlot(text: plot)
                 }
-                InfoLines(details: details?.info)
+                InfoLines(details: details?.info, year: series.year, genre: details?.info.genre ?? series.genre)
                 if let errorMessage {
                     Label(errorMessage, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.secondary)

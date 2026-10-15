@@ -196,6 +196,10 @@ struct CategoryFilterButton: View {
             Label("Categories", systemImage: hidden > 0 ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
         }
         .help("Choose the categories shown")
+        #if os(macOS)
+        // The Mac toolbar shows icons only: the title says where the languages and categories are.
+        .labelStyle(.titleAndIcon)
+        #endif
         .accessibilityIdentifier("categoryFilter")
         .sheet(isPresented: $isPresented) {
             CategoryManagerSheet(type: type, isPresented: $isPresented)
@@ -231,7 +235,9 @@ struct HiddenCategoriesNote: View {
 struct TagSuggestionCard: View {
     @Environment(AppModel.self) private var model
     let suggestion: TagSuggestion
-    @State private var choosing = false
+    /// Opens the categories screen. Presented by the parent: hiding a language answers the suggestion, and the
+    /// card goes away with anything it presents.
+    let onChoose: () -> Void
 
     var body: some View {
         let kept = ListFormatter.localizedString(byJoining: suggestion.kept.map { CategoryTagName.name(of: $0) ?? $0 })
@@ -247,7 +253,7 @@ struct TagSuggestionCard: View {
                 Button("Keep Only These") { model.accept(suggestion) }
                     .buttonStyle(.borderedProminent)
                     .accessibilityIdentifier("keepMyLanguages")
-                Button("Choose…") { choosing = true }
+                Button("Choose…", action: onChoose)
                     .buttonStyle(.bordered)
                 Spacer(minLength: 0)
                 Button("Not Now") { model.dismissTagSuggestion() }
@@ -257,8 +263,5 @@ struct TagSuggestionCard: View {
         .padding(16)
         .frame(maxWidth: 640, alignment: .leading)
         .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .sheet(isPresented: $choosing, onDismiss: { model.dismissTagSuggestion() }) {
-            CategoryManagerSheet(type: .movie, isPresented: $choosing)
-        }
     }
 }

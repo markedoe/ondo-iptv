@@ -28,6 +28,7 @@ import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
+import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.CategoriesActions
 import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.CollectionActions
@@ -137,6 +138,20 @@ class ScreensTest {
         compose.setContent { OndoTheme { MovieDetailScreen(state, DetailActions(onPerson = { people += it })) } }
         compose.onNodeWithTag("credit-Cast").performScrollTo().assert(hasText("Ada Vance, Tom Reyes")).performFirstLinkClick()
         assertEquals(listOf("Ada Vance"), people)
+    }
+
+    @Test
+    fun anAwardAGenreOrTheYearOpensTheTitlesSharingIt() {
+        val browsed = mutableListOf<Pair<BrowseKind, String>>()
+        val state = UiMappers.movieDetail(
+            Fixtures.state().copy(movieDetails = mapOf(Fixtures.glassCity.id to MediaDetails(title = "Glass City", genre = "Science Fiction, Mystery"))),
+            Fixtures.glassCity,
+        ).copy(awards = listOf(AwardRow("Palme d'Or", 2024, won = true, festival = true, awardId = "palme-dor")))
+        compose.setContent { OndoTheme { MovieDetailScreen(state, DetailActions(onBrowse = { kind, value -> browsed += kind to value })) } }
+        compose.onNodeWithTag("credit-Genre").performScrollTo().performFirstLinkClick()
+        compose.onNodeWithTag("credit-Year").performScrollTo().performFirstLinkClick()
+        compose.onNodeWithTag("award-palme-dor").performScrollTo().performClick()
+        assertEquals(listOf(BrowseKind.GENRE to "Science Fiction", BrowseKind.YEAR to "2024", BrowseKind.AWARD to "palme-dor"), browsed)
     }
 
     @Test

@@ -165,7 +165,7 @@
     <string name="my_list_empty_hint">Usa Mi lista en la ficha de una película o serie para encontrarla aquí.</string>
     <string name="help_mylist_title">Mi lista</string>
     <string name="help_mylist_body">En la ficha de una película o serie, Mi lista la mantiene a mano. En TV en directo, mantén pulsado un canal para añadirlo a Mi lista.\n\nLa pestaña Mi lista reúne tus películas, series y canales; la búsqueda es la lupa de la parte superior de cada pantalla.\n\nLas colecciones son tus propios grupos, como Fin de semana o Niños: usa Colección en la ficha de una película o serie y encuéntralas en Mi lista, en Colecciones.</string>
-    <string name="help_search_body">Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda, la lupa de la parte superior de cada pantalla, recorre canales, películas y series. En la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas de un festival o una ceremonia.\n\nEn una categoría, el botón de ordenar coloca los pósteres por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración. Las fichas de las películas muestran sus premios y selecciones en festivales. Toca el nombre de un director o de un actor en una ficha para ver sus otras películas y series entre las fichas que ya abriste.</string>
+    <string name="help_search_body">Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda, la lupa de la parte superior de cada pantalla, recorre canales, películas y series. En la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas de un festival o una ceremonia.\n\nEn una categoría, el botón de ordenar coloca los pósteres por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración. Las fichas de las películas muestran sus premios y selecciones en festivales. Toca el nombre de un director o de un actor en una ficha para ver sus otras películas y series entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten.</string>
     <string name="search_filters">Filtros</string>
     <string name="filter_from">Desde</string>
     <string name="filter_to">Hasta</string>
@@ -242,4 +242,7 @@
     <string name="styles_explanation">Oculta las categorías cuyo nombre contiene un estilo o una palabra (Manga, Bollywood…), en todas las listas, incluidas las que se añadan después. Solo cuentan los nombres de las categorías, no el género de cada película.</string>
     <string name="update_awards">Actualizar los premios automáticamente</string>
     <string name="update_awards_hint">Una vez por semana, Ondo descarga los últimos premios y selecciones en festivales (obtenidos de Wikidata) desde GitHub, donde se aloja el proyecto. No se envía nada sobre ti.</string>
+    <string name="genre_label">Género</string>
+    <string name="year_label">Año</string>
+    <string name="genre_hint">Las películas aparecen una vez abierta su ficha; las series, siempre.</string>
 </resources>

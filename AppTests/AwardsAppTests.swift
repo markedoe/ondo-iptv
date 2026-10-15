@@ -48,6 +48,33 @@ final class AwardsAppTests: XCTestCase {
         XCTAssertEqual(model.search("", releasedIn: nil, awardGroup: "cannes", winnersOnly: true).movies.map(\.name), ["Pulp Fiction"])
     }
 
+    func testTheValuesOfAPageOpenTheTitlesSharingThem() async throws {
+        let file = root.appendingPathComponent("list.m3u")
+        try Data("""
+        #EXTM3U
+        #EXTINF:5400 group-title="Movies | Drama",Pulp Fiction (1994)
+        http://127.0.0.1:9/movie/pulp.mp4
+        #EXTINF:5400 group-title="Movies | Drama",Northern Lights (2025)
+        http://127.0.0.1:9/movie/northern.mp4
+        """.utf8).write(to: file)
+        let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        await model.bootstrap()
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(file), autoRefreshHours: 0))
+        await model.awardsTask?.value
+        let pulp = try XCTUnwrap(model.content.movies.first { $0.name == "Pulp Fiction" })
+
+        XCTAssertEqual(model.titles(for: .award("palme-dor")).movies.map(\.name), ["Pulp Fiction"])
+        XCTAssertEqual(model.entry(of: pulp, for: .award("palme-dor"))?.won, true)
+        XCTAssertEqual(model.titles(for: .festival("cannes")).movies.map(\.name), ["Pulp Fiction"])
+        XCTAssertEqual(model.titles(for: .year(2025)).movies.map(\.name), ["Northern Lights"])
+
+        // A movie's genre is known once its page was opened.
+        XCTAssertTrue(model.titles(for: .genre("Crime")).isEmpty)
+        model.movieDetailsCache[pulp.id] = MediaDetails(title: "Pulp Fiction", genre: "Crime, Drama")
+        XCTAssertEqual(model.titles(for: .genre("crime")).movies.map(\.name), ["Pulp Fiction"])
+        XCTAssertEqual(AppModel.genres(in: "Action / Adventure, Sci-Fi"), ["Action", "Adventure", "Sci-Fi"])
+    }
+
     /// A newer file than the bundled one: "Northern Lights" won the Golden Bear in 2099, and a thousand other films.
     private func newerAwards(generated: String, films: Int = 1_000) throws -> URL {
         var list: [[String: Any]] = [["titles": ["Northern Lights"], "year": 2025, "awards": [["golden-bear", 2099, 1]]]]

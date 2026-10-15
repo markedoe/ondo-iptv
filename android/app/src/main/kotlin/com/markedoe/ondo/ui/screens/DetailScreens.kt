@@ -81,6 +81,7 @@ import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.ui.AwardRow
+import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.Poster
 import com.markedoe.ondo.ui.components.PosterCard
@@ -129,6 +130,8 @@ class DetailActions(
     val onPlayEpisode: (Episode) -> Unit = {},
     /** A director or an actor tapped in the credits. */
     val onPerson: (String) -> Unit = {},
+    /** A genre, the year or an award tapped on the page. */
+    val onBrowse: (BrowseKind, String) -> Unit = { _, _ -> },
     val onToggleCollection: (String) -> Unit = {},
     /** Makes a collection with this name, holding the item. */
     val onNewCollection: (String) -> Unit = {},
@@ -160,8 +163,8 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
             }
         },
         content = { metrics ->
-            item { TextBlock(state.details?.plot ?: movie.plot, state.details, metrics, actions.onPerson) }
-            if (state.awards.isNotEmpty()) item { AwardsBlock(state.awards, metrics) }
+            item { TextBlock(state.details?.plot ?: movie.plot, state.details, metrics, actions, year = movie.year, genre = state.details?.genre) }
+            if (state.awards.isNotEmpty()) item { AwardsBlock(state.awards, metrics) { actions.onBrowse(BrowseKind.AWARD, it) } }
             similarRow(state.similar, metrics, actions)
         },
     )
@@ -170,12 +173,16 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
 
 /** Awards and festival selections of a movie: the first few, then "And N more". */
 @Composable
-private fun AwardsBlock(awards: List<AwardRow>, metrics: ShelfMetrics) {
+private fun AwardsBlock(awards: List<AwardRow>, metrics: ShelfMetrics, onAward: (String) -> Unit) {
     var all by remember { mutableStateOf(false) }
     Column(Modifier.padding(horizontal = metrics.gutter).widthIn(max = 680.dp).animateContentSize().testTag("awards")) {
         Text(stringResource(R.string.awards), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
         (if (all) awards else awards.take(4)).forEach { award ->
-            Row(Modifier.padding(top = 6.dp).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.Top) {
+            // An award opens the other movies of the playlist that won it or competed for it.
+            Row(
+                Modifier.padding(top = 6.dp).clip(RoundedCornerShape(6.dp)).clickable { onAward(award.awardId) }.semantics(mergeDescendants = true) {}.testTag("award-${award.awardId}"),
+                verticalAlignment = Alignment.Top,
+            ) {
                 Icon(
                     if (award.won) Icons.Rounded.EmojiEvents else Icons.Rounded.WorkspacePremium,
                     contentDescription = null,
@@ -183,7 +190,7 @@ private fun AwardsBlock(awards: List<AwardRow>, metrics: ShelfMetrics) {
                     modifier = Modifier.padding(end = 8.dp).size(18.dp),
                 )
                 Column {
-                    Text(award.name, style = MaterialTheme.typography.bodyMedium)
+                    Text(award.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                     val status = when {
                         award.won -> R.string.award_winner
                         award.festival -> R.string.award_in_competition
@@ -234,7 +241,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             }
         },
         content = { metrics ->
-            item { TextBlock(state.details?.plot ?: series.plot, state.details, metrics, actions.onPerson) }
+            item { TextBlock(state.details?.plot ?: series.plot, state.details, metrics, actions, year = series.year, genre = state.details?.genre ?: series.genre) }
             state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = metrics.gutter)) } }
             if (state.seasons.size > 1) {
                 item {
@@ -386,7 +393,14 @@ private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit, 
 }
 
 @Composable
-private fun TextBlock(plot: String?, details: MediaDetails?, metrics: ShelfMetrics, onPerson: (String) -> Unit) {
+private fun TextBlock(
+    plot: String?,
+    details: MediaDetails?,
+    metrics: ShelfMetrics,
+    actions: DetailActions,
+    year: Int?,
+    genre: String?,
+) {
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.padding(horizontal = metrics.gutter).widthIn(max = 680.dp).animateContentSize()) {
         if (!plot.isNullOrBlank()) {
@@ -397,25 +411,30 @@ private fun TextBlock(plot: String?, details: MediaDetails?, metrics: ShelfMetri
                 }
             }
         }
-        details?.director?.let { Credit(stringResource(R.string.director), it, onPerson) }
-        details?.cast?.let { Credit(stringResource(R.string.cast), it, onPerson) }
+        details?.director?.let { field -> Credit(stringResource(R.string.director), field, People.names(field).map { it to { actions.onPerson(it) } }) }
+        details?.cast?.let { field -> Credit(stringResource(R.string.cast), field, People.names(field).map { it to { actions.onPerson(it) } }) }
+        (genre ?: details?.genre)?.let { field ->
+            Credit(stringResource(R.string.genre_label), field, UiMappers.genres(field).map { it to { actions.onBrowse(BrowseKind.GENRE, it) } })
+        }
+        (year ?: details?.releaseDate?.take(4)?.toIntOrNull())?.let { value ->
+            Credit(stringResource(R.string.year_label), value.toString(), listOf(value.toString() to { actions.onBrowse(BrowseKind.YEAR, value.toString()) }))
+        }
     }
 }
 
-/** A credit line whose names open the person's movies and series. */
+/** A credit line whose values (names, genres, the year) open the titles of the playlist sharing them. */
 @Composable
-private fun Credit(label: String, value: String, onPerson: (String) -> Unit) {
-    val names = remember(value) { People.names(value) }
-    val link = TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary))
+private fun Credit(label: String, value: String, links: List<Pair<String, () -> Unit>>) {
+    val style = TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary))
     Row(Modifier.padding(top = 8.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(110.dp))
-        val text = if (names.isEmpty()) {
+        val text = if (links.isEmpty()) {
             AnnotatedString(value)
         } else {
             buildAnnotatedString {
-                names.forEachIndexed { index, name ->
+                links.forEachIndexed { index, (text, open) ->
                     if (index > 0) append(", ")
-                    withLink(LinkAnnotation.Clickable(name, link) { onPerson(name) }) { append(name) }
+                    withLink(LinkAnnotation.Clickable(text, style) { open() }) { append(text) }
                 }
             }
         }

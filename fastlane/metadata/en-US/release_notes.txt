@@ -11,3 +11,4 @@
 • Awards and festival selections (Cannes, Oscars, Berlin, Venice, Césars…) on movie pages, an Award Winners row, and a search filter by festival or ceremony.
 • Hide a style just as easily (manga & anime, children, documentaries…) or any word of category names, in every playlist.
 • Home shows when the playlist was last updated, above its name.
+• Tap a genre, the release year or an award on a movie or series page to see the titles of your playlist that share it, then the whole festival.

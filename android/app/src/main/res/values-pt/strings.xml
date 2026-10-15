@@ -165,7 +165,7 @@
     <string name="my_list_empty_hint">Use Minha lista na página de um filme ou série para encontrá-lo aqui.</string>
     <string name="help_mylist_title">Minha lista</string>
     <string name="help_mylist_body">Na página de um filme ou série, Minha lista deixa o título à mão. Em TV ao vivo, toque e segure um canal para adicioná-lo à Minha lista.\n\nA aba Minha lista reúne seus filmes, séries e canais; a busca é a lupa no topo de cada tela.\n\nAs coleções são seus próprios grupos, como Fim de semana ou Crianças: use Coleção na página de um filme ou série e encontre-as em Minha lista, em Coleções.</string>
-    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca, a lupa no topo de cada tela, percorre canais, filmes e séries. Na busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher, ou os filmes de um festival ou cerimônia.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota. As páginas dos filmes mostram seus prêmios e seleções em festivais. Toque no nome de um diretor ou ator em uma página para ver os outros filmes e séries dessa pessoa entre as páginas que você já abriu.</string>
+    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca, a lupa no topo de cada tela, percorre canais, filmes e séries. Na busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher, ou os filmes de um festival ou cerimônia.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota. As páginas dos filmes mostram seus prêmios e seleções em festivais. Toque no nome de um diretor ou ator em uma página para ver os outros filmes e séries dessa pessoa entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham.</string>
     <string name="search_filters">Filtros</string>
     <string name="filter_from">De</string>
     <string name="filter_to">Até</string>
@@ -242,4 +242,7 @@
     <string name="styles_explanation">Oculta as categorias cujo nome contém um estilo ou uma palavra (Manga, Bollywood…), em todas as playlists, inclusive as adicionadas depois. Só os nomes das categorias contam, não o gênero de cada filme.</string>
     <string name="update_awards">Atualizar os prêmios automaticamente</string>
     <string name="update_awards_hint">Uma vez por semana, o Ondo baixa os prêmios e seleções em festivais mais recentes (obtidos do Wikidata) do GitHub, onde o projeto está hospedado. Nada sobre você é enviado.</string>
+    <string name="genre_label">Gênero</string>
+    <string name="year_label">Ano</string>
+    <string name="genre_hint">Os filmes aparecem depois que a página deles é aberta; as séries, sempre.</string>
 </resources>

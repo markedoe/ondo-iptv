@@ -7225,6 +7225,46 @@
         }
       }
     },
+    "Genre": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genre"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Género"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gênero"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "类型"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "النوع"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शैली"
+          }
+        }
+      }
+    },
     "Golden Globes": {
       "localizations": {
         "fr": {
@@ -10305,42 +10345,82 @@
         }
       }
     },
-    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose. The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With a TMDb key (Settings), all of them are found; without one, only among the pages you have already opened.": {
+    "Movies are listed once their page has been opened; series always.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez. Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec une clé TMDb (Réglages), tous sont trouvés ; sans clé, seulement parmi les fiches que vous avez déjà ouvertes."
+            "value": "Les films apparaissent une fois leur fiche ouverte ; les séries, toujours."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas. Las cuadrículas se ordenan por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu lista. Con una clave de TMDb (Ajustes) se encuentran todas; sin ella, solo entre las fichas que ya abriste."
+            "value": "Las películas aparecen una vez abierta su ficha; las series, siempre."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher. As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com uma chave do TMDb (Ajustes), todos são encontrados; sem ela, só entre as páginas que você já abriu."
+            "value": "Os filmes aparecem depois que a página deles é aberta; as séries, sempre."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“电影”“剧集”和“直播”会显示提供商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。设置 TMDb 密钥（“设置”）后可找到全部作品；没有密钥时，只在你已打开过的页面中查找。"
+            "value": "电影在打开过其页面后才会列出；剧集则始终列出。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها. تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. مع مفتاح TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث فقط في الصفحات التي فتحتها من قبل."
+            "value": "تظهر الأفلام بعد فتح صفحتها؛ أما المسلسلات فتظهر دائمًا."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। TMDb कुंजी (सेटिंग्स) होने पर सब मिलती हैं; उसके बिना, केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं।"
+            "value": "फ़िल्में उनका पेज खोलने के बाद दिखती हैं; सीरीज़ हमेशा।"
+          }
+        }
+      }
+    },
+    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose. The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With a TMDb key (Settings), all of them are found; without one, only among the pages you have already opened. Genres, the year and awards open the titles of your playlist that share them the same way.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez. Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec une clé TMDb (Réglages), tous sont trouvés ; sans clé, seulement parmi les fiches que vous avez déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas. Las cuadrículas se ordenan por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu lista. Con una clave de TMDb (Ajustes) se encuentran todas; sin ella, solo entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher. As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com uma chave do TMDb (Ajustes), todos são encontrados; sem ela, só entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“电影”“剧集”和“直播”会显示提供商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。设置 TMDb 密钥（“设置”）后可找到全部作品；没有密钥时，只在你已打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها. تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. مع مفتاح TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث فقط في الصفحات التي فتحتها من قبل. وبالطريقة نفسها، تفتح الأنواع والسنة والجوائز عناوين قائمة التشغيل التي تشترك فيها."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। TMDb कुंजी (सेटिंग्स) होने पर सब मिलती हैं; उसके बिना, केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं। इसी तरह, शैलियाँ, वर्ष और पुरस्कार आपकी प्लेलिस्ट के वे शीर्षक खोलते हैं जिनमें वे समान हैं।"
           }
         }
       }

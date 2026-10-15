@@ -35,7 +35,8 @@ extension HelpTopic {
 
             On a movie or series page, tap the name of a director or an actor to see their other movies and series \
             in your playlist. With a TMDb key (Settings), all of them are found; without one, only among the pages \
-            you have already opened.
+            you have already opened. Genres, the year and awards open the titles of your playlist that share them \
+            the same way.
             """
         ),
         HelpTopic(

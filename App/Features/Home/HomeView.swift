@@ -10,6 +10,8 @@ struct HomeView: View {
     #endif
     @State private var showingSettings = false
     @State private var showingAddPlaylist = false
+    /// The categories screen opened from the "show only your languages?" card, which may go away meanwhile.
+    @State private var choosingLanguages = false
     @State private var heroUnderBar = true
 
     private var compact: Bool {
@@ -50,6 +52,9 @@ struct HomeView: View {
         .toolbar { toolbar }
         .sheet(isPresented: $showingSettings) {
             NavigationStack { SettingsView() }
+        }
+        .sheet(isPresented: $choosingLanguages, onDismiss: { model.dismissTagSuggestion() }) {
+            CategoryManagerSheet(type: .movie, isPresented: $choosingLanguages)
         }
         .sheet(isPresented: $showingAddPlaylist) {
             NavigationStack { AddPlaylistView() }
@@ -95,7 +100,7 @@ struct HomeView: View {
                 .padding(.horizontal, metrics.gutter)
 
             if let suggestion = model.tagSuggestion() {
-                TagSuggestionCard(suggestion: suggestion)
+                TagSuggestionCard(suggestion: suggestion) { choosingLanguages = true }
                     .padding(.horizontal, metrics.gutter)
             }
 
