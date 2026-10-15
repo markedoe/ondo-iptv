@@ -95,6 +95,9 @@ struct AppSettings: Codable, Equatable {
     var subtitleSearchLanguages: [String] = []
     /// Playlists whose "show only your languages?" suggestion was answered or dismissed.
     var dismissedTagSuggestions: Set<UUID> = []
+    /// Newer awards and festival selections downloaded once a week (see `AwardsUpdate`).
+    var updateAwards = true
+    var awardsCheckedAt: Date?
 
     init() {}
 
@@ -125,5 +128,7 @@ struct AppSettings: Codable, Equatable {
         addic7edSubtitles = (try? c.decodeIfPresent(Bool.self, forKey: .addic7edSubtitles)) ?? d.addic7edSubtitles
         subtitleSearchLanguages = (try? c.decodeIfPresent([String].self, forKey: .subtitleSearchLanguages)) ?? d.subtitleSearchLanguages
         dismissedTagSuggestions = (try? c.decodeIfPresent(Set<UUID>.self, forKey: .dismissedTagSuggestions)) ?? d.dismissedTagSuggestions
+        updateAwards = (try? c.decodeIfPresent(Bool.self, forKey: .updateAwards)) ?? d.updateAwards
+        awardsCheckedAt = try? c.decodeIfPresent(Date.self, forKey: .awardsCheckedAt)
     }
 }

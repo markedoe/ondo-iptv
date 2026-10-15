@@ -47,19 +47,27 @@ public struct AwardsCatalogue: Decodable, Sendable {
 
     public let awards: [Award]
     public let films: [Film]
+    /// The day the file was made ("2026-10-14"): a newer download replaces the copy bundled with the app.
+    public let generated: String?
 
     public static let empty = AwardsCatalogue(awards: [], films: [])
 
-    public init(awards: [Award], films: [Film]) {
+    public init(awards: [Award], films: [Film], generated: String? = nil) {
         self.awards = awards
         self.films = films
+        self.generated = generated
     }
 
     public init(data: Data) throws {
         self = try JSONDecoder().decode(AwardsCatalogue.self, from: data)
     }
 
-    private enum CodingKeys: String, CodingKey { case awards, films }
+    private enum CodingKeys: String, CodingKey { case awards, films, generated }
+
+    /// Whether this catalogue was made after another one (a missing date counts as older).
+    public func isNewer(than other: AwardsCatalogue) -> Bool {
+        (generated ?? "") > (other.generated ?? "")
+    }
 
     public func award(_ id: String) -> Award? {
         awards.first { $0.id == id }

@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Builds awards.json: films that won or competed for major film awards, from Wikidata (CC0).
 
-Run by hand when the data should be refreshed (not in CI), with `python3 -I tools/awards/generate_awards.py`.
-It writes the same file to the Apple app (App/Resources/awards.json) and to the Android app
+Run by hand to refresh the copies bundled with the apps, with `python3 -I tools/awards/generate_awards.py`: it
+writes the same file to the Apple app (App/Resources/awards.json) and to the Android app
 (android/app/src/main/assets/awards.json); `.github/scripts/check_awards.py` checks that both copies match.
+The "Awards data" workflow runs it once a month with `--output`, and publishes the result on the `awards-data`
+branch, where the apps fetch it (unless the viewer turns that off in Settings).
 
 Nothing about the viewer is ever sent: the apps only read this file. This script only asks Wikidata for the
 films of each award.
@@ -146,6 +148,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--cache", type=pathlib.Path, help="keep Wikidata's answers in this folder (to resume a run)")
     parser.add_argument("--pause", type=float, default=PAUSE, help="seconds between two queries (Wikidata may ask for 60)")
+    parser.add_argument("--output", type=pathlib.Path, action="append",
+                        help="write the file here instead of the two copies in the repository (repeatable)")
     arguments = parser.parse_args()
     CACHE, PAUSE = arguments.cache, arguments.pause
     if CACHE:
@@ -214,7 +218,7 @@ def main() -> None:
         "films": films_out,
     }
     text = json.dumps(document, ensure_ascii=False, separators=(",", ":"), sort_keys=False) + "\n"
-    for output in OUTPUTS:
+    for output in arguments.output or OUTPUTS:
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(text, encoding="utf-8")
     print(f"{len(films_out)} films, {len(awards_out)} awards, {len(text.encode()) // 1024} KB", file=sys.stderr)

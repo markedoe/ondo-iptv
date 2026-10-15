@@ -54,6 +54,7 @@ data class SettingsUiState(
     val playlists: List<PlaylistSummary> = emptyList(),
     val appearance: Appearance = Appearance.DARK,
     val showAdultCategories: Boolean = false,
+    val updateAwards: Boolean = true,
     val version: String = "",
     val isRefreshing: Boolean = false,
 )
@@ -66,6 +67,7 @@ class SettingsActions(
     val onDelete: (String) -> Unit = {},
     val onAppearance: (Appearance) -> Unit = {},
     val onShowAdultCategories: (Boolean) -> Unit = {},
+    val onUpdateAwards: (Boolean) -> Unit = {},
     val onCategories: () -> Unit = {},
     val onHelp: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
@@ -126,6 +128,15 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                             onCheckedChange = actions.onShowAdultCategories,
                             modifier = Modifier.testTag("adultSwitch"),
                         )
+                    },
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.update_awards)) },
+                    supportingContent = { Text(stringResource(R.string.update_awards_hint)) },
+                    trailingContent = {
+                        Switch(checked = state.updateAwards, onCheckedChange = actions.onUpdateAwards, modifier = Modifier.testTag("awardsSwitch"))
                     },
                 )
             }

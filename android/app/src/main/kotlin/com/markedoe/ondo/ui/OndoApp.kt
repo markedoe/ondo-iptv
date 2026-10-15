@@ -451,6 +451,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onDelete = viewModel::delete,
             onAppearance = viewModel::setAppearance,
             onShowAdultCategories = viewModel::setShowAdultCategories,
+            onUpdateAwards = viewModel::setUpdateAwards,
             onCategories = { navController.navigate(Routes.Categories()) },
             onHelp = { navController.navigate(Routes.Help) },
             onPrivacy = { browse(PRIVACY_URL) },

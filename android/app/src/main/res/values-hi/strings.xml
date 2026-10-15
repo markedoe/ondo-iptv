@@ -233,4 +233,6 @@
     <string name="word_to_hide">छिपाने के लिए शब्द</string>
     <string name="show">दिखाएँ</string>
     <string name="styles_explanation">उन श्रेणियों को छिपाता है जिनके नाम में कोई शैली या शब्द (Manga, Bollywood…) हो, सभी प्लेलिस्ट में, बाद में जोड़ी गई श्रेणियों सहित। केवल श्रेणियों के नाम गिने जाते हैं, हर फ़िल्म की शैली नहीं।</string>
+    <string name="update_awards">पुरस्कार अपने-आप अपडेट करें</string>
+    <string name="update_awards_hint">हफ़्ते में एक बार, Ondo नवीनतम पुरस्कार और फ़ेस्टिवल चयन (Wikidata से बने) GitHub से डाउनलोड करता है, जहाँ यह प्रोजेक्ट होस्ट है। आपके बारे में कुछ नहीं भेजा जाता।</string>
 </resources>

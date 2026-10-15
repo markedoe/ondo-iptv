@@ -261,4 +261,6 @@
     <string name="word_to_hide">كلمة لإخفائها</string>
     <string name="show">إظهار</string>
     <string name="styles_explanation">يُخفي الفئات التي يتضمن اسمها نمطًا أو كلمة (Manga وBollywood…) في كل قوائم التشغيل، بما فيها الفئات المضافة لاحقًا. تُحتسب أسماء الفئات فقط، لا نوع كل فيلم.</string>
+    <string name="update_awards">تحديث الجوائز تلقائيًا</string>
+    <string name="update_awards_hint">مرة كل أسبوع، يُنزّل Ondo أحدث الجوائز واختيارات المهرجانات (المأخوذة من Wikidata) من GitHub حيث يُستضاف المشروع. لا يُرسَل أي شيء عنك.</string>
 </resources>

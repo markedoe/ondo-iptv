@@ -4,7 +4,9 @@ import com.markedoe.ondo.core.Fixtures
 import com.markedoe.ondo.core.model.Movie
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 /** Same cases as the Swift core (`awards_sample.json` in both test suites). */
 class AwardsTest {
@@ -49,5 +51,13 @@ class AwardsTest {
         assertEquals("Palme d'or", catalogue.award("palme-dor")?.name("fr"))
         assertEquals("César Award for Best Film", catalogue.award("cesar-best-film")?.name("fr"))
         assertEquals(listOf("cannes", "oscars", "cesars"), catalogue.groups)
+    }
+
+    @Test
+    fun aCatalogueKnowsWhenItWasMade() {
+        val made = AwardsCatalogue.parse("""{"generated":"2026-10-14","awards":[],"films":[]}""")
+        assertEquals("2026-10-14", made.generated)
+        assertTrue(made.isNewerThan(AwardsCatalogue.EMPTY))
+        assertFalse(AwardsCatalogue.EMPTY.isNewerThan(made))
     }
 }

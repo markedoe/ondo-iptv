@@ -47,4 +47,11 @@ final class AwardsTests: XCTestCase {
         XCTAssertEqual(catalogue.award("cesar-best-film")?.name(language: "fr"), "César Award for Best Film")
         XCTAssertEqual(catalogue.groups, ["cannes", "oscars", "cesars"])
     }
+
+    func testACatalogueKnowsWhenItWasMade() throws {
+        let made = try AwardsCatalogue(data: Data(#"{"generated":"2026-10-14","awards":[],"films":[]}"#.utf8))
+        XCTAssertEqual(made.generated, "2026-10-14")
+        XCTAssertTrue(made.isNewer(than: .empty))
+        XCTAssertFalse(AwardsCatalogue.empty.isNewer(than: made))
+    }
 }

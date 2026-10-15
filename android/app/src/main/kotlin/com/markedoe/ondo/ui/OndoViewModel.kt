@@ -259,6 +259,7 @@ class OndoViewModel(
     fun setCategoryHidden(categoryId: String, hidden: Boolean) = repository.setCategoryHidden(categoryId, hidden)
     fun setTagsHidden(tags: Collection<String>, hidden: Boolean) = repository.setTagsHidden(tags, hidden)
     fun setWordHidden(word: String, hidden: Boolean) = repository.setWordHidden(word, hidden)
+    fun setUpdateAwards(update: Boolean) = repository.setUpdateAwards(update)
     fun acceptSuggestion(suggestion: TagSuggestion) = repository.setTagsHidden(suggestion.hidden, hidden = true)
     fun dismissTagSuggestion() = repository.dismissTagSuggestion()
     fun clearError() = repository.clearError()

@@ -31,4 +31,7 @@ data class AppSettings(
     val posterSort: PosterSort = PosterSort.PLAYLIST,
     /** Playlists whose "show only your languages?" suggestion was answered or dismissed. */
     val dismissedTagSuggestions: Set<String> = emptySet(),
+    /** Newer awards and festival selections downloaded once a week (see [AwardsDownload]). */
+    val updateAwards: Boolean = true,
+    val awardsCheckedAt: Long = 0,
 )

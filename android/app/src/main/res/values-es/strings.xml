@@ -240,4 +240,6 @@
     <string name="word_to_hide">Palabra que ocultar</string>
     <string name="show">Mostrar</string>
     <string name="styles_explanation">Oculta las categorías cuyo nombre contiene un estilo o una palabra (Manga, Bollywood…), en todas las listas, incluidas las que se añadan después. Solo cuentan los nombres de las categorías, no el género de cada película.</string>
+    <string name="update_awards">Actualizar los premios automáticamente</string>
+    <string name="update_awards_hint">Una vez por semana, Ondo descarga los últimos premios y selecciones en festivales (obtenidos de Wikidata) desde GitHub, donde se aloja el proyecto. No se envía nada sobre ti.</string>
 </resources>

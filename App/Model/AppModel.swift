@@ -64,7 +64,7 @@ struct ContentIndex: Sendable {
 @Observable
 final class AppModel {
     @ObservationIgnored private let userStore: FileStore
-    @ObservationIgnored private let cacheStore: FileStore
+    @ObservationIgnored let cacheStore: FileStore
     @ObservationIgnored let secrets: SecretStore
     @ObservationIgnored let reminderScheduler: ReminderScheduling
     /// The latest reminder sync; the next one waits for it (see `syncReminders`).
@@ -89,7 +89,7 @@ final class AppModel {
     /// Language and country tags of the catalogue's categories ("|PT| Filmes").
     private(set) var categoryTags = CategoryTagIndex()
     /// Awards and festival selections of the catalogue's movies, by movie id (bundled data, matched on the device).
-    private(set) var movieAwards: [String: [AwardsCatalogue.Entry]] = [:]
+    var movieAwards: [String: [AwardsCatalogue.Entry]] = [:]
     @ObservationIgnored var awardsTask: Task<Void, Never>?
     private(set) var epg = EPGIndex.empty
     private(set) var phase: LoadPhase = .idle
@@ -540,7 +540,7 @@ final class AppModel {
         // Awards once the catalogue is on screen: matching every title takes a moment on a large playlist.
         awardsTask?.cancel()
         awardsTask = Task {
-            let awards = await Task.detached { AwardsCatalogue.bundled.match(edited.movies) }.value
+            let awards = await Task.detached { [catalogue = AwardsCatalogue.current] in catalogue.match(edited.movies) }.value
             guard !Task.isCancelled, activePlaylist?.id == playlist.id else { return }
             movieAwards = awards
         }

@@ -1,21 +1,27 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.model.Movie
+import kotlin.math.abs
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.math.abs
 
 /**
  * Film awards and festival selections (Palme d'Or, Oscars, Golden Bear…): the data bundled with the apps
  * (`awards.json`, made from Wikidata by `tools/awards/generate_awards.py`), and which movies of a playlist they
  * concern. Nothing is sent anywhere: the file is read on the device. Same rules as the Swift `AwardsCatalogue`.
  */
-class AwardsCatalogue(val awards: List<Award>, val films: List<Film>) {
+class AwardsCatalogue(
+    val awards: List<Award>,
+    val films: List<Film>,
+    /** The day the file was made ("2026-10-14"): a newer download replaces the copy bundled with the app. */
+    val generated: String? = null,
+) {
     /** [group] is the festival or ceremony ("cannes", "oscars"…); [names] by app language ("en", "fr", "zh-Hans"…). */
     data class Award(val id: String, val group: String, val names: Map<String, String>) {
         fun name(language: String): String = names[language] ?: names["en"] ?: id
@@ -27,6 +33,9 @@ class AwardsCatalogue(val awards: List<Award>, val films: List<Film>) {
     data class Film(val titles: List<String>, val year: Int?, val tmdb: Int?, val awards: List<Entry>)
 
     fun award(id: String): Award? = awards.firstOrNull { it.id == id }
+
+    /** Whether this catalogue was made after another one (a missing date counts as older). */
+    fun isNewerThan(other: AwardsCatalogue): Boolean = (generated ?: "") > (other.generated ?: "")
 
     /** The festivals and ceremonies, in the order of the file. */
     val groups: List<String> get() = awards.map { it.group }.distinct()
@@ -84,7 +93,7 @@ class AwardsCatalogue(val awards: List<Award>, val films: List<Film>) {
                     },
                 )
             }
-            return AwardsCatalogue(awards, films)
+            return AwardsCatalogue(awards, films, root["generated"]?.jsonPrimitive?.contentOrNull)
         }
     }
 }

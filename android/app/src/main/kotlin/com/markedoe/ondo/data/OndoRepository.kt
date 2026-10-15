@@ -75,6 +75,8 @@ class OndoRepository(
     private val io: CoroutineDispatcher = Dispatchers.IO,
     /** The bundled `awards.json` (Palme d'Or, Oscars…, from Wikidata), or null without it. */
     private val awardsSource: (() -> String?)? = null,
+    /** Where newer awards are published and the last download kept; null: the bundled ones only. */
+    private val awardsDownload: AwardsDownload? = null,
     /** Delivers programme reminders (WorkManager in the app). */
     private val reminderScheduler: ReminderScheduler = NoReminderScheduler,
 ) {
@@ -113,8 +115,26 @@ class OndoRepository(
                 val awards = withContext(io) { runCatching { source()?.let(AwardsCatalogue::parse) }.getOrNull() }
                 if (awards != null) _state.update { it.copy(awards = awards) }
             }
+            awardsDownload?.let { updateAwards(it) }
         }
     }
+
+    /** The last download when it is newer than the bundled awards; then, once a week unless turned off, a newer file. */
+    private suspend fun updateAwards(download: AwardsDownload) {
+        val saved = withContext(io) { runCatching { download.file.takeIf { it.exists() }?.readText()?.let(AwardsCatalogue::parse) }.getOrNull() }
+        if (saved != null && saved.isNewerThan(_state.value.awards)) _state.update { it.copy(awards = saved) }
+        val settings = _state.value.settings
+        if (!settings.updateAwards || now() - settings.awardsCheckedAt < AwardsDownload.INTERVAL) return
+        updateSettings { it.copy(awardsCheckedAt = now()) }
+        val text = runCatching { withContext(io) { http.get(download.url) } }.getOrNull()
+            ?.takeIf { it.size <= AwardsDownload.MAX_SIZE }?.decodeToString() ?: return
+        val catalogue = runCatching { AwardsCatalogue.parse(text) }.getOrNull() ?: return
+        if (catalogue.films.size < AwardsDownload.MIN_FILMS || !catalogue.isNewerThan(_state.value.awards)) return
+        withContext(io) { runCatching { download.file.parentFile?.mkdirs(); download.file.writeText(text) } }
+        _state.update { it.copy(awards = catalogue) }
+    }
+
+    fun setUpdateAwards(update: Boolean) = updateSettings { it.copy(updateAwards = update) }
 
     /** Saves in order, off the main thread. A failed save (disk full) keeps the app running. */
     private fun persist(save: AppStore.() -> Unit) {

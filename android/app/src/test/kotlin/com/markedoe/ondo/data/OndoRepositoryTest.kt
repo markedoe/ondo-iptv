@@ -154,6 +154,49 @@ class OndoRepositoryTest {
         }
     }
 
+    /** An awards file made on [generated], with [films] films (the app keeps files of a thousand films or more). */
+    private fun awardsJson(generated: String, films: Int = 1_000): String {
+        val list = (0 until films).joinToString(",") { """{"titles":["Film $it"],"year":1990,"awards":[["golden-bear",1990,0]]}""" }
+        return """{"generated":"$generated","awards":[{"id":"golden-bear","group":"berlin","names":{"en":"Golden Bear"}}],"films":[$list]}"""
+    }
+
+    @Test
+    fun newerAwardsReplaceTheBundledOnesOnceAWeek() = runTest {
+        val url = "https://example.com/awards.json"
+        val saved = folder.root.resolve("cache/awards.json")
+        val http = FakeHttp(mapOf(url to awardsJson("2099-01-01")))
+        fun repository() = OndoRepository(
+            AppStore(folder.root), http, backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler),
+            awardsSource = { awardsJson("2026-01-01", films = 1) }, awardsDownload = AwardsDownload(url, saved),
+        )
+        val first = repository()
+        first.bootstrap()
+        assertEquals("2099-01-01", first.awaitState { it.awards.generated == "2099-01-01" }.awards.generated)
+        assertTrue("kept for the next launch", saved.exists())
+        assertEquals(1, http.requests.size)
+
+        // Next launch, the same week: the download is used, nothing is asked.
+        val second = repository()
+        second.bootstrap()
+        assertEquals("2099-01-01", second.awaitState { it.awards.generated == "2099-01-01" }.awards.generated)
+        assertEquals(1, http.requests.size)
+    }
+
+    @Test
+    fun awardsAreNotDownloadedWhenTurnedOff() = runTest {
+        val url = "https://example.com/awards.json"
+        val http = FakeHttp(mapOf(url to awardsJson("2099-01-01")))
+        AppStore(folder.root).saveSettings(AppSettings(updateAwards = false))
+        val repository = OndoRepository(
+            AppStore(folder.root), http, backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler),
+            awardsSource = { awardsJson("2026-01-01", films = 1) }, awardsDownload = AwardsDownload(url, folder.root.resolve("awards.json")),
+        )
+        repository.bootstrap()
+        repository.awaitState { it.awards.generated == "2026-01-01" }
+        testScheduler.advanceUntilIdle()
+        assertTrue(http.requests.isEmpty())
+    }
+
     @Test
     fun aFailedDownloadSavesNothingAndExplainsWhy() = runTest {
         val repository = repository(FakeHttp(emptyMap()))

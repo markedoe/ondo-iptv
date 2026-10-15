@@ -195,6 +195,14 @@ struct SettingsView: View {
                 Text("Optional. Create a key on themoviedb.org. This product uses the TMDB API but is not endorsed or certified by TMDB.")
             }
 
+            Section {
+                Toggle("Update Awards Automatically", isOn: binding(\.updateAwards))
+            } header: {
+                Text("Awards")
+            } footer: {
+                Text("Once a week, Ondo downloads the latest awards and festival selections (made from Wikidata) from GitHub, where the project is hosted. Nothing about you is sent.")
+            }
+
             Section("Appearance") {
                 Picker(selection: binding(\.appearance)) {
                     ForEach(AppearancePreference.allCases) { appearance in

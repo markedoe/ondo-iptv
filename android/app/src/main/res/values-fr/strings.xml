@@ -240,4 +240,6 @@
     <string name="word_to_hide">Mot à masquer</string>
     <string name="show">Afficher</string>
     <string name="styles_explanation">Masque les catégories dont le nom contient un style ou un mot (Manga, Bollywood…), dans toutes les playlists, y compris celles ajoutées plus tard. Seuls les noms de catégories comptent, pas le genre de chaque film.</string>
+    <string name="update_awards">Mettre à jour les prix automatiquement</string>
+    <string name="update_awards_hint">Une fois par semaine, Ondo télécharge les derniers prix et sélections en festival (issus de Wikidata) depuis GitHub, où le projet est hébergé. Rien vous concernant n’est envoyé.</string>
 </resources>

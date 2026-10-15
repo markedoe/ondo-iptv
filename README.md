@@ -24,7 +24,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   **filtered by release years** and **by festival or ceremony** (winners only if you like).
 - **Awards**: Palme d'Or, Oscars, Golden Lion, Golden Bear, Césars, BAFTAs, Golden Globes… on movie pages
   (won, in competition or nominated) and an "Award Winners" row in Movies. The data comes from
-  [Wikidata](https://www.wikidata.org) (CC0), is bundled with the app and matched on the device
+  [Wikidata](https://www.wikidata.org) (CC0), is bundled with the app and matched on the device; a monthly
+  workflow refreshes it and the apps fetch the newer file once a week, unless turned off in Settings
   ([tools/awards](tools/awards/README.md)).
 - **Sources**: M3U / M3U8 playlists (URL or file), **Xtream Codes** accounts (API or "force M3U"), XSPF,
   JSON; several playlists, automatic refresh. (A Real-Debrid source exists in the code but is turned off in

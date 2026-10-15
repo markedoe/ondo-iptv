@@ -24,8 +24,9 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   **filtrables par années de sortie** et **par festival ou cérémonie** (lauréats seulement si vous voulez).
 - **Prix** : Palme d'or, Oscars, Lion d'or, Ours d'or, César, BAFTA, Golden Globes… sur les fiches des films
   (lauréat, en compétition ou nommé) et une rangée « Films primés » dans Films. Les données viennent de
-  [Wikidata](https://www.wikidata.org) (CC0), sont embarquées dans l'app et rapprochées sur l'appareil
-  ([tools/awards](tools/awards/README.fr.md)).
+  [Wikidata](https://www.wikidata.org) (CC0), sont embarquées dans l'app et rapprochées sur l'appareil ; un
+  workflow mensuel les rafraîchit et les apps récupèrent le fichier plus récent une fois par semaine, sauf si
+  c'est désactivé dans les Réglages ([tools/awards](tools/awards/README.fr.md)).
 - **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
   XSPF, JSON ; plusieurs playlists, actualisation automatique. (Une source Real-Debrid existe dans le
   code mais est désactivée dans la version App Store : `FeatureFlags.realDebrid`.)

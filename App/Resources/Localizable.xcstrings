@@ -12705,6 +12705,46 @@
         }
       }
     },
+    "Once a week, Ondo downloads the latest awards and festival selections (made from Wikidata) from GitHub, where the project is hosted. Nothing about you is sent.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une fois par semaine, Ondo télécharge les derniers prix et sélections en festival (issus de Wikidata) depuis GitHub, où le projet est hébergé. Rien vous concernant n’est envoyé."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una vez por semana, Ondo descarga los últimos premios y selecciones en festivales (obtenidos de Wikidata) desde GitHub, donde se aloja el proyecto. No se envía nada sobre ti."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uma vez por semana, o Ondo baixa os prêmios e seleções em festivais mais recentes (obtidos do Wikidata) do GitHub, onde o projeto está hospedado. Nada sobre você é enviado."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 每周从托管本项目的 GitHub 下载一次最新的获奖和电影节入选信息（来自 Wikidata）。不会发送任何关于你的信息。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مرة كل أسبوع، يُنزّل Ondo أحدث الجوائز واختيارات المهرجانات (المأخوذة من Wikidata) من GitHub حيث يُستضاف المشروع. لا يُرسَل أي شيء عنك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हफ़्ते में एक बार, Ondo नवीनतम पुरस्कार और फ़ेस्टिवल चयन (Wikidata से बने) GitHub से डाउनलोड करता है, जहाँ यह प्रोजेक्ट होस्ट है। आपके बारे में कुछ नहीं भेजा जाता।"
+          }
+        }
+      }
+    },
     "Ondo Help": {
       "localizations": {
         "fr": {
@@ -21027,6 +21067,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "अनम्यूट करें"
+          }
+        }
+      }
+    },
+    "Update Awards Automatically": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre à jour les prix automatiquement"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar los premios automáticamente"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualizar os prêmios automaticamente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动更新获奖信息"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحديث الجوائز تلقائيًا"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "पुरस्कार अपने-आप अपडेट करें"
           }
         }
       }

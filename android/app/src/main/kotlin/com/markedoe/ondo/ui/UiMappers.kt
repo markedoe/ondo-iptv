@@ -370,6 +370,7 @@ object UiMappers {
         },
         appearance = state.settings.appearance,
         showAdultCategories = state.settings.showAdultCategories,
+        updateAwards = state.settings.updateAwards,
         version = version,
         isRefreshing = state.isLoading,
     )

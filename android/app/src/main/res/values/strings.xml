@@ -234,4 +234,6 @@
     <string name="word_to_hide">Word to hide</string>
     <string name="show">Show</string>
     <string name="styles_explanation">Hides the categories whose name holds a style or a word (Manga, Bollywood…), in every playlist, including those added later. Only category names count, not the genre of each movie.</string>
+    <string name="update_awards">Update awards automatically</string>
+    <string name="update_awards_hint">Once a week, Ondo downloads the latest awards and festival selections (made from Wikidata) from GitHub, where the project is hosted. Nothing about you is sent.</string>
 </resources>

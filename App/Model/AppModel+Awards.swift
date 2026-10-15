@@ -10,8 +10,23 @@ extension AwardsCatalogue {
         return catalogue
     }()
 
+    /// The catalogue in use: the bundled one, or a newer download (see `AwardsUpdate`).
+    @MainActor static var current: AwardsCatalogue = .bundled
+
     /// Festivals, where taking part is being "in competition"; elsewhere a film is "nominated".
     static let festivals: Set<String> = ["cannes", "venice", "berlin", "san-sebastian", "locarno"]
+}
+
+/// Newer awards data: the "Awards data" workflow publishes it once a month (from Wikidata) on the project's
+/// `awards-data` branch; the app looks for it once a week, unless turned off in Settings. Nothing about the viewer
+/// is sent.
+enum AwardsUpdate {
+    static let url = URL(string: "https://raw.githubusercontent.com/markedoe/ondo-iptv/awards-data/awards.json")!
+    static let interval: TimeInterval = 7 * 24 * 3600
+    /// The file is about half a megabyte: anything far larger is not it.
+    static let maxSize = 8 << 20
+    /// A file with fewer films is a partial answer.
+    static let minFilms = 1_000
 }
 
 /// The festivals and ceremonies, as the search filter names them.
@@ -44,14 +59,52 @@ struct MovieAward: Identifiable, Hashable {
 }
 
 extension AppModel {
-    /// The app's language as the awards file names it ("fr", "zh-Hans"…).
+    /// Once a week, unless turned off in Settings: a newer awards file replaces the one in use, and is kept in the
+    /// caches so that the next launch starts from it.
+    func updateAwardsIfNeeded(from url: URL = AwardsUpdate.url, now: Date = Date()) async {
+        loadDownloadedAwards()
+        guard settings.updateAwards else { return }
+        if let checked = settings.awardsCheckedAt, now.timeIntervalSince(checked) < AwardsUpdate.interval { return }
+        updateSettings { $0.awardsCheckedAt = now }
+        guard let data = try? await http.data(from: url, headers: [:]), data.count <= AwardsUpdate.maxSize,
+              let catalogue = try? AwardsCatalogue(data: data), catalogue.films.count >= AwardsUpdate.minFilms,
+              catalogue.isNewer(than: AwardsCatalogue.current) else { return }
+        try? data.write(to: downloadedAwardsURL, options: .atomic)
+        use(catalogue)
+    }
+
+    /// The last download, when it is newer than the catalogue in use.
+    func loadDownloadedAwards() {
+        guard let data = try? Data(contentsOf: downloadedAwardsURL), let catalogue = try? AwardsCatalogue(data: data),
+              catalogue.isNewer(than: AwardsCatalogue.current) else { return }
+        use(catalogue)
+    }
+
+    private var downloadedAwardsURL: URL {
+        cacheStore.directory.appendingPathComponent("awards.json")
+    }
+
+    /// Uses this catalogue and matches the playlist's movies against it again.
+    private func use(_ catalogue: AwardsCatalogue) {
+        AwardsCatalogue.current = catalogue
+        let movies = content.movies
+        let playlistID = activePlaylist?.id
+        awardsTask?.cancel()
+        awardsTask = Task {
+            let awards = await Task.detached { catalogue.match(movies) }.value
+            guard !Task.isCancelled, activePlaylist?.id == playlistID else { return }
+            movieAwards = awards
+        }
+    }
+
+    /// The app's language as the awards file names it ("fr", "zh-Hans").
     private var awardsLanguage: String {
         Bundle.main.preferredLocalizations.first ?? "en"
     }
 
     /// Awards and festival selections of a movie, wins first then the most recent.
     func awards(for movie: Movie) -> [MovieAward] {
-        let catalogue = AwardsCatalogue.bundled
+        let catalogue = AwardsCatalogue.current
         let language = awardsLanguage
         return (movieAwards[movie.id] ?? []).compactMap { entry in
             guard let award = catalogue.award(entry.awardID) else { return nil }
@@ -77,7 +130,7 @@ extension AppModel {
 
     /// The festivals and ceremonies some movie of the playlist took part in (the search filter's choices).
     func awardGroups() -> [String] {
-        let catalogue = AwardsCatalogue.bundled
+        let catalogue = AwardsCatalogue.current
         var present = Set<String>()
         for entries in movieAwards.values {
             for entry in entries {
@@ -89,7 +142,7 @@ extension AppModel {
 
     /// Whether a movie won (or, unless `winnersOnly`, took part in) an award of this festival or ceremony.
     func movie(_ movie: Movie, hasAwardIn group: String, winnersOnly: Bool) -> Bool {
-        let catalogue = AwardsCatalogue.bundled
+        let catalogue = AwardsCatalogue.current
         return (movieAwards[movie.id] ?? []).contains { entry in
             (!winnersOnly || entry.won) && catalogue.award(entry.awardID)?.group == group
         }
