@@ -9,15 +9,18 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.model.ContentType
+import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.WatchEntry
@@ -30,7 +33,12 @@ import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
+import com.markedoe.ondo.ui.screens.PersonScreen
+import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PlaylistForm
+import com.markedoe.ondo.ui.screens.SearchFilters
+import com.markedoe.ondo.ui.screens.SearchScreen
+import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailScreen
 import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsScreen
@@ -80,6 +88,46 @@ class ScreensTest {
         assertEquals(listOf("PT" to true), tags)
         compose.onNodeWithText("Hide all").performScrollTo().performClick()
         compose.onNodeWithText("|PT| Filmes").assertExists()
+    }
+
+    @Test
+    fun searchShowsItsFiltersAndClearsThem() {
+        var filters = SearchFilters(fromYear = 2024, toYear = 2024, awardGroup = "cannes", winnersOnly = true)
+        val state = SearchUiState(
+            movies = listOf(ShowcaseItem.MovieItem(Fixtures.glassCity)),
+            filters = filters,
+            years = listOf(2025, 2024),
+            awardGroups = listOf("cannes"),
+        )
+        compose.setContent { OndoTheme { SearchScreen(state, onQuery = {}, onOpen = {}, onPlayChannel = {}, onFilters = { filters = it }) } }
+        compose.onNodeWithText("Released in 2024").assertExists()
+        compose.onNodeWithText("Winners: Cannes Film Festival").assertExists()
+        compose.onNodeWithText("Glass City").assertExists()
+        compose.onNodeWithContentDescription("Clear filters").performClick()
+        assertEquals(SearchFilters(), filters)
+        compose.onNodeWithTag("searchFilters").performClick()
+        compose.onNodeWithTag("searchFiltersSheet").assertExists()
+        compose.onNodeWithTag("filterWinners").performClick()
+        assertEquals(SearchFilters(fromYear = 2024, toYear = 2024, awardGroup = "cannes"), filters)
+    }
+
+    @Test
+    fun aNameInTheCreditsOpensThePerson() {
+        val people = mutableListOf<String>()
+        val state = UiMappers.movieDetail(
+            Fixtures.state().copy(movieDetails = mapOf(Fixtures.glassCity.id to MediaDetails(title = "Glass City", cast = "Ada Vance, Tom Reyes (voice)"))),
+            Fixtures.glassCity,
+        )
+        compose.setContent { OndoTheme { MovieDetailScreen(state, DetailActions(onPerson = { people += it })) } }
+        compose.onNodeWithTag("credit-Cast").performScrollTo().assert(hasText("Ada Vance, Tom Reyes")).performFirstLinkClick()
+        assertEquals(listOf("Ada Vance"), people)
+    }
+
+    @Test
+    fun aPersonWithNothingKnownSaysSo() {
+        compose.setContent { OndoTheme { PersonScreen(PersonUiState("Ada Vance"), onOpen = {}, onBack = {}) } }
+        compose.onNodeWithText("Nothing in this playlist").assertExists()
+        compose.onNodeWithText("Ada Vance.", substring = true).assertExists()
     }
 
     @Test

@@ -65,8 +65,10 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Home**: carousel, "Continue Watching", My List, recently added, channels.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), detail pages (Resume, From Start, next
-  episode, seasons, More Like This).
-- **Live TV**: categories, My List, current and next programme; **search** (the magnifying glass of each screen).
+  episode, seasons, More Like This); a director's or an actor's name opens their other movies and series
+  (among the pages already opened).
+- **Live TV**: categories, My List, current and next programme; **search** (the magnifying glass of each screen),
+  filtered by release years or by festival / ceremony (winners only, if you like), like on Apple.
 - **My List** tab: the movies, series and channels kept, as on Apple.
 - **Categories**: hidden by language or country code (`|PT|`, `FR:`…) or one by one, like on Apple.
 - **Help** in Settings.

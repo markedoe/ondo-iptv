@@ -16,6 +16,7 @@ import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.LiveUiState
 import com.markedoe.ondo.ui.screens.MyListUiState
 import com.markedoe.ondo.ui.screens.PlaylistForm
+import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.Appearance
@@ -93,8 +94,11 @@ class OndoViewModel(
         .map { (content, hidden) -> UiMappers.SearchIndex(content, hidden) }
         .flowOn(computation)
 
-    val search: StateFlow<SearchUiState> = combine(searchIndex, _query.debounce(200), state) { index, query, state ->
-        UiMappers.search(index, query, state, clock())
+    private val _searchFilters = MutableStateFlow(SearchFilters())
+    val searchFilters: StateFlow<SearchFilters> = _searchFilters.asStateFlow()
+
+    val search: StateFlow<SearchUiState> = combine(searchIndex, _query.debounce(200), _searchFilters, state) { index, query, filters, state ->
+        UiMappers.search(index, query, state, clock(), filters)
     }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, SearchUiState())
@@ -113,6 +117,10 @@ class OndoViewModel(
 
     fun setQuery(query: String) {
         _query.value = query
+    }
+
+    fun setSearchFilters(filters: SearchFilters) {
+        _searchFilters.value = filters
     }
 
     fun setLiveFilter(filter: LiveFilter) {

@@ -63,10 +63,17 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Season
@@ -115,6 +122,8 @@ class DetailActions(
     val onOpen: (ShowcaseItem) -> Unit = {},
     val onSeason: (Int) -> Unit = {},
     val onPlayEpisode: (Episode) -> Unit = {},
+    /** A director or an actor tapped in the credits. */
+    val onPerson: (String) -> Unit = {},
 )
 
 @Composable
@@ -141,7 +150,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
             }
         },
         content = { metrics ->
-            item { TextBlock(state.details?.plot ?: movie.plot, state.details, metrics) }
+            item { TextBlock(state.details?.plot ?: movie.plot, state.details, metrics, actions.onPerson) }
             if (state.awards.isNotEmpty()) item { AwardsBlock(state.awards, metrics) }
             similarRow(state.similar, metrics, actions)
         },
@@ -212,7 +221,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             }
         },
         content = { metrics ->
-            item { TextBlock(state.details?.plot ?: series.plot, state.details, metrics) }
+            item { TextBlock(state.details?.plot ?: series.plot, state.details, metrics, actions.onPerson) }
             state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = metrics.gutter)) } }
             if (state.seasons.size > 1) {
                 item {
@@ -356,7 +365,7 @@ private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit, 
 }
 
 @Composable
-private fun TextBlock(plot: String?, details: MediaDetails?, metrics: ShelfMetrics) {
+private fun TextBlock(plot: String?, details: MediaDetails?, metrics: ShelfMetrics, onPerson: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Column(Modifier.padding(horizontal = metrics.gutter).widthIn(max = 680.dp).animateContentSize()) {
         if (!plot.isNullOrBlank()) {
@@ -367,16 +376,29 @@ private fun TextBlock(plot: String?, details: MediaDetails?, metrics: ShelfMetri
                 }
             }
         }
-        details?.director?.let { Credit(stringResource(R.string.director), it) }
-        details?.cast?.let { Credit(stringResource(R.string.cast), it) }
+        details?.director?.let { Credit(stringResource(R.string.director), it, onPerson) }
+        details?.cast?.let { Credit(stringResource(R.string.cast), it, onPerson) }
     }
 }
 
+/** A credit line whose names open the person's movies and series. */
 @Composable
-private fun Credit(label: String, value: String) {
+private fun Credit(label: String, value: String, onPerson: (String) -> Unit) {
+    val names = remember(value) { People.names(value) }
+    val link = TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary))
     Row(Modifier.padding(top = 8.dp)) {
         Text(label, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.width(110.dp))
-        Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val text = if (names.isEmpty()) {
+            AnnotatedString(value)
+        } else {
+            buildAnnotatedString {
+                names.forEachIndexed { index, name ->
+                    if (index > 0) append(", ")
+                    withLink(LinkAnnotation.Clickable(name, link) { onPerson(name) }) { append(name) }
+                }
+            }
+        }
+        Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("credit-$label"))
     }
 }
 

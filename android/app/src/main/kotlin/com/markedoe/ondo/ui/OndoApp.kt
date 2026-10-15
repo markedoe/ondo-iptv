@@ -60,6 +60,8 @@ import com.markedoe.ondo.ui.screens.MovieDetailScreen
 import com.markedoe.ondo.ui.screens.MyListActions
 import com.markedoe.ondo.ui.screens.MyListKind
 import com.markedoe.ondo.ui.screens.MyListScreen
+import com.markedoe.ondo.ui.screens.PersonScreen
+import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PickedFile
 import com.markedoe.ondo.ui.screens.PosterGridScreen
 import com.markedoe.ondo.ui.screens.SearchScreen
@@ -135,6 +137,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 composable<Routes.MyList> { MyListDestination(viewModel, navController) }
                 composable<Routes.MovieDetail> { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                 composable<Routes.SeriesDetail> { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
+                composable<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
                 composable<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
                 composable<Routes.Settings> { SettingsDestination(viewModel, navController) }
                 composable<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
@@ -285,9 +288,11 @@ private fun LiveDestination(viewModel: OndoViewModel, navController: NavHostCont
 private fun SearchDestination(viewModel: OndoViewModel, navController: NavHostController) {
     val results by viewModel.search.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
+    val filters by viewModel.searchFilters.collectAsStateWithLifecycle()
     SearchScreen(
-        state = results.copy(query = query),
+        state = results.copy(query = query, filters = filters),
         onQuery = viewModel::setQuery,
+        onFilters = viewModel::setSearchFilters,
         onOpen = navController::open,
         onPlayChannel = viewModel::playChannel,
     )
@@ -307,6 +312,7 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
             onPlayFromStart = { viewModel.playMovie(id, fromStart = true) },
             onToggleMyList = { viewModel.toggleMyList(ShowcaseItem.MovieItem(movie)) },
             onOpen = navController::open,
+            onPerson = { navController.navigate(Routes.Person(it)) },
         ),
     )
 }
@@ -327,10 +333,21 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onPlay = { ui.next?.let { viewModel.playEpisode(id, it) } },
             onToggleMyList = { viewModel.toggleMyList(ui.item) },
             onOpen = navController::open,
+            onPerson = { navController.navigate(Routes.Person(it)) },
             onSeason = { season = it },
             onPlayEpisode = { viewModel.playEpisode(id, it) },
         ),
     )
+}
+
+@Composable
+private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostController, name: String) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    // Off the main thread: it looks through the whole catalogue.
+    val works by produceState(PersonUiState(name), state, name) {
+        value = withContext(Dispatchers.Default) { UiMappers.person(state, name) }
+    }
+    PersonScreen(works, onOpen = navController::open, onBack = { navController.popBackStack() })
 }
 
 @Composable

@@ -1,7 +1,9 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.core.TextNormalizer
+import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Series
@@ -19,7 +21,9 @@ import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.LiveUiState
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.MyListUiState
+import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PlaylistSummary
+import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailUiState
 import com.markedoe.ondo.ui.screens.SettingsUiState
@@ -280,27 +284,79 @@ object UiMappers {
         isRefreshing = state.isLoading,
     )
 
+    /** The movies and series whose opened page names this person (cast or director), newest first. */
+    fun person(state: OndoState, name: String): PersonUiState {
+        val hidden = hiddenCategoryIds(state)
+        fun names(details: MediaDetails) = People.mentions(details.cast, name) || People.mentions(details.director, name)
+        val movieIds = state.movieDetails.filterValues(::names).keys
+        val seriesIds = state.seriesDetails.filterValues { names(it.info) }.keys
+        val movies = state.content.movies.filter { it.id in movieIds && it.categoryId !in hidden }.map { ShowcaseItem.MovieItem(it) }
+        val series = state.content.series.filter { it.id in seriesIds && it.categoryId !in hidden }.map { ShowcaseItem.SeriesItem(it) }
+        return PersonUiState(name, sorted(movies, PosterSort.RELEASE), sorted(series, PosterSort.RELEASE))
+    }
+
     /** Normalised titles, built once per catalogue. */
     class SearchIndex(content: PlaylistContent, hidden: Set<String>) {
         val movies = content.movies.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
         val series = content.series.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
         val channels = content.channels.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
+
+        /** Release years of the movies and series, newest first (the filter's choices). */
+        val years: List<Int> = (movies.mapNotNull { it.second.year } + series.mapNotNull { it.second.year }).distinct().sortedDescending()
+        val movieIds: Set<String> = movies.mapTo(HashSet()) { it.second.id }
     }
 
-    /** Every word of the query must start a word of the title ("dark kni" finds "The Dark Knight"). */
-    fun search(index: SearchIndex, query: String, state: OndoState, now: Long, limit: Int = 60): SearchUiState {
+    /** Most movies and series listed by a filtered search (it lists the whole playlist when the query is empty). */
+    const val FILTERED_LIMIT = 1_000
+
+    /**
+     * Every word of the query must start a word of the title ("dark kni" finds "The Dark Knight"). With filters,
+     * only movies and series released in those years, or movies of that festival or ceremony, are listed, newest
+     * first; an empty query then lists all of them.
+     */
+    fun search(
+        index: SearchIndex,
+        query: String,
+        state: OndoState,
+        now: Long,
+        filters: SearchFilters = SearchFilters(),
+        limit: Int = 60,
+    ): SearchUiState {
         val words = TextNormalizer.normalize(query).split(' ').filter { it.isNotEmpty() }
-        if (words.isEmpty()) return SearchUiState(query = query)
-        fun <T> List<Pair<List<String>, T>>.find(): List<T> = asSequence()
+        val empty = SearchUiState(query = query, filters = filters, years = index.years, awardGroups = awardGroups(index, state))
+        if (words.isEmpty() && !filters.isActive) return empty
+        fun <T> List<Pair<List<String>, T>>.find(): Sequence<T> = asSequence()
             .filter { (titleWords, _) -> words.all { word -> titleWords.any { it.startsWith(word) } } }
             .map { it.second }
-            .take(limit)
-            .toList()
-        return SearchUiState(
-            query = query,
-            movies = index.movies.find().map { ShowcaseItem.MovieItem(it) },
-            series = index.series.find().map { ShowcaseItem.SeriesItem(it) },
-            channels = index.channels.find().map { channelRow(it, state, now) },
+        if (!filters.isActive) {
+            return empty.copy(
+                movies = index.movies.find().take(limit).map { ShowcaseItem.MovieItem(it) }.toList(),
+                series = index.series.find().take(limit).map { ShowcaseItem.SeriesItem(it) }.toList(),
+                channels = index.channels.find().take(limit).map { channelRow(it, state, now) }.toList(),
+            )
+        }
+        val years = filters.years
+        fun released(year: Int?) = years == null || (year != null && year in years)
+        val awards = MovieAwards.of(state)
+        fun awarded(movie: Movie) = filters.awardGroup == null || awards[movie.id].orEmpty().any { entry ->
+            (!filters.winnersOnly || entry.won) && state.awards.award(entry.awardId)?.group == filters.awardGroup
+        }
+        val movies = index.movies.find().filter { released(it.year) && awarded(it) }.map { ShowcaseItem.MovieItem(it) }.toList()
+        // Awards are given to films: series are left out. Release years and awards are not about channels.
+        val series = if (filters.awardGroup != null) emptyList() else index.series.find().filter { released(it.year) }.map { ShowcaseItem.SeriesItem(it) }.toList()
+        return empty.copy(
+            movies = sorted(movies, PosterSort.RELEASE).take(FILTERED_LIMIT),
+            series = sorted(series, PosterSort.RELEASE).take(FILTERED_LIMIT),
         )
+    }
+
+    /** The festivals and ceremonies some visible movie took part in, in the order of the awards file. */
+    private fun awardGroups(index: SearchIndex, state: OndoState): List<String> {
+        val present = HashSet<String>()
+        for ((id, entries) in MovieAwards.of(state)) {
+            if (id !in index.movieIds) continue
+            entries.mapNotNullTo(present) { state.awards.award(it.awardId)?.group }
+        }
+        return state.awards.groups.filter { it in present }
     }
 }

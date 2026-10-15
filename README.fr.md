@@ -67,8 +67,10 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Accueil** : carrousel, « Continuer à regarder », Ma liste, ajouts récents, chaînes.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), fiches (Reprendre, Depuis le début,
-  épisode suivant, saisons, Titres similaires).
-- **Live TV** : catégories, Ma liste, programme en cours et suivant ; **recherche** (la loupe de chaque écran).
+  épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
+  films et séries (parmi les fiches déjà ouvertes).
+- **Live TV** : catégories, Ma liste, programme en cours et suivant ; **recherche** (la loupe de chaque écran),
+  filtrable par années de sortie ou par festival / cérémonie (lauréats seulement, au choix), comme sur Apple.
 - Onglet **Ma liste** : les films, séries et chaînes gardés, comme sur Apple.
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…) ou une par une, comme sur Apple.
 - **Aide** dans les Réglages.

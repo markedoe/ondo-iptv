@@ -1,7 +1,10 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.MediaDetails
+import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.ItemKind
@@ -9,6 +12,7 @@ import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.screens.SearchFilters
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -101,6 +105,62 @@ class UiMappersTest {
         assertTrue("words must start a word", titles("ights").isEmpty())
         assertTrue("hidden categories are not searched", titles("late show").isEmpty())
         assertTrue(titles("  ").isEmpty())
+    }
+
+    @Test
+    fun searchFiltersByReleaseYearsAndAwards() {
+        // "Glass City" (2024) won at Cannes and was nominated for an Oscar; "Silent Harbor" (2023) only competed.
+        val catalogue = AwardsCatalogue.parse(
+            """
+            {"awards":[{"id":"palme-dor","group":"cannes","names":{"en":"Palme d'Or"}},
+                       {"id":"oscar-best-picture","group":"oscars","names":{"en":"Best Picture"}},
+                       {"id":"golden-bear","group":"berlin","names":{"en":"Golden Bear"}}],
+             "films":[{"titles":["Glass City"],"year":2024,"awards":[["palme-dor",2024,1],["oscar-best-picture",2025,0]]},
+                      {"titles":["Silent Harbor"],"year":2023,"awards":[["palme-dor",2023,0]]},
+                      {"titles":["Late Show"],"year":2025,"awards":[["golden-bear",2025,1]]}]}
+            """.trimIndent(),
+        )
+        val state = Fixtures.state().copy(awards = catalogue)
+        val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state))
+        fun titles(query: String, filters: SearchFilters) = UiMappers.search(index, query, state, Fixtures.NOW, filters).let { result ->
+            (result.movies + result.series).map { it.title } + result.channels.map { it.channel.name }
+        }
+        // An empty query lists what was released in those years, movies then series, newest first.
+        assertEquals(listOf("Glass City", "Midnight Orchard", "The Archive"), titles("", SearchFilters(fromYear = 2024, toYear = 2024)))
+        assertEquals(listOf("Northern Lights", "The Last Signal", "Harbor Lights"), titles("", SearchFilters(fromYear = 2025)))
+        assertEquals(listOf("The Long Road"), titles("", SearchFilters(toYear = 2021)))
+        assertEquals(2023..2025, SearchFilters(fromYear = 2025, toYear = 2023).years)
+        assertEquals(listOf("Northern Lights", "Harbor Lights"), titles("lights", SearchFilters(fromYear = 2025)))
+        assertTrue("channels have no release year", titles("stad", SearchFilters(fromYear = 2000)).isEmpty())
+        // Awards: movies only, every selection or the wins only.
+        assertEquals(listOf("Glass City", "Silent Harbor"), titles("", SearchFilters(awardGroup = "cannes")))
+        assertEquals(listOf("Glass City"), titles("", SearchFilters(awardGroup = "cannes", winnersOnly = true)))
+        assertTrue(titles("", SearchFilters(awardGroup = "oscars", winnersOnly = true)).isEmpty())
+        assertEquals(listOf("Silent Harbor"), titles("", SearchFilters(fromYear = 2023, toYear = 2023, awardGroup = "cannes")))
+        // The choices: the playlist's years and the festivals of its visible movies (the hidden "Late Show" won in Berlin).
+        val choices = UiMappers.search(index, "", state, Fixtures.NOW)
+        assertEquals(listOf(2025, 2024, 2023, 2022, 2021), choices.years)
+        assertEquals(listOf("cannes", "oscars"), choices.awardGroups)
+        assertTrue("no filter, no query: nothing listed", choices.movies.isEmpty())
+    }
+
+    @Test
+    fun aPersonListsTheOpenedPagesThatNameThem() {
+        val state = Fixtures.state().copy(
+            movieDetails = mapOf(
+                Fixtures.glassCity.id to MediaDetails(title = "Glass City", cast = "Ada Vance, Tom Reyes (voice)", director = "Lena Moss"),
+                Fixtures.northernLights.id to MediaDetails(title = "Northern Lights", director = "Ada Vance"),
+                Fixtures.adultMovie.id to MediaDetails(title = "Late Show", cast = "Ada Vance"),
+            ),
+            seriesDetails = mapOf(
+                Fixtures.theArchive.id to SeriesDetails(MediaDetails(title = "The Archive", cast = "Élodie Marçeau, ada vance"), seasons = emptyList()),
+            ),
+        )
+        val works = UiMappers.person(state, "Ada Vance")
+        assertEquals("newest first, hidden categories left out", listOf("Northern Lights", "Glass City"), works.movies.map { it.title })
+        assertEquals(listOf("The Archive"), works.series.map { it.title })
+        assertEquals(listOf("The Archive"), UiMappers.person(state, "elodie marceau").series.map { it.title })
+        assertTrue("a whole name, not a part of one", UiMappers.person(state, "Tom").movies.isEmpty())
     }
 
     @Test
