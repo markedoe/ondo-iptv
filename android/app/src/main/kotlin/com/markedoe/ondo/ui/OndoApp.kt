@@ -3,6 +3,9 @@ package com.markedoe.ondo.ui
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -476,6 +479,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onShowAdultCategories = viewModel::setShowAdultCategories,
             onUpdateAwards = viewModel::setUpdateAwards,
             onCategories = { navController.navigate(Routes.Categories()) },
+            onAppLanguage = { context.openAppLanguageSettings() },
             onHelp = { navController.navigate(Routes.Help) },
             onPrivacy = { browse(PRIVACY_URL) },
             onSupport = { browse(SUPPORT_URL) },
@@ -512,6 +516,20 @@ private fun Context.browse(url: String) {
         startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))
     } catch (_: ActivityNotFoundException) {
         // No browser on the device: nothing to open.
+    }
+}
+
+/** The system page where Ondo's language is chosen (Android 13+), else the device's languages. */
+private fun Context.openAppLanguageSettings() {
+    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", packageName, null))
+    } else {
+        Intent(Settings.ACTION_LOCALE_SETTINGS)
+    }
+    try {
+        startActivity(intent)
+    } catch (_: ActivityNotFoundException) {
+        startActivity(Intent(Settings.ACTION_SETTINGS))
     }
 }
 

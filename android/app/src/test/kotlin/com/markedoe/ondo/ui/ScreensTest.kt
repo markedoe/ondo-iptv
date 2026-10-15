@@ -334,4 +334,20 @@ class ScreensTest {
         compose.onNodeWithTag("adultSwitch").performClick()
         assertEquals(true, shown)
     }
+
+    /** Languages and categories, then the app's own language, which the system page sets. */
+    @Test
+    fun settingsOpenLanguagesAndCategoriesAndTheAppLanguage() {
+        val opened = mutableListOf<String>()
+        val state = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
+        compose.setContent {
+            OndoTheme {
+                SettingsScreen(state, SettingsActions(onCategories = { opened += "categories" }, onAppLanguage = { opened += "language" }))
+            }
+        }
+        compose.onNodeWithText("Languages and categories").assertExists()
+        compose.onNodeWithTag("categoriesRow").performScrollTo().performClick()
+        compose.onNodeWithTag("appLanguageRow").performScrollTo().performClick()
+        assertEquals(listOf("categories", "language"), opened)
+    }
 }

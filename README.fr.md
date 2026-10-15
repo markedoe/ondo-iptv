@@ -95,8 +95,9 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 
 ## Langues
 
-Les apps (iPhone, iPad, Mac et Android) existent en sept langues, choisies d'après les réglages de l'appareil
-(et, sur Android 13 et plus, d'après le réglage de langue propre à l'app) :
+Les apps (iPhone, iPad, Mac et Android) existent en sept langues, choisies d'après les réglages de l'appareil, ou
+pour Ondo seul dans le réglage de langue par app du système, qu'ouvre **Réglages → Langue de l'app** (iPhone, iPad,
+Android 13 et plus ; sur Mac, Réglages Système → Général → Langue et région → Applications) :
 
 | Langue | Apple (`App/Resources/Localizable.xcstrings`) | Android (`android/app/src/main/res/`) |
 |---|---|---|

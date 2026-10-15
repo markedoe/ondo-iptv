@@ -90,8 +90,9 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Languages
 
-The apps (iPhone, iPad, Mac and Android) are available in seven languages, picked from the device settings
-(and, on Android 13+, from the app's own language setting):
+The apps (iPhone, iPad, Mac and Android) are available in seven languages, picked from the device settings, or
+for Ondo alone from the system's per-app language setting, which **Settings → App Language** opens (iPhone, iPad,
+Android 13+; on the Mac, System Settings → General → Language & Region → Applications):
 
 | Language | Apple (`App/Resources/Localizable.xcstrings`) | Android (`android/app/src/main/res/`) |
 |---|---|---|

@@ -15,3 +15,4 @@
 • Movie and series pages whose background image is missing or broken show the one from TMDb when you have set your token, otherwise the blurred poster, instead of an empty frame.
 • Search finds actors and directors by name and opens their page.
 • Settings take your TMDb “API Read Access Token” (or API Key), named as on TMDb, and check it with TMDb before saving it.
+• Settings: “Languages and Categories” to hide a language in one tap, and “App Language”, which opens the system page where Ondo's language is chosen.

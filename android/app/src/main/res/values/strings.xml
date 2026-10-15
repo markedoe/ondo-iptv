@@ -127,15 +127,15 @@
         <item quantity="other">%d items</item>
     </plurals>
     <plurals name="tag_suggestion_message">
-        <item quantity="one">This playlist has categories for %1$d language or country. Keep %2$s and hide the others? You can change this at any time in Settings, Categories.</item>
-        <item quantity="other">This playlist has categories for %1$d languages and countries. Keep %2$s and hide the others? You can change this at any time in Settings, Categories.</item>
+        <item quantity="one">This playlist has categories for %1$d language or country. Keep %2$s and hide the others? You can change this at any time in Settings, Languages and categories.</item>
+        <item quantity="other">This playlist has categories for %1$d languages and countries. Keep %2$s and hide the others? You can change this at any time in Settings, Languages and categories.</item>
     </plurals>
     <string name="help">Help</string>
     <string name="help_playlists_title">Add a playlist</string>
     <string name="help_playlists_body">Ondo is a player: it shows the movies, series and channels of the subscription your provider gives you, and provides no content of its own.\n\nTo add your subscription, open Settings, Add playlist: an M3U link or file, or an Xtream Codes login (server address, user name and password). Tap a playlist in Settings to switch to it.</string>
     <string name="help_search_title">Find something to watch</string>
     <string name="help_categories_title">Hide languages and categories</string>
-    <string name="help_categories_body">Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nStyles work the same way with the words of category names: hide Manga &amp; anime, Children or Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of each movie.\n\nYou can also hide categories one by one there, and show them again at any time.</string>
+    <string name="help_categories_body">Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Languages and categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nStyles work the same way with the words of category names: hide Manga &amp; anime, Children or Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of each movie.\n\nYou can also hide categories one by one there, and show them again at any time.</string>
     <string name="help_playback_title">When a stream does not play</string>
     <string name="help_playback_body">Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.</string>
     <string name="help_privacy_title">Privacy</string>
@@ -239,4 +239,7 @@
     <string name="genre_label">Genre</string>
     <string name="year_label">Year</string>
     <string name="genre_hint">Movies are listed once their page has been opened; series always.</string>
+    <string name="languages_and_categories">Languages and categories</string>
+    <string name="app_language">App language</string>
+    <string name="app_language_hint">Opens the system setting where you choose Ondo\'s language.</string>
 </resources>

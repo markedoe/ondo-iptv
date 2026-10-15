@@ -15,3 +15,4 @@
 • Les fiches dont l’image de fond manque ou ne se charge pas affichent celle de TMDb si vous avez saisi votre jeton, sinon l’affiche floutée, au lieu d’un cadre vide.
 • La recherche trouve les acteurs et réalisateurs par leur nom et ouvre leur page.
 • Les Réglages prennent votre « Jeton d’accès en lecture à l’API » TMDb (ou la « Clé d’API »), nommé comme sur TMDb, et le vérifient auprès de TMDb avant de l’enregistrer.
+• Réglages : « Langues et catégories » pour masquer une langue d’un geste, et « Langue de l’app », qui ouvre la page du système où choisir la langue d’Ondo.

@@ -13,6 +13,7 @@ struct SettingsView: View {
     @State private var confirmClearHistory = false
     @State private var tmdbKey = ""
     @State private var tmdbCheck: TMDbCheck?
+    @Environment(\.openURL) private var openURL
     @State private var awaitingUnlock: BackupAction?
     @State private var unlockedAction: BackupAction?
 
@@ -77,6 +78,23 @@ struct SettingsView: View {
         }
     }
 
+    /// The language Ondo shows itself in, in that language ("Français").
+    private static var appLanguageName: String {
+        let code = Bundle.main.preferredLocalizations.first ?? "en"
+        return Locale.current.localizedString(forIdentifier: code)?.capitalized(with: Locale.current) ?? code
+    }
+
+    /// The system page where Ondo's language is chosen: Ondo's page in Settings (iPhone, iPad), Language & Region on
+    /// the Mac.
+    private func openAppLanguageSettings() {
+        #if os(macOS)
+        let address = "x-apple.systempreferences:com.apple.Localization-Settings.extension"
+        #else
+        let address = UIApplication.openSettingsURLString
+        #endif
+        if let url = URL(string: address) { openURL(url) }
+    }
+
     private func checkTMDbKey() {
         let value = tmdbKey
         guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, tmdbCheck != .checking else { return }
@@ -111,7 +129,7 @@ struct SettingsView: View {
                 NavigationLink {
                     CategoryManagerView()
                 } label: {
-                    Label("Categories", systemImage: "line.3.horizontal.decrease.circle")
+                    Label("Languages and Categories", systemImage: "line.3.horizontal.decrease.circle")
                 }
                 NavigationLink {
                     HiddenChannelsView()
@@ -246,7 +264,7 @@ struct SettingsView: View {
                 Text("Once a week, Ondo downloads the latest awards and festival selections (made from Wikidata) from GitHub, where the project is hosted. Nothing about you is sent.")
             }
 
-            Section("Appearance") {
+            Section {
                 Picker(selection: binding(\.appearance)) {
                     ForEach(AppearancePreference.allCases) { appearance in
                         Text(appearance.label).tag(appearance)
@@ -254,6 +272,19 @@ struct SettingsView: View {
                 } label: {
                     Label("Theme", systemImage: "circle.lefthalf.filled")
                 }
+                LabeledContent {
+                    Button(Self.appLanguageName, action: openAppLanguageSettings)
+                } label: {
+                    Label("App Language", systemImage: "globe")
+                }
+            } header: {
+                Text("Appearance")
+            } footer: {
+                #if os(macOS)
+                Text("Ondo's language is chosen in System Settings → General → Language & Region → Applications.")
+                #else
+                Text("Ondo's language is chosen in the Settings app, on Ondo's page.")
+                #endif
             }
 
             Section {

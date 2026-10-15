@@ -245,7 +245,7 @@ struct TagSuggestionCard: View {
         VStack(alignment: .leading, spacing: 10) {
             Label("Show only your languages?", systemImage: "globe")
                 .font(.headline)
-            Text("This playlist has categories for \(count) languages and countries. Keep \(kept) and hide the others? You can change this at any time in Settings, Categories.")
+            Text("This playlist has categories for \(count) languages and countries. Keep \(kept) and hide the others? You can change this at any time in Settings, Languages and Categories.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

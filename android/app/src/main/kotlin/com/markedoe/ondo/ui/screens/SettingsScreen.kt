@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -69,6 +70,7 @@ class SettingsActions(
     val onShowAdultCategories: (Boolean) -> Unit = {},
     val onUpdateAwards: (Boolean) -> Unit = {},
     val onCategories: () -> Unit = {},
+    val onAppLanguage: () -> Unit = {},
     val onHelp: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
     val onSupport: () -> Unit = {},
@@ -142,10 +144,18 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
             }
             item {
                 ListItem(
-                    headlineContent = { Text(stringResource(R.string.categories)) },
+                    headlineContent = { Text(stringResource(R.string.languages_and_categories)) },
                     supportingContent = { Text(stringResource(R.string.categories_hint)) },
                     leadingContent = { Icon(Icons.Rounded.FilterList, contentDescription = null) },
                     modifier = Modifier.clickable(onClick = actions.onCategories).testTag("categoriesRow"),
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.app_language)) },
+                    supportingContent = { Text(stringResource(R.string.app_language_hint)) },
+                    leadingContent = { Icon(Icons.Rounded.Language, contentDescription = null) },
+                    modifier = Modifier.clickable(onClick = actions.onAppLanguage).testTag("appLanguageRow"),
                 )
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }

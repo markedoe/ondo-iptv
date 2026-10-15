@@ -43,8 +43,8 @@ extension HelpTopic {
             id: "categories", title: "Hide Languages and Categories", systemImage: "line.3.horizontal.decrease.circle",
             body: """
             Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, \
-            Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every \
-            playlist; the categories the provider adds later follow the same rule.
+            Series and Live TV (also in Settings, Languages and Categories) hides a whole language or country at \
+            once, in every playlist; the categories the provider adds later follow the same rule.
 
             Styles work the same way with the words of category names: hide Manga & Anime, Children or \
             Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of \

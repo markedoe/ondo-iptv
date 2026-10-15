@@ -130,16 +130,16 @@
         <item quantity="other">%d itens</item>
     </plurals>
     <plurals name="tag_suggestion_message">
-        <item quantity="one">Esta playlist tem categorias para %1$d idioma ou país. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias.</item>
-        <item quantity="many">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias.</item>
-        <item quantity="other">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Categorias.</item>
+        <item quantity="one">Esta playlist tem categorias para %1$d idioma ou país. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Idiomas e categorias.</item>
+        <item quantity="many">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Idiomas e categorias.</item>
+        <item quantity="other">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Idiomas e categorias.</item>
     </plurals>
     <string name="help">Ajuda</string>
     <string name="help_playlists_title">Adicionar uma playlist</string>
     <string name="help_playlists_body">O Ondo é um player: ele mostra os filmes, séries e canais da assinatura que o seu provedor oferece, e não fornece nenhum conteúdo próprio.\n\nPara adicionar sua assinatura, abra Ajustes, Adicionar uma playlist: um link ou arquivo M3U, ou um login Xtream Codes (endereço do servidor, usuário e senha). Toque em uma playlist em Ajustes para mudar para ela.</string>
     <string name="help_search_title">Encontrar o que assistir</string>
     <string name="help_categories_title">Ocultar idiomas e categorias</string>
-    <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nOs estilos funcionam do mesmo jeito com as palavras dos nomes das categorias: oculte Mangá e anime, Infantil ou Documentários, ou uma palavra sua, como Bollywood. Só os nomes das categorias contam, não o gênero de cada filme.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.</string>
+    <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Idiomas e categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nOs estilos funcionam do mesmo jeito com as palavras dos nomes das categorias: oculte Mangá e anime, Infantil ou Documentários, ou uma palavra sua, como Bollywood. Só os nomes das categorias contam, não o gênero de cada filme.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.</string>
     <string name="help_playback_title">Quando um stream não toca</string>
     <string name="help_playback_body">O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.</string>
     <string name="help_privacy_title">Privacidade</string>
@@ -245,4 +245,7 @@
     <string name="genre_label">Gênero</string>
     <string name="year_label">Ano</string>
     <string name="genre_hint">Os filmes aparecem depois que a página deles é aberta; as séries, sempre.</string>
+    <string name="languages_and_categories">Idiomas e categorias</string>
+    <string name="app_language">Idioma do app</string>
+    <string name="app_language_hint">Abre o ajuste do sistema onde você escolhe o idioma do Ondo.</string>
 </resources>
