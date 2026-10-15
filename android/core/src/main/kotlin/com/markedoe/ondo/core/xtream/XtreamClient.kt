@@ -22,6 +22,7 @@ import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.nilIfBlank
 import com.markedoe.ondo.core.parsing.TitleParser
+import java.net.URI
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -239,7 +240,7 @@ class XtreamClient(
             durationSeconds = info?.durationSecs,
             rating = info?.rating,
             posterUrl = Urls.lenient(info?.movieImage ?: info?.cover),
-            backdropUrl = Urls.lenient(info?.backdrops?.firstOrNull()),
+            backdropUrl = backdropUrl(info?.backdrops.orEmpty()),
             trailerYouTubeId = info?.youtubeTrailer,
             tmdbId = info?.tmdbId,
         )
@@ -259,7 +260,7 @@ class XtreamClient(
             releaseDate = info?.releaseDate,
             rating = info?.rating,
             posterUrl = Urls.lenient(info?.cover ?: info?.movieImage),
-            backdropUrl = Urls.lenient(info?.backdrops?.firstOrNull()),
+            backdropUrl = backdropUrl(info?.backdrops.orEmpty()),
             trailerYouTubeId = info?.youtubeTrailer,
             tmdbId = info?.tmdbId,
         )
@@ -328,6 +329,16 @@ class XtreamClient(
             }
             return result
         }
+
+        /**
+         * The first backdrop that can be an image. Panels often list TMDb links missing their file
+         * (`https://image.tmdb.org/t/p/w1280`, `…/w1280null`): the page would show nothing behind its title.
+         */
+        internal fun backdropUrl(backdrops: List<String>): String? =
+            backdrops.asSequence().mapNotNull(Urls::lenient).firstOrNull { url ->
+                val uri = runCatching { URI(url) }.getOrNull() ?: return@firstOrNull true
+                uri.host?.endsWith("tmdb.org") != true || uri.path.orEmpty().substringAfterLast('/').contains('.')
+            }
 
         /** `"Copper Valley - S01E01 - Pilot"` -> `"Pilot"`. */
         internal fun cleanEpisodeTitle(title: String): String {

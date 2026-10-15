@@ -47,6 +47,29 @@ struct RemoteImage: View {
     }
 }
 
+/// A wide background picture (movie and series pages, home carousel). While it loads, without one, or when its
+/// address leads nowhere, the poster fills the space, blurred, rather than an empty frame.
+struct BackdropImage: View {
+    let backdropURL: URL?
+    let posterURL: URL?
+    var dimming = 0.25
+
+    var body: some View {
+        LazyImage(request: backdropURL.map { Artwork.request($0, maxPixelSize: 1600) }) { state in
+            if let image = state.image {
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                RemoteImage(url: posterURL, placeholderText: "", contentMode: .fill, maxPixelSize: 200)
+                    .blur(radius: 40, opaque: true)
+                    .scaleEffect(1.2)
+                    .overlay { Color.black.opacity(dimming) }
+            }
+        }
+    }
+}
+
 struct MonogramView: View {
     let text: String
 

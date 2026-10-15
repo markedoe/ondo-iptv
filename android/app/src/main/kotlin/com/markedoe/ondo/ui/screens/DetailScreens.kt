@@ -55,7 +55,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -83,6 +82,7 @@ import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.ui.AwardRow
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.components.Artwork
+import com.markedoe.ondo.ui.components.Backdrop
 import com.markedoe.ondo.ui.components.Poster
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.ProgressBar
@@ -274,7 +274,7 @@ private fun LazyListScope.similarRow(similar: List<ShowcaseItem>, metrics: Shelf
     }
 }
 
-/** Artwork header (backdrop, else the blurred poster), poster and title over its faded edge, then the page. */
+/** Artwork header (backdrop, else or while it loads the blurred poster), poster and title over its faded edge, then the page. */
 @Composable
 private fun DetailScaffold(
     title: String,
@@ -291,11 +291,7 @@ private fun DetailScaffold(
             item {
                 Box {
                     Box(Modifier.fillMaxWidth().height(if (metrics.compact) 300.dp else 380.dp)) {
-                        if (backdropUrl != null) {
-                            Artwork(url = backdropUrl, title = title, modifier = Modifier.fillMaxSize(), showsTitleFallback = false)
-                        } else {
-                            Artwork(url = posterUrl, title = title, modifier = Modifier.fillMaxSize().blur(40.dp), showsTitleFallback = false)
-                        }
+                        Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize())
                         Box(
                             Modifier.fillMaxSize().background(
                                 Brush.verticalGradient(

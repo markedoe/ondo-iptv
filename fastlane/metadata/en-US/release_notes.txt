@@ -12,3 +12,4 @@
 • Hide a style just as easily (manga & anime, children, documentaries…) or any word of category names, in every playlist.
 • Home shows when the playlist was last updated, above its name.
 • Tap a genre, the release year or an award on a movie or series page to see the titles of your playlist that share it, then the whole festival.
+• Movie and series pages whose background image is missing or broken show the blurred poster instead of an empty frame.

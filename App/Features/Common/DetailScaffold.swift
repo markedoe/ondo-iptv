@@ -104,16 +104,7 @@ struct DetailScaffold<Actions: View, Content: View>: View {
 
     private var artwork: some View {
         Color.black
-            .overlay {
-                if let backdropURL {
-                    RemoteImage(url: backdropURL, placeholderText: "", contentMode: .fill, maxPixelSize: 1600)
-                } else {
-                    RemoteImage(url: posterURL, placeholderText: "", contentMode: .fill, maxPixelSize: 200)
-                        .blur(radius: 40, opaque: true)
-                        .scaleEffect(1.2)
-                        .overlay { Color.black.opacity(0.25) }
-                }
-            }
+            .overlay { BackdropImage(backdropURL: backdropURL, posterURL: posterURL) }
             .overlay {
                 LinearGradient(
                     stops: [.init(color: .black.opacity(0.55), location: 0), .init(color: .clear, location: 0.3),

@@ -245,10 +245,18 @@ public struct XtreamClient: Sendable {
             durationSeconds: info?.durationSecs,
             rating: info?.rating,
             posterURL: URL.lenient(info?.movieImage ?? info?.cover),
-            backdropURL: URL.lenient(info?.backdrops.first),
+            backdropURL: Self.backdropURL(in: info?.backdrops ?? []),
             trailerYouTubeID: info?.youtubeTrailer,
             tmdbID: info?.tmdbID
         )
+    }
+
+    /// The first backdrop that can be an image. Panels often list TMDb links missing their file
+    /// (`https://image.tmdb.org/t/p/w1280`, `…/w1280null`): the page would show nothing behind its title.
+    static func backdropURL(in backdrops: [String]) -> URL? {
+        backdrops.lazy.compactMap(URL.lenient).first { url in
+            url.host?.hasSuffix("tmdb.org") != true || url.lastPathComponent.contains(".")
+        }
     }
 
     public func seriesDetails(seriesID: Int) async throws -> SeriesDetails {
@@ -263,7 +271,7 @@ public struct XtreamClient: Sendable {
             releaseDate: info?.releaseDate,
             rating: info?.rating,
             posterURL: URL.lenient(info?.cover ?? info?.movieImage),
-            backdropURL: URL.lenient(info?.backdrops.first),
+            backdropURL: Self.backdropURL(in: info?.backdrops ?? []),
             trailerYouTubeID: info?.youtubeTrailer,
             tmdbID: info?.tmdbID
         )

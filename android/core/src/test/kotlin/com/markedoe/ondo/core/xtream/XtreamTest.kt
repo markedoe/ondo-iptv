@@ -146,6 +146,16 @@ class XtreamTest {
     }
 
     @Test
+    fun aBackdropWithoutItsFileIsSkipped() {
+        val empty = listOf("https://image.tmdb.org/t/p/w1280", "https://image.tmdb.org/t/p/w1280null", " ")
+        assertEquals("http://img.example.com/back.jpg", XtreamClient.backdropUrl(empty + "http://img.example.com/back.jpg"))
+        assertEquals("https://image.tmdb.org/t/p/w1280/abc.jpg", XtreamClient.backdropUrl(listOf("https://image.tmdb.org/t/p/w1280/abc.jpg")))
+        // Other servers may serve images without an extension.
+        assertEquals("http://img.example.com/art?id=4", XtreamClient.backdropUrl(listOf("http://img.example.com/art?id=4")))
+        assertNull(XtreamClient.backdropUrl(empty))
+    }
+
+    @Test
     fun movieDetails() = runTest {
         val details = XtreamClient(credentials, mock()).movieDetails(5001)
         assertEquals("Lighthouse", details.title)

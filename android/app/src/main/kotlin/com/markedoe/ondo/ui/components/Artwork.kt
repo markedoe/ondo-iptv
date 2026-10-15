@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -59,6 +60,29 @@ fun Artwork(
         modifier = modifier,
         loading = { GeneratedCover(title, Modifier.fillMaxSize(), showsTitle = false) },
         error = { GeneratedCover(title, Modifier.fillMaxSize(), showsTitleFallback) },
+    )
+}
+
+/**
+ * A wide background picture (movie and series pages). While it loads, without one, or when its address leads
+ * nowhere, the poster fills the space, blurred, rather than an empty frame.
+ */
+@Composable
+fun Backdrop(url: String?, posterUrl: String?, title: String, modifier: Modifier = Modifier) {
+    val blurredPoster = @Composable {
+        Artwork(url = posterUrl, title = title, modifier = Modifier.fillMaxSize().blur(40.dp), showsTitleFallback = false)
+    }
+    if (url.isNullOrBlank()) {
+        Box(modifier) { blurredPoster() }
+        return
+    }
+    SubcomposeAsyncImage(
+        model = url,
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = modifier,
+        loading = { blurredPoster() },
+        error = { blurredPoster() },
     )
 }
 

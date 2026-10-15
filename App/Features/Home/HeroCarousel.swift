@@ -117,16 +117,7 @@ private struct HeroPage: View {
 
     private func background(backdrop: URL?) -> some View {
         Color.black
-            .overlay {
-                if let backdrop {
-                    RemoteImage(url: backdrop, placeholderText: "", contentMode: .fill, maxPixelSize: 1600)
-                } else {
-                    RemoteImage(url: item.posterURL, placeholderText: "", contentMode: .fill, maxPixelSize: 200)
-                        .blur(radius: 40, opaque: true)
-                        .scaleEffect(1.2)
-                        .overlay { Color.black.opacity(0.3) }
-                }
-            }
+            .overlay { BackdropImage(backdropURL: backdrop, posterURL: item.posterURL, dimming: 0.3) }
             .overlay {
                 // Keeps the toolbar legible and the text readable.
                 LinearGradient(

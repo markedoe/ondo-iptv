@@ -152,6 +152,17 @@ final class XtreamTests: XCTestCase {
         XCTAssertEqual(details.tmdbID, "910001")
     }
 
+    func testABackdropWithoutItsFileIsSkipped() {
+        let empty = ["https://image.tmdb.org/t/p/w1280", "https://image.tmdb.org/t/p/w1280null", " "]
+        XCTAssertEqual(XtreamClient.backdropURL(in: empty + ["http://img.example.com/back.jpg"])?.absoluteString,
+                       "http://img.example.com/back.jpg")
+        XCTAssertEqual(XtreamClient.backdropURL(in: ["https://image.tmdb.org/t/p/w1280/abc.jpg"])?.absoluteString,
+                       "https://image.tmdb.org/t/p/w1280/abc.jpg")
+        // Other servers may serve images without an extension.
+        XCTAssertEqual(XtreamClient.backdropURL(in: ["http://img.example.com/art?id=4"])?.absoluteString, "http://img.example.com/art?id=4")
+        XCTAssertNil(XtreamClient.backdropURL(in: empty))
+    }
+
     func testShortEPGDecodesBase64() async throws {
         let programs = try await XtreamClient(credentials: credentials, http: try mock()).shortEPG(streamID: 101, epgChannelID: "TV1.fr")
         XCTAssertEqual(programs.map(\.title), ["Le JT", "Film"])
