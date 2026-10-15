@@ -22,4 +22,14 @@ class PeopleTest {
         assertTrue(People.mentions("Lena Moss, Élodie Marçeau", "elodie marceau"))
         assertFalse(People.mentions("Lena Mossberg", "Lena Moss"))
     }
+
+    @Test
+    fun peopleAreFoundByName() {
+        val index = PeopleIndex(listOf("Ada Vance, Tom Reyes", "Ada Vance (voice)", "Lena Moss", null, "Éva Adams, Tomás Ruiz"))
+        assertEquals(listOf("Ada Vance", "Éva Adams"), index.names("ada"), "names starting with the query first")
+        assertEquals(listOf("Tomás Ruiz"), index.names("TOMAS"), "accents and case ignored")
+        assertEquals(listOf("Ada Vance"), index.names("vance ad"), "every word, in any order")
+        assertEquals(emptyList(), index.names("to"), "three letters at least")
+        assertEquals(listOf("Éva Adams"), index.names("eva"))
+    }
 }

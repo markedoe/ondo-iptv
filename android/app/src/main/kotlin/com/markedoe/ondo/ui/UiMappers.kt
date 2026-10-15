@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.People
+import com.markedoe.ondo.core.library.PeopleIndex
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
@@ -422,14 +423,19 @@ object UiMappers {
         }
     }
 
-    /** The movies and series whose opened page names this person (cast or director), newest first. */
+    /**
+     * The movies and series whose opened page names this person (cast or director), and the series whose list entry
+     * does (series lists name their cast; movie lists do not), newest first.
+     */
     fun person(state: OndoState, name: String): PersonUiState {
         val hidden = hiddenCategoryIds(state)
         fun names(details: MediaDetails) = People.mentions(details.cast, name) || People.mentions(details.director, name)
         val movieIds = state.movieDetails.filterValues(::names).keys
         val seriesIds = state.seriesDetails.filterValues { names(it.info) }.keys
         val movies = state.content.movies.filter { it.id in movieIds && it.categoryId !in hidden }.map { ShowcaseItem.MovieItem(it) }
-        val series = state.content.series.filter { it.id in seriesIds && it.categoryId !in hidden }.map { ShowcaseItem.SeriesItem(it) }
+        val series = state.content.series.filter { show ->
+            show.categoryId !in hidden && (show.id in seriesIds || People.mentions(show.cast, name) || People.mentions(show.director, name))
+        }.map { ShowcaseItem.SeriesItem(it) }
         return PersonUiState(name, sorted(movies, PosterSort.RELEASE), sorted(series, PosterSort.RELEASE))
     }
 
@@ -442,6 +448,19 @@ object UiMappers {
         /** Release years of the movies and series, newest first (the filter's choices). */
         val years: List<Int> = (movies.mapNotNull { it.second.year } + series.mapNotNull { it.second.year }).distinct().sortedDescending()
         val movieIds: Set<String> = movies.mapTo(HashSet()) { it.second.id }
+
+        /** Actors and directors of the series lists (movie lists give no cast). */
+        val people = PeopleIndex(content.series.filter { it.categoryId !in hidden }.flatMap { listOf(it.cast, it.director) })
+    }
+
+    /** Actors and directors whose name matches a search: from the pages already opened, then the series lists. */
+    fun people(index: SearchIndex, state: OndoState, query: String): List<String> {
+        val opened = PeopleIndex(
+            state.movieDetails.values.flatMap { listOf(it.cast, it.director) } +
+                state.seriesDetails.values.flatMap { listOf(it.info.cast, it.info.director) },
+        )
+        val seen = HashSet<String>()
+        return (opened.names(query) + index.people.names(query)).filter { seen.add(TextNormalizer.normalize(it)) }.take(20)
     }
 
     /** Most movies and series listed by a filtered search (it lists the whole playlist when the query is empty). */
@@ -468,6 +487,7 @@ object UiMappers {
             .map { it.second }
         if (!filters.isActive) {
             return empty.copy(
+                people = people(index, state, query),
                 movies = index.movies.find().take(limit).map { ShowcaseItem.MovieItem(it) }.toList(),
                 series = index.series.find().take(limit).map { ShowcaseItem.SeriesItem(it) }.toList(),
                 channels = index.channels.find().take(limit).map { channelRow(it, state, now) }.toList(),

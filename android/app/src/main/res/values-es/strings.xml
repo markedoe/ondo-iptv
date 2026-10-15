@@ -45,8 +45,6 @@
     <string name="next_program">A continuación: %1$s</string>
     <string name="nothing_here">Aún no hay nada.</string>
     <string name="home_empty">Tu playlist se está cargando o está vacía. Actualízala desde Ajustes si no aparece.</string>
-    <string name="search_prompt">Películas, series, canales</string>
-    <string name="search_hint">Encuentra películas, series y canales en la playlist actual.</string>
     <string name="no_results">No hay resultados para “%1$s”.</string>
     <string name="welcome_title">Te damos la bienvenida a Ondo</string>
     <string name="welcome_subtitle">Las películas, series y canales de tu proveedor de IPTV, en una biblioteca ordenada.</string>
@@ -165,7 +163,7 @@
     <string name="my_list_empty_hint">Usa Mi lista en la ficha de una película o serie para encontrarla aquí.</string>
     <string name="help_mylist_title">Mi lista</string>
     <string name="help_mylist_body">En la ficha de una película o serie, Mi lista la mantiene a mano. En TV en directo, mantén pulsado un canal para añadirlo a Mi lista.\n\nLa pestaña Mi lista reúne tus películas, series y canales; la búsqueda es la lupa de la parte superior de cada pantalla.\n\nLas colecciones son tus propios grupos, como Fin de semana o Niños: usa Colección en la ficha de una película o serie y encuéntralas en Mi lista, en Colecciones.</string>
-    <string name="help_search_body">Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda, la lupa de la parte superior de cada pantalla, recorre canales, películas y series. En la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas de un festival o una ceremonia.\n\nEn una categoría, el botón de ordenar coloca los pósteres por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración. Las fichas de las películas muestran sus premios y selecciones en festivales. Toca el nombre de un director o de un actor en una ficha para ver sus otras películas y series entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten.</string>
+    <string name="help_search_body">Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda, la lupa de la parte superior de cada pantalla, recorre canales, películas y series. En la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas de un festival o una ceremonia.\n\nEn una categoría, el botón de ordenar coloca los pósteres por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración. Las fichas de las películas muestran sus premios y selecciones en festivales. Toca el nombre de un director o de un actor en una ficha para ver sus otras películas y series entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten. La búsqueda también encuentra actores y directores por su nombre.</string>
     <string name="search_filters">Filtros</string>
     <string name="filter_from">Desde</string>
     <string name="filter_to">Hasta</string>
@@ -248,4 +246,7 @@
     <string name="languages_and_categories">Idiomas y categorías</string>
     <string name="app_language">Idioma de la app</string>
     <string name="app_language_hint">Abre el ajuste del sistema donde eliges el idioma de Ondo.</string>
+    <string name="people">Personas</string>
+    <string name="search_prompt">Películas, series, canales, personas</string>
+    <string name="search_hint">Encuentra películas, series, canales, actores y directores en la playlist actual.</string>
 </resources>

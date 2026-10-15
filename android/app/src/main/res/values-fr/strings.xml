@@ -45,8 +45,6 @@
     <string name="next_program">Ensuite : %1$s</string>
     <string name="nothing_here">Rien pour le moment.</string>
     <string name="home_empty">Votre playlist se charge ou est vide. Actualisez-la depuis les Réglages si elle n\'apparaît pas.</string>
-    <string name="search_prompt">Films, séries, chaînes</string>
-    <string name="search_hint">Trouvez films, séries et chaînes dans la playlist actuelle.</string>
     <string name="no_results">Aucun résultat pour « %1$s ».</string>
     <string name="welcome_title">Bienvenue dans Ondo</string>
     <string name="welcome_subtitle">Les films, séries et chaînes de votre fournisseur IPTV, dans une bibliothèque claire.</string>
@@ -165,7 +163,7 @@
     <string name="my_list_empty_hint">Utilisez Ma liste sur la fiche d’un film ou d’une série pour le retrouver ici.</string>
     <string name="help_mylist_title">Ma liste</string>
     <string name="help_mylist_body">Sur la fiche d’un film ou d’une série, Ma liste le garde à portée de main. Dans TV en direct, appuyez longuement sur une chaîne pour l’ajouter à Ma liste.\n\nL’onglet Ma liste réunit vos films, séries et chaînes ; la recherche est la loupe en haut de chaque écran.\n\nLes collections sont vos propres groupes, comme Week-end ou Enfants : utilisez Collection sur la fiche d’un film ou d’une série, puis retrouvez-les dans Ma liste, sous Collections.</string>
-    <string name="help_search_body">Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche, la loupe en haut de chaque écran, parcourt les chaînes, les films et les séries. Dans la recherche, le bouton de filtre garde les films et séries sortis dans les années choisies, ou les films d’un festival ou d’une cérémonie.\n\nDans une catégorie, le bouton de tri range les affiches par ordre de la playlist, nom, date d’ajout, date de sortie ou note. Les fiches des films montrent leurs prix et sélections en festival. Touchez le nom d’un réalisateur ou d’un acteur sur une fiche pour voir ses autres films et séries parmi les fiches déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent.</string>
+    <string name="help_search_body">Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche, la loupe en haut de chaque écran, parcourt les chaînes, les films et les séries. Dans la recherche, le bouton de filtre garde les films et séries sortis dans les années choisies, ou les films d’un festival ou d’une cérémonie.\n\nDans une catégorie, le bouton de tri range les affiches par ordre de la playlist, nom, date d’ajout, date de sortie ou note. Les fiches des films montrent leurs prix et sélections en festival. Touchez le nom d’un réalisateur ou d’un acteur sur une fiche pour voir ses autres films et séries parmi les fiches déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent. La recherche trouve aussi les acteurs et réalisateurs par leur nom.</string>
     <string name="search_filters">Filtres</string>
     <string name="filter_from">De</string>
     <string name="filter_to">À</string>
@@ -248,4 +246,7 @@
     <string name="languages_and_categories">Langues et catégories</string>
     <string name="app_language">Langue de l\'app</string>
     <string name="app_language_hint">Ouvre le réglage du système où choisir la langue d\'Ondo.</string>
+    <string name="people">Personnes</string>
+    <string name="search_prompt">Films, séries, chaînes, personnes</string>
+    <string name="search_hint">Trouvez films, séries, chaînes, acteurs et réalisateurs dans la playlist actuelle.</string>
 </resources>

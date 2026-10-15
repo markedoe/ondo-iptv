@@ -34,6 +34,9 @@ data class Series(
     val rating: Double? = null,
     val year: Int? = null,
     val genre: String? = null,
+    /** Xtream series lists name the cast and the director (movie lists do not): searchable without opening pages. */
+    val cast: String? = null,
+    val director: String? = null,
     /** Last modification reported by the provider, in epoch **seconds** (same unit as [Movie.addedAt]). */
     val addedAt: Long? = null,
     val xtreamSeriesId: Int? = null,

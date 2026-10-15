@@ -77,7 +77,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   films et séries (parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
   partagent.
 - **Live TV** : catégories, Ma liste, programme en cours et suivant ; **recherche** (la loupe de chaque écran),
-  filtrable par années de sortie ou par festival / cérémonie (lauréats seulement, au choix), comme sur Apple.
+  filtrable par années de sortie ou par festival / cérémonie (lauréats seulement, au choix), et les acteurs et
+  réalisateurs par leur nom, comme sur Apple.
 - **Guide TV** (le bouton calendrier de TV en direct) : une grille des chaînes choisies à cet endroit, et des
   **rappels**, une notification quelques minutes avant le début d'un programme.
 - Onglet **Ma liste** : les films, séries et chaînes gardés, et vos **collections** (Collection sur la fiche d'un film

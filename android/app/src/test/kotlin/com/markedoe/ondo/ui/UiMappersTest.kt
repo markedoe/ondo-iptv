@@ -169,6 +169,23 @@ class UiMappersTest {
         assertTrue("a whole name, not a part of one", UiMappers.person(state, "Tom").movies.isEmpty())
     }
 
+    /** Search lists the actors and directors whose name matches: series lists name their cast, opened pages too. */
+    @Test
+    fun searchFindsActorsAndDirectorsByName() {
+        val content = Fixtures.content.copy(
+            series = Fixtures.content.series.map { if (it.id == Fixtures.harborLights.id) it.copy(cast = "Mara Quinn, Ada Vance", director = "Sol Ortega") else it },
+        )
+        val state = Fixtures.state(content = content).copy(
+            movieDetails = mapOf(Fixtures.glassCity.id to MediaDetails(title = "Glass City", cast = "Ada Vance (Mara), Tom Reyes")),
+        )
+        val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state))
+        assertEquals("once, however often it is named", listOf("Ada Vance"), UiMappers.search(index, "vance", state, Fixtures.NOW).people)
+        assertEquals(listOf("Sol Ortega"), UiMappers.search(index, "ORTE", state, Fixtures.NOW).people)
+        assertTrue("three letters at least", UiMappers.search(index, "so", state, Fixtures.NOW).people.isEmpty())
+        // A series is found on the person's page through its list entry, without opening it.
+        assertEquals(listOf("Harbor Lights"), UiMappers.person(state, "Mara Quinn").series.map { it.title })
+    }
+
     @Test
     fun aCollectionShowsItsItemsOfThePlaylistInTheOrderAdded() {
         fun favorite(kind: ItemKind, id: String, playlistId: String = Fixtures.PLAYLIST_ID) = Favorite(playlistId, kind, id, id, addedAt = 1)

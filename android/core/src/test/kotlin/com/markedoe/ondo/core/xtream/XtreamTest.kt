@@ -99,6 +99,8 @@ class XtreamTest {
 
         assertEquals(9000, content.series.first().xtreamSeriesId)
         assertEquals(2008, content.series.first().year)
+        assertEquals("Alex Marsh", content.series.first().cast, "the series list names the cast")
+        assertEquals("Casey Brook", content.series.first().director)
         assertEquals("The Archive", content.series[1].name, "the year in the title is not part of the name")
         assertEquals(2025, content.series[1].year, "no year from the provider: the one in the title")
         assertEquals(1_700_000_000L, content.series.first().addedAt, "epoch seconds")

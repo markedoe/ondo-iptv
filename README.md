@@ -72,7 +72,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   episode, seasons, More Like This); a director's or an actor's name opens their other movies and series
   (among the pages already opened), and a genre, the year or an award the titles that share it.
 - **Live TV**: categories, My List, current and next programme; **search** (the magnifying glass of each screen),
-  filtered by release years or by festival / ceremony (winners only, if you like), like on Apple.
+  filtered by release years or by festival / ceremony (winners only, if you like), and actors and directors by
+  name, like on Apple.
 - **TV guide** (the calendar button of Live TV): a grid of the channels chosen there, and **reminders**, a
   notification a few minutes before a programme starts.
 - **My List** tab: the movies, series and channels kept, and your **collections** (Collection on a movie or series

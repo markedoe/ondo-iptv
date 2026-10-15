@@ -335,6 +335,19 @@ class ScreensTest {
         assertEquals(true, shown)
     }
 
+    /** A person found by search opens their page. */
+    @Test
+    fun searchListsPeopleAndOpensTheirPage() {
+        var opened: String? = null
+        compose.setContent {
+            OndoTheme {
+                SearchScreen(SearchUiState(query = "vance", people = listOf("Ada Vance")), onQuery = {}, onOpen = {}, onPlayChannel = {}, onPerson = { opened = it })
+            }
+        }
+        compose.onNodeWithTag("person-Ada Vance").performClick()
+        assertEquals("Ada Vance", opened)
+    }
+
     /** Languages and categories, then the app's own language, which the system page sets. */
     @Test
     fun settingsOpenLanguagesAndCategoriesAndTheAppLanguage() {

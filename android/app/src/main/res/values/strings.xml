@@ -46,8 +46,6 @@
     <string name="next_program">Next: %1$s</string>
     <string name="nothing_here">Nothing here yet.</string>
     <string name="home_empty">Your playlist is loading or empty. Pull a refresh from Settings if it does not appear.</string>
-    <string name="search_prompt">Movies, series, channels</string>
-    <string name="search_hint">Find movies, series and channels in the current playlist.</string>
     <string name="no_results">No results for “%1$s”.</string>
     <string name="welcome_title">Welcome to Ondo</string>
     <string name="welcome_subtitle">The movies, series and channels of your IPTV provider, in a clean library.</string>
@@ -160,7 +158,7 @@
     <string name="my_list_empty_hint">Use My List on a movie or series page to find it here.</string>
     <string name="help_mylist_title">My List</string>
     <string name="help_mylist_body">On a movie or series page, My List keeps it at hand. In Live TV, long-press a channel to add it to My List.\n\nThe My List tab gathers your movies, series and channels; search is the magnifying glass at the top of each screen.\n\nCollections are your own groups, such as Weekend or Kids: use Collection on a movie or series page, then find them in My List, under Collections.</string>
-    <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. Search, the magnifying glass at the top of each screen, looks through channels, movies and series. In Search, the filter button keeps the movies and series released in the years you choose, or the movies of a festival or ceremony.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating. Movie pages show their awards and festival selections. Tap the name of a director or an actor on a movie or series page to see their other movies and series among the pages you have opened. Genres, the year and awards open the titles of your playlist that share them the same way.</string>
+    <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. Search, the magnifying glass at the top of each screen, looks through channels, movies and series. In Search, the filter button keeps the movies and series released in the years you choose, or the movies of a festival or ceremony.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating. Movie pages show their awards and festival selections. Tap the name of a director or an actor on a movie or series page to see their other movies and series among the pages you have opened. Genres, the year and awards open the titles of your playlist that share them the same way. Search also finds actors and directors by name.</string>
     <string name="search_filters">Filters</string>
     <string name="filter_from">From</string>
     <string name="filter_to">To</string>
@@ -242,4 +240,7 @@
     <string name="languages_and_categories">Languages and categories</string>
     <string name="app_language">App language</string>
     <string name="app_language_hint">Opens the system setting where you choose Ondo\'s language.</string>
+    <string name="people">People</string>
+    <string name="search_prompt">Movies, series, channels, people</string>
+    <string name="search_hint">Find movies, series, channels, actors and directors in the current playlist.</string>
 </resources>

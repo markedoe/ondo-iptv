@@ -311,6 +311,7 @@ private fun SearchDestination(viewModel: OndoViewModel, navController: NavHostCo
         onFilters = viewModel::setSearchFilters,
         onOpen = navController::open,
         onPlayChannel = viewModel::playChannel,
+        onPerson = { navController.navigate(Routes.Person(it)) },
     )
 }
 

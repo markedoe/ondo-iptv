@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -81,6 +82,8 @@ data class SearchFilters(
 
 data class SearchUiState(
     val query: String = "",
+    /** Actors and directors whose name matches (see [com.markedoe.ondo.ui.UiMappers.people]). */
+    val people: List<String> = emptyList(),
     val movies: List<ShowcaseItem> = emptyList(),
     val series: List<ShowcaseItem> = emptyList(),
     val channels: List<ChannelRow> = emptyList(),
@@ -99,6 +102,7 @@ fun SearchScreen(
     onOpen: (ShowcaseItem) -> Unit,
     onPlayChannel: (ChannelRow) -> Unit,
     onFilters: (SearchFilters) -> Unit = {},
+    onPerson: (String) -> Unit = {},
 ) {
     val metrics = rememberShelfMetrics()
     val filters = state.filters
@@ -135,6 +139,16 @@ fun SearchScreen(
             posterGrid(R.string.movies, state.movies, onOpen)
             posterGrid(R.string.series, state.series, onOpen)
         } else {
+            if (state.people.isNotEmpty()) {
+                fullWidth { Text(stringResource(R.string.people), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = metrics.gutter)) }
+                items(state.people, key = { "person-$it" }, span = { GridItemSpan(maxLineSpan) }) { name ->
+                    ListItem(
+                        headlineContent = { Text(name) },
+                        leadingContent = { Icon(Icons.Rounded.Person, contentDescription = null) },
+                        modifier = Modifier.clickable { onPerson(name) }.padding(horizontal = metrics.gutter - 16.dp).testTag("person-$name"),
+                    )
+                }
+            }
             if (state.movies.isNotEmpty()) {
                 fullWidth {
                     Shelf(stringResource(R.string.movies), metrics) {
@@ -160,7 +174,7 @@ fun SearchScreen(
                 }
             }
         }
-        val nothing = state.movies.isEmpty() && state.series.isEmpty() && state.channels.isEmpty()
+        val nothing = state.people.isEmpty() && state.movies.isEmpty() && state.series.isEmpty() && state.channels.isEmpty()
         when {
             filters.isActive && nothing -> fullWidth {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
