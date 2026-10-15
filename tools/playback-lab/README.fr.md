@@ -47,7 +47,9 @@ avec une coupure de 5 secondes et 2 secondes de tampon, les compteurs se sont ar
 Une première version de ce banc comptait les gels avec ces compteurs et trouvait une image figée 51 secondes par
 minute avec les fournisseurs par à-coups ; à l'écran, il n'y a aucun gel. L'app lit les mêmes compteurs (VLCKit
 ne donne rien d'autre) : `PlaybackHealth` traite donc une position immobile comme une *interruption* des données
-et estime le gel comme la part de l'interruption que le tampon n'a pas couverte.
+et estime le gel comme la part de l'interruption que le tampon n'a pas couverte. L'estimation penche du côté du
+gel : VLC peut garder plus que son cache réseau, après avoir augmenté son délai (voir plus bas) ou avec un
+fournisseur qui a envoyé de l'avance, et une coupure que l'app compte comme un gel peut alors ne pas se voir.
 
 ## Chaînes en direct
 

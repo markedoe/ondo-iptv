@@ -45,7 +45,9 @@ bursts every 2.5 seconds, the counters move in 2.5-second steps over a picture t
 A first version of this lab counted freezes with those counters and found a picture frozen 51 seconds a minute
 with bursty providers; on screen there is no freeze at all. The app reads the same counters (VLCKit gives nothing
 else), so `PlaybackHealth` treats a still position as a *stall* of the data and estimates the freeze as the part
-of the stall the buffer did not cover.
+of the stall the buffer did not cover. The estimate errs on the side of a freeze: VLC may hold more than its
+network caching, after it raised its own delay (see below) or with a provider that sent a head start, and then a
+stop the app counts as a freeze may not show.
 
 ## Live channels
 
