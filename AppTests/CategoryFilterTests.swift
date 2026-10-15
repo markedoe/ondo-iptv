@@ -53,6 +53,24 @@ final class CategoryFilterTests: XCTestCase {
         XCTAssertTrue(model.search("title 0").movies.isEmpty, "and the search")
     }
 
+    func testHidingAStyleOrAWordHidesTheCategoriesNamedAfterIt() async throws {
+        let (model, _, _) = try await model(groups: ["|FR| Manga", "Animes VOSTFR", "Dessins Animés", "Bollywood Hits", "Drama"])
+        XCTAssertEqual(Set(model.categoryTags.styles.keys), ["manga", "kids"])
+
+        model.setHidden(true, word: "manga")
+        XCTAssertEqual(Set(model.categories(for: .movie).map(\.name)), ["Dessins Animés", "Bollywood Hits", "Drama"],
+                       "French cartoons are not anime")
+        XCTAssertEqual(model.hiddenWord(of: MediaCategory(id: "x", name: "MANGA", type: .movie)), "manga")
+
+        model.setHidden(true, word: "bollywood")
+        XCTAssertEqual(model.hiddenCustomWords, ["bollywood"])
+        XCTAssertEqual(model.hiddenCategoryCount(.movie), 3)
+        XCTAssertFalse(model.movies(in: nil, sort: .playlist).contains { $0.name == "Title 3" })
+
+        model.setHidden(false, word: "manga")
+        XCTAssertEqual(model.hiddenCategoryCount(.movie), 1)
+    }
+
     func testTheRuleCoversCategoriesTheProviderAddsLater() async throws {
         let (model, playlist, file) = try await model(groups: Self.groups)
         model.setHidden(true, tag: "PT")

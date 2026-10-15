@@ -1,0 +1,33 @@
+{
+  "styles": {
+    "|FR| Manga": ["manga"],
+    "Mangas VOSTFR": ["manga"],
+    "ANIME | Series": ["manga"],
+    "|PT| Animes Legendados": ["manga"],
+    "FR - Dessins Animés": ["kids"],
+    "Mangalore Movies": [],
+    "Kids & Family": ["kids"],
+    "|ES| Infantil": ["kids"],
+    "Cartoon Network": ["kids"],
+    "Animation": ["animation"],
+    "Films d'animation": ["animation"],
+    "Documentaires": ["documentary"],
+    "DE: Dokus": ["documentary"],
+    "UK | Sports": ["sport"],
+    "Sporting Clube": [],
+    "Horreur / Épouvante": ["horror"],
+    "Music Videos": ["music"],
+    "Anime Kids": ["manga", "kids"],
+    "Action - Drama": [],
+    "Movies | Comedy": []
+  },
+  "words": [
+    {"name": "Bollywood Hits", "word": "bollywood", "matches": true},
+    {"name": "BOLLYWOOD", "word": "  Bollywood ", "matches": true},
+    {"name": "Telenovelas", "word": "telenovela", "matches": true},
+    {"name": "Novelas", "word": "telenovela", "matches": false},
+    {"name": "Turkish Series", "word": "turk", "matches": false},
+    {"name": "|FR| Séries Turques", "word": "series turques", "matches": true},
+    {"name": "Netflix | Séries", "word": "Séries", "matches": true}
+  ]
+}

@@ -206,6 +206,9 @@ class OndoRepository(
         dismissTagSuggestion()
     }
 
+    /** Hides or shows the categories of a style or word ("manga"), in every playlist. */
+    fun setWordHidden(word: String, hidden: Boolean) = updateLibrary { it.settingWordHidden(word, hidden) }
+
     fun dismissTagSuggestion() {
         val playlistId = _state.value.activePlaylistId ?: return
         updateSettings { it.copy(dismissedTagSuggestions = it.dismissedTagSuggestions + playlistId) }

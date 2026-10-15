@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.screens
 
+import android.text.format.DateUtils
 import android.icu.text.ListFormatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -63,6 +64,9 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 
 data class HomeUiState(
     val playlistName: String,
+    /** When the catalogue was last downloaded (null without one), and the time the state was made for. */
+    val updatedAt: Long? = null,
+    val now: Long = 0,
     val hero: List<HeroPage> = emptyList(),
     val continueWatching: List<ResumeItem> = emptyList(),
     val myList: List<ShowcaseItem> = emptyList(),
@@ -111,10 +115,10 @@ fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = 
                     onPlay = actions.onPlay,
                     onToggleMyList = actions.onToggleMyList,
                     autoAdvance = autoAdvance,
-                    topBar = { HomeTopBar(state.playlistName, actions, onArtwork = true) },
+                    topBar = { HomeTopBar(state, actions, onArtwork = true) },
                 )
             } else {
-                Box(Modifier.windowInsetsPadding(WindowInsets.statusBars)) { HomeTopBar(state.playlistName, actions, onArtwork = false) }
+                Box(Modifier.windowInsetsPadding(WindowInsets.statusBars)) { HomeTopBar(state, actions, onArtwork = false) }
             }
         }
         state.tagSuggestion?.let { suggestion ->
@@ -194,16 +198,29 @@ fun ChannelTile(row: ChannelRow, onClick: () -> Unit) {
 }
 
 @Composable
-private fun HomeTopBar(playlistName: String, actions: HomeActions, onArtwork: Boolean) {
+private fun HomeTopBar(state: HomeUiState, actions: HomeActions, onArtwork: Boolean) {
     val tint = if (onArtwork) Color.White else MaterialTheme.colorScheme.onBackground
     Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp)) {
-        Row(
-            modifier = Modifier.align(Alignment.Center).clip(RoundedCornerShape(20.dp)).clickable(onClick = actions.onPlaylists).padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier.align(Alignment.Center).clip(RoundedCornerShape(20.dp)).clickable(onClick = actions.onPlaylists).padding(horizontal = 12.dp, vertical = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(playlistName, color = tint, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.width(4.dp))
-            Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = stringResource(R.string.playlists), tint = tint.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+            state.updatedAt?.let { updatedAt ->
+                // At least a minute ago: "0 minutes ago" reads oddly right after a refresh.
+                val ago = DateUtils.getRelativeTimeSpanString(minOf(updatedAt, state.now - DateUtils.MINUTE_IN_MILLIS), state.now, DateUtils.MINUTE_IN_MILLIS)
+                Text(
+                    stringResource(R.string.updated_ago, ago),
+                    color = tint.copy(alpha = 0.7f),
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    modifier = Modifier.testTag("lastUpdate"),
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(state.playlistName, color = tint, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = stringResource(R.string.playlists), tint = tint.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
+            }
         }
         Row(Modifier.align(Alignment.CenterEnd)) {
             IconButton(onClick = actions.onSearch, modifier = Modifier.testTag("searchButton")) {

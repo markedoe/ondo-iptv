@@ -139,7 +139,7 @@
     <string name="help_playlists_body">Ondo est un lecteur : il affiche les films, séries et chaînes de l’abonnement que vous donne votre fournisseur, et ne fournit aucun contenu lui-même.\n\nPour ajouter votre abonnement, ouvrez Réglages, Ajouter une playlist : un lien ou un fichier M3U, ou un identifiant Xtream Codes (adresse du serveur, nom d’utilisateur et mot de passe). Touchez une playlist dans Réglages pour passer sur elle.</string>
     <string name="help_search_title">Trouver quoi regarder</string>
     <string name="help_categories_title">Masquer des langues et des catégories</string>
-    <string name="help_categories_body">Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Le bouton de filtre de Films, Séries et TV en direct (aussi dans Réglages, Catégories) masque d’un coup une langue ou un pays entier, dans toutes les playlists ; les catégories que le fournisseur ajoute plus tard suivent la même règle.\n\nVous pouvez aussi y masquer les catégories une par une, et les réafficher à tout moment.</string>
+    <string name="help_categories_body">Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Le bouton de filtre de Films, Séries et TV en direct (aussi dans Réglages, Catégories) masque d’un coup une langue ou un pays entier, dans toutes les playlists ; les catégories que le fournisseur ajoute plus tard suivent la même règle.\n\nLes styles fonctionnent de la même façon avec les mots des noms de catégories : masquez Manga et anime, Enfants ou Documentaires, ou un mot de votre choix comme Bollywood. Seuls les noms de catégories comptent, pas le genre de chaque film.\n\nVous pouvez aussi y masquer les catégories une par une, et les réafficher à tout moment.</string>
     <string name="help_playback_title">Quand un flux ne se lit pas</string>
     <string name="help_playback_body">Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.</string>
     <string name="help_privacy_title">Confidentialité</string>
@@ -228,4 +228,16 @@
         <item quantity="many">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
         <item quantity="other">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
     </plurals>
+    <string name="updated_ago">Mis à jour %1$s</string>
+    <string name="styles">Styles</string>
+    <string name="style_manga">Manga et anime</string>
+    <string name="style_kids">Enfants</string>
+    <string name="style_animation">Animation</string>
+    <string name="style_documentary">Documentaires</string>
+    <string name="style_sport">Sport</string>
+    <string name="style_horror">Horreur</string>
+    <string name="style_music">Musique</string>
+    <string name="word_to_hide">Mot à masquer</string>
+    <string name="show">Afficher</string>
+    <string name="styles_explanation">Masque les catégories dont le nom contient un style ou un mot (Manga, Bollywood…), dans toutes les playlists, y compris celles ajoutées plus tard. Seuls les noms de catégories comptent, pas le genre de chaque film.</string>
 </resources>

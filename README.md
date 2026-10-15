@@ -14,7 +14,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 ### iPhone, iPad and Mac
 
 - **Home**: carousel of featured movies and series, "Continue Watching", My List, new releases, trending;
-  live TV last.
+  live TV last; when the playlist was last updated, above its name.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
@@ -52,8 +52,9 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   to group them your way.
 - **Categories**: hide a whole language or country in one go (providers start category names with codes
   such as `|PT|` or `FR:`), a rule that also covers the categories added later; offered once when a playlist
-  has many of them (keep your languages, choose, or not now); or hide categories one by one. The filter
-  button is on the Movies, Series and Live TV screens.
+  has many of them (keep your languages, choose, or not now); hide a **style** (manga & anime, children,
+  documentaries…) or any word of category names (Bollywood…) the same way; or hide categories one by one.
+  The filter button is on the Movies, Series and Live TV screens.
 - **Offline downloads** (movies, episodes), with the reason in plain words when the provider refuses,
   limits connections or sends nothing.
 - **Data**: JSON backup / restore, clearable cache.
@@ -62,7 +63,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 
 ### Android (phones and tablets)
 
-- **Home**: carousel, "Continue Watching", My List, recently added, channels.
+- **Home**: carousel, "Continue Watching", My List, recently added, channels; when the playlist was last updated,
+  above its name.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), detail pages (Resume, From Start, next
   episode, seasons, More Like This); a director's or an actor's name opens their other movies and series
@@ -73,7 +75,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   notification a few minutes before a programme starts.
 - **My List** tab: the movies, series and channels kept, and your **collections** (Collection on a movie or series
   page), as on Apple.
-- **Categories**: hidden by language or country code (`|PT|`, `FR:`…) or one by one, like on Apple.
+- **Categories**: hidden by language or country code (`|PT|`, `FR:`…), by style or word (manga, Bollywood…) or one
+  by one, like on Apple.
 - **Help** in Settings.
 - **Awards** on movie pages and an "Award winners" row in Movies, from the same bundled data.
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin

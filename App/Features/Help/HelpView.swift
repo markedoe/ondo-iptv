@@ -45,6 +45,10 @@ extension HelpTopic {
             Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every \
             playlist; the categories the provider adds later follow the same rule.
 
+            Styles work the same way with the words of category names: hide Manga & Anime, Children or \
+            Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of \
+            each movie.
+
             You can also hide categories one by one there, or from a category's menu (long-press, or Control-click \
             on a Mac). The number of hidden categories is shown at the end of the list, so you can bring them back \
             at any time.

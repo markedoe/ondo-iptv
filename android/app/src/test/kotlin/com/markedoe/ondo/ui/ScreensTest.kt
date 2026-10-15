@@ -211,6 +211,19 @@ class ScreensTest {
     }
 
     @Test
+    fun categoriesHideAStyleOrAWordOfTheViewers() {
+        val words = mutableListOf<Pair<String, Boolean>>()
+        val state = CategoriesUiState(styles = listOf(StyleRow("manga", 2, hidden = false)), words = listOf(WordRow("bollywood", 1)))
+        compose.setContent { OndoTheme { CategoriesScreen(state, ContentType.MOVIE, filter = "", actions = CategoriesActions(onWord = { word, hidden -> words += word to hidden })) } }
+        compose.onNodeWithText("Manga & anime").assertExists()
+        compose.onNodeWithTag("style-manga").performClick()
+        compose.onNodeWithTag("showWord-bollywood").performClick()
+        compose.onNodeWithTag("wordToHide").performTextInput("  Télénovela ")
+        compose.onNodeWithTag("addWord").performClick()
+        assertEquals(listOf("manga" to true, "bollywood" to false, "telenovela" to true), words)
+    }
+
+    @Test
     fun welcomeOffersAPlaylistOrTheDemoAndSaysOndoHasNoContent() {
         var demo = 0
         var add = 0
@@ -247,6 +260,7 @@ class ScreensTest {
             }
         }
         compose.onNodeWithTag("hero").assertIsDisplayed()
+        compose.onNodeWithTag("lastUpdate", useUnmergedTree = true).assert(hasText("Updated", substring = true))
         compose.onAllNodesWithText("Northern Lights").onFirst().assertExists()
         compose.onAllNodesWithText("Play").onFirst().performClick()
         compose.onAllNodesWithText("My List").onFirst().performClick()

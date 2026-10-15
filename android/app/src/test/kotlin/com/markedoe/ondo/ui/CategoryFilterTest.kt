@@ -39,6 +39,26 @@ class CategoryFilterTest {
     }
 
     @Test
+    fun hidingAStyleOrAWordHidesTheCategoriesNamedAfterIt() {
+        val named = listOf("|FR| Manga", "Animes VOSTFR", "Dessins Animés", "Bollywood Hits", "Drama")
+            .mapIndexed { index, name -> MediaCategory("s-$index", name, ContentType.MOVIE) }
+        val withStyles = content.copy(movieCategories = named)
+        val library = LibraryState().settingWordHidden("manga", hidden = true).settingWordHidden("bollywood", hidden = true)
+        val state = Fixtures.state(library = library, content = withStyles)
+        assertEquals("French cartoons are not anime", setOf("s-0", "s-1", "s-3"), UiMappers.hiddenCategoryIds(state).filter { it.startsWith("s-") }.toSet())
+
+        val ui = CategoryFilter.categories(state, ContentType.MOVIE, filter = "", locale = english)
+        assertEquals(
+            "the fixture's live \"Sports\" category counts too",
+            listOf(StyleRow("manga", 2, hidden = true), StyleRow("kids", 1, hidden = false), StyleRow("sport", 1, hidden = false)),
+            ui.styles,
+        )
+        assertEquals(listOf(WordRow("bollywood", 1)), ui.words)
+        assertEquals("manga", ui.categories.first { it.id == "s-0" }.hiddenWith)
+        assertFalse("filtering lists categories only", CategoryFilter.categories(state, ContentType.MOVIE, filter = "manga", locale = english).showsRules)
+    }
+
+    @Test
     fun theCategoriesScreenListsTagsAndCategories() {
         val library = LibraryState().settingTagsHidden(listOf("PT"), hidden = true).settingCategoryHidden(Fixtures.PLAYLIST_ID, "m-8", hidden = true)
         val ui = CategoryFilter.categories(Fixtures.state(library = library, content = content), ContentType.MOVIE, filter = "", locale = english)

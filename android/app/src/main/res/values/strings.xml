@@ -135,7 +135,7 @@
     <string name="help_playlists_body">Ondo is a player: it shows the movies, series and channels of the subscription your provider gives you, and provides no content of its own.\n\nTo add your subscription, open Settings, Add playlist: an M3U link or file, or an Xtream Codes login (server address, user name and password). Tap a playlist in Settings to switch to it.</string>
     <string name="help_search_title">Find something to watch</string>
     <string name="help_categories_title">Hide languages and categories</string>
-    <string name="help_categories_body">Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nYou can also hide categories one by one there, and show them again at any time.</string>
+    <string name="help_categories_body">Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nStyles work the same way with the words of category names: hide Manga &amp; anime, Children or Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of each movie.\n\nYou can also hide categories one by one there, and show them again at any time.</string>
     <string name="help_playback_title">When a stream does not play</string>
     <string name="help_playback_body">Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.</string>
     <string name="help_privacy_title">Privacy</string>
@@ -222,4 +222,16 @@
         <item quantity="one">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
         <item quantity="other">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
     </plurals>
+    <string name="updated_ago">Updated %1$s</string>
+    <string name="styles">Styles</string>
+    <string name="style_manga">Manga &amp; anime</string>
+    <string name="style_kids">Children</string>
+    <string name="style_animation">Animation</string>
+    <string name="style_documentary">Documentaries</string>
+    <string name="style_sport">Sport</string>
+    <string name="style_horror">Horror</string>
+    <string name="style_music">Music</string>
+    <string name="word_to_hide">Word to hide</string>
+    <string name="show">Show</string>
+    <string name="styles_explanation">Hides the categories whose name holds a style or a word (Manga, Bollywood…), in every playlist, including those added later. Only category names count, not the genre of each movie.</string>
 </resources>

@@ -112,6 +112,8 @@ object UiMappers {
         val channels = favoriteChannels.ifEmpty { recentChannels }.ifEmpty { channelsById.values.take(ROW_LENGTH) }
         return HomeUiState(
             playlistName = state.activePlaylist?.name.orEmpty(),
+            updatedAt = state.content.fetchedAt.takeIf { it > 0 && !state.content.isEmpty },
+            now = now,
             hero = hero,
             continueWatching = showcase.continueWatching().map { resume(it, state) },
             myList = showcase.myList(),

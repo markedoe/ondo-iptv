@@ -139,7 +139,7 @@
     <string name="help_playlists_body">Ondo es un reproductor: muestra las películas, series y canales de la suscripción que te da tu proveedor, y no ofrece ningún contenido propio.\n\nPara añadir tu suscripción, abre Ajustes, Añadir una playlist: un enlace o un archivo M3U, o un acceso Xtream Codes (dirección del servidor, usuario y contraseña). Toca una playlist en Ajustes para cambiar a ella.</string>
     <string name="help_search_title">Encontrar qué ver</string>
     <string name="help_categories_title">Ocultar idiomas y categorías</string>
-    <string name="help_categories_body">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. El botón de filtro de Películas, Series y TV en directo (también en Ajustes, Categorías) oculta de una vez un idioma o un país entero, en todas las listas; las categorías que el proveedor añada después siguen la misma regla.\n\nTambién puedes ocultar ahí las categorías una por una, y volver a mostrarlas cuando quieras.</string>
+    <string name="help_categories_body">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. El botón de filtro de Películas, Series y TV en directo (también en Ajustes, Categorías) oculta de una vez un idioma o un país entero, en todas las listas; las categorías que el proveedor añada después siguen la misma regla.\n\nLos estilos funcionan igual con las palabras de los nombres de categorías: oculta Manga y anime, Infantil o Documentales, o una palabra tuya como Bollywood. Solo cuentan los nombres de las categorías, no el género de cada película.\n\nTambién puedes ocultar ahí las categorías una por una, y volver a mostrarlas cuando quieras.</string>
     <string name="help_playback_title">Cuando una emisión no se reproduce</string>
     <string name="help_playback_body">Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.</string>
     <string name="help_privacy_title">Privacidad</string>
@@ -228,4 +228,16 @@
         <item quantity="many">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
         <item quantity="other">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
     </plurals>
+    <string name="updated_ago">Actualizado %1$s</string>
+    <string name="styles">Estilos</string>
+    <string name="style_manga">Manga y anime</string>
+    <string name="style_kids">Infantil</string>
+    <string name="style_animation">Animación</string>
+    <string name="style_documentary">Documentales</string>
+    <string name="style_sport">Deportes</string>
+    <string name="style_horror">Terror</string>
+    <string name="style_music">Música</string>
+    <string name="word_to_hide">Palabra que ocultar</string>
+    <string name="show">Mostrar</string>
+    <string name="styles_explanation">Oculta las categorías cuyo nombre contiene un estilo o una palabra (Manga, Bollywood…), en todas las listas, incluidas las que se añadan después. Solo cuentan los nombres de las categorías, no el género de cada película.</string>
 </resources>

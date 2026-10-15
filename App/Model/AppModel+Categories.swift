@@ -7,14 +7,21 @@ struct CategoryTagIndex: Sendable {
     private(set) var categories: [String: [MediaCategory]] = [:]
     /// Category id -> its tag.
     private(set) var tagOfCategory: [String: String] = [:]
+    /// Styles found in the category names ("manga", see `CategoryStyles`) -> their categories.
+    private(set) var styles: [String: [MediaCategory]] = [:]
+    /// Category id -> the words of its name, for the styles and words the viewer hides.
+    private(set) var words: [String: [Substring]] = [:]
 
     init() {}
 
     init(content: PlaylistContent) {
-        categories = CategoryTags.detect(in: content.liveCategories + content.movieCategories + content.seriesCategories)
+        let all = content.liveCategories + content.movieCategories + content.seriesCategories
+        categories = CategoryTags.detect(in: all)
         for (tag, list) in categories {
             for category in list { tagOfCategory[category.id] = tag }
         }
+        styles = CategoryStyles.detect(in: all)
+        for category in all { words[category.id] = CategoryStyles.tokens(of: category.name) }
     }
 
     var isEmpty: Bool { categories.isEmpty }
@@ -80,9 +87,38 @@ struct TagSuggestion: Equatable {
 }
 
 extension AppModel {
-    /// Hidden by the viewer, on its own or with its tag ("PT").
+    /// Hidden by the viewer, on its own, with its tag ("PT") or with a style or word of its name ("manga").
     func isHidden(_ category: MediaCategory) -> Bool {
-        isHiddenOnItsOwn(category) || hiddenTag(of: category) != nil
+        isHiddenOnItsOwn(category) || hiddenTag(of: category) != nil || hiddenWord(of: category) != nil
+    }
+
+    /// The style or word hiding this category, if one of the hidden ones is in its name.
+    func hiddenWord(of category: MediaCategory) -> String? {
+        let rules = library.hiddenCategoryWords.keys
+        guard !rules.isEmpty else { return nil }
+        let words = categoryTags.words[category.id] ?? CategoryStyles.tokens(of: category.name)
+        return CategoryStyles.rule(hidingTokens: words, among: rules)
+    }
+
+    func isHidden(word: String) -> Bool {
+        library.isHidden(word: word)
+    }
+
+    func setHidden(_ hidden: Bool, word: String) {
+        updateLibrary { $0.setHidden(hidden, word: word) }
+    }
+
+    /// Words the viewer hid that are not one of the known styles, alphabetically.
+    var hiddenCustomWords: [String] {
+        library.hiddenCategoryWords.keys.filter { CategoryStyles.words[$0] == nil }.sorted()
+    }
+
+    /// Categories of the current playlist whose name holds this style or word.
+    func categoryCount(word: String) -> Int {
+        let all = content.liveCategories + content.movieCategories + content.seriesCategories
+        return all.filter { category in
+            CategoryStyles.rule(hidingTokens: categoryTags.words[category.id] ?? CategoryStyles.tokens(of: category.name), among: [word]) != nil
+        }.count
     }
 
     func isHiddenOnItsOwn(_ category: MediaCategory) -> Bool {
@@ -141,5 +177,21 @@ extension AppModel {
     func dismissTagSuggestion() {
         guard let playlist = activePlaylist else { return }
         updateSettings { $0.dismissedTagSuggestions.insert(playlist.id) }
+    }
+}
+
+/// The styles, as the categories screen names them.
+enum CategoryStyleName {
+    static func name(_ style: String) -> String {
+        switch style {
+        case "manga": return String(localized: "Manga & Anime")
+        case "kids": return String(localized: "Children")
+        case "animation": return String(localized: "Animation")
+        case "documentary": return String(localized: "Documentaries")
+        case "sport": return String(localized: "Sport")
+        case "horror": return String(localized: "Horror")
+        case "music": return String(localized: "Music")
+        default: return style
+        }
     }
 }

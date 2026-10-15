@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.core.TextNormalizer
+import com.markedoe.ondo.core.library.CategoryStyles
 import com.markedoe.ondo.core.library.CategoryTags
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
@@ -11,10 +12,26 @@ import java.util.Locale
 /** A language or country tag of the catalogue's categories ("|PT| Filmes") in the categories screen. */
 data class TagRow(val tag: String, val label: String, val count: Int, val hidden: Boolean)
 
-/** One category in the categories screen; [hiddenWith] is the tag hiding it, when its tag is hidden. */
+/**
+ * One category in the categories screen; [hiddenWith] is the tag ("PT"), style ("manga") or word hiding it, when one
+ * of them is hidden.
+ */
 data class CategoryToggle(val id: String, val name: String, val count: Int, val hidden: Boolean, val hiddenWith: String?)
 
-data class CategoriesUiState(val tags: List<TagRow> = emptyList(), val categories: List<CategoryToggle> = emptyList())
+/** A style found in the catalogue's category names ("manga", see `CategoryStyles`), or hidden before. */
+data class StyleRow(val style: String, val count: Int, val hidden: Boolean)
+
+/** A word the viewer hid, and the categories of the catalogue holding it. */
+data class WordRow(val word: String, val count: Int)
+
+data class CategoriesUiState(
+    val tags: List<TagRow> = emptyList(),
+    val categories: List<CategoryToggle> = emptyList(),
+    val styles: List<StyleRow> = emptyList(),
+    val words: List<WordRow> = emptyList(),
+    /** False while filtering: the tags, styles and words are not listed then. */
+    val showsRules: Boolean = true,
+)
 
 /** "Show only your languages?": the viewer's language and country tags are kept, the others hidden. */
 data class TagSuggestion(val kept: List<String>, val keptNames: List<String>, val hidden: List<String>)
@@ -33,11 +50,16 @@ object CategoryFilter {
     /** Codes providers use for a country that is not its ISO code. */
     private val countryAliases = mapOf("UK" to "GB")
 
-    /** Tags shared by several categories, and the tag of each such category. */
+    /** Tags shared by several categories and the tag of each such category; styles found; words of each name. */
     class TagIndex(content: PlaylistContent) {
-        val categories: Map<String, List<MediaCategory>> =
-            CategoryTags.detect(content.liveCategories + content.movieCategories + content.seriesCategories)
+        private val all = content.liveCategories + content.movieCategories + content.seriesCategories
+        val categories: Map<String, List<MediaCategory>> = CategoryTags.detect(all)
         val tagOf: Map<String, String> = categories.flatMap { (tag, list) -> list.map { it.id to tag } }.toMap()
+        val styles: Map<String, List<MediaCategory>> = CategoryStyles.detect(all)
+        val words: Map<String, List<String>> = all.associate { it.id to CategoryStyles.tokens(it.name) }
+
+        /** Categories of the catalogue whose name holds this style or word. */
+        fun count(rule: String): Int = words.values.count { CategoryStyles.matches(it, rule) }
     }
 
     @Volatile private var cached: Pair<PlaylistContent, TagIndex>? = null
@@ -74,9 +96,13 @@ object CategoryFilter {
     fun isHidden(state: OndoState, category: MediaCategory): Boolean =
         state.library.isCategoryHidden(state.activePlaylistId.orEmpty(), category.id) || hiddenWith(state, category) != null
 
-    /** The tag hiding this category, if its tag is hidden. */
-    fun hiddenWith(state: OndoState, category: MediaCategory): String? =
-        tags(state.content).tagOf[category.id]?.takeIf { it in state.library.hiddenTags }
+    /** The tag, style or word hiding this category, if one of them is hidden. */
+    fun hiddenWith(state: OndoState, category: MediaCategory): String? {
+        val index = tags(state.content)
+        index.tagOf[category.id]?.takeIf { it in state.library.hiddenTags }?.let { return it }
+        if (state.library.hiddenWords.isEmpty()) return null
+        return CategoryStyles.ruleHiding(index.words[category.id] ?: CategoryStyles.tokens(category.name), state.library.hiddenWords)
+    }
 
     /** Languages and countries first (by name), other tags after. */
     fun sortedTags(index: TagIndex, locale: Locale): List<String> =
@@ -99,10 +125,16 @@ object CategoryFilter {
             val name = TextNormalizer.normalize(category.name)
             tokens.all { it in name }
         }
+        val hiddenWords = state.library.hiddenWords
         return CategoriesUiState(
             tags = if (tokens.isNotEmpty()) emptyList() else sortedTags(index, locale).map { tag ->
                 TagRow(tag, name(tag, locale)?.let { "$tag · $it" } ?: tag, index.categories[tag]?.size ?: 0, tag in state.library.hiddenTags)
             },
+            styles = CategoryStyles.order.filter { it in index.styles || it in hiddenWords }.map { style ->
+                StyleRow(style, index.styles[style]?.size ?: 0, style in hiddenWords)
+            },
+            words = hiddenWords.filter { it !in CategoryStyles.words }.sorted().map { WordRow(it, index.count(it)) },
+            showsRules = tokens.isEmpty(),
             categories = shown.map { category ->
                 CategoryToggle(category.id, category.name, counts[category.id] ?: 0, isHidden(state, category), hiddenWith(state, category))
             },

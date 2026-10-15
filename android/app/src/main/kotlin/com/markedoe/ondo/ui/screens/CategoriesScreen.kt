@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Search
@@ -30,12 +32,19 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.library.CategoryStyles
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.ui.CategoriesUiState
 
@@ -44,15 +53,24 @@ class CategoriesActions(
     val onType: (ContentType) -> Unit = {},
     val onFilter: (String) -> Unit = {},
     val onTag: (String, Boolean) -> Unit = { _, _ -> },
+    /** Hides (true) or shows a style ("manga") or a word of the viewer's, in every playlist. */
+    val onWord: (String, Boolean) -> Unit = { _, _ -> },
     val onCategory: (String, Boolean) -> Unit = { _, _ -> },
     /** Shows (false) or hides (true) every category listed. */
     val onAll: (Boolean) -> Unit = {},
 )
 
-/** Which categories are shown: by language or country tag ("|PT|"), in every playlist, then one by one. */
+/** Which categories are shown: by language or country tag ("|PT|") or by style, in every playlist, then one by one. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String, actions: CategoriesActions) {
+    var newWord by rememberSaveable { mutableStateOf("") }
+    val addWord = {
+        CategoryStyles.ruleForWord(newWord)?.let { word ->
+            actions.onWord(word, true)
+            newWord = ""
+        }
+    }
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).testTag("categories")) {
         TopAppBar(
             title = { Text(stringResource(R.string.categories)) },
@@ -93,6 +111,54 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                 }
                 item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
             }
+            if (state.showsRules) {
+                item { CategoriesSectionTitle(stringResource(R.string.styles)) }
+                items(state.styles, key = { "style-" + it.style }) { style ->
+                    ListItem(
+                        headlineContent = { Text(styleName(style.style)) },
+                        supportingContent = { Text(pluralStringResource(R.plurals.category_count, style.count, style.count)) },
+                        trailingContent = {
+                            Switch(checked = !style.hidden, onCheckedChange = { actions.onWord(style.style, !it) }, modifier = Modifier.testTag("style-" + style.style))
+                        },
+                    )
+                }
+                items(state.words, key = { "word-" + it.word }) { word ->
+                    ListItem(
+                        headlineContent = { Text(word.word) },
+                        supportingContent = { Text(pluralStringResource(R.plurals.category_count, word.count, word.count)) },
+                        trailingContent = {
+                            TextButton(onClick = { actions.onWord(word.word, false) }, modifier = Modifier.testTag("showWord-" + word.word)) {
+                                Text(stringResource(R.string.show))
+                            }
+                        },
+                    )
+                }
+                item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = newWord,
+                            onValueChange = { newWord = it },
+                            singleLine = true,
+                            placeholder = { Text(stringResource(R.string.word_to_hide)) },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { addWord() }),
+                            modifier = Modifier.weight(1f).testTag("wordToHide"),
+                        )
+                        TextButton(onClick = { addWord() }, enabled = CategoryStyles.ruleForWord(newWord) != null, modifier = Modifier.testTag("addWord")) {
+                            Text(stringResource(R.string.add))
+                        }
+                    }
+                }
+                item {
+                    Text(
+                        stringResource(R.string.styles_explanation),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+                item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+            }
             item { CategoriesSectionTitle(stringResource(R.string.categories)) }
             item {
                 val options = listOf(ContentType.MOVIE to R.string.movies, ContentType.SERIES to R.string.series, ContentType.LIVE to R.string.live_tv)
@@ -117,7 +183,7 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                     headlineContent = { Text(category.name) },
                     supportingContent = {
                         val count = pluralStringResource(R.plurals.item_count, category.count, category.count)
-                        Text(category.hiddenWith?.let { stringResource(R.string.hidden_with, it) + " · " + count } ?: count)
+                        Text(category.hiddenWith?.let { stringResource(R.string.hidden_with, styleName(it)) + " · " + count } ?: count)
                     },
                     trailingContent = {
                         Switch(
@@ -149,4 +215,17 @@ private fun CategoriesSectionTitle(text: String) {
         color = MaterialTheme.colorScheme.primary,
         modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
     )
+}
+
+/** A style as the screen names it; a tag ("PT") or a word of the viewer's stays as it is. */
+@Composable
+fun styleName(rule: String): String = when (rule) {
+    "manga" -> stringResource(R.string.style_manga)
+    "kids" -> stringResource(R.string.style_kids)
+    "animation" -> stringResource(R.string.style_animation)
+    "documentary" -> stringResource(R.string.style_documentary)
+    "sport" -> stringResource(R.string.style_sport)
+    "horror" -> stringResource(R.string.style_horror)
+    "music" -> stringResource(R.string.style_music)
+    else -> rule
 }

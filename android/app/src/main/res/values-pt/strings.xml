@@ -139,7 +139,7 @@
     <string name="help_playlists_body">O Ondo é um player: ele mostra os filmes, séries e canais da assinatura que o seu provedor oferece, e não fornece nenhum conteúdo próprio.\n\nPara adicionar sua assinatura, abra Ajustes, Adicionar uma playlist: um link ou arquivo M3U, ou um login Xtream Codes (endereço do servidor, usuário e senha). Toque em uma playlist em Ajustes para mudar para ela.</string>
     <string name="help_search_title">Encontrar o que assistir</string>
     <string name="help_categories_title">Ocultar idiomas e categorias</string>
-    <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.</string>
+    <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nOs estilos funcionam do mesmo jeito com as palavras dos nomes das categorias: oculte Mangá e anime, Infantil ou Documentários, ou uma palavra sua, como Bollywood. Só os nomes das categorias contam, não o gênero de cada filme.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.</string>
     <string name="help_playback_title">Quando um stream não toca</string>
     <string name="help_playback_body">O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.</string>
     <string name="help_privacy_title">Privacidade</string>
@@ -228,4 +228,16 @@
         <item quantity="many">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>
         <item quantity="other">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>
     </plurals>
+    <string name="updated_ago">Atualizado %1$s</string>
+    <string name="styles">Estilos</string>
+    <string name="style_manga">Mangá e anime</string>
+    <string name="style_kids">Infantil</string>
+    <string name="style_animation">Animação</string>
+    <string name="style_documentary">Documentários</string>
+    <string name="style_sport">Esportes</string>
+    <string name="style_horror">Terror</string>
+    <string name="style_music">Música</string>
+    <string name="word_to_hide">Palavra a ocultar</string>
+    <string name="show">Mostrar</string>
+    <string name="styles_explanation">Oculta as categorias cujo nome contém um estilo ou uma palavra (Manga, Bollywood…), em todas as playlists, inclusive as adicionadas depois. Só os nomes das categorias contam, não o gênero de cada filme.</string>
 </resources>

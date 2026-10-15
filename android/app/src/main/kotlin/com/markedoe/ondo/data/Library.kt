@@ -82,6 +82,8 @@ data class LibraryState(
     val hiddenCategories: Set<String> = emptySet(),
     /** Language or country tags ("PT", see `CategoryTags`) hidden in every playlist. */
     val hiddenTags: Set<String> = emptySet(),
+    /** Styles and words ("manga", "bollywood", see `CategoryStyles`) whose categories are hidden in every playlist. */
+    val hiddenWords: Set<String> = emptySet(),
     /** By name. */
     val collections: List<UserCollection> = emptyList(),
     /** Soonest first. */
@@ -96,6 +98,9 @@ data class LibraryState(
 
     fun settingTagsHidden(tags: Collection<String>, hidden: Boolean): LibraryState =
         copy(hiddenTags = if (hidden) hiddenTags + tags else hiddenTags - tags.toSet())
+
+    fun settingWordHidden(word: String, hidden: Boolean): LibraryState =
+        copy(hiddenWords = if (hidden) hiddenWords + word else hiddenWords - word)
 
     fun isFavorite(playlistId: String, kind: ItemKind, itemId: String): Boolean =
         favorites.any { it.playlistId == playlistId && it.kind == kind && it.itemId == itemId }

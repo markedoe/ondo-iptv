@@ -475,6 +475,7 @@ private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHo
             onType = { type = it },
             onFilter = { filter = it },
             onTag = { tag, hidden -> viewModel.setTagsHidden(listOf(tag), hidden) },
+            onWord = viewModel::setWordHidden,
             onCategory = viewModel::setCategoryHidden,
             onAll = { hidden -> ui.categories.filter { it.hiddenWith == null }.forEach { viewModel.setCategoryHidden(it.id, hidden) } },
         ),

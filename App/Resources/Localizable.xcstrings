@@ -2185,6 +2185,46 @@
         }
       }
     },
+    "Animation": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animation"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animación"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animação"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "动画"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رسوم متحركة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "एनिमेशन"
+          }
+        }
+      }
+    },
     "Any Movie": {
       "localizations": {
         "fr": {
@@ -3581,6 +3621,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "चैनल, कार्यक्रम, फ़िल्में, सीरीज़"
+          }
+        }
+      }
+    },
+    "Children": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enfants"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Infantil"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Infantil"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儿童"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأطفال"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बच्चे"
           }
         }
       }
@@ -5221,6 +5301,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "निर्देशक"
+          }
+        }
+      }
+    },
+    "Documentaries": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentaires"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentales"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documentários"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "纪录片"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وثائقيات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "वृत्तचित्र"
           }
         }
       }
@@ -7865,6 +7985,46 @@
         }
       }
     },
+    "Hides the categories whose name holds a style or a word (Manga, Bollywood…), in every playlist, including those added later. Only category names count, not the genre of each movie.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masque les catégories dont le nom contient un style ou un mot (Manga, Bollywood…), dans toutes les playlists, y compris celles ajoutées plus tard. Seuls les noms de catégories comptent, pas le genre de chaque film."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculta las categorías cuyo nombre contiene un estilo o una palabra (Manga, Bollywood…), en todas las listas, incluidas las que se añadan después. Solo cuentan los nombres de las categorías, no el género de cada película."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oculta as categorias cujo nome contém um estilo ou uma palavra (Manga, Bollywood…), em todas as playlists, inclusive as adicionadas depois. Só os nomes das categorias contam, não o gênero de cada filme."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏名称中包含某种风格或某个词（如 Manga、Bollywood…）的分类，适用于所有播放列表，包括以后添加的分类。只看分类名称，不看每部电影的类型。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُخفي الفئات التي يتضمن اسمها نمطًا أو كلمة (Manga وBollywood…) في كل قوائم التشغيل، بما فيها الفئات المضافة لاحقًا. تُحتسب أسماء الفئات فقط، لا نوع كل فيلم."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "उन श्रेणियों को छिपाता है जिनके नाम में कोई शैली या शब्द (Manga, Bollywood…) हो, सभी प्लेलिस्ट में, बाद में जोड़ी गई श्रेणियों सहित। केवल श्रेणियों के नाम गिने जाते हैं, हर फ़िल्म की शैली नहीं।"
+          }
+        }
+      }
+    },
     "Home": {
       "localizations": {
         "fr": {
@@ -7901,6 +8061,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "होम"
+          }
+        }
+      }
+    },
+    "Horror": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horreur"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terror"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terror"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恐怖"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رعب"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "हॉरर"
           }
         }
       }
@@ -9505,6 +9705,46 @@
         }
       }
     },
+    "Manga & Anime": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga et anime"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga y anime"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mangá e anime"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "动漫"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مانغا وأنمي"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मंगा और एनीमे"
+          }
+        }
+      }
+    },
     "Manual": {
       "localizations": {
         "fr": {
@@ -9585,42 +9825,42 @@
         }
       }
     },
-    "Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nYou can also hide categories one by one there, or from a category's menu (long-press, or Control-click on a Mac). The number of hidden categories is shown at the end of the list, so you can bring them back at any time.": {
+    "Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nStyles work the same way with the words of category names: hide Manga & Anime, Children or Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of each movie.\n\nYou can also hide categories one by one there, or from a category's menu (long-press, or Control-click on a Mac). The number of hidden categories is shown at the end of the list, so you can bring them back at any time.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Le bouton de filtre de Films, Séries et TV en direct (aussi dans Réglages, Catégories) masque d’un coup une langue ou un pays entier, dans toutes les playlists ; les catégories que le fournisseur ajoute plus tard suivent la même règle.\n\nVous pouvez aussi y masquer les catégories une par une, ou depuis le menu d’une catégorie (appui long, ou Contrôle-clic sur Mac). Le nombre de catégories masquées est indiqué au bas de la liste, pour les faire revenir à tout moment."
+            "value": "Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Le bouton de filtre de Films, Séries et TV en direct (aussi dans Réglages, Catégories) masque d’un coup une langue ou un pays entier, dans toutes les playlists ; les catégories que le fournisseur ajoute plus tard suivent la même règle.\n\nLes styles fonctionnent de la même façon avec les mots des noms de catégories : masquez Manga et anime, Enfants ou Documentaires, ou un mot de votre choix comme Bollywood. Seuls les noms de catégories comptent, pas le genre de chaque film.\n\nVous pouvez aussi y masquer les catégories une par une, ou depuis le menu d’une catégorie (appui long, ou Contrôle-clic sur Mac). Le nombre de catégories masquées est indiqué au bas de la liste, pour les faire revenir à tout moment."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. El botón de filtro de Películas, Series y TV en directo (también en Ajustes, Categorías) oculta de una vez un idioma o un país entero, en todas las listas; las categorías que el proveedor añada después siguen la misma regla.\n\nTambién puedes ocultar ahí las categorías una por una, o desde el menú de una categoría (mantener pulsado, o Control-clic en un Mac). El número de categorías ocultas aparece al final de la lista, para recuperarlas cuando quieras."
+            "value": "Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. El botón de filtro de Películas, Series y TV en directo (también en Ajustes, Categorías) oculta de una vez un idioma o un país entero, en todas las listas; las categorías que el proveedor añada después siguen la misma regla.\n\nLos estilos funcionan igual con las palabras de los nombres de categorías: oculta Manga y anime, Infantil o Documentales, o una palabra tuya como Bollywood. Solo cuentan los nombres de las categorías, no el género de cada película.\n\nTambién puedes ocultar ahí las categorías una por una, o desde el menú de una categoría (mantener pulsado, o Control-clic en un Mac). El número de categorías ocultas aparece al final de la lista, para recuperarlas cuando quieras."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nVocê também pode ocultar ali as categorias uma a uma, ou pelo menu de uma categoria (toque e segure, ou Control-clique no Mac). O número de categorias ocultas aparece no fim da lista, para trazê-las de volta quando quiser."
+            "value": "Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nOs estilos funcionam do mesmo jeito com as palavras dos nomes das categorias: oculte Mangá e anime, Infantil ou Documentários, ou uma palavra sua, como Bollywood. Só os nomes das categorias contam, não o gênero de cada filme.\n\nVocê também pode ocultar ali as categorias uma a uma, ou pelo menu de uma categoria (toque e segure, ou Control-clique no Mac). O número de categorias ocultas aparece no fim da lista, para trazê-las de volta quando quiser."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "许多提供商会在分类名称前加上代码，例如 |PT| 或 FR:。“电影”“剧集”和“直播”上的筛选按钮（也在“设置”>“分类”中）可一次隐藏整个语言或国家/地区，适用于所有播放列表；提供商以后新增的分类也遵循同一规则。\n\n你也可以在那里逐个隐藏分类，或通过分类的菜单隐藏（长按，在 Mac 上按住 Control 点按）。列表底部会显示已隐藏的分类数量，方便你随时恢复。"
+            "value": "许多提供商会在分类名称前加上代码，例如 |PT| 或 FR:。“电影”“剧集”和“直播”上的筛选按钮（也在“设置”>“分类”中）可一次隐藏整个语言或国家/地区，适用于所有播放列表；提供商以后新增的分类也遵循同一规则。\n\n风格的用法相同，针对分类名称中的词：隐藏“动漫”“儿童”或“纪录片”，或你自己的词，例如 Bollywood。只看分类名称，不看每部电影的类型。\n\n你也可以在那里逐个隐藏分类，或通过分类的菜单隐藏（长按，在 Mac 上按住 Control 点按）。列表底部会显示已隐藏的分类数量，方便你随时恢复。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:. يُخفي زر التصفية في الأفلام والمسلسلات والبث المباشر (وأيضًا في الإعدادات، الفئات) لغة أو بلدًا بالكامل دفعة واحدة، في جميع قوائم التشغيل؛ وتتبع الفئات التي يضيفها المزوّد لاحقًا القاعدة نفسها.\n\nيمكنك أيضًا إخفاء الفئات واحدة تلو الأخرى هناك، أو من قائمة الفئة (بالضغط المطوّل، أو Control مع النقر على Mac). يظهر عدد الفئات المخفية في آخر القائمة لتعيدها متى شئت."
+            "value": "يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:. يُخفي زر التصفية في الأفلام والمسلسلات والبث المباشر (وأيضًا في الإعدادات، الفئات) لغة أو بلدًا بالكامل دفعة واحدة، في جميع قوائم التشغيل؛ وتتبع الفئات التي يضيفها المزوّد لاحقًا القاعدة نفسها.\n\nتعمل الأنماط بالطريقة نفسها مع كلمات أسماء الفئات: أخفِ «مانغا وأنمي» أو «الأطفال» أو «وثائقيات»، أو كلمة من اختيارك مثل Bollywood. تُحتسب أسماء الفئات فقط، لا نوع كل فيلم.\n\nيمكنك أيضًا إخفاء الفئات واحدة تلو الأخرى هناك، أو من قائمة الفئة (بالضغط المطوّل، أو Control مع النقر على Mac). يظهر عدد الفئات المخفية في آخر القائمة لتعيدها متى شئت."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "कई प्रदाता श्रेणियों के नाम |PT| या FR: जैसे कोड से शुरू करते हैं। फ़िल्में, सीरीज़ और लाइव टीवी पर फ़िल्टर बटन (सेटिंग्स, श्रेणियाँ में भी) एक साथ पूरी भाषा या देश को हर प्लेलिस्ट में छिपा देता है; प्रदाता बाद में जो श्रेणियाँ जोड़ता है, वे भी इसी नियम का पालन करती हैं।\n\nआप वहाँ श्रेणियाँ एक-एक करके भी छिपा सकते हैं, या किसी श्रेणी के मेनू से (देर तक दबाएँ, या Mac पर Control-क्लिक करें)। छिपी श्रेणियों की संख्या सूची के अंत में दिखती है, ताकि आप उन्हें कभी भी वापस ला सकें।"
+            "value": "कई प्रदाता श्रेणियों के नाम |PT| या FR: जैसे कोड से शुरू करते हैं। फ़िल्में, सीरीज़ और लाइव टीवी पर फ़िल्टर बटन (सेटिंग्स, श्रेणियाँ में भी) एक साथ पूरी भाषा या देश को हर प्लेलिस्ट में छिपा देता है; प्रदाता बाद में जो श्रेणियाँ जोड़ता है, वे भी इसी नियम का पालन करती हैं।\n\nशैलियाँ श्रेणियों के नामों के शब्दों के साथ इसी तरह काम करती हैं: मंगा और एनीमे, बच्चे या वृत्तचित्र छिपाएँ, या अपना कोई शब्द जैसे Bollywood। केवल श्रेणियों के नाम गिने जाते हैं, हर फ़िल्म की शैली नहीं।\n\nआप वहाँ श्रेणियाँ एक-एक करके भी छिपा सकते हैं, या किसी श्रेणी के मेनू से (देर तक दबाएँ, या Mac पर Control-क्लिक करें)। छिपी श्रेणियों की संख्या सूची के अंत में दिखती है, ताकि आप उन्हें कभी भी वापस ला सकें।"
           }
         }
       }
@@ -10181,6 +10421,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "मल्टीव्यू में ज़्यादा से ज़्यादा 4 चैनल दिखते हैं। दूसरा जोड़ने के लिए कोई एक बंद करें।"
+          }
+        }
+      }
+    },
+    "Music": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Musique"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Música"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Música"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "音乐"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موسيقى"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संगीत"
           }
         }
       }
@@ -17951,6 +18231,46 @@
         }
       }
     },
+    "Sport": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sport"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deportes"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esportes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "体育"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رياضة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "खेल"
+          }
+        }
+      }
+    },
     "Starting…": {
       "localizations": {
         "fr": {
@@ -18187,6 +18507,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "स्ट्रेच"
+          }
+        }
+      }
+    },
+    "Styles": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Styles"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estilos"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estilos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "风格"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأنماط"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शैलियाँ"
           }
         }
       }
@@ -20671,6 +21031,46 @@
         }
       }
     },
+    "Updated %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mis à jour %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizado %@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atualizado %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@更新"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حُدّثت %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ अपडेट किया गया"
+          }
+        }
+      }
+    },
     "Use the Apple Engine": {
       "localizations": {
         "fr": {
@@ -21627,6 +22027,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "विजेता: %@"
+          }
+        }
+      }
+    },
+    "Word to hide": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mot à masquer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palabra que ocultar"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palavra a ocultar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要隐藏的词"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كلمة لإخفائها"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "छिपाने के लिए शब्द"
           }
         }
       }

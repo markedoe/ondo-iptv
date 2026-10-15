@@ -345,6 +345,12 @@ struct HomeView: View {
                 }
             }
             Divider()
+            #if os(macOS)
+            // The toolbar has room for the name only: the date of the catalogue is in the menu.
+            if let date = lastUpdate {
+                Text("Updated \(date.formatted(.relative(presentation: .named)))")
+            }
+            #endif
             Button {
                 showingAddPlaylist = true
             } label: {
@@ -357,23 +363,60 @@ struct HomeView: View {
             }
         } label: {
             if compactLabel {
-                HStack(spacing: 5) {
-                    if model.isRefreshing { ProgressView().controlSize(.small) }
-                    Text(model.activePlaylist?.name ?? String(localized: "Playlists"))
-                        .font(.headline)
-                        .lineLimit(1)
-                    Image(systemName: "chevron.down")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.secondary)
+                VStack(spacing: 0) {
+                    if let date = lastUpdate {
+                        LastUpdateText(date: date)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    HStack(spacing: 5) {
+                        if model.isRefreshing { ProgressView().controlSize(.small) }
+                        Text(model.activePlaylist?.name ?? String(localized: "Playlists"))
+                            .font(.headline)
+                            .lineLimit(1)
+                        Image(systemName: "chevron.down")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .foregroundStyle(.primary)
             } else {
                 HStack(spacing: 4) {
                     if model.isRefreshing { ProgressView().controlSize(.small) }
+                    #if os(iOS)
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let date = lastUpdate {
+                            LastUpdateText(date: date)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Label(model.activePlaylist?.name ?? String(localized: "Playlists"), systemImage: "list.bullet.rectangle")
+                    }
+                    #else
                     Label(model.activePlaylist?.name ?? String(localized: "Playlists"), systemImage: "list.bullet.rectangle")
+                    #endif
                 }
             }
         }
         .accessibilityIdentifier("playlistMenu")
+    }
+
+    /// When the catalogue of the playlist was last downloaded.
+    private var lastUpdate: Date? {
+        guard model.activePlaylist != nil, !model.content.isEmpty else { return nil }
+        return min(model.content.fetchedAt, Date())
+    }
+}
+
+/// "Updated 2 hours ago", kept current while the screen stays open.
+private struct LastUpdateText: View {
+    let date: Date
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 60)) { _ in
+            Text("Updated \(date.formatted(.relative(presentation: .named)))")
+        }
     }
 }

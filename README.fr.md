@@ -14,7 +14,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 ### iPhone, iPad et Mac
 
 - **Accueil** : carrousel de films et séries à la une, « Continuer à regarder », Ma liste, ajouts récents,
-  tendances ; le direct en dernier.
+  tendances ; le direct en dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
   ou note, fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
@@ -53,8 +53,10 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   **collections** pour les regrouper à votre façon.
 - **Catégories** : masquez d'un coup une langue ou un pays (les fournisseurs commencent le nom des catégories
   par des codes comme `|PT|` ou `FR:`), une règle qui couvre aussi les catégories ajoutées plus tard ;
-  proposé une fois quand une playlist en compte beaucoup (garder vos langues, choisir, ou plus tard) ; ou
-  masquez les catégories une par une. Le bouton de filtre est sur les écrans Films, Séries et Live TV.
+  proposé une fois quand une playlist en compte beaucoup (garder vos langues, choisir, ou plus tard) ;
+  masquez de la même façon un **style** (manga et anime, enfants, documentaires…) ou n'importe quel mot des noms
+  de catégories (Bollywood…) ; ou masquez les catégories une par une. Le bouton de filtre est sur les écrans
+  Films, Séries et Live TV.
 - **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
   limite les connexions ou n'envoie rien.
 - **Données** : sauvegarde / restauration JSON, cache vidable.
@@ -64,7 +66,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 
 ### Android (téléphones et tablettes)
 
-- **Accueil** : carrousel, « Continuer à regarder », Ma liste, ajouts récents, chaînes.
+- **Accueil** : carrousel, « Continuer à regarder », Ma liste, ajouts récents, chaînes ; la date de dernière
+  mise à jour de la playlist, au-dessus de son nom.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
@@ -75,7 +78,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   **rappels**, une notification quelques minutes avant le début d'un programme.
 - Onglet **Ma liste** : les films, séries et chaînes gardés, et vos **collections** (Collection sur la fiche d'un film
   ou d'une série), comme sur Apple.
-- **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…) ou une par une, comme sur Apple.
+- **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…), par style ou par mot (manga,
+  Bollywood…) ou une par une, comme sur Apple.
 - **Aide** dans les Réglages.
 - **Prix** sur les fiches des films et une rangée « Films primés » dans Films, avec les mêmes données embarquées.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et

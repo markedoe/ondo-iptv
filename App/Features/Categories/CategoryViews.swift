@@ -6,6 +6,7 @@ struct CategoryManagerView: View {
     @Environment(AppModel.self) private var model
     @State private var type: ContentType
     @State private var filter = ""
+    @State private var newWord = ""
 
     init(type: ContentType = .movie) {
         _type = State(initialValue: type)
@@ -23,6 +24,9 @@ struct CategoryManagerView: View {
         List {
             if !model.categoryTags.isEmpty && filter.isEmpty {
                 tagsSection
+            }
+            if filter.isEmpty {
+                stylesSection
             }
             Section {
                 Picker("Type", selection: $type) {
@@ -77,9 +81,60 @@ struct CategoryManagerView: View {
         }
     }
 
+    /// Styles found in the playlist (or hidden before), the viewer's own words, and a field to add one.
+    private var stylesSection: some View {
+        let styles = CategoryStyles.order.filter { model.categoryTags.styles[$0] != nil || model.isHidden(word: $0) }
+        return Section {
+            ForEach(styles, id: \.self) { style in
+                Toggle(isOn: Binding(
+                    get: { !model.isHidden(word: style) },
+                    set: { model.setHidden(!$0, word: style) }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(CategoryStyleName.name(style))
+                        Text("\(model.categoryTags.styles[style]?.count ?? 0) categories")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            ForEach(model.hiddenCustomWords, id: \.self) { word in
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: word)
+                        Text("\(model.categoryCount(word: word)) categories")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Show") { model.setHidden(false, word: word) }
+                        .buttonStyle(.borderless)
+                }
+            }
+            HStack {
+                TextField("Word to hide", text: $newWord)
+                    .onSubmit(addWord)
+                    .accessibilityIdentifier("wordToHide")
+                Button("Add", action: addWord)
+                    .buttonStyle(.borderless)
+                    .disabled(CategoryStyles.rule(forWord: newWord) == nil)
+            }
+        } header: {
+            Text("Styles")
+        } footer: {
+            Text("Hides the categories whose name holds a style or a word (Manga, Bollywood…), in every playlist, including those added later. Only category names count, not the genre of each movie.")
+        }
+    }
+
+    private func addWord() {
+        guard let word = CategoryStyles.rule(forWord: newWord) else { return }
+        model.setHidden(true, word: word)
+        newWord = ""
+    }
+
     @ViewBuilder
     private func row(_ category: MediaCategory) -> some View {
-        let hiddenTag = model.hiddenTag(of: category)
+        let hiddenTag = model.hiddenTag(of: category) ?? model.hiddenWord(of: category).map(CategoryStyleName.name)
         Toggle(isOn: Binding(
             get: { !model.isHidden(category) },
             set: { model.setHidden(!$0, category: category) }
@@ -101,7 +156,7 @@ struct CategoryManagerView: View {
     }
 
     private func setHidden(_ hidden: Bool, _ categories: [MediaCategory]) {
-        for category in categories where model.hiddenTag(of: category) == nil {
+        for category in categories where model.hiddenTag(of: category) == nil && model.hiddenWord(of: category) == nil {
             model.setHidden(hidden, category: category)
         }
     }

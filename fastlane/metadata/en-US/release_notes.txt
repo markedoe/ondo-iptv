@@ -9,3 +9,5 @@
 • Search can be filtered by release years, and the grids sort by release date.
 • Hide a whole language or country in one go (category names that start with |PT|, FR:…): the categories added later follow. The filter button is on Movies, Series and Live TV.
 • Awards and festival selections (Cannes, Oscars, Berlin, Venice, Césars…) on movie pages, an Award Winners row, and a search filter by festival or ceremony.
+• Hide a style just as easily (manga & anime, children, documentaries…) or any word of category names, in every playlist.
+• Home shows when the playlist was last updated, above its name.
