@@ -859,6 +859,46 @@
         }
       }
     },
+    "API Read Access Token": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jeton d'accès en lecture à l'API"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Read Access Token"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Read Access Token"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Read Access Token"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Read Access Token"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API Read Access Token"
+          }
+        }
+      }
+    },
     "API key": {
       "localizations": {
         "fr": {
@@ -1015,6 +1055,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "ऑस्कर पुरस्कार"
+          }
+        }
+      }
+    },
+    "Accepted by TMDb: trending titles, missing background images and filmographies come from TMDb.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accepté par TMDb : les tendances, les images de fond manquantes et les filmographies viennent de TMDb."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceptado por TMDb: las tendencias, las imágenes de fondo que faltan y las filmografías vienen de TMDb."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceito pelo TMDb: as tendências, as imagens de fundo que faltam e as filmografias vêm do TMDb."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDb 已接受：热门内容、缺少的背景图和影人作品均来自 TMDb。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قبِله TMDb: تأتي العناوين الرائجة وصور الخلفية الناقصة وأعمال الممثلين والمخرجين من TMDb."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDb ने स्वीकार किया: ट्रेंडिंग टाइटल, न मिलने वाली बैकग्राउंड इमेज और फ़िल्मोग्राफ़ी TMDb से आती हैं।"
           }
         }
       }
@@ -3585,42 +3665,82 @@
         }
       }
     },
-    "Channels, programmes, movies, series": {
+    "Channels, programmes, movies, series, people": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chaînes, programmes, films, séries"
+            "value": "Chaînes, programmes, films, séries, personnes"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Canales, programas, películas, series"
+            "value": "Canales, programas, películas, series, personas"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Canais, programas, filmes, séries"
+            "value": "Canais, programas, filmes, séries, pessoas"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "频道、节目、电影、剧集"
+            "value": "频道、节目、电影、剧集、人物"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "القنوات والبرامج والأفلام والمسلسلات"
+            "value": "القنوات والبرامج والأفلام والمسلسلات والأشخاص"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "चैनल, कार्यक्रम, फ़िल्में, सीरीज़"
+            "value": "चैनल, कार्यक्रम, फ़िल्में, सीरीज़, लोग"
+          }
+        }
+      }
+    },
+    "Check and Save": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérifier et enregistrer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprobar y guardar"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificar e salvar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "验证并保存"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحقق واحفظ"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जाँचें और सहेजें"
           }
         }
       }
@@ -6825,42 +6945,42 @@
         }
       }
     },
-    "Find channels, TV programmes, movies and series in the current playlist.": {
+    "Find channels, TV programmes, movies, series, actors and directors in the current playlist.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Trouvez chaînes, programmes TV, films et séries dans la playlist actuelle."
+            "value": "Trouvez chaînes, programmes TV, films, séries, acteurs et réalisateurs dans la playlist actuelle."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Encuentra canales, programas de TV, películas y series en la playlist actual."
+            "value": "Encuentra canales, programas de TV, películas, series, actores y directores en la playlist actual."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Encontre canais, programas de TV, filmes e séries na playlist atual."
+            "value": "Encontre canais, programas de TV, filmes, séries, atores e diretores na playlist atual."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在当前播放列表中查找频道、电视节目、电影和剧集。"
+            "value": "在当前播放列表中查找频道、电视节目、电影、剧集、演员和导演。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "ابحث عن القنوات والبرامج التلفزيونية والأفلام والمسلسلات في قائمة التشغيل الحالية."
+            "value": "ابحث عن القنوات والبرامج التلفزيونية والأفلام والمسلسلات والممثلين والمخرجين في قائمة التشغيل الحالية."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "मौजूदा प्लेलिस्ट में चैनल, टीवी कार्यक्रम, फ़िल्में और सीरीज़ खोजें।"
+            "value": "मौजूदा प्लेलिस्ट में चैनल, टीवी कार्यक्रम, फ़िल्में, सीरीज़, अभिनेता और निर्देशक खोजें।"
           }
         }
       }
@@ -10385,42 +10505,82 @@
         }
       }
     },
-    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose. The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With a TMDb key (Settings), all of them are found; without one, only among the pages you have already opened. Genres, the year and awards open the titles of your playlist that share them the same way.": {
+    "Movies are only found among the pages you have opened. Add your TMDb API Read Access Token in Settings to find all of them.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez. Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec une clé TMDb (Réglages), tous sont trouvés ; sans clé, seulement parmi les fiches que vous avez déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent."
+            "value": "Les films ne sont trouvés que parmi les fiches déjà ouvertes. Ajoutez votre « Jeton d'accès en lecture à l'API » TMDb dans les Réglages pour les trouver tous."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas. Las cuadrículas se ordenan por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu lista. Con una clave de TMDb (Ajustes) se encuentran todas; sin ella, solo entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten."
+            "value": "Las películas solo se encuentran entre las fichas que ya abriste. Añade tu «API Read Access Token» de TMDb en Ajustes para encontrarlas todas."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher. As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com uma chave do TMDb (Ajustes), todos são encontrados; sem ela, só entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham."
+            "value": "Os filmes só são encontrados entre as páginas que você já abriu. Adicione seu “API Read Access Token” do TMDb em Ajustes para encontrar todos."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“电影”“剧集”和“直播”会显示提供商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。设置 TMDb 密钥（“设置”）后可找到全部作品；没有密钥时，只在你已打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。"
+            "value": "只能在你打开过的页面中找到电影。在“设置”中添加你的 TMDb“API Read Access Token”即可全部找到。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها. تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. مع مفتاح TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث فقط في الصفحات التي فتحتها من قبل. وبالطريقة نفسها، تفتح الأنواع والسنة والجوائز عناوين قائمة التشغيل التي تشترك فيها."
+            "value": "لا يُعثر على الأفلام إلا بين الصفحات التي فتحتها. أضف «API Read Access Token» الخاص بك من TMDb في الإعدادات للعثور عليها كلها."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। TMDb कुंजी (सेटिंग्स) होने पर सब मिलती हैं; उसके बिना, केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं। इसी तरह, शैलियाँ, वर्ष और पुरस्कार आपकी प्लेलिस्ट के वे शीर्षक खोलते हैं जिनमें वे समान हैं।"
+            "value": "फ़िल्में केवल उन्हीं पेजों में मिलती हैं जिन्हें आपने खोला है। सभी ढूँढने के लिए सेटिंग्स में अपना TMDb “API Read Access Token” जोड़ें।"
+          }
+        }
+      }
+    },
+    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose. The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With your TMDb API Read Access Token (Settings), all of them are found; without it, movies only among the pages you have already opened. Genres, the year and awards open the titles of your playlist that share them the same way. Search finds actors and directors by name too.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez. Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec votre « Jeton d'accès en lecture à l'API » TMDb (Réglages), tous sont trouvés ; sans lui, les films seulement parmi les fiches que vous avez déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent. La recherche trouve aussi les acteurs et réalisateurs par leur nom."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas. Las cuadrículas se ordenan por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu lista. Con tu «API Read Access Token» de TMDb (Ajustes) se encuentran todas; sin él, las películas solo entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten. La búsqueda también encuentra actores y directores por su nombre."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher. As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com seu “API Read Access Token” do TMDb (Ajustes), todos são encontrados; sem ele, os filmes só entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham. A busca também encontra atores e diretores pelo nome."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“电影”“剧集”和“直播”会显示提供商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。添加你的 TMDb“API Read Access Token”（“设置”）后可找到全部作品；没有时，电影只在你已打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。搜索也能按姓名找到演员和导演。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها. تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. مع «API Read Access Token» الخاص بك من TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث عن الأفلام فقط في الصفحات التي فتحتها من قبل. وبالطريقة نفسها، تفتح الأنواع والسنة والجوائز عناوين قائمة التشغيل التي تشترك فيها. ويجد البحث أيضًا الممثلين والمخرجين بأسمائهم."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। अपने TMDb “API Read Access Token” (सेटिंग्स) के साथ सब मिलती हैं; उसके बिना, फ़िल्में केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं। इसी तरह, शैलियाँ, वर्ष और पुरस्कार आपकी प्लेलिस्ट के वे शीर्षक खोलते हैं जिनमें वे समान हैं। खोज में अभिनेता और निर्देशक भी नाम से मिलते हैं।"
           }
         }
       }
@@ -12785,6 +12945,46 @@
         }
       }
     },
+    "On themoviedb.org: your account → Settings → API. Copy the API Read Access Token (the long one); the API Key works too. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur themoviedb.org : votre compte → Paramètres → API. Copiez le « Jeton d'accès en lecture à l'API » (le long) ; la « Clé d'API » fonctionne aussi. Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En themoviedb.org: tu cuenta → Settings → API. Copia el «API Read Access Token» (el largo); la «API Key» también sirve. Este producto usa la API de TMDB, pero TMDB no lo respalda ni lo certifica."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No themoviedb.org: sua conta → Settings → API. Copie o “API Read Access Token” (o longo); a “API Key” também funciona. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 themoviedb.org 上：你的账户 → Settings → API。复制“API Read Access Token”（较长的那个）；“API Key”也可以。本产品使用 TMDB API，但未经 TMDB 认可或认证。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "على themoviedb.org: حسابك ← Settings ← API. انسخ «API Read Access Token» (الأطول)؛ ويعمل «API Key» أيضًا. يستخدم هذا المنتج TMDB API، لكنه غير معتمد أو مصدَّق من TMDB."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "themoviedb.org पर: आपका खाता → Settings → API। “API Read Access Token” (लंबा वाला) कॉपी करें; “API Key” भी काम करती है। यह प्रोडक्ट TMDB API का इस्तेमाल करता है, लेकिन TMDB इसका समर्थन या प्रमाणन नहीं करता।"
+          }
+        }
+      }
+    },
     "Once a week, Ondo downloads the latest awards and festival selections (made from Wikidata) from GitHub, where the project is hosted. Nothing about you is sent.": {
       "localizations": {
         "fr": {
@@ -12865,42 +13065,42 @@
         }
       }
     },
-    "Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device; passwords and keys are kept in the system keychain.\n\nOndo connects only to the servers you add and, if you enter a key, to TMDb and to the subtitle services you choose. Backups contain your logins: keep them private.": {
+    "Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device; passwords and keys are kept in the system keychain.\n\nOndo connects only to the servers you add and, if you enter your TMDb token, to TMDb and to the subtitle services you choose. Backups contain your logins: keep them private.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil ; les mots de passe et les clés sont gardés dans le trousseau du système.\n\nOndo se connecte uniquement aux serveurs que vous ajoutez et, si vous saisissez une clé, à TMDb et aux services de sous-titres que vous choisissez. Les sauvegardes contiennent vos identifiants : gardez-les privées."
+            "value": "Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil ; les mots de passe et les clés sont gardés dans le trousseau du système.\n\nOndo se connecte uniquement aux serveurs que vous ajoutez et, si vous saisissez votre jeton TMDb, à TMDb et aux services de sous-titres que vous choisissez. Les sauvegardes contiennent vos identifiants : gardez-les privées."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus listas, tu historial y tus ajustes se quedan en tu dispositivo; las contraseñas y las claves se guardan en el llavero del sistema.\n\nOndo solo se conecta a los servidores que añades y, si introduces una clave, a TMDb y a los servicios de subtítulos que elijas. Las copias de seguridad contienen tus datos de acceso: guárdalas en privado."
+            "value": "Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus listas, tu historial y tus ajustes se quedan en tu dispositivo; las contraseñas y las claves se guardan en el llavero del sistema.\n\nOndo solo se conecta a los servidores que añades y, si introduces tu token de TMDb, a TMDb y a los servicios de subtítulos que elijas. Las copias de seguridad contienen tus datos de acceso: guárdalas en privado."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho; senhas e chaves são guardadas nas chaves do sistema.\n\nO Ondo se conecta apenas aos servidores que você adiciona e, se você inserir uma chave, ao TMDb e aos serviços de legendas que escolher. Os backups contêm seus logins: mantenha-os privados."
+            "value": "O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho; senhas e chaves são guardadas nas chaves do sistema.\n\nO Ondo se conecta apenas aos servidores que você adiciona e, se você inserir seu token do TMDb, ao TMDb e aos serviços de legendas que escolher. Os backups contêm seus logins: mantenha-os privados."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上；密码和密钥保存在系统钥匙串中。\n\nOndo 只连接你添加的服务器；如果你输入了密钥，还会连接 TMDb 和你选择的字幕服务。备份包含你的登录信息：请妥善保管，切勿公开。"
+            "value": "Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上；密码和密钥保存在系统钥匙串中。\n\nOndo 只连接你添加的服务器；如果你输入了 TMDb 令牌，还会连接 TMDb 和你选择的字幕服务。备份包含你的登录信息：请妥善保管，切勿公开。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "لا يحتوي Ondo على حساب ولا إعلانات ولا إحصاءات خاصة به. تبقى قوائم التشغيل والسجل والإعدادات على جهازك؛ وتُحفظ كلمات المرور والمفاتيح في سلسلة مفاتيح النظام.\n\nلا يتصل Ondo إلا بالخوادم التي تضيفها، وإذا أدخلت مفتاحًا، بـ TMDb وبخدمات الترجمة التي تختارها. تحتوي النسخ الاحتياطية على بيانات دخولك: لا تشاركها مع أحد."
+            "value": "لا يحتوي Ondo على حساب ولا إعلانات ولا إحصاءات خاصة به. تبقى قوائم التشغيل والسجل والإعدادات على جهازك؛ وتُحفظ كلمات المرور والمفاتيح في سلسلة مفاتيح النظام.\n\nلا يتصل Ondo إلا بالخوادم التي تضيفها، وإذا أدخلت رمز TMDb، بـ TMDb وبخدمات الترجمة التي تختارها. تحتوي النسخ الاحتياطية على بيانات دخولك: لا تشاركها مع أحد."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo में न अकाउंट है, न विज्ञापन, न अपना कोई विश्लेषण। आपकी प्लेलिस्ट, इतिहास और सेटिंग्स आपके डिवाइस पर रहती हैं; पासवर्ड और कुंजियाँ सिस्टम कीचेन में रखी जाती हैं।\n\nOndo केवल उन सर्वरों से जुड़ता है जिन्हें आप जोड़ते हैं, और अगर आप कुंजी डालते हैं तो TMDb और आपकी चुनी सबटाइटल सेवाओं से। बैकअप में आपकी लॉगिन जानकारी होती है: इन्हें निजी रखें।"
+            "value": "Ondo में न अकाउंट है, न विज्ञापन, न अपना कोई विश्लेषण। आपकी प्लेलिस्ट, इतिहास और सेटिंग्स आपके डिवाइस पर रहती हैं; पासवर्ड और कुंजियाँ सिस्टम कीचेन में रखी जाती हैं।\n\nOndo केवल उन सर्वरों से जुड़ता है जिन्हें आप जोड़ते हैं, और अगर आप TMDb टोकन डालते हैं तो TMDb और आपकी चुनी सबटाइटल सेवाओं से। बैकअप में आपकी लॉगिन जानकारी होती है: इन्हें निजी रखें।"
           }
         }
       }
@@ -13145,46 +13345,6 @@
         }
       }
     },
-    "Only the pages you have opened are searched. Add a TMDb key in Settings to find all their movies and series.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seules les fiches déjà ouvertes sont parcourues. Ajoutez une clé TMDb dans les Réglages pour trouver tous ses films et séries."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo se buscan las fichas que ya abriste. Añade una clave de TMDb en Ajustes para encontrar todas sus películas y series."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Só as páginas que você já abriu são pesquisadas. Adicione uma chave do TMDb em Ajustes para encontrar todos os filmes e séries dessa pessoa."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只会搜索你打开过的页面。在“设置”中添加 TMDb 密钥即可找到此人的所有电影和剧集。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "يُبحث فقط في الصفحات التي فتحتها. أضف مفتاح TMDb في الإعدادات للعثور على كل أفلامه ومسلسلاته."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "केवल वही पेज खोजे जाते हैं जो आपने खोले हैं। उनकी सभी फ़िल्में और सीरीज़ ढूँढने के लिए सेटिंग्स में TMDb कुंजी जोड़ें।"
-          }
-        }
-      }
-    },
     "Open": {
       "localizations": {
         "fr": {
@@ -13221,6 +13381,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "खोलें"
+          }
+        }
+      }
+    },
+    "Open TMDb's API Page": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir la page API de TMDb"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir la página de API de TMDb"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir a página de API do TMDb"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 TMDb 的 API 页面"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح صفحة API في TMDb"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDb का API पेज खोलें"
           }
         }
       }
@@ -13381,46 +13581,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "खुल रहा है…"
-          }
-        }
-      }
-    },
-    "Optional. Create a key on themoviedb.org. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Facultatif. Créez une clé sur themoviedb.org. Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opcional. Crea una clave en themoviedb.org. Este producto usa la API de TMDB, pero TMDB no lo respalda ni lo certifica."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opcional. Crie uma chave em themoviedb.org. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "可选。请在 themoviedb.org 上创建密钥。本产品使用 TMDB API，但未经 TMDB 认可或认证。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "اختياري. أنشئ مفتاحًا على themoviedb.org. يستخدم هذا المنتج TMDB API، لكنه غير معتمد أو مصدَّق من TMDB."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "वैकल्पिक। themoviedb.org पर कुंजी बनाएँ। यह प्रोडक्ट TMDB API का इस्तेमाल करता है, लेकिन TMDB इसका समर्थन या प्रमाणन नहीं करता।"
           }
         }
       }
@@ -13821,6 +13981,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "पॉज़ है"
+          }
+        }
+      }
+    },
+    "People (%lld)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personnes (%lld)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personas (%lld)"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pessoas (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "人物（%lld）"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأشخاص (%lld)"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लोग (%lld)"
           }
         }
       }
@@ -17071,46 +17271,6 @@
         }
       }
     },
-    "Save Key": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enregistrer la clé"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar clave"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Salvar chave"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存密钥"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "حفظ المفتاح"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "कुंजी सेव करें"
-          }
-        }
-      }
-    },
     "Search": {
       "localizations": {
         "fr": {
@@ -19111,42 +19271,82 @@
         }
       }
     },
-    "TMDb API key or read access token": {
+    "TMDb could not be reached, so nothing was saved. Check the connection and try again.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Clé API ou jeton de lecture TMDb"
+            "value": "TMDb est injoignable, rien n'a été enregistré. Vérifiez la connexion et réessayez."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Clave de API o token de acceso de lectura de TMDb"
+            "value": "No se pudo contactar con TMDb, así que no se guardó nada. Comprueba la conexión y vuelve a intentarlo."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chave de API ou token de leitura do TMDb"
+            "value": "Não foi possível acessar o TMDb, então nada foi salvo. Verifique a conexão e tente de novo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "TMDb API 密钥或读取访问令牌"
+            "value": "无法连接 TMDb，因此未保存任何内容。请检查网络连接后重试。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "مفتاح TMDb API أو رمز الوصول للقراءة"
+            "value": "تعذّر الوصول إلى TMDb، لذلك لم يُحفظ شيء. تحقق من الاتصال وحاول مرة أخرى."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "TMDb API कुंजी या रीड ऐक्सेस टोकन"
+            "value": "TMDb से संपर्क नहीं हो सका, इसलिए कुछ भी सहेजा नहीं गया। कनेक्शन जाँचें और फिर से कोशिश करें।"
+          }
+        }
+      }
+    },
+    "TMDb refused it. Copy the whole API Read Access Token again (the API Key works too).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDb l'a refusé. Copiez à nouveau le « Jeton d'accès en lecture à l'API » en entier (la « Clé d'API » fonctionne aussi)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDb lo rechazó. Vuelve a copiar el «API Read Access Token» completo (la «API Key» también sirve)."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O TMDb recusou. Copie de novo o “API Read Access Token” inteiro (a “API Key” também funciona)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDb 拒绝了它。请重新完整复制“API Read Access Token”（“API Key”也可以）。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رفضه TMDb. انسخ «API Read Access Token» كاملًا مرة أخرى (ويعمل «API Key» أيضًا)."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDb ने इसे अस्वीकार कर दिया। “API Read Access Token” को फिर से पूरा कॉपी करें (“API Key” भी काम करती है)।"
           }
         }
       }
@@ -20787,86 +20987,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "ट्रेंडिंग"
-          }
-        }
-      }
-    },
-    "Trending (TMDb)": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tendances (TMDb)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tendencias (TMDb)"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Em alta (TMDb)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "热门（TMDb）"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "الرائج (TMDb)"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ट्रेंडिंग (TMDb)"
-          }
-        }
-      }
-    },
-    "Trending titles are shown on the home screen.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les titres tendance s'affichent sur l'accueil."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los títulos en tendencia se muestran en Inicio."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Os títulos em alta aparecem na tela inicial."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "热门作品会显示在首页上。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تظهر العناوين الرائجة على الشاشة الرئيسية."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ट्रेंडिंग शीर्षक होम स्क्रीन पर दिखते हैं।"
           }
         }
       }

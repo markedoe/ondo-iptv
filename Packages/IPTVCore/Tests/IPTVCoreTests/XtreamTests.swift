@@ -72,6 +72,8 @@ final class XtreamTests: XCTestCase {
 
         XCTAssertEqual(content.series.first?.xtreamSeriesID, 9000)
         XCTAssertEqual(content.series.first?.year, 2008)
+        XCTAssertEqual(content.series.first?.cast, "Alex Marsh", "the series list names the cast")
+        XCTAssertEqual(content.series.first?.director, "Casey Brook")
         XCTAssertEqual(content.series[1].name, "The Archive", "the year in the title is not part of the name")
         XCTAssertEqual(content.series[1].year, 2025, "no year from the provider: the one in the title")
         XCTAssertEqual(content.providerEPGURLs.first?.path, "/xmltv.php")

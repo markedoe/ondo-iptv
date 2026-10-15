@@ -12,6 +12,7 @@ struct SettingsView: View {
     @State private var cacheSize: Int64 = 0
     @State private var confirmClearHistory = false
     @State private var tmdbKey = ""
+    @State private var tmdbCheck: TMDbCheck?
     @State private var awaitingUnlock: BackupAction?
     @State private var unlockedAction: BackupAction?
 
@@ -20,6 +21,71 @@ struct SettingsView: View {
             get: { model.settings[keyPath: keyPath] },
             set: { value in model.updateSettings { $0[keyPath: keyPath] = value } }
         )
+    }
+
+    /// The viewer's own TMDb token, named as on TMDb's API page, checked with TMDb before it is saved.
+    private var tmdbSection: some View {
+        Section {
+            SecureField("API Read Access Token", text: $tmdbKey)
+                .onSubmit(checkTMDbKey)
+            HStack {
+                Button("Check and Save", action: checkTMDbKey)
+                    .disabled(tmdbKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || tmdbCheck == .checking)
+                if tmdbCheck == .checking {
+                    ProgressView().controlSize(.small)
+                }
+                if model.hasTMDbKey {
+                    Spacer()
+                    Button("Remove", role: .destructive) {
+                        tmdbKey = ""
+                        tmdbCheck = nil
+                        model.setTMDbCredential(nil)
+                    }
+                }
+            }
+            tmdbStatus
+            Link(destination: URL(string: "https://www.themoviedb.org/settings/api")!) {
+                Text("Open TMDb's API Page")
+            }
+        } header: {
+            Text(verbatim: "TMDb")
+        } footer: {
+            Text("""
+            On themoviedb.org: your account → Settings → API. Copy the API Read Access Token (the long one); the API \
+            Key works too. This product uses the TMDB API but is not endorsed or certified by TMDB.
+            """)
+        }
+    }
+
+    @ViewBuilder
+    private var tmdbStatus: some View {
+        switch tmdbCheck {
+        case .refused:
+            Label("TMDb refused it. Copy the whole API Read Access Token again (the API Key works too).", systemImage: "xmark.octagon")
+                .font(.caption)
+                .foregroundStyle(.red)
+        case .unreachable:
+            Label("TMDb could not be reached, so nothing was saved. Check the connection and try again.", systemImage: "wifi.exclamationmark")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        case .checking, .accepted, nil:
+            if model.hasTMDbKey {
+                Label("Accepted by TMDb: trending titles, missing background images and filmographies come from TMDb.", systemImage: "checkmark.circle")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+            }
+        }
+    }
+
+    private func checkTMDbKey() {
+        let value = tmdbKey
+        guard !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, tmdbCheck != .checking else { return }
+        tmdbCheck = .checking
+        Task {
+            let check = await model.checkAndSaveTMDbCredential(value)
+            tmdbCheck = check
+            if check == .accepted { tmdbKey = "" }
+        }
     }
 
     var body: some View {
@@ -170,30 +236,7 @@ struct SettingsView: View {
                 Text("Your own keys for OpenSubtitles, SubDL and SubSource, to find subtitles from the player.")
             }
 
-            Section {
-                SecureField("TMDb API key or read access token", text: $tmdbKey)
-                    .onSubmit { model.setTMDbCredential(tmdbKey) }
-                HStack {
-                    Button("Save Key") { model.setTMDbCredential(tmdbKey) }
-                        .disabled(tmdbKey.isEmpty)
-                    if model.hasTMDbKey {
-                        Spacer()
-                        Button("Remove", role: .destructive) {
-                            tmdbKey = ""
-                            model.setTMDbCredential(nil)
-                        }
-                    }
-                }
-                if model.hasTMDbKey {
-                    Label("Trending titles are shown on the home screen.", systemImage: "checkmark.circle")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                }
-            } header: {
-                Text("Trending (TMDb)")
-            } footer: {
-                Text("Optional. Create a key on themoviedb.org. This product uses the TMDB API but is not endorsed or certified by TMDB.")
-            }
+            tmdbSection
 
             Section {
                 Toggle("Update Awards Automatically", isOn: binding(\.updateAwards))

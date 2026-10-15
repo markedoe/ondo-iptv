@@ -77,4 +77,19 @@ final class PeopleAndYearsTests: XCTestCase {
         XCTAssertFalse(works.searchedOnline, "no TMDb key: nothing is sent online")
         XCTAssertTrue(model.knownWorks(of: "Nobody Here").isEmpty)
     }
+
+    /// Search lists the actors and directors whose name matches, then opens their page.
+    func testSearchFindsActorsAndDirectorsByName() async throws {
+        let model = try await model()
+        let quiet = try movie("Quiet Water", in: model)
+        let glass = try movie("Glass City", in: model)
+        model.movieDetailsCache[quiet.id] = MediaDetails(title: quiet.name, cast: "Ada Vance (Mara), Tom Ellery")
+        model.movieDetailsCache[glass.id] = MediaDetails(title: glass.name, director: "Ada Vance")
+
+        XCTAssertEqual(model.people(matching: "vance"), ["Ada Vance"], "once, however often it is named")
+        XCTAssertEqual(model.people(matching: "ELLE"), ["Tom Ellery"])
+        XCTAssertEqual(model.people(matching: "zz"), [])
+        let none = await model.tmdbPeople(matching: "Ada Vance")
+        XCTAssertEqual(none, [], "no TMDb token: nothing is sent online")
+    }
 }

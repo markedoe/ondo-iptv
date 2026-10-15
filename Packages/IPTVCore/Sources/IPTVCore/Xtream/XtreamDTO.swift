@@ -193,6 +193,8 @@ struct XtreamSeriesDTO: Decodable {
     var cover: String?
     var plot: String?
     var genre: String?
+    var cast: String?
+    var director: String?
     var releaseDate: String?
     var rating: Double?
     var categoryID: String?
@@ -200,7 +202,7 @@ struct XtreamSeriesDTO: Decodable {
     var year: Int?
 
     enum CodingKeys: String, CodingKey {
-        case name, cover, plot, genre, rating, year
+        case name, cover, plot, genre, rating, year, cast, actors, director
         case seriesID = "series_id"
         case releaseDate
         case releaseDateSnake = "release_date"
@@ -218,6 +220,8 @@ struct XtreamSeriesDTO: Decodable {
         cover = c.lenientString(.cover)
         plot = c.lenientString(.plot)?.nilIfBlank
         genre = c.lenientString(.genre)?.nilIfBlank
+        cast = (c.lenientString(.cast) ?? c.lenientString(.actors))?.nilIfBlank
+        director = c.lenientString(.director)?.nilIfBlank
         releaseDate = (c.lenientString(.releaseDate) ?? c.lenientString(.releaseDateSnake))?.nilIfBlank
         rating = c.lenientDouble(.rating)
         categoryID = c.lenientString(.categoryID)

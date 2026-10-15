@@ -139,6 +139,8 @@ public struct XtreamClient: Sendable {
                 rating: dto.rating,
                 year: dto.year ?? yearInTitle,
                 genre: dto.genre,
+                cast: dto.cast,
+                director: dto.director,
                 addedAt: dto.lastModified,
                 xtreamSeriesID: dto.seriesID
             )

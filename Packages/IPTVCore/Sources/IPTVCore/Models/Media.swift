@@ -184,6 +184,9 @@ public struct Series: Identifiable, Codable, Hashable, Sendable {
     public var rating: Double?
     public var year: Int?
     public var genre: String?
+    /// Xtream series lists name the cast and the director (movie lists do not): searchable without opening pages.
+    public var cast: String?
+    public var director: String?
     public var addedAt: Date?
     public var xtreamSeriesID: Int?
     /// Episodes are known up-front for M3U playlists; Xtream series load them on demand.
@@ -198,6 +201,8 @@ public struct Series: Identifiable, Codable, Hashable, Sendable {
         rating: Double? = nil,
         year: Int? = nil,
         genre: String? = nil,
+        cast: String? = nil,
+        director: String? = nil,
         addedAt: Date? = nil,
         xtreamSeriesID: Int? = nil,
         episodes: [Episode] = []
@@ -210,6 +215,8 @@ public struct Series: Identifiable, Codable, Hashable, Sendable {
         self.rating = rating
         self.year = year
         self.genre = genre
+        self.cast = cast
+        self.director = director
         self.addedAt = addedAt
         self.xtreamSeriesID = xtreamSeriesID
         self.episodes = episodes

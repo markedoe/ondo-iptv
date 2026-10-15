@@ -54,6 +54,45 @@ final class TMDbTests: XCTestCase {
         XCTAssertNil(none, "TMDb has no backdrop either")
     }
 
+    /// A key is checked with TMDb before it is saved: accepted, refused, or TMDb out of reach.
+    func testAKeyIsCheckedBeforeItIsSaved() async throws {
+        let http = MockHTTPClient()
+        http.routes["https://api.themoviedb.org/3/authentication?language=en-US&api_key=GOOD"] =
+            Data(#"{"success":true,"status_code":1,"status_message":"Success."}"#.utf8)
+        let accepted = try await TMDbClient(credential: "GOOD", http: http).isAccepted()
+        XCTAssertTrue(accepted)
+        // TMDb answers 401 to a key it does not know.
+        http.failures["https://api.themoviedb.org/3/authentication?language=en-US&api_key=BAD"] = [HTTPClientError.badStatus(401)]
+        let refused = try await TMDbClient(credential: "BAD", http: http).isAccepted()
+        XCTAssertFalse(refused)
+        http.failures["https://api.themoviedb.org/3/authentication?language=en-US&api_key=OFFLINE"] = [URLError(.notConnectedToInternet)]
+        do {
+            _ = try await TMDbClient(credential: "OFFLINE", http: http).isAccepted()
+            XCTFail("an unreachable TMDb is not a refusal")
+        } catch {
+            XCTAssertEqual((error as? URLError)?.code, .notConnectedToInternet)
+        }
+    }
+
+    /// Search finds actors and directors by any word of their name, the ones named most often first.
+    func testPeopleAreFoundByName() {
+        let index = PeopleIndex(fields: ["Ada Vance, Tom Reyes", "Ada Vance (voice)", "Lena Moss", nil, "Éva Adams, Tomás Ruiz"])
+        XCTAssertEqual(index.names(matching: "ada"), ["Ada Vance", "Éva Adams"], "names starting with the query first")
+        XCTAssertEqual(index.names(matching: "TOMAS"), ["Tomás Ruiz"], "accents and case ignored")
+        XCTAssertEqual(index.names(matching: "vance ad"), ["Ada Vance"], "every word, in any order")
+        XCTAssertEqual(index.names(matching: "to"), [], "three letters at least")
+        XCTAssertEqual(index.names(matching: "eva"), ["Éva Adams"])
+    }
+
+    /// TMDb's people for a search, the most popular first.
+    func testPeopleAreSearchedOnTMDb() async throws {
+        let http = MockHTTPClient()
+        http.routes["https://api.themoviedb.org/3/search/person?query=ada&language=en-US&api_key=KEY"] =
+            Data(#"{"results":[{"id":1,"name":"Ada Lowe","popularity":2.5},{"id":2,"name":"Ada Vance","popularity":9.1}]}"#.utf8)
+        let people = try await TMDbClient(credential: "KEY", http: http).people(matching: " ada ")
+        XCTAssertEqual(people.map(\.name), ["Ada Vance", "Ada Lowe"])
+    }
+
     /// Tapping a name in a movie's details: the person's credits, then what of it the catalogue has.
     func testAPersonsCreditsAreFoundInTheCatalogue() async throws {
         let http = MockHTTPClient()

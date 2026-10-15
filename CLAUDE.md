@@ -21,6 +21,10 @@ screenshots.
   in the same change: Apple `App/Resources/Localizable.xcstrings` (`fr`, `es`, `pt`, `zh-Hans`, `ar`, `hi`)
   and Android `res/values-{fr,es,pt,zh-rCN,ar,hi}/strings.xml`. `check_translations.py` (CI) fails on a
   missing Apple translation and Android lint on a missing Android one.
+- **Keys and logins are checked when saved**: every API key, token, login or other setting that depends on an
+  outside service is checked with that service as soon as the user saves it, with a clear message (accepted,
+  refused, service unreachable); a refused one is not saved. Fields and help texts use the service's own words for
+  its credentials (e.g. TMDb's "API Read Access Token"), with a short explanation of where to find them.
 - **Guard**: `.claude/hooks/leak_guard.py` is wired as a `PreToolUse` hook (`.claude/settings.json`): it
   blocks writing secrets or personal data into the repository and checks the changes before `git commit` /
   `git push`. CI runs it again on the whole history with gitleaks. For a false positive, add a regex to

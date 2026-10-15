@@ -12,7 +12,8 @@ struct PersonWorks: Equatable {
 }
 
 extension AppModel {
-    /// Pages already opened whose cast or director names this person.
+    /// Pages already opened whose cast or director names this person, and the series whose list entry does (series
+    /// lists name their cast; movie lists do not).
     func knownWorks(of name: String) -> PersonWorks {
         let excluded = excludedCategoryIDs
         let movies = movieDetailsCache.compactMap { id, details -> Movie? in
@@ -20,12 +21,36 @@ extension AppModel {
                   let movie = index.moviesByID[id], !excluded.contains(movie.categoryID) else { return nil }
             return movie
         }
-        let series = seriesDetailsCache.compactMap { id, details -> Series? in
+        var series = seriesDetailsCache.compactMap { id, details -> Series? in
             guard People.field(details.info.cast, names: name) || People.field(details.info.director, names: name),
                   let show = index.seriesByID[id], !excluded.contains(show.categoryID) else { return nil }
             return show
         }
+        let opened = Set(series.map(\.id))
+        series += content.series.filter { show in
+            !opened.contains(show.id) && !excluded.contains(show.categoryID)
+                && (People.field(show.cast, names: name) || People.field(show.director, names: name))
+        }
         return Self.sorted(PersonWorks(movies: movies, series: series))
+    }
+
+    /// Actors and directors whose name matches a search: from the pages already opened and the series lists.
+    func people(matching query: String) -> [String] {
+        let openedFields = movieDetailsCache.values.flatMap { [$0.cast, $0.director] }
+            + seriesDetailsCache.values.flatMap { [$0.info.cast, $0.info.director] }
+        var seen = Set<String>()
+        return (PeopleIndex(fields: openedFields).names(matching: query) + index.people.names(matching: query))
+            .filter { seen.insert(TextNormalizer.normalize($0)).inserted }
+            .prefix(20)
+            .map { $0 }
+    }
+
+    /// With the viewer's TMDb token, the people TMDb finds for a search (only the words typed are sent).
+    func tmdbPeople(matching query: String) async -> [String] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard hasTMDbKey, trimmed.count >= 3, let credential = secrets.get(Keychain.tmdbKey) else { return [] }
+        let client = TMDbClient(credential: credential, http: http, language: Locale.preferredLanguages.first ?? "en-US")
+        return (try? await client.people(matching: trimmed))?.prefix(8).map(\.name) ?? []
     }
 
     /// The pages already opened, then the person's credits on TMDb (when a key is set) that the playlist has.

@@ -19,10 +19,10 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
   see their other movies and series in the playlist (from the pages already opened, or all of them with a
-  TMDb key); a genre, the release year or an award (then its festival) opens the titles that share it; when the
-  provider's background image is missing or broken, the page shows TMDb's (with a key) or the blurred poster.
+  TMDb token); a genre, the release year or an award (then its festival) opens the titles that share it; when the
+  provider's background image is missing or broken, the page shows TMDb's (with a token) or the blurred poster.
 - **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
-  **filtered by release years** and **by festival or ceremony** (winners only if you like).
+  **actors and directors by name**, **filtered by release years** and **by festival or ceremony** (winners only if you like).
 - **Awards**: Palme d'Or, Oscars, Golden Lion, Golden Bear, Césars, BAFTAs, Golden Globes… on movie pages
   (won, in competition or nominated) and an "Award Winners" row in Movies. The data comes from
   [Wikidata](https://www.wikidata.org) (CC0), is bundled with the app and matched on the device; a monthly

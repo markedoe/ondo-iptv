@@ -82,6 +82,18 @@ public struct TMDbClient: Sendable {
         return try await http.data(from: components.url!, headers: headers)
     }
 
+    /// Asks TMDb whether it accepts the key or token (`/authentication`), before it is saved: false when TMDb
+    /// refuses it (401); a network failure throws.
+    public func isAccepted() async throws -> Bool {
+        do {
+            let data = try await get("authentication")
+            struct Answer: Decodable { var success: Bool? }
+            return (try? JSONDecoder().decode(Answer.self, from: data))?.success ?? true
+        } catch HTTPClientError.badStatus(let status) where status == 401 {
+            return false
+        }
+    }
+
     public func trending(window: String = "week") async throws -> [TMDbItem] {
         let data = try await get("trending/all/\(window)")
         struct Page: Decodable { var results: [TMDbItem] }
@@ -109,6 +121,15 @@ public struct TMDbClient: Sendable {
             }
             .compactMap(\.backdropURL)
             .first
+    }
+
+    /// The people TMDb finds for a search (actors, directors…), the most popular first.
+    public func people(matching query: String) async throws -> [TMDbPerson] {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+        let data = try await get("search/person", query: [URLQueryItem(name: "query", value: trimmed)])
+        struct Page: Decodable { var results: [TMDbPerson] }
+        return try JSONDecoder().decode(Page.self, from: data).results.sorted { $0.popularity > $1.popularity }
     }
 
     /// The person TMDb knows best by this name (its most popular match), if any.

@@ -6,6 +6,8 @@ struct SearchView: View {
     @State private var query = ""
     @State private var results = SearchResults()
     @State private var programs: [ProgramSearchResult] = []
+    /// Actors and directors matching the search (see `AppModel.people(matching:)`).
+    @State private var people: [String] = []
     @State private var scope: SearchScope = .all
     @State private var selectedProgram: ProgramSearchResult?
     @State private var fromYear: Int?
@@ -75,6 +77,15 @@ struct SearchView: View {
                     }
                 }
             }
+            if scope != .live && scope != .guide && !people.isEmpty {
+                Section("People (\(people.count))") {
+                    ForEach(people, id: \.self) { name in
+                        NavigationLink(value: PersonRoute(name: name)) {
+                            Label(name, systemImage: "person.crop.circle")
+                        }
+                    }
+                }
+            }
             if (scope == .all || scope == .movies) && !results.movies.isEmpty {
                 Section("Movies (\(results.movies.count))") {
                     ForEach(results.movies.prefix(scope == .all ? 30 : 150)) { movie in
@@ -96,8 +107,8 @@ struct SearchView: View {
         }
         .overlay {
             if query.isEmpty && !isFiltered {
-                ContentUnavailableView("Search", systemImage: "magnifyingglass", description: Text("Find channels, TV programmes, movies and series in the current playlist."))
-            } else if results.isEmpty && programs.isEmpty {
+                ContentUnavailableView("Search", systemImage: "magnifyingglass", description: Text("Find channels, TV programmes, movies, series, actors and directors in the current playlist."))
+            } else if results.isEmpty && programs.isEmpty && people.isEmpty {
                 if query.isEmpty {
                     ContentUnavailableView("No movie or series", systemImage: "line.3.horizontal.decrease.circle", description: Text("Nothing in this playlist matches these filters."))
                 } else {
@@ -105,7 +116,7 @@ struct SearchView: View {
                 }
             }
         }
-        .searchable(text: $query, prompt: Text("Channels, programmes, movies, series"))
+        .searchable(text: $query, prompt: Text("Channels, programmes, movies, series, people"))
         .searchScopes($scope) {
             ForEach(SearchScope.allCases) { scope in
                 Text(scope.label).tag(scope)
@@ -119,9 +130,16 @@ struct SearchView: View {
                 // Release years and awards only exist for movies and series: channels and programmes are left out.
                 results = model.search(query, releasedIn: years, awardGroup: awardGroup, winnersOnly: winnersOnly)
                 programs = []
+                people = []
             } else {
                 results = model.search(query)
                 programs = query.count >= 2 ? model.searchPrograms(query) : []
+                people = model.people(matching: query)
+                // With a TMDb token, the people TMDb knows by that name follow.
+                let online = await model.tmdbPeople(matching: query)
+                guard !Task.isCancelled, !online.isEmpty else { return }
+                var seen = Set(people.map(TextNormalizer.normalize))
+                people += online.filter { seen.insert(TextNormalizer.normalize($0)).inserted }
             }
         }
         .task(id: [model.content.movies.count, model.content.series.count, model.movieAwards.count]) {

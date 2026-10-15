@@ -34,9 +34,9 @@ extension HelpTopic {
             sort by playlist order, name, date added, release date or rating.
 
             On a movie or series page, tap the name of a director or an actor to see their other movies and series \
-            in your playlist. With a TMDb key (Settings), all of them are found; without one, only among the pages \
-            you have already opened. Genres, the year and awards open the titles of your playlist that share them \
-            the same way.
+            in your playlist. With your TMDb API Read Access Token (Settings), all of them are found; without it, \
+            movies only among the pages you have already opened. Genres, the year and awards open the titles of your \
+            playlist that share them the same way. Search finds actors and directors by name too.
             """
         ),
         HelpTopic(
@@ -137,7 +137,7 @@ extension HelpTopic {
             Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on \
             your device; passwords and keys are kept in the system keychain.
 
-            Ondo connects only to the servers you add and, if you enter a key, to TMDb and to the subtitle \
+            Ondo connects only to the servers you add and, if you enter your TMDb token, to TMDb and to the subtitle \
             services you choose. Backups contain your logins: keep them private.
             """
         ),

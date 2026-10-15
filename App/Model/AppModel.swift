@@ -43,6 +43,8 @@ struct ContentIndex: Sendable {
     /// Versions of the same channel ("TV1 HD", "FR: TV1 FHD"…) for automatic failover.
     var channelsByMatchKey: [String: [Channel]] = [:]
     var search = SearchEngine(content: .empty)
+    /// Actors and directors of the series lists (movie lists give no cast), for search.
+    var people = PeopleIndex()
 
     init() {}
 
@@ -56,6 +58,7 @@ struct ContentIndex: Sendable {
         channelsByMatchKey = Dictionary(grouping: content.channels, by: { TextNormalizer.channelMatchKey($0.name) })
             .filter { $0.value.count > 1 && !$0.key.isEmpty }
         search = SearchEngine(content: content)
+        people = PeopleIndex(fields: content.series.flatMap { [$0.cast, $0.director] })
     }
 }
 

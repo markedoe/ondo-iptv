@@ -60,6 +60,6 @@ struct PersonView: View {
 
     /// Without TMDb, only the pages already opened know their cast.
     private var onlineHint: Text {
-        Text("Only the pages you have opened are searched. Add a TMDb key in Settings to find all their movies and series.")
+        Text("Movies are only found among the pages you have opened. Add your TMDb API Read Access Token in Settings to find all of them.")
     }
 }
