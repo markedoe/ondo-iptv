@@ -50,6 +50,8 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.CategoriesActions
 import com.markedoe.ondo.ui.screens.CategoriesScreen
+import com.markedoe.ondo.ui.screens.CollectionActions
+import com.markedoe.ondo.ui.screens.CollectionScreen
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.screens.HomeActions
@@ -138,6 +140,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 composable<Routes.MovieDetail> { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                 composable<Routes.SeriesDetail> { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
                 composable<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
+                composable<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
                 composable<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
                 composable<Routes.Settings> { SettingsDestination(viewModel, navController) }
                 composable<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
@@ -313,6 +316,8 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
             onToggleMyList = { viewModel.toggleMyList(ShowcaseItem.MovieItem(movie)) },
             onOpen = navController::open,
             onPerson = { navController.navigate(Routes.Person(it)) },
+            onToggleCollection = { viewModel.toggleInCollection(it, ShowcaseItem.MovieItem(movie)) },
+            onNewCollection = { viewModel.newCollection(it, ShowcaseItem.MovieItem(movie)) },
         ),
     )
 }
@@ -336,6 +341,26 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onPerson = { navController.navigate(Routes.Person(it)) },
             onSeason = { season = it },
             onPlayEpisode = { viewModel.playEpisode(id, it) },
+            onToggleCollection = { viewModel.toggleInCollection(it, ui.item) },
+            onNewCollection = { viewModel.newCollection(it, ui.item) },
+        ),
+    )
+}
+
+@Composable
+private fun CollectionDestination(viewModel: OndoViewModel, navController: NavHostController, id: String) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val collection = remember(state, id) { UiMappers.collection(state, id, System.currentTimeMillis()) }
+    // Deleted (here or by a restore): back to My List.
+    LaunchedEffect(collection == null) { if (collection == null) navController.popBackStack() }
+    CollectionScreen(
+        state = collection ?: return,
+        actions = CollectionActions(
+            onBack = { navController.popBackStack() },
+            onOpen = navController::open,
+            onPlayChannel = viewModel::playChannel,
+            onRename = { viewModel.renameCollection(id, it) },
+            onDelete = { viewModel.deleteCollection(id) },
         ),
     )
 }
@@ -467,6 +492,8 @@ private fun MyListDestination(viewModel: OndoViewModel, navController: NavHostCo
             onOpen = navController::open,
             onPlayChannel = viewModel::playChannel,
             onSearch = { navController.navigate(Routes.Search) },
+            onOpenCollection = { navController.navigate(Routes.Collection(it)) },
+            onNewCollection = { viewModel.newCollection(it) },
         ),
     )
 }

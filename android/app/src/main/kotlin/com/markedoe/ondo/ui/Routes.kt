@@ -25,6 +25,9 @@ object Routes {
     /** The movies and series of an actor or director (a name tapped on a detail page). */
     @Serializable data class Person(val name: String)
 
+    /** A collection of My List. */
+    @Serializable data class Collection(val id: String)
+
     /** Poster grid: every movie or series, one category, or My List (of one type, or both with [anyType]). */
     @Serializable data class Grid(val series: Boolean, val categoryId: String? = null, val myList: Boolean = false, val anyType: Boolean = false)
     @Serializable data object Settings

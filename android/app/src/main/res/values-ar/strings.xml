@@ -182,7 +182,7 @@
     <string name="my_list_empty">لا شيء هنا بعد</string>
     <string name="my_list_empty_hint">استخدم «قائمتي» في صفحة فيلم أو مسلسل لتجده هنا.</string>
     <string name="help_mylist_title">قائمتي</string>
-    <string name="help_mylist_body">في صفحة فيلم أو مسلسل، تُبقيه «قائمتي» في متناول يدك. في البث المباشر، اضغط مطولًا على قناة لإضافتها إلى قائمتي.\n\nتجمع علامة تبويب قائمتي أفلامك ومسلسلاتك وقنواتك؛ والبحث هو العدسة المكبّرة أعلى كل شاشة.</string>
+    <string name="help_mylist_body">في صفحة فيلم أو مسلسل، تُبقيه «قائمتي» في متناول يدك. في البث المباشر، اضغط مطولًا على قناة لإضافتها إلى قائمتي.\n\nتجمع علامة تبويب قائمتي أفلامك ومسلسلاتك وقنواتك؛ والبحث هو العدسة المكبّرة أعلى كل شاشة.\n\nالمجموعات هي تصنيفاتك الخاصة، مثل «عطلة نهاية الأسبوع» أو «الأطفال»: استخدم «مجموعة» في صفحة فيلم أو مسلسل، ثم تجدها في قائمتي، ضمن المجموعات.</string>
     <string name="help_search_body">تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث، وهو العدسة المكبّرة أعلى كل شاشة، في القنوات والأفلام والمسلسلات. في البحث، يُبقي زر التصفية الأفلام والمسلسلات التي صدرت في السنوات التي تختارها، أو أفلام مهرجان أو حفل جوائز.\n\nفي فئة ما، يرتّب زر الترتيب الملصقات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم. وتعرض صفحات الأفلام جوائزها واختياراتها في المهرجانات. المس اسم مخرج أو ممثل في صفحة فيلم أو مسلسل لترى أفلامه ومسلسلاته الأخرى بين الصفحات التي فتحتها.</string>
     <string name="search_filters">عوامل التصفية</string>
     <string name="filter_from">من</string>
@@ -212,4 +212,18 @@
     <string name="person_nothing_title">لا شيء في قائمة التشغيل هذه</string>
     <string name="person_nothing">لا يُعرف فيلم أو مسلسل في قائمة التشغيل هذه يشارك فيه %1$s.</string>
     <string name="person_opened_pages">يُبحث فقط في الصفحات التي فتحتها.</string>
+    <string name="collections">المجموعات</string>
+    <string name="collection">مجموعة</string>
+    <string name="add_to_collection">إضافة إلى مجموعة</string>
+    <string name="new_collection">مجموعة جديدة</string>
+    <string name="rename_collection">إعادة تسمية المجموعة</string>
+    <string name="delete_collection">حذف المجموعة</string>
+    <string name="delete_collection_confirm">حذف هذه المجموعة؟</string>
+    <string name="empty_collection">مجموعة فارغة</string>
+    <string name="no_collections">لا توجد مجموعات</string>
+    <string name="collection_default_name">مجموعة %1$d</string>
+    <string name="create">إنشاء</string>
+    <string name="rename">إعادة التسمية</string>
+    <string name="no_collections_hint">جمّع الأفلام والمسلسلات على طريقتك: استخدم «مجموعة» في صفحتها.</string>
+    <string name="empty_collection_hint">استخدم «مجموعة» في صفحة فيلم أو مسلسل لإضافته هنا.</string>
 </resources>

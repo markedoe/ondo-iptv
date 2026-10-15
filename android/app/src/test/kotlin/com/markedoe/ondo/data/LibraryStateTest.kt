@@ -75,6 +75,24 @@ class LibraryStateTest {
     }
 
     @Test
+    fun collectionsAreMadeFilledRenamedAndDeleted() {
+        val movie = Favorite("p1", ItemKind.MOVIE, "m1", "Movie", addedAt = 1)
+        val series = Favorite("p2", ItemKind.SERIES, "s1", "Series", addedAt = 1)
+        var library = LibraryState().creatingCollection("c1", " Weekend ", now = 1).creatingCollection("c2", "kids", now = 2)
+        assertEquals("sorted by name, trimmed", listOf("kids", "Weekend"), library.collections.map { it.name })
+        library = library.togglingInCollection("c1", movie, now = 3).togglingInCollection("c1", series, now = 4)
+        val weekend = library.collections.single { it.id == "c1" }
+        assertTrue(weekend.contains("p1", ItemKind.MOVIE, "m1"))
+        assertFalse(weekend.contains("p2", ItemKind.MOVIE, "m1"))
+        assertEquals(4, weekend.updatedAt)
+        assertFalse("a second tap takes it out", library.togglingInCollection("c1", movie, now = 5).collections.single { it.id == "c1" }.contains("p1", ItemKind.MOVIE, "m1"))
+        library = library.renamingCollection("c2", "Animation", now = 6)
+        assertEquals(listOf("Animation", "Weekend"), library.collections.map { it.name })
+        assertEquals("deleting a playlist empties it from collections", listOf(series), library.removingPlaylist("p1").collections.single { it.id == "c1" }.items)
+        assertEquals(listOf("c1"), library.deletingCollection("c2").collections.map { it.id })
+    }
+
+    @Test
     fun historyIsCapped() {
         var library = LibraryState()
         repeat(LibraryState.MAX_HISTORY + 20) { library = library.recordStart(entry("m$it", at = it.toLong())) }

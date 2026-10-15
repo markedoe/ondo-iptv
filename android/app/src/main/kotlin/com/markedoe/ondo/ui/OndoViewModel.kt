@@ -148,6 +148,23 @@ class OndoViewModel(
         is ShowcaseItem.SeriesItem -> repository.toggleFavorite(ItemKind.SERIES, item.series.id, item.title, item.posterUrl)
     }
 
+    // Collections
+
+    fun toggleInCollection(id: String, item: ShowcaseItem) = when (item) {
+        is ShowcaseItem.MovieItem -> repository.toggleInCollection(id, ItemKind.MOVIE, item.movie.id, item.title, item.posterUrl)
+        is ShowcaseItem.SeriesItem -> repository.toggleInCollection(id, ItemKind.SERIES, item.series.id, item.title, item.posterUrl)
+    }
+
+    /** Makes a collection, with the item in it when there is one. */
+    fun newCollection(name: String, item: ShowcaseItem? = null) {
+        val id = repository.createCollection(name)
+        if (item != null) toggleInCollection(id, item)
+    }
+
+    fun renameCollection(id: String, name: String) = repository.renameCollection(id, name)
+
+    fun deleteCollection(id: String) = repository.deleteCollection(id)
+
     fun toggleFavorite(row: ChannelRow) =
         repository.toggleFavorite(ItemKind.CHANNEL, row.channel.id, row.channel.name, row.channel.logoUrl)
 

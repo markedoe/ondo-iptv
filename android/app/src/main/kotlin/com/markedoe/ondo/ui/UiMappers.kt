@@ -17,6 +17,9 @@ import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.CategoryRow
+import com.markedoe.ondo.ui.screens.CollectionChoice
+import com.markedoe.ondo.ui.screens.CollectionRow
+import com.markedoe.ondo.ui.screens.CollectionUiState
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.LiveUiState
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
@@ -220,7 +223,48 @@ object UiMappers {
             movies = grid(state, series = false, categoryId = null, myList = true, filter = ""),
             series = grid(state, series = true, categoryId = null, myList = true, filter = ""),
             channels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }.map { channelRow(it, state, now) },
+            collections = collectionRows(state, hidden),
         )
+    }
+
+    /** The collections, each with the number of its items the collection page shows. */
+    private fun collectionRows(state: OndoState, hidden: Set<String>): List<CollectionRow> {
+        val playlistId = state.activePlaylistId.orEmpty()
+        val shown by lazy {
+            mapOf(
+                ItemKind.MOVIE to state.content.movies.filter { it.categoryId !in hidden }.mapTo(HashSet()) { it.id },
+                ItemKind.SERIES to state.content.series.filter { it.categoryId !in hidden }.mapTo(HashSet()) { it.id },
+                ItemKind.CHANNEL to state.content.channels.filter { it.categoryId !in hidden }.mapTo(HashSet()) { it.id },
+            )
+        }
+        return state.library.collections.map { list ->
+            CollectionRow(list.id, list.name, list.items.count { it.playlistId == playlistId && it.itemId in shown.getValue(it.kind) })
+        }
+    }
+
+    /** A collection's items the playlist has, in the order they were added; null once it is deleted. */
+    fun collection(state: OndoState, id: String, now: Long): CollectionUiState? {
+        val list = state.library.collections.firstOrNull { it.id == id } ?: return null
+        val playlistId = state.activePlaylistId.orEmpty()
+        val hidden = hiddenCategoryIds(state)
+        fun order(kind: ItemKind): Map<String, Int> =
+            list.items.filter { it.playlistId == playlistId && it.kind == kind }.withIndex().associate { it.value.itemId to it.index }
+        val movies = order(ItemKind.MOVIE)
+        val series = order(ItemKind.SERIES)
+        val channels = order(ItemKind.CHANNEL)
+        return CollectionUiState(
+            id = list.id,
+            name = list.name,
+            movies = state.content.movies.filter { it.id in movies && it.categoryId !in hidden }.sortedBy { movies[it.id] }.map { ShowcaseItem.MovieItem(it) },
+            series = state.content.series.filter { it.id in series && it.categoryId !in hidden }.sortedBy { series[it.id] }.map { ShowcaseItem.SeriesItem(it) },
+            channels = state.content.channels.filter { it.id in channels && it.categoryId !in hidden }.sortedBy { channels[it.id] }.map { channelRow(it, state, now) },
+        )
+    }
+
+    /** The collections, ticked when they hold this item of the current playlist. */
+    fun collectionChoices(state: OndoState, kind: ItemKind, itemId: String): List<CollectionChoice> {
+        val playlistId = state.activePlaylistId.orEmpty()
+        return state.library.collections.map { CollectionChoice(it.id, it.name, it.contains(playlistId, kind, itemId)) }
     }
 
     fun channelRow(channel: Channel, state: OndoState, now: Long): ChannelRow {
@@ -248,6 +292,7 @@ object UiMappers {
             inMyList = isFavorite(state, item),
             similar = showcase.similarMovies(movie).map { ShowcaseItem.MovieItem(it) },
             awards = MovieAwards.rows(state, movie, locale),
+            collections = collectionChoices(state, ItemKind.MOVIE, movie.id),
         )
     }
 
@@ -270,6 +315,7 @@ object UiMappers {
             inMyList = isFavorite(state, item),
             similar = showcase.similarSeries(series).map { ShowcaseItem.SeriesItem(it) },
             error = error,
+            collections = collectionChoices(state, ItemKind.SERIES, series.id),
         )
     }
 

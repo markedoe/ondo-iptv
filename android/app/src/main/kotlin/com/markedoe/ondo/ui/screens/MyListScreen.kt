@@ -32,6 +32,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,12 +53,13 @@ import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 
 /** What My List shows: its movies, its series or its channels. */
-enum class MyListKind { MOVIES, SERIES, CHANNELS }
+enum class MyListKind { MOVIES, SERIES, CHANNELS, COLLECTIONS }
 
 data class MyListUiState(
     val movies: List<ShowcaseItem> = emptyList(),
     val series: List<ShowcaseItem> = emptyList(),
     val channels: List<ChannelRow> = emptyList(),
+    val collections: List<CollectionRow> = emptyList(),
 )
 
 class MyListActions(
@@ -62,6 +67,9 @@ class MyListActions(
     val onOpen: (ShowcaseItem) -> Unit = {},
     val onPlayChannel: (ChannelRow) -> Unit = {},
     val onSearch: () -> Unit = {},
+    val onOpenCollection: (String) -> Unit = {},
+    /** Makes an empty collection with this name. */
+    val onNewCollection: (String) -> Unit = {},
 )
 
 /** The My List tab: the movies, series and channels the viewer keeps, as on the Apple app. */
@@ -69,6 +77,7 @@ class MyListActions(
 @Composable
 fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions) {
     val metrics = rememberShelfMetrics()
+    var naming by rememberSaveable { mutableStateOf(false) }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
         contentPadding = PaddingValues(start = metrics.gutter, end = metrics.gutter, bottom = 32.dp),
@@ -87,11 +96,16 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
             )
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
-            val options = listOf(MyListKind.MOVIES to R.string.movies, MyListKind.SERIES to R.string.series, MyListKind.CHANNELS to R.string.channels)
+            val options = listOf(
+                MyListKind.MOVIES to R.string.movies,
+                MyListKind.SERIES to R.string.series,
+                MyListKind.CHANNELS to R.string.channels,
+                MyListKind.COLLECTIONS to R.string.collections,
+            )
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 options.forEachIndexed { index, (value, label) ->
                     SegmentedButton(selected = kind == value, onClick = { actions.onKind(value) }, shape = SegmentedButtonDefaults.itemShape(index, options.size)) {
-                        Text(stringResource(label))
+                        Text(stringResource(label), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
@@ -116,11 +130,13 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
                     }
                 }
             }
+            MyListKind.COLLECTIONS -> collectionRows(state.collections, onOpen = actions.onOpenCollection, onNew = { naming = true })
         }
         val empty = when (kind) {
             MyListKind.MOVIES -> state.movies.isEmpty()
             MyListKind.SERIES -> state.series.isEmpty()
             MyListKind.CHANNELS -> state.channels.isEmpty()
+            MyListKind.COLLECTIONS -> false
         }
         if (empty) {
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -134,5 +150,14 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
                 }
             }
         }
+    }
+    if (naming) {
+        CollectionNameDialog(
+            title = stringResource(R.string.new_collection),
+            initial = stringResource(R.string.collection_default_name, state.collections.size + 1),
+            confirm = stringResource(R.string.create),
+            onConfirm = { naming = false; actions.onNewCollection(it) },
+            onDismiss = { naming = false },
+        )
     }
 }

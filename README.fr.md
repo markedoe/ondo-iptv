@@ -71,7 +71,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   films et séries (parmi les fiches déjà ouvertes).
 - **Live TV** : catégories, Ma liste, programme en cours et suivant ; **recherche** (la loupe de chaque écran),
   filtrable par années de sortie ou par festival / cérémonie (lauréats seulement, au choix), comme sur Apple.
-- Onglet **Ma liste** : les films, séries et chaînes gardés, comme sur Apple.
+- Onglet **Ma liste** : les films, séries et chaînes gardés, et vos **collections** (Collection sur la fiche d'un film
+  ou d'une série), comme sur Apple.
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…) ou une par une, comme sur Apple.
 - **Aide** dans les Réglages.
 - **Prix** sur les fiches des films et une rangée « Films primés » dans Films, avec les mêmes données embarquées.

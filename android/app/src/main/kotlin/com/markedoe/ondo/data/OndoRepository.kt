@@ -291,6 +291,25 @@ class OndoRepository(
 
     fun removeFromHistory(entry: WatchEntry) = updateLibrary { it.remove(entry) }
 
+    // MARK: Collections
+
+    /** Creates a collection and returns its id. */
+    fun createCollection(name: String): String {
+        val id = UUID.randomUUID().toString()
+        updateLibrary { it.creatingCollection(id, name, now()) }
+        return id
+    }
+
+    fun renameCollection(id: String, name: String) = updateLibrary { it.renamingCollection(id, name, now()) }
+
+    fun deleteCollection(id: String) = updateLibrary { it.deletingCollection(id) }
+
+    /** Adds an item of the current playlist to a collection, or takes it out. */
+    fun toggleInCollection(id: String, kind: ItemKind, itemId: String, title: String, imageUrl: String?) {
+        val playlistId = _state.value.activePlaylistId ?: return
+        updateLibrary { it.togglingInCollection(id, Favorite(playlistId, kind, itemId, title, imageUrl, now()), now()) }
+    }
+
     private fun updateLibrary(change: (LibraryState) -> LibraryState) {
         if (!_state.value.isReady) {
             pendingLibraryChanges += change

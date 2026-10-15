@@ -33,6 +33,8 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.LibraryAdd
+import androidx.compose.material.icons.rounded.LibraryAddCheck
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.WorkspacePremium
@@ -49,6 +51,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,6 +101,7 @@ data class MovieDetailUiState(
     val similar: List<ShowcaseItem> = emptyList(),
     /** Awards and festival selections, wins first. */
     val awards: List<AwardRow> = emptyList(),
+    val collections: List<CollectionChoice> = emptyList(),
 )
 
 data class SeriesDetailUiState(
@@ -112,6 +116,7 @@ data class SeriesDetailUiState(
     val inMyList: Boolean = false,
     val similar: List<ShowcaseItem> = emptyList(),
     val error: String? = null,
+    val collections: List<CollectionChoice> = emptyList(),
 )
 
 class DetailActions(
@@ -124,6 +129,9 @@ class DetailActions(
     val onPlayEpisode: (Episode) -> Unit = {},
     /** A director or an actor tapped in the credits. */
     val onPerson: (String) -> Unit = {},
+    val onToggleCollection: (String) -> Unit = {},
+    /** Makes a collection with this name, holding the item. */
+    val onNewCollection: (String) -> Unit = {},
 )
 
 @Composable
@@ -136,6 +144,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         state.details?.genre,
     )
     val resumable = state.progress?.let { !it.finished && it.fraction > 0f } == true
+    var picking by rememberSaveable { mutableStateOf(false) }
     DetailScaffold(
         title = movie.name,
         posterUrl = state.details?.posterUrl ?: movie.posterUrl,
@@ -146,6 +155,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
             PlayButton(if (resumable) stringResource(R.string.resume) else stringResource(R.string.play), state.progress.takeIf { resumable }, actions.onPlay)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
+                CollectionAction(state.collections) { picking = true }
                 if (resumable) CircleAction(stringResource(R.string.from_start), Icons.Rounded.Replay, actions.onPlayFromStart)
             }
         },
@@ -155,6 +165,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
             similarRow(state.similar, metrics, actions)
         },
     )
+    if (picking) CollectionPicker(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
 }
 
 /** Awards and festival selections of a movie: the first few, then "And N more". */
@@ -201,6 +212,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         state.details?.genre ?: series.genre,
     )
     val season = state.seasons.firstOrNull { it.number == state.selectedSeason } ?: state.seasons.firstOrNull()
+    var picking by rememberSaveable { mutableStateOf(false) }
     DetailScaffold(
         title = series.name,
         posterUrl = state.details?.posterUrl ?: series.coverUrl,
@@ -218,6 +230,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             }
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
+                CollectionAction(state.collections) { picking = true }
             }
         },
         content = { metrics ->
@@ -242,6 +255,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             similarRow(state.similar, metrics, actions)
         },
     )
+    if (picking) CollectionPicker(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
 }
 
 private fun LazyListScope.similarRow(similar: List<ShowcaseItem>, metrics: ShelfMetrics, actions: DetailActions) {
@@ -341,6 +355,13 @@ private fun PlayButton(title: String, progress: WatchProgress?, onClick: () -> U
             }
         }
     }
+}
+
+/** Opens the collections; marked when one of them holds the item. */
+@Composable
+private fun CollectionAction(collections: List<CollectionChoice>, onClick: () -> Unit) {
+    val held = collections.any { it.contains }
+    CircleAction(stringResource(R.string.collection), if (held) Icons.Rounded.LibraryAddCheck else Icons.Rounded.LibraryAdd, onClick)
 }
 
 /** What TalkBack says after "My List": the check mark alone is visual only. */

@@ -152,7 +152,7 @@
     <string name="my_list_empty">这里还没有内容</string>
     <string name="my_list_empty_hint">在电影或剧集页面上使用“我的片单”，即可在这里找到它。</string>
     <string name="help_mylist_title">我的片单</string>
-    <string name="help_mylist_body">在电影或剧集页面上，“我的片单”可将其放在手边。在“直播”中，长按频道即可将其添加到我的片单。\n\n“我的片单”标签页汇集你的电影、剧集和频道；搜索是每个页面顶部的放大镜。</string>
+    <string name="help_mylist_body">在电影或剧集页面上，“我的片单”可将其放在手边。在“直播”中，长按频道即可将其添加到我的片单。\n\n“我的片单”标签页汇集你的电影、剧集和频道；搜索是每个页面顶部的放大镜。\n\n合集是你自己的分组，例如“周末”或“儿童”：在电影或剧集页面上使用“合集”，然后在“我的片单”的“合集”中找到它们。</string>
     <string name="help_search_body">“电影”“剧集”和“直播”会显示提供商的分类。搜索（每个页面顶部的放大镜）会查找频道、电影和剧集。在搜索中，筛选按钮可只保留所选年份上映的电影和剧集，或某个电影节或颁奖典礼的电影。\n\n在分类中，排序按钮可按播放列表顺序、名称、添加日期、上映日期或评分排列海报。电影页面会显示其获奖和电影节入选情况。在电影或剧集页面上点按导演或演员的名字，即可在你打开过的页面中查看其其他电影和剧集。</string>
     <string name="search_filters">筛选</string>
     <string name="filter_from">从</string>
@@ -182,4 +182,18 @@
     <string name="person_nothing_title">此播放列表中没有</string>
     <string name="person_nothing">此播放列表中没有已知包含 %1$s 的电影或剧集。</string>
     <string name="person_opened_pages">只会搜索你打开过的页面。</string>
+    <string name="collections">合集</string>
+    <string name="collection">合集</string>
+    <string name="add_to_collection">添加到合集</string>
+    <string name="new_collection">新建合集</string>
+    <string name="rename_collection">重命名合集</string>
+    <string name="delete_collection">删除合集</string>
+    <string name="delete_collection_confirm">删除此合集？</string>
+    <string name="empty_collection">空合集</string>
+    <string name="no_collections">没有合集</string>
+    <string name="collection_default_name">合集 %1$d</string>
+    <string name="create">创建</string>
+    <string name="rename">重命名</string>
+    <string name="no_collections_hint">按你的方式整理电影和剧集：在其页面上使用“合集”。</string>
+    <string name="empty_collection_hint">在电影或剧集页面上使用“合集”即可添加到这里。</string>
 </resources>

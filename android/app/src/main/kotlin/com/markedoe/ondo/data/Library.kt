@@ -45,9 +45,21 @@ data class WatchEntry(
     }
 }
 
+/** A collection the viewer made: movies, series and channels kept together under a name, as on Apple. */
+@Serializable
+data class UserCollection(
+    val id: String,
+    val name: String,
+    val items: List<Favorite> = emptyList(),
+    val updatedAt: Long = 0,
+) {
+    fun contains(playlistId: String, kind: ItemKind, itemId: String): Boolean =
+        items.any { it.playlistId == playlistId && it.kind == kind && it.itemId == itemId }
+}
+
 /**
- * Favourites, watch history and hidden categories, persisted as one JSON document. Pure: every change returns a
- * new value.
+ * Favourites, watch history, collections and hidden categories, persisted as one JSON document. Pure: every change
+ * returns a new value.
  */
 @Serializable
 data class LibraryState(
@@ -57,6 +69,8 @@ data class LibraryState(
     val hiddenCategories: Set<String> = emptySet(),
     /** Language or country tags ("PT", see `CategoryTags`) hidden in every playlist. */
     val hiddenTags: Set<String> = emptySet(),
+    /** By name. */
+    val collections: List<UserCollection> = emptyList(),
 ) {
     fun isCategoryHidden(playlistId: String, categoryId: String): Boolean = "$playlistId|$categoryId" in hiddenCategories
 
@@ -115,7 +129,31 @@ data class LibraryState(
         favorites = favorites.filterNot { it.playlistId == playlistId },
         history = history.filterNot { it.playlistId == playlistId },
         hiddenCategories = hiddenCategories.filterNot { it.startsWith("$playlistId|") }.toSet(),
+        collections = collections.map { list -> list.copy(items = list.items.filterNot { it.playlistId == playlistId }) },
     )
+
+    // Collections
+
+    fun creatingCollection(id: String, name: String, now: Long): LibraryState =
+        copy(collections = sortedByName(collections + UserCollection(id, name.trim(), updatedAt = now)))
+
+    fun renamingCollection(id: String, name: String, now: Long): LibraryState =
+        copy(collections = sortedByName(collections.map { if (it.id == id) it.copy(name = name.trim(), updatedAt = now) else it }))
+
+    fun deletingCollection(id: String): LibraryState = copy(collections = collections.filterNot { it.id == id })
+
+    /** Adds the item to the collection, or takes it out if it is there. */
+    fun togglingInCollection(id: String, item: Favorite, now: Long): LibraryState = copy(
+        collections = collections.map { list ->
+            when {
+                list.id != id -> list
+                list.items.any { it.key == item.key } -> list.copy(items = list.items.filterNot { it.key == item.key }, updatedAt = now)
+                else -> list.copy(items = list.items + item, updatedAt = now)
+            }
+        },
+    )
+
+    private fun sortedByName(lists: List<UserCollection>) = lists.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
 
     private fun trimmed(): LibraryState = if (history.size <= MAX_HISTORY) this else copy(history = history.sortedByDescending { it.lastWatchedAt }.take(MAX_HISTORY))
 

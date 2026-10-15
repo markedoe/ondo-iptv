@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -28,11 +29,20 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.CategoriesActions
 import com.markedoe.ondo.ui.screens.CategoriesScreen
+import com.markedoe.ondo.ui.screens.CollectionActions
+import com.markedoe.ondo.ui.screens.CollectionChoice
+import com.markedoe.ondo.ui.screens.CollectionRow
+import com.markedoe.ondo.ui.screens.CollectionScreen
+import com.markedoe.ondo.ui.screens.CollectionUiState
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
+import com.markedoe.ondo.ui.screens.MyListActions
+import com.markedoe.ondo.ui.screens.MyListKind
+import com.markedoe.ondo.ui.screens.MyListScreen
+import com.markedoe.ondo.ui.screens.MyListUiState
 import com.markedoe.ondo.ui.screens.PersonScreen
 import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PlaylistForm
@@ -128,6 +138,43 @@ class ScreensTest {
         compose.setContent { OndoTheme { PersonScreen(PersonUiState("Ada Vance"), onOpen = {}, onBack = {}) } }
         compose.onNodeWithText("Nothing in this playlist").assertExists()
         compose.onNodeWithText("Ada Vance.", substring = true).assertExists()
+    }
+
+    // The collection name dialogs are not driven: Robolectric never gets idle with a text field in a dialog window.
+
+    @Test
+    fun aMoviePageAddsItToACollection() {
+        val toggled = mutableListOf<String>()
+        val state = UiMappers.movieDetail(Fixtures.state(), Fixtures.glassCity).copy(collections = listOf(CollectionChoice("c1", "Weekend", contains = false)))
+        compose.setContent { OndoTheme { MovieDetailScreen(state, DetailActions(onToggleCollection = { toggled += it })) } }
+        compose.onNodeWithText("Collection").performScrollTo().performClick()
+        compose.onNodeWithTag("pick-Weekend").assertIsOff().performClick()
+        compose.onNodeWithTag("pickNewCollection").assertExists()
+        assertEquals(listOf("c1"), toggled)
+    }
+
+    @Test
+    fun aCollectionShowsItsItemsAndCanBeDeleted() {
+        var deleted = 0
+        val state = CollectionUiState("c1", "Weekend", movies = listOf(ShowcaseItem.MovieItem(Fixtures.glassCity)))
+        compose.setContent { OndoTheme { CollectionScreen(state, CollectionActions(onDelete = { deleted++ })) } }
+        compose.onNodeWithText("Glass City").assertExists()
+        compose.onNodeWithTag("collectionMenu").performClick()
+        compose.onNodeWithText("Rename collection").assertExists()
+        compose.onNodeWithText("Delete collection").performClick()
+        compose.onNodeWithText("Delete this collection?").assertExists()
+        compose.onNodeWithText("Delete").performClick()
+        assertEquals(1, deleted)
+    }
+
+    @Test
+    fun myListShowsItsCollections() {
+        var opened: String? = null
+        val state = MyListUiState(collections = listOf(CollectionRow("c1", "Weekend", 3)))
+        compose.setContent { OndoTheme { MyListScreen(state, MyListKind.COLLECTIONS, MyListActions(onOpenCollection = { opened = it })) } }
+        compose.onNodeWithTag("newCollection").assertExists()
+        compose.onNodeWithTag("collection-Weekend").assert(hasText("3")).performClick()
+        assertEquals("c1", opened)
     }
 
     @Test

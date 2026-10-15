@@ -2,8 +2,8 @@ package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.library.AwardsCatalogue
-import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.MediaDetails
+import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.Favorite
@@ -12,10 +12,13 @@ import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.screens.CollectionChoice
+import com.markedoe.ondo.ui.screens.CollectionRow
 import com.markedoe.ondo.ui.screens.SearchFilters
 import java.util.Locale
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -161,6 +164,27 @@ class UiMappersTest {
         assertEquals(listOf("The Archive"), works.series.map { it.title })
         assertEquals(listOf("The Archive"), UiMappers.person(state, "elodie marceau").series.map { it.title })
         assertTrue("a whole name, not a part of one", UiMappers.person(state, "Tom").movies.isEmpty())
+    }
+
+    @Test
+    fun aCollectionShowsItsItemsOfThePlaylistInTheOrderAdded() {
+        fun favorite(kind: ItemKind, id: String, playlistId: String = Fixtures.PLAYLIST_ID) = Favorite(playlistId, kind, id, id, addedAt = 1)
+        var library = LibraryState().creatingCollection("c1", "Weekend", now = 1)
+        for (item in listOf(
+            favorite(ItemKind.MOVIE, Fixtures.silentHarbor.id),
+            favorite(ItemKind.MOVIE, Fixtures.glassCity.id),
+            favorite(ItemKind.MOVIE, Fixtures.adultMovie.id),
+            favorite(ItemKind.SERIES, Fixtures.theArchive.id),
+            favorite(ItemKind.MOVIE, Fixtures.northernLights.id, playlistId = "another"),
+        )) library = library.togglingInCollection("c1", item, now = 2)
+        val state = Fixtures.state().copy(library = library)
+        val collection = UiMappers.collection(state, "c1", Fixtures.NOW)!!
+        assertEquals("added order; hidden categories and other playlists left out", listOf("Silent Harbor", "Glass City"), collection.movies.map { it.title })
+        assertEquals(listOf("The Archive"), collection.series.map { it.title })
+        assertEquals("counts what the page shows", listOf(CollectionRow("c1", "Weekend", 3)), UiMappers.myList(state, Fixtures.NOW).collections)
+        assertEquals(listOf(CollectionChoice("c1", "Weekend", contains = true)), UiMappers.movieDetail(state, Fixtures.glassCity).collections)
+        assertEquals(listOf(CollectionChoice("c1", "Weekend", contains = false)), UiMappers.movieDetail(state, Fixtures.lastSignal).collections)
+        assertNull("deleted", UiMappers.collection(state.copy(library = library.deletingCollection("c1")), "c1", Fixtures.NOW))
     }
 
     @Test

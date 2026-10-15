@@ -159,7 +159,7 @@
     <string name="my_list_empty">Nothing here yet</string>
     <string name="my_list_empty_hint">Use My List on a movie or series page to find it here.</string>
     <string name="help_mylist_title">My List</string>
-    <string name="help_mylist_body">On a movie or series page, My List keeps it at hand. In Live TV, long-press a channel to add it to My List.\n\nThe My List tab gathers your movies, series and channels; search is the magnifying glass at the top of each screen.</string>
+    <string name="help_mylist_body">On a movie or series page, My List keeps it at hand. In Live TV, long-press a channel to add it to My List.\n\nThe My List tab gathers your movies, series and channels; search is the magnifying glass at the top of each screen.\n\nCollections are your own groups, such as Weekend or Kids: use Collection on a movie or series page, then find them in My List, under Collections.</string>
     <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. Search, the magnifying glass at the top of each screen, looks through channels, movies and series. In Search, the filter button keeps the movies and series released in the years you choose, or the movies of a festival or ceremony.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating. Movie pages show their awards and festival selections. Tap the name of a director or an actor on a movie or series page to see their other movies and series among the pages you have opened.</string>
     <string name="search_filters">Filters</string>
     <string name="filter_from">From</string>
@@ -189,4 +189,18 @@
     <string name="person_nothing_title">Nothing in this playlist</string>
     <string name="person_nothing">No movie or series of this playlist is known to feature %1$s.</string>
     <string name="person_opened_pages">Only the pages you have opened are searched.</string>
+    <string name="collections">Collections</string>
+    <string name="collection">Collection</string>
+    <string name="add_to_collection">Add to collection</string>
+    <string name="new_collection">New collection</string>
+    <string name="rename_collection">Rename collection</string>
+    <string name="delete_collection">Delete collection</string>
+    <string name="delete_collection_confirm">Delete this collection?</string>
+    <string name="empty_collection">Empty collection</string>
+    <string name="no_collections">No collections</string>
+    <string name="collection_default_name">Collection %1$d</string>
+    <string name="create">Create</string>
+    <string name="rename">Rename</string>
+    <string name="no_collections_hint">Group movies and series your way: use Collection on their page.</string>
+    <string name="empty_collection_hint">Use Collection on a movie or series page to add it here.</string>
 </resources>

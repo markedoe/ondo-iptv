@@ -69,7 +69,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   (among the pages already opened).
 - **Live TV**: categories, My List, current and next programme; **search** (the magnifying glass of each screen),
   filtered by release years or by festival / ceremony (winners only, if you like), like on Apple.
-- **My List** tab: the movies, series and channels kept, as on Apple.
+- **My List** tab: the movies, series and channels kept, and your **collections** (Collection on a movie or series
+  page), as on Apple.
 - **Categories**: hidden by language or country code (`|PT|`, `FR:`…) or one by one, like on Apple.
 - **Help** in Settings.
 - **Awards** on movie pages and an "Award winners" row in Movies, from the same bundled data.
