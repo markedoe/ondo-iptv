@@ -12,6 +12,8 @@
 # Paths: Ruby code and `sh` run in fastlane/, actions (deliver, gym…) from the repository root.
 
 require "base64"
+require "openssl"
+require "set"
 require "tmpdir"
 
 default_platform(:ios)
@@ -100,6 +102,53 @@ end
 
 error do |_lane, _exception|
   remove_key_file
+end
+
+# Automatic signing makes Xcode create an Apple Development certificate on each new runner to sign the archive
+# (the export then uses a cloud-managed distribution certificate). Its private key dies with the runner, and Apple
+# caps how many a team may hold: past the cap, signing fails with "Your account has reached the maximum number of
+# certificates". The release workflow revokes the runner's own ones when the job ends.
+DEVELOPMENT_CERTIFICATE_TYPES = %w[DEVELOPMENT IOS_DEVELOPMENT MAC_APP_DEVELOPMENT].freeze
+
+def serial_key(serial)
+  serial.to_s.upcase.sub(/\A0+/, "")
+end
+
+# The certificates in this machine's keychains: their DER digests and serial numbers (hexadecimal).
+def keychain_certificates
+  pems = `security find-certificate -a -p`.scan(/-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----/m)
+  certificates = pems.filter_map do |pem|
+    OpenSSL::X509::Certificate.new(pem)
+  rescue OpenSSL::X509::CertificateError
+    nil
+  end
+  {
+    digests: certificates.map { |certificate| OpenSSL::Digest::SHA256.hexdigest(certificate.to_der) }.to_set,
+    serials: certificates.map { |certificate| serial_key(certificate.serial.to_s(16)) }.to_set
+  }
+end
+
+# Whether a certificate of the account is a development certificate held in this machine's keychains.
+def runner_development_certificate?(certificate, keychain)
+  return false unless DEVELOPMENT_CERTIFICATE_TYPES.include?(certificate.certificate_type)
+  content = certificate.certificate_content.to_s
+  digest = content.empty? ? nil : OpenSSL::Digest::SHA256.hexdigest(Base64.decode64(content))
+  keychain[:digests].include?(digest) || keychain[:serials].include?(serial_key(certificate.serial_number))
+end
+
+desc "Revoke the development certificates Xcode created on this CI runner (never run it on your own Mac)"
+lane :revoke_runner_certificates do
+  # GitHub's macOS runners are discarded after the job: a certificate in their keychain is one this job created.
+  UI.user_error!("Runs only on a CI runner: on a Mac it would revoke that Mac's certificates") unless ENV["CI"]
+  keychain = keychain_certificates
+  api_key
+  revoked = Spaceship::ConnectAPI::Certificate.all.select { |certificate| runner_development_certificate?(certificate, keychain) }
+  revoked.each do |certificate|
+    certificate.delete!
+    # Neither the name nor the requester: the log of a public repository is public.
+    UI.message("Revoked the #{certificate.certificate_type} certificate created on this runner")
+  end
+  UI.message("No development certificate of this runner to revoke") if revoked.empty?
 end
 
 platform :ios do

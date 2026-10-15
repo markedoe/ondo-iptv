@@ -151,8 +151,13 @@ HTTP, Cast and notifications.
    **Submit for Review**. The two versions are independent: **iOS / iPadOS can ship on its own**;
    run the Mac build from TestFlight on your Mac at least once before submitting the macOS version.
 
-The *Release* workflow has never run yet: if its first run fails (signing, export, upload), the job log
-says why — it is usually fixed with a one-line change in `fastlane/Fastfile`.
+If a run fails (signing, export, upload), the job log says why. To sign the archive, Xcode creates an
+*Apple Development* certificate on each new runner; its private key disappears with the runner, so the
+workflow revokes it when the job ends (step *Revoke this runner's development certificate*, matched by
+serial number: distribution certificates and your Mac's certificate are not touched). If signing fails with
+`Your account has reached the maximum number of certificates`, certificates from earlier runs were left
+behind: in *Certificates, Identifiers & Profiles → Certificates*, revoke the *Apple Development* certificates
+created by CI (keep your Mac's), then run the workflow again. TestFlight builds are not affected.
 
 ## E. Things to check before the review
 

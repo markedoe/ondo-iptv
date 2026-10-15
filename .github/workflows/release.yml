@@ -63,6 +63,7 @@ jobs:
           head -c 7 demo.m3u | grep -q '#EXTM3U' || { echo "::error::$URL is not an M3U playlist"; exit 1; }
           echo "$(grep -c '^#EXTINF' demo.m3u) entries in $URL"
       - name: iOS → TestFlight
+        id: ios
         if: env.TARGET == 'all' || env.TARGET == 'ios'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -71,6 +72,7 @@ jobs:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: bundle exec fastlane ios beta
       - name: macOS → TestFlight
+        id: mac
         if: env.TARGET == 'all' || env.TARGET == 'mac'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -108,3 +110,13 @@ jobs:
         if: failure()
         # Printed in the job log, where GitHub masks the secrets (an uploaded file would not be masked).
         run: tail -n 150 ~/Library/Logs/gym/*.log 2>/dev/null || true
+      - name: Revoke this runner's development certificate
+        # Signing makes Xcode create an Apple Development certificate on each new runner; its key dies with the
+        # runner and Apple caps how many a team may hold (see fastlane/Fastfile). Only the certificates found in
+        # this runner's keychain are revoked, matched by serial number; distribution certificates are not touched.
+        if: always() && (steps.ios.outcome == 'success' || steps.ios.outcome == 'failure' || steps.mac.outcome == 'success' || steps.mac.outcome == 'failure')
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: bundle exec fastlane revoke_runner_certificates
