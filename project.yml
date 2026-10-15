@@ -62,6 +62,9 @@ targets:
         LSApplicationCategoryType: public.app-category.entertainment
         # About window of the Mac app; same holder as LICENSE and fastlane/metadata/copyright.txt.
         NSHumanReadableCopyright: © 2026 markedoe
+        # Ondo's TMDb read access token: written by fastlane from the TMDB_READ_TOKEN secret for releases, empty
+        # otherwise (the viewer can then enter a key of their own). Never in the repository.
+        OndoTMDbReadToken: ""
         ITSAppUsesNonExemptEncryption: false
         # IPTV providers overwhelmingly serve plain HTTP playlists, APIs, guides, streams and logos.
         # NSAllowsArbitraryLoads alone: adding ...ForMedia, ...InWebContent or NSAllowsLocalNetworking

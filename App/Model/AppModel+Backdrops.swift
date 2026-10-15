@@ -27,18 +27,18 @@ extension AppModel {
         return trendingURL.flatMap { backdrops.dead.contains($0) ? nil : $0 }
     }
 
-    /// A backdrop that did not load (dead address, refused, not an image): the title shows TMDb's instead when a key
-    /// is set, else its blurred poster.
+    /// A backdrop that did not load (dead address, refused, not an image): the title shows TMDb's instead when TMDb
+    /// is on, else its blurred poster.
     func backdropFailed(_ url: URL, for item: ShowcaseItem) {
         guard backdrops.dead.insert(url).inserted else { return }
         Task { await loadTMDbBackdropIfNeeded(for: item) }
     }
 
-    /// With the viewer's TMDb key, looks for the backdrop of a title that has none that loads, once a session: by the
+    /// With TMDb on, looks for the backdrop of a title that has none that loads, once a session: by the
     /// TMDb id the provider gave, else by title and year. Only the title, its year and its TMDb id are sent.
     func loadTMDbBackdropIfNeeded(for item: ShowcaseItem) async {
-        guard hasTMDbKey, backdropURL(for: item) == nil, !backdrops.searched.contains(item.id),
-              let credential = secrets.get(Keychain.tmdbKey) else { return }
+        guard usesTMDb, backdropURL(for: item) == nil, !backdrops.searched.contains(item.id),
+              let credential = tmdbCredential() else { return }
         backdrops.searched.insert(item.id)
         let details = cachedDetails(for: item)
         let title = details.map(\.title).flatMap { $0.isEmpty ? nil : $0 } ?? item.title

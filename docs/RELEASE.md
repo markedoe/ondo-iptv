@@ -35,6 +35,20 @@ GitHub Actions*, then *Actions → Website → Run workflow*. The site is publis
 
 Never put the `.p8` in the repository (`secrets/` and `*.p8` are ignored by git).
 
+Optional, a fifth one: `TMDB_READ_TOKEN`, Ondo's own TMDb token. With it, trending titles, missing background
+images and actors' and directors' credits work without the viewer entering anything (a *Use TMDb* switch in
+Settings turns them off). Without it, Settings asks each viewer for a TMDb key of their own. To create it, once:
+
+1. Sign in (or sign up) on [themoviedb.org](https://www.themoviedb.org), then *avatar → Settings → API*.
+2. *Create* (or *Request an API Key*), type **Developer**, accept the terms of use.
+3. Application name `Ondo`, URL `https://markedoe.github.io/ondo-iptv/`, summary: "IPTV player for iPhone,
+   iPad and Mac; shows trending titles, background images and filmographies from TMDb". Your contact details
+   go to TMDb only.
+4. Copy the **API Read Access Token** (the long one, starting with `eyJ`) into the `TMDB_READ_TOKEN` secret.
+
+fastlane writes it into the app's generated `Info.plist` at build time: it never goes into the repository, a
+commit or a log. The next TestFlight build picks it up.
+
 ## B. Apple Developer (developer.apple.com)
 
 ### B1. Agreement

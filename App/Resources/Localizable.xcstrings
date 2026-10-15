@@ -10385,42 +10385,42 @@
         }
       }
     },
-    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose. The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With a TMDb key (Settings), all of them are found; without one, only among the pages you have already opened. Genres, the year and awards open the titles of your playlist that share them the same way.": {
+    "Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in the sidebar.\n\nIn Search, the filter button keeps the movies and series released in the years you choose. The grids sort by playlist order, name, date added, release date or rating.\n\nOn a movie or series page, tap the name of a director or an actor to see their other movies and series in your playlist. With TMDb on (Settings), all of them are found; without it, only among the pages you have already opened. Genres, the year and awards open the titles of your playlist that share them the same way.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez. Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec une clé TMDb (Réglages), tous sont trouvés ; sans clé, seulement parmi les fiches que vous avez déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent."
+            "value": "Films, Séries et TV en direct affichent les catégories de votre fournisseur. La recherche parcourt les chaînes, les programmes, les films et les séries : sur iPhone, c’est la loupe en haut de chaque onglet ; sur iPad et Mac, elle est dans la barre latérale.\n\nDans la recherche, le bouton de filtre garde les films et séries sortis les années que vous choisissez. Les grilles se trient par ordre de la playlist, nom, date d’ajout, date de sortie ou note.\n\nSur la fiche d’un film ou d’une série, touchez le nom d’un réalisateur ou d’un acteur pour voir ses autres films et séries de votre playlist. Avec TMDb activé (Réglages), tous sont trouvés ; sans TMDb, seulement parmi les fiches que vous avez déjà ouvertes. Les genres, l’année et les prix ouvrent de la même façon les titres de votre playlist qui les partagent."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas. Las cuadrículas se ordenan por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu lista. Con una clave de TMDb (Ajustes) se encuentran todas; sin ella, solo entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten."
+            "value": "Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda recorre canales, programas, películas y series: en iPhone es la lupa de la parte superior de cada pestaña; en iPad y Mac está en la barra lateral.\n\nEn la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas. Las cuadrículas se ordenan por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración.\n\nEn la ficha de una película o serie, toca el nombre de un director o de un actor para ver sus otras películas y series de tu lista. Con TMDb activado (Ajustes) se encuentran todas; sin él, solo entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher. As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com uma chave do TMDb (Ajustes), todos são encontrados; sem ela, só entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham."
+            "value": "Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca percorre canais, programas, filmes e séries: no iPhone é a lupa no topo de cada aba; no iPad e no Mac fica na barra lateral.\n\nNa busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher. As grades são ordenadas pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota.\n\nNa página de um filme ou série, toque no nome de um diretor ou ator para ver os outros filmes e séries dele na sua playlist. Com o TMDb ativado (Ajustes), todos são encontrados; sem ele, só entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“电影”“剧集”和“直播”会显示提供商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。设置 TMDb 密钥（“设置”）后可找到全部作品；没有密钥时，只在你已打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。"
+            "value": "“电影”“剧集”和“直播”会显示提供商的分类。搜索会查找频道、节目、电影和剧集：在 iPhone 上是每个标签页顶部的放大镜；在 iPad 和 Mac 上位于边栏中。\n\n在搜索中，筛选按钮可只保留你选择的年份上映的电影和剧集。网格可按播放列表顺序、名称、添加日期、上映日期或评分排序。\n\n在电影或剧集页面上，轻点导演或演员的名字，即可查看此人在你的播放列表中的其他电影和剧集。开启 TMDb（“设置”）后可找到全部作品；未开启时，只在你已打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها. تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. مع مفتاح TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث فقط في الصفحات التي فتحتها من قبل. وبالطريقة نفسها، تفتح الأنواع والسنة والجوائز عناوين قائمة التشغيل التي تشترك فيها."
+            "value": "تعرض الأفلام والمسلسلات والبث المباشر فئات مزوّدك. يبحث البحث في القنوات والبرامج والأفلام والمسلسلات: على iPhone هو العدسة المكبّرة أعلى كل علامة تبويب، وعلى iPad وMac يوجد في الشريط الجانبي.\n\nفي البحث، يُبقي زر التصفية الأفلام والمسلسلات الصادرة في السنوات التي تختارها. تُرتَّب الشبكات حسب ترتيب قائمة التشغيل أو الاسم أو تاريخ الإضافة أو تاريخ الإصدار أو التقييم.\n\nفي صفحة فيلم أو مسلسل، اضغط على اسم مخرج أو ممثل لترى أفلامه ومسلسلاته الأخرى في قائمة التشغيل. عند تفعيل TMDb (الإعدادات) يُعثر عليها كلها؛ ومن دونه، يُبحث فقط في الصفحات التي فتحتها من قبل. وبالطريقة نفسها، تفتح الأنواع والسنة والجوائز عناوين قائمة التشغيل التي تشترك فيها."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। TMDb कुंजी (सेटिंग्स) होने पर सब मिलती हैं; उसके बिना, केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं। इसी तरह, शैलियाँ, वर्ष और पुरस्कार आपकी प्लेलिस्ट के वे शीर्षक खोलते हैं जिनमें वे समान हैं।"
+            "value": "फ़िल्में, सीरीज़ और लाइव टीवी आपके प्रदाता की श्रेणियाँ दिखाते हैं। खोज चैनलों, कार्यक्रमों, फ़िल्मों और सीरीज़ में ढूँढती है: iPhone पर यह हर टैब के ऊपर का आवर्धक लेंस है; iPad और Mac पर यह साइडबार में है।\n\nखोज में, फ़िल्टर बटन केवल आपके चुने वर्षों में रिलीज़ हुई फ़िल्में और सीरीज़ रखता है। ग्रिड को प्लेलिस्ट क्रम, नाम, जोड़ने की तारीख, रिलीज़ तारीख या रेटिंग से छाँटा जा सकता है।\n\nकिसी फ़िल्म या सीरीज़ के पेज पर, निर्देशक या अभिनेता के नाम पर टैप करें और आपकी प्लेलिस्ट में उनकी दूसरी फ़िल्में और सीरीज़ देखें। TMDb चालू होने पर (सेटिंग्स) सब मिलती हैं; उसके बिना, केवल उन पेजों में जिन्हें आप पहले खोल चुके हैं। इसी तरह, शैलियाँ, वर्ष और पुरस्कार आपकी प्लेलिस्ट के वे शीर्षक खोलते हैं जिनमें वे समान हैं।"
           }
         }
       }
@@ -12865,42 +12865,42 @@
         }
       }
     },
-    "Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device; passwords and keys are kept in the system keychain.\n\nOndo connects only to the servers you add and, if you enter a key, to TMDb and to the subtitle services you choose. Backups contain your logins: keep them private.": {
+    "Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device; passwords and keys are kept in the system keychain.\n\nOndo connects only to the servers you add, to TMDb when it is on in Settings, and to the subtitle services you choose. Backups contain your logins: keep them private.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil ; les mots de passe et les clés sont gardés dans le trousseau du système.\n\nOndo se connecte uniquement aux serveurs que vous ajoutez et, si vous saisissez une clé, à TMDb et aux services de sous-titres que vous choisissez. Les sauvegardes contiennent vos identifiants : gardez-les privées."
+            "value": "Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil ; les mots de passe et les clés sont gardés dans le trousseau du système.\n\nOndo se connecte uniquement aux serveurs que vous ajoutez, à TMDb quand il est activé dans les Réglages, et aux services de sous-titres que vous choisissez. Les sauvegardes contiennent vos identifiants : gardez-les privées."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus listas, tu historial y tus ajustes se quedan en tu dispositivo; las contraseñas y las claves se guardan en el llavero del sistema.\n\nOndo solo se conecta a los servidores que añades y, si introduces una clave, a TMDb y a los servicios de subtítulos que elijas. Las copias de seguridad contienen tus datos de acceso: guárdalas en privado."
+            "value": "Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus listas, tu historial y tus ajustes se quedan en tu dispositivo; las contraseñas y las claves se guardan en el llavero del sistema.\n\nOndo solo se conecta a los servidores que añades, a TMDb cuando está activado en Ajustes y a los servicios de subtítulos que elijas. Las copias de seguridad contienen tus datos de acceso: guárdalas en privado."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho; senhas e chaves são guardadas nas chaves do sistema.\n\nO Ondo se conecta apenas aos servidores que você adiciona e, se você inserir uma chave, ao TMDb e aos serviços de legendas que escolher. Os backups contêm seus logins: mantenha-os privados."
+            "value": "O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho; senhas e chaves são guardadas nas chaves do sistema.\n\nO Ondo se conecta apenas aos servidores que você adiciona, ao TMDb quando ele está ativado em Ajustes e aos serviços de legendas que escolher. Os backups contêm seus logins: mantenha-os privados."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上；密码和密钥保存在系统钥匙串中。\n\nOndo 只连接你添加的服务器；如果你输入了密钥，还会连接 TMDb 和你选择的字幕服务。备份包含你的登录信息：请妥善保管，切勿公开。"
+            "value": "Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上；密码和密钥保存在系统钥匙串中。\n\nOndo 只连接你添加的服务器、在“设置”中开启时的 TMDb，以及你选择的字幕服务。备份包含你的登录信息：请妥善保管，切勿公开。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "لا يحتوي Ondo على حساب ولا إعلانات ولا إحصاءات خاصة به. تبقى قوائم التشغيل والسجل والإعدادات على جهازك؛ وتُحفظ كلمات المرور والمفاتيح في سلسلة مفاتيح النظام.\n\nلا يتصل Ondo إلا بالخوادم التي تضيفها، وإذا أدخلت مفتاحًا، بـ TMDb وبخدمات الترجمة التي تختارها. تحتوي النسخ الاحتياطية على بيانات دخولك: لا تشاركها مع أحد."
+            "value": "لا يحتوي Ondo على حساب ولا إعلانات ولا إحصاءات خاصة به. تبقى قوائم التشغيل والسجل والإعدادات على جهازك؛ وتُحفظ كلمات المرور والمفاتيح في سلسلة مفاتيح النظام.\n\nلا يتصل Ondo إلا بالخوادم التي تضيفها، وبـ TMDb عند تفعيله في الإعدادات، وبخدمات الترجمة التي تختارها. تحتوي النسخ الاحتياطية على بيانات دخولك: لا تشاركها مع أحد."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo में न अकाउंट है, न विज्ञापन, न अपना कोई विश्लेषण। आपकी प्लेलिस्ट, इतिहास और सेटिंग्स आपके डिवाइस पर रहती हैं; पासवर्ड और कुंजियाँ सिस्टम कीचेन में रखी जाती हैं।\n\nOndo केवल उन सर्वरों से जुड़ता है जिन्हें आप जोड़ते हैं, और अगर आप कुंजी डालते हैं तो TMDb और आपकी चुनी सबटाइटल सेवाओं से। बैकअप में आपकी लॉगिन जानकारी होती है: इन्हें निजी रखें।"
+            "value": "Ondo में न अकाउंट है, न विज्ञापन, न अपना कोई विश्लेषण। आपकी प्लेलिस्ट, इतिहास और सेटिंग्स आपके डिवाइस पर रहती हैं; पासवर्ड और कुंजियाँ सिस्टम कीचेन में रखी जाती हैं।\n\nOndo केवल उन सर्वरों से जुड़ता है जिन्हें आप जोड़ते हैं, सेटिंग्स में चालू होने पर TMDb से, और आपकी चुनी सबटाइटल सेवाओं से। बैकअप में आपकी लॉगिन जानकारी होती है: इन्हें निजी रखें।"
           }
         }
       }
@@ -13181,6 +13181,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "केवल वही पेज खोजे जाते हैं जो आपने खोले हैं। उनकी सभी फ़िल्में और सीरीज़ ढूँढने के लिए सेटिंग्स में TMDb कुंजी जोड़ें।"
+          }
+        }
+      }
+    },
+    "Only the pages you have opened are searched. Turn on TMDb in Settings to find all their movies and series.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seules les fiches déjà ouvertes sont parcourues. Activez TMDb dans les Réglages pour trouver tous ses films et séries."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se buscan las fichas que ya abriste. Activa TMDb en Ajustes para encontrar todas sus películas y series."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Só as páginas que você já abriu são pesquisadas. Ative o TMDb em Ajustes para encontrar todos os filmes e séries dessa pessoa."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只会搜索你打开过的页面。在“设置”中开启 TMDb 即可找到此人的所有电影和剧集。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُبحث فقط في الصفحات التي فتحتها. فعّل TMDb في الإعدادات للعثور على كل أفلامه ومسلسلاته."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "केवल वही पेज खोजे जाते हैं जो आपने खोले हैं। उनकी सभी फ़िल्में और सीरीज़ ढूँढने के लिए सेटिंग्स में TMDb चालू करें।"
           }
         }
       }
@@ -20871,6 +20911,46 @@
         }
       }
     },
+    "Trending titles, background images your playlist lacks and the other movies and series of an actor or a director come from TMDb: only titles and names are sent. This product uses the TMDB API but is not endorsed or certified by TMDB.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les tendances, les images de fond absentes de votre playlist et les autres films et séries d’un acteur ou d’un réalisateur viennent de TMDb : seuls des titres et des noms sont envoyés. Ce produit utilise l'API TMDB mais n'est ni approuvé ni certifié par TMDB."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las tendencias, las imágenes de fondo que le faltan a tu lista y las demás películas y series de un actor o un director vienen de TMDb: solo se envían títulos y nombres. Este producto usa la API de TMDB, pero TMDB no lo respalda ni lo certifica."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "As tendências, as imagens de fundo que faltam na sua playlist e os outros filmes e séries de um ator ou diretor vêm do TMDb: só títulos e nomes são enviados. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "热门内容、播放列表缺少的背景图，以及演员或导演的其他电影和剧集都来自 TMDb：只会发送片名和人名。本产品使用 TMDB API，但未经 TMDB 认可或认证。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تأتي العناوين الرائجة وصور الخلفية الناقصة في قائمة التشغيل وأفلام الممثل أو المخرج ومسلسلاته الأخرى من TMDb: لا تُرسل إلا العناوين والأسماء. يستخدم هذا المنتج TMDB API، لكنه غير معتمد أو مصدَّق من TMDB."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ट्रेंडिंग टाइटल, आपकी प्लेलिस्ट में न मिलने वाली बैकग्राउंड इमेज और किसी अभिनेता या निर्देशक की दूसरी फ़िल्में और सीरीज़ TMDb से आती हैं: केवल टाइटल और नाम भेजे जाते हैं। यह प्रोडक्ट TMDB API का इस्तेमाल करता है, लेकिन TMDB इसका समर्थन या प्रमाणन नहीं करता।"
+          }
+        }
+      }
+    },
     "Trial": {
       "localizations": {
         "fr": {
@@ -21227,6 +21307,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ अपडेट किया गया"
+          }
+        }
+      }
+    },
+    "Use TMDb": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser TMDb"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar TMDb"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usar o TMDb"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用 TMDb"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استخدام TMDb"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TMDb का उपयोग करें"
           }
         }
       }

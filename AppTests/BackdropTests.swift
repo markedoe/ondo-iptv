@@ -3,7 +3,7 @@ import IPTVCore
 @testable import Ondo
 
 /// The wide picture behind a page's title: a provider backdrop that does not load is not offered again, and the one
-/// found on TMDb takes its place.
+/// found on TMDb takes its place. TMDb is called only while it is on.
 @MainActor
 final class BackdropTests: XCTestCase {
     private var root: URL!
@@ -30,5 +30,20 @@ final class BackdropTests: XCTestCase {
         let found = URL(string: "https://image.tmdb.org/t/p/w1280/lighthouse.jpg")!
         model.backdrops.fromTMDb[ShowcaseItem.movie(movie).id] = found
         XCTAssertEqual(model.backdropURL(for: .movie(movie)), found)
+    }
+
+    func testTMDbIsCalledOnlyWhileItIsOn() {
+        let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        XCTAssertNil(AppModel.builtInTMDbToken, "test builds carry no token")
+        XCTAssertNil(model.tmdbCredential())
+        XCTAssertFalse(model.usesTMDb)
+
+        model.setTMDbCredential(" KEY ")
+        XCTAssertEqual(model.tmdbCredential(), "KEY")
+        XCTAssertTrue(model.usesTMDb)
+
+        model.updateSettings { $0.useTMDb = false }
+        XCTAssertNil(model.tmdbCredential(), "nothing goes to TMDb once it is off")
+        XCTAssertFalse(model.usesTMDb)
     }
 }

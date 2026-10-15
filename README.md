@@ -18,9 +18,9 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
-  see their other movies and series in the playlist (from the pages already opened, or all of them with a
-  TMDb key); a genre, the release year or an award (then its festival) opens the titles that share it; when the
-  provider's background image is missing or broken, the page shows TMDb's (with a key) or the blurred poster.
+  see their other movies and series in the playlist (from the pages already opened, or all of them with
+  TMDb); a genre, the release year or an award (then its festival) opens the titles that share it; when the
+  provider's background image is missing or broken, the page shows TMDb's (unless turned off in Settings) or the blurred poster.
 - **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
   **filtered by release years** and **by festival or ceremony** (winners only if you like).
 - **Awards**: Palme d'Or, Oscars, Golden Lion, Golden Bear, Césars, BAFTAs, Golden Globes… on movie pages

@@ -12,4 +12,5 @@
 • Masquez aussi facilement un style (manga et anime, enfants, documentaires…) ou n’importe quel mot des noms de catégories, dans toutes les playlists.
 • L’accueil indique la date de dernière mise à jour de la playlist, au-dessus de son nom.
 • Touchez un genre, l’année de sortie ou un prix sur une fiche pour voir les titres de votre playlist qui le partagent, puis tout le festival.
-• Les fiches dont l’image de fond manque ou ne se charge pas affichent celle de TMDb si vous avez saisi une clé, sinon l’affiche floutée, au lieu d’un cadre vide.
+• TMDb ne demande plus de clé : tendances, images de fond et filmographies marchent tout de suite ; un interrupteur dans les Réglages le coupe.
+• Les fiches dont l’image de fond manque ou ne se charge pas affichent celle de TMDb, sinon l’affiche floutée, au lieu d’un cadre vide.

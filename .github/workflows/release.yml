@@ -70,6 +70,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+          TMDB_READ_TOKEN: ${{ secrets.TMDB_READ_TOKEN }}
         run: bundle exec fastlane ios beta
       - name: macOS → TestFlight
         id: mac
@@ -79,6 +80,7 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
+          TMDB_READ_TOKEN: ${{ secrets.TMDB_READ_TOKEN }}
         run: bundle exec fastlane mac beta
       - name: App Store screenshots
         if: env.TARGET == 'all' || env.TARGET == 'metadata'

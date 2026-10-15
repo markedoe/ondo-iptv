@@ -69,6 +69,18 @@ end
 
 def generate_project
   sh("cd .. && xcodegen generate")
+  write_tmdb_token
+end
+
+# Ondo's TMDb read access token (TMDB_READ_TOKEN secret, optional) goes into the generated Info.plist, which git
+# ignores, so the token never reaches the repository, the xcodebuild command line or the logs. Without it the app
+# asks the viewer for a key of their own.
+def write_tmdb_token
+  token = ENV["TMDB_READ_TOKEN"].to_s.strip
+  return UI.message("No TMDb token: the app will ask for a key") if token.empty?
+  plist = File.expand_path("../App/Resources/Info.plist", __dir__)
+  sh("/usr/libexec/PlistBuddy", "-c", "Set :OndoTMDbReadToken #{token}", plist, log: false)
+  UI.message("TMDb token written into Info.plist")
 end
 
 # Build number: the platform's latest upload on App Store Connect + 1 (1 for the first one), so a re-run or
