@@ -161,6 +161,7 @@ class MacEntitlementsTests(CheckTestCase):
     COMPLETE = {
         "com.apple.security.app-sandbox": True,
         "com.apple.security.network.client": True,
+        "com.apple.security.network.server": True,
         "com.apple.security.files.user-selected.read-write": True,
     }
 
@@ -176,6 +177,10 @@ class MacEntitlementsTests(CheckTestCase):
     def test_without_network_nothing_loads(self):
         self.project({key: value for key, value in self.COMPLETE.items() if key != "com.apple.security.network.client"})
         self.assertFails("mac_entitlements", "com.apple.security.network.client")
+
+    def test_without_the_server_mkv_films_cannot_be_remuxed(self):
+        self.project({key: value for key, value in self.COMPLETE.items() if key != "com.apple.security.network.server"})
+        self.assertFails("mac_entitlements", "com.apple.security.network.server")
 
     def test_without_user_selected_files_nothing_imports(self):
         self.project({key: value for key, value in self.COMPLETE.items() if key != "com.apple.security.files.user-selected.read-write"})
