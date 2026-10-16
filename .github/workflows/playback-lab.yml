@@ -1,0 +1,68 @@
+name: Playback lab
+
+# libVLC (the library of Ondo's VLC engine) plays generated streams from a provider that misbehaves on purpose,
+# and what the screen shows is checked against limits: freezes covered by the buffer, film start and seek times,
+# resume position, and the freeze verdict on libVLC's own counters. See tools/playback-lab/README.md.
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/playback-lab/**
+      - Packages/IPTVCore/Sources/IPTVCore/Playback/**
+      - App/Player/VLCBackend.swift
+      - .github/workflows/playback-lab.yml
+  pull_request:
+    paths:
+      - tools/playback-lab/**
+      - Packages/IPTVCore/Sources/IPTVCore/Playback/**
+      - App/Player/VLCBackend.swift
+      - .github/workflows/playback-lab.yml
+  workflow_dispatch:
+
+concurrency:
+  group: playback-lab-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Freezes, start and seek times
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: tools/playback-lab
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: libVLC, its Python binding and ffmpeg
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends vlc-bin vlc-plugin-base python3-vlc ffmpeg
+          python3 -c "import vlc; print('libVLC', vlc.libvlc_get_version().decode())"
+      - name: Test streams (cached)
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: tools/playback-lab/media
+          key: playback-lab-media-${{ hashFiles('tools/playback-lab/make_media.sh') }}
+      - name: Generate the streams
+        run: |
+          if [ ! -f media/film.mkv ]; then SKIP_HEAVY=1 ./make_media.sh; fi
+          ls -l media
+      - name: Checks
+        run: |
+          python3 -W ignore faulty_server.py 8765 2> server.log &
+          sleep 1
+          python3 -W ignore run.py check
+      - name: Results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playback-lab-results
+          path: |
+            tools/playback-lab/results-check.jsonl
+            tools/playback-lab/server.log
+          if-no-files-found: ignore

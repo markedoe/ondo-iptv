@@ -9,8 +9,11 @@
     A file with Range support. `rate` 0 sends as fast as possible, otherwise at rate x the bitrate.
     `stall_at` pauses at the byte matching T seconds of media for D seconds; `drop_at` closes the
     connection at the byte matching T seconds (once per request: a reconnect with Range resumes).
+Both take `latency=MS`: each request waits this long before its answer, as a distant server does.
 """
+import json
 import os
+import subprocess
 import sys
 import threading
 import time
@@ -18,7 +21,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 MEDIA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "media")
-DURATIONS = {"test720.ts": 120.02, "test720.mkv": 120.02, "heavy.ts": 60.02}
+DURATIONS = {}
 LOG = []
 LOCK = threading.Lock()
 
@@ -27,6 +30,18 @@ def log(event):
     with LOCK:
         LOG.append((time.time(), event))
     print(f"[server {time.strftime('%H:%M:%S')}] {event}", file=sys.stderr, flush=True)
+
+
+def duration(path):
+    """Seconds of media in the file (ffprobe, once per file)."""
+    if path not in DURATIONS:
+        out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", path],
+                             capture_output=True, text=True, check=True)
+        DURATIONS[path] = float(json.loads(out.stdout)["format"]["duration"])
+    return DURATIONS[path]
+
+
+TYPES = {".ts": "video/mp2t", ".mkv": "video/x-matroska", ".mp4": "video/mp4"}
 
 
 def pairs(value):
@@ -52,7 +67,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(404)
             return
         size = os.path.getsize(path)
-        bps = size / DURATIONS.get(name, 120.0)
+        bps = size / duration(path)
+        latency = float(query.get("latency", 0)) / 1000
+        if latency:
+            time.sleep(latency)
         try:
             if kind == "live":
                 self.live(path, size, bps, query)
@@ -117,7 +135,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Range", f"bytes {first}-{last}/{size}")
         else:
             self.send_response(200)
-        self.send_header("Content-Type", "video/mp2t" if path.endswith(".ts") else "video/x-matroska")
+        self.send_header("Content-Type", TYPES.get(os.path.splitext(path)[1], "application/octet-stream"))
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(last - first + 1))
         self.end_headers()

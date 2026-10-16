@@ -10,13 +10,15 @@ misbehaves on purpose, and every freeze is counted on screen.
   slower than real time, with or without a head start on connection. Films: a file with byte ranges, with a
   stop, a dropped connection or a slow connection.
 - `harness.py`: plays one stream the way `VLCBackend` does. The pictures come out of VLC's real video output at
-  their display time (scaled down to 320×180) and a picture counts when its content changed. A freeze is 300 ms
-  or more without a new picture once the picture started.
+  their display time (scaled down to 320×180). Each test picture carries its number as a barcode, read on screen:
+  a picture counts when its number changed, and after a seek the number says where playback landed. A freeze is
+  300 ms or more without a new picture once the picture started.
 - `run.py`: plays every scenario of a suite with every setting and prints a table.
 - `check_verdict.py`: the app's freeze verdict (`PlaybackHealth` in IPTVCore), ported line for line, run on
   libVLC's counters recorded during a run, against what the screen showed.
-- `make_media.sh`: generates the test streams (nothing is downloaded): 720p at 25 frames per second, 3.4 Mb/s
-  in MPEG-TS like a typical channel, and a 4K stream too heavy for a busy device.
+- `make_media.sh`: generates the test streams (nothing is downloaded): a channel (720p at 25 frames per second,
+  3.4 Mb/s in MPEG-TS), a film (1080p, 6 Mb/s, a key frame every 10 s as encoders do by default) as MP4 with its
+  index at the end or at the start, MKV and MPEG-TS, and a 4K stream too heavy for a busy device.
 
 ## Running it
 
@@ -27,8 +29,9 @@ python3-vlc`).
 cd tools/playback-lab
 ./make_media.sh
 python3 faulty_server.py 8765 &
-python3 run.py live repeat=2    # then vod, zap, reactions, traces, heavy
+python3 run.py live repeat=2    # then vod, film, resume, zap, reactions, traces, heavy
 python3 check_verdict.py results-traces.jsonl results-heavy.jsonl
+python3 run.py check            # what CI checks
 ```
 
 The numbers below come from 45-second runs with libVLC 3.0.20 on Linux, three at a time on four cores (Ondo
@@ -81,7 +84,7 @@ Seconds until the picture shows:
 - When a stop outlasts the buffer, VLC raises its own delay for the rest of that channel (a 3 s stop after a
   2.5 s one froze 0.8 s instead of 1.3 s).
 
-## Films
+## Films: stops and dropped connections
 
 | Provider | 3 s | 5 s |
 |---|---|---|
@@ -90,8 +93,53 @@ Seconds until the picture shows:
 | Connection dropped at 30 s | 0 | 0 |
 | 90 % of the needed rate | 2 / 4.5 s | 0 (within 45 s) |
 
-VLC reads ahead and picks a dropped connection up again on its own (`http-reconnect` is not needed). On a fast
-connection the picture shows in 0.9 s whatever the buffer; on a slow one, in 4.1 s with 3 s and 6.3 s with 5 s.
+VLC reads ahead and picks a dropped connection up again on its own (`http-reconnect` is not needed). With 1 s
+of buffer too, a 4 s stop and a dropped connection do not show, on a fast connection and on one three times
+faster than the film.
+
+## Films: start and seeks
+
+The film in three containers on three networks: fast, distant (each request waits 150 ms, data at three times the
+film's bitrate) and slow (300 ms, one and a half times the bitrate). In each cell: seconds until the picture
+moves; then, for a skip of +10 s, a skip of −10 s and a jump to 1:30, seconds until it moves again.
+
+| File | Network | 1 s | 3 s | 5 s |
+|---|---|---|---|---|
+| MP4, index at the end | fast | 0.2; 0.7 / 0.3 / 0.1 | 0.2; 0.6 / 0.3 / 0.1 | 0.2; 0.7 / 0.2 / 0.1 |
+| | distant | 1.1; 0.3 / 1.2 / 0.7 | 1.8; 0.3 / 1.9 / 1.4 | 2.4; 0.3 / 2.5 / 2.1 |
+| | slow | 2.1; 4.5 / 6.2 / 1.4 | 3.4; 4.8 / 0.5 / 2.7 | 4.7; 4.9 / – / 4.2 |
+| MP4, index at the start | fast | 0.1; 0.6 / 0.2 / 0.1 | 0.1; 0.7 / 0.3 / 0.1 | 0.2; 0.7 / 0.3 / 0.1 |
+| | distant | 0.7; 0.3 / 1.2 / 0.7 | 1.4; 0.3 / 1.9 / 1.4 | 2.4; – |
+| | slow | 1.4; 4.5 / 6.2 / 1.4 | 2.7; 4.8 / 0.5 / 2.7 | 4.0; 4.9 / – / 4.2 |
+| MKV | fast | 0.1; 0.3 / 0.2 / 0.1 | 0.2; 0.3 / 0.2 / 0.1 | 0.1; 0.4 / 0.2 / 0.1 |
+| | distant | 2.4; 0.4 / 1.3 / 0.7 | 2.5; 0.4 / 2.0 / 1.3 | 2.5; 0.4 / 2.6 / 2.0 |
+| | slow | 4.7; 2.2 / – / 2.1 | 4.8; 3.6 / – / 2.7 | 4.7; 5.0 / – / 4.1 |
+
+"–": the harness could not tell where that seek landed. Every seek it saw landed on the target (within 0.04 s).
+
+- The buffer is waited for at the start and after every seek that leaves what VLC already read: on anything but
+  a fast connection, each second of buffer is a second more to wait. A skip forward into what is already read
+  (+10 s on the distant network) costs 0.3 s whatever the buffer.
+- An MKV film on a distant or slow server takes 2.4 to 4.8 s to start whatever the buffer: VLC first reads the
+  file's index at its end, a few round trips away.
+- On the slow network a precise seek needs the data from the key frame before the target (here up to 10 s of
+  film): 4.5 to 6 s.
+- VLC's fast seek (`input-fast-seek`) jumps to a key frame: 1.3 s on the slow network, but it lands up to 7 s
+  before the target, so a +10 s skip moves 3 to 5 s. It stays off.
+- Films in MPEG-TS seek poorly in VLC: 2 to 4 s even on a fast connection, landing 5 s before the target, and
+  later seeks were not seen landing at all. MKV and MP4 seek precisely.
+
+## Films: resume
+
+The app resumes a film with VLC's `start-time`. Seconds until the picture moves at 1:00:
+
+| File | Network | 1 s | 3 s |
+|---|---|---|---|
+| MP4, index at the end | fast / distant / slow | 0.4 / 1.4 / 2.8 | 0.4 / 2.1 / 4.1 |
+| MP4, index at the start | fast / distant / slow | 0.2 / 1.1 / 2.6 | 0.2 / 2.0 / 4.0 |
+| MKV | fast / distant / slow | 0.5 / 3.0 / 5.7 | 0.5 / 3.6 / 7.3 |
+
+Each resumed at 1:00 exactly. VLC ignores `start-time` on MPEG-TS and starts at 0:00; the app then seeks.
 
 ## A device that does not keep up
 
@@ -120,12 +168,26 @@ it was work for nothing on the main thread: Ondo now reacts to real changes only
 | Live 4K, busy device | 28 % lost | player |
 | Film 4K, busy device | 27 % lost | player |
 
+## In CI
+
+`run.py check` plays twelve cases with the defaults Ondo ships and fails when one passes its limit: stops a live
+buffer must cover, bursts that must never freeze, how soon a live channel and a film show, where and how fast
+seeks land, a resume at 1:00, a stop and a dropped connection during a film, and the freeze verdict on recorded
+counters. The limits leave room for shared machines. It runs on every change to the lab, the playback core or
+`VLCBackend` (`.github/workflows/playback-lab.yml`). The app's own CI also plays Apple's public sample stream with
+both engines and checks the start and seek times the player measures (`AppTests/PlaybackTimingTests.swift`).
+
 ## What Ondo does with this
 
 - Live channels start with a 3-second buffer (2 before): stops up to about 2.5 s no longer show, for one second
   more before the picture of a real-time provider. Once a stop used up the buffer, the next channels get 6
-  seconds (`LiveBufferPolicy`).
-- Films get 5 seconds (3 before): nothing more to wait on a fast connection, fewer freezes on a slow one.
+  seconds (`BufferPolicy`).
+- Films start with 1 second (3 before): on a distant server a film starts 0.7 s sooner, resumes 0.7 s sooner and
+  a skip back takes 1.2 s instead of 1.9 s. Once a stop used up the buffer (a connection too slow to read ahead),
+  the next films get 5 seconds.
+- Settings, Buffer for live TV and Buffer for movies & series, replace the automatic choice by a fixed length.
+- More, Report a Problem… shows a report of the playback to share: the start and seek times as the viewer waited
+  for them, the freezes, the statistics and the events, with no address, login or title.
 - More, Stream Statistics shows the engine, the video size, the video's bitrate, what arrives, the smoothness,
   the freezes, the lost pictures and the verdict. The spinner shows when a stall outlasts the buffer, and a live
   channel that received nothing for 12 seconds is reconnected.

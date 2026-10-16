@@ -10,13 +10,16 @@ se comporte mal exprès, et chaque gel est compté à l'écran.
   à-coups, avec des coupures, plus lent que le temps réel, avec ou sans avance à la connexion. Films : un fichier
   avec plages d'octets, avec une coupure, une connexion perdue ou une connexion lente.
 - `harness.py` : lit un flux comme le fait `VLCBackend`. Les images sortent de la vraie sortie vidéo de VLC à
-  leur heure d'affichage (réduites en 320×180) et une image compte quand son contenu a changé. Un gel, c'est
-  300 ms ou plus sans nouvelle image une fois l'image partie.
+  leur heure d'affichage (réduites en 320×180). Chaque image de test porte son numéro sous forme de code-barres,
+  lu à l'écran : une image compte quand son numéro a changé, et après un saut le numéro dit où la lecture est
+  arrivée. Un gel, c'est 300 ms ou plus sans nouvelle image une fois l'image partie.
 - `run.py` : joue chaque scénario d'une série avec chaque réglage et affiche un tableau.
 - `check_verdict.py` : le diagnostic des gels de l'app (`PlaybackHealth` dans IPTVCore), porté ligne à ligne,
   appliqué aux compteurs de libVLC enregistrés pendant une lecture, et comparé à ce que montrait l'écran.
-- `make_media.sh` : génère les flux de test (rien n'est téléchargé) : 720p à 25 images par seconde, 3,4 Mb/s en
-  MPEG-TS comme une chaîne typique, et un flux 4K trop lourd pour un appareil occupé.
+- `make_media.sh` : génère les flux de test (rien n'est téléchargé) : une chaîne (720p à 25 images par seconde,
+  3,4 Mb/s en MPEG-TS), un film (1080p, 6 Mb/s, une image-clé toutes les 10 s comme le font les encodeurs par
+  défaut) en MP4 avec son index à la fin ou au début, en MKV et en MPEG-TS, et un flux 4K trop lourd pour un
+  appareil occupé.
 
 ## Lancer les mesures
 
@@ -27,8 +30,9 @@ python3-vlc`).
 cd tools/playback-lab
 ./make_media.sh
 python3 faulty_server.py 8765 &
-python3 run.py live repeat=2    # puis vod, zap, reactions, traces, heavy
+python3 run.py live repeat=2    # puis vod, film, resume, zap, reactions, traces, heavy
 python3 check_verdict.py results-traces.jsonl results-heavy.jsonl
+python3 run.py check            # ce que vérifie la CI
 ```
 
 Les chiffres ci-dessous viennent de lectures de 45 secondes avec libVLC 3.0.20 sous Linux, trois à la fois sur
@@ -84,7 +88,7 @@ Secondes avant que l'image apparaisse :
 - Quand une coupure dépasse le tampon, VLC augmente lui-même son délai pour la suite de la chaîne (une coupure de
   3 s après une de 2,5 s a figé l'image 0,8 s au lieu de 1,3 s).
 
-## Films
+## Films : coupures et connexions perdues
 
 | Fournisseur | 3 s | 5 s |
 |---|---|---|
@@ -93,9 +97,55 @@ Secondes avant que l'image apparaisse :
 | Connexion perdue à 30 s | 0 | 0 |
 | 90 % du débit nécessaire | 2 / 4,5 s | 0 (en 45 s) |
 
-VLC lit en avance et reprend tout seul une connexion perdue (`http-reconnect` n'est pas nécessaire). Sur une
-connexion rapide, l'image apparaît en 0,9 s quel que soit le tampon ; sur une connexion lente, en 4,1 s avec 3 s
-et en 6,3 s avec 5 s.
+VLC lit en avance et reprend tout seul une connexion perdue (`http-reconnect` n'est pas nécessaire). Avec 1 s de
+tampon aussi, une coupure de 4 s et une connexion perdue ne se voient pas, sur une connexion rapide comme sur une
+connexion trois fois plus rapide que le film.
+
+## Films : démarrage et sauts
+
+Le film dans trois conteneurs sur trois réseaux : rapide, lointain (chaque requête attend 150 ms, données à trois
+fois le débit du film) et lent (300 ms, une fois et demie le débit). Dans chaque case : les secondes avant que
+l'image bouge ; puis, pour un saut de +10 s, un saut de −10 s et un saut à 1:30, les secondes avant qu'elle
+reparte.
+
+| Fichier | Réseau | 1 s | 3 s | 5 s |
+|---|---|---|---|---|
+| MP4, index à la fin | rapide | 0,2 ; 0,7 / 0,3 / 0,1 | 0,2 ; 0,6 / 0,3 / 0,1 | 0,2 ; 0,7 / 0,2 / 0,1 |
+| | lointain | 1,1 ; 0,3 / 1,2 / 0,7 | 1,8 ; 0,3 / 1,9 / 1,4 | 2,4 ; 0,3 / 2,5 / 2,1 |
+| | lent | 2,1 ; 4,5 / 6,2 / 1,4 | 3,4 ; 4,8 / 0,5 / 2,7 | 4,7 ; 4,9 / – / 4,2 |
+| MP4, index au début | rapide | 0,1 ; 0,6 / 0,2 / 0,1 | 0,1 ; 0,7 / 0,3 / 0,1 | 0,2 ; 0,7 / 0,3 / 0,1 |
+| | lointain | 0,7 ; 0,3 / 1,2 / 0,7 | 1,4 ; 0,3 / 1,9 / 1,4 | 2,4 ; – |
+| | lent | 1,4 ; 4,5 / 6,2 / 1,4 | 2,7 ; 4,8 / 0,5 / 2,7 | 4,0 ; 4,9 / – / 4,2 |
+| MKV | rapide | 0,1 ; 0,3 / 0,2 / 0,1 | 0,2 ; 0,3 / 0,2 / 0,1 | 0,1 ; 0,4 / 0,2 / 0,1 |
+| | lointain | 2,4 ; 0,4 / 1,3 / 0,7 | 2,5 ; 0,4 / 2,0 / 1,3 | 2,5 ; 0,4 / 2,6 / 2,0 |
+| | lent | 4,7 ; 2,2 / – / 2,1 | 4,8 ; 3,6 / – / 2,7 | 4,7 ; 5,0 / – / 4,1 |
+
+« – » : le banc n'a pas pu dire où ce saut est arrivé. Tous les sauts qu'il a vus sont arrivés sur la cible (à
+0,04 s près).
+
+- Le tampon est attendu au démarrage et après chaque saut qui sort de ce que VLC a déjà lu : sur toute connexion
+  autre que rapide, chaque seconde de tampon est une seconde d'attente de plus. Un saut en avant dans ce qui est
+  déjà lu (+10 s sur le réseau lointain) coûte 0,3 s quel que soit le tampon.
+- Un film MKV sur un serveur lointain ou lent met 2,4 à 4,8 s à démarrer quel que soit le tampon : VLC lit d'abord
+  l'index du fichier, à sa fin, à quelques allers-retours.
+- Sur le réseau lent, un saut précis a besoin des données depuis l'image-clé avant la cible (ici jusqu'à 10 s de
+  film) : 4,5 à 6 s.
+- Le saut rapide de VLC (`input-fast-seek`) va à une image-clé : 1,3 s sur le réseau lent, mais il arrive jusqu'à
+  7 s avant la cible, si bien qu'un saut de +10 s n'avance que de 3 à 5 s. Il reste désactivé.
+- Les films en MPEG-TS sautent mal avec VLC : 2 à 4 s même sur une connexion rapide, en arrivant 5 s avant la
+  cible, et les sauts suivants n'ont pas été vus arriver. Le MKV et le MP4 sautent précisément.
+
+## Films : reprise
+
+L'app reprend un film avec le `start-time` de VLC. Secondes avant que l'image bouge à 1:00 :
+
+| Fichier | Réseau | 1 s | 3 s |
+|---|---|---|---|
+| MP4, index à la fin | rapide / lointain / lent | 0,4 / 1,4 / 2,8 | 0,4 / 2,1 / 4,1 |
+| MP4, index au début | rapide / lointain / lent | 0,2 / 1,1 / 2,6 | 0,2 / 2,0 / 4,0 |
+| MKV | rapide / lointain / lent | 0,5 / 3,0 / 5,7 | 0,5 / 3,6 / 7,3 |
+
+Chacun a repris exactement à 1:00. VLC ignore `start-time` en MPEG-TS et démarre à 0:00 ; l'app fait alors un saut.
 
 ## Un appareil qui ne suit pas
 
@@ -125,13 +175,30 @@ changements.
 | Direct 4K, appareil occupé | 28 % perdues | lecteur |
 | Film 4K, appareil occupé | 27 % perdues | lecteur |
 
+## Dans la CI
+
+`run.py check` joue douze cas avec les réglages qu'Ondo livre et échoue dès qu'un cas dépasse sa limite : les
+coupures que le tampon du direct doit couvrir, les données par à-coups qui ne doivent jamais figer l'image, le
+temps avant l'image d'une chaîne et d'un film, où et en combien de temps arrivent les sauts, une reprise à 1:00,
+une coupure et une connexion perdue pendant un film, et le diagnostic des gels sur des compteurs enregistrés. Les
+limites laissent de la marge aux machines partagées. Il tourne à chaque modification du banc, du cœur de lecture
+ou de `VLCBackend` (`.github/workflows/playback-lab.yml`). La CI de l'app lit aussi le flux d'exemple public
+d'Apple avec les deux moteurs et vérifie les temps de démarrage et de saut que le lecteur mesure
+(`AppTests/PlaybackTimingTests.swift`).
+
 ## Ce qu'Ondo en fait
 
 - Les chaînes en direct démarrent avec un tampon de 3 secondes (2 avant) : les coupures jusqu'à environ 2,5 s ne
   se voient plus, pour une seconde de plus avant l'image d'un fournisseur qui envoie en temps réel. Dès qu'une
-  coupure a épuisé le tampon, les chaînes suivantes ont 6 secondes (`LiveBufferPolicy`).
-- Les films ont 5 secondes (3 avant) : rien de plus à attendre sur une connexion rapide, moins de gels sur une
-  connexion lente.
+  coupure a épuisé le tampon, les chaînes suivantes ont 6 secondes (`BufferPolicy`).
+- Les films démarrent avec 1 seconde (3 avant) : sur un serveur lointain, un film démarre 0,7 s plus tôt, reprend
+  0,7 s plus tôt et un saut en arrière prend 1,2 s au lieu de 1,9 s. Dès qu'une coupure a épuisé le tampon (une
+  connexion trop lente pour lire en avance), les films suivants ont 5 secondes.
+- Réglages, Mémoire tampon du direct et Mémoire tampon des films et séries, remplacent le choix automatique par
+  une durée fixe.
+- Plus, Signaler un problème… montre un rapport de la lecture à partager : les temps de démarrage et de saut tels
+  que le spectateur les a attendus, les gels, les statistiques et les événements, sans adresse, ni identifiant,
+  ni titre.
 - Plus, Statistiques du flux montre le moteur, la taille de la vidéo, son débit, ce qui arrive, la fluidité, les
   gels, les images perdues et le diagnostic. L'indicateur de chargement s'affiche quand une interruption dépasse
   le tampon, et une chaîne en direct qui n'a rien reçu pendant 12 secondes est reconnectée.
