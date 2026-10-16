@@ -6,6 +6,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.hasStateDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -26,6 +27,7 @@ import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.WatchEntry
+import com.markedoe.ondo.player.ProblemReportDialog
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.BrowseKind
@@ -333,6 +335,45 @@ class ScreensTest {
         compose.onNodeWithText("M3U playlist · example.com").assertExists()
         compose.onNodeWithTag("adultSwitch").performClick()
         assertEquals(true, shown)
+    }
+
+    /** Settings, Player: a buffer length is chosen from its menu, automatic first. */
+    @Test
+    fun settingsChooseTheBufferForMoviesAndSeries() {
+        val chosen = mutableListOf<Int>()
+        val state = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }.copy(liveBuffer = 3)
+        compose.setContent { OndoTheme { SettingsScreen(state, SettingsActions(onVodBuffer = { chosen += it })) } }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("vodBufferRow"))
+        compose.onNodeWithText("3 seconds").assertExists()
+        compose.onNodeWithTag("vodBufferRow").assert(hasText("Automatic")).performClick()
+        compose.onNodeWithText("10 seconds").performClick()
+        compose.onNodeWithTag("vodBufferRow").performClick()
+        compose.onNodeWithTag("bufferChoice-0").assert(hasText("Automatic")).performClick()
+        assertEquals(listOf(10, 0), chosen)
+    }
+
+    /** More, Report a Problem…: the report in full, with what it holds, and its three ways out. */
+    @Test
+    fun theProblemReportShowsTheReportAndItsActions() {
+        val actions = mutableListOf<String>()
+        compose.setContent {
+            OndoTheme {
+                ProblemReportDialog(
+                    report = "Ondo playback report\nEvents (seconds since opening):\n  1.4 picture moving after 1.4 s",
+                    onDismiss = { actions += "close" },
+                    onCopy = { actions += "copy" },
+                    onShare = { actions += "share" },
+                    onOpenIssue = { actions += "issue" },
+                )
+            }
+        }
+        compose.onNodeWithText("It holds no stream address, login or title", substring = true).assertExists()
+        compose.onNodeWithText("picture moving after 1.4 s", substring = true).assertExists()
+        compose.onNodeWithText("Copy Report").performClick()
+        compose.onNodeWithText("Share").performClick()
+        compose.onNodeWithText("Open an Issue on GitHub").performClick()
+        compose.onNodeWithText("Close").performClick()
+        assertEquals(listOf("copy", "share", "issue", "close"), actions)
     }
 
     /** A person found by search opens their page. */

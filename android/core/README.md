@@ -16,6 +16,7 @@ the specification; behaviour and edge cases are kept unless listed under *Differ
 | `catchup` | `CatchupUrlBuilder` (default / append / shift / flussonic / xtream, template tokens) |
 | `library` | `PlaylistLoader`, `PlaybackFactory`, `UserLibrary` (favourites, history, lists, reminders, hidden channels, deterministic merge), `SearchEngine`, `ChannelNumbering`, `JsonFileStore`, `BackupArchive`, TMDb (`TmdbClient`, `CatalogueMatcher`), `ErrorAttribution` |
 | `net` | `HttpClient` interface, `OkHttpClientAdapter`, `HttpException`, `Gzip` |
+| `playback` | `PlaybackBuffer` (buffer settings → Media3 buffer durations), `PlaybackLog` and `PrivacyScrubber`, `ProblemReport` (the playback problem report, with no address, login or title) |
 
 ## Conventions
 

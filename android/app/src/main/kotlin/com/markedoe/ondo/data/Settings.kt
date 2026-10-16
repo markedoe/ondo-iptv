@@ -34,4 +34,7 @@ data class AppSettings(
     /** Newer awards and festival selections downloaded once a week (see [AwardsDownload]). */
     val updateAwards: Boolean = true,
     val awardsCheckedAt: Long = 0,
+    /** Seconds the player gathers before it shows a live channel, and a movie or an episode; 0 is automatic (see `PlaybackBuffer`). */
+    val liveBuffer: Int = 0,
+    val vodBuffer: Int = 0,
 )

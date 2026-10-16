@@ -375,6 +375,8 @@ object UiMappers {
         appearance = state.settings.appearance,
         showAdultCategories = state.settings.showAdultCategories,
         updateAwards = state.settings.updateAwards,
+        liveBuffer = state.settings.liveBuffer,
+        vodBuffer = state.settings.vodBuffer,
         version = version,
         isRefreshing = state.isLoading,
     )

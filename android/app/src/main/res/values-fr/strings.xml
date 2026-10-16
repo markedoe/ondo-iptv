@@ -139,7 +139,7 @@
     <string name="help_categories_title">Masquer des langues et des catégories</string>
     <string name="help_categories_body">Beaucoup de fournisseurs commencent le nom des catégories par un code comme |PT| ou FR:. Le bouton de filtre de Films, Séries et TV en direct (aussi dans Réglages, Langues et catégories) masque d’un coup une langue ou un pays entier, dans toutes les playlists ; les catégories que le fournisseur ajoute plus tard suivent la même règle.\n\nLes styles fonctionnent de la même façon avec les mots des noms de catégories : masquez Manga et anime, Enfants ou Documentaires, ou un mot de votre choix comme Bollywood. Seuls les noms de catégories comptent, pas le genre de chaque film.\n\nVous pouvez aussi y masquer les catégories une par une, et les réafficher à tout moment.</string>
     <string name="help_playback_title">Quand un flux ne se lit pas</string>
-    <string name="help_playback_body">Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.</string>
+    <string name="help_playback_body">Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.\n\nAvec une mémoire tampon plus longue (Réglages, Mémoire tampon du direct et Mémoire tampon des films et séries), les coupures plus longues du fournisseur ne se voient pas, mais l’image met plus de temps à apparaître.\n\nDans le lecteur, Plus, Signaler un problème… montre un rapport de la lecture (temps de démarrage et de saut, gels, statistiques ; ni adresse, ni identifiant, ni titre) à envoyer par mail ou message, ou dans un ticket GitHub.</string>
     <string name="help_privacy_title">Confidentialité</string>
     <string name="help_privacy_body">Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil et sont exclus des sauvegardes de l’appareil.\n\nOndo se connecte uniquement aux serveurs que vous ajoutez.</string>
     <string name="error_load_denied">Le fournisseur a refusé l’accès (HTTP %1$d). Vérifiez le nom d’utilisateur, le mot de passe et votre abonnement.</string>
@@ -249,4 +249,21 @@
     <string name="people">Personnes</string>
     <string name="search_prompt">Films, séries, chaînes, personnes</string>
     <string name="search_hint">Trouvez films, séries, chaînes, acteurs et réalisateurs dans la playlist actuelle.</string>
+    <string name="automatic">Automatique</string>
+    <string name="player">Lecteur</string>
+    <string name="buffer_live">Mémoire tampon du direct</string>
+    <string name="buffer_vod">Mémoire tampon des films et séries</string>
+    <string name="buffer_hint">Une mémoire tampon plus longue couvre des coupures plus longues du fournisseur ; l’image met alors plus de temps à apparaître et à revenir après un saut. Automatique s’adapte au fournisseur.</string>
+    <plurals name="buffer_seconds">
+        <item quantity="one">%d seconde</item>
+        <item quantity="many">%d de secondes</item>
+        <item quantity="other">%d secondes</item>
+    </plurals>
+    <string name="report_problem">Signaler un problème…</string>
+    <string name="problem_report">Rapport de problème</string>
+    <string name="copy_report">Copier le rapport</string>
+    <string name="share">Partager</string>
+    <string name="open_issue">Ouvrir un ticket sur GitHub</string>
+    <string name="playback_report_subject">Rapport de lecture Ondo</string>
+    <string name="problem_report_explanation">Ce rapport aide à trouver la cause d’un problème de lecture : les temps de démarrage et de saut, les gels et les statistiques du lecteur pour cette lecture, avec l’app, le système et les réglages du lecteur. Il ne contient ni adresse de flux, ni identifiant, ni titre. Les tickets GitHub sont publics.</string>
 </resources>

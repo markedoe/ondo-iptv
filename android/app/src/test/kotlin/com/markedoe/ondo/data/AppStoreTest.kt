@@ -35,6 +35,20 @@ class AppStoreTest {
         assertEquals("not json", folder.root.resolve("library.json.corrupt-7").readText())
     }
 
+    /** Settings written by an older version, before the buffer settings: they load, buffers on automatic. */
+    @Test
+    fun settingsFromAnOlderVersionLoadWithTheNewDefaults() {
+        folder.root.resolve("settings.json").writeText("""{"appearance":"LIGHT","activePlaylistId":"p1","updateAwards":false}""")
+        val settings = AppStore(folder.root).loadSettings()
+        assertEquals(AppSettings(appearance = com.markedoe.ondo.ui.theme.Appearance.LIGHT, activePlaylistId = "p1", updateAwards = false), settings)
+        assertEquals(0, settings.liveBuffer)
+        assertEquals(0, settings.vodBuffer)
+
+        AppStore(folder.root).saveSettings(settings.copy(liveBuffer = 3, vodBuffer = 10))
+        assertEquals(3, AppStore(folder.root).loadSettings().liveBuffer)
+        assertEquals(10, AppStore(folder.root).loadSettings().vodBuffer)
+    }
+
     @Test
     fun catalogueSavesKeepNoPreviousVersion() {
         val store = AppStore(folder.root)

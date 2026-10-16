@@ -7,6 +7,9 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -83,10 +86,14 @@ import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 const val PRIVACY_URL = "https://markedoe.github.io/ondo-iptv/privacy.html"
 const val SUPPORT_URL = "https://markedoe.github.io/ondo-iptv/support.html"
+
+private const val PAGE_FADE_MS = 220
+private const val FILTER_DEBOUNCE_MS = 150L
 
 /** The whole app: welcome until a playlist exists, then the tabs and their pages. */
 @Composable
@@ -139,7 +146,15 @@ private fun MainTabs(viewModel: OndoViewModel) {
     }
     OndoNavigationFrame(selected, onSelect = navController::openTab) {
         Box(Modifier.fillMaxSize()) {
-            NavHost(navController, startDestination = Routes.Home) {
+            // A short fade between pages (the default crossfade lasts 700 ms).
+            NavHost(
+                navController,
+                startDestination = Routes.Home,
+                enterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
+                exitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
+                popEnterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
+                popExitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
+            ) {
                 composable<Routes.Home> { HomeDestination(viewModel, navController) }
                 composable<Routes.Movies> { VodDestination(viewModel, navController, series = false) }
                 composable<Routes.Series> { VodDestination(viewModel, navController, series = true) }
@@ -443,10 +458,17 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
         else -> stringResource(R.string.all_movies)
     }
     val sort = state.settings.posterSort
+    // The filter applies once typing pauses: each key no longer looks through the whole catalogue.
+    val query by produceState(filter, filter) {
+        if (value != filter) {
+            delay(FILTER_DEBOUNCE_MS)
+            value = filter
+        }
+    }
     // Off the main thread: sorting a hundred thousand titles must not freeze the screen while typing.
-    val items by produceState(emptyList<ShowcaseItem>(), state, route, filter, sort) {
+    val items by produceState(emptyList<ShowcaseItem>(), state, route, query, sort) {
         value = withContext(Dispatchers.Default) {
-            UiMappers.grid(state, route.series, route.categoryId, route.myList, filter, route.anyType, sort)
+            UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
         }
     }
     PosterGridScreen(
@@ -479,6 +501,8 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onAppearance = viewModel::setAppearance,
             onShowAdultCategories = viewModel::setShowAdultCategories,
             onUpdateAwards = viewModel::setUpdateAwards,
+            onLiveBuffer = viewModel::setLiveBuffer,
+            onVodBuffer = viewModel::setVodBuffer,
             onCategories = { navController.navigate(Routes.Categories()) },
             onAppLanguage = { context.openAppLanguageSettings() },
             onHelp = { navController.navigate(Routes.Help) },

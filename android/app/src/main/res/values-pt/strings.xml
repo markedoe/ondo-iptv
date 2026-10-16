@@ -139,7 +139,7 @@
     <string name="help_categories_title">Ocultar idiomas e categorias</string>
     <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Idiomas e categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nOs estilos funcionam do mesmo jeito com as palavras dos nomes das categorias: oculte Mangá e anime, Infantil ou Documentários, ou uma palavra sua, como Bollywood. Só os nomes das categorias contam, não o gênero de cada filme.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.</string>
     <string name="help_playback_title">Quando um stream não toca</string>
-    <string name="help_playback_body">O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.</string>
+    <string name="help_playback_body">O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.\n\nCom um buffer mais longo (Configurações, Buffer da TV ao vivo e Buffer de filmes e séries), as interrupções mais longas do provedor não são percebidas, mas a imagem demora mais para aparecer.\n\nNo player, Mais, Relatar um problema… mostra um relatório da reprodução (tempos de início e de salto, travamentos, estatísticas; sem endereço, login nem título) para enviar por e-mail ou mensagem, ou em um issue do GitHub.</string>
     <string name="help_privacy_title">Privacidade</string>
     <string name="help_privacy_body">O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho e ficam fora dos backups dele.\n\nO Ondo se conecta apenas aos servidores que você adiciona.</string>
     <string name="error_load_denied">O provedor recusou o acesso (HTTP %1$d). Verifique o usuário, a senha e a sua assinatura.</string>
@@ -249,4 +249,21 @@
     <string name="people">Pessoas</string>
     <string name="search_prompt">Filmes, séries, canais, pessoas</string>
     <string name="search_hint">Encontre filmes, séries, canais, atores e diretores na playlist atual.</string>
+    <string name="automatic">Automático</string>
+    <string name="player">Player</string>
+    <string name="buffer_live">Buffer da TV ao vivo</string>
+    <string name="buffer_vod">Buffer de filmes e séries</string>
+    <string name="buffer_hint">Um buffer mais longo cobre interrupções mais longas do provedor; a imagem demora mais para aparecer e para voltar depois de um salto. Automático se adapta ao provedor.</string>
+    <plurals name="buffer_seconds">
+        <item quantity="one">%d segundo</item>
+        <item quantity="many">%d de segundos</item>
+        <item quantity="other">%d segundos</item>
+    </plurals>
+    <string name="report_problem">Relatar um problema…</string>
+    <string name="problem_report">Relatório do problema</string>
+    <string name="copy_report">Copiar o relatório</string>
+    <string name="share">Compartilhar</string>
+    <string name="open_issue">Abrir um issue no GitHub</string>
+    <string name="playback_report_subject">Relatório de reprodução do Ondo</string>
+    <string name="problem_report_explanation">Este relatório ajuda a encontrar a causa de um problema de reprodução: os tempos de início e de salto, os travamentos e as estatísticas do player desta reprodução, com o app, o sistema e os ajustes do player. Ele não contém endereço de stream, login nem título. Os issues do GitHub são públicos.</string>
 </resources>

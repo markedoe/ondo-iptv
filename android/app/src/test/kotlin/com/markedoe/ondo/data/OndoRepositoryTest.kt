@@ -226,6 +226,29 @@ class OndoRepositoryTest {
         assertEquals(0L, repository.playRequest(movie, fromStart = true)!!.startPositionMs)
     }
 
+    /** The player can be recreated alone after the process was killed: the request carries the buffer settings. */
+    @Test
+    fun playRequestsCarryTheBufferSettingsAndTheKind() = runTest {
+        val repository = repository()
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        repository.addPlaylist("Home", list)
+        repository.setLiveBuffer(3)
+        repository.setVodBuffer(10)
+        val content = repository.state.value.content
+        val movie = repository.playRequest(content.movies.first { it.name == "Long Road" })!!
+        assertEquals("film", movie.kind)
+        assertEquals(10, movie.bufferSeconds)
+        val channel = repository.playRequest(content.channels.single())!!
+        assertEquals("live channel", channel.kind)
+        assertEquals(3, channel.bufferSeconds)
+        val series = content.series.single()
+        val episode = repository.playRequest(series, repository.details(series).seasons.single().episodes.first())!!
+        assertEquals("episode", episode.kind)
+        assertEquals(10, episode.bufferSeconds)
+        assertEquals(3, disk().loadSettings().liveBuffer)
+    }
+
     @Test
     fun episodesHaveTheirOwnProgress() = runTest {
         val repository = repository()

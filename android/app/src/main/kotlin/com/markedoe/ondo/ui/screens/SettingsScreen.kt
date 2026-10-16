@@ -2,6 +2,7 @@ package com.markedoe.ondo.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,12 +18,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,9 +49,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.ui.theme.Appearance
 
 data class PlaylistSummary(val id: String, val name: String, val detail: String, val active: Boolean)
@@ -56,6 +66,9 @@ data class SettingsUiState(
     val appearance: Appearance = Appearance.DARK,
     val showAdultCategories: Boolean = false,
     val updateAwards: Boolean = true,
+    /** Buffer settings in seconds, 0 for automatic. */
+    val liveBuffer: Int = 0,
+    val vodBuffer: Int = 0,
     val version: String = "",
     val isRefreshing: Boolean = false,
 )
@@ -69,6 +82,8 @@ class SettingsActions(
     val onAppearance: (Appearance) -> Unit = {},
     val onShowAdultCategories: (Boolean) -> Unit = {},
     val onUpdateAwards: (Boolean) -> Unit = {},
+    val onLiveBuffer: (Int) -> Unit = {},
+    val onVodBuffer: (Int) -> Unit = {},
     val onCategories: () -> Unit = {},
     val onAppLanguage: () -> Unit = {},
     val onHelp: () -> Unit = {},
@@ -76,7 +91,7 @@ class SettingsActions(
     val onSupport: () -> Unit = {},
 )
 
-/** Playlists, appearance and about (player-only disclaimer, privacy policy). */
+/** Playlists, appearance, player and about (player-only disclaimer, privacy policy). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
@@ -88,7 +103,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
             actions = { IconButton(onClick = actions.onRefresh, enabled = !state.isRefreshing) { Icon(Icons.Rounded.Refresh, contentDescription = stringResource(R.string.refresh)) } },
             windowInsets = WindowInsets(0),
         )
-        LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+        LazyColumn(Modifier.testTag("settingsList"), contentPadding = PaddingValues(bottom = 24.dp)) {
             item { SectionTitle(stringResource(R.string.playlists)) }
             items(state.playlists, key = { it.id }) { playlist ->
                 ListItem(
@@ -159,6 +174,18 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                 )
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+            item { SectionTitle(stringResource(R.string.player)) }
+            item { BufferRow(stringResource(R.string.buffer_live), state.liveBuffer, actions.onLiveBuffer, Modifier.testTag("liveBufferRow")) }
+            item { BufferRow(stringResource(R.string.buffer_vod), state.vodBuffer, actions.onVodBuffer, Modifier.testTag("vodBufferRow")) }
+            item {
+                Text(
+                    stringResource(R.string.buffer_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
+            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
             item { SectionTitle(stringResource(R.string.about)) }
             item {
                 ListItem(
@@ -183,6 +210,37 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
         )
     }
 }
+
+/** A buffer setting: its current length, and the choices (automatic, then seconds) in a menu. */
+@Composable
+private fun BufferRow(label: String, seconds: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        ListItem(
+            headlineContent = { Text(label) },
+            supportingContent = { Text(bufferLabel(seconds)) },
+            leadingContent = { Icon(Icons.Rounded.Speed, contentDescription = null) },
+            modifier = modifier.clickable { open = true },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, offset = DpOffset(16.dp, 0.dp)) {
+            PlaybackBuffer.CHOICES.forEach { choice ->
+                DropdownMenuItem(
+                    text = { Text(bufferLabel(choice)) },
+                    onClick = {
+                        open = false
+                        onChange(choice)
+                    },
+                    trailingIcon = { if (choice == seconds) Icon(Icons.Rounded.Check, contentDescription = null) },
+                    modifier = Modifier.semantics { selected = choice == seconds }.testTag("bufferChoice-$choice"),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun bufferLabel(seconds: Int): String =
+    if (seconds > 0) pluralStringResource(R.plurals.buffer_seconds, seconds, seconds) else stringResource(R.string.automatic)
 
 @Composable
 private fun SectionTitle(text: String) {

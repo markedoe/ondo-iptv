@@ -1,6 +1,9 @@
 package com.markedoe.ondo.player
 
 import android.app.PictureInPictureParams
+import android.content.ActivityNotFoundException
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -8,6 +11,7 @@ import android.content.res.Configuration
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.util.Rational
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
@@ -23,21 +27,27 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -45,20 +55,28 @@ import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaLibraryInfo
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.SeekParameters
+import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
+import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.net.DEFAULT_IPTV_USER_AGENT
+import com.markedoe.ondo.core.playback.PlaybackBuffer
+import com.markedoe.ondo.core.playback.ProblemReport
 import com.markedoe.ondo.ui.theme.OndoTheme
+import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -67,7 +85,7 @@ import kotlinx.serialization.json.Json
 /**
  * Full-screen player (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV; fallback addresses, resume position,
  * Picture-in-Picture (entered when the user leaves while a video plays), media session (headset and remote
- * buttons). Progress is saved every 10 s.
+ * buttons). Progress is saved every 10 s. More, Report a Problem… shows a report of the playback ([PlaybackReporter]).
  */
 @OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
@@ -76,6 +94,8 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var request: PlayRequest
     private var urlIndex = 0
     private var errorMessage by mutableStateOf<String?>(null)
+    private var shownReport by mutableStateOf<String?>(null)
+    private lateinit var reporter: PlaybackReporter
     private var inPictureInPicture by mutableStateOf(false)
     private var playerView: PlayerView? = null
     private val supportsPictureInPicture by lazy { packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
@@ -89,10 +109,12 @@ class PlayerActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
+        reporter = PlaybackReporter(request, SystemClock::elapsedRealtime)
         val exoPlayer = buildPlayer()
         player = exoPlayer
-        session = MediaSession.Builder(this, exoPlayer).build()
+        // Prepared first: the media session starts from a player that is already loading.
         play(urlIndex, request.startPositionMs)
+        session = MediaSession.Builder(this, exoPlayer).build()
 
         setContent {
             OndoTheme {
@@ -105,6 +127,8 @@ class PlayerActivity : ComponentActivity() {
                                 setShowSubtitleButton(true)
                                 setShowNextButton(false)
                                 setShowPreviousButton(false)
+                                // The spinner while the stream starts, after a seek and when it waits for data.
+                                setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                                 keepScreenOn = true
                                 // The video's place on screen, for the animation into Picture-in-Picture.
                                 videoSurfaceView?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updatePictureInPictureParams() }
@@ -120,6 +144,30 @@ class PlayerActivity : ComponentActivity() {
                         ) {
                             Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
                         }
+                        Box(Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp)) {
+                            var menu by remember { mutableStateOf(false) }
+                            IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playerMore")) {
+                                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more), tint = Color.White)
+                            }
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.report_problem)) },
+                                    onClick = {
+                                        menu = false
+                                        shownReport = problemReport()
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    shownReport?.takeIf { !inPictureInPicture }?.let { report ->
+                        ProblemReportDialog(
+                            report = report,
+                            onDismiss = { shownReport = null },
+                            onCopy = { copyReport(report) },
+                            onShare = { shareReport(report) },
+                            onOpenIssue = { startOrIgnore(Intent(Intent.ACTION_VIEW, ProblemReport.issueUrl(report).toUri())) },
+                        )
                     }
                     errorMessage?.takeIf { !inPictureInPicture }?.let { message ->
                         Column(
@@ -156,18 +204,47 @@ class PlayerActivity : ComponentActivity() {
         request.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
         return ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(http))
+            // The buffer chosen in Settings; automatic keeps Media3's own durations.
+            .apply {
+                PlaybackBuffer.durations(request.bufferSeconds)?.let { buffer ->
+                    setLoadControl(
+                        DefaultLoadControl.Builder()
+                            .setBufferDurationsMs(buffer.minBufferMs, buffer.maxBufferMs, buffer.bufferForPlaybackMs, buffer.bufferForPlaybackAfterRebufferMs)
+                            .setPrioritizeTimeOverSizeThresholds(true)
+                            .build(),
+                    )
+                }
+            }
+            // A key frame within 1 s of the target, else the exact position: providers often space key frames
+            // 10 s apart, and the closest one can land 5 to 10 s away from a 10 s skip.
+            .setSeekParameters(SeekParameters(1_000_000, 1_000_000))
             // Audio focus: pause for a call, lower the volume under a navigation prompt, stop when another
             // app starts playing.
             .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), true)
             .setHandleAudioBecomingNoisy(true)
             .build()
             .apply {
+                val exoPlayer = this
                 addListener(object : Player.Listener {
-                    override fun onPlayerError(error: PlaybackException) = handleError(error)
+                    override fun onPlayerError(error: PlaybackException) {
+                        val messages = generateSequence<Throwable>(error) { it.cause }.take(4).mapNotNull { it.message }.distinct().toList()
+                        reporter.error(error.errorCodeName, messages)
+                        handleError(error)
+                    }
 
-                    override fun onIsPlayingChanged(isPlaying: Boolean) = updatePictureInPictureParams()
+                    override fun onIsPlayingChanged(isPlaying: Boolean) {
+                        reporter.isPlaying(isPlaying)
+                        updatePictureInPictureParams()
+                    }
+
+                    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) = reporter.playWhenReady(playWhenReady)
+
+                    override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
+                        if (reason == Player.DISCONTINUITY_REASON_SEEK) reporter.seek(oldPosition.positionMs, newPosition.positionMs)
+                    }
 
                     override fun onPlaybackStateChanged(state: Int) {
+                        reporter.playbackState(state, exoPlayer.playWhenReady)
                         // The end of a movie or an episode: it counts as watched, back to the app.
                         if (state == Player.STATE_ENDED && !request.isLive) {
                             saveProgress(ended = true)
@@ -175,12 +252,22 @@ class PlayerActivity : ComponentActivity() {
                         }
                     }
                 })
+                addAnalyticsListener(object : AnalyticsListener {
+                    override fun onRenderedFirstFrame(eventTime: AnalyticsListener.EventTime, output: Any, renderTimeMs: Long) = reporter.firstFrame()
+
+                    override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) =
+                        reporter.droppedFrames(droppedFrames, elapsedMs)
+
+                    override fun onBandwidthEstimate(eventTime: AnalyticsListener.EventTime, totalLoadTimeMs: Int, totalBytesLoaded: Long, bitrateEstimate: Long) =
+                        reporter.bandwidth(bitrateEstimate)
+                })
                 playWhenReady = true
             }
     }
 
     private fun play(index: Int, startMs: Long) {
         val url = request.urls.getOrNull(index) ?: return
+        reporter.attempt(index, url)
         val item = MediaItem.Builder()
             .setUri(url)
             .apply { if (url.contains(".m3u8", ignoreCase = true)) setMimeType(MimeTypes.APPLICATION_M3U8) }
@@ -207,17 +294,20 @@ class PlayerActivity : ComponentActivity() {
         request = next
         urlIndex = 0
         errorMessage = null
+        shownReport = null
         player?.release()
         session?.release()
+        reporter = PlaybackReporter(request, SystemClock::elapsedRealtime)
         val exoPlayer = buildPlayer()
         player = exoPlayer
-        session = MediaSession.Builder(this, exoPlayer).build()
         playerView?.player = exoPlayer
         play(0, request.startPositionMs)
+        session = MediaSession.Builder(this, exoPlayer).build()
     }
 
     private fun retry() {
         errorMessage = null
+        reporter.retry()
         urlIndex = 0
         play(0, if (request.isLive) 0 else player?.currentPosition ?: 0)
     }
@@ -225,6 +315,7 @@ class PlayerActivity : ComponentActivity() {
     private fun handleError(error: PlaybackException) {
         // A live stream fell behind its window: back to the live edge.
         if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
+            reporter.note("behind the live window: back to the live edge")
             player?.apply {
                 seekToDefaultPosition()
                 prepare()
@@ -233,20 +324,94 @@ class PlayerActivity : ComponentActivity() {
         }
         // Another address (format or version of the channel) before giving up.
         if (urlIndex + 1 < request.urls.size) {
+            reporter.note("fallback to the next address")
             urlIndex += 1
             play(urlIndex, player?.currentPosition ?: 0)
             return
         }
-        errorMessage = getString(
-            when (error.errorCode) {
-                PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> R.string.error_provider_refused
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-                PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> R.string.error_network
-                PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
-                PlaybackException.ERROR_CODE_DECODER_INIT_FAILED -> R.string.error_format
-                else -> R.string.error_generic
-            },
+        val (message, cause) = when (error.errorCode) {
+            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS -> R.string.error_provider_refused to "provider refused"
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
+            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT -> R.string.error_network to "network"
+            PlaybackException.ERROR_CODE_PARSING_CONTAINER_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_DECODER_INIT_FAILED -> R.string.error_format to "format"
+            else -> R.string.error_generic to "other"
+        }
+        reporter.note("no address left: error shown ($cause)")
+        errorMessage = getString(message)
+    }
+
+    /** The report of this playback, as it stands now. */
+    private fun problemReport(): String {
+        val exoPlayer = player
+        val snapshot = PlaybackReporter.PlayerSnapshot(
+            app = "Ondo ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+            system = "Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MANUFACTURER} ${Build.MODEL}",
+            engine = "Media3 ${MediaLibraryInfo.VERSION}",
+            bufferInUse = PlaybackBuffer.durations(request.bufferSeconds) ?: MEDIA3_BUFFER,
+            video = exoPlayer?.videoSize?.takeIf { it.width > 0 && it.height > 0 }?.let { "${it.width}×${it.height}" },
+            durationMs = exoPlayer?.duration?.takeIf { it != C.TIME_UNSET },
+            positionMs = exoPlayer?.currentPosition,
+            state = describeState(exoPlayer),
+            statistics = exoPlayer?.let(::statistics).orEmpty(),
         )
+        return reporter.report(snapshot)
+    }
+
+    private fun describeState(exoPlayer: ExoPlayer?): String {
+        exoPlayer ?: return "no player"
+        exoPlayer.playerError?.let { return "failed: ${it.errorCodeName}" }
+        return when (exoPlayer.playbackState) {
+            Player.STATE_IDLE -> "idle"
+            Player.STATE_BUFFERING -> if (exoPlayer.playWhenReady) "buffering" else "buffering, paused"
+            Player.STATE_ENDED -> "ended"
+            else -> if (exoPlayer.isPlaying) "playing" else "paused"
+        }
+    }
+
+    /** The formats played, the decoder's frame counts and what is buffered ahead. */
+    private fun statistics(exoPlayer: ExoPlayer): List<String> = listOfNotNull(
+        exoPlayer.videoFormat?.let { format ->
+            "Video: " + listOfNotNull(
+                format.sampleMimeType,
+                format.codecs,
+                format.frameRate.takeIf { it > 0 }?.let { String.format(Locale.ROOT, "%.2f fps", it) },
+                format.bitrate.takeIf { it > 0 }?.let { PlaybackReporter.megabits(it.toLong()) },
+            ).joinToString(", ")
+        },
+        exoPlayer.audioFormat?.let { format ->
+            "Audio: " + listOfNotNull(
+                format.sampleMimeType,
+                format.codecs,
+                format.channelCount.takeIf { it > 0 }?.let { "$it channels" },
+                format.sampleRate.takeIf { it > 0 }?.let { "$it Hz" },
+            ).joinToString(", ")
+        },
+        exoPlayer.videoDecoderCounters?.let { counters ->
+            counters.ensureUpdated()
+            "Video decoder: ${counters.renderedOutputBufferCount} frames shown, ${counters.droppedBufferCount} dropped, ${counters.skippedOutputBufferCount} skipped"
+        },
+        "Buffered ahead: ${PlaybackReporter.seconds(exoPlayer.totalBufferedDuration)} s",
+    )
+
+    private fun copyReport(report: String) {
+        getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText(getString(R.string.problem_report), report))
+    }
+
+    private fun shareReport(report: String) {
+        val send = Intent(Intent.ACTION_SEND)
+            .setType("text/plain")
+            .putExtra(Intent.EXTRA_SUBJECT, getString(R.string.playback_report_subject))
+            .putExtra(Intent.EXTRA_TEXT, report)
+        startOrIgnore(Intent.createChooser(send, null))
+    }
+
+    private fun startOrIgnore(intent: Intent) {
+        try {
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+            // Nothing on the device can open it: Copy Report still works.
+        }
     }
 
     private fun saveProgress(ended: Boolean = false) {
@@ -324,6 +489,14 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_REQUEST = "request"
+
+        /** The durations Media3 uses on its own (automatic), for the report. */
+        private val MEDIA3_BUFFER = PlaybackBuffer.Durations(
+            minBufferMs = DefaultLoadControl.DEFAULT_MIN_BUFFER_MS,
+            maxBufferMs = DefaultLoadControl.DEFAULT_MAX_BUFFER_MS,
+            bufferForPlaybackMs = DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_MS,
+            bufferForPlaybackAfterRebufferMs = DefaultLoadControl.DEFAULT_BUFFER_FOR_PLAYBACK_AFTER_REBUFFER_MS,
+        )
 
         fun intent(context: Context, request: PlayRequest): Intent =
             Intent(context, PlayerActivity::class.java).putExtra(EXTRA_REQUEST, Json.encodeToString(PlayRequest.serializer(), request))

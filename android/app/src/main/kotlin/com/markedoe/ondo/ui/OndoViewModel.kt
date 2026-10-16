@@ -256,6 +256,8 @@ class OndoViewModel(
     fun setAppearance(appearance: Appearance) = repository.setAppearance(appearance)
     fun setShowAdultCategories(show: Boolean) = repository.setShowAdultCategories(show)
     fun setPosterSort(sort: PosterSort) = repository.setPosterSort(sort)
+    fun setLiveBuffer(seconds: Int) = repository.setLiveBuffer(seconds)
+    fun setVodBuffer(seconds: Int) = repository.setVodBuffer(seconds)
     fun setCategoryHidden(categoryId: String, hidden: Boolean) = repository.setCategoryHidden(categoryId, hidden)
     fun setTagsHidden(tags: Collection<String>, hidden: Boolean) = repository.setTagsHidden(tags, hidden)
     fun setWordHidden(word: String, hidden: Boolean) = repository.setWordHidden(word, hidden)

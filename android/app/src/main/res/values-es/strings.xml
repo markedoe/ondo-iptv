@@ -139,7 +139,7 @@
     <string name="help_categories_title">Ocultar idiomas y categorías</string>
     <string name="help_categories_body">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. El botón de filtro de Películas, Series y TV en directo (también en Ajustes, Idiomas y categorías) oculta de una vez un idioma o un país entero, en todas las listas; las categorías que el proveedor añada después siguen la misma regla.\n\nLos estilos funcionan igual con las palabras de los nombres de categorías: oculta Manga y anime, Infantil o Documentales, o una palabra tuya como Bollywood. Solo cuentan los nombres de las categorías, no el género de cada película.\n\nTambién puedes ocultar ahí las categorías una por una, y volver a mostrarlas cuando quieras.</string>
     <string name="help_playback_title">Cuando una emisión no se reproduce</string>
-    <string name="help_playback_body">Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.</string>
+    <string name="help_playback_body">Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.\n\nCon un búfer más largo (Ajustes, Búfer de la TV en directo y Búfer de películas y series), los cortes más largos del proveedor no se notan, pero la imagen tarda más en aparecer.\n\nEn el reproductor, Más, Informar de un problema… muestra un informe de la reproducción (tiempos de inicio y de salto, congelaciones, estadísticas; sin dirección, inicio de sesión ni título) para enviarlo por correo o mensaje, o en una incidencia de GitHub.</string>
     <string name="help_privacy_title">Privacidad</string>
     <string name="help_privacy_body">Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus listas, tu historial y tus ajustes se quedan en tu dispositivo y no se incluyen en sus copias de seguridad.\n\nOndo solo se conecta a los servidores que añades.</string>
     <string name="error_load_denied">El proveedor denegó el acceso (HTTP %1$d). Comprueba el usuario, la contraseña y tu suscripción.</string>
@@ -249,4 +249,21 @@
     <string name="people">Personas</string>
     <string name="search_prompt">Películas, series, canales, personas</string>
     <string name="search_hint">Encuentra películas, series, canales, actores y directores en la playlist actual.</string>
+    <string name="automatic">Automático</string>
+    <string name="player">Reproductor</string>
+    <string name="buffer_live">Búfer de la TV en directo</string>
+    <string name="buffer_vod">Búfer de películas y series</string>
+    <string name="buffer_hint">Un búfer más largo cubre cortes más largos del proveedor; la imagen tarda entonces más en aparecer y en volver tras un salto. Automático se adapta al proveedor.</string>
+    <plurals name="buffer_seconds">
+        <item quantity="one">%d segundo</item>
+        <item quantity="many">%d de segundos</item>
+        <item quantity="other">%d segundos</item>
+    </plurals>
+    <string name="report_problem">Informar de un problema…</string>
+    <string name="problem_report">Informe del problema</string>
+    <string name="copy_report">Copiar el informe</string>
+    <string name="share">Compartir</string>
+    <string name="open_issue">Abrir una incidencia en GitHub</string>
+    <string name="playback_report_subject">Informe de reproducción de Ondo</string>
+    <string name="problem_report_explanation">Este informe ayuda a encontrar la causa de un problema de reproducción: los tiempos de inicio y de salto, las congelaciones y las estadísticas del reproductor de esta reproducción, con la app, el sistema y los ajustes del reproductor. No contiene ninguna dirección de flujo, inicio de sesión ni título. Las incidencias de GitHub son públicas.</string>
 </resources>

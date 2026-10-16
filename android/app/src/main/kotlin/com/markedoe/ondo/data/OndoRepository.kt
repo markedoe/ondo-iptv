@@ -20,6 +20,7 @@ import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
+import com.markedoe.ondo.core.playback.ProblemReport
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.PlayRequest
 import java.util.UUID
@@ -215,6 +216,10 @@ class OndoRepository(
 
     fun setPosterSort(sort: PosterSort) = updateSettings { it.copy(posterSort = sort) }
 
+    fun setLiveBuffer(seconds: Int) = updateSettings { it.copy(liveBuffer = seconds) }
+
+    fun setVodBuffer(seconds: Int) = updateSettings { it.copy(vodBuffer = seconds) }
+
     fun setCategoryHidden(categoryId: String, hidden: Boolean) {
         val playlistId = _state.value.activePlaylistId ?: return
         updateLibrary { it.settingCategoryHidden(playlistId, categoryId, hidden) }
@@ -285,9 +290,9 @@ class OndoRepository(
         // A newer catalogue or another playlist replaces the guide being loaded.
         guideJob?.cancel()
         guideJob = scope.launch {
+            // Downloading, matching to the catalogue's channels, merging and indexing: all of it off the main thread.
             val guide = loadCatching {
-                val result = loader().loadEpg(core, content)
-                withContext(Dispatchers.Default) { EpgIndex(result.data) }
+                withContext(Dispatchers.Default) { EpgIndex(loader().loadEpg(core, content).data) }
             }.getOrNull() ?: return@launch
             if (_state.value.activePlaylistId == playlist.id) _state.update { it.copy(guide = guide) }
         }
@@ -432,6 +437,9 @@ class OndoRepository(
             artworkUrl = item.artworkUrl,
             startPositionMs = resumeAt,
             progressKey = entry.key,
+            kind = ProblemReport.kind(item),
+            liveBuffer = _state.value.settings.liveBuffer,
+            vodBuffer = _state.value.settings.vodBuffer,
         )
     }
 
