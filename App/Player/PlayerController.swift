@@ -103,6 +103,7 @@ final class PlayerController: NSObject {
     @ObservationIgnored var playbackStart = Date()
     @ObservationIgnored var startWatch = MovementWatch()
     @ObservationIgnored var seekWatch = MovementWatch()
+    @ObservationIgnored var dataWatch = DataRateWatch()
     @ObservationIgnored var loggedState = ""
     /// Scrubbing: the latest position asked for, and whether a seek is still on its way (PlayerController+Scrub).
     @ObservationIgnored var scrubTarget: Double?

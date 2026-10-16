@@ -73,10 +73,15 @@ public struct ProblemReport: Sendable {
             add("  \(Self.number(entry.time)) \(entry.event)")
         }
         add("")
-        add("Samples (s, position, received kB, pictures shown, lost):")
+        // Received and used: the player reads ahead, then only as fast as the picture uses the data; received falling
+        // behind used is the reserve running down.
+        add("Samples (s, position, received kB, used kB, pictures shown, lost):")
         for sample in health.recentSamples(120) {
             let position = sample.mediaTime.map(Self.number) ?? "-"
-            add("  \(Self.number(sample.clock)) \(position) \(sample.receivedBytes / 1000) \(sample.displayedPictures) \(sample.lostPictures)")
+            add(
+                "  \(Self.number(sample.clock)) \(position) \(sample.receivedBytes / 1000) \(sample.consumedBytes / 1000) "
+                    + "\(sample.displayedPictures) \(sample.lostPictures)"
+            )
         }
         text = lines.joined(separator: "\n")
     }

@@ -185,6 +185,14 @@ public struct PlaybackHealth: Sendable {
         return receivedRate(from: last.sample.clock - seconds, to: last.sample.clock)
     }
 
+    /// Bytes per second the picture consumed over the last `seconds` (what the demuxer read).
+    public func consumedRate(lastSeconds seconds: Double = 10) -> Double? {
+        guard let last = entries.last else { return nil }
+        let window = window(from: last.sample.clock - seconds, to: last.sample.clock)
+        guard let first = window.first, let end = window.last, end.clock > first.clock else { return nil }
+        return Double(end.consumedBytes - first.consumedBytes) / (end.clock - first.clock)
+    }
+
     private func window(from start: Double, to end: Double) -> [PlaybackSample] {
         entries.lazy.map(\.sample).filter { $0.clock >= start && $0.clock <= end }
     }

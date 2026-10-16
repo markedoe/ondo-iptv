@@ -38,6 +38,7 @@ final class PlaybackHealthTests: XCTestCase {
         XCTAssertEqual(health.verdict, .smooth)
         XCTAssertEqual(health.contentRate ?? 0, Double(bytesPerSecond), accuracy: 1)
         XCTAssertEqual(health.receivedRate() ?? 0, Double(bytesPerSecond), accuracy: 1)
+        XCTAssertEqual(health.consumedRate() ?? 0, Double(bytesPerSecond), accuracy: 1)
     }
 
     func testTheFirstSecondsAreStillBeingMeasured() {

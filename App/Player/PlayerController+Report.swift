@@ -19,6 +19,7 @@ extension PlayerController {
         playbackStart = Date()
         loggedState = ""
         startWatch.start(at: 0)
+        dataWatch = DataRateWatch()
         seekWatch.cancel()
         let resume = item.startPosition.map { $0 > 5 ? ", from \(Int($0)) s" : "" } ?? ""
         note("open \(Self.kind(of: item))\(resume)")
@@ -53,6 +54,20 @@ extension PlayerController {
         for freeze in health.freezes.dropFirst(freezesBefore) {
             log.add("freeze of \(Self.seconds(freeze.duration)) s (longest gap without data \(Self.seconds(freeze.longestGap)) s)", at: sample.clock)
         }
+        // While the picture plays: data received more slowly than the picture uses it, before any freeze shows.
+        if state == .playing, health.hasMoved, seekWatch.since == nil,
+           let change = dataWatch.note(received: health.receivedRate(), consumed: health.consumedRate()) {
+            switch change {
+            case .fellBehind(let received, let consumed):
+                log.add("data slower than the picture uses it: \(Self.megabits(received)) of \(Self.megabits(consumed)) Mb/s over 10 s", at: sample.clock)
+            case .caughtUp(let received):
+                log.add("data caught up: \(Self.megabits(received)) Mb/s", at: sample.clock)
+            }
+        }
+    }
+
+    private static func megabits(_ bytesPerSecond: Double) -> String {
+        String(format: "%.1f", bytesPerSecond * 8 / 1_000_000)
     }
 
     func problemReport() -> ProblemReport {
