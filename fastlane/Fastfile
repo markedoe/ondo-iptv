@@ -198,6 +198,11 @@ def report_version(app, name, platform, folder)
       shots = set.app_screenshots || []
       same = shots.count { |shot| current.include?(shot.source_file_checksum) }
       UI.message("  #{localization.locale} #{set.screenshot_display_type}: #{shots.count} screenshots, #{same} identical to today's")
+      # The address of each one that differs, to look at it (the App Store's own image server).
+      shots.reject { |shot| current.include?(shot.source_file_checksum) }.each do |shot|
+        template = shot.image_asset.to_h["templateUrl"].to_s
+        UI.message("    #{shot.file_name}: #{template.sub('{w}', '1280').sub('{h}', '800').sub('{f}', 'png')}") unless template.empty?
+      end
     end
   end
 rescue StandardError => e
