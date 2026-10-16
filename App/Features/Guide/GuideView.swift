@@ -55,6 +55,9 @@ struct GuideView: View {
                     }
                 }
                 .defaultScrollAnchor(openingAnchor(now: context.date, window: window, viewportWidth: geometry.size.width))
+                // The grid is a timeline that runs left to right in every language (Arabic text in it stays right to
+                // left): the column that stays in place and where the grid opens are worked out in those terms.
+                .environment(\.layoutDirection, .leftToRight)
             }
             .overlay {
                 if list.isEmpty {
