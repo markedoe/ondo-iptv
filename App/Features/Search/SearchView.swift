@@ -132,8 +132,10 @@ struct SearchView: View {
                 programs = []
                 people = []
             } else {
-                results = model.search(query)
-                programs = query.count >= 2 ? model.searchPrograms(query) : []
+                results = await model.searchInBackground(query)
+                guard !Task.isCancelled else { return }
+                programs = query.count >= 2 ? await model.searchProgramsInBackground(query) : []
+                guard !Task.isCancelled else { return }
                 people = model.people(matching: query)
                 // With a TMDb token, the people TMDb knows by that name follow.
                 let online = await model.tmdbPeople(matching: query)

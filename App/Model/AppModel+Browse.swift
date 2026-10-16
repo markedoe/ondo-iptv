@@ -17,12 +17,24 @@ extension AppModel {
 
     func movies(in category: MediaCategory?, sort: PosterSort) -> [Movie] {
         let list: [Movie]
+        let key: String
         if let category {
             list = index.moviesByCategory[category.id] ?? []
+            key = "movies|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category.id)|\(sort.rawValue)"
         } else {
             let excluded = excludedCategoryIDs
             list = content.movies.filter { !excluded.contains($0.categoryID) }
+            key = "movies|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|*|\(excluded.hashValue)|\(sort.rawValue)"
         }
+        guard sort != .playlist else { return list }
+        // Sorting a large catalogue by name takes a moment: once per catalogue, category and order, not at every redraw.
+        if let cached = sortedListCache[key] as? [Movie] { return cached }
+        let sorted = Self.sorted(list, by: sort)
+        cacheSortedList(sorted, key: key)
+        return sorted
+    }
+
+    private static func sorted(_ list: [Movie], by sort: PosterSort) -> [Movie] {
         switch sort {
         case .playlist: return list
         case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
@@ -34,12 +46,29 @@ extension AppModel {
 
     func series(in category: MediaCategory?, sort: PosterSort) -> [Series] {
         let list: [Series]
+        let key: String
         if let category {
             list = index.seriesByCategory[category.id] ?? []
+            key = "series|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category.id)|\(sort.rawValue)"
         } else {
             let excluded = excludedCategoryIDs
             list = content.series.filter { !excluded.contains($0.categoryID) }
+            key = "series|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|*|\(excluded.hashValue)|\(sort.rawValue)"
         }
+        guard sort != .playlist else { return list }
+        if let cached = sortedListCache[key] as? [Series] { return cached }
+        let sorted = Self.sorted(list, by: sort)
+        cacheSortedList(sorted, key: key)
+        return sorted
+    }
+
+    /// Keeps the last few sorted lists (the grids on screen and the shelves of Home).
+    private func cacheSortedList(_ list: Any, key: String) {
+        if sortedListCache.count >= 12 { sortedListCache.removeAll() }
+        sortedListCache[key] = list
+    }
+
+    private static func sorted(_ list: [Series], by sort: PosterSort) -> [Series] {
         switch sort {
         case .playlist: return list
         case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
@@ -68,8 +97,19 @@ extension AppModel {
     }
 
     func search(_ query: String) -> SearchResults {
-        var results = index.search.search(query, limitPerType: 150, excludedCategoryIDs: excludedCategoryIDs)
-        let hidden = hiddenChannelIDs
+        Self.search(query, in: index.search, excluded: excludedCategoryIDs, hidden: hiddenChannelIDs)
+    }
+
+    /// `search` on a background task: the main thread (and the keyboard) stays free while a large playlist is searched.
+    func searchInBackground(_ query: String) async -> SearchResults {
+        let engine = index.search, excluded = excludedCategoryIDs, hidden = hiddenChannelIDs
+        return await Task.detached(priority: .userInitiated) {
+            Self.search(query, in: engine, excluded: excluded, hidden: hidden)
+        }.value
+    }
+
+    private nonisolated static func search(_ query: String, in engine: SearchEngine, excluded: Set<String>, hidden: Set<String>) -> SearchResults {
+        var results = engine.search(query, limitPerType: 150, excludedCategoryIDs: excluded)
         if !hidden.isEmpty { results.channels.removeAll { hidden.contains($0.id) } }
         return results
     }

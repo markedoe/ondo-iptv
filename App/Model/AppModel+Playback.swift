@@ -25,11 +25,14 @@ extension AppModel {
     private func liveSession(for channel: Channel, in list: [Channel]?) -> PlaybackSession? {
         guard let factory else { return nil }
         let queueChannels = list ?? index.channelsByCategory[channel.categoryID] ?? [channel]
+        // Lookups only: the queue can hold every channel of the playlist.
+        let guideIDs = guideIDsByChannelID()
+        let now = Date()
         let queue = queueChannels.map { channel in
             factory.item(
                 for: channel,
-                currentProgram: epg.current(for: channel),
-                alternates: index.channelsByMatchKey[TextNormalizer.channelMatchKey(channel.name)] ?? []
+                currentProgram: guideIDs[channel.id].flatMap { epg.current(guideID: $0, at: now) },
+                alternates: index.matchKeyByChannelID[channel.id].flatMap { index.channelsByMatchKey[$0] } ?? []
             )
         }
         let position = queueChannels.firstIndex { $0.id == channel.id } ?? 0

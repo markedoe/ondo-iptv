@@ -15,6 +15,9 @@ public struct EPGIndex: Sendable {
     private var displayNameKeys: [String: String] = [:]
     /// Name key -> guide id, from the guide ids themselves (used when no display name matches).
     private var idNameKeys: [String: String] = [:]
+    /// Guide id -> each programme's normalised title and subtitle, in `data.programs` order: normalised once here
+    /// (in the background, with the rest of the index) rather than for every programme at every search.
+    private var searchTexts: [String: [String]] = [:]
 
     public init(data: EPGData, overrides: [String: String] = [:]) {
         self.data = data
@@ -30,6 +33,7 @@ public struct EPGIndex: Sendable {
         lowercasedIDs = [:]
         displayNameKeys = [:]
         idNameKeys = [:]
+        searchTexts = [:]
         for id in data.programs.keys { addLookups(for: id) }
         for id in data.channels.keys where data.programs[id] == nil { addLookups(for: id) }
     }
@@ -40,6 +44,9 @@ public struct EPGIndex: Sendable {
     private mutating func addLookups(for id: String) {
         Self.claim(&lowercasedIDs, id.lowercased(), for: id)
         Self.claim(&idNameKeys, TextNormalizer.channelMatchKey(id), for: id)
+        if let programs = data.programs[id] {
+            searchTexts[id] = programs.map { TextNormalizer.normalize($0.title + " " + ($0.subtitle ?? "")) }
+        }
         // Display names count only for guide channels with programmes: matching a name to a channel with
         // nothing to show would hide one that has some. `suggestions(for:)` still offers it.
         guard data.programs[id] != nil, let channel = data.channels[id] else { return }
@@ -210,8 +217,9 @@ public struct EPGIndex: Sendable {
         guard !tokens.isEmpty else { return [] }
         var matches: [ProgramMatch] = []
         for (id, programs) in data.programs {
-            for program in programs where program.end > interval.start && program.start < interval.end {
-                let text = TextNormalizer.normalize(program.title + " " + (program.subtitle ?? ""))
+            let texts = searchTexts[id].flatMap { $0.count == programs.count ? $0 : nil }
+            for (position, program) in programs.enumerated() where program.end > interval.start && program.start < interval.end {
+                let text = texts?[position] ?? TextNormalizer.normalize(program.title + " " + (program.subtitle ?? ""))
                 if TextNormalizer.matches(normalizedText: text, queryTokens: tokens) {
                     matches.append(ProgramMatch(guideID: id, program: program))
                 }

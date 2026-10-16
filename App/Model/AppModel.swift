@@ -42,6 +42,9 @@ struct ContentIndex: Sendable {
     var seriesByID: [String: Series] = [:]
     /// Versions of the same channel ("TV1 HD", "FR: TV1 FHD"…) for automatic failover.
     var channelsByMatchKey: [String: [Channel]] = [:]
+    /// Channel id -> its key in `channelsByMatchKey` (channels that have other versions only): a zapping queue of
+    /// thousands of channels is built without normalising every name.
+    var matchKeyByChannelID: [String: String] = [:]
     var search = SearchEngine(content: .empty)
     /// Actors and directors of the series lists (movie lists give no cast), for search.
     var people = PeopleIndex()
@@ -57,6 +60,9 @@ struct ContentIndex: Sendable {
         seriesByID = Dictionary(content.series.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         channelsByMatchKey = Dictionary(grouping: content.channels, by: { TextNormalizer.channelMatchKey($0.name) })
             .filter { $0.value.count > 1 && !$0.key.isEmpty }
+        for (key, versions) in channelsByMatchKey {
+            for channel in versions { matchKeyByChannelID[channel.id] = key }
+        }
         search = SearchEngine(content: content)
         people = PeopleIndex(fields: content.series.flatMap { [$0.cast, $0.director] })
     }
@@ -135,7 +141,9 @@ final class AppModel {
     var detailsRevision = 0
     @ObservationIgnored private var shortEPGRequested = Set<String>()
     /// Playlist channels per guide channel, rebuilt when the catalogue or the guide changes.
-    @ObservationIgnored var channelsByGuideIDCache: (key: String, map: [String: [Channel]])?
+    @ObservationIgnored var channelsByGuideIDCache: (key: String, map: [String: [Channel]], guideIDs: [String: String])?
+    /// Sorted movie and series lists, by catalogue, category and order (AppModel+Browse).
+    @ObservationIgnored var sortedListCache: [String: Any] = [:]
 
     /// Cached so parental checks in long lists do not hit the keychain.
     private(set) var hasParentalPIN = false
@@ -482,6 +490,13 @@ final class AppModel {
             hasCache = !content.isEmpty
         }
 
+        if hasCache && !forceRefresh && playlist.needsRefresh() {
+            // The cached catalogue is on screen: its guide and the last channel do not wait for the daily
+            // refresh, which goes on behind.
+            loadEPG(for: playlist, force: false)
+            Task { await refreshContent(of: playlist, silent: true) }
+            return
+        }
         if forceRefresh || !hasCache || playlist.needsRefresh() {
             await refreshContent(of: playlist, silent: hasCache)
         }
@@ -502,7 +517,11 @@ final class AppModel {
         do {
             let loader = self.loader
             let fresh = try await Task.detached { try await loader.load(playlist) }.value
-            await saveContentCache(fresh, for: playlist.id)
+            // Unchanged since the last load (most daily refreshes): nothing to save, and nothing to redraw.
+            let unchanged = activePlaylist?.id == playlist.id
+                ? await Task.detached(priority: .utility) { [current = rawContent] in fresh == current }.value
+                : false
+            if !unchanged { await saveContentCache(fresh, for: playlist.id) }
             if let position = playlists.firstIndex(where: { $0.id == playlist.id }) {
                 playlists[position].lastRefreshedAt = Date()
                 savePlaylists()
@@ -511,7 +530,7 @@ final class AppModel {
                 lockAdultCategories(playlistID: playlist.id, content: fresh)
             }
             guard activePlaylist?.id == playlist.id else { return }
-            await apply(fresh, for: playlist)
+            if !unchanged { await apply(fresh, for: playlist) }
             phase = .loaded
         } catch {
             let attribution = ErrorAttribution.classify(error)
@@ -681,26 +700,6 @@ final class AppModel {
         activeProfile.isKids && !isParentalUnlocked && (isLockConfigured(category) || category.looksAdult)
     }
 
-    func count(in category: MediaCategory) -> Int {
-        switch category.type {
-        case .live: return index.channelsByCategory[category.id]?.count ?? 0
-        case .movie: return index.moviesByCategory[category.id]?.count ?? 0
-        case .series: return index.seriesByCategory[category.id]?.count ?? 0
-        }
-    }
-
-    /// Category ids excluded from aggregated lists (search, home, "all channels").
-    var excludedCategoryIDs: Set<String> {
-        guard activePlaylist != nil else { return [] }
-        var excluded = Set<String>()
-        for category in content.liveCategories + content.movieCategories + content.seriesCategories {
-            if isHidden(category) || isLocked(category) || isHiddenForKids(category) {
-                excluded.insert(category.id)
-            }
-        }
-        return excluded
-    }
-
     func setHidden(_ hidden: Bool, category: MediaCategory) {
         guard let playlist = activePlaylist else { return }
         updateLibrary { $0.setHidden(hidden, playlistID: playlist.id, categoryID: category.id) }
@@ -805,5 +804,27 @@ final class AppModel {
         if let playlist = activePlaylist {
             await activate(playlist)
         }
+    }
+}
+
+extension AppModel {
+    func count(in category: MediaCategory) -> Int {
+        switch category.type {
+        case .live: return index.channelsByCategory[category.id]?.count ?? 0
+        case .movie: return index.moviesByCategory[category.id]?.count ?? 0
+        case .series: return index.seriesByCategory[category.id]?.count ?? 0
+        }
+    }
+
+    /// Category ids excluded from aggregated lists (search, home, "all channels").
+    var excludedCategoryIDs: Set<String> {
+        guard activePlaylist != nil else { return [] }
+        var excluded = Set<String>()
+        for category in content.liveCategories + content.movieCategories + content.seriesCategories {
+            if isHidden(category) || isLocked(category) || isHiddenForKids(category) {
+                excluded.insert(category.id)
+            }
+        }
+        return excluded
     }
 }

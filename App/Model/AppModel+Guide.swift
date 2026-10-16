@@ -38,11 +38,23 @@ extension AppModel {
     /// Programmes matching `query` from the archive (when replayable) to the end of the guide.
     func searchPrograms(_ query: String, now: Date = Date(), limit: Int = 100) -> [ProgramSearchResult] {
         let window = DateInterval(start: now.addingTimeInterval(-7 * 86_400), end: now.addingTimeInterval(14 * 86_400))
+        return programResults(epg.searchPrograms(query, in: window, limit: limit * 4), now: now, limit: limit)
+    }
+
+    /// `searchPrograms` with the guide scanned on a background task.
+    func searchProgramsInBackground(_ query: String, now: Date = Date(), limit: Int = 100) async -> [ProgramSearchResult] {
+        let window = DateInterval(start: now.addingTimeInterval(-7 * 86_400), end: now.addingTimeInterval(14 * 86_400))
+        let guide = epg
+        let matches = await Task.detached(priority: .userInitiated) { guide.searchPrograms(query, in: window, limit: limit * 4) }.value
+        return programResults(matches, now: now, limit: limit)
+    }
+
+    private func programResults(_ matches: [EPGIndex.ProgramMatch], now: Date, limit: Int) -> [ProgramSearchResult] {
         let channelsByGuideID = channelsByGuideID()
         let excluded = excludedCategoryIDs
         let hidden = hiddenChannelIDs
         var results: [ProgramSearchResult] = []
-        for match in epg.searchPrograms(query, in: window, limit: limit * 4) {
+        for match in matches {
             // Hidden, locked and (for kids) adult categories stay out of search, like everywhere else.
             guard let channel = channelsByGuideID[match.guideID]?.first(where: { !excluded.contains($0.categoryID) && !hidden.contains($0.id) }) else { continue }
             if match.program.end <= now && !canReplay(match.program, on: channel) { continue }
@@ -65,13 +77,27 @@ extension AppModel {
 
     /// Playlist channels per guide channel id.
     func channelsByGuideID() -> [String: [Channel]] {
+        guideMatches().map
+    }
+
+    /// The guide channel of each playlist channel: one matching pass per catalogue and guide, then lookups (a zapping
+    /// queue asks for thousands at once).
+    func guideIDsByChannelID() -> [String: String] {
+        guideMatches().guideIDs
+    }
+
+    private func guideMatches() -> (map: [String: [Channel]], guideIDs: [String: String]) {
         let key = "\(content.fetchedAt.timeIntervalSince1970)|\(content.channels.count)|\(epg.data.fetchedAt.timeIntervalSince1970)|\(epg.data.programs.count)|\(epg.overrides.hashValue)"
-        if let cache = channelsByGuideIDCache, cache.key == key { return cache.map }
+        if let cache = channelsByGuideIDCache, cache.key == key { return (cache.map, cache.guideIDs) }
         var map: [String: [Channel]] = [:]
+        var guideIDs: [String: String] = [:]
         for channel in content.channels {
-            if let id = epg.guideID(for: channel) { map[id, default: []].append(channel) }
+            if let id = epg.guideID(for: channel) {
+                map[id, default: []].append(channel)
+                guideIDs[channel.id] = id
+            }
         }
-        channelsByGuideIDCache = (key, map)
-        return map
+        channelsByGuideIDCache = (key, map, guideIDs)
+        return (map, guideIDs)
     }
 }

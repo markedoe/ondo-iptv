@@ -10,11 +10,10 @@ enum Artwork {
         ImagePipeline.shared = ImagePipeline(configuration: .withDataCache(name: "com.markedoe.ondo.artwork", sizeLimit: 300 * 1024 * 1024))
     }
 
+    /// Decoded straight at `maxPixelSize` by ImageIO (a thumbnail of the downloaded file): a 2000×3000 poster is
+    /// never decoded whole (24 MB) to be shrunk afterwards.
     static func request(_ url: URL, maxPixelSize: CGFloat) -> ImageRequest {
-        ImageRequest(
-            url: url,
-            processors: [.resize(size: CGSize(width: maxPixelSize, height: maxPixelSize), unit: .pixels, contentMode: .aspectFit)]
-        )
+        ImageRequest(url: url, userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(maxPixelSize: Float(maxPixelSize))])
     }
 
     /// Decoded thumbnail (Now Playing artwork…).

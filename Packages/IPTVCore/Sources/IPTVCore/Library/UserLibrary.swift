@@ -26,7 +26,7 @@ public struct CustomList: Identifiable, Codable, Hashable, Sendable {
     }
 
     public func contains(_ reference: MediaReference) -> Bool {
-        items.contains { $0.reference.itemKey == reference.itemKey }
+        items.contains { $0.reference.isSameItem(as: reference) }
     }
 }
 
@@ -123,13 +123,13 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     // MARK: Favourites
 
     public func isFavorite(_ reference: MediaReference) -> Bool {
-        favorites.contains { $0.reference.itemKey == reference.itemKey }
+        favorites.contains { $0.reference.isSameItem(as: reference) }
     }
 
     /// Returns the new favourite state.
     @discardableResult
     public mutating func toggleFavorite(_ reference: MediaReference, title: String, imageURL: URL?, now: Date = Date()) -> Bool {
-        if let index = favorites.firstIndex(where: { $0.reference.itemKey == reference.itemKey }) {
+        if let index = favorites.firstIndex(where: { $0.reference.isSameItem(as: reference) }) {
             favoriteTombstones[favorites[index].id] = now
             favorites.remove(at: index)
             return false
@@ -183,14 +183,14 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     }
 
     public mutating func updateProgress(_ reference: MediaReference, position: Double, duration: Double, now: Date = Date()) {
-        guard let index = history.firstIndex(where: { $0.reference.playbackKey == reference.playbackKey }) else { return }
+        guard let index = history.firstIndex(where: { $0.reference.isSamePlayback(as: reference) }) else { return }
         history[index].position = max(position, 0)
         if duration.isFinite && duration > 0 { history[index].duration = duration }
         history[index].lastWatchedAt = now
     }
 
     public func progress(for reference: MediaReference) -> HistoryEntry? {
-        history.first { $0.reference.playbackKey == reference.playbackKey }
+        history.first { $0.reference.isSamePlayback(as: reference) }
     }
 
     /// Movies and episodes in progress, most recent first, one entry per series.

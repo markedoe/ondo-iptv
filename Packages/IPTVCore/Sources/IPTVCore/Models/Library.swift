@@ -25,6 +25,17 @@ public struct MediaReference: Codable, Hashable, Sendable {
     public var itemKey: String {
         [playlistID.uuidString, type.rawValue, itemID].joined(separator: "|")
     }
+
+    /// Same browsable item (`itemKey`), compared field by field: lists compare it per cell, the keys are strings
+    /// to build.
+    public func isSameItem(as other: MediaReference) -> Bool {
+        itemID == other.itemID && type == other.type && playlistID == other.playlistID
+    }
+
+    /// Same playable thing (`playbackKey`), compared field by field.
+    public func isSamePlayback(as other: MediaReference) -> Bool {
+        isSameItem(as: other) && (episodeID ?? "") == (other.episodeID ?? "")
+    }
 }
 
 public struct FavoriteEntry: Identifiable, Codable, Hashable, Sendable {

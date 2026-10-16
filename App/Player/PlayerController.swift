@@ -583,7 +583,8 @@ extension PlayerController {
 
     private func reportProgress(force: Bool) {
         guard let item, !item.isLive, pendingStart == nil else { return }
-        guard force || Date().timeIntervalSince(lastReportedProgress) > 10 else { return }
+        // Every save redraws what shows progress: twice a minute while playing, and at every pause, seek and stop.
+        guard force || Date().timeIntervalSince(lastReportedProgress) > 30 else { return }
         guard currentTime > 0 else { return }
         lastReportedProgress = Date()
         onProgress?(item, currentTime, duration)
