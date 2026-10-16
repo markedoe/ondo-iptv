@@ -1,3 +1,4 @@
+• Les grosses playlists s’ouvrent plus vite au lancement, et la recherche et le guide TV trouvent titres et chaînes plus vite.
 • Les films et séries démarrent plus vite et reviennent plus tôt après un saut ; l’image suit votre doigt quand vous faites glisser la barre de temps.
 • Réglages, Lecteur : choisissez la mémoire tampon du direct et celle des films et séries (Automatique, ou de 1 à 10 secondes). Une mémoire tampon plus longue masque les coupures plus longues du fournisseur.
 • Lecteur, Plus, Signaler un problème… : un rapport de la lecture (temps de démarrage et de saut, gels, statistiques ; ni adresse du flux, ni identifiant, ni titre) à copier, partager ou envoyer dans un ticket GitHub.

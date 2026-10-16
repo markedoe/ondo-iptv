@@ -1,3 +1,4 @@
+• Large playlists open sooner after launch, and search and the TV guide find titles and channels faster.
 • Movies and series start faster and come back sooner after a skip or a jump; the picture follows your finger while you drag the time bar.
 • Settings, Player: choose the buffer for live TV and for movies & series (Automatic, or 1 to 10 seconds). A longer buffer hides longer interruptions from the provider.
 • Player, More, Report a Problem…: a report of the playback (start and seek times, freezes, statistics; no stream address, login or title) to copy, share or send in a GitHub issue.
