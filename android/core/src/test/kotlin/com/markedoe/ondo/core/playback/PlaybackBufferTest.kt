@@ -41,4 +41,32 @@ class PlaybackBufferTest {
         assertEquals(3, PlaybackBuffer.setting(isLive = true, live = 3, vod = 5))
         assertEquals(5, PlaybackBuffer.setting(isLive = false, live = 3, vod = 5))
     }
+
+    @Test
+    fun automaticWaitsLongerOnceTheProviderHasStoppedTwice() {
+        var raised = 0
+        val policy = RebufferPolicy(raisedUs = 5_000_000)
+        // The start and seeks are not rebufferings.
+        assertNull(policy.waitUs(rebuffering = false, rebufferStartedAtMs = null, targetLiveOffsetUs = null) { raised++ })
+        // The first rebuffering keeps the player's own wait, however often the player asks.
+        assertNull(policy.waitUs(true, 1_000, null) { raised++ })
+        assertNull(policy.waitUs(true, 1_000, null) { raised++ })
+        assertEquals(1, policy.rebufferings)
+        // The second one, and every one after, waits longer.
+        assertEquals(5_000_000L, policy.waitUs(true, 9_000, null) { raised++ })
+        assertEquals(5_000_000L, policy.waitUs(true, 9_000, null) { raised++ })
+        assertEquals(5_000_000L, policy.waitUs(true, 20_000, null) { raised++ })
+        assertTrue(policy.isRaised)
+        assertEquals(1, raised, "noted once")
+        assertNull(policy.waitUs(false, null, null), "a seek after that keeps the player's wait")
+    }
+
+    @Test
+    fun aLiveChannelNeverWaitsForMoreThanItCanBuffer() {
+        val policy = RebufferPolicy(raisedUs = PlaybackBuffer.RAISED_LIVE_MS * 1_000L)
+        policy.waitUs(true, 1_000, 30_000_000)
+        assertEquals(6_000_000L, policy.waitUs(true, 2_000, 30_000_000))
+        // Four seconds from the live edge: two seconds at most.
+        assertEquals(2_000_000L, policy.waitUs(true, 3_000, 4_000_000))
+    }
 }

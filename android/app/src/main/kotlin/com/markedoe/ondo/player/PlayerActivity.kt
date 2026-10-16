@@ -11,6 +11,8 @@ import android.content.res.Configuration
 import android.graphics.Rect
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Rational
 import android.view.ViewGroup
@@ -64,6 +66,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -75,6 +78,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.core.net.DEFAULT_IPTV_USER_AGENT
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.core.playback.RebufferPolicy
 import com.markedoe.ondo.ui.theme.OndoTheme
 import java.util.Locale
 import kotlinx.coroutines.delay
@@ -204,17 +208,7 @@ class PlayerActivity : ComponentActivity() {
         request.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
         return ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(http))
-            // The buffer chosen in Settings; automatic keeps Media3's own durations.
-            .apply {
-                PlaybackBuffer.durations(request.bufferSeconds)?.let { buffer ->
-                    setLoadControl(
-                        DefaultLoadControl.Builder()
-                            .setBufferDurationsMs(buffer.minBufferMs, buffer.maxBufferMs, buffer.bufferForPlaybackMs, buffer.bufferForPlaybackAfterRebufferMs)
-                            .setPrioritizeTimeOverSizeThresholds(true)
-                            .build(),
-                    )
-                }
-            }
+            .setLoadControl(loadControl())
             // A key frame within 1 s of the target, else the exact position: providers often space key frames
             // 10 s apart, and the closest one can land 5 to 10 s away from a 10 s skip.
             .setSeekParameters(SeekParameters(1_000_000, 1_000_000))
@@ -263,6 +257,25 @@ class PlayerActivity : ComponentActivity() {
                 })
                 playWhenReady = true
             }
+    }
+
+    /**
+     * The buffer chosen in Settings. Automatic keeps Media3's own durations, and waits longer before playing again
+     * once the provider has stopped twice ([AdaptiveLoadControl]).
+     */
+    private fun loadControl(): LoadControl {
+        PlaybackBuffer.durations(request.bufferSeconds)?.let { buffer ->
+            return DefaultLoadControl.Builder()
+                .setBufferDurationsMs(buffer.minBufferMs, buffer.maxBufferMs, buffer.bufferForPlaybackMs, buffer.bufferForPlaybackAfterRebufferMs)
+                .setPrioritizeTimeOverSizeThresholds(true)
+                .build()
+        }
+        val raisedMs = if (request.isLive) PlaybackBuffer.RAISED_LIVE_MS else PlaybackBuffer.RAISED_VOD_MS
+        val main = Handler(Looper.getMainLooper())
+        return AdaptiveLoadControl(DefaultLoadControl(), RebufferPolicy(raisedMs * 1_000L)) {
+            // From the player's thread: the reporter lives on the main one.
+            main.post { reporter.note("second rebuffering: waits ${raisedMs / 1_000} s of video before playing again") }
+        }
     }
 
     private fun play(index: Int, startMs: Long) {
