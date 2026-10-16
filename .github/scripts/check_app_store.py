@@ -13,6 +13,9 @@ submitted, its listing and its review notes are checked here, before any upload:
    nothing to come, has no test or placeholder words, says nothing of downloads (not in this edition), and its
    copyright is this year's, the same as the app's (2.3).
 4. The review notes explain every permission, background mode and Mac entitlement the app asks for (2.1, 5.1.1).
+5. No way to pay or donate other than In-App Purchase is reachable from the apps (3.1.1, and Google Play's payments
+   policy): no donation link in their code or on the pages of the website they open, and no `.github/FUNDING.yml`,
+   whose Sponsor button shows on the GitHub issue form the apps open.
 
 The addresses of the listing are checked to answer in the release workflow, before the upload.
 
@@ -40,6 +43,12 @@ DOWNLOAD_CODE = re.compile(
 PRIVATE_API = re.compile(
     r"NSSelectorFromString|NSClassFromString|\bSelector\(\"|\bdlopen\(|\bdlsym\(|objc_msgSend|objc_lookUpClass|"
     r"method_exchangeImplementations|class_getInstanceMethod|forKey(?:Path)?: *\"_|\bJSContext\b|evaluateJavaScript")
+DONATION_LINK = re.compile(
+    r"(?i)github\.com/sponsors|ko-fi\.com|paypal\.(?:me|com)|liberapay\.com|buymeacoffee\.com|patreon\.com|"
+    r"opencollective\.com|tipeee\.com|utip\.io")
+DONATION_WORD = re.compile(r"(?i)\bdonat|\bsponsor|faire un don|pourboire")
+# The website's pages the apps link to (https://<user>.github.io/ondo-iptv/<page>).
+SITE_PAGE = re.compile(r"https://[\w-]+\.github\.io/ondo-iptv/([\w.-]*)")
 RUNTIME_SWITCH = re.compile(r"UserDefaults|@AppStorage|ProcessInfo|URLSession|\bURL\(|\bDate\(|Keychain|Bundle\.main")
 
 LIMITS = {"name.txt": 30, "subtitle.txt": 30, "keywords.txt": 100, "promotional_text.txt": 170,
@@ -263,12 +272,40 @@ def check_review_notes(problems: list) -> None:
             problems.append(f"the review notes do not explain {item} (fastlane/metadata/review_information/notes.txt)")
 
 
+def check_payments(problems: list) -> None:
+    sources = list(swift_files("App"))
+    android = ROOT / "android/app/src/main"
+    if android.is_dir():
+        sources += sorted(path for path in android.rglob("*") if path.suffix in (".kt", ".xml") and path.is_file())
+    pages = set()
+    for path in sources:
+        text = path.read_text(encoding="utf-8")
+        if path.suffix == ".swift":
+            text = edition_source(text)
+        relative = path.relative_to(ROOT).as_posix()
+        for line in text.splitlines():
+            if DONATION_LINK.search(line):
+                problems.append(f"{relative}: the apps link to a way to pay outside the stores (3.1.1): {line.strip()[:120]}")
+        pages |= {page or "index.html" for page in SITE_PAGE.findall(text)}
+    for page in sorted(pages):
+        path = ROOT / "site" / page
+        if not path.is_file():
+            continue
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if DONATION_LINK.search(line) or DONATION_WORD.search(re.sub(r"<[^>]+>", " ", line)):
+                problems.append(f"site/{page}:{number}: the apps open this page, so it must not ask for donations: "
+                                f"{line.strip()[:120]}")
+    if (ROOT / ".github/FUNDING.yml").exists():
+        problems.append(".github/FUNDING.yml: its Sponsor button shows on the GitHub issue form the apps open")
+
+
 def main() -> int:
     problems = []
     check_code(problems)
     check_build_settings(problems)
     check_listing(problems)
     check_review_notes(problems)
+    check_payments(problems)
     for problem in problems:
         print(f"::error::{problem}")
     print(f"App Store edition: {len(problems)} problem(s).")

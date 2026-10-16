@@ -382,3 +382,15 @@ class AppStoreTests(CheckTestCase):
     def test_the_review_notes_do_not_describe_what_the_edition_lacks(self):
         self.write("fastlane/metadata/review_information/notes.txt", self.NOTES + "Downloads are in the Downloads tab.\n")
         self.assertFails("app_store", "notes.txt:3 mentions downloads")
+
+    def test_the_apps_lead_to_no_other_way_to_pay(self):
+        self.write("App/Features/Help.swift", 'let support = URL(string: "https://example.github.io/ondo-iptv/support.html")!\n')
+        self.write("site/support.html", "<p>Help and contact.</p>\n")
+        self.write("site/index.html", '<p>Support Ondo on <a href="https://github.com/sponsors/example">GitHub Sponsors</a>.</p>\n')
+        self.assertPasses("app_store")
+        self.write("site/support.html", "<p>Help.</p>\n<p>Like Ondo? Make a donation.</p>\n")
+        self.write("android/app/src/main/res/values/strings.xml", '<string name="tip">https://ko-fi.com/example</string>\n')
+        self.write(".github/FUNDING.yml", "github: [example]\n")
+        self.assertFails("app_store", "site/support.html:2: the apps open this page",
+                         "android/app/src/main/res/values/strings.xml: the apps link to a way to pay",
+                         ".github/FUNDING.yml")

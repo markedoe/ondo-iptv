@@ -30,7 +30,9 @@ screenshots.
     `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go.
   - No private API (no class, selector or symbol looked up by name, no method swapping), no code downloaded and run.
   - Money inside the apps only through Apple's In-App Purchase (Google Play Billing on Android), tips included; no
-    link or button in the apps to another way to pay or donate. The website and the README may link elsewhere.
+    link or button in the apps to another way to pay or donate. Donation links (GitHub Sponsors) live only on the
+    website's home page and in the README, never on a page the apps open (support, privacy), and there is no
+    `.github/FUNDING.yml`: its Sponsor button shows on the GitHub issue form the apps open.
   - The listing matches the build: no feature it lacks, no other platform named, nothing "coming soon", no test or
     placeholder words, this year's copyright. The review notes explain every permission, background mode and
     entitlement, and give a way to test without a subscription (the demo).

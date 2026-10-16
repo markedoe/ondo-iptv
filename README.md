@@ -192,6 +192,12 @@ A guard blocks secrets and personal data before any commit: a Claude Code hook (
 git hook (`git config core.hooksPath .githooks`) and CI (`.claude/hooks/leak_guard.py` + gitleaks on the
 whole history).
 
+## Support the project
+
+Ondo has no ads and no tracking. If you find it useful, you can support its development on
+[GitHub Sponsors](https://github.com/sponsors/markedoe). Inside the apps, money goes only through the App Store and Google Play, as
+their rules require: the apps link to no other way to pay.
+
 ## License
 
 MIT, see [LICENSE](LICENSE).

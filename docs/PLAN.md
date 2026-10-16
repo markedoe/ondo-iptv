@@ -101,7 +101,8 @@ with shortcuts, player in its own window (several windows = multi-screen), nativ
 - [x] TMDb trending (API key supplied by the user)
 - [x] Chromecast (official Google Cast SDK, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
 - [x] ~~Real-Debrid source~~: removed (October 2026): code no build could use is a dormant feature for App Review
-- [ ] Optional StoreKit 2 monetization — deliberately not done (open-source app)
+- [x] Donations on the website and in the README (GitHub Sponsors), never from inside the apps
+- [ ] Optional tips inside the apps (StoreKit 2 / Play Billing), unlocking nothing: planned for 1.2.0
 - [ ] tvOS / visionOS targets (the core is already compatible)
 
 ### Phase 6 — Advanced features ✅ in part

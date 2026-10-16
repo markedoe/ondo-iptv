@@ -101,7 +101,8 @@ avec raccourcis, lecteur dans sa propre fenêtre (plusieurs fenêtres = multi-é
 - [x] Tendances TMDb (clé API fournie par l'utilisateur)
 - [x] Chromecast (Google Cast SDK officiel, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
 - [x] ~~Source Real-Debrid~~ : supprimée (octobre 2026) : du code qu'aucun build ne peut utiliser est une fonction dormante pour la review d'Apple
-- [ ] Monétisation StoreKit 2 optionnelle — volontairement non faite (app libre)
+- [x] Dons sur le site et dans le README (GitHub Sponsors), jamais depuis les apps
+- [ ] Pourboires facultatifs dans les apps (StoreKit 2 / Play Billing), qui ne débloquent rien : prévus en 1.2.0
 - [ ] Cibles tvOS / visionOS (le cœur est déjà compatible)
 
 ### Phase 6 — Fonctions avancées ✅ en partie

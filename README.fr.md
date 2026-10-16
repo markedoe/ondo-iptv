@@ -201,6 +201,12 @@ Le dépôt est public : les clés de publication vivent uniquement dans les secr
 commit — hook Claude Code (`.claude/settings.json`), hook git (`git config core.hooksPath .githooks`) et
 CI (`.claude/hooks/leak_guard.py` + gitleaks sur tout l'historique).
 
+## Soutenir le projet
+
+Ondo n'a ni publicité ni pistage. S'il vous est utile, vous pouvez soutenir son développement sur
+[GitHub Sponsors](https://github.com/sponsors/markedoe). Dans les apps, l'argent ne passe que par l'App Store et Google Play, comme
+leurs règles l'exigent : les apps ne mènent à aucun autre moyen de payer.
+
 ## Licence
 
 MIT — voir [LICENSE](LICENSE).
