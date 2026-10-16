@@ -3,6 +3,7 @@
 Each test builds a small project in a temporary folder, with or without the defect, and runs the check on
 it as CI does. Run: python3 -m unittest discover -s .github/scripts/tests
 """
+import datetime
 import json
 import plistlib
 import shutil
@@ -283,3 +284,101 @@ class AwardsTests(CheckTestCase):
     def test_rejects_a_missing_copy(self):
         self.write("App/Resources/awards.json", json.dumps(self.AWARDS))
         self.assertFails("awards", "missing awards data")
+
+
+class AppStoreTests(CheckTestCase):
+    """The App Store edition: nothing dormant, no private API, a listing and review notes App Review accepts."""
+    YEAR = datetime.datetime.now(datetime.timezone.utc).year
+    LISTING = {"name.txt": "Ondo", "subtitle.txt": "Movies, series & TV player", "keywords.txt": "m3u,epg",
+               "promotional_text.txt": "Your provider's movies.", "description.txt": "Ondo is a player only.",
+               "release_notes.txt": "• Movies start faster. Some channels may be offline.",
+               "support_url.txt": "https://example.com/support", "privacy_url.txt": "https://example.com/privacy",
+               "marketing_url.txt": "https://example.com/"}
+    NOTES = ("HOW TO TEST: tap Try the demo.\nLocal network (NSLocalNetworkUsageDescription). Notifications. "
+             "NSAllowsArbitraryLoads. UIBackgroundModes audio. com.apple.security.network.client.\n")
+    FLAGS = ("enum FeatureFlags {\n    #if TESTFLIGHT_DOWNLOADS || DEBUG\n    static let downloads: Bool = {\n"
+             "        #if TESTFLIGHT_DOWNLOADS\n        return true\n        #else\n"
+             "        return !ProcessInfo.processInfo.arguments.contains(\"-uitest-showcase\")\n        #endif\n"
+             "    }()\n    #endif\n}\n")
+
+    def setUp(self):
+        super().setUp()
+        self.project()
+        self.write("App/Resources/Ondo-macOS.entitlements",
+                   plistlib.dumps({"com.apple.security.app-sandbox": True, "com.apple.security.network.client": True}))
+        self.write(".github/workflows/release.yml", "      EDITION: ${{ github.event.inputs.edition || 'app-store' }}\n")
+        self.write("fastlane/Fastfile", "  args << \"'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) TESTFLIGHT_DOWNLOADS'\" "
+                   "if testflight_edition?\n\ndef testflight_edition?\n  ENV[\"EDITION\"] == \"testflight\"\nend\n")
+        self.write("fastlane/metadata/copyright.txt", f"© {self.YEAR} example\n")
+        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES)
+        for locale in ("en-US", "fr-FR"):
+            for name, text in self.LISTING.items():
+                self.write(f"fastlane/metadata/{locale}/{name}", text + "\n")
+        self.write("App/Features/Flags.swift", self.FLAGS)
+        self.write("App/Model/Reminders.swift", "let center = UNUserNotificationCenter.current()  // reminders\n")
+        self.write("App/Model/DownloadManager.swift",
+                   "#if TESTFLIGHT_DOWNLOADS || DEBUG\nfinal class DownloadManager {\n"
+                   "    let configuration = URLSessionConfiguration.background(withIdentifier: \"d\")\n}\n#endif\n")
+        self.write("App/Features/Movie.swift", "#if os(iOS)\nlet a = 1\n#endif\n#if TESTFLIGHT_DOWNLOADS || DEBUG\n"
+                   "let button = DownloadButton(item: item)\n#endif\n")
+
+    def project(self, extra: str = "") -> None:
+        self.write("project.yml", f"        NSHumanReadableCopyright: © {self.YEAR} example\n"
+                   "        NSAppTransportSecurity:\n          NSAllowsArbitraryLoads: true\n"
+                   "        NSLocalNetworkUsageDescription: Ondo looks for TVs.\n        UIBackgroundModes: [audio]\n" + extra)
+
+    def test_the_app_store_edition_passes(self):
+        self.assertPasses("app_store")
+
+    def test_download_code_the_app_store_edition_compiles_fails(self):
+        self.write("App/Features/Series.swift", "#if DEBUG\nlet a = 1\n#else\nlet manager = DownloadManager.shared\n#endif\n")
+        self.assertFails("app_store", "App/Features/Series.swift: the App Store edition compiles download code")
+
+    def test_download_code_under_a_platform_condition_still_ships(self):
+        self.write("App/Player/Delegate.swift", "#if os(iOS)\nlet id = DownloadManager.sessionIdentifier\n#endif\n")
+        self.assertFails("app_store", "App/Player/Delegate.swift")
+
+    def test_a_feature_switched_off_for_good_is_dormant(self):
+        self.write("App/Features/Flags.swift", self.FLAGS.replace("enum FeatureFlags {\n", "enum FeatureFlags {\n    static let extra = false\n"))
+        self.assertFails("app_store", "FeatureFlags.extra is off in the App Store edition")
+
+    def test_a_switch_read_at_run_time_is_a_hidden_feature(self):
+        self.write("App/Features/Flags.swift", self.FLAGS.replace(
+            "enum FeatureFlags {\n", "enum FeatureFlags {\n    static var unlocked: Bool { UserDefaults.standard.bool(forKey: \"code\") }\n"))
+        self.assertFails("app_store", "FeatureFlags reads something at run time")
+
+    def test_a_private_api_fails(self):
+        self.write("Packages/IPTVCore/Sources/IPTVCore/Hack.swift", "let selector = NSSelectorFromString(\"_hidden\")\n")
+        self.assertFails("app_store", "Packages/IPTVCore/Sources/IPTVCore/Hack.swift: looks up or swaps code by name")
+
+    def test_the_testflight_condition_must_not_be_a_build_setting(self):
+        self.project("    SWIFT_ACTIVE_COMPILATION_CONDITIONS: TESTFLIGHT_DOWNLOADS\n")
+        self.assertFails("app_store", "project.yml: TESTFLIGHT_DOWNLOADS")
+
+    def test_a_tag_must_build_the_app_store_edition(self):
+        self.write(".github/workflows/release.yml", "      EDITION: ${{ github.event.inputs.edition || 'testflight' }}\n")
+        self.assertFails("app_store", "a tag must build the App Store edition")
+
+    def test_the_listing_follows_app_review_rules(self):
+        self.write("fastlane/metadata/en-US/description.txt", "Also on Android.\nDownload movies to watch offline.\n")
+        self.write("fastlane/metadata/fr-FR/promotional_text.txt", "Bientôt : la version bêta.\n")
+        self.write("fastlane/metadata/fr-FR/name.txt", "Ondo – le lecteur de films, séries et TV\n")
+        self.assertFails("app_store", "names another platform", "mentions downloads", "promises a feature to come",
+                         "has test words", "fr-FR/name.txt has 40 characters")
+
+    def test_the_copyright_must_be_this_years(self):
+        self.write("fastlane/metadata/copyright.txt", f"© {self.YEAR - 1} example\n")
+        self.assertFails("app_store", "copyright.txt must name this year", "NSHumanReadableCopyright")
+
+    def test_every_permission_and_entitlement_is_explained_to_the_reviewer(self):
+        self.project("        NSCameraUsageDescription: Scans codes.\n")
+        self.write("App/Resources/Ondo-macOS.entitlements", plistlib.dumps({
+            "com.apple.security.app-sandbox": True, "com.apple.security.network.client": True,
+            "com.apple.security.network.server": True}))
+        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES.replace("Notifications. ", ""))
+        self.assertFails("app_store", "do not explain NSCameraUsageDescription",
+                         "do not explain com.apple.security.network.server", "do not explain Notifications")
+
+    def test_the_review_notes_do_not_describe_what_the_edition_lacks(self):
+        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES + "Downloads are in the Downloads tab.\n")
+        self.assertFails("app_store", "notes.txt:3 mentions downloads")

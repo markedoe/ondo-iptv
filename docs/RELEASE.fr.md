@@ -146,9 +146,11 @@ HTTP, Cast et notifications.
    **Deux éditions.** *Run workflow* demande une `edition` : `testflight` (par défaut) construit l'app avec les
    téléchargements, pour les testeurs internes seulement ; `app-store` la construit sans (règle 5.2.3 d'Apple
    sur l'enregistrement de médias d'autres sources), et c'est **la seule à soumettre**. Un tag construit
-   l'édition App Store. Rien dans l'édition App Store ne peut activer les téléchargements
-   (`FeatureFlags.downloads`, un réglage de compilation) : un code de déblocage serait une fonction cachée,
-   ce que la règle 2.3.1 interdit.
+   l'édition App Store. L'édition App Store est construite sans le code des téléchargements
+   (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), donc rien en elle ne peut les activer : une fonction désactivée, ou un
+   code de déblocage, serait une fonction cachée ou dormante, ce que la règle 2.3.1 interdit et pour quoi Apple
+   peut exclure un développeur de son programme. Les builds de l'édition TestFlight restent aux testeurs
+   internes : les tests externes passent par la review d'Apple.
 3. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
    fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.
@@ -167,6 +169,13 @@ Les builds TestFlight ne sont pas touchés.
 
 ## E. Points à vérifier avant la review
 
+- `.github/scripts/check_app_store.py` passe (la CI, le workflow de sécurité et le workflow de release le
+  lancent) : l'édition App Store ne compile aucun code de téléchargement ni aucune fonction désactivée pour de
+  bon, n'utilise aucune API privée ; la fiche tient dans les limites d'App Store Connect, ne nomme aucune autre
+  plateforme, ne promet rien « à venir », n'a ni mot de test ni texte provisoire et ne parle pas de
+  téléchargements ; le copyright est celui de l'année ; les notes pour la review expliquent chaque
+  autorisation, mode d'arrière-plan et entitlement Mac. Le workflow de release vérifie aussi que les adresses
+  d'assistance, de confidentialité et du site répondent.
 - `ITSAppUsesNonExemptEncryption = NO` est déclaré : pas de question d'export à chaque build.
 - `PrivacyInfo.xcprivacy` présent (raisons d'usage des API sensibles).
 - Les captures ne montrent que la démo générée (affiches dessinées, chaînes fictives) : aucun logo ni

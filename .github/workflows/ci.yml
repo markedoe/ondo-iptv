@@ -56,7 +56,7 @@ jobs:
           echo "81cb02135897dc982b4d1049dba8510db3e982b0b0e8e138293982d77e4154e0  /tmp/swiftlint.zip" | sha256sum -c -
           unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint
           /tmp/swiftlint/swiftlint lint --reporter github-actions-logging
-      - name: Shipped configuration (translations in seven languages, privacy manifest, Mac sandbox, awards data)
+      - name: Shipped configuration (translations in seven languages, privacy manifest, Mac sandbox, awards data, App Store edition)
         if: success() || failure()
         # What tests on simulated data cannot see: an untranslated text, an App Store upload rejected for
         # an undeclared API, a Mac app whose sandbox blocks the network or the file pickers. The neutrality
@@ -65,7 +65,7 @@ jobs:
           status=0
           # The checks' own tests first: each must reject the defect it exists for (.github/scripts/tests).
           python3 -m unittest discover -s .github/scripts/tests || status=1
-          for check in translations privacy_manifest mac_entitlements awards; do
+          for check in translations privacy_manifest mac_entitlements awards app_store; do
             python3 .github/scripts/check_$check.py || status=1
           done
           exit $status
@@ -170,11 +170,12 @@ jobs:
           if-no-files-found: ignore
 
   release-build:
-    name: Release build (iOS)
+    name: Release build, App Store edition (iOS + macOS)
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 60
     # Debug is what the other jobs build and test; the App Store gets Release, without the `#if DEBUG`
-    # code (UI test catalogue, screenshot routes). A Release-only break shows here, not at archive time.
+    # code (UI test catalogue, screenshot routes) and without the TestFlight edition's downloads
+    # (`#if TESTFLIGHT_DOWNLOADS || DEBUG`). A break of the edition that gets submitted shows here, not at archive time.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -198,6 +199,16 @@ jobs:
             -project Ondo.xcodeproj -scheme Ondo -configuration Release \
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build/release \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: Build for macOS (Release)
+        if: success() || failure()
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/release-macos \
             -clonedSourcePackagesDirPath build/spm \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
 

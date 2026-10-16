@@ -69,6 +69,16 @@ jobs:
           curl -fsSL --retry 2 --max-time 60 "$URL" -o demo.m3u
           head -c 7 demo.m3u | grep -q '#EXTM3U' || { echo "::error::$URL is not an M3U playlist"; exit 1; }
           echo "$(grep -c '^#EXTINF' demo.m3u) entries in $URL"
+      - name: App Store edition checks
+        # The build to submit: nothing dormant, no private API, a listing and review notes App Review accepts
+        # (.github/scripts/check_app_store.py), and the listing's addresses answer.
+        if: env.EDITION == 'app-store' || env.TARGET == 'metadata' || env.TARGET == 'all'
+        run: |
+          python3 .github/scripts/check_app_store.py
+          for file in fastlane/metadata/*/*_url.txt; do
+            url=$(tr -d '[:space:]' < "$file")
+            curl -fsSL --retry 2 --max-time 30 -o /dev/null "$url" || { echo "::error::$file: $url does not answer"; exit 1; }
+          done
       - name: iOS → TestFlight
         id: ios
         if: env.TARGET == 'all' || env.TARGET == 'ios'

@@ -21,6 +21,21 @@ screenshots.
   in the same change: Apple `App/Resources/Localizable.xcstrings` (`fr`, `es`, `pt`, `zh-Hans`, `ar`, `hi`)
   and Android `res/values-{fr,es,pt,zh-rCN,ar,hi}/strings.xml`. `check_translations.py` (CI) fails on a
   missing Apple translation and Android lint on a missing Android one.
+- **App Store: never get banned by Apple.** Apple can remove a developer from its program for hidden or dormant
+  features (App Review Guidelines 2.3.1) and for getting around its rules, so:
+  - The build submitted is the build App Review sees. A feature the App Store edition does not have is left out of
+    its build (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), never switched off at run time: no unlock code, no remote
+    switch, no setting, date or launch argument that turns something on, no constant `false` feature left in.
+  - The TestFlight edition (downloads) goes to internal testers only and is never submitted; a tag or
+    `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go.
+  - No private API (no class, selector or symbol looked up by name, no method swapping), no code downloaded and run.
+  - Money inside the apps only through Apple's In-App Purchase (Google Play Billing on Android), tips included; no
+    link or button in the apps to another way to pay or donate. The website and the README may link elsewhere.
+  - The listing matches the build: no feature it lacks, no other platform named, nothing "coming soon", no test or
+    placeholder words, this year's copyright. The review notes explain every permission, background mode and
+    entitlement, and give a way to test without a subscription (the demo).
+  - `.github/scripts/check_app_store.py` (CI, security and release workflows) checks this: extend it with each
+    new permission, entitlement or edition difference.
 - **Keys and logins are checked when saved**: every API key, token, login or other setting that depends on an
   outside service is checked with that service as soon as the user saves it, with a clear message (accepted,
   refused, service unreachable); a refused one is not saved. Fields and help texts use the service's own words for

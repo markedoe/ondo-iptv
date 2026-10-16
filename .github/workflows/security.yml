@@ -47,3 +47,7 @@ jobs:
           persist-credentials: false
       - name: No other IPTV app named, IPTV never called free (seven languages), fictional channels only
         run: python3 .github/scripts/check_neutrality.py
+      - name: App Store edition (nothing dormant, no private API, listing and review notes App Review accepts)
+        # Here too because CI skips store listing changes, and App Review reads the listing.
+        if: success() || failure()
+        run: python3 .github/scripts/check_app_store.py
