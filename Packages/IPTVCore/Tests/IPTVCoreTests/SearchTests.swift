@@ -24,6 +24,23 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(TextNormalizer.channelMatchKey("FR"), "fr", "a lone country token is kept")
     }
 
+    /// The fast path for plain ASCII gives exactly what the general one gives, on any ASCII text; anything else
+    /// takes the general path.
+    func testTheASCIIPathNormalisesLikeTheGeneralOne() {
+        var generator = SystemRandomNumberGenerator()
+        let alphabet = Array(" \t-_.:|()[]!?'&+/#0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+        for _ in 0..<5_000 {
+            let text = String((0..<Int.random(in: 0...24, using: &generator)).map { _ in alphabet.randomElement(using: &generator)! })
+            XCTAssertEqual(TextNormalizer.normalizeASCII(text), TextNormalizer.normalizeUnicode(text), "\(text)")
+        }
+        for text in ["FR: TV1 HD", "  Night -- City (2024) ", "", "---", "A"] {
+            XCTAssertEqual(TextNormalizer.normalizeASCII(text), TextNormalizer.normalizeUnicode(text))
+        }
+        XCTAssertNil(TextNormalizer.normalizeASCII("Télé"))
+        XCTAssertNil(TextNormalizer.normalizeASCII("ＴＶ１"), "full-width letters are folded by the general path")
+        XCTAssertEqual(TextNormalizer.normalize("ＴＶ１ Évasion"), "tv1 evasion")
+    }
+
     /// Provider text is blank when it holds only spaces of any kind (no-break, ideographic…), not only ASCII ones.
     func testBlankTextCoversEveryKindOfSpace() {
         XCTAssertNil("\u{3000}".nilIfBlank, "ideographic space")

@@ -21,6 +21,37 @@ public enum TextNormalizer {
     /// Lowercased, accent-free, alphanumerics separated by single spaces.
     /// "Télé-Évasion  HD" -> "tele evasion hd"
     public static func normalize(_ text: String) -> String {
+        normalizeASCII(text) ?? normalizeUnicode(text)
+    }
+
+    /// `normalize` for plain ASCII text, most titles and names, byte by byte (the general path folds the string
+    /// first, which is slow on whole catalogues); nil when the text holds anything else. Same result.
+    static func normalizeASCII(_ text: String) -> String? {
+        var bytes: [UInt8] = []
+        bytes.reserveCapacity(text.utf8.count)
+        var lastWasSpace = true
+        for byte in text.utf8 {
+            switch byte {
+            case 0x80...:
+                return nil
+            case UInt8(ascii: "a")...UInt8(ascii: "z"), UInt8(ascii: "0")...UInt8(ascii: "9"):
+                bytes.append(byte)
+                lastWasSpace = false
+            case UInt8(ascii: "A")...UInt8(ascii: "Z"):
+                bytes.append(byte + 32)
+                lastWasSpace = false
+            default:
+                if !lastWasSpace {
+                    bytes.append(UInt8(ascii: " "))
+                    lastWasSpace = true
+                }
+            }
+        }
+        if bytes.last == UInt8(ascii: " ") { bytes.removeLast() }
+        return String(decoding: bytes, as: UTF8.self)
+    }
+
+    static func normalizeUnicode(_ text: String) -> String {
         let folded = text.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive], locale: nil)
         var result = ""
         result.reserveCapacity(folded.count)

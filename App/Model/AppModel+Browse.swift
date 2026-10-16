@@ -64,8 +64,16 @@ extension AppModel {
 
     /// Keeps the last few sorted lists (the grids on screen and the shelves of Home).
     private func cacheSortedList(_ list: Any, key: String) {
-        if sortedListCache.count >= 12 { sortedListCache.removeAll() }
+        if sortedListCache.count >= 16 { sortedListCache.removeAll() }
         sortedListCache[key] = list
+    }
+
+    /// The list kept under `key`, built once (`key` names everything the list depends on).
+    func cachedList<T>(_ key: String, build: () -> [T]) -> [T] {
+        if let cached = sortedListCache[key] as? [T] { return cached }
+        let list = build()
+        cacheSortedList(list, key: key)
+        return list
     }
 
     private static func sorted(_ list: [Series], by sort: PosterSort) -> [Series] {

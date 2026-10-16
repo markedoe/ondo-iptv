@@ -63,15 +63,28 @@ extension AppModel {
     /// the best rated. Titles without a known year never appear, and nothing from a hidden or locked category.
     func newMovies(limit: Int = 20, now: Date = .now) -> [ShowcaseItem] {
         let window = Self.releaseWindow(now)
-        let movies = self.movies(in: nil, sort: .playlist).filter { movie in movie.year.map { window.contains($0) } ?? false }
-        return Array(movies.map(ShowcaseItem.movie).sorted(by: Self.isNewer).prefix(limit))
+        // Home asks several times per redraw (carousel and shelves): the whole catalogue is gone through once.
+        let all = cachedList(newKey("movies", window)) {
+            self.movies(in: nil, sort: .playlist).filter { movie in movie.year.map { window.contains($0) } ?? false }
+                .map(ShowcaseItem.movie).sorted(by: Self.isNewer)
+        }
+        return Array(all.prefix(limit))
     }
 
     /// New series, by the same rule as `newMovies`.
     func newSeries(limit: Int = 20, now: Date = .now) -> [ShowcaseItem] {
         let window = Self.releaseWindow(now)
-        let series = self.series(in: nil, sort: .playlist).filter { show in show.year.map { window.contains($0) } ?? false }
-        return Array(series.map(ShowcaseItem.series).sorted(by: Self.isNewer).prefix(limit))
+        let all = cachedList(newKey("series", window)) {
+            self.series(in: nil, sort: .playlist).filter { show in show.year.map { window.contains($0) } ?? false }
+                .map(ShowcaseItem.series).sorted(by: Self.isNewer)
+        }
+        return Array(all.prefix(limit))
+    }
+
+    /// What the new titles depend on: the catalogue, the categories left out (hidden, locked, kids) and the years.
+    private func newKey(_ kind: String, _ window: ClosedRange<Int>) -> String {
+        "new-\(kind)|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(content.movies.count)|"
+            + "\(content.series.count)|\(excludedCategoryIDs.hashValue)|\(window.lowerBound)"
     }
 
     /// New movies and series alternating (the carousel).

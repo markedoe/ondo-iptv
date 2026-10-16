@@ -34,12 +34,22 @@ extension AppModel {
         return Self.sorted(PersonWorks(movies: movies, series: series))
     }
 
+    /// The actors and directors of `content`'s series (`peopleIndex`), built off the main thread.
+    func buildPeopleIndex(from content: PlaylistContent, for playlist: Playlist) {
+        peopleTask?.cancel()
+        peopleTask = Task {
+            let people = await Task.detached(priority: .utility) { PeopleIndex(fields: content.series.flatMap { [$0.cast, $0.director] }) }.value
+            guard !Task.isCancelled, activePlaylist?.id == playlist.id else { return }
+            peopleIndex = people
+        }
+    }
+
     /// Actors and directors whose name matches a search: from the pages already opened and the series lists.
     func people(matching query: String) -> [String] {
         let openedFields = movieDetailsCache.values.flatMap { [$0.cast, $0.director] }
             + seriesDetailsCache.values.flatMap { [$0.info.cast, $0.info.director] }
         var seen = Set<String>()
-        return (PeopleIndex(fields: openedFields).names(matching: query) + index.people.names(matching: query))
+        return (PeopleIndex(fields: openedFields).names(matching: query) + peopleIndex.names(matching: query))
             .filter { seen.insert(TextNormalizer.normalize($0)).inserted }
             .prefix(20)
             .map { $0 }

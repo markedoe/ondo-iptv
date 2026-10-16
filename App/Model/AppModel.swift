@@ -46,8 +46,6 @@ struct ContentIndex: Sendable {
     /// thousands of channels is built without normalising every name.
     var matchKeyByChannelID: [String: String] = [:]
     var search = SearchEngine(content: .empty)
-    /// Actors and directors of the series lists (movie lists give no cast), for search.
-    var people = PeopleIndex()
 
     init() {}
 
@@ -64,7 +62,6 @@ struct ContentIndex: Sendable {
             for channel in versions { matchKeyByChannelID[channel.id] = key }
         }
         search = SearchEngine(content: content)
-        people = PeopleIndex(fields: content.series.flatMap { [$0.cast, $0.director] })
     }
 }
 
@@ -100,6 +97,10 @@ final class AppModel {
     /// Awards and festival selections of the catalogue's movies, by movie id (bundled data, matched on the device).
     var movieAwards: [String: [AwardsCatalogue.Entry]] = [:]
     @ObservationIgnored var awardsTask: Task<Void, Never>?
+    /// Actors and directors of the series lists (movie lists give no cast), for search: built once the catalogue is
+    /// on screen (`apply`). Read when a search runs, so not observed.
+    @ObservationIgnored var peopleIndex = PeopleIndex()
+    @ObservationIgnored var peopleTask: Task<Void, Never>?
     private(set) var epg = EPGIndex.empty
     private(set) var phase: LoadPhase = .idle
     private(set) var epgPhase: LoadPhase = .idle
@@ -123,7 +124,7 @@ final class AppModel {
     @ObservationIgnored var autoplayPending = false
     @ObservationIgnored var sessions: [UUID: PlaybackSession] = [:]
 
-    @ObservationIgnored private var librarySaveTask: Task<Void, Never>?
+    @ObservationIgnored private let libraryWriter: LibraryWriter
     @ObservationIgnored private var epgTask: Task<Void, Never>?
     @ObservationIgnored var movieDetailsCache: [String: MediaDetails] = [:]
     @ObservationIgnored var movieDetailsInFlight: [String: Task<MediaDetails?, Never>] = [:]
@@ -160,6 +161,7 @@ final class AppModel {
     init(storageRoot: URL? = nil, secrets: SecretStore = KeychainSecretStore(), reminderScheduler: ReminderScheduling? = nil) {
         userStore = FileStore(directory: storageRoot?.appendingPathComponent("Support", isDirectory: true) ?? AppPaths.support)
         cacheStore = FileStore(directory: storageRoot?.appendingPathComponent("Caches", isDirectory: true) ?? AppPaths.caches)
+        libraryWriter = LibraryWriter(store: userStore)
         self.secrets = secrets
         // UI tests must never hit the system permission prompt.
         let isUITest = ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-uitest") }
@@ -258,20 +260,14 @@ final class AppModel {
 
     func updateLibrary(_ change: (inout UserLibrary) -> Void) {
         change(&library)
-        librarySaveTask?.cancel()
-        let store = userStore
-        let name = activeProfile.libraryDocumentName
-        librarySaveTask = Task { [library] in
-            try? await Task.sleep(for: .milliseconds(600))
-            guard !Task.isCancelled else { return }
-            try? store.save(library, name: name)
-        }
+        // Written a moment later, off the main thread, a burst of changes at once.
+        libraryWriter.schedule(library, name: activeProfile.libraryDocumentName)
     }
 
     /// Flushes pending writes (app going to background, profile switch).
     func flush() {
-        librarySaveTask?.cancel()
-        try? userStore.save(library, name: activeProfile.libraryDocumentName)
+        libraryWriter.schedule(library, name: activeProfile.libraryDocumentName)
+        libraryWriter.flush()
         try? userStore.save(settings, name: "settings")
     }
 
@@ -324,7 +320,7 @@ final class AppModel {
         profiles.removeAll { $0.id == profile.id }
         saveProfiles()
         // A pending save of the deleted profile's library would write its file again.
-        if wasActive { librarySaveTask?.cancel() }
+        libraryWriter.discard(name: profile.libraryDocumentName)
         userStore.remove(name: profile.libraryDocumentName)
         if wasActive, let first = profiles.first {
             library = userStore.load(UserLibrary.self, name: first.libraryDocumentName) ?? UserLibrary()
@@ -431,6 +427,7 @@ final class AppModel {
                 content = .empty
                 rawContent = .empty
                 index = ContentIndex()
+                peopleIndex = PeopleIndex()
                 categoryTags = CategoryTagIndex()
                 movieAwards = [:]
                 epg = .empty
@@ -484,6 +481,7 @@ final class AppModel {
                 content = .empty
                 rawContent = .empty
                 index = ContentIndex()
+                peopleIndex = PeopleIndex()
                 categoryTags = CategoryTagIndex()
                 movieAwards = [:]
             }
@@ -562,7 +560,9 @@ final class AppModel {
         content = edited
         index = built
         categoryTags = tags
-        // Awards once the catalogue is on screen: matching every title takes a moment on a large playlist.
+        // The cast and directors for search, and the awards, once the catalogue is on screen: each takes a moment on
+        // a large playlist.
+        buildPeopleIndex(from: edited, for: playlist)
         awardsTask?.cancel()
         awardsTask = Task {
             let awards = await Task.detached { [catalogue = AwardsCatalogue.current] in catalogue.match(edited.movies) }.value
