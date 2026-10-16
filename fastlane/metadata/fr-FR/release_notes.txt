@@ -1,3 +1,9 @@
+• Les films et séries démarrent plus vite et reviennent plus tôt après un saut ; l’image suit votre doigt quand vous faites glisser la barre de temps.
+• Réglages, Lecteur : choisissez la mémoire tampon du direct et celle des films et séries (Automatique, ou de 1 à 10 secondes). Une mémoire tampon plus longue masque les coupures plus longues du fournisseur.
+• Lecteur, Plus, Signaler un problème… : un rapport de la lecture (temps de démarrage et de saut, gels, statistiques ; ni adresse du flux, ni identifiant, ni titre) à copier, partager ou envoyer dans un ticket GitHub.
+• Avec VLC, les chaînes en direct gèlent moins : la mémoire tampon s’allonge d’elle-même après une coupure du flux du fournisseur, et les Statistiques du flux indiquent si un gel vient du réseau ou du lecteur.
+• Le guide TV s’ouvre aussitôt, même avec des milliers de chaînes, et les montre toutes ; les noms des chaînes et les heures restent visibles pendant le défilement.
+• Plus fluide partout : la recherche travaille en arrière-plan, les longues listes et les affiches défilent sans à-coups, et une playlist déjà sur l’appareil s’ouvre sans attendre sa mise à jour.
 • Mac : plein écran, avec le bouton, la touche F ou un double-clic.
 • AirPlay depuis le Mac envoie maintenant la vidéo vers la TV, pas seulement le son.
 • La reprise démarre exactement là où vous vous êtes arrêté, et une pause faite pendant l’ouverture d’un film est respectée.

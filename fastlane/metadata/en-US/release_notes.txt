@@ -1,3 +1,9 @@
+• Movies and series start faster and come back sooner after a skip or a jump; the picture follows your finger while you drag the time bar.
+• Settings, Player: choose the buffer for live TV and for movies & series (Automatic, or 1 to 10 seconds). A longer buffer hides longer interruptions from the provider.
+• Player, More, Report a Problem…: a report of the playback (start and seek times, freezes, statistics; no stream address, login or title) to copy, share or send in a GitHub issue.
+• With VLC, live channels freeze less: the buffer grows by itself after the provider's stream stops for a moment, and Stream Statistics say whether a freeze comes from the network or the player.
+• The TV guide opens at once, even with thousands of channels, and lists them all; channel names and times stay in view while you scroll.
+• Smoother everywhere: search works in the background, long lists and posters scroll without stutter, and a playlist already on the device opens without waiting for its update.
 • Mac: full screen, from the button, the F key or a double-click.
 • AirPlay from the Mac now sends the video to your TV, not only the sound.
 • Resume starts exactly where you stopped, and a pause made while a movie opens stays paused.
