@@ -73,12 +73,18 @@ class PlaybackHealth:
                 since = None
         return longest
 
+    def covered(self, start, end):
+        """The part of a stall the buffer covers: the picture goes on from it while no data comes in; while data keeps
+        coming in, the player is refilling and the picture stands still from the start."""
+        return min(self.buffer, self.longest_gap(start - 0.75, end))
+
     def freeze(self, start, end):
-        """The freeze a stall from start to end caused, if it outlasted the buffer by MINIMUM_FREEZE."""
-        duration = end - start - self.buffer
+        """The freeze a stall from start to end caused, if it outlasted what the buffer covered by MINIMUM_FREEZE."""
+        covered = self.covered(start, end)
+        duration = end - start - covered
         if duration < MINIMUM_FREEZE:
             return None
-        return {"start": start + self.buffer, "duration": duration, "rate": self.received_rate(start - 5, end),
+        return {"start": start + covered, "duration": duration, "rate": self.received_rate(start - 5, end),
                 "gap": self.longest_gap(start - 3, end)}
 
     def played(self):

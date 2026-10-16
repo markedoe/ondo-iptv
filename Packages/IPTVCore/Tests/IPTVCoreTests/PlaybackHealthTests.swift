@@ -122,6 +122,40 @@ final class PlaybackHealthTests: XCTestCase {
         XCTAssertEqual(health.verdict, .smooth)
     }
 
+    /// A 4K film at 12.2 Mb/s from a provider sending 9 Mb/s, with 5 s of buffer (a viewer's report): the data never
+    /// stops, the player runs out and refills, and the picture stands still for the whole stall, not for what is
+    /// left after the buffer. The spinner shows at once.
+    func testARefillFreezesThePictureForTheWholeStall() {
+        let bytesPerSecond = 1_525_000.0
+        var health = PlaybackHealth(buffer: 5)
+        var media = 0.0, received = 0.0, clock = 0.0
+        func add() {
+            health.add(PlaybackSample(
+                clock: clock, mediaTime: media, receivedBytes: Int(received), consumedBytes: Int(received),
+                displayedPictures: Int(media * 25), lostPictures: 0, isPlaying: true
+            ))
+            clock += 0.5
+        }
+        for _ in 0..<60 {
+            media += 0.5
+            received += bytesPerSecond / 2
+            add()
+        }
+        // The reserve is empty: 6.5 s still while 9 Mb/s keep arriving.
+        for _ in 0..<13 {
+            received += 1_125_000.0 / 2
+            add()
+        }
+        XCTAssertEqual(health.currentFreeze, 6, accuracy: 0.01, "frozen from the first still sample")
+        XCTAssertTrue(health.isFrozen)
+        media += 0.5
+        received += bytesPerSecond / 2
+        add()
+        XCTAssertEqual(health.freezes.map(\.duration), [6.5])
+        XCTAssertEqual(health.freezes.first?.longestGap ?? 1, 0, accuracy: 0.01)
+        XCTAssertEqual(health.verdict, .network)
+    }
+
     /// The picture keeps moving but stutters (short stops, under `minimumFreeze`): data too slow for a film.
     func testStutterWithoutLongFreezesIsTheNetwork() {
         let health = play(60, moving: { t in t.truncatingRemainder(dividingBy: 5) != 0 }, receiving: { _ in 0.9 })

@@ -139,7 +139,19 @@ public struct PlaybackHealth: Sendable {
     }
 
     /// How long the current freeze has lasted, in seconds (0 when the picture moves).
-    public var currentFreeze: Double { max(currentStall - buffer, 0) }
+    public var currentFreeze: Double {
+        guard let still = stillSince, let last = entries.last else { return 0 }
+        return max(currentStall - covered(stalledFrom: still.clock, to: last.sample.clock), 0)
+    }
+
+    /// The part of a stall the buffer covers. While no data comes in, libVLC's position stands still and the picture
+    /// goes on from the buffer; while data keeps coming in during a stall, the player has run out and refills (the
+    /// data is slower than the video), and the picture stands still from the start: a provider sending a 12 Mb/s film
+    /// at 9 Mb/s froze 6 to 8 s at a time with 5 s of buffer.
+    private func covered(stalledFrom start: Double, to end: Double) -> Double {
+        // From the sample before the stall: the data stopped between the two.
+        min(buffer, longestGap(from: start - 0.75, to: end))
+    }
 
     /// How long the position has stood still while playing (no data for libVLC), in seconds.
     public var currentStall: Double {
@@ -220,12 +232,13 @@ public struct PlaybackHealth: Sendable {
         return longest
     }
 
-    /// The freeze a stall caused, if it outlasted the buffer by `minimumFreeze`.
+    /// The freeze a stall caused, if it outlasted what the buffer covered by `minimumFreeze`.
     private func freeze(stalledFrom start: Double, to end: Double) -> Freeze? {
-        let duration = end - start - buffer
+        let covered = covered(stalledFrom: start, to: end)
+        let duration = end - start - covered
         guard duration >= Self.minimumFreeze else { return nil }
         return Freeze(
-            start: start + buffer, duration: duration, receivedRate: receivedRate(from: start - 5, to: end), longestGap: longestGap(from: start - 3, to: end)
+            start: start + covered, duration: duration, receivedRate: receivedRate(from: start - 5, to: end), longestGap: longestGap(from: start - 3, to: end)
         )
     }
 

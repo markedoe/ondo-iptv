@@ -52,6 +52,11 @@ of the stall the buffer did not cover. The estimate errs on the side of a freeze
 network caching, after it raised its own delay (see below) or with a provider that sent a head start, and then a
 stop the app counts as a freeze may not show.
 
+The buffer only covers the part of a stall where no data came in. When the data keeps coming but more slowly than
+the video needs, the position stands still while bytes still arrive: the player has run out and refills, and the
+picture is frozen for the whole stall (a viewer's report: a 12 Mb/s 4K film sent at 9 Mb/s froze 6 to 8 s at a
+time with 5 s of buffer, which the first estimate put at 1 to 3 s).
+
 ## Live channels
 
 Freezes / seconds frozen on screen in 45 seconds, by network caching (the buffer VLC fills before it shows the

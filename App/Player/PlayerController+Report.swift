@@ -52,7 +52,11 @@ extension PlayerController {
             log.add("seek done after \(Self.seconds(wait)) s", at: sample.clock)
         }
         for freeze in health.freezes.dropFirst(freezesBefore) {
-            log.add("freeze of \(Self.seconds(freeze.duration)) s (longest gap without data \(Self.seconds(freeze.longestGap)) s)", at: sample.clock)
+            // Data stopped (the buffer ran out), or kept coming too slowly (the player refilled).
+            let cause = freeze.longestGap >= PlaybackHealth.dataGap
+                ? "no data for \(Self.seconds(freeze.longestGap)) s"
+                : "refilling, data at \(Self.megabits(freeze.receivedRate)) Mb/s"
+            log.add("freeze of \(Self.seconds(freeze.duration)) s: \(cause)", at: sample.clock)
         }
         // While the picture plays: data received more slowly than the picture uses it, before any freeze shows.
         if state == .playing, health.hasMoved, seekWatch.since == nil,

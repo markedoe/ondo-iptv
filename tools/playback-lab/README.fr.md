@@ -55,6 +55,12 @@ et estime le gel comme la part de l'interruption que le tampon n'a pas couverte.
 gel : VLC peut garder plus que son cache réseau, après avoir augmenté son délai (voir plus bas) ou avec un
 fournisseur qui a envoyé de l'avance, et une coupure que l'app compte comme un gel peut alors ne pas se voir.
 
+Le tampon ne couvre que la part d'une interruption pendant laquelle aucune donnée n'arrive. Quand les données
+continuent d'arriver mais moins vite que la vidéo n'en a besoin, la position reste immobile alors que des octets
+arrivent encore : le lecteur est à court et remplit à nouveau son tampon, et l'image est figée pendant toute
+l'interruption (rapport d'un utilisateur : un film 4K à 12 Mb/s reçu à 9 Mb/s se figeait 6 à 8 s à chaque fois avec
+5 s de tampon, que la première estimation chiffrait à 1 à 3 s).
+
 ## Chaînes en direct
 
 Gels / secondes figées à l'écran en 45 secondes, selon le cache réseau (le tampon que VLC remplit avant de
