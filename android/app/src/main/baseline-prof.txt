@@ -1,0 +1,102 @@
+# Baseline Profile: the code that starts the app and shows its first screens, compiled ahead of time instead of being
+# interpreted and JIT-compiled until the system's background optimisation. Google Play compiles it when the app is
+# installed or updated; for other installs, androidx.profileinstaller (pulled in by AndroidX, Compose and Coil)
+# hands it to the system at the first launch, and the next background optimisation compiles it.
+#
+# Written as rules, not recorded: no emulator runs in CI, so there is no Macrobenchmark generator module.
+# Syntax: `L<class>;` loads a class at startup; `HSPL<class>;-><method>` marks a method hot (H), used at startup (S)
+# and after (P). In names, `*` matches within one package segment (not `/` nor `;`), `**` matches across packages;
+# `->**(**)**` is every method of the matched classes, constructors included. The release build expands the
+# wildcards against the app's classes (`expandReleaseArtProfileWildcards`), R8 renames them with the code, and
+# `compileReleaseArtProfile` writes the binary profile: assets/dexopt/baseline.prof and baseline.profm in the APK,
+# BUNDLE-METADATA/com.android.tools.build.profiles/ in the bundle.
+#
+# Maintenance: a new package or screen on the startup or browsing path gets its pair of rules below; rarely
+# opened screens (settings, help, reminders, collections, categories, person) and catch-up are left to the JIT.
+# To check, build the release APK and decode its profile:
+#   profgen dumpProfile -p baseline.prof -a app-release.apk -m app/build/outputs/mapping/release/mapping.txt -o dump.txt
+# (baseline.prof unzipped from assets/dexopt/; profgen comes with the Android SDK command-line tools).
+
+# Startup: the application (HTTP client, repository, image loader) and the main activity (splash screen, Compose).
+Lcom/markedoe/ondo/OndoApplication*;
+HSPLcom/markedoe/ondo/OndoApplication*;->**(**)**
+Lcom/markedoe/ondo/MainActivity*;
+HSPLcom/markedoe/ondo/MainActivity*;->**(**)**
+
+# Data: settings, playlists, library and saved catalogue read behind the splash screen (AppStore and the serializers
+# generated for these classes), the repository, awards and the Home showcase.
+Lcom/markedoe/ondo/data/**;
+HSPLcom/markedoe/ondo/data/**->**(**)**
+
+# UI: the app frame and navigation, the view model, the mappers from the catalogue to the screens, filters and awards.
+Lcom/markedoe/ondo/ui/*;
+HSPLcom/markedoe/ondo/ui/*;->**(**)**
+Lcom/markedoe/ondo/ui/components/**;
+HSPLcom/markedoe/ondo/ui/components/**->**(**)**
+Lcom/markedoe/ondo/ui/model/**;
+HSPLcom/markedoe/ondo/ui/model/**->**(**)**
+Lcom/markedoe/ondo/ui/theme/**;
+HSPLcom/markedoe/ondo/ui/theme/**->**(**)**
+
+# Screens, by source file (`*Home*` also takes ComposableSingletons$HomeScreenKt, HomeActions and HomeUiState):
+# welcome and first playlist, the tabs (Home, Movies and Series rows and grids, Live TV, My List), detail pages,
+# Guide, Search and the titles of an award, a year or a genre.
+Lcom/markedoe/ondo/ui/screens/*Onboarding*;
+HSPLcom/markedoe/ondo/ui/screens/*Onboarding*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/PlaylistForm*;
+HSPLcom/markedoe/ondo/ui/screens/PlaylistForm*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/*Home*;
+HSPLcom/markedoe/ondo/ui/screens/*Home*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/*Vod*;
+HSPLcom/markedoe/ondo/ui/screens/*Vod*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/CategoryRow*;
+HSPLcom/markedoe/ondo/ui/screens/CategoryRow*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/*Live*;
+HSPLcom/markedoe/ondo/ui/screens/*Live*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/*MyList*;
+HSPLcom/markedoe/ondo/ui/screens/*MyList*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/*Detail*;
+HSPLcom/markedoe/ondo/ui/screens/*Detail*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/WatchProgress*;
+HSPLcom/markedoe/ondo/ui/screens/WatchProgress*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/*Guide*;
+HSPLcom/markedoe/ondo/ui/screens/*Guide*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/*Search*;
+HSPLcom/markedoe/ondo/ui/screens/*Search*;->**(**)**
+Lcom/markedoe/ondo/ui/screens/*Browse*;
+HSPLcom/markedoe/ondo/ui/screens/*Browse*;->**(**)**
+
+# Player: the activity, its load control and playback reports (not the problem report dialog, opened on demand).
+Lcom/markedoe/ondo/player/PlayerActivity*;
+HSPLcom/markedoe/ondo/player/PlayerActivity*;->**(**)**
+Lcom/markedoe/ondo/player/PlayRequest*;
+HSPLcom/markedoe/ondo/player/PlayRequest*;->**(**)**
+Lcom/markedoe/ondo/player/PlaybackReporter*;
+HSPLcom/markedoe/ondo/player/PlaybackReporter*;->**(**)**
+Lcom/markedoe/ondo/player/AdaptiveLoadControl*;
+HSPLcom/markedoe/ondo/player/AdaptiveLoadControl*;->**(**)**
+
+# Core: JSON configuration, text normalisation (search) and hashing; the models and their serializers; the library
+# (catalogue loading, search engine, awards, categories, playback items); the guide (XMLTV parsing, index); the
+# network; M3U and Xtream parsing, which also run at startup when the saved catalogue is a day old; playback buffers.
+# Classes the app does not use are removed by R8 and their rules with them.
+Lcom/markedoe/ondo/core/*;
+HSPLcom/markedoe/ondo/core/*;->**(**)**
+Lcom/markedoe/ondo/core/model/**;
+HSPLcom/markedoe/ondo/core/model/**->**(**)**
+Lcom/markedoe/ondo/core/library/**;
+HSPLcom/markedoe/ondo/core/library/**->**(**)**
+Lcom/markedoe/ondo/core/epg/**;
+HSPLcom/markedoe/ondo/core/epg/**->**(**)**
+Lcom/markedoe/ondo/core/net/**;
+HSPLcom/markedoe/ondo/core/net/**->**(**)**
+Lcom/markedoe/ondo/core/parsing/**;
+HSPLcom/markedoe/ondo/core/parsing/**->**(**)**
+Lcom/markedoe/ondo/core/xtream/**;
+HSPLcom/markedoe/ondo/core/xtream/**->**(**)**
+Lcom/markedoe/ondo/core/playback/**;
+HSPLcom/markedoe/ondo/core/playback/**->**(**)**
+
+# kotlinx.serialization ships no profile: its JSON reader decodes the saved catalogue behind the splash screen.
+Lkotlinx/serialization/**;
+HSPLkotlinx/serialization/**->**(**)**
