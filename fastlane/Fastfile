@@ -104,6 +104,31 @@ def testflight_edition?
   ENV["EDITION"] == "testflight"
 end
 
+# Submits for App Review the App Store edition build BUILD_NUMBER of this version, with the listing as it is on App
+# Store Connect (the metadata lanes upload it), released as soon as Apple approves it. The number comes from the log of
+# the release run that built the App Store edition: never "the latest build", which may be a TestFlight edition one.
+# Run only when the user asks for the submission (CLAUDE.md, App Store).
+def submit_for_review(platform)
+  build = ENV.fetch("BUILD_NUMBER", "").strip
+  UI.user_error!("BUILD_NUMBER must be the App Store edition's build number (from its release run's log)") unless build.match?(/\A\d+\z/)
+  deliver(
+    api_key: api_key,
+    app_identifier: APP_ID,
+    platform: platform,
+    app_version: app_version,
+    build_number: build,
+    skip_binary_upload: true,
+    skip_metadata: true,
+    skip_screenshots: true,
+    force: true,
+    submit_for_review: true,
+    automatic_release: true,
+    run_precheck_before_submit: true,
+    precheck_include_in_app_purchases: false,
+    submission_information: { add_id_info_uses_idfa: false }
+  )
+end
+
 before_all do
   setup_ci if ENV["CI"]
 end
@@ -198,6 +223,11 @@ platform :ios do
       submit_for_review: false
     )
   end
+
+  desc "Submit the App Store edition build BUILD_NUMBER of this version for App Review"
+  lane :submit do
+    submit_for_review("ios")
+  end
 end
 
 platform :mac do
@@ -218,6 +248,11 @@ platform :mac do
       precheck_include_in_app_purchases: false,
       submit_for_review: false
     )
+  end
+
+  desc "Submit the App Store edition build BUILD_NUMBER of this version for App Review"
+  lane :submit do
+    submit_for_review("osx")
   end
 
   desc "Build the macOS app and upload it to TestFlight / App Store Connect"

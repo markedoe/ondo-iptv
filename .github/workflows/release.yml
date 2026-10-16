@@ -10,12 +10,20 @@ on:
         description: What to deliver
         type: choice
         default: all
-        options: [all, ios, mac, metadata]
+        options: [all, ios, mac, metadata, submit]
       edition:
         description: "testflight: with downloads, for testers only; app-store: without downloads, the build to submit"
         type: choice
         default: testflight
         options: [testflight, app-store]
+      ios_build:
+        description: "submit: the iOS build number of the App Store edition, from its release run's log (empty: iOS is not submitted)"
+        type: string
+        default: ""
+      mac_build:
+        description: "submit: the macOS build number of the App Store edition, from its release run's log (empty: macOS is not submitted)"
+        type: string
+        default: ""
 
 concurrency:
   group: release-${{ github.ref }}
@@ -72,7 +80,7 @@ jobs:
       - name: App Store edition checks
         # The build to submit: nothing dormant, no private API, a listing and review notes App Review accepts
         # (.github/scripts/check_app_store.py), and the listing's addresses answer.
-        if: env.EDITION == 'app-store' || env.TARGET == 'metadata' || env.TARGET == 'all'
+        if: env.EDITION == 'app-store' || env.TARGET == 'metadata' || env.TARGET == 'all' || env.TARGET == 'submit'
         run: |
           python3 .github/scripts/check_app_store.py
           for file in fastlane/metadata/*/*_url.txt; do
@@ -123,6 +131,25 @@ jobs:
         run: |
           bundle exec fastlane ios metadata
           bundle exec fastlane mac metadata
+      # Submission for App Review, only when the user asks for it (CLAUDE.md, App Store): the listing as it is on App
+      # Store Connect (target metadata first) and the App Store edition build given by number, never the latest build,
+      # which may be a TestFlight edition one. Released as soon as Apple approves it.
+      - name: Submit iOS for review
+        if: env.TARGET == 'submit' && github.event.inputs.ios_build != ''
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD_NUMBER: ${{ github.event.inputs.ios_build }}
+        run: bundle exec fastlane ios submit
+      - name: Submit macOS for review
+        if: (success() || failure()) && env.TARGET == 'submit' && github.event.inputs.mac_build != ''
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD_NUMBER: ${{ github.event.inputs.mac_build }}
+        run: bundle exec fastlane mac submit
       - name: Build log
         if: failure()
         # Printed in the job log, where GitHub masks the secrets (an uploaded file would not be masked).

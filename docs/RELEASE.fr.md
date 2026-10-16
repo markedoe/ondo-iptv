@@ -155,7 +155,10 @@ HTTP, Cast et notifications.
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
    fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.
 4. Dans chaque version (iOS 1.0 et macOS 1.0) : choisissez le build de l'édition **app-store** → **Add for Review** →
-   **Submit for Review**. Les deux versions sont indépendantes : **iOS / iPadOS peut partir seul** ;
+   **Submit for Review**. Ou *Run workflow* avec la cible `metadata` (la fiche), puis la cible `submit` avec
+   `ios_build` et `mac_build` : les numéros de build de l'édition App Store, lus dans le log du lancement de
+   release qui l'a construite (`CURRENT_PROJECT_VERSION=…`), jamais le dernier build, qui peut être un de
+   l'édition TestFlight. La version est publiée dès qu'Apple l'approuve. Les deux versions sont indépendantes : **iOS / iPadOS peut partir seul** ;
    lancez au moins une fois le build Mac de TestFlight sur votre Mac avant de soumettre la version macOS.
 
 Si un lancement échoue (signature, export, envoi), le log du job dit pourquoi. Pour signer l'archive,
