@@ -10,7 +10,7 @@ on:
         description: What to deliver
         type: choice
         default: all
-        options: [all, ios, mac, metadata, submit]
+        options: [all, ios, mac, metadata, metadata-ios, metadata-mac, submit]
       edition:
         description: "testflight: with downloads, for testers only; app-store: without downloads, the build to submit"
         type: choice
@@ -80,7 +80,7 @@ jobs:
       - name: App Store edition checks
         # The build to submit: nothing dormant, no private API, a listing and review notes App Review accepts
         # (.github/scripts/check_app_store.py), and the listing's addresses answer.
-        if: env.EDITION == 'app-store' || env.TARGET == 'metadata' || env.TARGET == 'all' || env.TARGET == 'submit'
+        if: env.EDITION == 'app-store' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'all' || env.TARGET == 'submit'
         run: |
           python3 .github/scripts/check_app_store.py
           for file in fastlane/metadata/*/*_url.txt; do
@@ -106,7 +106,7 @@ jobs:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: bundle exec fastlane mac beta
       - name: App Store screenshots
-        if: env.TARGET == 'all' || env.TARGET == 'metadata'
+        if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata')
         run: |
           # Published by the "App Store screenshots" workflow; the listing is uploaded without them otherwise.
           if git fetch -q origin appstore-screenshots; then
@@ -122,15 +122,16 @@ jobs:
             find fastlane/screenshots -type f | sort
           fi
       - name: App Store listing
-        if: env.TARGET == 'all' || env.TARGET == 'metadata'
+        if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata')
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: |
-          bundle exec fastlane ios metadata
-          bundle exec fastlane mac metadata
+          # A version in review cannot be edited: metadata-ios and metadata-mac update one platform only.
+          if [ "$TARGET" != metadata-mac ]; then bundle exec fastlane ios metadata; fi
+          if [ "$TARGET" != metadata-ios ]; then bundle exec fastlane mac metadata; fi
       # Submission for App Review, only when the user asks for it (CLAUDE.md, App Store): the listing as it is on App
       # Store Connect (target metadata first) and the App Store edition build given by number, never the latest build,
       # which may be a TestFlight edition one. Released as soon as Apple approves it.

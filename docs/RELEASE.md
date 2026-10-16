@@ -156,7 +156,8 @@ HTTP, Cast and notifications.
    screenshots* workflow (FR/EN) on the `appstore-screenshots` branch; the *Release* workflow uploads them
    with the listing. Re-run *App Store screenshots* before a release if the interface has changed.
 4. In each version (iOS 1.0 and macOS 1.0): choose the build of the **app-store** edition → **Add for Review** →
-   **Submit for Review**. Or *Run workflow* with target `metadata` (the listing), then target `submit` with
+   **Submit for Review**. Or *Run workflow* with target `metadata` (the listing; `metadata-ios` or `metadata-mac` for one platform, since a
+   version in review cannot be edited), then target `submit` with
    `ios_build` and `mac_build`: the build numbers of the App Store edition, read in the log of the release run
    that built it (`CURRENT_PROJECT_VERSION=…`), never the latest build, which may be a TestFlight edition one.
    The version is released as soon as Apple approves it. The two versions are independent: **iOS / iPadOS can ship on its own**;
