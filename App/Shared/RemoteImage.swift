@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreImage
 import Nuke
 import NukeUI
 
@@ -14,6 +15,11 @@ enum Artwork {
     /// never decoded whole (24 MB) to be shrunk afterwards.
     static func request(_ url: URL, maxPixelSize: CGFloat) -> ImageRequest {
         ImageRequest(url: url, userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(maxPixelSize: Float(maxPixelSize))])
+    }
+
+    /// A small copy of the picture, blurred once and kept in the cache (see `SoftBlur`).
+    static func blurredRequest(_ url: URL) -> ImageRequest {
+        ImageRequest(url: url, processors: [SoftBlur(sigma: 5)], userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(maxPixelSize: 64)])
     }
 
     /// Decoded thumbnail (Now Playing artwork…).
@@ -62,10 +68,16 @@ struct BackdropImage: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                RemoteImage(url: posterURL, placeholderText: "", contentMode: .fill, maxPixelSize: 200)
-                    .blur(radius: 40, opaque: true)
-                    .scaleEffect(1.2)
-                    .overlay { Color.black.opacity(dimming) }
+                LazyImage(request: posterURL.map(Artwork.blurredRequest)) { blurred in
+                    if let image = blurred.image {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Color.secondary.opacity(0.15)
+                    }
+                }
+                .overlay { Color.black.opacity(dimming) }
             }
         }
         // A cancelled request (scrolled away) reports nothing.
@@ -103,5 +115,30 @@ struct MonogramView: View {
                     .minimumScaleFactor(0.5)
             }
         }
+    }
+}
+
+/// Blurs a picture once, edges included, for the backgrounds that show a blurred poster: Nuke keeps the result, where
+/// a live blur over a large view costs the GPU every frame while scrolling.
+struct SoftBlur: ImageProcessing, Hashable {
+    let sigma: Double
+
+    var identifier: String { "com.markedoe.ondo/soft-blur?sigma=\(sigma)" }
+
+    func process(_ image: PlatformImage) -> PlatformImage? {
+        #if canImport(UIKit)
+        guard let source = image.cgImage else { return nil }
+        #else
+        guard let source = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        #endif
+        let input = CIImage(cgImage: source)
+        // Clamped first: without it the blur fades the edges to transparent.
+        let output = input.clampedToExtent().applyingGaussianBlur(sigma: sigma).cropped(to: input.extent)
+        guard let blurred = CIContext().createCGImage(output, from: input.extent) else { return nil }
+        #if canImport(UIKit)
+        return UIImage(cgImage: blurred)
+        #else
+        return NSImage(cgImage: blurred, size: NSSize(width: blurred.width, height: blurred.height))
+        #endif
     }
 }
