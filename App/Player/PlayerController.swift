@@ -316,6 +316,7 @@ final class PlayerController: NSObject {
 
     private func handleFailure(_ error: Error?, item playerItem: AVPlayerItem) {
         guard playerItem == player.currentItem, activeEngine == .apple else { return }
+        noteAppleFailure(error, item: playerItem)
         keepPositionForFallback()
         // AirPlay: the TV plays the stream itself, so VLC (which plays on this device only) is no fallback:
         // it would leave the TV connected without a picture.

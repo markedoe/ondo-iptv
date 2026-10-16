@@ -14,11 +14,14 @@ final class RemuxServer: @unchecked Sendable {
     private var stopped = false
     /// A segment that could not be made, for the playback log (on the server's queue).
     var onFailure: (@Sendable (String) -> Void)?
+    /// The first requests and every refused one, for the playback log: path, status, size and time taken.
+    var onRequest: (@Sendable (String) -> Void)?
+    private let served = Counter()
 
     init(remux: MatroskaRemux) throws {
         let parameters = NWParameters.tcp
+        // Bound to 127.0.0.1: nothing outside this device can connect.
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
-        parameters.acceptLocalOnly = true
         listener = try NWListener(using: parameters)
         self.remux = remux
     }
@@ -99,7 +102,9 @@ final class RemuxServer: @unchecked Sendable {
             let head = String(decoding: buffer[buffer.startIndex..<end.lowerBound], as: UTF8.self)
             let rest = Data(buffer[end.upperBound...])
             Task {
+                let started = Date()
                 let response = await self.respond(to: head)
+                self.log(head, response: response, since: started)
                 connection.send(content: response, completion: .contentProcessed { error in
                     guard error == nil else {
                         connection.cancel()
@@ -109,6 +114,15 @@ final class RemuxServer: @unchecked Sendable {
                 })
             }
         }
+    }
+
+    private func log(_ head: String, response: Data, since started: Date) {
+        let count = served.next()
+        let status = Int(String(decoding: response.prefix(12).suffix(3), as: UTF8.self)) ?? 0
+        guard count <= 6 || status >= 400, let onRequest else { return }
+        let request = head.prefix { $0 != "\r" }.split(separator: " ").prefix(2).joined(separator: " ")
+        let headLength = response.range(of: Data("\r\n\r\n".utf8))?.upperBound ?? 0
+        onRequest("\(request): \(status), \(response.count - headLength) bytes in \(Int(Date().timeIntervalSince(started) * 1_000)) ms")
     }
 
     func respond(to head: String) async -> Data {
@@ -136,7 +150,7 @@ final class RemuxServer: @unchecked Sendable {
             return (remux.initSegment, "video/mp4")
         default:
             guard path.hasPrefix("/seg-"), path.hasSuffix(".m4s"), let index = Int(path.dropFirst(5).dropLast(4)) else { return nil }
-            return (try await remux.segment(index), "video/iso.segment")
+            return (try await remux.segment(index), "video/mp4")
         }
     }
 
@@ -168,6 +182,19 @@ final class RemuxServer: @unchecked Sendable {
         var head = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: \(type)\r\nContent-Length: \(body.count)\r\n"
         head += "Accept-Ranges: bytes\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\n\(extra)\r\n"
         return Data(head.utf8) + (headOnly ? Data() : body)
+    }
+}
+
+/// Counts the requests served.
+private final class Counter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+
+    func next() -> Int {
+        lock.withLock {
+            value += 1
+            return value
+        }
     }
 }
 

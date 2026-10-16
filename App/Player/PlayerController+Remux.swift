@@ -28,6 +28,9 @@ extension PlayerController {
                 server.onFailure = { [weak self] failure in
                     Task { @MainActor in self?.note("remux: \(failure)") }
                 }
+                server.onRequest = { [weak self] request in
+                    Task { @MainActor in self?.note("remux served \(request)") }
+                }
                 self.remuxServer = server
                 let codecs = remux.tracks.map { FragmentWriter.codecName($0.codec) }.joined(separator: ", ")
                 let wait = String(format: "%.1f", self.clock - opened)
@@ -53,6 +56,27 @@ extension PlayerController {
         remuxServer?.stop()
         remuxServer = nil
         player.allowsExternalPlayback = true
+    }
+
+    /// What AVPlayer said when it failed, for the log: its error, the one beneath, and the last entries of the item's
+    /// error log (their addresses left out).
+    func noteAppleFailure(_ error: Error?, item: AVPlayerItem) {
+        guard let error = error as NSError? else {
+            note("AVPlayer failed without an error")
+            return
+        }
+        var line = "AVPlayer failed: \(error.domain) \(error.code), \(error.localizedDescription)"
+        if let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError {
+            line += " (\(underlying.domain) \(underlying.code), \(underlying.localizedDescription))"
+        }
+        note(line)
+        for event in (item.errorLog()?.events ?? []).suffix(3) {
+            note("AVPlayer error log: \(event.errorDomain) \(event.errorStatusCode), \(event.errorComment ?? "")")
+        }
+        for event in (item.accessLog()?.events ?? []).suffix(3) {
+            let file = event.uri.flatMap { URL(string: $0)?.lastPathComponent } ?? "-"
+            note("AVPlayer access log: \(file), \(event.numberOfBytesTransferred) bytes, \(Int(event.indicatedBitrate)) b/s")
+        }
     }
 
     /// The engine as the problem report names it.
