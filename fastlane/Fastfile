@@ -12,6 +12,7 @@
 # Paths: Ruby code and `sh` run in fastlane/, actions (deliver, gym…) from the repository root.
 
 require "base64"
+require "digest"
 require "openssl"
 require "set"
 require "tmpdir"
@@ -171,6 +172,44 @@ def runner_development_certificate?(certificate, keychain)
   content = certificate.certificate_content.to_s
   digest = content.empty? ? nil : OpenSSL::Digest::SHA256.hexdigest(Base64.decode64(content))
   keychain[:digests].include?(digest) || keychain[:serials].include?(serial_key(certificate.serial_number))
+end
+
+# What a check of the submitted versions prints: no contact detail, only whether the review contact is complete.
+PLATFORMS = { "iOS" => ["IOS", "ios"], "macOS" => ["MAC_OS", "mac"] }.freeze
+
+def report_version(app, name, platform, folder)
+  version = app.get_app_store_versions(filter: { platform: platform }, includes: "build,appStoreReviewDetail")
+               .find { |candidate| candidate.version_string == app_version }
+  return UI.message("#{name} #{app_version}: no such version") unless version
+
+  build = version.build
+  UI.message("#{name} #{version.version_string}: #{version.app_store_state}, build #{build ? build.version : 'none selected'}")
+  detail = version.app_store_review_detail
+  if detail
+    contact = [detail.contact_first_name, detail.contact_last_name, detail.contact_email, detail.contact_phone].none? { |value| value.to_s.empty? }
+    notes = detail.notes.to_s
+    UI.message("  review contact #{contact ? 'complete' : 'missing'}; notes explain network.server: #{notes.include?('network.server')}; " \
+               "notes mention downloads: #{notes.downcase.include?('download')}")
+  end
+  # Screenshots compared with today's files (fetched from the appstore-screenshots branch by the workflow).
+  current = Dir[File.expand_path("screenshots/#{folder}/**/*.png", __dir__)].map { |path| Digest::MD5.file(path).hexdigest }.to_set
+  version.get_app_store_version_localizations.each do |localization|
+    localization.get_app_screenshot_sets.each do |set|
+      shots = set.app_screenshots || []
+      same = shots.count { |shot| current.include?(shot.source_file_checksum) }
+      UI.message("  #{localization.locale} #{set.screenshot_display_type}: #{shots.count} screenshots, #{same} identical to today's")
+    end
+  end
+rescue StandardError => e
+  UI.error("#{name}: #{e.message}")
+end
+
+desc "Print what App Store Connect holds for this version, read only: state, build, review notes, screenshots"
+lane :status do
+  api_key
+  app = Spaceship::ConnectAPI::App.find(APP_ID)
+  PLATFORMS.each { |name, (platform, folder)| report_version(app, name, platform, folder) }
+  app.get_review_submissions.each { |submission| UI.message("review submission #{submission.platform}: #{submission.state}") }
 end
 
 desc "Revoke the development certificates Xcode created on this CI runner (never run it on your own Mac)"

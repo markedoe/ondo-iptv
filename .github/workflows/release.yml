@@ -10,7 +10,7 @@ on:
         description: What to deliver
         type: choice
         default: all
-        options: [all, ios, mac, metadata, metadata-ios, metadata-mac, submit]
+        options: [all, ios, mac, metadata, metadata-ios, metadata-mac, submit, status]
       edition:
         description: "testflight: with downloads, for testers only; app-store: without downloads, the build to submit"
         type: choice
@@ -67,9 +67,11 @@ jobs:
       - name: Tools
         run: brew install xcodegen || true
       - name: Core tests
+        if: env.TARGET != 'status'
         working-directory: Packages/IPTVCore
         run: swift test --parallel
       - name: Demo playlist answers
+        if: env.TARGET != 'status'
         # App Review taps "Try the demo": if the public list moved or broke, the review fails for a reason
         # no test sees. The address is read from the app's code.
         run: |
@@ -106,7 +108,7 @@ jobs:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: bundle exec fastlane mac beta
       - name: App Store screenshots
-        if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata')
+        if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'status'
         run: |
           # Published by the "App Store screenshots" workflow; the listing is uploaded without them otherwise.
           if git fetch -q origin appstore-screenshots; then
@@ -151,6 +153,15 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           BUILD_NUMBER: ${{ github.event.inputs.mac_build }}
         run: bundle exec fastlane mac submit
+      - name: App Store Connect status (read only)
+        # The versions of this release as App Store Connect holds them: state, selected build, review notes, and the
+        # screenshots compared with today's. Prints no contact detail.
+        if: env.TARGET == 'status'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: bundle exec fastlane status
       - name: Build log
         if: failure()
         # Printed in the job log, where GitHub masks the secrets (an uploaded file would not be masked).
