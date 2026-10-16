@@ -36,17 +36,12 @@ struct GuideView: View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let window = Self.window(around: context.date)
             let list = channels
-            ScrollViewReader { proxy in
+            GeometryReader { geometry in
                 // One scroll view for both directions, with rows made as they come into view: a list of thousands of
                 // channels opens at once. The channel column stays at the left edge and the times at the top.
                 ScrollView([.horizontal, .vertical]) {
                     LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                         Section {
-                            // Where the grid opens: the current half hour, next to the channel column.
-                            Color.clear
-                                .frame(width: 1, height: 0)
-                                .id(Self.openingAnchor)
-                                .padding(.leading, x(for: Self.slot(containing: context.date, in: window), in: window))
                             ForEach(list) { channel in
                                 HStack(spacing: 0) {
                                     channelCell(channel, in: list)
@@ -59,7 +54,7 @@ struct GuideView: View {
                         }
                     }
                 }
-                .onAppear { proxy.scrollTo(Self.openingAnchor, anchor: UnitPoint(x: 0, y: 0.5)) }
+                .defaultScrollAnchor(openingAnchor(now: context.date, window: window, viewportWidth: geometry.size.width))
             }
             .overlay {
                 if list.isEmpty {
@@ -111,7 +106,14 @@ struct GuideView: View {
         window.start.addingTimeInterval((date.timeIntervalSince(window.start) / 1800).rounded(.down) * 1800)
     }
 
-    private static let openingAnchor = "opening"
+    /// Where the grid opens: the current half hour next to the channel column, as a share of the scrollable width
+    /// (before the first frame, so the grid does not jump there).
+    private func openingAnchor(now: Date, window: DateInterval, viewportWidth: CGFloat) -> UnitPoint {
+        let scrollable = channelColumnWidth + x(for: window.end, in: window) - viewportWidth
+        guard scrollable > 0 else { return .topLeading }
+        let target = x(for: Self.slot(containing: now, in: window), in: window)
+        return UnitPoint(x: min(max(target / scrollable, 0), 1), y: 0)
+    }
 
     private func x(for date: Date, in window: DateInterval) -> CGFloat {
         CGFloat(date.timeIntervalSince(window.start) / 3600) * hourWidth
