@@ -51,6 +51,11 @@ final class PlaybackTimingTests: XCTestCase {
         }
     }
 
+    /// Each wait gives up after 45 s; beyond that, a test that hangs fails by name (CI enables test timeouts).
+    override func setUp() async throws {
+        executionTimeAllowance = 180
+    }
+
     private func startAndSeek(with engine: PlayerEngine, url: URL = PlaybackTimingTests.stream, to target: Double = 120) async throws {
         let controller = PlayerController()
         controller.isMuted = true
