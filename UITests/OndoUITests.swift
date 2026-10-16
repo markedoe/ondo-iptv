@@ -31,6 +31,52 @@ final class OndoUITests: XCTestCase {
         if close.exists { close.tap() }
     }
 
+    /// The TV guide grid: a reminder on an upcoming programme, and a channel played from the column.
+    private func exerciseGuide() {
+        let guide = app.buttons["TV Guide"].firstMatch
+        XCTAssertTrue(guide.waitForExistence(timeout: 5), "guide link")
+        guide.tap()
+        sleep(3)
+        snapshot("07-guide")
+
+        // An upcoming programme: its sheet offers a reminder (in-memory notifications in UI tests). At some
+        // times of day every next programme is long enough to start off screen: scroll the grid forward.
+        var upcoming = upcomingProgrammeCell()
+        for _ in 0..<3 where upcoming == nil {
+            // Slowly, and let the grid stop: a cell found while it still glides is not where the tap lands.
+            app.swipeLeft(velocity: .slow)
+            sleep(2)
+            upcoming = upcomingProgrammeCell()
+        }
+        if let later = upcoming {
+            later.tap()
+            let remind = app.buttons["reminderButton"]
+            if remind.waitForExistence(timeout: 5) {
+                remind.tap()
+                XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Reminder Set'")).firstMatch.waitForExistence(timeout: 5), "reminder set")
+            } else {
+                XCTFail("programme sheet with a reminder button")
+            }
+            snapshot("07b-program-reminder")
+            let closeSheet = app.buttons["Close"].firstMatch
+            if closeSheet.exists { closeSheet.tap() }
+            sleep(1)
+        } else {
+            XCTFail("upcoming programme in the guide grid")
+        }
+
+        // The channel column stays at the left edge while the grid scrolls (it opened on the current half hour and
+        // was swiped further): a tap where a channel shows must play it, not open the programme scrolled under it.
+        let channelCell = app.buttons["guideChannel"].firstMatch
+        XCTAssertTrue(channelCell.waitForExistence(timeout: 5), "guide channel column")
+        app.windows.firstMatch.coordinate(withNormalizedOffset: .zero)
+            .withOffset(CGVector(dx: 40, dy: channelCell.frame.midY))
+            .tap()
+        XCTAssertTrue(app.buttons["playerClose"].waitForExistence(timeout: 10), "player from the guide's channel column")
+        closePlayer()
+        sleep(1)
+    }
+
     /// A value of a page's credits (director, cast, genre, year), scrolled into view.
     private func creditLink(_ value: String) -> XCUIElement {
         let link = app.buttons["credit-\(value)"].firstMatch
@@ -62,9 +108,10 @@ final class OndoUITests: XCTestCase {
         let calendar = Calendar.current
         let now = Date()
         let cells = app.buttons.matching(NSPredicate(format: "label CONTAINS ' – '")).allElementsBoundByIndex
-        // `isHittable` fails hard on cells scrolled out of view: keep cells whose centre is on screen.
+        // `isHittable` fails hard on cells scrolled out of view: keep cells whose centre is on screen, right of the
+        // channel column that stays at the left edge (110 points on iPhone).
         let screen = app.windows.firstMatch.frame
-        for cell in cells where cell.frame.midX > screen.minX + 8 && cell.frame.midX < screen.maxX - 8 {
+        for cell in cells where cell.frame.midX > screen.minX + 130 && cell.frame.midX < screen.maxX - 8 {
             let label = cell.label.replacingOccurrences(of: "\u{202F}", with: " ")
             guard let dash = label.range(of: " – "), let comma = label[..<dash.lowerBound].range(of: ", ", options: .backwards),
                   let time = formatter.date(from: String(label[comma.upperBound..<dash.lowerBound])) else { continue }
@@ -188,37 +235,7 @@ final class OndoUITests: XCTestCase {
         // The guide is in the Live TV toolbar: back from the channel list to the categories.
         let categories = app.navigationBars.buttons["Live TV"]
         if categories.waitForExistence(timeout: 5) { categories.tap() }
-        let guide = app.buttons["TV Guide"].firstMatch
-        XCTAssertTrue(guide.waitForExistence(timeout: 5), "guide link")
-        guide.tap()
-        sleep(3)
-        snapshot("07-guide")
-
-        // An upcoming programme: its sheet offers a reminder (in-memory notifications in UI tests). At some
-        // times of day every next programme is long enough to start off screen: scroll the grid forward.
-        var upcoming = upcomingProgrammeCell()
-        for _ in 0..<3 where upcoming == nil {
-            // Slowly, and let the grid stop: a cell found while it still glides is not where the tap lands.
-            app.swipeLeft(velocity: .slow)
-            sleep(2)
-            upcoming = upcomingProgrammeCell()
-        }
-        if let later = upcoming {
-            later.tap()
-            let remind = app.buttons["reminderButton"]
-            if remind.waitForExistence(timeout: 5) {
-                remind.tap()
-                XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS 'Reminder Set'")).firstMatch.waitForExistence(timeout: 5), "reminder set")
-            } else {
-                XCTFail("programme sheet with a reminder button")
-            }
-            snapshot("07b-program-reminder")
-            let closeSheet = app.buttons["Close"].firstMatch
-            if closeSheet.exists { closeSheet.tap() }
-            sleep(1)
-        } else {
-            XCTFail("upcoming programme in the guide grid")
-        }
+        exerciseGuide()
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.tabBars.buttons["Movies"].tap()

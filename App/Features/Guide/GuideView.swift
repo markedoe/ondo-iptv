@@ -20,9 +20,6 @@ struct GuideView: View {
         categoryID ?? (model.favoriteChannels().isEmpty ? PseudoCategory.all : PseudoCategory.favorites)
     }
 
-    /// Rows drawn at most: the grid is not lazy. Beyond, a note asks to choose a category.
-    private static let rowLimit = 300
-
     private var channels: [Channel] {
         switch selectedCategoryID {
         case PseudoCategory.favorites:
@@ -38,26 +35,31 @@ struct GuideView: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             let window = Self.window(around: context.date)
-            let all = channels
-            let list = Array(all.prefix(Self.rowLimit))
-            ScrollView(.vertical) {
-                HStack(alignment: .top, spacing: 0) {
-                    channelColumn(list)
-                    ScrollViewReader { proxy in
-                        ScrollView(.horizontal) {
-                            VStack(alignment: .leading, spacing: 0) {
-                                timeHeader(window)
-                                ForEach(list) { channel in
+            let list = channels
+            ScrollViewReader { proxy in
+                // One scroll view for both directions, with rows made as they come into view: a list of thousands of
+                // channels opens at once. The channel column stays at the left edge and the times at the top.
+                ScrollView([.horizontal, .vertical]) {
+                    LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                        Section {
+                            // Where the grid opens: the current half hour, next to the channel column.
+                            Color.clear
+                                .frame(width: 1, height: 0)
+                                .id(Self.openingAnchor)
+                                .padding(.leading, x(for: Self.slot(containing: context.date, in: window), in: window))
+                            ForEach(list) { channel in
+                                HStack(spacing: 0) {
+                                    channelCell(channel, in: list)
                                     programRow(channel, window: window, now: context.date)
                                 }
+                                .overlay(alignment: .bottom) { Divider() }
                             }
-                            .overlay(alignment: .topLeading) {
-                                nowLine(window: window, now: context.date, height: CGFloat(list.count) * rowHeight + 32)
-                            }
+                        } header: {
+                            timeHeader(window, now: context.date)
                         }
-                        .onAppear { proxy.scrollTo("now", anchor: .leading) }
                     }
                 }
+                .onAppear { proxy.scrollTo(Self.openingAnchor, anchor: UnitPoint(x: 0, y: 0.5)) }
             }
             .overlay {
                 if list.isEmpty {
@@ -70,16 +72,6 @@ struct GuideView: View {
                     } actions: {
                         Button("Reload Guide") { model.loadEPG(force: true) }
                     }
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                if all.count > Self.rowLimit {
-                    Text("Showing the first \(Self.rowLimit) of \(all.count) channels. Choose a category to see the others.")
-                        .font(.footnote)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(.regularMaterial, in: Capsule())
-                        .padding(.bottom, 8)
                 }
             }
         }
@@ -114,62 +106,85 @@ struct GuideView: View {
         return DateInterval(start: start, duration: 14 * 3600)
     }
 
+    /// The start of the half hour that holds `date`.
+    static func slot(containing date: Date, in window: DateInterval) -> Date {
+        window.start.addingTimeInterval((date.timeIntervalSince(window.start) / 1800).rounded(.down) * 1800)
+    }
+
+    private static let openingAnchor = "opening"
+
     private func x(for date: Date, in window: DateInterval) -> CGFloat {
         CGFloat(date.timeIntervalSince(window.start) / 3600) * hourWidth
     }
 
-    private func channelColumn(_ list: [Channel]) -> some View {
-        VStack(spacing: 0) {
-            Color.clear.frame(height: 32)
-            ForEach(list) { channel in
-                Button {
-                    model.play(channel, in: list)
-                } label: {
-                    HStack(spacing: 8) {
-                        RemoteImage(url: model.logoURL(for: channel), placeholderText: channel.name, maxPixelSize: 120)
-                            .frame(width: 40, height: 28)
-                        if Platform.isMac || channelColumnWidth > 100 {
-                            Text(channel.name)
-                                .font(.caption)
-                                .lineLimit(2)
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 8)
-                    .frame(width: channelColumnWidth, height: rowHeight)
-                    .contentShape(Rectangle())
+    private func channelCell(_ channel: Channel, in list: [Channel]) -> some View {
+        Button {
+            model.play(channel, in: list)
+        } label: {
+            HStack(spacing: 8) {
+                RemoteImage(url: model.logoURL(for: channel), placeholderText: channel.name, maxPixelSize: 120)
+                    .frame(width: 40, height: 28)
+                if Platform.isMac || channelColumnWidth > 100 {
+                    Text(channel.name)
+                        .font(.caption)
+                        .lineLimit(2)
                 }
-                .buttonStyle(.plain)
-                .background(Color.secondary.opacity(0.06))
-                .overlay(alignment: .bottom) { Divider() }
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 8)
+            .frame(width: channelColumnWidth, height: rowHeight)
+            .contentShape(Rectangle())
         }
-        .frame(width: channelColumnWidth)
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("guideChannel")
+        .background { Self.columnBackground }
+        .modifier(PinnedToLeadingEdge())
     }
 
-    private func timeHeader(_ window: DateInterval) -> some View {
+    /// Opaque: the programmes scroll under the channel column and the time header.
+    private static var columnBackground: some View {
+        ZStack {
+            Rectangle().fill(.background)
+            Color.secondary.opacity(0.06)
+        }
+    }
+
+    private func timeHeader(_ window: DateInterval, now: Date) -> some View {
         let slots = Int(window.duration / 1800)
         return HStack(spacing: 0) {
-            ForEach(0..<slots, id: \.self) { slot in
-                let date = window.start.addingTimeInterval(Double(slot) * 1800)
-                Text(Formatting.time(date))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
-                    .frame(width: hourWidth / 2, height: 32, alignment: .leading)
-                    .padding(.leading, 4)
-                    .id(date <= Date() && Date() < date.addingTimeInterval(1800) ? "now" : "slot-\(slot)")
+            Self.columnBackground
+                .frame(width: channelColumnWidth, height: 32)
+                .modifier(PinnedToLeadingEdge())
+            ZStack(alignment: .topLeading) {
+                HStack(spacing: 0) {
+                    ForEach(0..<slots, id: \.self) { slot in
+                        Text(Formatting.time(window.start.addingTimeInterval(Double(slot) * 1800)))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 4)
+                            .frame(width: hourWidth / 2, height: 32, alignment: .leading)
+                    }
+                }
+                nowLine(window: window, now: now, height: 32)
             }
         }
+        .background(.background)
+        .overlay(alignment: .bottom) { Divider() }
     }
 
     private func programRow(_ channel: Channel, window: DateInterval, now: Date) -> some View {
         let programs = model.epg.programs(for: channel, in: window)
+        let column = channelColumnWidth
         return ZStack(alignment: .topLeading) {
             Color.clear.frame(width: x(for: window.end, in: window), height: rowHeight)
             if programs.isEmpty {
                 Text("No information")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
+                    // Follows the scroll, next to the channel column.
+                    .visualEffect { content, proxy in
+                        content.offset(x: max(column - proxy.frame(in: .scrollView).minX + 10, 0))
+                    }
                     .padding(.horizontal, 10)
                     .frame(width: x(for: window.end, in: window), height: rowHeight - 4, alignment: .leading)
                     .background(Color.secondary.opacity(0.05), in: RoundedRectangle(cornerRadius: 6))
@@ -192,9 +207,9 @@ struct GuideView: View {
                             .lineLimit(1)
                     }
                     .frame(width: max(width - 16, 0), alignment: .leading)
-                    // Keeps the title readable when the programme started left of the visible area.
+                    // Keeps the title readable when the programme started under the channel column.
                     .visualEffect { content, proxy in
-                        let hidden = -proxy.frame(in: .scrollView(axis: .horizontal)).minX
+                        let hidden = column - proxy.frame(in: .scrollView).minX
                         return content.offset(x: min(max(hidden + 6, 0), max(proxy.size.width - 56, 0)))
                     }
                     .padding(.horizontal, 8)
@@ -223,9 +238,9 @@ struct GuideView: View {
                 .padding(.leading, x(for: start, in: window) + 1)
                 .padding(.top, 2)
             }
+            nowLine(window: window, now: now, height: rowHeight)
         }
         .frame(height: rowHeight)
-        .overlay(alignment: .bottom) { Divider() }
     }
 
     private func nowLine(window: DateInterval, now: Date, height: CGFloat) -> some View {
@@ -234,5 +249,17 @@ struct GuideView: View {
             .frame(width: 2, height: height)
             .offset(x: x(for: now, in: window))
             .allowsHitTesting(false)
+    }
+}
+
+/// Keeps a view at the leading edge of the guide's scroll view while the programmes scroll under it, without
+/// rebuilding anything as it scrolls.
+private struct PinnedToLeadingEdge: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .visualEffect { content, proxy in
+                content.offset(x: max(-proxy.frame(in: .scrollView).minX, 0))
+            }
+            .zIndex(1)
     }
 }

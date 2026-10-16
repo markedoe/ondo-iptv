@@ -18911,46 +18911,6 @@
         }
       }
     },
-    "Showing the first %lld of %lld channels. Choose a category to see the others.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Affichage des %1$lld premières chaînes sur %2$lld. Choisissez une catégorie pour voir les autres."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se muestran los primeros %1$lld de %2$lld canales. Elige una categoría para ver los demás."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mostrando os primeiros %1$lld de %2$lld canais. Escolha uma categoria para ver os outros."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "显示 %2$lld 个频道中的前 %1$lld 个。选择一个分类以查看其他频道。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "يُعرض أول %1$lld من %2$lld قناة. اختر فئة لرؤية البقية."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%2$lld में से पहले %1$lld चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।"
-          }
-        }
-      }
-    },
     "Skip Back 10 s": {
       "localizations": {
         "fr": {
