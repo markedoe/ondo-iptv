@@ -163,13 +163,22 @@ public actor MatroskaRemux {
 
     static func fragmentTrack(_ video: MatroskaTrack) -> FragmentTrack {
         let config = video.codecPrivate ?? Data()
-        let codec: FragmentTrack.Codec = video.codecID == "V_MPEG4/ISO/AVC" ? .avc(config) : .hevc(config, dolbyVision: nil)
+        let codec: FragmentTrack.Codec = video.codecID == "V_MPEG4/ISO/AVC" ? .avc(config) : .hevc(config, dolbyVision: dolbyVision(video))
         var track = FragmentTrack(id: 1, codec: codec, timescale: UInt32(videoTimescale))
         track.width = video.video?.width ?? 0
         track.height = video.video?.height ?? 0
         track.colour = video.video?.colour
         track.language = iso639(video.language)
         return track
+    }
+
+    /// Dolby Vision's configuration record, for the profiles the system player shows: 5 (Dolby Vision only) and 8 (on
+    /// an HDR10, SDR or HLG base). Profile 7 (two layers, from Blu-ray discs) plays its HDR10 base layer.
+    static func dolbyVision(_ video: MatroskaTrack) -> Data? {
+        // BlockAddIDType "dvcC" or "dvvC".
+        guard let record = video.blockAdditions.first(where: { $0.type == 0x6476_6343 || $0.type == 0x6476_7643 })?.extraData,
+              let profile = FragmentWriter.dolbyVisionProfile(record), profile == 5 || profile == 8 else { return nil }
+        return record
     }
 
     /// An AAC track as fragmented MP4; nil for other codecs (Dolby's are described from a frame).
@@ -258,6 +267,7 @@ public actor MatroskaRemux {
         let seconds = max(file.duration ?? 0, 1)
         let average = file.fileSize.map { Int(Double($0) * 8 / seconds) } ?? 8_000_000
         var attributes = "BANDWIDTH=\(average * 2),AVERAGE-BANDWIDTH=\(average),CODECS=\"\(codecs)\""
+        if let supplemental = FragmentWriter.supplementalCodecs(tracks[0].codec) { attributes += ",SUPPLEMENTAL-CODECS=\"\(supplemental)\"" }
         if let size = video.video, size.width > 0 { attributes += ",RESOLUTION=\(size.width)x\(size.height)" }
         if let duration = video.defaultDuration, duration > 0 { attributes += String(format: ",FRAME-RATE=%.3f", 1e9 / Double(duration)) }
         attributes += ",VIDEO-RANGE=\(videoRange)"
@@ -266,6 +276,13 @@ public actor MatroskaRemux {
 
     /// PQ for HDR10 and Dolby Vision, HLG, or SDR.
     public nonisolated var videoRange: String {
+        if case .hevc(_, let dolbyVision?) = tracks[0].codec {
+            switch (FragmentWriter.dolbyVisionProfile(dolbyVision), FragmentWriter.dolbyVisionCompatibility(dolbyVision)) {
+            case (5, _), (8, 1): return "PQ"
+            case (8, 4): return "HLG"
+            default: break
+            }
+        }
         switch video.video?.colour?.transfer {
         case 16: return "PQ"
         case 18: return "HLG"

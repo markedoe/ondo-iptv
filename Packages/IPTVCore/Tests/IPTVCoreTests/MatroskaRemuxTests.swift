@@ -149,6 +149,42 @@ final class MatroskaRemuxTests: XCTestCase {
         XCTAssertEqual(audio[0].duration, UInt64(audio[0].count) * 1_536)
     }
 
+    /// Dolby Vision as Apple's HLS rules describe it: profile 5 as dvh1, profile 8.1 as HDR10 HEVC with Dolby Vision in
+    /// SUPPLEMENTAL-CODECS, and profile 7 (Blu-ray, two layers) as its HDR10 base layer.
+    func testDolbyVisionProfiles() throws {
+        func record(profile: UInt8, level: UInt8, compatibility: UInt8) -> Data {
+            var bytes = [UInt8](repeating: 0, count: 24)
+            bytes[0] = 1
+            bytes[2] = profile << 1 | level >> 5
+            bytes[3] = (level & 0x1F) << 3 | 0b101
+            bytes[4] = compatibility << 4
+            return Data(bytes)
+        }
+        let hvcC = Data([1, 0x02, 0x20, 0, 0, 0, 0x90, 0, 0, 0, 0, 0, 153] + [UInt8](repeating: 0, count: 10))
+        func track(_ dolbyVision: Data) -> MatroskaTrack {
+            MatroskaTrack(
+                number: 1, kind: .video, codecID: "V_MPEGH/ISO/HEVC", codecPrivate: hvcC, language: nil, name: nil, isDefault: true,
+                isEnabled: true, defaultDuration: 41_708_333, codecDelay: 0,
+                video: MatroskaTrack.Video(width: 3_840, height: 2_160, colour: nil), audio: nil, strippedHeader: nil,
+                blockAdditions: [MatroskaTrack.BlockAddition(type: 0x6476_6343, extraData: dolbyVision)]
+            )
+        }
+        let profile8 = MatroskaRemux.fragmentTrack(track(record(profile: 8, level: 6, compatibility: 1)))
+        XCTAssertEqual(FragmentWriter.codecName(profile8.codec), "hvc1.2.4.L153.90")
+        XCTAssertEqual(FragmentWriter.supplementalCodecs(profile8.codec), "dvh1.08.06/db1p")
+        XCTAssertNotNil(FragmentWriter.initSegment(tracks: [profile8]).range(of: Data("hvc1".utf8)))
+        XCTAssertNotNil(FragmentWriter.initSegment(tracks: [profile8]).range(of: Data("dvvC".utf8)))
+
+        let profile5 = MatroskaRemux.fragmentTrack(track(record(profile: 5, level: 9, compatibility: 0)))
+        XCTAssertEqual(FragmentWriter.codecName(profile5.codec), "dvh1.05.09")
+        XCTAssertNil(FragmentWriter.supplementalCodecs(profile5.codec))
+        XCTAssertNotNil(FragmentWriter.initSegment(tracks: [profile5]).range(of: Data("dvh1".utf8)))
+        XCTAssertNotNil(FragmentWriter.initSegment(tracks: [profile5]).range(of: Data("dvcC".utf8)))
+
+        let profile7 = MatroskaRemux.fragmentTrack(track(record(profile: 7, level: 6, compatibility: 6)))
+        XCTAssertEqual(profile7.codec, .hevc(hvcC, dolbyVision: nil), "the HDR10 base layer")
+    }
+
     /// Remuxes any file for a check with ffmpeg: REMUX_INPUT=film.mkv REMUX_DUMP=folder swift test --filter testDump.
     func testDump() async throws {
         let environment = ProcessInfo.processInfo.environment

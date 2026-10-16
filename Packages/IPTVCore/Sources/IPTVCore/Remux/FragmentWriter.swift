@@ -152,7 +152,8 @@ public enum FragmentWriter {
             guard bytes.count >= 4 else { return "avc1" }
             return "avc1.\(hex(bytes[1]))\(hex(bytes[2]))\(hex(bytes[3]))"
         case .hevc(let config, let dolbyVision):
-            if let dolbyVision, let name = dolbyVisionName(dolbyVision) { return name }
+            // Profile 5 is Dolby Vision only; profile 8 is HEVC that also carries Dolby Vision (SUPPLEMENTAL-CODECS).
+            if let dolbyVision, dolbyVisionProfile(dolbyVision) == 5, let name = dolbyVisionName(dolbyVision) { return name }
             return hevcName(config)
         case .aac(let config):
             let objectType = config.first.map { $0 >> 3 } ?? 2
@@ -178,6 +179,30 @@ public enum FragmentWriter {
         while let last = constraints.last, last == 0 { constraints.removeLast() }
         let constraintText = constraints.map { ".\(String($0, radix: 16, uppercase: true))" }.joined()
         return "hvc1.\(space)\(profile).\(String(reversed, radix: 16, uppercase: true)).\(tier)\(bytes[12])\(constraintText)"
+    }
+
+    /// The HLS playlist's SUPPLEMENTAL-CODECS of a Dolby Vision profile 8 stream: "dvh1.08.06/db1p", with the brand of
+    /// what its base layer is (db1p HDR10, db2g SDR, db4h HLG).
+    public static func supplementalCodecs(_ codec: FragmentTrack.Codec) -> String? {
+        guard case .hevc(_, let dolbyVision?) = codec, dolbyVisionProfile(dolbyVision) == 8, let name = dolbyVisionName(dolbyVision) else { return nil }
+        switch dolbyVisionCompatibility(dolbyVision) {
+        case 1: return name + "/db1p"
+        case 2: return name + "/db2g"
+        case 4: return name + "/db4h"
+        default: return name
+        }
+    }
+
+    /// Dolby Vision's profile, from its configuration record.
+    static func dolbyVisionProfile(_ config: Data) -> Int? {
+        let bytes = [UInt8](config)
+        return bytes.count >= 4 ? Int(bytes[2] >> 1) : nil
+    }
+
+    /// What the base layer is compatible with: 1 HDR10, 2 SDR, 4 HLG, 0 none.
+    static func dolbyVisionCompatibility(_ config: Data) -> Int {
+        let bytes = [UInt8](config)
+        return bytes.count >= 5 ? Int(bytes[4] >> 4) : 0
     }
 
     /// "dvh1.08.06": Dolby Vision's profile and level, from its configuration record.
@@ -303,11 +328,13 @@ struct BoxWriter {
         case .avc(let config):
             visualEntry("avc1", track) { $0.box("avcC") { $0.bytes(config) } }
         case .hevc(let config, let dolbyVision):
-            visualEntry(dolbyVision == nil ? "hvc1" : "dvh1", track) { entry in
+            // Profile 5 is described as Dolby Vision (dvh1); profile 8 as HEVC that carries it too (hvc1).
+            let profile = dolbyVision.flatMap(FragmentWriter.dolbyVisionProfile)
+            visualEntry(profile == 5 ? "dvh1" : "hvc1", track) { entry in
                 entry.box("hvcC") { $0.bytes(config) }
                 if let dolbyVision {
                     // Profiles up to 7 are described in dvcC, later ones in dvvC.
-                    entry.box(dolbyVision.count >= 3 && dolbyVision[dolbyVision.startIndex + 2] >> 1 > 7 ? "dvvC" : "dvcC") { $0.bytes(dolbyVision) }
+                    entry.box((profile ?? 0) > 7 ? "dvvC" : "dvcC") { $0.bytes(dolbyVision) }
                 }
             }
         case .aac(let config):
