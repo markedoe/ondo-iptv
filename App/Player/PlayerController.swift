@@ -90,7 +90,10 @@ final class PlayerController: NSObject {
     @ObservationIgnored var liveBufferSetting = 0
     @ObservationIgnored var vodBufferSetting = 0
     /// Set when AVPlayer failed on the current item and VLC takes over.
-    @ObservationIgnored private var forceVLCForItem = false
+    @ObservationIgnored var forceVLCForItem = false
+    /// An MKV film remuxed for the system player (PlayerController+Remux): its opening, then its server.
+    @ObservationIgnored var remuxTask: Task<Void, Never>?
+    @ObservationIgnored var remuxServer: RemuxServer?
     /// Freezes and lost pictures of this playback, explained (sampled twice a second, PlayerController+Health).
     var health = PlaybackHealth()
     /// The statistics panel is shown over the picture.
@@ -222,24 +225,28 @@ final class PlayerController: NSObject {
         load(current)
     }
 
-    private func loadCurrentCandidate() {
+    func loadCurrentCandidate() {
         guard let item, candidateIndex < candidates.count else { return }
         state = .loading
         retryTask?.cancel()
         stallTask?.cancel()
+        stopRemux()
         let url = candidates[candidateIndex]
-        if shouldUseVLC(for: url) {
-            startVLC(url: url, item: item)
+        if startRemux(url: url, item: item) || shouldUseVLC(for: url) {
+            if remuxTask == nil { startVLC(url: url, item: item) } else { stopVLC() }
             return
         }
         stopVLC()
-        activeEngine = .apple
         noteAttempt(url, engine: "AVPlayer")
+        startApple(url: url, headers: item.headers.dictionary)
+    }
+
+    /// Plays `url` with AVPlayer: the stream itself, or the local playlist of a remuxed MKV film.
+    func startApple(url: URL, headers: [String: String]) {
+        guard let item else { return }
+        activeEngine = .apple
         var options: [String: Any] = [:]
-        let headers = item.headers.dictionary
-        if !headers.isEmpty {
-            options["AVURLAssetHTTPHeaderFieldsKey"] = headers
-        }
+        if !headers.isEmpty { options["AVURLAssetHTTPHeaderFieldsKey"] = headers }
         let asset = AVURLAsset(url: url, options: options)
         let playerItem = AVPlayerItem(asset: asset)
         if let seconds = [item.isLive ? liveBufferSetting : vodBufferSetting].first(where: { $0 > 0 }) {
@@ -491,6 +498,7 @@ extension PlayerController {
         player.pause()
         player.replaceCurrentItem(with: nil)
         stopVLC()
+        stopRemux()
         activeEngine = .apple
         for token in itemObservers { NotificationCenter.default.removeObserver(token) }
         itemObservers = []

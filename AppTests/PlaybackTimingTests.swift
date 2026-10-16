@@ -20,13 +20,13 @@ final class PlaybackTimingTests: XCTestCase {
         )
     }
 
-    /// A 40 s MKV film (key frames 10 s apart) from the test bundle, with byte ranges.
-    private func filmServer() throws -> LocalHTTPServer {
+    /// A 40 s MKV film (key frames 10 s apart) from the test bundle, with byte ranges (or without, as some servers).
+    private func filmServer(ranges: Bool = true) throws -> LocalHTTPServer {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "film-sample", withExtension: "mkv"))
         let data = try Data(contentsOf: url)
         return try LocalHTTPServer { request in
             var response = LocalHTTPServer.Response(headers: ["Content-Type": "video/x-matroska", "Accept-Ranges": "bytes"], body: data)
-            if let range = request.headers["range"], range.hasPrefix("bytes=") {
+            if ranges, let range = request.headers["range"], range.hasPrefix("bytes=") {
                 let bounds = range.dropFirst(6).split(separator: "-", omittingEmptySubsequences: false)
                 let first = Int(bounds.first ?? "") ?? 0
                 let last = min(Int(bounds.dropFirst().first ?? "") ?? data.count - 1, data.count - 1)
@@ -57,7 +57,9 @@ final class PlaybackTimingTests: XCTestCase {
         executionTimeAllowance = 180
     }
 
-    private func startAndSeek(with engine: PlayerEngine, url: URL = PlaybackTimingTests.stream, to target: Double = 120) async throws {
+    private func startAndSeek(
+        with engine: PlayerEngine, url: URL = PlaybackTimingTests.stream, to target: Double = 120, inspect: (PlayerController) -> Void = { _ in }
+    ) async throws {
         let controller = PlayerController()
         controller.isMuted = true
         controller.enginePreference = engine
@@ -72,6 +74,7 @@ final class PlaybackTimingTests: XCTestCase {
             attachment.name = "report-\(engine.rawValue)"
             attachment.lifetime = .keepAlways
             add(attachment)
+            inspect(controller)
             controller.stop()
             window.isHidden = true
         }
@@ -81,6 +84,7 @@ final class PlaybackTimingTests: XCTestCase {
             if url == Self.stream { throw XCTSkip("The sample stream did not play here (no network?)") }
             return XCTFail("the film never started")
         }
+        XCTAssertLessThan(controller.currentTime, 8, "the film starts at its beginning")
         controller.seek(to: target, tolerance: 1)
         try await wait(seconds: 45) { logged(controller, "seek done after ") != nil }
         let seek = try XCTUnwrap(logged(controller, "seek done after "), "the seek never finished")
@@ -115,6 +119,37 @@ final class PlaybackTimingTests: XCTestCase {
         XCTAssertTrue(server.requests.contains { $0.headers["range"] != nil }, "VLC reads the film by byte ranges")
         // The player is released, as when the viewer closes it: whatever VLC does then happens within this test and
         // its time allowance (a run hung in the next test once, which had passed alone).
+        try await Task.sleep(for: .seconds(2))
+    }
+
+    /// An MKV film with the automatic engine: remuxed to HLS for the system player (HDR, Dolby Vision, Atmos, Picture in
+    /// Picture), which starts it and seeks in it.
+    func testTheSystemPlayerPlaysAnMKVFilmRemuxed() async throws {
+        let server = try filmServer()
+        let base = try await server.start()
+        var engine = ""
+        var log: [String] = []
+        try await startAndSeek(with: .automatic, url: base.appendingPathComponent("movie/viewer/secret/43.mkv"), to: 25) { controller in
+            engine = controller.engineName
+            log = controller.log.entries.map(\.event)
+        }
+        XCTAssertEqual(engine, "AVPlayer (MKV remuxed)", log.joined(separator: "\n"))
+        XCTAssertTrue(log.contains { $0.hasPrefix("remux ready") }, log.joined(separator: "\n"))
+    }
+
+    /// A server that sends the whole file instead of its parts cannot serve the remux: VLC plays the film.
+    func testVLCPlaysAnMKVFilmTheRemuxCannotRead() async throws {
+        guard PlayerEngine.isVLCAvailable else { throw XCTSkip("No VLC engine in this build") }
+        let server = try filmServer(ranges: false)
+        let base = try await server.start()
+        var engine = ""
+        var log: [String] = []
+        try await startAndSeek(with: .automatic, url: base.appendingPathComponent("movie/viewer/secret/44.mkv"), to: 25) { controller in
+            engine = controller.engineName
+            log = controller.log.entries.map(\.event)
+        }
+        XCTAssertEqual(engine, "VLC", log.joined(separator: "\n"))
+        XCTAssertTrue(log.contains { $0.hasPrefix("remux not possible") }, log.joined(separator: "\n"))
         try await Task.sleep(for: .seconds(2))
     }
 

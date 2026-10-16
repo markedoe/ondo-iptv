@@ -150,9 +150,12 @@ struct DownloadsView: View {
                     .lineLimit(5)
             }
         case .paused:
+            if record.totalBytes > 0 { ProgressView(value: record.progress).tint(.secondary) }
             Label("Paused", systemImage: "pause.circle").font(.caption).foregroundStyle(.secondary)
+            if (record.receivedBytes ?? 0) > 0 { Text(Self.progressText(record)).font(.caption2).foregroundStyle(.secondary) }
         case .failed(let message):
             Label(message, systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.red).lineLimit(5)
+            if (record.receivedBytes ?? 0) > 0 { Text(Self.progressText(record)).font(.caption2).foregroundStyle(.secondary) }
         }
     }
 

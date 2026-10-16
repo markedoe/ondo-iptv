@@ -85,7 +85,7 @@ extension PlayerController {
         let context = ProblemReport.Context(
             app: "Ondo \(version) (\(build))",
             system: Self.system,
-            engine: activeEngine == .vlc ? "VLC" : "AVPlayer",
+            engine: engineName,
             enginePreference: enginePreference.rawValue,
             liveBufferSetting: liveBufferSetting,
             vodBufferSetting: vodBufferSetting,

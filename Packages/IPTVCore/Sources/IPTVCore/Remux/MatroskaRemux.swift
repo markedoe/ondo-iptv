@@ -265,7 +265,7 @@ public actor MatroskaRemux {
     }
 
     /// PQ for HDR10 and Dolby Vision, HLG, or SDR.
-    nonisolated var videoRange: String {
+    public nonisolated var videoRange: String {
         switch video.video?.colour?.transfer {
         case 16: return "PQ"
         case 18: return "HLG"

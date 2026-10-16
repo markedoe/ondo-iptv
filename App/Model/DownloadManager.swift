@@ -56,6 +56,13 @@ final class DownloadManager: NSObject {
     @ObservationIgnored private var startedAt: [String: Date] = [:]
     /// Downloads whose answer from the provider is in their log.
     @ObservationIgnored private var answered: Set<String> = []
+    /// Downloads the viewer paused: a cancellation of theirs is not an interruption to recover from.
+    @ObservationIgnored private var pausedByViewer: Set<String> = []
+    /// Automatic retries after a network failure, and the one waiting.
+    @ObservationIgnored private var retries: [String: Int] = [:]
+    @ObservationIgnored private var retryTasks: [String: Task<Void, Never>] = [:]
+    /// Waits before each automatic retry, in seconds: a lost connection or a Mac that slept.
+    static let retryDelays: [Double] = [5, 15, 30, 60, 120, 300]
     /// Set by the iOS app delegate when the system relaunches the app for finished downloads.
     @ObservationIgnored var backgroundCompletionHandler: (() -> Void)?
 
@@ -136,10 +143,14 @@ final class DownloadManager: NSObject {
     }
 
     private func start(_ record: DownloadRecord) {
+        // Already running (resumed by two paths at once, at launch).
+        guard tasks[record.id] == nil else { return }
         let task: URLSessionDownloadTask
         meters[record.id] = TransferMeter()
         answered.remove(record.id)
-        if let data = resumeData.removeValue(forKey: record.id) {
+        pausedByViewer.remove(record.id)
+        retryTasks.removeValue(forKey: record.id)?.cancel()
+        if let data = takeResumeData(for: record.id) {
             task = session.downloadTask(withResumeData: data)
             note(record.id, "resume from \(DownloadReport.size(record.receivedBytes ?? 0))")
         } else {
@@ -167,11 +178,18 @@ final class DownloadManager: NSObject {
     }
 
     func pause(_ record: DownloadRecord) {
-        guard let task = tasks[record.id] else { return }
+        retryTasks.removeValue(forKey: record.id)?.cancel()
+        retries[record.id] = nil
+        guard let task = tasks[record.id] else {
+            // Waiting for an automatic retry: it stays paused.
+            if case .failed = record.status { update(record.id) { $0.status = .paused } }
+            return
+        }
+        pausedByViewer.insert(record.id)
         task.cancel(byProducingResumeData: { [weak self] data in
             Task { @MainActor in
                 guard let self else { return }
-                if let data { self.resumeData[record.id] = data }
+                if let data { self.keepResumeData(data, for: record.id) }
                 self.note(record.id, "paused at \(DownloadReport.size(self.record(for: record.item)?.receivedBytes ?? 0))\(data == nil ? ", nothing to resume from" : "")")
                 self.tasks[record.id] = nil
                 self.stalls[record.id] = nil
@@ -189,7 +207,9 @@ final class DownloadManager: NSObject {
     func delete(_ record: DownloadRecord) {
         tasks[record.id]?.cancel()
         tasks[record.id] = nil
-        resumeData[record.id] = nil
+        keepResumeData(nil, for: record.id)
+        retryTasks.removeValue(forKey: record.id)?.cancel()
+        retries[record.id] = nil
         stalls[record.id] = nil
         meters[record.id] = nil
         logs[record.id] = nil
@@ -211,6 +231,7 @@ final class DownloadManager: NSObject {
             record.receivedBytes = written
         }
         lastProgress[id] = Date()
+        retries[id] = nil
         if stalls[id] != nil {
             stalls[id] = nil
             note(id, "data again")
@@ -220,11 +241,13 @@ final class DownloadManager: NSObject {
         save(force: false)
     }
 
-    fileprivate func finished(id: String, movedTo url: URL?, error: String?) {
+    fileprivate func finished(id: String, movedTo url: URL?, error: String?, resumeData: Data? = nil, transient: Bool = false) {
         noteAnswer(id)
+        if let resumeData { keepResumeData(resumeData, for: id) }
         if let error {
-            note(id, "failed: \(error)")
+            note(id, "failed: \(error)\(resumeData == nil ? "" : " (can resume)")")
         } else if url != nil {
+            keepResumeData(nil, for: id)
             let received = records.first { $0.id == id }?.receivedBytes ?? 0
             note(id, "finished: \(DownloadReport.size(received)) in \(DownloadReport.duration(clock(for: id)))")
         }
@@ -239,7 +262,65 @@ final class DownloadManager: NSObject {
                 record.progress = 1
             }
         }
+        if error != nil, transient { scheduleRetry(id) }
         save(force: true)
+    }
+
+    /// A cancellation the viewer did not ask for: the system stopped the download (the app was closed, the system
+    /// needed the resources). It goes on from where it was.
+    fileprivate func cancelled(id: String, resumeData: Data?) {
+        guard let record = records.first(where: { $0.id == id }), !record.isCompleted else {
+            keepResumeData(nil, for: id)
+            return
+        }
+        if let resumeData { keepResumeData(resumeData, for: id) }
+        guard !pausedByViewer.contains(id), tasks[id] == nil || tasks[id]?.state != .running else { return }
+        tasks[id] = nil
+        note(id, "interrupted by the system\(resumeData == nil ? ", nothing to resume from" : "")")
+        if resumeData != nil {
+            start(record)
+        } else {
+            update(id) { $0.status = .paused }
+            save(force: true)
+        }
+    }
+
+    /// After a network failure: the download tries again by itself, from where it stopped, a few times and further
+    /// apart each time.
+    private func scheduleRetry(_ id: String) {
+        let attempt = retries[id, default: 0]
+        guard attempt < Self.retryDelays.count else { return }
+        retries[id] = attempt + 1
+        let delay = Self.retryDelays[attempt]
+        note(id, "tries again in \(Int(delay)) s (\(attempt + 1) of \(Self.retryDelays.count))")
+        retryTasks[id] = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(delay))
+            guard let self, !Task.isCancelled, let record = self.records.first(where: { $0.id == id }), case .failed = record.status else { return }
+            self.retryTasks[id] = nil
+            self.start(record)
+        }
+    }
+
+    // MARK: Resume data
+
+    /// Where a download's resume data is kept, so that it goes on from where it stopped even after the app closed.
+    nonisolated static func resumeFile(for id: String) -> URL {
+        directory.appendingPathComponent(StableHash.hex(id) + ".resume")
+    }
+
+    private func keepResumeData(_ data: Data?, for id: String) {
+        resumeData[id] = data
+        if let data {
+            try? data.write(to: Self.resumeFile(for: id), options: .atomic)
+        } else {
+            try? FileManager.default.removeItem(at: Self.resumeFile(for: id))
+        }
+    }
+
+    private func takeResumeData(for id: String) -> Data? {
+        let data = resumeData.removeValue(forKey: id) ?? (try? Data(contentsOf: Self.resumeFile(for: id)))
+        try? FileManager.default.removeItem(at: Self.resumeFile(for: id))
+        return data
     }
 
     private func update(_ id: String, _ change: (inout DownloadRecord) -> Void) {
@@ -266,9 +347,15 @@ final class DownloadManager: NSObject {
                     self.lastProgress[id] = Date()
                     self.note(id, "found running in the system when the app opened")
                 }
-                // Downloads interrupted by the app being killed can be restarted by the user.
+                // Downloads interrupted while the app was closed go on from where they stopped when they can; the others
+                // wait for the viewer.
                 for record in self.records where record.isActive && self.tasks[record.id] == nil {
-                    self.update(record.id) { $0.status = .paused }
+                    if FileManager.default.fileExists(atPath: Self.resumeFile(for: record.id).path) {
+                        self.note(record.id, "interrupted while the app was closed")
+                        self.start(record)
+                    } else {
+                        self.update(record.id) { $0.status = .paused }
+                    }
                 }
                 // Downloads that went on while the app was closed are diagnosed like new ones.
                 if !pairs.isEmpty { self.startWatchdog() }
@@ -321,7 +408,9 @@ final class DownloadManager: NSObject {
         case .queued: status = "queued"
         case .downloading: status = "downloading"
         case .completed: status = "completed"
-        case .paused: status = "paused\(resumeData[record.id] == nil ? "" : ", can resume")"
+        case .paused:
+            let resumable = resumeData[record.id] != nil || FileManager.default.fileExists(atPath: Self.resumeFile(for: record.id).path)
+            status = "paused\(resumable ? ", can resume" : ", nothing to resume from")"
         case .failed(let message): status = "failed: \(message)"
         }
         let context = DownloadReport.Context(
@@ -529,10 +618,19 @@ private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unc
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let error, let id = task.taskDescription else { return }
         let nsError = error as NSError
-        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled { return }
+        // What the system kept to go on from where the transfer stopped (a server that allows it).
+        let resumeData = nsError.userInfo[NSURLSessionDownloadTaskResumeData] as? Data
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            Task { @MainActor [weak manager] in manager?.cancelled(id: id, resumeData: resumeData) }
+            return
+        }
         let problem = nsError.domain == NSURLErrorDomain ? DownloadDiagnosis.problem(urlErrorCode: nsError.code) : nil
         let message = problem.map { DownloadManager.message(for: $0) } ?? error.localizedDescription
-        Task { @MainActor [weak manager] in manager?.finished(id: id, movedTo: nil, error: message) }
+        // Network failures are tried again; the provider's refusals are not.
+        let transient = nsError.domain == NSURLErrorDomain
+        Task { @MainActor [weak manager] in
+            manager?.finished(id: id, movedTo: nil, error: message, resumeData: resumeData, transient: transient)
+        }
     }
 
     /// A short text received instead of the film ("Max connections reached", a web page) is not kept.

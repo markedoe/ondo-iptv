@@ -20,6 +20,8 @@ RELEASE = "App/Resources/Ondo-macOS.entitlements"
 REQUIRED = {
     "com.apple.security.app-sandbox": "the Mac App Store requires the sandbox",
     "com.apple.security.network.client": "playlists, guides and streams are downloaded",
+    "com.apple.security.network.server":
+        "MKV films are remuxed for the system player and served to it on 127.0.0.1 (RemuxServer)",
     "com.apple.security.files.user-selected.read-write":
         "playlist, subtitle and backup files are opened with file pickers, and backups saved",
 }
