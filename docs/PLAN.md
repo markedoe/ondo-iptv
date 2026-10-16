@@ -100,7 +100,7 @@ with shortcuts, player in its own window (several windows = multi-screen), nativ
 - [x] Offline downloads of movies/episodes (background session, pause/resume)
 - [x] TMDb trending (API key supplied by the user)
 - [x] Chromecast (official Google Cast SDK, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
-- [x] Real-Debrid source (the account's list of downloads → movies / series), hidden in the App Store version
+- [x] ~~Real-Debrid source~~: removed (October 2026): code no build could use is a dormant feature for App Review
 - [ ] Optional StoreKit 2 monetization — deliberately not done (open-source app)
 - [ ] tvOS / visionOS targets (the core is already compatible)
 
@@ -118,7 +118,7 @@ Features deemed essential for a modern player, handled in milestones:
 - [x] Multiview (iPad / Mac: 2 to 4 streams, only one with audio)
 - [x] Offline downloads: kept in the App Store version (decision of 13 Oct)
 - ~~Recording~~: not retained (decision of 13 Oct)
-- Real-Debrid source: disabled in the App Store version (`FeatureFlags.realDebrid`, code kept);
+- Real-Debrid source: removed (a dormant feature for App Review, guideline 2.3.1);
   Stalker/MAG portal: out of v1 (decision of 13 Oct, Ondo remains an M3U / Xtream player)
 - [x] Replace the home-made image loader with Nuke/NukeUI (disk cache, coalescing, downsampling)
 

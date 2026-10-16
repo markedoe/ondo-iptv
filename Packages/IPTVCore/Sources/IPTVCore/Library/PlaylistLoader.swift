@@ -76,11 +76,6 @@ public struct PlaylistLoader: Sendable {
             if !url.isFileURL { content.providerEPGURLs.removeAll(where: \.isFileURL) }
             return content
 
-        case .realDebrid(let token):
-            var content = try await RealDebridClient(token: token, http: http).fetchContent()
-            content.fetchedAt = Date()
-            return content
-
         case .local(let fileName):
             let data = try Data(contentsOf: localFileURL(fileName))
             return try parse(data, playlistHeaders: playlist.headers)

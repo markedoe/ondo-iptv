@@ -86,7 +86,8 @@ final class AppModelTests: XCTestCase {
         secrets = InMemorySecretStore(failsWrites: true)
         let model = makeModel()
         await model.bootstrap()
-        let backup = BackupArchive(playlists: [Playlist(name: "RD", source: .realDebrid(token: "TOKEN-123"))], library: UserLibrary())
+        let credentials = XtreamCredentials(server: URL(string: "http://127.0.0.1:9")!, username: "user", password: "TOKEN-123")
+        let backup = BackupArchive(playlists: [Playlist(name: "X", source: .xtream(credentials))], library: UserLibrary())
         try await model.importBackup(backup.encoded())
 
         let relaunched = makeModel()

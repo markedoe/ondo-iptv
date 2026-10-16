@@ -101,15 +101,12 @@ public enum PlaylistSource: Codable, Hashable, Sendable {
     case local(fileName: String)
     /// Xtream Codes API login.
     case xtream(XtreamCredentials)
-    /// Real-Debrid account: its download list becomes a VOD library.
-    case realDebrid(token: String)
 
     public var kindLabel: String {
         switch self {
         case .remote: return "M3U URL"
         case .local: return "File"
         case .xtream: return "Xtream Codes"
-        case .realDebrid: return "Real-Debrid"
         }
     }
 
@@ -117,7 +114,6 @@ public enum PlaylistSource: Codable, Hashable, Sendable {
     public var secret: String? {
         switch self {
         case .xtream(let credentials): return credentials.password
-        case .realDebrid(let token): return token
         case .remote, .local: return nil
         }
     }
@@ -127,8 +123,6 @@ public enum PlaylistSource: Codable, Hashable, Sendable {
         case .xtream(var credentials):
             credentials.password = secret
             return .xtream(credentials)
-        case .realDebrid:
-            return .realDebrid(token: secret)
         case .remote, .local:
             return self
         }

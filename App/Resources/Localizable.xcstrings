@@ -1219,46 +1219,6 @@
         }
       }
     },
-    "API token": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jeton API"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Token de API"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Token de API"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API 令牌"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "رمز API"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API टोकन"
-          }
-        }
-      }
-    },
     "About": {
       "localizations": {
         "fr": {
@@ -24067,46 +24027,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "प्लेयर से सबटाइटल खोजने के लिए OpenSubtitles, SubDL और SubSource की आपकी अपनी कुंजियाँ।"
-          }
-        }
-      }
-    },
-    "Your private API token is on real-debrid.com/apitoken. The video files of your downloads become movies and series.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre jeton API privé se trouve sur real-debrid.com/apitoken. Les fichiers vidéo de vos téléchargements deviennent des films et des séries."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu token de API privado está en real-debrid.com/apitoken. Los archivos de video de tus descargas se convierten en películas y series."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seu token de API privado está em real-debrid.com/apitoken. Os arquivos de vídeo dos seus downloads viram filmes e séries."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的私人 API 令牌位于 real-debrid.com/apitoken。你下载的视频文件将显示为电影和剧集。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تجد رمز API الخاص بك على real-debrid.com/apitoken. تتحول ملفات الفيديو في تنزيلاتك إلى أفلام ومسلسلات."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "आपका निजी API टोकन real-debrid.com/apitoken पर है। आपके डाउनलोड की वीडियो फ़ाइलें फ़िल्में और सीरीज़ बन जाती हैं।"
           }
         }
       }

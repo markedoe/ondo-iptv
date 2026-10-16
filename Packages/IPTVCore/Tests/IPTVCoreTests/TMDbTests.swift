@@ -141,29 +141,3 @@ final class PeopleTests: XCTestCase {
         XCTAssertFalse(People.field("Lena Mossberg", names: "Lena Moss"))
     }
 }
-
-final class RealDebridTests: XCTestCase {
-    func testReleaseNames() {
-        XCTAssertEqual(ReleaseName.clean("The.Movie.2021.1080p.WEB-DL.x264.mkv").0, "The Movie (2021)")
-        XCTAssertEqual(ReleaseName.clean("Show.Name.S02E05.720p.HDTV.mkv").0, "Show Name S02E05")
-        XCTAssertTrue(ReleaseName.clean("Show.Name.S02E05.720p.HDTV.mkv").1)
-        XCTAssertEqual(ReleaseName.clean("Star Runner 2049 (2017) [MULTI].mp4").0, "Star Runner 2049 (2017)")
-        XCTAssertEqual(ReleaseName.clean("holiday_video.mp4").0, "holiday video")
-    }
-
-    func testDownloadsBecomeMoviesAndSeries() async throws {
-        let http = MockHTTPClient()
-        http.routes["https://api.real-debrid.com/rest/1.0/downloads?page=1&limit=100"] = Data("""
-        [{"id":"A","filename":"Sandstorm.Part.Two.2024.2160p.WEB.mkv","mimeType":"video/x-matroska","download":"https://dl.example.com/d/A/Sandstorm.mkv","streamable":1},
-         {"id":"B","filename":"Show.S01E01.1080p.mkv","mimeType":"video/x-matroska","download":"https://dl.example.com/d/B/s1e1.mkv"},
-         {"id":"C","filename":"Show.S01E02.1080p.mkv","download":"https://dl.example.com/d/C/s1e2.mkv"},
-         {"id":"D","filename":"archive.zip","mimeType":"application/zip","download":"https://dl.example.com/d/D/a.zip"}]
-        """.utf8)
-        let content = try await RealDebridClient(token: "T", http: http).fetchContent()
-        XCTAssertEqual(content.movies.map(\.name), ["Sandstorm Part Two"])
-        XCTAssertEqual(content.movies.first?.year, 2024)
-        XCTAssertEqual(content.series.first?.name, "Show")
-        XCTAssertEqual(content.series.first?.episodes.map(\.code), ["S01E01", "S01E02"])
-        XCTAssertTrue(content.channels.isEmpty)
-    }
-}

@@ -30,8 +30,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   workflow mensuel les rafraîchit et les apps récupèrent le fichier plus récent une fois par semaine, sauf si
   c'est désactivé dans les Réglages ([tools/awards](tools/awards/README.fr.md)).
 - **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
-  XSPF, JSON ; plusieurs playlists, actualisation automatique. (Une source Real-Debrid existe dans le
-  code mais est désactivée dans la version App Store : `FeatureFlags.realDebrid`.)
+  XSPF, JSON ; plusieurs playlists, actualisation automatique.
 - **Live TV** : catégories, numéros, logos, programme en cours + progression, Ma liste, récents, recherche ;
   chaînes masquées, renommées ou renumérotées.
 - **Guide TV** : XMLTV (gzip), guide du fournisseur et/ou URL personnalisées, grille aux titres

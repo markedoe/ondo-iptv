@@ -48,7 +48,7 @@ class CheckTestCase(unittest.TestCase):
 
 class RepositoryTests(unittest.TestCase):
     def test_the_repository_passes_every_check(self):
-        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality", "awards"):
+        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality", "awards", "app_store"):
             code, output = run(check, REPOSITORY)
             self.assertEqual(code, 0, f"{check}: {output}")
 

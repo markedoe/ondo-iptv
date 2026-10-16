@@ -2,11 +2,8 @@ import SwiftUI
 import IPTVCore
 import UniformTypeIdentifiers
 
-/// Product switches of the App Store version: the code stays, ready to be turned back on.
+/// What differs between the editions: the App Store edition is built without what it does not have.
 enum FeatureFlags {
-    /// Real-Debrid accounts as a source. Off: Ondo presents itself as an IPTV player only.
-    static let realDebrid = false
-
     #if TESTFLIGHT_DOWNLOADS || DEBUG
     /// Downloading movies and episodes to watch offline: in the TestFlight edition only. The App Store edition, the one
     /// sent to App Review, is built without the code at all (Apple's rules 5.2.3 on saving media from other sources and
@@ -23,21 +20,15 @@ enum FeatureFlags {
 }
 
 enum PlaylistKind: String, CaseIterable, Identifiable {
-    case xtream, m3uURL, file, realDebrid
+    case xtream, m3uURL, file
 
     var id: String { rawValue }
-
-    /// Kinds offered when adding a playlist.
-    static var available: [PlaylistKind] {
-        allCases.filter { $0 != .realDebrid || FeatureFlags.realDebrid }
-    }
 
     var label: LocalizedStringKey {
         switch self {
         case .xtream: return "Xtream Codes"
         case .m3uURL: return "M3U URL"
         case .file: return "File"
-        case .realDebrid: return "Real-Debrid"
         }
     }
 }
@@ -71,14 +62,13 @@ struct AddPlaylistView: View {
     @State private var errorMessage: String?
     @State private var errorAttribution: ErrorAttribution?
     @State private var detectedXtream: XtreamCredentials?
-    @State private var realDebridToken = ""
 
     var body: some View {
         Form {
             if editing == nil {
                 Section {
                     Picker("Type", selection: $kind) {
-                        ForEach(PlaylistKind.available) { kind in
+                        ForEach(PlaylistKind.allCases) { kind in
                             Text(kind.label).tag(kind)
                         }
                     }
@@ -135,9 +125,6 @@ struct AddPlaylistView: View {
                     } label: {
                         Label(importedFileLabel ?? String(localized: "Choose a file…"), systemImage: "doc")
                     }
-                case .realDebrid:
-                    SecureField("API token", text: $realDebridToken)
-                        .autocorrectionDisabled()
                 }
             } header: {
                 Text("Playlist")
@@ -145,8 +132,6 @@ struct AddPlaylistView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     if kind == .xtream {
                         Text("Use the server address, username and password sent by your provider.")
-                    } else if kind == .realDebrid {
-                        Text("Your private API token is on real-debrid.com/apitoken. The video files of your downloads become movies and series.")
                     }
                     Legal.disclaimer
                 }
@@ -263,8 +248,6 @@ struct AddPlaylistView: View {
             return URL(string: m3uURL.trimmingCharacters(in: .whitespacesAndNewlines))?.scheme != nil
         case .file:
             return importedFileName != nil
-        case .realDebrid:
-            return realDebridToken.trimmingCharacters(in: .whitespaces).count >= 20
         }
     }
 
@@ -284,9 +267,6 @@ struct AddPlaylistView: View {
             kind = .file
             importedFileName = fileName
             importedFileLabel = fileName.split(separator: "-", maxSplits: 5).last.map(String.init) ?? fileName
-        case .realDebrid(let token):
-            kind = .realDebrid
-            realDebridToken = token
         }
         epgURLs = playlist.epgURLs.map(\.absoluteString).joined(separator: "\n")
         useProviderEPG = playlist.useProviderEPG
@@ -314,15 +294,12 @@ struct AddPlaylistView: View {
         case .file:
             guard let importedFileName else { return nil }
             source = .local(fileName: importedFileName)
-        case .realDebrid:
-            source = .realDebrid(token: realDebridToken.trimmingCharacters(in: .whitespaces))
         }
         let defaultName: String
         switch source {
         case .xtream(let credentials): defaultName = credentials.server.host ?? "Xtream"
         case .remote(let url): defaultName = url.host ?? "M3U"
         case .local: defaultName = importedFileLabel ?? "Playlist"
-        case .realDebrid: defaultName = "Real-Debrid"
         }
         var playlist = editing ?? Playlist(name: "", source: source)
         playlist.name = name.trimmingCharacters(in: .whitespaces).isEmpty ? defaultName : name.trimmingCharacters(in: .whitespaces)

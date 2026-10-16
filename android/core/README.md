@@ -30,7 +30,7 @@ the specification; behaviour and edge cases are kept unless listed under *Differ
 
 ## Differences from the Swift package
 
-- Real-Debrid and Apple-only plumbing are not ported; `FileStore` becomes `JsonFileStore` (atomic write + `.bak`).
+- Apple-only plumbing is not ported; `FileStore` becomes `JsonFileStore` (atomic write + `.bak`).
 - Kotlin names: `isCategoryHidden` / `isChannelHidden` (Swift overloads on labels), `toggleInList(listId, …)`,
   `createList(name, id, now)`, `merged(other)`, `EpgIndex.withOverrides(…)` / `inserting(…)`, `EpgData.merged` / `pruned`.
 - `PlaybackItem.urls` is the de-duplicated candidate list (stream first); `headers` is `null` when empty.
@@ -50,5 +50,5 @@ cd android
 ```
 
 Tests live in `src/test/kotlin` (JUnit 4 + kotlin-test, `kotlinx-coroutines-test`, OkHttp `MockWebServer`) and use
-the Swift fixtures copied to `src/test/resources/fixtures`. Every Swift test case is ported (except Real-Debrid),
+the Swift fixtures copied to `src/test/resources/fixtures`. Every Swift test case is ported,
 plus tests for the adapted parts and two performance guards (60 000 playlist entries, 100 000 guide programmes).

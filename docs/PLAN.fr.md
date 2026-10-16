@@ -100,7 +100,7 @@ avec raccourcis, lecteur dans sa propre fenêtre (plusieurs fenêtres = multi-é
 - [x] Téléchargements hors ligne des films/épisodes (session d'arrière-plan, pause/reprise)
 - [x] Tendances TMDb (clé API fournie par l'utilisateur)
 - [x] Chromecast (Google Cast SDK officiel, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
-- [x] Source Real-Debrid (liste des téléchargements du compte → films / séries), masquée dans la version App Store
+- [x] ~~Source Real-Debrid~~ : supprimée (octobre 2026) : du code qu'aucun build ne peut utiliser est une fonction dormante pour la review d'Apple
 - [ ] Monétisation StoreKit 2 optionnelle — volontairement non faite (app libre)
 - [ ] Cibles tvOS / visionOS (le cœur est déjà compatible)
 
@@ -118,7 +118,7 @@ Fonctions jugées indispensables pour un lecteur moderne, traitées par jalons :
 - [x] Multivue (iPad / Mac : 2 à 4 flux, un seul audio)
 - [x] Téléchargements hors ligne : conservés dans la version App Store (décision du 13/10)
 - ~~Enregistrement~~ : non retenu (décision du 13/10)
-- Source Real-Debrid : désactivée dans la version App Store (`FeatureFlags.realDebrid`, code conservé) ;
+- Source Real-Debrid : supprimée (fonction dormante pour la review d'Apple, règle 2.3.1) ;
   portail Stalker/MAG : hors v1 (décision du 13/10, Ondo reste un lecteur M3U / Xtream)
 - [x] Remplacer le chargeur d'images maison par Nuke/NukeUI (cache disque, coalescence, sous-échantillonnage)
 

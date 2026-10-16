@@ -29,8 +29,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   workflow refreshes it and the apps fetch the newer file once a week, unless turned off in Settings
   ([tools/awards](tools/awards/README.md)).
 - **Sources**: M3U / M3U8 playlists (URL or file), **Xtream Codes** accounts (API or "force M3U"), XSPF,
-  JSON; several playlists, automatic refresh. (A Real-Debrid source exists in the code but is turned off in
-  the App Store version: `FeatureFlags.realDebrid`.)
+  JSON; several playlists, automatic refresh.
 - **Live TV**: categories, numbers, logos, current programme and its progress, My List, recents, search;
   hidden, renamed or renumbered channels.
 - **TV Guide**: XMLTV (gzip), the provider's guide and/or custom URLs, grid with sticky titles, programme

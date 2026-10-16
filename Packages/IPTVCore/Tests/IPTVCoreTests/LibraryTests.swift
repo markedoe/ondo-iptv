@@ -178,7 +178,7 @@ final class PlaylistDecodingTests: XCTestCase {
         let xtream = PlaylistSource.xtream(XtreamCredentials(server: URL(string: "http://p")!, username: "u", password: "pw"))
         XCTAssertEqual(xtream.secret, "pw")
         XCTAssertEqual(xtream.withSecret("new").secret, "new")
-        XCTAssertEqual(PlaylistSource.realDebrid(token: "t").withSecret("").secret, "")
+        XCTAssertNil(PlaylistSource.local(fileName: "list.m3u").withSecret("new").secret)
         XCTAssertNil(PlaylistSource.remote(URL(string: "http://x")!).secret)
     }
 
