@@ -7,19 +7,19 @@ enum FeatureFlags {
     /// Real-Debrid accounts as a source. Off: Ondo presents itself as an IPTV player only.
     static let realDebrid = false
 
-    /// Downloading movies and episodes to watch offline: in the TestFlight edition only. The edition sent to App Review
-    /// leaves it out (Apple's rule 5.2.3 on saving media from other sources); the release workflow builds one or the
-    /// other (`edition`), and nothing in an App Store build can turn it on. In development and tests it is on, except
-    /// for the App Store screenshots, which show the App Store edition.
+    #if TESTFLIGHT_DOWNLOADS || DEBUG
+    /// Downloading movies and episodes to watch offline: in the TestFlight edition only. The App Store edition, the one
+    /// sent to App Review, is built without the code at all (Apple's rules 5.2.3 on saving media from other sources and
+    /// 2.3.1 on hidden or dormant features): the release workflow builds one edition or the other (`edition`). In
+    /// development and tests it is on, except for the App Store screenshots, which show the App Store edition.
     static let downloads: Bool = {
         #if TESTFLIGHT_DOWNLOADS
         return true
-        #elseif DEBUG
-        return !ProcessInfo.processInfo.arguments.contains("-uitest-showcase")
         #else
-        return false
+        return !ProcessInfo.processInfo.arguments.contains("-uitest-showcase")
         #endif
     }()
+    #endif
 }
 
 enum PlaylistKind: String, CaseIterable, Identifiable {

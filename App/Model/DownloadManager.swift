@@ -2,6 +2,9 @@ import Foundation
 import IPTVCore
 import Observation
 
+// The TestFlight edition only (and development builds): the App Store edition is built without downloads.
+#if TESTFLIGHT_DOWNLOADS || DEBUG
+
 /// A movie or episode saved for offline viewing.
 struct DownloadRecord: Identifiable, Codable, Hashable {
     enum Status: Codable, Hashable {
@@ -650,3 +653,5 @@ private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unc
 private extension String {
     var nilIfEmpty: String? { isEmpty ? nil : self }
 }
+
+#endif

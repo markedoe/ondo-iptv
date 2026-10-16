@@ -1,6 +1,9 @@
 import SwiftUI
 import IPTVCore
 
+// The TestFlight edition only (and development builds): the App Store edition is built without downloads.
+#if TESTFLIGHT_DOWNLOADS || DEBUG
+
 /// Download / progress / delete control for a movie or an episode.
 struct DownloadButton: View {
     let item: PlaybackItem?
@@ -241,3 +244,5 @@ struct DownloadDetailsView: View {
         #endif
     }
 }
+
+#endif

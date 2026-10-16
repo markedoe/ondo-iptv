@@ -3,8 +3,8 @@ import SwiftUI
 #if os(iOS)
 import UIKit
 
-/// Lets the player force landscape on iPhone ("rotation per content type") and hands the events of finished
-/// background downloads to `DownloadManager`.
+/// Lets the player force landscape on iPhone ("rotation per content type") and, in the TestFlight edition, hands the
+/// events of finished background downloads to `DownloadManager`.
 final class AppDelegate: NSObject, UIApplicationDelegate {
     static var orientationLock: UIInterfaceOrientationMask = .all
 
@@ -12,10 +12,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
         Self.orientationLock
     }
 
+    #if TESTFLIGHT_DOWNLOADS || DEBUG
     func application(_ application: UIApplication, handleEventsForBackgroundURLSession identifier: String, completionHandler: @escaping () -> Void) {
         guard identifier == DownloadManager.sessionIdentifier else { return completionHandler() }
         DownloadManager.shared.backgroundCompletionHandler = completionHandler
     }
+    #endif
 }
 
 @MainActor

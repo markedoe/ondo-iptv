@@ -2,18 +2,29 @@ import SwiftUI
 import IPTVCore
 
 enum AppSection: String, CaseIterable, Identifiable, Hashable {
-    case home, movies, series, live, guide, favorites, downloads, search
+    case home, movies, series, live, guide, favorites
+    #if TESTFLIGHT_DOWNLOADS || DEBUG
+    /// The TestFlight edition only: the App Store edition is built without downloads.
+    case downloads
+    #endif
+    case search
 
     var id: String { rawValue }
 
-    /// Downloads shows in the TestFlight edition, or where downloads were made with it (to play or delete them).
+    #if TESTFLIGHT_DOWNLOADS || DEBUG
+    /// Downloads shows when downloads are on, or where some were made (to play or delete them).
     @MainActor static var showsDownloads: Bool {
         FeatureFlags.downloads || !DownloadManager.shared.records.isEmpty
     }
+    #endif
 
     /// The sections of the sidebar in this edition.
     @MainActor static var shown: [AppSection] {
-        allCases.filter { $0 != .downloads || showsDownloads }
+        #if TESTFLIGHT_DOWNLOADS || DEBUG
+        return allCases.filter { $0 != .downloads || showsDownloads }
+        #else
+        return allCases
+        #endif
     }
 
     var title: LocalizedStringKey {
@@ -24,7 +35,9 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .movies: return "Movies"
         case .series: return "Series"
         case .favorites: return "My List"
+        #if TESTFLIGHT_DOWNLOADS || DEBUG
         case .downloads: return "Downloads"
+        #endif
         case .search: return "Search"
         }
     }
@@ -37,7 +50,9 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
         case .movies: return "film"
         case .series: return "play.rectangle.on.rectangle"
         case .favorites: return "list.star"
+        #if TESTFLIGHT_DOWNLOADS || DEBUG
         case .downloads: return "arrow.down.circle"
+        #endif
         case .search: return "magnifyingglass"
         }
     }
@@ -340,7 +355,9 @@ extension SectionView {
         case .movies: MoviesView()
         case .series: SeriesListView()
         case .favorites: FavoritesView()
+        #if TESTFLIGHT_DOWNLOADS || DEBUG
         case .downloads: DownloadsView()
+        #endif
         case .search: SearchView()
         }
     }

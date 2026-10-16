@@ -242,11 +242,13 @@ struct EpisodeRow: View {
                     Button("From Start", systemImage: "backward.end", action: playFromStart)
                 }
             }
+            #if TESTFLIGHT_DOWNLOADS || DEBUG
             if let downloadItem {
                 DownloadButton(item: downloadItem, compact: true)
                     .buttonStyle(.borderless)
                     .padding(.top, 4)
             }
+            #endif
         }
     }
 

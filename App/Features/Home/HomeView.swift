@@ -156,7 +156,9 @@ struct HomeView: View {
             reminders
                 .padding(.horizontal, metrics.gutter)
 
+            #if TESTFLIGHT_DOWNLOADS || DEBUG
             if compact, AppSection.showsDownloads { libraryLinks.padding(.horizontal, metrics.gutter) }
+            #endif
         }
         .padding(.top, hero.isEmpty ? 12 : 0)
         .padding(.bottom, 32)
@@ -248,6 +250,7 @@ struct HomeView: View {
         }
     }
 
+    #if TESTFLIGHT_DOWNLOADS || DEBUG
     /// iPhone has no sidebar: downloads stay one tap away (My List has its own tab).
     private var libraryLinks: some View {
         VStack(spacing: 0) {
@@ -274,6 +277,7 @@ struct HomeView: View {
         }
         .buttonStyle(.plain)
     }
+    #endif
 
     /// Shown only when the provider account is expired, inactive or about to expire.
     @ViewBuilder

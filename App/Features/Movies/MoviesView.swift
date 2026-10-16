@@ -116,7 +116,9 @@ struct MovieDetailView: View {
                         .buttonStyle(.plain)
                     }
                     TrailerAction(youTubeID: details?.trailerYouTubeID)
+                    #if TESTFLIGHT_DOWNLOADS || DEBUG
                     DownloadAction(item: model.downloadItem(for: movie))
+                    #endif
                 }
             }
         } content: { metrics in

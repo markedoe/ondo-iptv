@@ -229,7 +229,8 @@ struct CollectionAction: View {
     }
 }
 
-/// Download control in the round style; nothing when the stream cannot be downloaded.
+#if TESTFLIGHT_DOWNLOADS || DEBUG
+/// Download control in the round style; nothing when the stream cannot be downloaded. The TestFlight edition only.
 struct DownloadAction: View {
     let item: PlaybackItem?
 
@@ -242,6 +243,7 @@ struct DownloadAction: View {
         }
     }
 }
+#endif
 
 /// Trailer on YouTube, when the provider gives one.
 struct TrailerAction: View {

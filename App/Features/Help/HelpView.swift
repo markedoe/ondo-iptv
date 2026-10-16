@@ -9,12 +9,39 @@ struct HelpTopic: Identifiable {
 }
 
 extension HelpTopic {
-    /// The topics of the features this edition has (no downloads in the App Store edition).
+    /// The topics shown: the App Store screenshots show the App Store edition.
     static var shown: [HelpTopic] {
-        all.filter { $0.id != "downloads" || FeatureFlags.downloads }
+        #if TESTFLIGHT_DOWNLOADS || DEBUG
+        return all.filter { $0.id != "downloads" || FeatureFlags.downloads }
+        #else
+        return all
+        #endif
     }
 
-    static let all: [HelpTopic] = [
+    /// The topics of this edition: downloads, after "When a Stream Does Not Play", in the TestFlight edition only (the
+    /// App Store edition is built without them).
+    static let all: [HelpTopic] = {
+        var topics = common
+        #if TESTFLIGHT_DOWNLOADS || DEBUG
+        topics.insert(downloads, at: (topics.firstIndex { $0.id == "playback" } ?? topics.count - 1) + 1)
+        #endif
+        return topics
+    }()
+
+    #if TESTFLIGHT_DOWNLOADS || DEBUG
+    private static let downloads = HelpTopic(
+        id: "downloads", title: "Downloads", systemImage: "arrow.down.circle",
+        body: """
+        Download a movie or an episode from its page to watch it offline, when your provider allows it. Your \
+        downloads are in Downloads.
+
+        If a download stays stuck, Ondo tells you why: refused by the provider, connection limit reached, or \
+        nothing received. Many providers count a download as one of your connections.
+        """
+    )
+    #endif
+
+    private static let common: [HelpTopic] = [
         HelpTopic(
             id: "playlists", title: "Add a Playlist", systemImage: "list.bullet.rectangle",
             body: """
@@ -106,16 +133,6 @@ extension HelpTopic {
 
             More, Report a Problem… shows a report of the playback (start and seek times, freezes, statistics; no \
             address, login or title) to send by mail or message, or in a GitHub issue.
-            """
-        ),
-        HelpTopic(
-            id: "downloads", title: "Downloads", systemImage: "arrow.down.circle",
-            body: """
-            Download a movie or an episode from its page to watch it offline, when your provider allows it. Your \
-            downloads are in Downloads.
-
-            If a download stays stuck, Ondo tells you why: refused by the provider, connection limit reached, or \
-            nothing received. Many providers count a download as one of your connections.
             """
         ),
         HelpTopic(

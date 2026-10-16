@@ -119,13 +119,18 @@ extension AppModel {
         present(PlaybackSession(queue: [item], index: 0))
     }
 
-    /// Plays the local copy when the item was downloaded (the stream stays as a fallback).
+    /// Plays the local copy when the item was downloaded (the stream stays as a fallback). The App Store edition has no
+    /// downloads: the item as it is.
     private static func preferringDownload(_ item: PlaybackItem) -> PlaybackItem {
+        #if TESTFLIGHT_DOWNLOADS || DEBUG
         guard let local = DownloadManager.shared.localFile(for: item) else { return item }
         var copy = item
         copy.fallbackURLs = [item.streamURL] + item.fallbackURLs
         copy.streamURL = local
         return copy
+        #else
+        return item
+        #endif
     }
 
     func downloadItem(for movie: Movie) -> PlaybackItem? {
@@ -136,11 +141,13 @@ extension AppModel {
         factory?.item(for: episode, in: series)
     }
 
+    #if TESTFLIGHT_DOWNLOADS || DEBUG
     func playDownload(_ record: DownloadRecord) {
         var item = Self.preferringDownload(record.item)
         item.startPosition = resumePosition(for: item)
         present(PlaybackSession(queue: [item], index: 0))
     }
+    #endif
 
     func play(_ episode: Episode, in series: Series, season: [Episode], fromStart: Bool = false) {
         guard let factory else { return }
@@ -229,11 +236,13 @@ extension AppModel {
         return category.map(isHiddenForKids) ?? false
     }
 
+    #if TESTFLIGHT_DOWNLOADS || DEBUG
     /// Downloads of locked or hidden categories are left out of the Downloads list, like their category.
     func isVisible(_ record: DownloadRecord) -> Bool {
         guard let categoryID = categoryID(of: record.item) else { return true }
         return !excludedCategoryIDs.contains(categoryID)
     }
+    #endif
 
     /// Plays what waited for the PIN (called once it was entered).
     func resumeLockedPlayback(_ pending: PendingPlayback) {
