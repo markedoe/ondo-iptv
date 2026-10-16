@@ -6,12 +6,14 @@ import IPTVCore
 extension PlayerController {
     func startHealthMonitoring() {
         healthTask?.cancel()
-        let start = Date()
+        let start = playbackStart
         healthTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(500))
                 guard let self, !Task.isCancelled else { return }
-                if let sample = self.currentSample(clock: Date().timeIntervalSince(start)) { self.record(sample) }
+                let clock = Date().timeIntervalSince(start)
+                self.noteStateChange(at: clock)
+                if let sample = self.currentSample(clock: clock) { self.record(sample) }
             }
         }
     }
@@ -23,11 +25,17 @@ extension PlayerController {
     func record(_ sample: PlaybackSample) {
         let buffer = engineBuffer
         if health.buffer != buffer { health.buffer = buffer }
+        let freezes = health.freezes.count
         health.add(sample)
+        noteTimings(sample, freezesBefore: freezes)
         guard activeEngine == .vlc else { return }
         #if canImport(VLCKitSPM)
-        // A provider whose stop used up the buffer gets a longer one from the next channel on.
-        if isLive { VLCBackend.liveBuffer.note(stall: health.currentStall, buffer: health.buffer) }
+        // A provider (or a connection) whose stop used up the buffer gets a longer one from the next item on.
+        if isLive && liveBufferSetting == 0 {
+            VLCBackend.liveBuffer.note(stall: health.currentStall, buffer: health.buffer)
+        } else if !isLive && vodBufferSetting == 0 {
+            VLCBackend.filmBuffer.note(stall: health.currentStall, buffer: health.buffer)
+        }
         #endif
         let frozen = state == .playing && health.isFrozen
         if frozen != freezeShown {

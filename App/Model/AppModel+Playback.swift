@@ -93,6 +93,8 @@ extension AppModel {
     private func configureMultiviewTile(_ session: PlaybackSession) {
         session.controller.autoRetry = settings.autoRetryStreams
         session.controller.enginePreference = settings.playerEngine
+        session.controller.liveBufferSetting = settings.liveBuffer
+        session.controller.vodBufferSetting = settings.vodBuffer
         session.controller.aspect = .fit
         session.controller.allowsPictureInPicture = false
     }
@@ -157,6 +159,18 @@ extension AppModel {
             if let movie = index.moviesByID[entry.reference.itemID] { play(movie) }
         case .series:
             guard let series = index.seriesByID[entry.reference.itemID] else { return }
+            if let item = quickEpisodeItem(entry, in: series) {
+                // Plays at once; the season follows for the next episodes.
+                let session = PlaybackSession(queue: [item], index: 0)
+                present(session)
+                Task { [weak session] in
+                    guard let factory, let details = await episodes(of: series),
+                          let season = details.seasons.first(where: { $0.episodes.contains { $0.id == entry.reference.episodeID } })
+                    else { return }
+                    session?.adoptQueue(season.episodes.map { Self.preferringDownload(factory.item(for: $0, in: series)) })
+                }
+                return
+            }
             Task {
                 guard let seriesDetails = await episodes(of: series) else { return }
                 for season in seriesDetails.seasons {
@@ -171,6 +185,19 @@ extension AppModel {
                 }
             }
         }
+    }
+
+    /// An episode of the history as an item, without asking the provider for the season: Xtream builds an episode's
+    /// address from its id and container, both kept in the history (older entries have no container: nil).
+    private func quickEpisodeItem(_ entry: HistoryEntry, in series: Series) -> PlaybackItem? {
+        guard let factory, let episodeID = entry.reference.episodeID, let container = entry.streamExtension,
+              let credentials = activePlaylist?.source.xtreamCredentials else { return nil }
+        let url = XtreamURLBuilder(credentials: credentials).episodeURL(episodeID: episodeID, containerExtension: container)
+        var item = factory.item(for: Episode(id: episodeID, title: "", season: 0, number: 0, streamURL: url), in: series)
+        item.subtitle = entry.subtitle
+        item = Self.preferringDownload(item)
+        item.startPosition = resumePosition(for: item)
+        return item
     }
 
     /// "Play last channel at launch".
@@ -226,6 +253,8 @@ extension AppModel {
         controller.preferredSubtitleLanguage = settings.preferredSubtitleLanguage
         controller.subtitlesEnabledByDefault = settings.subtitlesEnabled
         controller.enginePreference = settings.playerEngine
+        controller.liveBufferSetting = settings.liveBuffer
+        controller.vodBufferSetting = settings.vodBuffer
         controller.onProgress = { [weak self] item, position, duration in
             self?.recordProgress(item, position: position, duration: duration)
         }

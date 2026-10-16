@@ -84,7 +84,8 @@ public struct PlaybackHealth: Sendable {
     private var entries: [Entry] = []
     /// When the position stopped moving, while it should be playing: the start of the current stall.
     private var stillSince: PlaybackSample?
-    private var hasMoved = false
+    /// The picture moves forward since the stream started or since the last seek (`restart`).
+    public private(set) var hasMoved = false
 
     public init(buffer: Double = 0) {
         self.buffer = buffer
@@ -207,6 +208,11 @@ public struct PlaybackHealth: Sendable {
         return Freeze(
             start: start + buffer, duration: duration, receivedRate: receivedRate(from: start - 5, to: end), longestGap: longestGap(from: start - 3, to: end)
         )
+    }
+
+    /// The last `count` samples, oldest first (for a problem report).
+    public func recentSamples(_ count: Int) -> [PlaybackSample] {
+        entries.suffix(count).map(\.sample)
     }
 
     /// Pictures lost by the player, since the stream started.

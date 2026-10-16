@@ -23,11 +23,13 @@ struct PlayerView: View {
     @State private var panelTab: PlayerPanelTab?
     @State private var typedNumber = ""
     @State private var numberTask: Task<Void, Never>?
-    @State private var scrubPosition: Double?
+    @State private var isScrubbing = false
     @State private var isScrubbingLive = false
     @State private var showingSubtitleImporter = false
     @State private var explainingAirPlay = false
     @State private var searchingSubtitles = false
+    /// The text of the problem report being shown (More, Report a Problem).
+    @State private var problemReport: String?
     #if os(macOS)
     @State private var window = PlayerWindowState()
     #endif
@@ -179,6 +181,11 @@ struct PlayerView: View {
         .sheet(isPresented: $searchingSubtitles) {
             if let item = session.playingItem {
                 SubtitleSearchView(controller: controller, item: item)
+            }
+        }
+        .sheet(isPresented: Binding(get: { problemReport != nil }, set: { if !$0 { problemReport = nil } })) {
+            if let problemReport {
+                ProblemReportView(report: problemReport)
             }
         }
         .alert("AirPlay needs the Apple engine", isPresented: $explainingAirPlay) {
@@ -339,7 +346,9 @@ struct PlayerView: View {
             .accessibilityLabel(window.isFullScreen ? Text("Exit Full Screen") : Text("Full Screen"))
             .accessibilityIdentifier("playerFullScreen")
             #endif
-            PlayerMoreMenu(controller: controller, item: session.playingItem)
+            PlayerMoreMenu(controller: controller, item: session.playingItem) {
+                problemReport = controller.problemReport().text
+            }
         }
         .font(.title3)
     }
@@ -522,35 +531,9 @@ struct PlayerView: View {
     }
 
     private var seekBar: some View {
-        VStack(spacing: 6) {
-            Slider(
-                value: Binding(
-                    get: { scrubPosition ?? controller.currentTime },
-                    set: { scrubPosition = $0 }
-                ),
-                in: 0...max(controller.duration, 1)
-            ) { editing in
-                if editing {
-                    hideTask?.cancel()
-                } else if let position = scrubPosition {
-                    controller.seek(to: position)
-                    scrubPosition = nil
-                    scheduleHide()
-                }
-            }
-            .disabled(!controller.canSeek)
-            .tint(session.isTimeshifted ? .orange : .white)
-            HStack {
-                Text(Formatting.clock(scrubPosition ?? controller.currentTime))
-                Spacer()
-                if let end = controller.sleepTimerEnd {
-                    Label(Formatting.time(end), systemImage: "moon.zzz")
-                }
-                Spacer()
-                Text("-" + Formatting.clock(max(controller.duration - (scrubPosition ?? controller.currentTime), 0)))
-            }
-            .font(.caption.monospacedDigit())
-            .foregroundStyle(.white.opacity(0.8))
+        PlayerSeekBar(controller: controller, tint: session.isTimeshifted ? .orange : .white) { editing in
+            isScrubbing = editing
+            if editing { hideTask?.cancel() } else { scheduleHide() }
         }
     }
 
@@ -653,7 +636,7 @@ struct PlayerView: View {
         guard !Self.controlsStayVisible, !voiceOverEnabled else { return }
         hideTask = Task {
             try? await Task.sleep(for: .seconds(4))
-            guard !Task.isCancelled, controller.isPlaying, scrubPosition == nil, !isScrubbingLive, panelTab == nil else { return }
+            guard !Task.isCancelled, controller.isPlaying, !isScrubbing, !isScrubbingLive, panelTab == nil else { return }
             controlsVisible = false
             #if os(macOS)
             NSCursor.setHiddenUntilMouseMoves(true)  // nothing over the picture, the pointer included

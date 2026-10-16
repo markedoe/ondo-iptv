@@ -155,7 +155,7 @@ struct PlayerGestureLayer: View {
 
     private func endDrag(_ value: DragGesture.Value, size: CGSize) {
         if dragMode == .seek {
-            controller.seek(to: seekTarget(value, size: size))
+            controller.seek(to: seekTarget(value, size: size), tolerance: 1)
         }
         dragMode = nil
         scheduleHUDHide()

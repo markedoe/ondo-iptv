@@ -116,7 +116,7 @@ final class NowPlayingCenter {
         }
         center.changePlaybackPositionCommand.addTarget { [weak self] event in
             guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
-            self?.session?.controller.seek(to: event.positionTime)
+            self?.session?.controller.seek(to: event.positionTime, tolerance: 1)
             return .success
         }
     }

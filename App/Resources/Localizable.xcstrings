@@ -859,6 +859,46 @@
         }
       }
     },
+    "A longer buffer covers longer interruptions from the provider; the picture then takes longer to appear and to come back after a skip. Automatic adapts to the provider.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une mémoire tampon plus longue couvre des coupures plus longues du fournisseur ; l’image met alors plus de temps à apparaître et à revenir après un saut. Automatique s’adapte au fournisseur."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un búfer más largo cubre cortes más largos del proveedor; la imagen tarda entonces más en aparecer y en volver tras un salto. Automático se adapta al proveedor."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um buffer mais longo cobre interrupções mais longas do provedor; a imagem demora mais para aparecer e para voltar depois de um salto. Automático se adapta ao provedor."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缓冲越长，越能应对提供商较长的中断，但画面出现以及跳转后恢复所需的时间也会更长。“自动”会根据提供商进行调整。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يغطي التخزين المؤقت الأطول انقطاعات أطول من المزوّد، لكن الصورة تستغرق عندها وقتًا أطول للظهور وللعودة بعد القفز. يتكيّف الخيار التلقائي مع المزوّد."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लंबा बफ़र प्रदाता की लंबी रुकावटों को संभाल लेता है; लेकिन तब तस्वीर दिखने और आगे-पीछे जाने के बाद लौटने में ज़्यादा समय लगता है। स्वचालित विकल्प प्रदाता के अनुसार ढल जाता है।"
+          }
+        }
+      }
+    },
     "API Read Access Token": {
       "localizations": {
         "fr": {
@@ -3185,6 +3225,86 @@
         }
       }
     },
+    "Buffer for live TV": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémoire tampon du direct"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búfer de la TV en directo"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buffer da TV ao vivo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "直播缓冲"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التخزين المؤقت للبث المباشر"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लाइव टीवी के लिए बफ़र"
+          }
+        }
+      }
+    },
+    "Buffer for movies & series": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémoire tampon des films et séries"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Búfer de películas y series"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buffer de filmes e séries"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电影和剧集缓冲"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التخزين المؤقت للأفلام والمسلسلات"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िल्मों और सीरीज़ के लिए बफ़र"
+          }
+        }
+      }
+    },
     "Cache cleared.": {
       "localizations": {
         "fr": {
@@ -4661,6 +4781,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "किसी चैनल पर Control-क्लिक करें और “मेरी सूची में जोड़ें” चुनें; वह यहाँ दिखेगा।"
+          }
+        }
+      }
+    },
+    "Copy Report": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier le rapport"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar el informe"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar o relatório"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制报告"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نسخ التقرير"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "रिपोर्ट कॉपी करें"
           }
         }
       }
@@ -13505,42 +13665,82 @@
         }
       }
     },
-    "Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nIf the format is not supported, choose the other engine in Settings, Player Engine: the VLC-based engine plays MKV, AVI and TS. Reconnect dropped streams (Settings) restarts a live channel that cuts out.\n\nIf the picture freezes now and then, More, Stream Statistics shows what arrives, what the video needs and whether the freezes come from the network or the provider, or from the player. With the VLC-based engine, a live channel keeps 3 seconds in reserve; when a provider stops sending for longer, the next channels keep 6.": {
+    "Ondo playback report": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.\n\nSi le format n’est pas pris en charge, choisissez l’autre moteur dans Réglages, Moteur de lecture : le moteur basé sur VLC lit le MKV, l’AVI et le TS. Reconnecter les flux coupés (Réglages) relance une chaîne en direct qui coupe.\n\nSi l’image se fige par moments, Plus, Statistiques du flux montre ce qui arrive, ce dont la vidéo a besoin, et si les gels viennent du réseau ou du fournisseur, ou du lecteur. Avec le moteur basé sur VLC, une chaîne en direct garde 3 secondes d’avance ; quand un fournisseur s’arrête d’envoyer plus longtemps, les chaînes suivantes en gardent 6."
+            "value": "Rapport de lecture Ondo"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.\n\nSi el formato no es compatible, elige el otro motor en Ajustes, Motor de reproducción: el motor basado en VLC reproduce MKV, AVI y TS. Reconectar transmisiones cortadas (Ajustes) reanuda un canal en directo que se corta.\n\nSi la imagen se congela a ratos, Más, Estadísticas del flujo muestra lo que llega, lo que el vídeo necesita y si las congelaciones vienen de la red o del proveedor, o del reproductor. Con el motor basado en VLC, un canal en directo guarda 3 segundos de reserva; cuando un proveedor deja de enviar durante más tiempo, los canales siguientes guardan 6."
+            "value": "Informe de reproducción de Ondo"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.\n\nSe o formato não for compatível, escolha o outro motor em Ajustes, Motor do player: o motor baseado no VLC reproduz MKV, AVI e TS. Reconectar streams interrompidos (Ajustes) retoma um canal ao vivo que cai.\n\nSe a imagem trava de vez em quando, Mais, Estatísticas do stream mostra o que chega, o que o vídeo precisa e se os travamentos vêm da rede ou do provedor, ou do player. Com o motor baseado no VLC, um canal ao vivo guarda 3 segundos de reserva; quando um provedor para de enviar por mais tempo, os canais seguintes guardam 6."
+            "value": "Relatório de reprodução do Ondo"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果格式不受支持，请在“设置”>“播放引擎”中选择另一个引擎：基于 VLC 的引擎可播放 MKV、AVI 和 TS。“自动重连中断的流”（“设置”）会重新连接中断的直播频道。\n\n如果画面时不时卡住，“更多”>“流统计信息”会显示收到的数据、视频所需的数据，以及卡顿来自网络或提供商，还是来自播放器。使用基于 VLC 的引擎时，直播频道会预留 3 秒；如果提供商停止发送的时间更长，之后的频道会预留 6 秒。"
+            "value": "Ondo 播放报告"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يوضح Ondo ما إذا كانت المشكلة من المزوّد أو الشبكة أو الصيغة.\n\nإذا رفض المزوّد البث، فربما انتهى الاشتراك أو أن عدد الأجهزة التي تشاهد في الوقت نفسه كبير: يسمح معظم المزوّدين ببث أو اثنين في المرة الواحدة.\n\nإذا تعذّر الوصول إلى الخادم، تحقّق من اتصالك ثم أعد المحاولة.\n\nإذا كانت الصيغة غير مدعومة، اختر المحرك الآخر في الإعدادات، محرك التشغيل: يشغّل المحرك المبني على VLC ملفات MKV وAVI وTS. يعيد خيار إعادة الاتصال عند انقطاع البث (الإعدادات) تشغيل قناة مباشرة تنقطع.\n\nإذا تجمّدت الصورة أحيانًا، فإن المزيد، إحصاءات البث يعرض ما يصل وما يحتاجه الفيديو، وما إذا كانت التجمّدات سببها الشبكة أو المزوّد، أم المشغّل. مع المحرك المبني على VLC، تحتفظ القناة المباشرة باحتياطي 3 ثوانٍ؛ وعندما يتوقف المزوّد عن الإرسال لمدة أطول، تحتفظ القنوات التالية بـ 6 ثوانٍ."
+            "value": "تقرير تشغيل Ondo"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo बताता है कि समस्या प्रदाता, नेटवर्क या फ़ॉर्मैट में से किसकी है।\n\nअगर प्रदाता स्ट्रीम से मना करता है, तो हो सकता है सदस्यता खत्म हो गई हो या एक साथ बहुत सारे डिवाइस देख रहे हों: ज़्यादातर प्रदाता एक समय में एक या दो स्ट्रीम की अनुमति देते हैं।\n\nअगर सर्वर तक नहीं पहुँचा जा सकता, तो अपना कनेक्शन जाँचें और फिर कोशिश करें।\n\nअगर फ़ॉर्मैट समर्थित नहीं है, तो सेटिंग्स, प्लेयर इंजन में दूसरा इंजन चुनें: VLC पर आधारित इंजन MKV, AVI और TS चलाता है। टूटी स्ट्रीम फिर से कनेक्ट करें (सेटिंग्स) कटने वाले लाइव चैनल को फिर शुरू करता है।\n\nअगर तस्वीर बीच-बीच में रुक जाती है, तो ज़्यादा, स्ट्रीम आँकड़े दिखाता है कि क्या आ रहा है, वीडियो को क्या चाहिए, और रुकावटें नेटवर्क या प्रदाता से हैं या प्लेयर से। VLC पर आधारित इंजन के साथ, लाइव चैनल 3 सेकंड का रिज़र्व रखता है; जब कोई प्रदाता इससे ज़्यादा देर तक भेजना बंद कर दे, तो अगले चैनल 6 सेकंड रखते हैं।"
+            "value": "Ondo प्लेबैक रिपोर्ट"
+          }
+        }
+      }
+    },
+    "Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nIf the format is not supported, choose the other engine in Settings, Player Engine: the VLC-based engine plays MKV, AVI and TS. Reconnect dropped streams (Settings) restarts a live channel that cuts out.\n\nIf the picture freezes now and then, More, Stream Statistics shows what arrives, what the video needs and whether the freezes come from the network or the provider, or from the player. With the VLC-based engine, a live channel keeps 3 seconds in reserve and a film 1 second, so that they start and seek fast; when the provider stops sending for longer, the next ones keep 6 and 5. Settings, Buffer for live TV and Buffer for movies & series, set a fixed length instead.\n\nMore, Report a Problem… shows a report of the playback (start and seek times, freezes, statistics; no address, login or title) to send by mail or message, or in a GitHub issue.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo indique si le problème vient du fournisseur, du réseau ou du format.\n\nSi le fournisseur refuse le flux, l’abonnement a peut-être expiré ou trop d’appareils regardent en même temps : la plupart des fournisseurs autorisent un ou deux flux à la fois.\n\nSi le serveur est injoignable, vérifiez votre connexion puis réessayez.\n\nSi le format n’est pas pris en charge, choisissez l’autre moteur dans Réglages, Moteur de lecture : le moteur basé sur VLC lit le MKV, l’AVI et le TS. Reconnecter les flux coupés (Réglages) relance une chaîne en direct qui coupe.\n\nSi l’image se fige par moments, Plus, Statistiques du flux montre ce qui arrive, ce dont la vidéo a besoin, et si les gels viennent du réseau ou du fournisseur, ou du lecteur. Avec le moteur basé sur VLC, une chaîne en direct garde 3 secondes d’avance et un film 1 seconde, pour démarrer et sauter vite ; quand le fournisseur s’arrête d’envoyer plus longtemps, les suivants en gardent 6 et 5. Réglages, Mémoire tampon du direct et Mémoire tampon des films et séries, fixent une durée à la place.\n\nPlus, Signaler un problème… montre un rapport de la lecture (temps de démarrage et de saut, gels, statistiques ; ni adresse, ni identifiant, ni titre) à envoyer par mail ou message, ou dans un ticket GitHub."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.\n\nSi el formato no es compatible, elige el otro motor en Ajustes, Motor de reproducción: el motor basado en VLC reproduce MKV, AVI y TS. Reconectar transmisiones cortadas (Ajustes) reanuda un canal en directo que se corta.\n\nSi la imagen se congela a ratos, Más, Estadísticas del flujo muestra lo que llega, lo que el vídeo necesita y si las congelaciones vienen de la red o del proveedor, o del reproductor. Con el motor basado en VLC, un canal en directo guarda 3 segundos de reserva y una película 1 segundo, para empezar y saltar rápido; cuando el proveedor deja de enviar durante más tiempo, los siguientes guardan 6 y 5. Ajustes, Búfer de la TV en directo y Búfer de películas y series, fijan una duración en su lugar.\n\nMás, Informar de un problema… muestra un informe de la reproducción (tiempos de inicio y de salto, congelaciones, estadísticas; sin dirección, inicio de sesión ni título) para enviarlo por correo o mensaje, o en una incidencia de GitHub."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.\n\nSe o formato não for compatível, escolha o outro motor em Ajustes, Motor do player: o motor baseado no VLC reproduz MKV, AVI e TS. Reconectar streams interrompidos (Ajustes) retoma um canal ao vivo que cai.\n\nSe a imagem trava de vez em quando, Mais, Estatísticas do stream mostra o que chega, o que o vídeo precisa e se os travamentos vêm da rede ou do provedor, ou do player. Com o motor baseado no VLC, um canal ao vivo guarda 3 segundos de reserva e um filme 1 segundo, para começar e saltar rápido; quando o provedor para de enviar por mais tempo, os seguintes guardam 6 e 5. Ajustes, Buffer da TV ao vivo e Buffer de filmes e séries, definem uma duração fixa no lugar.\n\nMais, Relatar um problema… mostra um relatório da reprodução (tempos de início e de salto, travamentos, estatísticas; sem endereço, login nem título) para enviar por e-mail ou mensagem, ou em um issue do GitHub."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果格式不受支持，请在“设置”>“播放引擎”中选择另一个引擎：基于 VLC 的引擎可播放 MKV、AVI 和 TS。“自动重连中断的流”（“设置”）会重新连接中断的直播频道。\n\n如果画面时不时卡住，“更多”>“流统计信息”会显示收到的数据、视频所需的数据，以及卡顿来自网络或提供商，还是来自播放器。使用基于 VLC 的引擎时，直播频道会预留 3 秒，电影预留 1 秒，以便快速开始和跳转；如果提供商停止发送的时间更长，之后的内容会分别预留 6 秒和 5 秒。在“设置”中，“直播缓冲”和“电影和剧集缓冲”可改为固定时长。\n\n“更多”>“报告问题…”会显示本次播放的报告（启动和跳转时间、卡顿、统计信息；不含地址、登录信息或标题），可通过邮件或消息发送，或提交到 GitHub 问题中。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يوضح Ondo ما إذا كانت المشكلة من المزوّد أو الشبكة أو الصيغة.\n\nإذا رفض المزوّد البث، فربما انتهى الاشتراك أو أن عدد الأجهزة التي تشاهد في الوقت نفسه كبير: يسمح معظم المزوّدين ببث أو اثنين في المرة الواحدة.\n\nإذا تعذّر الوصول إلى الخادم، تحقّق من اتصالك ثم أعد المحاولة.\n\nإذا كانت الصيغة غير مدعومة، اختر المحرك الآخر في الإعدادات، محرك التشغيل: يشغّل المحرك المبني على VLC ملفات MKV وAVI وTS. يعيد خيار إعادة الاتصال عند انقطاع البث (الإعدادات) تشغيل قناة مباشرة تنقطع.\n\nإذا تجمّدت الصورة أحيانًا، فإن المزيد، إحصاءات البث يعرض ما يصل وما يحتاجه الفيديو، وما إذا كانت التجمّدات سببها الشبكة أو المزوّد، أم المشغّل. مع المحرك المبني على VLC، تحتفظ القناة المباشرة باحتياطي 3 ثوانٍ والفيلم بثانية واحدة، ليبدأ التشغيل والقفز بسرعة؛ وعندما يتوقف المزوّد عن الإرسال لمدة أطول، يحتفظ ما بعدها بـ 6 و5 ثوانٍ. في الإعدادات، يحدّد خيارا التخزين المؤقت للبث المباشر والتخزين المؤقت للأفلام والمسلسلات مدة ثابتة بدلًا من ذلك.\n\nالمزيد، الإبلاغ عن مشكلة… يعرض تقريرًا عن التشغيل (أوقات البدء والقفز، والتجمّدات، والإحصاءات؛ دون عنوان بث أو بيانات دخول أو عنوان عمل) لإرساله بالبريد أو برسالة، أو في بلاغ على GitHub."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo बताता है कि समस्या प्रदाता, नेटवर्क या फ़ॉर्मैट में से किसकी है।\n\nअगर प्रदाता स्ट्रीम से मना करता है, तो हो सकता है सदस्यता खत्म हो गई हो या एक साथ बहुत सारे डिवाइस देख रहे हों: ज़्यादातर प्रदाता एक समय में एक या दो स्ट्रीम की अनुमति देते हैं।\n\nअगर सर्वर तक नहीं पहुँचा जा सकता, तो अपना कनेक्शन जाँचें और फिर कोशिश करें।\n\nअगर फ़ॉर्मैट समर्थित नहीं है, तो सेटिंग्स, प्लेयर इंजन में दूसरा इंजन चुनें: VLC पर आधारित इंजन MKV, AVI और TS चलाता है। टूटी स्ट्रीम फिर से कनेक्ट करें (सेटिंग्स) कटने वाले लाइव चैनल को फिर शुरू करता है।\n\nअगर तस्वीर बीच-बीच में रुक जाती है, तो ज़्यादा, स्ट्रीम आँकड़े दिखाता है कि क्या आ रहा है, वीडियो को क्या चाहिए, और रुकावटें नेटवर्क या प्रदाता से हैं या प्लेयर से। VLC पर आधारित इंजन के साथ, लाइव चैनल 3 सेकंड और फ़िल्म 1 सेकंड का रिज़र्व रखती है, ताकि शुरू होना और आगे-पीछे जाना तेज़ हो; जब प्रदाता इससे ज़्यादा देर तक भेजना बंद कर दे, तो आगे वाले 6 और 5 सेकंड रखते हैं। सेटिंग्स में, लाइव टीवी के लिए बफ़र और फ़िल्मों और सीरीज़ के लिए बफ़र इसकी जगह एक तय अवधि चुनते हैं।\n\nज़्यादा, समस्या की रिपोर्ट करें… प्लेबैक की एक रिपोर्ट दिखाता है (शुरू होने और आगे-पीछे जाने का समय, रुकावटें, आँकड़े; कोई पता, लॉगिन या शीर्षक नहीं) जिसे ईमेल या संदेश से, या GitHub इश्यू में भेजा जा सकता है।"
           }
         }
       }
@@ -13821,6 +14021,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "टीवी गाइड में कोई कार्यक्रम खोलें और याद दिलाएँ चुनें।"
+          }
+        }
+      }
+    },
+    "Open an Issue on GitHub": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir un ticket sur GitHub"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir una incidencia en GitHub"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir um issue no GitHub"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 GitHub 上提交问题"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح بلاغ على GitHub"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub पर इश्यू खोलें"
           }
         }
       }
@@ -15181,6 +15421,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "गोपनीयता"
+          }
+        }
+      }
+    },
+    "Problem Report": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapport de problème"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informe del problema"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relatório do problema"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "问题报告"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تقرير المشكلة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "समस्या रिपोर्ट"
           }
         }
       }
@@ -17147,6 +17427,46 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Report a Problem…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signaler un problème…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informar de un problema…"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relatar um problema…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "报告问题…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإبلاغ عن مشكلة…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "समस्या की रिपोर्ट करें…"
           }
         }
       }
@@ -21027,6 +21347,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "इस प्रोवाइडर को कस्टम हेडर चाहिए, जो Chromecast नहीं भेज सकता। हो सकता है स्ट्रीम न चले।"
+          }
+        }
+      }
+    },
+    "This report helps find the cause of a playback problem: the start and seek times, the freezes and the player’s statistics for this playback, with the app, the system and the player settings. It holds no stream address, login or title. GitHub issues are public.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce rapport aide à trouver la cause d’un problème de lecture : les temps de démarrage et de saut, les gels et les statistiques du lecteur pour cette lecture, avec l’app, le système et les réglages du lecteur. Il ne contient ni adresse de flux, ni identifiant, ni titre. Les tickets GitHub sont publics."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este informe ayuda a encontrar la causa de un problema de reproducción: los tiempos de inicio y de salto, las congelaciones y las estadísticas del reproductor de esta reproducción, con la app, el sistema y los ajustes del reproductor. No contiene ninguna dirección de flujo, inicio de sesión ni título. Las incidencias de GitHub son públicas."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este relatório ajuda a encontrar a causa de um problema de reprodução: os tempos de início e de salto, os travamentos e as estatísticas do player desta reprodução, com o app, o sistema e os ajustes do player. Ele não contém endereço de stream, login nem título. Os issues do GitHub são públicos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此报告有助于找出播放问题的原因：本次播放的启动和跳转时间、卡顿及播放器统计信息，以及应用、系统和播放器设置。它不包含任何流地址、登录信息或标题。GitHub 上的问题是公开的。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يساعد هذا التقرير على معرفة سبب مشكلة في التشغيل: أوقات البدء والقفز، والتجمّدات، وإحصاءات المشغّل لهذا التشغيل، مع التطبيق والنظام وإعدادات المشغّل. لا يحتوي على أي عنوان بث أو بيانات دخول أو عنوان عمل. البلاغات على GitHub عامة."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह रिपोर्ट प्लेबैक समस्या का कारण खोजने में मदद करती है: इस प्लेबैक के शुरू होने और आगे-पीछे जाने का समय, रुकावटें और प्लेयर के आँकड़े, साथ में ऐप, सिस्टम और प्लेयर सेटिंग्स। इसमें कोई स्ट्रीम पता, लॉगिन या शीर्षक नहीं है। GitHub पर इश्यू सार्वजनिक होते हैं।"
           }
         }
       }

@@ -86,6 +86,9 @@ final class PlayerController: NSObject {
     @ObservationIgnored var preferredSubtitleLanguage: String?
     @ObservationIgnored var subtitlesEnabledByDefault = false
     @ObservationIgnored var enginePreference: PlayerEngine = .automatic
+    /// Buffer settings in seconds, 0 for automatic (`PlaybackBuffer`).
+    @ObservationIgnored var liveBufferSetting = 0
+    @ObservationIgnored var vodBufferSetting = 0
     /// Set when AVPlayer failed on the current item and VLC takes over.
     @ObservationIgnored private var forceVLCForItem = false
     /// Freezes and lost pictures of this playback, explained (sampled twice a second, PlayerController+Health).
@@ -95,6 +98,15 @@ final class PlayerController: NSObject {
     @ObservationIgnored var healthTask: Task<Void, Never>?
     /// The spinner is shown for a freeze VLC did not report (PlayerController+Health).
     @ObservationIgnored var freezeShown = false
+    /// What happened during this playback, for a problem report, and the waits being timed (PlayerController+Report).
+    @ObservationIgnored var log = PlaybackLog()
+    @ObservationIgnored var playbackStart = Date()
+    @ObservationIgnored var startWatch = MovementWatch()
+    @ObservationIgnored var seekWatch = MovementWatch()
+    @ObservationIgnored var loggedState = ""
+    /// Scrubbing: the latest position asked for, and whether a seek is still on its way (PlayerController+Scrub).
+    @ObservationIgnored var scrubTarget: Double?
+    @ObservationIgnored var scrubInFlight = false
     #if canImport(VLCKitSPM)
     @ObservationIgnored var vlcBackend: VLCBackend?
     @ObservationIgnored private var vlcViewSize: CGSize = .zero
@@ -104,8 +116,8 @@ final class PlayerController: NSObject {
     @ObservationIgnored private weak var playerLayer: AVPlayerLayer?
     @ObservationIgnored private var pipController: AVPictureInPictureController?
     @ObservationIgnored private var pipPossibleObservation: NSKeyValueObservation?
-    @ObservationIgnored private var candidates: [URL] = []
-    @ObservationIgnored private var candidateIndex = 0
+    @ObservationIgnored private(set) var candidates: [URL] = []
+    @ObservationIgnored private(set) var candidateIndex = 0
     @ObservationIgnored private var retries = 0
     @ObservationIgnored private var statusObservation: NSKeyValueObservation?
     @ObservationIgnored private var timeControlObservation: NSKeyValueObservation?
@@ -194,6 +206,7 @@ final class PlayerController: NSObject {
         rate = 1
         health = PlaybackHealth()
         freezeShown = false
+        startLog(for: item)
         // A new item plays; the automatic fallbacks below keep a pause the viewer made while it opened.
         playsWhenReady = true
         loadCurrentCandidate()
@@ -220,6 +233,7 @@ final class PlayerController: NSObject {
         }
         stopVLC()
         activeEngine = .apple
+        noteAttempt(url, engine: "AVPlayer")
         var options: [String: Any] = [:]
         let headers = item.headers.dictionary
         if !headers.isEmpty {
@@ -227,7 +241,9 @@ final class PlayerController: NSObject {
         }
         let asset = AVURLAsset(url: url, options: options)
         let playerItem = AVPlayerItem(asset: asset)
-        if item.isLive {
+        if let seconds = [item.isLive ? liveBufferSetting : vodBufferSetting].first(where: { $0 > 0 }) {
+            playerItem.preferredForwardBufferDuration = Double(seconds)
+        } else if item.isLive {
             // Keep a small forward buffer on live streams to stay close to real time.
             playerItem.preferredForwardBufferDuration = 8
         }
@@ -371,6 +387,7 @@ final class PlayerController: NSObject {
 
     func retry() {
         guard item != nil else { return }
+        note("reconnect")
         keepPositionForFallback()
         retries = 0
         candidateIndex = 0
@@ -415,8 +432,11 @@ final class PlayerController: NSObject {
         }
     }
 
-    func seek(to seconds: Double) {
+    /// Moves to `seconds`. A `tolerance` lets AVPlayer stop on a nearby key frame instead of decoding up to the exact
+    /// picture: skips and the end of a scrub use one second, which the viewer does not notice.
+    func seek(to seconds: Double, tolerance: Double = 0) {
         let target = max(0, duration > 0 ? min(seconds, duration - 1) : seconds)
+        noteSeek(from: currentTime, to: target)
         currentTime = target
         // The wait until the picture moves again is not a freeze.
         health.restart()
@@ -431,12 +451,13 @@ final class PlayerController: NSObject {
             return
         }
         pendingStart = nil
-        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
+        let margin = tolerance > 0 ? CMTime(seconds: tolerance, preferredTimescale: 600) : .zero
+        player.seek(to: CMTime(seconds: target, preferredTimescale: 600), toleranceBefore: margin, toleranceAfter: margin) { [weak self] _ in
             Task { @MainActor in self?.updateNowPlaying() }
         }
     }
 
-    private func updateNowPlaying() {
+    func updateNowPlaying() {
         if NowPlayingCenter.shared.isCurrent(self) { NowPlayingCenter.shared.refresh() }
     }
 }
@@ -448,7 +469,7 @@ extension PlayerController {
             return
         }
         guard canSeek else { return }
-        seek(to: currentTime + seconds)
+        seek(to: currentTime + seconds, tolerance: 1)
     }
 
     func seekToLiveEdge() {
@@ -501,7 +522,7 @@ extension PlayerController {
         if seconds.isFinite { currentTime = seconds }
         if let playerItem = player.currentItem {
             let total = playerItem.duration.seconds
-            if total.isFinite && total > 0 { duration = total }
+            if total.isFinite && total > 0 && total != duration { duration = total }
             // Only true live streams (indefinite duration) have a DVR window; a file served as a channel does not.
             if isLive && playerItem.duration.isIndefinite {
                 updateLiveWindow(playerItem)
@@ -759,40 +780,17 @@ extension PlayerController {
         }
     }
 
+    /// Picture in Picture started or stopped (PlayerController+PictureInPicture).
+    func pictureInPictureChanged(_ active: Bool) {
+        isPictureInPictureActive = active
+        onPictureInPictureChange?(active)
+    }
+
     /// A film that fails after a while restarts where it was, not at the position it was opened at.
     private func keepPositionForFallback() {
         guard var current = item, !current.isLive, pendingStart == nil, currentTime > 5 else { return }
         current.startPosition = currentTime
         item = current
-    }
-}
-
-extension PlayerController: AVPictureInPictureControllerDelegate {
-    nonisolated func pictureInPictureControllerDidStartPictureInPicture(_ controller: AVPictureInPictureController) {
-        Task { @MainActor in
-            self.isPictureInPictureActive = true
-            self.onPictureInPictureChange?(true)
-        }
-    }
-
-    nonisolated func pictureInPictureControllerDidStopPictureInPicture(_ controller: AVPictureInPictureController) {
-        Task { @MainActor in
-            self.isPictureInPictureActive = false
-            self.onPictureInPictureChange?(false)
-        }
-    }
-
-    nonisolated func pictureInPictureController(
-        _ controller: AVPictureInPictureController,
-        restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void
-    ) {
-        Task { @MainActor in
-            if let restore = self.restoreUserInterface {
-                restore(completionHandler)
-            } else {
-                completionHandler(true)
-            }
-        }
     }
 }
 
@@ -901,7 +899,7 @@ extension PlayerController {
             pendingStart = nil
         }
         currentTime = current
-        if total > 0 { duration = total }
+        if total > 0 && total != duration { duration = total }
         if state == .loading { state = .playing }
         reportProgress(force: false)
     }
@@ -935,7 +933,11 @@ extension PlayerController {
         pendingStart = Self.resumeStart(for: item)
         vlcStartSeekSent = false
         if let pendingStart { currentTime = pendingStart }
-        backend.load(url: url, headers: item.headers, startPosition: item.startPosition, isLive: item.isLive, autoplay: playsWhenReady)
+        let caching = item.isLive
+            ? PlaybackBuffer.seconds(setting: liveBufferSetting, automatic: VLCBackend.liveBuffer.seconds)
+            : PlaybackBuffer.seconds(setting: vodBufferSetting, automatic: VLCBackend.filmBuffer.seconds)
+        noteAttempt(url, engine: "VLC, buffer \(caching.formatted()) s")
+        backend.load(url: url, headers: item.headers, startPosition: item.startPosition, isLive: item.isLive, caching: caching, autoplay: playsWhenReady)
         backend.setRate(item.isLive ? 1 : rate)
         backend.setMuted(isMuted)
         // VLC reports nothing until it plays.

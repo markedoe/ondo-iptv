@@ -83,6 +83,9 @@ struct AppSettings: Codable, Equatable {
     var preferredSubtitleLanguage: String?
     var subtitlesEnabled = false
     var playerEngine: PlayerEngine = .automatic
+    /// Seconds of buffer for live channels and for films and episodes; 0 is automatic (`PlaybackBuffer`).
+    var liveBuffer = 0
+    var vodBuffer = 0
     var activeProfileID: UUID?
     var landscapeForLive = false
     var landscapeForVOD = true
@@ -120,6 +123,8 @@ struct AppSettings: Codable, Equatable {
         preferredSubtitleLanguage = try? c.decodeIfPresent(String.self, forKey: .preferredSubtitleLanguage)
         subtitlesEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .subtitlesEnabled)) ?? d.subtitlesEnabled
         playerEngine = (try? c.decodeIfPresent(PlayerEngine.self, forKey: .playerEngine)) ?? d.playerEngine
+        liveBuffer = (try? c.decodeIfPresent(Int.self, forKey: .liveBuffer)) ?? d.liveBuffer
+        vodBuffer = (try? c.decodeIfPresent(Int.self, forKey: .vodBuffer)) ?? d.vodBuffer
         activeProfileID = try? c.decodeIfPresent(UUID.self, forKey: .activeProfileID)
         landscapeForLive = (try? c.decodeIfPresent(Bool.self, forKey: .landscapeForLive)) ?? d.landscapeForLive
         landscapeForVOD = (try? c.decodeIfPresent(Bool.self, forKey: .landscapeForVOD)) ?? d.landscapeForVOD

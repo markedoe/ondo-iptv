@@ -60,6 +60,14 @@ final class PlaybackSession: Identifiable {
         return previousIndex != index && queue.indices.contains(previousIndex)
     }
 
+    /// The full queue (the whole season) once known, around the item already playing: nothing restarts.
+    func adoptQueue(_ items: [PlaybackItem]) {
+        guard let current, let position = items.firstIndex(where: { $0.id == current.id }) else { return }
+        queue = items
+        index = position
+        previousIndex = nil
+    }
+
     /// Starts the current item, or directly a programme of the live channel when `program` is given.
     func start(from program: EPGProgram? = nil) {
         guard let current else { return }

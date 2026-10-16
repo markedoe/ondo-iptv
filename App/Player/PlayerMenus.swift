@@ -81,6 +81,7 @@ struct PlayerMoreMenu: View {
     @Environment(AppModel.self) private var model
     let controller: PlayerController
     let item: PlaybackItem?
+    var onReportProblem: () -> Void = {}
 
     var body: some View {
         Menu {
@@ -116,6 +117,7 @@ struct PlayerMoreMenu: View {
                 Text("Video: \(String(Int(size.width)))×\(String(Int(size.height)))")
             }
             Toggle("Stream Statistics", isOn: Binding(get: { controller.showsStatistics }, set: { controller.showsStatistics = $0 }))
+            Button("Report a Problem…", action: onReportProblem)
             // The address carries the provider login: not under parental control (it could re-add the playlist).
             if let item, !model.isParentalControlActive {
                 Button("Copy Stream URL") { Pasteboard.copy(item.streamURL.absoluteString) }

@@ -79,6 +79,17 @@ struct SettingsView: View {
     }
 
     /// The language Ondo shows itself in, in that language ("Français").
+    /// Automatic, then the buffer lengths in seconds (`PlaybackBuffer`).
+    private var bufferChoices: some View {
+        ForEach(PlaybackBuffer.choices, id: \.self) { seconds in
+            if seconds == 0 {
+                Text("Automatic").tag(seconds)
+            } else {
+                Text(verbatim: Duration.seconds(seconds).formatted(.units(allowed: [.seconds], width: .abbreviated))).tag(seconds)
+            }
+        }
+    }
+
     private static var appLanguageName: String {
         let code = Bundle.main.preferredLocalizations.first ?? "en"
         return Locale.current.localizedString(forIdentifier: code)?.capitalized(with: Locale.current) ?? code
@@ -142,7 +153,7 @@ struct SettingsView: View {
                 }
             }
 
-            Section("Player") {
+            Section {
                 if PlayerEngine.isVLCAvailable {
                     Picker(selection: binding(\.playerEngine)) {
                         ForEach(PlayerEngine.allCases) { engine in
@@ -151,6 +162,16 @@ struct SettingsView: View {
                     } label: {
                         Label("Player Engine", systemImage: "cpu")
                     }
+                }
+                Picker(selection: binding(\.liveBuffer)) {
+                    bufferChoices
+                } label: {
+                    Label("Buffer for live TV", systemImage: "gauge.with.dots.needle.33percent")
+                }
+                Picker(selection: binding(\.vodBuffer)) {
+                    bufferChoices
+                } label: {
+                    Label("Buffer for movies & series", systemImage: "gauge.with.dots.needle.33percent")
                 }
                 Picker(selection: binding(\.defaultAspect)) {
                     ForEach(VideoAspect.allCases) { aspect in
@@ -179,6 +200,10 @@ struct SettingsView: View {
                     Label("Landscape for movies & series", systemImage: "rotate.right")
                 }
                 #endif
+            } header: {
+                Text("Player")
+            } footer: {
+                Text("A longer buffer covers longer interruptions from the provider; the picture then takes longer to appear and to come back after a skip. Automatic adapts to the provider.")
             }
 
             Section {

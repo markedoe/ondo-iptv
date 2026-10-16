@@ -82,6 +82,9 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
     /// Seconds. Zero for live channels.
     public var position: Double
     public var duration: Double
+    /// The container of an episode ("mkv"…): with the episode id, enough to play it again at once, before the
+    /// season is fetched from the provider.
+    public var streamExtension: String?
 
     public init(
         reference: MediaReference,
@@ -90,7 +93,8 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
         imageURL: URL? = nil,
         lastWatchedAt: Date = Date(),
         position: Double = 0,
-        duration: Double = 0
+        duration: Double = 0,
+        streamExtension: String? = nil
     ) {
         self.reference = reference
         self.title = title
@@ -99,6 +103,7 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
         self.lastWatchedAt = lastWatchedAt
         self.position = position
         self.duration = duration
+        self.streamExtension = streamExtension
     }
 
     public var progress: Double {

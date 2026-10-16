@@ -95,8 +95,12 @@ extension HelpTopic {
 
             If the picture freezes now and then, More, Stream Statistics shows what arrives, what the video needs \
             and whether the freezes come from the network or the provider, or from the player. With the VLC-based \
-            engine, a live channel keeps 3 seconds in reserve; when a provider stops sending for longer, the next \
-            channels keep 6.
+            engine, a live channel keeps 3 seconds in reserve and a film 1 second, so that they start and seek fast; \
+            when the provider stops sending for longer, the next ones keep 6 and 5. Settings, Buffer for live TV and \
+            Buffer for movies & series, set a fixed length instead.
+
+            More, Report a Problem… shows a report of the playback (start and seek times, freezes, statistics; no \
+            address, login or title) to send by mail or message, or in a GitHub issue.
             """
         ),
         HelpTopic(

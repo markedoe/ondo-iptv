@@ -26,8 +26,9 @@ enum PlayerEngine: String, Codable, CaseIterable, Identifiable {
         #endif
     }
 
-    /// Containers AVFoundation cannot open.
-    static let vlcOnlyExtensions: Set<String> = ["mkv", "avi", "wmv", "flv", "divx", "xvid", "mpg", "mpeg", "webm", "ogv", "ogg", "rmvb", "rm", "3gp", "vob", "asf", "m2ts", "mts"]
+    /// Containers AVFoundation cannot open. Raw MPEG-TS over HTTP (Xtream's `.ts` output) is one: trying AVPlayer
+    /// first cost a failed attempt, a second or more, on every channel change.
+    static let vlcOnlyExtensions: Set<String> = ["ts", "mkv", "avi", "wmv", "flv", "divx", "xvid", "mpg", "mpeg", "webm", "ogv", "ogg", "rmvb", "rm", "3gp", "vob", "asf", "m2ts", "mts"]
 
     static func prefersVLC(for url: URL) -> Bool {
         vlcOnlyExtensions.contains(url.pathExtension.lowercased())
@@ -61,10 +62,10 @@ final class VLCBackend: NSObject {
     var onTime: ((Double, Double) -> Void)?
     private var bridge: VLCDelegateBridge?
     private weak var drawable: AnyObject?
-    /// Seconds of a live channel VLC buffers, for every channel of this run of the app (see `LiveBufferPolicy`).
-    static var liveBuffer = LiveBufferPolicy()
-    /// Seconds of a film VLC buffers: on a fast connection it fills at once, on a slow one it covers more.
-    static let vodCaching = 5.0
+    /// Seconds VLC buffers when the buffer setting is automatic, for every channel and film of this run of the app
+    /// (see `BufferPolicy`).
+    static var liveBuffer = BufferPolicy.live
+    static var filmBuffer = BufferPolicy.film
     /// The network caching of the current media.
     private(set) var cachingSeconds = 0.0
     /// The last state reported. VLC posts "buffering" several times a second while it plays (each time its cache
@@ -85,7 +86,8 @@ final class VLCBackend: NSObject {
         player.drawable = view
     }
 
-    func load(url: URL, headers: HTTPHeaders, startPosition: Double?, isLive: Bool, autoplay: Bool = true) {
+    /// Opens `url`, buffering `caching` seconds before the picture shows (and after a seek).
+    func load(url: URL, headers: HTTPHeaders, startPosition: Double?, isLive: Bool, caching: Double, autoplay: Bool = true) {
         let media = VLCMedia(url: url)
         if let userAgent = headers.userAgent, !userAgent.isEmpty {
             media.addOption(":http-user-agent=\(userAgent)")
@@ -93,7 +95,7 @@ final class VLCBackend: NSObject {
         if let referrer = headers.referrer, !referrer.isEmpty {
             media.addOption(":http-referrer=\(referrer)")
         }
-        cachingSeconds = isLive ? Self.liveBuffer.seconds : Self.vodCaching
+        cachingSeconds = caching
         media.addOption(":network-caching=\(Int(cachingSeconds * 1000))")
         if let startPosition, startPosition > 5, !isLive {
             media.addOption(":start-time=\(Int(startPosition))")

@@ -154,13 +154,15 @@ extension AppModel {
     }
 
     func recordStart(_ item: PlaybackItem) {
+        let container = item.streamURL.pathExtension.lowercased()
         updateLibrary {
             $0.recordPlayback(HistoryEntry(
                 reference: item.reference,
                 title: item.title,
                 subtitle: item.subtitle,
                 imageURL: item.artworkURL,
-                position: item.isLive ? 0 : (item.startPosition ?? 0)
+                position: item.isLive ? 0 : (item.startPosition ?? 0),
+                streamExtension: item.reference.episodeID == nil || container.isEmpty ? nil : container
             ))
         }
     }
