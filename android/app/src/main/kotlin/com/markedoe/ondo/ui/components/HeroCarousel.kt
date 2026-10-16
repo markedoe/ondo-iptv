@@ -24,7 +24,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -36,7 +35,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,6 +76,8 @@ fun HeroCarousel(
     onToggleMyList: (ShowcaseItem) -> Unit,
     modifier: Modifier = Modifier,
     autoAdvance: Boolean = true,
+    /** The title whose Play is getting ready: its button shows progress. */
+    preparingKey: String? = null,
     topBar: @Composable () -> Unit = {},
 ) {
     val pager = rememberPagerState { pages.size }
@@ -95,12 +95,7 @@ fun HeroCarousel(
         HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { index ->
             val page = pages[index]
             Box(Modifier.fillMaxWidth().height(heroHeight)) {
-                Artwork(
-                    url = page.item.posterUrl,
-                    title = page.item.title,
-                    modifier = Modifier.fillMaxSize().blur(40.dp),
-                    showsTitleFallback = false,
-                )
+                BlurredPoster(url = page.item.posterUrl, title = page.item.title, modifier = Modifier.fillMaxSize())
                 Box(
                     Modifier
                         .fillMaxSize()
@@ -157,7 +152,7 @@ fun HeroCarousel(
                             contentPadding = PaddingValues(horizontal = 26.dp, vertical = 12.dp),
                             modifier = Modifier.testTag(if (index == pager.currentPage) "heroPlay" else "heroPlay$index"),
                         ) {
-                            Icon(Icons.Rounded.PlayArrow, contentDescription = null)
+                            PlayIcon(page.item.key == preparingKey, Modifier.size(24.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(stringResource(if (page.resumable) R.string.resume else R.string.play), fontWeight = FontWeight.SemiBold)
                         }

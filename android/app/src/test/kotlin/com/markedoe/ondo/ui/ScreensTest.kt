@@ -1,10 +1,15 @@
 package com.markedoe.ondo.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -40,6 +45,7 @@ import com.markedoe.ondo.ui.screens.CollectionScreen
 import com.markedoe.ondo.ui.screens.CollectionUiState
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.GuideActions
+import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.GuideRow
 import com.markedoe.ondo.ui.screens.GuideScreen
 import com.markedoe.ondo.ui.screens.GuideUiState
@@ -287,6 +293,26 @@ class ScreensTest {
         compose.onNodeWithTag("home").performScrollToNode(hasText("Live TV"))
         compose.onNodeWithText("Live TV").assertIsDisplayed()
         compose.onNodeWithText("Ondo News").assertIsDisplayed()
+    }
+
+    @Test
+    fun homeDoesNotCallThePlaylistEmptyWhileItsCatalogueIsRead() {
+        var restoring by mutableStateOf(true)
+        compose.setContent { OndoTheme { HomeScreen(HomeUiState("Home", isRestoring = restoring), HomeActions(), autoAdvance = false) } }
+        compose.onNodeWithText("loading or empty", substring = true).assertDoesNotExist()
+        restoring = false
+        compose.onNodeWithText("loading or empty", substring = true).assertExists()
+    }
+
+    @Test
+    fun playShowsProgressWhileTheTitleGetsReady() {
+        val state = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
+        var preparing by mutableStateOf<String?>(null)
+        compose.setContent { OndoTheme { HomeScreen(state, HomeActions(), autoAdvance = false, preparingKey = preparing) } }
+        val progress = hasContentDescription("Loading…") and hasAnyAncestor(hasTestTag("heroPlay"))
+        compose.onNode(progress, useUnmergedTree = true).assertDoesNotExist()
+        preparing = state.hero.first().item.key
+        compose.onNode(progress, useUnmergedTree = true).assertExists()
     }
 
     @Test

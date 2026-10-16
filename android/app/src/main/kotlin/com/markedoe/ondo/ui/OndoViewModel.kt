@@ -23,11 +23,17 @@ import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.Appearance
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -39,9 +45,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Live TV filter: one category, the favourites, or everything. */
 data class LiveFilter(val categoryId: String? = null, val favoritesOnly: Boolean = false)
@@ -50,7 +58,7 @@ data class LiveFilter(val categoryId: String? = null, val favoritesOnly: Boolean
  * Screen states derived from [OndoRepository.state], computed off the main thread, and the user's
  * actions. Playback requests come out of [playRequests] (the activity starts the player).
  */
-@OptIn(FlowPreview::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class OndoViewModel(
     private val repository: OndoRepository,
     private val labels: Labels,
@@ -62,6 +70,11 @@ class OndoViewModel(
     val state: StateFlow<OndoState> = repository.state
 
     private val sharing = SharingStarted.WhileSubscribed(5_000)
+
+    /** The look chosen in Settings, alone: the activity's root does not recompose at every other change of the state. */
+    val appearance: StateFlow<Appearance> = state.map { it.settings.appearance }
+        .distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, state.value.settings.appearance)
 
     val home: StateFlow<HomeUiState?> = combine(state, minutes) { state, now -> UiMappers.home(state, labels, now) }
         .flowOn(computation)
@@ -101,17 +114,35 @@ class OndoViewModel(
     private val searchIndex = state
         .map { it.content to UiMappers.hiddenCategoryIds(it) }
         .distinctUntilChanged()
-        .map { (content, hidden) -> UiMappers.SearchIndex(content, hidden) }
-        .flowOn(computation)
+        .map { (content, hidden) -> UiMappers.SearchIndex.of(content, hidden) }
+
+    /** What a search reads besides its index: a change of the library or the settings does not run it again. */
+    private val searchState = state.distinctUntilChanged { old, new ->
+        old.content === new.content && old.movieDetails === new.movieDetails && old.seriesDetails === new.seriesDetails &&
+            old.awards === new.awards && old.guide === new.guide
+    }
+
+    private class SearchInput(val index: UiMappers.SearchIndex, val query: String, val filters: SearchFilters, val state: OndoState)
 
     private val _searchFilters = MutableStateFlow(SearchFilters())
     val searchFilters: StateFlow<SearchFilters> = _searchFilters.asStateFlow()
 
-    val search: StateFlow<SearchUiState> = combine(searchIndex, _query.debounce(200), _searchFilters, state) { index, query, filters, state ->
-        UiMappers.search(index, query, state, clock(), filters)
+    /** A newer query stops the search under way (it is not finished for nothing). */
+    val search: StateFlow<SearchUiState> = combine(searchIndex, _query.debounce(200), _searchFilters, searchState) { index, query, filters, state ->
+        SearchInput(index, query, filters, state)
     }
+        .mapLatest { input ->
+            val job = currentCoroutineContext().job
+            UiMappers.search(input.index, input.query, input.state, clock(), input.filters, checkCancelled = { job.ensureActive() })
+        }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, SearchUiState())
+
+    private val _preparing = MutableStateFlow<String?>(null)
+    private var preparingJob: Job? = null
+
+    /** The Home title or card whose Play is getting ready (a series' episodes loading): it shows progress meanwhile. */
+    val preparing: StateFlow<String?> = _preparing.asStateFlow()
 
     private val _seriesErrors = MutableStateFlow<Map<String, LoadError>>(emptyMap())
     val seriesErrors: StateFlow<Map<String, LoadError>> = _seriesErrors.asStateFlow()
@@ -138,13 +169,15 @@ class OndoViewModel(
     }
 
     fun loadMovie(id: String) {
-        val movie = state.value.content.movies.firstOrNull { it.id == id } ?: return
-        viewModelScope.launch { repository.details(movie) }
+        viewModelScope.launch {
+            val movie = withContext(computation) { UiMappers.movie(state.value, id) } ?: return@launch
+            repository.details(movie)
+        }
     }
 
     fun loadSeries(id: String) {
-        val series = state.value.content.series.firstOrNull { it.id == id } ?: return
         viewModelScope.launch {
+            val series = withContext(computation) { UiMappers.series(state.value, id) } ?: return@launch
             runCatching { repository.details(series) }
                 .onSuccess { _seriesErrors.value -= id }
                 .onFailure { error -> _seriesErrors.value += (id to LoadError.of(error)) }
@@ -199,11 +232,11 @@ class OndoViewModel(
 
     fun playChannel(row: ChannelRow) = emit(repository.playRequest(row.channel))
 
-    /** Movie: plays it. Series: the next episode (details loaded first when needed). */
+    /** Movie: plays it. Series: the next episode (details loaded first when needed, see [preparing]). */
     fun play(item: ShowcaseItem) {
         when (item) {
             is ShowcaseItem.MovieItem -> playMovie(item.movie.id)
-            is ShowcaseItem.SeriesItem -> viewModelScope.launch { nextEpisode(item.series)?.let { emit(repository.playRequest(item.series, it)) } }
+            is ShowcaseItem.SeriesItem -> prepare(item.key) { nextEpisode(item.series)?.let { emit(repository.playRequest(item.series, it)) } }
         }
     }
 
@@ -216,11 +249,56 @@ class OndoViewModel(
             ItemKind.CHANNEL -> current.content.channels.firstOrNull { it.id == entry.itemId }?.let { emit(repository.playRequest(it)) }
             ItemKind.SERIES -> {
                 val series = current.content.series.firstOrNull { it.id == entry.itemId } ?: return
-                viewModelScope.launch {
-                    val details = runCatching { repository.details(series) }.getOrNull() ?: return@launch
+                prepare(key) {
+                    val details = runCatching { repository.details(series) }.getOrNull() ?: return@prepare
                     details.seasons.flatMap { it.episodes }.firstOrNull { it.id == entry.episodeId }
                         ?.let { emit(repository.playRequest(series, it)) }
                 }
+            }
+        }
+    }
+
+    /**
+     * Gets a Play ready with [preparing] set to [key] meanwhile. Another tap on the same Play waits for this one (one
+     * player, not two); a tap on another one replaces it.
+     */
+    private fun prepare(key: String, block: suspend () -> Unit) {
+        if (_preparing.value == key) return
+        preparingJob?.cancel()
+        _preparing.value = key
+        preparingJob = viewModelScope.launch {
+            try {
+                block()
+            } finally {
+                _preparing.compareAndSet(key, null)
+            }
+        }
+    }
+
+    /**
+     * Details of the provider's series on Home's carousel and in Continue watching, fetched ahead so that their Play
+     * starts at once: [PREFETCH_LIMIT] at most, one at a time. Stops when the caller is cancelled (Home left).
+     */
+    suspend fun prefetchSeries(home: HomeUiState) {
+        val wanted = withContext(computation) {
+            val current = state.value
+            val resumed = home.continueWatching.mapNotNull { current.library.progress(it.key) }
+                .filter { it.kind == ItemKind.SERIES }
+                .mapNotNull { UiMappers.series(current, it.itemId) }
+            (home.hero.mapNotNull { (it.item as? ShowcaseItem.SeriesItem)?.series } + resumed)
+                .distinctBy { it.id }
+                // Without a provider's server, a series' episodes come with the playlist: nothing to fetch.
+                .filter { it.xtreamSeriesId != null }
+                .take(PREFETCH_LIMIT)
+        }
+        for (series in wanted) {
+            if (series.id in state.value.seriesDetails) continue
+            try {
+                repository.details(series)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // Play asks again, and says why if it still fails.
             }
         }
     }
@@ -273,6 +351,9 @@ class OndoViewModel(
                 delay(60_000)
             }
         }
+
+        /** Series whose details Home fetches ahead, at most. */
+        const val PREFETCH_LIMIT = 4
 
         /** Public channels listed by the iptv-org project, the same demo as on iPhone. */
         const val DEMO_PLAYLIST_URL = "https://iptv-org.github.io/iptv/countries/fr.m3u"

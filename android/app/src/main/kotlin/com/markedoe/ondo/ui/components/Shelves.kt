@@ -21,7 +21,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -128,7 +130,7 @@ fun PosterCard(
 
 /** 16:9 "continue watching" card with the time left and the progress. */
 @Composable
-fun ContinueCard(item: ResumeItem, width: Dp, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ContinueCard(item: ResumeItem, width: Dp, onClick: () -> Unit, modifier: Modifier = Modifier, preparing: Boolean = false) {
     val shape = RoundedCornerShape(12.dp)
     Column(modifier.width(width).clip(shape).clickable(onClick = onClick)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(shape)) {
@@ -140,7 +142,7 @@ fun ContinueCard(item: ResumeItem, width: Dp, onClick: () -> Unit, modifier: Mod
             )
             Column(Modifier.align(Alignment.BottomStart).padding(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    PlayIcon(preparing, Modifier.size(16.dp), tint = Color.White)
                     Text(
                         text = if (item.minutesLeft > 1) pluralStringResource(R.plurals.minutes_left, item.minutesLeft, item.minutesLeft)
                         else stringResource(R.string.resume),
@@ -157,5 +159,21 @@ fun ContinueCard(item: ResumeItem, width: Dp, onClick: () -> Unit, modifier: Mod
         item.subtitle?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
+    }
+}
+
+/**
+ * The Play icon, or in its place, at the same size, a spinner while the title gets ready to play (a series'
+ * episodes loading): the tap is seen at once.
+ */
+@Composable
+fun PlayIcon(preparing: Boolean, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current) {
+    if (!preparing) {
+        Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = tint, modifier = modifier)
+        return
+    }
+    val label = stringResource(R.string.loading)
+    Box(modifier.semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(Modifier.fillMaxSize().padding(2.dp), color = tint, strokeWidth = 2.dp)
     }
 }

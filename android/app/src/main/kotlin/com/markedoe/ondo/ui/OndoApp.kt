@@ -61,6 +61,7 @@ import com.markedoe.ondo.ui.screens.CategoriesActions
 import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.CollectionActions
 import com.markedoe.ondo.ui.screens.CollectionScreen
+import com.markedoe.ondo.ui.screens.CollectionUiState
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.GuideActions
 import com.markedoe.ondo.ui.screens.GuideScreen
@@ -70,6 +71,7 @@ import com.markedoe.ondo.ui.screens.HomeScreen
 import com.markedoe.ondo.ui.screens.LiveActions
 import com.markedoe.ondo.ui.screens.LiveScreen
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
+import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.MyListActions
 import com.markedoe.ondo.ui.screens.MyListKind
 import com.markedoe.ondo.ui.screens.MyListScreen
@@ -80,6 +82,7 @@ import com.markedoe.ondo.ui.screens.PosterGridScreen
 import com.markedoe.ondo.ui.screens.RemindersScreen
 import com.markedoe.ondo.ui.screens.SearchScreen
 import com.markedoe.ondo.ui.screens.SeriesDetailScreen
+import com.markedoe.ondo.ui.screens.SeriesDetailUiState
 import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsScreen
 import com.markedoe.ondo.ui.screens.VodActions
@@ -253,9 +256,13 @@ private fun Loading() {
 @Composable
 private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostController) {
     val home by viewModel.home.collectAsStateWithLifecycle()
+    val preparing by viewModel.preparing.collectAsStateWithLifecycle()
     val state = home ?: return Loading()
+    // The series of the carousel and of Continue watching are fetched ahead while Home is shown: Play starts at once.
+    LaunchedEffect(state.hero.map { it.item.key }, state.continueWatching.map { it.key }) { viewModel.prefetchSeries(state) }
     HomeScreen(
         state = state,
+        preparingKey = preparing,
         actions = HomeActions(
             onOpen = navController::open,
             onPlay = viewModel::play,
@@ -334,10 +341,16 @@ private fun SearchDestination(viewModel: OndoViewModel, navController: NavHostCo
 private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostController, id: String) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     LaunchedEffect(id) { viewModel.loadMovie(id) }
-    val movie = state.content.movies.firstOrNull { it.id == id } ?: return Loading()
     val locale = LocalConfiguration.current.locales[0]
+    // Off the main thread: finding the movie, its similar titles, awards and hidden categories go through the whole
+    // catalogue. A change (My List, details loaded) keeps the page on screen until the new one is ready.
+    val detail by produceState<MovieDetailUiState?>(null, state, id, locale) {
+        value = withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale) } }
+    }
+    val ui = detail ?: return Loading()
+    val movie = ui.item.movie
     MovieDetailScreen(
-        state = remember(state, movie, locale) { UiMappers.movieDetail(state, movie, locale) },
+        state = ui,
         actions = DetailActions(
             onBack = { navController.popBackStack() },
             onPlay = { viewModel.playMovie(id) },
@@ -358,9 +371,13 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
     val errors by viewModel.seriesErrors.collectAsStateWithLifecycle()
     var season by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(id) { viewModel.loadSeries(id) }
-    val series = state.content.series.firstOrNull { it.id == id } ?: return Loading()
-    val errorText = errors[id]?.let { loadErrorText(it) }
-    val ui = remember(state, series, season, errorText) { UiMappers.seriesDetail(state, series, season, errorText) }
+    // Off the main thread: finding the series, its similar titles and hidden categories go through the whole catalogue.
+    val detail by produceState<SeriesDetailUiState?>(null, state, id) {
+        value = withContext(Dispatchers.Default) { UiMappers.series(state, id)?.let { UiMappers.seriesDetail(state, it, null, null) } }
+    }
+    val computed = detail ?: return Loading()
+    // The season chosen and a loading error show at once, without computing the page again.
+    val ui = computed.copy(selectedSeason = season ?: computed.selectedSeason, error = errors[id]?.let { loadErrorText(it) })
     SeriesDetailScreen(
         state = ui,
         actions = DetailActions(
@@ -405,11 +422,16 @@ private fun RemindersDestination(viewModel: OndoViewModel, navController: NavHos
 @Composable
 private fun CollectionDestination(viewModel: OndoViewModel, navController: NavHostController, id: String) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val collection = remember(state, id) { UiMappers.collection(state, id, System.currentTimeMillis()) }
+    val exists = state.library.collections.any { it.id == id }
     // Deleted (here or by a restore): back to My List.
-    LaunchedEffect(collection == null) { if (collection == null) navController.popBackStack() }
+    LaunchedEffect(exists) { if (!exists) navController.popBackStack() }
+    if (!exists) return
+    // Off the main thread: it looks through the whole catalogue.
+    val collection by produceState<CollectionUiState?>(null, state, id) {
+        value = withContext(Dispatchers.Default) { UiMappers.collection(state, id, System.currentTimeMillis()) }
+    }
     CollectionScreen(
-        state = collection ?: return,
+        state = collection ?: return Loading(),
         actions = CollectionActions(
             onBack = { navController.popBackStack() },
             onOpen = navController::open,
@@ -518,7 +540,11 @@ private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHo
     var type by rememberSaveable { mutableStateOf(ContentType.fromRawValue(route.type) ?: ContentType.MOVIE) }
     var filter by rememberSaveable { mutableStateOf("") }
     val locale = LocalConfiguration.current.locales[0]
-    val ui = remember(state, type, filter, locale) { CategoryFilter.categories(state, type, filter, locale) }
+    // Off the main thread: each key typed in the filter counts the whole catalogue's titles by category.
+    val categories by produceState<CategoriesUiState?>(null, state, type, filter, locale) {
+        value = withContext(Dispatchers.Default) { CategoryFilter.categories(state, type, filter, locale) }
+    }
+    val ui = categories ?: return Loading()
     CategoriesScreen(
         state = ui,
         type = type,

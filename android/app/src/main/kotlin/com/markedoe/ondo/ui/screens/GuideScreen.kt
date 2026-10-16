@@ -124,6 +124,9 @@ fun GuideScreen(state: GuideUiState, actions: GuideActions) {
     val pxPerHour = with(LocalDensity.current) { hourWidth.toPx() }
     val scroll = rememberScrollState()
     var selected by remember { mutableStateOf<Pair<Channel, EpgProgram>?>(null) }
+    // One formatter for every time label (hundreds of programmes), not one per label.
+    val context = LocalContext.current
+    val timeFormat = remember(context) { DateFormat.getTimeFormat(context) }
     // Opens half an hour before now.
     LaunchedEffect(state.start) {
         if (state.start > 0) scroll.scrollTo(((now - state.start - HOUR / 2).coerceAtLeast(0) * pxPerHour / HOUR).roundToInt())
@@ -152,7 +155,7 @@ fun GuideScreen(state: GuideUiState, actions: GuideActions) {
         if (state.rows.isNotEmpty()) {
             Row {
                 Spacer(Modifier.width(channelWidth))
-                TimeHeader(state, hourWidth, scroll)
+                TimeHeader(state, hourWidth, scroll, timeFormat)
             }
             HorizontalDivider()
         }
@@ -160,7 +163,7 @@ fun GuideScreen(state: GuideUiState, actions: GuideActions) {
             items(state.rows, key = { it.channel.id }) { row ->
                 Row(Modifier.height(64.dp)) {
                     ChannelCell(row.channel, channelWidth) { actions.onPlay(row.channel) }
-                    Programmes(row, state, now, hourWidth, scroll) { selected = row.channel to it }
+                    Programmes(row, state, now, hourWidth, scroll, timeFormat) { selected = row.channel to it }
                 }
                 HorizontalDivider()
             }
@@ -181,6 +184,7 @@ fun GuideScreen(state: GuideUiState, actions: GuideActions) {
             channel = channel,
             program = program,
             now = now,
+            timeFormat = timeFormat,
             hasReminder = "${channel.id}|${program.start}" in state.reminders,
             onPlay = { selected = null; actions.onPlay(channel) },
             onToggleReminder = { actions.onToggleReminder(channel, program) },
@@ -214,8 +218,7 @@ private fun CategoryMenu(state: GuideUiState, actions: GuideActions) {
 }
 
 @Composable
-private fun TimeHeader(state: GuideUiState, hourWidth: androidx.compose.ui.unit.Dp, scroll: ScrollState) {
-    val format = DateFormat.getTimeFormat(LocalContext.current)
+private fun TimeHeader(state: GuideUiState, hourWidth: androidx.compose.ui.unit.Dp, scroll: ScrollState, format: java.text.DateFormat) {
     val slots = ((state.end - state.start) / (HOUR / 2)).toInt()
     Row(Modifier.horizontalScroll(scroll).height(32.dp)) {
         for (slot in 0 until slots) {
@@ -242,7 +245,15 @@ private fun ChannelCell(channel: Channel, width: androidx.compose.ui.unit.Dp, on
 }
 
 @Composable
-private fun Programmes(row: GuideRow, state: GuideUiState, now: Long, hourWidth: androidx.compose.ui.unit.Dp, scroll: ScrollState, onSelect: (EpgProgram) -> Unit) {
+private fun Programmes(
+    row: GuideRow,
+    state: GuideUiState,
+    now: Long,
+    hourWidth: androidx.compose.ui.unit.Dp,
+    scroll: ScrollState,
+    timeFormat: java.text.DateFormat,
+    onSelect: (EpgProgram) -> Unit,
+) {
     val totalWidth = hourWidth * ((state.end - state.start).toFloat() / HOUR)
     val pxPerHour = with(LocalDensity.current) { hourWidth.toPx() }
     fun px(time: Long) = ((time - state.start) * pxPerHour / HOUR).roundToInt()
@@ -279,7 +290,7 @@ private fun Programmes(row: GuideRow, state: GuideUiState, now: Long, hourWidth:
                         }
                         Text(program.title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    Text(timeRange(program), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    Text(timeRange(program, timeFormat), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
             }
             if (now in state.start until state.end) {
@@ -289,11 +300,8 @@ private fun Programmes(row: GuideRow, state: GuideUiState, now: Long, hourWidth:
     }
 }
 
-@Composable
-private fun timeRange(program: EpgProgram): String {
-    val format = DateFormat.getTimeFormat(LocalContext.current)
-    return format.format(Date(program.start)) + " – " + format.format(Date(program.end))
-}
+private fun timeRange(program: EpgProgram, format: java.text.DateFormat): String =
+    format.format(Date(program.start)) + " – " + format.format(Date(program.end))
 
 /** A programme: what, when, on which channel; watch it if it is on, or be reminded before it starts. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -302,6 +310,7 @@ private fun ProgramSheet(
     channel: Channel,
     program: EpgProgram,
     now: Long,
+    timeFormat: java.text.DateFormat,
     hasReminder: Boolean,
     onPlay: () -> Unit,
     onToggleReminder: () -> Unit,
@@ -322,7 +331,7 @@ private fun ProgramSheet(
                 Text(it.joinToString(" · "), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             val day = DateFormat.getMediumDateFormat(context).format(Date(program.start))
-            Text("${channel.name} · $day · ${timeRange(program)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${channel.name} · $day · ${timeRange(program, timeFormat)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             program.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
                 if (program.start <= now && now < program.end) {

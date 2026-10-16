@@ -5,7 +5,9 @@ import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.ui.theme.Appearance
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -312,5 +314,33 @@ class OndoRepositoryTest {
     fun playlistNamesDefaultToTheHost() {
         assertEquals("provider.example.com", OndoRepository.hostName("http://www.provider.example.com/get.php"))
         assertEquals("Playlist", OndoRepository.hostName("not a url"))
+    }
+
+    /** At start, Home waits for the saved catalogue rather than calling the playlist empty (and the splash screen stays). */
+    @Test
+    fun aRestartIsRestoringUntilTheSavedCatalogueIsRead() = runTest {
+        val first = repository()
+        first.bootstrap()
+        first.awaitState { it.isReady }
+        first.addPlaylist("Home", list)
+        assertFalse(first.state.value.isRestoring)
+        disk()
+
+        val second = repository(FakeHttp(emptyMap()))
+        val seen = mutableListOf<OndoState>()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { second.state.collect { seen += it } }
+        second.bootstrap()
+        second.awaitState { it.content.movies.isNotEmpty() }
+        val ready = seen.filter { it.isReady }
+        assertTrue("restoring from the first ready state", ready.first().isRestoring)
+        assertTrue("never ready, empty and quiet", ready.none { it.content.isEmpty && !it.isRestoring && !it.isLoading })
+        assertFalse(second.state.value.isRestoring)
+    }
+
+    @Test
+    fun aFirstLaunchHasNothingToRestore() = runTest {
+        val repository = repository()
+        repository.bootstrap()
+        assertFalse(repository.awaitState { it.isReady }.isRestoring)
     }
 }

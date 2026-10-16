@@ -67,6 +67,24 @@ object UiMappers {
     fun showcase(state: OndoState): Showcase =
         Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state))
 
+    /** Movies and series by id; the first of an id the catalogue lists twice, as a search through the list would find. */
+    class CatalogueIndex(content: PlaylistContent) {
+        val movies: Map<String, Movie> = HashMap<String, Movie>(content.movies.size).also { map -> content.movies.forEach { map.getOrPut(it.id) { it } } }
+        val series: Map<String, Series> = HashMap<String, Series>(content.series.size).also { map -> content.series.forEach { map.getOrPut(it.id) { it } } }
+    }
+
+    @Volatile private var catalogueIndex: Pair<PlaylistContent, CatalogueIndex>? = null
+
+    /** Built once per catalogue, in the background (it goes through the whole catalogue). */
+    fun index(content: PlaylistContent): CatalogueIndex {
+        catalogueIndex?.let { (known, index) -> if (known === content) return index }
+        return CatalogueIndex(content).also { catalogueIndex = content to it }
+    }
+
+    fun movie(state: OndoState, id: String): Movie? = index(state.content).movies[id]
+
+    fun series(state: OndoState, id: String): Series? = index(state.content).series[id]
+
     fun resume(entry: WatchEntry, state: OndoState): ResumeItem {
         val backdrop = when (entry.kind) {
             ItemKind.MOVIE -> state.movieDetails[entry.itemId]?.backdropUrl
@@ -127,6 +145,7 @@ object UiMappers {
             channels = channels.map { channelRow(it, state, now) },
             channelsAreFavorites = favoriteChannels.isNotEmpty(),
             isLoading = state.isLoading,
+            isRestoring = state.isRestoring,
             tagSuggestion = CategoryFilter.suggestion(state, labels.viewerCodes, labels.locale),
         )
     }
@@ -441,7 +460,7 @@ object UiMappers {
         return PersonUiState(name, sorted(movies, PosterSort.RELEASE), sorted(series, PosterSort.RELEASE))
     }
 
-    /** Normalised titles, built once per catalogue. */
+    /** Normalised titles, built once per catalogue (see [of]). */
     class SearchIndex(content: PlaylistContent, hidden: Set<String>) {
         val movies = content.movies.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
         val series = content.series.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
@@ -453,6 +472,16 @@ object UiMappers {
 
         /** Actors and directors of the series lists (movie lists give no cast). */
         val people = PeopleIndex(content.series.filter { it.categoryId !in hidden }.flatMap { listOf(it.cast, it.director) })
+
+        companion object {
+            @Volatile private var cached: Triple<PlaylistContent, Set<String>, SearchIndex>? = null
+
+            /** The index of this catalogue and these hidden categories: coming back to Search does not build it again. */
+            fun of(content: PlaylistContent, hidden: Set<String>): SearchIndex {
+                cached?.let { (known, knownHidden, index) -> if (known === content && knownHidden == hidden) return index }
+                return SearchIndex(content, hidden).also { cached = Triple(content, hidden, it) }
+            }
+        }
     }
 
     /** Actors and directors whose name matches a search: from the pages already opened, then the series lists. */
@@ -471,7 +500,8 @@ object UiMappers {
     /**
      * Every word of the query must start a word of the title ("dark kni" finds "The Dark Knight"). With filters,
      * only movies and series released in those years, or movies of that festival or ceremony, are listed, newest
-     * first; an empty query then lists all of them.
+     * first; an empty query then lists all of them. [checkCancelled] is called while going through the titles: it
+     * throws to stop a search that a newer query replaced.
      */
     fun search(
         index: SearchIndex,
@@ -480,12 +510,16 @@ object UiMappers {
         now: Long,
         filters: SearchFilters = SearchFilters(),
         limit: Int = 60,
+        checkCancelled: () -> Unit = {},
     ): SearchUiState {
         val words = TextNormalizer.normalize(query).split(' ').filter { it.isNotEmpty() }
         val empty = SearchUiState(query = query, filters = filters, years = index.years, awardGroups = awardGroups(index, state))
         if (words.isEmpty() && !filters.isActive) return empty
         fun <T> List<Pair<List<String>, T>>.find(): Sequence<T> = asSequence()
-            .filter { (titleWords, _) -> words.all { word -> titleWords.any { it.startsWith(word) } } }
+            .filter { (titleWords, _) ->
+                checkCancelled()
+                words.all { word -> titleWords.any { it.startsWith(word) } }
+            }
             .map { it.second }
         if (!filters.isActive) {
             return empty.copy(

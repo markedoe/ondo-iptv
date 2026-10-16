@@ -77,6 +77,8 @@ data class HomeUiState(
     val channels: List<ChannelRow> = emptyList(),
     val channelsAreFavorites: Boolean = false,
     val isLoading: Boolean = false,
+    /** The saved catalogue is still being read: the playlist is not called empty meanwhile. */
+    val isRestoring: Boolean = false,
     /** "Show only your languages?", offered once on a playlist with categories for many languages. */
     val tagSuggestion: TagSuggestion? = null,
 )
@@ -97,9 +99,17 @@ class HomeActions(
     val onDismissSuggestion: () -> Unit = {},
 )
 
-/** Home: carousel of featured titles, then rows; live TV last (first on a live-only playlist). */
+/**
+ * Home: carousel of featured titles, then rows; live TV last (first on a live-only playlist). [preparingKey] is the
+ * title or card whose Play is getting ready (a series' episodes loading): its button shows progress meanwhile.
+ */
 @Composable
-fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = LocalCarouselAutoAdvance.current) {
+fun HomeScreen(
+    state: HomeUiState,
+    actions: HomeActions,
+    autoAdvance: Boolean = LocalCarouselAutoAdvance.current,
+    preparingKey: String? = null,
+) {
     val metrics = rememberShelfMetrics()
     val hasVod = state.hasVod
     LazyColumn(
@@ -115,6 +125,7 @@ fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = 
                     onPlay = actions.onPlay,
                     onToggleMyList = actions.onToggleMyList,
                     autoAdvance = autoAdvance,
+                    preparingKey = preparingKey,
                     topBar = { HomeTopBar(state, actions, onArtwork = true) },
                 )
             } else {
@@ -127,7 +138,9 @@ fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = 
         if (state.continueWatching.isNotEmpty()) {
             item {
                 Shelf(stringResource(R.string.continue_watching), metrics) {
-                    items(state.continueWatching, key = { it.key }) { ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }) }
+                    items(state.continueWatching, key = { it.key }) {
+                        ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey)
+                    }
                 }
             }
         }
@@ -146,7 +159,8 @@ fun HomeScreen(state: HomeUiState, actions: HomeActions, autoAdvance: Boolean = 
         if (hasVod) {
             item { ChannelShelf(state, metrics, actions) }
         }
-        if (!hasVod && state.channels.isEmpty() && !state.isLoading) {
+        // Nothing is said while the saved catalogue is read or a download runs: it may well have content.
+        if (!hasVod && state.channels.isEmpty() && !state.isLoading && !state.isRestoring) {
             item {
                 Text(
                     text = stringResource(R.string.home_empty),

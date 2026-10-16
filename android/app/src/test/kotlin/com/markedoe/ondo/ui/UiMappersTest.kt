@@ -6,6 +6,7 @@ import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.Favorite
@@ -19,9 +20,13 @@ import com.markedoe.ondo.ui.screens.CollectionChoice
 import com.markedoe.ondo.ui.screens.CollectionRow
 import com.markedoe.ondo.ui.screens.SearchFilters
 import java.util.Locale
+import kotlin.coroutines.cancellation.CancellationException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotSame
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -294,5 +299,46 @@ class UiMappersTest {
         )
         assertEquals("playlist order is kept", items, UiMappers.sorted(items, PosterSort.PLAYLIST))
         assertEquals("Bright Field", UiMappers.sorted(items, PosterSort.NAME).first().title)
+    }
+
+    @Test
+    fun detailPagesFindTheirTitleByIdOncePerCatalogue() {
+        val state = Fixtures.state()
+        assertEquals(Fixtures.glassCity, UiMappers.movie(state, Fixtures.glassCity.id))
+        assertEquals(Fixtures.theArchive, UiMappers.series(state, Fixtures.theArchive.id))
+        assertNull(UiMappers.movie(state, "missing"))
+        assertSame("built once per catalogue", UiMappers.index(state.content), UiMappers.index(state.content))
+        // An id listed twice finds the first, as a search through the list did.
+        val twice = state.content.copy(movies = state.content.movies + Fixtures.glassCity.copy(name = "Glass City (copy)"))
+        assertEquals("Glass City", UiMappers.index(twice).movies.getValue(Fixtures.glassCity.id).name)
+        assertNotSame(UiMappers.index(state.content), UiMappers.index(twice))
+    }
+
+    @Test
+    fun searchKeepsItsIndexWhileTheCatalogueAndHiddenCategoriesStay() {
+        val state = Fixtures.state()
+        val hidden = UiMappers.hiddenCategoryIds(state)
+        val index = UiMappers.SearchIndex.of(state.content, hidden)
+        assertSame("coming back to Search", index, UiMappers.SearchIndex.of(state.content, HashSet(hidden)))
+        assertNotSame("a category hidden", index, UiMappers.SearchIndex.of(state.content, hidden + Fixtures.drama.id))
+        assertNotSame("a new catalogue", index, UiMappers.SearchIndex.of(state.content.copy(fetchedAt = 1), hidden))
+    }
+
+    @Test
+    fun aSearchReplacedByANewerOneStops() {
+        val state = Fixtures.state()
+        val index = UiMappers.SearchIndex.of(state.content, UiMappers.hiddenCategoryIds(state))
+        var checks = 0
+        assertThrows(CancellationException::class.java) {
+            UiMappers.search(index, "signal", state, Fixtures.NOW, checkCancelled = { if (++checks > 2) throw CancellationException("newer query") })
+        }
+        assertEquals(listOf("The Last Signal"), UiMappers.search(index, "signal", state, Fixtures.NOW).movies.map { it.title })
+    }
+
+    @Test
+    fun homeSaysWhenTheSavedCatalogueIsStillRead() {
+        val state = Fixtures.state(content = PlaylistContent.EMPTY).copy(isRestoring = true)
+        assertTrue(UiMappers.home(state, labels, Fixtures.NOW).isRestoring)
+        assertFalse(UiMappers.home(Fixtures.state(), labels, Fixtures.NOW).isRestoring)
     }
 }

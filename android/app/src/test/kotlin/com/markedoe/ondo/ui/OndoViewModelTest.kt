@@ -1,14 +1,28 @@
 package com.markedoe.ondo.ui
 
 import app.cash.turbine.test
+import com.markedoe.ondo.core.model.ContentType
+import com.markedoe.ondo.core.model.MediaCategory
+import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.Series
+import com.markedoe.ondo.core.net.HttpClient
+import com.markedoe.ondo.core.net.HttpException
+import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.OndoRepository
+import com.markedoe.ondo.data.SavedPlaylist
+import com.markedoe.ondo.ui.components.HeroPage
+import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.PlaylistForm
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -22,6 +36,27 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+
+/** A provider's server answering series details, once [gate] opens; it counts the requests and how many run at once. */
+private class Panel(private val gate: CompletableDeferred<Unit>? = null) : HttpClient {
+    val seriesRequests = mutableListOf<String>()
+    var mostAtOnce = 0
+    private var running = 0
+
+    override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
+        if ("get_series_info" !in url) throw HttpException.BadStatus(404)
+        seriesRequests += url
+        running++
+        mostAtOnce = maxOf(mostAtOnce, running)
+        try {
+            gate?.await()
+            yield()
+        } finally {
+            running--
+        }
+        return """{"info":{"name":"Show"},"episodes":{"1":[{"id":"101","episode_num":1,"title":"Pilot","container_extension":"mp4"}]}}""".encodeToByteArray()
+    }
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OndoViewModelTest {
@@ -49,6 +84,73 @@ class OndoViewModelTest {
         val http = FakeHttp(mapOf(list to catalogue, OndoViewModel.DEMO_PLAYLIST_URL to catalogue))
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         return OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+    }
+
+    /** A provider's playlist of six series, saved earlier (restored without downloading). */
+    private fun TestScope.providerViewModel(panel: Panel): OndoViewModel {
+        val store = AppStore(folder.root)
+        val shows = MediaCategory("s-shows", "Shows", ContentType.SERIES)
+        store.savePlaylists(listOf(SavedPlaylist("x1", "Panel", "http://panel.example.com", username = "viewer", password = "example")))
+        store.saveSettings(AppSettings(activePlaylistId = "x1"))
+        store.saveContent(
+            "x1",
+            PlaylistContent(
+                series = (1..6).map { Series(id = "$it", name = "Show $it", categoryId = shows.id, year = 2025, xtreamSeriesId = it) },
+                seriesCategories = listOf(shows),
+                fetchedAt = System.currentTimeMillis(),
+            ),
+        )
+        val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler))
+        return OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+    }
+
+    @Test
+    fun playOnASeriesShowsProgressAndASecondTapDoesNotPlayTwice() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val panel = Panel(gate)
+        val viewModel = providerViewModel(panel)
+        val item = ShowcaseItem.SeriesItem(viewModel.state.first { it.content.series.isNotEmpty() }.content.series.first())
+        viewModel.playRequests.test {
+            viewModel.play(item)
+            assertEquals("its Play shows progress", item.key, viewModel.preparing.value)
+            viewModel.play(item)
+            gate.complete(Unit)
+            assertEquals("http://panel.example.com/series/viewer/example/101.mp4", awaitItem().urls.first())
+            assertEquals(null, viewModel.preparing.first { it == null })
+            assertEquals(1, panel.seriesRequests.size)
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun homeFetchesAFewSeriesAheadOneAtATime() = runTest {
+        val panel = Panel()
+        val viewModel = providerViewModel(panel)
+        val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series
+        val home = HomeUiState("Panel", hero = series.map { HeroPage(ShowcaseItem.SeriesItem(it), "", inMyList = false, resumable = false) })
+        viewModel.prefetchSeries(home)
+        assertEquals(OndoViewModel.PREFETCH_LIMIT, panel.seriesRequests.size)
+        assertEquals(1, panel.mostAtOnce)
+        assertEquals(series.take(OndoViewModel.PREFETCH_LIMIT).map { it.id }.toSet(), viewModel.state.value.seriesDetails.keys)
+        // Already known: not asked again.
+        viewModel.prefetchSeries(home)
+        assertEquals(OndoViewModel.PREFETCH_LIMIT, panel.seriesRequests.size)
+    }
+
+    @Test
+    fun leavingHomeStopsFetchingAhead() = runTest {
+        val gate = CompletableDeferred<Unit>()
+        val panel = Panel(gate)
+        val viewModel = providerViewModel(panel)
+        val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series
+        val home = HomeUiState("Panel", hero = series.map { HeroPage(ShowcaseItem.SeriesItem(it), "", inMyList = false, resumable = false) })
+        val prefetch = launch { viewModel.prefetchSeries(home) }
+        testScheduler.advanceUntilIdle()
+        assertEquals(1, panel.seriesRequests.size)
+        prefetch.cancel()
+        gate.complete(Unit)
+        testScheduler.advanceUntilIdle()
+        assertEquals("no request after leaving", 1, panel.seriesRequests.size)
     }
 
     @Test

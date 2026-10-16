@@ -46,6 +46,11 @@ data class OndoState(
     val library: LibraryState = LibraryState(),
     val guide: EpgIndex? = null,
     val isLoading: Boolean = false,
+    /**
+     * The active playlist's saved catalogue is being read (at start, after switching playlists): the splash screen
+     * stays a little longer and Home does not call the playlist empty meanwhile.
+     */
+    val isRestoring: Boolean = false,
     val error: LoadError? = null,
     val movieDetails: Map<String, MediaDetails> = emptyMap(),
     val seriesDetails: Map<String, SeriesDetails> = emptyMap(),
@@ -109,7 +114,8 @@ class OndoRepository(
             val pending = pendingLibraryChanges.toList()
             pendingLibraryChanges.clear()
             val library = pending.fold(saved) { library, change -> change(library) }
-            _state.update { it.copy(settings = settings, playlists = playlists, library = library, isReady = true) }
+            // With a playlist, its saved catalogue is read next: restoring from the same update (no "empty" moment).
+            _state.update { it.copy(settings = settings, playlists = playlists, library = library, isReady = true, isRestoring = playlists.isNotEmpty()) }
             if (pending.isNotEmpty()) persist { saveLibrary(library) }
             _state.value.activePlaylist?.let { open(it) }
             awardsSource?.let { source ->
@@ -167,7 +173,7 @@ class OndoRepository(
                         store.saveContent(saved.id, content)
                     }
                 }
-                _state.update { it.copy(playlists = playlists, settings = settings, content = content, isLoading = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap()) }
+                _state.update { it.copy(playlists = playlists, settings = settings, content = content, isLoading = false, isRestoring = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap()) }
                 loadGuide(saved, content)
             }
             .onFailure { error -> _state.update { it.copy(isLoading = false, error = LoadError.of(error)) } }
@@ -180,7 +186,7 @@ class OndoRepository(
         openJob?.cancel()
         refreshJob?.cancel()
         guideJob?.cancel()
-        _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), error = null, isLoading = false) }
+        _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), error = null, isLoading = false, isRestoring = true) }
         open(playlist)
     }
 
@@ -205,7 +211,7 @@ class OndoRepository(
             openJob?.cancel()
             refreshJob?.cancel()
             guideJob?.cancel()
-            _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, isLoading = false) }
+            _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, isLoading = false, isRestoring = it.playlists.isNotEmpty()) }
             _state.value.activePlaylist?.let { open(it) }
         }
     }
@@ -247,15 +253,20 @@ class OndoRepository(
         persist { saveSettings(settings) }
     }
 
-    /** Cached catalogue at once, then a refresh when it is a day old or missing. */
+    /**
+     * Cached catalogue at once, then a refresh when it is a day old or missing. [OndoState.isRestoring] is on while the
+     * cached catalogue is read; without one, the download takes over ([OndoState.isLoading]).
+     */
     private fun open(playlist: SavedPlaylist) {
         openJob?.cancel()
+        _state.update { it.copy(isRestoring = true) }
         openJob = scope.launch {
             val cached = withContext(io) { store.loadContent(playlist.id) }
-            // Another playlist was opened while this one was read: its catalogue must not replace that one.
+            // Another playlist was opened while this one was read: its catalogue must not replace that one (and that
+            // one's opening ends the restoring).
             if (_state.value.activePlaylistId != playlist.id) return@launch
             if (cached != null) {
-                _state.update { it.copy(content = cached) }
+                _state.update { it.copy(content = cached, isRestoring = false) }
                 loadGuide(playlist, cached)
             }
             if (cached == null || now() - cached.fetchedAt > REFRESH_AFTER_MS) load(playlist)
@@ -265,7 +276,7 @@ class OndoRepository(
     private fun load(playlist: SavedPlaylist) {
         refreshJob?.cancel()
         refreshJob = scope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true, isRestoring = false, error = null) }
             loadCatching { withContext(io) { loader().load(playlist.toCorePlaylist()) } }
                 .onSuccess { content ->
                     withContext(writer) { runCatching { store.saveContent(playlist.id, content) } }
