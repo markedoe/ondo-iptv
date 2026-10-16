@@ -3,19 +3,39 @@ import IPTVCore
 @testable import Ondo
 
 /// Start and seek times with the real engines, as the viewer waits for them, measured by the player's own log (the
-/// one a problem report carries), against Apple's public HLS sample. The bounds are wide (shared CI machines): they
-/// catch a start or a seek that hangs, and the times are attached to the result. Skipped without network.
+/// one a problem report carries): AVPlayer on Apple's public HLS sample (skipped without network), VLC on an MKV film
+/// served from the test runner with byte ranges, as providers serve films. The bounds are wide (shared CI machines):
+/// they catch a start or a seek that hangs, and the reports are attached to the result.
 @MainActor
 final class PlaybackTimingTests: XCTestCase {
     private static let stream = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!
 
-    private func film() -> PlaybackItem {
+    private func film(at url: URL = PlaybackTimingTests.stream) -> PlaybackItem {
         PlaybackItem(
-            reference: MediaReference(playlistID: UUID(), type: .movie, itemID: "bipbop"),
+            reference: MediaReference(playlistID: UUID(), type: .movie, itemID: "sample"),
             title: "Sample",
-            streamURL: Self.stream,
+            streamURL: url,
             isLive: false
         )
+    }
+
+    /// A 40 s MKV film (key frames 10 s apart) from the test bundle, with byte ranges.
+    private func filmServer() throws -> LocalHTTPServer {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "film-sample", withExtension: "mkv"))
+        let data = try Data(contentsOf: url)
+        return try LocalHTTPServer { request in
+            var response = LocalHTTPServer.Response(headers: ["Content-Type": "video/x-matroska", "Accept-Ranges": "bytes"], body: data)
+            if let range = request.headers["range"], range.hasPrefix("bytes=") {
+                let bounds = range.dropFirst(6).split(separator: "-", omittingEmptySubsequences: false)
+                let first = Int(bounds.first ?? "") ?? 0
+                let last = min(Int(bounds.dropFirst().first ?? "") ?? data.count - 1, data.count - 1)
+                guard first <= last else { return LocalHTTPServer.Response(status: 416) }
+                response.status = 206
+                response.headers["Content-Range"] = "bytes \(first)-\(last)/\(data.count)"
+                response.body = data.subdata(in: first..<(last + 1))
+            }
+            return response
+        }
     }
 
     /// Seconds of the last log line starting with `prefix` ("picture moving after 1.2 s").
@@ -31,7 +51,7 @@ final class PlaybackTimingTests: XCTestCase {
         }
     }
 
-    private func startAndSeek(with engine: PlayerEngine) async throws {
+    private func startAndSeek(with engine: PlayerEngine, url: URL = PlaybackTimingTests.stream, to target: Double = 120) async throws {
         let controller = PlayerController()
         controller.isMuted = true
         controller.enginePreference = engine
@@ -42,21 +62,23 @@ final class PlaybackTimingTests: XCTestCase {
             add(attachment)
             controller.stop()
         }
-        controller.load(film())
+        controller.load(film(at: url))
         try await wait(seconds: 45) { logged(controller, "picture moving after ") != nil }
         guard let start = logged(controller, "picture moving after ") else {
-            throw XCTSkip("The sample stream did not play here (no network?)")
+            if url == Self.stream { throw XCTSkip("The sample stream did not play here (no network?)") }
+            return XCTFail("the film never started")
         }
-        controller.seek(to: 120, tolerance: 1)
+        controller.seek(to: target, tolerance: 1)
         try await wait(seconds: 45) { logged(controller, "seek done after ") != nil }
         let seek = try XCTUnwrap(logged(controller, "seek done after "), "the seek never finished")
         XCTAssertLessThan(start, 20, "first picture")
         XCTAssertLessThan(seek, 20, "seek")
-        XCTAssertGreaterThanOrEqual(controller.currentTime, 110, "the seek landed")
+        XCTAssertGreaterThanOrEqual(controller.currentTime, target - 10, "the seek landed")
 
         let report = controller.problemReport().text
-        XCTAssertFalse(report.contains("devstreaming"), "the address never goes into a report")
-        XCTAssertFalse(report.contains("bipbop"), "nor any part of it")
+        for part in [url.host ?? "", url.lastPathComponent, "secret", "viewer", "bipbop", "127.0.0.1"] where !part.isEmpty {
+            XCTAssertFalse(report.contains(part), "the address never goes into a report: \(part)")
+        }
         XCTAssertTrue(report.contains("seek done after"))
     }
 
@@ -64,9 +86,12 @@ final class PlaybackTimingTests: XCTestCase {
         try await startAndSeek(with: .apple)
     }
 
-    func testVLCStartsAndSeeks() async throws {
+    func testVLCStartsAndSeeksInAnMKVFilm() async throws {
         guard PlayerEngine.isVLCAvailable else { throw XCTSkip("No VLC engine in this build") }
-        try await startAndSeek(with: .vlc)
+        let server = try filmServer()
+        let base = try await server.start()
+        try await startAndSeek(with: .vlc, url: base.appendingPathComponent("movie/viewer/secret/42.mkv"), to: 25)
+        XCTAssertTrue(server.requests.contains { $0.headers["range"] != nil }, "VLC reads the film by byte ranges")
     }
 
     /// Raw MPEG-TS over HTTP goes straight to VLC: AVPlayer cannot open it, and trying cost every channel change.
