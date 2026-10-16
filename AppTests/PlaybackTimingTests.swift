@@ -20,13 +20,15 @@ final class PlaybackTimingTests: XCTestCase {
         )
     }
 
-    /// A 40 s MKV film (key frames 10 s apart) from the test bundle, with byte ranges (or without, as some servers).
-    private func filmServer(ranges: Bool = true) throws -> LocalHTTPServer {
+    /// A 40 s MKV film (key frames 10 s apart) from the test bundle, with byte ranges, except for the first
+    /// `wholeFileAnswers` requests, answered with the whole file as servers that ignore ranges do.
+    private func filmServer(wholeFileAnswers: Int = 0) throws -> LocalHTTPServer {
         let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "film-sample", withExtension: "mkv"))
         let data = try Data(contentsOf: url)
+        let requests = RequestCount()
         return try LocalHTTPServer { request in
             var response = LocalHTTPServer.Response(headers: ["Content-Type": "video/x-matroska", "Accept-Ranges": "bytes"], body: data)
-            if ranges, let range = request.headers["range"], range.hasPrefix("bytes=") {
+            if requests.next() > wholeFileAnswers, let range = request.headers["range"], range.hasPrefix("bytes=") {
                 let bounds = range.dropFirst(6).split(separator: "-", omittingEmptySubsequences: false)
                 let first = Int(bounds.first ?? "") ?? 0
                 let last = min(Int(bounds.dropFirst().first ?? "") ?? data.count - 1, data.count - 1)
@@ -137,10 +139,11 @@ final class PlaybackTimingTests: XCTestCase {
         XCTAssertTrue(log.contains { $0.hasPrefix("remux ready") }, log.joined(separator: "\n"))
     }
 
-    /// A server that sends the whole file instead of its parts cannot serve the remux: VLC plays the film.
+    /// A server that sends the whole file instead of its parts cannot serve the remux: VLC plays the film. (The
+    /// server sends parts to VLC: without them, VLC itself opens this MKV only some of the time.)
     func testVLCPlaysAnMKVFilmTheRemuxCannotRead() async throws {
         guard PlayerEngine.isVLCAvailable else { throw XCTSkip("No VLC engine in this build") }
-        let server = try filmServer(ranges: false)
+        let server = try filmServer(wholeFileAnswers: 1)
         let base = try await server.start()
         var engine = ""
         var log: [String] = []
@@ -159,5 +162,18 @@ final class PlaybackTimingTests: XCTestCase {
         XCTAssertTrue(PlayerEngine.prefersVLC(for: URL(string: "http://example.com/movie/user/pass/2.mkv")!))
         XCTAssertFalse(PlayerEngine.prefersVLC(for: URL(string: "http://example.com/live/user/pass/1.m3u8")!))
         XCTAssertFalse(PlayerEngine.prefersVLC(for: URL(string: "http://example.com/movie/user/pass/2.mp4")!))
+    }
+}
+
+/// Counts a test server's requests, from its queue.
+private final class RequestCount: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+
+    func next() -> Int {
+        lock.withLock {
+            count += 1
+            return count
+        }
     }
 }
