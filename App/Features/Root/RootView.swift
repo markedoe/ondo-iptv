@@ -6,6 +6,16 @@ enum AppSection: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
+    /// Downloads shows in the TestFlight edition, or where downloads were made with it (to play or delete them).
+    @MainActor static var showsDownloads: Bool {
+        FeatureFlags.downloads || !DownloadManager.shared.records.isEmpty
+    }
+
+    /// The sections of the sidebar in this edition.
+    @MainActor static var shown: [AppSection] {
+        allCases.filter { $0 != .downloads || showsDownloads }
+    }
+
     var title: LocalizedStringKey {
         switch self {
         case .home: return "Home"
@@ -239,7 +249,7 @@ struct SidebarRootView: View {
         NavigationSplitView {
             List(selection: $selection) {
                 Section {
-                    ForEach(AppSection.allCases) { section in
+                    ForEach(AppSection.shown) { section in
                         Label(section.title, systemImage: section.systemImage)
                             .tag(section)
                     }

@@ -142,10 +142,17 @@ HTTP, Cast et notifications.
    version = le tag), puis la fiche FR/EN et les captures iPhone, iPad et Mac.
 2. **TestFlight** : les builds apparaissent après 10 à 30 min de traitement. Groupe de testeurs internes
    (jusqu'à 100 membres de l'équipe, sans review) pour essayer sur vos appareils.
+
+   **Deux éditions.** *Run workflow* demande une `edition` : `testflight` (par défaut) construit l'app avec les
+   téléchargements, pour les testeurs internes seulement ; `app-store` la construit sans (règle 5.2.3 d'Apple
+   sur l'enregistrement de médias d'autres sources), et c'est **la seule à soumettre**. Un tag construit
+   l'édition App Store. Rien dans l'édition App Store ne peut activer les téléchargements
+   (`FeatureFlags.downloads`, un réglage de compilation) : un code de déblocage serait une fonction cachée,
+   ce que la règle 2.3.1 interdit.
 3. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
    fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.
-4. Dans chaque version (iOS 1.0 et macOS 1.0) : choisissez le build → **Add for Review** →
+4. Dans chaque version (iOS 1.0 et macOS 1.0) : choisissez le build de l'édition **app-store** → **Add for Review** →
    **Submit for Review**. Les deux versions sont indépendantes : **iOS / iPadOS peut partir seul** ;
    lancez au moins une fois le build Mac de TestFlight sur votre Mac avant de soumettre la version macOS.
 

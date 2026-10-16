@@ -156,7 +156,7 @@ struct HomeView: View {
             reminders
                 .padding(.horizontal, metrics.gutter)
 
-            if compact { libraryLinks.padding(.horizontal, metrics.gutter) }
+            if compact, AppSection.showsDownloads { libraryLinks.padding(.horizontal, metrics.gutter) }
         }
         .padding(.top, hero.isEmpty ? 12 : 0)
         .padding(.bottom, 32)

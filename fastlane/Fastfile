@@ -89,7 +89,14 @@ end
 def build_settings_args(build_number)
   args = ["CURRENT_PROJECT_VERSION=#{build_number}"]
   args << "MARKETING_VERSION=#{marketing_version}" if marketing_version
+  # The TestFlight edition has downloads (FeatureFlags.downloads); the App Store edition, the one submitted, has not.
+  args << "'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) TESTFLIGHT_DOWNLOADS'" if testflight_edition?
   args.join(" ")
+end
+
+# EDITION from the release workflow: "testflight" for testers, anything else builds the App Store edition.
+def testflight_edition?
+  ENV["EDITION"] == "testflight"
 end
 
 before_all do

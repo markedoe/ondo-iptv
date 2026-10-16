@@ -91,7 +91,7 @@ final class DownloadManager: NSObject {
     // MARK: Queries
 
     static func canDownload(_ item: PlaybackItem) -> Bool {
-        guard !item.isLive, !item.isCatchup else { return false }
+        guard FeatureFlags.downloads, !item.isLive, !item.isCatchup else { return false }
         let ext = item.streamURL.pathExtension.lowercased()
         return !["m3u8", "m3u", "mpd", ""].contains(ext)
     }

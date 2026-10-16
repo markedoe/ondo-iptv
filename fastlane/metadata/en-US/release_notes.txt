@@ -1,5 +1,4 @@
 • MKV movies and episodes play with the system player when it can decode them: HDR10, HLG and Dolby Vision show, Dolby Atmos plays and Picture in Picture works. VLC plays the others.
-• Downloads go on from where they stopped, also after the app was closed, and try again by themselves after a network failure. They show their speed and the time left; Details says what the provider answered and what a download waits for, to share.
 • Player, More, Report a Problem…: a report of the playback (start and seek times, freezes and their cause, statistics; no stream address, login or title) to copy, share or send in a GitHub issue.
 • Movies and series start faster and come back sooner after a skip or a jump; the picture follows your finger while you drag the time bar.
 • Settings, Player: choose the buffer for live TV and for movies & series (Automatic, or 1 to 10 seconds). A longer buffer hides longer interruptions from the provider.

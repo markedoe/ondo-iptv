@@ -208,6 +208,22 @@ enum SubtitleArchive {
     }
 }
 
+/// What a service said about a key or a login, checked when the viewer saves it: only an accepted one is saved.
+public enum CredentialCheck: Equatable, Sendable {
+    case accepted
+    case refused
+    /// The service could not be reached, or did not say (an error of its own): nothing is saved.
+    case unreachable
+
+    /// What the failure of a request made with the credentials says: refused on 401 or 403, otherwise nothing.
+    static func failure(_ error: Error) -> CredentialCheck {
+        switch error {
+        case HTTPClientError.badStatus(401), HTTPClientError.badStatus(403), SubtitleSearchError.invalidCredentials: return .refused
+        default: return .unreachable
+        }
+    }
+}
+
 enum SubtitleHTTP {
     /// Maps an HTTP failure to what the viewer can act on.
     static func translate(_ error: Error, service: SubtitleService) -> Error {

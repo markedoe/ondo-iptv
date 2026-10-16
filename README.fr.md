@@ -43,7 +43,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Lecteur** : deux moteurs — **AVPlayer** (PiP, AirPlay, HDR) et **VLC** (MKV, AVI, TS…) avec bascule
   automatique —, **films MKV remuxés pour AVPlayer** sur l'appareil, sans transcodage (HDR10, HLG, Dolby Vision,
   Dolby Atmos, PiP), VLC lisant ceux qu'il ne sait pas décoder, zapping, pistes audio / sous-titres, **sous-titres SRT externes**, **recherche de
-  sous-titres en ligne** (OpenSubtitles, SubDL et SubSource avec votre clé, Addic7ed sans clé), format d'image,
+  sous-titres en ligne** (OpenSubtitles, SubDL et SubSource avec votre clé, vérifiée auprès du service à l'enregistrement, Addic7ed sans clé), format d'image,
   vitesse, minuterie, verrouillage, gestes (iPhone), paysage forcé, reconnexion automatique, bascule vers
   une autre version d'une chaîne morte, erreurs expliquées, écran verrouillé / touches média, raccourcis
   clavier, menu Lecture, une fenêtre par flux et **plein écran** (bouton, touche F, double-clic) sur Mac ;
@@ -64,7 +64,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   masquez de la même façon un **style** (manga et anime, enfants, documentaires…) ou n'importe quel mot des noms
   de catégories (Bollywood…) ; ou masquez les catégories une par une. Le bouton de filtre est sur les écrans
   Films, Séries et Live TV.
-- **Téléchargements** hors ligne (films, épisodes), avec leur vitesse et le temps restant, la raison en clair
+- **Téléchargements** hors ligne (films, épisodes ; édition TestFlight, pas celle de l'App Store), avec leur vitesse et le temps restant, la raison en clair
   quand le fournisseur refuse, limite les connexions ou n'envoie rien, et leurs détails à partager.
 - **Données** : sauvegarde / restauration JSON, cache vidable.
 - **Aide** dans l'app (Réglages, et Aide, Aide Ondo sur Mac) : une page par fonctionnalité, dans chaque langue.

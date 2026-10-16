@@ -24,6 +24,16 @@ public struct SubSourceClient: SubtitleProvider {
         }
     }
 
+    /// Checks the API key with a title search (401 or 403 when the service refuses it).
+    public func checkKey() async -> CredentialCheck {
+        do {
+            _ = try await get("/movies/search", [("searchType", "text"), ("q", "The Matrix"), ("type", "movie")])
+            return .accepted
+        } catch {
+            return .failure(error)
+        }
+    }
+
     public func search(_ query: SubtitleQuery) async throws -> [OnlineSubtitle] {
         let titles = try JSONDecoder().decode(Envelope<[Title]>.self, from: try await get("/movies/search", [
             ("searchType", "text"),

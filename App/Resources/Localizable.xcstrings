@@ -1,6 +1,46 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ could not be reached, so nothing was saved. Check the connection and try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de joindre %@, rien n’a donc été enregistré. Vérifiez la connexion et réessayez."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo contactar con %@, así que no se guardó nada. Comprueba la conexión e inténtalo de nuevo."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível acessar %@, então nada foi salvo. Verifique a conexão e tente novamente."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法连接 %@，因此未保存任何内容。请检查网络连接后重试。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعذّر الوصول إلى %@، لذا لم يُحفظ شيء. تحقّق من الاتصال وحاول مرة أخرى."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ तक नहीं पहुँचा जा सका, इसलिए कुछ भी सहेजा नहीं गया। कनेक्शन जाँचें और फिर से कोशिश करें।"
+          }
+        }
+      }
+    },
     "%@ left": {
       "localizations": {
         "fr": {
@@ -117,6 +157,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ प्राप्त"
+          }
+        }
+      }
+    },
+    "%@ refused the API key or the username and password, so nothing was saved.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a refusé la clé API ou le nom d’utilisateur et le mot de passe, rien n’a donc été enregistré."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ rechazó la clave de API o el nombre de usuario y la contraseña, así que no se guardó nada."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ recusou a chave de API ou o nome de usuário e a senha, então nada foi salvo."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 拒绝了该 API 密钥或用户名和密码，因此未保存任何内容。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رفض %@ مفتاح API أو اسم المستخدم وكلمة المرور، لذا لم يُحفظ شيء."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ने API कुंजी या उपयोगकर्ता नाम और पासवर्ड अस्वीकार कर दिए, इसलिए कुछ भी सहेजा नहीं गया।"
+          }
+        }
+      }
+    },
+    "%@ refused the API key, so nothing was saved. Copy it again from your account.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a refusé la clé API, rien n’a donc été enregistré. Copiez-la à nouveau depuis votre compte."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ rechazó la clave de API, así que no se guardó nada. Vuelve a copiarla desde tu cuenta."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ recusou a chave de API, então nada foi salvo. Copie-a novamente da sua conta."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 拒绝了该 API 密钥，因此未保存任何内容。请从您的账户中重新复制。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رفض %@ مفتاح API، لذا لم يُحفظ شيء. انسخه مرة أخرى من حسابك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ने API कुंजी अस्वीकार कर दी, इसलिए कुछ भी सहेजा नहीं गया। इसे अपने खाते से फिर से कॉपी करें।"
           }
         }
       }
@@ -1215,6 +1335,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "ऑस्कर पुरस्कार"
+          }
+        }
+      }
+    },
+    "Accepted by %@.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accepté par %@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceptada por %@."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aceita por %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 已接受。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قبِلها %@."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ने स्वीकार किया।"
           }
         }
       }
@@ -4021,6 +4181,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "जाँचें और सहेजें"
+          }
+        }
+      }
+    },
+    "Checking…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprobando…"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificando…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在检查…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ التحقق…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जाँच हो रही है…"
           }
         }
       }

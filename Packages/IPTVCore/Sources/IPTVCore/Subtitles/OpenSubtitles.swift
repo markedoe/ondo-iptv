@@ -119,6 +119,18 @@ public actor OpenSubtitlesClient: SubtitleProvider {
         session = (login.token, login.baseURL ?? Self.host)
     }
 
+    /// Checks the API key with the service (its list of formats needs one) and, when an account is given, signs in
+    /// with it: what Settings saves only once accepted.
+    public func checkCredentials() async -> CredentialCheck {
+        do {
+            _ = try await http.send(HTTPRequest(url: URL(string: "https://\(Self.host)/api/v1/infos/formats")!, headers: headers()))
+            if username != nil, password != nil { try await logIn() }
+            return .accepted
+        } catch {
+            return .failure(error)
+        }
+    }
+
     // MARK: Wire format
 
     private struct SearchResponse: Decodable {

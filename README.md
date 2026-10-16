@@ -42,7 +42,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 - **Player**: two engines, **AVPlayer** (PiP, AirPlay, HDR) and **VLC** (MKV, AVI, TS…), with automatic
   switching; **MKV films remuxed for AVPlayer** on the device, without transcoding (HDR10, HLG, Dolby Vision,
   Dolby Atmos, PiP), VLC playing those it cannot decode; zapping, audio / subtitle tracks, **external SRT subtitles**, **online subtitle search**
-  (OpenSubtitles, SubDL and SubSource with your key, Addic7ed without one), aspect ratio, speed, sleep timer,
+  (OpenSubtitles, SubDL and SubSource with your key, checked with the service when saved, Addic7ed without one), aspect ratio, speed, sleep timer,
   lock, gestures (iPhone), forced landscape, automatic reconnection, switch to another version of a dead
   channel, explained errors, lock screen / media keys, keyboard shortcuts, Playback menu, one window per
   stream and **full screen** (button, F key, double-click) on the Mac; **exact resume**, **last channel**,
@@ -60,7 +60,7 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   has many of them (keep your languages, choose, or not now); hide a **style** (manga & anime, children,
   documentaries…) or any word of category names (Bollywood…) the same way; or hide categories one by one.
   The filter button is on the Movies, Series and Live TV screens.
-- **Offline downloads** (movies, episodes), with their speed and time left, the reason in plain words when the
+- **Offline downloads** (movies, episodes; TestFlight edition, not the App Store one), with their speed and time left, the reason in plain words when the
   provider refuses, limits connections or sends nothing, and their details to share.
 - **Data**: JSON backup / restore, clearable cache.
 - **Help** in the app (Settings, and Help, Ondo Help on the Mac): one page per feature, in every language.

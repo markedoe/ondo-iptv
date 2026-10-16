@@ -9,10 +9,9 @@ FILMS ET SÉRIES
 • Prix et sélections en festival sur les fiches des films (Cannes, Oscars, Berlin, Venise, César…), et les films primés de votre playlist
 • Continuer à regarder : la lecture reprend exactement là où vous vous êtes arrêté, et l’épisode suivant démarre automatiquement
 • Ma liste réunit vos films, séries et chaînes au même endroit, et les collections les regroupent à votre façon
-• Téléchargement des films et épisodes pour les regarder hors ligne ; quand un téléchargement bloque, Ondo vous dit pourquoi en clair (refus du fournisseur, limite de connexions, rien reçu)
 
 UN LECTEUR QUI FONCTIONNE, TOUT SIMPLEMENT
-• Deux moteurs : le lecteur d’Apple (HDR, image dans l’image, AirPlay) et un moteur basé sur VLC pour MKV, AVI et TS
+• Deux moteurs : le lecteur d’Apple (HDR10, Dolby Vision, Dolby Atmos, image dans l’image, AirPlay), films MKV compris quand il sait les décoder, et un moteur basé sur VLC pour le reste (MKV, AVI, TS)
 • Pistes audio et sous-titres, fichiers de sous-titres SRT/VTT, format d’image, vitesse, minuterie, verrouillage des commandes
 • Recherche de sous-titres en ligne depuis le lecteur : OpenSubtitles, SubDL et SubSource avec votre propre clé, Addic7ed pour les séries sans clé
 • Messages d’erreur clairs : fournisseur, réseau ou application

@@ -9,6 +9,11 @@ struct HelpTopic: Identifiable {
 }
 
 extension HelpTopic {
+    /// The topics of the features this edition has (no downloads in the App Store edition).
+    static var shown: [HelpTopic] {
+        all.filter { $0.id != "downloads" || FeatureFlags.downloads }
+    }
+
     static let all: [HelpTopic] = [
         HelpTopic(
             id: "playlists", title: "Add a Playlist", systemImage: "list.bullet.rectangle",
@@ -160,7 +165,7 @@ struct HelpView: View {
     var body: some View {
         List {
             Section {
-                ForEach(HelpTopic.all) { topic in
+                ForEach(HelpTopic.shown) { topic in
                     NavigationLink {
                         HelpTopicView(topic: topic)
                     } label: {

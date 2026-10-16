@@ -10,8 +10,67 @@ enum SubtitleCredential: String, CaseIterable {
     case subSourceKey = "subtitles-subsource-key"
 }
 
+/// What a subtitle service said about the key or the account typed in Settings.
+enum SubtitleKeyCheck: Equatable {
+    case checking
+    case accepted
+    case refused
+    case unreachable
+}
+
+extension SubtitleCredential {
+    /// The fields of a service, its key first.
+    static func fields(of service: SubtitleService) -> [SubtitleCredential] {
+        switch service {
+        case .openSubtitles: return [.openSubtitlesKey, .openSubtitlesUsername, .openSubtitlesPassword]
+        case .subdl: return [.subdlKey]
+        case .subSource: return [.subSourceKey]
+        case .addic7ed: return []
+        }
+    }
+}
+
 /// Online subtitles: the user's own keys, the services they enable, and the query for what is playing.
 extension AppModel {
+    /// Checks a service's key (and OpenSubtitles' account) with the service and saves them only once it accepts them.
+    /// An empty key removes what was saved, without a check; nil then.
+    func checkAndSaveSubtitleCredentials(_ service: SubtitleService, values: [SubtitleCredential: String]) async -> SubtitleKeyCheck? {
+        let fields = SubtitleCredential.fields(of: service)
+        func value(_ field: SubtitleCredential) -> String? {
+            let raw = values[field] ?? ""
+            let trimmed = field == .openSubtitlesPassword ? raw : raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        guard let firstField = fields.first else { return nil }
+        guard let key = value(firstField) else {
+            for field in fields { setSubtitleCredential(nil, for: field) }
+            return nil
+        }
+        let check: CredentialCheck
+        switch service {
+        case .openSubtitles:
+            check = await OpenSubtitlesClient(
+                apiKey: key, username: value(.openSubtitlesUsername), password: value(.openSubtitlesPassword),
+                userAgent: Self.subtitleUserAgent, http: http
+            ).checkCredentials()
+        case .subdl:
+            check = await SubDLClient(apiKey: key, http: http).checkKey()
+        case .subSource:
+            check = await SubSourceClient(apiKey: key, http: http).checkKey()
+        case .addic7ed:
+            return nil
+        }
+        switch check {
+        case .accepted:
+            for field in fields { setSubtitleCredential(value(field), for: field) }
+            return .accepted
+        case .refused:
+            return .refused
+        case .unreachable:
+            return .unreachable
+        }
+    }
+
     func subtitleCredential(_ field: SubtitleCredential) -> String? {
         secrets.get(field.rawValue)
     }

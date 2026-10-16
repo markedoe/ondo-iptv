@@ -11,6 +11,11 @@ on:
         type: choice
         default: all
         options: [all, ios, mac, metadata]
+      edition:
+        description: "testflight: with downloads, for testers only; app-store: without downloads, the build to submit"
+        type: choice
+        default: testflight
+        options: [testflight, app-store]
 
 concurrency:
   group: release-${{ github.ref }}
@@ -28,6 +33,8 @@ jobs:
     # before them (gems, Homebrew).
     env:
       TARGET: ${{ github.event.inputs.target || 'all' }}
+      # A tag builds the App Store edition: the one that can be submitted.
+      EDITION: ${{ github.event.inputs.edition || 'app-store' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

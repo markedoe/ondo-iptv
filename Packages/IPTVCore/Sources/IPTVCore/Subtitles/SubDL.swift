@@ -62,6 +62,16 @@ public struct SubDLClient: SubtitleProvider {
         return try SubtitleArchive.pick(from: data, episodeCode: query.episodeCode)
     }
 
+    /// Checks the API key with a search: the service answers a refused key with an error that names it.
+    public func checkKey() async -> CredentialCheck {
+        do {
+            _ = try await search(SubtitleQuery(title: "The Matrix", year: 1999, languages: ["en"]))
+            return .accepted
+        } catch {
+            return .failure(error)
+        }
+    }
+
     private struct Response: Decodable {
         let status: Bool?
         let error: String?
