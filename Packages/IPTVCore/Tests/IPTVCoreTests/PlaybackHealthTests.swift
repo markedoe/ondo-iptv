@@ -150,6 +150,30 @@ final class PlaybackHealthTests: XCTestCase {
         XCTAssertEqual(health.verdict, .smooth)
     }
 
+    /// A 10 s skip: the position jumps at once, then waits for the picture. Neither the jump (it is no video shown)
+    /// nor the wait (the picture had not moved yet) counts.
+    func testASkipIsNeitherPlaybackNorAFreeze() {
+        var health = PlaybackHealth(buffer: 1)
+        var clock = 0.0
+        var received = 0
+        func add(_ media: Double) {
+            received += 1_000
+            health.add(PlaybackSample(
+                clock: clock, mediaTime: media, receivedBytes: received, consumedBytes: received, displayedPictures: Int(media * 25),
+                lostPictures: 0, isPlaying: true
+            ))
+            clock += 0.5
+        }
+        for step in 0..<20 { add(Double(step) / 2) }
+        health.restart()
+        for _ in 0..<8 { add(19.5) }
+        for step in 1...20 { add(19.5 + Double(step) / 2) }
+        XCTAssertTrue(health.freezes.isEmpty)
+        XCTAssertFalse(health.isFrozen)
+        XCTAssertEqual(health.pace ?? 0, 1, accuracy: 0.05, "the jump is not counted as video shown")
+        XCTAssertEqual(health.verdict, .smooth)
+    }
+
     /// Pictures dropped (the device cannot decode in time) without any freeze.
     func testLostPicturesAreThePlayers() {
         let health = play(30, lost: { t in Int(t * 2) })

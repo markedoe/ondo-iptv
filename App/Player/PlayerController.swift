@@ -975,6 +975,7 @@ extension PlayerController {
         vlcBackend?.apply(aspect, viewSize: vlcViewSize)
     }
     #else
+    func attachVLCDrawable(_ view: AnyObject) {}
     private func startVLC(url: URL, item: PlaybackItem) {}
     private func stopVLC() {}
     private func playVLC() {}

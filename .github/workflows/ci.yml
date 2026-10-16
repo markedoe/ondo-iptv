@@ -233,7 +233,7 @@ jobs:
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
       - name: Run unit and UI tests
-        # A test that hangs fails by name after its allowance (15 min, less where a test sets its own) instead of
+        # A test that hangs fails by name after its allowance (10 min, less where a test sets its own) instead of
         # holding the job until its timeout with nothing in the log.
         run: |
           set -o pipefail
@@ -245,7 +245,7 @@ jobs:
             -resultBundlePath build/UITests.xcresult \
             -skip-testing:OndoUITests/AppStoreScreenshots \
             -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 900 \
+            -default-test-execution-time-allowance 600 \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
       - name: App coverage
         if: always()

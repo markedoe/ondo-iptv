@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 import IPTVCore
 @testable import Ondo
 
@@ -60,12 +61,19 @@ final class PlaybackTimingTests: XCTestCase {
         let controller = PlayerController()
         controller.isMuted = true
         controller.enginePreference = engine
+        // As in the app (VLCVideoSurface): VLC draws into a view on screen, not into a window of its own.
+        let window = Self.window()
+        let surface = UIView(frame: window.bounds)
+        window.addSubview(surface)
+        window.isHidden = false
+        controller.attachVLCDrawable(surface)
         defer {
             let attachment = XCTAttachment(string: controller.problemReport().text)
             attachment.name = "report-\(engine.rawValue)"
             attachment.lifetime = .keepAlways
             add(attachment)
             controller.stop()
+            window.isHidden = true
         }
         controller.load(film(at: url))
         try await wait(seconds: 45) { logged(controller, "picture moving after ") != nil }
@@ -87,6 +95,14 @@ final class PlaybackTimingTests: XCTestCase {
         XCTAssertTrue(report.contains("seek done after"))
     }
 
+    /// A small window in the app's scene, for the video.
+    private static func window() -> UIWindow {
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        let window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow()
+        window.frame = CGRect(x: 0, y: 0, width: 320, height: 180)
+        return window
+    }
+
     func testAVPlayerStartsAndSeeks() async throws {
         try await startAndSeek(with: .apple)
     }
@@ -97,6 +113,9 @@ final class PlaybackTimingTests: XCTestCase {
         let base = try await server.start()
         try await startAndSeek(with: .vlc, url: base.appendingPathComponent("movie/viewer/secret/42.mkv"), to: 25)
         XCTAssertTrue(server.requests.contains { $0.headers["range"] != nil }, "VLC reads the film by byte ranges")
+        // The player is released, as when the viewer closes it: whatever VLC does then happens within this test and
+        // its time allowance (a run hung in the next test once, which had passed alone).
+        try await Task.sleep(for: .seconds(2))
     }
 
     /// Raw MPEG-TS over HTTP goes straight to VLC: AVPlayer cannot open it, and trying cost every channel change.

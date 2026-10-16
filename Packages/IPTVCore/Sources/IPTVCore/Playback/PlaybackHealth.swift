@@ -86,6 +86,8 @@ public struct PlaybackHealth: Sendable {
     private var stillSince: PlaybackSample?
     /// The picture moves forward since the stream started or since the last seek (`restart`).
     public private(set) var hasMoved = false
+    /// A seek was made and the position has not jumped to where it lands yet.
+    private var landing = false
 
     public init(buffer: Double = 0) {
         self.buffer = buffer
@@ -98,10 +100,18 @@ public struct PlaybackHealth: Sendable {
             entries.removeAll()
             stillSince = nil
             hasMoved = false
+            landing = false
         }
         let last = entries.last?.sample
         let moved = last.map { (sample.mediaTime ?? 0) != ($0.mediaTime ?? 0) || sample.displayedPictures != $0.displayedPictures } ?? false
-        if let last, let now = sample.mediaTime, let before = last.mediaTime, Self.isPlayed(now - before) { hasMoved = true }
+        if let last, let now = sample.mediaTime, let before = last.mediaTime, now != before {
+            if landing {
+                // The jump to where the seek lands (a 10 s skip looks like 10 s played): the picture moves after it.
+                landing = false
+            } else if Self.isPlayed(now - before) {
+                hasMoved = true
+            }
+        }
         if last != nil {
             if sample.isPlaying && !moved && sample.mediaTime != nil && hasMoved {
                 // From the first sample that found the picture still (it stopped since the previous one).
@@ -120,6 +130,7 @@ public struct PlaybackHealth: Sendable {
     public mutating func restart() {
         stillSince = nil
         hasMoved = false
+        landing = true
     }
 
     /// The picture is stopped right now, for at least `minimumFreeze`.
