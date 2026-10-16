@@ -1,26 +1,19 @@
-• Les téléchargements affichent leur vitesse et le temps restant, et Détails montre ce que le fournisseur a répondu et ce que le téléchargement attend, à partager. Ceux qui bloquent disent pourquoi (refus du fournisseur, limite de connexions, rien reçu) et quoi faire.
-• Signaler un problème compte maintenant les moments où l’image s’arrête pendant que le son continue, et n’accuse plus l’appareil des images perdues quand les données arrivaient trop lentement.
-• Les grosses playlists s’ouvrent plus vite au lancement, et la recherche et le guide TV trouvent titres et chaînes plus vite.
+• Les films et épisodes MKV se lisent avec le lecteur du système quand il sait les décoder : HDR10, HLG et Dolby Vision s’affichent, le Dolby Atmos est restitué et l’image dans l’image fonctionne. VLC lit les autres.
+• Les téléchargements reprennent là où ils se sont arrêtés, même après la fermeture de l’app, et réessaient seuls après une coupure réseau. Ils affichent leur vitesse et le temps restant ; Détails montre la réponse du fournisseur et ce qu’un téléchargement attend, à partager.
+• Lecteur, Plus, Signaler un problème… : un rapport de la lecture (temps de démarrage et de saut, gels et leur cause, statistiques ; ni adresse du flux, ni identifiant, ni titre) à copier, partager ou envoyer dans un ticket GitHub.
 • Les films et séries démarrent plus vite et reviennent plus tôt après un saut ; l’image suit votre doigt quand vous faites glisser la barre de temps.
 • Réglages, Lecteur : choisissez la mémoire tampon du direct et celle des films et séries (Automatique, ou de 1 à 10 secondes). Une mémoire tampon plus longue masque les coupures plus longues du fournisseur.
-• Lecteur, Plus, Signaler un problème… : un rapport de la lecture (temps de démarrage et de saut, gels, statistiques ; ni adresse du flux, ni identifiant, ni titre) à copier, partager ou envoyer dans un ticket GitHub.
-• Avec VLC, les chaînes en direct gèlent moins : la mémoire tampon s’allonge d’elle-même après une coupure du flux du fournisseur, et les Statistiques du flux indiquent si un gel vient du réseau ou du lecteur.
-• Le guide TV s’ouvre aussitôt, même avec des milliers de chaînes, et les montre toutes ; les noms des chaînes et les heures restent visibles pendant le défilement.
-• Plus fluide partout : la recherche travaille en arrière-plan, les longues listes et les affiches défilent sans à-coups, et une playlist déjà sur l’appareil s’ouvre sans attendre sa mise à jour.
-• Mac : plein écran, avec le bouton, la touche F ou un double-clic.
-• AirPlay depuis le Mac envoie maintenant la vidéo vers la TV, pas seulement le son.
+• Avec VLC, les chaînes en direct gèlent moins : la mémoire tampon s’allonge d’elle-même après une coupure du fournisseur, et les Statistiques du flux indiquent si un gel vient du réseau ou du lecteur.
+• Plus rapide et plus fluide partout : les grosses playlists s’ouvrent plus tôt, la recherche travaille en arrière-plan, les longues listes défilent sans à-coups et le guide TV s’ouvre aussitôt avec des milliers de chaînes.
+• Mac : plein écran, avec le bouton, la touche F ou un double-clic ; AirPlay envoie la vidéo vers la TV, pas seulement le son.
 • La reprise démarre exactement là où vous vous êtes arrêté, et une pause faite pendant l’ouverture d’un film est respectée.
 • Cherchez des sous-titres en ligne depuis le lecteur : OpenSubtitles, SubDL et SubSource avec votre propre clé, Addic7ed pour les séries sans clé.
 • Ondo parle désormais espagnol, portugais, chinois (simplifié), arabe et hindi, en plus du français et de l’anglais.
-• Ma liste a maintenant son onglet sur iPhone, avec vos films, séries et chaînes au même endroit ; vos propres listes s’appellent désormais des collections.
-• Touchez un acteur ou un réalisateur sur la fiche d’un film ou d’une série pour voir ses autres films et séries de votre playlist.
+• Ma liste a son onglet sur iPhone, avec vos films, séries et chaînes au même endroit ; vos propres listes s’appellent désormais des collections.
+• Touchez un acteur, un réalisateur, un genre, l’année ou un prix sur une fiche pour voir les titres de votre playlist qui le partagent ; la recherche trouve les acteurs et réalisateurs par leur nom.
 • La recherche se filtre par années de sortie, et les grilles se trient par date de sortie.
-• Masquez d’un coup une langue ou un pays (catégories qui commencent par |PT|, FR:…) : les catégories ajoutées plus tard suivent. Le bouton de filtre est sur Films, Séries et Live TV.
+• Masquez d’un coup une langue ou un pays (catégories qui commencent par |PT|, FR:…), un style (manga et anime, enfants, documentaires…) ou n’importe quel mot des noms de catégories ; les catégories ajoutées plus tard suivent.
 • Prix et sélections (Cannes, Oscars, Berlin, Venise, César…) sur les fiches des films, une rangée Films primés, et un filtre de recherche par festival ou cérémonie.
-• Masquez aussi facilement un style (manga et anime, enfants, documentaires…) ou n’importe quel mot des noms de catégories, dans toutes les playlists.
 • L’accueil indique la date de dernière mise à jour de la playlist, au-dessus de son nom.
-• Touchez un genre, l’année de sortie ou un prix sur une fiche pour voir les titres de votre playlist qui le partagent, puis tout le festival.
-• Les fiches dont l’image de fond manque ou ne se charge pas affichent celle de TMDb si vous avez saisi votre jeton, sinon l’affiche floutée, au lieu d’un cadre vide.
-• La recherche trouve les acteurs et réalisateurs par leur nom et ouvre leur page.
-• Les Réglages prennent votre « Jeton d’accès en lecture à l’API » TMDb (ou la « Clé d’API »), nommé comme sur TMDb, et le vérifient auprès de TMDb avant de l’enregistrer.
-• Réglages : « Langues et catégories » pour masquer une langue d’un geste, et « Langue de l’app », qui ouvre la page du système où choisir la langue d’Ondo.
+• Les fiches sans image de fond affichent celle de TMDb si vous avez saisi votre jeton, sinon l’affiche floutée.
+• Les Réglages prennent votre « Jeton d’accès en lecture à l’API » TMDb (ou la « Clé d’API »), nommé comme sur TMDb, et le vérifient auprès de TMDb avant de l’enregistrer ; « Langue de l’app » ouvre la page du système où choisir la langue d’Ondo.

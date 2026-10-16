@@ -40,7 +40,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   current programme**, watch a past programme and go back to live from the player, **live pause** (HLS DVR
   window, otherwise resumed from the archive).
 - **Player**: two engines, **AVPlayer** (PiP, AirPlay, HDR) and **VLC** (MKV, AVI, TS…), with automatic
-  switching; zapping, audio / subtitle tracks, **external SRT subtitles**, **online subtitle search**
+  switching; **MKV films remuxed for AVPlayer** on the device, without transcoding (HDR10, HLG, Dolby Vision,
+  Dolby Atmos, PiP), VLC playing those it cannot decode; zapping, audio / subtitle tracks, **external SRT subtitles**, **online subtitle search**
   (OpenSubtitles, SubDL and SubSource with your key, Addic7ed without one), aspect ratio, speed, sleep timer,
   lock, gestures (iPhone), forced landscape, automatic reconnection, switch to another version of a dead
   channel, explained errors, lock screen / media keys, keyboard shortcuts, Playback menu, one window per

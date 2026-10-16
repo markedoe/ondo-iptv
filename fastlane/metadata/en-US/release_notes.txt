@@ -1,26 +1,19 @@
-• Downloads show their speed and the time left, and Details says what the provider answered and what the download waits for, to share. Those that stall say why (provider refusal, connection limit, nothing received) and what to do.
-• Report a Problem now counts the moments the picture stops while the sound goes on, and no longer blames the device for pictures lost while the data came too slowly.
-• Large playlists open sooner after launch, and search and the TV guide find titles and channels faster.
+• MKV movies and episodes play with the system player when it can decode them: HDR10, HLG and Dolby Vision show, Dolby Atmos plays and Picture in Picture works. VLC plays the others.
+• Downloads go on from where they stopped, also after the app was closed, and try again by themselves after a network failure. They show their speed and the time left; Details says what the provider answered and what a download waits for, to share.
+• Player, More, Report a Problem…: a report of the playback (start and seek times, freezes and their cause, statistics; no stream address, login or title) to copy, share or send in a GitHub issue.
 • Movies and series start faster and come back sooner after a skip or a jump; the picture follows your finger while you drag the time bar.
 • Settings, Player: choose the buffer for live TV and for movies & series (Automatic, or 1 to 10 seconds). A longer buffer hides longer interruptions from the provider.
-• Player, More, Report a Problem…: a report of the playback (start and seek times, freezes, statistics; no stream address, login or title) to copy, share or send in a GitHub issue.
 • With VLC, live channels freeze less: the buffer grows by itself after the provider's stream stops for a moment, and Stream Statistics say whether a freeze comes from the network or the player.
-• The TV guide opens at once, even with thousands of channels, and lists them all; channel names and times stay in view while you scroll.
-• Smoother everywhere: search works in the background, long lists and posters scroll without stutter, and a playlist already on the device opens without waiting for its update.
-• Mac: full screen, from the button, the F key or a double-click.
-• AirPlay from the Mac now sends the video to your TV, not only the sound.
+• Faster and smoother everywhere: large playlists open sooner, search works in the background, long lists scroll without stutter, and the TV guide opens at once with thousands of channels.
+• Mac: full screen, from the button, the F key or a double-click; AirPlay sends the video to your TV, not only the sound.
 • Resume starts exactly where you stopped, and a pause made while a movie opens stays paused.
 • Find subtitles online from the player: OpenSubtitles, SubDL and SubSource with your own key, Addic7ed for series without a key.
 • Ondo now speaks Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi, as well as English and French.
 • My List is now a tab on iPhone, with your movies, series and channels in one place; your own lists are now called collections.
-• Tap an actor or a director on a movie or series page to see their other movies and series in your playlist.
+• Tap an actor, a director, a genre, the year or an award on a movie or series page to see the titles of your playlist that share it; search finds actors and directors by name.
 • Search can be filtered by release years, and the grids sort by release date.
-• Hide a whole language or country in one go (category names that start with |PT|, FR:…): the categories added later follow. The filter button is on Movies, Series and Live TV.
+• Hide a whole language or country in one go (category names that start with |PT|, FR:…), a style (manga & anime, children, documentaries…) or any word of category names; the categories added later follow.
 • Awards and festival selections (Cannes, Oscars, Berlin, Venice, Césars…) on movie pages, an Award Winners row, and a search filter by festival or ceremony.
-• Hide a style just as easily (manga & anime, children, documentaries…) or any word of category names, in every playlist.
 • Home shows when the playlist was last updated, above its name.
-• Tap a genre, the release year or an award on a movie or series page to see the titles of your playlist that share it, then the whole festival.
-• Movie and series pages whose background image is missing or broken show the one from TMDb when you have set your token, otherwise the blurred poster, instead of an empty frame.
-• Search finds actors and directors by name and opens their page.
-• Settings take your TMDb “API Read Access Token” (or API Key), named as on TMDb, and check it with TMDb before saving it.
-• Settings: “Languages and Categories” to hide a language in one tap, and “App Language”, which opens the system page where Ondo's language is chosen.
+• Pages whose background image is missing show the one from TMDb when you have set your token, otherwise the blurred poster.
+• Settings take your TMDb “API Read Access Token” (or API Key), named as on TMDb, and check it with TMDb before saving it; “App Language” opens the system page where Ondo's language is chosen.
