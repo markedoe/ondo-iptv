@@ -86,6 +86,11 @@ def marketing_version
   tag.start_with?("v") ? tag.delete_prefix("v") : nil
 end
 
+# The App Store version the listing goes to, the same as the builds': the tag's, otherwise project.yml's.
+def app_version
+  marketing_version || File.read(File.expand_path("../project.yml", __dir__), encoding: "UTF-8")[/MARKETING_VERSION:\s*"([^"]+)"/, 1]
+end
+
 def build_settings_args(build_number)
   args = ["CURRENT_PROJECT_VERSION=#{build_number}"]
   args << "MARKETING_VERSION=#{marketing_version}" if marketing_version
@@ -181,6 +186,7 @@ platform :ios do
       api_key: api_key,
       app_identifier: APP_ID,
       platform: "ios",
+      app_version: app_version,
       skip_binary_upload: true,
       # Both name fastlane/screenshots/ios: File.directory? runs in fastlane/, deliver from the repository root.
       skip_screenshots: !File.directory?("screenshots/ios"),
@@ -201,6 +207,7 @@ platform :mac do
       api_key: api_key,
       app_identifier: APP_ID,
       platform: "osx",
+      app_version: app_version,
       skip_binary_upload: true,
       # Both name fastlane/screenshots/mac (see the iOS lane).
       skip_screenshots: !File.directory?("screenshots/mac"),
