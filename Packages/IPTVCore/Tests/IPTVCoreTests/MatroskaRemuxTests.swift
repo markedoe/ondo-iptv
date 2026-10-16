@@ -110,6 +110,59 @@ final class MatroskaRemuxTests: XCTestCase {
         XCTAssertEqual(audio[0].duration, UInt64(audio[0].count) * 1_024)
     }
 
+    /// HEVC 10-bit in PQ (HDR10) with open GOPs (pictures decoded after a key frame but shown before it) and E-AC-3 5.1,
+    /// 3 s: the decoding times follow on from one segment to the next all the same.
+    func testHEVCWithOpenGOPsAndDolbyDigitalPlus() async throws {
+        let remux = try await MatroskaRemux.open(DataByteSource(try Fixture.data("remux-hevc-eac3.mkv")), targetDuration: 1)
+        let multivariant = remux.multivariantPlaylist(media: "media.m3u8")
+        XCTAssertTrue(multivariant.contains("CODECS=\"hvc1.2.4.L"), multivariant)
+        XCTAssertTrue(multivariant.contains(",ec-3\""), multivariant)
+        XCTAssertTrue(multivariant.contains("VIDEO-RANGE=PQ"), multivariant)
+        let initSegment = remux.initSegment
+        for box in ["hvc1", "hvcC", "colr", "ec-3", "dec3"] {
+            XCTAssertNotNil(initSegment.range(of: Data(box.utf8)), box)
+        }
+        guard case .eac3(let dec3) = remux.tracks[1].codec else { return XCTFail("E-AC-3") }
+        var bits = BitReader(dec3)
+        XCTAssertEqual(try bits.read(13), 96, "kb/s")
+        XCTAssertEqual(try bits.read(3), 0, "one independent substream")
+        XCTAssertEqual(try bits.read(2), 0, "48 kHz")
+        XCTAssertEqual(try bits.read(5), 16, "E-AC-3")
+        try bits.skip(5)
+        XCTAssertEqual(try bits.read(3), 7, "3/2: L, C, R, Ls, Rs")
+        XCTAssertEqual(try bits.read(1), 1, "and LFE")
+        XCTAssertEqual(remux.tracks[1].channels, 6)
+        var video: [(start: UInt64, count: Int, duration: UInt64, bytes: Int)] = []
+        var audio: [(start: UInt64, count: Int, duration: UInt64, bytes: Int)] = []
+        for index in remux.segments.indices {
+            let runs = runs(try await remux.segment(index))
+            video.append(try XCTUnwrap(runs[1]))
+            audio.append(try XCTUnwrap(runs[2]))
+        }
+        XCTAssertEqual(video.reduce(0) { $0 + $1.count }, 75)
+        XCTAssertEqual(video.reduce(0) { $0 + $1.bytes }, 22_793)
+        XCTAssertEqual(audio.reduce(0) { $0 + $1.count }, 94)
+        XCTAssertEqual(audio.reduce(0) { $0 + $1.bytes }, 36_096)
+        XCTAssertNotEqual(video.map(\.count), [25, 25, 25], "the leading pictures of a key frame go with it")
+        for (previous, next) in zip(video, video.dropFirst()) { XCTAssertEqual(previous.start + previous.duration, next.start) }
+        for (previous, next) in zip(audio, audio.dropFirst()) { XCTAssertEqual(previous.start + previous.duration, next.start) }
+        XCTAssertEqual(audio[0].duration, UInt64(audio[0].count) * 1_536)
+    }
+
+    /// Remuxes any file for a check with ffmpeg: REMUX_INPUT=film.mkv REMUX_DUMP=folder swift test --filter testDump.
+    func testDump() async throws {
+        let environment = ProcessInfo.processInfo.environment
+        guard let input = environment["REMUX_INPUT"], let dump = environment["REMUX_DUMP"] else { throw XCTSkip("REMUX_INPUT and REMUX_DUMP not set") }
+        let remux = try await MatroskaRemux.open(DataByteSource(try Data(contentsOf: URL(fileURLWithPath: input))), targetDuration: 1)
+        let folder = URL(fileURLWithPath: dump)
+        try remux.initSegment.write(to: folder.appendingPathComponent("init.mp4"))
+        try Data(remux.multivariantPlaylist(media: "media.m3u8").utf8).write(to: folder.appendingPathComponent("index.m3u8"))
+        try Data(remux.mediaPlaylist(initURI: "init.mp4") { "seg-\($0).m4s" }.utf8).write(to: folder.appendingPathComponent("media.m3u8"))
+        for index in remux.segments.indices {
+            try await remux.segment(index).write(to: folder.appendingPathComponent("seg-\(index).m4s"))
+        }
+    }
+
     func testFilmsTheSystemPlayerCannotDecodeAreLeftToVLC() throws {
         let dts = MatroskaTrack(
             number: 2, kind: .audio, codecID: "A_DTS", codecPrivate: nil, language: "eng", name: nil, isDefault: true, isEnabled: true,

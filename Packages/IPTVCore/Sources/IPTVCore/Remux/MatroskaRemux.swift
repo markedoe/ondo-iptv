@@ -55,20 +55,34 @@ public actor MatroskaRemux {
     ) async throws -> MatroskaRemux {
         let file = try await MatroskaReader.open(source)
         let video = try chooseVideo(file.tracks)
-        let audio = try chooseAudio(file.tracks, preferredLanguages: preferredLanguages)
+        var candidates = try audioCandidates(file.tracks, preferredLanguages: preferredLanguages)
+        var audio: (track: MatroskaTrack, fragment: FragmentTrack, frameLength: Int64)?
+        // The first track whose description can be made: Dolby's is read from its first frame.
+        while audio == nil, !candidates.isEmpty {
+            let track = candidates.removeFirst()
+            if let fragment = fragmentTrack(audio: track) {
+                audio = (track, fragment, track.audio?.outputSamplingFrequency.map { $0 > (track.audio?.samplingFrequency ?? 0) } == true ? 2_048 : 1_024)
+            } else if let frame = try? await firstFrame(of: track, in: file, source: source),
+                      let made = try? dolbyTrack(track, frame: frame) {
+                audio = (track, made.fragment, made.frameLength)
+            }
+        }
+        if audio == nil, file.tracks.contains(where: { $0.kind == .audio && $0.isEnabled }) { throw RemuxError("no audio track can be described") }
         let segments = try plan(file, video: video, targetDuration: targetDuration)
         return MatroskaRemux(source: source, file: file, video: video, audio: audio, segments: segments)
     }
 
-    private init(source: ByteSource, file: MatroskaFile, video: MatroskaTrack, audio: MatroskaTrack?, segments: [Segment]) {
+    private init(
+        source: ByteSource, file: MatroskaFile, video: MatroskaTrack, audio: (track: MatroskaTrack, fragment: FragmentTrack, frameLength: Int64)?,
+        segments: [Segment]
+    ) {
         self.source = source
         self.file = file
         self.video = video
-        self.audio = audio
+        self.audio = audio?.track
+        audioFrameTicks = audio?.frameLength ?? 1_024
         self.segments = segments
-        var tracks = [Self.fragmentTrack(video)]
-        if let audio, let track = Self.fragmentTrack(audio: audio) { tracks.append(track) }
-        self.tracks = tracks
+        tracks = [Self.fragmentTrack(video)] + (audio.map { [$0.fragment] } ?? [])
         frameTicks = video.defaultDuration.map { Self.ticks(Int64(clamping: $0), Self.videoTimescale) }
     }
 
@@ -87,17 +101,51 @@ public actor MatroskaRemux {
         return video
     }
 
+    /// Codecs the system player decodes in HLS.
+    static func isPlayable(_ codecID: String) -> Bool {
+        codecID.hasPrefix("A_AAC") || codecID == "A_AC3" || codecID == "A_EAC3"
+    }
+
     /// The audio track to play: the first language of `preferredLanguages` the file has, else its default track, among
     /// those the system player decodes. A film whose audio it cannot decode at all is left to VLC.
     static func chooseAudio(_ tracks: [MatroskaTrack], preferredLanguages: [String]) throws -> MatroskaTrack? {
+        try audioCandidates(tracks, preferredLanguages: preferredLanguages).first
+    }
+
+    /// The tracks the system player decodes, best first.
+    static func audioCandidates(_ tracks: [MatroskaTrack], preferredLanguages: [String]) throws -> [MatroskaTrack] {
         let audio = tracks.filter { $0.kind == .audio && $0.isEnabled }
-        guard !audio.isEmpty else { return nil }
-        let playable = audio.filter { fragmentTrack(audio: $0) != nil }
+        guard !audio.isEmpty else { return [] }
+        let playable = audio.filter { isPlayable($0.codecID) && ($0.audio?.samplingFrequency ?? 0) > 0 }
         guard !playable.isEmpty else { throw RemuxError("audio codec \(audio.map(\.codecID).joined(separator: ", "))") }
-        for language in preferredLanguages {
-            if let track = playable.first(where: { matches($0.language, language) }) { return track }
+        func rank(_ track: MatroskaTrack) -> Int {
+            if let language = preferredLanguages.firstIndex(where: { matches(track.language, $0) }) { return language }
+            return preferredLanguages.count + (track.isDefault ? 0 : 1)
         }
-        return playable.first(where: \.isDefault) ?? playable[0]
+        // Stable: the file's order among equals.
+        return playable.enumerated().sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }.map(\.element)
+    }
+
+    /// AC-3 and E-AC-3: described from their first frame.
+    static func dolbyTrack(_ audio: MatroskaTrack, frame: Data) throws -> (fragment: FragmentTrack, frameLength: Int64) {
+        let config = audio.codecID == "A_AC3" ? try DolbyAudio.ac3(frame) : try DolbyAudio.eac3(frame)
+        let codec: FragmentTrack.Codec = audio.codecID == "A_AC3" ? .ac3(config.box) : .eac3(config.box)
+        var track = FragmentTrack(id: 2, codec: codec, timescale: UInt32(config.sampleRate))
+        track.channels = config.channels
+        track.sampleRate = config.sampleRate
+        track.language = iso639(audio.language)
+        return (track, Int64(config.frameLength))
+    }
+
+    /// The first frame of `track`, from the start of the clusters.
+    static func firstFrame(of track: MatroskaTrack, in file: MatroskaFile, source: ByteSource) async throws -> Data {
+        for size: Int64 in [256 * 1024, 4 * 1024 * 1024] {
+            let bytes = try await source.read(file.firstClusterOffset..<min(file.firstClusterOffset + size, file.clustersEnd))
+            let read = try MatroskaReader.frames(in: bytes, from: file.firstClusterOffset, file: file)
+            if let frame = read.frames.first(where: { $0.track == track.number }) { return frame.data }
+            if read.complete { break }
+        }
+        throw RemuxError("no frame of track \(track.number) at the start")
     }
 
     /// "fre", "fra" and "fr-FR" are all French.
@@ -124,7 +172,7 @@ public actor MatroskaRemux {
         return track
     }
 
-    /// The audio track as fragmented MP4, or nil when the system player does not decode it.
+    /// An AAC track as fragmented MP4; nil for other codecs (Dolby's are described from a frame).
     static func fragmentTrack(audio: MatroskaTrack) -> FragmentTrack? {
         guard let info = audio.audio, info.samplingFrequency > 0 else { return nil }
         let codec: FragmentTrack.Codec
@@ -169,12 +217,8 @@ public actor MatroskaRemux {
         return language.lowercased()
     }
 
-    /// Audio ticks per frame: 1024 samples for AAC, 2048 at the output rate for HE-AAC.
-    nonisolated var audioFrameTicks: Int64 {
-        guard let audio, let info = audio.audio else { return 1_024 }
-        if let output = info.outputSamplingFrequency, output > info.samplingFrequency { return 2_048 }
-        return 1_024
-    }
+    /// Audio ticks per frame: 1024 samples for AAC (2048 at the output rate for HE-AAC), 1536 for AC-3.
+    nonisolated let audioFrameTicks: Int64
 
     // MARK: Segments
 
@@ -329,8 +373,10 @@ public actor MatroskaRemux {
         let grid = self.grid ?? Self.makeGrid(videoTimes: videoTimes, step: step, audioTimes: audioTimes, audioStep: audioFrameTicks)
         self.grid = grid
 
-        // Video: decoding times on the frame grid from the key frame's, composition offsets to each presentation time.
-        let firstDecode = Self.snap(videoTimes[0] - grid.reorder, phase: grid.videoPhase, step: step)
+        // Video: decoding times on the frame grid from the segment's earliest presentation time (with an open GOP, the
+        // pictures decoded after the key frame but shown before it), so that they follow on from the previous segment's;
+        // composition offsets to each presentation time.
+        let firstDecode = Self.snap((videoTimes.min() ?? videoTimes[0]) - grid.reorder, phase: grid.videoPhase, step: step)
         var runs: [(track: FragmentTrack, baseDecodeTime: UInt64, samples: [FragmentSample])] = []
         let videoSamples = videoFrames.enumerated().map { offset, frame in
             FragmentSample(
@@ -351,10 +397,10 @@ public actor MatroskaRemux {
     /// The first segment made sets the grid: how far decoding runs ahead of presentation (the deepest reordering of
     /// its frames, plus a frame), and the phases of the video and audio grids.
     static func makeGrid(videoTimes: [Int64], step: Int64, audioTimes: [Int64], audioStep: Int64) -> Grid {
-        let key = videoTimes[0]
-        let deepest = videoTimes.enumerated().map { key + Int64($0.offset) * step - $0.element }.max() ?? 0
+        let earliest = videoTimes.min() ?? 0
+        let deepest = videoTimes.enumerated().map { earliest + Int64($0.offset) * step - $0.element }.max() ?? 0
         let reorder = (max(deepest, 0) + step - 1) / step * step + step
-        return Grid(videoPhase: key - reorder, reorder: reorder, audioPhase: phase(audioTimes, step: audioStep))
+        return Grid(videoPhase: earliest - reorder, reorder: reorder, audioPhase: phase(audioTimes, step: audioStep))
     }
 
     /// The offset of a run of frames on a grid of `step`, averaged over the frames (their times are rounded to the
