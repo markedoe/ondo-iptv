@@ -118,9 +118,15 @@ extension AppModel {
 
     func details(for movie: Movie) async -> MediaDetails? {
         if let cached = movieDetailsCache[movie.id] { return cached }
+        // The Home prefetch and the page may ask at the same time: one request.
+        if let running = movieDetailsInFlight[movie.id] { return await running.value }
         guard let streamID = movie.xtreamStreamID, let credentials = activePlaylist?.source.xtreamCredentials else { return nil }
         let client = XtreamClient(credentials: credentials, http: http, headers: activePlaylist?.headers ?? .none)
-        guard let details = try? await client.movieDetails(streamID: streamID) else { return nil }
+        let request = Task { try? await client.movieDetails(streamID: streamID) }
+        movieDetailsInFlight[movie.id] = request
+        let fetched = await request.value
+        movieDetailsInFlight[movie.id] = nil
+        guard let details = fetched else { return nil }
         movieDetailsCache[movie.id] = details
         detailsRevision += 1
         return details

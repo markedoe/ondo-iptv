@@ -158,7 +158,7 @@ struct MultiviewTile: View {
 
     private var caption: some View {
         let channel = session.current.flatMap { model.index.channelsByID[$0.reference.itemID] }
-        let program = channel.flatMap { model.epg.current(for: $0) }
+        let program = channel.flatMap { model.currentProgram(for: $0) }
         return HStack(spacing: 6) {
             Image(systemName: hasSound ? "speaker.wave.2.fill" : "speaker.slash.fill")
                 .foregroundStyle(hasSound ? Color.accentColor : .white.opacity(0.7))

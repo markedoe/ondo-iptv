@@ -75,6 +75,14 @@ extension AppModel {
         return program.start > now ? 1 : 2
     }
 
+    /// The programme on a channel at `date`, from the guide matches kept per catalogue and guide: lists ask for it
+    /// for every row at every redraw, and matching a channel to the guide normalises its names.
+    func currentProgram(for channel: Channel, at date: Date = Date()) -> EPGProgram? {
+        if let id = guideIDsByChannelID()[channel.id] { return epg.current(guideID: id, at: date) }
+        // A channel outside the catalogue (a multiview tile of another playlist…): matched on its own.
+        return index.channelsByID[channel.id] == nil ? epg.current(for: channel, at: date) : nil
+    }
+
     /// Playlist channels per guide channel id.
     func channelsByGuideID() -> [String: [Channel]] {
         guideMatches().map

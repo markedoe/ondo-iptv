@@ -126,6 +126,7 @@ final class AppModel {
     @ObservationIgnored private var librarySaveTask: Task<Void, Never>?
     @ObservationIgnored private var epgTask: Task<Void, Never>?
     @ObservationIgnored var movieDetailsCache: [String: MediaDetails] = [:]
+    @ObservationIgnored var movieDetailsInFlight: [String: Task<MediaDetails?, Never>] = [:]
     /// TMDb backdrops and dead provider backdrops (AppModel+Backdrops).
     let backdrops = BackdropStore()
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]
@@ -643,7 +644,9 @@ final class AppModel {
     }
 
     func logoURL(for channel: Channel) -> URL? {
-        channel.logoURL ?? epg.iconURL(for: channel)
+        if let logo = channel.logoURL { return logo }
+        if let id = guideIDsByChannelID()[channel.id] { return epg.data.channels[id]?.iconURL }
+        return index.channelsByID[channel.id] == nil ? epg.iconURL(for: channel) : nil
     }
 
     // MARK: - Categories & parental control

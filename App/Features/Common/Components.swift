@@ -8,7 +8,7 @@ struct ChannelRow: View {
     var date: Date = Date()
 
     var body: some View {
-        let program = model.epg.current(for: channel, at: date)
+        let program = model.currentProgram(for: channel, at: date)
         HStack(spacing: 12) {
             if model.settings.showChannelNumbers, let number = channel.number {
                 Text(verbatim: String(number))  // 1001, not "1,001"
@@ -106,7 +106,7 @@ struct ChannelTile: View {
                 .font(.caption)
                 .lineLimit(1)
                 .frame(width: 120)
-            if let program = model.epg.current(for: channel) {
+            if let program = model.currentProgram(for: channel) {
                 Text(program.title)
                     .font(.caption2)
                     .foregroundStyle(.secondary)

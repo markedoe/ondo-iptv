@@ -371,6 +371,9 @@ final class DownloadManager: NSObject {
 /// URLSession delegate living off the main actor; files must be moved before the callback returns.
 private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
     weak var manager: DownloadManager?
+    /// When progress was last passed on, per download: the session reports every few kilobytes, the screen needs a
+    /// few updates a second. Only touched on the session's delegate queue, which is serial.
+    private var lastSent: [String: Date] = [:]
 
     init(manager: DownloadManager) {
         self.manager = manager
@@ -378,6 +381,9 @@ private final class DownloadDelegate: NSObject, URLSessionDownloadDelegate, @unc
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
         guard let id = downloadTask.taskDescription else { return }
+        let now = Date()
+        if let last = lastSent[id], now.timeIntervalSince(last) < 0.25, totalBytesWritten < totalBytesExpectedToWrite { return }
+        lastSent[id] = now
         Task { @MainActor [weak manager] in
             manager?.progressChanged(id: id, written: totalBytesWritten, expected: totalBytesExpectedToWrite)
         }
