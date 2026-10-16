@@ -18,7 +18,8 @@ misbehaves on purpose, and every freeze is counted on screen.
   libVLC's counters recorded during a run, against what the screen showed.
 - `make_media.sh`: generates the test streams (nothing is downloaded): a channel (720p at 25 frames per second,
   3.4 Mb/s in MPEG-TS), a film (1080p, 6 Mb/s, a key frame every 10 s as encoders do by default) as MP4 with its
-  index at the end or at the start, MKV and MPEG-TS, and a 4K stream too heavy for a busy device.
+  index at the end or at the start, MKV and MPEG-TS, the MKV with a second audio track that is not played (as
+  films carry other languages), and a 4K stream too heavy for a busy device.
 
 ## Running it
 
@@ -56,6 +57,22 @@ The buffer only covers the part of a stall where no data came in. When the data 
 the video needs, the position stands still while bytes still arrive: the player has run out and refills, and the
 picture is frozen for the whole stall (a viewer's report: a 12 Mb/s 4K film sent at 9 Mb/s froze 6 to 8 s at a
 time with 5 s of buffer, which the first estimate put at 1 to 3 s).
+
+## Tracks not played, and the picture after a refill
+
+A film often carries several audio tracks (other languages). VLC receives them all and hands its decoders the
+tracks it plays only: its count of bytes used (the "used" column of a report) stays below what was received, by
+the share of the tracks not played. The film with a second 4.6 Mb/s audio track, on a fast connection: used was 57 %
+of received from start to end, without a freeze. It is no sign of data piling up, and the network has to carry
+every track: the bitrate a film needs is what was received per second of video.
+
+A viewer's report showed both: a 4K MKV whose file carries 12.4 Mb/s, from a provider sending 8 to 9 Mb/s (used: 66 %
+of received). VLC ran out, refilled with its position standing still, then started the picture again at a key
+frame while the sound went on: the position moved for 6 and 8 more seconds under the same picture. `PlaybackHealth`
+counts these as freezes of the picture alone (pictures shown standing still while the position goes on), with the
+cause the data gives them: 31 s frozen in that minute instead of the 17 s the position's stalls showed. The libVLC
+used here (Linux, decoding in software) brings the picture back without waiting for a key frame; the report is
+replayed in IPTVCore's tests (`PlaybackReportReplayTests`).
 
 ## Live channels
 
@@ -149,7 +166,8 @@ Each resumed at 1:00 exactly. VLC ignores `start-time` on MPEG-TS and starts at 
 ## A device that does not keep up
 
 The 4K stream on half of one core: 28 % of the pictures lost and three short freezes, while the data arrived on
-time. Lost pictures are the sign: in every network case, none were lost.
+time. A player short of data loses pictures too: the MKV with a second audio track, sent at 70 % of its rate, lost
+4 %. Lost pictures point at the device only when the data kept up, and the verdict looks at the pace first.
 
 ## VLC's events
 
@@ -170,12 +188,13 @@ it was work for nothing on the main thread: Ondo now reacts to real changes only
 | Live, 95 % of the rate, 2 s | 2.1 s frozen | network |
 | Film, 90 % of the rate, 3 s | 4.5 s frozen | network |
 | Film, fast, 3 s | no freeze | smooth |
+| Film MKV with a second audio track, 70 % of the rate, 1 s | 17.2 s frozen, 4 % lost | network |
 | Live 4K, busy device | 28 % lost | player |
 | Film 4K, busy device | 27 % lost | player |
 
 ## In CI
 
-`run.py check` plays twelve cases with the defaults Ondo ships and fails when one passes its limit: stops a live
+`run.py check` plays thirteen cases with the defaults Ondo ships and fails when one passes its limit: stops a live
 buffer must cover, bursts that must never freeze, how soon a live channel and a film show, where and how fast
 seeks land, a resume at 1:00, a stop and a dropped connection during a film, and the freeze verdict on recorded
 counters. The limits leave room for shared machines. It runs on every change to the lab, the playback core or

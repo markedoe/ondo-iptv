@@ -1,5 +1,10 @@
 import AVFoundation
 import IPTVCore
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 /// Samples the engine twice a second for `health`: bytes received and consumed, pictures shown and lost, so a freeze
 /// can be told apart (network or provider, player or device) and shown in the statistics panel.
@@ -25,6 +30,9 @@ extension PlayerController {
     func record(_ sample: PlaybackSample) {
         let buffer = engineBuffer
         if health.buffer != buffer { health.buffer = buffer }
+        // In the background the sound may go on while no picture is shown: still pictures are no freeze then.
+        let visible = Self.picturesVisible
+        if health.watchesPictures != visible { health.watchesPictures = visible }
         let freezes = health.freezes.count
         health.add(sample)
         noteTimings(sample, freezesBefore: freezes)
@@ -46,6 +54,15 @@ extension PlayerController {
             freezeShown = false
             retry()
         }
+    }
+
+    /// The app's windows are on screen (not in the background, hidden or covered).
+    private static var picturesVisible: Bool {
+        #if os(iOS)
+        UIApplication.shared.applicationState != .background
+        #else
+        NSApplication.shared.occlusionState.contains(.visible)
+        #endif
     }
 
     /// Seconds of video the engine holds ahead of the picture: VLC's network caching (its position stands still

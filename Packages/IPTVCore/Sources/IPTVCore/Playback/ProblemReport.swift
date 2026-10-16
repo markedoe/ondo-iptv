@@ -62,20 +62,22 @@ public struct ProblemReport: Sendable {
         add("Verdict: \(Self.describe(health.verdict))")
         add("Freezes: \(health.freezes.count + (health.isFrozen ? 1 : 0)), \(Self.number(health.frozenSeconds)) s")
         for freeze in health.freezes.suffix(10) {
-            add("  at \(Self.number(freeze.start)) s for \(Self.number(freeze.duration)) s; received \(Self.megabits(freeze.receivedRate)), longest gap \(Self.number(freeze.longestGap)) s")
+            add("  at \(Self.number(freeze.start)) s for \(Self.number(freeze.duration)) s: \(Self.describe(freeze, in: health))")
         }
         add("Lost pictures: \(health.lostPictures)")
         add("Smoothness: \(health.pace.map { "\(Int(($0 * 100).rounded())) %" } ?? "-")")
         add("Video bitrate: \(health.contentRate.map(Self.megabits) ?? "-"); received (10 s): \(health.receivedRate().map(Self.megabits) ?? "-")")
+        if let share = health.usedShare, share < 0.9 {
+            add("Used: \(Int((share * 100).rounded())) % of the data received; the rest is tracks not played (other languages…), received all the same")
+        }
         add("")
         add("Events (seconds since opening):")
         for entry in log.entries {
             add("  \(Self.number(entry.time)) \(entry.event)")
         }
         add("")
-        // Received and used: the player reads ahead, then only as fast as the picture uses the data; received falling
-        // behind used is the reserve running down.
-        add("Samples (s, position, received kB, used kB, pictures shown, lost):")
+        // Used counts the tracks played only: a film's other languages are received and dropped.
+        add("Samples (s, position, received kB, used kB (tracks played), pictures shown, lost):")
         for sample in health.recentSamples(120) {
             let position = sample.mediaTime.map(Self.number) ?? "-"
             add(
@@ -84,6 +86,23 @@ public struct ProblemReport: Sendable {
             )
         }
         text = lines.joined(separator: "\n")
+    }
+
+    /// Why a freeze happened, for the report and the playback log: "picture only, sound went on; data too slow: 8.7
+    /// of 12.4 Mb/s".
+    public static func describe(_ freeze: PlaybackHealth.Freeze, in health: PlaybackHealth) -> String {
+        let cause: String
+        switch health.cause(of: freeze) {
+        case .noData(let seconds):
+            cause = "no data for \(number(seconds)) s"
+        case .slowData(let received, let needed?):
+            cause = "data too slow: \(megabits(received)) for \(megabits(needed)) needed"
+        case .slowData(let received, nil):
+            cause = "data at \(megabits(received))"
+        case .player:
+            cause = "data on time (\(megabits(freeze.receivedRate))): player or device"
+        }
+        return freeze.picturesOnly ? "picture only, sound went on; \(cause)" : cause
     }
 
     private static func describe(_ verdict: PlaybackHealth.Verdict) -> String {

@@ -5,6 +5,8 @@
 #   heavy.ts    1 minute, 2160p50 (H.264 25 Mb/s): more than one busy core decodes in time (the "heavy" suite).
 #   film.*      2 minutes, 1080p25 (H.264 6 Mb/s, a key frame every 10 s as encoders do by default), as a film:
 #               film.mp4 with its index at the end, film-faststart.mp4 with it at the start, film.mkv, film.ts.
+#   film-tracks.mkv the film with a second audio track (6 channels, 4.6 Mb/s) that is not played, as films carry
+#               other languages: VLC receives it and drops it.
 set -e
 cd "$(dirname "$0")"
 mkdir -p media
@@ -26,3 +28,5 @@ ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=1920x1080:rate
 ffmpeg -hide_banner -loglevel error -y -i media/film.mp4 -c copy -movflags +faststart media/film-faststart.mp4
 ffmpeg -hide_banner -loglevel error -y -i media/film.mp4 -c copy media/film.mkv
 ffmpeg -hide_banner -loglevel error -y -i media/film.mp4 -c copy -f mpegts media/film.ts
+ffmpeg -hide_banner -loglevel error -y -i media/film.mp4 -f lavfi -i "sine=frequency=220:sample_rate=48000" -map 0:v -map 0:a -map 1:a \
+  -t 120 -c:v copy -c:a:0 copy -c:a:1 pcm_s16le -ac:a:1 6 -disposition:a:0 default -disposition:a:1 0 media/film-tracks.mkv

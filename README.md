@@ -59,8 +59,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   has many of them (keep your languages, choose, or not now); hide a **style** (manga & anime, children,
   documentaries…) or any word of category names (Bollywood…) the same way; or hide categories one by one.
   The filter button is on the Movies, Series and Live TV screens.
-- **Offline downloads** (movies, episodes), with the reason in plain words when the provider refuses,
-  limits connections or sends nothing.
+- **Offline downloads** (movies, episodes), with their speed and time left, the reason in plain words when the
+  provider refuses, limits connections or sends nothing, and their details to share.
 - **Data**: JSON backup / restore, clearable cache.
 - **Help** in the app (Settings, and Help, Ondo Help on the Mac): one page per feature, in every language.
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi.

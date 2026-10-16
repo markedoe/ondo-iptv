@@ -50,7 +50,7 @@ jobs:
           key: playback-lab-media-${{ hashFiles('tools/playback-lab/make_media.sh') }}
       - name: Generate the streams
         run: |
-          if [ ! -f media/film.mkv ]; then SKIP_HEAVY=1 ./make_media.sh; fi
+          if [ ! -f media/film-tracks.mkv ]; then SKIP_HEAVY=1 ./make_media.sh; fi
           ls -l media
       - name: Checks
         run: |

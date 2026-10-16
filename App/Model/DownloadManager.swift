@@ -40,6 +40,8 @@ final class DownloadManager: NSObject {
     private(set) var stalls: [String: DownloadProblem] = [:]
     /// Time without data after which a download says what it waits for.
     static let stallDelay: TimeInterval = 30
+    /// Speed and time left of the downloads that ran in this session.
+    private(set) var meters: [String: TransferMeter] = [:]
 
     @ObservationIgnored private let store = FileStore(directory: AppPaths.support)
     @ObservationIgnored private var session: URLSession!
@@ -49,6 +51,11 @@ final class DownloadManager: NSObject {
     @ObservationIgnored private var lastProgress: [String: Date] = [:]
     @ObservationIgnored private var probed: Set<String> = []
     @ObservationIgnored private var watchdog: Task<Void, Never>?
+    /// What happened to each download in this session, for its details (Downloads, Details), and when it started.
+    @ObservationIgnored private var logs: [String: PlaybackLog] = [:]
+    @ObservationIgnored private var startedAt: [String: Date] = [:]
+    /// Downloads whose answer from the provider is in their log.
+    @ObservationIgnored private var answered: Set<String> = []
     /// Set by the iOS app delegate when the system relaunches the app for finished downloads.
     @ObservationIgnored var backgroundCompletionHandler: (() -> Void)?
 
@@ -130,10 +137,15 @@ final class DownloadManager: NSObject {
 
     private func start(_ record: DownloadRecord) {
         let task: URLSessionDownloadTask
+        meters[record.id] = TransferMeter()
+        answered.remove(record.id)
         if let data = resumeData.removeValue(forKey: record.id) {
             task = session.downloadTask(withResumeData: data)
+            note(record.id, "resume from \(DownloadReport.size(record.receivedBytes ?? 0))")
         } else {
             task = session.downloadTask(with: Self.request(for: record))
+            let received = record.receivedBytes ?? 0
+            note(record.id, received > 0 ? "start again from the beginning (\(DownloadReport.size(received)) lost: nothing to resume from)" : "start")
         }
         task.taskDescription = record.id
         tasks[record.id] = task
@@ -160,6 +172,7 @@ final class DownloadManager: NSObject {
             Task { @MainActor in
                 guard let self else { return }
                 if let data { self.resumeData[record.id] = data }
+                self.note(record.id, "paused at \(DownloadReport.size(self.record(for: record.item)?.receivedBytes ?? 0))\(data == nil ? ", nothing to resume from" : "")")
                 self.tasks[record.id] = nil
                 self.stalls[record.id] = nil
                 self.update(record.id) { $0.status = .paused }
@@ -178,6 +191,9 @@ final class DownloadManager: NSObject {
         tasks[record.id] = nil
         resumeData[record.id] = nil
         stalls[record.id] = nil
+        meters[record.id] = nil
+        logs[record.id] = nil
+        startedAt[record.id] = nil
         try? FileManager.default.removeItem(at: localURL(for: record))
         records.removeAll { $0.id == record.id }
         save(force: true)
@@ -195,11 +211,23 @@ final class DownloadManager: NSObject {
             record.receivedBytes = written
         }
         lastProgress[id] = Date()
-        if stalls[id] != nil { stalls[id] = nil }
+        if stalls[id] != nil {
+            stalls[id] = nil
+            note(id, "data again")
+        }
+        noteAnswer(id)
+        measure(id, bytes: written)
         save(force: false)
     }
 
     fileprivate func finished(id: String, movedTo url: URL?, error: String?) {
+        noteAnswer(id)
+        if let error {
+            note(id, "failed: \(error)")
+        } else if url != nil {
+            let received = records.first { $0.id == id }?.receivedBytes ?? 0
+            note(id, "finished: \(DownloadReport.size(received)) in \(DownloadReport.duration(clock(for: id)))")
+        }
         tasks[id] = nil
         stalls[id] = nil
         lastProgress[id] = nil
@@ -236,6 +264,7 @@ final class DownloadManager: NSObject {
                 for (id, task) in pairs {
                     self.tasks[id] = task
                     self.lastProgress[id] = Date()
+                    self.note(id, "found running in the system when the app opened")
                 }
                 // Downloads interrupted by the app being killed can be restarted by the user.
                 for record in self.records where record.isActive && self.tasks[record.id] == nil {
@@ -244,6 +273,81 @@ final class DownloadManager: NSObject {
                 // Downloads that went on while the app was closed are diagnosed like new ones.
                 if !pairs.isEmpty { self.startWatchdog() }
             }
+        }
+    }
+
+    // MARK: Details
+
+    /// Seconds since `id` started in this session: the clock of its log and its meter.
+    private func clock(for id: String) -> Double {
+        if let start = startedAt[id] { return Date().timeIntervalSince(start) }
+        startedAt[id] = Date()
+        return 0
+    }
+
+    private func note(_ id: String, _ event: String) {
+        let time = clock(for: id)
+        logs[id, default: PlaybackLog()].add(event, at: time)
+    }
+
+    private func measure(_ id: String, bytes: Int64) {
+        let time = clock(for: id)
+        meters[id, default: TransferMeter()].note(bytes: bytes, at: time)
+    }
+
+    /// The provider's first answer, once: its status, the size, the type and whether the download can resume.
+    private func noteAnswer(_ id: String) {
+        guard !answered.contains(id), let http = tasks[id]?.response as? HTTPURLResponse else { return }
+        answered.insert(id)
+        let size = http.expectedContentLength > 0 ? DownloadReport.size(http.expectedContentLength) : "size not given"
+        let type = http.value(forHTTPHeaderField: "Content-Type") ?? "no type"
+        let ranges = http.value(forHTTPHeaderField: "Accept-Ranges")?.lowercased() == "bytes" ? "can resume" : "may not resume"
+        note(id, "answer: HTTP \(http.statusCode), \(size), \(type), \(ranges)")
+    }
+
+    /// The details of a download, to show and share.
+    func report(for record: DownloadRecord) -> DownloadReport {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        let task = tasks[record.id]
+        let http = task?.response as? HTTPURLResponse
+        var headers: [String: String] = [:]
+        for name in DownloadReport.headerNames {
+            if let value = http?.value(forHTTPHeaderField: name) { headers[name] = value }
+        }
+        let status: String
+        switch record.status {
+        case .queued: status = "queued"
+        case .downloading: status = "downloading"
+        case .completed: status = "completed"
+        case .paused: status = "paused\(resumeData[record.id] == nil ? "" : ", can resume")"
+        case .failed(let message): status = "failed: \(message)"
+        }
+        let context = DownloadReport.Context(
+            app: "Ondo \(version) (\(build))",
+            system: PlayerController.system,
+            kind: record.item.reference.episodeID != nil ? "episode" : "film",
+            container: record.remoteURL.pathExtension.isEmpty ? nil : record.remoteURL.pathExtension.lowercased(),
+            status: status,
+            task: task.map { Self.describe($0.state) },
+            received: record.receivedBytes ?? 0,
+            total: record.totalBytes,
+            httpStatus: http?.statusCode,
+            headers: headers,
+            problem: stalls[record.id],
+            now: startedAt[record.id].map { Date().timeIntervalSince($0) } ?? 0
+        )
+        return DownloadReport(context: context, meter: meters[record.id] ?? TransferMeter(), log: logs[record.id] ?? PlaybackLog())
+    }
+
+    private static func describe(_ state: URLSessionTask.State) -> String {
+        switch state {
+        case .running: return "running"
+        case .suspended: return "suspended"
+        case .canceling: return "canceling"
+        case .completed: return "completed"
+        @unknown default: return "unknown"
         }
     }
 
@@ -274,15 +378,21 @@ final class DownloadManager: NSObject {
             guard let task = tasks[record.id] else { continue }
             running = true
             let received = task.countOfBytesReceived
+            noteAnswer(record.id)
             if received > (record.receivedBytes ?? 0) {
                 update(record.id) { $0.receivedBytes = received }
                 lastProgress[record.id] = now
                 stalls[record.id] = nil
+                measure(record.id, bytes: received)
                 continue
             }
+            // Nothing new: the speed falls.
+            measure(record.id, bytes: record.receivedBytes ?? 0)
             let since = lastProgress[record.id] ?? now
             guard now.timeIntervalSince(since) >= Self.stallDelay, stalls[record.id] == nil else { continue }
-            stalls[record.id] = DownloadDiagnosis.stall(status: (task.response as? HTTPURLResponse)?.statusCode)
+            let stall = DownloadDiagnosis.stall(status: (task.response as? HTTPURLResponse)?.statusCode)
+            stalls[record.id] = stall
+            note(record.id, "nothing received for \(Int(now.timeIntervalSince(since))) s: \(DownloadReport.describe(stall))")
             if !probed.contains(record.id) {
                 probed.insert(record.id)
                 probe(record)
@@ -297,6 +407,7 @@ final class DownloadManager: NSObject {
         let request = Self.request(for: record)
         Task { [weak self] in
             let problem = await Self.probe(request)
+            self?.note(record.id, "checked with an ordinary request: \(DownloadReport.describe(problem))")
             // Data arrived meanwhile: nothing to explain any more.
             guard let self, self.stalls[record.id] != nil else { return }
             self.stalls[record.id] = problem

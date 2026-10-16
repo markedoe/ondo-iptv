@@ -1,3 +1,5 @@
+• Les téléchargements affichent leur vitesse et le temps restant, et Détails montre ce que le fournisseur a répondu et ce que le téléchargement attend, à partager. Ceux qui bloquent disent pourquoi (refus du fournisseur, limite de connexions, rien reçu) et quoi faire.
+• Signaler un problème compte maintenant les moments où l’image s’arrête pendant que le son continue, et n’accuse plus l’appareil des images perdues quand les données arrivaient trop lentement.
 • Les grosses playlists s’ouvrent plus vite au lancement, et la recherche et le guide TV trouvent titres et chaînes plus vite.
 • Les films et séries démarrent plus vite et reviennent plus tôt après un saut ; l’image suit votre doigt quand vous faites glisser la barre de temps.
 • Réglages, Lecteur : choisissez la mémoire tampon du direct et celle des films et séries (Automatique, ou de 1 à 10 secondes). Une mémoire tampon plus longue masque les coupures plus longues du fournisseur.
@@ -9,7 +11,6 @@
 • AirPlay depuis le Mac envoie maintenant la vidéo vers la TV, pas seulement le son.
 • La reprise démarre exactement là où vous vous êtes arrêté, et une pause faite pendant l’ouverture d’un film est respectée.
 • Cherchez des sous-titres en ligne depuis le lecteur : OpenSubtitles, SubDL et SubSource avec votre propre clé, Addic7ed pour les séries sans clé.
-• Les téléchargements qui bloquent disent maintenant pourquoi (refus du fournisseur, limite de connexions, rien reçu) et quoi faire.
 • Ondo parle désormais espagnol, portugais, chinois (simplifié), arabe et hindi, en plus du français et de l’anglais.
 • Ma liste a maintenant son onglet sur iPhone, avec vos films, séries et chaînes au même endroit ; vos propres listes s’appellent désormais des collections.
 • Touchez un acteur ou un réalisateur sur la fiche d’un film ou d’une série pour voir ses autres films et séries de votre playlist.

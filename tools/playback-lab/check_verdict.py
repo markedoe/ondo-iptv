@@ -30,13 +30,17 @@ class PlaybackHealth:
         self.freezes = []
         self.still_since = None
         self.has_moved = False
+        self.pictures_still_since = None
 
     def add(self, sample):
         if self.entries:
             last = self.entries[-1][0]
             if sample["received"] < last["received"] or sample["consumed"] < last["consumed"]:
                 self.entries, self.still_since, self.has_moved = [], None, False
+                self.pictures_still_since = None
         last = self.entries[-1][0] if self.entries else None
+        if last is not None:
+            self.note_pictures(sample, last)
         moved = last is not None and ((sample["media"] or 0) != (last["media"] or 0) or sample["shown"] != last["shown"])
         if last is not None and sample["media"] is not None and last["media"] is not None:
             if is_played(sample["media"] - last["media"]):
@@ -52,6 +56,23 @@ class PlaybackHealth:
         self.entries.append((sample, self.has_moved and sample["playing"] and sample["media"] is not None))
         while self.entries[0][0]["clock"] < sample["clock"] - 120:
             self.entries.pop(0)
+
+    def note_pictures(self, sample, last):
+        """Still pictures while the position goes on: a freeze of the picture alone (VLC, after a refill, starts the
+        picture again at a key frame while the sound goes on)."""
+        advanced = is_played((sample["media"] or 0) - (last["media"] or 0))
+        if sample["playing"] and self.has_moved and advanced and sample["shown"] > 0 and sample["shown"] == last["shown"]:
+            if self.pictures_still_since is None:
+                self.pictures_still_since = sample["clock"]
+        else:
+            self.end_picture_freeze(sample["clock"])
+
+    def end_picture_freeze(self, end):
+        start, self.pictures_still_since = self.pictures_still_since, None
+        if start is None or end - start < MINIMUM_FREEZE:
+            return
+        self.freezes.append({"start": start, "duration": end - start, "rate": self.received_rate(start - 5, end),
+                             "gap": self.longest_gap(start - 3, end), "pictures_only": True})
 
     def window(self, start, end):
         return [s for s, _ in self.entries if start <= s["clock"] <= end]
@@ -115,7 +136,8 @@ class PlaybackHealth:
         info = {"freezes": len(recent), "lost %": round(100 * lost / max(shown + lost, 1), 1),
                 "pace": pace and round(pace, 2), "needed Mb/s": needed and round(needed * 8e-6, 2),
                 "received Mb/s": round(received / wall * 8e-6, 2) if wall else None}
-        if lost > 0 and lost / max(shown + lost, 1) > LOST_SHARE:
+        # Lost pictures point at the device when the data kept up: a player starved of data loses some too.
+        if lost > 0 and lost / max(shown + lost, 1) > LOST_SHARE and (pace is None or pace >= SMOOTH_PACE):
             return "player", info
         if not recent:
             return ("smooth" if pace is None or pace >= SMOOTH_PACE else "network"), info

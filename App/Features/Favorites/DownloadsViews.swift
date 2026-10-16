@@ -68,6 +68,7 @@ struct DownloadButton: View {
 
 struct DownloadsView: View {
     @Environment(AppModel.self) private var model
+    @State private var details: DownloadRecord?
     private var manager: DownloadManager { DownloadManager.shared }
 
     var body: some View {
@@ -87,6 +88,14 @@ struct DownloadsView: View {
                         status(record)
                     }
                     Spacer()
+                    Button {
+                        details = record
+                    } label: {
+                        Image(systemName: "info.circle")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Download Details")
+                    .help("Download Details")
                     if record.isCompleted {
                         Button {
                             model.playDownload(record)
@@ -113,6 +122,9 @@ struct DownloadsView: View {
                 ContentUnavailableView("No downloads", systemImage: "arrow.down.circle", description: Text("Download movies and episodes to watch them without a connection."))
             }
         }
+        .sheet(item: $details) { record in
+            DownloadDetailsView(record: record)
+        }
         .navigationTitle("Downloads")
         .toolbar {
             ToolbarItem(placement: .status) {
@@ -128,7 +140,7 @@ struct DownloadsView: View {
             Label("Downloaded", systemImage: "checkmark.circle.fill").font(.caption).foregroundStyle(.green)
         case .downloading, .queued:
             if record.totalBytes > 0 { ProgressView(value: record.progress) }
-            Text(Self.progressText(record))
+            Text(Self.progressText(record, meter: manager.meters[record.id]))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             if let problem = manager.stalls[record.id] {
@@ -144,15 +156,85 @@ struct DownloadsView: View {
         }
     }
 
-    /// Percentage and size when the provider gives the size, otherwise what arrived so far.
-    static func progressText(_ record: DownloadRecord) -> String {
+    /// Percentage and size when the provider gives the size, otherwise what arrived so far; then, while it runs, the
+    /// speed and the time left: a big film from a slow provider moves by a percent every few minutes.
+    static func progressText(_ record: DownloadRecord, meter: TransferMeter? = nil) -> String {
+        var parts: [String] = []
         if record.totalBytes > 0 {
-            let percent = record.progress.formatted(.percent.precision(.fractionLength(0)))
-            return "\(percent) · \(Formatting.bytes(record.totalBytes))"
+            parts.append(record.progress.formatted(.percent.precision(.fractionLength(0))))
+            let received = record.receivedBytes ?? Int64(record.progress * Double(record.totalBytes))
+            parts.append(String(localized: "\(Formatting.bytes(received)) of \(Formatting.bytes(record.totalBytes))"))
+        } else if let received = record.receivedBytes, received > 0 {
+            parts.append(String(localized: "\(Formatting.bytes(received)) received"))
+        } else {
+            return String(localized: "Starting…")
         }
-        if let received = record.receivedBytes, received > 0 {
-            return String(localized: "\(Formatting.bytes(received)) received")
+        if record.isActive, let meter {
+            if let rate = meter.rate() {
+                parts.append(String(localized: "\(Formatting.bytes(Int64(rate)))/s"))
+            }
+            if let left = meter.remaining(total: record.totalBytes) {
+                let time = Duration.seconds(left).formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))
+                parts.append(String(localized: "\(time) left"))
+            }
         }
-        return String(localized: "Starting…")
+        return parts.joined(separator: " · ")
+    }
+}
+
+/// Downloads, Details: how a download goes, live (speed, time left, what the provider answered, what it waits for,
+/// what happened), to read or share. Like the playback report, it holds no address, login or title.
+struct DownloadDetailsView: View {
+    let record: DownloadRecord
+    @Environment(\.dismiss) private var dismiss
+    private var manager: DownloadManager { DownloadManager.shared }
+
+    var body: some View {
+        let current = manager.records.first { $0.id == record.id } ?? record
+        NavigationStack {
+            TimelineView(.periodic(from: .now, by: 1)) { _ in
+                let report = manager.report(for: current).text
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text(current.item.title).font(.headline)
+                        Text(DownloadsView.progressText(current, meter: manager.meters[current.id]))
+                            .font(.callout.monospacedDigit())
+                        Text("""
+                            These details help find why a download is slow or stuck: what the provider answered, the \
+                            speed, what the download waits for and what happened. They hold no address, login or title.
+                            """)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        Text(verbatim: report)
+                            .font(.caption.monospaced())
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding()
+                }
+                .toolbar {
+                    ToolbarItemGroup(placement: .primaryAction) {
+                        Button {
+                            Pasteboard.copy(report)
+                        } label: {
+                            Label("Copy Report", systemImage: "doc.on.doc")
+                        }
+                        ShareLink(item: report, subject: Text("Ondo download report"))
+                    }
+                }
+            }
+            .navigationTitle("Download Details")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        #if os(macOS)
+        .frame(minWidth: 560, minHeight: 520)
+        #endif
     }
 }

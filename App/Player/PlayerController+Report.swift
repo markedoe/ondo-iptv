@@ -52,15 +52,13 @@ extension PlayerController {
             log.add("seek done after \(Self.seconds(wait)) s", at: sample.clock)
         }
         for freeze in health.freezes.dropFirst(freezesBefore) {
-            // Data stopped (the buffer ran out), or kept coming too slowly (the player refilled).
-            let cause = freeze.longestGap >= PlaybackHealth.dataGap
-                ? "no data for \(Self.seconds(freeze.longestGap)) s"
-                : "refilling, data at \(Self.megabits(freeze.receivedRate)) Mb/s"
-            log.add("freeze of \(Self.seconds(freeze.duration)) s: \(cause)", at: sample.clock)
+            log.add("freeze of \(Self.seconds(freeze.duration)) s: \(ProblemReport.describe(freeze, in: health))", at: sample.clock)
         }
-        // While the picture plays: data received more slowly than the picture uses it, before any freeze shows.
+        // While the picture plays: data received more slowly than the picture uses it, before any freeze shows. VLC
+        // counts as used the tracks it plays only: what it used stands for that share of what was received.
+        let used = health.usedShare.flatMap { share in health.consumedRate().map { $0 / share } }
         if state == .playing, health.hasMoved, seekWatch.since == nil,
-           let change = dataWatch.note(received: health.receivedRate(), consumed: health.consumedRate()) {
+           let change = dataWatch.note(received: health.receivedRate(), consumed: used) {
             switch change {
             case .fellBehind(let received, let consumed):
                 log.add("data slower than the picture uses it: \(Self.megabits(received)) of \(Self.megabits(consumed)) Mb/s over 10 s", at: sample.clock)
@@ -129,8 +127,8 @@ extension PlayerController {
         String(format: "%.1f", value)
     }
 
-    /// The system and the device model ("iPhone16,1", "Mac15,3").
-    private static var system: String {
+    /// The system and the device model ("iPhone16,1", "Mac15,3"), for the playback and download reports.
+    static var system: String {
         #if os(macOS)
         let key = "hw.model"
         #else

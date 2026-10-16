@@ -27,6 +27,19 @@ final class DownloadsTests: XCTestCase {
         XCTAssertTrue(known.contains(Formatting.bytes(1_000_000_000)))
     }
 
+    /// A 13 GB film from a provider sending 1 MB/s moves by a percent every two minutes: the line says how fast it
+    /// comes and how long it has left, so it does not look stuck at the start.
+    func testARunningDownloadShowsItsSpeedAndTimeLeft() {
+        var meter = TransferMeter()
+        for second in 0...20 { meter.note(bytes: Int64(second) * 1_000_000, at: Double(second)) }
+        let text = DownloadsView.progressText(record(total: 13_000_000_000, received: 20_000_000, progress: 0.0015), meter: meter)
+        XCTAssertTrue(text.contains(Formatting.bytes(20_000_000)), text)
+        XCTAssertTrue(text.contains(Formatting.bytes(13_000_000_000)), text)
+        XCTAssertTrue(text.contains(Formatting.bytes(1_000_000)), text)
+        let left = Duration.seconds(12_980).formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))
+        XCTAssertTrue(text.contains(left), text)
+    }
+
     /// Records saved before the received size existed still load.
     func testRecordsSavedBeforeStillLoad() throws {
         var saved = try JSONSerialization.jsonObject(with: JSONEncoder().encode(record(total: 0, received: 12))) as? [String: Any]

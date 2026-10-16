@@ -209,6 +209,14 @@ final class PlaybackHealthTests: XCTestCase {
         XCTAssertEqual(health.verdict, .smooth)
     }
 
+    /// A provider sending 70 % of what the film needs: VLC loses pictures too as it runs out (tools/playback-lab, an
+    /// MKV at 70 %: 4 % lost). With the data short, they are the data's.
+    func testPicturesLostWhileTheDataIsShortAreTheNetworks() {
+        let health = play(60, moving: { t in t.truncatingRemainder(dividingBy: 5) >= 1.5 }, receiving: { _ in 0.7 }, lost: { t in Int(t) })
+        XCTAssertFalse(health.freezes.isEmpty)
+        XCTAssertEqual(health.verdict, .network)
+    }
+
     /// Pictures dropped (the device cannot decode in time) without any freeze.
     func testLostPicturesAreThePlayers() {
         let health = play(30, lost: { t in Int(t * 2) })

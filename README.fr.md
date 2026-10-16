@@ -63,8 +63,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   masquez de la même façon un **style** (manga et anime, enfants, documentaires…) ou n'importe quel mot des noms
   de catégories (Bollywood…) ; ou masquez les catégories une par une. Le bouton de filtre est sur les écrans
   Films, Séries et Live TV.
-- **Téléchargements** hors ligne (films, épisodes), avec la raison en clair quand le fournisseur refuse,
-  limite les connexions ou n'envoie rien.
+- **Téléchargements** hors ligne (films, épisodes), avec leur vitesse et le temps restant, la raison en clair
+  quand le fournisseur refuse, limite les connexions ou n'envoie rien, et leurs détails à partager.
 - **Données** : sauvegarde / restauration JSON, cache vidable.
 - **Aide** dans l'app (Réglages, et Aide, Aide Ondo sur Mac) : une page par fonctionnalité, dans chaque langue.
 - **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et

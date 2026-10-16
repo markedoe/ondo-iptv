@@ -1,3 +1,5 @@
+• Downloads show their speed and the time left, and Details says what the provider answered and what the download waits for, to share. Those that stall say why (provider refusal, connection limit, nothing received) and what to do.
+• Report a Problem now counts the moments the picture stops while the sound goes on, and no longer blames the device for pictures lost while the data came too slowly.
 • Large playlists open sooner after launch, and search and the TV guide find titles and channels faster.
 • Movies and series start faster and come back sooner after a skip or a jump; the picture follows your finger while you drag the time bar.
 • Settings, Player: choose the buffer for live TV and for movies & series (Automatic, or 1 to 10 seconds). A longer buffer hides longer interruptions from the provider.
@@ -9,7 +11,6 @@
 • AirPlay from the Mac now sends the video to your TV, not only the sound.
 • Resume starts exactly where you stopped, and a pause made while a movie opens stays paused.
 • Find subtitles online from the player: OpenSubtitles, SubDL and SubSource with your own key, Addic7ed for series without a key.
-• Downloads that stall now say why (provider refusal, connection limit, nothing received) and what to do.
 • Ondo now speaks Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi, as well as English and French.
 • My List is now a tab on iPhone, with your movies, series and channels in one place; your own lists are now called collections.
 • Tap an actor or a director on a movie or series page to see their other movies and series in your playlist.

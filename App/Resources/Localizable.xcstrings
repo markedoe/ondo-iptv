@@ -1,6 +1,86 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ left": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "encore %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "faltan %@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "faltam %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剩余 %@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متبقٍ %@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ बाकी"
+          }
+        }
+      }
+    },
+    "%@ of %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ sur %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ de %2$@"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ de %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ / %2$@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ من %2$@"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@ में से %1$@"
+          }
+        }
+      }
+    },
     "%@ received": {
       "localizations": {
         "fr": {
@@ -37,6 +117,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ प्राप्त"
+          }
+        }
+      }
+    },
+    "%@/s": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/s"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/s"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/s"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/秒"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/ث"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/सेकंड"
           }
         }
       }
@@ -5741,6 +5861,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "डाउनलोड करें"
+          }
+        }
+      }
+    },
+    "Download Details": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détails du téléchargement"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detalles de la descarga"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detalhes do download"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载详情"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تفاصيل التنزيل"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डाउनलोड का विवरण"
           }
         }
       }
@@ -13505,6 +13665,46 @@
         }
       }
     },
+    "Ondo download report": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapport de téléchargement Ondo"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Informe de descarga de Ondo"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relatório de download do Ondo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 下载报告"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تقرير تنزيل Ondo"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo डाउनलोड रिपोर्ट"
+          }
+        }
+      }
+    },
     "Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device; passwords and keys are kept in the system keychain.\n\nOndo connects only to the servers you add and, if you enter your TMDb token, to TMDb and to the subtitle services you choose. Backups contain your logins: keep them private.": {
       "localizations": {
         "fr": {
@@ -21067,6 +21267,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "थीम"
+          }
+        }
+      }
+    },
+    "These details help find why a download is slow or stuck: what the provider answered, the speed, what the download waits for and what happened. They hold no address, login or title.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ces détails aident à comprendre pourquoi un téléchargement est lent ou bloqué : ce que le fournisseur a répondu, la vitesse, ce que le téléchargement attend et ce qui s'est passé. Ils ne contiennent ni adresse, ni identifiant, ni titre."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estos detalles ayudan a entender por qué una descarga es lenta o está bloqueada: lo que respondió el proveedor, la velocidad, lo que espera la descarga y lo que ocurrió. No contienen ninguna dirección, usuario ni título."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estes detalhes ajudam a entender por que um download está lento ou travado: o que o provedor respondeu, a velocidade, o que o download está esperando e o que aconteceu. Eles não contêm endereço, login nem título."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些详情有助于找出下载缓慢或卡住的原因：提供商的响应、速度、下载在等待什么以及发生了什么。其中不包含任何地址、登录信息或标题。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تساعد هذه التفاصيل على معرفة سبب بطء التنزيل أو توقفه: ما ردّ به المزوّد، والسرعة، وما ينتظره التنزيل، وما حدث. ولا تتضمن أي رابط أو بيانات تسجيل دخول أو اسم الفيلم أو الحلقة."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ये विवरण यह समझने में मदद करते हैं कि डाउनलोड धीमा क्यों है या रुका क्यों है: प्रदाता ने क्या जवाब दिया, गति, डाउनलोड किस चीज़ का इंतज़ार कर रहा है और क्या हुआ। इनमें कोई पता, लॉगिन या शीर्षक नहीं होता।"
           }
         }
       }

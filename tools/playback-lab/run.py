@@ -89,6 +89,7 @@ TRACES = {
         ("live slow-95%, 2 s", "live/test720.ts?rate=0.95", ":network-caching=2000", "network"),
         ("vod slow-90%, 3 s", "vod/test720.ts?rate=0.9", ":network-caching=3000", "network"),
         ("vod ideal, 3 s", "vod/test720.ts?rate=0", ":network-caching=3000", "smooth"),
+        ("mkv 2 audio tracks, 70%, 1 s", "vod/film-tracks.mkv?rate=0.7", ":network-caching=1000", "network"),
     ],
     "heavy": [
         ("live 4K, busy device", "live/heavy.ts?rate=1.0", ":network-caching=2000", "player"),
@@ -136,7 +137,8 @@ CHECKS = [
 ]
 # libVLC's counters recorded during these runs must give the verdict the screen showed.
 CHECK_TRACES = [t for t in TRACES["traces"] if t[0] in
-                ("live bursty-2.5s, 2 s", "live stall-5s, 2 s", "vod slow-90%, 3 s", "vod ideal, 3 s")]
+                ("live bursty-2.5s, 2 s", "live stall-5s, 2 s", "vod slow-90%, 3 s", "vod ideal, 3 s",
+                 "mkv 2 audio tracks, 70%, 1 s")]
 
 
 def check():

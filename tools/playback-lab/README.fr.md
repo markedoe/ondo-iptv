@@ -18,8 +18,8 @@ se comporte mal exprès, et chaque gel est compté à l'écran.
   appliqué aux compteurs de libVLC enregistrés pendant une lecture, et comparé à ce que montrait l'écran.
 - `make_media.sh` : génère les flux de test (rien n'est téléchargé) : une chaîne (720p à 25 images par seconde,
   3,4 Mb/s en MPEG-TS), un film (1080p, 6 Mb/s, une image-clé toutes les 10 s comme le font les encodeurs par
-  défaut) en MP4 avec son index à la fin ou au début, en MKV et en MPEG-TS, et un flux 4K trop lourd pour un
-  appareil occupé.
+  défaut) en MP4 avec son index à la fin ou au début, en MKV et en MPEG-TS, le MKV avec une seconde piste audio
+  non lue (comme les films qui portent d'autres langues), et un flux 4K trop lourd pour un appareil occupé.
 
 ## Lancer les mesures
 
@@ -60,6 +60,24 @@ continuent d'arriver mais moins vite que la vidéo n'en a besoin, la position re
 arrivent encore : le lecteur est à court et remplit à nouveau son tampon, et l'image est figée pendant toute
 l'interruption (rapport d'un utilisateur : un film 4K à 12 Mb/s reçu à 9 Mb/s se figeait 6 à 8 s à chaque fois avec
 5 s de tampon, que la première estimation chiffrait à 1 à 3 s).
+
+## Les pistes non lues, et l'image après un nouveau remplissage
+
+Un film porte souvent plusieurs pistes audio (d'autres langues). VLC les reçoit toutes et ne donne à ses décodeurs
+que les pistes qu'il lit : son compte des octets utilisés (la colonne « used » d'un rapport) reste en dessous de ce
+qui a été reçu, de la part des pistes non lues. Le film avec une seconde piste audio à 4,6 Mb/s, sur une connexion
+rapide : l'utilisé faisait 57 % du reçu du début à la fin, sans aucun gel. Ce n'est pas le signe de données qui
+s'accumulent, et le réseau doit transporter toutes les pistes : le débit dont un film a besoin est ce qui a été reçu
+par seconde de vidéo.
+
+Un rapport d'utilisateur montrait les deux : un MKV 4K dont le fichier porte 12,4 Mb/s, chez un fournisseur qui
+envoyait 8 à 9 Mb/s (utilisé : 66 % du reçu). VLC était à court, remplissait à nouveau son tampon avec la position
+immobile, puis reprenait l'image à une image-clé pendant que le son continuait : la position avançait encore 6 et
+8 secondes sous la même image. `PlaybackHealth` les compte comme des gels de l'image seule (les images affichées
+restent immobiles pendant que la position avance), avec la cause que leur donnent les données : 31 s figées dans
+cette minute au lieu des 17 s que montraient les arrêts de la position. Le libVLC utilisé ici (Linux, décodage
+logiciel) fait revenir l'image sans attendre d'image-clé ; le rapport est rejoué dans les tests d'IPTVCore
+(`PlaybackReportReplayTests`).
 
 ## Chaînes en direct
 
@@ -156,7 +174,9 @@ Chacun a repris exactement à 1:00. VLC ignore `start-time` en MPEG-TS et démar
 ## Un appareil qui ne suit pas
 
 Le flux 4K sur la moitié d'un cœur : 28 % des images perdues et trois gels courts, alors que les données
-arrivaient à temps. Les images perdues sont le signe : dans tous les cas réseau, aucune ne l'a été.
+arrivaient à temps. Un lecteur à court de données perd aussi des images : le MKV avec une seconde piste audio, envoyé
+à 70 % de son débit, en a perdu 4 %. Les images perdues ne désignent l'appareil que si les données suivaient, et le
+diagnostic regarde d'abord l'allure de la lecture.
 
 ## Les événements de VLC
 
@@ -178,12 +198,13 @@ changements.
 | Direct, 95 % du débit, 2 s | 2,1 s figées | réseau |
 | Film, 90 % du débit, 3 s | 4,5 s figées | réseau |
 | Film, rapide, 3 s | aucun gel | fluide |
+| Film MKV avec une seconde piste audio, 70 % du débit, 1 s | 17,2 s figées, 4 % perdues | réseau |
 | Direct 4K, appareil occupé | 28 % perdues | lecteur |
 | Film 4K, appareil occupé | 27 % perdues | lecteur |
 
 ## Dans la CI
 
-`run.py check` joue douze cas avec les réglages qu'Ondo livre et échoue dès qu'un cas dépasse sa limite : les
+`run.py check` joue treize cas avec les réglages qu'Ondo livre et échoue dès qu'un cas dépasse sa limite : les
 coupures que le tampon du direct doit couvrir, les données par à-coups qui ne doivent jamais figer l'image, le
 temps avant l'image d'une chaîne et d'un film, où et en combien de temps arrivent les sauts, une reprise à 1:00,
 une coupure et une connexion perdue pendant un film, et le diagnostic des gels sur des compteurs enregistrés. Les
