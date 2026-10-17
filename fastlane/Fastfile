@@ -188,8 +188,10 @@ def report_version(app, name, platform, folder)
   if detail
     contact = [detail.contact_first_name, detail.contact_last_name, detail.contact_email, detail.contact_phone].none? { |value| value.to_s.empty? }
     notes = detail.notes.to_s
-    UI.message("  review contact #{contact ? 'complete' : 'missing'}; notes explain network.server: #{notes.include?('network.server')}; " \
-               "notes mention downloads: #{notes.downcase.include?('download')}")
+    # Neither appears in the notes of a submitted version: the App Store edition has no downloads, and the Mac app no
+    # network.server entitlement.
+    UI.message("  review contact #{contact ? 'complete' : 'missing'}; notes mention downloads: #{notes.downcase.include?('download')}; " \
+               "notes mention network.server: #{notes.include?('network.server')}")
   end
   # Screenshots compared with today's files (fetched from the appstore-screenshots branch by the workflow).
   current = Dir[File.expand_path("screenshots/#{folder}/**/*.png", __dir__)].map { |path| Digest::MD5.file(path).hexdigest }.to_set
