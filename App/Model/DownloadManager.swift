@@ -121,6 +121,13 @@ final class DownloadManager: NSObject {
         }
     }
 
+    /// What the unfinished downloads received so far (kept by the system until they finish or are deleted).
+    var unfinishedBytes: Int64 {
+        records.filter { !$0.isCompleted }.reduce(0) { $0 + ($1.receivedBytes ?? 0) }
+    }
+
+    var hasUnfinished: Bool { records.contains { !$0.isCompleted } }
+
     // MARK: Actions
 
     func download(_ item: PlaybackItem) {
@@ -210,6 +217,11 @@ final class DownloadManager: NSObject {
     func delete(_ record: DownloadRecord) {
         tasks[record.id]?.cancel()
         tasks[record.id] = nil
+        // A paused download's partial file is not in this folder: its resume data names it.
+        if let data = resumeData[record.id] ?? (try? Data(contentsOf: Self.resumeFile(for: record.id))),
+           let partial = Self.partialFile(in: data) {
+            try? FileManager.default.removeItem(at: partial)
+        }
         keepResumeData(nil, for: record.id)
         retryTasks.removeValue(forKey: record.id)?.cancel()
         retries[record.id] = nil
@@ -307,6 +319,52 @@ final class DownloadManager: NSObject {
     // MARK: Resume data
 
     /// Where a download's resume data is kept, so that it goes on from where it stopped even after the app closed.
+    func deleteUnfinished() {
+        for record in records where !record.isCompleted { delete(record) }
+        removeLeftovers()
+    }
+
+    func deleteAll() {
+        for record in records { delete(record) }
+        removeLeftovers()
+    }
+
+    /// Removes what no download owns any more: files of this folder that belong to no download and, when no
+    /// download is unfinished, the partial files the system keeps for interrupted downloads.
+    func removeLeftovers() {
+        let files = FileManager.default
+        let kept = Set(records.flatMap { [$0.fileName, Self.resumeFile(for: $0.id).lastPathComponent] })
+        for url in (try? files.contentsOfDirectory(at: Self.directory, includingPropertiesForKeys: nil)) ?? []
+        where !kept.contains(url.lastPathComponent) {
+            try? files.removeItem(at: url)
+        }
+        guard !hasUnfinished, tasks.isEmpty else { return }
+        for folder in Self.partialFolders {
+            for url in (try? files.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+            where url.lastPathComponent.hasPrefix("CFNetworkDownload_") {
+                try? files.removeItem(at: url)
+            }
+        }
+    }
+
+    /// Where the system keeps the partial file of an interrupted download.
+    nonisolated static var partialFolders: [URL] {
+        var folders = [FileManager.default.temporaryDirectory]
+        if let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first,
+           let bundle = Bundle.main.bundleIdentifier {
+            folders.append(caches.appendingPathComponent("com.apple.nsurlsessiond/Downloads/\(bundle)", isDirectory: true))
+        }
+        return folders
+    }
+
+    /// The partial file named in the resume data of a paused download.
+    nonisolated static func partialFile(in resumeData: Data) -> URL? {
+        guard let info = try? PropertyListSerialization.propertyList(from: resumeData, format: nil) as? [String: Any] else { return nil }
+        if let path = info["NSURLSessionResumeInfoLocalPath"] as? String { return URL(fileURLWithPath: path) }
+        guard let name = info["NSURLSessionResumeInfoTempFileName"] as? String else { return nil }
+        return partialFolders.map { $0.appendingPathComponent(name) }.first { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
     nonisolated static func resumeFile(for id: String) -> URL {
         directory.appendingPathComponent(StableHash.hex(id) + ".resume")
     }
@@ -346,6 +404,11 @@ final class DownloadManager: NSObject {
             Task { @MainActor in
                 guard let self else { return }
                 for (id, task) in pairs {
+                    // A download deleted while the system ran it: its partial file goes with it.
+                    guard self.records.contains(where: { $0.id == id }) else {
+                        task.cancel()
+                        continue
+                    }
                     self.tasks[id] = task
                     self.lastProgress[id] = Date()
                     self.note(id, "found running in the system when the app opened")
@@ -362,6 +425,7 @@ final class DownloadManager: NSObject {
                 }
                 // Downloads that went on while the app was closed are diagnosed like new ones.
                 if !pairs.isEmpty { self.startWatchdog() }
+                self.removeLeftovers()
             }
         }
     }

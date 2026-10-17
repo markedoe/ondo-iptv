@@ -25,8 +25,9 @@ struct DownloadButton: View {
                         label("Downloaded", icon: "checkmark.circle.fill")
                     }
                 case .downloading?, .queued?:
-                    Button {
-                        if let record { manager.pause(record) }
+                    Menu {
+                        Button("Pause", systemImage: "pause.circle") { if let record { manager.pause(record) } }
+                        Button("Cancel Download", role: .destructive) { if let record { manager.delete(record) } }
                     } label: {
                         if let record, record.totalBytes <= 0 {
                             // Size not given by the provider: a spinner and what arrived, not a frozen 0 %.
@@ -42,13 +43,20 @@ struct DownloadButton: View {
                                 Text((record?.progress ?? 0).formatted(.percent.precision(.fractionLength(0)))).monospacedDigit()
                             }
                         }
+                    } primaryAction: {
+                        if let record { manager.pause(record) }
                     }
+                    .menuIndicator(.hidden)
                 case .paused?, .failed?:
-                    Button {
-                        if let record { manager.resume(record) }
+                    Menu {
+                        Button("Resume Download", systemImage: "arrow.down.circle") { if let record { manager.resume(record) } }
+                        Button("Delete Download", role: .destructive) { if let record { manager.delete(record) } }
                     } label: {
                         label("Resume Download", icon: "arrow.down.circle")
+                    } primaryAction: {
+                        if let record { manager.resume(record) }
                     }
+                    .menuIndicator(.hidden)
                 case nil:
                     Button {
                         manager.download(item)
@@ -73,8 +81,21 @@ struct DownloadButton: View {
 }
 
 struct DownloadsView: View {
+    /// What Clean Up deletes, once confirmed.
+    enum Cleanup: Identifiable {
+        case unfinished, all
+        var id: Self { self }
+        var question: LocalizedStringKey {
+            switch self {
+            case .unfinished: return "Delete the unfinished downloads and what they received?"
+            case .all: return "Delete all downloads and their files?"
+            }
+        }
+    }
+
     @Environment(AppModel.self) private var model
     @State private var details: DownloadRecord?
+    @State private var cleanup: Cleanup?
     private var manager: DownloadManager { DownloadManager.shared }
 
     var body: some View {
@@ -114,6 +135,16 @@ struct DownloadsView: View {
                         DownloadButton(item: record.item, compact: true)
                             .buttonStyle(.borderless)
                     }
+                    #if os(macOS)
+                    Button(role: .destructive) {
+                        manager.delete(record)
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Delete")
+                    .help("Delete")
+                    #endif
                 }
                 .contextMenu {
                     Button("Delete", role: .destructive) { manager.delete(record) }
@@ -134,9 +165,34 @@ struct DownloadsView: View {
         .navigationTitle("Downloads")
         .toolbar {
             ToolbarItem(placement: .status) {
-                Text(Formatting.bytes(manager.usedBytes)).font(.caption).foregroundStyle(.secondary)
+                Text(storage).font(.caption).foregroundStyle(.secondary)
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button("Delete Unfinished Downloads", role: .destructive) { cleanup = .unfinished }
+                        .disabled(!manager.hasUnfinished)
+                    Button("Delete All Downloads", role: .destructive) { cleanup = .all }
+                        .disabled(manager.records.isEmpty)
+                } label: {
+                    Label("Clean Up", systemImage: "trash")
+                }
             }
         }
+        .confirmationDialog(cleanup?.question ?? "Clean Up", isPresented: Binding(get: { cleanup != nil }, set: { if !$0 { cleanup = nil } }),
+                            titleVisibility: .visible, presenting: cleanup) { choice in
+            Button("Delete", role: .destructive) {
+                if choice == .all { manager.deleteAll() } else { manager.deleteUnfinished() }
+            }
+        }
+    }
+
+    /// Space taken by the finished downloads and by what the unfinished ones received.
+    private var storage: String {
+        var parts = [String(localized: "\(Formatting.bytes(manager.usedBytes)) downloaded")]
+        if manager.unfinishedBytes > 0 {
+            parts.append(String(localized: "\(Formatting.bytes(manager.unfinishedBytes)) unfinished"))
+        }
+        return parts.joined(separator: " · ")
     }
 
     @ViewBuilder
@@ -274,6 +330,10 @@ struct DownloadDetailsView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             #endif
+            Button("Delete Download", systemImage: "trash", role: .destructive) {
+                manager.delete(record)
+                dismiss()
+            }
         }
     }
 }
