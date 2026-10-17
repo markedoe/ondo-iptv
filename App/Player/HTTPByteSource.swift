@@ -1,6 +1,9 @@
 import Foundation
 import IPTVCore
 
+// iPhone and iPad only: on the Mac, VLC plays MKV films (PlayerController+Remux).
+#if os(iOS)
+
 /// A provider's file read through range requests, for the remux of MKV films: one request at a time on one connection
 /// (subscriptions often allow a single one), with the playlist's headers.
 final class HTTPByteSource: ByteSource, @unchecked Sendable {
@@ -62,3 +65,5 @@ final class HTTPByteSource: ByteSource, @unchecked Sendable {
         }
     }
 }
+
+#endif

@@ -1,4 +1,5 @@
 import AVFoundation
+import IPTVCore
 
 /// While the thumb of the seek bar moves, the picture follows it: one seek at a time to the nearest key frame,
 /// the latest position waiting for the one on its way (the "chase" Apple describes in QA1820). The exact
@@ -39,5 +40,13 @@ extension PlayerController {
     private func scrubFinished() {
         scrubInFlight = false
         sendScrub()
+    }
+}
+
+extension PlayerController {
+    /// Where a VOD item resumes (positions in the first seconds start from the beginning).
+    static func resumeStart(for item: PlaybackItem) -> Double? {
+        guard !item.isLive, let start = item.startPosition, start > 5 else { return nil }
+        return start
     }
 }

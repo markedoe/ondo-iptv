@@ -40,7 +40,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   **redémarrer le programme en cours**, revoir un programme passé et revenir au direct depuis le lecteur,
   **pause du direct** (fenêtre DVR HLS, sinon reprise via l'archive).
 - **Lecteur** : deux moteurs — **AVPlayer** (PiP, AirPlay, HDR) et **VLC** (MKV, AVI, TS…) avec bascule
-  automatique —, **films MKV remuxés pour AVPlayer** sur l'appareil, sans transcodage (HDR10, HLG, Dolby Vision,
+  automatique —, **films MKV remuxés pour AVPlayer** sur iPhone et iPad (VLC les lit sur Mac), sans transcodage (HDR10, HLG, Dolby Vision,
   Dolby Atmos, PiP), VLC lisant ceux qu'il ne sait pas décoder, zapping, pistes audio / sous-titres, **sous-titres SRT externes**, **recherche de
   sous-titres en ligne** (OpenSubtitles, SubDL et SubSource avec votre clé, vérifiée auprès du service à l'enregistrement, Addic7ed sans clé), format d'image,
   vitesse, minuterie, verrouillage, gestes (iPhone), paysage forcé, reconnexion automatique, bascule vers

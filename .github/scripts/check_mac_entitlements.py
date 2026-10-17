@@ -20,13 +20,14 @@ RELEASE = "App/Resources/Ondo-macOS.entitlements"
 REQUIRED = {
     "com.apple.security.app-sandbox": "the Mac App Store requires the sandbox",
     "com.apple.security.network.client": "playlists, guides and streams are downloaded",
-    "com.apple.security.network.server":
-        "MKV films are remuxed for the system player and served to it on 127.0.0.1 (RemuxServer)",
     "com.apple.security.files.user-selected.read-write":
         "playlist, subtitle and backup files are opened with file pickers, and backups saved",
 }
-# Debug only: never in the build sent to the App Store.
+# Never in the build sent to the App Store.
 FORBIDDEN = {
+    # App Review refused 1.1.0 for it (2.4.5(i)): a player listens to no one. The MKV remux, which serves its HLS to
+    # the system player on 127.0.0.1, runs on iPhone and iPad only; VLC plays MKV films on the Mac.
+    "com.apple.security.network.server": "App Review refuses it to an app that is not a server",
     "com.apple.security.cs.disable-library-validation": "only needed by ad-hoc signed Debug builds",
     "com.apple.security.get-task-allow": "debugging entitlement",
 }

@@ -11,7 +11,7 @@ FILMS ET SÉRIES
 • Ma liste réunit vos films, séries et chaînes au même endroit, et les collections les regroupent à votre façon
 
 UN LECTEUR QUI FONCTIONNE, TOUT SIMPLEMENT
-• Deux moteurs : le lecteur d’Apple (HDR10, Dolby Vision, Dolby Atmos, image dans l’image, AirPlay), films MKV compris quand il sait les décoder, et un moteur basé sur VLC pour le reste (MKV, AVI, TS)
+• Deux moteurs : le lecteur d’Apple (HDR10, Dolby Vision, Dolby Atmos, image dans l’image, AirPlay), films MKV compris sur iPhone et iPad quand il sait les décoder, et un moteur basé sur VLC pour le reste (MKV, AVI, TS)
 • Pistes audio et sous-titres, fichiers de sous-titres SRT/VTT, format d’image, vitesse, minuterie, verrouillage des commandes
 • Recherche de sous-titres en ligne depuis le lecteur : OpenSubtitles, SubDL et SubSource avec votre propre clé, Addic7ed pour les séries sans clé
 • Messages d’erreur clairs : fournisseur, réseau ou application

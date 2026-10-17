@@ -29,6 +29,8 @@ screenshots.
   - The TestFlight edition (downloads) goes to internal testers only and is never submitted; a tag or
     `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go.
   - No private API (no class, selector or symbol looked up by name, no method swapping), no code downloaded and run.
+  - The Mac sandbox has only the entitlements a feature needs; never `com.apple.security.network.server` (App Review
+    refused 1.1.0 for it: a player listens to no one), so the MKV remux and its 127.0.0.1 server are iPhone and iPad only.
   - Money inside the apps only through Apple's In-App Purchase (Google Play Billing on Android), tips included; no
     link or button in the apps to another way to pay or donate. The website and the README may link elsewhere.
   - The listing matches the build: no feature it lacks, no other platform named, nothing "coming soon", no test or
