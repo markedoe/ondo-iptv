@@ -16,6 +16,8 @@ screenshots.
   are updated together: documentation in English with a French version next to it (`README.fr.md`,
   `docs/*.fr.md`), store listings (`en-US` and `fr-FR`), the website, release notes. Code, comments and
   commit messages stay in English.
+- **Commit messages**: a short subject line and, when needed, one or two short lines on what changed. Never
+  describe or quote the requests or the conversation behind a change.
 - **The apps speak seven languages**: English, French, Spanish, Portuguese (Brazilian wording), Chinese
   (Simplified), Arabic (right to left) and Hindi. Every text of a new feature is translated into all of them
   in the same change: Apple `App/Resources/Localizable.xcstrings` (`fr`, `es`, `pt`, `zh-Hans`, `ar`, `hi`)
