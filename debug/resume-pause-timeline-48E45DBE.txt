@@ -1,0 +1,8 @@
+   0.0s state=loading engine=apple item=0 control=0 waiting=- clock=0.0 shown=120.0 loaded=[] error=- log=-
+   0.2s state=paused engine=apple item=0 control=0 waiting=- clock=0.0 shown=120.0 loaded=[] error=- log=-
+   0.6s state=paused engine=apple item=1 control=0 waiting=- clock=120.0 shown=120.0 loaded=[] error=- log=-
+   0.0s state=paused engine=apple item=1 control=1 waiting=AVPlayerWaitingWhileEvaluatingBufferingRateReason clock=120.1 shown=120.1 loaded=[120+0] error=- log=-
+   0.2s state=loading engine=apple item=1 control=1 waiting=AVPlayerWaitingToMinimizeStallsReason clock=120.1 shown=120.1 loaded=[] error=- log=-
+   0.4s state=loading engine=apple item=1 control=1 waiting=AVPlayerWaitingToMinimizeStallsReason clock=120.1 shown=120.1 loaded=[102+8] error=- log=-
+   0.6s state=loading engine=apple item=1 control=2 waiting=- clock=120.1 shown=120.1 loaded=[102+18] error=- log=-
+   0.8s state=playing engine=apple item=1 control=2 waiting=- clock=120.3 shown=120.3 loaded=[102+47] error=- log=-

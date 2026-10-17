@@ -1,0 +1,32 @@
+Ondo playback report, 2026-10-17T16:17:47Z
+App: Ondo 1.1.0 (1)
+System: iOS 26.5, arm64
+Engine: AVPlayer (setting: apple)
+Buffer: 0.0 s in use; live automatic, films and series automatic
+Playing: film, .m3u8, 416×234
+Duration: 1800.0 s
+Position: 120.8 s
+State: playing
+
+Verdict: measuring
+Freezes: 0, 0.0 s
+Lost pictures: 0
+Smoothness: -
+Video bitrate: -; received (10 s): 11.68 Mb/s
+
+Events (seconds since opening):
+  0.0 open film
+  0.0 address 1 of 1 (.m3u8) with AVPlayer
+  0.5 state: loading
+  2.4 state: playing
+  2.9 picture moving after 2.9 s
+  3.0 seek from 0.5 to 120.0 s
+  3.9 seek done after 0.9 s
+
+Samples (s, position, received kB, used kB (tracks played), pictures shown, lost):
+  0.5 - 0 0 0 0
+  1.9 - 0 0 0 0
+  2.4 0.0 326 0 0 0
+  2.9 0.5 2288 16 0 0
+  3.4 120.2 2615 3962 0 0
+  3.9 120.6 4916 3978 0 0
