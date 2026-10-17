@@ -135,14 +135,12 @@ fun HomeScreen(
         state.tagSuggestion?.let { suggestion ->
             item { TagSuggestionCard(suggestion, actions, Modifier.padding(horizontal = metrics.gutter)) }
         }
-        if (state.continueWatching.isNotEmpty()) {
-            item {
-                Shelf(stringResource(R.string.continue_watching), metrics) {
-                    items(state.continueWatching, key = { it.key }) {
-                        ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey)
-                    }
-                }
-            }
+        val (resumeSeries, resumeMovies) = state.continueWatching.partition { it.isSeries }
+        if (resumeMovies.isNotEmpty()) {
+            item { ResumeShelf(stringResource(R.string.movies_in_progress), resumeMovies, metrics, actions, preparingKey) }
+        }
+        if (resumeSeries.isNotEmpty()) {
+            item { ResumeShelf(stringResource(R.string.series_in_progress), resumeSeries, metrics, actions, preparingKey) }
         }
         if (state.myList.isNotEmpty()) {
             item { PosterShelf(stringResource(R.string.my_list), state.myList, metrics, actions, actions.onSeeAllMyList) }
@@ -169,6 +167,15 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = metrics.gutter),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMetrics, actions: HomeActions, preparingKey: String?) {
+    Shelf(title, metrics) {
+        items(items, key = { it.key }) {
+            ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey)
         }
     }
 }

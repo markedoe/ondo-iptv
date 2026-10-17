@@ -1,8 +1,8 @@
 import SwiftUI
 import IPTVCore
 
-/// Home: a carousel of featured movies and series, then shelves (continue watching, My List,
-/// new movies, new series), with live TV last.
+/// Home: a carousel of featured movies and series, then shelves (movies in progress, series in progress,
+/// My List, new movies, new series), with live TV last.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     #if os(iOS)
@@ -80,7 +80,8 @@ struct HomeView: View {
     @ViewBuilder
     private func content(hero: [ShowcaseItem], width: CGFloat, topInset: CGFloat) -> some View {
         let metrics = ShelfMetrics(compact: compact)
-        let resume = model.continueWatching()
+        let resumeMovies = model.continueWatching(.movie)
+        let resumeSeries = model.continueWatching(.series)
         let myList = model.myList()
         let newMovies = model.newMovies()
         let newSeries = model.newSeries()
@@ -104,9 +105,17 @@ struct HomeView: View {
                     .padding(.horizontal, metrics.gutter)
             }
 
-            if !resume.isEmpty {
-                Shelf(title: "Continue Watching", metrics: metrics) {
-                    ForEach(resume) { entry in
+            if !resumeMovies.isEmpty {
+                Shelf(title: "Movies in Progress", metrics: metrics) {
+                    ForEach(resumeMovies) { entry in
+                        ContinueCard(entry: entry, width: metrics.wideCardWidth)
+                    }
+                }
+            }
+
+            if !resumeSeries.isEmpty {
+                Shelf(title: "Series in Progress", metrics: metrics) {
+                    ForEach(resumeSeries) { entry in
                         ContinueCard(entry: entry, width: metrics.wideCardWidth)
                     }
                 }
@@ -305,12 +314,17 @@ struct HomeView: View {
     // MARK: - Details prefetch
 
     private func prefetchKey(_ hero: [ShowcaseItem]) -> String {
-        hero.map(\.id).joined(separator: ",") + "|" + model.continueWatching().prefix(6).map(\.id).joined(separator: ",")
+        hero.map(\.id).joined(separator: ",") + "|" + firstResumeCards().map(\.id).joined(separator: ",")
     }
 
-    /// Loads plots, genres and backdrops for the carousel and the continue watching cards.
+    /// The first cards of the movies and series in progress: the ones on screen.
+    private func firstResumeCards() -> [HistoryEntry] {
+        Array(model.continueWatching(.movie).prefix(4)) + Array(model.continueWatching(.series).prefix(4))
+    }
+
+    /// Loads plots, genres and backdrops for the carousel and the cards of the movies and series in progress.
     private func prefetchDetails(_ hero: [ShowcaseItem]) async {
-        let resume = model.continueWatching().prefix(6).compactMap { model.showcaseItem(for: $0) }
+        let resume = firstResumeCards().compactMap { model.showcaseItem(for: $0) }
         for item in hero + resume where model.cachedDetails(for: item) == nil {
             guard !Task.isCancelled else { return }
             _ = await model.loadDetails(for: item)

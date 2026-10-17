@@ -13,8 +13,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 
 ### iPhone, iPad et Mac
 
-- **Accueil** : carrousel de films et séries à la une, « Continuer à regarder », Ma liste, ajouts récents,
-  tendances ; le direct en dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom.
+- **Accueil** : carrousel de films et séries à la une, films et séries en cours (une rangée chacun), Ma liste,
+  nouveautés, tendances ; le direct en dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
   ou note, fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
@@ -72,8 +72,8 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 
 ### Android (téléphones et tablettes)
 
-- **Accueil** : carrousel, « Continuer à regarder », Ma liste, ajouts récents, chaînes ; la date de dernière
-  mise à jour de la playlist, au-dessus de son nom.
+- **Accueil** : carrousel, films et séries en cours (une rangée chacun), Ma liste, nouveautés, chaînes ;
+  la date de dernière mise à jour de la playlist, au-dessus de son nom.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres

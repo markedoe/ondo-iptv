@@ -26,8 +26,6 @@ class Showcase(
     private val seriesById by lazy { series.associateBy { it.id } }
 
     val hasVod: Boolean get() = movies.isNotEmpty() || series.isNotEmpty()
-    val moviesAreDated: Boolean get() = movies.any { it.addedAt != null }
-    val seriesAreDated: Boolean get() = series.any { it.addedAt != null }
 
     /**
      * New movies: released this year or last year, by release year and not by the date the provider added
@@ -68,13 +66,6 @@ class Showcase(
         .thenByDescending { it.addedAt ?: Long.MIN_VALUE }
         .thenByDescending { it.rating ?: 0.0 }
         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
-
-    /** Newest first when the provider dates them, otherwise in playlist order (Movies and Series tabs). */
-    fun featuredMovies(limit: Int = 20): List<Movie> =
-        if (moviesAreDated) movies.filter { it.addedAt != null }.sortedByDescending { it.addedAt }.take(limit) else movies.take(limit)
-
-    fun featuredSeries(limit: Int = 20): List<Series> =
-        if (seriesAreDated) series.filter { it.addedAt != null }.sortedByDescending { it.addedAt }.take(limit) else series.take(limit)
 
     /** Movies and series of My List, most recently added first. */
     fun myList(): List<ShowcaseItem> =

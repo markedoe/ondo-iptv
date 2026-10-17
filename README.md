@@ -13,8 +13,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 
 ### iPhone, iPad and Mac
 
-- **Home**: carousel of featured movies and series, "Continue Watching", My List, new releases, trending;
-  live TV last; when the playlist was last updated, above its name.
+- **Home**: carousel of featured movies and series, movies and series in progress (one row each), My List,
+  new releases, trending; live TV last; when the playlist was last updated, above its name.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
@@ -67,8 +67,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
 
 ### Android (phones and tablets)
 
-- **Home**: carousel, "Continue Watching", My List, recently added, channels; when the playlist was last updated,
-  above its name.
+- **Home**: carousel, movies and series in progress (one row each), My List, new releases, channels; when the
+  playlist was last updated, above its name.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), detail pages (Resume, From Start, next
   episode, seasons, More Like This); a director's or an actor's name opens their other movies and series

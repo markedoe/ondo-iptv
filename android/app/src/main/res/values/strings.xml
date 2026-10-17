@@ -17,6 +17,8 @@
     <string name="play_episode">Play %1$s</string>
     <string name="resume_episode">Resume %1$s</string>
     <string name="continue_watching">Continue Watching</string>
+    <string name="movies_in_progress">Movies in Progress</string>
+    <string name="series_in_progress">Series in Progress</string>
     <string name="recently_added">Recently Added</string>
     <string name="new_movies">New Movies</string>
     <string name="new_series">New Series</string>

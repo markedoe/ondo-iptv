@@ -16,6 +16,8 @@
     <string name="play_episode">Reproduzir %1$s</string>
     <string name="resume_episode">Retomar %1$s</string>
     <string name="continue_watching">Continuar assistindo</string>
+    <string name="movies_in_progress">Filmes em andamento</string>
+    <string name="series_in_progress">Séries em andamento</string>
     <string name="recently_added">Adicionados recentemente</string>
     <string name="new_movies">Novos filmes</string>
     <string name="new_series">Novas séries</string>

@@ -9,8 +9,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **Core** `android/core`: Kotlin port of IPTVCore (M3U, XSPF, JSON, Xtream, XMLTV, catch-up, search,
   playback items), tested with the same cases as the Swift tests.
 - **App** `android/app` (Compose, Material 3, type-safe Navigation, tab bar or rail depending on the screen):
-  home (carousel, Continue Watching, My List, Recently Added, channels), Movies and Series tabs
-  (one row per category, filterable grids), movie and series pages (Resume, From Start, next
+  home (carousel, Movies in Progress, Series in Progress, My List, New Movies, New Series, channels),
+  Movies and Series tabs (one row per category, filterable grids), movie and series pages (Resume, From Start, next
   episode, seasons, More Like This, awards, tappable cast and director), live TV (categories, favorites,
   current and next programme), TV guide grid with programme reminders (WorkManager notifications), My List
   tab with collections, search (filters by release years and by festival or ceremony), categories hidden by

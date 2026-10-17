@@ -9,8 +9,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Cœur** `android/core` : port Kotlin d'IPTVCore (M3U, XSPF, JSON, Xtream, XMLTV, catch-up, recherche,
   éléments de lecture), testé avec les mêmes cas que les tests Swift.
 - **App** `android/app` (Compose, Material 3, Navigation type-safe, barre d'onglets ou rail selon l'écran) :
-  accueil (carrousel, Continuer à regarder, Ma liste, ajouts récents, chaînes), onglets Films et Séries
-  (une rangée par catégorie, grilles filtrables), fiches film et série (reprise, depuis le début, épisode
+  accueil (carrousel, Films en cours, Séries en cours, Ma liste, Nouveaux films, Nouvelles séries, chaînes),
+  onglets Films et Séries (une rangée par catégorie, grilles filtrables), fiches film et série (reprise, depuis le début, épisode
   suivant, saisons, titres similaires, prix, casting et réalisation cliquables), TV en direct (catégories,
   favoris, programme en cours et suivant), grille du guide TV avec rappels de programmes (notifications
   WorkManager), onglet Ma liste avec collections, recherche (filtres par années de sortie et par festival ou

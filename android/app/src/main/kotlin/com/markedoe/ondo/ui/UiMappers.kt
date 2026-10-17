@@ -98,6 +98,7 @@ object UiMappers {
             imageUrl = backdrop ?: entry.imageUrl,
             progress = entry.progress.toFloat(),
             minutesLeft = entry.minutesLeft,
+            isSeries = entry.kind == ItemKind.SERIES,
         )
     }
 
@@ -159,17 +160,11 @@ object UiMappers {
             else state.content.movies.groupBy({ it.categoryId }) { ShowcaseItem.MovieItem(it) }
         val rows = categories.mapNotNull { category -> byCategory[category.id]?.take(ROW_LENGTH)?.let { CategoryRow(category, it) } }
         val kind = if (series) ItemKind.SERIES else ItemKind.MOVIE
-        val dated = if (series) showcase.seriesAreDated else showcase.moviesAreDated
         return VodUiState(
             title = title,
             categories = rows.map { it.category },
             continueWatching = showcase.continueWatching().filter { it.kind == kind }.map { resume(it, state) },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
-            recent = when {
-                !dated -> emptyList()
-                series -> showcase.featuredSeries().map { ShowcaseItem.SeriesItem(it) }
-                else -> showcase.featuredMovies().map { ShowcaseItem.MovieItem(it) }
-            },
             rows = rows,
             awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH).map { ShowcaseItem.MovieItem(it) },
         )

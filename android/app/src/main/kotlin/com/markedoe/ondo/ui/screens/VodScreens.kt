@@ -60,7 +60,6 @@ data class VodUiState(
     val lockedCategoryIds: Set<String> = emptySet(),
     val continueWatching: List<ResumeItem> = emptyList(),
     val myList: List<ShowcaseItem> = emptyList(),
-    val recent: List<ShowcaseItem> = emptyList(),
     val rows: List<CategoryRow> = emptyList(),
     /** Movies that won an award (Palme d'Or, Oscars…), the most recent first. */
     val awardWinners: List<ShowcaseItem> = emptyList(),
@@ -75,7 +74,7 @@ class VodActions(
     val onCategories: () -> Unit = {},
 )
 
-/** Movies or Series tab: category chips, continue watching, My List, recently added, one row per category. */
+/** Movies or Series tab: category chips, continue watching, My List, award winners, one row per category. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
@@ -124,13 +123,6 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
                 }
             }
         }
-        if (state.recent.isNotEmpty()) {
-            item {
-                Shelf(stringResource(R.string.recently_added), metrics) {
-                    items(state.recent, key = { it.key }) { PosterCard(it, metrics.posterWidth, onClick = { actions.onOpen(it) }) }
-                }
-            }
-        }
         if (state.awardWinners.isNotEmpty()) {
             item {
                 Shelf(stringResource(R.string.award_winners), metrics) {
@@ -143,7 +135,7 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
                 items(row.items, key = { it.key }) { PosterCard(it, metrics.posterWidth, onClick = { actions.onOpen(it) }) }
             }
         }
-        if (state.rows.isEmpty() && state.recent.isEmpty()) {
+        if (state.rows.isEmpty()) {
             item {
                 Text(
                     stringResource(R.string.nothing_here),

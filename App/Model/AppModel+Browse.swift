@@ -96,14 +96,6 @@ extension AppModel {
         return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
     }
 
-    func recentlyAddedMovies(limit: Int = 20) -> [Movie] {
-        Array(movies(in: nil, sort: .recent).prefix(limit)).filter { $0.addedAt != nil }
-    }
-
-    func recentlyAddedSeries(limit: Int = 20) -> [Series] {
-        Array(series(in: nil, sort: .recent).prefix(limit)).filter { $0.addedAt != nil }
-    }
-
     func search(_ query: String) -> SearchResults {
         Self.search(query, in: index.search, excluded: excludedCategoryIDs, hidden: hiddenChannelIDs)
     }

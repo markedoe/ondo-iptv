@@ -81,6 +81,17 @@ class UiMappersTest {
     }
 
     @Test
+    fun homeTellsEpisodesFromMoviesInProgress() {
+        val movie = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, title = "Glass City", lastWatchedAt = 1)
+        val episode = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, Fixtures.harborLights.id, "e1", title = "Harbor Lights", lastWatchedAt = 3)
+        val library = LibraryState()
+            .recordStart(movie).updateProgress(movie.key, 600.0, 6_000.0, now = 2)
+            .recordStart(episode).updateProgress(episode.key, 300.0, 3_000.0, now = 4)
+        val resume = UiMappers.home(Fixtures.state(library), labels, Fixtures.NOW).continueWatching
+        assertEquals(setOf("Glass City" to false, "Harbor Lights" to true), resume.map { it.title to it.isSeries }.toSet())
+    }
+
+    @Test
     fun vodTabHasOneRowPerCategoryAndItsContinueWatching() {
         val entry = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, title = "Glass City", lastWatchedAt = 1)
         val library = LibraryState().recordStart(entry).updateProgress(entry.key, 600.0, 6_000.0, now = 2)
