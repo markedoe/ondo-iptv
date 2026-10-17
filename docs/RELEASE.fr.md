@@ -150,7 +150,9 @@ HTTP, Cast et notifications.
    (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), donc rien en elle ne peut les activer : une fonction désactivée, ou un
    code de déblocage, serait une fonction cachée ou dormante, ce que la règle 2.3.1 interdit et pour quoi Apple
    peut exclure un développeur de son programme. Les builds de l'édition TestFlight restent aux testeurs
-   internes : les tests externes passent par la review d'Apple.
+   internes : les tests externes passent par la review d'Apple. TestFlight propose aux testeurs le dernier build
+   de chaque plateforme : chaque envoi de l'édition App Store est donc suivi d'un envoi de l'édition TestFlight
+   pour la même plateforme, sinon les testeurs reçoivent le build sans téléchargements.
 3. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
    fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.
