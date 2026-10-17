@@ -9105,6 +9105,46 @@
         }
       }
     },
+    "Kept inside Ondo on this device: the Files app does not show it.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gardé dans Ondo sur cet appareil : l’app Fichiers ne l’affiche pas."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se guarda dentro de Ondo en este dispositivo: la app Archivos no lo muestra."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fica dentro do Ondo neste dispositivo: o app Arquivos não o mostra."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存在此设备上的 Ondo 内：“文件”App 不会显示它。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُحفظ داخل Ondo على هذا الجهاز: لا يعرضه تطبيق الملفات."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस डिवाइस पर Ondo के अंदर रखा जाता है: Files ऐप इसे नहीं दिखाता।"
+          }
+        }
+      }
+    },
     "Kids": {
       "localizations": {
         "fr": {
@@ -9941,6 +9981,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "लोकार्नो फ़िल्म महोत्सव"
+          }
+        }
+      }
+    },
+    "Location": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Emplacement"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ubicación"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الموقع"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्थान"
           }
         }
       }
@@ -19231,6 +19311,46 @@
         }
       }
     },
+    "Show in Finder": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher dans le Finder"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar en el Finder"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar no Finder"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在访达中显示"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار في Finder"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder में दिखाएँ"
+          }
+        }
+      }
+    },
     "Show only your languages?": {
       "localizations": {
         "fr": {
@@ -20787,6 +20907,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "डेटा बहुत धीमा आ रहा है या रुक जाता है: कारण नेटवर्क या प्रदाता है।"
+          }
+        }
+      }
+    },
+    "The download is saved here when it ends.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le téléchargement est enregistré ici quand il se termine."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La descarga se guarda aquí cuando termina."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O download é salvo aqui quando termina."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下载完成后会保存在这里。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُحفظ التنزيل هنا عند انتهائه."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "डाउनलोड पूरा होने पर यहाँ सहेजा जाता है।"
+          }
+        }
+      }
+    },
+    "The file is named with a code, not with the title.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier porte un code pour nom, pas le titre."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo lleva un código como nombre, no el título."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O arquivo leva um código como nome, não o título."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件以代码命名，而不是以标题命名。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يحمل الملف رمزًا اسمًا له، وليس العنوان."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़ाइल का नाम एक कोड है, शीर्षक नहीं।"
           }
         }
       }

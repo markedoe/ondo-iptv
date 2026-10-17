@@ -1,5 +1,8 @@
 import SwiftUI
 import IPTVCore
+#if os(macOS)
+import AppKit
+#endif
 
 // The TestFlight edition only (and development builds): the App Store edition is built without downloads.
 #if TESTFLIGHT_DOWNLOADS || DEBUG
@@ -205,6 +208,7 @@ struct DownloadDetailsView: View {
                         Text(current.item.title).font(.headline)
                         Text(DownloadsView.progressText(current, meter: manager.meters[current.id]))
                             .font(.callout.monospacedDigit())
+                        location(of: current)
                         Text("""
                             These details help find why a download is slow or stuck: what the provider answered, the \
                             speed, what the download waits for and what happened. They hold no address, login or title.
@@ -242,6 +246,35 @@ struct DownloadDetailsView: View {
         #if os(macOS)
         .frame(minWidth: 560, minHeight: 520)
         #endif
+    }
+
+    /// Where the film is kept, so that it can be found on the Mac. The path stays out of the report, which is shared.
+    private func location(of record: DownloadRecord) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Location").font(.subheadline.bold())
+            #if os(macOS)
+            let url = manager.localURL(for: record)
+            Text(verbatim: url.path)
+                .font(.caption.monospaced())
+                .textSelection(.enabled)
+            if !record.isCompleted {
+                Text("The download is saved here when it ends.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Text("The file is named with a code, not with the title.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Show in Finder", systemImage: "folder") {
+                let exists = FileManager.default.fileExists(atPath: url.path)
+                NSWorkspace.shared.activateFileViewerSelecting([exists ? url : DownloadManager.directory])
+            }
+            #else
+            Text("Kept inside Ondo on this device: the Files app does not show it.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            #endif
+        }
     }
 }
 
