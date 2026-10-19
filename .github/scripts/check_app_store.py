@@ -7,12 +7,15 @@ submitted, its listing and its review notes are checked here, before any upload:
 1. Nothing hidden or dormant. The App Store edition is a Release build without TESTFLIGHT_DOWNLOADS: its code (App/,
    read as that build compiles it) holds no download code; no build setting turns TESTFLIGHT_DOWNLOADS on for it and a
    tag, the release that gets submitted, builds it; `FeatureFlags` reads nothing at run time and switches nothing off
-   for good (code no build can use is left out of the build).
+   for good (code no build can use is left out of the build). It never says "beta": betas belong on TestFlight, not
+   on the App Store (2.2); the TestFlight edition's beta badge is left out of this build.
 2. No private API: no class, selector or symbol looked up by name, no method swapped, no script run (2.5.1, 2.5.2).
 3. The listing (fastlane/metadata, every language) fits App Store Connect's limits, names no other platform, promises
    nothing to come, has no test or placeholder words, says nothing of downloads (not in this edition), and its
    copyright is this year's, the same as the app's (2.3).
 4. The review notes explain every permission, background mode and Mac entitlement the app asks for (2.1, 5.1.1).
+5. The pages of the website the listing opens (its support, privacy and marketing addresses, which App Review visits)
+   have no test words either: the App Store app must not read as a beta (2.2).
 
 The addresses of the listing are checked to answer in the release workflow, before the upload.
 
@@ -40,6 +43,8 @@ DOWNLOAD_CODE = re.compile(
 PRIVATE_API = re.compile(
     r"NSSelectorFromString|NSClassFromString|\bSelector\(\"|\bdlopen\(|\bdlsym\(|objc_msgSend|objc_lookUpClass|"
     r"method_exchangeImplementations|class_getInstanceMethod|forKey(?:Path)?: *\"_|\bJSContext\b|evaluateJavaScript")
+# A string the App Store edition would show that calls the app a beta (2.2).
+BETA_TEXT = re.compile(r'(?i)"[^"\n]*(?<![\w])(?:beta|bêta)(?![\w])[^"\n]*"')
 RUNTIME_SWITCH = re.compile(r"UserDefaults|@AppStorage|ProcessInfo|URLSession|\bURL\(|\bDate\(|Keychain|Bundle\.main")
 
 LIMITS = {"name.txt": 30, "subtitle.txt": 30, "keywords.txt": 100, "promotional_text.txt": 170,
@@ -171,6 +176,9 @@ def check_code(problems: list) -> None:
             if relative.startswith("App/") and DOWNLOAD_CODE.search(line):
                 problems.append(f"{relative}: the App Store edition compiles download code: {line.strip()} "
                                 "(put it under `#if TESTFLIGHT_DOWNLOADS || DEBUG`)")
+            if relative.startswith("App/") and BETA_TEXT.search(line):
+                problems.append(f"{relative}: the App Store edition calls the app a beta: {line.strip()} (betas belong "
+                                "on TestFlight, not the App Store, 2.2: put it under `#if TESTFLIGHT_DOWNLOADS`)")
         match = re.search(r"\benum FeatureFlags\b", code)
         if match:
             flags = braced_body(code, match.end())
@@ -234,6 +242,24 @@ def check_listing(problems: list) -> None:
         problems.append("project.yml: NSHumanReadableCopyright must be the listing's copyright (copyright.txt)")
 
 
+def check_site(problems: list) -> None:
+    """The pages of site/ that the listing's addresses open: App Review visits them."""
+    test_words = [pattern for reason, pattern in LISTING_RULES if reason.startswith("has test words")]
+    pages = set()
+    for path in METADATA.glob("*/*_url.txt"):
+        address = path.read_text(encoding="utf-8").strip()
+        name = address.split("?", 1)[0].split("#", 1)[0].rsplit("/", 1)[-1] or "index.html"
+        page = ROOT / "site" / name
+        if page.is_file():
+            pages.add(page)
+    for page in sorted(pages):
+        text = re.sub(r"<[^>]+>", " ", page.read_text(encoding="utf-8"))
+        for number, line in enumerate(text.splitlines(), start=1):
+            if any(pattern.search(line) for pattern in test_words):
+                problems.append(f"{page.relative_to(ROOT)}:{number} has test words, and the App Store listing opens "
+                                f"this page (2.2): {line.strip()[:120]}")
+
+
 def check_review_notes(problems: list) -> None:
     if not NOTES.is_file():
         problems.append("fastlane/metadata/review_information/notes.txt is missing")
@@ -268,6 +294,7 @@ def main() -> int:
     check_code(problems)
     check_build_settings(problems)
     check_listing(problems)
+    check_site(problems)
     check_review_notes(problems)
     for problem in problems:
         print(f"::error::{problem}")

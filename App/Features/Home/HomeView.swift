@@ -345,6 +345,9 @@ struct HomeView: View {
         ToolbarItem(placement: .primaryAction) { playlistMenu(compactLabel: false) }
         #endif
         ToolbarItem(placement: .primaryAction) { ProfileMenu() }
+        #if TESTFLIGHT_DOWNLOADS
+        ToolbarItem(placement: .navigation) { BetaBadge() }
+        #endif
         #if os(iOS)
         if !Platform.isPad {
             ToolbarItem(placement: .primaryAction) {

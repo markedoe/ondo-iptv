@@ -157,7 +157,10 @@ fastlane).
 ### E3. Production
 
 *Production → Create new release* (or the workflow with the `production` track: the release is created as
-a draft, to check and send for review in the console). Choose the countries, then *Send changes for
+a draft, to check and send for review in the console). Builds for the test tracks (internal, closed, open)
+show a *Beta* badge on Home and next to the version in Settings; a build made for the `production` track does
+not. So publish production from a bundle built for it (the workflow with the `production` track), not by
+promoting a test release, which would keep its badge. Choose the countries, then *Send changes for
 review*. The review takes from a few hours to a few days.
 
 ## F. Things to check before the review

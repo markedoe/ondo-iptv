@@ -38,6 +38,8 @@ screenshots.
   - The listing matches the build: no feature it lacks, no other platform named, nothing "coming soon", no test or
     placeholder words, this year's copyright. The review notes explain every permission, background mode and
     entitlement, and give a way to test without a subscription (the demo).
+  - Never "beta" in the App Store build, its listing or the site pages the listing opens (2.2: betas belong on
+    TestFlight); the beta badge is in the TestFlight edition only (`#if TESTFLIGHT_DOWNLOADS`).
   - `.github/scripts/check_app_store.py` (CI, security and release workflows) checks this: extend it with each
     new permission, entitlement or edition difference.
 - **Keys and logins are checked when saved**: every API key, token, login or other setting that depends on an

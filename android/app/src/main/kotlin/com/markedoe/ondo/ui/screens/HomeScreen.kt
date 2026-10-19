@@ -81,6 +81,8 @@ data class HomeUiState(
     val isRestoring: Boolean = false,
     /** "Show only your languages?", offered once on a playlist with categories for many languages. */
     val tagSuggestion: TagSuggestion? = null,
+    /** A build for a Google Play test track: a beta badge is shown. */
+    val beta: Boolean = false,
 )
 
 class HomeActions(
@@ -243,6 +245,7 @@ private fun HomeTopBar(state: HomeUiState, actions: HomeActions, onArtwork: Bool
                 Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = stringResource(R.string.playlists), tint = tint.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
             }
         }
+        if (state.beta) BetaBadge(Modifier.align(Alignment.CenterStart).padding(start = 8.dp))
         Row(Modifier.align(Alignment.CenterEnd)) {
             IconButton(onClick = actions.onSearch, modifier = Modifier.testTag("searchButton")) {
                 Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search), tint = tint)
@@ -252,6 +255,21 @@ private fun HomeTopBar(state: HomeUiState, actions: HomeActions, onArtwork: Bool
             }
         }
     }
+}
+
+@Composable
+private fun BetaBadge(modifier: Modifier = Modifier) {
+    Text(
+        stringResource(R.string.beta).uppercase(),
+        color = Color.White,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color(0xFFF59E0B))
+            .padding(horizontal = 7.dp, vertical = 2.dp)
+            .testTag("betaBadge"),
+    )
 }
 
 /** Offered once after opening a playlist with categories for many languages and countries. */

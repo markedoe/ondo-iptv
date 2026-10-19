@@ -16,6 +16,7 @@
     <string name="play_episode">تشغيل %1$s</string>
     <string name="resume_episode">استئناف %1$s</string>
     <string name="continue_watching">متابعة المشاهدة</string>
+    <string name="beta">تجريبي</string>
     <string name="movies_in_progress">أفلام قيد المشاهدة</string>
     <string name="series_in_progress">مسلسلات قيد المشاهدة</string>
     <string name="recently_added">أُضيف مؤخرًا</string>

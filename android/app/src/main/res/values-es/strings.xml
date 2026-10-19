@@ -16,6 +16,7 @@
     <string name="play_episode">Reproducir %1$s</string>
     <string name="resume_episode">Reanudar %1$s</string>
     <string name="continue_watching">Seguir viendo</string>
+    <string name="beta">Beta</string>
     <string name="movies_in_progress">Películas en curso</string>
     <string name="series_in_progress">Series en curso</string>
     <string name="recently_added">Añadidos recientemente</string>

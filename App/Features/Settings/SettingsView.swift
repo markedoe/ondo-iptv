@@ -117,6 +117,16 @@ struct SettingsView: View {
         }
     }
 
+    /// The app's version; the TestFlight edition says it is a beta.
+    private var versionText: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+        #if TESTFLIGHT_DOWNLOADS
+        return BetaBadge.version(version)
+        #else
+        return version
+        #endif
+    }
+
     var body: some View {
         Form {
             Section("Playlists") {
@@ -359,7 +369,7 @@ struct SettingsView: View {
                     Label("Help", systemImage: "questionmark.circle")
                 }
                 .accessibilityIdentifier("helpLink")
-                LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0")
+                LabeledContent("Version", value: versionText)
                 Legal.disclaimer
                     .font(.footnote)
                     .foregroundStyle(.secondary)

@@ -505,6 +505,11 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
     )
 }
 
+/** The app's version; a build for a Google Play test track says it is a beta. */
+@Composable
+private fun appVersion(): String =
+    if (BuildConfig.BETA) "${BuildConfig.VERSION_NAME} · ${stringResource(R.string.beta)}" else BuildConfig.VERSION_NAME
+
 @Composable
 private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHostController) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -513,7 +518,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
     val xtream = stringResource(R.string.kind_xtream)
     fun browse(url: String) = context.browse(url)
     SettingsScreen(
-        state = UiMappers.settings(state, BuildConfig.VERSION_NAME) { isXtream -> if (isXtream) xtream else m3u },
+        state = UiMappers.settings(state, appVersion()) { isXtream -> if (isXtream) xtream else m3u },
         actions = SettingsActions(
             onBack = { navController.popBackStack() },
             onAddPlaylist = { navController.navigate(Routes.AddPlaylist) },

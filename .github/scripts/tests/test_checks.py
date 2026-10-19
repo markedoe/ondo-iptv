@@ -365,6 +365,23 @@ class AppStoreTests(CheckTestCase):
         self.assertFails("app_store", "names another platform", "mentions downloads", "promises a feature to come",
                          "has test words", "fr-FR/name.txt has 40 characters")
 
+    def test_the_app_store_edition_never_says_beta(self):
+        self.write("App/Features/Badge.swift", "#if TESTFLIGHT_DOWNLOADS\nlet badge = Text(\"Beta\")\n#endif\n"
+                   "let version = \"1.1 (beta)\"\n")
+        self.assertFails("app_store", "App/Features/Badge.swift: the App Store edition calls the app a beta")
+
+    def test_the_testflight_beta_badge_passes(self):
+        self.write("App/Features/Badge.swift", "#if TESTFLIGHT_DOWNLOADS\nlet badge = Text(\"Beta\")\n#endif\n"
+                   "let alphabet = \"betamax\"\n")
+        self.assertPasses("app_store")
+
+    def test_the_site_pages_the_listing_opens_have_no_test_words(self):
+        self.write("site/index.html", "<h1>Ondo</h1>\n<p><b>Beta</b>: still changing.</p>\n")
+        self.write("site/notes.html", "<p>Beta builds on TestFlight.</p>\n")
+        self.assertFails("app_store", "site/index.html:2 has test words")
+        code, output = run("app_store", self.root)
+        self.assertNotIn("site/notes.html", output, "a page the listing does not open may talk of the beta")
+
     def test_the_copyright_must_be_this_years(self):
         self.write("fastlane/metadata/copyright.txt", f"© {self.YEAR - 1} example\n")
         self.assertFails("app_store", "copyright.txt must name this year", "NSHumanReadableCopyright")

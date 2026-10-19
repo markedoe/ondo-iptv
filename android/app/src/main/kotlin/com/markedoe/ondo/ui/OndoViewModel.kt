@@ -2,6 +2,7 @@ package com.markedoe.ondo.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.Series
@@ -76,7 +77,9 @@ class OndoViewModel(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, state.value.settings.appearance)
 
-    val home: StateFlow<HomeUiState?> = combine(state, minutes) { state, now -> UiMappers.home(state, labels, now) }
+    val home: StateFlow<HomeUiState?> = combine(state, minutes) { state, now ->
+        UiMappers.home(state, labels, now).copy(beta = BuildConfig.BETA)
+    }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 

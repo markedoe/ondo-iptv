@@ -90,6 +90,8 @@ jobs:
           export ANDROID_KEYSTORE_PATH="$RUNNER_TEMP/upload.jks"
           # Version code: always increasing (Play refuses reuse); version name from the tag.
           export ANDROID_VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))
+          # The test tracks get the beta badge; a production build never has it.
+          if [ "$TRACK" = production ]; then export ANDROID_BETA=false; else export ANDROID_BETA=true; fi
           case "$GITHUB_REF_NAME" in android-v*) export ANDROID_VERSION_NAME="${GITHUB_REF_NAME#android-v}";; esac
           status=0
           ./gradlew :app:bundleRelease --stacktrace || status=$?

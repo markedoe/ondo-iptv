@@ -9,6 +9,10 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 > Ondo est **uniquement un lecteur** : il n'héberge, ne fournit ni ne vend aucun contenu, chaîne, playlist
 > ou abonnement IPTV. Il lit les sources que l'utilisateur ajoute lui-même et qu'il est autorisé à regarder.
 
+> **Bêta.** Ondo est encore jeune : écrans et fonctions peuvent changer, et des bugs sont possibles. Les builds
+> TestFlight (iPhone, iPad, Mac) et les builds de test Google Play affichent un badge *Bêta*. Vos retours et
+> signalements de bugs sont les bienvenus dans les [issues](https://github.com/markedoe/ondo-iptv/issues).
+
 ## Fonctionnalités
 
 ### iPhone, iPad et Mac

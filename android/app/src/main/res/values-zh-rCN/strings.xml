@@ -16,6 +16,7 @@
     <string name="play_episode">播放 %1$s</string>
     <string name="resume_episode">继续播放 %1$s</string>
     <string name="continue_watching">继续观看</string>
+    <string name="beta">测试版</string>
     <string name="movies_in_progress">正在观看的电影</string>
     <string name="series_in_progress">正在观看的剧集</string>
     <string name="recently_added">最近添加</string>
