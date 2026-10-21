@@ -385,6 +385,7 @@ final class AppModel {
         if settings.lockAdultCategoriesAutomatically {
             lockAdultCategories(playlistID: stored.id, content: fresh)
         }
+        startDetails(for: stored.id)
         updateSettings { $0.activePlaylistID = stored.id; $0.hasCompletedOnboarding = true }
         await apply(fresh, for: stored)
         phase = .loaded
@@ -467,13 +468,8 @@ final class AppModel {
 
     func activate(_ playlist: Playlist, forceRefresh: Bool = false) async {
         let switching = content.isEmpty || activePlaylist?.id != playlist.id || index.channelsByID.isEmpty
-        // Details fetched in the last moments go to the previous playlist's document before the caches are emptied.
-        saveStoredDetailsNow()
+        startDetails(for: playlist.id)
         updateSettings { $0.activePlaylistID = playlist.id }
-        movieDetailsCache = [:]
-        seriesDetailsCache = [:]
-        movieDetailsFetchedAt = [:]
-        seriesDetailsFetchedAt = [:]
         loadStoredDetails(for: playlist)
         shortEPGRequested = []
         isParentalUnlocked = false

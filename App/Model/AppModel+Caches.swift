@@ -28,11 +28,23 @@ extension AppModel {
     // thumbnails show at once instead of waiting for the provider. A copy that is too old is fetched again, and
     // still shown when the provider cannot be reached.
 
+    /// The details in memory now belong to `playlistID` (a playlist opens or is added): details fetched in the last
+    /// moments are saved to the previous playlist's document first.
+    func startDetails(for playlistID: UUID) {
+        saveStoredDetailsNow()
+        storedDetailsLoad?.cancel()
+        storedDetailsLoad = nil
+        detailsPlaylistID = playlistID
+        movieDetailsCache = [:]
+        seriesDetailsCache = [:]
+        movieDetailsFetchedAt = [:]
+        seriesDetailsFetchedAt = [:]
+    }
+
     /// Reads the playlist's document in the background when it opens. `details(for:)` waits for it, so Home's
     /// prefetch finds what is on disk instead of asking the provider again.
     func loadStoredDetails(for playlist: Playlist) {
         storedDetailsLoad?.cancel()
-        detailsPlaylistID = playlist.id
         let store = cacheStore
         let name = DetailsArchive.documentName(for: playlist.id)
         // After the last write: reopening the same playlist must read the details just saved.

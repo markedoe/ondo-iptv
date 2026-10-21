@@ -60,6 +60,15 @@ class StoredDetailsTest {
         fun calls(action: String) = actions.count { it == action }
     }
 
+    /**
+     * Runs the save made a moment after the last fetch, and the writes. They run in the repository's background scope,
+     * which `advanceUntilIdle` leaves alone.
+     */
+    private fun TestScope.saved() {
+        testScheduler.advanceTimeBy(3_000)
+        testScheduler.runCurrent()
+    }
+
     private fun TestScope.repository(http: HttpClient) =
         OndoRepository(AppStore(folder.root), http, backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler))
 
@@ -74,7 +83,7 @@ class StoredDetailsTest {
         val series = first.state.value.content.series.single()
         assertEquals("http://img.example.com/wide.jpg", first.details(movie)?.backdropUrl)
         assertEquals("http://img.example.com/still.jpg", first.details(series).seasons.single().episodes.single().posterUrl)
-        testScheduler.advanceUntilIdle() // the save, a moment after the last fetch
+        saved() // a moment after the last fetch
 
         val second = repository(panel)
         second.bootstrap()
@@ -109,13 +118,13 @@ class StoredDetailsTest {
         assertTrue(repository.addPlaylist("Panel", "http://panel.example.com", "viewer", "secret").isSuccess)
         val id = repository.state.value.activePlaylistId!!
         repository.details(repository.state.value.content.movies.single())
-        testScheduler.advanceUntilIdle()
+        saved()
         assertTrue(AppStore(folder.root).loadDetails(id)?.movies?.isNotEmpty() == true)
 
         // Details fetched just before: their save, still pending, must not bring the document back.
         repository.details(repository.state.value.content.series.single())
         repository.delete(id)
-        testScheduler.advanceUntilIdle()
+        saved()
         assertNull(AppStore(folder.root).loadDetails(id))
     }
 
