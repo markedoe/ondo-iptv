@@ -69,7 +69,9 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   Films, Séries et Live TV.
 - **Téléchargements** hors ligne (films, épisodes ; édition TestFlight, pas celle de l'App Store), avec leur vitesse et le temps restant, la raison en clair
   quand le fournisseur refuse, limite les connexions ou n'envoie rien, et leurs détails à partager.
-- **Données** : sauvegarde / restauration JSON, cache vidable.
+- **Données** : sauvegarde / restauration JSON, cache vidable. Les affiches, les vignettes et les pages des films et
+  séries restent sur l'appareil : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même
+  quand le fournisseur ne répond pas.
 - **Aide** dans l'app (Réglages, et Aide, Aide Ondo sur Mac) : une page par fonctionnalité, dans chaque langue.
 - **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi.

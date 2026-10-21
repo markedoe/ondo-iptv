@@ -116,40 +116,75 @@ extension AppModel {
 
     // MARK: - Details
 
+    /// The details kept from an earlier visit or fetched this session, at once: a page shows them while
+    /// `details(for:)` makes sure they are recent enough.
+    func storedDetails(for movie: Movie) -> MediaDetails? {
+        movieDetailsCache[movie.id]
+    }
+
+    func storedDetails(for series: Series) -> SeriesDetails? {
+        seriesDetailsCache[series.id]
+    }
+
+    /// The kept details while they are recent (`DetailsArchive.movieMaxAge`), else the provider's; the kept ones when
+    /// the provider cannot be reached.
     func details(for movie: Movie) async -> MediaDetails? {
-        if let cached = movieDetailsCache[movie.id] { return cached }
+        await storedDetailsLoaded()
+        let kept = movieDetailsCache[movie.id]
+        if let kept, DetailsArchive.isFresh(movieDetailsFetchedAt[movie.id], maxAge: DetailsArchive.movieMaxAge) { return kept }
         // The Home prefetch and the page may ask at the same time: one request.
-        if let running = movieDetailsInFlight[movie.id] { return await running.value }
-        guard let streamID = movie.xtreamStreamID, let credentials = activePlaylist?.source.xtreamCredentials else { return nil }
-        let client = XtreamClient(credentials: credentials, http: http, headers: activePlaylist?.headers ?? .none)
+        if let running = movieDetailsInFlight[movie.id] { return await running.value ?? kept }
+        guard let streamID = movie.xtreamStreamID, let playlist = activePlaylist,
+              let credentials = playlist.source.xtreamCredentials else { return kept }
+        let client = XtreamClient(credentials: credentials, http: http, headers: playlist.headers)
         let request = Task { try? await client.movieDetails(streamID: streamID) }
         movieDetailsInFlight[movie.id] = request
         let fetched = await request.value
         movieDetailsInFlight[movie.id] = nil
-        guard let details = fetched else { return nil }
+        // Another playlist opened meanwhile: these details are not its own.
+        guard let details = fetched, activePlaylist?.id == playlist.id else { return fetched ?? kept }
         movieDetailsCache[movie.id] = details
+        movieDetailsFetchedAt[movie.id] = .now
         detailsRevision += 1
+        scheduleStoredDetailsSave()
         return details
     }
 
+    /// The kept episodes while they are recent (`DetailsArchive.seriesMaxAge`: a series gains episodes), else the
+    /// provider's; the kept ones when the provider cannot be reached.
     func details(for series: Series) async throws -> SeriesDetails {
-        if let cached = seriesDetailsCache[series.id] { return cached }
-        let details: SeriesDetails
-        if let seriesID = series.xtreamSeriesID, let credentials = activePlaylist?.source.xtreamCredentials {
-            let client = XtreamClient(credentials: credentials, http: http, headers: activePlaylist?.headers ?? .none)
-            details = try await client.seriesDetails(seriesID: seriesID)
-        } else {
+        await storedDetailsLoaded()
+        let kept = seriesDetailsCache[series.id]
+        guard let seriesID = series.xtreamSeriesID, let playlist = activePlaylist,
+              let credentials = playlist.source.xtreamCredentials else {
+            if let kept { return kept }
+            // Without a provider's server, the episodes come with the playlist: nothing to fetch or to keep on disk.
             let grouped = Dictionary(grouping: series.episodes, by: \.season)
             let seasons = grouped.keys.sorted().map { number in
                 Season(number: number, name: String(localized: "Season \(number)"), episodes: grouped[number] ?? [])
             }
-            details = SeriesDetails(
+            let details = SeriesDetails(
                 info: MediaDetails(title: series.name, plot: series.plot, genre: series.genre, rating: series.rating, posterURL: series.coverURL),
                 seasons: seasons
             )
+            seriesDetailsCache[series.id] = details
+            detailsRevision += 1
+            return details
         }
+        if let kept, DetailsArchive.isFresh(seriesDetailsFetchedAt[series.id], maxAge: DetailsArchive.seriesMaxAge) { return kept }
+        let client = XtreamClient(credentials: credentials, http: http, headers: playlist.headers)
+        let details: SeriesDetails
+        do {
+            details = try await client.seriesDetails(seriesID: seriesID)
+        } catch {
+            if let kept { return kept }
+            throw error
+        }
+        guard activePlaylist?.id == playlist.id else { return details }
         seriesDetailsCache[series.id] = details
+        seriesDetailsFetchedAt[series.id] = .now
         detailsRevision += 1
+        scheduleStoredDetailsSave()
         return details
     }
 }

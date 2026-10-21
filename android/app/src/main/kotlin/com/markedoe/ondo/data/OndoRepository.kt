@@ -30,6 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -92,6 +93,16 @@ class OndoRepository(
     private var openJob: Job? = null
     private var guideJob: Job? = null
     private var bootstrapping = false
+
+    /**
+     * The playlist whose details are in [OndoState], when each came from the provider (those are kept on disk), the
+     * reading of its document and the pending save. Changed on the main thread only.
+     */
+    private var detailsPlaylistId: String? = null
+    private val movieFetchedAt = mutableMapOf<String, Long>()
+    private val seriesFetchedAt = mutableMapOf<String, Long>()
+    private var storedDetailsJob: Job? = null
+    private var detailsSaveJob: Job? = null
 
     /**
      * Library changes made before the saved data is loaded: when the system recreates only the player after
@@ -173,6 +184,7 @@ class OndoRepository(
                         store.saveContent(saved.id, content)
                     }
                 }
+                startDetails(saved.id)
                 _state.update { it.copy(playlists = playlists, settings = settings, content = content, isLoading = false, isRestoring = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap()) }
                 loadGuide(saved, content)
             }
@@ -186,6 +198,7 @@ class OndoRepository(
         openJob?.cancel()
         refreshJob?.cancel()
         guideJob?.cancel()
+        startDetails(playlist.id)
         _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), error = null, isLoading = false, isRestoring = true) }
         open(playlist)
     }
@@ -204,6 +217,7 @@ class OndoRepository(
             saveLibrary(library)
             saveSettings(settings)
             deleteContent(id)
+            deleteDetails(id)
         }
         val wasActive = _state.value.activePlaylistId == id
         _state.update { it.copy(playlists = playlists, library = library, settings = settings) }
@@ -260,6 +274,7 @@ class OndoRepository(
     private fun open(playlist: SavedPlaylist) {
         openJob?.cancel()
         _state.update { it.copy(isRestoring = true) }
+        loadStoredDetails(playlist)
         openJob = scope.launch {
             val cached = withContext(io) { store.loadContent(playlist.id) }
             // Another playlist was opened while this one was read: its catalogue must not replace that one (and that
@@ -382,34 +397,126 @@ class OndoRepository(
 
     // MARK: Details
 
+    /**
+     * The kept details while they are recent ([DetailsArchive.MOVIE_MAX_AGE_MS]), else the provider's; the kept ones
+     * when the provider cannot be reached.
+     */
     suspend fun details(movie: Movie): MediaDetails? {
-        _state.value.movieDetails[movie.id]?.let { return it }
-        val playlist = _state.value.activePlaylist ?: return null
-        val streamId = movie.xtreamStreamId ?: return null
-        val credentials = playlist.credentials() ?: return null
-        val details = runCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }.getOrNull() ?: return null
+        storedDetailsJob?.join()
+        val kept = _state.value.movieDetails[movie.id]
+        if (kept != null && DetailsArchive.isFresh(movieFetchedAt[movie.id], DetailsArchive.MOVIE_MAX_AGE_MS, now())) return kept
+        val playlist = _state.value.activePlaylist ?: return kept
+        val streamId = movie.xtreamStreamId ?: return kept
+        val credentials = playlist.credentials() ?: return kept
+        val details = runCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }.getOrNull() ?: return kept
+        // Another playlist opened meanwhile: these details are not its own.
+        if (_state.value.activePlaylistId != playlist.id) return details
+        movieFetchedAt[movie.id] = now()
         _state.update { it.copy(movieDetails = it.movieDetails + (movie.id to details)) }
+        scheduleDetailsSave()
         return details
     }
 
+    /**
+     * The kept episodes while they are recent ([DetailsArchive.SERIES_MAX_AGE_MS]: a series gains episodes), else the
+     * provider's; the kept ones when the provider cannot be reached.
+     */
     suspend fun details(series: Series): SeriesDetails {
-        _state.value.seriesDetails[series.id]?.let { return it }
+        storedDetailsJob?.join()
+        val kept = _state.value.seriesDetails[series.id]
         val playlist = _state.value.activePlaylist
         val credentials = playlist?.credentials()
         val seriesId = series.xtreamSeriesId
-        val details = if (credentials != null && seriesId != null) {
-            withContext(io) { XtreamClient(credentials, http).seriesDetails(seriesId) }
-        } else {
+        if (playlist == null || credentials == null || seriesId == null) {
+            if (kept != null) return kept
+            // Without a provider's server, the episodes come with the playlist: nothing to fetch or to keep on disk.
             val seasons = series.episodes.groupBy { it.season }.toSortedMap().map { (number, episodes) ->
                 Season(number, "Season $number", episodes.sortedBy { it.number })
             }
-            SeriesDetails(
+            val details = SeriesDetails(
                 info = MediaDetails(title = series.name, plot = series.plot, genre = series.genre, rating = series.rating, posterUrl = series.coverUrl),
                 seasons = seasons,
             )
+            _state.update { it.copy(seriesDetails = it.seriesDetails + (series.id to details)) }
+            return details
         }
+        if (kept != null && DetailsArchive.isFresh(seriesFetchedAt[series.id], DetailsArchive.SERIES_MAX_AGE_MS, now())) return kept
+        val details = try {
+            withContext(io) { XtreamClient(credentials, http).seriesDetails(seriesId) }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            kept ?: throw error
+        }
+        if (_state.value.activePlaylistId != playlist.id) return details
+        seriesFetchedAt[series.id] = now()
         _state.update { it.copy(seriesDetails = it.seriesDetails + (series.id to details)) }
+        scheduleDetailsSave()
         return details
+    }
+
+    // MARK: Details kept between launches
+
+    /** The details in [OndoState] now belong to [playlistId]: a pending save goes to the previous playlist first. */
+    private fun startDetails(playlistId: String) {
+        saveDetailsNow()
+        storedDetailsJob?.cancel()
+        storedDetailsJob = null
+        detailsPlaylistId = playlistId
+        movieFetchedAt.clear()
+        seriesFetchedAt.clear()
+    }
+
+    /**
+     * Reads the playlist's document (`details-<id>.json`) when it opens: Home's backdrops, the pages and their episode
+     * thumbnails show at once. [details] waits for it, so Home's prefetch does not ask the provider for what is on disk.
+     */
+    private fun loadStoredDetails(playlist: SavedPlaylist) {
+        if (detailsPlaylistId != playlist.id) {
+            startDetails(playlist.id)
+            _state.update { it.copy(movieDetails = emptyMap(), seriesDetails = emptyMap()) }
+        }
+        storedDetailsJob?.cancel()
+        storedDetailsJob = scope.launch {
+            // On the writer, after the last save: reopening the same playlist reads the details just saved.
+            val archive = withContext(writer) { runCatching { store.loadDetails(playlist.id) }.getOrNull() } ?: return@launch
+            if (detailsPlaylistId != playlist.id) return@launch
+            // A title fetched while the document was read has the newer details.
+            val current = _state.value
+            archive.movies.forEach { (id, entry) -> if (id !in current.movieDetails) movieFetchedAt[id] = entry.fetchedAt }
+            archive.series.forEach { (id, entry) -> if (id !in current.seriesDetails) seriesFetchedAt[id] = entry.fetchedAt }
+            _state.update { state ->
+                state.copy(
+                    movieDetails = archive.movies.mapValues { it.value.value } + state.movieDetails,
+                    seriesDetails = archive.series.mapValues { it.value.value } + state.seriesDetails,
+                )
+            }
+        }
+    }
+
+    /** Saves a moment after the last fetch: titles fetched together make one write. */
+    private fun scheduleDetailsSave() {
+        detailsSaveJob?.cancel()
+        detailsSaveJob = scope.launch {
+            delay(DETAILS_SAVE_DELAY_MS)
+            saveDetailsNow()
+        }
+    }
+
+    /** Writes a pending save at once (another playlist opens). */
+    private fun saveDetailsNow() {
+        val pending = detailsSaveJob ?: return
+        detailsSaveJob = null
+        pending.cancel()
+        val playlistId = detailsPlaylistId ?: return
+        val state = _state.value
+        // The playlist was deleted meanwhile: its details go with it.
+        if (state.playlists.none { it.id == playlistId }) return
+        val archive = DetailsArchive(
+            movies = movieFetchedAt.mapNotNull { (id, at) -> state.movieDetails[id]?.let { id to DetailsArchive.Entry(it, at) } }.toMap(),
+            series = seriesFetchedAt.mapNotNull { (id, at) -> state.seriesDetails[id]?.let { id to DetailsArchive.Entry(it, at) } }.toMap(),
+        )
+        persist { saveDetails(playlistId, archive.trimmed()) }
     }
 
     // MARK: Playback
@@ -468,6 +575,7 @@ class OndoRepository(
 
     companion object {
         const val REFRESH_AFTER_MS = 24 * 60 * 60 * 1000L
+        private const val DETAILS_SAVE_DELAY_MS = 2_000L
 
         fun hostName(url: String): String = runCatching { java.net.URI(url.trim()).host }.getOrNull()?.removePrefix("www.") ?: "Playlist"
     }

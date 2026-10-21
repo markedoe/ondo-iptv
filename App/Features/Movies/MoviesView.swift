@@ -145,6 +145,11 @@ struct MovieDetailView: View {
             }
         }
         .task {
+            // The details kept from an earlier visit at once, then the provider's if they are old.
+            if let stored = model.storedDetails(for: movie) {
+                details = stored
+                isLoading = false
+            }
             details = await model.details(for: movie)
             isLoading = false
             await model.loadTMDbBackdropIfNeeded(for: .movie(movie))

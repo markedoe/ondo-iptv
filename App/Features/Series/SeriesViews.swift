@@ -121,10 +121,20 @@ struct SeriesDetailView: View {
             }
         }
         .task {
+            // The episodes kept from an earlier visit at once, then the provider's if they are old.
+            var suggested: Int?
+            if let stored = model.storedDetails(for: series) {
+                details = stored
+                suggested = model.nextEpisode(in: series, details: stored)?.season.number
+                if selectedSeason == nil { selectedSeason = suggested }
+            }
             do {
                 let loaded = try await model.details(for: series)
                 details = loaded
-                if selectedSeason == nil { selectedSeason = model.nextEpisode(in: series, details: loaded)?.season.number }
+                // New episodes can move the next one to another season, unless the viewer picked one.
+                if selectedSeason == nil || selectedSeason == suggested {
+                    selectedSeason = model.nextEpisode(in: series, details: loaded)?.season.number
+                }
             } catch {
                 errorMessage = error.localizedDescription
             }

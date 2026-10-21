@@ -46,6 +46,14 @@ class AppStore(private val directory: File, private val now: () -> Long = System
         File(directory, "content-$playlistId.json").delete()
     }
 
+    /** The movie and series details kept for a playlist; they can be fetched again: no previous version is kept. */
+    fun loadDetails(playlistId: String): DetailsArchive? = read("details-$playlistId.json", DetailsArchive.serializer())
+    fun saveDetails(playlistId: String, archive: DetailsArchive) =
+        write("details-$playlistId.json", DetailsArchive.serializer(), archive, keepPrevious = false)
+    fun deleteDetails(playlistId: String) {
+        File(directory, "details-$playlistId.json").delete()
+    }
+
     /** The document, else its previous version. One that cannot be read is renamed `name.corrupt-<time>`. */
     @Synchronized
     private fun <T> read(name: String, serializer: KSerializer<T>): T? {

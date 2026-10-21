@@ -65,7 +65,8 @@ Android version: [docs/ANDROID.md](docs/ANDROID.md).
   The filter button is on the Movies, Series and Live TV screens.
 - **Offline downloads** (movies, episodes; TestFlight edition, not the App Store one), with their speed and time left, the reason in plain words when the
   provider refuses, limits connections or sends nothing, and their details to share.
-- **Data**: JSON backup / restore, clearable cache.
+- **Data**: JSON backup / restore, clearable cache. Posters, thumbnails and the movie and series pages stay on the
+  device: they show at once at the next launch, and the pages still open when the provider cannot be reached.
 - **Help** in the app (Settings, and Help, Ondo Help on the Mac): one page per feature, in every language.
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi.
 

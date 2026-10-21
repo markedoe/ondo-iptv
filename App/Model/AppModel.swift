@@ -131,6 +131,14 @@ final class AppModel {
     /// TMDb backdrops and dead provider backdrops (AppModel+Backdrops).
     let backdrops = BackdropStore()
     @ObservationIgnored var seriesDetailsCache: [String: SeriesDetails] = [:]
+    /// When each title's details came from the provider: those are the ones kept on disk (AppModel+StoredDetails).
+    @ObservationIgnored var movieDetailsFetchedAt: [String: Date] = [:]
+    @ObservationIgnored var seriesDetailsFetchedAt: [String: Date] = [:]
+    /// The playlist whose details are in memory, the reading of its document, the pending save and the last write.
+    @ObservationIgnored var detailsPlaylistID: UUID?
+    @ObservationIgnored var storedDetailsLoad: Task<Void, Never>?
+    @ObservationIgnored var storedDetailsSave: Task<Void, Never>?
+    @ObservationIgnored var storedDetailsWrite: Task<Void, Never>?
     /// Subtitle services built from the saved keys; rebuilt when a key changes (OpenSubtitles keeps its
     /// signed-in session in its client, so it lives as long as the credentials).
     @ObservationIgnored var subtitleProviders: [any SubtitleProvider]?
@@ -266,6 +274,7 @@ final class AppModel {
 
     /// Flushes pending writes (app going to background, profile switch).
     func flush() {
+        saveStoredDetailsNow()
         libraryWriter.schedule(library, name: activeProfile.libraryDocumentName)
         libraryWriter.flush()
         try? userStore.save(settings, name: "settings")
@@ -415,6 +424,8 @@ final class AppModel {
         secrets.set(nil, for: Keychain.passwordKey(for: playlist.id))
         cacheStore.remove(name: "content-\(playlist.id.uuidString)")
         cacheStore.remove(name: "epg-\(playlist.id.uuidString)")
+        await storedDetailsWrite?.value
+        cacheStore.remove(name: DetailsArchive.documentName(for: playlist.id))
         if case .local(let fileName) = playlist.source {
             try? FileManager.default.removeItem(at: AppPaths.importedPlaylist(fileName))
         }
@@ -456,9 +467,14 @@ final class AppModel {
 
     func activate(_ playlist: Playlist, forceRefresh: Bool = false) async {
         let switching = content.isEmpty || activePlaylist?.id != playlist.id || index.channelsByID.isEmpty
+        // Details fetched in the last moments go to the previous playlist's document before the caches are emptied.
+        saveStoredDetailsNow()
         updateSettings { $0.activePlaylistID = playlist.id }
         movieDetailsCache = [:]
         seriesDetailsCache = [:]
+        movieDetailsFetchedAt = [:]
+        seriesDetailsFetchedAt = [:]
+        loadStoredDetails(for: playlist)
         shortEPGRequested = []
         isParentalUnlocked = false
 
@@ -766,21 +782,6 @@ final class AppModel {
     }
 
     // MARK: - Data management
-
-    /// The playlist and guide caches and the artwork, as Settings shows them. Walks folders: off the main thread.
-    func cacheSize() async -> Int64 {
-        let store = cacheStore
-        return await Task.detached(priority: .utility) { store.diskUsage() + Artwork.diskUsage() }.value
-    }
-
-    func clearCaches() async {
-        for playlist in playlists {
-            cacheStore.remove(name: "epg-\(playlist.id.uuidString)")
-            if playlist.id != activePlaylist?.id { cacheStore.remove(name: "content-\(playlist.id.uuidString)") }
-        }
-        Artwork.clearCaches()
-        loadEPG(force: true)
-    }
 
     func exportBackup() throws -> Data {
         // Category locks are kept for the whole device, outside the profile's library: they travel with it.
