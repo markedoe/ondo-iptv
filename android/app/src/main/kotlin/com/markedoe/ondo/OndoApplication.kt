@@ -49,10 +49,15 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
         )
     }
 
+    /**
+     * Posters, thumbnails and logos stay on disk whatever the image server's cache headers say (Coil's default
+     * strategy): one seen once comes back from the disk at the next launch, without a download. The folder is in the
+     * app's cache, which Android empties only when the device runs out of space.
+     */
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
         .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttp })) }
         .memoryCache { MemoryCache.Builder().maxSizePercent(context, 0.2).build() }
-        .diskCache { DiskCache.Builder().directory(cacheDir.resolve("artwork")).maxSizeBytes(256L * 1024 * 1024).build() }
+        .diskCache { DiskCache.Builder().directory(cacheDir.resolve("artwork")).maxSizeBytes(512L * 1024 * 1024).build() }
         .crossfade(true)
         .build()
 }

@@ -767,8 +767,10 @@ final class AppModel {
 
     // MARK: - Data management
 
-    func cacheSize() -> Int64 {
-        cacheStore.diskUsage()
+    /// The playlist and guide caches and the artwork, as Settings shows them. Walks folders: off the main thread.
+    func cacheSize() async -> Int64 {
+        let store = cacheStore
+        return await Task.detached(priority: .utility) { store.diskUsage() + Artwork.diskUsage() }.value
     }
 
     func clearCaches() async {

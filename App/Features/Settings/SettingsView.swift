@@ -338,7 +338,7 @@ struct SettingsView: View {
                 Button {
                     Task {
                         await model.clearCaches()
-                        cacheSize = model.cacheSize()
+                        cacheSize = await model.cacheSize()
                         message = String(localized: "Cache cleared.")
                     }
                 } label: {
@@ -384,7 +384,7 @@ struct SettingsView: View {
             }
             #endif
         }
-        .onAppear { cacheSize = model.cacheSize() }
+        .task { cacheSize = await model.cacheSize() }
         .fileExporter(isPresented: $showingExporter, document: backupDocument, contentType: .json, defaultFilename: "Ondo-Backup") { result in
             if case .failure(let error) = result { message = error.localizedDescription }
         }
