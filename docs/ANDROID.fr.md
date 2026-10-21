@@ -37,7 +37,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   Roborazzi qui servent de captures Google Play (téléphone, tablettes 7" et 10", anglais et français).
 
 Prévu ensuite (non inclus en v1) : Android TV, replay depuis le guide, Chromecast, téléchargements,
-profils et PIN, sous-titres en ligne, synchronisation, second moteur libVLC.
+profils et PIN, sous-titres en ligne, second moteur libVLC.
 
 ## Plan initial
 

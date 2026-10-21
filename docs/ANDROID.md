@@ -34,7 +34,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   screenshots that double as Google Play screenshots (phone, 7" and 10" tablets, English and French).
 
 Planned next (not included in v1): Android TV, catch-up from the guide, Chromecast, downloads, profiles
-and PIN, online subtitles, sync, second libVLC engine.
+and PIN, online subtitles, second libVLC engine.
 
 ## Initial plan
 

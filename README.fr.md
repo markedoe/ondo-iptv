@@ -3,13 +3,14 @@
 [English](README.md) · **Français**
 
 Lecteur IPTV pour **iPhone / iPad**, **macOS** et **Android** — films, séries et TV en direct —, natif sur
-chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feuille de route :
-[docs/PLAN.fr.md](docs/PLAN.fr.md), version Android : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
+chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Il fonctionne à partir d'iOS / iPadOS 17, de
+macOS 14 et d'Android 8.0 (API 26). Conception et feuille de route : [docs/PLAN.fr.md](docs/PLAN.fr.md),
+version Android : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
 > Ondo est **uniquement un lecteur** : il n'héberge, ne fournit ni ne vend aucun contenu, chaîne, playlist
 > ou abonnement IPTV. Il lit les sources que l'utilisateur ajoute lui-même et qu'il est autorisé à regarder.
 
-> **Bêta.** Ondo est encore jeune : écrans et fonctions peuvent changer, et des bugs sont possibles. Les builds
+> **Bêta.** Ondo est encore jeune : écrans et fonctions peuvent changer, et des bugs sont à prévoir. L'édition
 > TestFlight (iPhone, iPad, Mac) et les builds de test Google Play affichent un badge *Bêta*. Vos retours et
 > signalements de bugs sont les bienvenus dans les [issues](https://github.com/markedoe/ondo-iptv/issues).
 
@@ -35,7 +36,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   c'est désactivé dans les Réglages ([tools/awards](tools/awards/README.fr.md)).
 - **Sources** : playlists M3U / M3U8 (URL ou fichier), comptes **Xtream Codes** (API ou « forcer M3U »),
   XSPF, JSON ; plusieurs playlists, actualisation automatique.
-- **Live TV** : catégories, numéros, logos, programme en cours + progression, Ma liste, récents, recherche ;
+- **TV en direct** : catégories, numéros, logos, programme en cours + progression, Ma liste, récents, recherche ;
   chaînes masquées, renommées ou renumérotées.
 - **Guide TV** : XMLTV (gzip), guide du fournisseur et/ou URL personnalisées, grille aux titres
   « collants », fiche programme, décalage horaire, repli sur l'EPG court Xtream, **association manuelle
@@ -66,7 +67,7 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   proposé une fois quand une playlist en compte beaucoup (garder vos langues, choisir, ou plus tard) ;
   masquez de la même façon un **style** (manga et anime, enfants, documentaires…) ou n'importe quel mot des noms
   de catégories (Bollywood…) ; ou masquez les catégories une par une. Le bouton de filtre est sur les écrans
-  Films, Séries et Live TV.
+  Films, Séries et TV en direct.
 - **Téléchargements** hors ligne (films, épisodes ; édition TestFlight, pas celle de l'App Store), avec leur vitesse et le temps restant, la raison en clair
   quand le fournisseur refuse, limite les connexions ou n'envoie rien, et leurs détails à partager.
 - **Données** : sauvegarde / restauration JSON, cache vidable. Les affiches, les vignettes et les pages des films et
@@ -85,9 +86,10 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
   épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
   films et séries (parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
   partagent.
-- **Live TV** : catégories, Ma liste, programme en cours et suivant ; **recherche** (la loupe de chaque écran),
-  filtrable par années de sortie ou par festival / cérémonie (lauréats seulement, au choix), et les acteurs et
-  réalisateurs par leur nom, comme sur Apple.
+- **TV en direct** : catégories, Ma liste, programme en cours et suivant.
+- **Recherche** (la loupe d'Accueil, Films, Séries, TV en direct et Ma liste) : chaînes, films, séries et
+  **acteurs et réalisateurs par leur nom**, filtrables par années de sortie ou par festival / cérémonie
+  (lauréats seulement, au choix) ; pas de recherche dans les programmes.
 - **Guide TV** (le bouton calendrier de TV en direct) : une grille des chaînes choisies à cet endroit, et des
   **rappels**, une notification quelques minutes avant le début d'un programme.
 - Onglet **Ma liste** : les films, séries et chaînes gardés, et vos **collections** (Collection sur la fiche d'un film
@@ -95,19 +97,30 @@ chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Conception et feu
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…), par style ou par mot (manga,
   Bollywood…) ou une par une, comme sur Apple.
 - **Aide** dans les Réglages.
-- **Prix** sur les fiches des films et une rangée « Films primés » dans Films, avec les mêmes données embarquées.
+- **Prix** sur les fiches des films et une rangée « Films primés » dans Films, avec les mêmes données
+  embarquées, mises à jour une fois par semaine sauf si c'est désactivé dans les Réglages.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
   testé avec les mêmes cas).
 - **Lecteur** (Media3 / ExoPlayer) : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
-  reprise, image dans l'image, commandes multimédia, retour au direct.
-- **Réglages** : playlists, apparence, catégories adultes masquées par défaut ; écran d'accueil avec démo.
-- À venir : Android TV, replay, Chromecast, téléchargements, profils et PIN, sous-titres en ligne. Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
+  reprise, image dans l'image, commandes multimédia ; une chaîne qui prend du retard revient d'elle-même au
+  direct ; erreurs expliquées, **mémoire tampon** réglable pour le direct et pour les films et séries, et
+  **Signaler un problème…** : un rapport de lecture sans adresse, identifiant ni titre, à partager ou envoyer
+  dans un ticket GitHub.
+- **Données** : les affiches, les vignettes et les pages des films et séries restent sur l'appareil, comme sur
+  Apple : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même quand le fournisseur
+  ne répond pas.
+- **Réglages** : playlists, apparence, catégories adultes masquées par défaut, langues et catégories, langue de
+  l'app, mise à jour automatique des prix, mémoire tampon du lecteur ; écran d'accueil avec démo.
+- À venir : Android TV, replay, Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un
+  second moteur (libVLC). Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
 ## Langues
 
 Les apps (iPhone, iPad, Mac et Android) existent en sept langues, choisies d'après les réglages de l'appareil, ou
-pour Ondo seul dans le réglage de langue par app du système, qu'ouvre **Réglages → Langue de l'app** (iPhone, iPad,
-Android 13 et plus ; sur Mac, Réglages Système → Général → Langue et région → Applications) :
+pour Ondo seul dans le réglage de langue par app du système. **Réglages → Langue de l'app** l'ouvre : la page
+d'Ondo dans l'app Réglages (iPhone, iPad), Réglages Système → Général → Langue et région, où Ondo est sous
+Applications (Mac), ou la page de langue d'Ondo (Android 13 et plus). Avant Android 13, qui n'a pas de réglage
+par app, il ouvre les langues de l'appareil :
 
 | Langue | Apple (`App/Resources/Localizable.xcstrings`) | Android (`android/app/src/main/res/`) |
 |---|---|---|
@@ -127,17 +140,21 @@ en manque une sur Android. Les fiches des stores, le site et cette documentation
 
 ```
 App/                    Application SwiftUI (cible unique iOS + macOS)
-Packages/IPTVCore/      Logique métier (Foundation pur, testée sous Linux et macOS)
+AppTests/               Tests unitaires de l'app
+UITests/, MacUITests/   Tests UI et captures App Store (iPhone et iPad, Mac)
+Packages/IPTVCore/      Logique métier (Foundation et la zlib du système, testée sous Linux et macOS)
 android/app/            Application Android (Jetpack Compose, Media3)
 android/core/           Logique métier en Kotlin pur (port d'IPTVCore, mêmes cas de test)
 fastlane/               Publication App Store et Google Play, fiches des deux stores
 docs/                   Plan, publication (App Store, Google Play), version Android
+site/                   Site web (GitHub Pages) : accueil, assistance, confidentialité
+tools/                  Générateur des données de prix, banc de test de la lecture
 project.yml             Projet XcodeGen
 ```
 
 ## Compiler
 
-Prérequis : Xcode 16+ et [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+Prérequis : Xcode 26 (celui de la CI et des publications) et [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```bash
 brew install xcodegen
@@ -148,14 +165,32 @@ open Ondo.xcodeproj
 Choisissez le schéma **Ondo** puis un iPhone (simulateur ou appareil) ou **My Mac**. Pour un appareil,
 sélectionnez votre équipe de signature dans l'onglet *Signing & Capabilities*.
 
+Un build Debug (par défaut) comprend les téléchargements de l'édition TestFlight
+(`#if TESTFLIGHT_DOWNLOADS || DEBUG`) ; l'édition App Store est un build Release sans `TESTFLIGHT_DOWNLOADS`
+([docs/RELEASE.fr.md](docs/RELEASE.fr.md)).
+
 ### Dépendances
+
+Apple :
 
 - [IPTVCore](Packages/IPTVCore) (ce dépôt)
 - [VLCKit](https://code.videolan.org/videolan/VLCKit) 3.6 (LGPL 2.1) via
   [vlckit-spm](https://github.com/tylerjonesio/vlckit-spm), pour les formats non pris en charge par AVFoundation.
 - [Google Cast SDK](https://developers.google.com/cast) 4.8 (iPhone/iPad) via
-  [google-cast-sdk](https://github.com/SRGSSR/google-cast-sdk), pour diffuser sur Chromecast.
+  [google-cast-sdk](https://github.com/SRGSSR/google-cast-sdk), pour diffuser sur Chromecast. Contrairement aux
+  autres, le SDK est propriétaire : il appartient à Google et relève de ses conditions.
 - [Nuke / NukeUI](https://github.com/kean/Nuke) 12 (MIT), chargement et cache des logos et affiches.
+
+Android (`android/gradle/libs.versions.toml`), tous sous licence Apache 2.0 :
+
+- [AndroidX Media3](https://developer.android.com/media/media3) 1.11 (ExoPlayer, HLS, MediaSession), le lecteur.
+- [Jetpack Compose](https://developer.android.com/compose) (BOM 2026.09), Material 3, Navigation, Lifecycle.
+- [WorkManager](https://developer.android.com/topic/libraries/architecture/workmanager) 2.12, rappels de
+  programmes.
+- [Coil](https://github.com/coil-kt/coil) 3.6, chargement et cache des logos et affiches.
+- [OkHttp](https://github.com/square/okhttp) 5.5, requêtes réseau.
+- [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines) 1.11 et
+  [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) 1.11.
 
 Tests du cœur :
 
@@ -178,9 +213,18 @@ Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur donné
   question d'export, manifeste de confidentialité.
 - **Scripts** (`.github/scripts/check_*.py`, exécutables en local) : textes traduits dans toutes les langues,
   manifeste de confidentialité couvrant les API utilisées par le code livré, entitlements du bac à sable Mac,
-  neutralité du dépôt (aucune autre app IPTV citée, jamais « gratuit » pour qualifier l’IPTV, chaînes fictives
-  dans les tests).
-- **Compilation Release** (le code `#if DEBUG` est exclu de la version App Store).
+  mêmes données de prix dans les deux apps, neutralité du dépôt (aucune autre app IPTV citée, jamais
+  « gratuit » pour qualifier l’IPTV, chaînes fictives dans les tests), et l'édition App Store : aucun code
+  de téléchargement ni fonction dormante, aucune API privée, jamais « bêta », une fiche et des notes pour
+  la review qu'App Review accepte (vérifiée aussi à chaque changement et avant chaque publication).
+- **Compilation Release, édition App Store** (iOS et macOS) : le code `#if DEBUG` et les téléchargements de
+  l'édition TestFlight (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) en sont exclus, comme dans le build soumis.
+- **Banc de test de la lecture** (`tools/playback-lab`, quand le moteur VLC ou le code de lecture change) :
+  libVLC, la bibliothèque du moteur VLC, lit des flux générés servis par un fournisseur qui se comporte mal
+  exprès ; gels, temps de démarrage et de saut des films, position de reprise et diagnostic des gels de l'app
+  sont comparés à des limites.
+- **Tests de mutation** du cœur Kotlin, une fois par semaine (Pitest) : de petits bugs sont introduits dans le
+  code et ceux qu'aucun test ne détecte sont signalés ; ils ne font pas échouer la CI.
 - **Avant chaque publication** : la playlist de démonstration utilisée par la review d'Apple et de Google
   doit répondre.
 
@@ -203,9 +247,10 @@ dernier passage du workflow *Android*. Publication sur Google Play : [docs/RELEA
 ## Secrets et vie privée
 
 Le dépôt est public : les clés de publication vivent uniquement dans les secrets GitHub
-([docs/RELEASE.fr.md](docs/RELEASE.fr.md)). Un garde-fou bloque les secrets et données personnelles avant tout
-commit — hook Claude Code (`.claude/settings.json`), hook git (`git config core.hooksPath .githooks`) et
-CI (`.claude/hooks/leak_guard.py` + gitleaks sur tout l'historique).
+([docs/RELEASE.fr.md](docs/RELEASE.fr.md), [docs/RELEASE-ANDROID.fr.md](docs/RELEASE-ANDROID.fr.md)). Un
+garde-fou bloque les secrets et données personnelles avant tout commit — hook Claude Code
+(`.claude/settings.json`), hook git (`git config core.hooksPath .githooks`) et CI
+(`.claude/hooks/leak_guard.py` + gitleaks sur tout l'historique).
 
 ## Licence
 
