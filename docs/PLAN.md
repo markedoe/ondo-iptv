@@ -3,7 +3,8 @@
 **English** · [Français](PLAN.fr.md)
 
 IPTV player (movies, series, live TV) for **iPhone**, **iPad** and **macOS**, in native Swift/SwiftUI,
-under the MIT license. Ondo provides no content: it plays the sources added by the user.
+under the MIT license. Ondo provides no content: it plays the sources added by the user. The Android app
+follows its own plan: [ANDROID.md](ANDROID.md).
 
 ## 1. Technical choices
 
@@ -13,8 +14,8 @@ under the MIT license. Ondo provides no content: it plays the sources added by t
 | Targets | **iOS 17+**, **macOS 14+** (iPad included via the iOS target) | `@Observable`, `NavigationSplitView`, `ContentUnavailableView` |
 | Xcode project | **XcodeGen** (`project.yml`) | readable, versionable project, no hand-written `.pbxproj` |
 | Business logic | SPM package **`IPTVCore`** (pure Foundation) | testable on Linux and in CI, reusable (tvOS later) |
-| Playback | AVFoundation (`AVPlayer` + `AVPlayerLayer`) behind a `PlayerEngine` protocol | native PiP, AirPlay, HDR; a VLCKit engine can be added |
-| Storage | versioned JSON files in *Application Support* + Keychain for passwords | simple, robust, exportable; SQLite if performance requires it |
+| Playback | AVFoundation (`AVPlayer`) and **VLCKit** 3.6 (LGPL), chosen by the `PlayerEngine` setting (automatic / Apple / VLC); on iPhone/iPad, MKV films remuxed to HLS (fragmented MP4, no transcoding) and served to `AVPlayer` on 127.0.0.1 | native PiP, AirPlay, HDR; VLC for what `AVPlayer` cannot open (AVI, raw `.ts`, MKV on the Mac…) |
+| Storage | versioned JSON files in *Application Support* + Keychain for passwords; *Caches* folder for catalogues, guides and per-playlist details; Nuke disk cache for pictures | simple, robust, exportable; SQLite if performance requires it |
 | Networking | `URLSession`, per-playlist UA/Referer headers, gzip via zlib | |
 | Tests | XCTest (`swift test` on Linux/Docker and macOS) | |
 | CI | GitHub Actions: Linux tests + iOS Simulator build + macOS build | also catches regressions in the Mac version |
@@ -24,29 +25,36 @@ under the MIT license. Ondo provides no content: it plays the sources added by t
 ```
 ondo-iptv/
 ├── project.yml                     # XcodeGen: "Ondo" target, iOS + macOS
-├── Packages/IPTVCore/              # business logic, no UI
-│   ├── Models/        Playlist, Channel, Movie, Series, Episode, EPGProgram, Favorite, History, PlaybackItem
-│   ├── Parsing/       M3UParser, M3UContentBuilder, XSPFParser, JSONPlaylistParser, PlaylistFormat
+├── Packages/IPTVCore/              # business logic, no UI (Sources/IPTVCore; Sources/CZlib wraps the system zlib)
+│   ├── Models/        Playlist, Channel, Movie, Series, Episode, EPGProgram, FavoriteEntry, HistoryEntry, PlaybackItem
+│   ├── Parsing/       M3UParser, M3UContentBuilder, XSPFParser, JSONPlaylistParser, PlaylistFormat, SubtitleParser
 │   ├── Xtream/        XtreamClient (API), tolerant DTOs, XtreamURLBuilder (live/vod/series/timeshift)
 │   ├── EPG/           XMLTVParser (SAX + gzip), EPGIndex (now/next, channel matching)
 │   ├── Catchup/       CatchupURLBuilder (default/append/shift/flussonic/xtream)
-│   ├── Library/       PlaylistLoader, SearchEngine, LibraryStore (favorites, history, resume)
-│   └── Networking/    HTTPClient, Gzip (CZlib)
+│   ├── Library/       PlaylistLoader, SearchEngine, UserLibrary (favorites, history, resume), FileStore, DetailsArchive
+│   ├── Metadata/      TMDbClient, People, AwardsCatalogue
+│   ├── Playback/      PlaybackHealth, PlaybackLog, ProblemReport, BufferPolicy
+│   ├── Remux/         MatroskaRemux (MKV → HLS of fragmented MP4), EBML, Matroska, FragmentWriter
+│   ├── Subtitles/     OnlineSubtitles, OpenSubtitles, SubDL, SubSource, Addic7ed
+│   ├── Networking/    HTTPClient, TransferMeter, DownloadDiagnosis + DownloadReport (downloads, TestFlight edition)
+│   └── Utilities/     Gzip (CZlib), ZipArchive, TextUtilities
 ├── App/
-│   ├── OndoApp.swift               # scenes: main window, player windows (Mac), Settings (Mac)
-│   ├── Model/         AppModel (global state), PlaylistRepository (Keychain), EPGService, Settings
-│   ├── Features/      Onboarding, Home, Live, Movies, Series, Guide, Search, Favorites, Playlists, Settings
-│   ├── Player/        PlayerEngine, AVPlayerEngine, PlayerView, controls, PiP, AirPlay, zapping, EPG overlay
-│   └── Shared/        components (cached logo/poster, PIN, empty states), platforms (#if os)
+│   ├── OndoApp.swift               # scenes: main window, player windows, Multiview, Help, Settings (the last four on Mac)
+│   ├── Model/         AppModel (global state, AppModel+… extensions), AppSettings, AppPaths, Keychain, PlaybackSession
+│   ├── Features/      Root, Onboarding, Home, Live, Movies, Series, Guide, Search, Favorites, Playlists, Settings…
+│   ├── Player/        PlayerController, PlayerView, PlayerEngine + VLCBackend, RemuxServer, CastManager, PiP, zapping
+│   └── Shared/        RemoteImage (Nuke), components, platforms (#if os)
 └── .github/workflows/ci.yml
 ```
 
 Data flow: `Playlist` → `PlaylistLoader` (M3U/Xtream) → `PlaylistContent` cached on disk →
 `AppModel` (`@Observable`) → views. The EPG is loaded in the background → `EPGIndex` → now/next, grid, catch-up.
 
-Navigation: **iPhone** = `TabView` (Home, Live, Movies, Series, Search) + Settings; **Mac** =
-`NavigationSplitView` with a sidebar (same sections + TV Guide, Favorites, Playlists), "Playback" menu
-with shortcuts, player in its own window (several windows = multi-screen), native `Settings`.
+Navigation: **iPhone** = `TabView` (Home, Movies, Series, Live TV, My List); Search from the magnifying glass of
+every tab, TV Guide in Live TV, Settings on Home. **iPad** and **Mac** = `NavigationSplitView` with a sidebar
+(Home, Movies, Series, Live TV, TV Guide, My List, Search, then the playlists); Settings from the sidebar's gear
+on iPad, native `Settings` on Mac. On the Mac: "Playback" menu with shortcuts, player in its own window (several
+windows = multi-screen).
 
 ## 3. Phases and deliverables
 
@@ -65,7 +73,7 @@ with shortcuts, player in its own window (several windows = multi-screen), nativ
 - [x] Normalized search (accents, case, prefixes, ranking)
 - [x] Versioned JSON storage with a fallback copy, tolerant decoding, backup/restore
 - [x] SRT / WebVTT subtitles, TMDb trending + matching against the catalogue
-- [x] 66 unit tests (+ performance guards: 60,000 entries, 100,000 programmes)
+- [x] Unit tests: 66 at the end of phase 1, 223 today (+ performance guards: 60,000 entries, 100,000 programmes)
 
 ### Phase 2 — iPhone + Mac MVP app (P1) ✅
 - [x] XcodeGen project, Info.plist (ATS, background audio), Mac sandbox, original icon
@@ -97,7 +105,7 @@ with shortcuts, player in its own window (several windows = multi-screen), nativ
 - [x] Custom list manager, hidden categories
 
 ### Phase 5 — Extras (P3)
-- [x] Offline downloads of movies/episodes (background session, pause/resume)
+- [x] Offline downloads of movies/episodes (TestFlight edition; background session, pause/resume)
 - [x] TMDb trending (API key supplied by the user)
 - [x] Chromecast (official Google Cast SDK, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
 - [x] ~~Real-Debrid source~~: removed (October 2026): code no build could use is a dormant feature for App Review
@@ -116,7 +124,8 @@ Features deemed essential for a modern player, handled in milestones:
       in programmes (on now, upcoming, catch-up)
 - [x] **M5** channel management: hide (per profile), rename, renumber (per playlist)
 - [x] Multiview (iPad / Mac: 2 to 4 streams, only one with audio)
-- [x] Offline downloads: kept in the App Store version (decision of 13 Oct)
+- [x] Offline downloads: TestFlight edition only (internal testers); the App Store edition is built without them
+      (`#if TESTFLIGHT_DOWNLOADS || DEBUG`, guidelines 2.3.1 and 5.2.3)
 - ~~Recording~~: not retained (decision of 13 Oct)
 - Real-Debrid source: removed (a dormant feature for App Review, guideline 2.3.1);
   Stalker/MAG portal: out of v1 (decision of 13 Oct, Ondo remains an M3U / Xtream player)
@@ -138,7 +147,7 @@ Features deemed essential for a modern player, handled in milestones:
 | XMLTV guides of hundreds of MB | streaming SAX, channel/window filtering, pruned cache |
 | Non-compliant Xtream panels | tolerant JSON decoding, tests on real responses |
 | App Store review (IPTV apps) | no content provided, clear disclaimer, legal demo playlist |
-| Licenses | MIT/BSD/LGPL dependencies only |
+| Licenses | MIT/BSD/LGPL dependencies, Apache 2.0 (Android libraries), Google's Cast SDK under Google's terms (iPhone/iPad) |
 | No Mac in the development environment | core tested on Linux (Docker Swift 6); app built by the macOS CI |
 
 ## 6. Build and run
