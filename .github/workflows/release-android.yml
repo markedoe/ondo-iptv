@@ -62,7 +62,7 @@ jobs:
           curl -fsSL --retry 2 --max-time 60 "$URL" -o demo.m3u
           head -c 7 demo.m3u | grep -q '#EXTM3U' || { echo "::error::$URL is not an M3U playlist"; exit 1; }
           echo "$(grep -c '^#EXTINF' demo.m3u) entries in $URL"
-      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: 21
