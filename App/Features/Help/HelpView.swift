@@ -59,11 +59,12 @@ extension HelpTopic {
             id: "search", title: "Find Something to Watch", systemImage: "magnifyingglass",
             body: """
             Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, \
-            movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is \
-            in the sidebar.
+            movies and series: on iPhone it is the magnifying glass at the top of each tab, on iPad and Mac it is in \
+            the sidebar.
 
-            In Search, the filter button keeps the movies and series released in the years you choose. The grids \
-            sort by playlist order, name, date added, release date or rating.
+            In Search, the filter button keeps the movies and series released in the years you choose, or the movies \
+            of a festival or ceremony (Winners Only, if you like). The grids sort by playlist order, name, date \
+            added, release date or rating.
 
             On a movie or series page, tap the name of a director or an actor to see their other movies and series \
             in your playlist. With your TMDb API Read Access Token (Settings), all of them are found; without it, \
@@ -121,9 +122,9 @@ extension HelpTopic {
 
             If the server cannot be reached, check your connection and try again.
 
-            If the format is not supported, choose the other engine in Settings, Player Engine: the VLC-based \
-            engine plays MKV, AVI and TS. Reconnect dropped streams (Settings) restarts a live channel that cuts \
-            out.
+            If the format is not supported, choose VLC in Settings, Player Engine, or in the player, More, Player \
+            Engine: VLC plays MKV, AVI and TS. Reconnect dropped streams (Settings) restarts a live channel that \
+            cuts out.
 
             If the picture freezes now and then, More, Stream Statistics shows what arrives, what the video needs \
             and whether the freezes come from the network or the provider, or from the player. With the VLC-based \
@@ -146,8 +147,10 @@ extension HelpTopic {
         HelpTopic(
             id: "tv", title: "On Your TV", systemImage: "airplayvideo",
             body: """
-            AirPlay sends the video to an Apple TV or an AirPlay TV, from iPhone, iPad and Mac. Chromecast works \
-            from iPhone and iPad.
+            AirPlay sends the video to an Apple TV or an AirPlay TV, from iPhone, iPad and Mac. It needs the Apple \
+            engine: a stream played by VLC, or an MKV film, stays on this device. Chromecast works from iPhone and \
+            iPad, but cannot play TS, MKV or AVI streams: for an Xtream playlist, keep its Live stream format on HLS \
+            (m3u8).
 
             On iPad and Mac, Multiview plays up to four channels side by side, with the sound of one.
             """
@@ -166,10 +169,14 @@ extension HelpTopic {
             id: "privacy", title: "Privacy", systemImage: "hand.raised",
             body: """
             Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on \
-            your device; passwords and keys are kept in the system keychain.
+            your device; passwords and keys are kept in the system keychain. Posters and the movie and series pages \
+            you have opened are kept on your device too, so that they show at once and open when the provider cannot \
+            be reached; Settings, Clear Cache removes them.
 
-            Ondo connects only to the servers you add and, if you enter your TMDb token, to TMDb and to the subtitle \
-            services you choose. Backups contain your logins: keep them private.
+            Ondo connects to the servers you add; once a week to GitHub, for the latest awards and festival \
+            selections (nothing about you is sent; Update Awards Automatically in Settings turns it off); and, when \
+            you use them, to TMDb with your token and to the subtitle services you search. Backups contain your \
+            logins: keep them private.
             """
         ),
     ]

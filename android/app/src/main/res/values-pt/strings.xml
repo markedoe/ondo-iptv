@@ -131,20 +131,20 @@
         <item quantity="other">%d itens</item>
     </plurals>
     <plurals name="tag_suggestion_message">
-        <item quantity="one">Esta playlist tem categorias para %1$d idioma ou país. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Idiomas e categorias.</item>
-        <item quantity="many">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Idiomas e categorias.</item>
-        <item quantity="other">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Ajustes, Idiomas e categorias.</item>
+        <item quantity="one">Esta playlist tem categorias para %1$d idioma ou país. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Configurações, Idiomas e categorias.</item>
+        <item quantity="many">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Configurações, Idiomas e categorias.</item>
+        <item quantity="other">Esta playlist tem categorias para %1$d idiomas e países. Manter %2$s e ocultar os outros? Você pode mudar isso a qualquer momento em Configurações, Idiomas e categorias.</item>
     </plurals>
     <string name="help">Ajuda</string>
     <string name="help_playlists_title">Adicionar uma playlist</string>
-    <string name="help_playlists_body">O Ondo é um player: ele mostra os filmes, séries e canais da assinatura que o seu provedor oferece, e não fornece nenhum conteúdo próprio.\n\nPara adicionar sua assinatura, abra Ajustes, Adicionar uma playlist: um link ou arquivo M3U, ou um login Xtream Codes (endereço do servidor, usuário e senha). Toque em uma playlist em Ajustes para mudar para ela.</string>
+    <string name="help_playlists_body">O Ondo é um player: ele mostra os filmes, séries e canais da assinatura que o seu provedor oferece, e não fornece nenhum conteúdo próprio.\n\nPara adicionar sua assinatura, abra Configurações (a engrenagem do Início, ou toque no nome da playlist no topo do Início), Adicionar uma playlist: um link ou arquivo M3U, ou um login Xtream Codes (endereço do servidor, usuário e senha). Toque em uma playlist em Configurações para mudar para ela.</string>
     <string name="help_search_title">Encontrar o que assistir</string>
     <string name="help_categories_title">Ocultar idiomas e categorias</string>
-    <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Ajustes, Idiomas e categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nOs estilos funcionam do mesmo jeito com as palavras dos nomes das categorias: oculte Mangá e anime, Infantil ou Documentários, ou uma palavra sua, como Bollywood. Só os nomes das categorias contam, não o gênero de cada filme.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.</string>
+    <string name="help_categories_body">Muitos provedores começam o nome das categorias com um código como |PT| ou FR:. O botão de filtro de Filmes, Séries e TV ao vivo (também em Configurações, Idiomas e categorias) oculta de uma vez um idioma ou um país inteiro, em todas as playlists; as categorias que o provedor adicionar depois seguem a mesma regra.\n\nOs estilos funcionam do mesmo jeito com as palavras dos nomes das categorias: oculte Mangá e anime, Infantil ou Documentários, ou uma palavra sua, como Bollywood. Só os nomes das categorias contam, não o gênero de cada filme.\n\nVocê também pode ocultar ali as categorias uma a uma, e mostrá-las de novo quando quiser.\n\nAs categorias cujo nome parece adulto ficam ocultas em todo lugar até você ativar Mostrar categorias adultas em Configurações.</string>
     <string name="help_playback_title">Quando um stream não toca</string>
     <string name="help_playback_body">O Ondo diz se o problema vem do provedor, da rede ou do formato.\n\nSe o provedor recusar o stream, a assinatura pode ter expirado ou há aparelhos demais assistindo ao mesmo tempo: a maioria dos provedores permite um ou dois streams por vez.\n\nSe o servidor não responder, verifique sua conexão e tente de novo.\n\nCom um buffer mais longo (Configurações, Buffer da TV ao vivo e Buffer de filmes e séries), as interrupções mais longas do provedor não são percebidas, mas a imagem demora mais para aparecer.\n\nNo player, Mais, Relatar um problema… mostra um relatório da reprodução (tempos de início e de salto, travamentos, estatísticas; sem endereço, login nem título) para enviar por e-mail ou mensagem, ou em um issue do GitHub.</string>
     <string name="help_privacy_title">Privacidade</string>
-    <string name="help_privacy_body">O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho e ficam fora dos backups dele.\n\nO Ondo se conecta apenas aos servidores que você adiciona.</string>
+    <string name="help_privacy_body">O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho e ficam fora dos backups dele. Os pôsteres e as páginas dos filmes e séries que você abriu também ficam guardados nele, para aparecerem na hora e abrirem mesmo quando o provedor não responde.\n\nO Ondo se conecta aos servidores que você adiciona e, uma vez por semana, ao GitHub para os prêmios e seleções de festivais mais recentes (nada sobre você é enviado; desative Atualizar os prêmios automaticamente em Configurações).</string>
     <string name="error_load_denied">O provedor recusou o acesso (HTTP %1$d). Verifique o usuário, a senha e a sua assinatura.</string>
     <string name="error_load_provider">O provedor não enviou uma playlist. Verifique o endereço e a sua assinatura.</string>
     <string name="error_load_format">Esta não é uma playlist que o Ondo consiga ler (M3U, Xtream Codes, XSPF ou JSON).</string>
@@ -166,7 +166,7 @@
     <string name="my_list_empty_hint">Use Minha lista na página de um filme ou série para encontrá-lo aqui.</string>
     <string name="help_mylist_title">Minha lista</string>
     <string name="help_mylist_body">Na página de um filme ou série, Minha lista deixa o título à mão. Em TV ao vivo, toque e segure um canal para adicioná-lo à Minha lista.\n\nA aba Minha lista reúne seus filmes, séries e canais; a busca é a lupa no topo de cada tela.\n\nAs coleções são seus próprios grupos, como Fim de semana ou Crianças: use Coleção na página de um filme ou série e encontre-as em Minha lista, em Coleções.</string>
-    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca, a lupa no topo de cada tela, percorre canais, filmes e séries. Na busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher, ou os filmes de um festival ou cerimônia.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota. As páginas dos filmes mostram seus prêmios e seleções em festivais. Toque no nome de um diretor ou ator em uma página para ver os outros filmes e séries dessa pessoa entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham. A busca também encontra atores e diretores pelo nome.</string>
+    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca, a lupa no topo de cada tela, percorre canais, filmes e séries. Na busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher, ou os filmes de um festival ou cerimônia.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota. As páginas dos filmes mostram seus prêmios e seleções em festivais. Toque no nome de um diretor ou ator em uma página para ver os outros filmes e séries dessa pessoa na sua playlist: as séries sempre, os filmes entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham. A busca também encontra atores e diretores pelo nome.</string>
     <string name="search_filters">Filtros</string>
     <string name="filter_from">De</string>
     <string name="filter_to">Até</string>
@@ -194,7 +194,7 @@
     <string name="award_group_locarno">Festival de Locarno</string>
     <string name="person_nothing_title">Nada nesta playlist</string>
     <string name="person_nothing">Nenhum filme ou série desta playlist é conhecido por ter %1$s.</string>
-    <string name="person_opened_pages">Só as páginas que você já abriu são pesquisadas.</string>
+    <string name="person_opened_pages">Os filmes só são procurados entre as páginas que você já abriu.</string>
     <string name="collections">Coleções</string>
     <string name="collection">Coleção</string>
     <string name="add_to_collection">Adicionar a uma coleção</string>
@@ -221,7 +221,7 @@
     <string name="no_reminders_hint">Abra um programa no guia de TV e escolha Lembrar-me.</string>
     <string name="reminder_body">Começa às %1$s em %2$s</string>
     <string name="all_channels">Todos os canais</string>
-    <string name="notifications_off">As notificações do Ondo estão desativadas: permita-as em Ajustes para receber lembretes.</string>
+    <string name="notifications_off">As notificações do Ondo estão desativadas: permita-as em Configurações para receber lembretes.</string>
     <string name="help_guide_title">Guia de TV e lembretes</string>
     <string name="help_guide_body">O botão de guia da TV ao vivo mostra os programas dos canais escolhidos ali (Minha lista, uma categoria ou todos). O guia vem do seu provedor, ou do endereço XMLTV informado ao adicionar uma playlist M3U.\n\nAbra um programa futuro e crie um lembrete: uma notificação chega alguns minutos antes do início. O sino do guia lista seus lembretes.</string>
     <plurals name="guide_row_limit">
