@@ -81,7 +81,9 @@ and rejected by the leak guard (`.claude/hooks/leak_guard.py`).
 The store listing (title, descriptions, icon, feature graphic, phone and tablet screenshots in English and
 French; the app itself is in seven languages, see the README) is uploaded by fastlane from
 `fastlane/metadata-android/`; the screenshots are produced by the
-Roborazzi tests on every release. The rest is declared once in the console, in the *Set up your app*
+Roborazzi tests on every release. The release notes, `fastlane/metadata-android/en-US/changelogs/default.txt`
+and `fr-FR/changelogs/default.txt` (500 characters at most, checked by the *Android* workflow), are sent with
+every release: update both before tagging. The rest is declared once in the console, in the *Set up your app*
 section of the dashboard:
 
 ### D1. Privacy policy
@@ -112,8 +114,10 @@ requirements.
 
 ### D6. Data safety
 
-Ondo has no server, no account, no analytics, no ads and no crash reporting: all data stays on the device,
-and network requests only go to the servers the user has entered.
+Ondo has no server, no account, no analytics, no ads and no crash reporting: all data stays on the device.
+Network requests go to the servers the user has entered, to the public demo playlist (iptv-org project) when
+*Try the demo* is tapped, and once a week, unless turned off in Settings (*Update awards automatically*), to
+GitHub for the public awards file; nothing about the user is sent (see the privacy policy).
 
 - *Does your app collect or share any of the required user data types?* **No.**
 - The form then only asks you to confirm. (No Google Cast on Android, unlike the iPhone: nothing to
@@ -140,9 +144,11 @@ Google does not let the API create the first release: the first AAB is uploaded 
    artifact (file `app-release.aab`) from the run.
 2. *Play Console → Test and release → Internal testing → Create new release*: accept Play App Signing,
    upload `app-release.aab`, add testers (email list) and roll out.
-3. Subsequent releases go out from GitHub: `git tag android-v1.0.1 && git push origin android-v1.0.1`
+3. Subsequent releases go out from GitHub: `git tag android-v1.1.1 && git push origin android-v1.1.1`
    (internal track, release rolled out), or *Run workflow* with the desired track. The `versionCode`
-   increases on every run (1000 + run number), the `versionName` comes from the tag.
+   increases on every run (1000 + run number). The `versionName` comes only from an `android-vX.Y.Z` tag: a
+   run started from a branch keeps the default in `android/app/build.gradle.kts` (currently 1.1.0), so tag a
+   version above the current one.
 
 ### E2. Closed test (recent personal account)
 
@@ -151,8 +157,9 @@ Group), send them the opt-in link, and keep them opted in for **14 consecutive d
 below 12, the counter restarts from zero). Ask them to actually use the app (demo mode, their own
 playlists). Then: *Dashboard → Apply for production* and answer the questionnaire about the test.
 
-The workflow also publishes to this track: *Run workflow* with the `alpha` track (= closed testing in
-fastlane).
+The workflow also publishes to this track: *Run workflow* with the `alpha` track (`alpha` = closed testing,
+`beta` = open testing). The release is created as a draft: review it and roll it out in the Play Console. Only
+`internal` can be rolled out directly (status `completed`, the default).
 
 ### E3. Production
 
@@ -185,5 +192,5 @@ review*. The review takes from a few hours to a few days.
 
 | Workflow | When | What it does |
 |---|---|---|
-| *Android* | every push touching `android/` | Kotlin core tests, unit and Compose tests (Robolectric), Roborazzi screenshots (published to the `android-screenshots` branch), lint, debug APK and release bundle |
-| *Release Android* | `android-v*` tag or manual | tests, bundle signed with the upload key, screenshots copied into the store listing, upload to Google Play with the store listing |
+| *Android* | pushes to `main` and pull requests touching `android/`, `fastlane/metadata-android/` or the workflow; manual | Kotlin core tests, unit and Compose tests (Robolectric), Roborazzi screenshots (published to the `android-screenshots` branch after a push to `main`), lint (`lintRelease`), debug APK and release bundle (**android-builds** artifact), Google Play listing lengths (title 30, short description 80, full description 4000, release notes 500 characters) |
+| *Release Android* | `android-v*` tag or manual | checks that the five secrets are set and that the demo playlist answers, tests, screenshots copied into the store listing, bundle signed with the upload key (*Beta* badge except for `production`), **ondo-release-bundle** artifact, upload to Google Play with the store listing and release notes |

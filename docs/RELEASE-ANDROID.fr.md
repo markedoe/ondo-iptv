@@ -58,8 +58,9 @@ elle peut être réinitialisée depuis la Play Console (*Intégrité de l'applic
    (`ondo-release`), sans rôle Cloud. Onglet *Clés → Ajouter une clé → JSON* : un fichier JSON est
    téléchargé.
 3. Dans la Play Console : *Utilisateurs et autorisations → Inviter de nouveaux utilisateurs* : l'adresse du
-   compte de service, autorisations **pour l'app Ondo** : *Publier sur les canaux de test*, *Gérer la
-   fiche Play Store*, *Publier en production* (si vous voulez publier en production depuis GitHub).
+   compte de service, autorisations **pour l'app Ondo** : *Publier des applications sur les canaux de test*,
+   *Gérer la présence sur le Play Store*, *Publier des applications en production, exclure des appareils et
+   utiliser la signature d'application Play* (si vous voulez publier en production depuis GitHub).
 
 ### C3. Secrets du dépôt
 
@@ -81,8 +82,11 @@ par git et refusés par le garde anti-fuite (`.claude/hooks/leak_guard.py`).
 La fiche (titre, descriptions, icône, image de présentation, captures téléphone et tablettes en anglais
 et en français ; l'app elle-même est en sept langues, voir le README) est envoyée par fastlane depuis
 `fastlane/metadata-android/` ; les captures sont produites
-par les tests Roborazzi à chaque release. Le reste se déclare une fois dans la console, section
-*Configurer votre application* du tableau de bord :
+par les tests Roborazzi à chaque release. Les notes de version,
+`fastlane/metadata-android/en-US/changelogs/default.txt` et `fr-FR/changelogs/default.txt` (500 caractères au
+plus, vérifiés par le workflow *Android*), partent avec chaque release : mettez les deux à jour avant de poser
+le tag. Le reste se déclare une fois dans la console, section *Configurer votre application* du tableau de
+bord :
 
 ### D1. Règles de confidentialité
 
@@ -114,7 +118,10 @@ programme Familles.
 ### D6. Sécurité des données
 
 Ondo n'a ni serveur, ni compte, ni statistiques, ni publicité, ni rapport de plantage : toutes les données
-restent sur l'appareil, et les requêtes réseau vont uniquement aux serveurs que l'utilisateur a saisis.
+restent sur l'appareil. Les requêtes réseau vont aux serveurs que l'utilisateur a saisis, à la playlist
+publique de démonstration (projet iptv-org) quand il touche *Essayer la démo*, et une fois par semaine, sauf
+si c'est désactivé dans les Réglages (*Mettre à jour les prix automatiquement*), à GitHub pour le fichier
+public des prix ; rien concernant l'utilisateur n'est envoyé (voir les règles de confidentialité).
 
 - *Votre application collecte-t-elle ou partage-t-elle des types de données utilisateur requis ?* **Non.**
 - Le formulaire demande alors seulement de confirmer. (Pas de Google Cast sur Android, contrairement à
@@ -142,9 +149,11 @@ Google n'autorise pas l'API à créer la première version : le premier AAB s'en
 2. *Play Console → Tester et publier → Tests internes → Créer une version* : acceptez la signature
    d'application par Google Play, importez `app-release.aab`, ajoutez des testeurs (liste d'e-mails) et
    déployez.
-3. Les versions suivantes partent de GitHub : `git tag android-v1.0.1 && git push origin android-v1.0.1`
+3. Les versions suivantes partent de GitHub : `git tag android-v1.1.1 && git push origin android-v1.1.1`
    (piste interne, version déployée), ou *Run workflow* avec la piste voulue. Le `versionCode` augmente à
-   chaque exécution (1000 + numéro d'exécution), le `versionName` vient du tag.
+   chaque exécution (1000 + numéro d'exécution). Le `versionName` vient uniquement d'un tag `android-vX.Y.Z` :
+   une exécution lancée depuis une branche garde la valeur par défaut de `android/app/build.gradle.kts`
+   (actuellement 1.1.0), donc posez un tag de version supérieure à l'actuelle.
 
 ### E2. Test fermé (compte personnel récent)
 
@@ -154,7 +163,9 @@ nombre passe sous 12, le compteur repart à zéro). Demandez-leur d'utiliser ré
 leurs propres playlists). Ensuite : *Tableau de bord → Demander l'accès à la production* et répondez au
 questionnaire sur le test.
 
-Le workflow publie aussi sur ce canal : *Run workflow* avec la piste `alpha` (= test fermé dans fastlane).
+Le workflow publie aussi sur ce canal : *Run workflow* avec la piste `alpha` (`alpha` = test fermé,
+`beta` = test ouvert). La version est créée en brouillon : vérifiez-la et déployez-la dans la Play Console.
+Seule la piste `internal` peut être déployée directement (statut `completed`, par défaut).
 
 ### E3. Production
 
@@ -188,5 +199,5 @@ examen*. L'examen prend de quelques heures à quelques jours.
 
 | Workflow | Quand | Ce qu'il fait |
 |---|---|---|
-| *Android* | chaque push touchant `android/` | tests du cœur Kotlin, tests unitaires et Compose (Robolectric), captures Roborazzi (publiées sur la branche `android-screenshots`), lint, APK de debug et bundle de release |
-| *Release Android* | tag `android-v*` ou manuel | tests, bundle signé avec la clé d'importation, captures copiées dans la fiche, envoi sur Google Play avec la fiche |
+| *Android* | push sur `main` et pull requests touchant `android/`, `fastlane/metadata-android/` ou le workflow ; manuel | tests du cœur Kotlin, tests unitaires et Compose (Robolectric), captures Roborazzi (publiées sur la branche `android-screenshots` après un push sur `main`), lint (`lintRelease`), APK de debug et bundle de release (artefact **android-builds**), longueurs de la fiche Google Play (titre 30, description courte 80, description complète 4000, notes de version 500 caractères) |
+| *Release Android* | tag `android-v*` ou manuel | vérifie que les cinq secrets sont définis et que la playlist de démonstration répond, tests, captures copiées dans la fiche, bundle signé avec la clé d'importation (badge *Bêta* sauf pour `production`), artefact **ondo-release-bundle**, envoi sur Google Play avec la fiche et les notes de version |

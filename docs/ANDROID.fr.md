@@ -10,15 +10,26 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   éléments de lecture), testé avec les mêmes cas que les tests Swift.
 - **App** `android/app` (Compose, Material 3, Navigation type-safe, barre d'onglets ou rail selon l'écran) :
   accueil (carrousel, Films en cours, Séries en cours, Ma liste, Nouveaux films, Nouvelles séries, chaînes),
-  onglets Films et Séries (une rangée par catégorie, grilles filtrables), fiches film et série (reprise, depuis le début, épisode
-  suivant, saisons, titres similaires, prix, casting et réalisation cliquables), TV en direct (catégories,
-  favoris, programme en cours et suivant), grille du guide TV avec rappels de programmes (notifications
-  WorkManager), onglet Ma liste avec collections, recherche (filtres par années de sortie et par festival ou
-  cérémonie), catégories masquées par code de langue ou de pays, aide, réglages (playlists, apparence,
-  catégories adultes masquées par défaut), accueil avec démonstration et avertissement « lecteur sans
-  contenu ».
+  onglets Films et Séries (Continuer à regarder, Ma liste, Films primés dans Films, une rangée par catégorie,
+  grilles filtrables), fiches film et série (reprise, depuis le début, épisode suivant, saisons, titres
+  similaires, prix, casting et réalisation cliquables), TV en direct (catégories, Ma liste, programme en cours
+  et suivant), grille du guide TV avec rappels de programmes (notifications WorkManager), onglet Ma liste avec
+  collections, recherche (chaînes, films, séries, acteurs et réalisateurs ; filtres par années de sortie et
+  par festival ou cérémonie), catégories masquées par code de langue ou de pays, par style ou par mot, ou une
+  à une, aide, réglages (playlists, apparence, catégories adultes masquées par défaut, Mettre à jour les prix
+  automatiquement, Langues et catégories, Langue de l'app, mémoires tampons du lecteur), accueil avec
+  démonstration et avertissement « lecteur sans contenu ».
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
-  reprise, image dans l'image, MediaSession, retour au direct.
+  reprise, image dans l'image, MediaSession, pistes audio et sous-titres, mémoires tampons distinctes pour le
+  direct et pour les films et séries, retour automatique au direct quand une chaîne prend du retard, Plus →
+  Signaler un problème… (un rapport de lecture sans adresse, identifiant ni titre).
+- **Stockage** : documents JSON dans le stockage privé de l'app (`data/AppStore.kt`), exclus des sauvegardes
+  (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`) : réglages, playlists avec leurs identifiants, Ma
+  liste, collections, progression et rappels, catalogue de chaque playlist, et fiches de films et de séries
+  ouvertes (jusqu'à 1 000 films et 300 séries par playlist, téléchargées à nouveau après 7 jours pour un film
+  et 12 heures pour une série, toujours affichées quand le fournisseur est injoignable ;
+  `data/DetailsArchive.kt`). Affiches et vignettes sont gardées sur le disque par Coil 3 (jusqu'à 512 Mo, dans
+  le cache de l'app ; `OndoApplication.kt`).
 - **Langues** : anglais, français, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi (`res/values-*`), proposées aussi dans le réglage de langue par app d'Android 13
   (`res/xml/locales_config.xml`).
@@ -26,9 +37,13 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   Roborazzi qui servent de captures Google Play (téléphone, tablettes 7" et 10", anglais et français).
 
 Prévu ensuite (non inclus en v1) : Android TV, replay depuis le guide, Chromecast, téléchargements,
-profils et PIN, synchronisation, second moteur libVLC.
+profils et PIN, sous-titres en ligne, synchronisation, second moteur libVLC.
 
 ## Plan initial
+
+Écrit avant la v1, qui en diffère : documents JSON dans le stockage privé au lieu de Room, DataStore et
+l'Android Keystore, pas de Hilt, tests du cœur sous JUnit 4, fastlane au lieu de Gradle Play Publisher, et
+pas encore de DASH, d'extension FFmpeg, de Cast ni de service de premier plan pour la lecture.
 
 À démarrer une fois la version iPhone / iPad / Mac validée et publiée. Objectif : la même app, native,
 sans compromis sur la qualité, en réutilisant tout ce qui peut l'être (spécifications, jeux de test,
