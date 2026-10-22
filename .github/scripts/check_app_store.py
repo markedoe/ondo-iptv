@@ -53,6 +53,8 @@ DONATION_LINK = re.compile(
 DONATION_WORD = re.compile(r"(?i)\bdonat|\bsponsor|faire un don|pourboire")
 # The website's pages the apps link to (https://<user>.github.io/ondo-iptv/<page>).
 SITE_PAGE = re.compile(r"https://[\w-]+\.github\.io/ondo-iptv/([\w.-]*)")
+# A link from one of the website's pages to another of them (relative: not to another site, nor within the page).
+SITE_LINK = re.compile(r'href="(?![a-z][a-z0-9+.-]*:|#)([^"#?]*)')
 # A string the App Store edition would show that calls the app a beta (2.2).
 BETA_TEXT = re.compile(r'(?i)"[^"\n]*(?<![\w])(?:beta|bêta)(?![\w])[^"\n]*"')
 # What a flag could read to turn a feature on after review: settings (local or iCloud), launch arguments and the
@@ -358,6 +360,14 @@ def check_payments(problems: list) -> None:
             if DONATION_LINK.search(line) or DONATION_WORD.search(re.sub(r"<[^>]+>", " ", line)):
                 problems.append(f"site/{page}:{number}: the apps open this page, so it must not ask for donations: "
                                 f"{line.strip()[:120]}")
+            # Nor lead to one that does (the home page): the way to pay would be a tap away from the apps.
+            for target in SITE_LINK.findall(line):
+                linked = path.parent / target
+                if not target or target.endswith("/") or linked.is_dir():
+                    linked = linked / "index.html"
+                if linked.suffix == ".html" and linked.is_file() and DONATION_LINK.search(linked.read_text(encoding="utf-8")):
+                    problems.append(f"site/{page}:{number}: the apps open this page, so it must not link to "
+                                    f"{target or './'}, which asks for donations")
     if (ROOT / ".github/FUNDING.yml").exists():
         problems.append(".github/FUNDING.yml: its Sponsor button shows on the GitHub issue form the apps open")
 

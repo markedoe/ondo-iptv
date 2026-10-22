@@ -449,9 +449,11 @@ class AppStoreTests(CheckTestCase):
 
     def test_the_apps_lead_to_no_other_way_to_pay(self):
         self.write("App/Features/Help.swift", 'let support = URL(string: "https://example.github.io/ondo-iptv/support.html")!\n')
-        self.write("site/support.html", "<p>Help and contact.</p>\n")
+        self.write("site/support.html", '<p>Help and contact, <a href="#fr">en français</a>.</p>\n')
         self.write("site/index.html", '<p>Support Ondo on <a href="https://ko-fi.com/example">Ko-fi</a>.</p>\n')
         self.assertPasses("app_store")
+        self.write("site/support.html", '<header><a href="./">Ondo</a></header>\n')
+        self.assertFails("app_store", "site/support.html:1: the apps open this page, so it must not link to ./")
         self.write("site/support.html", "<p>Help.</p>\n<p>Like Ondo? Make a donation.</p>\n")
         self.write("android/app/src/main/res/values/strings.xml", '<string name="tip">https://ko-fi.com/example</string>\n')
         self.write("App/Features/Support.swift", 'let page = URL(string: "https://buy.stripe.com/test_00example")!\n')
