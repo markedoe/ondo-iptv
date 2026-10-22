@@ -6,9 +6,12 @@ import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Series
+import com.markedoe.ondo.core.net.Urls
+import com.markedoe.ondo.core.nilIfBlank
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class SearchTest {
@@ -44,6 +47,19 @@ class SearchTest {
         assertEquals("", TextNormalizer.normalize(" -!- "))
         assertTrue(TextNormalizer.matches("le grand match", TextNormalizer.tokens("gra mat")))
         assertTrue(TextNormalizer.matches("anything", emptyList()))
+    }
+
+    /** Provider text is blank when it holds only spaces of any kind (no-break, ideographic…), not only ASCII ones. */
+    @Test
+    fun blankTextCoversEveryKindOfSpace() {
+        assertNull("\u3000".nilIfBlank(), "ideographic space")
+        assertNull(" \u00A0\u2003\n".nilIfBlank())
+        assertNull("".nilIfBlank())
+        assertEquals("TV1", "\u2003TV1\u3000".nilIfBlank())
+        assertEquals("Télé à la carte", "Télé à la carte".nilIfBlank())
+        // Swift `trimmedFast`: provider addresses are trimmed of the same spaces.
+        assertEquals("http://example.com/1", Urls.lenient("\u000Bhttp://example.com/1\u000C"))
+        assertEquals("http://example.com/1", Urls.lenient("\u3000http://example.com/1"))
     }
 
     @Test
