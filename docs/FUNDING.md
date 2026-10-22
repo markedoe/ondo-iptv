@@ -65,6 +65,8 @@ Stripe accepts tips for something provided (here, the app): the pages say "suppo
 **A link's amount cannot change on Stripe**: a new amount gives a new link at a **new address**, and the old one
 closes. The summary flags it ("NEW ADDRESS"): change the address on the website and in the README in the same commit.
 New texts update the links in place, at the same address. A page removed from the file closes its links.
+Ondo's links are in `site/index.html` (English and French paragraphs) and in the "Support the project" section of
+`README.md` and `README.fr.md`.
 
 ## 4. Several apps
 

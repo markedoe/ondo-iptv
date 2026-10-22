@@ -265,10 +265,10 @@ whole history).
 
 ## Support the project
 
-Ondo has no ads and no tracking. If you find it useful, you can support its development on
-[Ko-fi](https://ko-fi.com/markdev23), once or every month, by card, Apple Pay or Google Pay, without creating an account. Inside the
-apps, money goes only through the App Store and Google Play, as their rules require: the apps link to no other way
-to pay.
+Ondo has no ads and no tracking. If you find it useful, you can support its development
+[once, with the amount you choose](https://buy.stripe.com/00w14n5x6gc12kO6qL5Rm06), or every month: [€3](https://buy.stripe.com/aFaeVd0cM8Jz6B4aH15Rm02), [€5](https://buy.stripe.com/6oU3cve3C9NDe3wg1l5Rm04) or [€10](https://buy.stripe.com/dRm4gzaRqf7XcZs2av5Rm00).
+By card, Apple Pay or Google Pay, without creating an account. Inside the apps, money goes only through the App
+Store and Google Play, as their rules require: the apps link to no other way to pay.
 
 ## License
 

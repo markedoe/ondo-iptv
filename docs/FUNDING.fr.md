@@ -67,7 +67,8 @@ Stripe accepte les pourboires pour quelque chose de fourni (ici, l'app) : les pa
 **Le montant d'un lien ne peut pas changer chez Stripe** : un nouveau montant donne un nouveau lien, à une **nouvelle
 adresse**, et l'ancien se ferme. Le résumé le signale (« NEW ADDRESS ») : changez l'adresse sur le site et dans le
 README dans le même commit. De nouveaux textes mettent les liens à jour sur place, à la même adresse. Une page retirée
-du fichier ferme ses liens.
+du fichier ferme ses liens. Les liens d'Ondo sont dans `site/index.html` (paragraphes anglais et français) et dans la
+section « Soutenir le projet » de `README.md` et `README.fr.md`.
 
 ## 4. Plusieurs apps
 

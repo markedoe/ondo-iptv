@@ -109,7 +109,7 @@ windows = multi-screen).
 - [x] TMDb trending (API key supplied by the user)
 - [x] Chromecast (official Google Cast SDK, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
 - [x] ~~Real-Debrid source~~: removed (October 2026): code no build could use is a dormant feature for App Review
-- [x] Donations on the website and in the README (Ko-fi), never from inside the apps
+- [x] Support pages on the website and in the README (Stripe, `funding/stripe.json`), never from inside the apps
 - [ ] Optional tips inside the apps (StoreKit 2 / Play Billing), unlocking nothing: planned for 1.2.0
 - [ ] tvOS / visionOS targets (the core is already compatible)
 

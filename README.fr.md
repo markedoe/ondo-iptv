@@ -279,10 +279,10 @@ garde-fou bloque les secrets et données personnelles avant tout commit — hook
 
 ## Soutenir le projet
 
-Ondo n'a ni publicité ni pistage. S'il vous est utile, vous pouvez soutenir son développement sur
-[Ko-fi](https://ko-fi.com/markdev23), une fois ou chaque mois, par carte, Apple Pay ou Google Pay, sans créer de compte. Dans les apps,
-l'argent ne passe que par l'App Store et Google Play, comme leurs règles l'exigent : les apps ne mènent à aucun autre
-moyen de payer.
+Ondo n'a ni publicité ni pistage. S'il vous est utile, vous pouvez soutenir son développement
+[une fois, du montant de votre choix](https://buy.stripe.com/6oU3cv4t24tjf7AaH15Rm07), ou chaque mois : [3 €](https://buy.stripe.com/4gM00j1gQ2lb3oS3ez5Rm03), [5 €](https://buy.stripe.com/bJebJ1gbKbVLcZs2av5Rm05) ou
+[10 €](https://buy.stripe.com/6oU7sL7FecZP9NgeXh5Rm01). Par carte, Apple Pay ou Google Pay, sans créer de compte. Dans les apps, l'argent ne passe que par
+l'App Store et Google Play, comme leurs règles l'exigent : les apps ne mènent à aucun autre moyen de payer.
 
 ## Licence
 
