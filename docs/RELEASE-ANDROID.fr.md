@@ -101,6 +101,13 @@ Play demande alors des identifiants qui fonctionnent (« Missing sign in details
 **Try the demo** sur l'écran de bienvenue affiché au premier lancement : une playlist de chaînes publiques
 (projet iptv-org).
 
+Si Play signale encore « Missing sign in details » (ses vérifications voient les champs Xtream), répondez **Yes**
+et ajoutez un jeu d'instructions : nom `Demo – no account`, utilisateur `No account needed`, mot de passe `No
+password needed`, et dans *Any other instructions* : « Ondo has no accounts and no payments. On the welcome
+screen, tap "Try the demo": a playlist of public TV channels (iptv-org project) loads, and every screen of the
+app can be reviewed with it. The Xtream fields (server, username, password) are for the user's own provider: Ondo
+provides no server and no content. » Ne donnez jamais les identifiants d'un vrai abonnement IPTV.
+
 ### D3. Annonces
 
 *Non, mon application ne contient pas d'annonces.*

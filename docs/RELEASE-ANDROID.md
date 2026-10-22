@@ -98,6 +98,13 @@ are not a sign-in to Ondo. Do not choose the restricted option: Play then asks f
 ("Missing sign in details"). Reviewers find **Try the demo** on the welcome screen shown at first launch: a
 playlist of public channels (iptv-org project).
 
+If Play still reports "Missing sign in details" (its checks see the Xtream fields), answer **Yes** and add one set
+of instructions: name `Demo – no account`, username `No account needed`, password `No password needed`, and in
+*Any other instructions*: "Ondo has no accounts and no payments. On the welcome screen, tap "Try the demo": a
+playlist of public TV channels (iptv-org project) loads, and every screen of the app can be reviewed with it. The
+Xtream fields (server, username, password) are for the user's own provider: Ondo provides no server and no
+content." Never give the credentials of a real IPTV subscription.
+
 ### D3. Ads
 
 *No, my app does not contain ads.*
