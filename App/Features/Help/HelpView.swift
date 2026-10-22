@@ -56,6 +56,18 @@ extension HelpTopic {
             """
         ),
         HelpTopic(
+            id: "home", title: "Home", systemImage: "house",
+            body: """
+            At the top of Home, the menu with the playlist's name switches playlists, adds one or refreshes it, and \
+            shows when it was last updated. Below it, the carousel shows what you are watching, then Trending titles \
+            (with your TMDb token) and new releases.
+
+            Movies in Progress and Series in Progress pick up where you stopped. Then come My List, New Movies and \
+            New Series (released this year or last year), Trending, your Collections, Channels in My List and \
+            Recently Watched, and your Reminders. A playlist with live channels only shows them first.
+            """
+        ),
+        HelpTopic(
             id: "search", title: "Find Something to Watch", systemImage: "magnifyingglass",
             body: """
             Movies, Series and Live TV show your provider's categories. Search looks through channels, programmes, \

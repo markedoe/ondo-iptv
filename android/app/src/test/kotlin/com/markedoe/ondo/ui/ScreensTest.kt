@@ -87,6 +87,8 @@ class ScreensTest {
         var support = 0
         compose.setContent { OndoTheme { HelpScreen(onBack = {}, onSupport = { support++ }) } }
         compose.onNodeWithText("|PT|", substring = true).assertDoesNotExist()
+        compose.onNodeWithTag("help-home").performClick()
+        compose.onNodeWithText("Movies in Progress and Series in Progress", substring = true).assertExists()
         compose.onNodeWithTag("help-categories").performClick()
         compose.onNodeWithText("|PT|", substring = true).assertExists()
         compose.onNodeWithText("Support").performScrollTo().performClick()

@@ -3025,6 +3025,46 @@
         }
       }
     },
+    "At the top of Home, the menu with the playlist's name switches playlists, adds one or refreshes it, and shows when it was last updated. Below it, the carousel shows what you are watching, then Trending titles (with your TMDb token) and new releases.\n\nMovies in Progress and Series in Progress pick up where you stopped. Then come My List, New Movies and New Series (released this year or last year), Trending, your Collections, Channels in My List and Recently Watched, and your Reminders. A playlist with live channels only shows them first.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En haut de l’Accueil, le menu au nom de la playlist change de playlist, en ajoute une ou l’actualise, et indique sa dernière mise à jour. Dessous, le carrousel montre ce que vous regardez, puis les Tendances (avec votre jeton TMDb) et les nouveautés.\n\nFilms en cours et Séries en cours reprennent là où vous vous êtes arrêté. Viennent ensuite Ma liste, Nouveaux films et Nouvelles séries (sortis cette année ou l’an dernier), Tendances, vos Collections, Chaînes de Ma liste et Vus récemment, et vos Rappels. Une playlist qui n’a que des chaînes en direct les montre en premier."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En la parte superior de Inicio, el menú con el nombre de la playlist cambia de playlist, añade una o la actualiza, e indica cuándo se actualizó por última vez. Debajo, el carrusel muestra lo que estás viendo y, después, las Tendencias (con tu token de TMDb) y las novedades.\n\nPelículas en curso y Series en curso retoman donde lo dejaste. Después vienen Mi lista, Películas nuevas y Series nuevas (estrenadas este año o el anterior), Tendencias, tus Colecciones, Canales de Mi lista y Vistos recientemente, y tus Recordatorios. Una playlist que solo tiene canales en directo los muestra primero."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No topo do Início, o menu com o nome da playlist troca de playlist, adiciona uma ou a atualiza, e mostra quando ela foi atualizada pela última vez. Abaixo, o carrossel mostra o que você está assistindo e, depois, os títulos Em alta (com seu token do TMDb) e as novidades.\n\nFilmes em andamento e Séries em andamento retomam de onde você parou. Depois vêm Minha lista, Novos filmes e Novas séries (lançados neste ano ou no ano passado), Em alta, suas Coleções, Canais da Minha lista e Assistidos recentemente, e seus Lembretes. Uma playlist que só tem canais ao vivo os mostra primeiro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在“首页”顶部，带有播放列表名称的菜单可切换播放列表、添加或刷新播放列表，并显示其上次更新时间。下方的轮播会先显示你正在观看的内容，然后是“热门”影片（需要你的 TMDb 令牌）和新上线的影片。\n\n“正在观看的电影”和“正在观看的剧集”会从你停下的地方继续。接下来是“我的片单”、“最新电影”和“最新剧集”（今年或去年上映）、“热门”、你的“合集”、“我的片单中的频道”和“最近观看”，以及你的“提醒”。只有直播频道的播放列表会先显示频道。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "في أعلى الرئيسية، تتيح القائمة التي تحمل اسم قائمة التشغيل التبديل بين قوائم التشغيل أو إضافة قائمة أو تحديثها، وتعرض وقت آخر تحديث لها. وتحتها، يعرض العرض الدوّار ما تشاهده، ثم العناوين الرائجة (مع رمز TMDb الخاص بك) والإصدارات الجديدة.\n\nتستأنف «أفلام قيد المشاهدة» و«مسلسلات قيد المشاهدة» من حيث توقفت. ثم تأتي «قائمتي» و«أفلام جديدة» و«مسلسلات جديدة» (الصادرة هذا العام أو العام الماضي) و«الرائج» و«المجموعات» الخاصة بك و«القنوات في قائمتي» و«شوهد مؤخرًا»، ثم «التذكيرات». وتعرض قائمة التشغيل التي لا تحتوي إلا على قنوات مباشرة هذه القنوات أولًا."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "होम के ऊपर, प्लेलिस्ट के नाम वाला मेन्यू प्लेलिस्ट बदलता है, नई जोड़ता है या उसे रीफ़्रेश करता है, और बताता है कि वह आख़िरी बार कब अपडेट हुई। उसके नीचे, कैरोसेल पहले वह दिखाता है जो आप देख रहे हैं, फिर ट्रेंडिंग शीर्षक (आपके TMDb टोकन के साथ) और नई रिलीज़।\n\nदेखी जा रही फ़िल्में और देखी जा रही सीरीज़ वहीं से शुरू होती हैं जहाँ आपने छोड़ा था। फिर आते हैं मेरी सूची, नई फ़िल्में और नई सीरीज़ (इस साल या पिछले साल रिलीज़ हुई), ट्रेंडिंग, आपके संग्रह, मेरी सूची के चैनल और हाल ही में देखे गए, और आपके रिमाइंडर। जिस प्लेलिस्ट में सिर्फ़ लाइव चैनल हों, वह उन्हें सबसे पहले दिखाती है।"
+          }
+        }
+      }
+    },
     "Audio": {
       "localizations": {
         "fr": {
