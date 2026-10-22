@@ -201,6 +201,47 @@ final class MatroskaRemuxTests: XCTestCase {
 
     // MARK: Damaged files
 
+    /// The sample with the bytes after `marker` replaced.
+    private func patched(_ marker: [UInt8], _ bytes: [UInt8]) throws -> Data {
+        var data = try Fixture.data("remux-h264-aac.mkv")
+        let at = try XCTUnwrap(data.range(of: Data(marker))).upperBound
+        data.replaceSubrange(at..<at + bytes.count, with: bytes)
+        return data
+    }
+
+    private func assertLeftToVLC(_ data: Data, _ message: String, file: StaticString = #filePath, line: UInt = #line) async {
+        do {
+            _ = try await MatroskaRemux.open(DataByteSource(data), targetDuration: 1)
+            XCTFail(message, file: file, line: line)
+        } catch {
+            XCTAssertTrue(error is RemuxError, "\(message): \(error)", file: file, line: line)
+        }
+    }
+
+    /// A frame duration of 0, or too short for a tick of the video clock, is unknown: the frame rate is measured, and
+    /// the film comes out as with its real one.
+    func testAFrameDurationOfZeroIsMeasured() async throws {
+        let original = try await remux()
+        for nanoseconds: UInt32 in [0, 1_000] {
+            // DefaultDuration, 4 bytes: 40 ms in the sample.
+            let data = try patched([0x23, 0xE3, 0x83, 0x84], withUnsafeBytes(of: nanoseconds.bigEndian) { [UInt8]($0) })
+            let remux = try await MatroskaRemux.open(DataByteSource(data), targetDuration: 1)
+            for index in remux.segments.indices {
+                let segment = try await remux.segment(index)
+                let expected = try await original.segment(index)
+                XCTAssertEqual(segment, expected, "segment \(index) with \(nanoseconds) ns")
+            }
+        }
+        // Built here, without B-frames.
+        for duration: UInt64? in [nil, 0, 1_000] {
+            let remux = try await MatroskaRemux.open(DataByteSource(MatroskaBytes.film(defaultDuration: duration)), targetDuration: 1)
+            let segment = try await remux.segment(1)
+            let video = try XCTUnwrap(runs(segment)[1])
+            XCTAssertEqual(video.count, 25)
+            XCTAssertEqual(video.duration, 25 * 14_400, "\(String(describing: duration))")
+        }
+    }
+
     /// Times close to the end of 64 bits (a cluster 292 years in) throw instead of overflowing once the remux's
     /// offset is added.
     func testFrameTimesThatOverflowAreLeftToVLC() async throws {
@@ -211,6 +252,101 @@ final class MatroskaRemuxTests: XCTestCase {
         } catch {
             XCTAssertTrue(error is RemuxError, "\(error)")
         }
+    }
+
+    /// A duration that is not a number, infinite, negative or beyond 64 bits of nanoseconds.
+    func testImpossibleDurationsAreLeftToVLC() async throws {
+        for duration in [Double.nan, .infinity, -1, 1e30] {
+            // Duration, 8 bytes, in milliseconds.
+            let data = try patched([0x44, 0x89, 0x88], withUnsafeBytes(of: duration.bitPattern.bigEndian) { [UInt8]($0) })
+            await assertLeftToVLC(data, "\(duration)")
+        }
+    }
+
+    /// A file size no film has, from a server: the playlist's bandwidth stays a number.
+    func testAnImpossibleFileSizeKeepsThePlaylistValid() async throws {
+        struct Sized: ByteSource {
+            let base: DataByteSource
+            func size() async throws -> Int64? { .max }
+            func read(_ range: Range<Int64>) async throws -> Data { try await base.read(range) }
+        }
+        let remux = try await MatroskaRemux.open(Sized(base: DataByteSource(MatroskaBytes.film())), targetDuration: 1)
+        let playlist = remux.multivariantPlaylist(media: "media.m3u8")
+        XCTAssertTrue(playlist.contains("BANDWIDTH="), playlist)
+    }
+
+    func testImpossibleSampleRatesAndSizes() throws {
+        var aac = MatroskaTrack(
+            number: 2, kind: .audio, codecID: "A_AAC", codecPrivate: Data([0x11, 0x90]), language: nil, name: nil, isDefault: true,
+            isEnabled: true, defaultDuration: nil, codecDelay: 0, video: nil,
+            audio: MatroskaTrack.Audio(samplingFrequency: 48_000, outputSamplingFrequency: nil, channels: 2, bitDepth: nil),
+            strippedHeader: nil, blockAdditions: []
+        )
+        XCTAssertNotNil(MatroskaRemux.fragmentTrack(audio: aac))
+        for rate in [Double.infinity, .nan, 1e10, 1e300] {
+            aac.audio?.samplingFrequency = rate
+            XCTAssertNil(MatroskaRemux.fragmentTrack(audio: aac), "\(rate) Hz")
+            aac.audio?.samplingFrequency = 24_000
+            aac.audio?.outputSamplingFrequency = rate
+            XCTAssertNil(MatroskaRemux.fragmentTrack(audio: aac), "HE-AAC at \(rate) Hz")
+            aac.audio?.outputSamplingFrequency = nil
+        }
+        // Wider than MP4 describes: refused, and never a crash when writing its header.
+        var video = MatroskaTrack(
+            number: 1, kind: .video, codecID: "V_MPEG4/ISO/AVC", codecPrivate: Data([1, 0x64, 0, 0x0B]), language: nil, name: nil,
+            isDefault: true, isEnabled: true, defaultDuration: 40_000_000, codecDelay: 0,
+            video: MatroskaTrack.Video(width: 1 << 40, height: 96, colour: nil), audio: nil, strippedHeader: nil, blockAdditions: []
+        )
+        XCTAssertThrowsError(try MatroskaRemux.chooseVideo([video]))
+        XCTAssertFalse(FragmentWriter.initSegment(tracks: [MatroskaRemux.fragmentTrack(video)]).isEmpty)
+        video.video?.width = 3_840
+        XCTAssertNoThrow(try MatroskaRemux.chooseVideo([video]))
+    }
+
+    /// AC-3's dac3 box from a syncframe: 48 kHz, 448 kb/s, 3/2 with LFE (ETSI TS 102 366, F.4).
+    func testDolbyDigitalDescription() throws {
+        var frame = BitWriter()
+        frame.write(0x0B77, 16)
+        frame.write(0, 16)  // crc1
+        frame.write(0, 2)  // fscod: 48 kHz
+        frame.write(28, 6)  // frmsizecod: 448 kb/s
+        frame.write(8, 5)  // bsid
+        frame.write(0, 3)  // bsmod
+        frame.write(7, 3)  // acmod: 3/2
+        frame.write(1, 2)  // cmixlev
+        frame.write(1, 2)  // surmixlev
+        frame.write(1, 1)  // lfeon
+        frame.write(0, 32)
+        let config = try DolbyAudio.ac3(frame.data)
+        XCTAssertEqual(config.box, Data([0x10, 0x3D, 0xC0]), "fscod, bsid 8, bsmod, acmod 7, LFE, bit rate code 14")
+        XCTAssertEqual(config.sampleRate, 48_000)
+        XCTAssertEqual(config.channels, 6)
+        XCTAssertEqual(config.frameLength, 1_536)
+        XCTAssertThrowsError(try DolbyAudio.ac3(Data([0x0B, 0x78] + [UInt8](repeating: 0, count: 8))), "no sync word")
+        var reserved = frame.data
+        reserved[4] |= 0xC0  // fscod 3: reserved
+        XCTAssertThrowsError(try DolbyAudio.ac3(reserved))
+    }
+
+    /// E-AC-3 whose first independent substream is not program 0 says nothing of the frame's length: refused, rather
+    /// than an audio clock with no ticks per frame.
+    func testDolbyDigitalPlusWithoutItsFirstProgramIsRefused() throws {
+        func syncframe(substream: UInt32) -> Data {
+            var bits = BitWriter()
+            bits.write(0x0B77, 16)
+            bits.write(0, 2)  // strmtyp: independent
+            bits.write(substream, 3)
+            bits.write(3, 11)  // frmsiz: 8 bytes
+            bits.write(0, 2)  // fscod: 48 kHz
+            bits.write(3, 2)  // numblkscod: 6 blocks
+            bits.write(2, 3)  // acmod: 2/0
+            bits.write(0, 1)  // lfeon
+            bits.write(16, 5)  // bsid
+            bits.write(0, 19)  // dialnorm, compre, mixmdate, infomdate, addbsie, up to the frame's 8 bytes
+            return bits.data
+        }
+        XCTAssertEqual(try DolbyAudio.eac3(syncframe(substream: 0)).frameLength, 1_536)
+        XCTAssertThrowsError(try DolbyAudio.eac3(syncframe(substream: 1)))
     }
 
     func testFilmsTheSystemPlayerCannotDecodeAreLeftToVLC() throws {

@@ -26,6 +26,8 @@ public actor MatroskaRemux {
     /// The video's ticks per second: a whole number of ticks per frame at 23.976, 24, 25, 29.97, 30, 50, 59.94 and 60
     /// frames per second, and per millisecond.
     static let videoTimescale: Int64 = 360_000
+    /// Video ticks per frame the remux works with: up to a frame every 10 seconds.
+    static let frameTicksRange: ClosedRange<Int64> = 1...videoTimescale * 10
 
     public nonisolated let file: MatroskaFile
     public nonisolated let video: MatroskaTrack
@@ -83,13 +85,15 @@ public actor MatroskaRemux {
         audioFrameTicks = audio?.frameLength ?? 1_024
         self.segments = segments
         tracks = [Self.fragmentTrack(video)] + (audio.map { [$0.fragment] } ?? [])
-        frameTicks = video.defaultDuration.map { Self.ticks(Int64(clamping: $0), Self.videoTimescale) }
+        frameTicks = Self.frameTicks(video)
     }
 
     // MARK: Tracks
 
     static func chooseVideo(_ tracks: [MatroskaTrack]) throws -> MatroskaTrack {
         guard let video = tracks.first(where: { $0.kind == .video && $0.isEnabled }) else { throw RemuxError("no video") }
+        // MP4 gives a picture's size on 16 bits.
+        if let size = video.video, size.width > 0xFFFF || size.height > 0xFFFF { throw RemuxError("picture of \(size.width)×\(size.height)") }
         switch video.codecID {
         case "V_MPEG4/ISO/AVC":
             guard let config = video.codecPrivate, config.first == 1 else { throw RemuxError("H.264 without its configuration") }
@@ -181,11 +185,11 @@ public actor MatroskaRemux {
         return record
     }
 
-    /// An AAC track as fragmented MP4; nil for other codecs (Dolby's are described from a frame).
+    /// An AAC track as fragmented MP4; nil for other codecs (Dolby's are described from a frame), and for a sampling
+    /// frequency no audio has.
     static func fragmentTrack(audio: MatroskaTrack) -> FragmentTrack? {
-        guard let info = audio.audio, info.samplingFrequency > 0 else { return nil }
+        guard let info = audio.audio, var rate = sampleRate(info.samplingFrequency) else { return nil }
         let codec: FragmentTrack.Codec
-        var rate = Int(info.samplingFrequency.rounded())
         if audio.codecID.hasPrefix("A_AAC") {
             if let config = audio.codecPrivate, config.count >= 2 {
                 codec = .aac(config)
@@ -195,7 +199,10 @@ public actor MatroskaRemux {
                 return nil
             }
             // HE-AAC: the output rate is twice the core's, and so is a frame's length.
-            if let output = info.outputSamplingFrequency, output > info.samplingFrequency { rate = Int(output.rounded()) }
+            if let output = info.outputSamplingFrequency, output > info.samplingFrequency || output.isNaN {
+                guard let outputRate = sampleRate(output) else { return nil }
+                rate = outputRate
+            }
         } else {
             return nil
         }
@@ -204,6 +211,12 @@ public actor MatroskaRemux {
         track.sampleRate = rate
         track.language = iso639(audio.language)
         return track
+    }
+
+    /// Hertz, from a track's sampling frequency: nil when it is not a number, below 1 Hz or past 768 kHz.
+    static func sampleRate(_ frequency: Double) -> Int? {
+        guard frequency.isFinite, frequency >= 1, frequency <= 768_000 else { return nil }
+        return Int(frequency.rounded())
     }
 
     /// An AudioSpecificConfig for the old codec IDs that carry none ("A_AAC/MPEG4/LC").
@@ -239,7 +252,9 @@ public actor MatroskaRemux {
             keys.append(cue)
         }
         guard !keys.isEmpty else { throw RemuxError("no key frame in the index") }
-        let total = Int64(((file.duration ?? 0) * 1e9).rounded())
+        // Nanoseconds: a duration that is not a number, negative or past 64 bits is damage.
+        let seconds = file.duration ?? 0
+        guard seconds >= 0, let total = Int64(exactly: (seconds * 1e9).rounded()) else { throw RemuxError("duration of \(seconds) s") }
         var segments: [Segment] = []
         // The first segment starts with the first cluster, whatever the index says.
         var current = Segment(time: 0, duration: 0, start: nil, end: nil)
@@ -265,11 +280,12 @@ public actor MatroskaRemux {
     public nonisolated func multivariantPlaylist(media: String) -> String {
         let codecs = tracks.map { FragmentWriter.codecName($0.codec) }.joined(separator: ",")
         let seconds = max(file.duration ?? 0, 1)
-        let average = file.fileSize.map { Int(Double($0) * 8 / seconds) } ?? 8_000_000
+        // Bits per second, up to a terabit (past any film) when a server gives a size no file has.
+        let average = file.fileSize.map { Int(min(max(Double($0), 0) * 8 / seconds, 1e12)) } ?? 8_000_000
         var attributes = "BANDWIDTH=\(average * 2),AVERAGE-BANDWIDTH=\(average),CODECS=\"\(codecs)\""
         if let supplemental = FragmentWriter.supplementalCodecs(tracks[0].codec) { attributes += ",SUPPLEMENTAL-CODECS=\"\(supplemental)\"" }
         if let size = video.video, size.width > 0 { attributes += ",RESOLUTION=\(size.width)x\(size.height)" }
-        if let duration = video.defaultDuration, duration > 0 { attributes += String(format: ",FRAME-RATE=%.3f", 1e9 / Double(duration)) }
+        if Self.frameTicks(video) != nil, let duration = video.defaultDuration { attributes += String(format: ",FRAME-RATE=%.3f", 1e9 / Double(duration)) }
         attributes += ",VIDEO-RANGE=\(videoRange)"
         return "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-INDEPENDENT-SEGMENTS\n#EXT-X-STREAM-INF:\(attributes)\n\(media)\n"
     }
@@ -384,6 +400,7 @@ public actor MatroskaRemux {
 
         let videoTimes = try videoFrames.map { Self.ticks(try $0.time.adding(Self.timeOffset), Self.videoTimescale) }
         let step = try frameTicks ?? Self.measureFrameTicks(videoTimes)
+        guard Self.frameTicksRange.contains(step) else { throw RemuxError("frame duration of \(step) ticks") }
         frameTicks = step
         let audioRate = Int64(tracks.count > 1 ? tracks[1].timescale : 48_000)
         let audioTimes = try audioFrames.map { Self.ticks(try $0.time.adding(Self.timeOffset), audioRate) }
@@ -436,6 +453,14 @@ public actor MatroskaRemux {
 
     static func snap(_ time: Int64, phase: Int64, step: Int64) -> Int64 {
         phase + Int64((Double(time - phase) / Double(step)).rounded()) * step
+    }
+
+    /// The track's frame duration in video ticks; nil when it has none, or one of 0 (or below a tick) or past the
+    /// range, which are measured on the frames instead.
+    static func frameTicks(_ video: MatroskaTrack) -> Int64? {
+        guard let duration = video.defaultDuration else { return nil }
+        let step = ticks(Int64(clamping: duration), videoTimescale)
+        return frameTicksRange.contains(step) ? step : nil
     }
 
     /// Without a frame duration in the file: the most common gap between presentation times.

@@ -274,8 +274,8 @@ struct BoxWriter {
                 box.u16(video ? 0 : 0x0100)
                 box.u16(0)
                 box.matrix()
-                box.u32(UInt32(track.width) << 16)
-                box.u32(UInt32(track.height) << 16)
+                box.u32(UInt32(UInt16(clamping: track.width)) << 16)
+                box.u32(UInt32(UInt16(clamping: track.height)) << 16)
             }
             trak.box("mdia") { mdia in
                 mdia.fullBox("mdhd") { box in

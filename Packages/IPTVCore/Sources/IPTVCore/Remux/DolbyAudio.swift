@@ -75,8 +75,10 @@ enum DolbyAudio {
         let main = independent.filter { $0.id == 0 }
         let dependents = substreams.filter { $0.type == 1 }
         let samplesPerFrame = main.count * first.blocks * 256
+        // The first program gives the frame's length: without it, the audio clock would have no ticks per frame.
+        guard samplesPerFrame > 0 else { throw RemuxError("E-AC-3 frame without its first program") }
         let bytes = substreams.reduce(0) { $0 + $1.size }
-        let dataRate = bytes * 8 * first.sampleRate / max(samplesPerFrame, 1) / 1_000
+        let dataRate = bytes * 8 * first.sampleRate / samplesPerFrame / 1_000
         var box = BitWriter()
         box.write(UInt32(min(dataRate, 8_191)), 13)
         box.write(0, 3)
