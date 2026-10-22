@@ -51,6 +51,7 @@ import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.focusFrame
 
 /** What My List shows: its movies, its series or its channels. */
 enum class MyListKind { MOVIES, SERIES, CHANNELS, COLLECTIONS }
@@ -117,7 +118,7 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
             }
             MyListKind.CHANNELS -> items(state.channels, key = { it.channel.id }, span = { GridItemSpan(maxLineSpan) }) { row ->
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { actions.onPlayChannel(row) }.padding(vertical = 6.dp),
+                    Modifier.fillMaxWidth().focusFrame(RoundedCornerShape(10.dp), grow = 1.02f).clip(RoundedCornerShape(10.dp)).clickable { actions.onPlayChannel(row) }.padding(vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(

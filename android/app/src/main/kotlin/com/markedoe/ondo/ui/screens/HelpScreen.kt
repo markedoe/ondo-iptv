@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -36,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.tv.focusFrame
 
 /** One page of the help: what a feature does and where it is. */
 data class HelpTopic(val id: String, @StringRes val title: Int, @StringRes val body: Int)
@@ -72,6 +74,7 @@ fun HelpScreen(onBack: () -> Unit, onSupport: () -> Unit) {
                         headlineContent = { Text(stringResource(topic.title)) },
                         trailingContent = { Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, contentDescription = null) },
                         modifier = Modifier
+                            .focusFrame(RoundedCornerShape(12.dp), grow = 1f)
                             .clickable(role = Role.Button) { open = if (expanded) null else topic.id }
                             .testTag("help-" + topic.id),
                     )
@@ -94,7 +97,7 @@ fun HelpScreen(onBack: () -> Unit, onSupport: () -> Unit) {
                     modifier = Modifier.padding(16.dp),
                 )
             }
-            item { ListItem(headlineContent = { Text(stringResource(R.string.support)) }, modifier = Modifier.clickable(onClick = onSupport)) }
+            item { ListItem(headlineContent = { Text(stringResource(R.string.support)) }, modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = onSupport)) }
         }
     }
 }

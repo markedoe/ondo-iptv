@@ -101,6 +101,7 @@ import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.WebPageScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
+import com.markedoe.ondo.ui.tv.FocusEntry
 import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
 import com.markedoe.ondo.ui.tv.TelevisionFrame
@@ -128,7 +129,7 @@ fun OndoApp(viewModel: OndoViewModel) {
     TelevisionFrame {
         when {
             !state.isReady -> Box(Modifier.fillMaxSize())
-            state.playlists.isEmpty() -> Onboarding(viewModel)
+            state.playlists.isEmpty() -> FocusEntry { Onboarding(viewModel) }
             else -> MainTabs(viewModel)
         }
     }
@@ -271,7 +272,7 @@ private fun ErrorSnackbar(viewModel: OndoViewModel, modifier: Modifier, onRetry:
 /** A page of the app, which keeps where the remote's focus was while another page is open (see [FocusMemory]). */
 private inline fun <reified T : Any> NavGraphBuilder.page(noinline content: @Composable (NavBackStackEntry) -> Unit) {
     composable<T> { entry ->
-        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) { content(entry) }
+        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) { FocusEntry { content(entry) } }
     }
 }
 

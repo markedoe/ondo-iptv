@@ -64,6 +64,7 @@ import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.focusFrame
 
 /** A collection in My List: its name and how many items of the current playlist it holds. */
 data class CollectionRow(val id: String, val name: String, val count: Int)
@@ -173,7 +174,7 @@ fun LazyGridScope.collectionRows(rows: List<CollectionRow>, onOpen: (String) -> 
         ListItem(
             headlineContent = { Text(stringResource(R.string.new_collection), color = MaterialTheme.colorScheme.primary) },
             leadingContent = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onNew).testTag("newCollection"),
+            modifier = Modifier.focusFrame(RoundedCornerShape(10.dp), grow = 1.02f).clip(RoundedCornerShape(10.dp)).clickable(onClick = onNew).testTag("newCollection"),
         )
     }
     items(rows, key = { it.id }, span = { GridItemSpan(maxLineSpan) }) { row ->
@@ -181,7 +182,7 @@ fun LazyGridScope.collectionRows(rows: List<CollectionRow>, onOpen: (String) -> 
             headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             leadingContent = { Icon(Icons.Rounded.CollectionsBookmark, contentDescription = null) },
             trailingContent = { Text(row.count.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { onOpen(row.id) }.testTag("collection-${row.name}"),
+            modifier = Modifier.focusFrame(RoundedCornerShape(10.dp), grow = 1.02f).clip(RoundedCornerShape(10.dp)).clickable { onOpen(row.id) }.testTag("collection-${row.name}"),
         )
     }
     if (rows.isEmpty()) {
@@ -211,14 +212,14 @@ fun CollectionPicker(choices: List<CollectionChoice>, onToggle: (String) -> Unit
                     headlineContent = { Text(choice.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     trailingContent = { Checkbox(checked = choice.contains, onCheckedChange = null) },
                     modifier = Modifier
-                        .toggleable(value = choice.contains, role = Role.Checkbox, onValueChange = { onToggle(choice.id) })
+                        .focusFrame(RoundedCornerShape(12.dp), grow = 1f).toggleable(value = choice.contains, role = Role.Checkbox, onValueChange = { onToggle(choice.id) })
                         .testTag("pick-${choice.name}"),
                 )
             }
             ListItem(
                 headlineContent = { Text(stringResource(R.string.new_collection), color = MaterialTheme.colorScheme.primary) },
                 leadingContent = { Icon(Icons.Rounded.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                modifier = Modifier.clickable { naming = true }.testTag("pickNewCollection"),
+                modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { naming = true }.testTag("pickNewCollection"),
             )
         }
     }
@@ -265,7 +266,7 @@ private fun LazyGridScope.posters(title: Int, posters: List<ShowcaseItem>, onOpe
 @Composable
 private fun ChannelLine(row: ChannelRow, onPlay: (ChannelRow) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onPlay(row) }.padding(vertical = 6.dp),
+        Modifier.fillMaxWidth().focusFrame(RoundedCornerShape(10.dp), grow = 1.02f).clip(RoundedCornerShape(10.dp)).clickable { onPlay(row) }.padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

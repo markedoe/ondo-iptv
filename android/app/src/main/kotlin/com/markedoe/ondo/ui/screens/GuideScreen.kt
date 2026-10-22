@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -78,6 +79,8 @@ import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.data.ReminderNotifications
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
+import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.focusMemory
 import java.util.Date
 import kotlin.math.roundToInt
 
@@ -160,10 +163,10 @@ fun GuideScreen(state: GuideUiState, actions: GuideActions) {
             HorizontalDivider()
         }
         LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(bottom = 24.dp)) {
-            items(state.rows, key = { it.channel.id }) { row ->
+            itemsIndexed(state.rows, key = { _, it -> it.channel.id }) { index, row ->
                 Row(Modifier.height(64.dp)) {
                     ChannelCell(row.channel, channelWidth) { actions.onPlay(row.channel) }
-                    Programmes(row, state, now, hourWidth, scroll, timeFormat) { selected = row.channel to it }
+                    Programmes(row, state, now, hourWidth, scroll, timeFormat, first = index == 0) { selected = row.channel to it }
                 }
                 HorizontalDivider()
             }
@@ -235,7 +238,14 @@ private fun TimeHeader(state: GuideUiState, hourWidth: androidx.compose.ui.unit.
 @Composable
 private fun ChannelCell(channel: Channel, width: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
     Row(
-        Modifier.width(width).fillMaxHeight().background(MaterialTheme.colorScheme.surfaceContainerLow).clickable(onClick = onClick).padding(horizontal = 8.dp),
+        Modifier
+            .width(width)
+            .fillMaxHeight()
+            .focusFrame(RoundedCornerShape(6.dp), grow = 1f)
+            .focusMemory("guide:${channel.id}")
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -252,6 +262,8 @@ private fun Programmes(
     hourWidth: androidx.compose.ui.unit.Dp,
     scroll: ScrollState,
     timeFormat: java.text.DateFormat,
+    /** The first row: its programme on air takes the focus on a TV. */
+    first: Boolean,
     onSelect: (EpgProgram) -> Unit,
 ) {
     val totalWidth = hourWidth * ((state.end - state.start).toFloat() / HOUR)
@@ -278,6 +290,8 @@ private fun Programmes(
                         .width(width.coerceAtLeast(2.dp))
                         .fillMaxHeight()
                         .padding(vertical = 3.dp)
+                        .focusFrame(RoundedCornerShape(6.dp), grow = 1f)
+                        .focusMemory("guide:${row.channel.id}:${program.start}", initial = first && airing)
                         .clip(RoundedCornerShape(6.dp))
                         .background(if (airing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
                         .clickable { onSelect(program) }

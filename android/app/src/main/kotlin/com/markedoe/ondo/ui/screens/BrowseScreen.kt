@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.EmojiEvents
@@ -35,6 +36,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.focusFrame
 
 /** What a value of a movie's or a series' page stands for: an award, a festival, a year, a genre. */
 enum class BrowseKind { AWARD, FESTIVAL, YEAR, GENRE }
@@ -82,7 +84,7 @@ fun BrowseScreen(state: BrowseUiState, onOpen: (ShowcaseItem) -> Unit, onFestiva
                 ListItem(
                     headlineContent = { Text(awardGroupName(festival), color = MaterialTheme.colorScheme.primary) },
                     leadingContent = { Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.clickable { onFestival(festival) }.testTag("festival"),
+                    modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onFestival(festival) }.testTag("festival"),
                 )
             }
         }

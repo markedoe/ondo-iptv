@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
@@ -60,6 +61,7 @@ import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.focusFrame
 
 /** Release years and awards the search is limited to. One year alone keeps the other end open. */
 data class SearchFilters(
@@ -145,7 +147,7 @@ fun SearchScreen(
                     ListItem(
                         headlineContent = { Text(name) },
                         leadingContent = { Icon(Icons.Rounded.Person, contentDescription = null) },
-                        modifier = Modifier.clickable { onPerson(name) }.padding(horizontal = metrics.gutter - 16.dp).testTag("person-$name"),
+                        modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onPerson(name) }.padding(horizontal = metrics.gutter - 16.dp).testTag("person-$name"),
                     )
                 }
             }
@@ -169,7 +171,7 @@ fun SearchScreen(
                     ListItem(
                         headlineContent = { Text(row.channel.name) },
                         supportingContent = row.nowTitle?.let { { Text(it) } },
-                        modifier = Modifier.clickable { onPlayChannel(row) }.padding(horizontal = metrics.gutter - 16.dp),
+                        modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onPlayChannel(row) }.padding(horizontal = metrics.gutter - 16.dp),
                     )
                 }
             }
@@ -329,7 +331,7 @@ private fun <T> ChoiceItem(label: String, value: String, options: List<Pair<T?, 
         ListItem(
             headlineContent = { Text(label) },
             trailingContent = { Text(value, color = MaterialTheme.colorScheme.primary) },
-            modifier = Modifier.clickable { open = true }.testTag(tag),
+            modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { open = true }.testTag(tag),
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, modifier = Modifier.align(Alignment.TopEnd)) {
             options.forEach { (option, text) ->

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bookmarks
@@ -45,6 +46,8 @@ import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ProgressBar
 import com.markedoe.ondo.ui.model.ChannelRow
+import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.focusMemory
 
 data class LiveUiState(
     val categories: List<MediaCategory> = emptyList(),
@@ -65,7 +68,7 @@ class LiveActions(
     val onGuide: () -> Unit = {},
 )
 
-/** Live TV: category chips and channels with what is on now (long press: favourite). */
+/** Live TV: category chips and channels with what is on now (long press, or OK held on a remote: favourite). */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LiveScreen(state: LiveUiState, actions: LiveActions) {
@@ -103,10 +106,14 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                 }
             }
         }
-        items(state.channels, key = { it.channel.id }) { row ->
+        itemsIndexed(state.channels, key = { _, it -> it.channel.id }) { index, row ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    // A remote: the frame shows the channel; holding OK toggles My List, as a long press does.
+                    .focusFrame(RoundedCornerShape(12.dp), grow = 1.02f)
+                    .focusMemory("channel:${row.channel.id}", initial = index == 0)
+                    .clip(RoundedCornerShape(12.dp))
                     // TalkBack offers the long press under this name ("double-tap and hold to …").
                     .combinedClickable(
                         onClick = { actions.onPlay(row) },

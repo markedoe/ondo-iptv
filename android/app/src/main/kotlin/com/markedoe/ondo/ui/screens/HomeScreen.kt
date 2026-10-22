@@ -1,7 +1,7 @@
 package com.markedoe.ondo.ui.screens
 
-import android.text.format.DateUtils
 import android.icu.text.ListFormatter
+import android.text.format.DateUtils
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -230,7 +230,7 @@ private fun HomeTopBar(state: HomeUiState, actions: HomeActions, onArtwork: Bool
     val tint = if (onArtwork) Color.White else MaterialTheme.colorScheme.onBackground
     Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp)) {
         Column(
-            modifier = Modifier.align(Alignment.Center).clip(RoundedCornerShape(20.dp)).clickable(onClick = actions.onPlaylists).padding(horizontal = 12.dp, vertical = 2.dp),
+            modifier = Modifier.align(Alignment.Center).focusFrame(RoundedCornerShape(20.dp), grow = 1.02f).clip(RoundedCornerShape(20.dp)).clickable(onClick = actions.onPlaylists).padding(horizontal = 12.dp, vertical = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             state.updatedAt?.let { updatedAt ->

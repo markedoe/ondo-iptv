@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 
 /**
  * Android TV and Google TV: the remote's five-way pad moves a visible focus from item to item (Google's TV app
@@ -112,6 +114,31 @@ fun Modifier.focusFrame(shape: Shape = RoundedCornerShape(12.dp), grow: Float = 
             scaleY = scale
         }
         .border(3.dp, color, shape)
+}
+
+/**
+ * On a TV, the focus enters [content] when nothing in it has the focus once it shows (a page without its own first
+ * item, or one still loading): the remote's first press then moves from something on screen. Elsewhere, [content]
+ * as it is.
+ */
+@Composable
+fun FocusEntry(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    if (!isTelevision()) {
+        Box(modifier) { content() }
+        return
+    }
+    val requester = remember { FocusRequester() }
+    var hasFocus by remember { mutableStateOf(false) }
+    val mode = LocalInputModeManager.current.inputMode
+    LaunchedEffect(mode) {
+        // The page's own first item (or the one to come back to) takes it first; the content may still be loading.
+        repeat(50) {
+            delay(100)
+            if (hasFocus) return@LaunchedEffect
+            runCatching { requester.requestFocus() }
+        }
+    }
+    Box(modifier.focusRequester(requester).onFocusChanged { hasFocus = it.hasFocus }.focusGroup()) { content() }
 }
 
 /**

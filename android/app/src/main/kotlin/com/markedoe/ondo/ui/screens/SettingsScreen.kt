@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.ui.theme.Appearance
+import com.markedoe.ondo.ui.tv.focusFrame
 
 data class PlaylistSummary(val id: String, val name: String, val detail: String, val active: Boolean)
 
@@ -113,14 +115,14 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     trailingContent = {
                         IconButton(onClick = { deleting = playlist }) { Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete)) }
                     },
-                    modifier = Modifier.clickable { actions.onActivate(playlist.id) },
+                    modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { actions.onActivate(playlist.id) },
                 )
             }
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.add_playlist)) },
                     leadingContent = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                    modifier = Modifier.clickable(onClick = actions.onAddPlaylist),
+                    modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onAddPlaylist),
                 )
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
@@ -162,7 +164,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     headlineContent = { Text(stringResource(R.string.languages_and_categories)) },
                     supportingContent = { Text(stringResource(R.string.categories_hint)) },
                     leadingContent = { Icon(Icons.Rounded.FilterList, contentDescription = null) },
-                    modifier = Modifier.clickable(onClick = actions.onCategories).testTag("categoriesRow"),
+                    modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onCategories).testTag("categoriesRow"),
                 )
             }
             item {
@@ -170,7 +172,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     headlineContent = { Text(stringResource(R.string.app_language)) },
                     supportingContent = { Text(stringResource(R.string.app_language_hint)) },
                     leadingContent = { Icon(Icons.Rounded.Language, contentDescription = null) },
-                    modifier = Modifier.clickable(onClick = actions.onAppLanguage).testTag("appLanguageRow"),
+                    modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onAppLanguage).testTag("appLanguageRow"),
                 )
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
@@ -191,12 +193,12 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.help)) },
                     leadingContent = { Icon(Icons.AutoMirrored.Rounded.HelpOutline, contentDescription = null) },
-                    modifier = Modifier.clickable(onClick = actions.onHelp).testTag("helpRow"),
+                    modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onHelp).testTag("helpRow"),
                 )
             }
             item { Text(stringResource(R.string.disclaimer), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) }
-            item { ListItem(headlineContent = { Text(stringResource(R.string.privacy_policy)) }, modifier = Modifier.clickable(onClick = actions.onPrivacy)) }
-            item { ListItem(headlineContent = { Text(stringResource(R.string.support)) }, modifier = Modifier.clickable(onClick = actions.onSupport)) }
+            item { ListItem(headlineContent = { Text(stringResource(R.string.privacy_policy)) }, modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onPrivacy)) }
+            item { ListItem(headlineContent = { Text(stringResource(R.string.support)) }, modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onSupport)) }
             item { ListItem(headlineContent = { Text(stringResource(R.string.version)) }, trailingContent = { Text(state.version) }) }
         }
     }
@@ -220,7 +222,7 @@ private fun BufferRow(label: String, seconds: Int, onChange: (Int) -> Unit, modi
             headlineContent = { Text(label) },
             supportingContent = { Text(bufferLabel(seconds)) },
             leadingContent = { Icon(Icons.Rounded.Speed, contentDescription = null) },
-            modifier = modifier.clickable { open = true },
+            modifier = modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { open = true },
         )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, offset = DpOffset(16.dp, 0.dp)) {
             PlaybackBuffer.CHOICES.forEach { choice ->
