@@ -94,9 +94,10 @@ URL : `https://markedoe.github.io/ondo-iptv/privacy.html` (le site est publié p
 
 ### D2. Accès à l'application
 
-*Toutes les fonctionnalités sont disponibles sans accès particulier*. Pour la review, ajoutez une
-instruction : « Sur l'écran de bienvenue affiché au premier lancement, touchez **Try the demo** : une
-playlist de chaînes publiques (projet iptv-org) est chargée. Ondo ne fournit aucun contenu ; l'utilisateur ajoute ses propres sources. »
+*Toutes les fonctionnalités sont disponibles sans restriction d'accès* : Ondo n'a pas de compte. Ne
+choisissez pas l'option restreinte : Play demande alors des identifiants de connexion (« Missing sign in
+details »). Les examinateurs trouvent **Try the demo** sur l'écran de bienvenue affiché au premier
+lancement : une playlist de chaînes publiques (projet iptv-org).
 
 ### D3. Annonces
 
