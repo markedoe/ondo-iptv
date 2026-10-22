@@ -34,7 +34,7 @@ screenshots.
   - The Mac sandbox has only the entitlements a feature needs; never `com.apple.security.network.server` (App Review
     refused 1.1.0 for it: a player listens to no one), so the MKV remux and its 127.0.0.1 server are iPhone and iPad only.
   - Money inside the apps only through Apple's In-App Purchase (Google Play Billing on Android), tips included; no
-    link or button in the apps to another way to pay or donate. Donation links (GitHub Sponsors) live only on the
+    link or button in the apps to another way to pay or donate. Donation links (Ko-fi) live only on the
     website's home page and in the README, never on a page the apps open (support, privacy), and there is no
     `.github/FUNDING.yml`: its Sponsor button shows on the GitHub issue form the apps open.
   - The listing matches the build: no feature it lacks, no other platform named, nothing "coming soon", no test or

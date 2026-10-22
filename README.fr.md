@@ -258,8 +258,9 @@ garde-fou bloque les secrets et données personnelles avant tout commit — hook
 ## Soutenir le projet
 
 Ondo n'a ni publicité ni pistage. S'il vous est utile, vous pouvez soutenir son développement sur
-[GitHub Sponsors](https://github.com/sponsors/markedoe). Dans les apps, l'argent ne passe que par l'App Store et Google Play, comme
-leurs règles l'exigent : les apps ne mènent à aucun autre moyen de payer.
+[Ko-fi](https://ko-fi.com/ondoapp), une fois ou chaque mois, par carte, Apple Pay ou Google Pay, sans créer de compte. Dans les apps,
+l'argent ne passe que par l'App Store et Google Play, comme leurs règles l'exigent : les apps ne mènent à aucun autre
+moyen de payer.
 
 ## Licence
 
