@@ -5,3 +5,5 @@
 \bsupport@github\.com\b
 # Fictitious subtitle service keys of the IPTVCore tests ("key-example-0001"…).
 \bkey-example-\d{4}\b
+# The made-up password with + / & = of the Xtream login tests (PlaylistOverHTTPTests, XtreamOverHttpTest).
+"pa\+ss/w&rd=1"

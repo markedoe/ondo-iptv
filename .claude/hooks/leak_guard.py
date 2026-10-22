@@ -21,9 +21,67 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Secrets: specific formats first, then generic assignments of long values.
+# What stands for a secret without being one: templates (`$X`, `${{ secrets.X }}`, `{value}`, `\\(pass)`, `<key>`,
+# `%s`) and placeholder words (`PASSWORD`, `pass`, `xxx`, `YOUR_API_KEY`, `key-example-0001`). Given to a secret
+# name, a value with a secret word in it is a name too (`"tmdb_token_v4"`, a storage key).
+TEMPLATE = re.compile(r"[$<>{}]|\\\(|%[(s]|^[*.…]+$")
+PLACEHOLDER = re.compile(
+    r"(?i)^(?:x{3,}|(?:your|my|the|some|a)?[_-]?(?:pass(?:word|wd)?|secret|token|(?:api[_-]?)?key|user(?:name)?|login|"
+    r"value|changeme)s?[_-]?\d{0,2})$|example|placeholder|dummy|redacted|not[_-]?(?:a[_-]?)?(?:real|secret)")
+SECRET_WORD = re.compile(r"(?i)pass(?:word|wd|phrase)|secret|token|api[_-]?key|private[_-]?key")
+# Hosts of no real service: the reserved example names, this machine, a bare name (`h`, `host:port`, `server`).
+SAFE_HOST = re.compile(
+    r"(?i)^(?:[^@/]*@)?(?:(?:[\w-]+\.)*(?:example(?:\.(?:com|org|net))?|test|invalid|localhost)|127(?:\.\d+){3}|[^.:\[]+)"
+    r"(?::[^/]*)?$")
+
+
+def placeholder(value):
+    return bool(TEMPLATE.search(value) or PLACEHOLDER.search(value))
+
+
+def mixed(value):
+    """Letters and digits: what a generated password or key looks like, unlike a word or a type name."""
+    return bool(re.search(r"[A-Za-z]", value) and re.search(r"\d", value))
+
+
+def url_query_secret(match):
+    """`?username=jdoe42&password=…`: any value at a real host; without an address, a plain value of 6 characters
+    or more (the core tests' URL-encoding fixtures, `se/cr%2Bet`, are not secrets)."""
+    host, value = match.group("host"), match.group("value")
+    if placeholder(value):
+        return False
+    if host:
+        return not SAFE_HOST.match(host) and len(value) >= 3
+    return bool(re.fullmatch(r"[A-Za-z0-9._~!*+-]{6,}", value))
+
+
+def url_path_secret(match):
+    """`http://panel/live/jdoe42/<password>/1234.ts`: the Xtream stream address carries the account."""
+    return not SAFE_HOST.match(match.group("host")) and len(match.group("value")) >= 3 and \
+        not placeholder(match.group("value"))
+
+
+def assigned_secret(match):
+    """A value given to a name that ends with a secret word (`storePassword`, `ANDROID_KEYSTORE_PASSWORD`,
+    `tmdbToken`, `password:` in YAML): quoted, 16 characters or more, or 8 with letters and digits; bare (YAML,
+    shell, properties), 8 characters or more with letters and digits."""
+    quoted, bare = match.group("quoted"), match.group("bare")
+    value = quoted or bare
+    if placeholder(value) or SECRET_WORD.search(value) or "://" in value:
+        return False
+    if quoted:
+        return len(value) >= 16 or (len(value) >= 8 and mixed(value))
+    return len(value) >= 8 and mixed(value)
+
+
+SECRET_NAME = (r"(?:api[_-]?key|access[_-]?key|secret[_-]?key|private[_-]?key|auth[_-]?key|client[_-]?secret|secret|"
+               r"token|password|passwd|passphrase)s?(?![A-Za-z0-9_])")
+
+# Secrets: specific formats first, then credentials in addresses and values given to secret names. An optional third
+# item decides on each match (placeholders, example hosts).
 SECRET_RULES = [
-    ("private key", re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----\s*[A-Za-z0-9+/=\s]{40,}")),
+    # The PEM body, also as a JSON string (a service account key: `\n` between the lines).
+    ("private key", re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----(?:[A-Za-z0-9+/=\s]|\\[nr]){40,}")),
     ("AWS access key", re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")),
     ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})")),
     ("Slack token", re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}")),
@@ -33,8 +91,16 @@ SECRET_RULES = [
     ("JSON Web Token", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}")),
     ("App Store Connect key file", re.compile(r"\bAuthKey_[A-Z0-9]{10}\.p8\b")),
     ("credentials in a URL", re.compile(r"\b[a-z][a-z0-9+.-]*://[^/\s:@'\"]+:[^/\s:@'\"$]{6,}@[^\s'\"]+")),
+    ("credentials in a URL", re.compile(
+        r"(?i)(?:\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)[^\s?#'\"<>]*\?(?:[^\s#'\"<>]*?&)?|[?&])"
+        r"(?:password|passwd|pass|pwd)=(?P<value>[^&#\s'\"<>]+)"), url_query_secret),
+    ("credentials in a URL", re.compile(
+        r"(?i)\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)/(?:live|movie|series|timeshift)/[^/\s?#'\"<>]+/"
+        r"(?P<value>[^/\s?#'\"<>]+)/[^\s'\"<>]*\d"), url_path_secret),
     ("hard-coded secret", re.compile(
-        r"(?i)\b(?:api[_-]?key|secret|token|password|passwd|private[_-]?key)\b[\"']?\s*[:=]\s*[\"']([^\"'\s$]{16,})[\"']")),
+        rf"(?i)(?<![?&]){SECRET_NAME}[\"'`]?(?:\s*:\s*[A-Za-z_][\w.<>?\[\]]*\s*(?==))?\s*(?:=>|:=|\?=|=|:)[ \t]*"
+        r"(?:(?P<quote>[\"'`])(?P<quoted>[^\"'`\s]{8,})(?P=quote)|(?P<bare>[^\s\"'`.$<>{}()\[\]\\,;#&?]{8,})(?=[\s,;)\]}]|$))"),
+     assigned_secret),
 ]
 
 # Personal data: addresses, home folders and private networks.
@@ -87,8 +153,10 @@ def scan_text(text, where, allow):
         number = text.count("\n", 0, position)
         return number + 1, lines[number] if number < len(lines) else ""
 
-    for name, rule in SECRET_RULES:
+    for name, rule, *decide in SECRET_RULES:
         for match in rule.finditer(text):
+            if decide and not decide[0](match):
+                continue
             number, line = line_of(match.start())
             if not allowed(match.group(0), line):
                 findings.append((f"{where}:{number}", name, redact(match.group(0))))
@@ -166,7 +234,9 @@ def scan_identity(root, allow):
 
 
 def scan_unpushed(root, allow):
-    revisions = git(root, "rev-list", "HEAD", "--not", "--remotes").split()
+    """The commits of every local branch and tag that no remote branch has: `git push origin <branch>`, `--all` and
+    `--tags` can send more than the current branch."""
+    revisions = git(root, "rev-list", "--branches", "--tags", "--not", "--remotes").split()
     return scan_commits(root, revisions, allow)
 
 
