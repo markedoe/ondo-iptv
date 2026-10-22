@@ -62,7 +62,7 @@ data class LiveFilter(val categoryId: String? = null, val favoritesOnly: Boolean
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class OndoViewModel(
     private val repository: OndoRepository,
-    private val labels: Labels,
+    labels: Labels,
     private val clock: () -> Long = System::currentTimeMillis,
     private val computation: CoroutineDispatcher = Dispatchers.Default,
     /** The time, every minute: "now on" and progress of live programmes. */
@@ -77,7 +77,14 @@ class OndoViewModel(
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.Eagerly, state.value.settings.appearance)
 
-    val home: StateFlow<HomeUiState?> = combine(state, minutes) { state, now ->
+    private val labels = MutableStateFlow(labels)
+
+    /** The words and locale of the app's language, again after the language changes (the view model stays). */
+    fun setLabels(labels: Labels) {
+        this.labels.value = labels
+    }
+
+    val home: StateFlow<HomeUiState?> = combine(state, minutes, this.labels) { state, now, labels ->
         UiMappers.home(state, labels, now).copy(beta = BuildConfig.BETA)
     }
         .flowOn(computation)

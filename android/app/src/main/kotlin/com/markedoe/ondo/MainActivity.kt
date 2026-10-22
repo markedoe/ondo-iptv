@@ -18,6 +18,9 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.runtime.LaunchedEffect
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.OndoApp
@@ -40,6 +43,11 @@ class MainActivity : ComponentActivity() {
             val viewModel: OndoViewModel = viewModel {
                 OndoViewModel(repository, Labels(getString(R.string.kind_movie), getString(R.string.kind_series)))
             }
+            // Another app language (Settings, App language) recreates the activity, not the view model.
+            val movie = stringResource(R.string.kind_movie)
+            val series = stringResource(R.string.kind_series)
+            val locale = LocalConfiguration.current.locales[0]
+            LaunchedEffect(movie, series, locale) { viewModel.setLabels(Labels(movie, series, locale)) }
             val appearance by viewModel.appearance.collectAsStateWithLifecycle()
             val dark = when (appearance) {
                 Appearance.SYSTEM -> isSystemInDarkTheme()

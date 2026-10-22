@@ -58,6 +58,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
@@ -123,8 +126,13 @@ private const val FILTER_DEBOUNCE_MS = 150L
 fun OndoApp(viewModel: OndoViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    LaunchedEffect(viewModel) {
-        viewModel.playRequests.collect { request -> context.startActivity(PlayerActivity.intent(context, request)) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(viewModel, lifecycle) {
+        // While Ondo is on screen only: a title that took long to start (a series' episodes still loading) after the
+        // user left waits for their return, rather than opening the player over another app.
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.playRequests.collect { request -> context.startActivity(PlayerActivity.intent(context, request)) }
+        }
     }
     TelevisionFrame {
         when {
@@ -206,6 +214,12 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 page<Routes.AddPlaylist> {
                     val state by viewModel.state.collectAsStateWithLifecycle()
                     var picked by remember { mutableStateOf<PickedFile?>(null) }
+                    // A refresh error still on screen when the form opens is not the form's.
+                    var opened by rememberSaveable { mutableStateOf(false) }
+                    LaunchedEffect(Unit) {
+                        if (!opened) viewModel.clearError()
+                        opened = true
+                    }
                     AddPlaylistScreen(
                         onSave = { form -> viewModel.addPlaylist(form) { navController.popBackStack() } },
                         onBack = { viewModel.clearError(); navController.popBackStack() },
