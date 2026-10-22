@@ -1,0 +1,25 @@
+{
+  "note": "Reference for the repository's About box and settings, set by hand on GitHub (Settings). Topics avoid words that suggest providing access or content: no xtream-codes.",
+  "description": "Native IPTV player for iPhone, iPad, Mac and Android: movies, series and live TV from the playlist or login your provider gives you. A player only: it provides no content. · Lecteur IPTV natif : films, séries et TV en direct de la playlist ou du compte de votre fournisseur, sans contenu fourni.",
+  "homepage": "https://markedoe.github.io/ondo-iptv/",
+  "topics": [
+    "android",
+    "epg",
+    "exoplayer",
+    "hls",
+    "ios",
+    "iptv",
+    "iptv-application",
+    "iptv-player",
+    "iptv-player-application",
+    "kotlin",
+    "m3u",
+    "m3u8-player",
+    "macos",
+    "swiftui",
+    "vlc-libvlc",
+    "xmltv"
+  ],
+  "social_preview": "fastlane/creative/social.jpg",
+  "private_vulnerability_reporting": true
+}
