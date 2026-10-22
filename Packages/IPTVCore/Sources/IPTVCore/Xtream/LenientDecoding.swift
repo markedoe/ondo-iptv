@@ -32,6 +32,12 @@ extension KeyedDecodingContainer {
         Int(exactly: value.rounded(.towardZero))
     }
 
+    /// A year (2021, "2021"), else the one `date` starts with ("2021-05-04"): anything but four digits (0 for none,
+    /// -1, 1e18) is no year.
+    func lenientYear(_ key: Key, orStartOf date: String? = nil) -> Int? {
+        [lenientInt(key), date.flatMap { Int($0.prefix(4)) }].lazy.compactMap { $0 }.first { (1_000...9_999).contains($0) }
+    }
+
     func lenientDouble(_ key: Key) -> Double? {
         if let value = try? decodeIfPresent(Double.self, forKey: key) { return value }
         if let value = try? decodeIfPresent(String.self, forKey: key) {

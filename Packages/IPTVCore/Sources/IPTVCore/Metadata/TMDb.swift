@@ -117,7 +117,7 @@ public struct TMDbClient: Sendable {
             .filter { item in
                 guard [item.title, item.originalTitle].compactMap({ $0 }).map(CatalogueMatcher.key).contains(key) else { return false }
                 guard let year, let released = item.year else { return true }
-                return abs(year - released) <= 1
+                return CatalogueMatcher.closeYears(year, released)
             }
             .compactMap(\.backdropURL)
             .first
@@ -214,6 +214,13 @@ public enum CatalogueMatcher {
         words(of: title).joined(separator: " ")
     }
 
+    /// Release years one apart at most (release dates differ between countries). Any year compares, however absurd
+    /// the one a panel sent.
+    static func closeYears(_ a: Int, _ b: Int) -> Bool {
+        let difference = a.subtractingReportingOverflow(b)
+        return !difference.overflow && (-1...1).contains(difference.partialValue)
+    }
+
     private static func words(of title: String) -> [String] {
         var name = title
         // Remove bracketed tags: [MULTI], (VOSTFR)…
@@ -238,7 +245,7 @@ public enum CatalogueMatcher {
                 let candidates = keys.flatMap { movieIndex[$0] ?? [] }
                 let best = candidates.first { movie in
                     guard let a = movie.year, let b = item.year else { return true }
-                    return abs(a - b) <= 1
+                    return closeYears(a, b)
                 }
                 if let best, used.insert("m" + best.id).inserted { result.append(.movie(best, item)) }
             case .tv:

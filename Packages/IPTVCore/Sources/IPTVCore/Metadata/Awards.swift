@@ -100,7 +100,7 @@ public struct AwardsCatalogue: Decodable, Sendable {
             } else {
                 let candidates = byTitle[CatalogueMatcher.key(movie.name)] ?? []
                 if let year = movie.year {
-                    found = candidates.first { films[$0].year.map { abs($0 - year) <= 1 } ?? false }
+                    found = candidates.first { films[$0].year.map { CatalogueMatcher.closeYears($0, year) } ?? false }
                 } else {
                     found = candidates.count == 1 ? candidates.first : nil
                 }

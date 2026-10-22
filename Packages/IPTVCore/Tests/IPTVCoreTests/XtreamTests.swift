@@ -250,6 +250,19 @@ final class XtreamTests: XCTestCase {
         XCTAssertEqual(list[1].tvArchiveDuration, 7)
     }
 
+    func testYearsThatAreNotYearsAreIgnored() throws {
+        let movies = #"""
+        [{"stream_id":1,"year":"-9223372036854775808"},{"stream_id":2,"year":0},{"stream_id":3,"year":"2021"},{"stream_id":4,"year":1e18}]
+        """#
+        let list = try JSONDecoder().decode(LossyArray<XtreamVODStreamDTO>.self, from: Data(movies.utf8)).elements
+        XCTAssertEqual(list.map(\.year), [nil, nil, 2021, nil])
+        let series = #"""
+        [{"series_id":1,"year":"0","releaseDate":"2019-05-04"},{"series_id":2,"release_date":"-999-01-01"},{"series_id":3,"year":2008}]
+        """#
+        let shows = try JSONDecoder().decode(LossyArray<XtreamSeriesDTO>.self, from: Data(series.utf8)).elements
+        XCTAssertEqual(shows.map(\.year), [2019, nil, 2008])
+    }
+
     func testLiveURLRecognition() {
         let parsed = XtreamURLBuilder.parseLiveURL(URL(string: "http://h.example.com:8080/live/u/p/42.ts")!)
         XCTAssertEqual(parsed?.streamID, 42)

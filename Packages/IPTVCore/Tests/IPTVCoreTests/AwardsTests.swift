@@ -36,6 +36,11 @@ final class AwardsTests: XCTestCase {
         XCTAssertEqual(found["2"]?.first?.awardID, "palme-dor")
     }
 
+    func testAbsurdYearsDoNotMatch() throws {
+        let found = try catalogue().match([movie("1", "Parasite", year: Int.min), movie("2", "Parasite", year: Int.max)])
+        XCTAssertTrue(found.isEmpty)
+    }
+
     func testATMDbIdWinsOverTheTitle() throws {
         let found = try catalogue().match([movie("1", "Some Other Name", year: nil)], tmdbIDs: ["1": 680])
         XCTAssertEqual(found["1"]?.first?.awardID, "palme-dor")

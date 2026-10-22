@@ -182,7 +182,7 @@ struct XtreamVODStreamDTO: Decodable {
         added = c.lenientDate(.added)
         containerExtension = c.lenientString(.containerExtension)?.nilIfBlank
         directSource = c.lenientString(.directSource)?.nilIfBlank
-        year = c.lenientInt(.year)
+        year = c.lenientYear(.year)
         plot = c.lenientString(.plot)?.nilIfBlank
     }
 }
@@ -226,7 +226,7 @@ struct XtreamSeriesDTO: Decodable {
         rating = c.lenientDouble(.rating)
         categoryID = c.lenientString(.categoryID)
         lastModified = c.lenientDate(.lastModified)
-        year = c.lenientInt(.year) ?? releaseDate.flatMap { Int($0.prefix(4)) }
+        year = c.lenientYear(.year, orStartOf: releaseDate)
     }
 }
 

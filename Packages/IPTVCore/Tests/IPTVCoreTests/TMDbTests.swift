@@ -20,6 +20,12 @@ final class TMDbTests: XCTestCase {
         let series = [Series(id: "s", name: "Copper Valley (US)", categoryID: "c")]
         let matches = CatalogueMatcher.match(items, movies: movies, series: series)
         XCTAssertEqual(matches.map(\.id), ["m-1", "s-s", "m-3"], "Lighthouse rejected: year too far apart")
+
+        let absurd = [Int.min, Int.max].map { (year: Int) in Movie(id: String(year), name: "Lighthouse", categoryID: "c", streamURL: url, year: year) }
+        XCTAssertEqual(CatalogueMatcher.match(items, movies: absurd, series: []).map(\.id), [])
+        XCTAssertTrue(CatalogueMatcher.closeYears(2008, 2009))
+        XCTAssertFalse(CatalogueMatcher.closeYears(Int.min, 2008))
+        XCTAssertFalse(CatalogueMatcher.closeYears(Int.max, Int.min))
     }
 
     func testBearerTokenUsesHeader() async throws {
