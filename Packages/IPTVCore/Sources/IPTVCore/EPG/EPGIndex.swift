@@ -102,7 +102,7 @@ public struct EPGIndex: Sendable {
     /// Current programme followed by the next `count - 1` ones.
     public func upcoming(for channel: Channel, at date: Date = Date(), count: Int = 2) -> [EPGProgram] {
         let list = programs(for: channel)
-        guard count > 0, !list.isEmpty else { return [] }
+        guard count >= 1, !list.isEmpty else { return [] }
         if let current = Self.indexOfProgram(in: list, at: date) {
             // Inside a long programme, the shorter ones after the current one may already be over.
             return [list[current]] + list[(current + 1)...].lazy.filter { $0.end > date }.prefix(count - 1)

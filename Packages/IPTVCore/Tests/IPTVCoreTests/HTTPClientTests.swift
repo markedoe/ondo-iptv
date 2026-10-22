@@ -193,12 +193,12 @@ private func readRequest(_ fd: Int32, untilClosed: Bool = false) {
     var buffer = [UInt8](repeating: 0, count: 4_096)
     while untilClosed || received.range(of: Data("\r\n\r\n".utf8)) == nil {
         #if canImport(Glibc)
-        let count = Glibc.recv(fd, &buffer, buffer.count, 0)
+        let length = Glibc.recv(fd, &buffer, buffer.count, 0)
         #else
-        let count = Darwin.recv(fd, &buffer, buffer.count, 0)
+        let length = Darwin.recv(fd, &buffer, buffer.count, 0)
         #endif
-        guard count > 0 else { return }
-        if !untilClosed { received.append(contentsOf: buffer[0..<count]) }
+        guard length > 0 else { return }
+        if !untilClosed { received.append(contentsOf: buffer[0..<length]) }
     }
 }
 
@@ -216,12 +216,12 @@ private func sendAll(_ fd: Int32, _ data: Data) {
         var sent = 0
         while sent < bytes.count {
             #if canImport(Glibc)
-            let count = Glibc.send(fd, base + sent, bytes.count - sent, flags)
+            let written = Glibc.send(fd, base + sent, bytes.count - sent, flags)
             #else
-            let count = Darwin.send(fd, base + sent, bytes.count - sent, flags)
+            let written = Darwin.send(fd, base + sent, bytes.count - sent, flags)
             #endif
-            guard count > 0 else { return }
-            sent += count
+            guard written > 0 else { return }
+            sent += written
         }
     }
 }
