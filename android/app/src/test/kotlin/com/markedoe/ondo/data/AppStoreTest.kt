@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -33,6 +34,28 @@ class AppStoreTest {
         assertTrue(folder.root.resolve("library.json.corrupt-7").exists())
         store.saveLibrary(LibraryState())
         assertEquals("not json", folder.root.resolve("library.json.corrupt-7").readText())
+    }
+
+    /** A deleted playlist leaves nothing behind: no previous version or damaged copy with its login, no imported file. */
+    @Test
+    fun aDeletedPlaylistLeavesNothingBehind() {
+        val store = AppStore(folder.root.resolve("ondo"), now = { 9L })
+        val imported = store.imports.apply { mkdirs() }.resolve("list.m3u").apply { writeText("#EXTM3U") }
+        val elsewhere = folder.root.resolve("elsewhere.m3u").apply { writeText("#EXTM3U") }
+        val local = SavedPlaylist(id = "local", name = "Local", url = imported.toURI().toString(), password = "made-up")
+        val outside = SavedPlaylist(id = "outside", name = "Outside", url = elsewhere.toURI().toString())
+        store.savePlaylists(listOf(local, outside, playlist("kept")))
+        store.savePlaylists(listOf(local, outside, playlist("kept")))
+        folder.root.resolve("ondo/playlists.json.corrupt-1").writeText("[{\"password\":\"made-up\"}]")
+
+        store.savePlaylists(listOf(outside, playlist("kept")), removed = local)
+        store.savePlaylists(listOf(playlist("kept")), removed = outside)
+
+        assertEquals(listOf(playlist("kept")), store.loadPlaylists())
+        assertFalse(folder.root.resolve("ondo/playlists.json.bak").exists())
+        assertFalse(folder.root.resolve("ondo/playlists.json.corrupt-1").exists())
+        assertFalse(imported.exists())
+        assertTrue("only files Ondo imported are deleted", elsewhere.exists())
     }
 
     /** Settings written by an older version, before the buffer settings: they load, buffers on automatic. */

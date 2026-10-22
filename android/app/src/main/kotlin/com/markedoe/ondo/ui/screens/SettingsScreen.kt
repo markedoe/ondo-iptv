@@ -56,6 +56,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.ui.theme.Appearance
@@ -142,10 +143,12 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     headlineContent = { Text(stringResource(R.string.adult_categories)) },
                     supportingContent = { Text(stringResource(R.string.adult_categories_hint)) },
                     trailingContent = {
+                        val label = stringResource(R.string.adult_categories)
                         Switch(
                             checked = state.showAdultCategories,
                             onCheckedChange = actions.onShowAdultCategories,
-                            modifier = Modifier.testTag("adultSwitch"),
+                            // TalkBack reaches the switch on its own: it says what it turns on.
+                            modifier = Modifier.testTag("adultSwitch").semantics { contentDescription = label },
                         )
                     },
                 )
@@ -155,7 +158,12 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     headlineContent = { Text(stringResource(R.string.update_awards)) },
                     supportingContent = { Text(stringResource(R.string.update_awards_hint)) },
                     trailingContent = {
-                        Switch(checked = state.updateAwards, onCheckedChange = actions.onUpdateAwards, modifier = Modifier.testTag("awardsSwitch"))
+                        val label = stringResource(R.string.update_awards)
+                        Switch(
+                            checked = state.updateAwards,
+                            onCheckedChange = actions.onUpdateAwards,
+                            modifier = Modifier.testTag("awardsSwitch").semantics { contentDescription = label },
+                        )
                     },
                 )
             }

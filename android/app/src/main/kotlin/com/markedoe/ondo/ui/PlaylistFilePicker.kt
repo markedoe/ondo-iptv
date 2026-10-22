@@ -49,6 +49,7 @@ private suspend fun importPlaylist(context: Context, uri: Uri): PickedFile? = wi
         val name = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) cursor.getString(0) else null
         }
+        // AppStore.imports: deleting the playlist deletes its copy.
         val folder = File(context.filesDir, "imports").apply { mkdirs() }
         val target = File(folder, "${UUID.randomUUID()}.m3u")
         context.contentResolver.openInputStream(uri)?.use { input -> target.outputStream().use { input.copyTo(it) } } ?: return@runCatching null

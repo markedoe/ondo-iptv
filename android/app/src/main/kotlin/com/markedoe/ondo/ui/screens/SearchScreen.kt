@@ -55,6 +55,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
@@ -305,11 +307,13 @@ private fun SearchFiltersSheet(state: SearchUiState, onFilters: (SearchFilters) 
             ListItem(
                 headlineContent = { Text(stringResource(R.string.winners_only)) },
                 trailingContent = {
+                    val label = stringResource(R.string.winners_only)
                     Switch(
                         checked = filters.winnersOnly,
                         onCheckedChange = { onFilters(filters.copy(winnersOnly = it)) },
                         enabled = filters.awardGroup != null,
-                        modifier = Modifier.testTag("filterWinners"),
+                        // TalkBack reaches the switch on its own: it says what it keeps.
+                        modifier = Modifier.testTag("filterWinners").semantics { contentDescription = label },
                     )
                 },
             )

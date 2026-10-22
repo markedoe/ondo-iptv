@@ -107,6 +107,32 @@ class PlayerRemoteTest {
         banner("No channel 9")
     }
 
+    /** Holding CH+ changes channel once: each change builds a new player. */
+    @Test
+    fun aHeldChannelKeyChangesChannelOnce() {
+        launchChannel()
+        scenario.onActivity { activity ->
+            val down = KeyEvent(0L, 0L, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_CHANNEL_UP, 0)
+            activity.dispatchKeyEvent(down)
+            (1..5).forEach { activity.dispatchKeyEvent(KeyEvent.changeTimeRepeat(down, it * 50L, it)) }
+            activity.dispatchKeyEvent(KeyEvent(0L, 300L, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_CHANNEL_UP, 0))
+        }
+        compose.waitForIdle()
+        banner("2  World Report")
+    }
+
+    /** Recreated (the app stopped in the background, a setting changed): the channel zapped to stays. */
+    @Test
+    fun theChannelZappedToSurvivesARecreation() {
+        launchChannel()
+        press(KeyEvent.KEYCODE_CHANNEL_UP)
+        banner("2  World Report")
+        scenario.recreate()
+        compose.waitForIdle()
+        press(KeyEvent.KEYCODE_CHANNEL_UP)
+        banner("3  Stadium One")
+    }
+
     @Test
     fun onAMovieAnArrowShowsTheControlsAndBackHidesThemBeforeLeaving() {
         launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))

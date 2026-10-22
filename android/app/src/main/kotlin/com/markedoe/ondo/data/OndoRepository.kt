@@ -173,7 +173,17 @@ class OndoRepository(
             addedAt = now(),
         )
         _state.update { it.copy(isLoading = true, error = null) }
-        return loadCatching { withContext(io) { loader().load(saved.toCorePlaylist()) } }
+        return try {
+            add(saved)
+        } catch (cancelled: CancellationException) {
+            // Left before it loaded (Back on Welcome closes the screen and its scope): the buttons come back.
+            _state.update { it.copy(isLoading = false) }
+            throw cancelled
+        }
+    }
+
+    private suspend fun add(saved: SavedPlaylist): Result<Unit> =
+        loadCatching { withContext(io) { loader().load(saved.toCorePlaylist()) } }
             .map { content ->
                 val playlists = _state.value.playlists + saved
                 val settings = _state.value.settings.copy(activePlaylistId = saved.id)
@@ -189,7 +199,6 @@ class OndoRepository(
                 loadGuide(saved, content)
             }
             .onFailure { error -> _state.update { it.copy(isLoading = false, error = LoadError.of(error)) } }
-    }
 
     fun activate(id: String) {
         val playlist = _state.value.playlists.firstOrNull { it.id == id } ?: return
@@ -208,12 +217,13 @@ class OndoRepository(
     }
 
     fun delete(id: String) {
+        val removed = _state.value.playlists.firstOrNull { it.id == id } ?: return
         val playlists = _state.value.playlists.filterNot { it.id == id }
         _state.value.library.reminders.filter { it.playlistId == id }.forEach(reminderScheduler::cancel)
         val library = _state.value.library.removingPlaylist(id)
         val settings = _state.value.settings.let { if (it.activePlaylistId == id) it.copy(activePlaylistId = playlists.firstOrNull()?.id) else it }
         persist {
-            savePlaylists(playlists)
+            savePlaylists(playlists, removed)
             saveLibrary(library)
             saveSettings(settings)
             deleteContent(id)
@@ -240,9 +250,13 @@ class OndoRepository(
 
     fun setVodBuffer(seconds: Int) = updateSettings { it.copy(vodBuffer = seconds) }
 
-    fun setCategoryHidden(categoryId: String, hidden: Boolean) {
+    fun setCategoryHidden(categoryId: String, hidden: Boolean) = setCategoriesHidden(listOf(categoryId), hidden)
+
+    /** Hide all / Show all: one change, one save of the library. */
+    fun setCategoriesHidden(categoryIds: Collection<String>, hidden: Boolean) {
         val playlistId = _state.value.activePlaylistId ?: return
-        updateLibrary { it.settingCategoryHidden(playlistId, categoryId, hidden) }
+        if (categoryIds.isEmpty()) return
+        updateLibrary { it.settingCategoriesHidden(playlistId, categoryIds, hidden) }
     }
 
     /** A choice about tags answers the "show only your languages?" suggestion too. */

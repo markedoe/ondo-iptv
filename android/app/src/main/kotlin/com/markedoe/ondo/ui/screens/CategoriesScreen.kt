@@ -43,6 +43,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.CategoryStyles
 import com.markedoe.ondo.core.model.ContentType
@@ -97,7 +99,12 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                         headlineContent = { Text(tag.label) },
                         supportingContent = { Text(pluralStringResource(R.plurals.category_count, tag.count, tag.count)) },
                         trailingContent = {
-                            Switch(checked = !tag.hidden, onCheckedChange = { actions.onTag(tag.tag, !it) }, modifier = Modifier.testTag("tag-" + tag.tag))
+                            Switch(
+                                checked = !tag.hidden,
+                                onCheckedChange = { actions.onTag(tag.tag, !it) },
+                                // TalkBack reaches the switch on its own: it says what it shows.
+                                modifier = Modifier.testTag("tag-" + tag.tag).semantics { contentDescription = tag.label },
+                            )
                         },
                     )
                 }
@@ -118,7 +125,12 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                         headlineContent = { Text(styleName(style.style)) },
                         supportingContent = { Text(pluralStringResource(R.plurals.category_count, style.count, style.count)) },
                         trailingContent = {
-                            Switch(checked = !style.hidden, onCheckedChange = { actions.onWord(style.style, !it) }, modifier = Modifier.testTag("style-" + style.style))
+                            val name = styleName(style.style)
+                            Switch(
+                                checked = !style.hidden,
+                                onCheckedChange = { actions.onWord(style.style, !it) },
+                                modifier = Modifier.testTag("style-" + style.style).semantics { contentDescription = name },
+                            )
                         },
                     )
                 }
@@ -190,6 +202,7 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                             checked = !category.hidden,
                             onCheckedChange = { actions.onCategory(category.id, !it) },
                             enabled = category.hiddenWith == null,
+                            modifier = Modifier.semantics { contentDescription = category.name },
                         )
                     },
                 )

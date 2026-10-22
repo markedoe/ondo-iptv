@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.ui.theme.Appearance
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -80,6 +81,23 @@ class OndoRepositoryTest {
         assertEquals(listOf("Harbor"), state.content.series.map { it.name })
         assertFalse(state.isLoading)
         assertNull(state.error)
+    }
+
+    /** Back on Welcome while the demo loads cancels the add: the buttons must not stay disabled. */
+    @Test
+    fun aCancelledAddDoesNotLeaveTheAppLoading() = runTest {
+        val silent = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = awaitCancellation()
+        }
+        val repository = repository(silent)
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        val adding = launch { repository.addPlaylist("Home", list) }
+        repository.awaitState { it.isLoading }
+        adding.cancel()
+        adding.join()
+        assertFalse(repository.state.value.isLoading)
+        assertTrue(repository.state.value.playlists.isEmpty())
     }
 
     @Test

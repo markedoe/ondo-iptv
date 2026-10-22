@@ -91,9 +91,12 @@ data class LibraryState(
 ) {
     fun isCategoryHidden(playlistId: String, categoryId: String): Boolean = "$playlistId|$categoryId" in hiddenCategories
 
-    fun settingCategoryHidden(playlistId: String, categoryId: String, hidden: Boolean): LibraryState {
-        val key = "$playlistId|$categoryId"
-        return copy(hiddenCategories = if (hidden) hiddenCategories + key else hiddenCategories - key)
+    fun settingCategoryHidden(playlistId: String, categoryId: String, hidden: Boolean): LibraryState =
+        settingCategoriesHidden(playlistId, listOf(categoryId), hidden)
+
+    fun settingCategoriesHidden(playlistId: String, categoryIds: Collection<String>, hidden: Boolean): LibraryState {
+        val keys = categoryIds.mapTo(HashSet()) { "$playlistId|$it" }
+        return copy(hiddenCategories = if (hidden) hiddenCategories + keys else hiddenCategories - keys)
     }
 
     fun settingTagsHidden(tags: Collection<String>, hidden: Boolean): LibraryState =

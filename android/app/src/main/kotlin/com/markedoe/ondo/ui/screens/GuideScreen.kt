@@ -72,6 +72,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.EpgProgram
@@ -245,6 +247,8 @@ private fun ChannelCell(channel: Channel, width: androidx.compose.ui.unit.Dp, on
             .focusMemory("guide:${channel.id}")
             .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .clickable(onClick = onClick)
+            // A narrow cell shows the logo only: TalkBack still says the channel.
+            .then(if (width > 120.dp) Modifier else Modifier.semantics { contentDescription = channel.name })
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -300,7 +304,11 @@ private fun Programmes(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         if ("${row.channel.id}|${program.start}" in state.reminders) {
-                            Icon(Icons.Rounded.NotificationsActive, contentDescription = null, modifier = Modifier.size(12.dp).padding(end = 2.dp))
+                            Icon(
+                                Icons.Rounded.NotificationsActive,
+                                contentDescription = stringResource(R.string.reminder_set),
+                                modifier = Modifier.size(12.dp).padding(end = 2.dp),
+                            )
                         }
                         Text(program.title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }

@@ -126,6 +126,7 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var request: PlayRequest
     private var urlIndex = 0
     private var errorMessage by mutableStateOf<String?>(null)
+    private val liveReopening = LiveReopening()
     private var shownReport by mutableStateOf<String?>(null)
     private lateinit var reporter: PlaybackReporter
     private var inPictureInPicture by mutableStateOf(false)
@@ -183,7 +184,9 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        request = requireNotNull(intent.playRequest()) { "PlayerActivity needs a play request" }
+        // Recreated (Android stopped the app in the background, or a setting changed): what played, from where it was.
+        request = savedInstanceState?.getString(EXTRA_REQUEST)?.let(::decodeRequest)
+            ?: requireNotNull(intent.playRequest()) { "PlayerActivity needs a play request" }
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
@@ -386,8 +389,11 @@ class PlayerActivity : ComponentActivity() {
 
                     override fun onPlaybackStateChanged(state: Int) {
                         reporter.playbackState(state, exoPlayer.playWhenReady)
-                        // The end of a movie or an episode: it counts as watched, back to the app.
-                        if (state == Player.STATE_ENDED && !request.isLive) {
+                        if (state != Player.STATE_ENDED) return
+                        if (request.isLive) {
+                            reopenLive()
+                        } else {
+                            // The end of a movie or an episode: it counts as watched, back to the app.
                             saveProgress(ended = true)
                             finish()
                         }
@@ -428,6 +434,7 @@ class PlayerActivity : ComponentActivity() {
     private fun play(index: Int, startMs: Long) {
         val url = request.urls.getOrNull(index) ?: return
         reporter.attempt(index, url)
+        liveReopening.reset()
         health.restart()
         val item = MediaItem.Builder()
             .setUri(url)
@@ -450,14 +457,22 @@ class PlayerActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         val next = intent.playRequest() ?: return
-        setIntent(intent)
         switchTo(next)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        val position = player?.takeIf { !request.isLive }?.currentPosition ?: 0
+        val current = if (position > 0) request.copy(startPositionMs = position) else request
+        outState.putString(EXTRA_REQUEST, Json.encodeToString(PlayRequest.serializer(), current))
     }
 
     /** Plays [next] instead of what plays now (the progress of the current one is saved first). */
     private fun switchTo(next: PlayRequest) {
         saveProgress()
         request = next
+        // The channel zapped to is the one to open again from the recent apps.
+        setIntent(PlayerActivity.intent(this, next))
         urlIndex = 0
         errorMessage = null
         shownReport = null
@@ -492,6 +507,9 @@ class PlayerActivity : ComponentActivity() {
         val changesChannel = action is RemoteAction.Digit || action == RemoteAction.NextChannel ||
             action == RemoteAction.PreviousChannel || action == RemoteAction.LastChannel
         if (errorMessage != null && !changesChannel) return false
+        // A key held down repeats: seeking goes on, the rest happens once per press (each channel builds a new player).
+        val seeks = action == RemoteAction.SeekBack || action == RemoteAction.SeekForward
+        if (event.repeatCount > 0 && !seeks) return true
         when (action) {
             RemoteAction.TogglePlay -> {
                 Util.handlePlayPauseButtonAction(exoPlayer)
@@ -577,6 +595,20 @@ class PlayerActivity : ComponentActivity() {
         reporter.retry()
         urlIndex = 0
         play(0, if (request.isLive) 0 else player?.currentPosition ?: 0)
+    }
+
+    /** A live stream has no end: its server closed the connection ([LiveReopening]). */
+    private fun reopenLive() {
+        if (!liveReopening.reopens(SystemClock.elapsedRealtime())) {
+            reporter.note("live stream ended again: error shown")
+            errorMessage = getString(R.string.error_generic)
+            return
+        }
+        reporter.note("live stream ended: opened again")
+        player?.apply {
+            seekToDefaultPosition()
+            prepare()
+        }
     }
 
     private fun handleError(error: PlaybackException) {
@@ -848,7 +880,8 @@ class PlayerActivity : ComponentActivity() {
         fun intent(context: Context, request: PlayRequest): Intent =
             Intent(context, PlayerActivity::class.java).putExtra(EXTRA_REQUEST, Json.encodeToString(PlayRequest.serializer(), request))
 
-        private fun Intent.playRequest(): PlayRequest? =
-            getStringExtra(EXTRA_REQUEST)?.let { runCatching { Json.decodeFromString(PlayRequest.serializer(), it) }.getOrNull() }
+        private fun Intent.playRequest(): PlayRequest? = getStringExtra(EXTRA_REQUEST)?.let(::decodeRequest)
+
+        private fun decodeRequest(json: String): PlayRequest? = runCatching { Json.decodeFromString(PlayRequest.serializer(), json) }.getOrNull()
     }
 }

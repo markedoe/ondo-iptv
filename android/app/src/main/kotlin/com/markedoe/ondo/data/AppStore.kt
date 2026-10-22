@@ -3,6 +3,7 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.model.PlaylistContent
 import java.io.File
 import java.io.FileOutputStream
+import java.net.URI
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.ExperimentalSerializationApi
@@ -34,6 +35,23 @@ class AppStore(private val directory: File, private val now: () -> Long = System
     fun loadPlaylists(): List<SavedPlaylist> = read("playlists.json", ListSerializer(SavedPlaylist.serializer())) ?: emptyList()
     fun savePlaylists(playlists: List<SavedPlaylist>) =
         write("playlists.json", ListSerializer(SavedPlaylist.serializer()), playlists, keepPrevious = true)
+
+    /**
+     * Saves [playlists] once [removed] was deleted, leaving nothing of it behind: no previous version or damaged copy
+     * still holding its login, and not the copy of the file it was imported from.
+     */
+    fun savePlaylists(playlists: List<SavedPlaylist>, removed: SavedPlaylist) {
+        write("playlists.json", ListSerializer(SavedPlaylist.serializer()), playlists, keepPrevious = false)
+        File(directory, "playlists.json.bak").delete()
+        directory.listFiles { file -> file.name.startsWith("playlists.json.corrupt-") }?.forEach(File::delete)
+        importedFile(removed.url)?.delete()
+    }
+
+    /** Where playlist files chosen on the device are copied (`ui/PlaylistFilePicker.kt`), next to this folder. */
+    val imports: File get() = File(directory.absoluteFile.parentFile, "imports")
+
+    private fun importedFile(url: String): File? =
+        runCatching { File(URI(url)) }.getOrNull()?.takeIf { it.canonicalFile.parentFile == imports.canonicalFile }
 
     fun loadLibrary(): LibraryState = read("library.json", LibraryState.serializer()) ?: LibraryState()
     fun saveLibrary(library: LibraryState) = write("library.json", LibraryState.serializer(), library, keepPrevious = true)

@@ -10,6 +10,17 @@ class LibraryStateTest {
     private fun entry(itemId: String, kind: ItemKind = ItemKind.MOVIE, episodeId: String? = null, at: Long = 0, playlistId: String = "p1") =
         WatchEntry(playlistId, kind, itemId, episodeId, title = itemId, lastWatchedAt = at)
 
+    /** Hide all / Show all: every category of the playlist at once, the other playlists untouched. */
+    @Test
+    fun categoriesHideAndShowTogether() {
+        val hidden = LibraryState().settingCategoryHidden("p2", "a", hidden = true).settingCategoriesHidden("p1", listOf("a", "b", "c"), hidden = true)
+        assertTrue(listOf("a", "b", "c").all { hidden.isCategoryHidden("p1", it) })
+        val shown = hidden.settingCategoriesHidden("p1", listOf("a", "b"), hidden = false)
+        assertFalse(shown.isCategoryHidden("p1", "a"))
+        assertTrue(shown.isCategoryHidden("p1", "c"))
+        assertTrue(shown.isCategoryHidden("p2", "a"))
+    }
+
     @Test
     fun favouritesToggleAndStayPerPlaylist() {
         val favorite = Favorite("p1", ItemKind.MOVIE, "m1", "Movie", addedAt = 1)
