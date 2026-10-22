@@ -145,10 +145,9 @@ object CatchupUrlBuilder {
     /**
      * Replaces catch-up template tokens:
      * `{utc}` `{start}` `${start}` start (unix) · `{utcend}` `{end}` `${end}` end · `{lutc}` `{now}` `${now}`
-     * `{timestamp}` now · `{duration}` seconds · `{duration:60}` minutes · `{offset}` / `{offset:60}` now - start ·
-     * `{Y}` `{m}` `{d}` `{H}` `{M}` `{S}` start components (UTC) · `{utc:Y-m-d:H-M}` `{end:YmdHMS}` formatted.
-     * Unknown tokens are left as they are. Token names are letters only (as in the Swift app), so
-     * `{timestamp_start}` is not a token.
+     * `{timestamp}` now · `{timestamp_start}` start · `{duration}` seconds · `{duration:60}` minutes ·
+     * `{offset}` / `{offset:60}` now - start · `{Y}` `{m}` `{d}` `{H}` `{M}` `{S}` start components (UTC) ·
+     * `{utc:Y-m-d:H-M}` `{end:YmdHMS}` formatted. Unknown tokens are left as they are.
      */
     fun fill(template: String, start: Long, end: Long, now: Long): String {
         val startTs = start / 1000
