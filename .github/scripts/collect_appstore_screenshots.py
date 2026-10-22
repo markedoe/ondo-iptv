@@ -3,7 +3,9 @@
 deliver detects the device from the image size, so files only need a sortable name. iPad captures
 are taken in landscape but XCTest stores them in the device's portrait pixel orientation: they are
 turned upright with `sips`. Mac window captures are scaled (and padded if needed) to the largest size
-the App Store accepts (2880×1800, 2560×1600, 1440×900 or 1280×800)."""
+the App Store accepts (2880×1800, 2560×1600, 1440×900 or 1280×800). Every PNG then loses its metadata
+(png_metadata.py): the capture's orientation tag would have the App Store, GitHub and browsers turn an
+upright iPad screen sideways again."""
 import json
 import pathlib
 import re
@@ -11,6 +13,8 @@ import shutil
 import struct
 import subprocess
 import sys
+
+import png_metadata
 
 
 MAC_SIZES = [(2880, 1800), (2560, 1600), (1440, 900), (1280, 800)]
@@ -87,4 +91,6 @@ for test in manifest:
             width, height = size(out)
             if width < height:
                 subprocess.run(["sips", "--rotate", "270", str(out)], check=True, stdout=subprocess.DEVNULL)
+        if out.suffix == ".png":
+            png_metadata.strip(out)
         print("screenshot:", out, size(out) if out.suffix == ".png" else "")

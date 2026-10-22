@@ -212,12 +212,33 @@ def status(client: Client):
         print(f"asset {attributes.get('referenceName')}: {attributes.get('state')} spec {attributes.get('specId')}")
     if not images:
         print("no creative asset in the library")
+    if versions:
+        listing_ipad_screenshots(client, versions[0])
     for version in versions[:3]:
         for localization in client.all(f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations",
                                        query={"fields[appStoreVersionLocalizations]": "locale"}):
             placements = client.all(f"/v1/appStoreVersionLocalizations/{localization['id']}/placements")
             slots = [p["attributes"].get("placementType") for p in placements if p["attributes"].get("placementType") in SLOTS.values()]
             print(f"iOS {version['attributes']['versionString']} {localization['attributes']['locale']}: {slots or 'no header or search results asset'}")
+
+
+def listing_ipad_screenshots(client: Client, version: dict):
+    """The iPad screenshots of the listing as App Store Connect stored them: landscape captures must come out
+    landscape (an orientation tag left in a file once turned them sideways)."""
+    for localization in client.all(f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations",
+                                   query={"fields[appStoreVersionLocalizations]": "locale"}):
+        for screenshot_set in client.all(f"/v1/appStoreVersionLocalizations/{localization['id']}/appScreenshotSets"):
+            display = screenshot_set["attributes"].get("screenshotDisplayType", "")
+            if "IPAD" not in display:
+                continue
+            for shot in client.all(f"/v1/appScreenshotSets/{screenshot_set['id']}/appScreenshots"):
+                attributes = shot["attributes"]
+                asset = attributes.get("imageAsset") or {}
+                width, height = asset.get("width"), asset.get("height")
+                shape = "landscape" if width and height and width > height else "PORTRAIT"
+                preview = (asset.get("templateUrl") or "").replace("{w}", "800").replace("{h}", "600").replace("{f}", "png")
+                print(f"listing {localization['attributes']['locale']} {display} {attributes.get('fileName')}: "
+                      f"{width}×{height} {shape} {preview}")
 
 
 def upload_file(client: Client, library: str, path: Path, name: str) -> dict:
