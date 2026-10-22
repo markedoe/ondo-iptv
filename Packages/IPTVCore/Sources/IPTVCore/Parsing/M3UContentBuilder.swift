@@ -13,15 +13,18 @@ public enum M3UContentBuilder {
         var seriesByKey: [String: Series] = [:]
         var seriesOrder: [String] = []
         var usedIDs = Set<String>()
+        /// The next suffix to try per base id: many entries with one address stay linear.
+        var nextSuffix: [String: Int] = [:]
         var normalizedSeriesNames: [String: String] = [:]
 
         func uniqueID(_ base: String) -> String {
-            var candidate = base
-            var counter = 1
+            var counter = nextSuffix[base] ?? 1
+            var candidate = counter == 1 ? base : "\(base)-\(counter)"
             while !usedIDs.insert(candidate).inserted {
                 counter += 1
                 candidate = "\(base)-\(counter)"
             }
+            nextSuffix[base] = counter + 1
             return candidate
         }
 

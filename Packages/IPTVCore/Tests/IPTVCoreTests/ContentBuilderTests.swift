@@ -70,6 +70,18 @@ final class ContentBuilderTests: XCTestCase {
         XCTAssertEqual(Set(episodes.map(\.id)).count, 2, "progress is kept per episode")
     }
 
+    /// Thousands of channels on one address: numbered in order, without retrying every number taken before.
+    func testManyChannelsSharingAURL() throws {
+        let m3u = "#EXTM3U\n" + String(repeating: "#EXTINF:-1 group-title=\"News\",TV\nhttp://example.com/live.ts\n", count: 20_000)
+        let started = Date()
+        let channels = try PlaylistLoader(http: MockHTTPClient(), localFileURL: { URL(fileURLWithPath: $0) }).parse(Data(m3u.utf8)).channels
+        XCTAssertLessThan(Date().timeIntervalSince(started), 10)
+        let base = channels[0].id
+        XCTAssertEqual(channels.prefix(3).map(\.id), [base, base + "-2", base + "-3"])
+        XCTAssertEqual(channels.last?.id, base + "-20000")
+        XCTAssertEqual(Set(channels.map(\.id)).count, 20_000)
+    }
+
     func testCatchupAttributes() throws {
         let channels = try content().channels
         XCTAssertEqual(channels[0].catchup, CatchupInfo(mode: .shift, days: 2), "header defaults apply")
