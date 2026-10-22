@@ -74,8 +74,14 @@ class ContentClassifier {
                     break
                 }
             }
+            // Start at the path: the host's name is not an extension ("http://example.com" has none).
+            var pathStart = -1
+            val colon = url.indexOf(':')
+            if (colon in 0 until end - 2 && url[colon + 1] == '/' && url[colon + 2] == '/') {
+                pathStart = url.indexOf('/', colon + 3).takeIf { it in 0 until end } ?: return ""
+            }
             var index = end - 1
-            while (index >= 0) {
+            while (index > pathStart) {
                 val c = url[index]
                 if (c == '.') {
                     val length = end - index - 1

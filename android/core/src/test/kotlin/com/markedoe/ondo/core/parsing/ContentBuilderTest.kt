@@ -183,6 +183,32 @@ class ContentBuilderTest {
     }
 
     @Test
+    fun aJsonListWithAStrayValueKeepsItsChannels() {
+        val array = """[{"name":"One","url":"http://stream.example.com/1.m3u8"},null,"junk",{"name":"Two","url":"http://stream.example.com/2.m3u8"}]"""
+        assertEquals(listOf("One", "Two"), JsonPlaylistParser.parse(array.encodeToByteArray()).entries.map { it.title })
+        val wrapped = """{"channels":[7,{"name":"One","url":"http://stream.example.com/1.m3u8"}]}"""
+        assertEquals(listOf("One"), JsonPlaylistParser.parse(wrapped.encodeToByteArray()).entries.map { it.title })
+    }
+
+    @Test
+    fun aJsonPlaylistStartingWithAByteOrderMarkIsRead() {
+        val bom = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
+        assertEquals(listOf("JSON One"), loader.parse(bom + Fixtures.bytes("sample.json")).channels.map { it.name })
+    }
+
+    @Test
+    fun fileExtensionComesFromThePathNeverTheHost() {
+        assertEquals("", ContentClassifier.fileExtension("http://stream.example.com"))
+        assertEquals("", ContentClassifier.fileExtension("http://stream.example.com?id=1.2"))
+        assertEquals("", ContentClassifier.fileExtension("http://stream.example.tv/"))
+        assertEquals("ts", ContentClassifier.fileExtension("http://stream.example.com:8080/live/1.TS?token=a.b"))
+        assertEquals("mkv", ContentClassifier.fileExtension("http://stream.example.com/films/dust-road.mkv#t=10"))
+        assertEquals("mp4", ContentClassifier.fileExtension("file:///videos/clip.mp4"))
+        assertEquals("", ContentClassifier.fileExtension("http://stream.example.com/stream"))
+        assertEquals("mkv", ContentClassifier.fileExtension("/videos/clip.mkv"), "a path without a scheme")
+    }
+
+    @Test
     fun plainListAndGzippedPlaylists() {
         val plain = loader.parse("http://a.example.com/1.m3u8\n# comment\n\nhttp://a.example.com/2.m3u8\n".encodeToByteArray())
         assertEquals(listOf("1.m3u8", "2.m3u8"), plain.channels.map { it.name })

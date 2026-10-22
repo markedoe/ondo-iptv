@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.parsing
 
+import com.markedoe.ondo.core.decodeToStringWithoutBom
 import com.markedoe.ondo.core.model.HttpHeaders
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.nonEmptyLines
@@ -109,14 +110,15 @@ object XspfParser {
 object JsonPlaylistParser {
     fun parse(bytes: ByteArray): M3uPlaylist {
         val root = try {
-            Json.parseToJsonElement(bytes.decodeToString())
+            Json.parseToJsonElement(bytes.decodeToStringWithoutBom())
         } catch (_: IllegalArgumentException) {
             return M3uPlaylist(emptyMap(), emptyList())
         }
+        // Objects of the list; a stray `null` or string among them is skipped rather than failing the whole list.
         val items: List<JsonObject> = when (root) {
-            is JsonArray -> objects(root).orEmpty()
+            is JsonArray -> root.filterIsInstance<JsonObject>()
             is JsonObject -> listOf("channels", "items", "streams", "playlist", "data", "list")
-                .firstNotNullOfOrNull { key -> (root[key] as? JsonArray)?.let(::objects) }
+                .firstNotNullOfOrNull { key -> (root[key] as? JsonArray)?.filterIsInstance<JsonObject>() }
                 .orEmpty()
             else -> emptyList()
         }
@@ -140,10 +142,6 @@ object JsonPlaylistParser {
         }
         return M3uPlaylist(emptyMap(), entries)
     }
-
-    /** The array when every element is an object (`as? [[String: Any]]`). */
-    private fun objects(array: JsonArray): List<JsonObject>? =
-        if (array.all { it is JsonObject }) array.map { it as JsonObject } else null
 
     /** First non-empty string, or number / boolean rendered as text, among `keys`. */
     private fun string(item: JsonObject, vararg keys: String): String? {
