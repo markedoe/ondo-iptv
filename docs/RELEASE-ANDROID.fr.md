@@ -79,8 +79,8 @@ par git et refusés par le garde anti-fuite (`.claude/hooks/leak_guard.py`).
 
 ## D. Fiche et déclarations (Play Console → *Surveiller et améliorer* / *Règles et programmes*)
 
-La fiche (titre, descriptions, icône, image de présentation, captures téléphone et tablettes en anglais
-et en français ; l'app elle-même est en sept langues, voir le README) est envoyée par fastlane depuis
+La fiche (titre, descriptions, icône, image de présentation, captures téléphone, tablettes et TV, bannière TV,
+en anglais et en français ; l'app elle-même est en sept langues, voir le README) est envoyée par fastlane depuis
 `fastlane/metadata-android/` ; les captures sont produites
 par les tests Roborazzi à chaque release. Les notes de version,
 `fastlane/metadata-android/en-US/changelogs/default.txt` et `fr-FR/changelogs/default.txt` (500 caractères au
@@ -182,7 +182,9 @@ Seule la piste `internal` peut être déployée directement (statut `completed`,
 ### E3. Production
 
 *Production → Créer une version* (ou workflow avec la piste `production` : la version est créée en
-brouillon, à vérifier et envoyer en examen dans la console). Les builds des pistes de test (interne, fermée,
+brouillon, à vérifier et envoyer en examen dans la console). Lancez ce workflow depuis le tag `android-vX.Y.Z`
+de la version, choisi dans *Use workflow from → Tags* : le workflow refuse `production` depuis une branche, dont
+le bundle garderait le `versionName` par défaut. Les builds des pistes de test (interne, fermée,
 ouverte) affichent un badge *Bêta* sur l'accueil et à côté de la version dans les réglages ; un build fait pour
 la piste `production` ne l'a pas. Publiez donc la production avec un bundle construit pour elle (le workflow
 avec la piste `production`), pas en promouvant une version de test, qui garderait son badge. Choisissez les pays, puis *Envoyer pour
@@ -233,4 +235,4 @@ description nomme Android TV, comme Google le demande.
 | Workflow | Quand | Ce qu'il fait |
 |---|---|---|
 | *Android* | push sur `main` et pull requests touchant `android/`, `fastlane/metadata-android/` ou le workflow ; manuel | tests du cœur Kotlin, tests unitaires et Compose (Robolectric), captures Roborazzi (publiées sur la branche `android-screenshots` après un push sur `main`), lint (`lintRelease`), APK de debug et bundle de release (artefact **android-builds**), longueurs de la fiche Google Play (titre 30, description courte 80, description complète 4000, notes de version 500 caractères) |
-| *Release Android* | tag `android-v*` ou manuel | vérifie que les cinq secrets sont définis et que la playlist de démonstration répond, tests, captures copiées dans la fiche, bundle signé avec la clé d'importation (badge *Bêta* sauf pour `production`), artefact **ondo-release-bundle**, envoi sur Google Play avec la fiche et les notes de version |
+| *Release Android* | tag `android-v*` ou manuel | refuse `production` hors d'un tag `android-v*`, vérifie que les cinq secrets sont définis et que la playlist de démonstration répond, tests, captures copiées dans la fiche, bundle signé avec la clé d'importation (badge *Bêta* sauf pour `production`), artefact **ondo-release-bundle**, envoi sur Google Play avec la fiche et les notes de version |

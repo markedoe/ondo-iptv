@@ -78,8 +78,8 @@ and rejected by the leak guard (`.claude/hooks/leak_guard.py`).
 
 ## D. Store listing and declarations (Play Console → *Monitor and improve* / *Policy and programs*)
 
-The store listing (title, descriptions, icon, feature graphic, phone and tablet screenshots in English and
-French; the app itself is in seven languages, see the README) is uploaded by fastlane from
+The store listing (title, descriptions, icon, feature graphic, phone, tablet and TV screenshots, TV banner, in
+English and French; the app itself is in seven languages, see the README) is uploaded by fastlane from
 `fastlane/metadata-android/`; the screenshots are produced by the
 Roborazzi tests on every release. The release notes, `fastlane/metadata-android/en-US/changelogs/default.txt`
 and `fr-FR/changelogs/default.txt` (500 characters at most, checked by the *Android* workflow), are sent with
@@ -174,7 +174,9 @@ The workflow also publishes to this track: *Run workflow* with the `alpha` track
 ### E3. Production
 
 *Production → Create new release* (or the workflow with the `production` track: the release is created as
-a draft, to check and send for review in the console). Builds for the test tracks (internal, closed, open)
+a draft, to check and send for review in the console). Start that run from the version's `android-vX.Y.Z` tag,
+chosen in *Use workflow from → Tags*: the workflow refuses `production` from a branch, whose bundle would keep
+the default `versionName`. Builds for the test tracks (internal, closed, open)
 show a *Beta* badge on Home and next to the version in Settings; a build made for the `production` track does
 not. So publish production from a bundle built for it (the workflow with the `production` track), not by
 promoting a test release, which would keep its badge. Choose the countries, then *Send changes for
@@ -221,4 +223,4 @@ and the description names Android TV, as Google asks.
 | Workflow | When | What it does |
 |---|---|---|
 | *Android* | pushes to `main` and pull requests touching `android/`, `fastlane/metadata-android/` or the workflow; manual | Kotlin core tests, unit and Compose tests (Robolectric), Roborazzi screenshots (published to the `android-screenshots` branch after a push to `main`), lint (`lintRelease`), debug APK and release bundle (**android-builds** artifact), Google Play listing lengths (title 30, short description 80, full description 4000, release notes 500 characters) |
-| *Release Android* | `android-v*` tag or manual | checks that the five secrets are set and that the demo playlist answers, tests, screenshots copied into the store listing, bundle signed with the upload key (*Beta* badge except for `production`), **ondo-release-bundle** artifact, upload to Google Play with the store listing and release notes |
+| *Release Android* | `android-v*` tag or manual | refuses `production` outside an `android-v*` tag, checks that the five secrets are set and that the demo playlist answers, tests, screenshots copied into the store listing, bundle signed with the upload key (*Beta* badge except for `production`), **ondo-release-bundle** artifact, upload to Google Play with the store listing and release notes |

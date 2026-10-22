@@ -37,6 +37,15 @@ jobs:
       TRACK: ${{ github.event.inputs.track || 'internal' }}
       RELEASE_STATUS: ${{ github.event.inputs.status || 'completed' }}
     steps:
+      - name: Production comes from a version tag
+        # From a branch, or another tag, the bundle would keep the default versionName of
+        # android/app/build.gradle.kts.
+        if: env.TRACK == 'production'
+        run: |
+          if [ "$GITHUB_REF_TYPE" != tag ] || [[ "$GITHUB_REF_NAME" != android-v* ]]; then
+            echo "::error::The production track is published from an android-vX.Y.Z tag: choose it in Use workflow from → Tags (this run is on the $GITHUB_REF_TYPE $GITHUB_REF_NAME)."
+            exit 1
+          fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
