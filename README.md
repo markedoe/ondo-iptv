@@ -2,6 +2,8 @@
 
 **English** · [Français](README.fr.md)
 
+[![CI](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml) [![Android](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml) [![Security](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 IPTV player for **iPhone / iPad**, **macOS** and **Android** (movies, series and live TV), native on each
 platform (Swift / SwiftUI, Kotlin / Jetpack Compose). It runs on iOS / iPadOS 17, macOS 14 and Android 8.0
 (API 26) or later. Design and roadmap: [docs/PLAN.md](docs/PLAN.md), Android version:
@@ -13,6 +15,25 @@ platform (Swift / SwiftUI, Kotlin / Jetpack Compose). It runs on iOS / iPadOS 17
 > **Beta.** Ondo is still young: screens and features may change, and bugs are expected. The TestFlight edition
 > (iPhone, iPad, Mac) and the Google Play test builds show a *Beta* badge. Feedback and bug reports are welcome
 > in the [issues](https://github.com/markedoe/ondo-iptv/issues).
+
+## Screenshots
+
+The built-in demo playlist (fictional titles), taken by CI each time the interface changes.
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/appstore-screenshots/en-US/01-home-iphone-max.png" width="200" alt="Home on iPhone">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/appstore-screenshots/en-US/02-movie-iphone-max.png" width="200" alt="A movie page on iPhone">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/appstore-screenshots/en-US/03-series-iphone-max.png" width="200" alt="A series page on iPhone">
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/appstore-screenshots/en-US/01-home-ipad-13.png" width="410" alt="Home on iPad">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/appstore-screenshots/mac/en-US/01-home-mac.png" width="410" alt="Home on the Mac">
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/en-US/phoneScreenshots/01-home.png" width="200" alt="Home on Android">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/en-US/phoneScreenshots/02-movie.png" width="200" alt="A movie page on Android">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/en-US/phoneScreenshots/05-live.png" width="200" alt="Live TV on Android">
+</p>
 
 ## Features
 

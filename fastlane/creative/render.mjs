@@ -1,5 +1,7 @@
 // Renders the App Store header and search results assets (template.html) for each listing language, in
-// fastlane/creative/<locale>/: header.png (3840 × 1646, 21:9: PNG only) and search.jpg (3840 × 2560, 3:2).
+// fastlane/creative/<locale>/: header.png (3840 × 1646, 21:9: PNG only) and search.jpg (3840 × 2560, 3:2); and
+// the GitHub social preview, fastlane/creative/social.jpg (2560 × 1280, under GitHub's 1 MB; Settings → General →
+// Social preview).
 //
 //   git fetch origin appstore-screenshots && mkdir -p /tmp/shots && git archive FETCH_HEAD | tar -x -C /tmp/shots
 //   NODE_PATH="$(npm root -g)" node fastlane/creative/render.mjs /tmp/shots
@@ -56,6 +58,15 @@ try {
       console.log(file);
     }
   }
+  // English only: one card for every visitor.
+  const page = await browser.newPage({ viewport: { width: 2560, height: 1280 }, deviceScaleFactor: 1 });
+  const url = new URL("/template.html", origin);
+  url.search = new URLSearchParams({ kind: "social", locale: "en-US", shots: "/shots" }).toString();
+  await page.goto(url.href);
+  await page.waitForSelector("body[data-ready='1']");
+  await page.screenshot({ path: join(here, "social.jpg"), type: "jpeg", quality: 85 });
+  await page.close();
+  console.log(join(here, "social.jpg"));
 } finally {
   await browser.close();
   server.close();

@@ -1,8 +1,8 @@
 <!doctype html>
 <!--
-  The App Store product page header (21:9) and search results asset (3:2) for iOS and iPadOS 27, drawn from the
-  App Store screenshots. render.mjs opens this page once per asset and language:
-  template.html?kind=header|search&locale=en-US|fr-FR&shots=<folder of the appstore-screenshots branch>
+  The App Store product page header (21:9) and search results asset (3:2) for iOS and iPadOS 27, and the GitHub
+  social preview (2:1), drawn from the App Store screenshots. render.mjs opens this page once per asset and language:
+  template.html?kind=header|search|social&locale=en-US|fr-FR&shots=<folder of the appstore-screenshots branch>
   Key elements stay in the centre: the App Store shows its own icon, name and Get button around the header.
 -->
 <html>
@@ -61,14 +61,16 @@
     "en-US": ["Movies, series and live TV", "from your own playlist"],
     "fr-FR": ["Films, séries et TV en direct", "depuis votre playlist"],
   };
-  const size = kind === "header" ? [3840, 1646] : [3840, 2560];
+  const size = { header: [3840, 1646], search: [3840, 2560], social: [2560, 1280] }[kind];
   document.documentElement.style.width = size[0] + "px";
   document.documentElement.style.height = size[1] + "px";
 
   // Device sizes: the iPad screenshots are 2752 × 2064, the iPhone ones 1320 × 2868.
-  const layout = kind === "header"
-    ? { top: 250, tablet: 1880, phone: 600, phoneDrop: 230, spread: 1240 }
-    : { top: 830, tablet: 2240, phone: 720, phoneDrop: 260, spread: 1480 };
+  const layout = {
+    header: { top: 250, tablet: 1880, phone: 600, phoneDrop: 230, spread: 1240 },
+    search: { top: 830, tablet: 2240, phone: 720, phoneDrop: 260, spread: 1480 },
+    social: { top: 470, tablet: 1360, phone: 430, phoneDrop: 170, spread: 900 },
+  }[kind];
   const stage = document.getElementById("stage");
   stage.style.top = layout.top + "px";
 
@@ -103,6 +105,17 @@
     title.textContent = first;
     const accent = document.createElement("span");
     accent.textContent = second;
+    title.appendChild(accent);
+  } else if (kind === "social") {
+    // The repository's card on GitHub and in shared links: the name, then what it is.
+    const title = document.getElementById("title");
+    title.style.top = "90px";
+    title.style.fontSize = "190px";
+    title.textContent = "Ondo";
+    const accent = document.createElement("span");
+    accent.style.fontSize = "74px";
+    accent.style.marginTop = "18px";
+    accent.textContent = titles["en-US"].join(" ");
     title.appendChild(accent);
   }
 
