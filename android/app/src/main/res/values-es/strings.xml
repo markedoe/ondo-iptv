@@ -113,7 +113,7 @@
     <string name="categories_hint">Elige las categorías que se muestran, por idioma o país, o una por una.</string>
     <string name="filter_categories">Filtrar categorías</string>
     <string name="languages_and_countries">Idiomas y países</string>
-    <string name="tags_explanation">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. Ocultar un código oculta todas sus categorías, en todas las listas, incluidas las que se añadan más adelante.</string>
+    <string name="tags_explanation">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. Ocultar un código oculta todas sus categorías, en todas las playlists, incluidas las que se añadan más adelante.</string>
     <string name="show_all">Mostrar todas</string>
     <string name="hide_all">Ocultar todas</string>
     <string name="hidden_with">Oculta con %1$s</string>
@@ -132,25 +132,25 @@
         <item quantity="other">%d elementos</item>
     </plurals>
     <plurals name="tag_suggestion_message">
-        <item quantity="one">Esta lista tiene categorías para %1$d idioma o país. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Idiomas y categorías.</item>
-        <item quantity="many">Esta lista tiene categorías para %1$d idiomas y países. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Idiomas y categorías.</item>
-        <item quantity="other">Esta lista tiene categorías para %1$d idiomas y países. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Idiomas y categorías.</item>
+        <item quantity="one">Esta playlist tiene categorías para %1$d idioma o país. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Idiomas y categorías.</item>
+        <item quantity="many">Esta playlist tiene categorías para %1$d idiomas y países. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Idiomas y categorías.</item>
+        <item quantity="other">Esta playlist tiene categorías para %1$d idiomas y países. ¿Mantener %2$s y ocultar los demás? Puedes cambiarlo en cualquier momento en Ajustes, Idiomas y categorías.</item>
     </plurals>
     <string name="help">Ayuda</string>
-    <string name="help_playlists_title">Añadir una lista</string>
+    <string name="help_playlists_title">Añadir una playlist</string>
     <string name="help_playlists_body">Ondo es un reproductor: muestra las películas, series y canales de la suscripción que te da tu proveedor, y no ofrece ningún contenido propio.\n\nPara añadir tu suscripción, abre Ajustes (el engranaje de Inicio, o toca el nombre de la playlist en la parte superior de Inicio), Añadir una playlist: un enlace o un archivo M3U, o un acceso Xtream Codes (dirección del servidor, usuario y contraseña). Toca una playlist en Ajustes para cambiar a ella.</string>
     <string name="help_home_title">Inicio</string>
     <string name="help_home_body">En la parte superior de Inicio, toca el nombre de la playlist, que aparece con la hora de su última actualización, para abrir tus playlists en Ajustes; la lupa abre la búsqueda y el engranaje, Ajustes. Debajo, el carrusel muestra lo que estás viendo y, después, las novedades.\n\nPelículas en curso y Series en curso retoman donde lo dejaste. Después vienen Mi lista, Películas nuevas y Series nuevas (estrenadas este año o el anterior) y los canales: los de Mi lista o, si no, los que viste hace poco o los primeros de la playlist. Una playlist que solo tiene canales en directo los muestra primero.</string>
     <string name="help_search_title">Encontrar qué ver</string>
     <string name="help_categories_title">Ocultar idiomas y categorías</string>
-    <string name="help_categories_body">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. El botón de filtro de Películas, Series y TV en directo (también en Ajustes, Idiomas y categorías) oculta de una vez un idioma o un país entero, en todas las listas; las categorías que el proveedor añada después siguen la misma regla.\n\nLos estilos funcionan igual con las palabras de los nombres de categorías: oculta Manga y anime, Infantil o Documentales, o una palabra tuya como Bollywood. Solo cuentan los nombres de las categorías, no el género de cada película.\n\nTambién puedes ocultar ahí las categorías una por una, y volver a mostrarlas cuando quieras.\n\nLas categorías cuyo nombre parece para adultos se ocultan en todas partes hasta que activas Mostrar categorías para adultos en Ajustes.</string>
+    <string name="help_categories_body">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. El botón de filtro de Películas, Series y TV en directo (también en Ajustes, Idiomas y categorías) oculta de una vez un idioma o un país entero, en todas las playlists; las categorías que el proveedor añada después siguen la misma regla.\n\nLos estilos funcionan igual con las palabras de los nombres de categorías: oculta Manga y anime, Infantil o Documentales, o una palabra tuya como Bollywood. Solo cuentan los nombres de las categorías, no el género de cada película.\n\nTambién puedes ocultar ahí las categorías una por una, y volver a mostrarlas cuando quieras.\n\nLas categorías cuyo nombre parece para adultos se ocultan en todas partes hasta que activas Mostrar categorías para adultos en Ajustes.</string>
     <string name="help_playback_title">Cuando una emisión no se reproduce</string>
     <string name="help_playback_body">Ondo indica si el problema viene del proveedor, de la red o del formato.\n\nSi el proveedor rechaza la emisión, puede que la suscripción haya caducado o que haya demasiados dispositivos viendo a la vez: la mayoría de los proveedores permiten una o dos emisiones a la vez.\n\nSi no se puede conectar con el servidor, comprueba tu conexión y vuelve a intentarlo.\n\nSi la imagen se congela a ratos, Más, Estadísticas del flujo muestra lo que llega, lo que el vídeo necesita y si las congelaciones vienen de la red o del proveedor, o del reproductor.\n\nCon un búfer más largo (Ajustes, Búfer de la TV en directo y Búfer de películas y series), los cortes más largos del proveedor no se notan, pero la imagen tarda más en aparecer.\n\nEn el reproductor, Más, Informar de un problema… muestra un informe de la reproducción (tiempos de inicio y de salto, congelaciones, estadísticas; sin dirección, inicio de sesión ni título) para enviarlo por correo o mensaje, o en una incidencia de GitHub.</string>
     <string name="help_privacy_title">Privacidad</string>
-    <string name="help_privacy_body">Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus listas, tu historial y tus ajustes se quedan en tu dispositivo y no se incluyen en sus copias de seguridad. Los pósteres y las fichas de las películas y series que has abierto también se guardan en él, para que se muestren al instante y se abran aunque el proveedor no responda.\n\nOndo se conecta a los servidores que añades y, una vez por semana, a GitHub para los últimos premios y selecciones de festivales (no se envía nada sobre ti; desactiva Actualizar los premios automáticamente en Ajustes).</string>
+    <string name="help_privacy_body">Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus playlists, tu historial y tus ajustes se quedan en tu dispositivo y no se incluyen en sus copias de seguridad. Los pósteres y las fichas de las películas y series que has abierto también se guardan en él, para que se muestren al instante y se abran aunque el proveedor no responda.\n\nOndo se conecta a los servidores que añades y, una vez por semana, a GitHub para los últimos premios y selecciones de festivales (no se envía nada sobre ti; desactiva Actualizar los premios automáticamente en Ajustes).</string>
     <string name="error_load_denied">El proveedor denegó el acceso (HTTP %1$d). Comprueba el usuario, la contraseña y tu suscripción.</string>
-    <string name="error_load_provider">El proveedor no envió ninguna lista. Comprueba la dirección y tu suscripción.</string>
-    <string name="error_load_format">No es una lista que Ondo pueda leer (M3U, Xtream Codes, XSPF o JSON).</string>
+    <string name="error_load_provider">El proveedor no envió ninguna playlist. Comprueba la dirección y tu suscripción.</string>
+    <string name="error_load_format">No es una playlist que Ondo pueda leer (M3U, Xtream Codes, XSPF o JSON).</string>
     <string name="awards">Premios</string>
     <string name="award_winners">Películas premiadas</string>
     <string name="award_winner">Ganadora, %1$s</string>
@@ -169,7 +169,7 @@
     <string name="my_list_empty_hint">Usa Mi lista en la ficha de una película o serie para encontrarla aquí.</string>
     <string name="help_mylist_title">Mi lista</string>
     <string name="help_mylist_body">En la ficha de una película o serie, Mi lista la mantiene a mano. En TV en directo, mantén pulsado un canal para añadirlo a Mi lista.\n\nLa pestaña Mi lista reúne tus películas, series y canales; la búsqueda es la lupa de la parte superior de cada pantalla.\n\nLas colecciones son tus propios grupos, como Fin de semana o Niños: usa Colección en la ficha de una película o serie y encuéntralas en Mi lista, en Colecciones.</string>
-    <string name="help_search_body">Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda, la lupa de la parte superior de cada pantalla, recorre canales, películas y series. En la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas de un festival o una ceremonia.\n\nEn una categoría, el botón de ordenar coloca los pósteres por orden de la lista, nombre, fecha de incorporación, fecha de estreno o valoración. Las fichas de las películas muestran sus premios y selecciones en festivales. Toca el nombre de un director o de un actor en una ficha para ver sus otras películas y series de tu lista: las series siempre, las películas entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu lista que los comparten. La búsqueda también encuentra actores y directores por su nombre.</string>
+    <string name="help_search_body">Películas, Series y TV en directo muestran las categorías de tu proveedor. La búsqueda, la lupa de la parte superior de cada pantalla, recorre canales, películas y series. En la búsqueda, el botón de filtro deja las películas y series estrenadas en los años que elijas, o las películas de un festival o una ceremonia.\n\nEn una categoría, el botón de ordenar coloca los pósteres por orden de la playlist, nombre, fecha de incorporación, fecha de estreno o puntuación. Las fichas de las películas muestran sus premios y selecciones en festivales. Toca el nombre de un director o de un actor en una ficha para ver sus otras películas y series de tu playlist: las series siempre, las películas entre las fichas que ya abriste. Los géneros, el año y los premios abren del mismo modo los títulos de tu playlist que los comparten. La búsqueda también encuentra actores y directores por su nombre.</string>
     <string name="search_filters">Filtros</string>
     <string name="filter_from">Desde</string>
     <string name="filter_to">Hasta</string>
@@ -183,7 +183,7 @@
     <string name="released_in_year">Estrenados en %1$s</string>
     <string name="released_between">Estrenados de %1$s a %2$s</string>
     <string name="no_filtered_results_title">Ninguna película ni serie</string>
-    <string name="no_filtered_results">Nada de esta lista coincide con estos filtros.</string>
+    <string name="no_filtered_results">Nada de esta playlist coincide con estos filtros.</string>
     <string name="award_group_cannes">Festival de Cannes</string>
     <string name="award_group_venice">Festival de Venecia</string>
     <string name="award_group_berlin">Berlinale</string>
@@ -195,8 +195,8 @@
     <string name="award_group_european_film_awards">Premios del Cine Europeo</string>
     <string name="award_group_san_sebastian">Festival de San Sebastián</string>
     <string name="award_group_locarno">Festival de Locarno</string>
-    <string name="person_nothing_title">Nada en esta lista</string>
-    <string name="person_nothing">No se conoce ninguna película ni serie de esta lista con %1$s.</string>
+    <string name="person_nothing_title">Nada en esta playlist</string>
+    <string name="person_nothing">No se conoce ninguna película ni serie de esta playlist con %1$s.</string>
     <string name="person_opened_pages">Las películas solo se buscan entre las fichas que ya abriste.</string>
     <string name="collections">Colecciones</string>
     <string name="collection">Colección</string>
@@ -226,7 +226,7 @@
     <string name="all_channels">Todos los canales</string>
     <string name="notifications_off">Las notificaciones de Ondo están desactivadas: permítelas en Ajustes para recibir recordatorios.</string>
     <string name="help_guide_title">Guía de TV y recordatorios</string>
-    <string name="help_guide_body">El botón de guía de TV en directo muestra los programas de los canales elegidos allí (Mi lista, una categoría o todos). La guía viene de tu proveedor, o de la dirección XMLTV indicada al añadir una lista M3U.\n\nAbre un programa próximo y crea un recordatorio: llega una notificación unos minutos antes de que empiece. La campana de la guía muestra tus recordatorios.</string>
+    <string name="help_guide_body">El botón de guía de TV en directo muestra los programas de los canales elegidos allí (Mi lista, una categoría o todos). La guía viene de tu proveedor, o de la dirección XMLTV indicada al añadir una playlist M3U.\n\nAbre un programa próximo y crea un recordatorio: llega una notificación unos minutos antes de que empiece. La campana de la guía muestra tus recordatorios.</string>
     <string name="help_remote_title">Con el mando</string>
     <string name="help_remote_body">Muévete con las flechas y pulsa OK para elegir; Atrás vuelve atrás, y Atrás en Inicio cierra Ondo.\n\nEn el reproductor, OK pausa, reanuda y muestra los controles (la tecla Info también los muestra; Más está arriba a la derecha); Izquierda y Derecha retroceden y avanzan. En un canal en directo, Arriba y Abajo o las teclas de canal cambian de canal, los números llevan directamente a un canal y la tecla de canal anterior vuelve al que veías antes.\n\nEn TV en directo, mantén pulsado OK sobre un canal para añadirlo a Mi lista.</string>
     <plurals name="guide_row_limit">
@@ -245,7 +245,7 @@
     <string name="style_music">Música</string>
     <string name="word_to_hide">Palabra que ocultar</string>
     <string name="show">Mostrar</string>
-    <string name="styles_explanation">Oculta las categorías cuyo nombre contiene un estilo o una palabra (Manga, Bollywood…), en todas las listas, incluidas las que se añadan después. Solo cuentan los nombres de las categorías, no el género de cada película.</string>
+    <string name="styles_explanation">Oculta las categorías cuyo nombre contiene un estilo o una palabra (Manga, Bollywood…), en todas las playlists, incluidas las que se añadan después. Solo cuentan los nombres de las categorías, no el género de cada película.</string>
     <string name="update_awards">Actualizar los premios automáticamente</string>
     <string name="update_awards_hint">Una vez por semana, Ondo descarga los últimos premios y selecciones en festivales (obtenidos de Wikidata) desde GitHub, donde se aloja el proyecto. No se envía nada sobre ti.</string>
     <string name="genre_label">Género</string>

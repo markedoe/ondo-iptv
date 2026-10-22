@@ -51,11 +51,11 @@
     <string name="home_empty">आपकी प्लेलिस्ट लोड हो रही है या खाली है। अगर वह न दिखे, तो सेटिंग्स से उसे रीफ़्रेश करें।</string>
     <string name="no_results">“%1$s” के लिए कोई नतीजा नहीं।</string>
     <string name="welcome_title">Ondo में आपका स्वागत है</string>
-    <string name="welcome_subtitle">आपके IPTV प्रोवाइडर की फ़िल्में, सीरीज़ और चैनल, एक साफ़-सुथरी लाइब्रेरी में।</string>
+    <string name="welcome_subtitle">आपके IPTV प्रदाता की फ़िल्में, सीरीज़ और चैनल, एक साफ़-सुथरी लाइब्रेरी में।</string>
     <string name="feature_vod_title">फ़िल्में और सीरीज़</string>
     <string name="feature_vod_text">पोस्टर, विवरण, सीज़न, देखना जारी रखें और अगला एपिसोड।</string>
     <string name="feature_sources_title">M3U और Xtream Codes</string>
-    <string name="feature_sources_text">अपने प्रोवाइडर से मिली प्लेलिस्ट जोड़ें।</string>
+    <string name="feature_sources_text">अपने प्रदाता से मिली प्लेलिस्ट जोड़ें।</string>
     <string name="feature_live_title">लाइव टीवी और गाइड</string>
     <string name="feature_live_text">चैनल, अभी और आगे चलने वाले कार्यक्रमों के साथ।</string>
     <string name="feature_player_title">एक भरोसेमंद प्लेयर</string>
@@ -70,7 +70,7 @@
     <string name="server">सर्वर</string>
     <string name="username">यूज़रनेम</string>
     <string name="password">पासवर्ड</string>
-    <string name="xtream_hint">अपने प्रोवाइडर से मिला सर्वर पता, यूज़रनेम और पासवर्ड इस्तेमाल करें।</string>
+    <string name="xtream_hint">अपने प्रदाता से मिला सर्वर पता, यूज़रनेम और पासवर्ड इस्तेमाल करें।</string>
     <string name="playlist_url">प्लेलिस्ट URL</string>
     <string name="guide_url_optional">टीवी गाइड URL (XMLTV, वैकल्पिक)</string>
     <string name="playlists">प्लेलिस्ट</string>
@@ -86,8 +86,8 @@
     <string name="delete_playlist_text">इस डिवाइस पर इसका कैटलॉग, पसंदीदा और इतिहास हटा दिए जाते हैं।</string>
     <string name="try_again">फिर से कोशिश करें</string>
     <string name="loading">लोड हो रहा है…</string>
-    <string name="error_provider_refused">प्रोवाइडर ने इस स्ट्रीम का ऐक्सेस नहीं दिया। हो सकता है आपका सब्सक्रिप्शन समाप्त हो गया हो या कनेक्शन सीमा पूरी हो गई हो।</string>
-    <string name="error_network">प्रोवाइडर के सर्वर तक नहीं पहुँचा जा सकता। अपना कनेक्शन जाँचें।</string>
+    <string name="error_provider_refused">प्रदाता ने इस स्ट्रीम का ऐक्सेस नहीं दिया। हो सकता है आपका सब्सक्रिप्शन समाप्त हो गया हो या कनेक्शन सीमा पूरी हो गई हो।</string>
+    <string name="error_network">प्रदाता के सर्वर तक नहीं पहुँचा जा सकता। अपना कनेक्शन जाँचें।</string>
     <string name="error_format">यह स्ट्रीम फ़ॉर्मैट इस डिवाइस पर नहीं चल सकता।</string>
     <string name="error_generic">यह स्ट्रीम अभी नहीं चल सकती।</string>
     <string name="error_playlist">प्लेलिस्ट लोड नहीं हो सकी: %1$s</string>
@@ -152,8 +152,8 @@
     <string name="award_in_competition">प्रतियोगिता में, %1$s</string>
     <string name="award_nominated">नामांकित, %1$s</string>
     <plurals name="and_more">
-        <item quantity="one">और %d</item>
-        <item quantity="other">और %d</item>
+        <item quantity="one">%d और</item>
+        <item quantity="other">%d और</item>
     </plurals>
     <string name="favorite_channels">मेरी सूची के चैनल</string>
     <string name="favorite">मेरी सूची में</string>
@@ -197,8 +197,8 @@
     <string name="add_to_collection">संग्रह में जोड़ें</string>
     <string name="new_collection">नया संग्रह</string>
     <string name="rename_collection">संग्रह का नाम बदलें</string>
-    <string name="delete_collection">संग्रह हटाएँ</string>
-    <string name="delete_collection_confirm">यह संग्रह हटाएँ?</string>
+    <string name="delete_collection">संग्रह डिलीट करें</string>
+    <string name="delete_collection_confirm">यह संग्रह डिलीट करें?</string>
     <string name="empty_collection">खाली संग्रह</string>
     <string name="no_collections">कोई संग्रह नहीं</string>
     <string name="collection_default_name">संग्रह %1$d</string>
@@ -208,7 +208,7 @@
     <string name="empty_collection_hint">किसी फ़िल्म या सीरीज़ को यहाँ जोड़ने के लिए उसके पेज पर संग्रह का उपयोग करें।</string>
     <string name="tv_guide">टीवी गाइड</string>
     <string name="no_tv_guide">टीवी गाइड नहीं है</string>
-    <string name="no_tv_guide_hint">आपका प्रोवाइडर गाइड पब्लिश नहीं करता, या वह लोड नहीं हो सका।</string>
+    <string name="no_tv_guide_hint">आपका प्रदाता गाइड पब्लिश नहीं करता, या वह लोड नहीं हो सका।</string>
     <string name="no_information">कोई जानकारी नहीं</string>
     <string name="watch_live">लाइव देखें</string>
     <string name="remind_me">याद दिलाएँ</string>
@@ -220,7 +220,7 @@
     <string name="all_channels">सभी चैनल</string>
     <string name="notifications_off">Ondo के लिए सूचनाएँ बंद हैं: रिमाइंडर पाने के लिए सेटिंग्स में इनकी अनुमति दें।</string>
     <string name="help_guide_title">टीवी गाइड और रिमाइंडर</string>
-    <string name="help_guide_body">लाइव टीवी का गाइड बटन वहाँ चुने गए चैनलों (मेरी सूची, कोई श्रेणी या सभी) के कार्यक्रम दिखाता है। गाइड आपके प्रोवाइडर से आता है, या M3U प्लेलिस्ट जोड़ते समय दिए गए XMLTV पते से।\n\nकोई आने वाला कार्यक्रम खोलें और रिमाइंडर सेट करें: शुरू होने से कुछ मिनट पहले सूचना आती है। गाइड की घंटी आपके रिमाइंडर दिखाती है।</string>
+    <string name="help_guide_body">लाइव टीवी का गाइड बटन वहाँ चुने गए चैनलों (मेरी सूची, कोई श्रेणी या सभी) के कार्यक्रम दिखाता है। गाइड आपके प्रदाता से आता है, या M3U प्लेलिस्ट जोड़ते समय दिए गए XMLTV पते से।\n\nकोई आने वाला कार्यक्रम खोलें और रिमाइंडर सेट करें: शुरू होने से कुछ मिनट पहले सूचना आती है। गाइड की घंटी आपके रिमाइंडर दिखाती है।</string>
     <string name="help_remote_title">रिमोट से</string>
     <string name="help_remote_body">तीर वाले बटनों से घूमें और चुनने के लिए OK दबाएँ; Back पीछे ले जाता है, और होम पर Back दबाने से Ondo बंद हो जाता है।\n\nप्लेयर में OK रोकता है, फिर चलाता है और कंट्रोल दिखाता है (Info बटन भी उन्हें दिखाता है; ज़्यादा ऊपर दाईं ओर है); बायाँ और दायाँ पीछे और आगे ले जाते हैं। लाइव चैनल पर ऊपर और नीचे या चैनल बटन चैनल बदलते हैं, नंबर बटन सीधे किसी चैनल पर ले जाते हैं, और पिछले चैनल वाला बटन उस चैनल पर लौटाता है जिसे आप पहले देख रहे थे।\n\nलाइव टीवी में किसी चैनल पर OK दबाए रखें ताकि वह मेरी सूची में जुड़ जाए।</string>
     <plurals name="guide_row_limit">

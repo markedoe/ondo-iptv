@@ -69,8 +69,8 @@
     <string name="name">الاسم</string>
     <string name="server">الخادم</string>
     <string name="username">اسم المستخدم</string>
-    <string name="password">كلمة السر</string>
-    <string name="xtream_hint">استخدم عنوان الخادم واسم المستخدم وكلمة السر التي أرسلها مزوّدك.</string>
+    <string name="password">كلمة المرور</string>
+    <string name="xtream_hint">استخدم عنوان الخادم واسم المستخدم وكلمة المرور التي أرسلها مزوّدك.</string>
     <string name="playlist_url">عنوان URL لقائمة التشغيل</string>
     <string name="guide_url_optional">عنوان URL لدليل البرامج (XMLTV، اختياري)</string>
     <string name="playlists">قوائم التشغيل</string>
@@ -93,16 +93,16 @@
     <string name="error_playlist">تعذّر تحميل قائمة التشغيل: %1$s</string>
     <plurals name="minutes_left">
         <item quantity="zero">متبقٍ %d دقيقة</item>
-        <item quantity="one">متبقٍ %d دقيقة</item>
-        <item quantity="two">متبقٍ %d دقيقة</item>
+        <item quantity="one">دقيقة واحدة متبقية</item>
+        <item quantity="two">دقيقتان متبقيتان</item>
         <item quantity="few">متبقٍ %d دقائق</item>
         <item quantity="many">متبقٍ %d دقيقة</item>
         <item quantity="other">متبقٍ %d دقيقة</item>
     </plurals>
     <plurals name="seasons">
         <item quantity="zero">%d موسم</item>
-        <item quantity="one">%d موسم</item>
-        <item quantity="two">%d موسم</item>
+        <item quantity="one">موسم واحد</item>
+        <item quantity="two">موسمان</item>
         <item quantity="few">%d مواسم</item>
         <item quantity="many">%d موسمًا</item>
         <item quantity="other">%d موسم</item>
@@ -129,16 +129,16 @@
     <string name="not_now">ليس الآن</string>
     <plurals name="category_count">
         <item quantity="zero">%d فئة</item>
-        <item quantity="one">%d فئة</item>
-        <item quantity="two">%d فئة</item>
+        <item quantity="one">فئة واحدة</item>
+        <item quantity="two">فئتان</item>
         <item quantity="few">%d فئات</item>
         <item quantity="many">%d فئة</item>
         <item quantity="other">%d فئة</item>
     </plurals>
     <plurals name="item_count">
         <item quantity="zero">%d عنصر</item>
-        <item quantity="one">%d عنصر</item>
-        <item quantity="two">%d عنصر</item>
+        <item quantity="one">عنصر واحد</item>
+        <item quantity="two">عنصران</item>
         <item quantity="few">%d عناصر</item>
         <item quantity="many">%d عنصرًا</item>
         <item quantity="other">%d عنصر</item>
@@ -285,8 +285,8 @@
     <string name="buffer_hint">يغطي التخزين المؤقت الأطول انقطاعات أطول من المزوّد، لكن الصورة تستغرق عندها وقتًا أطول للظهور وللعودة بعد القفز. يتكيّف الخيار التلقائي مع المزوّد.</string>
     <plurals name="buffer_seconds">
         <item quantity="zero">%d ثانية</item>
-        <item quantity="one">%d ثانية</item>
-        <item quantity="two">%d ثانية</item>
+        <item quantity="one">ثانية واحدة</item>
+        <item quantity="two">ثانيتان</item>
         <item quantity="few">%d ثوانٍ</item>
         <item quantity="many">%d ثانية</item>
         <item quantity="other">%d ثانية</item>

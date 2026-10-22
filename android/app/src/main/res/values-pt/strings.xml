@@ -169,7 +169,7 @@
     <string name="my_list_empty_hint">Use Minha lista na página de um filme ou série para encontrá-lo aqui.</string>
     <string name="help_mylist_title">Minha lista</string>
     <string name="help_mylist_body">Na página de um filme ou série, Minha lista deixa o título à mão. Em TV ao vivo, toque e segure um canal para adicioná-lo à Minha lista.\n\nA aba Minha lista reúne seus filmes, séries e canais; a busca é a lupa no topo de cada tela.\n\nAs coleções são seus próprios grupos, como Fim de semana ou Crianças: use Coleção na página de um filme ou série e encontre-as em Minha lista, em Coleções.</string>
-    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca, a lupa no topo de cada tela, percorre canais, filmes e séries. Na busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher, ou os filmes de um festival ou cerimônia.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou nota. As páginas dos filmes mostram seus prêmios e seleções em festivais. Toque no nome de um diretor ou ator em uma página para ver os outros filmes e séries dessa pessoa na sua playlist: as séries sempre, os filmes entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham. A busca também encontra atores e diretores pelo nome.</string>
+    <string name="help_search_body">Filmes, Séries e TV ao vivo mostram as categorias do seu provedor. A busca, a lupa no topo de cada tela, percorre canais, filmes e séries. Na busca, o botão de filtro mantém os filmes e séries lançados nos anos que você escolher, ou os filmes de um festival ou cerimônia.\n\nEm uma categoria, o botão de ordenar organiza os pôsteres pela ordem da playlist, nome, data de inclusão, data de lançamento ou avaliação. As páginas dos filmes mostram seus prêmios e seleções em festivais. Toque no nome de um diretor ou ator em uma página para ver os outros filmes e séries dessa pessoa na sua playlist: as séries sempre, os filmes entre as páginas que você já abriu. Os gêneros, o ano e os prêmios abrem da mesma forma os títulos da sua playlist que os compartilham. A busca também encontra atores e diretores pelo nome.</string>
     <string name="search_filters">Filtros</string>
     <string name="filter_from">De</string>
     <string name="filter_to">Até</string>
@@ -196,15 +196,15 @@
     <string name="award_group_san_sebastian">Festival de San Sebastián</string>
     <string name="award_group_locarno">Festival de Locarno</string>
     <string name="person_nothing_title">Nada nesta playlist</string>
-    <string name="person_nothing">Nenhum filme ou série desta playlist é conhecido por ter %1$s.</string>
+    <string name="person_nothing">Não conhecemos nenhum filme ou série desta playlist com %1$s.</string>
     <string name="person_opened_pages">Os filmes só são procurados entre as páginas que você já abriu.</string>
     <string name="collections">Coleções</string>
     <string name="collection">Coleção</string>
     <string name="add_to_collection">Adicionar a uma coleção</string>
     <string name="new_collection">Nova coleção</string>
     <string name="rename_collection">Renomear coleção</string>
-    <string name="delete_collection">Apagar coleção</string>
-    <string name="delete_collection_confirm">Apagar esta coleção?</string>
+    <string name="delete_collection">Excluir coleção</string>
+    <string name="delete_collection_confirm">Excluir esta coleção?</string>
     <string name="empty_collection">Coleção vazia</string>
     <string name="no_collections">Nenhuma coleção</string>
     <string name="collection_default_name">Coleção %1$d</string>

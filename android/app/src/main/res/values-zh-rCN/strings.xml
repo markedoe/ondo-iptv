@@ -36,7 +36,7 @@
     <string name="filter">筛选</string>
     <string name="sort">排序</string>
     <string name="sort_playlist_order">播放列表顺序</string>
-    <string name="sort_release_date">发行日期</string>
+    <string name="sort_release_date">上映日期</string>
     <string name="sort_rating">评分</string>
     <string name="back">返回</string>
     <string name="close">关闭</string>
@@ -109,7 +109,7 @@
     <string name="categories_hint">按语言或国家/地区，或逐个选择要显示的分类。</string>
     <string name="filter_categories">筛选分类</string>
     <string name="languages_and_countries">语言和国家/地区</string>
-    <string name="tags_explanation">许多提供商会在分类名称前加上代码，例如 |PT| 或 FR:。隐藏某个代码会隐藏它在所有播放列表中的全部分类，包括以后新增的分类。</string>
+    <string name="tags_explanation">许多服务商会在分类名称前加上代码，例如 |PT| 或 FR:。隐藏某个代码会隐藏它在所有播放列表中的全部分类，包括以后新增的分类。</string>
     <string name="show_all">全部显示</string>
     <string name="hide_all">全部隐藏</string>
     <string name="hidden_with">已随 %1$s 隐藏</string>
@@ -128,18 +128,18 @@
     </plurals>
     <string name="help">帮助</string>
     <string name="help_playlists_title">添加播放列表</string>
-    <string name="help_playlists_body">Ondo 是一款播放器：它显示提供商为你提供的订阅中的电影、剧集和频道，本身不提供任何内容。\n\n要添加你的订阅，请打开“设置”（首页上的齿轮图标，或轻点首页顶部的播放列表名称）&gt;“添加播放列表”：M3U 链接或文件，或 Xtream Codes 登录信息（服务器地址、用户名和密码）。在“设置”中轻点某个播放列表即可切换到它。</string>
+    <string name="help_playlists_body">Ondo 是一款播放器：它显示服务商为你提供的订阅中的电影、剧集和频道，本身不提供任何内容。\n\n要添加你的订阅，请打开“设置”（首页上的齿轮图标，或轻点首页顶部的播放列表名称）&gt;“添加播放列表”：M3U 链接或文件，或 Xtream Codes 登录信息（服务器地址、用户名和密码）。在“设置”中轻点某个播放列表即可切换到它。</string>
     <string name="help_home_title">首页</string>
     <string name="help_home_body">在“首页”顶部，轻点播放列表名称（旁边显示上次更新时间）即可在“设置”中打开你的播放列表；放大镜打开“搜索”，齿轮打开“设置”。下方的轮播会先显示你正在观看的内容，然后是新上线的影片。\n\n“正在观看的电影”和“正在观看的剧集”会从你停下的地方继续。接下来是“我的片单”、“最新电影”和“最新剧集”（今年或去年上映），然后是频道：“我的片单中的频道”；如果没有，则显示你最近观看的频道或播放列表的前几个频道。只有直播频道的播放列表会先显示频道。</string>
     <string name="help_search_title">查找要看的内容</string>
     <string name="help_categories_title">隐藏语言和分类</string>
-    <string name="help_categories_body">许多提供商会在分类名称前加上代码，例如 |PT| 或 FR:。“电影”“剧集”和“直播”上的筛选按钮（也在“设置”&gt;“语言和分类”中）可一次隐藏整个语言或国家/地区，适用于所有播放列表；提供商以后新增的分类也遵循同一规则。\n\n风格的用法相同，针对分类名称中的词：隐藏“动漫”“儿童”或“纪录片”，或你自己的词，例如 Bollywood。只看分类名称，不看每部电影的类型。\n\n你也可以在那里逐个隐藏分类，并随时重新显示。\n\n名称看起来属于成人内容的分类会在所有地方隐藏，直到你在“设置”中打开“显示成人分类”。</string>
+    <string name="help_categories_body">许多服务商会在分类名称前加上代码，例如 |PT| 或 FR:。“电影”“剧集”和“直播”上的筛选按钮（也在“设置”&gt;“语言和分类”中）可一次隐藏整个语言或国家/地区，适用于所有播放列表；服务商以后新增的分类也遵循同一规则。\n\n风格的用法相同，针对分类名称中的词：隐藏“动漫”“儿童”或“纪录片”，或你自己的词，例如 Bollywood。只看分类名称，不看每部电影的类型。\n\n你也可以在那里逐个隐藏分类，并随时重新显示。\n\n名称看起来属于成人内容的分类会在所有地方隐藏，直到你在“设置”中打开“显示成人分类”。</string>
     <string name="help_playback_title">无法播放时</string>
-    <string name="help_playback_body">Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果画面时不时卡住，“更多”&gt;“流统计信息”会显示收到的数据、视频所需的数据，以及卡顿来自网络或提供商，还是来自播放器。\n\n缓冲更长时（“设置”&gt;“直播缓冲”和“电影和剧集缓冲”），提供商较长的中断不会显现，但画面出现所需的时间更长。\n\n在播放器中，“更多”&gt;“报告问题…”会显示本次播放的报告（启动和跳转时间、卡顿、统计信息；不含地址、登录信息或标题），可通过邮件或消息发送，或提交到 GitHub 问题中。</string>
+    <string name="help_playback_body">Ondo 会说明问题出在服务商、网络还是格式。\n\n如果服务商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数服务商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果画面时不时卡住，“更多”&gt;“流统计信息”会显示收到的数据、视频所需的数据，以及卡顿来自网络或服务商，还是来自播放器。\n\n缓冲更长时（“设置”&gt;“直播缓冲”和“电影和剧集缓冲”），服务商较长的中断不会显现，但画面出现所需的时间更长。\n\n在播放器中，“更多”&gt;“报告问题…”会显示本次播放的报告（启动和跳转时间、卡顿、统计信息；不含地址、登录信息或标题），可通过邮件或消息发送，或提交到 GitHub 问题中。</string>
     <string name="help_privacy_title">隐私</string>
-    <string name="help_privacy_body">Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上，并且不会包含在设备备份中。你打开过的电影和剧集页面及海报也保存在设备上，因此可以立即显示，即使提供商无法连接也能打开。\n\nOndo 会连接你添加的服务器，并每周连接一次 GitHub，获取最新的奖项和电影节入选信息（不会发送任何关于你的信息；可在“设置”中关闭“自动更新获奖信息”）。</string>
-    <string name="error_load_denied">提供商拒绝了访问（HTTP %1$d）。请检查用户名、密码和你的订阅。</string>
-    <string name="error_load_provider">提供商没有发送播放列表。请检查地址和你的订阅。</string>
+    <string name="help_privacy_body">Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上，并且不会包含在设备备份中。你打开过的电影和剧集页面及海报也保存在设备上，因此可以立即显示，即使服务商无法连接也能打开。\n\nOndo 会连接你添加的服务器，并每周连接一次 GitHub，获取最新的奖项和电影节入选信息（不会发送任何关于你的信息；可在“设置”中关闭“自动更新获奖信息”）。</string>
+    <string name="error_load_denied">服务商拒绝了访问（HTTP %1$d）。请检查用户名、密码和你的订阅。</string>
+    <string name="error_load_provider">服务商没有发送播放列表。请检查地址和你的订阅。</string>
     <string name="error_load_format">这不是 Ondo 能读取的播放列表（M3U、Xtream Codes、XSPF 或 JSON）。</string>
     <string name="awards">奖项</string>
     <string name="award_winners">获奖电影</string>
@@ -157,7 +157,7 @@
     <string name="my_list_empty_hint">在电影或剧集页面上使用“我的片单”，即可在这里找到它。</string>
     <string name="help_mylist_title">我的片单</string>
     <string name="help_mylist_body">在电影或剧集页面上，“我的片单”可将其放在手边。在“直播”中，长按频道即可将其添加到我的片单。\n\n“我的片单”标签页汇集你的电影、剧集和频道；搜索是每个页面顶部的放大镜。\n\n合集是你自己的分组，例如“周末”或“儿童”：在电影或剧集页面上使用“合集”，然后在“我的片单”的“合集”中找到它们。</string>
-    <string name="help_search_body">“电影”“剧集”和“直播”会显示提供商的分类。搜索（每个页面顶部的放大镜）会查找频道、电影和剧集。在搜索中，筛选按钮可只保留所选年份上映的电影和剧集，或某个电影节或颁奖典礼的电影。\n\n在分类中，排序按钮可按播放列表顺序、名称、添加日期、上映日期或评分排列海报。电影页面会显示其获奖和电影节入选情况。在电影或剧集页面上点按导演或演员的名字，即可查看其在你的播放列表中的其他电影和剧集：剧集总能找到，电影只在你打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。搜索也能按姓名找到演员和导演。</string>
+    <string name="help_search_body">“电影”“剧集”和“直播”会显示服务商的分类。搜索（每个页面顶部的放大镜）会查找频道、电影和剧集。在搜索中，筛选按钮可只保留所选年份上映的电影和剧集，或某个电影节或颁奖典礼的电影。\n\n在分类中，排序按钮可按播放列表顺序、名称、添加日期、上映日期或评分排列海报。电影页面会显示其获奖和电影节入选情况。在电影或剧集页面上点按导演或演员的名字，即可查看其在你的播放列表中的其他电影和剧集：剧集总能找到，电影只在你打开过的页面中查找。类型、年份和奖项也一样，点按即可打开播放列表中具有相同信息的影片。搜索也能按姓名找到演员和导演。</string>
     <string name="search_filters">筛选</string>
     <string name="filter_from">从</string>
     <string name="filter_to">到</string>
@@ -183,7 +183,7 @@
     <string name="award_group_european_film_awards">欧洲电影奖</string>
     <string name="award_group_san_sebastian">圣塞巴斯蒂安电影节</string>
     <string name="award_group_locarno">洛迦诺电影节</string>
-    <string name="person_nothing_title">此播放列表中没有</string>
+    <string name="person_nothing_title">此播放列表中没有相关内容</string>
     <string name="person_nothing">此播放列表中没有已知包含 %1$s 的电影或剧集。</string>
     <string name="person_opened_pages">电影只会在你打开过的页面中查找。</string>
     <string name="collections">合集</string>
@@ -247,7 +247,7 @@
     <string name="player">播放器</string>
     <string name="buffer_live">直播缓冲</string>
     <string name="buffer_vod">电影和剧集缓冲</string>
-    <string name="buffer_hint">缓冲越长，越能应对提供商较长的中断，但画面出现以及跳转后恢复所需的时间也会更长。“自动”会根据提供商进行调整。</string>
+    <string name="buffer_hint">缓冲越长，越能应对服务商较长的中断，但画面出现以及跳转后恢复所需的时间也会更长。“自动”会根据服务商进行调整。</string>
     <plurals name="buffer_seconds">
         <item quantity="other">%d 秒</item>
     </plurals>
@@ -269,6 +269,6 @@
     <string name="stats_lost_pictures">丢帧</string>
     <string name="stats_measuring">正在测量…</string>
     <string name="stats_smooth">没有卡顿：播放流畅。</string>
-    <string name="stats_network">数据到达太慢或中断：原因在于网络或提供商。</string>
+    <string name="stats_network">数据到达太慢或中断：原因在于网络或服务商。</string>
     <string name="stats_player">数据按时到达：卡顿或丢帧来自播放器或设备。</string>
 </resources>
