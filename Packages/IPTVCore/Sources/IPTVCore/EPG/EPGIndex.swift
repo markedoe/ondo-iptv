@@ -102,9 +102,12 @@ public struct EPGIndex: Sendable {
     /// Current programme followed by the next `count - 1` ones.
     public func upcoming(for channel: Channel, at date: Date = Date(), count: Int = 2) -> [EPGProgram] {
         let list = programs(for: channel)
-        guard !list.isEmpty else { return [] }
-        let start = Self.indexOfProgram(in: list, at: date) ?? Self.firstIndex(in: list, startingAfter: date)
-        guard let start, start < list.count else { return [] }
+        guard count > 0, !list.isEmpty else { return [] }
+        if let current = Self.indexOfProgram(in: list, at: date) {
+            // Inside a long programme, the shorter ones after the current one may already be over.
+            return [list[current]] + list[(current + 1)...].lazy.filter { $0.end > date }.prefix(count - 1)
+        }
+        guard let start = Self.firstIndex(in: list, startingAfter: date) else { return [] }
         return Array(list[start..<min(start + count, list.count)])
     }
 
@@ -112,22 +115,21 @@ public struct EPGIndex: Sendable {
         programs(for: channel).filter { $0.end > interval.start && $0.start < interval.end }
     }
 
-    /// Binary search for the programme airing at `date` (lists are sorted by start).
+    /// The programme airing at `date` (lists are sorted by start): the last one started by then that has not ended.
+    /// Programmes can overlap (a film around a news flash): going back from the last start passes those already over.
     static func indexOfProgram(in list: [EPGProgram], at date: Date) -> Int? {
+        // Binary search for the first programme that starts after `date`.
         var low = 0
-        var high = list.count - 1
-        while low <= high {
+        var high = list.count
+        while low < high {
             let mid = (low + high) / 2
-            let program = list[mid]
-            if program.end <= date {
+            if list[mid].start <= date {
                 low = mid + 1
-            } else if program.start > date {
-                high = mid - 1
             } else {
-                return mid
+                high = mid
             }
         }
-        return nil
+        return list[..<low].lastIndex { $0.end > date }
     }
 
     static func firstIndex(in list: [EPGProgram], startingAfter date: Date) -> Int? {

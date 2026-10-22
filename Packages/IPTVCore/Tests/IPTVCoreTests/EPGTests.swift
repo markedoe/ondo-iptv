@@ -131,6 +131,26 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(index.current(for: channel, at: .utc(2025, 1, 1, 10, 30))?.title, "JT")
     }
 
+    /// A long programme around shorter ones: it airs between and after them, and what is over is not upcoming.
+    func testOverlappingProgrammes() {
+        var index = EPGIndex.empty
+        let channel = Channel(id: "x1", name: "TV1", categoryID: "c", streamURL: URL(string: "http://x/1")!, epgID: "TV1.fr")
+        index.insert([
+            EPGProgram(channelID: "TV1.fr", title: "A", start: .utc(2025, 1, 1, 0), end: .utc(2025, 1, 1, 6)),
+            EPGProgram(channelID: "TV1.fr", title: "B", start: .utc(2025, 1, 1, 1), end: .utc(2025, 1, 1, 2)),
+            EPGProgram(channelID: "TV1.fr", title: "C", start: .utc(2025, 1, 1, 2), end: .utc(2025, 1, 1, 3)),
+        ], for: channel)
+        XCTAssertEqual(index.current(for: channel, at: .utc(2025, 1, 1, 4))?.title, "A")
+        XCTAssertEqual(index.upcoming(for: channel, at: .utc(2025, 1, 1, 4)).map(\.title), ["A"])
+        XCTAssertEqual(index.current(for: channel, at: .utc(2025, 1, 1, 2, 30))?.title, "C", "the latest to start")
+        XCTAssertEqual(index.current(for: channel, at: .utc(2025, 1, 1, 1, 30))?.title, "B")
+        XCTAssertEqual(index.upcoming(for: channel, at: .utc(2025, 1, 1, 1, 30)).map(\.title), ["B", "C"])
+        XCTAssertEqual(index.upcoming(for: channel, at: .utc(2025, 1, 1, 0, 30), count: 3).map(\.title), ["A", "B", "C"])
+        XCTAssertNil(index.current(for: channel, at: .utc(2025, 1, 1, 7)))
+        XCTAssertEqual(index.upcoming(for: channel, at: .utc(2025, 1, 1, 7)), [])
+        XCTAssertEqual(index.current(guideID: "TV1.fr", at: .utc(2025, 1, 1, 5))?.title, "A")
+    }
+
     func testPlainDataIsLeftAloneAndBrokenGzipThrows() throws {
         XCTAssertFalse(Data("plain".utf8).isGzipped)
         XCTAssertEqual(try Data("plain".utf8).gunzippedIfNeeded(), Data("plain".utf8))
