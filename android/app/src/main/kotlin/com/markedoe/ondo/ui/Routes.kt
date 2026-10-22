@@ -42,9 +42,12 @@ object Routes {
     @Serializable data class Categories(val type: String = "movie")
     @Serializable data object Help
     @Serializable data object AddPlaylist
+
+    /** The privacy policy or the support page inside the app, on a TV (no browser there: Google's TV-WB). */
+    @Serializable data class Web(val url: String)
 }
 
-/** The tabs: bottom bar on phones, rail on tablets and Chromebooks. Search is the magnifying glass of each screen. */
+/** The tabs: bottom bar on phones, rail on tablets, Chromebooks and TVs. Search is the magnifying glass of each screen. */
 enum class TopLevel(val route: Any, @StringRes val label: Int, val icon: ImageVector, val tag: String) {
     HOME(Routes.Home, R.string.home, Icons.Rounded.Home, "tabHome"),
     MOVIES(Routes.Movies, R.string.movies, Icons.Rounded.Movie, "tabMovies"),

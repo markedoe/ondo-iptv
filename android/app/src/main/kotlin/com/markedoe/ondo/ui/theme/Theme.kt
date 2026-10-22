@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.markedoe.ondo.ui.tv.ProvideFocusRipple
 
 /** Ondo palette: lime accent on deep green-black (dark, the default) or teal on white (light). */
 object OndoColors {
@@ -66,5 +67,8 @@ fun OndoTheme(appearance: Appearance = Appearance.DARK, content: @Composable () 
         Appearance.LIGHT -> false
         Appearance.DARK -> true
     }
-    MaterialTheme(colorScheme = if (dark) Dark else Light, typography = OndoTypography, content = content)
+    MaterialTheme(colorScheme = if (dark) Dark else Light, typography = OndoTypography) {
+        // A focus that shows from the sofa (remote, keyboard).
+        ProvideFocusRipple(content)
+    }
 }

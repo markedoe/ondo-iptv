@@ -91,6 +91,8 @@ import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.ShelfMetrics
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.focusMemory
 
 /** Progress of something being watched. */
 data class WatchProgress(val fraction: Float, val minutesLeft: Int, val finished: Boolean)
@@ -183,7 +185,7 @@ private fun AwardsBlock(awards: List<AwardRow>, metrics: ShelfMetrics, onAward: 
         (if (all) awards else awards.take(4)).forEach { award ->
             // An award opens the other movies of the playlist that won it or competed for it.
             Row(
-                Modifier.padding(top = 6.dp).clip(RoundedCornerShape(6.dp)).clickable { onAward(award.awardId) }.semantics(mergeDescendants = true) {}.testTag("award-${award.awardId}"),
+                Modifier.padding(top = 6.dp).focusFrame(RoundedCornerShape(6.dp), grow = 1.02f).clip(RoundedCornerShape(6.dp)).clickable { onAward(award.awardId) }.semantics(mergeDescendants = true) {}.testTag("award-${award.awardId}"),
                 verticalAlignment = Alignment.Top,
             ) {
                 Icon(
@@ -291,8 +293,17 @@ private fun DetailScaffold(
     content: LazyListScope.(ShelfMetrics) -> Unit,
 ) {
     val metrics = rememberShelfMetrics()
+    val configuration = LocalConfiguration.current
+    // A short landscape screen (a TV, a phone on its side): poster, title, facts and the buttons side by side in the
+    // first screenful, Play in sight.
+    val wide = configuration.screenHeightDp < 600 && configuration.screenWidthDp > configuration.screenHeightDp
     Box(Modifier.fillMaxSize().testTag("detail")) {
         LazyColumn(contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+            if (wide) {
+                item { WideHeader(title, posterUrl, backdropUrl, facts, metrics) { actions(metrics) } }
+                content(metrics)
+                return@LazyColumn
+            }
             item {
                 Box {
                     Box(Modifier.fillMaxWidth().height(if (metrics.compact) 300.dp else 380.dp)) {
@@ -342,6 +353,43 @@ private fun DetailScaffold(
     }
 }
 
+/** The header of a short landscape screen: artwork behind, the poster beside the title, facts and [actions]. */
+@Composable
+private fun WideHeader(
+    title: String,
+    posterUrl: String?,
+    backdropUrl: String?,
+    facts: List<String>,
+    metrics: ShelfMetrics,
+    actions: @Composable () -> Unit,
+) {
+    Box(Modifier.fillMaxWidth()) {
+        Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.matchParentSize())
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.7f), 1f to Color.Black.copy(alpha = 0.25f)))
+                .background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to MaterialTheme.colorScheme.background)),
+        )
+        Row(
+            modifier = Modifier
+                .windowInsetsPadding(WindowInsets.statusBars)
+                .padding(start = metrics.gutter, end = metrics.gutter, top = 56.dp, bottom = 16.dp),
+        ) {
+            Poster(url = posterUrl, title = title, modifier = Modifier.width(150.dp))
+            Spacer(Modifier.width(24.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                if (facts.isNotEmpty()) {
+                    Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.75f), maxLines = 2, modifier = Modifier.padding(top = 4.dp))
+                }
+                Spacer(Modifier.height(16.dp))
+                actions()
+            }
+        }
+    }
+}
+
 @Composable
 private fun PlayButton(title: String, progress: WatchProgress?, onClick: () -> Unit) {
     Column {
@@ -349,7 +397,7 @@ private fun PlayButton(title: String, progress: WatchProgress?, onClick: () -> U
             onClick = onClick,
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
             contentPadding = PaddingValues(vertical = 14.dp, horizontal = 24.dp),
-            modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().testTag("detailPlay"),
+            modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().focusMemory("detail-play", initial = true).testTag("detailPlay"),
         ) {
             Icon(Icons.Rounded.PlayArrow, contentDescription = null)
             Spacer(Modifier.width(8.dp))
@@ -381,6 +429,8 @@ private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit, 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
+            .focusFrame(RoundedCornerShape(12.dp))
+            .focusMemory("action:$title")
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) { if (state != null) stateDescription = state }
@@ -446,7 +496,12 @@ private fun Credit(label: String, value: String, links: List<Pair<String, () -> 
 @Composable
 private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: ShelfMetrics, onClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = metrics.gutter, vertical = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .focusFrame(RoundedCornerShape(12.dp), grow = 1.02f)
+            .focusMemory("episode:${episode.id}")
+            .clickable(onClick = onClick)
+            .padding(horizontal = metrics.gutter, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(Modifier.width(if (metrics.compact) 150.dp else 220.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))) {

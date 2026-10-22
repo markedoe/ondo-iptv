@@ -45,6 +45,8 @@ import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.focusMemory
 
 /** Sizes of posters, cards and margins for phones and wide screens. */
 data class ShelfMetrics(val compact: Boolean) {
@@ -96,7 +98,10 @@ fun Shelf(
     }
 }
 
-/** Poster opening the detail page. */
+/**
+ * Poster opening the detail page. [focusKey] tells it apart from the same title elsewhere on the page (another
+ * shelf), for the focus to come back to the right one.
+ */
 @Composable
 fun PosterCard(
     item: ShowcaseItem,
@@ -105,10 +110,15 @@ fun PosterCard(
     modifier: Modifier = Modifier,
     progress: Float? = null,
     showsTitle: Boolean = false,
+    focusKey: String = item.key,
+    /** The page's first item: it takes the focus on a TV when the page opens. */
+    initialFocus: Boolean = false,
 ) {
     Column(
         modifier = modifier
             .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
+            .focusFrame(PosterShape)
+            .focusMemory(focusKey, initialFocus)
             .clip(PosterShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = item.title },
@@ -130,9 +140,16 @@ fun PosterCard(
 
 /** 16:9 "continue watching" card with the time left and the progress. */
 @Composable
-fun ContinueCard(item: ResumeItem, width: Dp, onClick: () -> Unit, modifier: Modifier = Modifier, preparing: Boolean = false) {
+fun ContinueCard(
+    item: ResumeItem,
+    width: Dp,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    preparing: Boolean = false,
+    initialFocus: Boolean = false,
+) {
     val shape = RoundedCornerShape(12.dp)
-    Column(modifier.width(width).clip(shape).clickable(onClick = onClick)) {
+    Column(modifier.width(width).focusFrame(shape).focusMemory("resume:${item.key}", initialFocus).clip(shape).clickable(onClick = onClick).padding(bottom = 4.dp)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(shape)) {
             Artwork(url = item.imageUrl, title = item.title, modifier = Modifier.fillMaxSize(), showsTitleFallback = false)
             Box(
@@ -155,9 +172,9 @@ fun ContinueCard(item: ResumeItem, width: Dp, onClick: () -> Unit, modifier: Mod
                 ProgressBar(item.progress)
             }
         }
-        Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+        Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp))
         item.subtitle?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp))
         }
     }
 }

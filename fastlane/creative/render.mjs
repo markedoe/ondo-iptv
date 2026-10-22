@@ -8,6 +8,12 @@
 //
 // Needs Playwright's Chromium and the Inter font. The App Store Connect upload is
 // .github/workflows/app-store-assets.yml.
+//
+// With --tv instead of a folder, only the Android TV banners (tv-banner.html, no screenshots needed): the launcher
+// banner, 320 × 180 at xhdpi, in every density of android/app/src/main/res/drawable-*/tv_banner.png, and the Google
+// Play listing's fastlane/metadata-android/<locale>/images/tvBanner.png (the release workflow uploads it).
+//
+//   NODE_PATH="$(npm root -g)" node fastlane/creative/render.mjs --tv
 import { mkdirSync, readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
@@ -17,7 +23,8 @@ import { fileURLToPath } from "node:url";
 // Through require, so that NODE_PATH finds a Playwright installed globally (ES imports ignore NODE_PATH).
 const { chromium } = createRequire(import.meta.url)("playwright");
 const here = dirname(fileURLToPath(import.meta.url));
-const shots = resolve(process.argv[2] ?? "shots");
+const tv = process.argv[2] === "--tv";
+const shots = resolve(tv ? "shots" : process.argv[2] ?? "shots");
 // App Store Connect takes the 21:9 header as PNG only; Chromium's PNG and JPEG have no alpha channel, which the
 // App Store refuses for these assets.
 const assets = { header: [3840, 1646, "png"], search: [3840, 2560, "jpeg"] };
@@ -43,6 +50,38 @@ await new Promise((ready) => server.listen(0, "127.0.0.1", ready));
 const origin = `http://127.0.0.1:${server.address().port}`;
 
 const browser = await chromium.launch();
+
+/** The banner at this size, as a PNG (Google Play takes PNG or JPEG; the launcher, PNG). */
+async function banner(width, height, file) {
+  const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
+  const url = new URL("/tv-banner.html", origin);
+  url.search = new URLSearchParams({ width, height }).toString();
+  await page.goto(url.href);
+  await page.waitForSelector("body[data-ready='1']");
+  mkdirSync(dirname(file), { recursive: true });
+  await page.screenshot({ path: file, type: "png" });
+  await page.close();
+  console.log(file);
+}
+
+if (tv) {
+  try {
+    const repository = resolve(here, "..", "..");
+    const res = join(repository, "android", "app", "src", "main", "res");
+    // 160 × 90 dp: mdpi 1×, hdpi 1.5×, xhdpi 2×, xxhdpi 3×, xxxhdpi 4× (4K screens).
+    for (const [density, scale] of [["mdpi", 1], ["hdpi", 1.5], ["xhdpi", 2], ["xxhdpi", 3], ["xxxhdpi", 4]]) {
+      await banner(160 * scale, 90 * scale, join(res, `drawable-${density}`, "tv_banner.png"));
+    }
+    for (const locale of ["en-US", "fr-FR"]) {
+      await banner(1280, 720, join(repository, "fastlane", "metadata-android", locale, "images", "tvBanner.png"));
+    }
+  } finally {
+    await browser.close();
+    server.close();
+  }
+  process.exit(0);
+}
+
 try {
   for (const locale of ["en-US", "fr-FR"]) {
     mkdirSync(join(here, locale), { recursive: true });

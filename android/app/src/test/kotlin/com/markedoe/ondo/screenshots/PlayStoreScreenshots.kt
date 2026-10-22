@@ -24,6 +24,7 @@ import com.markedoe.ondo.ui.screens.SeriesDetailScreen
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
+import com.markedoe.ondo.ui.tv.TelevisionFrame
 import java.util.Locale
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,7 +34,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Google Play listing screenshots, from the fixture catalogue: phone (1080×1920), 7" (1920×1080) and
- * 10" (2560×1440) tablets, in English and French. Written to `src/test/screenshots/play/<locale>/<device>/`
+ * 10" (2560×1440) tablets and TV (1920×1080, inside the TV's safe area), in English and French. Written to `src/test/screenshots/play/<locale>/<device>/`
  * by `./gradlew :app:recordRoborazziDebug`; the release workflow copies them into the store listing.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -43,6 +44,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
         PHONE("phoneScreenshots", "w360dp-h640dp-xxhdpi"),
         SEVEN_INCH("sevenInchScreenshots", "w960dp-h540dp-land-xhdpi"),
         TEN_INCH("tenInchScreenshots", "w1280dp-h720dp-land-xhdpi"),
+        TV("tvScreenshots", "w960dp-h540dp-land-television-xhdpi"),
     }
 
     companion object {
@@ -83,7 +85,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
         ) {
             OndoTheme {
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
-                    OndoNavigationFrame(tab, onSelect = {}) { content() }
+                    TelevisionFrame { OndoNavigationFrame(tab, onSelect = {}) { content() } }
                 }
             }
         }

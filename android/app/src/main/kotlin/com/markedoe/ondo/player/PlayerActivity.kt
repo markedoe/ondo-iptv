@@ -91,6 +91,7 @@ import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
 import com.markedoe.ondo.core.playback.RebufferPolicy
 import com.markedoe.ondo.ui.theme.OndoTheme
+import com.markedoe.ondo.ui.tv.isTelevision
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.delay
@@ -115,7 +116,13 @@ class PlayerActivity : ComponentActivity() {
     private lateinit var reporter: PlaybackReporter
     private var inPictureInPicture by mutableStateOf(false)
     private var playerView: PlayerView? = null
-    private val supportsPictureInPicture by lazy { packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
+    /**
+     * No Picture-in-Picture on a TV: Google's TV app quality wants it entered only by an explicit action (TV-IE), and
+     * the remote's Home is not one.
+     */
+    private val supportsPictureInPicture by lazy {
+        packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && !resources.configuration.isTelevision
+    }
 
     /** Freezes and lost pictures of this playback, explained; shown by More, Stream Statistics. */
     private var health = PlaybackHealth()
@@ -161,7 +168,9 @@ class PlayerActivity : ComponentActivity() {
                                 setShowPreviousButton(false)
                                 // The spinner while the stream starts, after a seek and when it waits for data.
                                 setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
-                                keepScreenOn = true
+                                // The screen stays on while the video plays only: paused, it may dim and a TV may
+                                // show its screen saver (TV-BU, TV-BY).
+                                keepScreenOn = exoPlayer.isPlaying
                                 // The video's place on screen, for the animation into Picture-in-Picture.
                                 videoSurfaceView?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updatePictureInPictureParams() }
                             }.also { playerView = it }
@@ -209,12 +218,14 @@ class PlayerActivity : ComponentActivity() {
                         }
                     }
                     shownReport?.takeIf { !inPictureInPicture }?.let { report ->
+                        // Share when an app can take the text; the GitHub issue opens in a browser, which a TV
+                        // does not open (TV-WB).
                         ProblemReportDialog(
                             report = report,
                             onDismiss = { shownReport = null },
                             onCopy = { copyReport(report) },
-                            onShare = { shareReport(report) },
-                            onOpenIssue = { startOrIgnore(Intent(Intent.ACTION_VIEW, ProblemReport.issueUrl(report).toUri())) },
+                            onShare = if (canShare) ({ shareReport(report) }) else null,
+                            onOpenIssue = if (resources.configuration.isTelevision) null else ({ startOrIgnore(Intent(Intent.ACTION_VIEW, ProblemReport.issueUrl(report).toUri())) }),
                         )
                     }
                     errorMessage?.takeIf { !inPictureInPicture }?.let { message ->
@@ -279,6 +290,7 @@ class PlayerActivity : ComponentActivity() {
 
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         reporter.isPlaying(isPlaying)
+                        playerView?.keepScreenOn = isPlaying
                         updatePictureInPictureParams()
                     }
 
@@ -531,6 +543,9 @@ class PlayerActivity : ComponentActivity() {
     private fun copyReport(report: String) {
         getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText(getString(R.string.problem_report), report))
     }
+
+    /** An app on the device can take a shared text (not always so on a TV). */
+    private val canShare by lazy { Intent(Intent.ACTION_SEND).setType("text/plain").resolveActivity(packageManager) != null }
 
     private fun shareReport(report: String) {
         val send = Intent(Intent.ACTION_SEND)

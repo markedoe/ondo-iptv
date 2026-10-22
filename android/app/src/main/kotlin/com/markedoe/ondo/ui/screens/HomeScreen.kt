@@ -61,6 +61,8 @@ import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.focusMemory
 
 data class HomeUiState(
     val playlistName: String,
@@ -185,7 +187,9 @@ private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMe
 @Composable
 private fun PosterShelf(title: String, items: List<ShowcaseItem>, metrics: ShelfMetrics, actions: HomeActions, onSeeAll: (() -> Unit)? = null) {
     Shelf(title, metrics, onSeeAll = onSeeAll) {
-        items(items, key = { it.key }) { item -> PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }) }
+        items(items, key = { it.key }) { item ->
+            PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "$title:${item.key}")
+        }
     }
 }
 
@@ -203,7 +207,8 @@ private fun ChannelShelf(state: HomeUiState, metrics: ShelfMetrics, actions: Hom
 
 @Composable
 fun ChannelTile(row: ChannelRow, onClick: () -> Unit) {
-    Column(Modifier.width(124.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick)) {
+    val shape = RoundedCornerShape(12.dp)
+    Column(Modifier.width(124.dp).focusFrame(shape).focusMemory("channel:${row.channel.id}").clip(shape).clickable(onClick = onClick).padding(bottom = 4.dp)) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -215,8 +220,8 @@ fun ChannelTile(row: ChannelRow, onClick: () -> Unit) {
         ) {
             ChannelLogo(url = row.channel.logoUrl, name = row.channel.name)
         }
-        Text(row.channel.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
-        row.nowTitle?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        Text(row.channel.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp))
+        row.nowTitle?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp)) }
     }
 }
 

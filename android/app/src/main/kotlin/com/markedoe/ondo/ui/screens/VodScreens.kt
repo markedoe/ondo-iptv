@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Sort
@@ -109,30 +110,51 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
                 }
             }
         }
+        // On a TV, the first card of the first shelf takes the focus when the tab opens.
+        val first = when {
+            state.continueWatching.isNotEmpty() -> "resume"
+            state.myList.isNotEmpty() -> "myList"
+            state.awardWinners.isNotEmpty() -> "awards"
+            else -> state.rows.firstOrNull()?.category?.id
+        }
         if (state.continueWatching.isNotEmpty()) {
             item {
                 Shelf(stringResource(R.string.continue_watching), metrics) {
-                    items(state.continueWatching, key = { it.key }) { ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }) }
+                    itemsIndexed(state.continueWatching, key = { _, it -> it.key }) { index, item ->
+                        ContinueCard(item, metrics.wideCardWidth, onClick = { actions.onResume(item) }, initialFocus = first == "resume" && index == 0)
+                    }
                 }
             }
         }
         if (state.myList.isNotEmpty()) {
             item {
                 Shelf(stringResource(R.string.my_list), metrics, onSeeAll = actions.onSeeAllMyList) {
-                    items(state.myList, key = { it.key }) { PosterCard(it, metrics.posterWidth, onClick = { actions.onOpen(it) }) }
+                    itemsIndexed(state.myList, key = { _, it -> it.key }) { index, item ->
+                        PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == "myList" && index == 0)
+                    }
                 }
             }
         }
         if (state.awardWinners.isNotEmpty()) {
             item {
                 Shelf(stringResource(R.string.award_winners), metrics) {
-                    items(state.awardWinners, key = { it.key }) { PosterCard(it, metrics.posterWidth, onClick = { actions.onOpen(it) }) }
+                    itemsIndexed(state.awardWinners, key = { _, it -> it.key }) { index, item ->
+                        PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "awards:${item.key}", initialFocus = first == "awards" && index == 0)
+                    }
                 }
             }
         }
         items(state.rows, key = { it.category.id }) { row ->
             Shelf(row.category.name, metrics, onSeeAll = { actions.onCategory(row.category) }) {
-                items(row.items, key = { it.key }) { PosterCard(it, metrics.posterWidth, onClick = { actions.onOpen(it) }) }
+                itemsIndexed(row.items, key = { _, it -> it.key }) { index, item ->
+                    PosterCard(
+                        item,
+                        metrics.posterWidth,
+                        onClick = { actions.onOpen(item) },
+                        focusKey = "${row.category.id}:${item.key}",
+                        initialFocus = first == row.category.id && index == 0,
+                    )
+                }
             }
         }
         if (state.rows.isEmpty()) {

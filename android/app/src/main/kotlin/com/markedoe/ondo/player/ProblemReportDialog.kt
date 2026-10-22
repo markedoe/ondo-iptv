@@ -28,8 +28,10 @@ fun ProblemReportDialog(
     report: String,
     onDismiss: () -> Unit,
     onCopy: () -> Unit,
-    onShare: () -> Unit,
-    onOpenIssue: () -> Unit,
+    /** Null when nothing on the device can take it (the button is not shown). */
+    onShare: (() -> Unit)?,
+    /** Null on a TV, which opens no browser. */
+    onOpenIssue: (() -> Unit)?,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -55,8 +57,12 @@ fun ProblemReportDialog(
         // The buttons wrap onto more lines when they do not fit side by side.
         confirmButton = {
             TextButton(onClick = onCopy, modifier = Modifier.testTag("copyReport")) { Text(stringResource(R.string.copy_report)) }
-            TextButton(onClick = onShare, modifier = Modifier.testTag("shareReport")) { Text(stringResource(R.string.share)) }
-            TextButton(onClick = onOpenIssue, modifier = Modifier.testTag("openIssue")) { Text(stringResource(R.string.open_issue)) }
+            if (onShare != null) {
+                TextButton(onClick = onShare, modifier = Modifier.testTag("shareReport")) { Text(stringResource(R.string.share)) }
+            }
+            if (onOpenIssue != null) {
+                TextButton(onClick = onOpenIssue, modifier = Modifier.testTag("openIssue")) { Text(stringResource(R.string.open_issue)) }
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) } },
     )

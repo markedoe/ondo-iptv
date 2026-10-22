@@ -1,0 +1,47 @@
+<!doctype html>
+<!--
+  Ondo's Android TV banners, drawn by render.mjs (--tv): the launcher banner (320 × 180 at xhdpi, 640 × 360 at
+  xxxhdpi for 4K screens) and the Google Play listing's TV banner (1280 × 720). The launcher banner must carry the
+  app's name (Google's TV app quality, TV-BN). The logo is the launcher icon's (ic_launcher_foreground.xml).
+  tv-banner.html?width=320&height=180
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Inter Display", "Inter", sans-serif;
+    background:
+      radial-gradient(ellipse 60% 80% at 30% 45%, rgba(214, 255, 61, 0.14), transparent 70%),
+      linear-gradient(180deg, #1c4f45 0%, #081c17 100%);
+  }
+  svg { display: block; }
+  span { color: #fff6de; font-weight: 600; letter-spacing: -0.02em; line-height: 1; }
+</style>
+</head>
+<body>
+<!-- The logo's ring and wave, cropped to the ring (the icon's 108 × 108 canvas keeps a safe margin around it). -->
+<svg id="logo" viewBox="26 26 56 56" aria-hidden="true">
+  <path d="M32.90,54.00 a21.10,21.10 0 1,0 42.19,0 a21.10,21.10 0 1,0 -42.19,0" fill="none" stroke="#d6ff3d" stroke-width="8.28"/>
+  <path d="M28.55,54.00 L28.97,54.40 L29.40,54.79 L29.82,55.18 L30.24,55.56 L30.67,55.93 L31.09,56.29 L31.52,56.63 L31.94,56.96 L32.37,57.27 L32.79,57.56 L33.21,57.83 L33.64,58.08 L34.06,58.30 L34.49,58.49 L34.91,58.66 L35.34,58.79 L35.76,58.90 L36.18,58.98 L36.61,59.02 L37.03,59.04 L37.46,59.02 L37.88,58.98 L38.30,58.90 L38.73,58.79 L39.15,58.66 L39.58,58.49 L40.00,58.30 L40.43,58.08 L40.85,57.83 L41.27,57.56 L41.70,57.27 L42.12,56.96 L42.55,56.63 L42.97,56.29 L43.40,55.93 L43.82,55.56 L44.24,55.18 L44.67,54.79 L45.09,54.40 L45.52,54.00 L45.94,53.60 L46.36,53.21 L46.79,52.82 L47.21,52.44 L47.64,52.07 L48.06,51.71 L48.49,51.37 L48.91,51.04 L49.33,50.73 L49.76,50.44 L50.18,50.17 L50.61,49.92 L51.03,49.70 L51.45,49.51 L51.88,49.34 L52.30,49.21 L52.73,49.10 L53.15,49.02 L53.58,48.98 L54.00,48.96 L54.42,48.98 L54.85,49.02 L55.27,49.10 L55.70,49.21 L56.12,49.34 L56.55,49.51 L56.97,49.70 L57.39,49.92 L57.82,50.17 L58.24,50.44 L58.67,50.73 L59.09,51.04 L59.51,51.37 L59.94,51.71 L60.36,52.07 L60.79,52.44 L61.21,52.82 L61.64,53.21 L62.06,53.60 L62.48,54.00 L62.91,54.40 L63.33,54.79 L63.76,55.18 L64.18,55.56 L64.61,55.93 L65.03,56.29 L65.45,56.63 L65.88,56.96 L66.30,57.27 L66.73,57.56 L67.15,57.83 L67.57,58.08 L68.00,58.30 L68.42,58.49 L68.85,58.66 L69.27,58.79 L69.70,58.90 L70.12,58.98 L70.54,59.02 L70.97,59.04 L71.39,59.02 L71.82,58.98 L72.24,58.90 L72.66,58.79 L73.09,58.66 L73.51,58.49 L73.94,58.30 L74.36,58.08 L74.79,57.83 L75.21,57.56 L75.63,57.27 L76.06,56.96 L76.48,56.63 L76.91,56.29 L77.33,55.93 L77.76,55.56 L78.18,55.18 L78.60,54.79 L79.03,54.40 L79.45,54.00" fill="none" stroke="#fff6de" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+<span id="name">Ondo</span>
+<script>
+  const params = new URLSearchParams(location.search);
+  const width = Number(params.get("width") || 320);
+  const height = Number(params.get("height") || 180);
+  document.documentElement.style.width = width + "px";
+  document.documentElement.style.height = height + "px";
+  // Proportions of the 320 × 180 banner, scaled: logo, gap and name side by side, centred.
+  const unit = height / 180;
+  const logo = document.getElementById("logo");
+  logo.style.width = logo.style.height = 92 * unit + "px";
+  logo.style.marginRight = 18 * unit + "px";
+  document.getElementById("name").style.fontSize = 70 * unit + "px";
+  document.fonts.ready.then(() => { document.body.dataset.ready = "1"; });
+</script>
+</body>
+</html>

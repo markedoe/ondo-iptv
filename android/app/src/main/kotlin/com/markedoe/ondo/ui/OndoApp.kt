@@ -10,17 +10,25 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScope
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -30,16 +38,20 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -87,7 +99,14 @@ import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsScreen
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
+import com.markedoe.ondo.ui.screens.WebPageScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
+import com.markedoe.ondo.ui.tv.FocusMemory
+import com.markedoe.ondo.ui.tv.LocalFocusMemory
+import com.markedoe.ondo.ui.tv.TelevisionFrame
+import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.isTelevision
+import com.markedoe.ondo.ui.tv.rememberFocusMemory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -106,10 +125,12 @@ fun OndoApp(viewModel: OndoViewModel) {
     LaunchedEffect(viewModel) {
         viewModel.playRequests.collect { request -> context.startActivity(PlayerActivity.intent(context, request)) }
     }
-    when {
-        !state.isReady -> Box(Modifier.fillMaxSize())
-        state.playlists.isEmpty() -> Onboarding(viewModel)
-        else -> MainTabs(viewModel)
+    TelevisionFrame {
+        when {
+            !state.isReady -> Box(Modifier.fillMaxSize())
+            state.playlists.isEmpty() -> Onboarding(viewModel)
+            else -> MainTabs(viewModel)
+        }
     }
 }
 
@@ -158,27 +179,30 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 popEnterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
                 popExitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
             ) {
-                composable<Routes.Home> { HomeDestination(viewModel, navController) }
-                composable<Routes.Movies> { VodDestination(viewModel, navController, series = false) }
-                composable<Routes.Series> { VodDestination(viewModel, navController, series = true) }
-                composable<Routes.Live> { LiveDestination(viewModel, navController) }
-                composable<Routes.Search> { SearchDestination(viewModel, navController) }
-                composable<Routes.MyList> { MyListDestination(viewModel, navController) }
-                composable<Routes.MovieDetail> { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
-                composable<Routes.SeriesDetail> { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
-                composable<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
-                composable<Routes.Browse> { BrowseDestination(viewModel, navController, it.toRoute()) }
-                composable<Routes.Guide> { GuideDestination(viewModel, navController) }
-                composable<Routes.Reminders> { RemindersDestination(viewModel, navController) }
-                composable<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
-                composable<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
-                composable<Routes.Settings> { SettingsDestination(viewModel, navController) }
-                composable<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
-                composable<Routes.Help> {
-                    val context = LocalContext.current
-                    HelpScreen(onBack = { navController.popBackStack() }, onSupport = { context.browse(SUPPORT_URL) })
+                page<Routes.Home> { HomeDestination(viewModel, navController) }
+                page<Routes.Movies> { VodDestination(viewModel, navController, series = false) }
+                page<Routes.Series> { VodDestination(viewModel, navController, series = true) }
+                page<Routes.Live> { LiveDestination(viewModel, navController) }
+                page<Routes.Search> { SearchDestination(viewModel, navController) }
+                page<Routes.MyList> { MyListDestination(viewModel, navController) }
+                page<Routes.MovieDetail> { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
+                page<Routes.SeriesDetail> { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
+                page<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
+                page<Routes.Browse> { BrowseDestination(viewModel, navController, it.toRoute()) }
+                page<Routes.Guide> { GuideDestination(viewModel, navController) }
+                page<Routes.Reminders> { RemindersDestination(viewModel, navController) }
+                page<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
+                page<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
+                page<Routes.Settings> { SettingsDestination(viewModel, navController) }
+                page<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
+                page<Routes.Help> {
+                    val open = rememberPageOpener(navController)
+                    HelpScreen(onBack = { navController.popBackStack() }, onSupport = { open(SUPPORT_URL) })
                 }
-                composable<Routes.AddPlaylist> {
+                page<Routes.Web> {
+                    WebPageScreen(it.toRoute<Routes.Web>().url, allowed = setOf(PRIVACY_URL, SUPPORT_URL), onBack = { navController.popBackStack() })
+                }
+                page<Routes.AddPlaylist> {
                     val state by viewModel.state.collectAsStateWithLifecycle()
                     var picked by remember { mutableStateOf<PickedFile?>(null) }
                     AddPlaylistScreen(
@@ -198,23 +222,34 @@ private fun MainTabs(viewModel: OndoViewModel) {
     }
 }
 
-/** The tabs around the pages: a bottom bar on phones, a rail on tablets and Chromebooks. */
+/** The tabs around the pages: a bottom bar on phones, a rail on tablets, Chromebooks and TVs. */
 @Composable
 fun OndoNavigationFrame(selected: TopLevel, onSelect: (TopLevel) -> Unit, content: @Composable () -> Unit) {
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            TopLevel.entries.forEach { tab ->
-                item(
-                    selected = tab == selected,
-                    onClick = { onSelect(tab) },
-                    icon = { Icon(tab.icon, contentDescription = null) },
-                    label = { Text(stringResource(tab.label)) },
-                    modifier = Modifier.testTag(tab.tag),
-                )
-            }
-        },
-        content = content,
-    )
+    val television = isTelevision()
+    // On a TV, a frame shows which tab the remote is on (the selected one keeps its pill).
+    val frame = if (television) Modifier.focusFrame(RoundedCornerShape(16.dp), grow = 1f) else Modifier
+    val items: NavigationSuiteScope.() -> Unit = {
+        TopLevel.entries.forEach { tab ->
+            item(
+                selected = tab == selected,
+                onClick = { onSelect(tab) },
+                icon = { Icon(tab.icon, contentDescription = null) },
+                label = { Text(stringResource(tab.label)) },
+                modifier = frame.testTag(tab.tag),
+            )
+        }
+    }
+    if (television) {
+        // A rail whatever the window's size class, on the page's own background.
+        NavigationSuiteScaffold(
+            navigationSuiteItems = items,
+            layoutType = NavigationSuiteType.NavigationRail,
+            navigationSuiteColors = NavigationSuiteDefaults.colors(navigationRailContainerColor = Color.Transparent),
+            content = content,
+        )
+    } else {
+        NavigationSuiteScaffold(navigationSuiteItems = items, content = content)
+    }
 }
 
 /** Loading failures (the cached catalogue stays on screen), with a retry. */
@@ -231,6 +266,13 @@ private fun ErrorSnackbar(viewModel: OndoViewModel, modifier: Modifier, onRetry:
         if (result == SnackbarResult.ActionPerformed) onRetry()
     }
     SnackbarHost(host, modifier.testTag("errorSnackbar"))
+}
+
+/** A page of the app, which keeps where the remote's focus was while another page is open (see [FocusMemory]). */
+private inline fun <reified T : Any> NavGraphBuilder.page(noinline content: @Composable (NavBackStackEntry) -> Unit) {
+    composable<T> { entry ->
+        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) { content(entry) }
+    }
 }
 
 /** Each tab keeps its own back stack, like the system apps. */
@@ -516,7 +558,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
     val context = LocalContext.current
     val m3u = stringResource(R.string.kind_m3u)
     val xtream = stringResource(R.string.kind_xtream)
-    fun browse(url: String) = context.browse(url)
+    val browse = rememberPageOpener(navController)
     SettingsScreen(
         state = UiMappers.settings(state, appVersion()) { isXtream -> if (isXtream) xtream else m3u },
         actions = SettingsActions(
@@ -567,6 +609,19 @@ private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHo
 }
 
 /** Opens a web page in the browser (nothing happens on a device without one). */
+/**
+ * Opens one of Ondo's own pages (privacy policy, support): in the browser, or inside the app on a TV, where Google
+ * wants no browser opened (TV-WB).
+ */
+@Composable
+private fun rememberPageOpener(navController: NavHostController): (String) -> Unit {
+    val context = LocalContext.current
+    val television = isTelevision()
+    return remember(navController, television) {
+        { url -> if (television) navController.navigate(Routes.Web(url)) else context.browse(url) }
+    }
+}
+
 private fun Context.browse(url: String) {
     try {
         startActivity(Intent(Intent.ACTION_VIEW, url.toUri()))

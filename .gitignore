@@ -31,3 +31,6 @@ secrets/
 *.jks
 .env
 .env.*
+
+# Android screenshots recorded by the tests (CI publishes them; the release copies them into the listing)
+android/app/src/test/screenshots/
