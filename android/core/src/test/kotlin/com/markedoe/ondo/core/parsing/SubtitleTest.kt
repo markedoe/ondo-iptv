@@ -18,6 +18,33 @@ class SubtitleTest {
         assertNull(SubtitleParser.cueAt(0.5, cues))
     }
 
+    /**
+     * Sloppy files separate cues with lines holding spaces or tabs: the next cue's number and timing must not
+     * end up in the previous cue's text.
+     */
+    @Test
+    fun blankLinesHoldingSpacesStillSeparateCues() {
+        val srt = "1\n00:00:01,000 --> 00:00:02,000\nFirst\n \n2\n00:00:03,000 --> 00:00:04,000\nSecond\n\t\n3\n00:00:05,000 --> 00:00:06,000\nThird\n"
+        assertEquals(listOf("First", "Second", "Third"), SubtitleParser.parse(srt).map { it.text })
+    }
+
+    @Test
+    fun utf16SubtitlesWithAByteOrderMarkAreDecoded() {
+        val text = "1\n00:00:01,000 --> 00:00:02,000\nL’été\n"
+        val little = byteArrayOf(0xFF.toByte(), 0xFE.toByte()) + text.toByteArray(Charsets.UTF_16LE)
+        val big = byteArrayOf(0xFE.toByte(), 0xFF.toByte()) + text.toByteArray(Charsets.UTF_16BE)
+        assertEquals("L’été", SubtitleParser.parse(little).firstOrNull()?.text)
+        assertEquals("L’été", SubtitleParser.parse(big).firstOrNull()?.text)
+    }
+
+    /** Old French subtitles are often Windows-1252: its curly apostrophes and "œ" are not control characters. */
+    @Test
+    fun windows1252SubtitlesKeepTheirPunctuation() {
+        // Bytes 0x92, 0xE9, 0x9C, 0x85 and 0x81 (undefined in Windows-1252).
+        val bytes = "1\n00:00:01,000 --> 00:00:02,000\nL\u0092été \u009Cuvre\u0085\u0081\n".toByteArray(Charsets.ISO_8859_1)
+        assertEquals("L’été œuvre…\uFFFD", SubtitleParser.parse(bytes).firstOrNull()?.text)
+    }
+
     @Test
     fun webVtt() {
         val vtt = "WEBVTT\n\nintro\n00:01.000 --> 00:02.000 align:start\n{\\an8}Short <b>form</b>\n\n01:00:00.000 --> 01:00:01.000\nHour\n"
