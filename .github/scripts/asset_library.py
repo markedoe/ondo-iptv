@@ -11,9 +11,12 @@ ASC_KEY_P8, as for the release workflow):
   asset_library.py place    shows them in the Header and Search Results tab of the iOS version being prepared, one
                             pair per listing language. Refused for a version in review or already approved: App Review
                             sees the version as it was submitted.
+  asset_library.py submit   submits them for review on their own (a review submission of the Asset Library), once an
+                            iOS version is approved. Refused while an iOS version or review submission is in review,
+                            so that nothing changes what App Review is looking at. Only with the user's go (CLAUDE.md).
+  asset_library.py publish  shows the approved assets on the live iOS version's product page, without a new version.
 
-Nothing here submits anything for review (CLAUDE.md: never without the user's go). Prints no secret and no contact
-detail. Standard library and the openssl command only.
+Prints no secret and no contact detail. Standard library and the openssl command only.
 """
 import base64
 import hashlib
@@ -38,6 +41,11 @@ SLOTS = {"header": "PRODUCT_PAGE_HEADER_ASSET", "search": "APP_STORE_SEARCH_RESU
 FILES = {"header": "header.png", "search": "search.jpg"}
 # The iOS version states whose product page can still change (App Store Connect Help, screenshots).
 EDITABLE = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"}
+# An iOS version Apple is looking at, and one it has approved.
+IN_REVIEW = {"WAITING_FOR_REVIEW", "IN_REVIEW", "READY_FOR_REVIEW", "WAITING_FOR_EXPORT_COMPLIANCE"}
+APPROVED = {"READY_FOR_SALE", "PENDING_DEVELOPER_RELEASE", "PENDING_APPLE_RELEASE", "PROCESSING_FOR_APP_STORE", "ACCEPTED"}
+# Review submissions under way (READY_FOR_REVIEW is a draft not sent yet).
+SUBMISSION_IN_REVIEW = {"WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES", "CANCELING", "COMPLETING"}
 
 
 def b64url(data: bytes) -> str:
@@ -139,6 +147,23 @@ def creative_images(client: Client, library: str):
     return [image for image in images if image["attributes"].get("category") == "CREATIVE_ASSETS"]
 
 
+def review_submissions(client: Client, app: str):
+    return client.all("/v1/reviewSubmissions", query={"filter[app]": app, "filter[platform]": "IOS", "limit": "20",
+                                                     "fields[reviewSubmissions]": "state,platform"})
+
+
+def current_assets(client: Client, library: str) -> dict:
+    """The library image of each file as it is today, by (locale, kind); missing ones are left out."""
+    images = {image["attributes"].get("referenceName"): image for image in creative_images(client, library)}
+    found = {}
+    for locale in LOCALES:
+        for kind in SLOTS:
+            name = reference_name(kind, locale, (CREATIVE / locale / FILES[kind]).read_bytes())
+            if name in images and images[name]["attributes"].get("state") not in ("FAILED", "ARCHIVED"):
+                found[(locale, kind)] = images[name]
+    return found
+
+
 def reference_name(kind: str, locale: str, content: bytes) -> str:
     """Names a file by its slot, language and content: an unchanged file is not uploaded again."""
     return f"Ondo {kind} {locale} {hashlib.sha256(content).hexdigest()[:12]}"
@@ -179,6 +204,8 @@ def status(client: Client):
     for spec in reference["specs"]:
         print(f"spec {spec.get('specId')} {spec.get('aspectRatio')} {spec.get('dimensions')} "
               f"{spec.get('fileExtensions')} for {spec.get('compatiblePlacementTypes')}")
+    for submission in review_submissions(client, app):
+        print(f"iOS review submission: {submission['attributes'].get('state')}")
     images = creative_images(client, library)
     for image in images:
         attributes = image["attributes"]
@@ -241,15 +268,9 @@ def upload(client: Client):
         raise SystemExit(1)
 
 
-def place(client: Client):
-    app = app_id(client)
-    library = library_id(client, app)
-    versions = [version for version in ios_versions(client, app) if version["attributes"]["appStoreState"] in EDITABLE]
-    if not versions:
-        raise SystemExit("No iOS version being prepared: a version in review or approved cannot change. Nothing placed.")
-    version = versions[0]
+def put_on_version(client: Client, version: dict, assets: dict):
+    """One placement per slot and language on the version's listings; an earlier one in the slot is replaced."""
     groups = slot_groups(client)["groups"]
-    images = {image["attributes"].get("referenceName"): image for image in creative_images(client, library)}
     localizations = {item["attributes"]["locale"]: item for item in client.all(
         f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations", query={"fields[appStoreVersionLocalizations]": "locale"})}
     for locale in LOCALES:
@@ -259,10 +280,7 @@ def place(client: Client):
             continue
         current = client.all(f"/v1/appStoreVersionLocalizations/{localization['id']}/placements", query={"include": "image"})
         for kind, slot in SLOTS.items():
-            name = reference_name(kind, locale, (CREATIVE / locale / FILES[kind]).read_bytes())
-            image = images.get(name)
-            if not image or image["attributes"]["state"] in ("FAILED", "ARCHIVED"):
-                raise SystemExit(f"{name} is not in the library: run upload first")
+            image = assets[(locale, kind)]
             for group in sorted(set(groups.get(slot, []))) or [None]:
                 same = [p for p in current if p["attributes"].get("placementType") == slot and p["attributes"].get("placementGroup") == group]
                 if any(p.get("relationships", {}).get("image", {}).get("data", {}).get("id") == image["id"] for p in same):
@@ -281,8 +299,79 @@ def place(client: Client):
                 print(f"{locale} {slot} {group}: placed on iOS {version['attributes']['versionString']} ({placed['attributes'].get('state')})")
 
 
+def all_assets(client: Client, library: str) -> dict:
+    assets = current_assets(client, library)
+    missing = [f"{locale} {kind}" for locale in LOCALES for kind in SLOTS if (locale, kind) not in assets]
+    if missing:
+        raise SystemExit(f"Not in the library: {', '.join(missing)}. Run upload first.")
+    return assets
+
+
+def place(client: Client):
+    app = app_id(client)
+    versions = [version for version in ios_versions(client, app) if version["attributes"]["appStoreState"] in EDITABLE]
+    if not versions:
+        raise SystemExit("No iOS version being prepared: a version in review or approved cannot change. Nothing placed.")
+    put_on_version(client, versions[0], all_assets(client, library_id(client, app)))
+
+
+def submit(client: Client):
+    app = app_id(client)
+    versions = ios_versions(client, app)
+    reviewing = [v["attributes"]["versionString"] for v in versions if v["attributes"]["appStoreState"] in IN_REVIEW]
+    if reviewing:
+        raise SystemExit(f"iOS {', '.join(reviewing)} is in review: nothing submitted, to leave that review alone.")
+    if not any(v["attributes"]["appStoreState"] in APPROVED for v in versions):
+        raise SystemExit("No approved iOS version yet: the assets are reviewed against the latest one. Nothing submitted.")
+    submissions = review_submissions(client, app)
+    busy = [s["attributes"].get("state") for s in submissions if s["attributes"].get("state") in SUBMISSION_IN_REVIEW]
+    if busy:
+        raise SystemExit(f"An iOS review submission is under way ({', '.join(busy)}): nothing submitted.")
+    assets = all_assets(client, library_id(client, app))
+    pending = {key: image for key, image in assets.items() if image["attributes"]["state"] in ("PREPARE_FOR_SUBMISSION", "COMPLETE", "READY_FOR_REVIEW")}
+    for (locale, kind), image in assets.items():
+        if (locale, kind) not in pending:
+            print(f"{locale} {kind}: {image['attributes']['state']}, not submitted again")
+    if not pending:
+        print("Nothing to submit")
+        return
+    # A draft submission holding anything else (an app version…) would send that too: never reuse one.
+    drafts = [s for s in submissions if s["attributes"].get("state") == "READY_FOR_REVIEW"]
+    for draft in drafts:
+        items = client.all(f"/v1/reviewSubmissions/{draft['id']}/items")
+        if items:
+            raise SystemExit("An iOS review submission draft already holds items: finish or remove it in App Store Connect first.")
+    submission = drafts[0] if drafts else client.call("POST", "/v1/reviewSubmissions", {"data": {
+        "type": "reviewSubmissions", "attributes": {"platform": "IOS"},
+        "relationships": {"app": {"data": {"type": "apps", "id": app}}},
+    }})["data"]
+    for (locale, kind), image in pending.items():
+        client.call("POST", "/v1/reviewSubmissionItems", {"data": {
+            "type": "reviewSubmissionItems",
+            "relationships": {"reviewSubmission": {"data": {"type": "reviewSubmissions", "id": submission["id"]}},
+                              "appAssetLibraryImage": {"data": {"type": "appAssetLibraryImages", "id": image["id"]}}},
+        }})
+        print(f"{locale} {kind}: added to the review submission")
+    sent = client.call("PATCH", f"/v1/reviewSubmissions/{submission['id']}",
+                       {"data": {"type": "reviewSubmissions", "id": submission["id"], "attributes": {"submitted": True}}})["data"]
+    print(f"Review submission: {sent['attributes'].get('state')}")
+
+
+def publish(client: Client):
+    app = app_id(client)
+    live = [version for version in ios_versions(client, app) if version["attributes"]["appStoreState"] == "READY_FOR_SALE"]
+    if not live:
+        raise SystemExit("No iOS version on the App Store yet: nothing published.")
+    assets = all_assets(client, library_id(client, app))
+    waiting = [f"{locale} {kind} ({image['attributes']['state']})" for (locale, kind), image in assets.items()
+               if image["attributes"]["state"] != "APPROVED"]
+    if waiting:
+        raise SystemExit(f"Not approved yet: {', '.join(waiting)}. Nothing published.")
+    put_on_version(client, live[0], assets)
+
+
 def main() -> None:
-    commands = {"status": status, "upload": upload, "place": place}
+    commands = {"status": status, "upload": upload, "place": place, "submit": submit, "publish": publish}
     if len(sys.argv) != 2 or sys.argv[1] not in commands:
         raise SystemExit(f"Usage: asset_library.py {'|'.join(commands)}")
     client = Client(os.environ["ASC_KEY_ID"], os.environ["ASC_ISSUER_ID"], key_pem(os.environ["ASC_KEY_P8"]))

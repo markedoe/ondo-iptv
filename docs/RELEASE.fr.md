@@ -204,10 +204,11 @@ réseau, fichiers choisis par l'utilisateur).
    → Run workflow* : `status` montre ce que contient App Store Connect (lecture seule), `upload` dépose les
    images dans la bibliothèque de ressources (Asset Library) sans toucher à aucune version, `place` les affiche
    sur la version iOS en préparation. Une version en review ou approuvée ne peut pas changer : `place` la
-   refuse. Les ressources passent en review avec la version qui les porte ; la bibliothèque peut aussi les
-   soumettre seules (App Store Connect → Asset Library) ; une fois approuvées, elles se publient sur la version
-   en ligne dans App Store Connect (En-tête et résultats de recherche → Parcourir les ressources → Publier), sans
-   nouvelle version (`place` ne le fait pas). Rien n'est soumis sans votre accord.
+   refuse. Les ressources passent en review avec la version qui les porte, ou seules : `submit` les soumet une
+   fois une version iOS approuvée, et refuse tant qu'une version iOS ou une soumission est en review, pour ne
+   rien changer à ce qu'App Review examine. Une fois approuvées par Apple, `publish` les affiche sur la version
+   en ligne sans nouvelle version (ou dans App Store Connect : En-tête et résultats de recherche → Parcourir les
+   ressources → Publier). Rien n'est soumis sans votre accord.
 5. Dans chaque version (iOS et macOS, par exemple 1.1.0) : choisissez le build de l'édition **app-store** →
    **Add for Review** → **Submit for Review**. Ou *Run workflow* avec la cible `metadata` (la fiche ;
    `metadata-ios` ou `metadata-mac` pour une seule plateforme, car une version en review ne peut plus être

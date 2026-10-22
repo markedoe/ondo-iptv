@@ -80,6 +80,71 @@ class AssetLibraryTest(unittest.TestCase):
             self.assertEqual((3840, 2560), jpeg_size(search), f"{locale}: search results asset size")
 
 
+
+class FakeAppStoreConnect:
+    """Answers the few requests submit and publish make, and records the ones that would change something."""
+
+    def __init__(self, version_state: str, asset_state: str = "PREPARE_FOR_SUBMISSION", submissions=()):
+        self.version_state, self.submissions, self.changes = version_state, list(submissions), []
+        self.images = [{"id": f"{locale}-{kind}", "attributes": {
+            "category": "CREATIVE_ASSETS", "state": asset_state,
+            "referenceName": asset_library.reference_name(kind, locale, (asset_library.CREATIVE / locale / asset_library.FILES[kind]).read_bytes()),
+        }} for locale in asset_library.LOCALES for kind in asset_library.SLOTS]
+
+    def call(self, method, path, body=None, query=None):
+        if method != "GET":
+            self.changes.append((method, path))
+            return {"data": {"id": "submission", "attributes": {"state": "WAITING_FOR_REVIEW"}}}
+        if path == "/v1/apps":
+            return {"data": [{"id": "app"}]}
+        if path.endswith("/assetLibrary"):
+            return {"data": {"id": "library"}}
+        raise AssertionError(path)
+
+    def all(self, path, query=None):
+        if path.endswith("/appStoreVersions"):
+            return [{"id": "version", "attributes": {"versionString": "1.1.0", "appStoreState": self.version_state}}]
+        if path == "/v1/reviewSubmissions":
+            return self.submissions
+        if path.endswith("/images"):
+            return self.images
+        if path.endswith("/items"):
+            return []
+        raise AssertionError(path)
+
+
+class SubmitTest(unittest.TestCase):
+    def test_nothing_is_submitted_while_the_version_is_in_review(self):
+        for state in ("WAITING_FOR_REVIEW", "IN_REVIEW", "PREPARE_FOR_SUBMISSION"):
+            fake = FakeAppStoreConnect(state)
+            with self.assertRaises(SystemExit):
+                asset_library.submit(fake)
+            self.assertEqual([], fake.changes, state)
+
+    def test_nothing_is_submitted_while_a_review_submission_is_under_way(self):
+        fake = FakeAppStoreConnect("READY_FOR_SALE", submissions=[{"id": "s", "attributes": {"state": "IN_REVIEW"}}])
+        with self.assertRaises(SystemExit):
+            asset_library.submit(fake)
+        self.assertEqual([], fake.changes)
+
+    def test_once_approved_the_four_assets_go_in_one_submission(self):
+        fake = FakeAppStoreConnect("READY_FOR_SALE")
+        asset_library.submit(fake)
+        self.assertEqual([("POST", "/v1/reviewSubmissions")] + [("POST", "/v1/reviewSubmissionItems")] * 4
+                         + [("PATCH", "/v1/reviewSubmissions/submission")], fake.changes)
+
+    def test_assets_already_submitted_are_not_sent_again(self):
+        fake = FakeAppStoreConnect("READY_FOR_SALE", asset_state="WAITING_FOR_REVIEW")
+        asset_library.submit(fake)
+        self.assertEqual([], fake.changes)
+
+    def test_only_approved_assets_are_published(self):
+        fake = FakeAppStoreConnect("READY_FOR_SALE", asset_state="IN_REVIEW")
+        with self.assertRaises(SystemExit):
+            asset_library.publish(fake)
+        self.assertEqual([], fake.changes)
+
+
 def jpeg_size(data: bytes) -> tuple[int, int]:
     """Width and height from the JPEG's start-of-frame segment."""
     index = 2

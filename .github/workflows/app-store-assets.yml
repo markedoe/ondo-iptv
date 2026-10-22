@@ -5,7 +5,10 @@ name: App Store header and search results
 #   status  what App Store Connect holds (read only)
 #   upload  the files into the Asset Library, unreviewed, without touching any version
 #   place   onto the iOS version being prepared; refused for a version in review or approved
-# Nothing here submits for review: that stays the user's call (CLAUDE.md). See docs/RELEASE.md.
+#   submit  for review on their own, once an iOS version is approved; refused while one is in review. Run it only
+#           with the user's go (CLAUDE.md)
+#   publish the approved assets onto the live iOS version, without a new version
+# See docs/RELEASE.md.
 on:
   workflow_dispatch:
     inputs:
@@ -13,7 +16,7 @@ on:
         description: What to do
         type: choice
         default: status
-        options: [status, upload, place]
+        options: [status, upload, place, submit, publish]
 
 permissions:
   contents: read
