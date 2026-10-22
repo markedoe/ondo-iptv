@@ -92,11 +92,11 @@ URL: `https://markedoe.github.io/ondo-iptv/privacy.html` (the site is published 
 
 ### D2. Sign-in details (App access)
 
-*All functionality in my app is available without any access restrictions*: Ondo has no account and locks
-nothing. The Xtream fields (server, username, password) take the details of the user's own provider, like a
-playlist address: they are not a sign-in to Ondo. Do not choose the restricted option: Play then asks for
-working login credentials ("Missing sign in details"). Reviewers find **Try the demo** on the welcome screen
-shown at first launch: a playlist of public channels (iptv-org project).
+*Is any part of your app restricted?* **No**: Ondo has no account, no payment and locks nothing. The Xtream
+fields (server, username, password) take the details of the user's own provider, like a playlist address: they
+are not a sign-in to Ondo. Do not choose the restricted option: Play then asks for working login credentials
+("Missing sign in details"). Reviewers find **Try the demo** on the welcome screen shown at first launch: a
+playlist of public channels (iptv-org project).
 
 ### D3. Ads
 

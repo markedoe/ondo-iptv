@@ -94,12 +94,12 @@ URL : `https://markedoe.github.io/ondo-iptv/privacy.html` (le site est publié p
 
 ### D2. Identifiants de connexion (accès à l'application)
 
-*Toutes les fonctionnalités sont disponibles sans restriction d'accès* : Ondo n'a pas de compte et ne bloque
-rien. Les champs Xtream (serveur, nom d'utilisateur, mot de passe) reçoivent les informations du fournisseur
-de l'utilisateur, comme une adresse de playlist : ce n'est pas une connexion à Ondo. Ne choisissez pas
-l'option restreinte : Play demande alors des identifiants qui fonctionnent (« Missing sign in details »). Les
-examinateurs trouvent **Try the demo** sur l'écran de bienvenue affiché au premier lancement : une playlist
-de chaînes publiques (projet iptv-org).
+*Is any part of your app restricted?* **No** : Ondo n'a ni compte ni paiement et ne bloque rien. Les champs
+Xtream (serveur, nom d'utilisateur, mot de passe) reçoivent les informations du fournisseur de l'utilisateur,
+comme une adresse de playlist : ce n'est pas une connexion à Ondo. Ne choisissez pas l'option restreinte :
+Play demande alors des identifiants qui fonctionnent (« Missing sign in details »). Les examinateurs trouvent
+**Try the demo** sur l'écran de bienvenue affiché au premier lancement : une playlist de chaînes publiques
+(projet iptv-org).
 
 ### D3. Annonces
 
