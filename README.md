@@ -244,7 +244,7 @@ whole history).
 ## Support the project
 
 Ondo has no ads and no tracking. If you find it useful, you can support its development on
-[Ko-fi](https://ko-fi.com/ondoapp), once or every month, by card, Apple Pay or Google Pay, without creating an account. Inside the
+[Ko-fi](https://ko-fi.com/markdev23), once or every month, by card, Apple Pay or Google Pay, without creating an account. Inside the
 apps, money goes only through the App Store and Google Play, as their rules require: the apps link to no other way
 to pay.
 
