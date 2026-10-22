@@ -46,6 +46,57 @@ class ProblemReportTest {
         assertEquals("error ERROR_CODE_IO_BAD_HTTP_STATUS: Response code: 404", PrivacyScrubber.scrub("error ERROR_CODE_IO_BAD_HTTP_STATUS: Response code: 404"))
     }
 
+    /** Reports can be shared publicly: a host is removed whatever its top-level domain, an IPv6 address in any form. */
+    @Test
+    fun theScrubberRemovesEveryHostAndIpv6() {
+        assertEquals(
+            "java.net.UnknownHostException: Unable to resolve host \"<host>\": No address associated with hostname",
+            PrivacyScrubber.scrub("java.net.UnknownHostException: Unable to resolve host \"panel.example.vip\": No address associated with hostname"),
+        )
+        assertEquals(
+            "androidx.media3.datasource.HttpDataSource\$HttpDataSourceException: failed to connect to <host>/<ip> (port 8080) after 60000ms",
+            PrivacyScrubber.scrub(
+                "androidx.media3.datasource.HttpDataSource\$HttpDataSourceException: failed to connect to panel.example.co/2001:db8::7 (port 8080) after 60000ms",
+            ),
+        )
+        assertEquals("connect to <ip> refused", PrivacyScrubber.scrub("connect to [2001:db8::1]:8080 refused"))
+        assertEquals("from <ip> and <ip>", PrivacyScrubber.scrub("from 2001:db8:0:0:0:0:0:1 and fe80::1%wlan0"))
+        assertEquals(
+            "Hostname <host> not verified: certificate pretending to be “<host>” which could be anyone",
+            PrivacyScrubber.scrub("Hostname panel.example.one not verified: certificate pretending to be “panel.example.one” which could be anyone"),
+        )
+        assertEquals(
+            "<host>, <host>:8080, <host>, <host>.",
+            PrivacyScrubber.scrub("PANEL.EXAMPLE.TV, my_host.example.com:8080, télé.example.fr, panel.example.xn--p1ai."),
+        )
+        for (text in listOf("panel.example.vip", "panel.example.co/2001:db8::7", "[2001:db8::1]:8080", "“panel.example.one”")) {
+            val scrubbed = PrivacyScrubber.scrub(text)
+            assertFalse("example" in scrubbed || "db8" in scrubbed, "left in: $scrubbed")
+        }
+    }
+
+    @Test
+    fun theScrubberKeepsClassNamesCodecsAndMediaTypes() {
+        for (text in listOf(
+            "java.net.UnknownHostException",
+            "androidx.media3.datasource.HttpDataSource\$HttpDataSourceException",
+            "javax.net.ssl.SSLHandshakeException: java.security.cert.CertPathValidatorException: Trust anchor not found",
+            "java.io.EOFException, java.io.IOException",
+            "Video: video/avc, avc1.64001F, 25 fps",
+            "Audio: audio/mp4a-latm, mp4a.40.2, 48000 Hz",
+            "Video: video/hevc, hvc1.2.4.L153.B0, dvh1.05.06",
+            "Audio: audio/vnd.dts, application/vnd.apple.mpegurl",
+            "Decoder init failed: c2.android.avc.decoder, OMX.MTK.VIDEO.DECODER.HEVC",
+            "Media3 1.11.0, Ondo 1.2.0 (34)",
+            "seek done at 10:00:05 after 0.6 s, e.g. twice",
+            "Ondo playback report, 2026-10-16T10:00:00Z",
+            "Buffer: 5.0 s to start, 15.0 to 50.0 s ahead",
+            "Playing: film, .mkv, 1920×1080",
+        )) {
+            assertEquals(text, PrivacyScrubber.scrub(text))
+        }
+    }
+
     @Test
     fun theLogKeepsTheLastLinesScrubbed() {
         val log = PlaybackLog()
