@@ -82,8 +82,9 @@ extension PlayerController {
             note("AVPlayer error log: \(event.errorDomain) \(event.errorStatusCode), \(event.errorComment ?? "")")
         }
         for event in (item.accessLog()?.events ?? []).suffix(3) {
-            let file = event.uri.flatMap { URL(string: $0)?.lastPathComponent } ?? "-"
-            note("AVPlayer access log: \(file), \(event.numberOfBytesTransferred) bytes, \(Int(event.indicatedBitrate)) b/s")
+            // The file's type only: its name could be the film's title.
+            let type = event.uri.flatMap { URL(string: $0)?.pathExtension }.flatMap { $0.isEmpty ? nil : $0 } ?? "-"
+            note("AVPlayer access log: \(type) file, \(event.numberOfBytesTransferred) bytes, \(Int(event.indicatedBitrate)) b/s")
         }
     }
 

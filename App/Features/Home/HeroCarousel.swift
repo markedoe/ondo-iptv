@@ -12,8 +12,12 @@ struct HeroCarousel: View {
     let width: CGFloat
     @State private var current: String?
 
-    /// Auto-advance is off in UI tests and screenshots so captures are deterministic.
+    #if DEBUG
+    /// Auto-advance is off in UI tests and screenshots (Debug builds) so captures are deterministic.
     private static let autoAdvances = !ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-uitest") }
+    #else
+    private static let autoAdvances = true
+    #endif
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {

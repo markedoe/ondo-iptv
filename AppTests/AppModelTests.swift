@@ -65,6 +65,31 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(relaunched.content.channels.count, 3)
     }
 
+    func testAnEditedAddressIsCheckedBeforeItIsSaved() async throws {
+        let model = try await modelWithPlaylist()
+        let original = try XCTUnwrap(model.activePlaylist)
+        // An address that answers nothing: the edit is refused and the playlist keeps its working address.
+        var broken = original
+        broken.source = .remote(root.appendingPathComponent("missing.m3u"))
+        do {
+            try await model.saveEditedPlaylist(broken)
+            XCTFail("A playlist that cannot be loaded must not be saved")
+        } catch {}
+        XCTAssertEqual(model.playlists.first?.source, original.source)
+        let relaunched = makeModel()
+        await relaunched.bootstrap()
+        XCTAssertEqual(relaunched.playlists.first?.source, original.source)
+
+        // A working new address is saved, and its catalogue shown.
+        let other = root.appendingPathComponent("other.m3u")
+        try Data("#EXTM3U\n#EXTINF:-1 group-title=\"News\",Other News\nhttp://127.0.0.1:9/other.m3u8\n".utf8).write(to: other)
+        var moved = original
+        moved.source = .remote(other)
+        try await model.saveEditedPlaylist(moved)
+        XCTAssertEqual(model.playlists.first?.source, .remote(other))
+        XCTAssertEqual(model.content.channels.map(\.name), ["Other News"])
+    }
+
     func testSecretsLeaveThePlaylistFileWhenTheStoreWorks() async throws {
         let model = makeModel()
         await model.bootstrap()

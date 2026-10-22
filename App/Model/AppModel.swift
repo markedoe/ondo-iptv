@@ -171,9 +171,12 @@ final class AppModel {
         cacheStore = FileStore(directory: storageRoot?.appendingPathComponent("Caches", isDirectory: true) ?? AppPaths.caches)
         libraryWriter = LibraryWriter(store: userStore)
         self.secrets = secrets
-        // UI tests must never hit the system permission prompt.
+        #if DEBUG  // only in test builds: UI tests must never hit the system permission prompt
         let isUITest = ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-uitest") }
         self.reminderScheduler = reminderScheduler ?? (isUITest ? InMemoryReminderScheduler() : UserNotificationReminderScheduler())
+        #else
+        self.reminderScheduler = reminderScheduler ?? UserNotificationReminderScheduler()
+        #endif
         let client = URLSessionHTTPClient()
         http = client
         loader = PlaylistLoader(http: client, localFileURL: { AppPaths.importedPlaylist($0) })
@@ -392,13 +395,41 @@ final class AppModel {
         loadEPG(for: stored, force: true)
     }
 
-    func updatePlaylist(_ playlist: Playlist) async {
+    /// Saves a playlist edited in its form. A new address, login or format is checked with the provider first (the
+    /// playlist is downloaded once, as when adding one): one the provider refuses is not saved, and the error is thrown.
+    func saveEditedPlaylist(_ playlist: Playlist) async throws {
+        guard let previous = playlists.first(where: { $0.id == playlist.id }) else { return }
+        guard Self.reachesProviderDifferently(previous, playlist) else {
+            await updatePlaylist(playlist)
+            return
+        }
+        let loader = self.loader
+        let fresh = try await Task.detached { try await loader.load(playlist) }.value
+        await updatePlaylist(playlist, checked: fresh)
+    }
+
+    /// What the provider sees of a playlist: a change there needs the playlist downloaded again.
+    private static func reachesProviderDifferently(_ previous: Playlist, _ playlist: Playlist) -> Bool {
+        previous.source != playlist.source || previous.headers != playlist.headers || previous.xtreamOutput != playlist.xtreamOutput
+            || previous.xtreamForceM3U != playlist.xtreamForceM3U
+    }
+
+    /// Saves a changed playlist. `fresh` is its content when it was just downloaded with these settings.
+    func updatePlaylist(_ playlist: Playlist, checked fresh: PlaylistContent? = nil) async {
         guard let position = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
         let previous = playlists[position]
+        var playlist = playlist
+        if fresh != nil { playlist.lastRefreshedAt = Date() }
         playlists[position] = playlist
         savePlaylists()
+        if let fresh {
+            await saveContentCache(fresh, for: playlist.id)
+            if settings.lockAdultCategoriesAutomatically {
+                lockAdultCategories(playlistID: playlist.id, content: fresh)
+            }
+        }
         guard playlist.id == activePlaylist?.id else { return }
-        if previous.channelEdits != playlist.channelEdits {
+        if previous.channelEdits != playlist.channelEdits, fresh == nil {
             await apply(rawContent, for: playlist)
         }
         if previous.epgChannelOverrides != playlist.epgChannelOverrides {
@@ -409,9 +440,13 @@ final class AppModel {
                 loadEPG(for: playlist, force: true)
             }
         }
-        if previous.source != playlist.source || previous.headers != playlist.headers || previous.xtreamOutput != playlist.xtreamOutput
-            || previous.xtreamForceM3U != playlist.xtreamForceM3U {
-            await refreshContent(of: playlist, silent: false)
+        if Self.reachesProviderDifferently(previous, playlist) {
+            if let fresh {
+                await apply(fresh, for: playlist)
+                phase = .loaded
+            } else {
+                await refreshContent(of: playlist, silent: false)
+            }
             loadEPG(for: playlist, force: true)
         } else if previous.epgURLs != playlist.epgURLs || previous.useProviderEPG != playlist.useProviderEPG
                     || previous.epgTimeShiftHours != playlist.epgTimeShiftHours {

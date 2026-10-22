@@ -326,13 +326,12 @@ struct AddPlaylistView: View {
         errorAttribution = nil
         isWorking = true
         defer { isWorking = false }
-        if editing != nil {
-            await model.updatePlaylist(playlist)
-            dismiss()
-            return
-        }
         do {
-            try await model.addPlaylist(playlist)
+            if editing != nil {
+                try await model.saveEditedPlaylist(playlist)
+            } else {
+                try await model.addPlaylist(playlist)
+            }
             dismiss()
         } catch {
             errorAttribution = ErrorAttribution.classify(error)

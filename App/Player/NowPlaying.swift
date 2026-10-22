@@ -36,7 +36,8 @@ final class NowPlayingCenter {
 
     /// Rebuilds the info dictionary (cheap; the system extrapolates elapsed time from the rate).
     func refresh() {
-        guard let session, let item = session.current else { return }
+        // During a replay, the programme played (the live channel stays `current` for the guide and zapping).
+        guard let session, let item = session.playingItem else { return }
         let controller = session.controller
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: item.title,
