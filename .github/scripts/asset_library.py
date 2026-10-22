@@ -6,7 +6,7 @@ ASC_KEY_P8, as for the release workflow):
   asset_library.py status   what App Store Connect holds: the iOS versions and their states, the creative assets of
                             the library, the header and search results slots and specifications, and the placements
                             on each iOS version. Changes nothing.
-  asset_library.py upload   puts fastlane/creative/<locale>/{header,search}.jpg into the Asset Library, once per file
+  asset_library.py upload   puts fastlane/creative/<locale>/header.png and search.jpg into the Asset Library, once per file
                             content. No placement and no submission: the assets wait there, unreviewed.
   asset_library.py place    shows them in the Header and Search Results tab of the iOS version being prepared, one
                             pair per listing language. Refused for a version in review or already approved: App Review
@@ -32,8 +32,10 @@ API = "https://api.appstoreconnect.apple.com"
 BUNDLE_ID = "com.markedoe.ondo"
 CREATIVE = Path(__file__).resolve().parents[2] / "fastlane" / "creative"
 LOCALES = ("en-US", "fr-FR")
-# File name in fastlane/creative/<locale>/ → App Store slot.
+# Asset → App Store slot.
 SLOTS = {"header": "PRODUCT_PAGE_HEADER_ASSET", "search": "APP_STORE_SEARCH_RESULTS_ASSET"}
+# The file of each asset in fastlane/creative/<locale>/: the 21:9 header is taken as PNG only (reference data).
+FILES = {"header": "header.png", "search": "search.jpg"}
 # The iOS version states whose product page can still change (App Store Connect Help, screenshots).
 EDITABLE = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED", "INVALID_BINARY"}
 
@@ -223,7 +225,7 @@ def upload(client: Client):
     failed = False
     for locale in LOCALES:
         for kind in SLOTS:
-            path = CREATIVE / locale / f"{kind}.jpg"
+            path = CREATIVE / locale / FILES[kind]
             name = reference_name(kind, locale, path.read_bytes())
             if name in existing:
                 print(f"{name}: already in the library ({existing[name]['attributes']['state']})")
@@ -257,7 +259,7 @@ def place(client: Client):
             continue
         current = client.all(f"/v1/appStoreVersionLocalizations/{localization['id']}/placements", query={"include": "image"})
         for kind, slot in SLOTS.items():
-            name = reference_name(kind, locale, (CREATIVE / locale / f"{kind}.jpg").read_bytes())
+            name = reference_name(kind, locale, (CREATIVE / locale / FILES[kind]).read_bytes())
             image = images.get(name)
             if not image or image["attributes"]["state"] in ("FAILED", "ARCHIVED"):
                 raise SystemExit(f"{name} is not in the library: run upload first")

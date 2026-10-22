@@ -1,7 +1,7 @@
 name: App Store header and search results
 
 # The product page header and the search results asset of the iOS and iPadOS app (iOS 27 and later), in App Store
-# Connect's Asset Library: fastlane/creative/<locale>/{header,search}.jpg, drawn by fastlane/creative/render.mjs.
+# Connect's Asset Library: fastlane/creative/<locale>/header.png and search.jpg, drawn by fastlane/creative/render.mjs.
 #   status  what App Store Connect holds (read only)
 #   upload  the files into the Asset Library, unreviewed, without touching any version
 #   place   onto the iOS version being prepared; refused for a version in review or approved

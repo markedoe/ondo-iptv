@@ -1,5 +1,5 @@
-// Renders the App Store header and search results assets (template.html) for each listing language, as JPEG
-// files in fastlane/creative/<locale>/: header.jpg (3840 × 1646, 21:9) and search.jpg (3840 × 2560, 3:2).
+// Renders the App Store header and search results assets (template.html) for each listing language, in
+// fastlane/creative/<locale>/: header.png (3840 × 1646, 21:9: PNG only) and search.jpg (3840 × 2560, 3:2).
 //
 //   git fetch origin appstore-screenshots && mkdir -p /tmp/shots && git archive FETCH_HEAD | tar -x -C /tmp/shots
 //   NODE_PATH="$(npm root -g)" node fastlane/creative/render.mjs /tmp/shots
@@ -16,7 +16,9 @@ import { fileURLToPath } from "node:url";
 const { chromium } = createRequire(import.meta.url)("playwright");
 const here = dirname(fileURLToPath(import.meta.url));
 const shots = resolve(process.argv[2] ?? "shots");
-const assets = { header: [3840, 1646], search: [3840, 2560] };
+// App Store Connect takes the 21:9 header as PNG only; Chromium's PNG and JPEG have no alpha channel, which the
+// App Store refuses for these assets.
+const assets = { header: [3840, 1646, "png"], search: [3840, 2560, "jpeg"] };
 
 // The page and the screenshots from one local origin: Chromium honours `image-orientation: none` (template.html)
 // for same-origin images only.
@@ -42,15 +44,14 @@ const browser = await chromium.launch();
 try {
   for (const locale of ["en-US", "fr-FR"]) {
     mkdirSync(join(here, locale), { recursive: true });
-    for (const [kind, [width, height]] of Object.entries(assets)) {
+    for (const [kind, [width, height, type]] of Object.entries(assets)) {
       const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
       const url = new URL("/template.html", origin);
       url.search = new URLSearchParams({ kind, locale, shots: "/shots" }).toString();
       await page.goto(url.href);
       await page.waitForSelector("body[data-ready='1']");
-      const file = join(here, locale, `${kind}.jpg`);
-      // JPEG: no alpha channel, which the App Store refuses for these assets.
-      await page.screenshot({ path: file, type: "jpeg", quality: 92 });
+      const file = join(here, locale, `${kind}.${type === "png" ? "png" : "jpg"}`);
+      await page.screenshot({ path: file, type, ...(type === "jpeg" ? { quality: 92 } : {}) });
       await page.close();
       console.log(file);
     }

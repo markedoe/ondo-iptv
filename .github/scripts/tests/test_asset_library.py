@@ -69,12 +69,15 @@ class AssetLibraryTest(unittest.TestCase):
         self.assertTrue(name.startswith("Ondo header fr-FR "))
 
     def test_each_listing_language_has_both_assets_at_the_app_store_sizes(self):
-        sizes = {"header": (3840, 1646), "search": (3840, 2560)}
         for locale in asset_library.LOCALES:
-            for kind, size in sizes.items():
-                data = (asset_library.CREATIVE / locale / f"{kind}.jpg").read_bytes()
-                self.assertEqual(b"\xff\xd8", data[:2], f"{locale}/{kind}.jpg is a JPEG (no alpha channel)")
-                self.assertEqual(size, jpeg_size(data), f"{locale}/{kind}.jpg")
+            header = (asset_library.CREATIVE / locale / asset_library.FILES["header"]).read_bytes()
+            self.assertEqual(b"\x89PNG", header[:4], f"{locale}: the 21:9 header is taken as PNG only")
+            self.assertEqual((3840, 1646), (int.from_bytes(header[16:20], "big"), int.from_bytes(header[20:24], "big")))
+            # Colour type 2: RGB, no alpha channel (refused for these assets).
+            self.assertEqual(2, header[25], f"{locale}: the header has no alpha channel")
+            search = (asset_library.CREATIVE / locale / asset_library.FILES["search"]).read_bytes()
+            self.assertEqual(b"\xff\xd8", search[:2], f"{locale}: the search results asset is a JPEG")
+            self.assertEqual((3840, 2560), jpeg_size(search), f"{locale}: search results asset size")
 
 
 def jpeg_size(data: bytes) -> tuple[int, int]:

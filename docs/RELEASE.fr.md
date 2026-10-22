@@ -198,7 +198,7 @@ réseau, fichiers choisis par l'utilisateur).
 
    **En-tête et résultats de recherche** (iPhone et iPad sous iOS / iPadOS 27 ou plus ; pas le Mac) : l'onglet
    *En-tête et résultats de recherche* de la page de la version. Les images sont
-   `fastlane/creative/<langue>/header.jpg` (21:9, 3840×1646) et `search.jpg` (3:2, 3840×2560), en anglais et en
+   `fastlane/creative/<langue>/header.png` (21:9, 3840×1646, PNG seulement) et `search.jpg` (3:2, 3840×2560), en anglais et en
    français, dessinées à partir des captures App Store par `fastlane/creative/render.mjs` (voir ses premières
    lignes) ; dessinez-les de nouveau quand les captures changent. *Actions → App Store header and search results
    → Run workflow* : `status` montre ce que contient App Store Connect (lecture seule), `upload` dépose les
