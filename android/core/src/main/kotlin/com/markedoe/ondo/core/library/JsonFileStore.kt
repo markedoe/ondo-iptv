@@ -37,19 +37,36 @@ class JsonFileStore(
 
     private fun backupFile(name: String): File = File(directory, "$name.json.bak")
 
-    /** The stored value, from the backup if the main file is unreadable; `null` when neither can be decoded. */
+    /**
+     * The stored value, from the backup if the main file is unreadable; `null` when neither can be decoded.
+     * A file that cannot be decoded is moved aside as `name.json.corrupt-<seconds>.json`: left in place, the
+     * next save would rotate it over the good `.bak`, and the one after would lose the data for good.
+     */
     fun <T> load(serializer: KSerializer<T>, name: String): T? = synchronized(lock) {
         for (candidate in listOf(file(name), backupFile(name))) {
             if (!candidate.isFile) continue
+            val text = try {
+                candidate.readText()
+            } catch (_: IOException) {
+                continue
+            }
+            decode(serializer, text)?.let { return it.value }
             try {
-                val envelope = json.parseToJsonElement(candidate.readText()) as? JsonObject ?: continue
-                val value = envelope["value"] ?: continue
-                return json.decodeFromJsonElement(serializer, value)
-            } catch (_: SerializationException) {
-            } catch (_: IllegalArgumentException) {
+                Files.move(candidate.toPath(), File(directory, "${candidate.name}.corrupt-${clock() / 1000}.json").toPath())
             } catch (_: IOException) {
             }
         }
+        null
+    }
+
+    /** The value of a stored document, wrapped so that a stored `null` is told apart from a failure. */
+    private class Decoded<T>(val value: T)
+
+    private fun <T> decode(serializer: KSerializer<T>, text: String): Decoded<T>? = try {
+        (json.parseToJsonElement(text) as? JsonObject)?.get("value")?.let { Decoded(json.decodeFromJsonElement(serializer, it)) }
+    } catch (_: SerializationException) {
+        null
+    } catch (_: IllegalArgumentException) {
         null
     }
 

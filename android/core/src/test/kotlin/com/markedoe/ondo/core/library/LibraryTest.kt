@@ -14,6 +14,7 @@ import com.markedoe.ondo.core.model.PlaylistSource
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.model.XtreamOutputFormat
 import com.markedoe.ondo.core.xtream.XtreamUrlBuilder
+import java.io.File
 import java.nio.file.Files
 import java.util.UUID
 import kotlin.test.Test
@@ -205,6 +206,42 @@ class LibraryTest {
 
             store.remove("library")
             assertNull(store.load<UserLibrary>("library"))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun aDamagedFileIsKeptAsideAndNeverRotatedOverTheBackup() {
+        val directory = Files.createTempDirectory("ondo-store").toFile()
+        try {
+            val store = JsonFileStore(directory, clock = { 1_800_000_000_000L })
+            val library = UserLibrary().toggleFavorite(ref(ContentType.LIVE, "a"), "A", null)
+            store.save(library, "library")
+            store.save(library, "library")
+            store.file("library").writeText("{corrupt")
+
+            assertEquals(library, store.load<UserLibrary>("library"))
+            assertEquals("{corrupt", File(directory, "library.json.corrupt-1800000000.json").readText())
+
+            // The next save does not rotate the damaged file into `.bak`: the good version is still there.
+            store.save(UserLibrary(), "library")
+            store.file("library").delete()
+            assertEquals(library, store.load<UserLibrary>("library"))
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun withoutAnyReadableVersionNothingIsLost() {
+        val directory = Files.createTempDirectory("ondo-store").toFile()
+        try {
+            val store = JsonFileStore(directory, clock = { 7_000L })
+            store.file("playlists").writeText("garbage")
+            assertNull(store.load<List<Playlist>>("playlists"))
+            store.save(emptyList<Playlist>(), "playlists")
+            assertEquals("garbage", File(directory, "playlists.json.corrupt-7.json").readText())
         } finally {
             directory.deleteRecursively()
         }
