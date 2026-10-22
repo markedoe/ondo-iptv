@@ -26,6 +26,39 @@ final class ProblemReportTests: XCTestCase {
         XCTAssertEqual(PrivacyScrubber.scrub("VLC 3.0.21, iOS 18.0.1"), "VLC 3.0.21, iOS 18.0.1")
     }
 
+    /// Hosts under any top-level domain and shortened IPv6 addresses go; the names of errors, codecs and versions stay.
+    func testTheScrubberKnowsEveryHostAndKeepsWhatHelps() {
+        let samples = [
+            "Unable to resolve host \"panel.example.vip\": No address associated with hostname",
+            "failed to connect to panel.example.co/2001:db8::7 (port 8080) after 10000ms",
+            "connecting to [2001:db8::1]:8080",
+            "The certificate for this server is invalid. You might be connecting to a server that is pretending to be “panel.example.one” which could put your confidential information at risk.",
+            "PANEL.EXAMPLE.TV refused, then fe80::1%en0",
+        ]
+        for text in samples {
+            let scrubbed = PrivacyScrubber.scrub(text)
+            for secret in ["panel", "example", "2001:db8", "db8::", "fe80"] {
+                XCTAssertFalse(scrubbed.lowercased().contains(secret), "\(secret) left in: \(scrubbed)")
+            }
+        }
+        XCTAssertEqual(
+            PrivacyScrubber.scrub("failed to connect to panel.example.co/2001:db8::7 (port 8080)"), "failed to connect to <host>/<ip> (port 8080)"
+        )
+        XCTAssertEqual(PrivacyScrubber.scrub("connecting to [2001:db8::1]:8080"), "connecting to <ip>")
+        let readable = [
+            "java.net.UnknownHostException: Unable to resolve host",
+            "javax.net.ssl.SSLHandshakeException: java.security.cert.CertPathValidatorException",
+            "androidx.media3.exoplayer.ExoPlaybackException: Source error",
+            "Error Domain=NSURLErrorDomain Code=-1003, CoreMediaErrorDomain -12642",
+            "codecs avc1.64001F, mp4a.40.2, hvc1.2.4.L153.B0, ec-3",
+            "ExoPlayer 1.11.0, seek to 600.0 s at 12:30:45, e.g. a key frame. Then i.e. the next one.",
+            "remux served /seg-3.m4s, /init.mp4 and /media.m3u8",
+        ]
+        for text in readable {
+            XCTAssertEqual(PrivacyScrubber.scrub(text), text)
+        }
+    }
+
     func testTheLogKeepsTheLastLinesScrubbed() {
         var log = PlaybackLog()
         for index in 0..<(PlaybackLog.limit + 10) { log.add("event \(index)", at: Double(index)) }
