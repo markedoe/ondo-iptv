@@ -170,7 +170,8 @@ Packages/IPTVCore/      Logique métier (Foundation et la zlib du système, test
 android/app/            Application Android (Jetpack Compose, Media3)
 android/core/           Logique métier en Kotlin pur (port d'IPTVCore, mêmes cas de test)
 fastlane/               Publication App Store et Google Play, fiches des deux stores
-docs/                   Plan, publication (App Store, Google Play), version Android
+funding/                Pages de soutien sur Stripe, par app (docs/FUNDING.fr.md)
+docs/                   Plan, publication (App Store, Google Play), version Android, pages de soutien
 site/                   Site web (GitHub Pages) : accueil, assistance, confidentialité
 tools/                  Générateur des données de prix, banc de test de la lecture
 project.yml             Projet XcodeGen

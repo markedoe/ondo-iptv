@@ -161,7 +161,8 @@ Packages/IPTVCore/      Business logic (Foundation and the system zlib, tested o
 android/app/            Android app (Jetpack Compose, Media3)
 android/core/           Business logic in pure Kotlin (port of IPTVCore, same test cases)
 fastlane/               App Store and Google Play publishing, listings of both stores
-docs/                   Plan, publishing (App Store, Google Play), Android version
+funding/                Support pages on Stripe, per app (docs/FUNDING.md)
+docs/                   Plan, publishing (App Store, Google Play), Android version, support pages
 site/                   Website (GitHub Pages): home, support, privacy
 tools/                  Awards data generator, playback lab
 project.yml             XcodeGen project

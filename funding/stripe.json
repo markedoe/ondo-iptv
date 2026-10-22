@@ -1,0 +1,44 @@
+{
+  "currency": "eur",
+  "projects": {
+    "ondo": {
+      "name": "Ondo",
+      "image": "https://markedoe.github.io/ondo-iptv/icon.png",
+      "statement_descriptor_suffix": "ONDO",
+      "texts": {
+        "en": {
+          "submit": "Ondo has no ads and no tracking. Your support pays for its development on iPhone, iPad, Mac and Android.",
+          "thanks": "Thank you for supporting Ondo!",
+          "monthly": "Every month for Ondo's development. Stop at any time from the link in your receipt."
+        },
+        "fr": {
+          "submit": "Ondo n'a ni publicité ni pistage. Votre soutien finance son développement sur iPhone, iPad, Mac et Android.",
+          "thanks": "Merci de soutenir Ondo !",
+          "monthly": "Chaque mois, pour le développement d'Ondo. Arrêtez quand vous voulez depuis le lien de votre reçu."
+        }
+      },
+      "pages": {
+        "once": {
+          "amount": { "preset": 500, "minimum": 100, "maximum": 50000 },
+          "en": { "name": "Support Ondo", "description": "Once, the amount you choose." },
+          "fr": { "name": "Soutenir Ondo", "description": "Une fois, du montant de votre choix." }
+        },
+        "monthly-3": {
+          "monthly": 300,
+          "en": { "name": "Support Ondo every month", "description": "€3 a month." },
+          "fr": { "name": "Soutenir Ondo chaque mois", "description": "3 € par mois." }
+        },
+        "monthly-5": {
+          "monthly": 500,
+          "en": { "name": "Support Ondo every month", "description": "€5 a month." },
+          "fr": { "name": "Soutenir Ondo chaque mois", "description": "5 € par mois." }
+        },
+        "monthly-10": {
+          "monthly": 1000,
+          "en": { "name": "Support Ondo every month", "description": "€10 a month." },
+          "fr": { "name": "Soutenir Ondo chaque mois", "description": "10 € par mois." }
+        }
+      }
+    }
+  }
+}

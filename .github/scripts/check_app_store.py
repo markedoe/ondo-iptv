@@ -48,7 +48,7 @@ PRIVATE_API = re.compile(
     r"method_exchangeImplementations|class_getInstanceMethod|forKey(?:Path)?: *\"_|\bJSContext\b|evaluateJavaScript")
 DONATION_LINK = re.compile(
     r"(?i)github\.com/sponsors|ko-fi\.com|paypal\.(?:me|com)|liberapay\.com|buymeacoffee\.com|patreon\.com|"
-    r"opencollective\.com|tipeee\.com|utip\.io")
+    r"opencollective\.com|tipeee\.com|utip\.io|(?:buy|donate|checkout)\.stripe\.com|polar\.sh")
 DONATION_WORD = re.compile(r"(?i)\bdonat|\bsponsor|faire un don|pourboire")
 # The website's pages the apps link to (https://<user>.github.io/ondo-iptv/<page>).
 SITE_PAGE = re.compile(r"https://[\w-]+\.github\.io/ondo-iptv/([\w.-]*)")

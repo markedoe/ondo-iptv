@@ -406,7 +406,9 @@ class AppStoreTests(CheckTestCase):
         self.assertPasses("app_store")
         self.write("site/support.html", "<p>Help.</p>\n<p>Like Ondo? Make a donation.</p>\n")
         self.write("android/app/src/main/res/values/strings.xml", '<string name="tip">https://ko-fi.com/example</string>\n')
+        self.write("App/Features/Support.swift", 'let page = URL(string: "https://buy.stripe.com/test_00example")!\n')
         self.write(".github/FUNDING.yml", "github: [example]\n")
         self.assertFails("app_store", "site/support.html:2: the apps open this page",
                          "android/app/src/main/res/values/strings.xml: the apps link to a way to pay",
+                         "App/Features/Support.swift: the apps link to a way to pay",
                          ".github/FUNDING.yml")

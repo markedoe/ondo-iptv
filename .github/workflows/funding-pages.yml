@@ -1,0 +1,37 @@
+name: Support pages (Stripe)
+
+# The support pages of each app in funding/stripe.json, as Stripe payment links: one product, price and link per page
+# and language, tagged with the app so that several apps share one Stripe account. See docs/FUNDING.md.
+#   plan   what would change (read only)
+#   apply  creates or updates them; the summary lists each link, and flags a new address
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        default: plan
+        options: [plan, apply]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: funding-pages
+  cancel-in-progress: false
+
+jobs:
+  pages:
+    name: Stripe payment links
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: ${{ github.event.inputs.action }}
+        # The restricted key only for this step; the script prints no secret and no customer data.
+        env:
+          STRIPE_API_KEY: ${{ secrets.STRIPE_API_KEY }}
+          ACTION: ${{ github.event.inputs.action }}
+        run: python3 -I .github/scripts/funding_pages.py "$ACTION"
