@@ -7,7 +7,8 @@ submitted, its listing and its review notes are checked here, before any upload:
 1. Nothing hidden or dormant. The App Store edition is a Release build without TESTFLIGHT_DOWNLOADS: its code (App/,
    read as that build compiles it) holds no download code; no build setting turns TESTFLIGHT_DOWNLOADS on for it and a
    tag, the release that gets submitted, builds it; `FeatureFlags` reads nothing at run time and switches nothing off
-   for good (code no build can use is left out of the build). It never says "beta": betas belong on TestFlight, not
+   for good (code no build can use is left out of the build), and no code reads the launch arguments or the
+   environment (test hooks are `#if DEBUG`). It never says "beta": betas belong on TestFlight, not
    on the App Store (2.2); the TestFlight edition's beta badge is left out of this build.
 2. No private API: no class, selector or symbol looked up by name, no method swapped, no script run (2.5.1, 2.5.2).
 3. The listing (fastlane/metadata, every language) fits App Store Connect's limits, names no other platform, promises
@@ -59,6 +60,10 @@ BETA_TEXT = re.compile(r'(?i)"[^"\n]*(?<![\w])(?:beta|bêta)(?![\w])[^"\n]*"')
 RUNTIME_SWITCH = re.compile(
     r"UserDefaults|@AppStorage|NSUbiquitousKeyValueStore|ProcessInfo|CommandLine|\bgetenv\b|URLSession|\bURL\(|"
     r"\bDate\b|FileManager|contentsOf|Keychain|Bundle\.main")
+# The app reading its launch arguments or environment: a switch anyone can turn from the command line, so test hooks
+# (`-uitest…`) stay in `#if DEBUG` code.
+LAUNCH_SWITCH = re.compile(
+    r"\bProcessInfo(?:\.processInfo|\(\))\.(?:arguments|environment)\b|\bCommandLine\.\w+|\bgetenv\(")
 # A flag that is off for good: `static let x = false`, `static var x: Bool { false }`, `static func x() -> Bool { false }`,
 # `static let x: Bool = { return false }()`.
 DORMANT_FLAG = re.compile(
@@ -194,6 +199,10 @@ def check_code(problems: list) -> None:
             if relative.startswith("App/") and DOWNLOAD_CODE.search(line):
                 problems.append(f"{relative}: the App Store edition compiles download code: {line.strip()} "
                                 "(put it under `#if TESTFLIGHT_DOWNLOADS || DEBUG`)")
+            if LAUNCH_SWITCH.search(line):
+                problems.append(f"{relative}: the App Store edition reads its launch arguments or environment: "
+                                f"{line.strip()} (a switch an argument can turn is a hidden feature, 2.3.1: put it "
+                                "under `#if DEBUG`)")
             if relative.startswith("App/") and BETA_TEXT.search(line):
                 problems.append(f"{relative}: the App Store edition calls the app a beta: {line.strip()} (betas belong "
                                 "on TestFlight, not the App Store, 2.2: put it under `#if TESTFLIGHT_DOWNLOADS`)")

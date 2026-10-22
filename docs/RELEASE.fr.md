@@ -246,7 +246,8 @@ Les builds TestFlight ne sont pas touchés.
   - l'édition App Store ne compile aucun code de téléchargement, aucune fonction désactivée pour de bon ni
     aucun texte qui dit que l'app est une bêta, et n'utilise aucune API privée ; aucun réglage de build n'y
     active `TESTFLIGHT_DOWNLOADS`, et un tag la construit ; `FeatureFlags` ne lit rien à l'exécution (ni
-    réglage, ni serveur, ni date, ni argument) ;
+    réglage, ni serveur, ni date, ni fichier, ni argument), et aucun code ne lit les arguments de lancement
+    ni l'environnement hors de `#if DEBUG` (les points d'entrée des tests d'interface) ;
   - la fiche (notes de version comprises) tient dans les limites d'App Store Connect, ne nomme aucune autre
     plateforme, ne promet rien « à venir », n'a ni mot de test ni texte provisoire et ne parle pas de
     téléchargements ; les pages du site qu'elle ouvre (accueil, support, confidentialité) n'ont pas de mot

@@ -362,6 +362,16 @@ class AppStoreTests(CheckTestCase):
                     "enum FeatureFlags {\n", f"enum FeatureFlags {{\n    static var unlocked: Bool {{ {switch} }}\n"))
                 self.assertFails("app_store", "FeatureFlags reads something at run time")
 
+    def test_launch_arguments_read_by_the_app_store_edition_are_a_hidden_switch(self):
+        hook = 'private static let autoAdvances = !ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-uitest") }\n'
+        self.write("App/Features/Home/Hero.swift", hook)
+        self.write("Packages/IPTVCore/Sources/IPTVCore/Mode.swift", 'let verbose = CommandLine.arguments.contains("-v")\n')
+        self.assertFails("app_store", "App/Features/Home/Hero.swift: the App Store edition reads its launch arguments",
+                         "Packages/IPTVCore/Sources/IPTVCore/Mode.swift: the App Store edition reads its launch arguments")
+        self.write("App/Features/Home/Hero.swift", f"#if DEBUG\n{hook}#else\nprivate static let autoAdvances = true\n#endif\n")
+        self.write("Packages/IPTVCore/Sources/IPTVCore/Mode.swift", "let verbose = false\n")
+        self.assertPasses("app_store")
+
     def test_a_private_api_fails(self):
         self.write("Packages/IPTVCore/Sources/IPTVCore/Hack.swift", "let selector = NSSelectorFromString(\"_hidden\")\n")
         self.assertFails("app_store", "Packages/IPTVCore/Sources/IPTVCore/Hack.swift: looks up or swaps code by name")

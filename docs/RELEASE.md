@@ -238,7 +238,8 @@ TestFlight builds are not affected.
 - `.github/scripts/check_app_store.py` passes (CI, the security workflow and the release workflow run it):
   - the App Store edition compiles no download code, no feature switched off for good and no text that calls
     the app a beta, and uses no private API; no build setting turns `TESTFLIGHT_DOWNLOADS` on for it, and a
-    tag builds it; `FeatureFlags` reads nothing at run time (no setting, server, date or argument);
+    tag builds it; `FeatureFlags` reads nothing at run time (no setting, server, date, file or argument), and
+    no code reads the launch arguments or the environment outside `#if DEBUG` (the UI test hooks);
   - the listing (release notes included) fits App Store Connect's limits, names no other platform, promises
     nothing to come, has no test or placeholder words and says nothing of downloads; the site pages it opens
     (home, support, privacy) have no test words either;
