@@ -22,7 +22,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
   reprise, image dans l'image, MediaSession, pistes audio et sous-titres, mémoires tampons distinctes pour le
   direct et pour les films et séries, retour automatique au direct quand une chaîne prend du retard, Plus →
-  Signaler un problème… (un rapport de lecture sans adresse, identifiant ni titre).
+  Statistiques du flux (format, débits de la vidéo et reçu, fluidité, gels et images perdues, et s'ils viennent
+  du réseau ou du lecteur : `core/playback/PlaybackHealth.kt`, les règles d'Apple), Plus → Signaler un
+  problème… (un rapport de lecture sans adresse, identifiant ni titre). Les fiches des films et séries indiquent
+  le format (MKV, HLS…).
 - **Stockage** : documents JSON dans le stockage privé de l'app (`data/AppStore.kt`), exclus des sauvegardes
   (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`) : réglages, playlists avec leurs identifiants, Ma
   liste, collections, progression et rappels, catalogue de chaque playlist, et fiches de films et de séries

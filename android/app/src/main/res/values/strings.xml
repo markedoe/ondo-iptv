@@ -140,7 +140,7 @@
     <string name="help_categories_title">Hide languages and categories</string>
     <string name="help_categories_body">Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Languages and categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nStyles work the same way with the words of category names: hide Manga &amp; anime, Children or Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of each movie.\n\nYou can also hide categories one by one there, and show them again at any time.\n\nCategories whose name looks adult are hidden everywhere until you turn on Show adult categories in Settings.</string>
     <string name="help_playback_title">When a stream does not play</string>
-    <string name="help_playback_body">Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nWith a longer buffer (Settings, Buffer for live TV and Buffer for movies &amp; series), the provider’s longer interruptions do not show, but the picture takes longer to appear.\n\nIn the player, More, Report a Problem… shows a report of the playback (start and seek times, freezes, statistics; no address, login or title) to send by mail or message, or in a GitHub issue.</string>
+    <string name="help_playback_body">Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nIf the picture freezes now and then, More, Stream Statistics shows what arrives, what the video needs and whether the freezes come from the network or the provider, or from the player.\n\nWith a longer buffer (Settings, Buffer for live TV and Buffer for movies &amp; series), the provider’s longer interruptions do not show, but the picture takes longer to appear.\n\nIn the player, More, Report a Problem… shows a report of the playback (start and seek times, freezes, statistics; no address, login or title) to send by mail or message, or in a GitHub issue.</string>
     <string name="help_privacy_title">Privacy</string>
     <string name="help_privacy_body">Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device and are left out of device backups. Posters and the movie and series pages you have opened are kept on your device too, so that they show at once and open when the provider cannot be reached.\n\nOndo connects to the servers you add and, once a week, to GitHub for the latest awards and festival selections (nothing about you is sent; turn off Update awards automatically in Settings).</string>
     <string name="error_load_denied">The provider refused access (HTTP %1$d). Check the user name, the password and your subscription.</string>
@@ -264,4 +264,17 @@
     <string name="open_issue">Open an Issue on GitHub</string>
     <string name="playback_report_subject">Ondo playback report</string>
     <string name="problem_report_explanation">This report helps find the cause of a playback problem: the start and seek times, the freezes and the player’s statistics for this playback, with the app, the system and the player settings. It holds no stream address, login or title. GitHub issues are public.</string>
+    <string name="stream_statistics">Stream Statistics</string>
+    <string name="stats_engine">Engine</string>
+    <string name="stats_format">Format</string>
+    <string name="stats_video">Video</string>
+    <string name="stats_video_bitrate">Video bitrate</string>
+    <string name="stats_received">Received</string>
+    <string name="stats_smoothness">Smoothness</string>
+    <string name="stats_freezes">Freezes</string>
+    <string name="stats_lost_pictures">Lost pictures</string>
+    <string name="stats_measuring">Measuring…</string>
+    <string name="stats_smooth">No freeze: the stream plays smoothly.</string>
+    <string name="stats_network">The data arrives too slowly or stops: the network or the provider is the cause.</string>
+    <string name="stats_player">The data arrives on time: the freezes or lost pictures come from the player or the device.</string>
 </resources>

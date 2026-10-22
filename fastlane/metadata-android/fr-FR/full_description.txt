@@ -12,6 +12,7 @@ UN LECTEUR QUI FONCTIONNE, TOUT SIMPLEMENT
 • Basé sur le lecteur multimédia d’Android (HLS, MPEG-TS, MP4, MKV)
 • Pistes audio et sous-titres, image dans l’image
 • Messages d’erreur clairs : fournisseur, réseau ou application
+• Statistiques du flux : voyez si un gel vient du réseau ou du lecteur
 
 TV EN DIRECT
 • Chaînes par catégorie avec le programme en cours et le suivant

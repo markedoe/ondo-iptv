@@ -32,7 +32,10 @@ import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.WatchEntry
+import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.player.ProblemReportDialog
+import com.markedoe.ondo.player.StreamStatistics
+import com.markedoe.ondo.player.StreamStatisticsPanel
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.BrowseKind
@@ -402,6 +405,32 @@ class ScreensTest {
         compose.onNodeWithText("Open an Issue on GitHub").performClick()
         compose.onNodeWithText("Close").performClick()
         assertEquals(listOf("copy", "share", "issue", "close"), actions)
+    }
+
+    /** More, Stream Statistics: the format, the rates, the freezes and their cause, in the player's words. */
+    @Test
+    fun streamStatisticsShowTheRowsAndTheVerdict() {
+        var statistics by mutableStateOf(
+            StreamStatistics(
+                engine = "ExoPlayer",
+                format = "MKV",
+                video = "1920×1080",
+                videoBitrate = "8.0 Mb/s",
+                received = "6.1 Mb/s",
+                smoothness = "92%",
+                freezes = "2 · 7.0 s",
+                lostPictures = "0",
+                verdict = PlaybackHealth.Verdict.NETWORK,
+            ),
+        )
+        compose.setContent { OndoTheme { StreamStatisticsPanel(statistics) } }
+        for (text in listOf("Engine", "ExoPlayer", "Format", "MKV", "Video", "1920×1080", "Video bitrate", "8.0 Mb/s", "Received", "6.1 Mb/s", "Smoothness", "92%", "Freezes", "2 · 7.0 s", "Lost pictures")) {
+            compose.onNodeWithText(text, useUnmergedTree = true).assertExists()
+        }
+        compose.onNodeWithTag("statisticsVerdict", useUnmergedTree = true).assert(hasText("the network or the provider is the cause", substring = true))
+        statistics = statistics.copy(format = null, verdict = PlaybackHealth.Verdict.PLAYER)
+        compose.onNodeWithText("MKV", useUnmergedTree = true).assertDoesNotExist()
+        compose.onNodeWithTag("statisticsVerdict", useUnmergedTree = true).assert(hasText("come from the player or the device", substring = true))
     }
 
     /** A person found by search opens their page. */

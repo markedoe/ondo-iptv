@@ -97,8 +97,10 @@ platform (Swift / SwiftUI, Kotlin / Jetpack Compose). It runs on iOS / iPadOS 17
   and tested with the same cases).
 - **Player** (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses, resume,
   picture-in-picture, media controls; a channel that falls behind goes back to the live edge on its own;
-  explained errors, **buffer length** for live TV and for movies & series, and **Report a Problem…**: a
-  playback report with no address, login or title, to share or send in a GitHub issue.
+  explained errors, **buffer length** for live TV and for movies & series, **stream statistics** that tell a
+  network freeze from a player one and show the format (MKV, MP4…), as on Apple, and **Report a Problem…**: a
+  playback report with no address, login or title, to share or send in a GitHub issue. Movie and series pages
+  show the format their provider sends.
 - **Data**: posters, thumbnails and the movie and series pages stay on the device, like on Apple: they show at
   once at the next launch, and the pages still open when the provider cannot be reached.
 - **Settings**: playlists, appearance, adult categories hidden by default, languages and categories, app language,

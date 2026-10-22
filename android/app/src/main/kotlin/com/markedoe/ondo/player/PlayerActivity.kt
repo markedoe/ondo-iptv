@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Button
@@ -45,6 +46,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -62,8 +65,13 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
+import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.TransferListener
+import androidx.media3.exoplayer.DecoderCounters
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.LoadControl
@@ -76,11 +84,15 @@ import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.net.DEFAULT_IPTV_USER_AGENT
+import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.core.playback.PlaybackBuffer
+import com.markedoe.ondo.core.playback.PlaybackHealth
+import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
 import com.markedoe.ondo.core.playback.RebufferPolicy
 import com.markedoe.ondo.ui.theme.OndoTheme
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -89,7 +101,8 @@ import kotlinx.serialization.json.Json
 /**
  * Full-screen player (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV; fallback addresses, resume position,
  * Picture-in-Picture (entered when the user leaves while a video plays), media session (headset and remote
- * buttons). Progress is saved every 10 s. More, Report a Problem… shows a report of the playback ([PlaybackReporter]).
+ * buttons). Progress is saved every 10 s. More, Stream Statistics shows what arrives and the freezes, explained
+ * ([PlaybackHealth], sampled twice a second); More, Report a Problem… shows a report of the playback ([PlaybackReporter]).
  */
 @OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
@@ -103,6 +116,21 @@ class PlayerActivity : ComponentActivity() {
     private var inPictureInPicture by mutableStateOf(false)
     private var playerView: PlayerView? = null
     private val supportsPictureInPicture by lazy { packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) }
+
+    /** Freezes and lost pictures of this playback, explained; shown by More, Stream Statistics. */
+    private var health = PlaybackHealth()
+    private var healthStart = SystemClock.elapsedRealtime()
+    private var showsStatistics by mutableStateOf(false)
+    private var statistics by mutableStateOf<StreamStatistics?>(null)
+
+    /** Bytes the player received from the network (counted on its loading threads). */
+    private var receivedBytes = AtomicLong()
+
+    /** Pictures shown and lost, kept across the video decoders the player creates (one per address or track). */
+    private var decoder: DecoderCounters? = null
+    private var shownBefore = 0L
+    private var lostBefore = 0L
+    private val period = Timeline.Period()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -140,6 +168,12 @@ class PlayerActivity : ComponentActivity() {
                         },
                         modifier = Modifier.fillMaxSize(),
                     )
+                    statistics?.takeIf { showsStatistics && !inPictureInPicture }?.let {
+                        StreamStatisticsPanel(
+                            it,
+                            Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).padding(start = 16.dp, top = 64.dp, end = 16.dp),
+                        )
+                    }
                     // The small Picture-in-Picture window shows the video only: the system draws its own controls.
                     if (!inPictureInPicture) {
                         IconButton(
@@ -154,6 +188,16 @@ class PlayerActivity : ComponentActivity() {
                                 Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more), tint = Color.White)
                             }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.stream_statistics)) },
+                                    onClick = {
+                                        menu = false
+                                        showsStatistics = !showsStatistics
+                                        statistics = if (showsStatistics) currentStatistics() else null
+                                    },
+                                    trailingIcon = { if (showsStatistics) Icon(Icons.Rounded.Check, contentDescription = null) },
+                                    modifier = Modifier.testTag("statisticsToggle").semantics { selected = showsStatistics },
+                                )
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.report_problem)) },
                                     onClick = {
@@ -194,6 +238,12 @@ class PlayerActivity : ComponentActivity() {
                 saveProgress()
             }
         }
+        lifecycleScope.launch {
+            while (isActive) {
+                delay(500)
+                sampleHealth()
+            }
+        }
     }
 
     private fun buildPlayer(): ExoPlayer {
@@ -205,6 +255,7 @@ class PlayerActivity : ComponentActivity() {
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(20_000)
             .setDefaultRequestProperties(request.headers)
+            .setTransferListener(ByteCounter(AtomicLong().also { receivedBytes = it }))
         request.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
         return ExoPlayer.Builder(this)
             .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(http))
@@ -234,7 +285,11 @@ class PlayerActivity : ComponentActivity() {
                     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) = reporter.playWhenReady(playWhenReady)
 
                     override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
-                        if (reason == Player.DISCONTINUITY_REASON_SEEK) reporter.seek(oldPosition.positionMs, newPosition.positionMs)
+                        if (reason == Player.DISCONTINUITY_REASON_SEEK) {
+                            reporter.seek(oldPosition.positionMs, newPosition.positionMs)
+                            // The wait until the picture moves again is not a freeze.
+                            health.restart()
+                        }
                     }
 
                     override fun onPlaybackStateChanged(state: Int) {
@@ -281,6 +336,7 @@ class PlayerActivity : ComponentActivity() {
     private fun play(index: Int, startMs: Long) {
         val url = request.urls.getOrNull(index) ?: return
         reporter.attempt(index, url)
+        health.restart()
         val item = MediaItem.Builder()
             .setUri(url)
             .apply { if (url.contains(".m3u8", ignoreCase = true)) setMimeType(MimeTypes.APPLICATION_M3U8) }
@@ -311,6 +367,7 @@ class PlayerActivity : ComponentActivity() {
         player?.release()
         session?.release()
         reporter = PlaybackReporter(request, SystemClock::elapsedRealtime)
+        resetHealth()
         val exoPlayer = buildPlayer()
         player = exoPlayer
         playerView?.player = exoPlayer
@@ -353,6 +410,70 @@ class PlayerActivity : ComponentActivity() {
         reporter.note("no address left: error shown ($cause)")
         errorMessage = getString(message)
     }
+
+    /** A new title: its freezes and counters start from nothing. */
+    private fun resetHealth() {
+        health = PlaybackHealth()
+        healthStart = SystemClock.elapsedRealtime()
+        decoder = null
+        shownBefore = 0
+        lostBefore = 0
+        if (showsStatistics) statistics = currentStatistics()
+    }
+
+    /** Twice a second: what arrived, where the picture is, the pictures shown and lost. */
+    private fun sampleHealth() {
+        val exoPlayer = player ?: return
+        val playing = exoPlayer.playWhenReady && exoPlayer.playerError == null &&
+            exoPlayer.playbackSuppressionReason == Player.PLAYBACK_SUPPRESSION_REASON_NONE &&
+            (exoPlayer.playbackState == Player.STATE_READY || exoPlayer.playbackState == Player.STATE_BUFFERING)
+        val (shown, lost) = pictureCounts(exoPlayer)
+        health.add(
+            PlaybackSample(
+                clock = (SystemClock.elapsedRealtime() - healthStart) / 1_000.0,
+                mediaTime = if (playing) mediaSeconds(exoPlayer) else null,
+                receivedBytes = receivedBytes.get(),
+                displayedPictures = shown,
+                lostPictures = lost,
+                isPlaying = playing,
+            ),
+        )
+        if (showsStatistics) statistics = currentStatistics()
+    }
+
+    /**
+     * The position in the stream itself, in seconds: a live channel's position in its window steps back each time
+     * the window moves on, the stream's own position does not.
+     */
+    private fun mediaSeconds(exoPlayer: ExoPlayer): Double {
+        val timeline = exoPlayer.currentTimeline
+        val periodStartMs = if (timeline.isEmpty) 0 else timeline.getPeriod(exoPlayer.currentPeriodIndex, period).positionInWindowMs
+        return (exoPlayer.currentPosition - periodStartMs) / 1_000.0
+    }
+
+    /** Pictures shown and lost since the title opened, across the decoders the player made meanwhile. */
+    private fun pictureCounts(exoPlayer: ExoPlayer): Pair<Long, Long> {
+        val counters = exoPlayer.videoDecoderCounters
+        if (counters != null && counters !== decoder) {
+            decoder?.let { previous ->
+                previous.ensureUpdated()
+                shownBefore += previous.renderedOutputBufferCount
+                lostBefore += previous.droppedBufferCount
+            }
+            decoder = counters
+        }
+        val current = decoder ?: return shownBefore to lostBefore
+        current.ensureUpdated()
+        return shownBefore + current.renderedOutputBufferCount to lostBefore + current.droppedBufferCount
+    }
+
+    private fun currentStatistics(): StreamStatistics = StreamStatistics.of(
+        health,
+        engine = "ExoPlayer",
+        format = request.urls.getOrNull(urlIndex)?.let(MediaFormat::label),
+        video = player?.videoSize?.takeIf { it.width > 0 && it.height > 0 }?.let { "${it.width}×${it.height}" },
+        locale = resources.configuration.locales[0],
+    )
 
     /** The report of this playback, as it stands now. */
     private fun problemReport(): String {
@@ -498,6 +619,19 @@ class PlayerActivity : ComponentActivity() {
         session = null
         player = null
         super.onDestroy()
+    }
+
+    /** Counts the bytes received from the network, on the player's loading threads. */
+    private class ByteCounter(private val bytes: AtomicLong) : TransferListener {
+        override fun onTransferInitializing(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) = Unit
+
+        override fun onTransferStart(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) = Unit
+
+        override fun onBytesTransferred(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean, bytesTransferred: Int) {
+            if (isNetwork) bytes.addAndGet(bytesTransferred.toLong())
+        }
+
+        override fun onTransferEnd(source: DataSource, dataSpec: DataSpec, isNetwork: Boolean) = Unit
     }
 
     companion object {

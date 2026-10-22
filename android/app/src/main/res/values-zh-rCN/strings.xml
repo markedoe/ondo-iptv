@@ -134,7 +134,7 @@
     <string name="help_categories_title">隐藏语言和分类</string>
     <string name="help_categories_body">许多提供商会在分类名称前加上代码，例如 |PT| 或 FR:。“电影”“剧集”和“直播”上的筛选按钮（也在“设置”&gt;“语言和分类”中）可一次隐藏整个语言或国家/地区，适用于所有播放列表；提供商以后新增的分类也遵循同一规则。\n\n风格的用法相同，针对分类名称中的词：隐藏“动漫”“儿童”或“纪录片”，或你自己的词，例如 Bollywood。只看分类名称，不看每部电影的类型。\n\n你也可以在那里逐个隐藏分类，并随时重新显示。\n\n名称看起来属于成人内容的分类会在所有地方隐藏，直到你在“设置”中打开“显示成人分类”。</string>
     <string name="help_playback_title">无法播放时</string>
-    <string name="help_playback_body">Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n缓冲更长时（“设置”&gt;“直播缓冲”和“电影和剧集缓冲”），提供商较长的中断不会显现，但画面出现所需的时间更长。\n\n在播放器中，“更多”&gt;“报告问题…”会显示本次播放的报告（启动和跳转时间、卡顿、统计信息；不含地址、登录信息或标题），可通过邮件或消息发送，或提交到 GitHub 问题中。</string>
+    <string name="help_playback_body">Ondo 会说明问题出在提供商、网络还是格式。\n\n如果提供商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数提供商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果画面时不时卡住，“更多”&gt;“流统计信息”会显示收到的数据、视频所需的数据，以及卡顿来自网络或提供商，还是来自播放器。\n\n缓冲更长时（“设置”&gt;“直播缓冲”和“电影和剧集缓冲”），提供商较长的中断不会显现，但画面出现所需的时间更长。\n\n在播放器中，“更多”&gt;“报告问题…”会显示本次播放的报告（启动和跳转时间、卡顿、统计信息；不含地址、登录信息或标题），可通过邮件或消息发送，或提交到 GitHub 问题中。</string>
     <string name="help_privacy_title">隐私</string>
     <string name="help_privacy_body">Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上，并且不会包含在设备备份中。你打开过的电影和剧集页面及海报也保存在设备上，因此可以立即显示，即使提供商无法连接也能打开。\n\nOndo 会连接你添加的服务器，并每周连接一次 GitHub，获取最新的奖项和电影节入选信息（不会发送任何关于你的信息；可在“设置”中关闭“自动更新获奖信息”）。</string>
     <string name="error_load_denied">提供商拒绝了访问（HTTP %1$d）。请检查用户名、密码和你的订阅。</string>
@@ -255,4 +255,17 @@
     <string name="open_issue">在 GitHub 上提交问题</string>
     <string name="playback_report_subject">Ondo 播放报告</string>
     <string name="problem_report_explanation">此报告有助于找出播放问题的原因：本次播放的启动和跳转时间、卡顿及播放器统计信息，以及应用、系统和播放器设置。它不包含任何流地址、登录信息或标题。GitHub 上的问题是公开的。</string>
+    <string name="stream_statistics">流统计信息</string>
+    <string name="stats_engine">引擎</string>
+    <string name="stats_format">格式</string>
+    <string name="stats_video">视频</string>
+    <string name="stats_video_bitrate">视频码率</string>
+    <string name="stats_received">接收速率</string>
+    <string name="stats_smoothness">流畅度</string>
+    <string name="stats_freezes">卡顿</string>
+    <string name="stats_lost_pictures">丢帧</string>
+    <string name="stats_measuring">正在测量…</string>
+    <string name="stats_smooth">没有卡顿：播放流畅。</string>
+    <string name="stats_network">数据到达太慢或中断：原因在于网络或提供商。</string>
+    <string name="stats_player">数据按时到达：卡顿或丢帧来自播放器或设备。</string>
 </resources>

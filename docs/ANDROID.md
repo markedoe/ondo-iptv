@@ -20,8 +20,10 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   screen with a demo and a "player without content" disclaimer.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
   resume, picture-in-picture, MediaSession, audio and subtitle tracks, separate buffers for live TV and for
-  movies & series, back to the live edge on its own when a channel falls behind, More → Report a Problem… (a
-  playback report with no address, login or title).
+  movies & series, back to the live edge on its own when a channel falls behind, More → Stream Statistics
+  (format, video and received bitrates, smoothness, freezes and lost pictures, and whether they come from the
+  network or the player: `core/playback/PlaybackHealth.kt`, the Apple rules), More → Report a Problem… (a
+  playback report with no address, login or title). Movie and series pages show the format (MKV, HLS…).
 - **Storage**: JSON documents in the app's private storage (`data/AppStore.kt`), left out of backups
   (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`): settings, playlists with their logins, My List,
   collections, progress and reminders, each playlist's catalogue, and the movie and series pages opened (up to

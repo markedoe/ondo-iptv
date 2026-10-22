@@ -104,9 +104,11 @@ version Android : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
   testé avec les mêmes cas).
 - **Lecteur** (Media3 / ExoPlayer) : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
   reprise, image dans l'image, commandes multimédia ; une chaîne qui prend du retard revient d'elle-même au
-  direct ; erreurs expliquées, **mémoire tampon** réglable pour le direct et pour les films et séries, et
-  **Signaler un problème…** : un rapport de lecture sans adresse, identifiant ni titre, à partager ou envoyer
-  dans un ticket GitHub.
+  direct ; erreurs expliquées, **mémoire tampon** réglable pour le direct et pour les films et séries,
+  **statistiques du flux** qui distinguent un gel dû au réseau d'un gel dû au lecteur et montrent le format
+  (MKV, MP4…), comme sur Apple, et **Signaler un problème…** : un rapport de lecture sans adresse, identifiant
+  ni titre, à partager ou envoyer dans un ticket GitHub. Les fiches des films et séries indiquent le format
+  qu'envoie le fournisseur.
 - **Données** : les affiches, les vignettes et les pages des films et séries restent sur l'appareil, comme sur
   Apple : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même quand le fournisseur
   ne répond pas.
