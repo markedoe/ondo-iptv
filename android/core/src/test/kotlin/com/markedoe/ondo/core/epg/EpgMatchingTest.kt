@@ -62,6 +62,35 @@ class EpgMatchingTest {
         assertTrue(disabled.programs(tv1).isEmpty())
     }
 
+    /**
+     * Guide channels sharing a name ("TV1 HD", "TV1 FHD") or an id up to case must not take turns from one
+     * launch to the next.
+     */
+    @Test
+    fun matchingIsTheSameAtEveryBuild() {
+        repeat(30) {
+            val channels = listOf("b.tv1" to "TV1 HD", "a.tv1" to "TV1 FHD", "c.tv1" to "TV1").shuffled()
+                .associate { (id, name) -> id to EpgChannel(id, listOf(name)) }
+            val programs = listOf("b.tv1", "c.tv1", "a.tv1", "nation2.FR", "Nation2.fr", "aria.hd", "aria-hd").shuffled()
+                .associateWith { id -> listOf(program(id, "News", 0)) }
+            val index = EpgIndex(EpgData(channels = HashMap(channels), programs = HashMap(programs)))
+            assertEquals("a.tv1", index.guideId(channel("FR: TV1 HD")), "same display name: the smallest id")
+            assertEquals("Nation2.fr", index.guideId(channel("Nation", epgId = "NATION2.fr")), "same id up to case")
+            assertEquals("aria-hd", index.guideId(channel("Aria")), "same name from the id")
+        }
+    }
+
+    @Test
+    fun insertingProgrammesMatchesLikeABuild() {
+        var inserted = EpgIndex(EpgData(channels = mapOf("tv1.fr" to EpgChannel("tv1.fr", listOf("TV1")))))
+        val tv1 = channel("FR: TV1 HD", id = "1", epgId = "x-tv1")
+        assertNull(inserted.guideId(tv1), "a guide channel without programmes is not matched by its name")
+        inserted = inserted.inserting(listOf(program("tv1.fr", "Journal", 0)), channel("TV1", id = "2", epgId = "tv1.fr"))
+        assertEquals("tv1.fr", inserted.guideId(tv1), "its programmes make its display name count")
+        assertEquals("Journal", inserted.current(tv1, start + 60_000)?.title)
+        assertEquals("tv1.fr", EpgIndex(inserted.data).guideId(tv1))
+    }
+
     @Test
     fun suggestionsRankSimilarNamesFirst() {
         val suggestions = index.suggestions(channel("FR | TV1 FHD (backup)"))

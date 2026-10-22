@@ -10,7 +10,8 @@ import com.markedoe.ondo.core.model.TimeWindow
  * Fast, immutable guide lookups for playlist channels.
  *
  * Matching order: the user's manual choice ([overrides]), exact `tvg-id`, case-insensitive `tvg-id`, then
- * normalised names (`tvg-name` / channel name vs. XMLTV `display-name` / id).
+ * normalised names (`tvg-name` / channel name vs. XMLTV `display-name`, then vs. guide id). When several guide
+ * channels fit equally, the smallest id wins, so a channel gets the same guide at every launch.
  */
 class EpgIndex private constructor(
     val data: EpgData,
@@ -26,25 +27,33 @@ class EpgIndex private constructor(
         overrides,
     )
 
-    private class Lookups(val lowercasedIds: Map<String, String>, val nameKeys: Map<String, String>) {
+    private class Lookups(
+        /** Lowercased guide id -> guide id. */
+        val lowercasedIds: Map<String, String>,
+        /** Name key -> guide id, from the display names of guide channels that have programmes. */
+        val displayNameKeys: Map<String, String>,
+        /** Name key -> guide id, from the guide ids themselves (used when no display name matches). */
+        val idNameKeys: Map<String, String>,
+    ) {
         companion object {
+            /** A key several ids claim goes to the smallest (ids are visited in order). */
             fun build(data: EpgData): Lookups {
                 val lowercased = HashMap<String, String>()
-                val nameKeys = HashMap<String, String>()
+                val displayNameKeys = HashMap<String, String>()
+                val idNameKeys = HashMap<String, String>()
                 for (id in (data.programs.keys + data.channels.keys).sorted()) {
                     lowercased.putIfAbsent(id.lowercase(), id)
                     val idKey = TextNormalizer.channelMatchKey(id)
-                    if (idKey.isNotEmpty()) nameKeys.putIfAbsent(idKey, id)
-                }
-                // Display names take precedence over ids for name matching.
-                for (id in data.channels.keys.sorted()) {
+                    if (idKey.isNotEmpty()) idNameKeys.putIfAbsent(idKey, id)
+                    // Display names count only for guide channels with programmes: matching a name to a channel
+                    // with nothing to show would hide one that has some. `suggestions` still offers it.
                     if (data.programs[id] == null) continue
-                    for (name in data.channels.getValue(id).displayNames) {
+                    for (name in data.channels[id]?.displayNames.orEmpty()) {
                         val key = TextNormalizer.channelMatchKey(name)
-                        if (key.isNotEmpty()) nameKeys[key] = id
+                        if (key.isNotEmpty()) displayNameKeys.putIfAbsent(key, id)
                     }
                 }
-                return Lookups(lowercased, nameKeys)
+                return Lookups(lowercased, displayNameKeys, idNameKeys)
             }
         }
     }
@@ -69,7 +78,7 @@ class EpgIndex private constructor(
         }
         for (candidate in listOfNotNull(channel.epgName, channel.name, channel.epgId)) {
             val key = TextNormalizer.channelMatchKey(candidate)
-            if (key.isNotEmpty()) lookups.nameKeys[key]?.let { return it }
+            if (key.isNotEmpty()) (lookups.displayNameKeys[key] ?: lookups.idNameKeys[key])?.let { return it }
         }
         return null
     }
