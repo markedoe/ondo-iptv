@@ -203,8 +203,9 @@ user-selected files).
    (read only), `upload` puts the images in the Asset Library without touching any version, `place` shows them
    on the iOS version being prepared. A version in review or approved cannot change: `place` refuses it. The
    assets are reviewed with the version they are placed on; the Asset Library can also submit them on their
-   own (App Store Connect → Asset Library), after which they can be published on the live version without a
-   new version. Nothing is submitted without your go.
+   own (App Store Connect → Asset Library); once approved, they are published on the live version in App Store
+   Connect (Header and Search Results → Browse Assets → Publish), without a new version (`place` does not do
+   it). Nothing is submitted without your go.
 5. In each version (iOS and macOS, e.g. 1.1.0): choose the build of the **app-store** edition →
    **Add for Review** → **Submit for Review**. Or *Run workflow* with target `metadata` (the listing;
    `metadata-ios` or `metadata-mac` for one platform, since a version in review cannot be edited), then target
