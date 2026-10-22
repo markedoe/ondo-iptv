@@ -68,8 +68,11 @@ def signing_xcargs
   "#{authentication_xcargs} DEVELOPMENT_TEAM=#{ENV.fetch('DEVELOPMENT_TEAM')} CODE_SIGN_STYLE=Automatic"
 end
 
-def generate_project
-  sh("cd .. && xcodegen generate")
+# The release workflow generates the project with XcodeGen in a step of its own, without the signing secrets; on a
+# Mac, run `xcodegen generate` first.
+def require_project
+  return if File.directory?(File.expand_path("../#{PROJECT}", __dir__))
+  UI.user_error!("#{PROJECT} is missing: run `xcodegen generate` at the repository root first")
 end
 
 # Build number: the platform's latest upload on App Store Connect + 1 (1 for the first one), so a re-run or
@@ -80,11 +83,15 @@ def next_build_number(platform)
   latest.to_i + 1
 end
 
-# The version comes from the tag (v1.2.3 → 1.2.3); without one (a manual run on main), project.yml's
-# MARKETING_VERSION is kept.
+# The version comes from the tag (v1.2.3 → 1.2.3); without one (a manual run on a branch, even one whose name starts
+# with v), project.yml's MARKETING_VERSION is kept. A v tag that is not a version stops the lane: its builds would
+# otherwise go to project.yml's version.
 def marketing_version
+  return nil unless ENV["GITHUB_REF_TYPE"] == "tag"
   tag = ENV["GITHUB_REF_NAME"].to_s
-  tag.start_with?("v") ? tag.delete_prefix("v") : nil
+  return nil unless tag.start_with?("v")
+  UI.user_error!("Tag #{tag} is not a version (v1.2 or v1.2.3)") unless tag.match?(/\Av\d+(\.\d+){1,2}\z/)
+  tag.delete_prefix("v")
 end
 
 # The App Store version the listing goes to, the same as the builds': the tag's, otherwise project.yml's.
@@ -237,7 +244,7 @@ end
 platform :ios do
   desc "Build the iOS app and upload it to TestFlight"
   lane :beta do
-    generate_project
+    require_project
     number = next_build_number("ios")
     build_app(
       project: PROJECT,
@@ -303,7 +310,7 @@ platform :mac do
 
   desc "Build the macOS app and upload it to TestFlight / App Store Connect"
   lane :beta do
-    generate_project
+    require_project
     number = next_build_number("osx")
     build_mac_app(
       project: PROJECT,

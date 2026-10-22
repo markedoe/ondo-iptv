@@ -147,25 +147,34 @@ réseau, fichiers choisis par l'utilisateur).
    ```bash
    git tag v1.1.0 && git push origin v1.1.0
    ```
-   Le workflow (macOS 26, Xcode 26 — exigé par Apple depuis avril 2026) lance les tests du cœur, puis deux
-   vérifications dont chacune arrête le lancement avant toute compilation : *Demo playlist answers*
-   (la review d'Apple teste l'app avec la playlist de démo ; toutes les cibles sauf `status`) et
+   Le workflow (macOS 26, Xcode 26 — exigé par Apple depuis avril 2026) lance les tests du cœur, puis trois
+   vérifications dont chacune arrête le lancement avant toute compilation ou soumission : *Demo playlist
+   answers* (la review d'Apple teste l'app avec la playlist de démo ; toutes les cibles sauf `status`),
    *App Store edition checks* (`check_app_store.py` et les adresses de la fiche, voir E ; pour l'édition
-   App Store, et pour les cibles `all`, `submit` et les trois `metadata` quelle que soit l'édition). Il
-   construit, signe et envoie ensuite **iOS** puis **macOS** sur TestFlight (build = dernier build
-   TestFlight + 1), puis la fiche FR/EN et les captures iPhone, iPad et Mac.
+   App Store, et pour les cibles `all`, `submit` et les trois `metadata` quelle que soit l'édition) et
+   *Privacy manifest and Mac sandbox checks* (`check_privacy_manifest.py` et `check_mac_entitlements.py` ;
+   les cibles `all`, `ios`, `mac` et `submit`, les deux éditions). Il construit, signe et envoie ensuite
+   **iOS** puis **macOS** sur TestFlight (build = dernier build TestFlight + 1), puis la fiche FR/EN et les
+   captures iPhone, iPad et Mac.
 
-   **Version.** Un lancement parti d'un tag prend la version du tag (`v1.1.0` → `1.1.0`), tout autre lancement
-   `MARKETING_VERSION` de `project.yml` ; les cibles `metadata`, `submit` et `status` choisissent la version
-   App Store de la même façon. Lancez-les depuis le tag (*Use workflow from → Tags*) ou gardez
-   `MARKETING_VERSION` égal au tag, sinon elles visent la version de `project.yml`.
+   **Version.** Un lancement parti d'un tag prend la version du tag (`v1.1.0` → `1.1.0` ; un tag `v` qui n'est
+   pas une version, comme `v1.1.0-rc1`, arrête le lancement), tout autre lancement `MARKETING_VERSION` de
+   `project.yml` ; les cibles `metadata`, `submit` et `status` choisissent la version App Store de la même
+   façon. Lancez-les depuis le tag (*Use workflow from → Tags*) ou gardez `MARKETING_VERSION` égal au tag,
+   sinon elles visent la version de `project.yml`.
+
+   **Un lancement à la fois.** Deux lancements prendraient le même numéro de build : un lancement démarré
+   pendant qu'un autre tourne l'attend, quels que soient leur tag ou leur branche. GitHub ne garde qu'un seul
+   lancement en attente : en démarrer un troisième annule celui qui attendait (jamais celui qui tourne).
+   Démarrez le lancement suivant une fois le précédent terminé.
 
    **Cibles** :
    - `all` : les deux builds, puis la fiche ;
    - `ios` ou `mac` : un seul build ;
    - `metadata` : la fiche seule (`metadata-ios` ou `metadata-mac` pour une seule plateforme) ;
    - `submit` : la soumission à la review (étape 5) ; laissez `ios_build` ou `mac_build` vide pour ne
-     soumettre qu'une plateforme ;
+     soumettre qu'une plateforme. Une vérification en échec ne soumet ni l'une ni l'autre ; l'échec de la
+     soumission iOS n'arrête pas celle de macOS ;
    - `status`, en lecture seule : l'état de chaque version et son build choisi, si le contact pour la review
      est complet et si les notes pour la review parlent de téléchargements ou de `network.server`, les
      captures comparées à la branche `appstore-screenshots`, et les soumissions à la review.
@@ -248,7 +257,9 @@ Les builds TestFlight ne sont pas touchés.
     `NSAllowsArbitraryLoads` et chaque autorisation, mode d'arrière-plan et entitlement Mac.
 - Les adresses d'assistance, de confidentialité et du site répondent (le workflow de release les vérifie).
 - `ITSAppUsesNonExemptEncryption = NO` est déclaré : pas de question d'export à chaque build.
-- `PrivacyInfo.xcprivacy` présent (raisons d'usage des API sensibles).
+- `PrivacyInfo.xcprivacy` présent (raisons d'usage des API sensibles) et couvrant le code livré, et le bac à
+  sable du Mac a exactement les droits (entitlements) dont l'app a besoin : `check_privacy_manifest.py` et
+  `check_mac_entitlements.py` passent (la CI les lance, et le workflow de release avant chaque envoi).
 - Les captures ne montrent que la démo générée (affiches dessinées, chaînes fictives) : aucun logo ni
   visuel protégé.
 

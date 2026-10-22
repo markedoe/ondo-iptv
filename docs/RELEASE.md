@@ -149,25 +149,32 @@ user-selected files).
    ```bash
    git tag v1.1.0 && git push origin v1.1.0
    ```
-   The workflow (macOS 26, Xcode 26 — required by Apple since April 2026) runs the core tests, then two
-   checks, either of which stops the run before any build: *Demo playlist answers* (App Review tests the app
-   with the demo playlist; every target but `status`) and *App Store edition checks* (`check_app_store.py`
-   and the listing's addresses, see E; for the App Store edition, and for the targets `all`, `submit` and
-   the three `metadata` ones whatever the edition). It then builds, signs and uploads **iOS** then **macOS**
-   to TestFlight (build = latest TestFlight build + 1), then the FR/EN listing and the iPhone, iPad and Mac
-   screenshots.
+   The workflow (macOS 26, Xcode 26 — required by Apple since April 2026) runs the core tests, then three
+   checks, any of which stops the run before any build or submission: *Demo playlist answers* (App Review
+   tests the app with the demo playlist; every target but `status`), *App Store edition checks*
+   (`check_app_store.py` and the listing's addresses, see E; for the App Store edition, and for the targets
+   `all`, `submit` and the three `metadata` ones whatever the edition) and *Privacy manifest and Mac sandbox
+   checks* (`check_privacy_manifest.py` and `check_mac_entitlements.py`; the targets `all`, `ios`, `mac` and
+   `submit`, both editions). It then builds, signs and uploads **iOS** then **macOS** to TestFlight
+   (build = latest TestFlight build + 1), then the FR/EN listing and the iPhone, iPad and Mac screenshots.
 
-   **Version.** A run started from a tag uses the tag's version (`v1.1.0` → `1.1.0`), any other run
-   `MARKETING_VERSION` in `project.yml`; the `metadata`, `submit` and `status` targets pick the App Store
-   version the same way. Start them from the tag (*Use workflow from → Tags*) or keep `MARKETING_VERSION`
-   equal to the tag, otherwise they go to `project.yml`'s version.
+   **Version.** A run started from a tag uses the tag's version (`v1.1.0` → `1.1.0`; a `v` tag that is not a
+   version, such as `v1.1.0-rc1`, stops the run), any other run `MARKETING_VERSION` in `project.yml`; the
+   `metadata`, `submit` and `status` targets pick the App Store version the same way. Start them from the tag
+   (*Use workflow from → Tags*) or keep `MARKETING_VERSION` equal to the tag, otherwise they go to
+   `project.yml`'s version.
+
+   **One run at a time.** Two runs would take the same build number, so a run started while another one is
+   going waits for it, whatever its tag or branch. GitHub keeps only one waiting run: starting a third one
+   cancels the one that was waiting (never a running one). Start the next run once the previous one has
+   finished.
 
    **Targets**:
    - `all`: both builds, then the listing;
    - `ios` or `mac`: one build;
    - `metadata`: the listing only (`metadata-ios` or `metadata-mac` for one platform);
    - `submit`: the submission for review (step 5); leave `ios_build` or `mac_build` empty to submit one
-     platform only;
+     platform only. A failed check submits neither; a failed iOS submission does not stop the macOS one;
    - `status`, read only: the state of each version and its selected build, whether the review contact is
      complete and the review notes mention downloads or `network.server`, the screenshots compared with the
      `appstore-screenshots` branch, and the review submissions.
@@ -241,7 +248,9 @@ TestFlight builds are not affected.
     permission, background mode and Mac entitlement.
 - The support, privacy and website addresses answer (the release workflow checks them).
 - `ITSAppUsesNonExemptEncryption = NO` is declared: no export compliance question on each build.
-- `PrivacyInfo.xcprivacy` is present (reasons for using sensitive APIs).
+- `PrivacyInfo.xcprivacy` is present (reasons for using sensitive APIs) and covers the shipped code, and the Mac
+  sandbox has exactly the entitlements the app needs: `check_privacy_manifest.py` and
+  `check_mac_entitlements.py` pass (CI runs them, and the release workflow before every upload).
 - The screenshots only show the generated demo (drawn posters, fictional channels): no logo or
   protected visual.
 
