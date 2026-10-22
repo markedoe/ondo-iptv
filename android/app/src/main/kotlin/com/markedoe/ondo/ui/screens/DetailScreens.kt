@@ -79,6 +79,7 @@ import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Season
+import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.ui.AwardRow
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.components.Artwork
@@ -145,6 +146,8 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         state.details?.durationSeconds?.takeIf { it > 0 }?.let { durationText(it, LocalConfiguration.current.locales[0]) },
         (state.details?.rating ?: movie.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
         state.details?.genre,
+        // MKV, MP4…: the format the provider sends.
+        MediaFormat.label(movie.streamUrl),
     )
     val resumable = state.progress?.let { !it.finished && it.fraction > 0f } == true
     var picking by rememberSaveable { mutableStateOf(false) }
@@ -217,6 +220,8 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         seasonCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.seasons, it, it) },
         (state.details?.rating ?: series.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
         state.details?.genre ?: series.genre,
+        // The format of the episodes, when they all share one.
+        MediaFormat.label(state.seasons.flatMap { season -> season.episodes.map { it.streamUrl } }),
     )
     val season = state.seasons.firstOrNull { it.number == state.selectedSeason } ?: state.seasons.firstOrNull()
     var picking by rememberSaveable { mutableStateOf(false) }

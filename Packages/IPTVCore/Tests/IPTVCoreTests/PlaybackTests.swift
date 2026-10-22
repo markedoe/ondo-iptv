@@ -62,3 +62,24 @@ final class PlaybackTests: XCTestCase {
         XCTAssertNil(factory.catchupItem(for: archived, start: now.addingTimeInterval(60), end: now.addingTimeInterval(600), now: now), "future")
     }
 }
+
+/// The format shown on pages and in the player's statistics.
+final class MediaFormatTests: XCTestCase {
+    private func url(_ text: String) throws -> URL { try XCTUnwrap(URL(string: text)) }
+
+    func testTheAddressNamesTheFormat() throws {
+        XCTAssertEqual(MediaFormat.label(for: try url("http://panel.example.com/movie/u/p/5001.mkv")), "MKV")
+        XCTAssertEqual(MediaFormat.label(for: try url("http://panel.example.com/movie/u/p/5001.MP4?token=1")), "MP4")
+        XCTAssertEqual(MediaFormat.label(for: try url("http://panel.example.com/live/u/p/101.m3u8")), "HLS")
+        XCTAssertEqual(MediaFormat.label(for: try url("http://panel.example.com/live/u/p/101.ts")), "TS")
+        XCTAssertNil(MediaFormat.label(for: try url("http://panel.example.com/play.php?id=5001")), "not a video format")
+        XCTAssertNil(MediaFormat.label(for: try url("http://panel.example.com/movie/5001")), "no extension")
+    }
+
+    func testASeriesShowsItsFormatOnlyWhenEveryEpisodeSharesIt() throws {
+        let mkv = [try url("http://panel.example.com/series/u/p/1.mkv"), try url("http://panel.example.com/series/u/p/2.mkv")]
+        XCTAssertEqual(MediaFormat.label(for: mkv), "MKV")
+        XCTAssertNil(MediaFormat.label(for: mkv + [try url("http://panel.example.com/series/u/p/3.mp4")]), "mixed formats")
+        XCTAssertNil(MediaFormat.label(for: []))
+    }
+}

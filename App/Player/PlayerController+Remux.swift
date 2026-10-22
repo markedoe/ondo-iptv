@@ -87,6 +87,18 @@ extension PlayerController {
         }
     }
 
+    /// The format playing, for Stream Statistics: "MKV", or "MKV, converted for the system player" while the film is
+    /// remuxed for AVPlayer.
+    var formatDescription: String? {
+        guard candidates.indices.contains(candidateIndex), let format = MediaFormat.label(for: candidates[candidateIndex]) else {
+            return nil
+        }
+        #if os(iOS)
+        if remuxServer != nil { return String(localized: "\(format), converted for the system player") }
+        #endif
+        return format
+    }
+
     /// The engine as the problem report names it.
     var engineName: String {
         if activeEngine == .vlc { return "VLC" }

@@ -200,6 +200,10 @@ struct SeriesDetailView: View {
         }
         if let rating = details?.info.rating ?? series.rating, rating > 0 { items.append("★ " + Formatting.rating(rating)) }
         if let genre = details?.info.genre ?? series.genre { items.append(genre) }
+        // The format of the episodes, when they all share one.
+        if let episodes = details?.seasons.flatMap(\.episodes), let format = MediaFormat.label(for: episodes.map(\.streamURL)) {
+            items.append(format)
+        }
         return items
     }
 }

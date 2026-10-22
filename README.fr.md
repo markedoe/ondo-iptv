@@ -53,9 +53,10 @@ version Android : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
   clavier, menu Lecture, une fenêtre par flux et **plein écran** (bouton, touche F, double-clic) sur Mac ;
   **reprise** au point exact, **dernière chaîne**, **zapping par numéro**,
   panneau chaînes / guide dans le lecteur ; **mémoire tampon** réglable pour le direct et pour les films et
-  séries, **statistiques du flux** qui distinguent un gel dû au réseau d'un gel dû au lecteur, et **Signaler un
-  problème…** : un rapport de lecture sans adresse, identifiant ni titre, à partager ou envoyer dans un ticket
-  GitHub.
+  séries, **statistiques du flux** qui distinguent un gel dû au réseau d'un gel dû au lecteur et montrent le
+  format (MKV, MP4…), et **Signaler un problème…** : un rapport de lecture sans adresse, identifiant ni titre, à
+  partager ou envoyer dans un ticket GitHub. Les fiches des films et séries indiquent le format qu'envoie le
+  fournisseur.
 - **Diffusion** : **AirPlay** (iPhone, iPad, Mac : la vidéo part vers la TV, pas seulement le son) et
   **Chromecast** (iPhone, iPad).
 - **Multivue** (iPad, Mac) : jusqu'à 4 chaînes, un seul son actif.

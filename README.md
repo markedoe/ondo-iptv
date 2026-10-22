@@ -51,8 +51,9 @@ platform (Swift / SwiftUI, Kotlin / Jetpack Compose). It runs on iOS / iPadOS 17
   channel, explained errors, lock screen / media keys, keyboard shortcuts, Playback menu, one window per
   stream and **full screen** (button, F key, double-click) on the Mac; **exact resume**, **last channel**,
   **zapping by number**, channels / guide panel in the player; **buffer length** for live TV and for movies &
-  series, **stream statistics** that tell a network freeze from a player one, and **Report a Problem…**: a
-  playback report with no address, login or title, to share or send in a GitHub issue.
+  series, **stream statistics** that tell a network freeze from a player one and show the format (MKV, MP4…),
+  and **Report a Problem…**: a playback report with no address, login or title, to share or send in a GitHub
+  issue. Movie and series pages show the format their provider sends.
 - **Casting**: **AirPlay** (iPhone, iPad, Mac: the video goes to the TV, not only the sound) and
   **Chromecast** (iPhone, iPad).
 - **Multiview** (iPad, Mac): up to 4 channels, a single active sound.
