@@ -321,10 +321,10 @@ class AppStoreTests(CheckTestCase):
         self.write("App/Features/Movie.swift", "#if os(iOS)\nlet a = 1\n#endif\n#if TESTFLIGHT_DOWNLOADS || DEBUG\n"
                    "let button = DownloadButton(item: item)\n#endif\n")
 
-    def project(self, extra: str = "") -> None:
+    def project(self, extra: str = "", modes: str = " [audio]") -> None:
         self.write("project.yml", f"        NSHumanReadableCopyright: © {self.YEAR} example\n"
                    "        NSAppTransportSecurity:\n          NSAllowsArbitraryLoads: true\n"
-                   "        NSLocalNetworkUsageDescription: Ondo looks for TVs.\n        UIBackgroundModes: [audio]\n" + extra)
+                   f"        NSLocalNetworkUsageDescription: Ondo looks for TVs.\n        UIBackgroundModes:{modes}\n" + extra)
 
     def test_the_app_store_edition_passes(self):
         self.assertPasses("app_store")
@@ -341,10 +341,26 @@ class AppStoreTests(CheckTestCase):
         self.write("App/Features/Flags.swift", self.FLAGS.replace("enum FeatureFlags {\n", "enum FeatureFlags {\n    static let extra = false\n"))
         self.assertFails("app_store", "FeatureFlags.extra is off in the App Store edition")
 
+    def test_a_computed_feature_switched_off_for_good_is_dormant(self):
+        for flag in ("static var extra: Bool { false }", "static var extra: Bool { return false }",
+                     "static func extra() -> Bool { false }", "static let extra: Bool = {\n        return false\n    }()"):
+            with self.subTest(flag=flag):
+                self.write("App/Features/Flags.swift", self.FLAGS.replace("enum FeatureFlags {\n", f"enum FeatureFlags {{\n    {flag}\n"))
+                self.assertFails("app_store", "FeatureFlags.extra is off in the App Store edition")
+
     def test_a_switch_read_at_run_time_is_a_hidden_feature(self):
         self.write("App/Features/Flags.swift", self.FLAGS.replace(
             "enum FeatureFlags {\n", "enum FeatureFlags {\n    static var unlocked: Bool { UserDefaults.standard.bool(forKey: \"code\") }\n"))
         self.assertFails("app_store", "FeatureFlags reads something at run time")
+
+    def test_a_switch_turned_by_an_argument_a_date_icloud_or_a_file_is_a_hidden_feature(self):
+        for switch in ('CommandLine.arguments.contains("-unlock")', "Date.now > Self.launchDay",
+                       'NSUbiquitousKeyValueStore.default.bool(forKey: "unlock")',
+                       'FileManager.default.fileExists(atPath: "/tmp/unlock")', 'getenv("ONDO_UNLOCK") != nil'):
+            with self.subTest(switch=switch):
+                self.write("App/Features/Flags.swift", self.FLAGS.replace(
+                    "enum FeatureFlags {\n", f"enum FeatureFlags {{\n    static var unlocked: Bool {{ {switch} }}\n"))
+                self.assertFails("app_store", "FeatureFlags reads something at run time")
 
     def test_a_private_api_fails(self):
         self.write("Packages/IPTVCore/Sources/IPTVCore/Hack.swift", "let selector = NSSelectorFromString(\"_hidden\")\n")
@@ -394,6 +410,14 @@ class AppStoreTests(CheckTestCase):
         self.write("fastlane/metadata/review_information/notes.txt", self.NOTES.replace("Notifications. ", ""))
         self.assertFails("app_store", "do not explain NSCameraUsageDescription",
                          "do not explain com.apple.security.network.server", "do not explain Notifications")
+
+    def test_background_modes_written_as_a_block_list_are_explained_too(self):
+        self.project(modes="\n          - audio\n          - fetch")
+        self.assertFails("app_store", "do not explain UIBackgroundModes fetch")
+        code, output = run("app_store", self.root)
+        self.assertNotIn("UIBackgroundModes audio", output, "audio is in the review notes")
+        self.project(modes="\n          - audio\n        UILaunchScreen:\n          - fetch")
+        self.assertPasses("app_store")
 
     def test_the_review_notes_do_not_describe_what_the_edition_lacks(self):
         self.write("fastlane/metadata/review_information/notes.txt", self.NOTES + "Downloads are in the Downloads tab.\n")

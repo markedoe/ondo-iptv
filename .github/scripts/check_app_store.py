@@ -54,7 +54,16 @@ DONATION_WORD = re.compile(r"(?i)\bdonat|\bsponsor|faire un don|pourboire")
 SITE_PAGE = re.compile(r"https://[\w-]+\.github\.io/ondo-iptv/([\w.-]*)")
 # A string the App Store edition would show that calls the app a beta (2.2).
 BETA_TEXT = re.compile(r'(?i)"[^"\n]*(?<![\w])(?:beta|bêta)(?![\w])[^"\n]*"')
-RUNTIME_SWITCH = re.compile(r"UserDefaults|@AppStorage|ProcessInfo|URLSession|\bURL\(|\bDate\(|Keychain|Bundle\.main")
+# What a flag could read to turn a feature on after review: settings (local or iCloud), launch arguments and the
+# environment, a server, a date, a file, the keychain, the bundle.
+RUNTIME_SWITCH = re.compile(
+    r"UserDefaults|@AppStorage|NSUbiquitousKeyValueStore|ProcessInfo|CommandLine|\bgetenv\b|URLSession|\bURL\(|"
+    r"\bDate\b|FileManager|contentsOf|Keychain|Bundle\.main")
+# A flag that is off for good: `static let x = false`, `static var x: Bool { false }`, `static func x() -> Bool { false }`,
+# `static let x: Bool = { return false }()`.
+DORMANT_FLAG = re.compile(
+    r"static\s+(?:let|var|func)\s+(\w+)\s*(?:\(\s*\)\s*->\s*Bool|:\s*Bool)?\s*"
+    r"(?:=\s*false\b|=?\s*\{\s*(?:get\s*\{\s*)?(?:return\s+)?false\s*\})")
 
 LIMITS = {"name.txt": 30, "subtitle.txt": 30, "keywords.txt": 100, "promotional_text.txt": 170,
           "description.txt": 4000, "release_notes.txt": 4000}
@@ -191,7 +200,7 @@ def check_code(problems: list) -> None:
         match = re.search(r"\benum FeatureFlags\b", code)
         if match:
             flags = braced_body(code, match.end())
-            for name in re.findall(r"static\s+(?:let|var)\s+(\w+)\s*(?::\s*Bool)?\s*=\s*false\b", flags):
+            for name in DORMANT_FLAG.findall(flags):
                 problems.append(f"{relative}: FeatureFlags.{name} is off in the App Store edition: a feature nobody "
                                 "can use is a dormant feature (2.3.1); leave its code out of the build instead")
             if RUNTIME_SWITCH.search(flags):
@@ -269,6 +278,26 @@ def check_site(problems: list) -> None:
                                 f"this page (2.2): {line.strip()[:120]}")
 
 
+def background_modes(project: str) -> list:
+    """The UIBackgroundModes of project.yml, written inline (`[audio, fetch]`, `audio`) or as a YAML block list."""
+    modes = []
+    for match in re.finditer(r"^([ \t]*)UIBackgroundModes:[ \t]*([^\n#]*)", project, re.MULTILINE):
+        indent, value = match.group(1), match.group(2).strip()
+        if value.startswith("["):
+            modes += [mode.strip().strip("'\"") for mode in value.strip("[]").split(",")]
+        elif value:
+            modes.append(value.strip("'\""))
+        else:
+            # The items that follow, each `- mode` on its own line, no less indented than the key.
+            for line in project[match.end():].splitlines()[1:]:
+                item = re.match(rf"{indent}[ \t]*-[ \t]*([^#\n]+)", line)
+                if item:
+                    modes.append(item.group(1).strip().strip("'\""))
+                elif line.strip() and not line.strip().startswith("#"):
+                    break
+    return [mode for mode in modes if mode]
+
+
 def check_review_notes(problems: list) -> None:
     if not NOTES.is_file():
         problems.append("fastlane/metadata/review_information/notes.txt is missing")
@@ -284,9 +313,7 @@ def check_review_notes(problems: list) -> None:
     project = (ROOT / "project.yml").read_text(encoding="utf-8")
     asked = set(re.findall(r"^\s*(NS\w+UsageDescription):", project, re.MULTILINE))
     asked |= set(re.findall(r"^\s*(NSAllows\w+):\s*true", project, re.MULTILINE))
-    modes = re.search(r"UIBackgroundModes:\s*\[([^\]]*)\]", project)
-    if modes:
-        asked |= {f"UIBackgroundModes {mode.strip()}" for mode in modes.group(1).split(",") if mode.strip()}
+    asked |= {f"UIBackgroundModes {mode}" for mode in background_modes(project)}
     if ENTITLEMENTS.is_file():
         entitlements = plistlib.loads(ENTITLEMENTS.read_bytes())
         asked |= {key for key, value in entitlements.items() if value and key != "com.apple.security.app-sandbox"}
