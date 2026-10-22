@@ -22,15 +22,16 @@ class RemoteKeysTest {
 
     @Test
     fun aStreamThatCannotSeekShowsTheControlsInstead() {
-        assertNull(hidden(KeyEvent.KEYCODE_DPAD_LEFT, seekable = false))
+        assertEquals(RemoteAction.ShowControls, hidden(KeyEvent.KEYCODE_DPAD_LEFT, seekable = false))
         assertNull(hidden(KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, seekable = false))
     }
 
     @Test
-    fun upAndDownChangeChannelOnLiveTvOnly() {
+    fun upAndDownChangeChannelOnLiveTvAndShowTheControlsOnAMovie() {
         assertEquals(RemoteAction.NextChannel, hidden(KeyEvent.KEYCODE_DPAD_UP, live = true))
         assertEquals(RemoteAction.PreviousChannel, hidden(KeyEvent.KEYCODE_DPAD_DOWN, live = true))
-        assertNull(hidden(KeyEvent.KEYCODE_DPAD_UP))
+        assertEquals(RemoteAction.ShowControls, hidden(KeyEvent.KEYCODE_DPAD_UP))
+        assertEquals(RemoteAction.ShowControls, hidden(KeyEvent.KEYCODE_DPAD_DOWN))
     }
 
     @Test
@@ -46,12 +47,12 @@ class RemoteKeysTest {
     }
 
     @Test
-    fun withTheControlsShownTheArrowsMoveThroughThemAndBackHidesThem() {
+    fun withTheControlsShownTheArrowsMoveThroughThem() {
         assertNull(shown(KeyEvent.KEYCODE_DPAD_CENTER))
         assertNull(shown(KeyEvent.KEYCODE_DPAD_LEFT))
         assertNull(shown(KeyEvent.KEYCODE_DPAD_UP, live = true))
-        assertEquals(RemoteAction.HideControls, shown(KeyEvent.KEYCODE_BACK))
-        // Hidden, Back leaves the player.
+        // Back goes through the system's back (PlayerRemoteTest), never as a key.
+        assertNull(shown(KeyEvent.KEYCODE_BACK))
         assertNull(hidden(KeyEvent.KEYCODE_BACK))
     }
 

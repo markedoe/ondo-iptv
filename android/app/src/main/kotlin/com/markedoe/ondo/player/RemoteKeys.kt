@@ -23,9 +23,10 @@ sealed interface RemoteAction {
 
 /**
  * The player's remote keys (Google's TV app quality: TV-PC, TV-PP). With the controls hidden, OK pauses and resumes,
- * Left and Right go back and forward, Up and Down change channel on a live one; with the controls shown, the arrows
- * and OK move through them and Back hides them. Channel keys, figures and "last channel" work on a live channel at
- * any time, the media keys on everything. Null: the key does what it does by default.
+ * Left and Right go back and forward, Up and Down change channel on a live one; another arrow shows the controls.
+ * With the controls shown, the arrows and OK move through them (Back hides them: `PlayerActivity`, through the
+ * system's back, which the key itself no longer reaches from Android 13). Channel keys, figures and "last channel"
+ * work on a live channel at any time, the media keys on everything. Null: the key does what it does by default.
  */
 object RemoteKeys {
     fun action(keyCode: Int, controlsShown: Boolean, zapping: Boolean, seekable: Boolean): RemoteAction? {
@@ -41,13 +42,13 @@ object RemoteKeys {
             KeyEvent.KEYCODE_LAST_CHANNEL -> return RemoteAction.LastChannel.takeIf { zapping }
             KeyEvent.KEYCODE_INFO -> return if (controlsShown) RemoteAction.HideControls else RemoteAction.ShowControls
         }
-        if (controlsShown) return RemoteAction.HideControls.takeIf { keyCode == KeyEvent.KEYCODE_BACK }
+        if (controlsShown) return null
         return when (keyCode) {
             KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> RemoteAction.TogglePlay
-            KeyEvent.KEYCODE_DPAD_LEFT -> RemoteAction.SeekBack.takeIf { seekable }
-            KeyEvent.KEYCODE_DPAD_RIGHT -> RemoteAction.SeekForward.takeIf { seekable }
-            KeyEvent.KEYCODE_DPAD_UP -> RemoteAction.NextChannel.takeIf { zapping }
-            KeyEvent.KEYCODE_DPAD_DOWN -> RemoteAction.PreviousChannel.takeIf { zapping }
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (seekable) RemoteAction.SeekBack else RemoteAction.ShowControls
+            KeyEvent.KEYCODE_DPAD_RIGHT -> if (seekable) RemoteAction.SeekForward else RemoteAction.ShowControls
+            KeyEvent.KEYCODE_DPAD_UP -> if (zapping) RemoteAction.NextChannel else RemoteAction.ShowControls
+            KeyEvent.KEYCODE_DPAD_DOWN -> if (zapping) RemoteAction.PreviousChannel else RemoteAction.ShowControls
             else -> null
         }
     }

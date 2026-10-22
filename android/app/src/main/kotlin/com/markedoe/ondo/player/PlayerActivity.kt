@@ -20,6 +20,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
@@ -158,6 +159,13 @@ class PlayerActivity : ComponentActivity() {
     /** Keys the player handled when pressed: their release is consumed too. */
     private val handledKeys = HashSet<Int>()
 
+    /** On a TV, Back hides the controls first (the system's back: the key itself no longer reaches the app). */
+    private val hideControlsOnBack = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() {
+            playerView?.hideController()
+        }
+    }
+
     /** Freezes and lost pictures of this playback, explained; shown by More, Stream Statistics. */
     private var health = PlaybackHealth()
     private var healthStart = SystemClock.elapsedRealtime()
@@ -186,6 +194,7 @@ class PlayerActivity : ComponentActivity() {
         // The channel list for the remote's channel keys, when the player was opened again alone (after Android
         // stopped the app in the background).
         repository.bootstrap()
+        onBackPressedDispatcher.addCallback(this, hideControlsOnBack)
         val exoPlayer = buildPlayer()
         player = exoPlayer
         // Prepared first: the media session starts from a player that is already loading.
@@ -209,7 +218,12 @@ class PlayerActivity : ComponentActivity() {
                                 // The screen stays on while the video plays only: paused, it may dim and a TV may
                                 // show its screen saver (TV-BU, TV-BY).
                                 keepScreenOn = exoPlayer.isPlaying
-                                setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { controlsShown = it == View.VISIBLE })
+                                setControllerVisibilityListener(
+                                    PlayerView.ControllerVisibilityListener {
+                                        controlsShown = it == View.VISIBLE
+                                        hideControlsOnBack.isEnabled = television && controlsShown
+                                    },
+                                )
                                 if (television) {
                                     // The time bar and its times out of the 5 % a TV may crop (TV-OV).
                                     val (horizontal, vertical) = (48 * resources.displayMetrics.density).toInt() to (27 * resources.displayMetrics.density).toInt()
