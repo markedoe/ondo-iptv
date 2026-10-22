@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.xtream
 
+import com.markedoe.ondo.core.isNewline
 import com.markedoe.ondo.core.nilIfBlank
 import com.markedoe.ondo.core.net.Urls
 import kotlinx.serialization.json.JsonArray
@@ -320,8 +321,9 @@ internal data class XtreamEpgListingDto(
             val start = o["start_timestamp"].lenientEpochSeconds() ?: return null
             val end = o["stop_timestamp"].lenientEpochSeconds() ?: return null
             return XtreamEpgListingDto(
-                title = decodeBase64(o["title"].lenientString()) ?: "",
-                description = decodeBase64(o["description"].lenientString())?.nilIfBlank(),
+                // As sent: `listings` decodes them once it knows whether the panel uses base64.
+                title = o["title"].lenientString() ?: "",
+                description = o["description"].lenientString()?.nilIfBlank(),
                 start = start,
                 end = end,
                 channelId = o["channel_id"].lenientString(),
@@ -329,28 +331,43 @@ internal data class XtreamEpgListingDto(
             )
         }
 
-        /** Short EPG listings response: `{"epg_listings": [...]}`. */
+        /**
+         * Short EPG listings response: `{"epg_listings": [...]}`. Panels send every title and description in
+         * base64, a few send them all as plain text. Deciding for the whole answer keeps a plain "Film" or "Show",
+         * which is valid base64 too, from turning into garbage.
+         */
         fun listings(json: JsonElement): List<XtreamEpgListingDto>? {
             val o = json as? JsonObject ?: return null
-            return o["epg_listings"].lossyList(::from)
+            val listings = o["epg_listings"].lossyList(::from)
+            val texts = listings.flatMap { listOf(it.title, it.description.orEmpty()) }.filter { it.isNotEmpty() }
+            if (!texts.all { base64Text(it) != null }) return listings
+            return listings.map { listing ->
+                listing.copy(
+                    title = base64Text(listing.title) ?: listing.title,
+                    description = listing.description?.let(::base64Text)?.nilIfBlank(),
+                )
+            }
         }
 
-        /** Titles and descriptions are base64 encoded; fall back to the raw text when they are not. */
-        internal fun decodeBase64(value: String?): String? {
-            if (value.isNullOrEmpty()) return value
-            val bytes = Base64Lenient.decode(value) ?: return value
+        /**
+         * The text `value` holds in base64, or `null` when it is not base64 of readable UTF-8 text. Strict: a plain
+         * title has spaces or punctuation that base64 does not, and garbage decoded from one often has control
+         * characters.
+         */
+        internal fun base64Text(value: String): String? {
+            val bytes = Base64Strict.decode(value.trim().filterNot { it.isNewline() }) ?: return null
             val text = Urls.decodeUtf8Strict(bytes)
-            return if (text.isNullOrEmpty()) value else text
+            if (text.isNullOrEmpty() || text.any { (it < ' ' && it !in "\t\n\r") || it in '\u007F'..'\u009F' }) return null
+            return text
         }
     }
 }
 
 /**
- * Base64 decoding like Foundation's `Data(base64Encoded:options: .ignoreUnknownCharacters)`: characters
- * outside the alphabet are skipped, `=` padding is honoured, and the (alphabet + padding) length must be a
- * multiple of 4.
+ * Base64 decoding like Foundation's `Data(base64Encoded:)`: only the alphabet and `=` padding, with a length
+ * that is a multiple of 4.
  */
-internal object Base64Lenient {
+internal object Base64Strict {
     private val values = IntArray(128) { -1 }.also { table ->
         "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".forEachIndexed { index, c -> table[c.code] = index }
     }
@@ -364,7 +381,7 @@ internal object Base64Lenient {
                 continue
             }
             val value = if (c.code < 128) values[c.code] else -1
-            if (value < 0) continue
+            if (value < 0) return null
             if (padding > 0) return null // data after padding
             sextets.add(value)
         }

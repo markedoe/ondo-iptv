@@ -37,18 +37,27 @@ internal fun JsonElement?.lenientString(): String? {
     return null
 }
 
-/** 64-bit integer from a number, a numeric string (`"7"`, `"7.9"` -> 7) or a boolean. */
+/**
+ * 64-bit integer from a number, a numeric string (`"7"`, `"7.9"` -> 7) or a boolean. A number beyond the
+ * 64-bit range (`1e30`) is dropped rather than clamped.
+ */
 internal fun JsonElement?.lenientLong(): Long? {
     val p = primitive ?: return null
     if (!p.isString) {
         p.integerLiteral()?.let { return it }
         if (p.isBooleanLiteral()) return if (p.content == "true") 1 else 0
-        return p.numberLiteral()?.toLong()
+        return p.numberLiteral()?.let(::truncatedLong)
     }
     val trimmed = p.content.trim()
     trimmed.toLongOrNull()?.let { return it }
-    return trimmed.toStrictDoubleOrNull()?.takeIf { it.isFinite() }?.toLong()
+    return trimmed.toStrictDoubleOrNull()?.let(::truncatedLong)
 }
+
+/** `value` without its fraction, or `null` when it is not finite or does not fit a `Long` (Swift `Int(exactly:)`). */
+private fun truncatedLong(value: Double): Long? =
+    if (value.isFinite() && value >= -TWO_POW_63 && value < TWO_POW_63) value.toLong() else null
+
+private const val TWO_POW_63 = 9.223372036854775808e18
 
 /** [lenientLong] when it fits an `Int`. */
 internal fun JsonElement?.lenientInt(): Int? =

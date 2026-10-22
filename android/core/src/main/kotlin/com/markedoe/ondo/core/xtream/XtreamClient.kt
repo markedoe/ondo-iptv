@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.xtream
 
+import com.markedoe.ondo.core.decodeToStringWithoutBom
 import com.markedoe.ondo.core.model.AccountInfo
 import com.markedoe.ondo.core.model.CatchupInfo
 import com.markedoe.ondo.core.model.Channel
@@ -62,7 +63,7 @@ class XtreamClient(
             val data = Gzip.gunzipIfNeeded(raw)
             if (data.isEmpty()) throw HttpException.EmptyResponse()
             try {
-                Json.parseToJsonElement(data.decodeToString())
+                Json.parseToJsonElement(data.decodeToStringWithoutBom())
             } catch (e: IllegalArgumentException) { // SerializationException
                 throw XtreamException.InvalidResponse()
             }

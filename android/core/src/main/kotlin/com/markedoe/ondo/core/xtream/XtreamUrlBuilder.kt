@@ -108,7 +108,9 @@ class XtreamUrlBuilder(val credentials: XtreamCredentials) {
             val parsed = Urls.parse(url) ?: return null
             val scheme = parsed.scheme ?: return null
             val host = parsed.host?.takeIf { it.isNotEmpty() } ?: return null
-            val parts = parsed.path.split('/').filter { it.isNotEmpty() }.toMutableList()
+            // Split the encoded path, then decode each part once: the decoded path would split a password at
+            // its `/` and decode its `%` twice.
+            val parts = parsed.rawPath.split('/').filter { it.isNotEmpty() }.toMutableList()
             if (parts.firstOrNull() == "live") parts.removeAt(0)
             if (parts.size != 3) return null
             val last = parts[2]

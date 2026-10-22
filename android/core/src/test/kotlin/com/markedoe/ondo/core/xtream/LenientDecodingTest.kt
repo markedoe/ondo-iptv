@@ -6,6 +6,7 @@ import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlinx.coroutines.test.runTest
@@ -82,17 +83,53 @@ class LenientDecodingTest {
         assertEquals(emptyList(), field("null").lossyList { it.lenientString() })
     }
 
+    /** Numbers a panel writes out of range ("nan", 1e300…) are dropped like any other bad value. */
+    @Test
+    fun outOfRangeNumbersAreIgnored() {
+        val live = Json.parseToJsonElement(
+            """
+            [{"stream_id":"nan","name":"No id"},
+             {"stream_id":101,"name":1e300,"num":"inf","tv_archive":"NaN","tv_archive_duration":1e300,"added":"1e30"},
+             {"stream_id":102,"name":"Nation 2","num":-1e19,"tv_archive_duration":"7.9"}]
+            """,
+        ).lossyList(XtreamLiveStreamDto::from)
+        assertEquals(listOf(101, 102), live.map { it.streamId }, "an id that is not a number skips the entry")
+        assertTrue(live[0].name.isNotEmpty())
+        assertNull(live[0].number)
+        assertFalse(live[0].tvArchive)
+        assertNull(live[0].tvArchiveDuration)
+        assertNull(live[1].number)
+        assertEquals(7, live[1].tvArchiveDuration)
+
+        val movies = Json.parseToJsonElement("""[{"stream_id":1,"added":"1e30"},{"stream_id":2,"added":-1e19},{"stream_id":3,"added":1e300}]""")
+            .lossyList(XtreamVodStreamDto::from)
+        assertEquals(listOf(null, null, null), movies.map { it.added })
+        assertNull(field("9.3e18").lenientLong(), "beyond a 64-bit integer")
+        assertNull(field("\"-9.3e18\"").lenientLong())
+    }
+
     @Test
     fun base64() {
-        assertEquals("Le JT", XtreamEpgListingDto.decodeBase64("TGUgSlQ="))
-        assertEquals("Le JT", XtreamEpgListingDto.decodeBase64("Le JT"), "not base64 (invalid UTF-8 once decoded): raw text")
-        assertEquals("Hello!", XtreamEpgListingDto.decodeBase64("Hello!"), "length not a multiple of 4: raw text")
-        assertEquals("", XtreamEpgListingDto.decodeBase64(""))
-        assertNull(XtreamEpgListingDto.decodeBase64(null))
-        assertContentEquals(byteArrayOf(0x66, 0x6f), Base64Lenient.decode("Zm8="))
-        assertContentEquals(byteArrayOf(0x66, 0x6f, 0x6f), Base64Lenient.decode("Zm\n9v"))
-        assertNull(Base64Lenient.decode("Zm8"))
-        assertNull(Base64Lenient.decode("Zm=8"))
+        assertEquals("Le JT", XtreamEpgListingDto.base64Text("TGUgSlQ="))
+        assertEquals("Le JT", XtreamEpgListingDto.base64Text(" TGUg\nSlQ=\n"), "surrounding spaces and line breaks")
+        assertNull(XtreamEpgListingDto.base64Text("Le JT"), "a space is not base64")
+        assertNull(XtreamEpgListingDto.base64Text("Hello!"))
+        assertNull(XtreamEpgListingDto.base64Text("Film"), "valid base64, but of control characters")
+        assertNull(XtreamEpgListingDto.base64Text(""))
+        assertContentEquals(byteArrayOf(0x66, 0x6f), Base64Strict.decode("Zm8="))
+        assertContentEquals(byteArrayOf(0x66, 0x6f, 0x6f), Base64Strict.decode("Zm9v"))
+        assertNull(Base64Strict.decode("Zm\n9v"), "only the alphabet")
+        assertNull(Base64Strict.decode("Zm8"), "padding is required")
+        assertNull(Base64Strict.decode("Zm=8"))
+    }
+
+    @Test
+    fun shortEpgIsDecodedForTheWholeAnswer() {
+        fun titles(json: String) = XtreamEpgListingDto.listings(Json.parseToJsonElement(json))?.map { it.title }
+        val listing = """{"title":"%s","start_timestamp":1760032800,"stop_timestamp":1760035500}"""
+        assertEquals(listOf("Le JT", "Film"), titles("""{"epg_listings":[${listing.format("TGUgSlQ=")},${listing.format("RmlsbQ==")}]}"""))
+        assertEquals(listOf("TGUgSlQ=", "Le JT"), titles("""{"epg_listings":[${listing.format("TGUgSlQ=")},${listing.format("Le JT")}]}"""), "one plain title: all plain")
+        assertNull(titles("[]"))
     }
 }
 

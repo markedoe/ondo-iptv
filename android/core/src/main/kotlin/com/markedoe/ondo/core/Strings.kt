@@ -58,6 +58,12 @@ internal fun String.nonEmptyLines(): List<String> {
     return result
 }
 
+/** UTF-8 text without its byte order mark, if any: JSON parsers reject one (Foundation's skips it). */
+internal fun ByteArray.decodeToStringWithoutBom(): String {
+    val hasBom = size >= 3 && this[0] == 0xEF.toByte() && this[1] == 0xBB.toByte() && this[2] == 0xBF.toByte()
+    return if (hasBom) decodeToString(3, size) else decodeToString()
+}
+
 /** Whole doubles print as integers (`4.0` -> `"4"`), like `NSNumber.stringValue`. */
 internal fun numberString(value: Double): String =
     if (round(value) == value && abs(value) < 9.2e18) value.toLong().toString() else value.toString()

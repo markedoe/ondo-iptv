@@ -179,6 +179,31 @@ class XtreamTest {
         assertTrue(programs.all { it.channelId == "TV1.fr" })
     }
 
+    /**
+     * A few panels send the guide as plain text: short titles such as "Film" or "Show" are valid base64 as well
+     * and must stay as sent instead of turning into garbage.
+     */
+    @Test
+    fun shortEpgInPlainTextStaysReadable() = runTest {
+        val http = MockHttpClient()
+        http.routes["api:get_short_epg"] = """
+            {"epg_listings":[{"title":"Film","description":"","start_timestamp":1760032800,"stop_timestamp":1760035500},
+            {"title":"Show","description":"Le magazine du soir","start_timestamp":1760035500,"stop_timestamp":1760039100}]}
+        """.encodeToByteArray()
+        val programs = XtreamClient(credentials, http).shortEpg(101, "TV1.fr")
+        assertEquals(listOf("Film", "Show"), programs.map { it.title })
+        assertNull(programs[0].description)
+        assertEquals("Le magazine du soir", programs[1].description)
+    }
+
+    /** Some panels start their JSON with a UTF-8 byte order mark. */
+    @Test
+    fun anAnswerStartingWithAByteOrderMarkIsRead() = runTest {
+        val http = MockHttpClient()
+        http.routes["api:"] = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte()) + Fixtures.bytes("xtream_auth.json")
+        assertEquals("Active", XtreamClient(credentials, http).authenticate().status)
+    }
+
     @Test
     fun urlBuilder() {
         val builder = XtreamUrlBuilder(credentials)
@@ -234,6 +259,26 @@ class XtreamTest {
         assertNull(XtreamUrlBuilder.parseLiveUrl("http://h.example.com/hls/stream.m3u8"))
         assertEquals("http://h.example.com:8080/live/u/p/42.m3u8", XtreamUrlBuilder.alternateFormatUrl("http://h.example.com:8080/live/u/p/42.ts"))
         assertEquals("http://h.example.com:8080/live/u/p/42.ts", XtreamUrlBuilder.alternateFormatUrl("http://h.example.com:8080/live/u/p/42.m3u8"))
+    }
+
+    @Test
+    fun credentialsWithReservedCharactersRoundTrip() {
+        val password = "p/a%20s+s&w=o#r?d" // leak-guard: allow (fictional, made of reserved characters)
+        val tricky = XtreamCredentials("http://panel.example.com:8080", "user name", password)
+        val builder = XtreamUrlBuilder(tricky)
+        val live = builder.liveUrl(42, XtreamOutputFormat.TS)
+        val parsed = assertNotNull(XtreamUrlBuilder.parseLiveUrl(live), live)
+        assertEquals(tricky.username, parsed.username)
+        assertEquals(tricky.password, parsed.password)
+        assertEquals(42, parsed.streamId)
+        assertEquals(builder.liveUrl(42, XtreamOutputFormat.M3U8), XtreamUrlBuilder.alternateFormatUrl(live))
+        val escaped = XtreamUrlBuilder(tricky.copy(password = "a%20b")).liveUrl(7, XtreamOutputFormat.TS)
+        assertEquals("a%20b", XtreamUrlBuilder.parseLiveUrl(escaped)?.password, "decoded once, not twice")
+
+        val query = Urls.queryItems(Urls.parse(builder.apiUrl("get_live_streams"))?.rawQuery)
+        assertEquals(listOf("username", "password", "action"), query.map { it.first }, "`&` and `=` in the password do not split it")
+        assertEquals(tricky.username, query[0].second)
+        assertEquals(tricky.password, query[1].second)
     }
 
     @Test
