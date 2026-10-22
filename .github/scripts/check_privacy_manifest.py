@@ -3,8 +3,9 @@
 
 App Store Connect rejects an upload that uses one of these APIs without declaring it in
 App/Resources/PrivacyInfo.xcprivacy (ITMS-91053). The app's own code (App/ and the IPTVCore package, Swift
-and C) is scanned without its `#if DEBUG` blocks; VLCKit, Nuke and the Google Cast SDK ship their own
-manifests.
+and C) is scanned as every Release build compiles it: without the code only Debug builds have (`#if DEBUG`,
+`#ifdef DEBUG`), with the TestFlight edition's (its uploads are checked too); VLCKit, Nuke and the Google Cast SDK
+ship their own manifests.
 
 Usage: check_privacy_manifest.py [repository root]. Exit code 1 lists the undeclared categories.
 """
@@ -12,6 +13,9 @@ import plistlib
 import re
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from check_app_store import edition_source  # noqa: E402  (the same reading of `#if` conditions)
 
 ROOT = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / "App/Resources/PrivacyInfo.xcprivacy"
@@ -33,26 +37,30 @@ CATEGORIES = {
 }
 # Swift and the C / Objective-C sources next to it (IPTVCore's zlib wrapper).
 SOURCE_SUFFIXES = {".swift", ".c", ".h", ".m", ".mm"}
+C_SUFFIXES = {".c", ".h", ".m", ".mm"}
+# The compilation conditions every Release build has, both editions: DEBUG is off; TESTFLIGHT_DOWNLOADS is left
+# unknown, so code under it is scanned too (its builds are uploaded to TestFlight).
+RELEASE = {"DEBUG": False, "true": True, "false": False, "0": False, "1": True}
 
 
-def without_debug_blocks(text: str) -> str:
-    """Drops `#if DEBUG … #endif` (nested conditions included, `#else` branches kept); Swift and C alike."""
-    kept, stack = [], []  # stack: is each open #if a DEBUG block currently being skipped
+def swift_conditions(text: str) -> str:
+    """C preprocessor conditions written the Swift way (`#ifdef X` → `#if X`, `#ifndef X` → `#if !(X)`, `#elif` →
+    `#elseif`, `defined(X)` → `X`), for edition_source."""
+    lines = []
     for line in text.splitlines():
-        directive = line.strip()
-        if directive.startswith("#if"):
-            words = directive.split()  # `#ifndef DEBUG` (C) is release code: scanned
-            stack.append(words[0] in ("#if", "#ifdef") and words[1:2] == ["DEBUG"])
-            continue
-        if directive.startswith("#else") and stack and stack[-1]:
-            stack[-1] = False
-            continue
-        if directive.startswith("#endif") and stack:
-            stack.pop()
-            continue
-        if not any(stack):
-            kept.append(line)
-    return "\n".join(kept)
+        directive = re.match(r"\s*#\s*(ifdef|ifndef|elif|if|else|endif)\b(.*)", line)
+        if directive:
+            keyword, rest = directive.group(1), directive.group(2).split("/*", 1)[0].split("//", 1)[0]
+            rest = re.sub(r"\bdefined\s*\(\s*(\w+)\s*\)|\bdefined\s+(\w+)", lambda m: m.group(1) or m.group(2), rest).strip()
+            line = {"ifdef": f"#if {rest}", "ifndef": f"#if !({rest})", "elif": f"#elseif {rest}"}.get(keyword, f"#{keyword} {rest}")
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def release_source(path: Path) -> str:
+    """The code of a source file that a Release build compiles."""
+    text = path.read_text(encoding="utf-8")
+    return edition_source(swift_conditions(text) if path.suffix in C_SUFFIXES else text, RELEASE)
 
 
 def main() -> int:
@@ -65,7 +73,7 @@ def main() -> int:
         uses = []
         for folder in SOURCES:
             for path in sorted(p for p in folder.rglob("*") if p.suffix in SOURCE_SUFFIXES and p.is_file()):
-                if re.search(pattern, without_debug_blocks(path.read_text(encoding="utf-8"))):
+                if re.search(pattern, release_source(path)):
                     uses.append(str(path.relative_to(ROOT)))
         if uses and category not in declared:
             problems.append(f"{category} is used by {', '.join(uses)} but not declared in PrivacyInfo.xcprivacy")

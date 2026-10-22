@@ -140,6 +140,14 @@ class PrivacyManifestTests(CheckTestCase):
         self.write("App/Model/Clock.swift", "#if DEBUG\nlet up = 0.0\n#else\nlet up = ProcessInfo.processInfo.systemUptime\n#endif\n")
         self.assertFails("privacy_manifest", "NSPrivacyAccessedAPICategorySystemBootTime")
 
+    def test_code_that_debug_or_another_condition_turns_on_ships(self):
+        self.manifest()
+        self.write("App/Model/Preferences.swift", "#if DEBUG || TESTFLIGHT_DOWNLOADS\nlet r = UserDefaults.standard\n#endif\n")
+        self.assertFails("privacy_manifest", "NSPrivacyAccessedAPICategoryUserDefaults", "App/Model/Preferences.swift")
+        self.write("App/Model/Preferences.swift", "#if DEBUG && os(iOS)\nlet r = UserDefaults.standard\n#elseif DEBUG\n"
+                   "let s = UserDefaults.standard\n#endif\n")
+        self.assertPasses("privacy_manifest")
+
     def test_c_code_of_the_core_package_is_checked_too(self):
         self.manifest()
         self.write("Packages/IPTVCore/Sources/CZlib/czlib.c", "struct stat info;\nint ok = lstat(path, &info) == 0;\n")
@@ -151,6 +159,12 @@ class PrivacyManifestTests(CheckTestCase):
         self.assertPasses("privacy_manifest")
         self.write("Packages/IPTVCore/Sources/CZlib/release.c", "#ifndef DEBUG\nint ok = fstatfs(fd, &info);\n#endif\n")
         self.assertFails("privacy_manifest", "NSPrivacyAccessedAPICategoryDiskSpace", "release.c")
+        self.write("Packages/IPTVCore/Sources/CZlib/release.c", "#if defined(DEBUG) || defined(VERBOSE)\nint ok = fstatfs(fd, &info);\n"
+                   "#elif 0\nint a = 0;\n#endif /* DEBUG */\n")
+        self.assertFails("privacy_manifest", "NSPrivacyAccessedAPICategoryDiskSpace", "release.c")
+        self.write("Packages/IPTVCore/Sources/CZlib/release.c", "# if defined DEBUG && !defined(NDEBUG)\nint ok = fstatfs(fd, &info);\n"
+                   "# endif\n")
+        self.assertPasses("privacy_manifest")
 
     def test_a_category_needs_a_reason(self):
         self.manifest("NSPrivacyAccessedAPICategoryFileTimestamp", reasons=())

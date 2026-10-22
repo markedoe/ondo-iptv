@@ -90,8 +90,9 @@ LISTING_RULES = [
 NOTES_RULES = [rule for rule in LISTING_RULES if not rule[0].startswith("has test words")]
 
 
-def condition_value(expression: str):
-    """True, False or None (not known here: os(), canImport()…) for a `#if` condition, by three-valued logic."""
+def condition_value(expression: str, conditions: dict = EDITION):
+    """True, False or None (not known here: os(), canImport()…) for a `#if` condition, by three-valued logic, from the
+    compilation conditions given (the App Store edition's by default)."""
     tokens = re.findall(r"\|\||&&|!|\(|\)|[A-Za-z_][A-Za-z0-9_]*(?:\([^()]*\))?|\S", expression)
     position = 0
 
@@ -131,14 +132,14 @@ def condition_value(expression: str):
                 take()
             return value
         token = take() if peek() is not None else ""
-        return EDITION.get(token)
+        return conditions.get(token)
 
     return either()
 
 
-def edition_source(text: str) -> str:
-    """The lines the App Store edition compiles: `#if` branches decided by its conditions are kept or dropped, the
-    others (platform, imports) are all kept."""
+def edition_source(text: str, conditions: dict = EDITION) -> str:
+    """The lines the App Store edition compiles (or a build with the conditions given): `#if` branches decided by its
+    conditions are kept or dropped, the others (platform, imports) are all kept."""
     kept = []
     # Each open #if: (whether its enclosing code is compiled, whether a branch was surely taken, whether this branch is
     # compiled).
@@ -147,12 +148,12 @@ def edition_source(text: str) -> str:
         directive = line.split("//", 1)[0].strip()
         enclosing = stack[-1][2] if stack else True
         if directive.startswith("#if"):
-            value = condition_value(directive[3:])
+            value = condition_value(directive[3:], conditions)
             stack.append((enclosing, value is True, enclosing and value is not False))
             continue
         if directive.startswith("#elseif") and stack:
             outer, taken, _ = stack[-1]
-            value = condition_value(directive[7:])
+            value = condition_value(directive[7:], conditions)
             stack[-1] = (outer, taken or value is True, outer and not taken and value is not False)
             continue
         if directive.startswith("#else") and stack:
