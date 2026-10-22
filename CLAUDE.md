@@ -16,6 +16,8 @@ screenshots.
   are updated together: documentation in English with a French version next to it (`README.fr.md`,
   `docs/*.fr.md`), store listings (`en-US` and `fr-FR`), the website, release notes. Code, comments and
   commit messages stay in English.
+- **Commit messages**: a short subject line and, when needed, one or two short lines on what changed. Never
+  describe or quote the requests or the conversation behind a change.
 - **The apps speak seven languages**: English, French, Spanish, Portuguese (Brazilian wording), Chinese
   (Simplified), Arabic (right to left) and Hindi. Every text of a new feature is translated into all of them
   in the same change: Apple `App/Resources/Localizable.xcstrings` (`fr`, `es`, `pt`, `zh-Hans`, `ar`, `hi`)
@@ -29,6 +31,8 @@ screenshots.
   - The TestFlight edition (downloads) goes to internal testers only and is never submitted; a tag or
     `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go.
   - No private API (no class, selector or symbol looked up by name, no method swapping), no code downloaded and run.
+  - The Mac sandbox has only the entitlements a feature needs; never `com.apple.security.network.server` (App Review
+    refused 1.1.0 for it: a player listens to no one), so the MKV remux and its 127.0.0.1 server are iPhone and iPad only.
   - Money inside the apps only through Apple's In-App Purchase (Google Play Billing on Android), tips included; no
     link or button in the apps to another way to pay or donate. Donation links (GitHub Sponsors) live only on the
     website's home page and in the README, never on a page the apps open (support, privacy), and there is no
@@ -36,6 +40,8 @@ screenshots.
   - The listing matches the build: no feature it lacks, no other platform named, nothing "coming soon", no test or
     placeholder words, this year's copyright. The review notes explain every permission, background mode and
     entitlement, and give a way to test without a subscription (the demo).
+  - Never "beta" in the App Store build, its listing or the site pages the listing opens (2.2: betas belong on
+    TestFlight); the beta badge is in the TestFlight edition only (`#if TESTFLIGHT_DOWNLOADS`).
   - `.github/scripts/check_app_store.py` (CI, security and release workflows) checks this: extend it with each
     new permission, entitlement or edition difference.
 - **Keys and logins are checked when saved**: every API key, token, login or other setting that depends on an

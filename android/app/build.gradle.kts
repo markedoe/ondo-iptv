@@ -21,6 +21,9 @@ android {
         targetSdk = libs.versions.targetSdk.get().toInt()
         versionCode = (System.getenv("ANDROID_VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("ANDROID_VERSION_NAME") ?: "1.1.0"
+        // A beta badge for the Google Play test tracks: the release workflow sets ANDROID_BETA for every track but
+        // production. Debug builds and the listing screenshots never show it.
+        buildConfigField("boolean", "BETA", (System.getenv("ANDROID_BETA") == "true").toString())
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

@@ -162,7 +162,6 @@ class MacEntitlementsTests(CheckTestCase):
     COMPLETE = {
         "com.apple.security.app-sandbox": True,
         "com.apple.security.network.client": True,
-        "com.apple.security.network.server": True,
         "com.apple.security.files.user-selected.read-write": True,
     }
 
@@ -179,8 +178,8 @@ class MacEntitlementsTests(CheckTestCase):
         self.project({key: value for key, value in self.COMPLETE.items() if key != "com.apple.security.network.client"})
         self.assertFails("mac_entitlements", "com.apple.security.network.client")
 
-    def test_without_the_server_mkv_films_cannot_be_remuxed(self):
-        self.project({key: value for key, value in self.COMPLETE.items() if key != "com.apple.security.network.server"})
+    def test_the_server_entitlement_app_review_refused_must_not_come_back(self):
+        self.project(self.COMPLETE | {"com.apple.security.network.server": True})
         self.assertFails("mac_entitlements", "com.apple.security.network.server")
 
     def test_without_user_selected_files_nothing_imports(self):
@@ -365,6 +364,23 @@ class AppStoreTests(CheckTestCase):
         self.write("fastlane/metadata/fr-FR/name.txt", "Ondo – le lecteur de films, séries et TV\n")
         self.assertFails("app_store", "names another platform", "mentions downloads", "promises a feature to come",
                          "has test words", "fr-FR/name.txt has 40 characters")
+
+    def test_the_app_store_edition_never_says_beta(self):
+        self.write("App/Features/Badge.swift", "#if TESTFLIGHT_DOWNLOADS\nlet badge = Text(\"Beta\")\n#endif\n"
+                   "let version = \"1.1 (beta)\"\n")
+        self.assertFails("app_store", "App/Features/Badge.swift: the App Store edition calls the app a beta")
+
+    def test_the_testflight_beta_badge_passes(self):
+        self.write("App/Features/Badge.swift", "#if TESTFLIGHT_DOWNLOADS\nlet badge = Text(\"Beta\")\n#endif\n"
+                   "let alphabet = \"betamax\"\n")
+        self.assertPasses("app_store")
+
+    def test_the_site_pages_the_listing_opens_have_no_test_words(self):
+        self.write("site/index.html", "<h1>Ondo</h1>\n<p><b>Beta</b>: still changing.</p>\n")
+        self.write("site/notes.html", "<p>Beta builds on TestFlight.</p>\n")
+        self.assertFails("app_store", "site/index.html:2 has test words")
+        code, output = run("app_store", self.root)
+        self.assertNotIn("site/notes.html", output, "a page the listing does not open may talk of the beta")
 
     def test_the_copyright_must_be_this_years(self):
         self.write("fastlane/metadata/copyright.txt", f"© {self.YEAR - 1} example\n")

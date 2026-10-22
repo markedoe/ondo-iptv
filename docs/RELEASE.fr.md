@@ -89,9 +89,11 @@ Si l'app a été créée pour iOS seul : barre latérale → **Add Platform** �
 
 ### C2. App Information
 
-- **Catégorie** : Entertainment (cohérent avec l'app Mac).
+- **Catégorie** : envoyée par fastlane avec la fiche, Entertainment (`fastlane/metadata/primary_category.txt`)
+  et Photo & Video (`secondary_category.txt`), en accord avec `LSApplicationCategoryType` (entertainment) dans
+  `project.yml` : rien à choisir ici.
 - **Content Rights** : l'app ne contient aucun contenu ; elle lit les sources que l'utilisateur ajoute.
-  Répondez « No » (n'embarque aucun contenu de tiers) et gardez l'explication des notes de review.
+  Répondez « No » (n'embarque aucun contenu de tiers) et gardez l'explication dans les notes pour la review.
 - **Age Rating → Set Up Age Ratings** : répondez au questionnaire honnêtement (aucun contenu fourni ;
   *Parental Controls* : oui — profils enfant et code PIN ; pas de navigateur web, de contenu créé par les
   utilisateurs, de messagerie ni de publicité). Comme l'utilisateur peut lire n'importe quelle source,
@@ -125,22 +127,49 @@ mise à jour du SDK Cast (`project.yml`).
 *Pricing and Availability* : **Free** ; pays : tous sauf la **Chine continentale** (elle exige une
 licence ICP).
 
-### C5. Informations pour la review (dans la version 1.0)
+### C5. Informations pour la review (dans la version à soumettre)
 
 Coordonnées (nom, téléphone, e-mail), *Sign-in required* : non. Les notes sont envoyées par fastlane
-(`fastlane/metadata/review_information/notes.txt`) : lecteur sans contenu, bouton « Try the demo »,
-HTTP, Cast et notifications.
+(`fastlane/metadata/review_information/notes.txt`) : lecteur sans contenu, comment tester avec le bouton
+« Try the demo », pourquoi HTTP (`NSAllowsArbitraryLoads`), puis chaque autorisation, mode d'arrière-plan et
+entitlement : réseau local, notifications, audio en arrière-plan, AirPlay et Cast, bac à sable du Mac (client
+réseau, fichiers choisis par l'utilisateur).
 
 ## D. Publier
 
-1. *Actions → Release → Run workflow* (cible `all`), ou un tag :
+1. **Nouveautés** (*What's New*) : avant chaque nouvelle version, écrivez ses notes de version dans
+   `fastlane/metadata/en-US/release_notes.txt` et `fastlane/metadata/fr-FR/release_notes.txt`, les deux
+   ensemble, et mettez-les dans un commit avant le tag (un lancement parti d'un tag envoie la fiche telle que
+   le tag la contient). Elles partent avec la fiche et suivent ses règles : `check_app_store.py` échoue si
+   l'une manque, est vide ou dépasse 4000 caractères, a un mot de test ou un texte provisoire, nomme une autre
+   plateforme, promet une fonction à venir ou parle de téléchargements.
+2. *Actions → Release → Run workflow* (cible `all`), ou un tag égal à `MARKETING_VERSION` de `project.yml` :
    ```bash
-   git tag v1.0.0 && git push origin v1.0.0
+   git tag v1.1.0 && git push origin v1.1.0
    ```
-   Le workflow (macOS 26, Xcode 26 — exigé par Apple depuis avril 2026) lance les tests du cœur,
-   construit, signe et envoie **iOS** puis **macOS** sur TestFlight (build = dernier build TestFlight + 1,
-   version = le tag), puis la fiche FR/EN et les captures iPhone, iPad et Mac.
-2. **TestFlight** : les builds apparaissent après 10 à 30 min de traitement. Groupe de testeurs internes
+   Le workflow (macOS 26, Xcode 26 — exigé par Apple depuis avril 2026) lance les tests du cœur, puis deux
+   vérifications dont chacune arrête le lancement avant toute compilation : *Demo playlist answers*
+   (la review d'Apple teste l'app avec la playlist de démo ; toutes les cibles sauf `status`) et
+   *App Store edition checks* (`check_app_store.py` et les adresses de la fiche, voir E ; pour l'édition
+   App Store, et pour les cibles `all`, `submit` et les trois `metadata` quelle que soit l'édition). Il
+   construit, signe et envoie ensuite **iOS** puis **macOS** sur TestFlight (build = dernier build
+   TestFlight + 1), puis la fiche FR/EN et les captures iPhone, iPad et Mac.
+
+   **Version.** Un lancement parti d'un tag prend la version du tag (`v1.1.0` → `1.1.0`), tout autre lancement
+   `MARKETING_VERSION` de `project.yml` ; les cibles `metadata`, `submit` et `status` choisissent la version
+   App Store de la même façon. Lancez-les depuis le tag (*Use workflow from → Tags*) ou gardez
+   `MARKETING_VERSION` égal au tag, sinon elles visent la version de `project.yml`.
+
+   **Cibles** :
+   - `all` : les deux builds, puis la fiche ;
+   - `ios` ou `mac` : un seul build ;
+   - `metadata` : la fiche seule (`metadata-ios` ou `metadata-mac` pour une seule plateforme) ;
+   - `submit` : la soumission à la review (étape 5) ; laissez `ios_build` ou `mac_build` vide pour ne
+     soumettre qu'une plateforme ;
+   - `status`, en lecture seule : l'état de chaque version et son build choisi, si le contact pour la review
+     est complet et si les notes pour la review parlent de téléchargements ou de `network.server`, les
+     captures comparées à la branche `appstore-screenshots`, et les soumissions à la review.
+3. **TestFlight** : les builds apparaissent après 10 à 30 min de traitement. Groupe de testeurs internes
    (jusqu'à 100 membres de l'équipe, sans review) pour essayer sur vos appareils.
 
    **Deux éditions.** *Run workflow* demande une `edition` : `testflight` (par défaut) construit l'app avec les
@@ -150,18 +179,52 @@ HTTP, Cast et notifications.
    (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), donc rien en elle ne peut les activer : une fonction désactivée, ou un
    code de déblocage, serait une fonction cachée ou dormante, ce que la règle 2.3.1 interdit et pour quoi Apple
    peut exclure un développeur de son programme. Les builds de l'édition TestFlight restent aux testeurs
-   internes : les tests externes passent par la review d'Apple.
-3. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
+   internes : les tests externes passent par la review d'Apple. TestFlight propose aux testeurs le dernier build
+   de chaque plateforme, et chaque lancement construit une seule édition : après chaque envoi de l'édition
+   App Store, relancez *Release* avec la cible `ios` ou `mac` pour la même plateforme et l'`edition` laissée
+   à `testflight` (après un tag ou un lancement `all`, un lancement par plateforme), sinon les testeurs
+   reçoivent le build sans téléchargements. Pas la cible `all` : elle envoie aussi la fiche, et une version
+   en review ne peut plus être modifiée.
+
+   **Badge bêta.** L'édition TestFlight affiche un badge *Bêta* (barre d'outils de l'accueil, version dans les
+   réglages) ; l'édition App Store est construite sans, car les bêtas vont sur TestFlight, pas sur l'App Store
+   (règle 2.2). Rien dans le build App Store, sa fiche ou les pages du site que la fiche ouvre (accueil, support,
+   confidentialité : la review d'Apple les visite) ne doit dire que l'app est une bêta ; `check_app_store.py`
+   vérifie les trois. Le mot reste dans le catalogue de traductions des deux éditions : une traduction que
+   personne ne voit n'est pas une fonction, la laisser.
+4. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
    fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.
-4. Dans chaque version (iOS 1.0 et macOS 1.0) : choisissez le build de l'édition **app-store** → **Add for Review** →
-   **Submit for Review**. Les deux versions sont indépendantes : **iOS / iPadOS peut partir seul** ;
-   lancez au moins une fois le build Mac de TestFlight sur votre Mac avant de soumettre la version macOS.
 
-Si un lancement échoue (signature, export, envoi), le log du job dit pourquoi. Pour signer l'archive,
-Xcode crée un certificat *Apple Development* sur chaque nouveau runner ; sa clé privée disparaît avec le
-runner, donc le workflow le révoque à la fin du job (étape *Revoke this runner's development certificate*,
-repéré par son numéro de série : ni les certificats de distribution ni celui de votre Mac ne sont touchés).
+   **En-tête et résultats de recherche** (iPhone et iPad sous iOS / iPadOS 27 ou plus ; pas le Mac) : l'onglet
+   *En-tête et résultats de recherche* de la page de la version. Les images sont
+   `fastlane/creative/<langue>/header.png` (21:9, 3840×1646, PNG seulement) et `search.jpg` (3:2, 3840×2560), en anglais et en
+   français, dessinées à partir des captures App Store par `fastlane/creative/render.mjs` (voir ses premières
+   lignes) ; dessinez-les de nouveau quand les captures changent. *Actions → App Store header and search results
+   → Run workflow* : `status` montre ce que contient App Store Connect (lecture seule), `upload` dépose les
+   images dans la bibliothèque de ressources (Asset Library) sans toucher à aucune version, `place` les affiche
+   sur la version iOS en préparation. Une version en review ou approuvée ne peut pas changer : `place` la
+   refuse. Les ressources passent en review avec la version qui les porte, ou seules : `submit` les soumet une
+   fois une version iOS approuvée, et refuse tant qu'une version iOS ou une soumission est en review, pour ne
+   rien changer à ce qu'App Review examine. Une fois approuvées par Apple, `publish` les affiche sur la version
+   en ligne sans nouvelle version (ou dans App Store Connect : En-tête et résultats de recherche → Parcourir les
+   ressources → Publier). Rien n'est soumis sans votre accord.
+5. Dans chaque version (iOS et macOS, par exemple 1.1.0) : choisissez le build de l'édition **app-store** →
+   **Add for Review** → **Submit for Review**. Ou *Run workflow* avec la cible `metadata` (la fiche ;
+   `metadata-ios` ou `metadata-mac` pour une seule plateforme, car une version en review ne peut plus être
+   modifiée), puis la cible `submit` avec `ios_build` et `mac_build` : les numéros de build de l'édition
+   App Store, lus dans le log du lancement de release qui l'a construite (`CURRENT_PROJECT_VERSION=…`), jamais
+   le dernier build, qui peut être un de l'édition TestFlight. La version est publiée dès qu'Apple l'approuve.
+   Les deux versions sont indépendantes : **iOS / iPadOS peut partir seul** ; avant de soumettre la version
+   macOS, installez depuis TestFlight le build de l'édition App Store que vous allez soumettre (par son numéro
+   de build : le dernier build Mac est normalement un de l'édition TestFlight) et lancez-le au moins une fois
+   sur votre Mac.
+
+Si un lancement échoue (playlist de démo, vérifications de l'édition App Store, signature, export, envoi), le
+log du job dit pourquoi. Pour signer l'archive, Xcode crée un certificat *Apple Development* sur chaque
+nouveau runner ; sa clé privée disparaît avec le runner, donc le workflow le révoque à la fin du job (étape
+*Revoke this runner's development certificate*, repéré par son numéro de série : ni les certificats de
+distribution ni celui de votre Mac ne sont touchés).
 Si la signature échoue avec `Your account has reached the maximum number of certificates`, des certificats
 de lancements précédents sont restés : dans *Certificates, Identifiers & Profiles → Certificates*, révoquez
 les certificats *Apple Development* créés par la CI (gardez celui de votre Mac), puis relancez le workflow.
@@ -170,12 +233,20 @@ Les builds TestFlight ne sont pas touchés.
 ## E. Points à vérifier avant la review
 
 - `.github/scripts/check_app_store.py` passe (la CI, le workflow de sécurité et le workflow de release le
-  lancent) : l'édition App Store ne compile aucun code de téléchargement ni aucune fonction désactivée pour de
-  bon, n'utilise aucune API privée ; la fiche tient dans les limites d'App Store Connect, ne nomme aucune autre
-  plateforme, ne promet rien « à venir », n'a ni mot de test ni texte provisoire et ne parle pas de
-  téléchargements ; le copyright est celui de l'année ; les notes pour la review expliquent chaque
-  autorisation, mode d'arrière-plan et entitlement Mac. Le workflow de release vérifie aussi que les adresses
-  d'assistance, de confidentialité et du site répondent.
+  lancent) :
+  - l'édition App Store ne compile aucun code de téléchargement, aucune fonction désactivée pour de bon ni
+    aucun texte qui dit que l'app est une bêta, et n'utilise aucune API privée ; aucun réglage de build n'y
+    active `TESTFLIGHT_DOWNLOADS`, et un tag la construit ; `FeatureFlags` ne lit rien à l'exécution (ni
+    réglage, ni serveur, ni date, ni argument) ;
+  - la fiche (notes de version comprises) tient dans les limites d'App Store Connect, ne nomme aucune autre
+    plateforme, ne promet rien « à venir », n'a ni mot de test ni texte provisoire et ne parle pas de
+    téléchargements ; les pages du site qu'elle ouvre (accueil, support, confidentialité) n'ont pas de mot
+    de test non plus ;
+  - le copyright est celui de l'année et le même que `NSHumanReadableCopyright` dans `project.yml` ;
+  - les notes pour la review (4000 caractères au plus) ne nomment aucune autre plateforme, ne promettent rien
+    « à venir », n'ont pas de texte provisoire et ne parlent pas de téléchargements ; elles expliquent
+    `NSAllowsArbitraryLoads` et chaque autorisation, mode d'arrière-plan et entitlement Mac.
+- Les adresses d'assistance, de confidentialité et du site répondent (le workflow de release les vérifie).
 - `ITSAppUsesNonExemptEncryption = NO` est déclaré : pas de question d'export à chaque build.
 - `PrivacyInfo.xcprivacy` présent (raisons d'usage des API sensibles).
 - Les captures ne montrent que la démo générée (affiches dessinées, chaînes fictives) : aucun logo ni
@@ -192,7 +263,10 @@ ces points demandent un vrai appareil et un vrai abonnement avant la soumission 
 - **Redémarrer / revoir** un programme sur un compte Xtream et sur une playlist M3U `catchup`.
 - **Chromecast** (iPhone/iPad) et **AirPlay** (iPhone, iPad, Mac) vers une TV ; autorisation réseau local
   demandée au premier Cast ; reprise locale à l'arrêt.
-- **Image dans l'image** et lecture en arrière-plan ; commandes de l'écran verrouillé ; VLC (MKV, AVI).
+- **Image dans l'image** et lecture en arrière-plan ; commandes de l'écran verrouillé.
+- **Films et épisodes MKV** : sur iPhone et iPad, remuxés pour le lecteur du système (HDR10 / Dolby Vision,
+  Dolby Atmos, image dans l'image), VLC pour un codec qu'il ne sait pas décoder (DTS, TrueHD) ; sur Mac, VLC.
+  **AVI** avec VLC.
 - **Rappels** : autorisation demandée au premier rappel, notification reçue, toucher la notification
   ouvre la chaîne (application fermée et ouverte).
 - **Multivue** (iPad, Mac) avec 4 flux réels : fluidité, un seul son, passage en plein écran.

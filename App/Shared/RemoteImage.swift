@@ -6,9 +6,33 @@ import NukeUI
 /// Artwork (logos, posters) goes through Nuke: memory cache, a disk cache, request coalescing and
 /// downsampling, so huge provider images do not cost memory in long lists.
 enum Artwork {
-    /// Called once at launch.
+    #if os(macOS)
+    static let diskLimit = 1024 * 1024 * 1024
+    #else
+    static let diskLimit = 512 * 1024 * 1024
+    #endif
+
+    /// Called once at launch. The disk cache keeps the file as downloaded and, next to it, the copy at the size the
+    /// screen shows (blurred copies included): a poster seen once comes back at the next launch from disk, already
+    /// sized, without a download or a full decode. It lives in Caches, which the system empties only when the
+    /// device runs out of space.
     static func configurePipeline() {
-        ImagePipeline.shared = ImagePipeline(configuration: .withDataCache(name: "com.markedoe.ondo.artwork", sizeLimit: 300 * 1024 * 1024))
+        ImagePipeline.shared = pipeline()
+    }
+
+    /// The app's pipeline; tests give it a folder of their own.
+    static func pipeline(cacheName: String = "com.markedoe.ondo.artwork") -> ImagePipeline {
+        var configuration = ImagePipeline.Configuration.withDataCache(name: cacheName, sizeLimit: diskLimit)
+        configuration.dataCachePolicy = .storeAll
+        return ImagePipeline(configuration: configuration)
+    }
+
+    /// Bytes of artwork on disk, for Settings. Walks the cache folder: not on the main thread.
+    static func diskUsage() -> Int64 {
+        guard let cache = ImagePipeline.shared.configuration.dataCache as? DataCache else { return 0 }
+        // Writes and removals are staged for a moment: count the folder as it will be.
+        cache.flush()
+        return Int64(cache.totalSize)
     }
 
     /// Decoded straight at `maxPixelSize` by ImageIO (a thumbnail of the downloaded file): a 2000×3000 poster is

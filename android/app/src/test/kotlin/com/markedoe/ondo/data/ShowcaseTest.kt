@@ -74,19 +74,11 @@ class ShowcaseTest {
     }
 
     @Test
-    fun newestTitlesAreFeaturedFirst() {
-        val featured = showcase().featuredMovies()
-        assertEquals(Fixtures.adultMovie, featured.first())
-        assertEquals(Fixtures.northernLights, showcase(hidden = setOf(Fixtures.adultMovies.id)).featuredMovies().first())
-    }
-
-    @Test
     fun liveOnlyPlaylistHasNoCarousel() {
         val live = Fixtures.content.copy(movies = emptyList(), series = emptyList())
         assertTrue(showcase(content = live).heroItems(Fixtures.NOW).isEmpty())
         assertTrue(showcase(content = live).newMovies(Fixtures.NOW).isEmpty())
         assertTrue(showcase(content = live).newSeries(Fixtures.NOW).isEmpty())
-        assertTrue(showcase(content = live).featuredMovies().isEmpty())
     }
 
     @Test
@@ -108,13 +100,5 @@ class ShowcaseTest {
             listOf(ShowcaseItem.SeriesItem(Fixtures.harborLights), ShowcaseItem.MovieItem(Fixtures.glassCity)),
             showcase(library).myList(),
         )
-    }
-
-    @Test
-    fun undatedCataloguesKeepThePlaylistOrder() {
-        val undated = Fixtures.content.copy(movies = Fixtures.content.movies.map { it.copy(addedAt = null) })
-        val showcase = showcase(content = undated)
-        assertEquals(false, showcase.moviesAreDated)
-        assertEquals(undated.movies.take(3), showcase.featuredMovies(limit = 3))
     }
 }

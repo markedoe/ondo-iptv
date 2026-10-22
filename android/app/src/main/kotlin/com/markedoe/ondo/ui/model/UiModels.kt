@@ -42,6 +42,8 @@ data class ResumeItem(
     val imageUrl: String?,
     val progress: Float,
     val minutesLeft: Int,
+    /** An episode: Home shows it in the series in progress, apart from the movies. */
+    val isSeries: Boolean = false,
 )
 
 /** A channel with what is on now. */

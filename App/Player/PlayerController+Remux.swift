@@ -1,13 +1,16 @@
 import AVFoundation
 import IPTVCore
 
-/// MKV films through the system player: their tracks are copied into HLS made of fragmented MP4 (no transcoding,
-/// `MatroskaRemux`) and served on 127.0.0.1 (`RemuxServer`), so that HDR10, HLG and Dolby Vision show, Dolby Atmos
-/// plays and Picture in Picture works. VLC plays the film when the system player cannot: a codec it does not decode
-/// (DTS, TrueHD…), a file without index, a server that does not send parts of the file, or an error while playing.
+/// MKV films through the system player on iPhone and iPad: their tracks are copied into HLS made of fragmented MP4 (no
+/// transcoding, `MatroskaRemux`) and served on 127.0.0.1 (`RemuxServer`), so that HDR10, HLG and Dolby Vision show,
+/// Dolby Atmos plays and Picture in Picture works. VLC plays the film when the system player cannot: a codec it does
+/// not decode (DTS, TrueHD…), a file without index, a server that does not send parts of the file, or an error while
+/// playing. On the Mac, VLC plays MKV films: listening on 127.0.0.1 would need the sandbox's network.server
+/// entitlement, which App Review refuses to a player (CLAUDE.md, App Store).
 extension PlayerController {
     /// Starts the remux of an MKV film when it applies; false lets VLC play it.
     func startRemux(url: URL, item: PlaybackItem) -> Bool {
+        #if os(iOS)
         guard enginePreference != .vlc, !forceVLCForItem, !item.isLive, !item.isCatchup, url.pathExtension.lowercased() == "mkv",
               !(isExternalPlaybackActive || player.isExternalPlaybackActive) else { return false }
         player.pause()
@@ -47,15 +50,20 @@ extension PlayerController {
             }
         }
         return true
+        #else
+        return false
+        #endif
     }
 
     /// Ends the remux of the film that played (a new item, a fallback, the player closing).
     func stopRemux() {
         remuxTask?.cancel()
         remuxTask = nil
+        #if os(iOS)
         remuxServer?.stop()
         remuxServer = nil
         player.allowsExternalPlayback = true
+        #endif
     }
 
     /// What AVPlayer said when it failed, for the log: its error, the one beneath, and the last entries of the item's
@@ -79,9 +87,24 @@ extension PlayerController {
         }
     }
 
+    /// The format playing, for Stream Statistics: "MKV", or "MKV, converted for the system player" while the film is
+    /// remuxed for AVPlayer.
+    var formatDescription: String? {
+        guard candidates.indices.contains(candidateIndex), let format = MediaFormat.label(for: candidates[candidateIndex]) else {
+            return nil
+        }
+        #if os(iOS)
+        if remuxServer != nil { return String(localized: "\(format), converted for the system player") }
+        #endif
+        return format
+    }
+
     /// The engine as the problem report names it.
     var engineName: String {
         if activeEngine == .vlc { return "VLC" }
-        return remuxServer == nil ? "AVPlayer" : "AVPlayer (MKV remuxed)"
+        #if os(iOS)
+        if remuxServer != nil { return "AVPlayer (MKV remuxed)" }
+        #endif
+        return "AVPlayer"
     }
 }

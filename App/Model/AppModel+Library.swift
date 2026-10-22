@@ -136,6 +136,11 @@ extension AppModel {
         }
     }
 
+    /// The movies, or the series, in progress: Home shows them in two rows, each tab in one.
+    func continueWatching(_ type: ContentType) -> [HistoryEntry] {
+        continueWatching().filter { $0.reference.type == type }
+    }
+
     func progress(movie: Movie) -> HistoryEntry? {
         reference(.movie, movie.id).flatMap { library.progress(for: $0) }
     }

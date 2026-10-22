@@ -10,6 +10,9 @@ struct PlayerStatsView: View {
         let health = controller.health
         VStack(alignment: .leading, spacing: 4) {
             row("Engine", controller.activeEngine == .vlc ? "VLC" : "AVPlayer")
+            if let format = controller.formatDescription {
+                row("Format", format)
+            }
             if let size = controller.videoResolution {
                 row("Video", "\(Int(size.width))×\(Int(size.height))")
             }

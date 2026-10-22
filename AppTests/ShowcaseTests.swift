@@ -120,6 +120,19 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(model.heroItems(limit: 2).count, 2)
     }
 
+    func testMoviesAndSeriesInProgressAreApart() async throws {
+        let model = try await model()
+        let road = try movie("Long Road", in: model)
+        let harbor = try XCTUnwrap(model.content.series.first)
+        let episodes = try await model.details(for: harbor).seasons.flatMap(\.episodes)
+        try await watch(model.downloadItem(for: road), in: model, fraction: 0.2, duration: 6_000)
+        try await watch(model.downloadItem(for: episodes[0], in: harbor), in: model, fraction: 0.3, duration: 2_700)
+
+        XCTAssertEqual(model.continueWatching().count, 2)
+        XCTAssertEqual(model.continueWatching(.movie).map(\.reference.itemID), [road.id], "Home's movies in progress")
+        XCTAssertEqual(model.continueWatching(.series).map(\.reference.itemID), [harbor.id], "Home's series in progress")
+    }
+
     func testNewMoviesAndSeriesGoByReleaseYear() async throws {
         let model = try await model(with: Self.releases)
         let horror = try XCTUnwrap(model.content.movieCategories.first { $0.name.contains("Horror") })

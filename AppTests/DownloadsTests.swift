@@ -57,4 +57,18 @@ final class DownloadsTests: XCTestCase {
         XCTAssertEqual(Set(messages).count, problems.count)
         XCTAssertTrue(DownloadManager.message(for: .refused(status: 403)).contains("403"))
     }
+
+    /// A paused download keeps its partial file outside the downloads folder: deleting it must find that file.
+    func testThePartialFileOfAPausedDownloadIsFoundFromItsResumeData() throws {
+        let partial = FileManager.default.temporaryDirectory.appendingPathComponent("CFNetworkDownload_test.tmp")
+        try Data("part".utf8).write(to: partial)
+        defer { try? FileManager.default.removeItem(at: partial) }
+        let byName = try PropertyListSerialization.data(
+            fromPropertyList: ["NSURLSessionResumeInfoTempFileName": partial.lastPathComponent], format: .xml, options: 0)
+        XCTAssertEqual(DownloadManager.partialFile(in: byName)?.standardizedFileURL, partial.standardizedFileURL)
+        let byPath = try PropertyListSerialization.data(
+            fromPropertyList: ["NSURLSessionResumeInfoLocalPath": partial.path], format: .binary, options: 0)
+        XCTAssertEqual(DownloadManager.partialFile(in: byPath)?.path, partial.path)
+        XCTAssertNil(DownloadManager.partialFile(in: Data("not a property list".utf8)))
+    }
 }

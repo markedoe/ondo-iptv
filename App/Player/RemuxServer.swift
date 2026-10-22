@@ -2,6 +2,9 @@ import Foundation
 import IPTVCore
 import Network
 
+// iPhone and iPad only: on the Mac, VLC plays MKV films (PlayerController+Remux).
+#if os(iOS)
+
 /// Serves an MKV film remuxed to HLS to the system player, on 127.0.0.1 only: the playlists, the initialization segment
 /// and the media segments, made from the provider's file as the player asks for them (`MatroskaRemux`). The system
 /// player takes HLS media segments only from an HTTP server, not from a resource loader.
@@ -210,3 +213,5 @@ private final class Resumed: @unchecked Sendable {
         }
     }
 }
+
+#endif

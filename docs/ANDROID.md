@@ -9,24 +9,40 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **Core** `android/core`: Kotlin port of IPTVCore (M3U, XSPF, JSON, Xtream, XMLTV, catch-up, search,
   playback items), tested with the same cases as the Swift tests.
 - **App** `android/app` (Compose, Material 3, type-safe Navigation, tab bar or rail depending on the screen):
-  home (carousel, Continue Watching, My List, Recently Added, channels), Movies and Series tabs
-  (one row per category, filterable grids), movie and series pages (Resume, From Start, next
-  episode, seasons, More Like This, awards, tappable cast and director), live TV (categories, favorites,
-  current and next programme), TV guide grid with programme reminders (WorkManager notifications), My List
-  tab with collections, search (filters by release years and by festival or ceremony), categories hidden by
-  language or country code, help, settings (playlists, appearance, adult categories hidden by default),
-  welcome screen with a demo and a "player without content" disclaimer.
+  home (carousel, Movies in Progress, Series in Progress, My List, New Movies, New Series, channels),
+  Movies and Series tabs (Continue Watching, My List, Award winners in Movies, one row per category, filterable
+  grids), movie and series pages (Resume, From Start, next episode, seasons, More Like This, awards, tappable
+  cast and director), live TV (categories, My List, current and next programme), TV guide grid with programme
+  reminders (WorkManager notifications), My List tab with collections, search (channels, movies, series, actors
+  and directors; filters by release years and by festival or ceremony), categories hidden by language or
+  country code, by style or word, or one by one, help, settings (playlists, appearance, adult categories hidden
+  by default, Update awards automatically, Languages and categories, App language, player buffers), welcome
+  screen with a demo and a "player without content" disclaimer.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
-  resume, picture-in-picture, MediaSession, Back to Live.
+  resume, picture-in-picture, MediaSession, audio and subtitle tracks, separate buffers for live TV and for
+  movies & series, back to the live edge on its own when a channel falls behind, More → Stream Statistics
+  (format, video and received bitrates, smoothness, freezes and lost pictures, and whether they come from the
+  network or the player: `core/playback/PlaybackHealth.kt`, the Apple rules), More → Report a Problem… (a
+  playback report with no address, login or title). Movie and series pages show the format (MKV, HLS…).
+- **Storage**: JSON documents in the app's private storage (`data/AppStore.kt`), left out of backups
+  (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`): settings, playlists with their logins, My List,
+  collections, progress and reminders, each playlist's catalogue, and the movie and series pages opened (up to
+  1,000 movies and 300 series per playlist, fetched again after 7 days for a movie and 12 hours for a series,
+  still shown when the provider cannot be reached; `data/DetailsArchive.kt`). Posters and thumbnails are kept
+  on disk by Coil 3 (up to 512 MB, in the app's cache; `OndoApplication.kt`).
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi
   (`res/values-*`), also offered in Android 13's per-app language setting (`res/xml/locales_config.xml`).
 - **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), Roborazzi
   screenshots that double as Google Play screenshots (phone, 7" and 10" tablets, English and French).
 
 Planned next (not included in v1): Android TV, catch-up from the guide, Chromecast, downloads, profiles
-and PIN, sync, second libVLC engine.
+and PIN, online subtitles, second libVLC engine.
 
 ## Initial plan
+
+Written before v1, which differs: JSON documents in private storage instead of Room, DataStore and the Android
+Keystore, no Hilt, core tests on JUnit 4, fastlane instead of Gradle Play Publisher, and no DASH, FFmpeg
+extension, Cast or playback foreground service yet.
 
 To be started once the iPhone / iPad / Mac version is validated and published. Goal: the same app, native,
 with no compromise on quality, reusing everything that can be reused (specifications, test suites,

@@ -1,0 +1,44 @@
+name: App Store header and search results
+
+# The product page header and the search results asset of the iOS and iPadOS app (iOS 27 and later), in App Store
+# Connect's Asset Library: fastlane/creative/<locale>/header.png and search.jpg, drawn by fastlane/creative/render.mjs.
+#   status  what App Store Connect holds (read only)
+#   upload  the files into the Asset Library, unreviewed, without touching any version
+#   place   onto the iOS version being prepared; refused for a version in review or approved
+#   submit  for review on their own, once an iOS version is approved; refused while one is in review. Run it only
+#           with the user's go (CLAUDE.md)
+#   publish the approved assets onto the live iOS version, without a new version
+# See docs/RELEASE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: What to do
+        type: choice
+        default: status
+        options: [status, upload, place, submit, publish]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-store-assets
+  cancel-in-progress: false
+
+jobs:
+  assets:
+    name: Asset Library
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: ${{ github.event.inputs.action }}
+        # The API key (the release workflow's) only for this step; the script prints no secret and no contact detail.
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ACTION: ${{ github.event.inputs.action }}
+        run: python3 -I .github/scripts/asset_library.py "$ACTION"

@@ -63,16 +63,13 @@ struct VODBrowser: View {
 
     private func shelves(_ metrics: ShelfMetrics) -> some View {
         let categories = model.categories(for: type)
-        let resume = model.continueWatching().filter { $0.reference.type == type }
+        let resume = model.continueWatching(type)
         let mine = model.myList().filter { item in
             switch item {
             case .movie: return type == .movie
             case .series: return type == .series
             }
         }
-        let recent: [ShowcaseItem] = type == .movie
-            ? model.recentlyAddedMovies(limit: Self.rowLength).map(ShowcaseItem.movie)
-            : model.recentlyAddedSeries(limit: Self.rowLength).map(ShowcaseItem.series)
 
         return LazyVStack(alignment: .leading, spacing: compact ? 26 : 34) {
             chips(categories, metrics: metrics)
@@ -86,13 +83,6 @@ struct VODBrowser: View {
             if !mine.isEmpty {
                 Shelf(title: "My List", route: .favorites(FavoritesRoute(type: type)), metrics: metrics) {
                     ForEach(mine) { item in
-                        ShowcasePoster(item: item, width: metrics.posterWidth)
-                    }
-                }
-            }
-            if !recent.isEmpty {
-                Shelf(title: "Recently Added", metrics: metrics) {
-                    ForEach(recent) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
                 }

@@ -12,6 +12,7 @@ A PLAYER THAT JUST WORKS
 • Built on Android’s media player (HLS, MPEG-TS, MP4, MKV)
 • Audio tracks and subtitles, Picture-in-Picture
 • Clear error messages: provider, network or app
+• Stream statistics: see whether a freeze comes from the network or the player
 
 LIVE TV
 • Channels by category with what is on now and next

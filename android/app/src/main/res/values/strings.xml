@@ -17,6 +17,9 @@
     <string name="play_episode">Play %1$s</string>
     <string name="resume_episode">Resume %1$s</string>
     <string name="continue_watching">Continue Watching</string>
+    <string name="beta">Beta</string>
+    <string name="movies_in_progress">Movies in Progress</string>
+    <string name="series_in_progress">Series in Progress</string>
     <string name="recently_added">Recently Added</string>
     <string name="new_movies">New Movies</string>
     <string name="new_series">New Series</string>
@@ -130,14 +133,16 @@
     </plurals>
     <string name="help">Help</string>
     <string name="help_playlists_title">Add a playlist</string>
-    <string name="help_playlists_body">Ondo is a player: it shows the movies, series and channels of the subscription your provider gives you, and provides no content of its own.\n\nTo add your subscription, open Settings, Add playlist: an M3U link or file, or an Xtream Codes login (server address, user name and password). Tap a playlist in Settings to switch to it.</string>
+    <string name="help_playlists_body">Ondo is a player: it shows the movies, series and channels of the subscription your provider gives you, and provides no content of its own.\n\nTo add your subscription, open Settings (the gear on Home, or tap the playlist name at the top of Home), Add a Playlist: an M3U link or file, or an Xtream Codes login (server address, user name and password). Tap a playlist in Settings to switch to it.</string>
+    <string name="help_home_title">Home</string>
+    <string name="help_home_body">At the top of Home, tap the playlist’s name, shown with the time of its last update, to open your playlists in Settings; the magnifying glass opens Search and the gear opens Settings. The carousel below shows what you are watching, then new releases.\n\nMovies in Progress and Series in Progress pick up where you stopped. Then come My List, New Movies and New Series (released this year or last year), then the channels: those in My List, or else the ones you watched last or the first ones of the playlist. A playlist with live channels only shows them first.</string>
     <string name="help_search_title">Find something to watch</string>
     <string name="help_categories_title">Hide languages and categories</string>
-    <string name="help_categories_body">Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Languages and categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nStyles work the same way with the words of category names: hide Manga &amp; anime, Children or Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of each movie.\n\nYou can also hide categories one by one there, and show them again at any time.</string>
+    <string name="help_categories_body">Many providers start category names with a code such as |PT| or FR:. The filter button on Movies, Series and Live TV (also in Settings, Languages and categories) hides a whole language or country at once, in every playlist; the categories the provider adds later follow the same rule.\n\nStyles work the same way with the words of category names: hide Manga &amp; anime, Children or Documentaries, or a word of your own such as Bollywood. Only category names count, not the genre of each movie.\n\nYou can also hide categories one by one there, and show them again at any time.\n\nCategories whose name looks adult are hidden everywhere until you turn on Show adult categories in Settings.</string>
     <string name="help_playback_title">When a stream does not play</string>
-    <string name="help_playback_body">Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nWith a longer buffer (Settings, Buffer for live TV and Buffer for movies &amp; series), the provider’s longer interruptions do not show, but the picture takes longer to appear.\n\nIn the player, More, Report a Problem… shows a report of the playback (start and seek times, freezes, statistics; no address, login or title) to send by mail or message, or in a GitHub issue.</string>
+    <string name="help_playback_body">Ondo says whether the provider, the network or the format is at fault.\n\nIf the provider refuses the stream, the subscription may have expired or too many devices may be watching at once: most providers allow one or two streams at a time.\n\nIf the server cannot be reached, check your connection and try again.\n\nIf the picture freezes now and then, More, Stream Statistics shows what arrives, what the video needs and whether the freezes come from the network or the provider, or from the player.\n\nWith a longer buffer (Settings, Buffer for live TV and Buffer for movies &amp; series), the provider’s longer interruptions do not show, but the picture takes longer to appear.\n\nIn the player, More, Report a Problem… shows a report of the playback (start and seek times, freezes, statistics; no address, login or title) to send by mail or message, or in a GitHub issue.</string>
     <string name="help_privacy_title">Privacy</string>
-    <string name="help_privacy_body">Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device and are left out of device backups.\n\nOndo connects only to the servers you add.</string>
+    <string name="help_privacy_body">Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device and are left out of device backups. Posters and the movie and series pages you have opened are kept on your device too, so that they show at once and open when the provider cannot be reached.\n\nOndo connects to the servers you add and, once a week, to GitHub for the latest awards and festival selections (nothing about you is sent; turn off Update awards automatically in Settings).</string>
     <string name="error_load_denied">The provider refused access (HTTP %1$d). Check the user name, the password and your subscription.</string>
     <string name="error_load_provider">The provider did not send a playlist. Check the address and your subscription.</string>
     <string name="error_load_format">This is not a playlist Ondo can read (M3U, Xtream Codes, XSPF or JSON).</string>
@@ -158,7 +163,7 @@
     <string name="my_list_empty_hint">Use My List on a movie or series page to find it here.</string>
     <string name="help_mylist_title">My List</string>
     <string name="help_mylist_body">On a movie or series page, My List keeps it at hand. In Live TV, long-press a channel to add it to My List.\n\nThe My List tab gathers your movies, series and channels; search is the magnifying glass at the top of each screen.\n\nCollections are your own groups, such as Weekend or Kids: use Collection on a movie or series page, then find them in My List, under Collections.</string>
-    <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. Search, the magnifying glass at the top of each screen, looks through channels, movies and series. In Search, the filter button keeps the movies and series released in the years you choose, or the movies of a festival or ceremony.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating. Movie pages show their awards and festival selections. Tap the name of a director or an actor on a movie or series page to see their other movies and series among the pages you have opened. Genres, the year and awards open the titles of your playlist that share them the same way. Search also finds actors and directors by name.</string>
+    <string name="help_search_body">Movies, Series and Live TV show your provider’s categories. Search, the magnifying glass at the top of each screen, looks through channels, movies and series. In Search, the filter button keeps the movies and series released in the years you choose, or the movies of a festival or ceremony.\n\nIn a category, the sort button orders the posters by playlist order, name, date added, release date or rating. Movie pages show their awards and festival selections. Tap the name of a director or an actor on a movie or series page to see their other movies and series in your playlist: series always, movies among the pages you have opened. Genres, the year and awards open the titles of your playlist that share them the same way. Search also finds actors and directors by name.</string>
     <string name="search_filters">Filters</string>
     <string name="filter_from">From</string>
     <string name="filter_to">To</string>
@@ -186,7 +191,7 @@
     <string name="award_group_locarno">Locarno Film Festival</string>
     <string name="person_nothing_title">Nothing in this playlist</string>
     <string name="person_nothing">No movie or series of this playlist is known to feature %1$s.</string>
-    <string name="person_opened_pages">Only the pages you have opened are searched.</string>
+    <string name="person_opened_pages">Movies are found only among the pages you have opened.</string>
     <string name="collections">Collections</string>
     <string name="collection">Collection</string>
     <string name="add_to_collection">Add to collection</string>
@@ -259,4 +264,17 @@
     <string name="open_issue">Open an Issue on GitHub</string>
     <string name="playback_report_subject">Ondo playback report</string>
     <string name="problem_report_explanation">This report helps find the cause of a playback problem: the start and seek times, the freezes and the player’s statistics for this playback, with the app, the system and the player settings. It holds no stream address, login or title. GitHub issues are public.</string>
+    <string name="stream_statistics">Stream Statistics</string>
+    <string name="stats_engine">Engine</string>
+    <string name="stats_format">Format</string>
+    <string name="stats_video">Video</string>
+    <string name="stats_video_bitrate">Video bitrate</string>
+    <string name="stats_received">Received</string>
+    <string name="stats_smoothness">Smoothness</string>
+    <string name="stats_freezes">Freezes</string>
+    <string name="stats_lost_pictures">Lost pictures</string>
+    <string name="stats_measuring">Measuring…</string>
+    <string name="stats_smooth">No freeze: the stream plays smoothly.</string>
+    <string name="stats_network">The data arrives too slowly or stops: the network or the provider is the cause.</string>
+    <string name="stats_player">The data arrives on time: the freezes or lost pictures come from the player or the device.</string>
 </resources>

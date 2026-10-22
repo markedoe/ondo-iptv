@@ -93,7 +93,9 @@ final class PlayerController: NSObject {
     @ObservationIgnored var forceVLCForItem = false
     /// An MKV film remuxed for the system player (PlayerController+Remux): its opening, then its server.
     @ObservationIgnored var remuxTask: Task<Void, Never>?
+    #if os(iOS)
     @ObservationIgnored var remuxServer: RemuxServer?
+    #endif
     /// Freezes and lost pictures of this playback, explained (sampled twice a second, PlayerController+Health).
     var health = PlaybackHealth()
     /// The statistics panel is shown over the picture.
@@ -764,12 +766,6 @@ extension PlayerController {
 // MARK: - Resume
 
 extension PlayerController {
-    /// Where a VOD item resumes (positions in the first seconds start from the beginning).
-    static func resumeStart(for item: PlaybackItem) -> Double? {
-        guard !item.isLive, let start = item.startPosition, start > 5 else { return nil }
-        return start
-    }
-
     /// The resume seek of a ready item, with playback started right away unless the viewer paused while it
     /// opened: it starts where the seek lands, after a single buffering. Waiting for the seek to land before
     /// playing does not work: a paused player does not always load anything, so the seek never lands.

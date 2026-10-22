@@ -81,6 +81,8 @@ data class HomeUiState(
     val isRestoring: Boolean = false,
     /** "Show only your languages?", offered once on a playlist with categories for many languages. */
     val tagSuggestion: TagSuggestion? = null,
+    /** A build for a Google Play test track: a beta badge is shown. */
+    val beta: Boolean = false,
 )
 
 class HomeActions(
@@ -135,14 +137,12 @@ fun HomeScreen(
         state.tagSuggestion?.let { suggestion ->
             item { TagSuggestionCard(suggestion, actions, Modifier.padding(horizontal = metrics.gutter)) }
         }
-        if (state.continueWatching.isNotEmpty()) {
-            item {
-                Shelf(stringResource(R.string.continue_watching), metrics) {
-                    items(state.continueWatching, key = { it.key }) {
-                        ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey)
-                    }
-                }
-            }
+        val (resumeSeries, resumeMovies) = state.continueWatching.partition { it.isSeries }
+        if (resumeMovies.isNotEmpty()) {
+            item { ResumeShelf(stringResource(R.string.movies_in_progress), resumeMovies, metrics, actions, preparingKey) }
+        }
+        if (resumeSeries.isNotEmpty()) {
+            item { ResumeShelf(stringResource(R.string.series_in_progress), resumeSeries, metrics, actions, preparingKey) }
         }
         if (state.myList.isNotEmpty()) {
             item { PosterShelf(stringResource(R.string.my_list), state.myList, metrics, actions, actions.onSeeAllMyList) }
@@ -169,6 +169,15 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = metrics.gutter),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMetrics, actions: HomeActions, preparingKey: String?) {
+    Shelf(title, metrics) {
+        items(items, key = { it.key }) {
+            ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey)
         }
     }
 }
@@ -236,6 +245,7 @@ private fun HomeTopBar(state: HomeUiState, actions: HomeActions, onArtwork: Bool
                 Icon(Icons.Rounded.KeyboardArrowDown, contentDescription = stringResource(R.string.playlists), tint = tint.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
             }
         }
+        if (state.beta) BetaBadge(Modifier.align(Alignment.CenterStart).padding(start = 8.dp))
         Row(Modifier.align(Alignment.CenterEnd)) {
             IconButton(onClick = actions.onSearch, modifier = Modifier.testTag("searchButton")) {
                 Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search), tint = tint)
@@ -245,6 +255,21 @@ private fun HomeTopBar(state: HomeUiState, actions: HomeActions, onArtwork: Bool
             }
         }
     }
+}
+
+@Composable
+private fun BetaBadge(modifier: Modifier = Modifier) {
+    Text(
+        stringResource(R.string.beta).uppercase(),
+        color = Color.White,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        modifier = modifier
+            .clip(RoundedCornerShape(50))
+            .background(Color(0xFFF59E0B))
+            .padding(horizontal = 7.dp, vertical = 2.dp)
+            .testTag("betaBadge"),
+    )
 }
 
 /** Offered once after opening a playlist with categories for many languages and countries. */

@@ -10,12 +10,20 @@ on:
         description: What to deliver
         type: choice
         default: all
-        options: [all, ios, mac, metadata]
+        options: [all, ios, mac, metadata, metadata-ios, metadata-mac, submit, status]
       edition:
         description: "testflight: with downloads, for testers only; app-store: without downloads, the build to submit"
         type: choice
         default: testflight
         options: [testflight, app-store]
+      ios_build:
+        description: "submit: the iOS build number of the App Store edition, from its release run's log (empty: iOS is not submitted)"
+        type: string
+        default: ""
+      mac_build:
+        description: "submit: the macOS build number of the App Store edition, from its release run's log (empty: macOS is not submitted)"
+        type: string
+        default: ""
 
 concurrency:
   group: release-${{ github.ref }}
@@ -59,9 +67,11 @@ jobs:
       - name: Tools
         run: brew install xcodegen || true
       - name: Core tests
+        if: env.TARGET != 'status'
         working-directory: Packages/IPTVCore
         run: swift test --parallel
       - name: Demo playlist answers
+        if: env.TARGET != 'status'
         # App Review taps "Try the demo": if the public list moved or broke, the review fails for a reason
         # no test sees. The address is read from the app's code.
         run: |
@@ -72,7 +82,7 @@ jobs:
       - name: App Store edition checks
         # The build to submit: nothing dormant, no private API, a listing and review notes App Review accepts
         # (.github/scripts/check_app_store.py), and the listing's addresses answer.
-        if: env.EDITION == 'app-store' || env.TARGET == 'metadata' || env.TARGET == 'all'
+        if: env.EDITION == 'app-store' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'all' || env.TARGET == 'submit'
         run: |
           python3 .github/scripts/check_app_store.py
           for file in fastlane/metadata/*/*_url.txt; do
@@ -98,7 +108,7 @@ jobs:
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: bundle exec fastlane mac beta
       - name: App Store screenshots
-        if: env.TARGET == 'all' || env.TARGET == 'metadata'
+        if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'status'
         run: |
           # Published by the "App Store screenshots" workflow; the listing is uploaded without them otherwise.
           if git fetch -q origin appstore-screenshots; then
@@ -114,15 +124,44 @@ jobs:
             find fastlane/screenshots -type f | sort
           fi
       - name: App Store listing
-        if: env.TARGET == 'all' || env.TARGET == 'metadata'
+        if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata')
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: |
-          bundle exec fastlane ios metadata
-          bundle exec fastlane mac metadata
+          # A version in review cannot be edited: metadata-ios and metadata-mac update one platform only.
+          if [ "$TARGET" != metadata-mac ]; then bundle exec fastlane ios metadata; fi
+          if [ "$TARGET" != metadata-ios ]; then bundle exec fastlane mac metadata; fi
+      # Submission for App Review, only when the user asks for it (CLAUDE.md, App Store): the listing as it is on App
+      # Store Connect (target metadata first) and the App Store edition build given by number, never the latest build,
+      # which may be a TestFlight edition one. Released as soon as Apple approves it.
+      - name: Submit iOS for review
+        if: env.TARGET == 'submit' && github.event.inputs.ios_build != ''
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD_NUMBER: ${{ github.event.inputs.ios_build }}
+        run: bundle exec fastlane ios submit
+      - name: Submit macOS for review
+        if: (success() || failure()) && env.TARGET == 'submit' && github.event.inputs.mac_build != ''
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD_NUMBER: ${{ github.event.inputs.mac_build }}
+        run: bundle exec fastlane mac submit
+      - name: App Store Connect status (read only)
+        # The versions of this release as App Store Connect holds them: state, selected build, review notes, and the
+        # screenshots compared with today's. Prints no contact detail.
+        if: env.TARGET == 'status'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: bundle exec fastlane status
       - name: Build log
         if: failure()
         # Printed in the job log, where GitHub masks the secrets (an uploaded file would not be masked).

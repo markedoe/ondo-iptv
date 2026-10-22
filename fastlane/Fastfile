@@ -12,6 +12,7 @@
 # Paths: Ruby code and `sh` run in fastlane/, actions (deliver, gym…) from the repository root.
 
 require "base64"
+require "digest"
 require "openssl"
 require "set"
 require "tmpdir"
@@ -104,6 +105,31 @@ def testflight_edition?
   ENV["EDITION"] == "testflight"
 end
 
+# Submits for App Review the App Store edition build BUILD_NUMBER of this version, with the listing as it is on App
+# Store Connect (the metadata lanes upload it), released as soon as Apple approves it. The number comes from the log of
+# the release run that built the App Store edition: never "the latest build", which may be a TestFlight edition one.
+# Run only when the user asks for the submission (CLAUDE.md, App Store).
+def submit_for_review(platform)
+  build = ENV.fetch("BUILD_NUMBER", "").strip
+  UI.user_error!("BUILD_NUMBER must be the App Store edition's build number (from its release run's log)") unless build.match?(/\A\d+\z/)
+  deliver(
+    api_key: api_key,
+    app_identifier: APP_ID,
+    platform: platform,
+    app_version: app_version,
+    build_number: build,
+    skip_binary_upload: true,
+    skip_metadata: true,
+    skip_screenshots: true,
+    force: true,
+    submit_for_review: true,
+    automatic_release: true,
+    run_precheck_before_submit: true,
+    precheck_include_in_app_purchases: false,
+    submission_information: { add_id_info_uses_idfa: false }
+  )
+end
+
 before_all do
   setup_ci if ENV["CI"]
 end
@@ -146,6 +172,51 @@ def runner_development_certificate?(certificate, keychain)
   content = certificate.certificate_content.to_s
   digest = content.empty? ? nil : OpenSSL::Digest::SHA256.hexdigest(Base64.decode64(content))
   keychain[:digests].include?(digest) || keychain[:serials].include?(serial_key(certificate.serial_number))
+end
+
+# What a check of the submitted versions prints: no contact detail, only whether the review contact is complete.
+PLATFORMS = { "iOS" => ["IOS", "ios"], "macOS" => ["MAC_OS", "mac"] }.freeze
+
+def report_version(app, name, platform, folder)
+  version = app.get_app_store_versions(filter: { platform: platform }, includes: "build,appStoreReviewDetail")
+               .find { |candidate| candidate.version_string == app_version }
+  return UI.message("#{name} #{app_version}: no such version") unless version
+
+  build = version.build
+  UI.message("#{name} #{version.version_string}: #{version.app_store_state}, build #{build ? build.version : 'none selected'}")
+  detail = version.app_store_review_detail
+  if detail
+    contact = [detail.contact_first_name, detail.contact_last_name, detail.contact_email, detail.contact_phone].none? { |value| value.to_s.empty? }
+    notes = detail.notes.to_s
+    # Neither appears in the notes of a submitted version: the App Store edition has no downloads, and the Mac app no
+    # network.server entitlement.
+    UI.message("  review contact #{contact ? 'complete' : 'missing'}; notes mention downloads: #{notes.downcase.include?('download')}; " \
+               "notes mention network.server: #{notes.include?('network.server')}")
+  end
+  # Screenshots compared with today's files (fetched from the appstore-screenshots branch by the workflow).
+  current = Dir[File.expand_path("screenshots/#{folder}/**/*.png", __dir__)].map { |path| Digest::MD5.file(path).hexdigest }.to_set
+  version.get_app_store_version_localizations.each do |localization|
+    localization.get_app_screenshot_sets.each do |set|
+      shots = set.app_screenshots || []
+      same = shots.count { |shot| current.include?(shot.source_file_checksum) }
+      UI.message("  #{localization.locale} #{set.screenshot_display_type}: #{shots.count} screenshots, #{same} identical to today's")
+      # The address of each one that differs, to look at it (the App Store's own image server).
+      shots.reject { |shot| current.include?(shot.source_file_checksum) }.each do |shot|
+        template = shot.image_asset.to_h["templateUrl"].to_s
+        UI.message("    #{shot.file_name}: #{template.sub('{w}', '1280').sub('{h}', '800').sub('{f}', 'png')}") unless template.empty?
+      end
+    end
+  end
+rescue StandardError => e
+  UI.error("#{name}: #{e.message}")
+end
+
+desc "Print what App Store Connect holds for this version, read only: state, build, review notes, screenshots"
+lane :status do
+  api_key
+  app = Spaceship::ConnectAPI::App.find(APP_ID)
+  PLATFORMS.each { |name, (platform, folder)| report_version(app, name, platform, folder) }
+  app.get_review_submissions.each { |submission| UI.message("review submission #{submission.platform}: #{submission.state}") }
 end
 
 desc "Revoke the development certificates Xcode created on this CI runner (never run it on your own Mac)"
@@ -198,6 +269,11 @@ platform :ios do
       submit_for_review: false
     )
   end
+
+  desc "Submit the App Store edition build BUILD_NUMBER of this version for App Review"
+  lane :submit do
+    submit_for_review("ios")
+  end
 end
 
 platform :mac do
@@ -218,6 +294,11 @@ platform :mac do
       precheck_include_in_app_purchases: false,
       submit_for_review: false
     )
+  end
+
+  desc "Submit the App Store edition build BUILD_NUMBER of this version for App Review"
+  lane :submit do
+    submit_for_review("osx")
   end
 
   desc "Build the macOS app and upload it to TestFlight / App Store Connect"

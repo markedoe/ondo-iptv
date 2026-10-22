@@ -14,8 +14,9 @@ you agree.
 ## Scope
 
 - The Ondo apps (iOS, iPadOS, macOS, Android) and the code of this repository.
-- Ondo is a player: it provides no content and has no server. Problems with an IPTV provider or a third-party
-  playlist are out of scope.
+- Ondo is a player: it provides no content and runs no online service (on iPhone and iPad it only serves MKV
+  films to the system player on 127.0.0.1, inside the device). Problems with an IPTV provider or a
+  third-party playlist are out of scope.
 
 ## Supported versions
 
@@ -37,8 +38,9 @@ notes de version, avec votre accord pour vous citer.
 ## Périmètre
 
 - Les apps Ondo (iOS, iPadOS, macOS, Android) et le code de ce dépôt.
-- Ondo est un lecteur : il ne fournit aucun contenu et n'a aucun serveur. Les problèmes d'un fournisseur
-  IPTV ou d'une playlist tierce sont hors périmètre.
+- Ondo est un lecteur : il ne fournit aucun contenu et ne fait tourner aucun service en ligne (sur iPhone et
+  iPad, il sert seulement les films MKV au lecteur du système sur 127.0.0.1, à l'intérieur de l'appareil).
+  Les problèmes d'un fournisseur IPTV ou d'une playlist tierce sont hors périmètre.
 
 ## Versions prises en charge
 

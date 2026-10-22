@@ -145,6 +145,11 @@ struct MovieDetailView: View {
             }
         }
         .task {
+            // The details kept from an earlier visit at once, then the provider's if they are old.
+            if let stored = model.storedDetails(for: movie) {
+                details = stored
+                isLoading = false
+            }
             details = await model.details(for: movie)
             isLoading = false
             await model.loadTMDbBackdropIfNeeded(for: .movie(movie))
@@ -157,6 +162,8 @@ struct MovieDetailView: View {
         if let seconds = details?.durationSeconds, seconds > 0 { items.append(Formatting.duration(seconds)) }
         if let rating = details?.rating ?? movie.rating, rating > 0 { items.append("★ " + Formatting.rating(rating)) }
         if let genre = details?.genre { items.append(genre) }
+        // MKV, MP4…: the format the provider sends (MKV plays differently on each device).
+        if let format = MediaFormat.label(for: movie.streamURL) { items.append(format) }
         return items
     }
 }
