@@ -303,6 +303,62 @@ final class MatroskaRemuxTests: XCTestCase {
         XCTAssertNoThrow(try MatroskaRemux.chooseVideo([video]))
     }
 
+    /// A segment is read and held whole: an index with too few key frames (one for the whole film) is left to VLC
+    /// rather than read into memory.
+    func testSegmentsPastTheLimitAreLeftToVLC() async throws {
+        let base = try await MatroskaReader.open(DataByteSource(MatroskaBytes.film()))
+        let video = base.tracks[0]
+        let limit = MatroskaRemux.largestSegment
+        func file(cues: [MatroskaCuePoint], clustersEnd: Int64) -> MatroskaFile {
+            var file = base
+            file.cues = cues
+            file.clustersEnd = clustersEnd
+            return file
+        }
+        let start = base.firstClusterOffset
+        let first = MatroskaCuePoint(time: 0, track: video.number, clusterOffset: start)
+        // A key frame 7 s in, past the limit: refused when planning, before anything is read.
+        let far = MatroskaCuePoint(time: 7_000_000_000, track: video.number, clusterOffset: start + limit + 1)
+        XCTAssertThrowsError(try MatroskaRemux.plan(file(cues: [first, far], clustersEnd: start + limit + 2_000), video: video, targetDuration: 6))
+        XCTAssertThrowsError(try MatroskaRemux.plan(file(cues: [first], clustersEnd: start + limit + 1), video: video, targetDuration: 6))
+        // Positions whose sum overflows.
+        var overflowing = far
+        overflowing.clusterOffset = start + 1_000
+        overflowing.relativePosition = .max
+        XCTAssertThrowsError(try MatroskaRemux.plan(file(cues: [first, overflowing], clustersEnd: start + 4_000), video: video, targetDuration: 6))
+        XCTAssertEqual(try MatroskaRemux.plan(file(cues: [first], clustersEnd: start + limit), video: video, targetDuration: 6).count, 1, "up to the limit")
+
+        // Where the clusters end is unknown: no more than the limit is asked for.
+        final class Recorder: ByteSource, @unchecked Sendable {
+            private let lock = NSLock()
+            private var ranges: [Range<Int64>] = []
+            var asked: [Range<Int64>] { lock.withLock { ranges } }
+            func size() async throws -> Int64? { nil }
+            func read(_ range: Range<Int64>) async throws -> Data {
+                lock.withLock { ranges.append(range) }
+                return Data(count: 16)
+            }
+        }
+        let recorder = Recorder()
+        let open = file(cues: [first], clustersEnd: .max)
+        let segments = try MatroskaRemux.plan(open, video: video, targetDuration: 6)
+        let read = try await MatroskaRemux.read(segments[0], file: open, source: recorder)
+        XCTAssertEqual(read.count, 16)
+        XCTAssertEqual(recorder.asked.map { $0.upperBound - $0.lowerBound }, [limit + 1])
+        // Known to be past the limit: nothing is read.
+        var block = far
+        block.relativePosition = 100
+        let untouched = Recorder()
+        do {
+            let segment = MatroskaRemux.Segment(time: 0, duration: 7, start: nil, end: block)
+            _ = try await MatroskaRemux.read(segment, file: file(cues: [first, block], clustersEnd: .max), source: untouched)
+            XCTFail("a segment past the limit")
+        } catch {
+            XCTAssertTrue(error is RemuxError, "\(error)")
+        }
+        XCTAssertEqual(untouched.asked, [])
+    }
+
     /// AC-3's dac3 box from a syncframe: 48 kHz, 448 kb/s, 3/2 with LFE (ETSI TS 102 366, F.4).
     func testDolbyDigitalDescription() throws {
         var frame = BitWriter()

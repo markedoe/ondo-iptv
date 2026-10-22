@@ -96,8 +96,9 @@ public enum FragmentWriter {
         return writer.data
     }
 
-    /// A moof and its mdat: each track's samples from `baseDecodeTime`, in the order given.
-    public static func mediaSegment(sequence: UInt32, runs: [(track: FragmentTrack, baseDecodeTime: UInt64, samples: [FragmentSample])]) -> Data {
+    /// A moof and its mdat: each track's samples from `baseDecodeTime`, in the order given. Throws past 2 GB, where a
+    /// track run's data offset (32 bits, signed) no longer reaches the samples.
+    public static func mediaSegment(sequence: UInt32, runs: [(track: FragmentTrack, baseDecodeTime: UInt64, samples: [FragmentSample])]) throws -> Data {
         // The moof first with zero data offsets, then the offsets once its size is known.
         func moof(offsets: [UInt32]) -> Data {
             var writer = BoxWriter()
@@ -125,7 +126,10 @@ public enum FragmentWriter {
             }
             return writer.data
         }
+        let payload = runs.reduce(0) { $0 + $1.samples.reduce(0) { $0 + $1.data.count } }
+        guard payload <= Int32.max else { throw RemuxError("segment of \(payload) bytes") }
         let size = moof(offsets: runs.map { _ in 0 }).count
+        guard size + 8 + payload <= Int32.max else { throw RemuxError("segment of \(payload) bytes") }
         var offsets: [UInt32] = []
         var position = size + 8
         for run in runs {
@@ -224,7 +228,8 @@ struct BoxWriter {
         u32(0)
         fourCC(type)
         body(&self)
-        let size = UInt32(data.count - start)
+        // Never clamped in practice: media segments past 2 GB are refused before they are written.
+        let size = UInt32(clamping: data.count - start)
         data.replaceSubrange(start..<start + 4, with: [UInt8(size >> 24), UInt8(size >> 16 & 0xFF), UInt8(size >> 8 & 0xFF), UInt8(size & 0xFF)])
     }
 

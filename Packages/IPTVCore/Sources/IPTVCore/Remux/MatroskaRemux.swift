@@ -28,6 +28,8 @@ public actor MatroskaRemux {
     static let videoTimescale: Int64 = 360_000
     /// Video ticks per frame the remux works with: up to a frame every 10 seconds.
     static let frameTicksRange: ClosedRange<Int64> = 1...videoTimescale * 10
+    /// A segment is read and held whole: past this many bytes (an index with too few key frames), the film is left to VLC.
+    static let largestSegment: Int64 = 128 * 1024 * 1024
 
     public nonisolated let file: MatroskaFile
     public nonisolated let video: MatroskaTrack
@@ -267,6 +269,14 @@ public actor MatroskaRemux {
         }
         current.duration = max(Double(total - current.time) / 1e9, 0.1)
         segments.append(current)
+        // A segment is read in one go: one known to run past the limit is left to VLC before playing. When the index
+        // does not say where the next key frame's block is, the segment runs at least to its cluster; `.max` is unknown.
+        for segment in segments {
+            let start = rangeStart(segment, file: file)
+            let end = try segment.end.map { next in try next.clusterOffset.adding(next.relativePosition.map { try $0.adding(12) } ?? 0) }
+                ?? file.clustersEnd
+            if end < .max, end - start > largestSegment { throw RemuxError("segment of \(end - start) bytes") }
+        }
         return segments
     }
 
@@ -370,8 +380,12 @@ public actor MatroskaRemux {
             end = file.clustersEnd
         }
         guard end > start else { throw RemuxError("empty segment") }
-        let data = try await source.read(start..<end)
+        // No more than the limit is asked for, also when the end of the clusters is unknown.
+        let length = end - start
+        guard length <= largestSegment || end == .max else { throw RemuxError("segment of \(length) bytes") }
+        let data = try await source.read(start..<(length > largestSegment ? start + largestSegment + 1 : end))
         guard !data.isEmpty else { throw RemuxError("nothing read") }
+        guard data.count <= largestSegment else { throw RemuxError("segment past \(largestSegment) bytes") }
         return data
     }
 
@@ -425,7 +439,7 @@ public actor MatroskaRemux {
             let samples = audioFrames.map { FragmentSample(data: $0.data, duration: UInt32(clamping: audioStep), isSync: true) }
             runs.append((tracks[1], UInt64(max(start, 0)), samples))
         }
-        return FragmentWriter.mediaSegment(sequence: UInt32(index + 1), runs: runs)
+        return try FragmentWriter.mediaSegment(sequence: UInt32(index + 1), runs: runs)
     }
 
     /// The first segment made sets the grid: how far decoding runs ahead of presentation (the deepest reordering of
