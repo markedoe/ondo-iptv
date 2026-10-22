@@ -16,7 +16,7 @@ UN LECTEUR QUI FONCTIONNE, TOUT SIMPLEMENT
 
 TV EN DIRECT
 • Chaînes par catégorie avec le programme en cours et le suivant
-• Chaînes favorites
+• Chaînes de Ma liste, guide TV et rappels de programmes
 
 SUR ANDROID TV ET GOOGLE TV
 • Chaque écran à la télécommande

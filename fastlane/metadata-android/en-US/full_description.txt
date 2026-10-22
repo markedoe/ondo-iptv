@@ -16,7 +16,7 @@ A PLAYER THAT JUST WORKS
 
 LIVE TV
 • Channels by category with what is on now and next
-• Favourite channels
+• Channels in My List, a TV guide and programme reminders
 
 ON ANDROID TV AND GOOGLE TV
 • Every screen with the remote

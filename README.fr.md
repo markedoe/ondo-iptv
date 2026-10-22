@@ -48,8 +48,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
   ou note, fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
-  acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (parmi les fiches déjà
-  ouvertes, ou tous avec un jeton TMDb) ; un genre, l'année de sortie ou un prix (puis son festival) ouvre les
+  acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (les séries d'après la liste
+  du fournisseur, les films parmi les fiches déjà ouvertes, ou tous avec un jeton TMDb) ; un genre, l'année de sortie ou un prix (puis son festival) ouvre les
   titres qui le partagent ; quand l'image de fond du fournisseur manque ou ne se charge pas, la fiche affiche
   celle de TMDb (avec un jeton) ou l'affiche floutée.
 - **Recherche** (la loupe en haut de chaque onglet sur iPhone) : chaînes, programmes, films et séries,
@@ -110,7 +110,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
-  films et séries (parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
+  films et séries (les séries toujours, les films parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
   partagent.
 - **TV en direct** : catégories, Ma liste, programme en cours et suivant.
 - **Recherche** (la loupe d'Accueil, Films, Séries, TV en direct et Ma liste) : chaînes, films, séries et

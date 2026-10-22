@@ -10,7 +10,7 @@ follows its own plan: [ANDROID.md](ANDROID.md).
 
 | Topic | Choice | Why |
 |---|---|---|
-| Language / UI | Swift 5.10+ (Swift 6 compiler), SwiftUI, Observation (`@Observable`) | a single codebase for iPhone + native Mac |
+| Language / UI | Swift 6 compiler (the app in the Swift 5 language mode, IPTVCore in Swift 6 mode), SwiftUI, Observation (`@Observable`) | a single codebase for iPhone + native Mac |
 | Targets | **iOS 17+**, **macOS 14+** (iPad included via the iOS target) | `@Observable`, `NavigationSplitView`, `ContentUnavailableView` |
 | Xcode project | **XcodeGen** (`project.yml`) | readable, versionable project, no hand-written `.pbxproj` |
 | Business logic | SPM package **`IPTVCore`** (pure Foundation) | testable on Linux and in CI, reusable (tvOS later) |

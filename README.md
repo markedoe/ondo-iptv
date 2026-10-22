@@ -48,8 +48,8 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
-  see their other movies and series in the playlist (from the pages already opened, or all of them with a
-  TMDb token); a genre, the release year or an award (then its festival) opens the titles that share it; when the
+  see their other movies and series in the playlist (series from the provider's list, movies from the pages
+  already opened, or all of them with a TMDb token); a genre, the release year or an award (then its festival) opens the titles that share it; when the
   provider's background image is missing or broken, the page shows TMDb's (with a token) or the blurred poster.
 - **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
   **actors and directors by name**, **filtered by release years** and **by festival or ceremony** (winners only if you like).
@@ -104,7 +104,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), detail pages (Resume, From Start, next
   episode, seasons, More Like This); a director's or an actor's name opens their other movies and series
-  (among the pages already opened), and a genre, the year or an award the titles that share it.
+  (series always, movies among the pages already opened), and a genre, the year or an award the titles that share it.
 - **Live TV**: categories, My List, current and next programme.
 - **Search** (the magnifying glass of Home, Movies, Series, Live TV and My List): channels, movies, series and
   **actors and directors by name**, filtered by release years or by festival / ceremony (winners only, if you
