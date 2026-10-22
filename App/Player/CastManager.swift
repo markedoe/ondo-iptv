@@ -150,6 +150,11 @@ final class CastManager {
         #endif
     }
 
+    /// The receiver's own state: paused from the TV's remote or another phone, or finished.
+    fileprivate func receiverChanged(playing: Bool) {
+        isPlaying = playing
+    }
+
     fileprivate func sessionChanged(connected: Bool, name: String?) {
         isConnected = connected
         deviceName = connected ? name : nil
@@ -161,7 +166,7 @@ final class CastManager {
 }
 
 #if canImport(GoogleCast)
-private final class CastSessionListener: NSObject, GCKSessionManagerListener {
+private final class CastSessionListener: NSObject, GCKSessionManagerListener, GCKRemoteMediaClientListener {
     weak var manager: CastManager?
 
     init(manager: CastManager) {
@@ -169,16 +174,19 @@ private final class CastSessionListener: NSObject, GCKSessionManagerListener {
     }
 
     func sessionManager(_ sessionManager: GCKSessionManager, didStart session: GCKCastSession) {
+        session.remoteMediaClient?.add(self)
         let name = session.device.friendlyName
         Task { @MainActor in self.manager?.sessionChanged(connected: true, name: name) }
     }
 
     func sessionManager(_ sessionManager: GCKSessionManager, didResumeCastSession session: GCKCastSession) {
+        session.remoteMediaClient?.add(self)
         let name = session.device.friendlyName
         Task { @MainActor in self.manager?.sessionChanged(connected: true, name: name) }
     }
 
     func sessionManager(_ sessionManager: GCKSessionManager, didEnd session: GCKCastSession, withError error: Error?) {
+        session.remoteMediaClient?.remove(self)
         let message = error?.localizedDescription
         Task { @MainActor in
             self.manager?.sessionChanged(connected: false, name: nil)
@@ -189,6 +197,12 @@ private final class CastSessionListener: NSObject, GCKSessionManagerListener {
     func sessionManager(_ sessionManager: GCKSessionManager, didFailToStart session: GCKCastSession, withError error: Error) {
         let message = error.localizedDescription
         Task { @MainActor in self.manager?.lastError = message }
+    }
+
+    func remoteMediaClient(_ client: GCKRemoteMediaClient, didUpdate mediaStatus: GCKMediaStatus?) {
+        guard let state = mediaStatus?.playerState else { return }
+        let playing = state == .playing || state == .buffering || state == .loading
+        Task { @MainActor in self.manager?.receiverChanged(playing: playing) }
     }
 }
 
