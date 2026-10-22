@@ -135,15 +135,16 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
 
 ## E. First upload and testing
 
-### E1. First bundle (manual)
+### E1. First bundle
 
-Google does not let the API create the first release: the first AAB is uploaded by hand.
-
-1. *GitHub → Actions → Release Android → Run workflow* (track `internal`, status `draft`). If the fastlane
-   upload fails because the app has no release yet, that's fine: download the **ondo-release-bundle**
-   artifact (file `app-release.aab`) from the run.
-2. *Play Console → Test and release → Internal testing → Create new release*: accept Play App Signing,
-   upload `app-release.aab`, add testers (email list) and roll out.
+1. *GitHub → Actions → Release Android → Run workflow* (track `internal`, status `draft`): the workflow sends
+   the bundle, the listing texts and the screenshots, and creates a draft release on the internal track.
+   If Google refuses it because the app has no release yet, download the **ondo-release-bundle** artifact
+   (file `app-release.aab`) from the run and upload it in *Internal testing → Create new release*.
+2. *Play Console → Test and release → Testing → Internal testing*: in *Testers*, create an email list with
+   your Google account and save. Then *Releases* → the draft → *Edit* → *Next* → *Save and publish*. Open
+   the *Join on Android* link on the phone and install Ondo from Google Play. *Test and release → App
+   integrity* shows that Google Play signs the app (Play App Signing); the upload key stays yours.
 3. Subsequent releases go out from GitHub: `git tag android-v1.1.1 && git push origin android-v1.1.1`
    (internal track, release rolled out), or *Run workflow* with the desired track. The `versionCode`
    increases on every run (1000 + run number). The `versionName` comes only from an `android-vX.Y.Z` tag: a

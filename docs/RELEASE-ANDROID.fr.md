@@ -139,16 +139,18 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
 
 ## E. Premier envoi et tests
 
-### E1. Premier bundle (manuel)
+### E1. Premier bundle
 
-Google n'autorise pas l'API à créer la première version : le premier AAB s'envoie à la main.
-
-1. *GitHub → Actions → Release Android → Run workflow* (piste `internal`, statut `draft`). Si l'envoi
-   fastlane échoue parce que l'app n'a encore aucune version, ce n'est pas grave : téléchargez l'artefact
-   **ondo-release-bundle** (fichier `app-release.aab`) de l'exécution.
-2. *Play Console → Tester et publier → Tests internes → Créer une version* : acceptez la signature
-   d'application par Google Play, importez `app-release.aab`, ajoutez des testeurs (liste d'e-mails) et
-   déployez.
+1. *GitHub → Actions → Release Android → Run workflow* (piste `internal`, statut `draft`) : le workflow
+   envoie le bundle, les textes de la fiche et les captures, et crée une version brouillon sur la piste
+   interne. Si Google la refuse parce que l'app n'a encore aucune version, téléchargez l'artefact
+   **ondo-release-bundle** (fichier `app-release.aab`) de l'exécution et importez-le dans *Tests internes →
+   Créer une version*.
+2. *Play Console → Tester et publier → Tests → Tests internes* : dans *Testeurs*, créez une liste d'e-mails
+   avec votre compte Google et enregistrez. Puis *Versions* → le brouillon → *Modifier* → *Suivant* →
+   *Enregistrer et publier*. Ouvrez le lien *Rejoindre sur Android* sur le téléphone et installez Ondo depuis
+   Google Play. *Tester et publier → Intégrité de l'application* montre que Google Play signe l'app (signature
+   d'application Play) ; la clé d'importation reste la vôtre.
 3. Les versions suivantes partent de GitHub : `git tag android-v1.1.1 && git push origin android-v1.1.1`
    (piste interne, version déployée), ou *Run workflow* avec la piste voulue. Le `versionCode` augmente à
    chaque exécution (1000 + numéro d'exécution). Le `versionName` vient uniquement d'un tag `android-vX.Y.Z` :
