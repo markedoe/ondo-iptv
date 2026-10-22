@@ -195,6 +195,18 @@ réseau, fichiers choisis par l'utilisateur).
 4. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
    fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.
+
+   **En-tête et résultats de recherche** (iPhone et iPad sous iOS / iPadOS 27 ou plus ; pas le Mac) : l'onglet
+   *En-tête et résultats de recherche* de la page de la version. Les images sont
+   `fastlane/creative/<langue>/header.jpg` (21:9, 3840×1646) et `search.jpg` (3:2, 3840×2560), en anglais et en
+   français, dessinées à partir des captures App Store par `fastlane/creative/render.mjs` (voir ses premières
+   lignes) ; dessinez-les de nouveau quand les captures changent. *Actions → App Store header and search results
+   → Run workflow* : `status` montre ce que contient App Store Connect (lecture seule), `upload` dépose les
+   images dans la bibliothèque de ressources (Asset Library) sans toucher à aucune version, `place` les affiche
+   sur la version iOS en préparation. Une version en review ou approuvée ne peut pas changer : `place` la
+   refuse. Les ressources passent en review avec la version qui les porte ; la bibliothèque peut aussi les
+   soumettre seules (App Store Connect → Asset Library), après quoi elles se publient sur la version en ligne
+   sans nouvelle version. Rien n'est soumis sans votre accord.
 5. Dans chaque version (iOS et macOS, par exemple 1.1.0) : choisissez le build de l'édition **app-store** →
    **Add for Review** → **Submit for Review**. Ou *Run workflow* avec la cible `metadata` (la fiche ;
    `metadata-ios` ou `metadata-mac` pour une seule plateforme, car une version en review ne peut plus être

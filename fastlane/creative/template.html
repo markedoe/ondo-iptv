@@ -1,0 +1,113 @@
+<!doctype html>
+<!--
+  The App Store product page header (21:9) and search results asset (3:2) for iOS and iPadOS 27, drawn from the
+  App Store screenshots. render.mjs opens this page once per asset and language:
+  template.html?kind=header|search&locale=en-US|fr-FR&shots=<folder of the appstore-screenshots branch>
+  Key elements stay in the centre: the App Store shows its own icon, name and Get button around the header.
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --deep: #071a16;
+    --brand: #11362f;
+    --lime: #cef941;
+    --cream: #f5efdc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--deep); }
+  body {
+    position: relative;
+    font-family: "Inter Display", "Inter", sans-serif;
+    background:
+      radial-gradient(ellipse 55% 60% at 50% 38%, rgba(206, 249, 65, 0.16), transparent 70%),
+      radial-gradient(ellipse 90% 80% at 50% 110%, rgba(17, 54, 47, 0.95), transparent 70%),
+      linear-gradient(180deg, #0b2621 0%, var(--deep) 100%);
+  }
+  svg.waves { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .stage { position: absolute; left: 50%; transform: translateX(-50%); }
+  .device { position: absolute; background: #0b0b0c; box-shadow: 0 0 0 3px #2c2f2e, 0 80px 160px rgba(0, 0, 0, 0.6); }
+  /* The iPad screenshots carry a rotated orientation tag from the simulator; their pixels are already upright. */
+  .device img { display: block; width: 100%; height: 100%; object-fit: cover; image-orientation: none; }
+  .tablet { border-radius: 96px; padding: 38px; }
+  .tablet img { border-radius: 60px; }
+  .phone { border-radius: 104px; padding: 22px; }
+  .phone img { border-radius: 84px; }
+  h1 {
+    position: absolute; left: 0; right: 0; text-align: center;
+    color: var(--cream); font-weight: 600; letter-spacing: -0.02em; line-height: 1.08;
+  }
+  h1 span { display: block; color: var(--lime); }
+</style>
+</head>
+<body>
+<svg class="waves" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+  <!-- The icon's wave, drawn across the whole width behind the devices. -->
+  <path d="M -20 610 C 140 610, 200 470, 330 470 S 520 640, 640 640 S 860 500, 1020 520"
+        fill="none" stroke="#f5efdc" stroke-opacity="0.13" stroke-width="7" vector-effect="non-scaling-stroke"/>
+  <path d="M -20 690 C 160 690, 230 560, 360 560 S 560 720, 690 720 S 880 590, 1020 600"
+        fill="none" stroke="#cef941" stroke-opacity="0.10" stroke-width="5" vector-effect="non-scaling-stroke"/>
+</svg>
+<h1 id="title"></h1>
+<div class="stage" id="stage"></div>
+<script>
+  const params = new URLSearchParams(location.search);
+  const kind = params.get("kind") || "header";
+  const locale = params.get("locale") || "en-US";
+  const shots = params.get("shots");
+  // A short phrase on the search results asset only: what Ondo is, at a glance. Never "free" (CLAUDE.md).
+  const titles = {
+    "en-US": ["Movies, series and live TV", "from your own playlist"],
+    "fr-FR": ["Films, séries et TV en direct", "depuis votre playlist"],
+  };
+  const size = kind === "header" ? [3840, 1646] : [3840, 2560];
+  document.documentElement.style.width = size[0] + "px";
+  document.documentElement.style.height = size[1] + "px";
+
+  // Device sizes: the iPad screenshots are 2752 × 2064, the iPhone ones 1320 × 2868.
+  const layout = kind === "header"
+    ? { top: 250, tablet: 1880, phone: 600, phoneDrop: 230, spread: 1240 }
+    : { top: 830, tablet: 2240, phone: 720, phoneDrop: 260, spread: 1480 };
+  const stage = document.getElementById("stage");
+  stage.style.top = layout.top + "px";
+
+  function device(className, file, width, aspect, left, top, z) {
+    const frame = document.createElement("div");
+    frame.className = "device " + className;
+    frame.style.width = width + "px";
+    frame.style.height = Math.round(width / aspect) + "px";
+    frame.style.left = left + "px";
+    frame.style.top = top + "px";
+    frame.style.zIndex = z;
+    const image = document.createElement("img");
+    image.src = `${shots}/${locale}/${file}`;
+    frame.appendChild(image);
+    stage.appendChild(frame);
+    return frame;
+  }
+
+  const tabletBezel = 76;
+  const phoneBezel = 44;
+  device("tablet", "01-home-ipad-13.png", layout.tablet, (2752 + tabletBezel) / (2064 + tabletBezel), -layout.tablet / 2, 0, 1);
+  device("phone", "02-movie-iphone-max.png", layout.phone, (1320 + phoneBezel) / (2868 + phoneBezel),
+         -layout.spread - layout.phone / 2, layout.phoneDrop, 2);
+  device("phone", "03-series-iphone-max.png", layout.phone, (1320 + phoneBezel) / (2868 + phoneBezel),
+         layout.spread - layout.phone / 2, layout.phoneDrop, 2);
+
+  if (kind === "search") {
+    const title = document.getElementById("title");
+    const [first, second] = titles[locale];
+    title.style.top = "230px";
+    title.style.fontSize = "176px";
+    title.textContent = first;
+    const accent = document.createElement("span");
+    accent.textContent = second;
+    title.appendChild(accent);
+  }
+
+  // render.mjs waits for this before taking the picture.
+  Promise.all([...document.images].map((image) => image.decode())).then(() => { document.body.dataset.ready = "1"; });
+</script>
+</body>
+</html>
