@@ -41,6 +41,8 @@
     <string name="sort_rating">Rating</string>
     <string name="back">Back</string>
     <string name="close">Close</string>
+    <!-- The player, when the number typed on the remote matches no channel. -->
+    <string name="no_channel_number">No channel %1$d</string>
     <string name="cancel">Cancel</string>
     <string name="delete">Delete</string>
     <string name="add">Add</string>

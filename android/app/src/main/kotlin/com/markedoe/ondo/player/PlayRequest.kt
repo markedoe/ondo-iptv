@@ -25,6 +25,8 @@ data class PlayRequest(
      */
     val liveBuffer: Int = 0,
     val vodBuffer: Int = 0,
+    /** The live channel played: the remote's channel keys change from it (zapping). */
+    val channelId: String? = null,
 ) {
     /** The buffer setting for this item. */
     val bufferSeconds: Int get() = PlaybackBuffer.setting(isLive, liveBuffer, vodBuffer)

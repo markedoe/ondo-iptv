@@ -40,6 +40,7 @@
     <string name="sort_rating">रेटिंग</string>
     <string name="back">वापस जाएँ</string>
     <string name="close">बंद करें</string>
+    <string name="no_channel_number">चैनल %1$d मौजूद नहीं है</string>
     <string name="cancel">रद्द करें</string>
     <string name="delete">डिलीट करें</string>
     <string name="add">जोड़ें</string>

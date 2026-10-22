@@ -226,6 +226,12 @@ object UiMappers {
         )
     }
 
+    /** The channels the player's channel keys go through: all of Live TV, hidden categories left out. */
+    fun zappingChannels(state: OndoState): List<Channel> {
+        val hidden = hiddenCategoryIds(state)
+        return state.content.channels.filter { it.categoryId !in hidden }
+    }
+
     /** The channels of a Live TV choice (My List, a category or all), the categories that have some, the favourites. */
     private class ChannelSelection(val channels: List<Channel>, val categories: List<MediaCategory>, val favoriteIds: Set<String>)
 

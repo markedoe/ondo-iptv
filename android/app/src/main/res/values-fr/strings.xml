@@ -40,6 +40,7 @@
     <string name="sort_rating">Note</string>
     <string name="back">Retour</string>
     <string name="close">Fermer</string>
+    <string name="no_channel_number">Pas de chaîne n° %1$d</string>
     <string name="cancel">Annuler</string>
     <string name="delete">Supprimer</string>
     <string name="add">Ajouter</string>

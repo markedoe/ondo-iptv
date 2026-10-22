@@ -539,7 +539,7 @@ class OndoRepository(
         val playlist = _state.value.activePlaylist ?: return null
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(channel)
         val entry = WatchEntry(playlist.id, ItemKind.CHANNEL, channel.id, null, channel.name, null, channel.logoUrl, lastWatchedAt = now())
-        return start(item, entry, fromStart = true)
+        return start(item, entry, fromStart = true).copy(channelId = channel.id)
     }
 
     private fun start(item: PlaybackItem, entry: WatchEntry, fromStart: Boolean): PlayRequest {

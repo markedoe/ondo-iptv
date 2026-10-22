@@ -1,5 +1,6 @@
 package com.markedoe.ondo.player
 
+import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
 import android.content.ClipData
@@ -15,6 +16,8 @@ import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
 import android.util.Rational
+import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -38,17 +42,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -67,6 +74,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
@@ -83,6 +91,8 @@ import androidx.media3.ui.PlayerView
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.library.ChannelZapping
+import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.net.DEFAULT_IPTV_USER_AGENT
 import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.core.playback.PlaybackBuffer
@@ -90,10 +100,13 @@ import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
 import com.markedoe.ondo.core.playback.RebufferPolicy
+import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.theme.OndoTheme
+import com.markedoe.ondo.ui.tv.TvSafeArea
 import com.markedoe.ondo.ui.tv.isTelevision
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -124,6 +137,27 @@ class PlayerActivity : ComponentActivity() {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && !resources.configuration.isTelevision
     }
 
+    /** A TV: no Picture-in-Picture, the overlays inside the safe area and shown with the controls only. */
+    private val television by lazy { resources.configuration.isTelevision }
+
+    /** The player's controls are on screen (the remote's arrows then move through them). */
+    private var controlsShown by mutableStateOf(false)
+
+    /** The channel just zapped to, shown a moment at the top. */
+    private var banner by mutableStateOf<ChannelBanner?>(null)
+    private var bannerJob: Job? = null
+
+    /** A channel number being typed on the remote. */
+    private val numberEntry = ChannelNumberEntry()
+    private var typedNumber by mutableStateOf("")
+    private var numberJob: Job? = null
+
+    /** The channel watched before this one (the remote's "last channel" key). */
+    private var lastChannel: PlayRequest? = null
+
+    /** Keys the player handled when pressed: their release is consumed too. */
+    private val handledKeys = HashSet<Int>()
+
     /** Freezes and lost pictures of this playback, explained; shown by More, Stream Statistics. */
     private var health = PlaybackHealth()
     private var healthStart = SystemClock.elapsedRealtime()
@@ -149,6 +183,9 @@ class PlayerActivity : ComponentActivity() {
         }
 
         reporter = PlaybackReporter(request, SystemClock::elapsedRealtime)
+        // The channel list for the remote's channel keys, when the player was opened again alone (after Android
+        // stopped the app in the background).
+        repository.bootstrap()
         val exoPlayer = buildPlayer()
         player = exoPlayer
         // Prepared first: the media session starts from a player that is already loading.
@@ -156,6 +193,7 @@ class PlayerActivity : ComponentActivity() {
         session = MediaSession.Builder(this, exoPlayer).build()
 
         setContent {
+            val safeArea = if (television) Modifier.padding(TvSafeArea) else Modifier
             OndoTheme {
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     AndroidView(
@@ -171,6 +209,12 @@ class PlayerActivity : ComponentActivity() {
                                 // The screen stays on while the video plays only: paused, it may dim and a TV may
                                 // show its screen saver (TV-BU, TV-BY).
                                 keepScreenOn = exoPlayer.isPlaying
+                                setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { controlsShown = it == View.VISIBLE })
+                                if (television) {
+                                    // The time bar and its times out of the 5 % a TV may crop (TV-OV).
+                                    val (horizontal, vertical) = (48 * resources.displayMetrics.density).toInt() to (27 * resources.displayMetrics.density).toInt()
+                                    findViewById<View>(androidx.media3.ui.R.id.exo_controller)?.setPadding(horizontal, vertical, horizontal, vertical)
+                                }
                                 // The video's place on screen, for the animation into Picture-in-Picture.
                                 videoSurfaceView?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updatePictureInPictureParams() }
                             }.also { playerView = it }
@@ -180,18 +224,19 @@ class PlayerActivity : ComponentActivity() {
                     statistics?.takeIf { showsStatistics && !inPictureInPicture }?.let {
                         StreamStatisticsPanel(
                             it,
-                            Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).padding(start = 16.dp, top = 64.dp, end = 16.dp),
+                            Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(start = 16.dp, top = 64.dp, end = 16.dp),
                         )
                     }
                     // The small Picture-in-Picture window shows the video only: the system draws its own controls.
-                    if (!inPictureInPicture) {
+                    // On a TV, Close and More come and go with the controls (Back closes, the remote reaches More).
+                    if (!inPictureInPicture && (!television || controlsShown)) {
                         IconButton(
                             onClick = { finish() },
-                            modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp),
+                            modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(8.dp),
                         ) {
                             Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
                         }
-                        Box(Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp)) {
+                        Box(Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(8.dp)) {
                             var menu by remember { mutableStateOf(false) }
                             IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playerMore")) {
                                 Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more), tint = Color.White)
@@ -229,15 +274,36 @@ class PlayerActivity : ComponentActivity() {
                         )
                     }
                     errorMessage?.takeIf { !inPictureInPicture }?.let { message ->
+                        // With a remote, Try Again has the focus: OK retries.
+                        val retryFocus = remember { FocusRequester() }
+                        LaunchedEffect(message) { runCatching { retryFocus.requestFocus() } }
                         Column(
                             modifier = Modifier.align(Alignment.Center).padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(message, color = Color.White, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-                            Button(onClick = { retry() }, modifier = Modifier.padding(top = 16.dp)) {
+                            Button(onClick = { retry() }, modifier = Modifier.padding(top = 16.dp).focusRequester(retryFocus)) {
                                 Text(stringResource(R.string.try_again))
                             }
                         }
+                    }
+                    banner?.takeIf { !inPictureInPicture }?.let {
+                        ChannelBannerView(it, Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(16.dp))
+                    }
+                    typedNumber.takeIf { it.isNotEmpty() && !inPictureInPicture }?.let {
+                        Text(
+                            it,
+                            color = Color.White,
+                            style = MaterialTheme.typography.displaySmall,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .windowInsetsPadding(WindowInsets.safeDrawing)
+                                .then(safeArea)
+                                .padding(16.dp)
+                                .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                                .testTag("typedNumber"),
+                        )
                     }
                 }
             }
@@ -370,8 +436,13 @@ class PlayerActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         val next = intent.playRequest() ?: return
-        saveProgress()
         setIntent(intent)
+        switchTo(next)
+    }
+
+    /** Plays [next] instead of what plays now (the progress of the current one is saved first). */
+    private fun switchTo(next: PlayRequest) {
+        saveProgress()
         request = next
         urlIndex = 0
         errorMessage = null
@@ -385,6 +456,106 @@ class PlayerActivity : ComponentActivity() {
         playerView?.player = exoPlayer
         play(0, request.startPositionMs)
         session = MediaSession.Builder(this, exoPlayer).build()
+    }
+
+    /**
+     * Every key reaches the remote's handling first, before the focused control. Activity.dispatchKeyEvent is public
+     * Android API; AndroidX's ComponentActivity only marks its own override as internal to its libraries.
+     */
+    @SuppressLint("RestrictedApi")
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean = remoteKey(event) || super.dispatchKeyEvent(event)
+
+    /** A key of the remote or a keyboard ([RemoteKeys]); false when it does what it does by default. */
+    private fun remoteKey(event: KeyEvent): Boolean {
+        if (inPictureInPicture) return false
+        if (event.action == KeyEvent.ACTION_UP) return handledKeys.remove(event.keyCode)
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+        val view = playerView ?: return false
+        val exoPlayer = player ?: return false
+        val zapping = request.isLive && request.channelId != null
+        val action = RemoteKeys.action(event.keyCode, controlsShown, zapping, exoPlayer.isCurrentMediaItemSeekable) ?: return false
+        // A stream that failed: OK presses Try Again; the channel keys still lead to another channel.
+        val changesChannel = action is RemoteAction.Digit || action == RemoteAction.NextChannel ||
+            action == RemoteAction.PreviousChannel || action == RemoteAction.LastChannel
+        if (errorMessage != null && !changesChannel) return false
+        when (action) {
+            RemoteAction.TogglePlay -> {
+                Util.handlePlayPauseButtonAction(exoPlayer)
+                view.showController()
+            }
+            RemoteAction.Play -> Util.handlePlayButtonAction(exoPlayer)
+            RemoteAction.Pause -> Util.handlePauseButtonAction(exoPlayer)
+            RemoteAction.SeekBack -> {
+                exoPlayer.seekBack()
+                view.showController()
+            }
+            RemoteAction.SeekForward -> {
+                exoPlayer.seekForward()
+                view.showController()
+            }
+            RemoteAction.NextChannel -> zap(1)
+            RemoteAction.PreviousChannel -> zap(-1)
+            RemoteAction.LastChannel -> backToLastChannel()
+            RemoteAction.ShowControls -> view.showController()
+            RemoteAction.HideControls -> view.hideController()
+            is RemoteAction.Digit -> typeDigit(action.value)
+        }
+        handledKeys += event.keyCode
+        return true
+    }
+
+    private val repository get() = (application as OndoApplication).repository
+
+    /** The channel [by] places after (or before) this one in Live TV. */
+    private fun zap(by: Int) {
+        val from = request.channelId ?: return
+        ChannelZapping.step(UiMappers.zappingChannels(repository.state.value), from, by)?.let(::playChannel)
+    }
+
+    /** The channel of a number typed on the remote, or a word that there is none. */
+    private fun zapTo(number: Int) {
+        val channel = ChannelZapping.byNumber(UiMappers.zappingChannels(repository.state.value), number)
+        if (channel == null) showBanner(ChannelBanner(getString(R.string.no_channel_number, number), null)) else playChannel(channel)
+    }
+
+    private fun playChannel(channel: Channel) {
+        if (channel.id == request.channelId) return
+        val next = repository.playRequest(channel) ?: return
+        lastChannel = request
+        switchTo(next)
+        val now = repository.state.value.guide?.current(channel, System.currentTimeMillis())?.title
+        showBanner(ChannelBanner(listOfNotNull(channel.number?.toString(), channel.name).joinToString("  "), now))
+    }
+
+    private fun backToLastChannel() {
+        val previous = lastChannel ?: return
+        lastChannel = request
+        switchTo(previous)
+        showBanner(ChannelBanner(previous.title, null))
+    }
+
+    private fun typeDigit(digit: Int) {
+        val complete = numberEntry.add(digit)
+        typedNumber = numberEntry.typed
+        numberJob?.cancel()
+        if (complete != null) {
+            zapTo(complete)
+            return
+        }
+        numberJob = lifecycleScope.launch {
+            delay(ChannelNumberEntry.WAIT_MS)
+            typedNumber = ""
+            numberEntry.finish()?.let(::zapTo)
+        }
+    }
+
+    private fun showBanner(value: ChannelBanner) {
+        banner = value
+        bannerJob?.cancel()
+        bannerJob = lifecycleScope.launch {
+            delay(4_000)
+            banner = null
+        }
     }
 
     private fun retry() {

@@ -40,6 +40,7 @@
     <string name="sort_rating">Avaliação</string>
     <string name="back">Voltar</string>
     <string name="close">Fechar</string>
+    <string name="no_channel_number">Nenhum canal %1$d</string>
     <string name="cancel">Cancelar</string>
     <string name="delete">Excluir</string>
     <string name="add">Adicionar</string>
