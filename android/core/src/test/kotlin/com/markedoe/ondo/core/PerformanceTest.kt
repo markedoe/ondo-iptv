@@ -5,6 +5,8 @@ import com.markedoe.ondo.core.epg.EpgFilter
 import com.markedoe.ondo.core.epg.XmltvParser
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.library.SearchEngine
+import com.markedoe.ondo.core.model.EpgData
+import com.markedoe.ondo.core.model.EpgProgram
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -62,6 +64,39 @@ class PerformanceTest {
         assertEquals(250 * 200, data.programCount)
         println("100k programmes parsed (50k kept) in ${elapsed}s")
         assertTrue(elapsed < 30, "took ${elapsed}s")
+    }
+
+    /** A user guide and the provider's covering the same channels: overlap checks must not scan every programme. */
+    @Test
+    fun mergingTwoLargeGuidesIsQuick() {
+        val base = utc(2025, 10, 9, 0)
+        fun guide(first: Int) = EpgData(
+            programs = (0 until 200).associate { c ->
+                "ch$c" to (first until first + 1000).map { p ->
+                    EpgProgram("ch$c", base + p * 1_800_000L, base + (p + 1) * 1_800_000L, "Show $p")
+                }
+            },
+        )
+        val merged = guide(0)
+        val later = guide(500) // half of it overlaps, half is new
+        val start = System.nanoTime()
+        val result = merged.merged(later)
+        val elapsed = (System.nanoTime() - start) / 1e9
+        println("200 channels x 1000 programmes merged in ${elapsed}s")
+        assertEquals(200 * 1500, result.programCount)
+        assertEquals(listOf("Show 1498", "Show 1499"), result.programs["ch0"]?.map { it.title }?.takeLast(2))
+        assertTrue(elapsed < 5, "took ${elapsed}s")
+
+        // One channel with a long archive: scanning its programmes for each new one would take seconds.
+        fun long(first: Int) = EpgData(
+            programs = mapOf("ch" to (first until first + 60_000).map { p -> EpgProgram("ch", base + p * 600_000L, base + (p + 1) * 600_000L, "Show $p") }),
+        )
+        val longStart = System.nanoTime()
+        val longResult = long(0).merged(long(30_000))
+        val longElapsed = (System.nanoTime() - longStart) / 1e9
+        println("60 000 + 60 000 programmes of one channel merged in ${longElapsed}s")
+        assertEquals(90_000, longResult.programCount)
+        assertTrue(longElapsed < 5, "took ${longElapsed}s")
     }
 
     private fun stamp(epochMillis: Long) = CatchupUrlBuilder.format(epochMillis, "YmdHMS") + " +0000"

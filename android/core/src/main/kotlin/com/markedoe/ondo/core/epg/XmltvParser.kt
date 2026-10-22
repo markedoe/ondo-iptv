@@ -6,6 +6,7 @@ import com.markedoe.ondo.core.model.EpgData
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.TimeWindow
 import com.markedoe.ondo.core.net.Gzip
+import com.markedoe.ondo.core.net.GzipTooLargeException
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.parsing.Sax
 import java.io.ByteArrayInputStream
@@ -22,7 +23,9 @@ class XmltvParseException(message: String, cause: Throwable? = null) : IOExcepti
 /**
  * Streaming XMLTV parser (SAX). Gzip input is detected and inflated on the fly. Programmes outside the
  * filter's window or channels are dropped while parsing, so huge guides stay cheap in memory. A guide that
- * breaks half-way keeps what was read before the error.
+ * breaks half-way keeps what was read before the error. A file that yields nothing is an error when it is
+ * broken or is not a guide at all: providers answer some refusals with an HTML page and a 200, which must not
+ * pass for an empty guide.
  */
 class XmltvParser {
     /**
@@ -39,21 +42,35 @@ class XmltvParser {
     ): List<EpgProgram> = parseGuide(input, EpgFilter(window = window, channelIds = channels), timeShiftMillis).allPrograms
 
     /** Channels and programmes (by channel, sorted by start) of a guide read from a stream. */
-    fun parseGuide(input: InputStream, filter: EpgFilter = EpgFilter.NONE, timeShiftMillis: Long = 0): EpgData {
+    fun parseGuide(input: InputStream, filter: EpgFilter = EpgFilter.NONE, timeShiftMillis: Long = 0): EpgData =
+        parseGuide(input, filter, timeShiftMillis, Gzip.MAX_GUNZIPPED_SIZE)
+
+    /** [sizeLimit]: largest inflated size of a gzip guide; a larger one throws [GzipTooLargeException]. */
+    internal fun parseGuide(input: InputStream, filter: EpgFilter, timeShiftMillis: Long, sizeLimit: Long): EpgData {
         val handler = XmltvHandler(filter, timeShiftMillis)
         try {
-            Sax.parse(Gzip.decompressingStream(input), handler)
+            Sax.parse(Gzip.decompressingStream(input, sizeLimit), handler)
         } catch (e: SAXException) {
+            tooLarge(e)?.let { throw it }
             if (handler.isEmpty) throw XmltvParseException("Invalid XMLTV guide: ${e.message}", e)
         } catch (e: IOException) {
+            tooLarge(e)?.let { throw it }
             if (handler.isEmpty) throw XmltvParseException("Invalid XMLTV guide: ${e.message}", e)
         }
+        if (handler.isEmpty && !handler.sawGuideElement) throw XmltvParseException("Invalid XMLTV guide: no <tv> element")
         return handler.result()
     }
 
-    /** Same as the stream variant, for a downloaded guide (gzip or plain). */
+    /** The size limit reached while parsing, which the parser may have wrapped. */
+    private fun tooLarge(error: Throwable): GzipTooLargeException? =
+        generateSequence(error) { it.cause }.take(8).filterIsInstance<GzipTooLargeException>().firstOrNull()
+
+    /**
+     * Same as the stream variant, for a downloaded guide (gzip or plain). A gzip guide is inflated while it is
+     * parsed, never whole in memory: inflated, a large guide takes hundreds of megabytes.
+     */
     fun parseGuide(bytes: ByteArray, filter: EpgFilter = EpgFilter.NONE, timeShiftMillis: Long = 0): EpgData =
-        parseGuide(ByteArrayInputStream(Gzip.gunzipIfNeeded(bytes)), filter, timeShiftMillis)
+        parseGuide(ByteArrayInputStream(bytes), filter, timeShiftMillis)
 
     companion object {
         /**
@@ -164,6 +181,10 @@ private class XmltvHandler(private val filter: EpgFilter, private val timeShift:
     private val programs = LinkedHashMap<String, MutableList<EpgProgram>>()
     private var programCount = 0
 
+    /** Whether the document has the `<tv>` element of an XMLTV guide. */
+    var sawGuideElement = false
+        private set
+
     // Channel being parsed.
     private var channelId: String? = null
     private var channelNames = ArrayList<String>()
@@ -207,6 +228,8 @@ private class XmltvHandler(private val filter: EpgFilter, private val timeShift:
 
     override fun startElement(uri: String?, localName: String?, qName: String, attributes: Attributes) {
         when (qName) {
+            "tv" -> sawGuideElement = true
+
             "programme" -> {
                 val channel = attributes.getValue("channel")
                 val start = attributes.getValue("start")?.let(XmltvParser::parseDate)

@@ -61,19 +61,22 @@ object Gzip {
         return output.toByteArray()
     }
 
-    /** Wraps `input` so gzip compressed streams are inflated on the fly (detected by the magic number). */
-    fun decompressingStream(input: InputStream): InputStream {
+    /**
+     * Wraps `input` so gzip compressed streams are inflated on the fly (detected by the magic number). Reading
+     * more than `limit` inflated bytes throws [GzipTooLargeException].
+     */
+    fun decompressingStream(input: InputStream, limit: Long = MAX_GUNZIPPED_SIZE): InputStream {
         val buffered = if (input.markSupported()) input else BufferedInputStream(input, BUFFER_SIZE)
         buffered.mark(2)
         val first = buffered.read()
         val second = buffered.read()
         buffered.reset()
-        return if (first == 0x1f && second == 0x8b) LimitedInputStream(GZIPInputStream(buffered, BUFFER_SIZE), MAX_GUNZIPPED_SIZE) else buffered
+        return if (first == 0x1f && second == 0x8b) LimitedInputStream(GZIPInputStream(buffered, BUFFER_SIZE), limit) else buffered
     }
 }
 
 /** Thrown when inflated data goes past the limit (a "gzip bomb", or a file far larger than any real one). */
-class GzipTooLargeException(limit: Long) : IOException("The decompressed data is larger than ${limit / (1024 * 1024)} MB")
+class GzipTooLargeException(val limit: Long) : IOException("The decompressed data is larger than ${limit / (1024 * 1024)} MB")
 
 /** Fails once more than [limit] bytes were read. */
 class LimitedInputStream(input: InputStream, private val limit: Long) : java.io.FilterInputStream(input) {

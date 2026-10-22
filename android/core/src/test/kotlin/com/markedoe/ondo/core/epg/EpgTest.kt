@@ -9,6 +9,7 @@ import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.TimeWindow
 import com.markedoe.ondo.core.net.Gzip
 import com.markedoe.ondo.core.net.GzipException
+import com.markedoe.ondo.core.net.GzipTooLargeException
 import com.markedoe.ondo.core.utc
 import java.io.ByteArrayInputStream
 import kotlin.test.Test
@@ -109,6 +110,45 @@ class EpgTest {
         assertTrue(parser.parseGuide(ByteArrayInputStream(gzipTruncated)).channels.isNotEmpty(), "truncated gzip keeps the readable part")
     }
 
+    /**
+     * An error page answered with a 200 is reported, not taken for an empty guide; a damaged guide keeps what
+     * could be read.
+     */
+    @Test
+    fun damagedGuides() {
+        for (page in listOf("<html><body>Forbidden</body></html>", "<html><body>Forbidden</body>", "Forbidden", "")) {
+            assertFailsWith<XmltvParseException>(page) { parser.parseGuide(page.encodeToByteArray()) }
+            assertFailsWith<XmltvParseException>(page) { parser.parseGuide(ByteArrayInputStream(page.encodeToByteArray())) }
+        }
+        assertEquals(0, parser.parseGuide("<?xml version=\"1.0\"?><tv></tv>".encodeToByteArray()).programCount, "an empty guide is not an error")
+        val xml = Fixtures.bytes("epg.xml")
+        val truncated = parser.parseGuide(xml.copyOf(xml.size - 200))
+        assertEquals(listOf("Le JT", "Film du soir"), truncated.programs["TV1.fr"]?.map { it.title }, "what was read before the damage is kept")
+    }
+
+    @Test
+    fun gzipMembersPaddingAndJunk() {
+        val compressed = Fixtures.bytes("epg.xml.gz")
+        val xml = Fixtures.bytes("epg.xml")
+        assertContentEquals(xml, Gzip.gunzip(compressed))
+        assertContentEquals(xml + xml, Gzip.gunzip(compressed + compressed), "concatenated members")
+        assertContentEquals(xml, Gzip.gunzip(compressed + ByteArray(16)), "padding after the file")
+        assertContentEquals(xml, Gzip.gunzip(compressed + "<html>junk</html>".encodeToByteArray()), "junk after the file")
+
+        // A downloaded guide is inflated while it is parsed, never whole in memory: same result.
+        val plain = parser.parseGuide(xml)
+        assertEquals(plain.programs, parser.parseGuide(compressed + ByteArray(16)).programs)
+        assertEquals(plain.programs, parser.parseGuide(compressed + "<html>junk</html>".encodeToByteArray()).programs)
+    }
+
+    @Test
+    fun gzipStopsAtTheSizeLimit() {
+        val compressed = Fixtures.bytes("epg.xml.gz")
+        assertEquals(100L, assertFailsWith<GzipTooLargeException> { Gzip.gunzip(compressed, limit = 100) }.limit)
+        // While parsing too: a guide far too large is the provider's fault, not a damaged guide.
+        assertFailsWith<GzipTooLargeException> { parser.parseGuide(ByteArrayInputStream(compressed), EpgFilter.NONE, 0, sizeLimit = 100) }
+    }
+
     @Test
     fun missingStopAndInvertedTimes() {
         val xml = """
@@ -181,6 +221,30 @@ class EpgTest {
         merged = merged.pruned(before = utc(2025, 1, 1, 11, 30))
         assertEquals(listOf("C"), merged.programs["c"]?.map { it.title })
         assertNull(merged.programs["d"])
+    }
+
+    /** A long programme holding a short one (a film around a news flash) still blocks what overlaps its end. */
+    @Test
+    fun mergeSeesOverlapsBehindANestedProgramme() {
+        val merged = EpgData(
+            programs = mapOf(
+                "c" to listOf(
+                    EpgProgram("c", utc(2025, 1, 1, 10), utc(2025, 1, 1, 14), "Long"),
+                    EpgProgram("c", utc(2025, 1, 1, 11), utc(2025, 1, 1, 12), "Flash"),
+                ),
+            ),
+        ).merged(
+            EpgData(
+                programs = mapOf(
+                    "c" to listOf(
+                        EpgProgram("c", utc(2025, 1, 1, 12, 30), utc(2025, 1, 1, 13), "Inside"),
+                        EpgProgram("c", utc(2025, 1, 1, 9), utc(2025, 1, 1, 10), "Before"),
+                        EpgProgram("c", utc(2025, 1, 1, 14), utc(2025, 1, 1, 15), "After"),
+                    ),
+                ),
+            ),
+        )
+        assertEquals(listOf("Before", "Long", "Flash", "After"), merged.programs["c"]?.map { it.title })
     }
 
     @Test

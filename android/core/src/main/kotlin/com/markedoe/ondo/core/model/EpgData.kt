@@ -39,9 +39,10 @@ data class EpgData(
                 mergedPrograms[id] = incoming
                 continue
             }
+            val taken = TakenSlots(existing)
             val combined = existing.toMutableList()
             for (program in incoming) {
-                if (existing.none { it.start < program.end && program.start < it.end }) combined.add(program)
+                if (!taken.overlaps(program)) combined.add(program)
             }
             mergedPrograms[id] = combined.sortedBy { it.start }
         }
@@ -60,5 +61,37 @@ data class EpgData(
 
     companion object {
         val EMPTY = EpgData()
+    }
+}
+
+/**
+ * The time a channel's programmes take, to tell in O(log n) whether another programme overlaps one of them:
+ * scanning the list for each programme of a second guide took seconds on long guides.
+ */
+private class TakenSlots(programs: List<EpgProgram>) {
+    private val starts: LongArray
+
+    /** Latest end among the programmes up to each index (programmes can overlap, so ends are not sorted). */
+    private val latestEnds: LongArray
+
+    init {
+        val sorted = programs.sortedBy { it.start }
+        starts = LongArray(sorted.size) { sorted[it].start }
+        var latest = Long.MIN_VALUE
+        latestEnds = LongArray(sorted.size) { index ->
+            latest = maxOf(latest, sorted[index].end)
+            latest
+        }
+    }
+
+    /** Whether one of the programmes starting before `program` ends is still on when it starts. */
+    fun overlaps(program: EpgProgram): Boolean {
+        var low = 0
+        var high = starts.size
+        while (low < high) {
+            val mid = (low + high) ushr 1
+            if (starts[mid] < program.end) low = mid + 1 else high = mid
+        }
+        return low > 0 && latestEnds[low - 1] > program.start
     }
 }
