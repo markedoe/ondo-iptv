@@ -9,6 +9,22 @@ public struct RemuxError: Error, Equatable, Sendable, CustomStringConvertible {
     }
 }
 
+/// Positions and times read from a file, added and scaled without trapping: a damaged file's values that overflow 64
+/// bits throw, and the app plays the file with VLC.
+extension Int64 {
+    func adding(_ other: Int64) throws -> Int64 {
+        let (sum, overflow) = addingReportingOverflow(other)
+        guard !overflow else { throw RemuxError("value out of range (\(self) + \(other))") }
+        return sum
+    }
+
+    func multiplied(by other: Int64) throws -> Int64 {
+        let (product, overflow) = multipliedReportingOverflow(by: other)
+        guard !overflow else { throw RemuxError("value out of range (\(self) × \(other))") }
+        return product
+    }
+}
+
 /// Random access to a file's bytes: a local file, memory, or a provider's server through range requests.
 public protocol ByteSource: Sendable {
     /// The file's size, when known.

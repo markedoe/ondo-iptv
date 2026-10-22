@@ -76,26 +76,20 @@ final class MatroskaReaderTests: XCTestCase {
 
     // MARK: Files built here
 
-    /// Element bytes: the ID, its size on 8 bytes, the body.
     private func element(_ id: UInt32, _ body: Data) -> Data {
-        var bytes = Data()
-        let idLength = id > 0xFF_FFFF ? 4 : id > 0xFFFF ? 3 : id > 0xFF ? 2 : 1
-        for shift in stride(from: (idLength - 1) * 8, through: 0, by: -8) { bytes.append(UInt8(truncatingIfNeeded: id >> UInt32(shift))) }
-        bytes.append(0x01)
-        for shift in stride(from: 48, through: 0, by: -8) { bytes.append(UInt8(truncatingIfNeeded: body.count >> shift)) }
-        return bytes + body
+        MatroskaBytes.element(id, body)
     }
 
     private func element(_ id: UInt32, _ children: [Data]) -> Data {
-        element(id, children.reduce(Data(), +))
+        MatroskaBytes.element(id, children)
     }
 
     private func unsigned(_ id: UInt32, _ value: UInt64) -> Data {
-        element(id, Data((0..<8).reversed().map { UInt8(truncatingIfNeeded: value >> ($0 * 8)) }))
+        MatroskaBytes.unsigned(id, value)
     }
 
     private func string(_ id: UInt32, _ value: String) -> Data {
-        element(id, Data(value.utf8))
+        MatroskaBytes.string(id, value)
     }
 
     /// A block of track 1 at `relative` ms in its cluster.
@@ -108,13 +102,24 @@ final class MatroskaReaderTests: XCTestCase {
         Data(repeating: byte, count: count)
     }
 
+    /// Values of `builtFile`, changed one at a time to damage it.
+    private struct Values {
+        var defaultDuration: UInt64 = 32_000_000
+        var clusterTime: UInt64 = 1_000
+        var blockDuration: UInt64 = 96
+        var cueTime: UInt64 = 1_000
+        /// Where the seek head and the index say the index and the cluster are; nil for where they are.
+        var cuesPosition: UInt64?
+        var clusterPosition: UInt64?
+    }
+
     /// An AC-3 track with header stripping (the sync word 0B 77 taken out of each frame), 32 ms frames, laced three
     /// ways in a cluster at 1 s, and its index after the clusters, found through the seek head.
-    private func builtFile(compression: UInt64 = 3, withIndex: Bool = true) -> Data {
+    private func builtFile(compression: UInt64 = 3, withIndex: Bool = true, values: Values = Values()) -> Data {
         let header = element(0x1A45_DFA3, [string(0x4282, "matroska")])
         let info = element(0x1549_A966, [unsigned(0x2AD7B1, 1_000_000)])
         let track = element(0xAE, [
-            unsigned(0xD7, 1), unsigned(0x83, 2), string(0x86, "A_AC3"), unsigned(0x23E383, 32_000_000),
+            unsigned(0xD7, 1), unsigned(0x83, 2), string(0x86, "A_AC3"), unsigned(0x23E383, values.defaultDuration),
             element(0xE1, [element(0xB5, Data([0x40, 0xE7, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00])), unsigned(0x9F, 6)]),
             element(0x6D80, [element(0x6240, [element(0x5034, [unsigned(0x4254, compression), element(0x4255, Data([0x0B, 0x77]))])])]),
         ])
@@ -126,16 +131,16 @@ final class MatroskaReaderTests: XCTestCase {
         // Fixed-size lacing: 2 frames of 4 bytes.
         let fixed = block(relative: 192, flags: 0x80 | 0x04, lacing: Data([1]), frames: [frame(7, 4), frame(8, 4)])
         let cluster = element(0x1F43_B675, [
-            unsigned(0xE7, 1_000), element(0xA3, xiph),
-            element(0xA0, [element(0xA1, ebml), unsigned(0x9B, 96)]),
+            unsigned(0xE7, values.clusterTime), element(0xA3, xiph),
+            element(0xA0, [element(0xA1, ebml), unsigned(0x9B, values.blockDuration)]),
             element(0xA3, fixed),
         ])
         // Positions are from the start of the segment's content: the seek head comes first, with a fixed size.
         let seekHeadLength = element(0x114D_9B74, [element(0x4DBB, [element(0x53AB, Data([0x1C, 0x53, 0xBB, 0x6B])), unsigned(0x53AC, 0)])]).count
-        let cuesPosition = UInt64(seekHeadLength + info.count + tracks.count + cluster.count)
-        let clusterPosition = UInt64(seekHeadLength + info.count + tracks.count)
+        let cuesPosition = values.cuesPosition ?? UInt64(seekHeadLength + info.count + tracks.count + cluster.count)
+        let clusterPosition = values.clusterPosition ?? UInt64(seekHeadLength + info.count + tracks.count)
         let seekHead = element(0x114D_9B74, [element(0x4DBB, [element(0x53AB, Data([0x1C, 0x53, 0xBB, 0x6B])), unsigned(0x53AC, cuesPosition)])])
-        let cues = element(0x1C53_BB6B, [element(0xBB, [unsigned(0xB3, 1_000), element(0xB7, [unsigned(0xF7, 1), unsigned(0xF1, clusterPosition)])])])
+        let cues = element(0x1C53_BB6B, [element(0xBB, [unsigned(0xB3, values.cueTime), element(0xB7, [unsigned(0xF7, 1), unsigned(0xF1, clusterPosition)])])])
         let segment = element(0x1853_8067, [seekHead, info, tracks, cluster] + (withIndex ? [cues] : []))
         return header + segment
     }
@@ -168,6 +173,48 @@ final class MatroskaReaderTests: XCTestCase {
                 XCTFail("\(error)")
             }
         }
+    }
+
+    /// Positions and times past what 64 bits hold (8 bytes of FF) throw instead of overflowing: the app plays the
+    /// file with VLC.
+    func testPositionsAndTimesThatOverflowAreLeftToVLC() async throws {
+        let damaged: [(String, Values)] = [
+            ("seek position", Values(cuesPosition: .max)),
+            ("cue position", Values(clusterPosition: .max)),
+            ("cue time", Values(cueTime: .max)),
+        ]
+        for (name, values) in damaged {
+            do {
+                _ = try await MatroskaReader.open(DataByteSource(builtFile(values: values)))
+                XCTFail(name)
+            } catch {
+                XCTAssertTrue(error is RemuxError, "\(name): \(error)")
+            }
+        }
+        // In the cluster: its time, a block's duration, and the frames of a lace that follow each other by the track's
+        // frame duration.
+        for (name, values) in [
+            ("cluster time", Values(clusterTime: .max)), ("block duration", Values(blockDuration: .max)),
+            ("frame duration", Values(defaultDuration: .max)),
+        ] {
+            let source = DataByteSource(builtFile(values: values))
+            let file = try await MatroskaReader.open(source)
+            let length = try await MatroskaReader.clusterLength(at: file.firstClusterOffset, in: source)
+            let bytes = try await source.read(file.firstClusterOffset..<file.firstClusterOffset + length)
+            XCTAssertThrowsError(try MatroskaReader.frames(inCluster: bytes, file: file), name) { XCTAssertTrue($0 is RemuxError, "\(name): \($0)") }
+        }
+    }
+
+    /// EBML lacing whose sizes add up past 64 bits (255 frames of 2^56 - 2 bytes) throws before adding them.
+    func testLaceSizesThatOverflowAreRefused() {
+        let block = Data([0x81, 0, 0, 0x06, 0xFF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE] + [UInt8](repeating: 0xBF, count: 254))
+        var offset = 4
+        XCTAssertThrowsError(try MatroskaReader.laceSizes(block, offset: &offset, lacing: 3)) { XCTAssertTrue($0 is RemuxError, "\($0)") }
+        // A size past the block's bytes, and a difference below zero.
+        offset = 4
+        XCTAssertThrowsError(try MatroskaReader.laceSizes(Data([0x81, 0, 0, 0x06, 0x01, 0x90]) + Data(count: 8), offset: &offset, lacing: 3))
+        offset = 4
+        XCTAssertThrowsError(try MatroskaReader.laceSizes(Data([0x81, 0, 0, 0x06, 0x02, 0x84, 0x80]) + Data(count: 8), offset: &offset, lacing: 3))
     }
 
     func testVariableLengthIntegers() {

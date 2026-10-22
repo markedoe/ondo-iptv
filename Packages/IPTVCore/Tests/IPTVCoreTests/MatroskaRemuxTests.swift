@@ -199,6 +199,20 @@ final class MatroskaRemuxTests: XCTestCase {
         }
     }
 
+    // MARK: Damaged files
+
+    /// Times close to the end of 64 bits (a cluster 292 years in) throw instead of overflowing once the remux's
+    /// offset is added.
+    func testFrameTimesThatOverflowAreLeftToVLC() async throws {
+        let remux = try await MatroskaRemux.open(DataByteSource(MatroskaBytes.film(clusterTimes: [9_223_372_030_000])), targetDuration: 1)
+        do {
+            _ = try await remux.segment(0)
+            XCTFail("times past 64 bits")
+        } catch {
+            XCTAssertTrue(error is RemuxError, "\(error)")
+        }
+    }
+
     func testFilmsTheSystemPlayerCannotDecodeAreLeftToVLC() throws {
         let dts = MatroskaTrack(
             number: 2, kind: .audio, codecID: "A_DTS", codecPrivate: nil, language: "eng", name: nil, isDefault: true, isEnabled: true,

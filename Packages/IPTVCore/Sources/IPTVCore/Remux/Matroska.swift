@@ -202,24 +202,25 @@ public enum MatroskaReader {
         guard file.firstClusterOffset > 0 else { throw RemuxError("no cluster") }
         guard seenTracks else { throw RemuxError("no tracks") }
         // The first element the seek head places after the clusters ends them.
-        let after = seekPositions.values.map { segmentOffset + $0 }.filter { $0 > file.firstClusterOffset }
+        let after = try seekPositions.values.map { try segmentOffset.adding($0) }.filter { $0 > file.firstClusterOffset }
         if let end = after.min() { file.clustersEnd = min(file.clustersEnd, end) }
         // The index is usually after the clusters: the seek head says where.
         if !seenCues, let position = seekPositions[IDs.cues] {
-            let at = segmentOffset + position
-            let headerBytes = try await source.read(at..<at + 12)
+            let at = try segmentOffset.adding(position)
+            let headerBytes = try await source.read(at..<at.adding(12))
             guard let header = EBML.header(headerBytes, at: 0), header.id == IDs.cues, !header.hasUnknownSize,
                   header.size <= largestHeaderElement else { throw RemuxError("no index where the seek head says") }
-            let body = try await source.read(at + Int64(header.headerLength)..<at + Int64(header.headerLength) + Int64(header.size))
+            let bodyStart = at + Int64(header.headerLength)
+            let body = try await source.read(bodyStart..<bodyStart.adding(Int64(header.size)))
             guard body.count == Int(header.size) else { throw RemuxError("file ends inside its index") }
             file.cues = try cues(body, segmentOffset: segmentOffset, scale: 1)
         }
         guard !file.cues.isEmpty else { throw RemuxError("no index") }
         // Cue times are in timestamp units until the scale is known.
         let scale = Int64(clamping: file.timestampScale)
-        file.cues = file.cues.map { cue in
+        file.cues = try file.cues.map { cue in
             var cue = cue
-            cue.time *= scale
+            cue.time = try cue.time.multiplied(by: scale)
             return cue
         }.sorted { $0.time < $1.time }
         file.duration = rawDuration.map { $0 * Double(file.timestampScale) / 1e9 }
@@ -240,7 +241,7 @@ public enum MatroskaReader {
         var scan = TopLevel()
         var offset = start
         while offset < end {
-            let headerBytes = try await source.read(offset..<offset + 12)
+            let headerBytes = try await source.read(offset..<offset.adding(12))
             guard let header = EBML.header(headerBytes, at: 0) else { throw RemuxError("broken element at \(offset)") }
             if header.id == IDs.cluster {
                 scan.firstCluster = offset
@@ -248,7 +249,7 @@ public enum MatroskaReader {
             }
             guard !header.hasUnknownSize else { throw RemuxError("top-level element of unknown size") }
             let bodyStart = offset + Int64(header.headerLength)
-            let bodyEnd = bodyStart + Int64(clamping: header.size)
+            let bodyEnd = try bodyStart.adding(Int64(clamping: header.size))
             offset = bodyEnd
             // Void, Chapters, Tags, Attachments… are skipped.
             guard [IDs.seekHead, IDs.info, IDs.tracks, IDs.cues].contains(header.id) else { continue }
@@ -450,7 +451,9 @@ public enum MatroskaReader {
             }
             guard let time else { continue }
             for (track, cluster, relative) in positions {
-                points.append(MatroskaCuePoint(time: time * scale, track: track, clusterOffset: segmentOffset + cluster, relativePosition: relative))
+                points.append(
+                    MatroskaCuePoint(time: try time.multiplied(by: scale), track: track, clusterOffset: try segmentOffset.adding(cluster), relativePosition: relative)
+                )
             }
         }
         return points
@@ -460,7 +463,7 @@ public enum MatroskaReader {
 
     /// The size of the cluster starting at `offset` (header included), to read it in one request.
     public static func clusterLength(at offset: Int64, in source: ByteSource) async throws -> Int64 {
-        let headerBytes = try await source.read(offset..<offset + 12)
+        let headerBytes = try await source.read(offset..<offset.adding(12))
         guard let header = EBML.header(headerBytes, at: 0), header.id == IDs.cluster else { throw RemuxError("no cluster at \(offset)") }
         guard !header.hasUnknownSize else { throw RemuxError("cluster of unknown size") }
         return Int64(header.headerLength) + Int64(clamping: header.size)
@@ -537,7 +540,7 @@ public enum MatroskaReader {
         for field in try EBML.children(bytes, in: header.dataOffset..<(header.end ?? header.dataOffset)) {
             switch field.id {
             case IDs.block: block = try EBML.binary(bytes, field)
-            case IDs.blockDuration: duration = Int64(clamping: try EBML.unsigned(bytes, field)) * context.scale
+            case IDs.blockDuration: duration = try Int64(clamping: try EBML.unsigned(bytes, field)).multiplied(by: context.scale)
             case IDs.referenceBlock: referenced = true
             default: break
             }
@@ -561,7 +564,7 @@ public enum MatroskaReader {
         guard let track = context.tracks[number.value] else { return [] }
         let relative = Int16(bitPattern: UInt16(block[number.length]) << 8 | UInt16(block[number.length + 1]))
         let flags = block[number.length + 2]
-        let time = (context.clusterTime + Int64(relative)) * context.scale
+        let time = try context.clusterTime.adding(Int64(relative)).multiplied(by: context.scale)
         let isKeyframe = simple ? flags & 0x80 != 0 : !referenced
         var offset = number.length + 3
         let sizes = try laceSizes(block, offset: &offset, lacing: (flags >> 1) & 0x03)
@@ -571,7 +574,7 @@ public enum MatroskaReader {
             var data = block.subdata(in: offset..<offset + size)
             offset += size
             if let header = track.strippedHeader { data = header + data }
-            let frameTime = time + Int64(index) * (step ?? 0)
+            let frameTime = try time.adding(Int64(index).multiplied(by: step ?? 0))
             let frameDuration = sizes.count == 1 ? duration : step
             frames.append(MatroskaFrame(track: track.number, time: frameTime, duration: frameDuration, isKeyframe: isKeyframe, data: data))
         }
@@ -604,7 +607,7 @@ public enum MatroskaReader {
             guard offset < block.count else { throw RemuxError("short lace") }
             let count = Int(block[offset]) + 1
             offset += 1
-            var size = 0
+            var size = 0, total = 0
             for index in 0..<count - 1 {
                 guard let raw = EBML.vint(block, at: offset, isID: false), raw.value != EBML.unknownSize else { throw RemuxError("bad lace") }
                 offset += raw.length
@@ -614,9 +617,12 @@ public enum MatroskaReader {
                     let bias = (Int64(1) << (7 * raw.length - 1)) - 1
                     size += Int(Int64(clamping: raw.value) - bias)
                 }
+                // Each size within the bytes left, so that they add up without overflowing.
+                guard size >= 0, size <= block.count - offset - total else { throw RemuxError("bad lace sizes") }
                 sizes.append(size)
+                total += size
             }
-            sizes.append(block.count - offset - sizes.reduce(0, +))
+            sizes.append(block.count - offset - total)
         default:  // Fixed size.
             guard offset < block.count else { throw RemuxError("short lace") }
             let count = Int(block[offset]) + 1

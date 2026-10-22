@@ -140,7 +140,7 @@ public actor MatroskaRemux {
     /// The first frame of `track`, from the start of the clusters.
     static func firstFrame(of track: MatroskaTrack, in file: MatroskaFile, source: ByteSource) async throws -> Data {
         for size: Int64 in [256 * 1024, 4 * 1024 * 1024] {
-            let bytes = try await source.read(file.firstClusterOffset..<min(file.firstClusterOffset + size, file.clustersEnd))
+            let bytes = try await source.read(file.firstClusterOffset..<min(file.firstClusterOffset.adding(size), file.clustersEnd))
             let read = try MatroskaReader.frames(in: bytes, from: file.firstClusterOffset, file: file)
             if let frame = read.frames.first(where: { $0.track == track.number }) { return frame.data }
             if read.complete { break }
@@ -346,9 +346,9 @@ public actor MatroskaRemux {
         let end: Int64
         if let next = segment.end {
             if let relative = next.relativePosition {
-                end = next.clusterOffset + 12 + relative
+                end = try next.clusterOffset.adding(12).adding(relative)
             } else {
-                end = next.clusterOffset + (try await MatroskaReader.clusterLength(at: next.clusterOffset, in: source))
+                end = try await next.clusterOffset.adding(MatroskaReader.clusterLength(at: next.clusterOffset, in: source))
             }
         } else {
             end = file.clustersEnd
@@ -362,7 +362,7 @@ public actor MatroskaRemux {
     /// Where a segment's frames start (or end, for the next segment's key frame): the key frame's block.
     private static func cut(_ key: MatroskaCuePoint, clusters: [MatroskaReader.ClusterMark], frames: [MatroskaFrame], video: UInt64) throws -> Int64 {
         if let relative = key.relativePosition, let cluster = clusters.first(where: { $0.offset == key.clusterOffset }) {
-            return cluster.offset + Int64(cluster.headerLength) + relative
+            return try cluster.offset.adding(Int64(cluster.headerLength)).adding(relative)
         }
         guard let frame = frames.first(where: { $0.track == video && $0.isKeyframe && $0.time == key.time }) else {
             throw RemuxError("key frame at \(key.time) not found")
@@ -382,11 +382,11 @@ public actor MatroskaRemux {
         guard let key = videoFrames.first, key.isKeyframe else { throw RemuxError("segment \(index) does not start with a key frame") }
         let audioFrames = audio.map { track in frames.filter { $0.track == track.number } } ?? []
 
-        let videoTimes = videoFrames.map { Self.ticks($0.time + Self.timeOffset, Self.videoTimescale) }
+        let videoTimes = try videoFrames.map { Self.ticks(try $0.time.adding(Self.timeOffset), Self.videoTimescale) }
         let step = try frameTicks ?? Self.measureFrameTicks(videoTimes)
         frameTicks = step
         let audioRate = Int64(tracks.count > 1 ? tracks[1].timescale : 48_000)
-        let audioTimes = audioFrames.map { Self.ticks($0.time + Self.timeOffset, audioRate) }
+        let audioTimes = try audioFrames.map { Self.ticks(try $0.time.adding(Self.timeOffset), audioRate) }
         let grid = self.grid ?? Self.makeGrid(videoTimes: videoTimes, step: step, audioTimes: audioTimes, audioStep: audioFrameTicks)
         self.grid = grid
 
