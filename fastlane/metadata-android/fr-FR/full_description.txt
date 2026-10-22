@@ -1,6 +1,6 @@
 Ondo est uniquement un lecteur : il n’héberge, ne fournit ni ne vend aucun contenu ni abonnement IPTV. Utilisez-le seulement avec des sources que vous êtes autorisé à regarder.
 
-Ondo est un lecteur IPTV élégant pour téléphones et tablettes Android. Ajoutez la playlist M3U ou l’identifiant Xtream Codes donné par votre fournisseur : ses films, ses séries et ses chaînes se retrouvent dans une bibliothèque claire, rapide et sans publicité.
+Ondo est un lecteur IPTV élégant pour téléphones et tablettes Android et pour Android TV. Ajoutez la playlist M3U ou l’identifiant Xtream Codes donné par votre fournisseur : ses films, ses séries et ses chaînes se retrouvent dans une bibliothèque claire, rapide et sans publicité.
 
 FILMS ET SÉRIES
 • Carrousel à la une, rangées par catégorie, affiches et recherche instantanée
@@ -17,6 +17,10 @@ UN LECTEUR QUI FONCTIONNE, TOUT SIMPLEMENT
 TV EN DIRECT
 • Chaînes par catégorie avec le programme en cours et le suivant
 • Chaînes favorites
+
+SUR ANDROID TV ET GOOGLE TV
+• Chaque écran à la télécommande
+• OK pour la pause, les flèches pour reculer et avancer, CH+ / CH− et les chiffres pour changer de chaîne
 
 SOURCES
 • Playlists M3U / M3U8, XSPF et JSON (lien ou fichier) et comptes Xtream Codes

@@ -89,6 +89,8 @@ class ScreensTest {
     fun helpOpensATopicAndLinksToSupport() {
         var support = 0
         compose.setContent { OndoTheme { HelpScreen(onBack = {}, onSupport = { support++ }) } }
+        // The remote's keys are for a TV only.
+        compose.onNodeWithTag("help-remote").assertDoesNotExist()
         compose.onNodeWithText("|PT|", substring = true).assertDoesNotExist()
         compose.onNodeWithTag("help-home").performClick()
         compose.onNodeWithText("Movies in Progress and Series in Progress", substring = true).assertExists()

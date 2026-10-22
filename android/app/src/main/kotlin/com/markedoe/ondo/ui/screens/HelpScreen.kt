@@ -38,11 +38,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.isTelevision
 
-/** One page of the help: what a feature does and where it is. */
-data class HelpTopic(val id: String, @StringRes val title: Int, @StringRes val body: Int)
+/** One page of the help: what a feature does and where it is; [television] ones show on a TV only. */
+data class HelpTopic(val id: String, @StringRes val title: Int, @StringRes val body: Int, val television: Boolean = false)
 
 val helpTopics = listOf(
+    HelpTopic("remote", R.string.help_remote_title, R.string.help_remote_body, television = true),
     HelpTopic("playlists", R.string.help_playlists_title, R.string.help_playlists_body),
     HelpTopic("home", R.string.help_home_title, R.string.help_home_body),
     HelpTopic("search", R.string.help_search_title, R.string.help_search_body),
@@ -66,8 +68,10 @@ fun HelpScreen(onBack: () -> Unit, onSupport: () -> Unit) {
             },
             windowInsets = WindowInsets(0),
         )
+        // The remote's keys first on a TV; nowhere else.
+        val television = isTelevision()
         LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-            items(helpTopics, key = { it.id }) { topic ->
+            items(helpTopics.filter { television || !it.television }, key = { it.id }) { topic ->
                 val expanded = open == topic.id
                 Column(Modifier.fillMaxWidth().animateContentSize()) {
                     ListItem(

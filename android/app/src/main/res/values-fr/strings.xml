@@ -227,6 +227,8 @@
     <string name="notifications_off">Les notifications d\'Ondo sont désactivées : autorisez-les dans Réglages pour être prévenu.</string>
     <string name="help_guide_title">Guide TV et rappels</string>
     <string name="help_guide_body">Le bouton de guide de TV en direct montre les programmes des chaînes choisies à cet endroit (Ma liste, une catégorie ou toutes). Le guide vient de votre fournisseur, ou de l’adresse XMLTV donnée à l’ajout d’une playlist M3U.\n\nOuvrez un programme à venir et créez un rappel : une notification arrive quelques minutes avant le début. La cloche du guide liste vos rappels.</string>
+    <string name="help_remote_title">Avec la télécommande</string>
+    <string name="help_remote_body">Déplacez-vous avec les flèches et appuyez sur OK pour choisir ; Retour revient en arrière, et Retour sur l’Accueil quitte Ondo.\n\nDans le lecteur, OK met en pause, reprend et affiche les commandes (la touche Info les affiche aussi ; Plus est en haut à droite) ; Gauche et Droite reculent et avancent. Sur une chaîne en direct, Haut et Bas ou les touches de chaîne changent de chaîne, les chiffres mènent directement à une chaîne, et la touche de la chaîne précédente revient à celle que vous regardiez avant.\n\nDans TV en direct, maintenez OK sur une chaîne pour l’ajouter à Ma liste.</string>
     <plurals name="guide_row_limit">
         <item quantity="one">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>
         <item quantity="many">Affichage des %1$d premières chaînes sur %2$d. Choisissez une catégorie pour voir les autres.</item>

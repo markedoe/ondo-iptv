@@ -188,6 +188,27 @@ la piste `production` ne l'a pas. Publiez donc la production avec un bundle cons
 avec la piste `production`), pas en promouvant une version de test, qui garderait son badge. Choisissez les pays, puis *Envoyer pour
 examen*. L'examen prend de quelques heures à quelques jours.
 
+### E4. Android TV
+
+La même app et le même bundle servent Android TV et Google TV : le manifeste déclare le lanceur TV, le workflow
+envoie les captures TV (`tvScreenshots`, 1920 × 1080) et la bannière TV (`images/tvBanner.png`, 1280 × 720), et la
+description nomme Android TV, comme Google le demande.
+
+1. **Avant de s'inscrire, essayez-la sur votre TV** : l'app n'est pas dans le Play Store de la TV tant que Google
+   ne l'a pas approuvée pour la TV. Installez le build de débogage (`com.markedoe.ondo.debug`, à côté de la
+   version Play) depuis l'artefact **android-builds** de la dernière exécution du workflow *Android* : sur la TV,
+   *Paramètres → Préférences de l'appareil → À propos*, sélectionnez *Build* sept fois, puis *Options pour les
+   développeurs → Débogage USB* (ou *Débogage via le réseau*) ; sur un ordinateur du même réseau,
+   `adb connect <adresse de la TV>` puis `adb install app-debug.apk`. Parcourez chaque écran à la télécommande
+   seulement.
+2. **Inscription** : *Tester et publier → Configuration → Paramètres avancés → Facteurs de forme → Ajouter un type
+   de version → Android TV*, acceptez les règles d'examen TV. Google vérifie alors l'app selon ses critères de
+   qualité des apps TV (de quelques jours à quelques semaines) et envoie le résultat par e-mail ; l'état est sous
+   *Android TV* dans les paramètres de l'app.
+3. Tant que l'examen TV n'est pas passé, les versions pour téléphones continuent comme avant. Si Google refuse la
+   version TV et qu'elle bloque une mise à jour pour téléphones, retirez le type de version TV et réinscrivez-vous
+   une fois corrigé.
+
 ## F. Points à vérifier avant l'examen
 
 - La fiche dit clairement qu'Ondo **ne fournit aucun contenu** et ne vend pas d'abonnement (déjà dans les

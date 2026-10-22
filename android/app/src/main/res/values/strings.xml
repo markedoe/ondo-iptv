@@ -223,6 +223,9 @@
     <string name="notifications_off">Notifications are off for Ondo: allow them in Settings to be reminded.</string>
     <string name="help_guide_title">TV guide and reminders</string>
     <string name="help_guide_body">The guide button on Live TV shows the programmes of the channels chosen there (My List, a category or all of them). The guide comes from your provider, or from the XMLTV address given when adding an M3U playlist.\n\nOpen an upcoming programme and set a reminder: a notification arrives a few minutes before it starts. The bell of the guide lists your reminders.</string>
+    <!-- Help, on a TV only. -->
+    <string name="help_remote_title">With the remote</string>
+    <string name="help_remote_body">Move with the arrows and press OK to choose; Back goes back, and Back on Home leaves Ondo.\n\nIn the player, OK pauses, resumes and shows the controls (the Info key shows them too; More is at the top right); Left and Right go back and forward. On a live channel, Up and Down or the channel keys change channel, the number keys go straight to a channel, and the last-channel key returns to the one you watched before.\n\nIn Live TV, hold OK on a channel to add it to My List.</string>
     <plurals name="guide_row_limit">
         <item quantity="one">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
         <item quantity="other">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>

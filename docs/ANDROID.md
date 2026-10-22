@@ -32,11 +32,22 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   on disk by Coil 3 (up to 512 MB, in the app's cache; `OndoApplication.kt`).
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi
   (`res/values-*`), also offered in Android 13's per-app language setting (`res/xml/locales_config.xml`).
-- **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), Roborazzi
-  screenshots that double as Google Play screenshots (phone, 7" and 10" tablets, English and French).
+- **Android TV / Google TV** (`ui/tv/Television.kt`): a Leanback launcher entry and banner (320 × 180 at xhdpi,
+  drawn by `fastlane/creative/render.mjs --tv`), touch screen not required; the same Compose screens, with a
+  navigation rail, the TV's safe area (48 × 27 dp), a frame around the focused item, a focus that comes back to
+  the card left (`FocusMemory`) and enters each page by itself (`FocusEntry`), rows scrolled to a third of the
+  way, a side-by-side carousel and detail header on short landscape screens (also a phone on its side). Player:
+  OK pauses, Left / Right seek, Up / Down, CH+ / CH−, the number keys and Last Channel change channel
+  (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), a channel banner, Back hides the controls. Google's
+  TV app quality: no Picture-in-Picture on a TV, the screen kept on while playing only, no browser (the privacy
+  policy and support pages open in an in-app page limited to them), no file picker or share button where the TV
+  has none, a smaller image memory cache on a low-memory device.
+- **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), the remote on a TV
+  (`TelevisionTest`, `PlayerRemoteTest`), Roborazzi screenshots that double as Google Play screenshots (phone,
+  7" and 10" tablets, TV, English and French).
 
-Planned next (not included in v1): Android TV, catch-up from the guide, Chromecast, downloads, profiles
-and PIN, online subtitles, second libVLC engine.
+Planned next (not included in v1): catch-up from the guide, Chromecast, downloads, profiles and PIN, online
+subtitles, second libVLC engine; on a TV, launcher channels and voice search.
 
 ## Initial plan
 

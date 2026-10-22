@@ -36,11 +36,24 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Langues** : anglais, français, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi (`res/values-*`), proposées aussi dans le réglage de langue par app d'Android 13
   (`res/xml/locales_config.xml`).
-- **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), captures
-  Roborazzi qui servent de captures Google Play (téléphone, tablettes 7" et 10", anglais et français).
+- **Android TV / Google TV** (`ui/tv/Television.kt`) : une entrée et une bannière dans le lanceur Leanback
+  (320 × 180 en xhdpi, dessinée par `fastlane/creative/render.mjs --tv`), écran tactile non requis ; les mêmes
+  écrans Compose, avec un rail de navigation, la zone sûre de la TV (48 × 27 dp), un cadre autour de l'élément
+  sélectionné, une sélection qui revient sur la carte quittée (`FocusMemory`) et entre d'elle-même dans chaque
+  page (`FocusEntry`), des rangées qui défilent jusqu'au tiers, un carrousel et un en-tête de fiche côte à côte sur
+  les écrans bas en paysage (un téléphone couché aussi). Lecteur : OK met en pause, Gauche / Droite reculent et
+  avancent, Haut / Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de chaîne
+  (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), un bandeau de chaîne, Retour masque les commandes.
+  Qualité des apps TV de Google : pas d'image dans l'image sur une TV, l'écran gardé allumé seulement pendant la
+  lecture, pas de navigateur (les règles de confidentialité et la page d'aide s'ouvrent dans une page de l'app
+  limitée à elles), pas de sélecteur de fichier ni de bouton de partage quand la TV n'en a pas, un cache d'images
+  en mémoire plus petit sur un appareil à peu de mémoire.
+- **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), la
+  télécommande sur une TV (`TelevisionTest`, `PlayerRemoteTest`), captures Roborazzi qui servent de captures
+  Google Play (téléphone, tablettes 7" et 10", TV, anglais et français).
 
-Prévu ensuite (non inclus en v1) : Android TV, replay depuis le guide, Chromecast, téléchargements,
-profils et PIN, sous-titres en ligne, second moteur libVLC.
+Prévu ensuite (non inclus en v1) : replay depuis le guide, Chromecast, téléchargements, profils et PIN,
+sous-titres en ligne, second moteur libVLC ; sur une TV, chaînes du lanceur et recherche vocale.
 
 ## Plan initial
 

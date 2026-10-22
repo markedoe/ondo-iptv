@@ -16,7 +16,9 @@ import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
@@ -30,6 +32,7 @@ import com.markedoe.ondo.ui.screens.GuideActions
 import com.markedoe.ondo.ui.screens.GuideRow
 import com.markedoe.ondo.ui.screens.GuideScreen
 import com.markedoe.ondo.ui.screens.GuideUiState
+import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
@@ -200,6 +203,13 @@ class TelevisionTest {
         assertTrue("the programme on air has the focus: ${focused()}", focused().contains("Morning News"))
         press(Key.DirectionRight)
         assertTrue("then the next one: ${focused()}", focused().contains("Weather"))
+    }
+
+    @Test
+    fun theHelpStartsWithTheRemote() {
+        compose.setContent { OndoTheme { HelpScreen(onBack = {}, onSupport = {}) } }
+        compose.onNodeWithTag("help-remote").performClick()
+        compose.onNodeWithText("hold OK on a channel", substring = true).assertExists()
     }
 
     @Test

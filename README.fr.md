@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml) [![Android](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml) [![Security](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Lecteur IPTV pour **iPhone / iPad**, **macOS** et **Android** — films, séries et TV en direct —, natif sur
+Lecteur IPTV pour **iPhone / iPad**, **macOS** et **Android** (téléphones, tablettes et Android TV) — films, séries et TV en direct —, natif sur
 chaque plateforme (Swift / SwiftUI, Kotlin / Jetpack Compose). Il fonctionne à partir d'iOS / iPadOS 17, de
 macOS 14 et d'Android 8.0 (API 26). Conception et feuille de route : [docs/PLAN.fr.md](docs/PLAN.fr.md),
 version Android : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
@@ -33,6 +33,10 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/fr-FR/phoneScreenshots/01-home.png" width="200" alt="L'accueil sur Android">
   <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/fr-FR/phoneScreenshots/02-movie.png" width="200" alt="Une fiche film sur Android">
   <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/fr-FR/phoneScreenshots/05-live.png" width="200" alt="La TV en direct sur Android">
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/fr-FR/tvScreenshots/01-home.png" width="410" alt="L'accueil sur Android TV">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/fr-FR/tvScreenshots/02-movie.png" width="410" alt="La fiche d'un film sur Android TV">
 </p>
 
 ## Fonctionnalités
@@ -99,7 +103,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi.
 
-### Android (téléphones et tablettes)
+### Android (téléphones, tablettes et TV)
 
 - **Accueil** : carrousel, films et séries en cours (une rangée chacun), Ma liste, nouveautés, chaînes ;
   la date de dernière mise à jour de la playlist, au-dessus de son nom.
@@ -135,8 +139,14 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   ne répond pas.
 - **Réglages** : playlists, apparence, catégories adultes masquées par défaut, langues et catégories, langue de
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur ; écran d'accueil avec démo.
-- À venir : Android TV, replay, Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un
-  second moteur (libVLC). Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
+- **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande
+  (une sélection bien visible, qui revient sur la carte que vous avez quittée, des mises en page qui restent à
+  l'écart des bords de l'écran) ; dans le lecteur, OK met en pause, Gauche et Droite reculent et avancent, Haut et
+  Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de chaîne ; maintenez OK sur une chaîne pour
+  l'ajouter à Ma liste ; Aide, Avec la télécommande. Les règles de confidentialité et la page d'aide s'ouvrent
+  dans l'app.
+- À venir : replay, Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un second moteur
+  (libVLC). Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
 ## Langues
 

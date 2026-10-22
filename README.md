@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml) [![Android](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml) [![Security](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-IPTV player for **iPhone / iPad**, **macOS** and **Android** (movies, series and live TV), native on each
+IPTV player for **iPhone / iPad**, **macOS** and **Android** (phones, tablets and Android TV) — movies, series and live TV —, native on each
 platform (Swift / SwiftUI, Kotlin / Jetpack Compose). It runs on iOS / iPadOS 17, macOS 14 and Android 8.0
 (API 26) or later. Design and roadmap: [docs/PLAN.md](docs/PLAN.md), Android version:
 [docs/ANDROID.md](docs/ANDROID.md).
@@ -33,6 +33,10 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/en-US/phoneScreenshots/01-home.png" width="200" alt="Home on Android">
   <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/en-US/phoneScreenshots/02-movie.png" width="200" alt="A movie page on Android">
   <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/en-US/phoneScreenshots/05-live.png" width="200" alt="Live TV on Android">
+</p>
+<p align="center">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/en-US/tvScreenshots/01-home.png" width="410" alt="Home on Android TV">
+  <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/android-screenshots/play/en-US/tvScreenshots/02-movie.png" width="410" alt="A movie page on Android TV">
 </p>
 
 ## Features
@@ -93,7 +97,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Help** in the app (Settings, and Help, Ondo Help on the Mac): one page per feature, in every language.
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi.
 
-### Android (phones and tablets)
+### Android (phones, tablets and TV)
 
 - **Home**: carousel, movies and series in progress (one row each), My List, new releases, channels; when the
   playlist was last updated, above its name.
@@ -126,8 +130,12 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   once at the next launch, and the pages still open when the provider cannot be reached.
 - **Settings**: playlists, appearance, adult categories hidden by default, languages and categories, app language,
   automatic awards updates, player buffers; welcome screen with a demo.
-- Coming next: Android TV, catch-up, Chromecast, downloads, profiles and PIN, online subtitles, a second engine
-  (libVLC). Details: [docs/ANDROID.md](docs/ANDROID.md).
+- **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible
+  focus that comes back to the card you left, layouts that keep clear of the screen's edges); in the player, OK
+  pauses, Left and Right seek, Up and Down, CH+ / CH−, the number keys and Last Channel change channel; hold OK on
+  a channel to add it to My List; Help, With the remote. The privacy policy and support pages open inside the app.
+- Coming next: catch-up, Chromecast, downloads, profiles and PIN, online subtitles, a second engine (libVLC).
+  Details: [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Languages
 

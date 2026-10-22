@@ -227,6 +227,8 @@
     <string name="notifications_off">Las notificaciones de Ondo están desactivadas: permítelas en Ajustes para recibir recordatorios.</string>
     <string name="help_guide_title">Guía de TV y recordatorios</string>
     <string name="help_guide_body">El botón de guía de TV en directo muestra los programas de los canales elegidos allí (Mi lista, una categoría o todos). La guía viene de tu proveedor, o de la dirección XMLTV indicada al añadir una lista M3U.\n\nAbre un programa próximo y crea un recordatorio: llega una notificación unos minutos antes de que empiece. La campana de la guía muestra tus recordatorios.</string>
+    <string name="help_remote_title">Con el mando</string>
+    <string name="help_remote_body">Muévete con las flechas y pulsa OK para elegir; Atrás vuelve atrás, y Atrás en Inicio cierra Ondo.\n\nEn el reproductor, OK pausa, reanuda y muestra los controles (la tecla Info también los muestra; Más está arriba a la derecha); Izquierda y Derecha retroceden y avanzan. En un canal en directo, Arriba y Abajo o las teclas de canal cambian de canal, los números llevan directamente a un canal y la tecla de canal anterior vuelve al que veías antes.\n\nEn TV en directo, mantén pulsado OK sobre un canal para añadirlo a Mi lista.</string>
     <plurals name="guide_row_limit">
         <item quantity="one">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
         <item quantity="many">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>

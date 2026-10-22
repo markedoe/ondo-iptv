@@ -180,6 +180,24 @@ not. So publish production from a bundle built for it (the workflow with the `pr
 promoting a test release, which would keep its badge. Choose the countries, then *Send changes for
 review*. The review takes from a few hours to a few days.
 
+### E4. Android TV
+
+The same app and bundle serve Android TV and Google TV: the manifest declares the TV launcher, the workflow
+sends the TV screenshots (`tvScreenshots`, 1920 × 1080) and the TV banner (`images/tvBanner.png`, 1280 × 720),
+and the description names Android TV, as Google asks.
+
+1. **Before opting in, try it on your own TV**: the app is not on the TV's Play Store until Google approves it
+   for TV. Install the debug build (`com.markedoe.ondo.debug`, next to the Play version) from the
+   **android-builds** artifact of the latest *Android* workflow run: on the TV, *Settings → Device Preferences →
+   About*, select *Build* seven times, then *Developer options → USB debugging* (or *Network debugging*); on a
+   computer on the same network, `adb connect <TV address>` then `adb install app-debug.apk`. Go through every
+   screen with the remote only.
+2. **Opt in**: *Test and release → Setup → Advanced settings → Form factors → Add release type → Android TV*,
+   accept the TV review policy. Google then checks the app against its TV app quality criteria (from a few days
+   to a few weeks) and emails the result; the status is under *Android TV* in the app's settings.
+3. Until the TV review passes, the phone releases continue as before. If Google refuses the TV version and it
+   holds back a phone update, remove the TV release type and opt in again once fixed.
+
 ## F. Things to check before the review
 
 - The store listing clearly states that Ondo **does not provide any content** and does not sell
