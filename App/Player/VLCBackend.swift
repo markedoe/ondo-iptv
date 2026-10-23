@@ -98,7 +98,7 @@ final class VLCBackend: NSObject {
         cachingSeconds = caching
         media.addOption(":network-caching=\(Int(cachingSeconds * 1000))")
         if let startPosition, startPosition > 5, !isLive {
-            media.addOption(":start-time=\(Int(startPosition))")
+            media.addOption(":start-time=\(Int(min(startPosition, 1e12)))")
         }
         lastEvent = nil
         player.media = media
@@ -119,7 +119,9 @@ final class VLCBackend: NSObject {
     }
 
     func seek(to seconds: Double) {
-        player.time = VLCTime(int: Int32(max(seconds, 0) * 1000))
+        // Milliseconds in an Int32 reach 24 days: a resume point past that (another device's, a backup's) stops there.
+        let milliseconds = seconds.isFinite ? min(max(seconds, 0) * 1000, Double(Int32.max)) : 0
+        player.time = VLCTime(int: Int32(milliseconds))
     }
 
     func setRate(_ rate: Float) {

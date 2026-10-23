@@ -21,7 +21,8 @@ extension PlayerController {
         startWatch.start(at: 0)
         dataWatch = DataRateWatch()
         seekWatch.cancel()
-        let resume = item.startPosition.map { $0 > 5 ? ", from \(Int($0)) s" : "" } ?? ""
+        // A resume point from another device or a backup can be past Int's range.
+        let resume = item.startPosition.map { $0 > 5 ? ", from \(Int(min($0, 1e12))) s" : "" } ?? ""
         note("open \(Self.kind(of: item))\(resume)")
     }
 

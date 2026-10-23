@@ -175,4 +175,27 @@ final class SyncMappingTests: XCTestCase {
         XCTAssertEqual(snapshot.progress.first { $0.item == "m8" }?.watchedAt, .max)
         XCTAssertEqual(snapshot.lists.first?.updatedAt, .max)
     }
+
+    /// A position and duration another device sends can be any number: the screens that show them and the player that
+    /// resumes at them do not trap.
+    @MainActor
+    func testAResumePointPastIntRangeDoesNotTrap() throws {
+        let x = xtreamID.uuidString.lowercased()
+        let received = SyncSnapshot(device: "other", progress: [
+            SyncProgress(playlist: x, kind: "movie", item: "m1", title: "Far", position: 1e300, duration: 0, watchedAt: t0.syncMilliseconds),
+            SyncProgress(playlist: x, kind: "movie", item: "m2", title: "Long", position: 31, duration: 1e300, watchedAt: t0.syncMilliseconds),
+        ])
+        let history = SyncMapping.library(UserLibrary(), applying: received).history
+        let far = try XCTUnwrap(history.first { $0.reference.itemID == "m1" })
+        let long = try XCTUnwrap(history.first { $0.reference.itemID == "m2" })
+        XCTAssertTrue(far.isResumable)
+        XCTAssertTrue(long.isResumable)
+        XCTAssertFalse(long.timeLeftText.isEmpty)
+        XCTAssertEqual(Formatting.clock(far.position), Formatting.clock(1e12))
+
+        let controller = PlayerController()
+        controller.startLog(for: PlaybackItem(reference: far.reference, title: far.title, streamURL: URL(string: "http://example.com/m1.mp4")!,
+                                              isLive: false, startPosition: far.position))
+        XCTAssertEqual(controller.log.entries.count, 1)
+    }
 }

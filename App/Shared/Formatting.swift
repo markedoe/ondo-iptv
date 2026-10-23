@@ -4,7 +4,8 @@ enum Formatting {
     /// 3725 -> "1:02:05", 125 -> "2:05"
     static func clock(_ seconds: Double) -> String {
         guard seconds.isFinite, seconds >= 0 else { return "--:--" }
-        let total = Int(seconds)
+        // A resume point from another device or a backup can be past Int's range.
+        let total = Int(min(seconds, 1e12))
         let h = total / 3600
         let m = (total % 3600) / 60
         let s = total % 60

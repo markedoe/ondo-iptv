@@ -284,6 +284,7 @@ extension HistoryEntry {
     var timeLeftText: String {
         let seconds = max(duration - position, 0)
         guard seconds > 60 else { return String(localized: "Resume") }
-        return String(localized: "\(Int(seconds / 60)) min left")
+        // A duration from another device or a backup can be past Int's range.
+        return String(localized: "\(Int(min(seconds / 60, 1e12))) min left")
     }
 }
