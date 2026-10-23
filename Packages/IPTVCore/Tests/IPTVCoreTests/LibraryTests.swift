@@ -344,6 +344,20 @@ final class ReminderTests: XCTestCase {
         XCTAssertNotNil(library.reminderTombstones[reminder("a").id])
     }
 
+    /// A backup or a provider can hold a date past Int's range: identifiers are made without trapping, and stay the
+    /// same as before for every other date.
+    func testDatesPastIntRangeMakeIdentifiersWithoutTrapping() {
+        XCTAssertEqual(reminder("a").id, "\(playlistID.uuidString)|a|\(Int(start.timeIntervalSince1970))")
+        XCTAssertEqual(Date(timeIntervalSince1970: -0.5).wholeSecondsKey, "0")
+        XCTAssertEqual(Date(timeIntervalSince1970: 1_760_000_000.9).wholeSecondsKey, "1760000000")
+        let far = Date(timeIntervalSince1970: 1e300)
+        var backup = UserLibrary()
+        backup.reminders = [ProgramReminder(playlistID: playlistID, channelID: "a", channelName: "A", title: "Far", start: far, end: far)]
+        XCTAssertEqual(UserLibrary().merged(with: backup).reminders.count, 1)
+        let program = EPGProgram(channelID: "a", title: "Far", start: Date(timeIntervalSince1970: 9.3e18), end: .distantFuture)
+        XCTAssertTrue(program.id.hasPrefix("a|"))
+    }
+
     func testUpcomingAndPruning() {
         var library = UserLibrary()
         library.toggleReminder(reminder("a"))

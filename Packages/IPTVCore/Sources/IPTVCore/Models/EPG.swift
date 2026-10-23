@@ -2,7 +2,7 @@ import Foundation
 
 /// One TV programme from the electronic programme guide.
 public struct EPGProgram: Identifiable, Codable, Hashable, Sendable {
-    public var id: String { "\(channelID)|\(Int(start.timeIntervalSince1970))" }
+    public var id: String { "\(channelID)|\(start.wholeSecondsKey)" }
     /// XMLTV channel id the programme belongs to.
     public var channelID: String
     public var title: String

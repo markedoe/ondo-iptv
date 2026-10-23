@@ -78,7 +78,16 @@ public struct ProgramReminder: Identifiable, Codable, Hashable, Sendable {
     }
 
     public static func id(playlistID: UUID, channelID: String, start: Date) -> String {
-        "\(playlistID.uuidString)|\(channelID)|\(Int(start.timeIntervalSince1970))"
+        "\(playlistID.uuidString)|\(channelID)|\(start.wholeSecondsKey)"
+    }
+}
+
+extension Date {
+    /// Whole seconds since 1970 (`Int(_:)`'s truncation) as text, for identifiers. A date past Int's range (a backup's
+    /// or a provider's) keeps its `Double` text: `Int(_:)` traps there.
+    var wholeSecondsKey: String {
+        let seconds = timeIntervalSince1970.rounded(.towardZero)
+        return Int(exactly: seconds).map(String.init) ?? "\(seconds)"
     }
 }
 
