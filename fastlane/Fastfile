@@ -223,7 +223,10 @@ lane :status do
   api_key
   app = Spaceship::ConnectAPI::App.find(APP_ID)
   PLATFORMS.each { |name, (platform, folder)| report_version(app, name, platform, folder) }
-  app.get_review_submissions.each { |submission| UI.message("review submission #{submission.platform}: #{submission.state}") }
+  app.get_review_submissions.each do |submission|
+    # The date tells a long wait from a normal one (most reviews take a day or two).
+    UI.message("review submission #{submission.platform}: #{submission.state}, submitted #{submission.submitted_date || 'not yet'}")
+  end
 end
 
 desc "Revoke the development certificates Xcode created on this CI runner (never run it on your own Mac)"
