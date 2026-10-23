@@ -1,12 +1,21 @@
 package com.markedoe.ondo.core.xtream
 
+import com.markedoe.ondo.core.net.Gzip
+import com.markedoe.ondo.core.net.GzipException
+import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.numberString
 import com.markedoe.ondo.core.toStrictDoubleOrNull
+import java.io.BufferedInputStream
+import java.io.File
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.DecodeSequenceMode
+import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.decodeToSequence
 
 // Xtream panels are notoriously inconsistent: the same field can be an Int, a String, a Bool, `null`, an
 // empty array… These helpers never throw for a wrong type, they return `null` (Swift LenientDecoding.swift).
@@ -100,4 +109,41 @@ internal inline fun <T> JsonElement?.lossyList(decode: (JsonElement) -> T?): Lis
     is JsonArray -> mapNotNull(decode)
     is JsonObject -> entries.sortedBy { it.key.toIntOrNull() ?: 0 }.mapNotNull { decode(it.value) }
     else -> emptyList()
+}
+
+/**
+ * The elements of the JSON list saved in [file] (gzip or not, with or without a byte order mark), decoded one at a
+ * time: only the element being read is in memory as JSON. An answer that is not an array (`{}` or `null` for an
+ * empty list, an object keyed by index) is small and read whole, as [lossyList] reads it.
+ * @throws HttpException.EmptyResponse for an empty answer
+ * @throws XtreamException.InvalidResponse for anything that is not JSON
+ */
+@OptIn(ExperimentalSerializationApi::class)
+internal fun <T> decodeList(file: File, decode: (JsonElement) -> T?): List<T> = try {
+    BufferedInputStream(Gzip.decompressingStream(file.inputStream()), 64 * 1024).use { input ->
+        input.mark(4)
+        if (!(input.read() == 0xEF && input.read() == 0xBB && input.read() == 0xBF)) input.reset()
+        // The first character tells an array from anything else.
+        var first: Int
+        var sawAnything = false
+        do {
+            input.mark(1)
+            first = input.read()
+            if (first >= 0) sawAnything = true
+        } while (first == ' '.code || first == '\n'.code || first == '\r'.code || first == '\t'.code)
+        if (first < 0) throw if (sawAnything) XtreamException.InvalidResponse() else HttpException.EmptyResponse()
+        input.reset()
+        if (first == '['.code) {
+            Json.decodeToSequence(input, JsonElement.serializer(), DecodeSequenceMode.ARRAY_WRAPPED).mapNotNull(decode).toList()
+        } else {
+            Json.parseToJsonElement(input.readBytes().decodeToString()).lossyList(decode)
+        }
+    }
+} catch (e: IllegalArgumentException) { // SerializationException: not JSON, or cut off
+    throw XtreamException.InvalidResponse()
+} catch (e: java.util.zip.ZipException) {
+    throw GzipException("Could not inflate the data: ${e.message}", e)
+} catch (e: java.io.EOFException) {
+    // A gzip answer cut off: what was inflated is JSON cut off too.
+    throw XtreamException.InvalidResponse()
 }

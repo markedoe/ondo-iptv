@@ -36,20 +36,20 @@ data class EpgLoadResult(val data: EpgData, val failures: Map<String, Throwable>
 
 /**
  * Downloads and parses any playlist source into [PlaylistContent].
- * Parsing runs on [parsingDispatcher], file reads on [ioDispatcher]. Guides are downloaded into [guideFolder] (the
- * system's temporary folder when null) and read from there, then deleted.
+ * Parsing runs on [parsingDispatcher], file reads on [ioDispatcher]. Large answers (guides, Xtream lists) are downloaded
+ * into [downloadFolder] (the system's temporary folder when null) and read from there, then deleted.
  */
 class PlaylistLoader(
     private val http: HttpClient,
     private val parsingDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val clock: () -> Long = System::currentTimeMillis,
-    private val guideFolder: File? = null,
+    private val downloadFolder: File? = null,
 ) {
     /** Downloads (or reads) the playlist and returns its content. */
     suspend fun load(playlist: Playlist): PlaylistContent = when (val source = playlist.source) {
         is PlaylistSource.Xtream -> {
-            val client = XtreamClient(source.credentials, http, playlist.headers, parsingDispatcher, clock)
+            val client = XtreamClient(source.credentials, http, playlist.headers, parsingDispatcher, clock, downloadFolder)
             if (playlist.xtreamForceM3u) {
                 // Some panels have a broken JSON API but a working M3U export.
                 val account = try {
@@ -133,8 +133,8 @@ class PlaylistLoader(
             try {
                 // On disk, then read while parsed: a large guide (hundreds of megabytes) never sits whole in memory.
                 val download = withContext(ioDispatcher) {
-                    guideFolder?.mkdirs()
-                    File.createTempFile("guide-", ".xml", guideFolder)
+                    downloadFolder?.mkdirs()
+                    File.createTempFile("guide-", ".xml", downloadFolder)
                 }
                 file = download
                 http.download(url, playlist.headers.toMap(), download)

@@ -197,7 +197,7 @@ class PlaylistLoaderTest {
         val content = PlaylistContent(channels = listOf(Channel(id = "1", name = "TV1", categoryId = "c", streamUrl = "http://h/1", epgId = "TV1.fr")))
         val window = TimeWindow(utc(2025, 10, 9, 0), utc(2025, 10, 10, 0))
         try {
-            val result = PlaylistLoader(http, guideFolder = folder).loadEpg(playlist, content, window)
+            val result = PlaylistLoader(http, downloadFolder = folder).loadEpg(playlist, content, window)
             assertIs<OutOfMemoryError>(result.failures["http://huge.example.com/guide.xml"])
             assertEquals(listOf("JT"), assertNotNull(result.data.programs["TV1.fr"]).map { it.title })
             assertEquals(emptyList(), folder.listFiles()!!.map { it.name }, "downloaded guides are deleted once read")

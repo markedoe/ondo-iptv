@@ -23,10 +23,12 @@ import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.nilIfBlank
 import com.markedoe.ondo.core.parsing.TitleParser
+import java.io.File
 import java.net.URI
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
@@ -46,15 +48,37 @@ sealed class XtreamException(message: String) : Exception(message) {
     class InvalidResponse : XtreamException("The server did not answer like an Xtream Codes panel.")
 }
 
-/** Client for the Xtream Codes `player_api.php` API. */
+/**
+ * Client for the Xtream Codes `player_api.php` API. The catalogue's lists are downloaded into [downloadFolder] (the
+ * system's temporary folder when null) and decoded from there one element at a time, then deleted.
+ */
 class XtreamClient(
     val credentials: XtreamCredentials,
     private val http: HttpClient,
     val headers: HttpHeaders = HttpHeaders.NONE,
     private val parsingDispatcher: CoroutineDispatcher = Dispatchers.Default,
     private val clock: () -> Long = System::currentTimeMillis,
+    private val downloadFolder: File? = null,
 ) {
     val urls: XtreamUrlBuilder = XtreamUrlBuilder(credentials)
+
+    /**
+     * A list of the catalogue (channels, movies, series, categories), element by element: a large panel's list is tens
+     * of megabytes, and read whole it took several times that in memory (the bytes, the text, the JSON tree), more
+     * than an entry-level TV gives an app. Elements [decode] rejects are dropped, as [lossyList] does.
+     */
+    private suspend fun <T> getList(action: String, decode: (JsonElement) -> T?): List<T> {
+        val file = withContext(Dispatchers.IO) {
+            downloadFolder?.mkdirs()
+            File.createTempFile("xtream-", ".json", downloadFolder)
+        }
+        try {
+            http.download(urls.apiUrl(action, emptyMap()), headers.toMap(), file)
+            return withContext(parsingDispatcher) { decodeList(file, decode) }
+        } finally {
+            withContext(NonCancellable + Dispatchers.IO) { file.delete() }
+        }
+    }
 
     private suspend fun getJson(action: String? = null, parameters: Map<String, String> = emptyMap()): JsonElement {
         val url = urls.apiUrl(action, parameters)
@@ -98,7 +122,7 @@ class XtreamClient(
     // Catalogue
 
     private suspend fun categories(action: String, type: ContentType): List<MediaCategory> =
-        getJson(action).lossyList(XtreamCategoryDto::from)
+        getList(action, XtreamCategoryDto::from)
             .map { MediaCategory("${type.rawValue}-${it.id}", it.name, type) }
 
     suspend fun liveCategories(): List<MediaCategory> = categories("get_live_categories", ContentType.LIVE)
@@ -108,7 +132,7 @@ class XtreamClient(
     suspend fun seriesCategories(): List<MediaCategory> = categories("get_series_categories", ContentType.SERIES)
 
     suspend fun liveStreams(format: XtreamOutputFormat): List<Channel> =
-        getJson("get_live_streams").lossyList(XtreamLiveStreamDto::from).map { dto ->
+        getList("get_live_streams", XtreamLiveStreamDto::from).map { dto ->
             Channel(
                 id = "x${dto.streamId}",
                 name = dto.name,
@@ -123,7 +147,7 @@ class XtreamClient(
         }.distinctBy { it.id }  // a panel listing a stream twice would break the lists (one key per row)
 
     suspend fun movies(): List<Movie> =
-        getJson("get_vod_streams").lossyList(XtreamVodStreamDto::from).map { dto ->
+        getList("get_vod_streams", XtreamVodStreamDto::from).map { dto ->
             val (name, yearInTitle) = TitleParser.splitYear(dto.name)
             Movie(
                 id = "x${dto.streamId}",
@@ -141,7 +165,7 @@ class XtreamClient(
         }.distinctBy { it.id }
 
     suspend fun series(): List<Series> =
-        getJson("get_series").lossyList(XtreamSeriesDto::from).map { dto ->
+        getList("get_series", XtreamSeriesDto::from).map { dto ->
             val (name, yearInTitle) = TitleParser.splitYear(dto.name)
             Series(
                 id = "x${dto.seriesId}",

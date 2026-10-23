@@ -29,7 +29,20 @@ dependencies {
 
 tasks.test {
     useJUnit()
+    exclude("**/MemoryBudgetTest*")
     testLogging { events("failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+}
+
+// Large catalogues and guides within a heap the size an entry-level TV gives an app (`./gradlew :core:memoryTest`).
+val memoryTest by tasks.registering(Test::class) {
+    description = "Loads large catalogues and guides under a 64 MB heap."
+    group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    useJUnit()
+    filter { includeTestsMatching("*MemoryBudgetTest") }
+    maxHeapSize = "64m"
+    testLogging { events("passed", "failed"); exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
 }
 
 // Mutation testing (`./gradlew :core:pitest`, weekly in CI): Pitest plants small bugs in the compiled core

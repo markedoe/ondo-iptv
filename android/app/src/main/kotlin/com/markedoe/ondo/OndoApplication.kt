@@ -68,7 +68,7 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             awardsSource = { assets.open("awards.json").bufferedReader().use { it.readText() } },
             reminderScheduler = WorkManagerReminderScheduler(this),
             awardsDownload = AwardsDownload(AwardsDownload.URL, cacheDir.resolve("awards.json")),
-            guideFolder = cacheDir.resolve("guides"),
+            downloadFolder = cacheDir.resolve("downloads"),
         )
     }
 

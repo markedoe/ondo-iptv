@@ -91,8 +91,8 @@ class OndoRepository(
     private val awardsDownload: AwardsDownload? = null,
     /** Delivers programme reminders (WorkManager in the app). */
     private val reminderScheduler: ReminderScheduler = NoReminderScheduler,
-    /** Where guides are downloaded while they are read (the app's cache); emptied at start. */
-    private val guideFolder: File? = null,
+    /** Where large answers (guides, Xtream lists) are downloaded while they are read (the app's cache); emptied at start. */
+    private val downloadFolder: File? = null,
 ) {
     private val _state = MutableStateFlow(OndoState())
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -130,8 +130,8 @@ class OndoRepository(
             val playlists = withContext(io) { store.loadPlaylists() }
             val saved = withContext(io) { store.loadLibrary() }
             val lastCrash = withContext(io) {
-                // Guides left half-downloaded by a stop.
-                guideFolder?.listFiles()?.forEach { it.delete() }
+                // Downloads left half-read by a stop.
+                downloadFolder?.listFiles()?.forEach { it.delete() }
                 store.loadLastCrash()
             }
             val pending = pendingLibraryChanges.toList()
@@ -667,7 +667,7 @@ class OndoRepository(
         )
     }
 
-    private fun loader() = PlaylistLoader(http, clock = now, guideFolder = guideFolder)
+    private fun loader() = PlaylistLoader(http, clock = now, downloadFolder = downloadFolder)
 
     private fun SavedPlaylist.credentials(): XtreamCredentials? =
         if (isXtream) XtreamCredentials(XtreamCredentials.normalizeServer(url) ?: url, username.orEmpty(), password.orEmpty()) else null
