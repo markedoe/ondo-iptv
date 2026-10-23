@@ -16,11 +16,14 @@ object TitleParser {
     data class TitleAndYear(val name: String, val year: Int?)
 
     // "Name S01E02", "Name S01 E02", "Name - S1.E2 - Title", "Name 1x02", "Name Saison 2 Épisode 3".
+    // Linear in the title's length: the look-behind lets the name end only where a run of separators starts
+    // (where the leftmost match starts anyway), and the rest of the title, line breaks included, always matches.
+    // Otherwise each position inside a long run, or each marker before a line break, scanned the rest again.
     private val patterns: List<Pattern> = listOf(
-        """^(.*?)[\s._\-|:]*\bS(\d{1,2})[\s._\-]*E(\d{1,4})\b(.*)$""",
-        """^(.*?)[\s._\-|:]*\b(\d{1,2})x(\d{1,3})\b(.*)$""",
-        """^(.*?)[\s._\-|:]*\b(?:Saison|Season|Temporada|Staffel)\s*(\d{1,2})[\s._\-,]*""" +
-            """(?:[EÉ]pisode|Episode|Ep\.?|Folge|Capitulo)\s*(\d{1,4})\b(.*)$""",
+        """^(.*?)(?<![\s._\-|:])[\s._\-|:]*\bS(\d{1,2})[\s._\-]*E(\d{1,4})\b(?s:(.*?))$""",
+        """^(.*?)(?<![\s._\-|:])[\s._\-|:]*\b(\d{1,2})x(\d{1,3})\b(?s:(.*?))$""",
+        """^(.*?)(?<![\s._\-|:])[\s._\-|:]*\b(?:Saison|Season|Temporada|Staffel)\s*(\d{1,2})[\s._\-,]*""" +
+            """(?:[EÉ]pisode|Episode|Ep\.?|Folge|Capitulo)\s*(\d{1,4})\b(?s:(.*?))$""",
     ).map { Pattern.compile(it, Pattern.CASE_INSENSITIVE or Pattern.UNICODE_CASE) }
 
     private val seasonWords = listOf("season", "saison", "temporada", "staffel")
@@ -59,7 +62,7 @@ object TitleParser {
 
     private fun cleanSeriesName(name: String): String = name.trim { it in NAME_SEPARATORS }.trim()
 
-    private val yearPattern: Pattern = Pattern.compile("""^(.*?)[\s\-_.]*[(\[]?((?:19|20)\d{2})[)\]]?\s*$""")
+    private val yearPattern: Pattern = Pattern.compile("""^(.*?)(?<![\s\-_.])[\s\-_.]*[(\[]?((?:19|20)\d{2})[)\]]?\s*$""")
 
     /** `"Lighthouse (2010)"` -> (`"Lighthouse"`, 2010). */
     fun splitYear(title: String): TitleAndYear {
