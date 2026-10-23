@@ -107,6 +107,7 @@ import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
 import com.markedoe.ondo.ui.tv.TvPlace
 import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
+import com.markedoe.ondo.ui.tv.TvSettingsScreen
 import com.markedoe.ondo.ui.tv.tvSafeArea
 import com.markedoe.ondo.ui.tv.isTelevision
 import com.markedoe.ondo.ui.tv.rememberFocusMemory
@@ -218,7 +219,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 page<Routes.Reminders> { RemindersDestination(viewModel, navController) }
                 page<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
                 page<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
-                page<Routes.Settings> { SettingsDestination(viewModel, navController) }
+                page<Routes.Settings>(TvMargins.NONE) { SettingsDestination(viewModel, navController) }
                 page<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
                 page<Routes.Help> {
                     val open = rememberPageOpener(navController)
@@ -579,9 +580,8 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
     val m3u = stringResource(R.string.kind_m3u)
     val xtream = stringResource(R.string.kind_xtream)
     val browse = rememberPageOpener(navController)
-    SettingsScreen(
-        state = UiMappers.settings(state, appVersion()) { isXtream -> if (isXtream) xtream else m3u },
-        actions = SettingsActions(
+    val ui = UiMappers.settings(state, appVersion()) { isXtream -> if (isXtream) xtream else m3u }
+    val actions = SettingsActions(
             onBack = { navController.popBackStack() },
             onAddPlaylist = { navController.navigate(Routes.AddPlaylist) },
             onActivate = viewModel::activate,
@@ -597,8 +597,13 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onHelp = { navController.navigate(Routes.Help) },
             onPrivacy = { browse(PRIVACY_URL) },
             onSupport = { browse(SUPPORT_URL) },
-        ),
-    )
+        )
+    if (isTelevision()) {
+        val canChooseLanguage = remember(context) { context.appLanguageSettings() != null }
+        TvSettingsScreen(ui, actions, canChooseAppLanguage = canChooseLanguage)
+    } else {
+        SettingsScreen(ui, actions)
+    }
 }
 
 @Composable
@@ -652,16 +657,25 @@ private fun Context.browse(url: String) {
 
 /** The system page where Ondo's language is chosen (Android 13+), else the device's languages. */
 private fun Context.openAppLanguageSettings() {
-    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", packageName, null))
-    } else {
-        Intent(Settings.ACTION_LOCALE_SETTINGS)
-    }
+    val intent = appLanguageSettings() ?: Intent(Settings.ACTION_SETTINGS)
     try {
         startActivity(intent)
     } catch (_: ActivityNotFoundException) {
         startActivity(Intent(Settings.ACTION_SETTINGS))
     }
+}
+
+/**
+ * The system screen where Ondo's language is chosen (Android 13's per-app language, else the device's language),
+ * or null where the system has none (some TVs).
+ */
+private fun Context.appLanguageSettings(): Intent? {
+    val perApp = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Intent(Settings.ACTION_APP_LOCALE_SETTINGS, Uri.fromParts("package", packageName, null))
+    } else {
+        null
+    }
+    return listOfNotNull(perApp, Intent(Settings.ACTION_LOCALE_SETTINGS)).firstOrNull { it.resolveActivity(packageManager) != null }
 }
 
 /** The reason a playlist could not be loaded, in the viewer's language. */

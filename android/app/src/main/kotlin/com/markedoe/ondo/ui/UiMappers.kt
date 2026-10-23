@@ -398,7 +398,7 @@ object UiMappers {
     fun settings(state: OndoState, version: String, kindLabel: (Boolean) -> String): SettingsUiState = SettingsUiState(
         playlists = state.playlists.map { playlist ->
             val host = runCatching { java.net.URI(playlist.url.trim()).host }.getOrNull()
-            PlaylistSummary(playlist.id, playlist.name, listOfNotNull(kindLabel(playlist.isXtream), host).joinToString(" · "), playlist.id == state.activePlaylistId)
+            PlaylistSummary(playlist.id, playlist.name, listOfNotNull(kindLabel(playlist.isXtream), host).joinToString(" · "), playlist.id == state.activePlaylistId, playlist.isXtream)
         },
         appearance = state.settings.appearance,
         showAdultCategories = state.settings.showAdultCategories,

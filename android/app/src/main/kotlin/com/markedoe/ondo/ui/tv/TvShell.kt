@@ -89,7 +89,8 @@ fun TvNavigationFrame(
     // The content stays in the same place whether the drawer shows or not: its pages keep their state.
     ModalNavigationDrawer(
         drawerState = rememberDrawerState(DrawerValue.Closed),
-        scrimBrush = startToEndGradient(0f to Color.Black.copy(alpha = 0.92f), 0.45f to Color.Black.copy(alpha = 0.7f), 1f to Color.Transparent),
+        // Open, the drawer's labels sit on a solid dark ground: nothing of the page shows through them.
+        scrimBrush = startToEndGradient(0f to TvTokens.Ink, 0.34f to TvTokens.Ink, 0.6f to Color.Black.copy(alpha = 0.8f), 1f to Color.Black.copy(alpha = 0.55f)),
         drawerContent = {
             if (showDrawer) {
                 Column(

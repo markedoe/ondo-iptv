@@ -46,6 +46,8 @@
     <string name="delete">Supprimer</string>
     <string name="add">Ajouter</string>
     <string name="refresh">Actualiser</string>
+    <string name="use_playlist">Utiliser</string>
+    <string name="settings_catalogue">Catalogue</string>
     <string name="active">Active</string>
     <string name="next_program">À suivre : %1$s</string>
     <string name="nothing_here">Rien pour le moment.</string>

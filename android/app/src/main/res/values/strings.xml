@@ -48,6 +48,8 @@
     <string name="delete">Delete</string>
     <string name="add">Add</string>
     <string name="refresh">Refresh</string>
+    <string name="use_playlist">Use</string>
+    <string name="settings_catalogue">Catalog</string>
     <string name="active">Active</string>
     <string name="next_program">Next: %1$s</string>
     <string name="nothing_here">Nothing here yet.</string>

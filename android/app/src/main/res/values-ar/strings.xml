@@ -46,6 +46,8 @@
     <string name="delete">حذف</string>
     <string name="add">إضافة</string>
     <string name="refresh">تحديث</string>
+    <string name="use_playlist">استخدام</string>
+    <string name="settings_catalogue">الكتالوج</string>
     <string name="active">نشطة</string>
     <string name="next_program">التالي: %1$s</string>
     <string name="nothing_here">لا يوجد شيء هنا بعد.</string>

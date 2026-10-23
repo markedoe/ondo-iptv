@@ -223,12 +223,14 @@ fun AddPlaylistScreen(
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
             Button(
                 onClick = {
+                    if (isLoading) return@Button
                     onSave(
                         if (kind == 0) PlaylistForm.Xtream(name.trim(), server.trim(), username.trim(), password)
                         else PlaylistForm.M3u(name.trim(), url.trim(), epg.trim()),
                     )
                 },
-                enabled = valid && !isLoading,
+                // Not disabled while it checks: the remote's focus stays on it (a disabled button loses it).
+                enabled = valid,
                 modifier = Modifier.fillMaxWidth().testTag("savePlaylist"),
             ) {
                 if (isLoading) ButtonProgress() else Text(stringResource(R.string.add))

@@ -62,7 +62,7 @@ import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.ui.theme.Appearance
 import com.markedoe.ondo.ui.tv.focusFrame
 
-data class PlaylistSummary(val id: String, val name: String, val detail: String, val active: Boolean)
+data class PlaylistSummary(val id: String, val name: String, val detail: String, val active: Boolean, val xtream: Boolean = false)
 
 data class SettingsUiState(
     val playlists: List<PlaylistSummary> = emptyList(),
@@ -249,7 +249,7 @@ private fun BufferRow(label: String, seconds: Int, onChange: (Int) -> Unit, modi
 }
 
 @Composable
-private fun bufferLabel(seconds: Int): String =
+internal fun bufferLabel(seconds: Int): String =
     if (seconds > 0) pluralStringResource(R.plurals.buffer_seconds, seconds, seconds) else stringResource(R.string.automatic)
 
 @Composable

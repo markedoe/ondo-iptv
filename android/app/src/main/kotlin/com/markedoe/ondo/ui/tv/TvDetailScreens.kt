@@ -28,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckBox
+import androidx.compose.material.icons.rounded.CheckBoxOutlineBlank
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.LibraryAdd
@@ -40,12 +42,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,20 +58,29 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.tv.material3.Button
 import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
+import androidx.tv.material3.ListItem
+import androidx.tv.material3.ListItemDefaults
 import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.People
@@ -80,13 +94,14 @@ import com.markedoe.ondo.ui.components.BlurredPoster
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.CollectionChoice
-import com.markedoe.ondo.ui.screens.CollectionPicker
+import com.markedoe.ondo.ui.screens.CollectionNameDialog
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailUiState
 import com.markedoe.ondo.ui.screens.WatchProgress
 import com.markedoe.ondo.ui.screens.durationText
 import com.markedoe.ondo.ui.screens.myListState
+import com.markedoe.ondo.ui.theme.OndoColors
 
 /** Where the text and rows of a page without the drawer start. */
 private val PageStart: Dp = TvTokens.EdgeEnd
@@ -106,6 +121,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
     )
     val resumable = state.progress?.let { !it.finished && it.fraction > 0f } == true
     var picking by rememberSaveable { mutableStateOf(false) }
+    val collectionButton = remember { FocusRequester() }
     TvDetailPage {
         item(key = "header") {
             TvDetailHeader(
@@ -128,7 +144,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                     }
                 }
                 MyListButton(state.inMyList, actions.onToggleMyList)
-                CollectionButton(state.collections) { picking = true }
+                CollectionButton(state.collections, collectionButton) { picking = true }
             }
         }
         peopleShelf(details?.director, details?.cast, actions)
@@ -136,7 +152,8 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         exploreShelf(details?.genre, movie.year ?: details?.releaseDate?.take(4)?.toIntOrNull(), actions)
         similarShelf(state.similar, actions)
     }
-    if (picking) CollectionPicker(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
+    if (picking) TvCollectionDialog(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
+    FocusBackAfter(picking, collectionButton)
 }
 
 /**
@@ -157,6 +174,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
     val resumable = state.nextProgress?.let { !it.finished && it.fraction > 0f } == true
     val episodesTitle = stringResource(R.string.episodes)
     var picking by rememberSaveable { mutableStateOf(false) }
+    val collectionButton = remember { FocusRequester() }
     TvDetailPage {
         item(key = "header") {
             TvDetailHeader(
@@ -176,7 +194,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                     }
                 }
                 MyListButton(state.inMyList, actions.onToggleMyList)
-                CollectionButton(state.collections) { picking = true }
+                CollectionButton(state.collections, collectionButton) { picking = true }
             }
         }
         state.error?.let { error ->
@@ -213,7 +231,8 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         exploreShelf(details?.genre ?: series.genre, series.year, actions)
         similarShelf(state.similar, actions)
     }
-    if (picking) CollectionPicker(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
+    if (picking) TvCollectionDialog(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
+    FocusBackAfter(picking, collectionButton)
 }
 
 @Composable
@@ -356,10 +375,81 @@ private fun MyListButton(inMyList: Boolean, onClick: () -> Unit) {
 
 /** Opens the collections; marked when one of them holds the title. */
 @Composable
-private fun CollectionButton(collections: List<CollectionChoice>, onClick: () -> Unit) {
+private fun CollectionButton(collections: List<CollectionChoice>, requester: FocusRequester, onClick: () -> Unit) {
     val held = collections.any { it.contains }
-    TvActionButton(onClick = onClick, modifier = Modifier.focusMemory("detail-collection").testTag("detailCollection")) {
+    TvActionButton(onClick = onClick, modifier = Modifier.focusRequester(requester).focusMemory("detail-collection").testTag("detailCollection")) {
         ButtonLabel(if (held) Icons.Rounded.LibraryAddCheck else Icons.Rounded.LibraryAdd, stringResource(R.string.collection))
+    }
+}
+
+/**
+ * The collections, ticked when they hold the title, and New collection: OK ticks or unticks one. The remote starts
+ * on the first line.
+ */
+@Composable
+private fun TvCollectionDialog(choices: List<CollectionChoice>, onToggle: (String) -> Unit, onNew: (String) -> Unit, onDismiss: () -> Unit) {
+    var naming by rememberSaveable { mutableStateOf(false) }
+    val first = remember { FocusRequester() }
+    val colors = ListItemDefaults.colors(
+        containerColor = Color.Transparent,
+        contentColor = Color.White,
+        focusedContainerColor = Color.White,
+        focusedContentColor = TvTokens.Ink,
+    )
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            colors = SurfaceDefaults.colors(containerColor = OndoColors.SurfaceHigh, contentColor = Color.White),
+            modifier = Modifier.widthIn(min = 360.dp, max = 520.dp).testTag("collectionPicker"),
+        ) {
+            Column(Modifier.padding(vertical = 24.dp, horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    stringResource(R.string.add_to_collection),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 12.dp, bottom = 12.dp),
+                )
+                FocusOnOpen(first)
+                choices.forEachIndexed { index, choice ->
+                    ListItem(
+                        selected = false,
+                        onClick = { onToggle(choice.id) },
+                        headlineContent = { Text(choice.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        trailingContent = { Icon(if (choice.contains) Icons.Rounded.CheckBox else Icons.Rounded.CheckBoxOutlineBlank, contentDescription = null) },
+                        modifier = Modifier
+                            .then(if (index == 0) Modifier.focusRequester(first) else Modifier)
+                            .semantics {
+                                role = Role.Checkbox
+                                toggleableState = ToggleableState(choice.contains)
+                            }
+                            .testTag("pick-${choice.name}"),
+                        colors = colors,
+                        shape = ListItemDefaults.shape(RoundedCornerShape(12.dp)),
+                    )
+                }
+                ListItem(
+                    selected = false,
+                    onClick = { naming = true },
+                    headlineContent = { Text(stringResource(R.string.new_collection)) },
+                    leadingContent = { Icon(Icons.Rounded.Add, contentDescription = null) },
+                    modifier = Modifier.then(if (choices.isEmpty()) Modifier.focusRequester(first) else Modifier).testTag("pickNewCollection"),
+                    colors = colors,
+                    shape = ListItemDefaults.shape(RoundedCornerShape(12.dp)),
+                )
+            }
+        }
+    }
+    if (naming) {
+        CollectionNameDialog(
+            title = stringResource(R.string.new_collection),
+            initial = stringResource(R.string.collection_default_name, choices.size + 1),
+            confirm = stringResource(R.string.create),
+            onConfirm = {
+                naming = false
+                onNew(it)
+            },
+            onDismiss = { naming = false },
+        )
     }
 }
 

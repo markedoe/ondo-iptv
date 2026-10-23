@@ -46,6 +46,8 @@
     <string name="delete">डिलीट करें</string>
     <string name="add">जोड़ें</string>
     <string name="refresh">रीफ़्रेश करें</string>
+    <string name="use_playlist">इस्तेमाल करें</string>
+    <string name="settings_catalogue">कैटलॉग</string>
     <string name="active">सक्रिय</string>
     <string name="next_program">अगला: %1$s</string>
     <string name="nothing_here">अभी यहाँ कुछ नहीं है।</string>

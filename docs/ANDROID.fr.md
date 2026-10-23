@@ -41,7 +41,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   (`androidx.tv:tv-material`) aux couleurs d'Ondo (`TvDesign.kt`) : un menu latéral avec Recherche, les onglets et
   Réglages (`TvShell.kt` ; Retour mène d'une page au menu, puis à l'Accueil, puis hors de l'app), un Accueil plein
   écran (`TvHomeScreen.kt`) et des fiches film et série (`TvDetailScreens.kt`) avec l'image de fond derrière le
-  texte, des cartes qui grandissent avec un contour blanc à la sélection et des rangées qui dépassent du bord droit ;
+  texte, des Réglages en deux volets où chaque playlist a ses boutons à portée de télécommande (`TvSettingsScreen.kt` ;
+  Supprimer demande d'abord, en commençant sur Annuler), des cartes qui grandissent avec un contour blanc à la sélection et des rangées qui dépassent du bord droit ;
   les autres pages sont les écrans Compose dans la zone sûre de la TV (48 × 27 dp). Une sélection qui revient sur
   la carte quittée (`FocusMemory`) et entre d'elle-même dans chaque page (`FocusEntry`), des rangées qui défilent
   jusqu'au tiers. Lecteur : OK met en pause, Gauche / Droite reculent et

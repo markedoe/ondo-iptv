@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
@@ -65,6 +67,7 @@ import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.theme.OndoColors
+import kotlinx.coroutines.delay
 
 /**
  * The look of Ondo on Android TV and Google TV: Google's Compose for TV components (cards that grow with a white
@@ -133,6 +136,37 @@ fun startToEndGradient(vararg stops: Pair<Float, Color>): Brush {
         startX = if (rtl) Float.POSITIVE_INFINITY else 0f,
         endX = if (rtl) 0f else Float.POSITIVE_INFINITY,
     )
+}
+
+/**
+ * Gives the focus back to [requester] once a dialog that was [open] closes: without it, the remote's focus is lost
+ * on the page behind and the next key press does nothing.
+ */
+@Composable
+fun FocusBackAfter(open: Boolean, requester: FocusRequester) {
+    var wasOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(open) {
+        if (open) {
+            wasOpen = true
+        } else if (wasOpen) {
+            wasOpen = false
+            runCatching { requester.requestFocus() }
+        }
+    }
+}
+
+/**
+ * Puts the focus on [requester] when a dialog opens: called inside the dialog, it waits for the dialog's window to
+ * lay the item out (a few frames), so the remote starts on it.
+ */
+@Composable
+fun FocusOnOpen(requester: FocusRequester) {
+    LaunchedEffect(requester) {
+        repeat(20) {
+            if (runCatching { requester.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
+            delay(16)
+        }
+    }
 }
 
 /** The scale, white border and soft glow every card takes with the remote's focus. */
@@ -311,10 +345,11 @@ fun playLabel(resumable: Boolean): String = stringResource(if (resumable) R.stri
  * focus), slightly larger.
  */
 @Composable
-fun TvActionButton(onClick: () -> Unit, modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
+fun TvActionButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, content: @Composable RowScope.() -> Unit) {
     Button(
         onClick = onClick,
         modifier = modifier,
+        enabled = enabled,
         scale = ButtonDefaults.scale(focusedScale = 1.06f),
         colors = ButtonDefaults.colors(
             containerColor = Color.White.copy(alpha = 0.16f),
