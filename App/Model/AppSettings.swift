@@ -103,6 +103,9 @@ struct AppSettings: Codable, Equatable {
     var awardsCheckedAt: Date?
     /// Movies the viewer has finished are left out where movies are browsed (not of search, My List or collections).
     var hideWatchedMovies = false
+    /// Sync with Ondo on the other devices of the local network (docs/SYNC.md): off until the viewer turns it on, on
+    /// each device. The device's sync ID is kept apart (`SyncState`), not here.
+    var syncOnLocalNetwork = false
 
     init() {}
 
@@ -138,5 +141,6 @@ struct AppSettings: Codable, Equatable {
         updateAwards = (try? c.decodeIfPresent(Bool.self, forKey: .updateAwards)) ?? d.updateAwards
         awardsCheckedAt = try? c.decodeIfPresent(Date.self, forKey: .awardsCheckedAt)
         hideWatchedMovies = (try? c.decodeIfPresent(Bool.self, forKey: .hideWatchedMovies)) ?? d.hideWatchedMovies
+        syncOnLocalNetwork = (try? c.decodeIfPresent(Bool.self, forKey: .syncOnLocalNetwork)) ?? d.syncOnLocalNetwork
     }
 }

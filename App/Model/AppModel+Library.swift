@@ -17,16 +17,19 @@ extension AppModel {
     func toggleFavorite(_ channel: Channel) {
         guard let ref = reference(.live, channel.id) else { return }
         updateLibrary { $0.toggleFavorite(ref, title: channel.name, imageURL: logoURL(for: channel)) }
+        syncSoon()
     }
 
     func toggleFavorite(_ movie: Movie) {
         guard let ref = reference(.movie, movie.id) else { return }
         updateLibrary { $0.toggleFavorite(ref, title: movie.name, imageURL: movie.posterURL) }
+        syncSoon()
     }
 
     func toggleFavorite(_ series: Series) {
         guard let ref = reference(.series, series.id) else { return }
         updateLibrary { $0.toggleFavorite(ref, title: series.name, imageURL: series.coverURL) }
+        syncSoon()
     }
 
     func favorites(_ type: ContentType) -> [FavoriteEntry] {
@@ -47,15 +50,18 @@ extension AppModel {
     func createList(named name: String) -> UUID {
         var id = UUID()
         updateLibrary { id = $0.createList(named: name) }
+        syncSoon()
         return id
     }
 
     func renameList(_ id: UUID, to name: String) {
         updateLibrary { $0.renameList(id, to: name) }
+        syncSoon()
     }
 
     func deleteList(_ id: UUID) {
         updateLibrary { $0.deleteList(id) }
+        noteListDeletedForSync(id)
     }
 
     func toggle(_ item: LibraryItem, inList id: UUID) {
@@ -65,6 +71,7 @@ extension AppModel {
             return item.imageURL
         }()
         updateLibrary { $0.toggle(ref, title: item.title, imageURL: image, inList: id) }
+        syncSoon()
     }
 
     func isInList(_ item: LibraryItem, list: CustomList) -> Bool {
@@ -90,6 +97,7 @@ extension AppModel {
         guard let list = library.customLists.first(where: { $0.id == id }) else { return }
         let move = Self.storedMove(visible: items(in: list), stored: list.items, fromOffsets: source, toOffset: destination)
         updateLibrary { $0.moveItems(inList: id, fromOffsets: move.source, toOffset: move.destination) }
+        syncSoon()
     }
 
     /// Screens show a filtered list (locked, hidden and vanished items left out), so the offsets of a move
@@ -167,10 +175,13 @@ extension AppModel {
 
     func removeFromHistory(_ entry: HistoryEntry) {
         updateLibrary { $0.removeHistory(entry) }
+        syncSoon()
     }
 
     func clearHistory() {
+        let cleared = library.history
         updateLibrary { $0.clearHistory() }
+        noteHistoryClearedForSync(cleared)
     }
 
     func recordStart(_ item: PlaybackItem) {

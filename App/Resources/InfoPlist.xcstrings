@@ -8,43 +8,43 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo looks for Chromecast and AirPlay devices on your network so you can watch on a TV or projector, and plays streams served from your local network."
+            "value": "Ondo looks for Chromecast and AirPlay devices on your network so you can watch on a TV or projector, plays streams served from your local network, and finds Ondo on your other devices to sync with them when you turn sync on."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo recherche les appareils Chromecast et AirPlay de votre réseau pour que vous puissiez regarder sur une TV ou un projecteur, et lit les flux servis par votre réseau local."
+            "value": "Ondo recherche les appareils Chromecast et AirPlay de votre réseau pour que vous puissiez regarder sur une TV ou un projecteur, lit les flux servis par votre réseau local, et trouve Ondo sur vos autres appareils pour se synchroniser avec eux quand vous activez la synchronisation."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo busca dispositivos Chromecast y AirPlay en tu red para que puedas ver en un televisor o un proyector, y reproduce las transmisiones servidas desde tu red local."
+            "value": "Ondo busca dispositivos Chromecast y AirPlay en tu red para que puedas ver en un televisor o un proyector, reproduce las transmisiones servidas desde tu red local y encuentra Ondo en tus otros dispositivos para sincronizarse con ellos cuando activas la sincronización."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Ondo procura dispositivos Chromecast e AirPlay na sua rede para você assistir em uma TV ou projetor, e reproduz as transmissões servidas pela sua rede local."
+            "value": "O Ondo procura dispositivos Chromecast e AirPlay na sua rede para você assistir em uma TV ou projetor, reproduz as transmissões servidas pela sua rede local e encontra o Ondo nos seus outros dispositivos para sincronizar com eles quando você ativa a sincronização."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo 会在你的网络中查找 Chromecast 和 AirPlay 设备，以便你在电视或投影仪上观看，并播放来自本地网络的流。"
+            "value": "Ondo 会在你的网络中查找 Chromecast 和 AirPlay 设备，以便你在电视或投影仪上观看，播放来自本地网络的流，并在你开启同步后查找你其他设备上的 Ondo 以与之同步。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "يبحث Ondo عن أجهزة Chromecast وAirPlay على شبكتك لتتمكن من المشاهدة على تلفاز أو جهاز عرض، ويشغّل البث المقدَّم من شبكتك المحلية."
+            "value": "يبحث Ondo عن أجهزة Chromecast وAirPlay على شبكتك لتتمكن من المشاهدة على تلفاز أو جهاز عرض، ويشغّل البث المقدَّم من شبكتك المحلية، ويعثر على Ondo في أجهزتك الأخرى ليتزامن معها عند تفعيل المزامنة."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo आपके नेटवर्क पर Chromecast और AirPlay डिवाइस खोजता है ताकि आप टीवी या प्रोजेक्टर पर देख सकें, और आपके लोकल नेटवर्क से आने वाली स्ट्रीम चलाता है।"
+            "value": "Ondo आपके नेटवर्क पर Chromecast और AirPlay डिवाइस खोजता है ताकि आप टीवी या प्रोजेक्टर पर देख सकें, आपके लोकल नेटवर्क से आने वाली स्ट्रीम चलाता है, और सिंक चालू करने पर आपके दूसरे डिवाइस पर Ondo खोजकर उनसे सिंक करता है।"
           }
         }
       }

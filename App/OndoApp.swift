@@ -32,6 +32,8 @@ struct OndoApp: App {
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model.flush() }
             if phase == .background { model.lockParentalControl() }
+            // Sync on the local network runs while the app is open, and stops in the background.
+            model.setInForeground(phase != .background)
         }
         #if os(macOS)
         .defaultSize(width: 1180, height: 760)

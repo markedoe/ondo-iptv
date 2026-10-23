@@ -20,6 +20,10 @@ submitted, its listing and its review notes are checked here, before any upload:
 6. No way to pay or donate other than In-App Purchase is reachable from the apps (3.1.1, and Google Play's payments
    policy): no donation link in their code or on the pages of the website they open, and no `.github/FUNDING.yml`,
    whose Sponsor button shows on the GitHub issue form the apps open.
+7. The local network: every Bonjour service the app's code browses is declared in NSBonjourServices (iOS finds nothing
+   otherwise) and named in the review notes; when it browses Ondo's own service (sync on the local network,
+   docs/SYNC.md), the Local Network prompt says so (5.1.1). The Mac App Store edition never listens for connections
+   (no NWListener outside iPhone and iPad code): it has no network.server entitlement, which App Review refused.
 
 The addresses of the listing are checked to answer in the release workflow, before the upload.
 
@@ -66,6 +70,12 @@ RUNTIME_SWITCH = re.compile(
 # (`-uitest…`) stay in `#if DEBUG` code.
 LAUNCH_SWITCH = re.compile(
     r"\bProcessInfo(?:\.processInfo|\(\))\.(?:arguments|environment)\b|\bCommandLine\.\w+|\bgetenv\(")
+# A Bonjour service type written in the code ("_ondo._tcp").
+BONJOUR_SERVICE = re.compile(r'"(_[A-Za-z0-9-]+\._(?:tcp|udp))"')
+# Ondo's own service: sync on the local network, which the Local Network prompt must give as a reason.
+SYNC_SERVICE = "_ondo._tcp"
+# The conditions of the Mac App Store edition: the App Store edition's, on macOS.
+MAC_EDITION = {**EDITION, "os(macOS)": True, "os(iOS)": False}
 # A flag that is off for good: `static let x = false`, `static var x: Bool { false }`, `static func x() -> Bool { false }`,
 # `static let x: Bool = { return false }()`.
 DORMANT_FLAG = re.compile(
@@ -292,8 +302,13 @@ def check_site(problems: list) -> None:
 
 def background_modes(project: str) -> list:
     """The UIBackgroundModes of project.yml, written inline (`[audio, fetch]`, `audio`) or as a YAML block list."""
+    return yaml_list(project, "UIBackgroundModes")
+
+
+def yaml_list(project: str, key: str) -> list:
+    """The values of a list key of project.yml, written inline (`[audio, fetch]`, `audio`) or as a YAML block list."""
     modes = []
-    for match in re.finditer(r"^([ \t]*)UIBackgroundModes:[ \t]*([^\n#]*)", project, re.MULTILINE):
+    for match in re.finditer(rf"^([ \t]*){re.escape(key)}:[ \t]*([^\n#]*)", project, re.MULTILINE):
         indent, value = match.group(1), match.group(2).strip()
         if value.startswith("["):
             modes += [mode.strip().strip("'\"") for mode in value.strip("[]").split(",")]
@@ -372,6 +387,33 @@ def check_payments(problems: list) -> None:
         problems.append(".github/FUNDING.yml: its Sponsor button shows on the GitHub issue form the apps open")
 
 
+def check_local_network(problems: list) -> None:
+    project = (ROOT / "project.yml").read_text(encoding="utf-8")
+    declared = set(yaml_list(project, "NSBonjourServices"))
+    notes = NOTES.read_text(encoding="utf-8") if NOTES.is_file() else ""
+    browsed = set()
+    for path in swift_files("App", "Packages/IPTVCore/Sources"):
+        text = path.read_text(encoding="utf-8")
+        relative = path.relative_to(ROOT).as_posix()
+        browsed |= set(BONJOUR_SERVICE.findall(without_comments(edition_source(text))))
+        if relative.startswith("App/") and re.search(r"\bNWListener\b", without_comments(edition_source(text, MAC_EDITION))):
+            problems.append(f"{relative}: the Mac App Store edition would listen for connections (NWListener): it has no "
+                            "com.apple.security.network.server entitlement (App Review refused it, 2.4.5(i)); keep "
+                            "listeners in iPhone and iPad code (`#if os(iOS)`) and make the Mac a client")
+    for service in sorted(browsed):
+        if service not in declared:
+            problems.append(f"project.yml: NSBonjourServices lacks {service}, which the app browses: iOS finds nothing "
+                            "without it")
+        if service not in notes:
+            problems.append(f"the review notes do not explain the Bonjour service {service} "
+                            "(fastlane/metadata/review_information/notes.txt)")
+    if SYNC_SERVICE in browsed:
+        description = re.search(r"NSLocalNetworkUsageDescription:\s*(.+)", project)
+        if not description or not re.search(r"(?i)\bsync", description.group(1)):
+            problems.append("project.yml: NSLocalNetworkUsageDescription must say that Ondo looks for its other devices "
+                            f"to sync (the app browses {SYNC_SERVICE}), not only for Chromecast and AirPlay (5.1.1)")
+
+
 def main() -> int:
     problems = []
     check_code(problems)
@@ -380,6 +422,7 @@ def main() -> int:
     check_site(problems)
     check_review_notes(problems)
     check_payments(problems)
+    check_local_network(problems)
     for problem in problems:
         print(f"::error::{problem}")
     print(f"App Store edition: {len(problems)} problem(s).")

@@ -95,6 +95,9 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   provider refuses, limits connections or sends nothing, and their details to share.
 - **Data**: JSON backup / restore, clearable cache. Posters, thumbnails and the movie and series pages stay on the
   device: they show at once at the next launch, and the pages still open when the provider cannot be reached.
+- **Sync on this network** (Settings, off until turned on): iPhone, iPad and Mac connect to the Android devices
+  with Ondo open on the same network and keep the same playlists, My List, collections and progress (main profile
+  only; two Apple devices sync through an Android one). Local addresses only ([docs/SYNC.md](docs/SYNC.md)).
 - **Help** in the app (Settings, and Help, Ondo Help on the Mac): one page per feature, in every language.
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi.
 

@@ -330,6 +330,24 @@ struct SettingsView: View {
             }
 
             Section {
+                // Sync brings playlists and their logins in and sends them out, like backups: behind the PIN too.
+                Toggle(isOn: Binding(
+                    get: { model.settings.syncOnLocalNetwork },
+                    set: { on in guarded(on ? .syncOn : .syncOff) }
+                )) {
+                    Label("Sync on this network", systemImage: "arrow.triangle.2.circlepath.circle")
+                }
+                .disabled(backupsBlocked)
+                if model.settings.syncOnLocalNetwork {
+                    LocalSyncStatus()
+                }
+            } footer: {
+                // One sentence group, the same as Android's: the translation checks read single-line literals.
+                // swiftlint:disable:next line_length
+                Text("While Ondo is open, devices on this network with this setting on keep the same playlists, My List, collections and progress. iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other. Nothing leaves the local network, but playlist logins travel unencrypted on it: turn this on at home only.")
+            }
+
+            Section {
                 Button {
                     guarded(.export)
                 } label: {
@@ -422,9 +440,9 @@ struct SettingsView: View {
     }
 
     /// A backup holds the provider logins, and restoring one changes the playlists: under parental control,
-    /// both need the PIN.
+    /// both need the PIN. So does turning sync on or off, which sends and brings the same.
     private enum BackupAction: String, Identifiable {
-        case export, restore
+        case export, restore, syncOn, syncOff
         var id: String { rawValue }
     }
 
@@ -452,7 +470,52 @@ struct SettingsView: View {
             }
         case .restore:
             showingImporter = true
+        case .syncOn, .syncOff:
+            model.setSyncOnLocalNetwork(action == .syncOn)
         }
+    }
+}
+
+/// What sync on the local network found, and how it went with each device; or why it does not run.
+private struct LocalSyncStatus: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        let sync = model.localSync
+        if !model.syncsThisProfile {
+            Label("Only the main profile syncs.", systemImage: "person.crop.circle.badge.exclamationmark")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        } else if sync.problem == .localNetworkDenied {
+            Label("Ondo may not use the local network. Allow it in the system settings, in Privacy & Security, Local Network.", systemImage: "exclamationmark.triangle")
+                .font(.caption)
+                .foregroundStyle(.orange)
+        } else if sync.devices.isEmpty {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Looking for other devices with Ondo open…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        } else {
+            ForEach(sync.devices) { device in
+                LabeledContent {
+                    status(of: device)
+                } label: {
+                    Label {
+                        Text(verbatim: device.name)
+                    } icon: {
+                        Image(systemName: "tv")
+                    }
+                }
+            }
+        }
+    }
+
+    private func status(of device: LocalSync.Device) -> Text {
+        if device.failures > 0 { return Text("Not reached, trying again") }
+        if let syncedAt = device.syncedAt { return Text("Synced at \(syncedAt.formatted(date: .omitted, time: .shortened))") }
+        return Text("Found")
     }
 }
 

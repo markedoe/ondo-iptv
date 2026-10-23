@@ -330,6 +330,8 @@ extension AppModel {
         sessions[session.id] = nil
         if pictureInPictureSession === session { pictureInPictureSession = nil }
         if playbackRequest === session { playbackRequest = nil }
+        // Where the movie or episode was left goes to the other devices once playback ends (not at every save).
+        if session.current?.isLive == false { syncSoon() }
     }
 
     /// Called when the iOS full-screen player is dismissed by the user.

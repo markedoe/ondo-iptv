@@ -435,6 +435,26 @@ class AppStoreTests(CheckTestCase):
         self.assertFails("app_store", "do not explain NSCameraUsageDescription",
                          "do not explain com.apple.security.network.server", "do not explain Notifications")
 
+    def test_a_browsed_bonjour_service_is_declared_explained_and_given_as_a_reason(self):
+        self.write("Packages/IPTVCore/Sources/IPTVCore/Sync/SyncNetwork.swift",
+                   'public static let serviceType = "_ondo._tcp"\n// "_other._tcp" in a comment is not browsed\n')
+        self.assertFails("app_store", "project.yml: NSBonjourServices lacks _ondo._tcp",
+                         "do not explain the Bonjour service _ondo._tcp",
+                         "NSLocalNetworkUsageDescription must say that Ondo looks for its other devices to sync")
+        code, output = run("app_store", self.root)
+        self.assertNotIn("_other._tcp", output)
+        self.project("        NSBonjourServices:\n          - _googlecast._tcp\n          - _ondo._tcp\n")
+        project = (self.root / "project.yml").read_text(encoding="utf-8")
+        self.write("project.yml", project.replace("Ondo looks for TVs.", "Ondo looks for TVs, and for Ondo on your devices to sync."))
+        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES + "Sync browses _ondo._tcp.\n")
+        self.assertPasses("app_store")
+
+    def test_the_mac_edition_never_listens_for_connections(self):
+        self.write("App/Player/RemuxServer.swift", "import Network\n#if os(iOS)\nlet listener = try NWListener(using: .tcp)\n#endif\n")
+        self.assertPasses("app_store")
+        self.write("App/Model/LocalSync.swift", "#if !os(iOS)\nlet listener = try NWListener(using: .tcp)\n#endif\n")
+        self.assertFails("app_store", "App/Model/LocalSync.swift: the Mac App Store edition would listen for connections")
+
     def test_background_modes_written_as_a_block_list_are_explained_too(self):
         self.project(modes="\n          - audio\n          - fetch")
         self.assertFails("app_store", "do not explain UIBackgroundModes fetch")

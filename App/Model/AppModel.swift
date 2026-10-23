@@ -69,7 +69,7 @@ struct ContentIndex: Sendable {
 @MainActor
 @Observable
 final class AppModel {
-    @ObservationIgnored private let userStore: FileStore
+    @ObservationIgnored let userStore: FileStore
     @ObservationIgnored let cacheStore: FileStore
     @ObservationIgnored let secrets: SecretStore
     @ObservationIgnored let reminderScheduler: ReminderScheduling
@@ -113,6 +113,12 @@ final class AppModel {
     var playbackRequest: PlaybackSession?
     /// Channels watched side by side (iPad / Mac).
     let multiview = Multiview()
+    /// Sync with Ondo on the other devices of the local network (AppModel+Sync, LocalSync); off until turned on.
+    let localSync = LocalSync()
+    /// This device's sync ID, playlist edit times and deletions (`sync.json`).
+    @ObservationIgnored var syncState = SyncState()
+    /// The app is on screen (not in the background): sync runs only then.
+    @ObservationIgnored var isInForeground = true
     /// Shows the multiview screen (full-screen cover on iPad, a window on Mac).
     var isMultiviewPresented = false
     /// Session kept alive while playing in Picture in Picture with the player UI closed.
@@ -180,6 +186,7 @@ final class AppModel {
         let client = URLSessionHTTPClient()
         http = client
         loader = PlaylistLoader(http: client, localFileURL: { AppPaths.importedPlaylist($0) })
+        localSync.model = self
     }
 
     // MARK: - Startup
@@ -212,7 +219,9 @@ final class AppModel {
         playlists = (userStore.load([Playlist].self, name: "playlists") ?? []).map(withStoredPassword)
         hasParentalPIN = secrets.get(Keychain.parentalPINKey) != nil
         hasTMDbKey = secrets.get(Keychain.tmdbKey) != nil
+        loadSyncState()
         isReady = true
+        refreshLocalSync()
         #if DEBUG
         if UITestFixture.isEnabled, playlists.isEmpty, let fixture = try? UITestFixture.makePlaylist() {
             try? await addPlaylist(fixture)
@@ -301,6 +310,7 @@ final class AppModel {
         isParentalUnlocked = false
         needsProfileSelection = false
         scheduleReminderSync()
+        refreshLocalSync()
         if autoplayPending {
             autoplayPending = false
             autoplayLastChannel()
@@ -337,6 +347,7 @@ final class AppModel {
         if wasActive, let first = profiles.first {
             library = userStore.load(UserLibrary.self, name: first.libraryDocumentName) ?? UserLibrary()
             updateSettings { $0.activeProfileID = first.id }
+            refreshLocalSync()
         }
     }
 
@@ -384,6 +395,7 @@ final class AppModel {
         stored.lastRefreshedAt = Date()
         playlists.append(stored)
         savePlaylists()
+        notePlaylistChangedForSync(stored.id)
         await saveContentCache(fresh, for: stored.id)
         if settings.lockAdultCategoriesAutomatically {
             lockAdultCategories(playlistID: stored.id, content: fresh)
@@ -396,13 +408,15 @@ final class AppModel {
     }
 
     /// Saves a changed playlist. `fresh` is its content when it was just downloaded with these settings.
-    func updatePlaylist(_ playlist: Playlist, checked fresh: PlaylistContent? = nil) async {
+    /// `recordsSyncChange` is false when the change comes from sync, which keeps the other device's edit time.
+    func updatePlaylist(_ playlist: Playlist, checked fresh: PlaylistContent? = nil, recordsSyncChange: Bool = true) async {
         guard let position = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
         let previous = playlists[position]
         var playlist = playlist
         if fresh != nil { playlist.lastRefreshedAt = Date() }
         playlists[position] = playlist
         savePlaylists()
+        if recordsSyncChange { notePlaylistEditedForSync(from: previous, to: playlist) }
         if let fresh {
             await saveContentCache(fresh, for: playlist.id)
             if settings.lockAdultCategoriesAutomatically {
@@ -435,9 +449,11 @@ final class AppModel {
         }
     }
 
-    func deletePlaylist(_ playlist: Playlist) async {
+    /// `recordsSyncDeletion` is false when sync deletes it: the deletion keeps the time it was made elsewhere.
+    func deletePlaylist(_ playlist: Playlist, recordsSyncDeletion: Bool = true) async {
         playlists.removeAll { $0.id == playlist.id }
         savePlaylists()
+        notePlaylistDeletedForSync(playlist, recordsDeletion: recordsSyncDeletion)
         secrets.set(nil, for: Keychain.passwordKey(for: playlist.id))
         cacheStore.remove(name: "content-\(playlist.id.uuidString)")
         cacheStore.remove(name: "epg-\(playlist.id.uuidString)")
@@ -782,9 +798,10 @@ final class AppModel {
     func lockParentalControl() {
         isParentalUnlocked = false
     }
+}
 
-    // MARK: - Data management
-
+/// Backups (export and restore).
+extension AppModel {
     func exportBackup() throws -> Data {
         // Category locks are kept for the whole device, outside the profile's library: they travel with it.
         var archived = library
@@ -794,10 +811,13 @@ final class AppModel {
 
     func importBackup(_ data: Data) async throws {
         let archive = try BackupArchive.decode(data)
+        var restored: [Playlist] = []
         for playlist in archive.playlists where !playlists.contains(where: { $0.id == playlist.id }) {
             playlists.append(playlist)
+            restored.append(playlist)
         }
         savePlaylists()
+        notePlaylistsRestoredForSync(restored)
         // The same merge as between devices: favourites, lists, history, reminders and hidden channels,
         // with deletions respected.
         updateLibrary { $0 = $0.merged(with: archive.library) }
@@ -834,5 +854,60 @@ extension AppModel {
             }
         }
         return excluded
+    }
+}
+
+/// Playlists that sync brings (AppModel+Sync).
+extension AppModel {
+    /// Playlists another device has (sync): saved like an added playlist, their catalogue downloaded in the background,
+    /// without opening them, unless this device had no playlist open.
+    func addSyncedPlaylists(_ added: [Playlist]) async {
+        let hadPlaylist = activePlaylist != nil
+        playlists.append(contentsOf: added)
+        savePlaylists()
+        let opened = hadPlaylist ? nil : activePlaylist
+        for playlist in added where playlist.id != opened?.id {
+            Task { await prefetchCatalogue(of: playlist) }
+        }
+        if let opened {
+            updateSettings { $0.activePlaylistID = opened.id; $0.hasCompletedOnboarding = true }
+            await activate(opened)
+        }
+    }
+
+    /// A playlist that turned out to be another one (the same account added on two devices) leaves its place to it:
+    /// this device's parental locks, hidden categories and hidden channels move to the one that stays.
+    func carryDeviceSettings(from old: UUID, to new: UUID) {
+        let oldPrefix = old.uuidString + "|"
+        func moved(_ key: String) -> String? {
+            key.hasPrefix(oldPrefix) ? new.uuidString + "|" + String(key.dropFirst(oldPrefix.count)) : nil
+        }
+        let locks = lockedCategoryKeys.union(lockedCategoryKeys.compactMap(moved))
+        if locks != lockedCategoryKeys {
+            lockedCategoryKeys = locks
+            saveLocks()
+        }
+        updateLibrary { library in
+            library.hiddenCategoryKeys.formUnion(library.hiddenCategoryKeys.compactMap(moved))
+            for (key, date) in library.hiddenChannels {
+                if let key = moved(key) { library.hiddenChannels[key] = date }
+            }
+        }
+    }
+
+    /// Downloads a playlist that is not open, as adding it does: its catalogue is ready when it is opened, and its
+    /// adult categories are locked like those of any added playlist.
+    private func prefetchCatalogue(of playlist: Playlist) async {
+        let loader = self.loader
+        // Deleted meanwhile: nothing to keep.
+        guard let fresh = try? await Task.detached(operation: { try await loader.load(playlist) }).value,
+              playlists.contains(where: { $0.id == playlist.id }) else { return }
+        await saveContentCache(fresh, for: playlist.id)
+        if settings.lockAdultCategoriesAutomatically {
+            lockAdultCategories(playlistID: playlist.id, content: fresh)
+        }
+        guard let position = playlists.firstIndex(where: { $0.id == playlist.id }) else { return }
+        playlists[position].lastRefreshedAt = Date()
+        savePlaylists()
     }
 }

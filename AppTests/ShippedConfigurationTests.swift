@@ -21,6 +21,14 @@ final class ShippedConfigurationTests: XCTestCase {
         XCTAssertFalse((info("NSLocalNetworkUsageDescription") as? String ?? "").isEmpty)
     }
 
+    /// Without its Bonjour service, sync on the local network finds no device (docs/SYNC.md), and without a word on it
+    /// the local network prompt does not say why it is asked.
+    func testLocalNetworkSyncIsDeclared() {
+        let services = info("NSBonjourServices") as? [String] ?? []
+        XCTAssertTrue(services.contains("_ondo._tcp"), "\(services)")
+        XCTAssertTrue((info("NSLocalNetworkUsageDescription") as? String ?? "").localizedCaseInsensitiveContains("sync"))
+    }
+
     /// Sound goes on with the screen locked, and picture in picture works.
     func testBackgroundAudioIsDeclared() {
         XCTAssertTrue((info("UIBackgroundModes") as? [String] ?? []).contains("audio"))

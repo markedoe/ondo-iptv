@@ -68,10 +68,13 @@ targets:
         # makes the system ignore it, and every non-media HTTP request fails (AppTransportSecurityTests).
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
-        NSLocalNetworkUsageDescription: Ondo looks for Chromecast and AirPlay devices on your network so you can watch on a TV or projector, and plays streams served from your local network.
+        NSLocalNetworkUsageDescription: Ondo looks for Chromecast and AirPlay devices on your network so you can watch on a TV or projector, plays streams served from your local network, and finds Ondo on your other devices to sync with them when you turn sync on.
+        # Chromecast, and Ondo on the user's other devices (sync on the local network, docs/SYNC.md: browsed, never
+        # advertised). The same Info.plist serves iOS and macOS.
         NSBonjourServices:
           - _googlecast._tcp
           - _CC1AD845._googlecast._tcp
+          - _ondo._tcp
         UIBackgroundModes: [audio]
         UILaunchScreen:
           UIColorName: AccentColor

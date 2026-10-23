@@ -99,6 +99,10 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Données** : sauvegarde / restauration JSON, cache vidable. Les affiches, les vignettes et les pages des films et
   séries restent sur l'appareil : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même
   quand le fournisseur ne répond pas.
+- **Synchroniser sur ce réseau** (Réglages, désactivé tant qu'on ne l'active pas) : iPhone, iPad et Mac se
+  connectent aux appareils Android du même réseau où Ondo est ouvert et gardent les mêmes playlists, Ma liste,
+  collections et progression (profil principal uniquement ; deux appareils Apple se synchronisent via un appareil
+  Android). Adresses locales uniquement ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **Aide** dans l'app (Réglages, et Aide, Aide Ondo sur Mac) : une page par fonctionnalité, dans chaque langue.
 - **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi.
