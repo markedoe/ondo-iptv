@@ -6,14 +6,23 @@ import com.markedoe.ondo.core.TextNormalizer
 object People {
     private val separators = Regex("[,;/|\\n]")
 
-    /** A role in brackets is not part of the name. */
-    private val role = Regex("\\s*[(\\[][^)\\]]*[)\\]]")
+    /** A role in brackets is not part of the name. The look-behind starts a match only where spaces start. */
+    private val role = Regex("(?<!\\s)\\s*[(\\[][^)\\]]*[)\\]]")
+
+    /**
+     * [part] without its roles. A role ends with a closing bracket, so nothing past the last one is searched:
+     * there, each opening bracket of a long field scanned the rest of it again.
+     */
+    private fun withoutRoles(part: String): String {
+        val end = part.lastIndexOfAny(charArrayOf(')', ']')) + 1
+        return part.substring(0, end).replace(role, "") + part.substring(end)
+    }
 
     fun names(text: String?): List<String> {
         if (text.isNullOrEmpty()) return emptyList()
         val seen = HashSet<String>()
         return text.split(separators)
-            .map { part -> part.replace(role, "").trim { it.isWhitespace() || it == '.' || it == '…' } }
+            .map { part -> withoutRoles(part).trim { it.isWhitespace() || it == '.' || it == '…' } }
             .filter { name -> name.length > 1 && name.any(Char::isLetter) && seen.add(TextNormalizer.normalize(name)) }
     }
 
