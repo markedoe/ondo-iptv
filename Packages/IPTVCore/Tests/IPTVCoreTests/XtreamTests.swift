@@ -145,6 +145,28 @@ final class XtreamTests: XCTestCase {
         XCTAssertEqual(details.seasons[1].name, "Season 2")
     }
 
+    /// SwiftUI lists need each ID once: what a panel lists twice is kept once, the first time.
+    func testItemsListedTwiceAreKeptOnce() async throws {
+        let http = try mock()
+        http.routes["api:get_live_categories"] = Data(#"[{"category_id":"1","category_name":"One"},{"category_id":1,"category_name":"One again"}]"#.utf8)
+        http.routes["api:get_live_streams"] = Data(#"""
+        [{"stream_id":7,"name":"A","category_id":"1"},{"stream_id":"7","name":"A again","category_id":"1"},{"stream_id":8,"name":"B","category_id":"1"}]
+        """#.utf8)
+        http.routes["api:get_vod_streams"] = Data(#"[{"stream_id":5,"name":"M"},{"stream_id":5,"name":"M again"}]"#.utf8)
+        http.routes["api:get_series"] = Data(#"[{"series_id":9,"name":"S"},{"series_id":9,"name":"S again"}]"#.utf8)
+        http.routes["api:get_series_info"] = Data(#"""
+        {"episodes":{"1":[{"id":"e1","title":"Pilot"},{"id":"e1","title":"Pilot again"},{"id":"e2","title":"Next"}]}}
+        """#.utf8)
+        let client = XtreamClient(credentials: credentials, http: http)
+        let content = try await client.fetchContent(format: .m3u8)
+        XCTAssertEqual(content.liveCategories.map(\.name), ["One"])
+        XCTAssertEqual(content.channels.map(\.name), ["A", "B"])
+        XCTAssertEqual(content.movies.map(\.name), ["M"])
+        XCTAssertEqual(content.series.map(\.name), ["S"])
+        let details = try await client.seriesDetails(seriesID: 9)
+        XCTAssertEqual(details.seasons.first?.episodes.map(\.title), ["Pilot", "Next"])
+    }
+
     func testMovieDetails() async throws {
         let details = try await XtreamClient(credentials: credentials, http: try mock()).movieDetails(streamID: 5001)
         XCTAssertEqual(details.title, "Lighthouse")

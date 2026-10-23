@@ -70,7 +70,9 @@ public struct XtreamClient: Sendable {
 
     func categories(action: String, type: ContentType) async throws -> [MediaCategory] {
         let list = try await get(LossyArray<XtreamCategoryDTO>.self, action: action).elements
-        return list.map { MediaCategory(id: "\(type.rawValue)-\($0.id)", name: $0.name, type: type) }
+        // An item listed twice would give two rows one ID, which SwiftUI lists do not allow: the first is kept.
+        var seen = Set<String>()
+        return list.filter { seen.insert($0.id).inserted }.map { MediaCategory(id: "\(type.rawValue)-\($0.id)", name: $0.name, type: type) }
     }
 
     public func liveCategories() async throws -> [MediaCategory] {
@@ -87,7 +89,8 @@ public struct XtreamClient: Sendable {
 
     public func liveStreams(format: XtreamOutputFormat) async throws -> [Channel] {
         let list = try await get(LossyArray<XtreamLiveStreamDTO>.self, action: "get_live_streams").elements
-        return list.map { dto in
+        var seen = Set<Int>()
+        return list.filter { seen.insert($0.streamID).inserted }.map { dto in
             var catchup: CatchupInfo?
             if dto.tvArchive {
                 catchup = CatchupInfo(mode: .xtream, days: max(dto.tvArchiveDuration ?? 1, 1))
@@ -108,7 +111,8 @@ public struct XtreamClient: Sendable {
 
     public func movies() async throws -> [Movie] {
         let list = try await get(LossyArray<XtreamVODStreamDTO>.self, action: "get_vod_streams").elements
-        return list.map { dto in
+        var seen = Set<Int>()
+        return list.filter { seen.insert($0.streamID).inserted }.map { dto in
             let (name, yearInTitle) = TitleParser.splitYear(dto.name)
             return Movie(
                 id: "x\(dto.streamID)",
@@ -128,7 +132,8 @@ public struct XtreamClient: Sendable {
 
     public func series() async throws -> [Series] {
         let list = try await get(LossyArray<XtreamSeriesDTO>.self, action: "get_series").elements
-        return list.map { dto in
+        var seen = Set<Int>()
+        return list.filter { seen.insert($0.seriesID).inserted }.map { dto in
             let (name, yearInTitle) = TitleParser.splitYear(dto.name)
             return Series(
                 id: "x\(dto.seriesID)",
@@ -279,7 +284,8 @@ public struct XtreamClient: Sendable {
         )
         let seasonMeta = Dictionary(response.seasons.map { ($0.seasonNumber, $0) }, uniquingKeysWith: { first, _ in first })
         let seasons: [Season] = response.episodes.keys.sorted().map { number in
-            let episodes = (response.episodes[number] ?? []).enumerated().map { index, dto in
+            var seen = Set<String>()
+            let episodes = (response.episodes[number] ?? []).filter { seen.insert($0.id).inserted }.enumerated().map { index, dto in
                 Episode(
                     id: dto.id,
                     title: dto.title.map { Self.cleanEpisodeTitle($0) } ?? "Episode \(dto.episodeNumber ?? index + 1)",
