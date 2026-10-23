@@ -19,10 +19,14 @@ import android.util.Rational
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
+import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -173,6 +177,9 @@ class PlayerActivity : ComponentActivity() {
     private var showsStatistics by mutableStateOf(false)
     private var statistics by mutableStateOf<StreamStatistics?>(null)
 
+    /** The More menu (Stream Statistics, Report a Problem) is open. */
+    private var menuOpen by mutableStateOf(false)
+
     /** Bytes the player received from the network (counted on its loading threads). */
     private var receivedBytes = AtomicLong()
 
@@ -202,7 +209,7 @@ class PlayerActivity : ComponentActivity() {
         player = exoPlayer
         // Prepared first: the media session starts from a player that is already loading.
         play(urlIndex, request.startPositionMs)
-        session = MediaSession.Builder(this, exoPlayer).build()
+        openSession(exoPlayer)
 
         setContent {
             val safeArea = if (television) Modifier.padding(TvSafeArea) else Modifier
@@ -231,6 +238,7 @@ class PlayerActivity : ComponentActivity() {
                                     // The time bar and its times out of the 5 % a TV may crop (TV-OV).
                                     val (horizontal, vertical) = (48 * resources.displayMetrics.density).toInt() to (27 * resources.displayMetrics.density).toInt()
                                     findViewById<View>(androidx.media3.ui.R.id.exo_controller)?.setPadding(horizontal, vertical, horizontal, vertical)
+                                    addMoreButton(this)
                                 }
                                 // The video's place on screen, for the animation into Picture-in-Picture.
                                 videoSurfaceView?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updatePictureInPictureParams() }
@@ -245,7 +253,8 @@ class PlayerActivity : ComponentActivity() {
                         )
                     }
                     // The small Picture-in-Picture window shows the video only: the system draws its own controls.
-                    // On a TV, Close and More come and go with the controls (Back closes, the remote reaches More).
+                    // On a TV, Close comes and goes with the controls (Back closes too) and More is one of the
+                    // player's own buttons (the remote reaches it like the others): the menu opens by it.
                     if (!inPictureInPicture && (!television || controlsShown)) {
                         IconButton(
                             onClick = { finish() },
@@ -253,16 +262,19 @@ class PlayerActivity : ComponentActivity() {
                         ) {
                             Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
                         }
-                        Box(Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(8.dp)) {
-                            var menu by remember { mutableStateOf(false) }
-                            IconButton(onClick = { menu = true }, modifier = Modifier.testTag("playerMore")) {
-                                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more), tint = Color.White)
+                    }
+                    if (!inPictureInPicture) {
+                        Box(Modifier.align(if (television) Alignment.BottomEnd else Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(8.dp)) {
+                            if (!television) {
+                                IconButton(onClick = { menuOpen = true }, modifier = Modifier.testTag("playerMore")) {
+                                    Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more), tint = Color.White)
+                                }
                             }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.stream_statistics)) },
                                     onClick = {
-                                        menu = false
+                                        menuOpen = false
                                         showsStatistics = !showsStatistics
                                         statistics = if (showsStatistics) currentStatistics() else null
                                     },
@@ -272,7 +284,7 @@ class PlayerActivity : ComponentActivity() {
                                 DropdownMenuItem(
                                     text = { Text(stringResource(R.string.report_problem)) },
                                     onClick = {
-                                        menu = false
+                                        menuOpen = false
                                         shownReport = problemReport()
                                     },
                                 )
@@ -338,6 +350,29 @@ class PlayerActivity : ComponentActivity() {
                 sampleHealth()
             }
         }
+    }
+
+    /**
+     * On a TV, More is one of the player's own buttons, after Settings: the remote moves to it like to the others
+     * (TV-DP). It opens the menu the other screens show from the button over the video.
+     */
+    private fun addMoreButton(view: PlayerView) {
+        val controls = view.findViewById<ViewGroup>(androidx.media3.ui.R.id.exo_basic_controls) ?: return
+        val settings = view.findViewById<View>(androidx.media3.ui.R.id.exo_settings) ?: return
+        val size = settings.layoutParams as? ViewGroup.MarginLayoutParams ?: return
+        val more = ImageButton(view.context).apply {
+            tag = MORE_BUTTON
+            setImageResource(R.drawable.ic_player_more)
+            contentDescription = getString(R.string.more)
+            scaleType = ImageView.ScaleType.FIT_XY
+            // Media3's look for its buttons: size, margins, padding, and the focus and press highlight.
+            background = settings.background?.constantState?.newDrawable(resources)?.mutate()
+            setPadding(settings.paddingLeft, settings.paddingTop, settings.paddingRight, settings.paddingBottom)
+            layoutParams = LinearLayout.LayoutParams(size)
+            setOnClickListener { menuOpen = true }
+        }
+        // Media3 keeps its overflow button last.
+        controls.addView(more, controls.indexOfChild(settings) + 1)
     }
 
     private fun buildPlayer(): ExoPlayer {
@@ -484,7 +519,25 @@ class PlayerActivity : ComponentActivity() {
         player = exoPlayer
         playerView?.player = exoPlayer
         play(0, request.startPositionMs)
+        openSession(exoPlayer)
+    }
+
+    /**
+     * The media session: system media controls, remotes and voice commands. On a TV it lives only while the player is
+     * on screen: a video app offers no system controls once the user has left it, the video being paused (TV-NP).
+     */
+    private fun openSession(exoPlayer: ExoPlayer) {
+        session?.release()
         session = MediaSession.Builder(this, exoPlayer).build()
+    }
+
+    /** Whether the media session is open (tests). */
+    @VisibleForTesting
+    internal val hasMediaSession: Boolean get() = session != null
+
+    override fun onStart() {
+        super.onStart()
+        if (television && session == null) player?.let(::openSession)
     }
 
     /**
@@ -840,6 +893,10 @@ class PlayerActivity : ComponentActivity() {
         super.onStop()
         saveProgress()
         if (!isInPictureInPictureMode) player?.pause()
+        if (television) {
+            session?.release()
+            session = null
+        }
     }
 
     override fun onDestroy() {
@@ -868,6 +925,9 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_REQUEST = "request"
+
+        /** The tag of the More button among the player's buttons on a TV (tests). */
+        internal const val MORE_BUTTON = "playerMoreTv"
 
         /** The durations Media3 uses on its own (automatic), for the report. */
         private val MEDIA3_BUFFER = PlaybackBuffer.Durations(

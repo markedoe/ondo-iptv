@@ -7,7 +7,9 @@ import android.view.ViewGroup
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performClick
 import androidx.core.view.children
+import androidx.lifecycle.Lifecycle
 import androidx.media3.ui.PlayerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -17,6 +19,7 @@ import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import java.time.Duration
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -131,6 +134,36 @@ class PlayerRemoteTest {
         compose.waitForIdle()
         press(KeyEvent.KEYCODE_CHANNEL_UP)
         banner("3  Stadium One")
+    }
+
+    /** On a TV, leaving the player pauses the video and closes its system media controls (TV-NP); back, they return. */
+    @Test
+    fun leavingThePlayerOnATvClosesItsMediaControls() {
+        launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
+        scenario.onActivity { assertTrue(it.hasMediaSession) }
+        scenario.moveToState(Lifecycle.State.CREATED)
+        scenario.onActivity { assertFalse(it.hasMediaSession) }
+        scenario.moveToState(Lifecycle.State.RESUMED)
+        scenario.onActivity { assertTrue(it.hasMediaSession) }
+    }
+
+    /** On a TV, More is one of the player's own buttons: the remote moves to it from Settings, OK opens the menu (TV-DP). */
+    @Test
+    fun onATvMoreIsAmongThePlayersButtons() {
+        launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
+        scenario.onActivity { playerView(it).showController() }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
+        compose.waitForIdle()
+        scenario.onActivity { activity ->
+            val view = playerView(activity)
+            val more = view.findViewWithTag<View>(PlayerActivity.MORE_BUTTON)
+            assertTrue(more.isFocusable)
+            assertEquals(more, view.findViewById<View>(androidx.media3.ui.R.id.exo_settings).focusSearch(View.FOCUS_RIGHT))
+            more.performClick()
+        }
+        compose.onNodeWithTag("playerMore").assertDoesNotExist()
+        compose.onNodeWithTag("statisticsToggle").performClick()
+        compose.onNodeWithTag("streamStatistics").assertExists()
     }
 
     @Test
