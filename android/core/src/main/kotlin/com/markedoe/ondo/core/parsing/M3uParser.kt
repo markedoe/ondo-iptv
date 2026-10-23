@@ -45,16 +45,16 @@ data class M3uPlaylist(
     /** Guide URLs advertised in the header (`url-tvg`, `x-tvg-url`, `tvg-url`), comma separated. */
     val epgUrls: List<String>
         get() {
-            val urls = ArrayList<String>()
+            // A set: looking each address up in a list took quadratic time on long lists.
+            val urls = LinkedHashSet<String>()
             for (key in listOf("url-tvg", "x-tvg-url", "tvg-url")) {
                 val value = headerAttributes[key] ?: continue
                 for (part in value.split(',')) {
                     if (part.isEmpty()) continue
-                    val url = Urls.lenient(part) ?: continue
-                    if (url !in urls) urls.add(url)
+                    urls.add(Urls.lenient(part) ?: continue)
                 }
             }
-            return urls
+            return urls.toList()
         }
 }
 

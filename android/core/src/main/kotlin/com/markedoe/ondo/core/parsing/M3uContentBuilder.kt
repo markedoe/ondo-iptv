@@ -33,15 +33,20 @@ object M3uContentBuilder {
         val movies = ArrayList<Movie>()
         val seriesByKey = LinkedHashMap<String, SeriesAccumulator>()
         val usedIds = HashSet<String>()
+        val lastSuffix = HashMap<String, Int>()
         val normalizedSeriesNames = HashMap<String, String>()
 
         fun uniqueId(base: String): String {
-            var candidate = base
-            var counter = 1
-            while (!usedIds.add(candidate)) {
+            if (usedIds.add(base)) return base
+            // Entries sharing a URL go on from the last suffix of that base: trying `-2`, `-3`… again for each one
+            // took quadratic time (a suffixed id has a `-`, a base never has one, so only that base used them).
+            var counter = lastSuffix[base] ?: 1
+            var candidate: String
+            do {
                 counter++
                 candidate = "$base-$counter"
-            }
+            } while (!usedIds.add(candidate))
+            lastSuffix[base] = counter
             return candidate
         }
 
@@ -99,7 +104,9 @@ object M3uContentBuilder {
                         SeriesAccumulator("s" + StableHash.hex(key), cleanName, year, entry.logo, category.id)
                     }
                     val season = parsed?.season ?: 1
-                    val number = parsed?.episode ?: (series.episodes.count { it.season == season } + 1)
+                    val inSeason = series.episodesPerSeason[season] ?: 0
+                    series.episodesPerSeason[season] = inSeason + 1
+                    val number = parsed?.episode ?: (inSeason + 1)
                     series.episodes.add(
                         Episode(
                             id = uniqueId("e" + StableHash.hex(entry.url)),
@@ -140,6 +147,9 @@ object M3uContentBuilder {
 
     private class SeriesAccumulator(val id: String, val name: String, val year: Int?, var coverUrl: String?, val categoryId: String) {
         val episodes = ArrayList<Episode>()
+
+        /** Episodes added so far per season (counting them again for each new one took quadratic time). */
+        val episodesPerSeason = HashMap<Int, Int>()
     }
 
     /** Reads `catchup`, `catchup-type`, `catchup-days`, `catchup-source`, `timeshift`, `tvg-rec`, `tv_archive_duration`. */
