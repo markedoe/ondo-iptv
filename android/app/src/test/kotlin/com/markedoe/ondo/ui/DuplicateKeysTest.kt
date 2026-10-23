@@ -13,6 +13,7 @@ import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
+import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
 import java.io.File
 import java.util.Locale
 import org.junit.Rule
@@ -57,6 +58,27 @@ class DuplicateKeysTest {
     fun aTvMoviePageOpensForPoorThings() {
         showTvMovie(Movie(id = "x792307", name = "Poor Things", categoryId = Fixtures.drama.id, streamUrl = "http://example.com/movie/792307.mkv", year = 2023))
         compose.onNodeWithTag("detail").performScrollToNode(hasTestTag("awards"))
+        compose.waitForIdle()
+    }
+
+    /** A provider's genre naming the same genre twice. */
+    @Test
+    @Config(qualifiers = TV)
+    fun aTvMoviePageOpensWhenItsGenreRepeats() {
+        showTvMovie(Fixtures.northernLights, MediaDetails(title = "Northern Lights", genre = "Drama, Drama"))
+        compose.onNodeWithTag("detail").performScrollToNode(hasTestTag("explore"))
+        compose.waitForIdle()
+    }
+
+    /** The genre of a series comes with the catalogue (Xtream `get_series`): "Action & Adventure, Adventure". */
+    @Test
+    @Config(qualifiers = TV)
+    fun aTvSeriesPageOpensWhenItsGenreRepeats() {
+        val series = Fixtures.harborLights.copy(genre = "Action & Adventure, Adventure")
+        val state = Fixtures.state(content = Fixtures.content.copy(series = listOf(series) + Fixtures.content.series.drop(1)))
+        val ui = UiMappers.seriesDetail(state, series, null, null)
+        compose.setContent { OndoTheme { TelevisionFrame { TvSeriesDetailScreen(ui, DetailActions()) } } }
+        compose.onNodeWithTag("detail").performScrollToNode(hasTestTag("explore"))
         compose.waitForIdle()
     }
 

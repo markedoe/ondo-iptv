@@ -422,8 +422,8 @@ object UiMappers {
         lastCrash = state.lastCrash,
     )
 
-    /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"). */
-    fun genres(field: String?): List<String> = field.orEmpty().split(',', '/', '|', '&').map { it.trim() }.filter { it.isNotEmpty() }
+    /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"), each once ("Action & Adventure, Adventure"). */
+    fun genres(field: String?): List<String> = field.orEmpty().split(',', '/', '|', '&').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
 
     /** The titles of the playlist sharing a value of a movie's or a series' page, hidden categories left out. */
     fun browse(state: OndoState, kind: BrowseKind, value: String, locale: Locale = Locale.getDefault()): BrowseUiState {
