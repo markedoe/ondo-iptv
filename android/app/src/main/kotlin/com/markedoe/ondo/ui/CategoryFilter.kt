@@ -119,7 +119,7 @@ object CategoryFilter {
             ContentType.LIVE -> state.content.liveCategories
             ContentType.MOVIE -> state.content.movieCategories
             ContentType.SERIES -> state.content.seriesCategories
-        }
+        }.distinctBy { it.id } // a panel can list a category twice
         val tokens = TextNormalizer.normalize(filter).split(' ').filter { it.isNotEmpty() }
         val shown = if (tokens.isEmpty()) list else list.filter { category ->
             val name = TextNormalizer.normalize(category.name)

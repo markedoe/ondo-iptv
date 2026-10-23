@@ -11,14 +11,25 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.PlaylistLoader
+import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.Playlist
+import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.PlaylistSource
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.data.FakeHttp
+import com.markedoe.ondo.ui.screens.CategoriesActions
+import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.DetailActions
+import com.markedoe.ondo.ui.screens.LiveActions
+import com.markedoe.ondo.ui.screens.LiveScreen
 import com.markedoe.ondo.ui.screens.SeriesDetailScreen
+import com.markedoe.ondo.ui.screens.VodActions
+import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
@@ -130,6 +141,51 @@ class DuplicateKeysTest {
         val (_, ui) = seriesWithAnEpisodeTwice()
         compose.setContent { OndoTheme { TelevisionFrame { TvSeriesDetailScreen(ui, DetailActions()) } } }
         compose.onNodeWithTag("detail").performScrollToNode(hasTestTag("episodes"))
+        compose.waitForIdle()
+    }
+
+    /** A panel listing its categories twice (the same `category_id`), its streams once. */
+    private fun panelListingCategoriesTwice(): PlaylistContent {
+        val categories = """[{"category_id":"1","category_name":"Action"},{"category_id":"1","category_name":"Action"},{"category_id":"2","category_name":"Drama"}]"""
+        val http = FakeHttp(
+            mapOf(
+                api() to """{"user_info":{"auth":1,"status":"Active","username":"viewer"},"server_info":{}}""",
+                api("get_live_categories") to categories,
+                api("get_vod_categories") to categories,
+                api("get_series_categories") to categories,
+                api("get_live_streams") to """[{"num":1,"name":"Panel News","stream_id":11,"category_id":"1"},{"num":2,"name":"Panel Drama","stream_id":12,"category_id":"2"}]""",
+                api("get_vod_streams") to """[{"name":"Quiet Water","stream_id":21,"category_id":"1"},{"name":"Long Road","stream_id":22,"category_id":"2"}]""",
+                api("get_series") to """[{"name":"Harbor","series_id":31,"category_id":"1"}]""",
+            ),
+        )
+        val playlist = Playlist(id = Fixtures.PLAYLIST_ID, name = "Panel", source = PlaylistSource.Xtream(credentials))
+        return runBlocking { PlaylistLoader(http).load(playlist) }
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun theMoviesTabOpensWhenThePanelListsACategoryTwice() {
+        val state = Fixtures.state(content = panelListingCategoriesTwice())
+        val ui = UiMappers.vod(state, series = false, title = "Movies")
+        compose.setContent { OndoTheme { TelevisionFrame { VodScreen(ui, VodActions()) } } }
+        compose.waitForIdle()
+    }
+
+    @Test
+    @Config(qualifiers = TV)
+    fun theLiveTabOpensWhenThePanelListsACategoryTwice() {
+        val state = Fixtures.state(content = panelListingCategoriesTwice())
+        val ui = UiMappers.live(state, categoryId = null, favoritesOnly = false, now = Fixtures.NOW)
+        compose.setContent { OndoTheme { TelevisionFrame { LiveScreen(ui, LiveActions()) } } }
+        compose.waitForIdle()
+    }
+
+    @Test
+    @Config(qualifiers = PHONE)
+    fun theCategoriesScreenOpensWhenThePanelListsACategoryTwice() {
+        val state = Fixtures.state(content = panelListingCategoriesTwice())
+        val ui = CategoryFilter.categories(state, ContentType.MOVIE, filter = "", locale = Locale.ENGLISH)
+        compose.setContent { OndoTheme { CategoriesScreen(ui, ContentType.MOVIE, filter = "", actions = CategoriesActions()) } }
         compose.waitForIdle()
     }
 

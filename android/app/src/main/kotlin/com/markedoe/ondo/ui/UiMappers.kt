@@ -167,7 +167,8 @@ object UiMappers {
     fun vod(state: OndoState, series: Boolean, title: String): VodUiState {
         val showcase = showcase(state)
         val hidden = hiddenCategoryIds(state)
-        val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }
+        // A panel can list a category twice (same id): one chip and one row each.
+        val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }.distinctBy { it.id }
         val watched = hiddenMovieIds(state)
         val byCategory: Map<String, List<ShowcaseItem>> =
             if (series) state.content.series.groupBy({ it.categoryId }) { ShowcaseItem.SeriesItem(it) }
@@ -265,7 +266,7 @@ object UiMappers {
             }
         }
         val used = visible.mapTo(HashSet()) { it.categoryId }
-        return ChannelSelection(channels, state.content.liveCategories.filter { it.id in used }, favoriteIds)
+        return ChannelSelection(channels, state.content.liveCategories.filter { it.id in used }.distinctBy { it.id }, favoriteIds)
     }
 
     /** Rows of the TV guide at most: each row lays out its programmes. Beyond, a note asks to choose a category. */
