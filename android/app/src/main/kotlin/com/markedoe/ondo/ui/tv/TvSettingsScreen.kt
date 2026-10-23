@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui.tv
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -60,6 +61,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -77,10 +79,12 @@ import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
+import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.ui.screens.PlaylistSummary
 import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsUiState
 import com.markedoe.ondo.ui.screens.bufferLabel
+import com.markedoe.ondo.ui.screens.lastCrashTitle
 import com.markedoe.ondo.ui.screens.syncDetail
 import com.markedoe.ondo.ui.theme.OndoColors
 
@@ -399,6 +403,26 @@ private fun LazyListScope.about(state: SettingsUiState, actions: SettingsActions
     }
     item(key = "version") {
         Text(stringResource(R.string.version) + "  " + state.version, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    state.lastCrash?.let { crash -> item(key = "lastCrash") { CrashCard(crash) } }
+}
+
+/** The last error that stopped the app: the remote can reach it, so that it scrolls into view for a photo. */
+@Composable
+private fun CrashCard(crash: LastCrash) {
+    var focused by remember { mutableStateOf(false) }
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        colors = SurfaceDefaults.colors(containerColor = Color.White.copy(alpha = 0.06f), contentColor = Color.White),
+        border = Border(BorderStroke(2.dp, if (focused) Color.White else Color.Transparent)),
+        modifier = Modifier.widthIn(max = 900.dp).padding(top = 8.dp).onFocusChanged { focused = it.isFocused }.focusable().testTag("lastCrash"),
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(lastCrashTitle(crash), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.last_crash_hint), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f))
+            // The error and where it happened: the first lines, which fit on the screen.
+            Text(crash.report.lineSequence().take(22).joinToString("\n"), style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, color = Color.White.copy(alpha = 0.85f))
+        }
     }
 }
 

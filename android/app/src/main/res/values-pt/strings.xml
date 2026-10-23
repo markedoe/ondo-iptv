@@ -302,4 +302,6 @@
     <string name="sync_found">Encontrado</string>
     <string name="help_sync_title">Sincronize seus dispositivos</string>
     <string name="help_sync_body">Configurações → Sincronizar nesta rede mantém as mesmas playlists, Minha lista, coleções e progresso nos seus dispositivos de casa. Ative em cada dispositivo e mantenha o Ondo aberto neles: uma TV, um celular ou um tablet Android encontra os outros sozinho; iPhone, iPad e Mac sincronizam por meio de um dispositivo Android. Um dispositivo sem playlists pode receber as suas assim: ative na tela de boas-vindas.\n\nTudo vai direto de um dispositivo para outro pela sua rede, nunca pela internet. Não há pareamento e os dados de acesso trafegam sem criptografia na rede: ative apenas em casa. As configurações, as categorias ocultas e as playlists importadas de um arquivo ficam em cada dispositivo.</string>
+    <string name="last_crash">Última falha: %1$s</string>
+    <string name="last_crash_hint">Registrado neste dispositivo quando o Ondo fechou. Uma foto ajuda a corrigir o problema; endereços e logins ficam de fora.</string>
 </resources>

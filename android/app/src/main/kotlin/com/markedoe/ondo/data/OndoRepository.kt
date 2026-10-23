@@ -25,6 +25,7 @@ import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.PlayRequest
+import java.io.File
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -59,6 +60,8 @@ data class OndoState(
     val seriesDetails: Map<String, SeriesDetails> = emptyMap(),
     /** The awards bundled with the app (read once, see `awardsSource`). */
     val awards: AwardsCatalogue = AwardsCatalogue.EMPTY,
+    /** The last error that stopped the app, shown in Settings → About. */
+    val lastCrash: LastCrash? = null,
 ) {
     val activePlaylist: SavedPlaylist? get() = playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull()
     val activePlaylistId: String? get() = activePlaylist?.id
@@ -88,6 +91,8 @@ class OndoRepository(
     private val awardsDownload: AwardsDownload? = null,
     /** Delivers programme reminders (WorkManager in the app). */
     private val reminderScheduler: ReminderScheduler = NoReminderScheduler,
+    /** Where guides are downloaded while they are read (the app's cache); emptied at start. */
+    private val guideFolder: File? = null,
 ) {
     private val _state = MutableStateFlow(OndoState())
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -124,11 +129,18 @@ class OndoRepository(
             val settings = withContext(io) { store.loadSettings() }
             val playlists = withContext(io) { store.loadPlaylists() }
             val saved = withContext(io) { store.loadLibrary() }
+            val lastCrash = withContext(io) {
+                // Guides left half-downloaded by a stop.
+                guideFolder?.listFiles()?.forEach { it.delete() }
+                store.loadLastCrash()
+            }
             val pending = pendingLibraryChanges.toList()
             pendingLibraryChanges.clear()
             val library = pending.fold(saved) { library, change -> change(library) }
             // With a playlist, its saved catalogue is read next: restoring from the same update (no "empty" moment).
-            _state.update { it.copy(settings = settings, playlists = playlists, library = library, isReady = true, isRestoring = playlists.isNotEmpty()) }
+            _state.update {
+                it.copy(settings = settings, playlists = playlists, library = library, lastCrash = lastCrash, isReady = true, isRestoring = playlists.isNotEmpty())
+            }
             if (pending.isNotEmpty()) persist { saveLibrary(library) }
             _state.value.activePlaylist?.let { open(it) }
             awardsSource?.let { source ->
@@ -425,6 +437,9 @@ class OndoRepository(
         throw cancelled
     } catch (error: Exception) {
         Result.failure(error)
+    } catch (error: OutOfMemoryError) {
+        // A catalogue or guide too large for this device: an error on screen, not a stop of the app.
+        Result.failure(error)
     }
 
     // MARK: Library
@@ -652,7 +667,7 @@ class OndoRepository(
         )
     }
 
-    private fun loader() = PlaylistLoader(http, clock = now)
+    private fun loader() = PlaylistLoader(http, clock = now, guideFolder = guideFolder)
 
     private fun SavedPlaylist.credentials(): XtreamCredentials? =
         if (isXtream) XtreamCredentials(XtreamCredentials.normalizeServer(url) ?: url, username.orEmpty(), password.orEmpty()) else null

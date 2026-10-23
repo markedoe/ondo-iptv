@@ -297,4 +297,6 @@
     <string name="sync_found">Found</string>
     <string name="help_sync_title">Sync your devices</string>
     <string name="help_sync_body">Settings → Sync on this network keeps the same playlists, My List, collections and progress on your devices at home. Turn it on on each device and keep Ondo open on them: an Android TV, phone or tablet finds the others by itself; iPhone, iPad and Mac sync through an Android device. A device with no playlist yet can get yours this way: turn it on from the welcome screen.\n\nEverything goes directly from one device to another on your network, never through the internet. There is no pairing and logins travel unencrypted on the network, so turn it on at home only. Settings, hidden categories and playlists imported from a file stay on each device.</string>
+    <string name="last_crash">Last crash: %1$s</string>
+    <string name="last_crash_hint">Recorded on this device when Ondo stopped. A photo of it helps fix the problem; addresses and logins are left out.</string>
 </resources>

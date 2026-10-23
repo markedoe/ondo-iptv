@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.net
 
+import java.io.File
 import java.io.IOException
 
 /**
@@ -9,6 +10,14 @@ import java.io.IOException
 interface HttpClient {
     /** Downloads `url` (http, https or file) with the given request headers. */
     suspend fun get(url: String, headers: Map<String, String> = emptyMap()): ByteArray
+
+    /**
+     * Downloads `url` into [file], for answers too large to hold in memory (a guide can be hundreds of megabytes
+     * once inflated, more than a TV gives an app). The default goes through [get].
+     */
+    suspend fun download(url: String, headers: Map<String, String> = emptyMap(), file: File) {
+        file.writeBytes(get(url, headers))
+    }
 }
 
 /** Default user agent: many panels block unknown agents, VLC's is widely accepted. */

@@ -3,10 +3,10 @@ package com.markedoe.ondo.ui
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.ui.input.InputMode
-import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -18,7 +18,9 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextClearance
@@ -27,6 +29,7 @@ import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
+import com.markedoe.ondo.data.CrashLog
 import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
@@ -36,6 +39,7 @@ import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.SETTINGS_TAG
+import java.io.File
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -213,6 +217,43 @@ class TelevisionLibraryTest {
         pressUntil(Key.DirectionUp) { focusedTag() == "settingsSync" }
         press(Key.DirectionRight)
         waitFor { focusedTag() == "syncSwitch" }
+    }
+
+    @Test
+    fun theSyncPageOpensWhenSyncIsAlreadyOnWithADevice() {
+        start()
+        repository.setSyncOnLocalNetwork(true)
+        repository.reportSyncDevices(listOf(SyncDevice("1f0e6c1a-2b3c-4d5e-8f90-123456789abc", "iPhone", syncedAt = System.currentTimeMillis(), unreachable = false)))
+        settle()
+        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        press(Key.DirectionCenter)
+        waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
+        pressUntil(Key.DirectionDown) { focusedTag() == "settingsSync" }
+        waitFor { exists("syncDevice") }
+        press(Key.DirectionRight)
+        waitFor { focusedTag() == "syncSwitch" }
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        waitFor { !repository.state.value.settings.syncOnLocalNetwork }
+    }
+
+    /** The last error that stopped the app shows at the end of About, and the remote brings it into view. */
+    @Test
+    fun theLastCrashShowsInAboutWithTheRemote() {
+        val error = IllegalStateException("Guide http://panel.example.com/xmltv.php?username=demo&password=secret")
+        CrashLog.record(File(folder.root, CrashLog.FILE_NAME), "Ondo 1.1.0 (1007) · Android 12 (API 31) · Test TV", "main", error, Fixtures.NOW)
+        start()
+        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        press(Key.DirectionCenter)
+        waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
+        pressUntil(Key.DirectionDown) { focusedTag() == "settingsAbout" }
+        press(Key.DirectionRight)
+        waitFor { focusedTag() == "helpRow" }
+        pressUntil(Key.DirectionDown) { focusedTag() == "lastCrash" }
+        compose.onNodeWithText("IllegalStateException: Guide http://…", substring = true).assertExists()
+        assertTrue(compose.onAllNodesWithText("secret", substring = true).fetchSemanticsNodes().isEmpty())
     }
 
     @Test

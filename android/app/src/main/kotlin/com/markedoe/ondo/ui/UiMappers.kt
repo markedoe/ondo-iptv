@@ -419,6 +419,7 @@ object UiMappers {
         hideWatchedMovies = state.settings.hideWatchedMovies,
         syncOnLocalNetwork = state.settings.syncOnLocalNetwork,
         syncDevices = if (state.settings.syncOnLocalNetwork) syncDevices else emptyList(),
+        lastCrash = state.lastCrash,
     )
 
     /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"). */

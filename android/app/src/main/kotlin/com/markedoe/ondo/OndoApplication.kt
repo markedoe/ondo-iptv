@@ -2,6 +2,8 @@ package com.markedoe.ondo
 
 import android.app.ActivityManager
 import android.app.Application
+import android.os.Build
+import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
 import coil3.ImageLoader
@@ -15,6 +17,7 @@ import coil3.request.crossfade
 import com.markedoe.ondo.core.net.OkHttpClientAdapter
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.AwardsDownload
+import com.markedoe.ondo.data.CrashLog
 import com.markedoe.ondo.data.LocalSync
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.WorkManagerReminderScheduler
@@ -28,6 +31,20 @@ import okhttp3.OkHttpClient
 
 /** Owns the app-wide objects: one HTTP client, the repository, sync on the local network, the image loader. */
 class OndoApplication : Application(), SingletonImageLoader.Factory {
+    override fun onCreate() {
+        super.onCreate()
+        // The next start shows what stopped the app in Settings → About.
+        val version = runCatching {
+            packageManager.getPackageInfo(packageName, 0).let { "${it.versionName} (${PackageInfoCompat.getLongVersionCode(it)})" }
+        }.getOrDefault("")
+        // What the device gives the app: a memory error reads against these figures.
+        val activities = getSystemService(ActivityManager::class.java)
+        val memory = "memory class ${activities?.memoryClass} MB, large ${activities?.largeMemoryClass} MB, " +
+            "max heap ${Runtime.getRuntime().maxMemory() / (1024 * 1024)} MB, low RAM ${activities?.isLowRamDevice}"
+        val about = "Ondo $version · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) · ${Build.MANUFACTURER} ${Build.MODEL}\n$memory"
+        CrashLog.install(filesDir.resolve("ondo").resolve(CrashLog.FILE_NAME), about)
+    }
+
     /** Playlists, guides and artwork share connections and the cache. */
     val okHttp: OkHttpClient by lazy { OkHttpClientAdapter.defaultClient() }
 
@@ -51,6 +68,7 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             awardsSource = { assets.open("awards.json").bufferedReader().use { it.readText() } },
             reminderScheduler = WorkManagerReminderScheduler(this),
             awardsDownload = AwardsDownload(AwardsDownload.URL, cacheDir.resolve("awards.json")),
+            guideFolder = cacheDir.resolve("guides"),
         )
     }
 

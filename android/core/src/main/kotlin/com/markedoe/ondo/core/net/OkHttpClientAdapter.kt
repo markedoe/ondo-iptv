@@ -2,6 +2,7 @@ package com.markedoe.ondo.core.net
 
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.net.URI
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -27,7 +28,15 @@ class OkHttpClientAdapter(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : HttpClient {
 
-    override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
+    override suspend fun get(url: String, headers: Map<String, String>): ByteArray =
+        fetch(url, headers) { readLimited(it, MAX_BODY_SIZE) }
+
+    /** Streams the answer to [file]: a large guide never sits whole in memory. */
+    override suspend fun download(url: String, headers: Map<String, String>, file: File) =
+        fetch(url, headers) { copyLimited(it, file, MAX_BODY_SIZE) }
+
+    /** Opens `url` (http, https or file) and hands its body to [consume], on the I/O thread that reads it. */
+    private suspend fun <T> fetch(url: String, headers: Map<String, String>, consume: (InputStream) -> T): T {
         if (url.startsWith("file:", ignoreCase = true)) {
             val file = try {
                 File(URI(url))
@@ -36,7 +45,7 @@ class OkHttpClientAdapter(
             } catch (e: java.net.URISyntaxException) {
                 throw HttpException.InvalidUrl(url)
             }
-            return withContext(ioDispatcher) { file.readBytes() }
+            return withContext(ioDispatcher) { consume(file.inputStream()) }
         }
         val httpUrl = url.toHttpUrlOrNull() ?: throw HttpException.InvalidUrl(url)
         val request = Request.Builder().url(httpUrl).headers(requestHeaders(headers)).build()
@@ -55,8 +64,12 @@ class OkHttpClientAdapter(
                             return
                         }
                         val body = try {
-                            readLimited(it.body.byteStream(), MAX_BODY_SIZE)
+                            consume(it.body.byteStream())
                         } catch (e: IOException) {
+                            continuation.resumeWithException(e)
+                            return
+                        } catch (e: OutOfMemoryError) {
+                            // Thrown on OkHttp's thread, it would stop the app: the caller gets it instead.
                             continuation.resumeWithException(e)
                             return
                         }
@@ -71,7 +84,7 @@ class OkHttpClientAdapter(
         /** Largest response read into memory: far above any real playlist or guide, below what would stop the app. */
         const val MAX_BODY_SIZE = 256L * 1024 * 1024
 
-        internal fun readLimited(input: java.io.InputStream, limit: Long): ByteArray {
+        internal fun readLimited(input: InputStream, limit: Long): ByteArray {
             val output = java.io.ByteArrayOutputStream()
             val buffer = ByteArray(256 * 1024)
             input.use { stream ->
@@ -83,6 +96,22 @@ class OkHttpClientAdapter(
                 }
             }
             return output.toByteArray()
+        }
+
+        internal fun copyLimited(input: InputStream, file: File, limit: Long) {
+            input.use { stream ->
+                file.outputStream().use { output ->
+                    val buffer = ByteArray(256 * 1024)
+                    var total = 0L
+                    while (true) {
+                        val read = stream.read(buffer)
+                        if (read < 0) break
+                        total += read
+                        if (total > limit) throw HttpException.TooLarge(limit)
+                        output.write(buffer, 0, read)
+                    }
+                }
+            }
         }
 
         /**

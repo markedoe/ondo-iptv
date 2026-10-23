@@ -30,4 +30,16 @@ class LimitsTest {
         assertEquals(1000, OkHttpClientAdapter.readLimited(ByteArrayInputStream(ByteArray(1000)), 1000).size)
         assertFailsWith<HttpException.TooLarge> { OkHttpClientAdapter.readLimited(ByteArrayInputStream(ByteArray(1001)), 1000) }
     }
+
+    @Test
+    fun aDownloadIsCopiedUpToItsLimit() {
+        val file = java.nio.file.Files.createTempFile("ondo", ".xml").toFile()
+        try {
+            OkHttpClientAdapter.copyLimited(ByteArrayInputStream(ByteArray(1000)), file, 1000)
+            assertEquals(1000L, file.length())
+            assertFailsWith<HttpException.TooLarge> { OkHttpClientAdapter.copyLimited(ByteArrayInputStream(ByteArray(1001)), file, 1000) }
+        } finally {
+            file.delete()
+        }
+    }
 }

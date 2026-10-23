@@ -302,4 +302,6 @@
     <string name="sync_found">Trouvé</string>
     <string name="help_sync_title">Synchroniser vos appareils</string>
     <string name="help_sync_body">Réglages → Synchroniser sur ce réseau garde les mêmes playlists, Ma liste, collections et reprises de lecture sur vos appareils à la maison. Activez-le sur chaque appareil et gardez Ondo ouvert : une TV, un téléphone ou une tablette Android trouve les autres tout seul ; iPhone, iPad et Mac se synchronisent via un appareil Android. Un appareil sans playlist peut ainsi recevoir les vôtres : activez-le depuis l’écran d’accueil.\n\nTout passe directement d’un appareil à l’autre sur votre réseau, jamais par internet. Il n’y a pas d’appairage et les identifiants circulent sans chiffrement sur le réseau : ne l’activez que chez vous. Les réglages, les catégories masquées et les playlists importées d’un fichier restent sur chaque appareil.</string>
+    <string name="last_crash">Dernier plantage : %1$s</string>
+    <string name="last_crash_hint">Enregistré sur cet appareil quand Ondo s’est arrêté. Une photo aide à corriger le problème ; les adresses et identifiants n’y figurent pas.</string>
 </resources>

@@ -91,6 +91,29 @@ class OkHttpClientAdapterTest {
         }
     }
 
+    /** A guide goes to a file, never whole in memory; a file address is copied the same way. */
+    @Test
+    fun downloadsWriteTheBodyToAFile(): Unit = runBlocking(Dispatchers.IO) {
+        val target = Files.createTempFile("ondo", ".xml").toFile()
+        val local = Files.createTempFile("ondo", ".xml").toFile()
+        try {
+            server.enqueue(MockResponse().setBody("<tv></tv>"))
+            client.download(server.url("/xmltv.php").toString(), mapOf("Referer" to "http://ref"), target)
+            assertEquals("<tv></tv>", target.readText())
+            assertEquals("http://ref", server.takeRequest(5, TimeUnit.SECONDS)!!.getHeader("Referer"))
+
+            local.writeText("<tv>local</tv>")
+            client.download(local.toURI().toString(), file = target)
+            assertEquals("<tv>local</tv>", target.readText())
+
+            server.enqueue(MockResponse().setResponseCode(404))
+            assertFailsWith<HttpException.BadStatus> { client.download(server.url("/gone.xml").toString(), file = target) }
+        } finally {
+            target.delete()
+            local.delete()
+        }
+    }
+
     @Test
     fun cancellationCancelsTheCall(): Unit = runBlocking(Dispatchers.IO) {
         server.enqueue(MockResponse().setBody("late").setBodyDelay(10, TimeUnit.SECONDS))

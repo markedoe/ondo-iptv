@@ -10,6 +10,7 @@ import com.markedoe.ondo.core.model.PlaylistSource
 import com.markedoe.ondo.core.model.TimeWindow
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.GzipException
+import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.utc
 import com.markedoe.ondo.core.xtream.XtreamException
@@ -144,6 +145,65 @@ class PlaylistLoaderTest {
 
         val withoutProvider = PlaylistLoader(http).loadEpg(playlist.copy(useProviderEpg = false, epgUrls = emptyList()), content, window)
         assertTrue(withoutProvider.data.programs.isEmpty())
+    }
+
+    /** The user's copy of the provider's guide address, written another way, is downloaded once. */
+    @Test
+    fun aGuideWrittenTwoWaysIsDownloadedOnce() = runTest {
+        val http = MockHttpClient()
+        val guide = "<tv><channel id=\"TV1.fr\"><display-name>TV1</display-name></channel></tv>".encodeToByteArray()
+        http.routes["HTTPS://Panel.example.com/xmltv.php?username=demo&password=pw"] = guide
+        val playlist = Playlist(
+            name = "P",
+            source = PlaylistSource.Remote("http://example.com/list.m3u"),
+            epgUrls = listOf("HTTPS://Panel.example.com/xmltv.php?username=demo&password=pw"),
+        )
+        val content = PlaylistContent(
+            channels = listOf(Channel(id = "1", name = "TV1", categoryId = "c", streamUrl = "http://h/1", epgId = "TV1.fr")),
+            providerEpgUrls = listOf("http://panel.example.com/xmltv.php/?password=pw&username=demo"),
+        )
+        val result = PlaylistLoader(http).loadEpg(playlist, content)
+        assertEquals(listOf("HTTPS://Panel.example.com/xmltv.php?username=demo&password=pw"), http.requested)
+        assertTrue(result.failures.isEmpty())
+        assertEquals(
+            PlaylistLoader.guideKey("https://panel.example.com/xmltv.php?password=pw&username=demo"),
+            PlaylistLoader.guideKey(" http://PANEL.example.com/xmltv.php/?username=demo&password=pw#top"),
+        )
+        assertTrue(PlaylistLoader.guideKey("http://a.example.com/g.xml") != PlaylistLoader.guideKey("http://b.example.com/g.xml"))
+    }
+
+    /**
+     * A guide too large for the device's memory is left out like a broken one: the other guides still load, and
+     * nothing downloaded stays behind.
+     */
+    @Test
+    fun aGuideTooLargeForMemoryIsLeftOut() = runTest {
+        val folder = Files.createTempDirectory("guides").toFile()
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when (url) {
+                "http://huge.example.com/guide.xml" -> throw OutOfMemoryError("Failed to allocate")
+                else -> """
+                    <tv><channel id="TV1.fr"><display-name>TV1</display-name></channel>
+                    <programme start="20251009180000 +0000" stop="20251009183000 +0000" channel="TV1.fr"><title>JT</title></programme></tv>
+                """.trimIndent().encodeToByteArray()
+            }
+        }
+        val playlist = Playlist(
+            name = "P",
+            source = PlaylistSource.Remote("http://example.com/list.m3u"),
+            epgUrls = listOf("http://huge.example.com/guide.xml", "http://small.example.com/guide.xml"),
+            epgTimeShiftHours = 0.0,
+        )
+        val content = PlaylistContent(channels = listOf(Channel(id = "1", name = "TV1", categoryId = "c", streamUrl = "http://h/1", epgId = "TV1.fr")))
+        val window = TimeWindow(utc(2025, 10, 9, 0), utc(2025, 10, 10, 0))
+        try {
+            val result = PlaylistLoader(http, guideFolder = folder).loadEpg(playlist, content, window)
+            assertIs<OutOfMemoryError>(result.failures["http://huge.example.com/guide.xml"])
+            assertEquals(listOf("JT"), assertNotNull(result.data.programs["TV1.fr"]).map { it.title })
+            assertEquals(emptyList(), folder.listFiles()!!.map { it.name }, "downloaded guides are deleted once read")
+        } finally {
+            folder.deleteRecursively()
+        }
     }
 }
 

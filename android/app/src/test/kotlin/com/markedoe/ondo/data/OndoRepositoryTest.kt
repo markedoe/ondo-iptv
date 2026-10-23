@@ -100,6 +100,31 @@ class OndoRepositoryTest {
         assertTrue(repository.state.value.playlists.isEmpty())
     }
 
+    /** A catalogue too large for the device's memory (an entry-level TV) is an error on screen, not a stop of the app. */
+    @Test
+    fun aCatalogueTooLargeForTheDeviceIsAnErrorNotAStop() = runTest {
+        val tooLarge = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = throw OutOfMemoryError("Failed to allocate")
+        }
+        val repository = repository(tooLarge)
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Home", list).isFailure)
+        assertTrue(repository.state.value.playlists.isEmpty())
+        assertFalse(repository.state.value.isLoading)
+    }
+
+    /** The last error that stopped the app is read at start, for Settings → About. */
+    @Test
+    fun theLastCrashIsReadAtStart() = runTest {
+        CrashLog.record(java.io.File(folder.root, CrashLog.FILE_NAME), "Ondo test", "main", IllegalStateException("broken"), at = clock - 60_000)
+        val repository = repository()
+        repository.bootstrap()
+        val crash = requireNotNull(repository.awaitState { it.isReady }.lastCrash)
+        assertEquals(clock - 60_000, crash.at)
+        assertTrue(crash.report.contains("java.lang.IllegalStateException: broken"))
+    }
+
     @Test
     fun aRestartRestoresPlaylistsCatalogueAndLibraryWithoutDownloading() = runTest {
         val first = repository()

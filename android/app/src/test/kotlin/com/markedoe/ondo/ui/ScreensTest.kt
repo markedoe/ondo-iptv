@@ -34,6 +34,7 @@ import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
+import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.player.ProblemReportDialog
@@ -395,6 +396,17 @@ class ScreensTest {
         compose.onNodeWithText("Living room TV").assertExists()
         compose.onNodeWithText("Synced at", substring = true).assertExists()
         compose.onNodeWithText("Not reached, trying again").assertExists()
+    }
+
+    /** Settings, About: the last error that stopped the app, to photograph for a report. */
+    @Test
+    fun settingsShowTheLastCrash() {
+        val crash = LastCrash(1_760_000_000_000L, "Ondo 1.1.0 (1007)\nThread: main\njava.lang.IllegalStateException: broken\n\tat com.markedoe.ondo.Test")
+        val state = UiMappers.settings(Fixtures.state().copy(lastCrash = crash), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
+        compose.setContent { OndoTheme { SettingsScreen(state, SettingsActions()) } }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("lastCrash"))
+        compose.onNodeWithText("Last crash:", substring = true).assertExists()
+        compose.onNodeWithText("IllegalStateException: broken", substring = true).assertExists()
     }
 
     @Test

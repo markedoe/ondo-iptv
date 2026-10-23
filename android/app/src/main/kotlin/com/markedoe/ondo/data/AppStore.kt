@@ -56,8 +56,8 @@ class AppStore(private val directory: File, private val now: () -> Long = System
     fun loadLibrary(): LibraryState = read("library.json", LibraryState.serializer()) ?: LibraryState()
     fun saveLibrary(library: LibraryState) = write("library.json", LibraryState.serializer(), library, keepPrevious = true)
 
-    /** Catalogues can be downloaded again: no previous version is kept. */
-    fun loadContent(playlistId: String): PlaylistContent? = read("content-$playlistId.json", PlaylistContent.serializer())
+    /** Catalogues can be downloaded again: no previous version is kept, and one that cannot be read is deleted. */
+    fun loadContent(playlistId: String): PlaylistContent? = read("content-$playlistId.json", PlaylistContent.serializer(), disposable = true)
     fun saveContent(playlistId: String, content: PlaylistContent) =
         write("content-$playlistId.json", PlaylistContent.serializer(), content, keepPrevious = false)
     fun deleteContent(playlistId: String) {
@@ -65,21 +65,34 @@ class AppStore(private val directory: File, private val now: () -> Long = System
     }
 
     /** The movie and series details kept for a playlist; they can be fetched again: no previous version is kept. */
-    fun loadDetails(playlistId: String): DetailsArchive? = read("details-$playlistId.json", DetailsArchive.serializer())
+    fun loadDetails(playlistId: String): DetailsArchive? = read("details-$playlistId.json", DetailsArchive.serializer(), disposable = true)
     fun saveDetails(playlistId: String, archive: DetailsArchive) =
         write("details-$playlistId.json", DetailsArchive.serializer(), archive, keepPrevious = false)
     fun deleteDetails(playlistId: String) {
         File(directory, "details-$playlistId.json").delete()
     }
 
-    /** The document, else its previous version. One that cannot be read is renamed `name.corrupt-<time>`. */
+    /** The last error that stopped the app (see [CrashLog]), kept next to the documents. */
+    val crashFile: File get() = File(directory, CrashLog.FILE_NAME)
+    fun loadLastCrash(): LastCrash? = CrashLog.read(crashFile)
+
+    /**
+     * The document, else its previous version. One that cannot be read is renamed `name.corrupt-<time>`, or deleted
+     * when [disposable] (it can be downloaded again). One too large for the memory left is not damaged: it stays.
+     */
     @Synchronized
-    private fun <T> read(name: String, serializer: KSerializer<T>): T? {
+    private fun <T> read(name: String, serializer: KSerializer<T>, disposable: Boolean = false): T? {
         for (file in listOf(File(directory, name), File(directory, "$name.bak"))) {
             if (!file.exists()) continue
-            val value = runCatching { file.inputStream().buffered().use { json.decodeFromStream(serializer, it) } }.getOrNull()
+            val value = try {
+                file.inputStream().buffered().use { json.decodeFromStream(serializer, it) }
+            } catch (_: OutOfMemoryError) {
+                return null
+            } catch (_: Exception) {
+                null
+            }
             if (value != null) return value
-            file.renameTo(File(directory, "${file.name}.corrupt-${now()}"))
+            if (disposable) file.delete() else file.renameTo(File(directory, "${file.name}.corrupt-${now()}"))
         }
         return null
     }

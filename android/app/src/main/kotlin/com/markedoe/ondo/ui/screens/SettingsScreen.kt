@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
@@ -57,11 +58,13 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
+import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.ui.theme.Appearance
 import com.markedoe.ondo.ui.tv.focusFrame
@@ -82,6 +85,8 @@ data class SettingsUiState(
     val syncOnLocalNetwork: Boolean = false,
     /** The devices sync found or heard from (only while it is on). */
     val syncDevices: List<SyncDevice> = emptyList(),
+    /** The last error that stopped the app, recorded on this device. */
+    val lastCrash: LastCrash? = null,
 )
 
 class SettingsActions(
@@ -260,6 +265,17 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
             item { ListItem(headlineContent = { Text(stringResource(R.string.privacy_policy)) }, modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onPrivacy)) }
             item { ListItem(headlineContent = { Text(stringResource(R.string.support)) }, modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onSupport)) }
             item { ListItem(headlineContent = { Text(stringResource(R.string.version)) }, trailingContent = { Text(state.version) }) }
+            state.lastCrash?.let { crash ->
+                item(key = "lastCrash") {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("lastCrash")) {
+                        Text(lastCrashTitle(crash), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.last_crash_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        SelectionContainer {
+                            Text(crash.report, style = MaterialTheme.typography.labelSmall, fontFamily = FontFamily.Monospace, modifier = Modifier.padding(top = 8.dp))
+                        }
+                    }
+                }
+            }
         }
     }
     deleting?.let { playlist ->
@@ -312,6 +328,15 @@ private fun SectionTitle(text: String) {
 }
 
 /** Where sync is with a device: when the last session worked, or that it could not be reached. */
+/** "Last crash: <date and time>". */
+@Composable
+fun lastCrashTitle(crash: LastCrash): String {
+    val context = LocalContext.current
+    val date = java.util.Date(crash.at)
+    val time = android.text.format.DateFormat.getDateFormat(context).format(date) + " " + android.text.format.DateFormat.getTimeFormat(context).format(date)
+    return stringResource(R.string.last_crash, time)
+}
+
 @Composable
 fun syncDetail(device: SyncDevice): String = when {
     device.unreachable -> stringResource(R.string.sync_not_reached)
