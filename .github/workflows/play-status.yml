@@ -1,0 +1,30 @@
+name: Google Play status
+
+# What Google Play shows of the Android app, read only: tracks and releases, bundles, store listing and images, testers'
+# groups, countries, reviews, generated APKs, crashes and ANRs. Changes nothing: the edit it opens is deleted, never
+# committed. The review of changes and the Android TV review are in no API (Play Console and e-mails).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never during an upload: a read would race on the same app's edits.
+concurrency:
+  group: release-android
+  cancel-in-progress: false
+
+jobs:
+  status:
+    name: Google Play (read only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Read Google Play
+        # The service account only for this step; the script prints no secret, address or review text.
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: python3 -I .github/scripts/play_status.py
