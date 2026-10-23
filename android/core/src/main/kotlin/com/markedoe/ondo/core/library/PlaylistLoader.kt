@@ -92,14 +92,16 @@ class PlaylistLoader(
     fun parse(bytes: ByteArray): PlaylistContent {
         val data = Gzip.gunzipIfNeeded(bytes)
         if (data.isEmpty()) throw PlaylistLoaderException.EmptyPlaylist()
-        val parsed = when (PlaylistFormat.detect(data) ?: throw PlaylistLoaderException.UnsupportedFormat()) {
-            PlaylistFormat.M3U -> M3uParser.parse(data)
-            PlaylistFormat.XSPF -> XspfParser.parse(data)
-            PlaylistFormat.JSON -> JsonPlaylistParser.parse(data)
-            PlaylistFormat.PLAIN_LIST -> PlainListParser.parse(data)
+        val content = when (PlaylistFormat.detect(data) ?: throw PlaylistLoaderException.UnsupportedFormat()) {
+            // Entry by entry into the catalogue: large M3U playlists are the common case.
+            PlaylistFormat.M3U -> M3uContentBuilder.build(M3uParser.headerAttributes(data), M3uParser.entries(data))
+            PlaylistFormat.XSPF -> M3uContentBuilder.build(XspfParser.parse(data))
+            PlaylistFormat.JSON -> M3uContentBuilder.build(JsonPlaylistParser.parse(data))
+            PlaylistFormat.PLAIN_LIST -> M3uContentBuilder.build(PlainListParser.parse(data))
         }
-        if (parsed.entries.isEmpty()) throw PlaylistLoaderException.EmptyPlaylist()
-        return M3uContentBuilder.build(parsed).copy(fetchedAt = clock())
+        // Every entry becomes a channel, a movie or an episode: nothing in the catalogue means no entry.
+        if (content.channels.isEmpty() && content.movies.isEmpty() && content.series.isEmpty()) throw PlaylistLoaderException.EmptyPlaylist()
+        return content.copy(fetchedAt = clock())
     }
 
     /**

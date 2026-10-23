@@ -75,10 +75,33 @@ object M3uParser {
 
     fun parse(text: String): M3uPlaylist = parse(text.encodeToByteArray())
 
-    fun parse(bytes: ByteArray): M3uPlaylist {
-        val header = LinkedHashMap<String, String>()
-        val entries = ArrayList<M3uEntry>(maxOf(bytes.size / 200, 16))
+    fun parse(bytes: ByteArray): M3uPlaylist = M3uPlaylist(headerAttributes(bytes), entries(bytes).toList())
 
+    /** Attributes of the `#EXTM3U` line (keys lowercased). */
+    fun headerAttributes(bytes: ByteArray): Map<String, String> {
+        val header = LinkedHashMap<String, String>()
+        val count = bytes.size
+        var lineStart = 0
+        while (lineStart < count) {
+            var lineEnd = lineStart
+            while (lineEnd < count && bytes[lineEnd] != LF && bytes[lineEnd] != CR) lineEnd++
+            var a = lineStart
+            var b = lineEnd
+            lineStart = lineEnd + 1
+            // A byte order mark before the first line, spaces and tabs around.
+            if (a == 0 && count >= 3 && bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte()) a = 3
+            while (a < b && isBlank(bytes[a])) a++
+            while (b > a && isBlank(bytes[b - 1])) b--
+            if (b - a >= 7 && bytes[a] == HASH && hasPrefix(bytes, a, b, "#EXTM3U")) header.putAll(parseAttributes(bytes, a + 7, b))
+        }
+        return header
+    }
+
+    /**
+     * The entries, each parsed when the sequence reaches it: a playlist of 100,000 entries is never all in memory as
+     * entries (with their attributes) next to the catalogue built from them.
+     */
+    fun entries(bytes: ByteArray): Sequence<M3uEntry> = sequence {
         var pendingInfo: ExtInf? = null
         var pendingGroup: String? = null
         var pendingHeaders = HttpHeaders.NONE
@@ -101,7 +124,6 @@ object M3uParser {
             if (bytes[a] == HASH) {
                 when {
                     hasPrefix(bytes, a, b, "#EXTINF:") -> pendingInfo = parseExtInf(bytes, a + 8, b)
-                    hasPrefix(bytes, a, b, "#EXTM3U") -> header.putAll(parseAttributes(bytes, a + 7, b))
                     hasPrefix(bytes, a, b, "#EXTGRP:") -> pendingGroup = string(bytes, a + 8, b).trim()
                     hasPrefix(bytes, a, b, "#EXTVLCOPT:") -> pendingHeaders = applyOption(string(bytes, a + 11, b), pendingHeaders)
                     hasPrefix(bytes, a, b, "#KODIPROP:") -> pendingHeaders = applyKodiProp(string(bytes, a + 10, b), pendingHeaders)
@@ -135,12 +157,11 @@ object M3uParser {
                 if (referrer != null) headers = headers.copy(referrer = referrer)
             }
             val title = info.title.ifEmpty { info.attributes["tvg-name"] ?: Urls.lastPathComponent(url) }
-            entries.add(M3uEntry(info.duration, title, info.attributes, url, pendingGroup, headers))
+            yield(M3uEntry(info.duration, title, info.attributes, url, pendingGroup, headers))
             pendingInfo = null
             pendingGroup = null
             pendingHeaders = HttpHeaders.NONE
         }
-        return M3uPlaylist(header, entries)
     }
 
     private fun isBlank(byte: Byte) = byte == SPACE || byte == TAB

@@ -20,8 +20,11 @@ import com.markedoe.ondo.core.xtream.XtreamUrlBuilder
  * playlist: entries sharing a URL get `-2`, `-3`… suffixes, episodes included, so progress is kept per episode.
  */
 object M3uContentBuilder {
-    fun build(playlist: M3uPlaylist): PlaylistContent {
-        val defaultCatchup = catchupInfo(playlist.headerAttributes, url = null)
+    fun build(playlist: M3uPlaylist): PlaylistContent = build(playlist.headerAttributes, playlist.entries.asSequence())
+
+    /** The catalogue of [entries], read once in order (see `M3uParser.entries`). */
+    fun build(headerAttributes: Map<String, String>, entries: Sequence<M3uEntry>): PlaylistContent {
+        val defaultCatchup = catchupInfo(headerAttributes, url = null)
 
         val liveCategories = OrderedCategories(ContentType.LIVE)
         val movieCategories = OrderedCategories(ContentType.MOVIE)
@@ -43,7 +46,7 @@ object M3uContentBuilder {
         }
 
         val classifier = ContentClassifier()
-        for (entry in playlist.entries) {
+        for (entry in entries) {
             val headers = if (entry.headers.isEmpty) null else entry.headers
             when (classifier.classify(entry)) {
                 ContentType.LIVE -> {
@@ -131,7 +134,7 @@ object M3uContentBuilder {
             liveCategories = liveCategories.all,
             movieCategories = movieCategories.all,
             seriesCategories = seriesCategories.all,
-            providerEpgUrls = playlist.epgUrls,
+            providerEpgUrls = M3uPlaylist(headerAttributes, emptyList()).epgUrls,
         )
     }
 
