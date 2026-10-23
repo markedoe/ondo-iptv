@@ -96,7 +96,7 @@ public struct EPGData: Codable, Hashable, Sendable {
         }
         for (id, incoming) in other.programs {
             guard let existing = programs[id], !existing.isEmpty else {
-                programs[id] = incoming
+                programs[id] = Self.onePerStartSecond(incoming.sorted { $0.start < $1.start })
                 continue
             }
             let taken = TakenSlots(existing)
@@ -105,8 +105,23 @@ public struct EPGData: Codable, Hashable, Sendable {
                 combined.append(program)
             }
             combined.sort { $0.start < $1.start }
-            programs[id] = combined
+            programs[id] = Self.onePerStartSecond(combined)
         }
+    }
+
+    /// The first programme of each start second, from a channel's list sorted by start: `EPGProgram.id` is the
+    /// channel and that second, and a guide that lists a programme twice would give a SwiftUI list two rows with one ID.
+    static func onePerStartSecond(_ sorted: [EPGProgram]) -> [EPGProgram] {
+        var result: [EPGProgram] = []
+        result.reserveCapacity(sorted.count)
+        var previous: Double?
+        for program in sorted {
+            let second = program.start.timeIntervalSince1970.rounded(.towardZero)
+            if second == previous { continue }
+            previous = second
+            result.append(program)
+        }
+        return result
     }
 
     /// The time a channel's programmes take, to tell in O(log n) whether another programme overlaps one of

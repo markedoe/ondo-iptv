@@ -135,6 +135,26 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(data.programs["a"]?.map(\.episode), ["9223372036854775807.0.", "1.9223372036854775807."])
     }
 
+    /// A programme's ID is its channel and start second: one listed twice is kept once, or SwiftUI lists get two rows
+    /// with one ID.
+    func testAProgrammeListedTwiceIsKeptOnce() throws {
+        let xml = """
+        <?xml version="1.0"?><tv>\
+        <programme channel="a" start="20251009200000 +0000" stop="20251009210000 +0000"><title>T</title></programme>\
+        <programme channel="a" start="20251009200000 +0000" stop="20251009210000 +0000"><title>T</title></programme>\
+        <programme channel="a" start="20251009210000 +0000" stop="20251009220000 +0000"><title>U</title></programme></tv>
+        """
+        XCTAssertEqual(try XMLTVParser.parse(Data(xml.utf8)).programs["a"]?.map(\.title), ["T", "U"])
+
+        var index = EPGIndex.empty
+        let channel = Channel(id: "x1", name: "A", categoryID: "c", streamURL: URL(string: "http://example.com/1")!, epgID: "a")
+        let twice = EPGProgram(channelID: "a", title: "V", start: .utc(2025, 1, 1, 10), end: .utc(2025, 1, 1, 11))
+        index.insert([twice, twice], for: channel)
+        XCTAssertEqual(index.programs(for: channel).count, 1)
+        index.insert([twice, twice], for: channel)
+        XCTAssertEqual(index.programs(for: channel).count, 1)
+    }
+
     func testInsertShortEPG() {
         var index = EPGIndex.empty
         let channel = Channel(id: "x1", name: "TV1", categoryID: "c", streamURL: URL(string: "http://x/1")!, epgID: "TV1.fr")

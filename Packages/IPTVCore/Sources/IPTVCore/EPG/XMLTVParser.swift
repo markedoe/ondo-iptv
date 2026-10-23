@@ -142,7 +142,7 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
         var sorted: [String: [EPGProgram]] = [:]
         sorted.reserveCapacity(programs.count)
         for (id, list) in programs {
-            sorted[id] = list.sorted { $0.start < $1.start }
+            sorted[id] = EPGData.onePerStartSecond(list.sorted { $0.start < $1.start })
         }
         return EPGData(channels: channels, programs: sorted)
     }
