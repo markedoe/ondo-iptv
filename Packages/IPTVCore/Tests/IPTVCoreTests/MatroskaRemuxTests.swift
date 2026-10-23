@@ -305,6 +305,20 @@ final class MatroskaRemuxTests: XCTestCase {
 
     /// A segment is read and held whole: an index with too few key frames (one for the whole film) is left to VLC
     /// rather than read into memory.
+    /// Mastering metadata is the file's floats: not a number, infinite or past Int's range, it is written as 0, never a
+    /// crash when the header is made.
+    func testMasteringMetadataThatIsNotANumberIsWrittenAsZero() {
+        for bad in [Double.nan, .infinity, -.infinity, 1e300] {
+            var colour = MatroskaTrack.Colour()
+            colour.colourVolume = MatroskaTrack.ColourVolume(
+                primaries: [0.708, 0.292, 0.17, 0.797, 0.131, bad], whitePoint: [bad, 0.329], maxLuminance: bad, minLuminance: bad
+            )
+            var track = FragmentTrack(id: 1, codec: .avc(Data([1, 0x64, 0, 0x28])), timescale: 90_000)
+            track.colour = colour
+            XCTAssertNotNil(FragmentWriter.initSegment(tracks: [track]).range(of: Data("mdcv".utf8)), "\(bad)")
+        }
+    }
+
     func testSegmentsPastTheLimitAreLeftToVLC() async throws {
         let base = try await MatroskaReader.open(DataByteSource(MatroskaBytes.film()))
         let video = base.tracks[0]

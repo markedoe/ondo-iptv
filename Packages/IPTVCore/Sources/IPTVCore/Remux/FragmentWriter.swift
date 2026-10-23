@@ -398,15 +398,17 @@ struct BoxWriter {
         if let volume = colour.colourVolume, volume.primaries.count == 6, volume.whitePoint.count == 2 {
             box("mdcv") { box in
                 // Chromaticities in units of 0.00002, in the order G, B, R; luminance in units of 0.0001 cd/m².
-                func chroma(_ value: Double) -> UInt16 { UInt16(clamping: Int((value / 0.000_02).rounded())) }
+                // The file's floats: `Int(_:)` traps on NaN, infinity and past Int's range, so those count as 0.
+                func whole(_ value: Double) -> Int { Int(exactly: value.rounded()) ?? 0 }
+                func chroma(_ value: Double) -> UInt16 { UInt16(clamping: whole(value / 0.000_02)) }
                 for index in [2, 4, 0] {
                     box.u16(chroma(volume.primaries[index]))
                     box.u16(chroma(volume.primaries[index + 1]))
                 }
                 box.u16(chroma(volume.whitePoint[0]))
                 box.u16(chroma(volume.whitePoint[1]))
-                box.u32(UInt32(clamping: Int((volume.maxLuminance * 10_000).rounded())))
-                box.u32(UInt32(clamping: Int((volume.minLuminance * 10_000).rounded())))
+                box.u32(UInt32(clamping: whole(volume.maxLuminance * 10_000)))
+                box.u32(UInt32(clamping: whole(volume.minLuminance * 10_000)))
             }
         }
         if colour.maxCLL != nil || colour.maxFALL != nil {
