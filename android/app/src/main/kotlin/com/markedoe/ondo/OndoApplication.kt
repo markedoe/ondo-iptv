@@ -101,6 +101,8 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             reminderScheduler = WorkManagerReminderScheduler(this),
             awardsDownload = AwardsDownload(AwardsDownload.URL, cacheDir.resolve("awards.json")),
             downloadFolder = cacheDir.resolve("downloads"),
+            // A quarter of what the device gives the app: the catalogue, the screens and the images need the rest.
+            guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
         )
     }
 

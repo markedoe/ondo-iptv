@@ -46,8 +46,17 @@ class XmltvParser {
         parseGuide(input, filter, timeShiftMillis, Gzip.MAX_GUNZIPPED_SIZE)
 
     /** [sizeLimit]: largest inflated size of a gzip guide; a larger one throws [GzipTooLargeException]. */
-    internal fun parseGuide(input: InputStream, filter: EpgFilter, timeShiftMillis: Long, sizeLimit: Long): EpgData {
-        val handler = XmltvHandler(filter, timeShiftMillis)
+    internal fun parseGuide(input: InputStream, filter: EpgFilter, timeShiftMillis: Long, sizeLimit: Long): EpgData =
+        read(input, XmltvHandler(filter, timeShiftMillis), sizeLimit).result()
+
+    /**
+     * What [parseGuide] would keep with the same [filter] and shift, by hour around [now], without keeping anything:
+     * read once to size it, the guide is read again within a window that fits the memory it may take.
+     */
+    internal fun estimateGuide(input: InputStream, filter: EpgFilter, timeShiftMillis: Long, now: Long): GuideEstimate =
+        read(input, XmltvHandler(filter, timeShiftMillis, estimateAround = now), Gzip.MAX_GUNZIPPED_SIZE).estimate()
+
+    private fun read(input: InputStream, handler: XmltvHandler, sizeLimit: Long): XmltvHandler {
         try {
             Sax.parse(Gzip.decompressingStream(input, sizeLimit), handler)
         } catch (e: SAXException) {
@@ -58,7 +67,7 @@ class XmltvParser {
             if (handler.isEmpty) throw XmltvParseException("Invalid XMLTV guide: ${e.message}", e)
         }
         if (handler.isEmpty && !handler.sawGuideElement) throw XmltvParseException("Invalid XMLTV guide: no <tv> element")
-        return handler.result()
+        return handler
     }
 
     /** The size limit reached while parsing, which the parser may have wrapped. */
@@ -163,6 +172,10 @@ private class ProgrammeBuilder(val channelId: String, val start: Long, val end: 
         rating = rating,
     )
 
+    /** Characters of its texts, for [GuideEstimate]. */
+    fun textLength(): Int = title.length + (subtitle?.length ?: 0) + (description?.length ?: 0) + (category?.length ?: 0) +
+        (iconUrl?.length ?: 0) + (episode?.length ?: 0) + (rating?.length ?: 0)
+
     /** Stores the text of a programme child element (the first value of each kind wins). */
     fun fill(element: String, value: String) {
         when (element) {
@@ -176,10 +189,18 @@ private class ProgrammeBuilder(val channelId: String, val start: Long, val end: 
     }
 }
 
-private class XmltvHandler(private val filter: EpgFilter, private val timeShift: Long) : DefaultHandler() {
+/** Reads a guide; with [estimateAround], counts what it would keep (see [GuideEstimate]) instead of keeping it. */
+private class XmltvHandler(
+    private val filter: EpgFilter,
+    private val timeShift: Long,
+    private val estimateAround: Long? = null,
+) : DefaultHandler() {
     private val channels = LinkedHashMap<String, EpgChannel>()
     private val programs = LinkedHashMap<String, MutableList<EpgProgram>>()
     private var programCount = 0
+    private val bytesByHour = HashMap<Long, Long>()
+
+    fun estimate(): GuideEstimate = GuideEstimate(estimateAround ?: 0L, bytesByHour)
 
     /** Whether the document has the `<tv>` element of an XMLTV guide. */
     var sawGuideElement = false
@@ -284,7 +305,12 @@ private class XmltvHandler(private val filter: EpgFilter, private val timeShift:
             "programme" -> {
                 val current = programme
                 if (keepProgramme && current != null) {
-                    programs.getOrPut(current.channelId) { ArrayList() }.add(current.build())
+                    if (estimateAround != null) {
+                        val hour = Math.floorDiv(current.start - estimateAround, GuideEstimate.HOUR)
+                        bytesByHour.merge(hour, GuideEstimate.bytesOf(current.channelId, current.textLength()), Long::plus)
+                    } else {
+                        programs.getOrPut(current.channelId) { ArrayList() }.add(current.build())
+                    }
                     programCount++
                 }
                 programme = null

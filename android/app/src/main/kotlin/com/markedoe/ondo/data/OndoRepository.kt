@@ -93,6 +93,8 @@ class OndoRepository(
     private val reminderScheduler: ReminderScheduler = NoReminderScheduler,
     /** Where large answers (guides, Xtream lists) are downloaded while they are read (the app's cache); emptied at start. */
     private val downloadFolder: File? = null,
+    /** Memory the guide's programmes may take (see `PlaylistLoader`); null: no limit. */
+    private val guideBudgetBytes: Long? = null,
 ) {
     private val _state = MutableStateFlow(OndoState())
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -667,7 +669,7 @@ class OndoRepository(
         )
     }
 
-    private fun loader() = PlaylistLoader(http, clock = now, downloadFolder = downloadFolder)
+    private fun loader() = PlaylistLoader(http, clock = now, downloadFolder = downloadFolder, guideBudgetBytes = guideBudgetBytes)
 
     private fun SavedPlaylist.credentials(): XtreamCredentials? =
         if (isXtream) XtreamCredentials(XtreamCredentials.normalizeServer(url) ?: url, username.orEmpty(), password.orEmpty()) else null

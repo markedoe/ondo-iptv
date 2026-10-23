@@ -45,6 +45,26 @@ class MemoryBudgetTest {
         assertEquals(50_000, content.channels.size + content.movies.size + content.series.sumOf { it.episodes.size })
     }
 
+    /**
+     * A guide whose programmes alone would need more than the heap (4,000 channels with three days each: about 130 MB
+     * measured kept whole) loads within its budget, a quarter of the heap: what is on and next on every channel.
+     */
+    @Test
+    fun aGuideLargerThanTheHeapKeepsWhatIsOnWithinItsBudget() = runBlocking {
+        val url = "http://epg.example.com/guide.xml"
+        val now = System.currentTimeMillis()
+        val file = LargeCatalogue.xmltv(folder.resolve("big.xml"), channels = 4_000, days = 3, perDay = 24, start = now - 86_400_000L)
+        val content = PlaylistContent(
+            channels = (1..4_000).map { Channel(id = "c$it", name = "Channel $it", categoryId = "c", streamUrl = "http://stream.example.com/$it", epgId = "channel$it.example") },
+        )
+        val playlist = Playlist(name = "G", source = PlaylistSource.Remote("http://provider.example.com/list.m3u"), epgUrls = listOf(url))
+        val loader = PlaylistLoader(FileHttp(mapOf(url to file)), clock = { now }, downloadFolder = folder.resolve("downloads"), guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4)
+        val result = loader.loadEpg(playlist, content)
+        assertTrue(result.failures.isEmpty(), "${result.failures}")
+        assertEquals(4_000, result.data.programs.size)
+        assertTrue(result.data.programs.values.all { list -> list.any { it.start <= now && it.end > now } }, "what is on now, on every channel")
+    }
+
     @Test
     fun aGuideOfTensOfMegabytesLoads() = runBlocking {
         val url = "http://epg.example.com/guide.xml"

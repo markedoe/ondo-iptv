@@ -16,6 +16,9 @@ class EpgFilter(
     internal val filtersChannels: Boolean
         get() = channelIds != null || channelNameKeys != null
 
+    /** The same channels within [window]. */
+    internal fun within(window: TimeWindow) = EpgFilter(window, channelIds, channelNameKeys)
+
     companion object {
         val NONE = EpgFilter()
 

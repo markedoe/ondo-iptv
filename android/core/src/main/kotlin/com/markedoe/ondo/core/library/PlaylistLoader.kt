@@ -2,6 +2,7 @@ package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.epg.EpgFilter
+import com.markedoe.ondo.core.epg.GuideEstimate
 import com.markedoe.ondo.core.epg.XmltvParser
 import com.markedoe.ondo.core.model.EpgData
 import com.markedoe.ondo.core.model.Playlist
@@ -45,6 +46,11 @@ class PlaylistLoader(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val clock: () -> Long = System::currentTimeMillis,
     private val downloadFolder: File? = null,
+    /**
+     * Memory the programmes of a playlist's guides may take, in bytes (null: no limit). A guide over it is kept within
+     * a narrower window around now (see [GuideEstimate]); the app gives a quarter of its memory.
+     */
+    private val guideBudgetBytes: Long? = null,
 ) {
     /** Downloads (or reads) the playlist and returns its content. */
     suspend fun load(playlist: Playlist): PlaylistContent = when (val source = playlist.source) {
@@ -128,6 +134,8 @@ class PlaylistLoader(
         )
         val shift = (playlist.epgTimeShiftHours * 3_600_000).toLong()
         val parser = XmltvParser()
+        val now = clock()
+        var remaining = guideBudgetBytes
         var merged = EpgData()
         val failures = LinkedHashMap<String, Throwable>()
         for (url in sources) {
@@ -140,7 +148,22 @@ class PlaylistLoader(
                 }
                 file = download
                 http.download(url, playlist.headers.toMap(), download)
-                val parsed = withContext(parsingDispatcher) { download.inputStream().use { parser.parseGuide(it, filter, shift) } }
+                // Within the memory left: the guide is sized first, and read within a narrower window when it is over.
+                val budget = remaining
+                val sourceFilter = if (budget == null) {
+                    filter
+                } else {
+                    val estimate = withContext(parsingDispatcher) { download.inputStream().use { parser.estimateGuide(it, filter, shift, now) } }
+                    if (estimate.totalBytes <= budget) {
+                        remaining = budget - estimate.totalBytes
+                        filter
+                    } else {
+                        val selection = estimate.window(budget, filter.window)
+                        remaining = (budget - selection.bytes).coerceAtLeast(0)
+                        filter.within(selection.window)
+                    }
+                }
+                val parsed = withContext(parsingDispatcher) { download.inputStream().use { parser.parseGuide(it, sourceFilter, shift) } }
                 merged = merged.merged(parsed)
             } catch (e: CancellationException) {
                 throw e
