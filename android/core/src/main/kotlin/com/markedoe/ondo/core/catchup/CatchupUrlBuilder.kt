@@ -155,7 +155,10 @@ object CatchupUrlBuilder {
         val nowTs = now / 1000
         val duration = maxOf(endTs - startTs, 0)
         val offset = maxOf(nowTs - startTs, 0)
-        return tokenRegex.replace(template) { match ->
+        // A token ends with `}`, so nothing past the last one is searched: there, each `{` of a long template
+        // scanned the rest of it again.
+        val tokensEnd = template.lastIndexOf('}') + 1
+        return tokenRegex.replace(template.substring(0, tokensEnd)) { match ->
             val name = match.groupValues[1]
             val argument = match.groups[2]?.value
             val divider = argument?.toIntOrNull()?.let { maxOf(it, 1) }
@@ -169,7 +172,7 @@ object CatchupUrlBuilder {
                 "Y", "m", "d", "H", "M", "S" -> format(start, name)
                 else -> match.value
             }
-        }
+        } + template.substring(tokensEnd)
     }
 
     /** Formats with strftime-like letters `Y m d H M S` (UTC). Other characters are kept. */
