@@ -348,6 +348,25 @@ platform :android do
     )
   end
 
+  desc "Promote a version of internal testing to a test track (VERSION_CODE, TRACK), as a draft: no new build"
+  lane :promote do
+    upload_to_play_store(
+      package_name: ANDROID_PACKAGE,
+      json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON"),
+      track: "internal",
+      version_code: Integer(ENV.fetch("VERSION_CODE")),
+      track_promote_to: ENV.fetch("TRACK"),
+      # Reviewed and rolled out in the Play Console, like any release outside internal testing.
+      track_promote_release_status: "draft",
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true
+    )
+  end
+
   desc "Upload only the Google Play listing (texts and images)"
   lane :metadata do
     upload_to_play_store(

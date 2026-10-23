@@ -177,7 +177,9 @@ questionnaire sur le test.
 
 Le workflow publie aussi sur ce canal : *Run workflow* avec la piste `alpha` (`alpha` = test fermé,
 `beta` = test ouvert). La version est créée en brouillon : vérifiez-la et déployez-la dans la Play Console.
-Seule la piste `internal` peut être déployée directement (statut `completed`, par défaut).
+Seule la piste `internal` peut être déployée directement (statut `completed`, par défaut). Pour envoyer aux
+testeurs le bundle même déjà vérifié en test interne, sans nouveau build, lancez *Promote Android* avec son
+version code et la piste : il y arrive aussi en brouillon.
 
 ### E3. Production
 
@@ -236,4 +238,5 @@ description nomme Android TV, comme Google le demande.
 |---|---|---|
 | *Android* | push sur `main` et pull requests touchant `android/`, `fastlane/metadata-android/` ou le workflow ; manuel | tests du cœur Kotlin, tests unitaires et Compose (Robolectric), captures Roborazzi (publiées sur la branche `android-screenshots` après un push sur `main`), lint (`lintRelease`), APK de debug et bundle de release (artefact **android-builds**), longueurs de la fiche Google Play (titre 30, description courte 80, description complète 4000, notes de version 500 caractères) |
 | *Release Android* | tag `android-v*` ou manuel | refuse `production` hors d'un tag `android-v*`, vérifie que les cinq secrets sont définis et que la playlist de démonstration répond, tests, captures copiées dans la fiche, bundle signé avec la clé d'importation (badge *Bêta* sauf pour `production`), artefact **ondo-release-bundle**, envoi sur Google Play avec la fiche et les notes de version |
+| *Promote Android* | manuel | passe un version code du test interne au test fermé (`alpha`) ou ouvert (`beta`), en brouillon, sans nouveau build ; la production reste réservée au tag `android-v*` |
 | *Google Play status* | manuel | lecture seule : canaux et versions, bundles détenus par Play, fiche (longueurs, nombre d'images de chaque type, captures TV et bannière comprises), groupes Google des testeurs, pays, avis de la dernière semaine (nombre et étoiles), APK générés depuis le dernier bundle, plantages et ANR (API Reporting, à activer dans le projet Google Cloud du compte de service). Ouvre une modification et la supprime, sans jamais la valider ; le journal ne contient ni adresse, ni e-mail, ni texte d'avis. L'examen des modifications et l'examen Android TV ne sont dans aucune API |
