@@ -117,9 +117,12 @@ struct SettingsView: View {
         }
     }
 
-    /// The app's version; the TestFlight edition says it is a beta.
+    /// The app's version and its build number, as App Store Connect and TestFlight list them ("1.1.0 (24)"); the
+    /// TestFlight edition says it is a beta.
     private var versionText: String {
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let version = (info?["CFBundleVersion"] as? String).map { "\(short) (\($0))" } ?? short
         #if TESTFLIGHT_DOWNLOADS
         return BetaBadge.version(version)
         #else

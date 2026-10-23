@@ -578,10 +578,12 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
     )
 }
 
-/** The app's version; a build for a Google Play test track says it is a beta. */
+/** The app's version and its build (the version code); a build for a Google Play test track says it is a beta. */
 @Composable
-private fun appVersion(): String =
-    if (BuildConfig.BETA) "${BuildConfig.VERSION_NAME} · ${stringResource(R.string.beta)}" else BuildConfig.VERSION_NAME
+private fun appVersion(): String {
+    val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
+    return if (BuildConfig.BETA) "$version · ${stringResource(R.string.beta)}" else version
+}
 
 @Composable
 private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHostController) {
