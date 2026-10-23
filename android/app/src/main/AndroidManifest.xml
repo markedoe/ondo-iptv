@@ -12,6 +12,8 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.faketouch" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- Sync asks for Wi-Fi multicast, which would make Google Play require Wi-Fi: TV boxes on Ethernet only keep Ondo. -->
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
 
     <!-- Whether the device has a file picker for "Choose a file" (most TVs have none) and an app to share a report with. -->
     <queries>
