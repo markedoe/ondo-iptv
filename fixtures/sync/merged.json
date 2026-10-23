@@ -1,0 +1,84 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "11111111-1111-4111-8111-111111111111",
+  "deviceName": "Living room TV",
+  "playlists": [
+    {
+      "id": "a0000000-0000-4000-8000-00000000000a",
+      "name": "Home",
+      "kind": "xtream",
+      "url": "http://panel.example.com",
+      "username": "viewer",
+      "password": "example-password",
+      "addedAt": 1000,
+      "updatedAt": 1000
+    },
+    {
+      "id": "c0000000-0000-4000-8000-00000000000c",
+      "name": "News and sport",
+      "kind": "m3u",
+      "url": "http://example.com/news.m3u",
+      "epgUrl": "http://example.com/guide.xml",
+      "addedAt": 1500,
+      "updatedAt": 1600
+    }
+  ],
+  "favorites": [
+    {
+      "playlist": "a0000000-0000-4000-8000-00000000000a",
+      "kind": "movie",
+      "item": "m1",
+      "title": "Glass City",
+      "image": "http://example.com/m1.jpg",
+      "addedAt": 2000
+    },
+    {
+      "playlist": "a0000000-0000-4000-8000-00000000000a",
+      "kind": "series",
+      "item": "s1",
+      "title": "Harbor Lights",
+      "addedAt": 2500
+    },
+    {
+      "playlist": "f0000000-0000-4000-8000-00000000000f",
+      "kind": "movie",
+      "item": "m6",
+      "title": "From a file playlist",
+      "addedAt": 2700
+    }
+  ],
+  "progress": [
+    {
+      "playlist": "a0000000-0000-4000-8000-00000000000a",
+      "kind": "series",
+      "item": "s1",
+      "episode": "e2",
+      "title": "Harbor Lights",
+      "subtitle": "S01E02",
+      "position": 2700,
+      "duration": 2700,
+      "watchedAt": 3600
+    },
+    {
+      "playlist": "a0000000-0000-4000-8000-00000000000a",
+      "kind": "movie",
+      "item": "m1",
+      "title": "Glass City",
+      "position": 1200,
+      "duration": 6000,
+      "watchedAt": 3500
+    }
+  ],
+  "lists": [],
+  "deleted": {
+    "favorite:a0000000-0000-4000-8000-00000000000a|live|c1": 2100,
+    "favorite:a0000000-0000-4000-8000-00000000000a|movie|m9": 1900,
+    "list:d0000000-0000-4000-8000-00000000000d": 4500,
+    "playlist:b0000000-0000-4000-8000-00000000000b": 5000,
+    "playlist:e0000000-0000-4000-8000-00000000000e": 900
+  },
+  "replaced": {
+    "b0000000-0000-4000-8000-00000000000b": "a0000000-0000-4000-8000-00000000000a"
+  }
+}

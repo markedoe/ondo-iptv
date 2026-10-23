@@ -1,0 +1,74 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "11111111-1111-4111-8111-111111111111",
+  "deviceName": "Living room TV",
+  "playlists": [
+    {
+      "id": "A0000000-0000-4000-8000-00000000000A",
+      "name": "Home",
+      "kind": "xtream",
+      "url": "http://panel.example.com",
+      "username": "viewer",
+      "password": "example-password",
+      "addedAt": 1000,
+      "updatedAt": 1000
+    },
+    {
+      "id": "c0000000-0000-4000-8000-00000000000c",
+      "name": "News",
+      "kind": "m3u",
+      "url": "http://example.com/news.m3u",
+      "epgUrl": "http://example.com/guide.xml",
+      "addedAt": 1500,
+      "updatedAt": 1500
+    }
+  ],
+  "favorites": [
+    {
+      "playlist": "a0000000-0000-4000-8000-00000000000a",
+      "kind": "movie",
+      "item": "m1",
+      "title": "Glass City",
+      "image": "http://example.com/m1.jpg",
+      "addedAt": 2000
+    },
+    {
+      "playlist": "a0000000-0000-4000-8000-00000000000a",
+      "kind": "live",
+      "item": "c1",
+      "title": "Ondo News",
+      "addedAt": 2100
+    }
+  ],
+  "progress": [
+    {
+      "playlist": "a0000000-0000-4000-8000-00000000000a",
+      "kind": "movie",
+      "item": "m1",
+      "title": "Glass City",
+      "position": 600,
+      "duration": 6000,
+      "watchedAt": 3000
+    }
+  ],
+  "lists": [
+    {
+      "id": "D0000000-0000-4000-8000-00000000000D",
+      "name": "Weekend",
+      "items": [
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m1",
+          "title": "Glass City"
+        }
+      ],
+      "updatedAt": 4000
+    }
+  ],
+  "deleted": {
+    "favorite:a0000000-0000-4000-8000-00000000000a|movie|m9": 1900,
+    "playlist:e0000000-0000-4000-8000-00000000000e": 900
+  }
+}

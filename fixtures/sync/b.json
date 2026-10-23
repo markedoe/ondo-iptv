@@ -1,0 +1,92 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "22222222-2222-4222-8222-222222222222",
+  "deviceName": "Phone",
+  "futureField": "ignored",
+  "playlists": [
+    {
+      "id": "b0000000-0000-4000-8000-00000000000b",
+      "name": "Home (phone)",
+      "kind": "xtream",
+      "url": " HTTP://Panel.Example.com ",
+      "username": "viewer",
+      "password": "example-password",
+      "addedAt": 1200,
+      "updatedAt": 5000
+    },
+    {
+      "id": "c0000000-0000-4000-8000-00000000000c",
+      "name": "News and sport",
+      "kind": "m3u",
+      "url": "http://example.com/news.m3u",
+      "epgUrl": "http://example.com/guide.xml",
+      "addedAt": 1500,
+      "updatedAt": 1600
+    }
+  ],
+  "favorites": [
+    {
+      "playlist": "b0000000-0000-4000-8000-00000000000b",
+      "kind": "series",
+      "item": "s1",
+      "title": "Harbor Lights",
+      "addedAt": 2500
+    },
+    {
+      "playlist": "a0000000-0000-4000-8000-00000000000a",
+      "kind": "movie",
+      "item": "m9",
+      "title": "Late Show",
+      "addedAt": 1800
+    },
+    {
+      "playlist": "e0000000-0000-4000-8000-00000000000e",
+      "kind": "movie",
+      "item": "m5",
+      "title": "Old Movie",
+      "addedAt": 2600
+    },
+    {
+      "playlist": "f0000000-0000-4000-8000-00000000000f",
+      "kind": "movie",
+      "item": "m6",
+      "title": "From a file playlist",
+      "addedAt": 2700
+    }
+  ],
+  "progress": [
+    {
+      "playlist": "b0000000-0000-4000-8000-00000000000b",
+      "kind": "movie",
+      "item": "m1",
+      "title": "Glass City",
+      "position": 1200,
+      "duration": 6000,
+      "watchedAt": 3500
+    },
+    {
+      "playlist": "b0000000-0000-4000-8000-00000000000b",
+      "kind": "series",
+      "item": "s1",
+      "episode": "e2",
+      "title": "Harbor Lights",
+      "subtitle": "S01E02",
+      "position": 2700,
+      "duration": 2700,
+      "watchedAt": 3600
+    }
+  ],
+  "lists": [
+    {
+      "id": "d0000000-0000-4000-8000-00000000000d",
+      "name": "Weekend",
+      "items": [],
+      "updatedAt": 3900
+    }
+  ],
+  "deleted": {
+    "list:d0000000-0000-4000-8000-00000000000d": 4500,
+    "favorite:a0000000-0000-4000-8000-00000000000a|live|c1": 2100
+  }
+}
