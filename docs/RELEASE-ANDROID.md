@@ -154,11 +154,19 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
    your Google account and save. Then *Releases* → the draft → *Edit* → *Next* → *Save and publish*. Open
    the *Join on Android* link on the phone and install Ondo from Google Play. *Test and release → App
    integrity* shows that Google Play signs the app (Play App Signing); the upload key stays yours.
-3. Subsequent releases go out from GitHub: `git tag android-v1.1.1 && git push origin android-v1.1.1`
-   (internal track, release rolled out), or *Run workflow* with the desired track. The `versionCode`
-   increases on every run (1000 + run number). The `versionName` comes only from an `android-vX.Y.Z` tag: a
-   run started from a branch keeps the default in `android/app/build.gradle.kts` (currently 1.1.0), so tag a
-   version above the current one.
+3. Subsequent releases go out from GitHub by themselves:
+   - **a push to `main`**: once the *Android* workflow is green, *Deliver* sends the build alone (not the
+     listing) to **internal testing**, rolled out at once, when `android/` changed;
+   - **a version tag** (`git tag v1.2.0 && git push origin v1.2.0`, the same tag as the App Store, equal to
+     `versionName` in `android/app/build.gradle.kts` and `MARKETING_VERSION` in `project.yml`, or the run stops):
+     the build **with the listing** goes to **closed testing**, status `completed`, so Google Play sends it for
+     review at once. This needs **managed publishing off** (*Publishing overview → Managed publishing*); with it
+     on, Google refuses the automatic sending and the run fails, saying so.
+   - or *Run workflow* with the desired track.
+
+   The `versionCode` increases on every run (1000 + run number). The `versionName` comes from the tag; a run
+   started from a branch keeps the default in `android/app/build.gradle.kts` (currently 1.1.0). After a release,
+   raise it with `MARKETING_VERSION` in `project.yml` to the next version.
 
 ### E2. Closed test (recent personal account)
 
@@ -167,16 +175,16 @@ Group), send them the opt-in link, and keep them opted in for **14 consecutive d
 below 12, the counter restarts from zero). Ask them to actually use the app (demo mode, their own
 playlists). Then: *Dashboard → Apply for production* and answer the questionnaire about the test.
 
-The workflow also publishes to this track: *Run workflow* with the `alpha` track (`alpha` = closed testing,
-`beta` = open testing). The release is created as a draft: review it and roll it out in the Play Console. Only
-`internal` can be rolled out directly (status `completed`, the default). To send testers the very bundle
-already checked in internal testing, without a new build, run *Promote Android* with its version code and the
-track: it lands there as a draft too.
+A version tag publishes to this track by itself (above). By hand: *Run workflow* with the `alpha` track (`alpha`
+= closed testing, `beta` = open testing); status `completed` (the default) sends it for review at once, `draft`
+leaves it to review and roll out in the Play Console. To send testers the very bundle already checked in internal
+testing, without a new build, run *Promote Android* with its version code and the track: it lands there as a
+draft.
 
 ### E3. Production
 
 *Production → Create new release* (or the workflow with the `production` track: the release is created as
-a draft, to check and send for review in the console). Start that run from the version's `android-vX.Y.Z` tag,
+a draft, to check and send for review in the console). Start that run from the version's `vX.Y.Z` tag,
 chosen in *Use workflow from → Tags*: the workflow refuses `production` from a branch, whose bundle would keep
 the default `versionName`. Builds for the test tracks (internal, closed, open)
 show a *Beta* badge on Home and next to the version in Settings; a build made for the `production` track does
@@ -225,6 +233,6 @@ and the description names Android TV, as Google asks.
 | Workflow | When | What it does |
 |---|---|---|
 | *Android* | pushes to `main` and pull requests touching `android/`, `fastlane/metadata-android/` or the workflow; manual | Kotlin core tests, unit and Compose tests (Robolectric), Roborazzi screenshots (published to the `android-screenshots` branch after a push to `main`), lint (`lintRelease`), debug APK and release bundle (**android-builds** artifact), Google Play listing lengths (title 30, short description 80, full description 4000, release notes 500 characters) |
-| *Release Android* | `android-v*` tag or manual | refuses `production` outside an `android-v*` tag, checks that the five secrets are set and that the demo playlist answers, tests, screenshots copied into the store listing, bundle signed with the upload key (*Beta* badge except for `production`), **ondo-release-bundle** artifact, upload to Google Play with the store listing and release notes (`listing: skip`: the build and its release notes alone, the listing under review untouched) |
-| *Promote Android* | manual | moves a version code of internal testing to closed (`alpha`) or open (`beta`) testing as a draft, without a new build; production stays with the `android-v*` tag |
+| *Release Android* | `v*` tag (closed testing, listing, sent for review), *Deliver* after a green push (internal testing, build alone) or manual | refuses `production` outside a `v*` tag, checks that the tag equals the apps' version, checks that the five secrets are set and that the demo playlist answers, tests, screenshots copied into the store listing, bundle signed with the upload key (*Beta* badge except for `production`), **ondo-release-bundle** artifact, upload to Google Play with the store listing and release notes (`listing: skip`: the build and its release notes alone, the listing under review untouched) |
+| *Promote Android* | manual | moves a version code of internal testing to closed (`alpha`) or open (`beta`) testing as a draft, without a new build; a `vX.Y.Z` tag sends a new build to closed testing by itself |
 | *Google Play status* | manual | read only: tracks and releases, bundles Play holds, store listing (lengths, number of images of each kind, TV screenshots and banner included), testers' Google Groups, countries, the last week's reviews (count and stars), APKs generated from the latest bundle, crashes and ANRs (Reporting API, to be enabled in the service account's Google Cloud project). Opens an edit and deletes it, never commits it; the log holds no address, e-mail or review text. The review of changes and the Android TV review are in no API |

@@ -1,1 +1,1 @@
-Ondo now runs on Android TV and Google TV: every screen with the remote, OK to pause, the arrows to go back and forward, CH+ / CH− and the number keys to change channel, OK held on a channel to add it to My List. On a phone held sideways, Home and the movie and series pages fit the screen better.
+A new Android TV look made for the remote. Sync on this network (Settings): playlists, My List, collections and progress stay the same on your Ondo devices at home. Hide watched movies. Sync works over Wi-Fi and Ethernet.

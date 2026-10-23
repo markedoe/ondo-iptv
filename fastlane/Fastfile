@@ -112,6 +112,29 @@ def testflight_edition?
   ENV["EDITION"] == "testflight"
 end
 
+# A version tag's release waits until App Store Connect has processed the build (minutes to half an hour): only a
+# processed build can be selected for review. Pushes to main do not wait.
+def wait_for_processing?
+  ENV["WAIT_FOR_PROCESSING"] == "true"
+end
+
+# Uploads to TestFlight, waiting for the processing when the build is to be submitted (no tester group is notified).
+def upload_build(platform)
+  upload_to_testflight(
+    api_key: api_key,
+    app_platform: platform,
+    skip_waiting_for_build_processing: !wait_for_processing?,
+    skip_submission: true,
+    wait_processing_timeout_duration: 5400
+  )
+end
+
+# The build number of this upload for the steps after it (the submission in release.yml).
+def report_build_number(number)
+  File.write(ENV["GITHUB_OUTPUT"], "build=#{number}\n", mode: "a") if ENV["GITHUB_OUTPUT"]
+  UI.message("Build number #{number}")
+end
+
 # Submits for App Review the App Store edition build BUILD_NUMBER of this version, with the listing as it is on App
 # Store Connect (the metadata lanes upload it), released as soon as Apple approves it. The number comes from the log of
 # the release run that built the App Store edition: never "the latest build", which may be a TestFlight edition one.
@@ -132,6 +155,36 @@ def submit_for_review(platform)
     submit_for_review: true,
     automatic_release: true,
     run_precheck_before_submit: true,
+    precheck_include_in_app_purchases: false,
+    submission_information: { add_id_info_uses_idfa: false }
+  )
+end
+
+# A version tag's release (the user's go: CLAUDE.md, App Store): the listing and its screenshots, the App Store edition
+# build BUILD_NUMBER uploaded just before, and the submission for App Review, released as soon as Apple approves it.
+# A submission of this version still waiting for review is withdrawn first: the newer build replaces it. SUBMIT=false
+# (a rehearsal run by hand) does everything but the submission.
+def release_for_review(platform, screenshots)
+  build = ENV.fetch("BUILD_NUMBER", "").strip
+  UI.user_error!("BUILD_NUMBER must be the App Store edition build uploaded by this run") unless build.match?(/\A\d+\z/)
+  submit = ENV["SUBMIT"] == "true"
+  deliver(
+    api_key: api_key,
+    app_identifier: APP_ID,
+    platform: platform,
+    app_version: app_version,
+    build_number: build,
+    skip_binary_upload: true,
+    # Both name fastlane/screenshots/<platform>: File.directory? runs in fastlane/, deliver from the repository root.
+    skip_screenshots: !File.directory?("screenshots/#{screenshots}"),
+    screenshots_path: "fastlane/screenshots/#{screenshots}",
+    overwrite_screenshots: true,
+    metadata_path: "fastlane/metadata",
+    force: true,
+    reject_if_possible: submit,
+    submit_for_review: submit,
+    automatic_release: true,
+    run_precheck_before_submit: submit,
     precheck_include_in_app_purchases: false,
     submission_information: { add_id_info_uses_idfa: false }
   )
@@ -258,7 +311,8 @@ platform :ios do
       output_directory: "build/ios-release",
       xcargs: "#{signing_xcargs} #{build_settings_args(number)}"
     )
-    upload_to_testflight(api_key: api_key, skip_waiting_for_build_processing: true)
+    upload_build("ios")
+    report_build_number(number)
   end
 
   desc "Upload the App Store listing (texts, keywords, URLs, screenshots) without a binary; the age rating is set in App Store Connect"
@@ -283,6 +337,11 @@ platform :ios do
   desc "Submit the App Store edition build BUILD_NUMBER of this version for App Review"
   lane :submit do
     submit_for_review("ios")
+  end
+
+  desc "Version tag: listing, App Store edition build BUILD_NUMBER and submission for App Review (SUBMIT=true)"
+  lane :release do
+    release_for_review("ios", "ios")
   end
 end
 
@@ -311,6 +370,11 @@ platform :mac do
     submit_for_review("osx")
   end
 
+  desc "Version tag: listing, App Store edition build BUILD_NUMBER and submission for App Review (SUBMIT=true)"
+  lane :release do
+    release_for_review("osx", "mac")
+  end
+
   desc "Build the macOS app and upload it to TestFlight / App Store Connect"
   lane :beta do
     require_project
@@ -329,7 +393,8 @@ platform :mac do
       output_directory: "build/mac-release",
       xcargs: "#{signing_xcargs} #{build_settings_args(number)}"
     )
-    upload_to_testflight(api_key: api_key, app_platform: "osx", skip_waiting_for_build_processing: true)
+    upload_build("osx")
+    report_build_number(number)
   end
 end
 
@@ -344,8 +409,9 @@ platform :android do
       package_name: ANDROID_PACKAGE,
       json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON"),
       track: ENV.fetch("TRACK", "internal"),
-      # Other tracks stay drafts to review in the Play Console; a never published app only accepts drafts.
-      release_status: ENV.fetch("TRACK", "internal") == "internal" ? ENV.fetch("RELEASE_STATUS", "completed") : "draft",
+      # Completed sends the release (and the listing) for review at once (managed publishing off); production stays a
+      # draft, rolled out in the Play Console.
+      release_status: ENV.fetch("TRACK", "internal") == "production" ? "draft" : ENV.fetch("RELEASE_STATUS", "completed"),
       aab: File.expand_path("../android/app/build/outputs/bundle/release/app-release.aab", __dir__),
       metadata_path: File.expand_path("metadata-android", __dir__),
       skip_upload_metadata: skip_listing,

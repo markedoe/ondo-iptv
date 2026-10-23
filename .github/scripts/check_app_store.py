@@ -236,7 +236,9 @@ def check_build_settings(problems: list) -> None:
         problems.append("project.yml: TESTFLIGHT_DOWNLOADS would put downloads in every build, the App Store one "
                         "included; only the release lanes set it, for the TestFlight edition")
     release = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
-    if not re.search(r"EDITION:\s*\$\{\{\s*github\.event\.inputs\.edition\s*\|\|\s*'app-store'\s*\}\}", release):
+    # A tag has no inputs: the expression must fall back to the App Store edition (a release run by hand builds it too).
+    if not re.search(r"EDITION:\s*\$\{\{\s*(github\.event\.inputs\.target\s*==\s*'release'\s*&&\s*'app-store'\s*\|\|\s*)?"
+                     r"github\.event\.inputs\.edition\s*\|\|\s*'app-store'\s*\}\}", release):
         problems.append(".github/workflows/release.yml: a tag must build the App Store edition "
                         "(EDITION: ${{ github.event.inputs.edition || 'app-store' }})")
     fastfile = (ROOT / "fastlane/Fastfile").read_text(encoding="utf-8")

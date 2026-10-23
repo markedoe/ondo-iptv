@@ -1,8 +1,8 @@
 name: Promote Android
 
 # Moves a version already in internal testing (the bundle testers checked) to closed or open testing, as a draft
-# to review and roll out in the Play Console: no new build, same version code. Production comes from an
-# android-v* tag (Release Android).
+# to review and roll out in the Play Console: no new build, same version code. A vX.Y.Z tag sends a new build to
+# closed testing by itself (Release Android).
 on:
   workflow_dispatch:
     inputs:

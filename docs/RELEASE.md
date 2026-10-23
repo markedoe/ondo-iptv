@@ -145,31 +145,50 @@ user-selected files).
    go up with the listing and follow its rules: `check_app_store.py` fails if one is missing, empty or longer
    than 4000 characters, has test or placeholder words, names another platform, promises a feature to come
    or speaks of downloads.
-2. *Actions → Release → Run workflow* (target `all`), or a tag equal to `MARKETING_VERSION` in `project.yml`:
-   ```bash
-   git tag v1.1.0 && git push origin v1.1.0
-   ```
-   The workflow (macOS 26, Xcode 26 — required by Apple since April 2026) runs the core tests, then three
+2. **The pipeline.** Two events deliver, nothing else is needed:
+   - **A push to `main`.** Once *CI* is green, the *Deliver* workflow starts *Release* with target `builds` and
+     the `testflight` edition: iOS and macOS go to TestFlight (internal testers, no review). It sends nothing
+     when the commit changed nothing the app ships (`App/`, `AppTests/`, `Packages/`, `project.yml`,
+     `fastlane/Fastfile`, `Gemfile*`), when a newer push is already on `main` (that push's delivery sends it), or
+     when the commit carries a version tag.
+   - **A version tag: your go for App Review** (CLAUDE.md). The tag must equal `MARKETING_VERSION` in
+     `project.yml` and `versionName` in `android/app/build.gradle.kts` (the run stops otherwise):
+     ```bash
+     git tag v1.1.0 && git push origin v1.1.0
+     ```
+     *Release* (target `release`) builds the **App Store edition** of iOS then macOS, waits until App Store
+     Connect has processed each build, then for each platform uploads the listing and the screenshots, selects
+     the build it just uploaded and submits it for review, released as soon as Apple approves it. A submission of
+     the same version still waiting for review is withdrawn first: the new build replaces it. The Mac is
+     released even when iOS fails (two independent versions). Then the TestFlight edition of the tag is built again
+     for the testers. The same tag sends Android to closed testing (RELEASE-ANDROID.md).
+   - **Rehearsal**: *Actions → Release → Run workflow*, target `release`, `submit` off (the default): the App
+     Store edition builds and the listing, without the submission.
+
+   **After a release**, raise `MARKETING_VERSION` in `project.yml` and `versionName` in
+   `android/app/build.gradle.kts` to the next version in the same commit: once a version is on the App Store,
+   App Store Connect refuses new builds of it, so the TestFlight uploads of the next pushes need the next version.
+
+   Each run of *Release* (macOS 26, Xcode 26 — required by Apple since April 2026) runs the core tests, then three
    checks, any of which stops the run before any build or submission: *Demo playlist answers* (App Review
    tests the app with the demo playlist; every target but `status`), *App Store edition checks*
    (`check_app_store.py` and the listing's addresses, see E; for the App Store edition, and for the targets
-   `all`, `submit` and the three `metadata` ones whatever the edition) and *Privacy manifest and Mac sandbox
-   checks* (`check_privacy_manifest.py` and `check_mac_entitlements.py`; the targets `all`, `ios`, `mac` and
-   `submit`, both editions). It then builds, signs and uploads **iOS** then **macOS** to TestFlight
-   (build = latest TestFlight build + 1), then the FR/EN listing and the iPhone, iPad and Mac screenshots.
+   `all`, `release`, `submit` and the three `metadata` ones whatever the edition) and *Privacy manifest and Mac
+   sandbox checks* (`check_privacy_manifest.py` and `check_mac_entitlements.py`; every target that builds or
+   submits). Build number = the platform's latest TestFlight build + 1.
 
    **Version.** A run started from a tag uses the tag's version (`v1.1.0` → `1.1.0`; a `v` tag that is not a
    version, such as `v1.1.0-rc1`, stops the run), any other run `MARKETING_VERSION` in `project.yml`; the
-   `metadata`, `submit` and `status` targets pick the App Store version the same way. Start them from the tag
-   (*Use workflow from → Tags*) or keep `MARKETING_VERSION` equal to the tag, otherwise they go to
-   `project.yml`'s version.
+   `metadata`, `submit` and `status` targets pick the App Store version the same way.
 
    **One run at a time.** Two runs would take the same build number, so a run started while another one is
    going waits for it, whatever its tag or branch. GitHub keeps only one waiting run: starting a third one
    cancels the one that was waiting (never a running one). Start the next run once the previous one has
    finished.
 
-   **Targets**:
+   **Targets** (*Run workflow*, by hand):
+   - `release`: what a tag does (above); `submit` off is a rehearsal;
+   - `builds`: both builds without the listing (what a push to `main` sends to TestFlight);
    - `all`: both builds, then the listing;
    - `ios` or `mac`: one build;
    - `metadata`: the listing only (`metadata-ios` or `metadata-mac` for one platform);
@@ -188,10 +207,9 @@ user-selected files).
    turn downloads on: a feature switched off, or an unlock code, would be a hidden or dormant feature, which
    rule 2.3.1 forbids and for which Apple can remove a developer from its program. TestFlight edition builds
    stay with internal testers: external testing goes through App Review. TestFlight offers testers the latest
-   build of each platform, and each run builds one edition: after every App Store edition upload, run
-   *Release* again with target `ios` or `mac` for the same platform and `edition` left at `testflight` (after
-   a tag or an `all` run, one run for each platform), otherwise testers get the build without downloads. Not
-   target `all`: it also uploads the listing, and a version in review cannot be edited.
+   build of each platform, and each run builds one edition: a tag builds the TestFlight edition again by itself
+   after the App Store one; after an App Store edition built by hand (`ios`, `mac` or `all`), run *Release* again
+   with target `builds` and `edition` left at `testflight`, otherwise testers get the build without downloads.
 
    **Beta badge.** The TestFlight edition shows a *Beta* badge (Home toolbar, version in Settings); the App Store
    edition is built without it, because betas belong on TestFlight, not on the App Store (rule 2.2). Nothing in
@@ -214,8 +232,8 @@ user-selected files).
    nothing changes what App Review is looking at. Once Apple approves them, `publish` shows them on the live
    version without a new version (or in App Store Connect: Header and Search Results → Browse Assets →
    Publish). Nothing is submitted without your go.
-5. In each version (iOS and macOS, e.g. 1.1.0): choose the build of the **app-store** edition →
-   **Add for Review** → **Submit for Review**. Or *Run workflow* with target `metadata` (the listing;
+5. A tag submits by itself (step 2). By hand, in each version (iOS and macOS, e.g. 1.1.0): choose the build of the
+   **app-store** edition → **Add for Review** → **Submit for Review**. Or *Run workflow* with target `metadata` (the listing;
    `metadata-ios` or `metadata-mac` for one platform, since a version in review cannot be edited), then target
    `submit` with `ios_build` and `mac_build`: the build numbers of the App Store edition, read in the log of
    the release run that built it (`CURRENT_PROJECT_VERSION=…`), never the latest build, which may be a

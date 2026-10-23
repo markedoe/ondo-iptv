@@ -1,6 +1,8 @@
 name: Release
 
-# Push a tag like v1.0.0 to build, sign and upload iOS + macOS builds to TestFlight and refresh the listing.
+# A version tag (v1.2.0: the user's go, CLAUDE.md) releases iOS and macOS: App Store edition builds, the listing, and
+# the submission for App Review, a submission of the same version still waiting being withdrawn first; then the
+# TestFlight edition is built again. A push to main reaches TestFlight only (deliver.yml, target builds).
 on:
   push:
     tags: ["v*"]
@@ -10,7 +12,7 @@ on:
         description: "What to deliver (builds: iOS and macOS without the listing, what a push to main sends to TestFlight)"
         type: choice
         default: all
-        options: [all, builds, ios, mac, metadata, metadata-ios, metadata-mac, submit, status]
+        options: [all, builds, ios, mac, metadata, metadata-ios, metadata-mac, release, submit, status]
       edition:
         description: "testflight: with downloads, for testers only; app-store: without downloads, the build to submit"
         type: choice
@@ -24,6 +26,10 @@ on:
         description: "submit: the macOS build number of the App Store edition, from its release run's log (empty: macOS is not submitted)"
         type: string
         default: ""
+      submit:
+        description: "release by hand: also submit for App Review (off: a rehearsal that builds, uploads the listing and stops there)"
+        type: boolean
+        default: false
 
 # One release at a time, whatever the tag or branch: two runs would both take the latest build number + 1 and
 # collide on App Store Connect. A running upload is never cancelled; GitHub keeps one run waiting, the newest.
@@ -38,17 +44,33 @@ jobs:
   deliver:
     name: TestFlight / App Store Connect
     runs-on: macos-26
-    timeout-minutes: 120
+    # A release waits for App Store Connect's processing of both builds.
+    timeout-minutes: 240
     # The signing secrets are given only to the steps that sign or upload, not to the tools installed or run
     # before them (gems, Homebrew, XcodeGen, which generates the project in a step of its own).
     env:
-      TARGET: ${{ github.event.inputs.target || 'all' }}
-      # A tag builds the App Store edition: the one that can be submitted.
-      EDITION: ${{ github.event.inputs.edition || 'app-store' }}
+      TARGET: ${{ github.event.inputs.target || 'release' }}
+      # A tag (and a release by hand) builds the App Store edition: the one that can be submitted.
+      EDITION: ${{ github.event.inputs.target == 'release' && 'app-store' || github.event.inputs.edition || 'app-store' }}
+      # A tag submits; a release run by hand submits only when asked.
+      SUBMIT: ${{ github.event_name == 'push' || github.event.inputs.submit == 'true' }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: The tag is the version of the apps
+        # project.yml and Android give the version to the builds made between releases: a tag that disagrees would ship
+        # a version the next TestFlight uploads do not follow.
+        if: github.ref_type == 'tag'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          apple=$(sed -n 's/^ *MARKETING_VERSION: *"\([^"]*\)".*/\1/p' project.yml | head -1)
+          android=$(sed -n 's/.*ANDROID_VERSION_NAME") ?: "\([^"]*\)".*/\1/p' android/app/build.gradle.kts | head -1)
+          echo "tag $tag, project.yml $apple, Android $android"
+          if [ "$tag" != "$apple" ] || [ "$tag" != "$android" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME must match MARKETING_VERSION in project.yml ($apple) and versionName in android/app/build.gradle.kts ($android)."
+            exit 1
+          fi
       - name: Check signing secrets
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -82,7 +104,7 @@ jobs:
       - name: App Store edition checks
         # The build to submit: nothing dormant, no private API, a listing and review notes App Review accepts
         # (.github/scripts/check_app_store.py), and the listing's addresses answer.
-        if: env.EDITION == 'app-store' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'all' || env.TARGET == 'submit'
+        if: env.EDITION == 'app-store' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'all' || env.TARGET == 'submit' || env.TARGET == 'release'
         run: |
           python3 .github/scripts/check_app_store.py
           for file in fastlane/metadata/*/*_url.txt; do
@@ -92,20 +114,21 @@ jobs:
       - name: Privacy manifest and Mac sandbox checks
         # Every upload, TestFlight edition included: App Store Connect refuses a build that uses a required reason
         # API its privacy manifest does not declare, and the Mac app needs exactly its sandbox entitlements.
-        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'mac' || env.TARGET == 'submit'
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'mac' || env.TARGET == 'submit' || env.TARGET == 'release'
         run: |
           python3 .github/scripts/check_privacy_manifest.py
           python3 .github/scripts/check_mac_entitlements.py
       - name: Generate Xcode project
         # Here, without secrets, rather than in the fastlane lanes that sign and upload.
-        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'mac'
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'mac' || env.TARGET == 'release'
         run: |
           brew install xcodegen || true
           xcodegen generate
       - name: iOS → TestFlight
         id: ios
-        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios'
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'release'
         env:
+          WAIT_FOR_PROCESSING: ${{ env.TARGET == 'release' }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
@@ -113,15 +136,16 @@ jobs:
         run: bundle exec fastlane ios beta
       - name: macOS → TestFlight
         id: mac
-        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'mac'
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'mac' || env.TARGET == 'release'
         env:
+          WAIT_FOR_PROCESSING: ${{ env.TARGET == 'release' }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           DEVELOPMENT_TEAM: ${{ secrets.DEVELOPMENT_TEAM }}
         run: bundle exec fastlane mac beta
       - name: App Store screenshots
-        if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'status'
+        if: env.TARGET == 'all' || startsWith(env.TARGET, 'metadata') || env.TARGET == 'status' || env.TARGET == 'release'
         run: |
           # Published by the "App Store screenshots" workflow; the listing is uploaded without them otherwise.
           if git fetch -q origin appstore-screenshots; then
@@ -147,6 +171,25 @@ jobs:
           # A version in review cannot be edited: metadata-ios and metadata-mac update one platform only.
           if [ "$TARGET" != metadata-mac ]; then bundle exec fastlane ios metadata; fi
           if [ "$TARGET" != metadata-ios ]; then bundle exec fastlane mac metadata; fi
+      # A version tag: the listing, the build this run uploaded and the submission, one platform after the other (the
+      # Mac also after a failed iOS release: the two versions are independent).
+      - name: iOS → App Review
+        id: release_ios
+        if: env.TARGET == 'release'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD_NUMBER: ${{ steps.ios.outputs.build }}
+        run: bundle exec fastlane ios release
+      - name: macOS → App Review
+        if: "!cancelled() && (success() || steps.release_ios.outcome == 'failure') && env.TARGET == 'release'"
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD_NUMBER: ${{ steps.mac.outputs.build }}
+        run: bundle exec fastlane mac release
       # Submission for App Review, only when the user asks for it (CLAUDE.md, App Store): the listing as it is on App
       # Store Connect (target metadata first) and the App Store edition build given by number, never the latest build,
       # which may be a TestFlight edition one. Released as soon as Apple approves it.
@@ -192,3 +235,19 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: bundle exec fastlane revoke_runner_certificates
+
+  # After an App Store edition release, the testers get the TestFlight edition of the same code again (its build
+  # numbers come after the App Store ones). Queued behind this run by the release-apple concurrency group.
+  testflight:
+    name: TestFlight edition again
+    needs: deliver
+    # The tag's own run only: the run it starts builds on the tag too and must not start another.
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - run: gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f target=builds -f edition=testflight

@@ -161,11 +161,19 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
    *Enregistrer et publier*. Ouvrez le lien *Rejoindre sur Android* sur le téléphone et installez Ondo depuis
    Google Play. *Tester et publier → Intégrité de l'application* montre que Google Play signe l'app (signature
    d'application Play) ; la clé d'importation reste la vôtre.
-3. Les versions suivantes partent de GitHub : `git tag android-v1.1.1 && git push origin android-v1.1.1`
-   (piste interne, version déployée), ou *Run workflow* avec la piste voulue. Le `versionCode` augmente à
-   chaque exécution (1000 + numéro d'exécution). Le `versionName` vient uniquement d'un tag `android-vX.Y.Z` :
-   une exécution lancée depuis une branche garde la valeur par défaut de `android/app/build.gradle.kts`
-   (actuellement 1.1.0), donc posez un tag de version supérieure à l'actuelle.
+3. Les versions suivantes partent de GitHub toutes seules :
+   - **un push sur `main`** : une fois le workflow *Android* au vert, *Deliver* envoie le build seul (pas la fiche)
+     en **test interne**, déployé aussitôt, quand `android/` a changé ;
+   - **un tag de version** (`git tag v1.2.0 && git push origin v1.2.0`, le même tag que pour l'App Store, égal au
+     `versionName` de `android/app/build.gradle.kts` et au `MARKETING_VERSION` de `project.yml`, sinon le lancement
+     s'arrête) : le build **avec la fiche** part en **test fermé**, statut `completed`, donc Google Play l'envoie
+     aussitôt en examen. Il faut pour cela **la publication gérée désactivée** (*Vue d'ensemble de la publication →
+     Publication gérée*) ; activée, Google refuse l'envoi automatique et le lancement échoue en le disant ;
+   - ou *Run workflow* avec la piste voulue.
+
+   Le `versionCode` augmente à chaque exécution (1000 + numéro d'exécution). Le `versionName` vient du tag ; une
+   exécution lancée depuis une branche garde la valeur par défaut de `android/app/build.gradle.kts` (actuellement
+   1.1.0). Après une publication, montez-la avec `MARKETING_VERSION` de `project.yml` à la version suivante.
 
 ### E2. Test fermé (compte personnel récent)
 
@@ -175,16 +183,16 @@ nombre passe sous 12, le compteur repart à zéro). Demandez-leur d'utiliser ré
 leurs propres playlists). Ensuite : *Tableau de bord → Demander l'accès à la production* et répondez au
 questionnaire sur le test.
 
-Le workflow publie aussi sur ce canal : *Run workflow* avec la piste `alpha` (`alpha` = test fermé,
-`beta` = test ouvert). La version est créée en brouillon : vérifiez-la et déployez-la dans la Play Console.
-Seule la piste `internal` peut être déployée directement (statut `completed`, par défaut). Pour envoyer aux
-testeurs le bundle même déjà vérifié en test interne, sans nouveau build, lancez *Promote Android* avec son
-version code et la piste : il y arrive aussi en brouillon.
+Un tag de version publie tout seul sur ce canal (ci-dessus). À la main : *Run workflow* avec la piste `alpha`
+(`alpha` = test fermé, `beta` = test ouvert) ; le statut `completed` (par défaut) l'envoie aussitôt en examen,
+`draft` le laisse à vérifier et déployer dans la Play Console. Pour envoyer aux testeurs le bundle même déjà
+vérifié en test interne, sans nouveau build, lancez *Promote Android* avec son version code et la piste : il y
+arrive en brouillon.
 
 ### E3. Production
 
 *Production → Créer une version* (ou workflow avec la piste `production` : la version est créée en
-brouillon, à vérifier et envoyer en examen dans la console). Lancez ce workflow depuis le tag `android-vX.Y.Z`
+brouillon, à vérifier et envoyer en examen dans la console). Lancez ce workflow depuis le tag `vX.Y.Z`
 de la version, choisi dans *Use workflow from → Tags* : le workflow refuse `production` depuis une branche, dont
 le bundle garderait le `versionName` par défaut. Les builds des pistes de test (interne, fermée,
 ouverte) affichent un badge *Bêta* sur l'accueil et à côté de la version dans les réglages ; un build fait pour
@@ -237,6 +245,6 @@ description nomme Android TV, comme Google le demande.
 | Workflow | Quand | Ce qu'il fait |
 |---|---|---|
 | *Android* | push sur `main` et pull requests touchant `android/`, `fastlane/metadata-android/` ou le workflow ; manuel | tests du cœur Kotlin, tests unitaires et Compose (Robolectric), captures Roborazzi (publiées sur la branche `android-screenshots` après un push sur `main`), lint (`lintRelease`), APK de debug et bundle de release (artefact **android-builds**), longueurs de la fiche Google Play (titre 30, description courte 80, description complète 4000, notes de version 500 caractères) |
-| *Release Android* | tag `android-v*` ou manuel | refuse `production` hors d'un tag `android-v*`, vérifie que les cinq secrets sont définis et que la playlist de démonstration répond, tests, captures copiées dans la fiche, bundle signé avec la clé d'importation (badge *Bêta* sauf pour `production`), artefact **ondo-release-bundle**, envoi sur Google Play avec la fiche et les notes de version (`listing: skip` : le build et ses notes de version seuls, la fiche en examen intacte) |
-| *Promote Android* | manuel | passe un version code du test interne au test fermé (`alpha`) ou ouvert (`beta`), en brouillon, sans nouveau build ; la production reste réservée au tag `android-v*` |
+| *Release Android* | tag `v*` (test fermé, fiche, envoyé en examen), *Deliver* après un push au vert (test interne, build seul) ou manuel | refuse `production` hors d'un tag `v*`, vérifie que le tag est la version des apps, vérifie que les cinq secrets sont définis et que la playlist de démonstration répond, tests, captures copiées dans la fiche, bundle signé avec la clé d'importation (badge *Bêta* sauf pour `production`), artefact **ondo-release-bundle**, envoi sur Google Play avec la fiche et les notes de version (`listing: skip` : le build et ses notes de version seuls, la fiche en examen intacte) |
+| *Promote Android* | manuel | passe un version code du test interne au test fermé (`alpha`) ou ouvert (`beta`), en brouillon, sans nouveau build ; un tag `vX.Y.Z` envoie tout seul un nouveau build en test fermé |
 | *Google Play status* | manuel | lecture seule : canaux et versions, bundles détenus par Play, fiche (longueurs, nombre d'images de chaque type, captures TV et bannière comprises), groupes Google des testeurs, pays, avis de la dernière semaine (nombre et étoiles), APK générés depuis le dernier bundle, plantages et ANR (API Reporting, à activer dans le projet Google Cloud du compte de service). Ouvre une modification et la supprime, sans jamais la valider ; le journal ne contient ni adresse, ni e-mail, ni texte d'avis. L'examen des modifications et l'examen Android TV ne sont dans aucune API |

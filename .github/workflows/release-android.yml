@@ -1,10 +1,11 @@
 name: Release Android
 
-# Tests, builds the signed release bundle and sends it to Google Play with the listing: internal testing for
-# an android-v* tag, the chosen track when run by hand.
+# Tests, builds the signed release bundle and sends it to Google Play. A version tag (v1.2.0: the user's go, CLAUDE.md)
+# sends it with the listing to closed testing, for review at once (managed publishing off); a push to main sends the
+# build alone to internal testing (deliver.yml); a run by hand goes to the chosen track.
 on:
   push:
-    tags: ["android-v*"]
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       track:
@@ -13,7 +14,7 @@ on:
         default: internal
         options: [internal, alpha, beta, production]
       status:
-        description: "Release status, internal track only (draft while the app has never been published; other tracks are always drafts)"
+        description: "Release status: completed is sent for review at once on a test track (managed publishing off); production is always a draft"
         type: choice
         default: completed
         options: [completed, draft]
@@ -39,7 +40,8 @@ jobs:
     # Each secret is given only to the step that uses it, not to the tools installed before (gems, Gradle
     # plugins download their own code).
     env:
-      TRACK: ${{ github.event.inputs.track || 'internal' }}
+      # A tag: closed testing. Production waits for the closed test Google asks of new accounts (docs/RELEASE-ANDROID.md).
+      TRACK: ${{ github.event.inputs.track || 'alpha' }}
       RELEASE_STATUS: ${{ github.event.inputs.status || 'completed' }}
       LISTING: ${{ github.event.inputs.listing || 'upload' }}
     steps:
@@ -48,13 +50,25 @@ jobs:
         # android/app/build.gradle.kts.
         if: env.TRACK == 'production'
         run: |
-          if [ "$GITHUB_REF_TYPE" != tag ] || [[ "$GITHUB_REF_NAME" != android-v* ]]; then
-            echo "::error::The production track is published from an android-vX.Y.Z tag: choose it in Use workflow from → Tags (this run is on the $GITHUB_REF_TYPE $GITHUB_REF_NAME)."
+          if [ "$GITHUB_REF_TYPE" != tag ] || [[ "$GITHUB_REF_NAME" != v* ]]; then
+            echo "::error::The production track is published from a vX.Y.Z tag: choose it in Use workflow from → Tags (this run is on the $GITHUB_REF_TYPE $GITHUB_REF_NAME)."
             exit 1
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: The tag is the version of the apps
+        # The builds between releases take their version from build.gradle.kts and project.yml: the tag must agree.
+        if: github.ref_type == 'tag'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          android=$(sed -n 's/.*ANDROID_VERSION_NAME") ?: "\([^"]*\)".*/\1/p' android/app/build.gradle.kts | head -1)
+          apple=$(sed -n 's/^ *MARKETING_VERSION: *"\([^"]*\)".*/\1/p' project.yml | head -1)
+          echo "tag $tag, Android $android, project.yml $apple"
+          if [ "$tag" != "$android" ] || [ "$tag" != "$apple" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME must match versionName in android/app/build.gradle.kts ($android) and MARKETING_VERSION in project.yml ($apple)."
+            exit 1
+          fi
       - name: Check secrets
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -107,7 +121,7 @@ jobs:
           export ANDROID_VERSION_CODE=$((1000 + GITHUB_RUN_NUMBER))
           # The test tracks get the beta badge; a production build never has it.
           if [ "$TRACK" = production ]; then export ANDROID_BETA=false; else export ANDROID_BETA=true; fi
-          case "$GITHUB_REF_NAME" in android-v*) export ANDROID_VERSION_NAME="${GITHUB_REF_NAME#android-v}";; esac
+          if [ "$GITHUB_REF_TYPE" = tag ]; then case "$GITHUB_REF_NAME" in v*) export ANDROID_VERSION_NAME="${GITHUB_REF_NAME#v}";; esac; fi
           status=0
           ./gradlew :app:bundleRelease --stacktrace || status=$?
           rm -f "$RUNNER_TEMP/upload.jks"

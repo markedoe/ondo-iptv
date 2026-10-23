@@ -1,3 +1,5 @@
+• Synchroniser sur ce réseau (Réglages, désactivé tant que vous ne l’activez pas) : playlists, Ma liste, collections et reprises de lecture restent les mêmes sur les appareils Ondo de votre réseau, directement entre eux, jamais par internet.
+• Masquer les films déjà vus (Réglages, et le menu des grilles de films) : les films terminés quittent Films, l’Accueil et Titres similaires.
 • Sur iPhone et iPad, les films et épisodes MKV se lisent avec le lecteur du système quand il sait les décoder : HDR10, HLG et Dolby Vision s’affichent, le Dolby Atmos est restitué et l’image dans l’image fonctionne. VLC lit les autres.
 • Lecteur, Plus, Signaler un problème… : un rapport de la lecture (temps de démarrage et de saut, gels et leur cause, statistiques ; ni adresse du flux, ni identifiant, ni titre) à copier, partager ou envoyer dans un ticket GitHub.
 • Les films et séries démarrent plus vite et reviennent plus tôt après un saut ; l’image suit votre doigt quand vous faites glisser la barre de temps.

@@ -143,32 +143,53 @@ réseau, fichiers choisis par l'utilisateur).
    le tag la contient). Elles partent avec la fiche et suivent ses règles : `check_app_store.py` échoue si
    l'une manque, est vide ou dépasse 4000 caractères, a un mot de test ou un texte provisoire, nomme une autre
    plateforme, promet une fonction à venir ou parle de téléchargements.
-2. *Actions → Release → Run workflow* (cible `all`), ou un tag égal à `MARKETING_VERSION` de `project.yml` :
-   ```bash
-   git tag v1.1.0 && git push origin v1.1.0
-   ```
-   Le workflow (macOS 26, Xcode 26 — exigé par Apple depuis avril 2026) lance les tests du cœur, puis trois
-   vérifications dont chacune arrête le lancement avant toute compilation ou soumission : *Demo playlist
-   answers* (la review d'Apple teste l'app avec la playlist de démo ; toutes les cibles sauf `status`),
-   *App Store edition checks* (`check_app_store.py` et les adresses de la fiche, voir E ; pour l'édition
-   App Store, et pour les cibles `all`, `submit` et les trois `metadata` quelle que soit l'édition) et
-   *Privacy manifest and Mac sandbox checks* (`check_privacy_manifest.py` et `check_mac_entitlements.py` ;
-   les cibles `all`, `ios`, `mac` et `submit`, les deux éditions). Il construit, signe et envoie ensuite
-   **iOS** puis **macOS** sur TestFlight (build = dernier build TestFlight + 1), puis la fiche FR/EN et les
-   captures iPhone, iPad et Mac.
+2. **La chaîne de livraison.** Deux événements livrent, rien d'autre n'est nécessaire :
+   - **Un push sur `main`.** Une fois *CI* au vert, le workflow *Deliver* lance *Release* avec la cible `builds`
+     et l'édition `testflight` : iOS et macOS partent sur TestFlight (testeurs internes, sans review). Il n'envoie
+     rien quand le commit ne change rien de ce que l'app embarque (`App/`, `AppTests/`, `Packages/`,
+     `project.yml`, `fastlane/Fastfile`, `Gemfile*`), quand un push plus récent est déjà sur `main` (sa propre
+     livraison l'envoie), ou quand le commit porte un tag de version.
+   - **Un tag de version : votre go pour la review d'Apple** (CLAUDE.md). Le tag doit être égal à
+     `MARKETING_VERSION` de `project.yml` et au `versionName` de `android/app/build.gradle.kts` (sinon le lancement
+     s'arrête) :
+     ```bash
+     git tag v1.1.0 && git push origin v1.1.0
+     ```
+     *Release* (cible `release`) construit **l'édition App Store** d'iOS puis de macOS, attend qu'App Store
+     Connect ait traité chaque build, puis pour chaque plateforme envoie la fiche et les captures, choisit le
+     build qu'il vient d'envoyer et le soumet à la review, publié dès qu'Apple l'approuve. Une soumission de la
+     même version encore en attente de review est d'abord retirée : le nouveau build la remplace. Le Mac part même
+     si iOS échoue (deux versions indépendantes). Ensuite l'édition TestFlight du tag est reconstruite pour les
+     testeurs. Le même tag envoie Android en test fermé (RELEASE-ANDROID.fr.md).
+   - **Répétition** : *Actions → Release → Run workflow*, cible `release`, `submit` décoché (par défaut) : les
+     builds de l'édition App Store et la fiche, sans la soumission.
+
+   **Après une publication**, montez `MARKETING_VERSION` dans `project.yml` et `versionName` dans
+   `android/app/build.gradle.kts` à la version suivante, dans le même commit : une fois une version sur l'App
+   Store, App Store Connect refuse ses nouveaux builds, donc les envois TestFlight des pushs suivants ont besoin de
+   la version suivante.
+
+   Chaque lancement de *Release* (macOS 26, Xcode 26 — exigé par Apple depuis avril 2026) lance les tests du cœur,
+   puis trois vérifications dont chacune arrête le lancement avant toute compilation ou soumission : *Demo
+   playlist answers* (la review d'Apple teste l'app avec la playlist de démo ; toutes les cibles sauf `status`),
+   *App Store edition checks* (`check_app_store.py` et les adresses de la fiche, voir E ; pour l'édition App
+   Store, et pour les cibles `all`, `release`, `submit` et les trois `metadata` quelle que soit l'édition) et
+   *Privacy manifest and Mac sandbox checks* (`check_privacy_manifest.py` et `check_mac_entitlements.py` ; toute
+   cible qui construit ou soumet). Numéro de build = dernier build TestFlight de la plateforme + 1.
 
    **Version.** Un lancement parti d'un tag prend la version du tag (`v1.1.0` → `1.1.0` ; un tag `v` qui n'est
    pas une version, comme `v1.1.0-rc1`, arrête le lancement), tout autre lancement `MARKETING_VERSION` de
    `project.yml` ; les cibles `metadata`, `submit` et `status` choisissent la version App Store de la même
-   façon. Lancez-les depuis le tag (*Use workflow from → Tags*) ou gardez `MARKETING_VERSION` égal au tag,
-   sinon elles visent la version de `project.yml`.
+   façon.
 
    **Un lancement à la fois.** Deux lancements prendraient le même numéro de build : un lancement démarré
    pendant qu'un autre tourne l'attend, quels que soient leur tag ou leur branche. GitHub ne garde qu'un seul
    lancement en attente : en démarrer un troisième annule celui qui attendait (jamais celui qui tourne).
    Démarrez le lancement suivant une fois le précédent terminé.
 
-   **Cibles** :
+   **Cibles** (*Run workflow*, à la main) :
+   - `release` : ce que fait un tag (ci-dessus) ; `submit` décoché, c'est une répétition ;
+   - `builds` : les deux builds sans la fiche (ce qu'un push sur `main` envoie sur TestFlight) ;
    - `all` : les deux builds, puis la fiche ;
    - `ios` ou `mac` : un seul build ;
    - `metadata` : la fiche seule (`metadata-ios` ou `metadata-mac` pour une seule plateforme) ;
@@ -189,11 +210,10 @@ réseau, fichiers choisis par l'utilisateur).
    code de déblocage, serait une fonction cachée ou dormante, ce que la règle 2.3.1 interdit et pour quoi Apple
    peut exclure un développeur de son programme. Les builds de l'édition TestFlight restent aux testeurs
    internes : les tests externes passent par la review d'Apple. TestFlight propose aux testeurs le dernier build
-   de chaque plateforme, et chaque lancement construit une seule édition : après chaque envoi de l'édition
-   App Store, relancez *Release* avec la cible `ios` ou `mac` pour la même plateforme et l'`edition` laissée
-   à `testflight` (après un tag ou un lancement `all`, un lancement par plateforme), sinon les testeurs
-   reçoivent le build sans téléchargements. Pas la cible `all` : elle envoie aussi la fiche, et une version
-   en review ne peut plus être modifiée.
+   de chaque plateforme, et chaque lancement construit une seule édition : un tag reconstruit tout seul l'édition
+   TestFlight après l'édition App Store ; après une édition App Store construite à la main (`ios`, `mac` ou
+   `all`), relancez *Release* avec la cible `builds` et l'`edition` laissée à `testflight`, sinon les testeurs
+   reçoivent le build sans téléchargements.
 
    **Badge bêta.** L'édition TestFlight affiche un badge *Bêta* (barre d'outils de l'accueil, version dans les
    réglages) ; l'édition App Store est construite sans, car les bêtas vont sur TestFlight, pas sur l'App Store
@@ -218,7 +238,8 @@ réseau, fichiers choisis par l'utilisateur).
    rien changer à ce qu'App Review examine. Une fois approuvées par Apple, `publish` les affiche sur la version
    en ligne sans nouvelle version (ou dans App Store Connect : En-tête et résultats de recherche → Parcourir les
    ressources → Publier). Rien n'est soumis sans votre accord.
-5. Dans chaque version (iOS et macOS, par exemple 1.1.0) : choisissez le build de l'édition **app-store** →
+5. Un tag soumet tout seul (étape 2). À la main, dans chaque version (iOS et macOS, par exemple 1.1.0) : choisissez
+   le build de l'édition **app-store** →
    **Add for Review** → **Submit for Review**. Ou *Run workflow* avec la cible `metadata` (la fiche ;
    `metadata-ios` ou `metadata-mac` pour une seule plateforme, car une version en review ne peut plus être
    modifiée), puis la cible `submit` avec `ios_build` et `mac_build` : les numéros de build de l'édition

@@ -1,3 +1,5 @@
+• Sync on this network (Settings, off until you turn it on): playlists, My List, collections and progress stay the same on the Ondo devices of your home network, directly between them, never through the internet.
+• Hide watched movies (Settings, and the menu of the movie grids): the movies you finished leave Movies, Home and More Like This.
 • On iPhone and iPad, MKV movies and episodes play with the system player when it can decode them: HDR10, HLG and Dolby Vision show, Dolby Atmos plays and Picture in Picture works. VLC plays the others.
 • Player, More, Report a Problem…: a report of the playback (start and seek times, freezes and their cause, statistics; no stream address, login or title) to copy, share or send in a GitHub issue.
 • Movies and series start faster and come back sooner after a skip or a jump; the picture follows your finger while you drag the time bar.
