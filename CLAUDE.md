@@ -24,7 +24,7 @@ screenshots.
   and Android `res/values-{fr,es,pt,zh-rCN,ar,hi}/strings.xml`. `check_translations.py` (CI) fails on a
   missing Apple translation and Android lint on a missing Android one.
 - **App Store: never get banned by Apple.** Apple can remove a developer from its program for hidden or dormant
-  features (App Review Guidelines 2.3.1) and for getting around its rules, so:
+  features (App Review Guidelines 2.5.19) and for getting around its rules, so:
   - The build submitted is the build App Review sees. A feature the App Store edition does not have is left out of
     its build (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), never switched off at run time: no unlock code, no remote
     switch, no setting, date or launch argument that turns something on, no constant `false` feature left in.

@@ -205,7 +205,7 @@ user-selected files).
    from other sources), and is **the only one to submit**. A tag builds the App Store edition. The App Store
    edition is built without the download code (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), so nothing in it can
    turn downloads on: a feature switched off, or an unlock code, would be a hidden or dormant feature, which
-   rule 2.3.1 forbids and for which Apple can remove a developer from its program. TestFlight edition builds
+   rule 2.5.19 forbids and for which Apple can remove a developer from its program. TestFlight edition builds
    stay with internal testers: external testing goes through App Review. TestFlight offers testers the latest
    build of each platform, and each run builds one edition: a tag builds the TestFlight edition again by itself
    after the App Store one; after an App Store edition built by hand (`ios`, `mac` or `all`), run *Release* again

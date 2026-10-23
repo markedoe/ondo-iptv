@@ -207,7 +207,7 @@ réseau, fichiers choisis par l'utilisateur).
    sur l'enregistrement de médias d'autres sources), et c'est **la seule à soumettre**. Un tag construit
    l'édition App Store. L'édition App Store est construite sans le code des téléchargements
    (`#if TESTFLIGHT_DOWNLOADS || DEBUG`), donc rien en elle ne peut les activer : une fonction désactivée, ou un
-   code de déblocage, serait une fonction cachée ou dormante, ce que la règle 2.3.1 interdit et pour quoi Apple
+   code de déblocage, serait une fonction cachée ou dormante, ce que la règle 2.5.19 interdit et pour quoi Apple
    peut exclure un développeur de son programme. Les builds de l'édition TestFlight restent aux testeurs
    internes : les tests externes passent par la review d'Apple. TestFlight propose aux testeurs le dernier build
    de chaque plateforme, et chaque lancement construit une seule édition : un tag reconstruit tout seul l'édition

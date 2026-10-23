@@ -7,7 +7,7 @@ enum FeatureFlags {
     #if TESTFLIGHT_DOWNLOADS || DEBUG
     /// Downloading movies and episodes to watch offline: in the TestFlight edition only. The App Store edition, the one
     /// sent to App Review, is built without the code at all (Apple's rules 5.2.3 on saving media from other sources and
-    /// 2.3.1 on hidden or dormant features): the release workflow builds one edition or the other (`edition`). In
+    /// 2.5.19 on hidden or dormant features): the release workflow builds one edition or the other (`edition`). In
     /// development and tests it is on, except for the App Store screenshots, which show the App Store edition.
     static let downloads: Bool = {
         #if TESTFLIGHT_DOWNLOADS

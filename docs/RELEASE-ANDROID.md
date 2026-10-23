@@ -156,7 +156,9 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
    integrity* shows that Google Play signs the app (Play App Signing); the upload key stays yours.
 3. Subsequent releases go out from GitHub by themselves:
    - **a push to `main`**: once the *Android* workflow is green, *Deliver* sends the build alone (not the
-     listing) to **internal testing**, rolled out at once, when `android/` changed;
+     listing) to **internal testing**, rolled out at once, when `android/` changed. While Google is reviewing
+     something (a closed test, the listing, the Android TV opt-in), it sends nothing rather than restart that
+     review (by default a Google Play commit cancels the changes in review and sends them again);
    - **a version tag** (`git tag v1.2.0 && git push origin v1.2.0`, the same tag as the App Store, equal to
      `versionName` in `android/app/build.gradle.kts` and `MARKETING_VERSION` in `project.yml`, or the run stops):
      the build **with the listing** goes to **closed testing**, status `completed`, so Google Play sends it for

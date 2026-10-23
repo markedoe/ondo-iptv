@@ -44,6 +44,8 @@ jobs:
       TRACK: ${{ github.event.inputs.track || 'alpha' }}
       RELEASE_STATUS: ${{ github.event.inputs.status || 'completed' }}
       LISTING: ${{ github.event.inputs.listing || 'upload' }}
+      # Internal testing is not reviewed: its uploads must not cancel and restart a review in progress (Fastfile).
+      KEEP_PLAY_REVIEW: ${{ (github.event.inputs.track || 'alpha') == 'internal' }}
     steps:
       - name: Production comes from a version tag
         # From a branch, or another tag, the bundle would keep the default versionName of

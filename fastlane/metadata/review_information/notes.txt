@@ -18,3 +18,5 @@ PERMISSIONS, BACKGROUND MODE AND ENTITLEMENTS
 
 SYNC ON THIS NETWORK (OPTIONAL, OFF BY DEFAULT)
 Settings → Sync on this network keeps playlists, My List, collections and playback progress in step with the Ondo app on the user's other devices on the same local network (TV boxes, phones, tablets), while the app is open on both. It stays off until the user turns it on. The app is a client only: it browses Bonjour for the _ondo._tcp service (NSBonjourServices) that those devices advertise, connects to them, and sends nothing until it has checked that the address reached is a local network address (private, link-local or loopback); it never advertises a service and accepts no incoming connection. Nothing goes through the internet. Testing it needs a second device running Ondo with sync on; every other feature works without it.
+
+ALSO NEW: Settings → Hide watched movies (also in the movie grids' menu) leaves finished movies out of Movies and Home.

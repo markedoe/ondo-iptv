@@ -126,9 +126,9 @@ Fonctions jugées indispensables pour un lecteur moderne, traitées par jalons :
 - [x] **M5** gestion des chaînes : masquer (par profil), renommer, renuméroter (par playlist)
 - [x] Multivue (iPad / Mac : 2 à 4 flux, un seul audio)
 - [x] Téléchargements hors ligne : édition TestFlight uniquement (testeurs internes) ; l'édition App Store est
-      compilée sans eux (`#if TESTFLIGHT_DOWNLOADS || DEBUG`, règles 2.3.1 et 5.2.3)
+      compilée sans eux (`#if TESTFLIGHT_DOWNLOADS || DEBUG`, règles 2.5.19 et 5.2.3)
 - ~~Enregistrement~~ : non retenu (décision du 13/10)
-- Source Real-Debrid : supprimée (fonction dormante pour la review d'Apple, règle 2.3.1) ;
+- Source Real-Debrid : supprimée (fonction dormante pour la review d'Apple, règle 2.5.19) ;
   portail Stalker/MAG : hors v1 (décision du 13/10, Ondo reste un lecteur M3U / Xtream)
 - [x] Remplacer le chargeur d'images maison par Nuke/NukeUI (cache disque, coalescence, sous-échantillonnage)
 

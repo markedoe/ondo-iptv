@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The App Store edition must pass App Review and never put the developer account at risk (CLAUDE.md, App Store).
 
-Apple can remove a developer from its program for hidden or dormant features (guideline 2.3.1), so the build that is
+Apple can remove a developer from its program for hidden or dormant features (guideline 2.5.19), so the build that is
 submitted, its listing and its review notes are checked here, before any upload:
 
 1. Nothing hidden or dormant. The App Store edition is a Release build without TESTFLIGHT_DOWNLOADS: its code (App/,
@@ -214,7 +214,7 @@ def check_code(problems: list) -> None:
                                 "(put it under `#if TESTFLIGHT_DOWNLOADS || DEBUG`)")
             if LAUNCH_SWITCH.search(line):
                 problems.append(f"{relative}: the App Store edition reads its launch arguments or environment: "
-                                f"{line.strip()} (a switch an argument can turn is a hidden feature, 2.3.1: put it "
+                                f"{line.strip()} (a switch an argument can turn is a hidden feature, 2.5.19: put it "
                                 "under `#if DEBUG`)")
             if relative.startswith("App/") and BETA_TEXT.search(line):
                 problems.append(f"{relative}: the App Store edition calls the app a beta: {line.strip()} (betas belong "
@@ -224,7 +224,7 @@ def check_code(problems: list) -> None:
             flags = braced_body(code, match.end())
             for name in DORMANT_FLAG.findall(flags):
                 problems.append(f"{relative}: FeatureFlags.{name} is off in the App Store edition: a feature nobody "
-                                "can use is a dormant feature (2.3.1); leave its code out of the build instead")
+                                "can use is a dormant feature (2.5.19); leave its code out of the build instead")
             if RUNTIME_SWITCH.search(flags):
                 problems.append(f"{relative}: FeatureFlags reads something at run time in the App Store edition: "
                                 "a switch that settings, a server, a date or an argument can turn is a hidden feature")

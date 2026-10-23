@@ -168,6 +168,7 @@ def release_for_review(platform, screenshots)
   build = ENV.fetch("BUILD_NUMBER", "").strip
   UI.user_error!("BUILD_NUMBER must be the App Store edition build uploaded by this run") unless build.match?(/\A\d+\z/)
   submit = ENV["SUBMIT"] == "true"
+  withdraw_from_review(platform) if submit
   deliver(
     api_key: api_key,
     app_identifier: APP_ID,
@@ -181,13 +182,33 @@ def release_for_review(platform, screenshots)
     overwrite_screenshots: true,
     metadata_path: "fastlane/metadata",
     force: true,
-    reject_if_possible: submit,
+    # Already withdrawn above: deliver would rename a waiting version to the tag's before withdrawing it.
+    reject_if_possible: false,
     submit_for_review: submit,
     automatic_release: true,
     run_precheck_before_submit: submit,
     precheck_include_in_app_purchases: false,
     submission_information: { add_id_info_uses_idfa: false }
   )
+end
+
+# Removes this platform's submission from App Review (waiting, in review, or with unresolved issues) and waits until
+# App Store Connect lets the version be edited again: the release replaces it. Done before deliver touches the version.
+def withdraw_from_review(platform)
+  api_key
+  app = Spaceship::ConnectAPI::App.find(APP_ID)
+  api_platform = Spaceship::ConnectAPI::Platform.map(platform)
+  submission = app.get_in_progress_review_submission(platform: api_platform)
+  return UI.message("No #{platform} submission in review") unless submission
+  UI.important("Withdrawing the #{platform} submission (#{submission.state}) from App Review: this release replaces it")
+  submission.cancel_submission
+  60.times do
+    in_progress = app.get_in_progress_review_submission(platform: api_platform)
+    canceling = app.get_review_submissions(filter: { platform: api_platform, state: "CANCELING" })
+    return UI.success("The #{platform} submission is withdrawn") if in_progress.nil? && canceling.empty?
+    sleep(15)
+  end
+  UI.user_error!("The #{platform} submission is still being withdrawn after 15 minutes: check App Store Connect, then run the release again")
 end
 
 before_all do
@@ -398,11 +419,28 @@ platform :mac do
   end
 end
 
+# Committing a Google Play edit cancels the changes in review and sends them again by default, which restarts their
+# review (a closed test, the Android TV opt-in, the listing). A push's internal build must not: KEEP_PLAY_REVIEW=true
+# commits with changesInReviewBehavior ERROR_IF_IN_REVIEW, and the build waits for a push made after the review.
+module KeepPlayReview
+  def commit_current_edit!
+    ensure_active_edit!
+    call_google_api { client.commit_edit(current_package_name, current_edit.id, changes_in_review_behavior: "ERROR_IF_IN_REVIEW") }
+    self.current_edit = nil
+    self.current_package_name = nil
+  end
+end
+
 platform :android do
   ANDROID_PACKAGE = "com.markedoe.ondo"
 
   desc "Upload the signed bundle and the listing to Google Play (track from TRACK, default internal)"
   lane :deploy do
+    keep_review = ENV["KEEP_PLAY_REVIEW"] == "true"
+    if keep_review
+      require "supply"
+      Supply::Client.prepend(KeepPlayReview)
+    end
     # LISTING=skip sends the build alone: the listing texts and screenshots under review stay as they are.
     skip_listing = ENV.fetch("LISTING", "upload") == "skip"
     upload_to_play_store(
@@ -417,8 +455,15 @@ platform :android do
       skip_upload_metadata: skip_listing,
       skip_upload_images: skip_listing,
       skip_upload_screenshots: skip_listing || !File.directory?(File.expand_path("metadata-android/en-US/images/phoneScreenshots", __dir__)),
-      skip_upload_changelogs: false
+      skip_upload_changelogs: false,
+      # A tag's release must reach review, or the run fails saying why (fastlane would otherwise commit it unsent).
+      rescue_changes_not_sent_for_review: ENV.fetch("TRACK", "internal") == "internal"
     )
+  rescue FastlaneCore::Interface::FastlaneError => e
+    raise unless keep_review && e.message.match?(/review/i)
+    # The bundle stays in the discarded edit; the next push's delivery sends one.
+    UI.important("Google Play has changes in review: this internal build was not sent, so as not to restart that review")
+    puts "::warning::Google Play has changes in review: this internal build was not sent (#{e.message.lines.first&.strip})"
   end
 
   desc "Promote a version of internal testing to a test track (VERSION_CODE, TRACK), as a draft: no new build"

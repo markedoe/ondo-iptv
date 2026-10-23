@@ -126,9 +126,9 @@ Features deemed essential for a modern player, handled in milestones:
 - [x] **M5** channel management: hide (per profile), rename, renumber (per playlist)
 - [x] Multiview (iPad / Mac: 2 to 4 streams, only one with audio)
 - [x] Offline downloads: TestFlight edition only (internal testers); the App Store edition is built without them
-      (`#if TESTFLIGHT_DOWNLOADS || DEBUG`, guidelines 2.3.1 and 5.2.3)
+      (`#if TESTFLIGHT_DOWNLOADS || DEBUG`, guidelines 2.5.19 and 5.2.3)
 - ~~Recording~~: not retained (decision of 13 Oct)
-- Real-Debrid source: removed (a dormant feature for App Review, guideline 2.3.1);
+- Real-Debrid source: removed (a dormant feature for App Review, guideline 2.5.19);
   Stalker/MAG portal: out of v1 (decision of 13 Oct, Ondo remains an M3U / Xtream player)
 - [x] Replace the home-made image loader with Nuke/NukeUI (disk cache, coalescing, downsampling)
 

@@ -66,6 +66,15 @@ jobs:
             fi
             printf 'Changed since %s:\n%s\n' "$previous" "$changed"
           fi
+          # GitHub keeps one waiting run per release group, and a new one replaces it: never push out a waiting run
+          # (a version tag's release among them). The waiting run, or the next push, delivers this commit.
+          if [ "$SOURCE" = CI ]; then release_workflow=release.yml; else release_workflow=release-android.yml; fi
+          waiting=$(gh run list --repo "$REPO" --workflow "$release_workflow" --limit 20 --json status \
+            --jq '[.[] | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | length')
+          if [ "$waiting" -gt 0 ]; then
+            echo "A $release_workflow run is already waiting: no new one, so as not to replace it."
+            exit 0
+          fi
           if [ "$SOURCE" = CI ]; then
             gh workflow run release.yml --repo "$REPO" --ref main -f target=builds -f edition=testflight
             echo "TestFlight: iOS and macOS builds of $SHA started (Release, target builds)."
