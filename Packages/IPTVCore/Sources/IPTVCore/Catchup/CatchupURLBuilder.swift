@@ -31,7 +31,7 @@ public enum CatchupURLBuilder {
     /// Candidate URLs (best first) to replay the programme. Empty when the channel has no catch-up.
     public static func urls(channel: Channel, start: Date, end: Date, now: Date = Date(), context: Context = Context()) -> [URL] {
         guard let catchup = channel.catchup else { return [] }
-        let duration = max(Int(end.timeIntervalSince(start)), 60)
+        let duration = max(wholeSeconds(end.timeIntervalSince(start)), 60)
         let live = channel.streamURL
 
         switch catchup.mode {
@@ -123,9 +123,9 @@ public enum CatchupURLBuilder {
     /// a `$` before the brace is accepted (`${start}`) ·
     /// `{Y}` `{m}` `{d}` `{H}` `{M}` `{S}` start components (UTC) · `{utc:Y-m-d:H-M}` `{end:YmdHMS}` formatted.
     public static func fill(template: String, start: Date, end: Date, now: Date) -> String {
-        let startTS = Int(start.timeIntervalSince1970)
-        let endTS = Int(end.timeIntervalSince1970)
-        let nowTS = Int(now.timeIntervalSince1970)
+        let startTS = wholeSeconds(start.timeIntervalSince1970)
+        let endTS = wholeSeconds(end.timeIntervalSince1970)
+        let nowTS = wholeSeconds(now.timeIntervalSince1970)
         let duration = max(endTS - startTS, 0)
         let offset = max(nowTS - startTS, 0)
 
@@ -160,6 +160,12 @@ public enum CatchupURLBuilder {
         }
         result += nsTemplate.substring(from: cursor)
         return result
+    }
+
+    /// `Int(_:)` of seconds, within ±1e15 (31 million years): a panel's stop timestamp of Int.max seconds is past what
+    /// `Int(_:)` converts once it is a `Date` (2^63), and would trap.
+    static func wholeSeconds(_ seconds: TimeInterval) -> Int {
+        seconds.isNaN ? 0 : Int(min(max(seconds, -1e15), 1e15))
     }
 
     /// Formats with strftime-like letters: Y m d H M S (UTC). Other characters are kept.

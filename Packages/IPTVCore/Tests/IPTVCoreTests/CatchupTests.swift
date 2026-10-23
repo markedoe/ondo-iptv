@@ -18,6 +18,16 @@ final class CatchupTests: XCTestCase {
                        "s=1760032800&{no_such_token}")
     }
 
+    /// A panel's stop timestamp of Int.max seconds becomes 2^63 as a `Date`, past what `Int(_:)` converts.
+    func testAnEndPastIntRangeDoesNotTrap() {
+        let far = Date(timeIntervalSince1970: Double(Int.max))
+        let c = channel("http://a.example.com/live.m3u8", CatchupInfo(mode: .append, days: 3, source: "?utc={utc}&lutc={lutc}"))
+        XCTAssertEqual(CatchupURLBuilder.urls(channel: c, start: start, end: far, now: now).first?.absoluteString,
+                       "http://a.example.com/live.m3u8?utc=1760032800&lutc=1760040000")
+        XCTAssertEqual(CatchupURLBuilder.fill(template: "{utcend}", start: start, end: far, now: now), "1000000000000000")
+        XCTAssertEqual(CatchupURLBuilder.fill(template: "{utcend}", start: start, end: end, now: now), "1760035500", "unchanged within range")
+    }
+
     func testDefaultMode() {
         let c = channel("http://a.example.com/live.m3u8", CatchupInfo(mode: .default, days: 3, source: "http://archive.example.com/aria?start={utc}&end={utcend}"))
         XCTAssertEqual(CatchupURLBuilder.urls(channel: c, start: start, end: end, now: now).map(\.absoluteString),
