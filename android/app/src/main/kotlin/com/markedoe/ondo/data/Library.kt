@@ -130,6 +130,10 @@ data class LibraryState(
 
     fun progress(key: String): WatchEntry? = history.firstOrNull { it.key == key }
 
+    /** The movies of [playlistId] watched to the end. */
+    fun finishedMovies(playlistId: String): Set<String> =
+        history.filter { it.playlistId == playlistId && it.kind == ItemKind.MOVIE && it.isFinished }.mapTo(HashSet()) { it.itemId }
+
     fun remove(entry: WatchEntry): LibraryState = copy(history = history.filterNot { it.key == entry.key })
 
     /** Movies and episodes in progress, most recent first, one entry per series. */

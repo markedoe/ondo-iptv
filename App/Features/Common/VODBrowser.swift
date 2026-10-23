@@ -98,9 +98,13 @@ struct VODBrowser: View {
                 }
             }
             ForEach(categories.filter { !model.isLocked($0) }) { category in
-                Shelf(category: category, metrics: metrics) {
-                    ForEach(items(in: category)) { item in
-                        ShowcasePoster(item: item, width: metrics.posterWidth)
+                // A category whose movies are all hidden as watched has no row.
+                let titles = items(in: category)
+                if !titles.isEmpty {
+                    Shelf(category: category, metrics: metrics) {
+                        ForEach(titles) { item in
+                            ShowcasePoster(item: item, width: metrics.posterWidth)
+                        }
                     }
                 }
             }

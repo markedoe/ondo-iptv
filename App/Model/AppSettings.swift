@@ -101,6 +101,8 @@ struct AppSettings: Codable, Equatable {
     /// Newer awards and festival selections downloaded once a week (see `AwardsUpdate`).
     var updateAwards = true
     var awardsCheckedAt: Date?
+    /// Movies the viewer has finished are left out where movies are browsed (not of search, My List or collections).
+    var hideWatchedMovies = false
 
     init() {}
 
@@ -135,5 +137,6 @@ struct AppSettings: Codable, Equatable {
         dismissedTagSuggestions = (try? c.decodeIfPresent(Set<UUID>.self, forKey: .dismissedTagSuggestions)) ?? d.dismissedTagSuggestions
         updateAwards = (try? c.decodeIfPresent(Bool.self, forKey: .updateAwards)) ?? d.updateAwards
         awardsCheckedAt = try? c.decodeIfPresent(Date.self, forKey: .awardsCheckedAt)
+        hideWatchedMovies = (try? c.decodeIfPresent(Bool.self, forKey: .hideWatchedMovies)) ?? d.hideWatchedMovies
     }
 }

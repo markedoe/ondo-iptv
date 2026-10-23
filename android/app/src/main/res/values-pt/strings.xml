@@ -106,6 +106,8 @@
     </plurals>
     <string name="adult_categories">Mostrar categorias adultas</string>
     <string name="adult_categories_hint">Categorias com nome de conteúdo adulto ficam ocultas em todo lugar até você mostrá-las.</string>
+    <string name="hide_watched">Ocultar filmes assistidos</string>
+    <string name="hide_watched_hint">Os filmes que você terminou não aparecem mais em Filmes, no Início nem em Títulos semelhantes. A busca, a Minha lista e as coleções continuam mostrando esses filmes.</string>
     <string name="kind_movie">Filme</string>
     <string name="kind_series">Série</string>
     <string name="kind_m3u">Playlist M3U</string>

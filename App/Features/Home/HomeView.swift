@@ -85,6 +85,7 @@ struct HomeView: View {
         let myList = model.myList()
         let newMovies = model.newMovies()
         let newSeries = model.newSeries()
+        let trending = model.trendingTitles()
         let hasVOD = !model.content.movies.isEmpty || !model.content.series.isEmpty
 
         VStack(alignment: .leading, spacing: compact ? 26 : 34) {
@@ -147,9 +148,9 @@ struct HomeView: View {
                 }
             }
 
-            if !model.trending.isEmpty {
+            if !trending.isEmpty {
                 Shelf(title: "Trending", metrics: metrics) {
-                    ForEach(model.trending) { match in
+                    ForEach(trending) { match in
                         switch match {
                         case .movie(let movie, _): ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
                         case .series(let series, _): ShowcasePoster(item: .series(series), width: metrics.posterWidth)

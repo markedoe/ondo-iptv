@@ -46,7 +46,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Accueil** : carrousel de films et séries à la une, films et séries en cours (une rangée chacun), Ma liste,
   nouveautés, tendances ; le direct en dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
-  ou note, fiches (synopsis, casting, bande-annonce), saisons /
+  ou note, films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
   acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (les séries d'après la liste
   du fournisseur, les films parmi les fiches déjà ouvertes, ou tous avec un jeton TMDb) ; un genre, l'année de sortie ou un prix (puis son festival) ouvre les
@@ -108,7 +108,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Accueil** : carrousel, films et séries en cours (une rangée chacun), Ma liste, nouveautés, chaînes ;
   la date de dernière mise à jour de la playlist, au-dessus de son nom.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
-  sortie comprise), fiches (Reprendre, Depuis le début,
+  sortie comprise), films déjà vus masqués si vous le souhaitez, fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
   films et séries (les séries toujours, les films parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
   partagent.

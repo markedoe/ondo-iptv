@@ -46,6 +46,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Home**: carousel of featured movies and series, movies and series in progress (one row each), My List,
   new releases, trending; live TV last; when the playlist was last updated, above its name.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
+  watched movies hidden if you like (Search and My List keep them),
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
   see their other movies and series in the playlist (series from the provider's list, movies from the pages
@@ -102,7 +103,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Home**: carousel, movies and series in progress (one row each), My List, new releases, channels; when the
   playlist was last updated, above its name.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
-  included), detail pages (Resume, From Start, next
+  included), watched movies hidden if you like, detail pages (Resume, From Start, next
   episode, seasons, More Like This); a director's or an actor's name opens their other movies and series
   (series always, movies among the pages already opened), and a genre, the year or an award the titles that share it.
 - **Live TV**: categories, My List, current and next programme.

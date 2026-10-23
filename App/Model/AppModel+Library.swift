@@ -145,6 +145,21 @@ extension AppModel {
         reference(.movie, movie.id).flatMap { library.progress(for: $0) }
     }
 
+    /// With "Hide watched movies" on, the movies of the active playlist the viewer has finished: left out where movies
+    /// are browsed (Movies, Home, the pages opened from a movie), still found by search, My List and collections.
+    func hiddenWatchedMovieIDs() -> Set<String> {
+        guard settings.hideWatchedMovies, let playlist = activePlaylist else { return [] }
+        return Set(library.history.lazy
+            .filter { $0.reference.type == .movie && $0.reference.playlistID == playlist.id && $0.isFinished }
+            .map(\.reference.itemID))
+    }
+
+    /// `movies` without the ones `hiddenWatchedMovieIDs` leaves out.
+    func hidingWatched(_ movies: [Movie]) -> [Movie] {
+        let hidden = hiddenWatchedMovieIDs()
+        return hidden.isEmpty ? movies : movies.filter { !hidden.contains($0.id) }
+    }
+
     func progress(episode: Episode, in series: Series) -> HistoryEntry? {
         guard let playlist = activePlaylist else { return nil }
         return library.progress(for: MediaReference(playlistID: playlist.id, type: .series, itemID: series.id, episodeID: episode.id))

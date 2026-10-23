@@ -19,8 +19,13 @@ class Showcase(
     private val library: LibraryState,
     private val playlistId: String,
     private val excludedCategoryIds: Set<String> = emptySet(),
+    /** Finished movies stay out of the new titles, the carousel and similar titles (they stay in My List). */
+    private val hideWatchedMovies: Boolean = false,
 ) {
     private val movies by lazy { content.movies.filter { it.categoryId !in excludedCategoryIds } }
+    private val browsableMovies by lazy {
+        if (!hideWatchedMovies) movies else library.finishedMovies(playlistId).let { watched -> movies.filter { it.id !in watched } }
+    }
     private val series by lazy { content.series.filter { it.categoryId !in excludedCategoryIds } }
     private val moviesById by lazy { movies.associateBy { it.id } }
     private val seriesById by lazy { series.associateBy { it.id } }
@@ -34,7 +39,7 @@ class Showcase(
      */
     fun newMovies(now: Long, limit: Int = 20): List<ShowcaseItem> {
         val window = releaseWindow(now)
-        return movies.filter { it.year?.let { year -> year in window } == true }.map { ShowcaseItem.MovieItem(it) }.sortedWith(newer).take(limit)
+        return browsableMovies.filter { it.year?.let { year -> year in window } == true }.map { ShowcaseItem.MovieItem(it) }.sortedWith(newer).take(limit)
     }
 
     /** New series, by the same rule as [newMovies]. */
@@ -96,7 +101,7 @@ class Showcase(
     /** Other titles of the same category (none when that category is excluded, such as a hidden adult one). */
     fun similarMovies(movie: Movie, limit: Int = 15): List<Movie> =
         if (movie.categoryId in excludedCategoryIds) emptyList()
-        else movies.asSequence().filter { it.categoryId == movie.categoryId && it.id != movie.id }.take(limit).toList()
+        else browsableMovies.asSequence().filter { it.categoryId == movie.categoryId && it.id != movie.id }.take(limit).toList()
 
     fun similarSeries(item: Series, limit: Int = 15): List<Series> =
         if (item.categoryId in excludedCategoryIds) emptyList()

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -341,6 +342,9 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
     }
     item(key = "adult") {
         SwitchRow(stringResource(R.string.adult_categories), stringResource(R.string.adult_categories_hint), Icons.Rounded.Lock, state.showAdultCategories, actions.onShowAdultCategories, Modifier.testTag("adultSwitch"))
+    }
+    item(key = "hideWatched") {
+        SwitchRow(stringResource(R.string.hide_watched), stringResource(R.string.hide_watched_hint), Icons.Rounded.VisibilityOff, state.hideWatchedMovies, actions.onHideWatchedMovies, Modifier.testTag("hideWatchedSwitch"))
     }
     item(key = "awards") {
         SwitchRow(stringResource(R.string.update_awards), stringResource(R.string.update_awards_hint), Icons.Rounded.Refresh, state.updateAwards, actions.onUpdateAwards, Modifier.testTag("awardsSwitch"))

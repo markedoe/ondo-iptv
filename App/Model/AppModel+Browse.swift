@@ -15,7 +15,14 @@ extension AppModel {
         return hidden.isEmpty ? list : list.filter { !hidden.contains($0.id) }
     }
 
-    func movies(in category: MediaCategory?, sort: PosterSort) -> [Movie] {
+    /// The movies of a category, or of all of them; the ones hidden as watched are left out unless `includingWatched`
+    /// (search, and the lists kept in a cache, which leave them out once read from it).
+    func movies(in category: MediaCategory?, sort: PosterSort, includingWatched: Bool = false) -> [Movie] {
+        let list = sortedMovies(in: category, sort: sort)
+        return includingWatched ? list : hidingWatched(list)
+    }
+
+    private func sortedMovies(in category: MediaCategory?, sort: PosterSort) -> [Movie] {
         let list: [Movie]
         let key: String
         if let category {

@@ -16,6 +16,7 @@ import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Reminder
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.CollectionChoice
 import com.markedoe.ondo.ui.screens.CollectionRow
 import com.markedoe.ondo.ui.screens.SearchFilters
@@ -104,6 +105,35 @@ class UiMappersTest {
         val series = UiMappers.vod(Fixtures.state(library), series = true, title = "Series")
         assertTrue("a movie is not resumed in the Series tab", series.continueWatching.isEmpty())
         assertEquals(listOf("Drama", "Mystery"), series.rows.map { it.category.name })
+    }
+
+    @Test
+    fun finishedMoviesLeaveTheListsWhenSettingsHidesThemButStayInSearchAndMyList() {
+        val finished = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, title = "Glass City", lastWatchedAt = 1)
+        val library = LibraryState()
+            .recordStart(finished).updateProgress(finished.key, 5_900.0, 6_000.0, now = 2)
+            .toggleFavorite(Favorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, "Glass City", addedAt = 3))
+        fun titles(state: com.markedoe.ondo.data.OndoState): Map<String, List<String>> {
+            val home = UiMappers.home(state, labels, Fixtures.NOW)
+            val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state))
+            return mapOf(
+                "grid" to UiMappers.grid(state, false, null, false, "").map { it.title },
+                "rows" to UiMappers.vod(state, series = false, title = "").rows.flatMap { row -> row.items.map { it.title } },
+                "new" to home.newMovies.map { it.title },
+                "hero" to home.hero.map { it.item.title },
+                "similar" to UiMappers.movieDetail(state, Fixtures.lastSignal).similar.map { it.title },
+                "year" to UiMappers.browse(state, BrowseKind.YEAR, "2024").movies.map { it.title },
+                "search" to UiMappers.search(index, "glass", state, Fixtures.NOW).movies.map { it.title },
+                "myList" to home.myList.map { it.title },
+            )
+        }
+        val shown = titles(Fixtures.state(library))
+        shown.forEach { (list, items) -> assertTrue("$list shows it by default", "Glass City" in items) }
+        val hidden = titles(Fixtures.state(library, settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, hideWatchedMovies = true)))
+        listOf("grid", "rows", "new", "hero", "similar", "year").forEach { assertFalse("$it leaves it out", "Glass City" in hidden.getValue(it)) }
+        listOf("search", "myList").forEach { assertTrue("$it keeps it", "Glass City" in hidden.getValue(it)) }
+        // Other movies stay.
+        assertTrue("Northern Lights" in hidden.getValue("grid"))
     }
 
     @Test

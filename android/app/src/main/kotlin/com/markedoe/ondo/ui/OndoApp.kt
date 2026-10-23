@@ -565,6 +565,8 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
         onBack = { navController.popBackStack() },
         sort = sort,
         onSort = viewModel::setPosterSort,
+        hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
+        onHideWatched = viewModel::setHideWatchedMovies,
     )
 }
 
@@ -589,6 +591,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onDelete = viewModel::delete,
             onAppearance = viewModel::setAppearance,
             onShowAdultCategories = viewModel::setShowAdultCategories,
+            onHideWatchedMovies = viewModel::setHideWatchedMovies,
             onUpdateAwards = viewModel::setUpdateAwards,
             onLiveBuffer = viewModel::setLiveBuffer,
             onVodBuffer = viewModel::setVodBuffer,

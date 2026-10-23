@@ -343,6 +343,7 @@ class OndoViewModel(
     fun delete(id: String) = repository.delete(id)
     fun setAppearance(appearance: Appearance) = repository.setAppearance(appearance)
     fun setShowAdultCategories(show: Boolean) = repository.setShowAdultCategories(show)
+    fun setHideWatchedMovies(hide: Boolean) = repository.setHideWatchedMovies(hide)
     fun setPosterSort(sort: PosterSort) = repository.setPosterSort(sort)
     fun setLiveBuffer(seconds: Int) = repository.setLiveBuffer(seconds)
     fun setVodBuffer(seconds: Int) = repository.setVodBuffer(seconds)

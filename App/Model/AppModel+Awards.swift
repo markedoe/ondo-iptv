@@ -121,11 +121,13 @@ extension AppModel {
         }
     }
 
-    /// Movies of the playlist that won an award, the most recent award first.
+    /// Movies of the playlist that won an award, the most recent award first (none hidden as watched).
     func awardWinners(limit: Int = 20) -> [Movie] {
         let excluded = excludedCategoryIDs
+        let watched = hiddenWatchedMovieIDs()
         let winners = movieAwards.compactMap { id, entries -> (Movie, Int)? in
-            guard let win = entries.first(where: \.won), let movie = index.moviesByID[id], !excluded.contains(movie.categoryID) else { return nil }
+            guard let win = entries.first(where: \.won), let movie = index.moviesByID[id], !excluded.contains(movie.categoryID),
+                  !watched.contains(movie.id) else { return nil }
             return (movie, win.year)
         }
         return winners.sorted { ($0.1, $0.0.name) > ($1.1, $1.0.name) }.prefix(limit).map(\.0)

@@ -37,4 +37,6 @@ data class AppSettings(
     /** Seconds the player gathers before it shows a live channel, and a movie or an episode; 0 is automatic (see `PlaybackBuffer`). */
     val liveBuffer: Int = 0,
     val vodBuffer: Int = 0,
+    /** Movies finished (see [WatchEntry.isFinished]) left out where the viewer browses movies; search and My List keep them. */
+    val hideWatchedMovies: Boolean = false,
 )

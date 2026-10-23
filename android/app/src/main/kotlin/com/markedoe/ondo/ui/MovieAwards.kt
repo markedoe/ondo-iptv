@@ -31,11 +31,11 @@ object MovieAwards {
     }
 
     /** Movies that won an award, the most recent award first. */
-    fun winners(state: OndoState, hidden: Set<String>, limit: Int): List<Movie> {
+    fun winners(state: OndoState, hidden: Set<String>, limit: Int, leftOut: Set<String> = emptySet()): List<Movie> {
         val byId = state.content.movies.associateBy { it.id }
         return of(state).mapNotNull { (id, entries) ->
             val win = entries.firstOrNull { it.won } ?: return@mapNotNull null
-            val movie = byId[id]?.takeIf { it.categoryId !in hidden } ?: return@mapNotNull null
+            val movie = byId[id]?.takeIf { it.categoryId !in hidden && it.id !in leftOut } ?: return@mapNotNull null
             movie to win.year
         }.sortedWith(compareByDescending<Pair<Movie, Int>> { it.second }.thenBy { it.first.name }).take(limit).map { it.first }
     }

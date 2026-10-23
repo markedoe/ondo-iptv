@@ -12,8 +12,15 @@ enum MetadataRoute: Hashable {
 }
 
 extension AppModel {
-    /// The movies and series of the playlist sharing this value, hidden and locked categories left out.
+    /// The movies and series of the playlist sharing this value, hidden and locked categories and the movies hidden as
+    /// watched left out.
     func titles(for route: MetadataRoute) -> SearchResults {
+        var results = allTitles(for: route)
+        results.movies = hidingWatched(results.movies)
+        return results
+    }
+
+    private func allTitles(for route: MetadataRoute) -> SearchResults {
         switch route {
         case .award(let id):
             let excluded = excludedCategoryIDs

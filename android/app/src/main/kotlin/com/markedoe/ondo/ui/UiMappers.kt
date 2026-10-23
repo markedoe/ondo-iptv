@@ -65,7 +65,11 @@ object UiMappers {
     }
 
     fun showcase(state: OndoState): Showcase =
-        Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state))
+        Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies)
+
+    /** The movies left out where the viewer browses: the finished ones, when Settings hides them. */
+    fun hiddenMovieIds(state: OndoState): Set<String> =
+        if (state.settings.hideWatchedMovies) state.library.finishedMovies(state.activePlaylistId.orEmpty()) else emptySet()
 
     /** Movies and series by id; the first of an id the catalogue lists twice, as a search through the list would find. */
     class CatalogueIndex(content: PlaylistContent) {
@@ -163,9 +167,10 @@ object UiMappers {
         val showcase = showcase(state)
         val hidden = hiddenCategoryIds(state)
         val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }
+        val watched = hiddenMovieIds(state)
         val byCategory: Map<String, List<ShowcaseItem>> =
             if (series) state.content.series.groupBy({ it.categoryId }) { ShowcaseItem.SeriesItem(it) }
-            else state.content.movies.groupBy({ it.categoryId }) { ShowcaseItem.MovieItem(it) }
+            else state.content.movies.filter { it.id !in watched }.groupBy({ it.categoryId }) { ShowcaseItem.MovieItem(it) }
         val rows = categories.mapNotNull { category -> byCategory[category.id]?.take(ROW_LENGTH)?.let { CategoryRow(category, it) } }
         val kind = if (series) ItemKind.SERIES else ItemKind.MOVIE
         return VodUiState(
@@ -174,7 +179,7 @@ object UiMappers {
             continueWatching = showcase.continueWatching().filter { it.kind == kind }.map { resume(it, state) },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
-            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH).map { ShowcaseItem.MovieItem(it) },
+            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH, watched).map { ShowcaseItem.MovieItem(it) },
         )
     }
 
@@ -192,7 +197,10 @@ object UiMappers {
         val items: List<ShowcaseItem> = when {
             myList -> showcase(state).myList().filter { anyType || (it is ShowcaseItem.SeriesItem) == series }
             series -> state.content.series.filter { it.categoryId !in hidden && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.SeriesItem(it) }
-            else -> state.content.movies.filter { it.categoryId !in hidden && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.MovieItem(it) }
+            else -> {
+                val watched = hiddenMovieIds(state)
+                state.content.movies.filter { it.categoryId !in hidden && it.id !in watched && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.MovieItem(it) }
+            }
         }
         val query = TextNormalizer.normalize(filter)
         return sorted(if (query.isEmpty()) items else items.filter { TextNormalizer.normalize(it.title).contains(query) }, sort)
@@ -407,6 +415,7 @@ object UiMappers {
         vodBuffer = state.settings.vodBuffer,
         version = version,
         isRefreshing = state.isLoading,
+        hideWatchedMovies = state.settings.hideWatchedMovies,
     )
 
     /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"). */
@@ -415,7 +424,8 @@ object UiMappers {
     /** The titles of the playlist sharing a value of a movie's or a series' page, hidden categories left out. */
     fun browse(state: OndoState, kind: BrowseKind, value: String, locale: Locale = Locale.getDefault()): BrowseUiState {
         val hidden = hiddenCategoryIds(state)
-        val movies = state.content.movies.filter { it.categoryId !in hidden }
+        val watched = hiddenMovieIds(state)
+        val movies = state.content.movies.filter { it.categoryId !in hidden && it.id !in watched }
         val series = state.content.series.filter { it.categoryId !in hidden }
         val awards = MovieAwards.of(state)
         fun items(list: List<Movie>) = list.map { ShowcaseItem.MovieItem(it) }
@@ -462,7 +472,8 @@ object UiMappers {
         fun names(details: MediaDetails) = People.mentions(details.cast, name) || People.mentions(details.director, name)
         val movieIds = state.movieDetails.filterValues(::names).keys
         val seriesIds = state.seriesDetails.filterValues { names(it.info) }.keys
-        val movies = state.content.movies.filter { it.id in movieIds && it.categoryId !in hidden }.map { ShowcaseItem.MovieItem(it) }
+        val watched = hiddenMovieIds(state)
+        val movies = state.content.movies.filter { it.id in movieIds && it.categoryId !in hidden && it.id !in watched }.map { ShowcaseItem.MovieItem(it) }
         val series = state.content.series.filter { show ->
             show.categoryId !in hidden && (show.id in seriesIds || People.mentions(show.cast, name) || People.mentions(show.director, name))
         }.map { ShowcaseItem.SeriesItem(it) }

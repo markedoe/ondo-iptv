@@ -2,7 +2,7 @@ import XCTest
 import IPTVCore
 @testable import Ondo
 
-/// Home carousel and new releases, next episode, "More like this" and My List.
+/// Home carousel and new releases, next episode, "More like this", My List and hiding watched movies.
 @MainActor
 final class ShowcaseTests: XCTestCase {
     private var root: URL!
@@ -165,6 +165,47 @@ final class ShowcaseTests: XCTestCase {
         let drama = try XCTUnwrap(model.content.movieCategories.first { $0.id == quiet.categoryID })
         model.setHidden(true, category: drama)
         XCTAssertTrue(model.similarMovies(to: quiet).isEmpty, "nothing from a hidden or locked category")
+    }
+
+    func testWatchedMoviesCanBeHiddenWhereMoviesAreBrowsed() async throws {
+        let model = try await model()
+        let quiet = try movie("Quiet Water", in: model)
+        let road = try movie("Long Road", in: model)
+        let drama = try XCTUnwrap(model.content.movieCategories.first { $0.id == quiet.categoryID })
+        try await watch(model.downloadItem(for: quiet), in: model, fraction: 0.99, duration: 5_400)
+        try await watch(model.downloadItem(for: road), in: model, fraction: 0.5, duration: 6_000)
+
+        // Off by default. These lists are kept in a cache from now on: hiding must still apply to them.
+        XCTAssertEqual(model.movies(in: drama, sort: .name).map(\.name), ["Long Road", "Quiet Water"])
+        XCTAssertTrue(model.newMovies().contains(.movie(quiet)))
+
+        model.updateSettings { $0.hideWatchedMovies = true }
+        XCTAssertEqual(model.movies(in: drama, sort: .name).map(\.name), ["Long Road"], "a category's row and grid; a movie in progress stays")
+        XCTAssertEqual(model.movies(in: drama, sort: .playlist).map(\.name), ["Long Road"])
+        XCTAssertFalse(model.movies(in: nil, sort: .name).contains(quiet), "all movies")
+        XCTAssertFalse(model.newMovies().contains(.movie(quiet)), "Home's new movies")
+        XCTAssertFalse(model.heroItems().contains(.movie(quiet)), "the carousel")
+        XCTAssertTrue(model.similarMovies(to: road).isEmpty, "More Like This")
+        let lastYear = Self.thisYear - 1
+        XCTAssertFalse(model.titles(for: .year(lastYear)).movies.contains(quiet), "the page of its release year")
+
+        XCTAssertTrue(model.search("Quiet Water").movies.contains(quiet), "search still finds it")
+        XCTAssertTrue(model.search("", releasedIn: lastYear...lastYear).movies.contains(quiet), "and so do its filters")
+        model.toggleFavorite(quiet)
+        XCTAssertEqual(model.myList(), [.movie(quiet)], "My List still shows it")
+
+        model.updateSettings { $0.hideWatchedMovies = false }
+        XCTAssertEqual(model.movies(in: drama, sort: .name).map(\.name), ["Long Road", "Quiet Water"], "turned off: back everywhere")
+        XCTAssertTrue(model.newMovies().contains(.movie(quiet)))
+    }
+
+    /// Settings saved before the option existed keep their values, and finished movies stay visible.
+    func testSettingsSavedBeforeTheOptionShowWatchedMovies() throws {
+        let saved = Data(#"{"showChannelNumbers": false, "posterSort": "name"}"#.utf8)
+        let settings = try JSONDecoder().decode(AppSettings.self, from: saved)
+        XCTAssertFalse(settings.hideWatchedMovies)
+        XCTAssertFalse(settings.showChannelNumbers)
+        XCTAssertEqual(settings.posterSort, .name)
     }
 
     func testMyListShowsTheLatestAdditionFirst() async throws {

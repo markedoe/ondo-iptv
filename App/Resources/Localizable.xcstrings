@@ -9357,6 +9357,46 @@
         }
       }
     },
+    "Hide watched movies": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer les films déjà vus"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar películas vistas"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar filmes assistidos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏已看过的电影"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إخفاء الأفلام التي شاهدتها"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "देखी गई फ़िल्में छिपाएँ"
+          }
+        }
+      }
+    },
     "Hides the categories whose name holds a style or a word (Manga, Bollywood…), in every playlist, including those added later. Only category names count, not the genre of each movie.": {
       "localizations": {
         "fr": {
@@ -11993,6 +12033,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "देखी जा रही फ़िल्में"
+          }
+        }
+      }
+    },
+    "Movies you have finished no longer appear in Movies, on Home or in More Like This. Search, My List and collections still show them.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les films que vous avez terminés n’apparaissent plus dans Films, à l’Accueil ni dans Titres similaires. La recherche, Ma liste et les collections les montrent toujours."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las películas que terminaste ya no aparecen en Películas, en Inicio ni en Títulos similares. La búsqueda, Mi lista y las colecciones siguen mostrándolas."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os filmes que você terminou não aparecem mais em Filmes, no Início nem em Títulos semelhantes. A busca, a Minha lista e as coleções continuam mostrando esses filmes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "看完的电影不再出现在“电影”、首页和“相似内容”中。搜索、“我的片单”和合集中仍会显示。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لن تظهر الأفلام التي أنهيتها في الأفلام أو الرئيسية أو عناوين مشابهة. يظل البحث وقائمتي والمجموعات تعرضها."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "जो फ़िल्में आप पूरी देख चुके हैं, वे फ़िल्में, होम और इससे मिलते-जुलते में नहीं दिखेंगी। खोज, मेरी सूची और संग्रह में वे अब भी दिखेंगी।"
           }
         }
       }

@@ -102,6 +102,8 @@
     </plurals>
     <string name="adult_categories">显示成人分类</string>
     <string name="adult_categories_hint">名称看似成人内容的分类会在所有位置隐藏，直到你选择显示。</string>
+    <string name="hide_watched">隐藏已看过的电影</string>
+    <string name="hide_watched_hint">看完的电影不再出现在“电影”、首页和“相似内容”中。搜索、“我的片单”和合集中仍会显示。</string>
     <string name="kind_movie">电影</string>
     <string name="kind_series">剧集</string>
     <string name="kind_m3u">M3U 播放列表</string>

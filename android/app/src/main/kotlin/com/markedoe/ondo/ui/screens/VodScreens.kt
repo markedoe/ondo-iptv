@@ -26,6 +26,7 @@ import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,6 +43,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.MediaCategory
@@ -181,6 +184,9 @@ fun PosterGridScreen(
     onBack: () -> Unit,
     sort: PosterSort = PosterSort.PLAYLIST,
     onSort: (PosterSort) -> Unit = {},
+    /** Whether finished movies are left out; null where it does not apply (series, My List). */
+    hideWatched: Boolean? = null,
+    onHideWatched: (Boolean) -> Unit = {},
 ) {
     var sorting by remember { mutableStateOf(false) }
     val metrics = rememberShelfMetrics()
@@ -210,6 +216,18 @@ fun PosterGridScreen(
                                     sorting = false
                                     onSort(option)
                                 },
+                            )
+                        }
+                        hideWatched?.let { hidden ->
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.hide_watched)) },
+                                leadingIcon = { if (hidden) Icon(Icons.Rounded.Check, contentDescription = null) },
+                                onClick = {
+                                    sorting = false
+                                    onHideWatched(!hidden)
+                                },
+                                modifier = Modifier.semantics { selected = hidden }.testTag("hideWatched"),
                             )
                         }
                     }

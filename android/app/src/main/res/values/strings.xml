@@ -106,6 +106,8 @@
     </plurals>
     <string name="adult_categories">Show adult categories</string>
     <string name="adult_categories_hint">Categories whose name looks adult are hidden everywhere until you show them.</string>
+    <string name="hide_watched">Hide watched movies</string>
+    <string name="hide_watched_hint">Movies you have finished no longer appear in Movies, on Home or in More Like This. Search, My List and collections still show them.</string>
     <string name="kind_movie">Movie</string>
     <string name="kind_series">Series</string>
     <string name="kind_m3u">M3U playlist</string>

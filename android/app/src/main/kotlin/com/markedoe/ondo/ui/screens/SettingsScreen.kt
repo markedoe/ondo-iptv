@@ -74,6 +74,7 @@ data class SettingsUiState(
     val vodBuffer: Int = 0,
     val version: String = "",
     val isRefreshing: Boolean = false,
+    val hideWatchedMovies: Boolean = false,
 )
 
 class SettingsActions(
@@ -84,6 +85,7 @@ class SettingsActions(
     val onDelete: (String) -> Unit = {},
     val onAppearance: (Appearance) -> Unit = {},
     val onShowAdultCategories: (Boolean) -> Unit = {},
+    val onHideWatchedMovies: (Boolean) -> Unit = {},
     val onUpdateAwards: (Boolean) -> Unit = {},
     val onLiveBuffer: (Int) -> Unit = {},
     val onVodBuffer: (Int) -> Unit = {},
@@ -149,6 +151,20 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                             onCheckedChange = actions.onShowAdultCategories,
                             // TalkBack reaches the switch on its own: it says what it turns on.
                             modifier = Modifier.testTag("adultSwitch").semantics { contentDescription = label },
+                        )
+                    },
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.hide_watched)) },
+                    supportingContent = { Text(stringResource(R.string.hide_watched_hint)) },
+                    trailingContent = {
+                        val label = stringResource(R.string.hide_watched)
+                        Switch(
+                            checked = state.hideWatchedMovies,
+                            onCheckedChange = actions.onHideWatchedMovies,
+                            modifier = Modifier.testTag("hideWatchedSwitch").semantics { contentDescription = label },
                         )
                     },
                 )

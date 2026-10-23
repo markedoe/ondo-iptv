@@ -244,6 +244,8 @@ class OndoRepository(
 
     fun setShowAdultCategories(show: Boolean) = updateSettings { it.copy(showAdultCategories = show) }
 
+    fun setHideWatchedMovies(hide: Boolean) = updateSettings { it.copy(hideWatchedMovies = hide) }
+
     fun setPosterSort(sort: PosterSort) = updateSettings { it.copy(posterSort = sort) }
 
     fun setLiveBuffer(seconds: Int) = updateSettings { it.copy(liveBuffer = seconds) }

@@ -9,6 +9,8 @@ struct MoviesView: View {
 
 struct SortMenu: View {
     @Environment(AppModel.self) private var model
+    /// Movie grids also offer to hide the movies already watched.
+    var offersHideWatched = false
 
     var body: some View {
         Menu {
@@ -19,6 +21,13 @@ struct SortMenu: View {
                 ForEach(PosterSort.allCases) { sort in
                     Text(sort.label).tag(sort)
                 }
+            }
+            if offersHideWatched {
+                Divider()
+                Toggle("Hide watched movies", isOn: Binding(
+                    get: { model.settings.hideWatchedMovies },
+                    set: { value in model.updateSettings { $0.hideWatchedMovies = value } }
+                ))
             }
         } label: {
             Label("Sort", systemImage: "arrow.up.arrow.down")
@@ -76,7 +85,7 @@ struct MovieGridView: View {
         }
         .searchable(text: $filter, prompt: Text("Search movies"))
         .navigationTitle(category.id == PseudoCategory.all ? String(localized: "All Movies") : category.name)
-        .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu() } }
+        .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu(offersHideWatched: category.id != PseudoCategory.favorites) } }
     }
 }
 

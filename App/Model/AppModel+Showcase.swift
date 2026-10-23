@@ -60,15 +60,22 @@ enum ShowcaseItem: Identifiable, Hashable {
 extension AppModel {
     /// New movies: released this year or last year, by release year and not by the date the provider
     /// added them (an old film added yesterday is not new). Newest first, then the latest additions, then
-    /// the best rated. Titles without a known year never appear, and nothing from a hidden or locked category.
+    /// the best rated. Titles without a known year never appear, nothing from a hidden or locked category, and no
+    /// movie hidden as watched.
     func newMovies(limit: Int = 20, now: Date = .now) -> [ShowcaseItem] {
         let window = Self.releaseWindow(now)
         // Home asks several times per redraw (carousel and shelves): the whole catalogue is gone through once.
         let all = cachedList(newKey("movies", window)) {
-            self.movies(in: nil, sort: .playlist).filter { movie in movie.year.map { window.contains($0) } ?? false }
+            self.movies(in: nil, sort: .playlist, includingWatched: true).filter { movie in movie.year.map { window.contains($0) } ?? false }
                 .map(ShowcaseItem.movie).sorted(by: Self.isNewer)
         }
-        return Array(all.prefix(limit))
+        // The kept list does not follow the watch history: the movies hidden as watched are left out afterwards.
+        let watched = hiddenWatchedMovieIDs()
+        guard !watched.isEmpty else { return Array(all.prefix(limit)) }
+        return Array(all.lazy.filter { item in
+            if case .movie(let movie) = item { return !watched.contains(movie.id) }
+            return true
+        }.prefix(limit))
     }
 
     /// New series, by the same rule as `newMovies`.
@@ -137,7 +144,7 @@ extension AppModel {
         for entry in continueWatching().prefix(2) {
             if let item = showcaseItem(for: entry) { append(item) }
         }
-        for match in trending {
+        for match in trendingTitles() {
             switch match {
             case .movie(let movie, _): append(.movie(movie))
             case .series(let series, _): append(.series(series))
@@ -145,6 +152,16 @@ extension AppModel {
         }
         for item in newReleases(limit: limit * 2) { append(item) }
         return items
+    }
+
+    /// Trending titles as Home shows them: without the movies hidden as watched.
+    func trendingTitles() -> [TrendingMatch] {
+        let watched = hiddenWatchedMovieIDs()
+        guard !watched.isEmpty else { return trending }
+        return trending.filter { match in
+            if case .movie(let movie, _) = match { return !watched.contains(movie.id) }
+            return true
+        }
     }
 
     /// Details already loaded (no network).
@@ -214,11 +231,12 @@ extension AppModel {
     }
 }
 
-/// "More like this": other titles of the same category (none from a locked or hidden category).
+/// "More like this": other titles of the same category (none from a locked or hidden category, no movie hidden as watched).
 extension AppModel {
     func similarMovies(to movie: Movie, limit: Int = 15) -> [Movie] {
         guard !excludedCategoryIDs.contains(movie.categoryID) else { return [] }
-        return Array((index.moviesByCategory[movie.categoryID] ?? []).lazy.filter { $0.id != movie.id }.prefix(limit))
+        let watched = hiddenWatchedMovieIDs()
+        return Array((index.moviesByCategory[movie.categoryID] ?? []).lazy.filter { $0.id != movie.id && !watched.contains($0.id) }.prefix(limit))
     }
 
     func similarSeries(to series: Series, limit: Int = 15) -> [Series] {

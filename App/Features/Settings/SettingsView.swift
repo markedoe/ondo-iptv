@@ -129,7 +129,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Playlists") {
+            Section {
                 NavigationLink {
                     // Re-adding a playlist would bring it back without its locks: behind the PIN like backups.
                     ParentalGate { PlaylistsSettingsView() }
@@ -161,6 +161,13 @@ struct SettingsView: View {
                         Label("Hidden Channels", systemImage: "eye.slash.circle")
                     }
                 }
+                Toggle(isOn: binding(\.hideWatchedMovies)) {
+                    Label("Hide watched movies", systemImage: "eye.slash")
+                }
+            } header: {
+                Text("Playlists")
+            } footer: {
+                Text("Movies you have finished no longer appear in Movies, on Home or in More Like This. Search, My List and collections still show them.")
             }
 
             Section {

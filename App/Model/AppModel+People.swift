@@ -16,9 +16,10 @@ extension AppModel {
     /// lists name their cast; movie lists do not).
     func knownWorks(of name: String) -> PersonWorks {
         let excluded = excludedCategoryIDs
+        let watched = hiddenWatchedMovieIDs()
         let movies = movieDetailsCache.compactMap { id, details -> Movie? in
             guard People.field(details.cast, names: name) || People.field(details.director, names: name),
-                  let movie = index.moviesByID[id], !excluded.contains(movie.categoryID) else { return nil }
+                  let movie = index.moviesByID[id], !excluded.contains(movie.categoryID), !watched.contains(movie.id) else { return nil }
             return movie
         }
         var series = seriesDetailsCache.compactMap { id, details -> Series? in
@@ -75,9 +76,11 @@ extension AppModel {
         let series = content.series
         let matches = await Task.detached { CatalogueMatcher.match(credits, movies: movies, series: series) }.value
         let excluded = excludedCategoryIDs
+        let watched = hiddenWatchedMovieIDs()
         for match in matches {
             switch match {
-            case .movie(let movie, _) where !excluded.contains(movie.categoryID) && !works.movies.contains(where: { $0.id == movie.id }):
+            case .movie(let movie, _) where !excluded.contains(movie.categoryID) && !watched.contains(movie.id)
+                && !works.movies.contains(where: { $0.id == movie.id }):
                 works.movies.append(movie)
             case .series(let show, _) where !excluded.contains(show.categoryID) && !works.series.contains(where: { $0.id == show.id }):
                 works.series.append(show)
@@ -118,7 +121,8 @@ extension AppModel {
         let movies: [Movie]
         let series: [Series]
         if trimmed.isEmpty {
-            movies = self.movies(in: nil, sort: .release)
+            // Search shows the movies hidden as watched; the pages of a year or a festival leave them out (`titles(for:)`).
+            movies = self.movies(in: nil, sort: .release, includingWatched: true)
             series = self.series(in: nil, sort: .release)
         } else {
             let found = index.search.search(trimmed, limitPerType: 5000, excludedCategoryIDs: excludedCategoryIDs)
