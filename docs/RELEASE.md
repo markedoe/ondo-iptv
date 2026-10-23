@@ -148,7 +148,7 @@ user-selected files).
 2. **The pipeline.** Two events deliver, nothing else is needed:
    - **A push to `main`.** Once *CI* is green, the *Deliver* workflow starts *Release* with target `builds` and
      the `testflight` edition: iOS and macOS go to TestFlight (internal testers, no review). It sends nothing
-     when the commit changed nothing the app ships (`App/`, `AppTests/`, `Packages/`, `project.yml`,
+     when the commit changed nothing the app ships (`App/`, `Packages/` without their tests, `project.yml`,
      `fastlane/Fastfile`, `Gemfile*`), when a newer push is already on `main` (that push's delivery sends it), or
      when the commit carries a version tag.
    - **A version tag: your go for App Review** (CLAUDE.md). The tag must equal `MARKETING_VERSION` in

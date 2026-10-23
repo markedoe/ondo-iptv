@@ -146,7 +146,7 @@ réseau, fichiers choisis par l'utilisateur).
 2. **La chaîne de livraison.** Deux événements livrent, rien d'autre n'est nécessaire :
    - **Un push sur `main`.** Une fois *CI* au vert, le workflow *Deliver* lance *Release* avec la cible `builds`
      et l'édition `testflight` : iOS et macOS partent sur TestFlight (testeurs internes, sans review). Il n'envoie
-     rien quand le commit ne change rien de ce que l'app embarque (`App/`, `AppTests/`, `Packages/`,
+     rien quand le commit ne change rien de ce que l'app embarque (`App/`, `Packages/` sans leurs tests,
      `project.yml`, `fastlane/Fastfile`, `Gemfile*`), quand un push plus récent est déjà sur `main` (sa propre
      livraison l'envoie), ou quand le commit porte un tag de version.
    - **Un tag de version : votre go pour la review d'Apple** (CLAUDE.md). Le tag doit être égal à

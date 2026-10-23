@@ -49,12 +49,13 @@ jobs:
           fi
           if [ "$SOURCE" = CI ]; then
             source_workflow=ci.yml
-            paths="App AppTests Packages project.yml fastlane/Fastfile Gemfile Gemfile.lock"
+            paths="App Packages :(exclude)Packages/*/Tests/* project.yml fastlane/Fastfile Gemfile Gemfile.lock"
           else
             source_workflow=android.yml
-            paths="android"
+            paths="android :(exclude)android/*/src/test/*"
           fi
-          # What changed since the previous green push of the same workflow, the last one delivered.
+          # What the apps ship (tests left out) changed since the previous green push of the same workflow, the last one
+          # delivered.
           previous=$(gh run list --repo "$REPO" --workflow "$source_workflow" --branch main --event push --status success \
             --limit 10 --json headSha --jq "[.[] | .headSha | select(. != \"$SHA\")][0] // empty")
           if [ -n "$previous" ] && git cat-file -e "$previous^{commit}" 2>/dev/null; then

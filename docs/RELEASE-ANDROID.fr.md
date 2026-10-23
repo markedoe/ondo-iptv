@@ -163,7 +163,7 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
    d'application Play) ; la clé d'importation reste la vôtre.
 3. Les versions suivantes partent de GitHub toutes seules :
    - **un push sur `main`** : une fois le workflow *Android* au vert, *Deliver* envoie le build seul (pas la fiche)
-     en **test interne**, déployé aussitôt, quand `android/` a changé. Pendant que Google examine quelque chose
+     en **test interne**, déployé aussitôt, quand `android/` a changé (hors tests). Pendant que Google examine quelque chose
      (un test fermé, la fiche, l'inscription Android TV), il n'envoie rien plutôt que de relancer cet examen (par
      défaut, une validation sur Google Play annule les modifications en examen et les renvoie) ;
    - **un tag de version** (`git tag v1.2.0 && git push origin v1.2.0`, le même tag que pour l'App Store, égal au

@@ -32,6 +32,7 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.SavedPlaylist
+import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.SETTINGS_TAG
@@ -183,6 +184,35 @@ class TelevisionLibraryTest {
         waitFor { !exists("playlist-Backup") }
         // The remote stays on the page, on something it can press.
         assertTrue("the focus is on ${focused()}", focusedTag().isNotEmpty())
+    }
+
+    @Test
+    fun syncIsTurnedOnAndItsDevicesShowWithTheRemote() {
+        start()
+        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        press(Key.DirectionCenter)
+        waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
+        pressUntil(Key.DirectionDown) { focusedTag() == "settingsSync" }
+        waitFor { exists("syncSwitch") }
+        press(Key.DirectionRight)
+        waitFor { focusedTag() == "syncSwitch" }
+        press(Key.DirectionCenter)
+        waitFor { repository.state.value.settings.syncOnLocalNetwork }
+        // Devices come and go while the page is open, as sessions succeed or fail.
+        repository.reportSyncDevices(listOf(SyncDevice("a", "iPhone", syncedAt = Fixtures.NOW, unreachable = false)))
+        settle()
+        waitFor { exists("syncDevice") }
+        repository.reportSyncDevices(listOf(SyncDevice("a", "iPhone", syncedAt = Fixtures.NOW, unreachable = true), SyncDevice("b", "Living room TV", syncedAt = null, unreachable = false)))
+        settle()
+        repository.reportSyncDevices(emptyList())
+        settle()
+        // Back to the menu and down again: the page stays.
+        press(Key.DirectionLeft)
+        pressUntil(Key.DirectionDown) { focusedTag() == "settingsPlayer" }
+        pressUntil(Key.DirectionUp) { focusedTag() == "settingsSync" }
+        press(Key.DirectionRight)
+        waitFor { focusedTag() == "syncSwitch" }
     }
 
     @Test
