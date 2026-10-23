@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.core.view.children
@@ -147,7 +148,10 @@ class PlayerRemoteTest {
         scenario.onActivity { assertTrue(it.hasMediaSession) }
     }
 
-    /** On a TV, More is one of the player's own buttons: the remote moves to it from Settings, OK opens the menu (TV-DP). */
+    /**
+     * On a TV, More is one of the player's own buttons: the remote moves to it from Settings, OK opens the menu (TV-DP).
+     * No Close button for the focus to wander to: Back closes.
+     */
     @Test
     fun onATvMoreIsAmongThePlayersButtons() {
         launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
@@ -162,6 +166,7 @@ class PlayerRemoteTest {
             more.performClick()
         }
         compose.onNodeWithTag("playerMore").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Close").assertDoesNotExist()
         compose.onNodeWithTag("statisticsToggle").performClick()
         compose.onNodeWithTag("streamStatistics").assertExists()
     }

@@ -143,7 +143,7 @@ class PlayerActivity : ComponentActivity() {
         packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE) && !resources.configuration.isTelevision
     }
 
-    /** A TV: no Picture-in-Picture, the overlays inside the safe area and shown with the controls only. */
+    /** A TV: no Picture-in-Picture, the overlays inside the safe area, Back to close and More among the controls. */
     private val television by lazy { resources.configuration.isTelevision }
 
     /** The player's controls are on screen (the remote's arrows then move through them). */
@@ -253,9 +253,9 @@ class PlayerActivity : ComponentActivity() {
                         )
                     }
                     // The small Picture-in-Picture window shows the video only: the system draws its own controls.
-                    // On a TV, Close comes and goes with the controls (Back closes too) and More is one of the
-                    // player's own buttons (the remote reaches it like the others): the menu opens by it.
-                    if (!inPictureInPicture && (!television || controlsShown)) {
+                    // On a TV, the remote's Back closes (no Close button for the focus to wander to) and More is one
+                    // of the player's own buttons (the remote reaches it like the others): the menu opens by it.
+                    if (!inPictureInPicture && !television) {
                         IconButton(
                             onClick = { finish() },
                             modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(8.dp),
