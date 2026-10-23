@@ -169,12 +169,8 @@ enum SyncMapping {
         return playlist
     }
 
-    /// Never a file: file playlists stay on their device (docs/SYNC.md), and a `file:` address from another device would
-    /// make this one read its own files as a playlist or a guide, whole, past the download limit.
     private static func address(_ text: String) -> URL? {
-        guard let url = URL(string: text) ?? URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
-              !url.isFileURL, url.scheme?.lowercased() != "file" else { return nil }
-        return url
+        URL(string: text) ?? URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     /// The Xtream server as written when it is a full address, else completed as the app completes a typed one.
