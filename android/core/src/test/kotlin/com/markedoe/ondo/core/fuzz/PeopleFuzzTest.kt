@@ -29,7 +29,7 @@ class PeopleFuzzTest {
                 .filter { name -> name.length > 1 && name.any(Char::isLetter) && seen.add(TextNormalizer.normalize(name)) }
         }
         val fuzz = Fuzz(seed = 11)
-        val pieces = listOf("(", ")", "[", "]", " ", "\t", "\n", ",", "/", "|", ";", ".", "…", "Ann", "Lee", "voice", "Bo", "é", " ")
+        val pieces = listOf("(", ")", "[", "]", " ", "\t", "\n", ",", "/", "|", ";", ".", "…", "Ann", "Lee", "voice", "Bo", "é", "\u00A0")
         repeat(20_000) { case ->
             val text = buildString { repeat(1 + fuzz.int(14)) { append(fuzz.pick(pieces).repeat(1 + fuzz.int(3))) } }
             assertEquals(former(text), People.names(text), "case $case: ${describe(text)}")
