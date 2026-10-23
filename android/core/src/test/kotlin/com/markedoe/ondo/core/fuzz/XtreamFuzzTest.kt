@@ -100,10 +100,10 @@ class XtreamFuzzTest {
 
     /**
      * `XtreamClient.getJson` hands the answer to kotlinx.serialization as is: 100 000 `[` throw StackOverflowError
-     * out of `authenticate` (and of every list). Left to the streaming rewrite of `getJson`, which should refuse
-     * answers nesting deeper than `MAX_JSON_DEPTH` (`jsonNestsDeeperThan`, as `parseJsonOrNull` does).
+     * out of `authenticate` (and of every list). `getJson` should refuse answers nesting deeper than
+     * `MAX_JSON_DEPTH` (`jsonNestsDeeperThan`, as `parseJsonOrNull` does).
      */
-    @Ignore("Fails until XtreamClient.getJson refuses deeply nested answers (streaming rewrite in progress)")
+    @Ignore("Fails until XtreamClient.getJson refuses answers nesting deeper than MAX_JSON_DEPTH")
     @Test(timeout = 30_000)
     fun aDeeplyNestedAnswerIsAnInvalidResponse() {
         for (route in listOf("api:", "api:get_live_streams", "api:get_series_info")) {
