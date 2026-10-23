@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core
 
+import java.io.InputStream
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
@@ -41,6 +42,39 @@ internal fun jsonNestsDeeperThan(text: String, max: Int = MAX_JSON_DEPTH): Boole
         index++
     }
     return false
+}
+
+/**
+ * The same check over UTF-8 bytes read from [input] (closed after): JSON's brackets, quote and backslash are single
+ * bytes no other character's encoding contains. One pass, without holding the document in memory.
+ */
+internal fun jsonNestsDeeperThan(input: InputStream, max: Int = MAX_JSON_DEPTH): Boolean {
+    input.use { stream ->
+        val buffer = ByteArray(64 * 1024)
+        var depth = 0
+        var inString = false
+        var escaped = false
+        while (true) {
+            val read = stream.read(buffer)
+            if (read < 0) return false
+            for (i in 0 until read) {
+                val byte = buffer[i].toInt()
+                if (inString) {
+                    when {
+                        escaped -> escaped = false
+                        byte == '\\'.code -> escaped = true
+                        byte == '"'.code -> inString = false
+                    }
+                } else {
+                    when (byte) {
+                        '"'.code -> inString = true
+                        '['.code, '{'.code -> if (++depth > max) return true
+                        ']'.code, '}'.code -> depth--
+                    }
+                }
+            }
+        }
+    }
 }
 
 /** Provider JSON parsed, or `null` when [text] is not JSON or nests deeper than [MAX_JSON_DEPTH]. */

@@ -23,7 +23,6 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import org.junit.Ignore
 import org.junit.Test
 
 /**
@@ -99,11 +98,9 @@ class XtreamFuzzTest {
     }
 
     /**
-     * `XtreamClient.getJson` hands the answer to kotlinx.serialization as is: 100 000 `[` throw StackOverflowError
-     * out of `authenticate` (and of every list). `getJson` should refuse answers nesting deeper than
-     * `MAX_JSON_DEPTH` (`jsonNestsDeeperThan`, as `parseJsonOrNull` does).
+     * kotlinx.serialization reads nested arrays recursively: an answer of 100 000 `[` threw StackOverflowError out of
+     * `authenticate` and every list. Answers nesting deeper than `MAX_JSON_DEPTH` are an invalid response.
      */
-    @Ignore("Fails until XtreamClient.getJson refuses answers nesting deeper than MAX_JSON_DEPTH")
     @Test(timeout = 30_000)
     fun aDeeplyNestedAnswerIsAnInvalidResponse() {
         for (route in listOf("api:", "api:get_live_streams", "api:get_series_info")) {

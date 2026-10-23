@@ -1,5 +1,7 @@
 package com.markedoe.ondo.core.xtream
 
+import com.markedoe.ondo.core.MAX_JSON_DEPTH
+import com.markedoe.ondo.core.jsonNestsDeeperThan
 import com.markedoe.ondo.core.net.Gzip
 import com.markedoe.ondo.core.net.GzipException
 import com.markedoe.ondo.core.net.HttpException
@@ -116,10 +118,12 @@ internal inline fun <T> JsonElement?.lossyList(decode: (JsonElement) -> T?): Lis
  * time: only the element being read is in memory as JSON. An answer that is not an array (`{}` or `null` for an
  * empty list, an object keyed by index) is small and read whole, as [lossyList] reads it.
  * @throws HttpException.EmptyResponse for an empty answer
- * @throws XtreamException.InvalidResponse for anything that is not JSON
+ * @throws XtreamException.InvalidResponse for anything that is not JSON, or nests deeper than [MAX_JSON_DEPTH]
  */
 @OptIn(ExperimentalSerializationApi::class)
 internal fun <T> decodeList(file: File, decode: (JsonElement) -> T?): List<T> = try {
+    // kotlinx reads nested arrays recursively: a few kilobytes of `[` would overflow the stack.
+    if (jsonNestsDeeperThan(Gzip.decompressingStream(file.inputStream()))) throw XtreamException.InvalidResponse()
     BufferedInputStream(Gzip.decompressingStream(file.inputStream()), 64 * 1024).use { input ->
         input.mark(4)
         if (!(input.read() == 0xEF && input.read() == 0xBB && input.read() == 0xBF)) input.reset()

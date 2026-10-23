@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.xtream
 
 import com.markedoe.ondo.core.decodeToStringWithoutBom
+import com.markedoe.ondo.core.parseJsonOrNull
 import com.markedoe.ondo.core.model.AccountInfo
 import com.markedoe.ondo.core.model.CatchupInfo
 import com.markedoe.ondo.core.model.Channel
@@ -32,7 +33,6 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 
 /** Errors specific to Xtream panels, with messages meant for the user. */
@@ -86,11 +86,8 @@ class XtreamClient(
         return withContext(parsingDispatcher) {
             val data = Gzip.gunzipIfNeeded(raw)
             if (data.isEmpty()) throw HttpException.EmptyResponse()
-            try {
-                Json.parseToJsonElement(data.decodeToStringWithoutBom())
-            } catch (e: IllegalArgumentException) { // SerializationException
-                throw XtreamException.InvalidResponse()
-            }
+            // Not JSON, or nested deep enough to overflow the stack.
+            parseJsonOrNull(data.decodeToStringWithoutBom()) ?: throw XtreamException.InvalidResponse()
         }
     }
 
