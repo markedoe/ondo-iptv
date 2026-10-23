@@ -56,6 +56,45 @@ class CrashLogTest {
         assertTrue(text, text.endsWith("\tat com.markedoe.ondo.data.OndoRepository.load(OndoRepository.kt:391)"))
     }
 
+    /** Android ended the run (out of memory, not responding): its reason and the memory in use, unless already on file. */
+    @Test
+    fun anExitByAndroidIsRecordedOnce() {
+        val file = File(folder.root, CrashLog.FILE_NAME)
+        val about = "Ondo 1.1.0 (1010) · Android 12 (API 31) · Test TV\nmemory class 192 MB, large 384 MB, max heap 384 MB, low RAM false"
+        val exit = CrashLog.SystemExit(at = 1_760_000_100_000L, reason = "out of memory (the device's)", description = "lmk", pssKb = 412_000, rssKb = 530_000)
+        CrashLog.recordExit(file, about, exit)
+        val crash = requireNotNull(CrashLog.read(file))
+        assertEquals(1_760_000_100_000L, crash.at)
+        assertEquals("$about\nStopped by Android: out of memory (the device's) (lmk)\nMemory at that moment: PSS 402 MB, RSS 517 MB", crash.report)
+
+        // A Kotlin crash recorded after it is kept; the same exit read again at the next start changes nothing.
+        CrashLog.record(file, about, "main", IllegalStateException("broken"), at = 1_760_000_200_000L)
+        CrashLog.recordExit(file, about, exit)
+        assertTrue(requireNotNull(CrashLog.read(file)).report.contains("IllegalStateException: broken"))
+    }
+
+    @Test
+    fun anAnrKeepsTheMainThreadsStack() {
+        val trace = """
+            ----- pid 4242 at 2026-10-23 16:20:00 -----
+            Cmd line: com.markedoe.ondo
+
+            "Signal Catcher" daemon prio=10 tid=2 Runnable
+              at java.lang.Object.wait(Native method)
+
+            "main" prio=5 tid=1 Runnable
+              at com.markedoe.ondo.ui.UiMappers.home(UiMappers.kt:120)
+              at com.markedoe.ondo.ui.OndoApp.Home(OndoApp.kt:300)
+
+            "OkHttp Dispatcher" prio=5 tid=20 Waiting
+        """.trimIndent()
+        assertEquals(
+            "\"main\" prio=5 tid=1 Runnable\n  at com.markedoe.ondo.ui.UiMappers.home(UiMappers.kt:120)\n  at com.markedoe.ondo.ui.OndoApp.Home(OndoApp.kt:300)",
+            CrashLog.mainThread(trace),
+        )
+        assertNull(CrashLog.mainThread("no thread here"))
+    }
+
     @Test
     fun noRecordOrAnUnreadableOneIsNoCrash() {
         val file = File(folder.root, CrashLog.FILE_NAME)

@@ -2,7 +2,9 @@ package com.markedoe.ondo
 
 import android.app.ActivityManager
 import android.app.Application
+import android.app.ApplicationExitInfo
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -42,7 +44,37 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
         val memory = "memory class ${activities?.memoryClass} MB, large ${activities?.largeMemoryClass} MB, " +
             "max heap ${Runtime.getRuntime().maxMemory() / (1024 * 1024)} MB, low RAM ${activities?.isLowRamDevice}"
         val about = "Ondo $version · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) · ${Build.MANUFACTURER} ${Build.MODEL}\n$memory"
-        CrashLog.install(filesDir.resolve("ondo").resolve(CrashLog.FILE_NAME), about)
+        val crashFile = filesDir.resolve("ondo").resolve(CrashLog.FILE_NAME)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) recordLastExit(crashFile, about)
+        CrashLog.install(crashFile, about)
+    }
+
+    /**
+     * Why Android ended the last run, when it was on screen and no Kotlin error was recorded: an app stopped for lack of
+     * memory or for not responding leaves no stack trace of its own.
+     */
+    @RequiresApi(Build.VERSION_CODES.R)
+    private fun recordLastExit(file: java.io.File, about: String) {
+        val exit = runCatching {
+            getSystemService(ActivityManager::class.java)?.getHistoricalProcessExitReasons(packageName, 0, 1)?.firstOrNull()
+        }.getOrNull() ?: return
+        // In the background, Android ends apps to make room: not a crash.
+        if (exit.importance > ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE) return
+        val reason = when (exit.reason) {
+            ApplicationExitInfo.REASON_LOW_MEMORY -> "out of memory (the device's)"
+            ApplicationExitInfo.REASON_ANR -> "not responding (ANR)"
+            ApplicationExitInfo.REASON_CRASH_NATIVE -> "crash in native code"
+            ApplicationExitInfo.REASON_SIGNALED -> "signal ${exit.status}"
+            ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "excessive resource use"
+            ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "failed to start"
+            else -> return
+        }
+        val trace = if (exit.reason == ApplicationExitInfo.REASON_ANR) {
+            runCatching { exit.traceInputStream?.bufferedReader()?.use { CrashLog.mainThread(it.readText()) } }.getOrNull()
+        } else {
+            null
+        }
+        CrashLog.recordExit(file, about, CrashLog.SystemExit(exit.timestamp, reason, exit.description, exit.pss, exit.rss, trace))
     }
 
     /** Playlists, guides and artwork share connections and the cache. */
