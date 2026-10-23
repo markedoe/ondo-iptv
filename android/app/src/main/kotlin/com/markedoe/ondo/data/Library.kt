@@ -88,6 +88,10 @@ data class LibraryState(
     val collections: List<UserCollection> = emptyList(),
     /** Soonest first. */
     val reminders: List<Reminder> = emptyList(),
+    /** Sync on the local network (docs/SYNC.md): what was removed here or elsewhere, by sync key, and when. */
+    val syncDeleted: Map<String, Long> = emptyMap(),
+    /** Sync: playlist IDs that became another playlist (the same one added on two devices). */
+    val syncReplaced: Map<String, String> = emptyMap(),
 ) {
     fun isCategoryHidden(playlistId: String, categoryId: String): Boolean = "$playlistId|$categoryId" in hiddenCategories
 
@@ -108,9 +112,13 @@ data class LibraryState(
     fun isFavorite(playlistId: String, kind: ItemKind, itemId: String): Boolean =
         favorites.any { it.playlistId == playlistId && it.kind == kind && it.itemId == itemId }
 
+    /** Adds [favorite], or takes it away (remembered for sync at its [Favorite.addedAt], the time of the toggle). */
     fun toggleFavorite(favorite: Favorite): LibraryState =
-        if (favorites.any { it.key == favorite.key }) copy(favorites = favorites.filterNot { it.key == favorite.key })
-        else copy(favorites = favorites + favorite)
+        if (favorites.any { it.key == favorite.key }) {
+            copy(favorites = favorites.filterNot { it.key == favorite.key }).deleting(SyncKeys.favorite(favorite), favorite.addedAt)
+        } else {
+            copy(favorites = favorites + favorite)
+        }
 
     fun favorites(playlistId: String, kind: ItemKind): List<Favorite> =
         favorites.filter { it.playlistId == playlistId && it.kind == kind }
@@ -134,7 +142,8 @@ data class LibraryState(
     fun finishedMovies(playlistId: String): Set<String> =
         history.filter { it.playlistId == playlistId && it.kind == ItemKind.MOVIE && it.isFinished }.mapTo(HashSet()) { it.itemId }
 
-    fun remove(entry: WatchEntry): LibraryState = copy(history = history.filterNot { it.key == entry.key })
+    fun remove(entry: WatchEntry, now: Long = entry.lastWatchedAt): LibraryState =
+        copy(history = history.filterNot { it.key == entry.key }).let { if (SyncKeys.syncs(entry)) it.deleting(SyncKeys.progress(entry), now) else it }
 
     /** Movies and episodes in progress, most recent first, one entry per series. */
     fun continueWatching(playlistId: String, limit: Int = 20): List<WatchEntry> {
@@ -152,7 +161,8 @@ data class LibraryState(
     fun recentChannels(playlistId: String, limit: Int = 20): List<WatchEntry> =
         history.filter { it.playlistId == playlistId && it.kind == ItemKind.CHANNEL }.sortedByDescending { it.lastWatchedAt }.take(limit)
 
-    fun removingPlaylist(playlistId: String): LibraryState = copy(
+    /** Everything of a playlist taken away; for sync, the playlist is remembered as deleted at [now]. */
+    fun removingPlaylist(playlistId: String, now: Long = 0): LibraryState = deleting(SyncKeys.playlist(playlistId), now).copy(
         favorites = favorites.filterNot { it.playlistId == playlistId },
         history = history.filterNot { it.playlistId == playlistId },
         hiddenCategories = hiddenCategories.filterNot { it.startsWith("$playlistId|") }.toSet(),
@@ -179,7 +189,12 @@ data class LibraryState(
     fun renamingCollection(id: String, name: String, now: Long): LibraryState =
         copy(collections = sortedByName(collections.map { if (it.id == id) it.copy(name = name.trim(), updatedAt = now) else it }))
 
-    fun deletingCollection(id: String): LibraryState = copy(collections = collections.filterNot { it.id == id })
+    fun deletingCollection(id: String, now: Long = 0): LibraryState =
+        copy(collections = collections.filterNot { it.id == id }).deleting(SyncKeys.list(id), now)
+
+    /** Remembers for sync that [key] was removed at [time] (the later time is kept). */
+    fun deleting(key: String, time: Long): LibraryState =
+        if ((syncDeleted[key] ?: Long.MIN_VALUE) >= time) this else copy(syncDeleted = syncDeleted + (key to time))
 
     /** Adds the item to the collection, or takes it out if it is there. */
     fun togglingInCollection(id: String, item: Favorite, now: Long): LibraryState = copy(

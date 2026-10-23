@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Programme reminders (asked for the first time a reminder is set). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Sync on the local network (off until turned on): Wi-Fi lets the devices' announcements through. -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <!-- Phones, tablets, Chromebooks (keyboard and mouse work too) and Android TV / Google TV (remote control). -->
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />

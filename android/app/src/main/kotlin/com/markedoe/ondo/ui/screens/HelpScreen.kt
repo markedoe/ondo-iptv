@@ -52,6 +52,7 @@ val helpTopics = listOf(
     HelpTopic("my-list", R.string.help_mylist_title, R.string.help_mylist_body),
     HelpTopic("guide", R.string.help_guide_title, R.string.help_guide_body),
     HelpTopic("playback", R.string.help_playback_title, R.string.help_playback_body),
+    HelpTopic("sync", R.string.help_sync_title, R.string.help_sync_body),
     HelpTopic("privacy", R.string.help_privacy_title, R.string.help_privacy_body),
 )
 

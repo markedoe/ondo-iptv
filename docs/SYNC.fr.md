@@ -36,7 +36,8 @@ Type de service `_ondo._tcp`. Un appareil Android dont la synchronisation est ac
 
 - `d` : son identifiant d’appareil, un UUID aléatoire créé une fois par installation (en minuscules) ;
 - `v` : `1` ;
-- `n` : un nom pour la liste des appareils (le modèle de l’appareil, 40 caractères au plus).
+- `n` : un nom pour la liste des appareils (le nom de l’appareil dans les réglages du système, ou son modèle ;
+  40 caractères au plus).
 
 Les appareils sont reconnus par `d`. Un appareil ignore son propre `d`.
 
@@ -62,12 +63,15 @@ avec le sien, garde le résultat et répond avec l’instantané fusionné (une 
 ferme. La connexion a 10 secondes et la session entière 30 secondes. Un serveur traite au plus 4 sessions à la
 fois et ferme les connexions en plus.
 
-Entre deux appareils Android, celui dont l’identifiant est le plus petit (comme chaîne) se connecte.
-
 **Quand.** Un client synchronise quand il trouve un appareil, puis toutes les 60 secondes tant que l’app est
 ouverte, et quelques secondes après un changement local (une playlist, Ma liste, une liste, ou la fin d’une
-lecture). Après une session ratée, il réessaie avec cet appareil au bout de 15 secondes, puis 1 minute, puis
-5 minutes, puis attend que l’appareil revienne ou qu’une session réussisse.
+lecture). Après une session ratée, il retrouve l’adresse de l’appareil et réessaie au bout de 15 secondes, puis
+1 minute, puis toutes les 5 minutes tant que Bonjour trouve encore l’appareil.
+
+Entre deux appareils Android, celui dont l’identifiant est le plus petit (comme chaîne) se connecte quand il
+trouve l’autre et toutes les 60 secondes ; chacun se connecte quelques secondes après un changement qui lui est
+propre. Un appareil Android qui garde ce qu’un iPhone, un iPad ou un Mac lui a envoyé le transmet ainsi aux autres
+appareils Android.
 
 ## Instantané
 

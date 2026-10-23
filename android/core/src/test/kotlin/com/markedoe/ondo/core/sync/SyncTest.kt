@@ -5,7 +5,11 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.net.InetAddress
+import java.net.ServerSocket
 import kotlin.test.assertFailsWith
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -96,5 +100,52 @@ class SyncTest {
         // Too large, or cut short: refused.
         assertFailsWith<IOException> { SyncNetwork.readFrame(ByteArrayInputStream(byteArrayOf(0x7F, 0, 0, 0))) }
         assertFailsWith<IOException> { SyncNetwork.readFrame(ByteArrayInputStream(byteArrayOf(0, 0, 0, 9, 1, 2))) }
+    }
+
+    private val loopback: InetAddress = InetAddress.getLoopbackAddress()
+
+    // Real sockets and real time: runBlocking, not runTest (whose virtual time would end each session at once).
+    @Test
+    fun aSessionSendsASnapshotAndBringsBackTheMergedOne() = runBlocking {
+        val a = fixture("a.json")
+        val b = fixture("b.json")
+        val server = ServerSocket(0, 8, loopback)
+        var received: SyncSnapshot? = null
+        val serving = launch { SyncSession.serve(server) { incoming, _ -> received = incoming; SyncMerge.merge(b, incoming) } }
+        val answer = SyncSession.exchange(loopback, server.localPort, a)
+        assertEquals(a, received)
+        assertEquals(SyncMerge.merge(b, a), answer)
+        // Twice in a row: each connection is a session of its own.
+        assertEquals(answer, SyncSession.exchange(loopback, server.localPort, a))
+        serving.cancelAndJoin()
+        assertTrue(server.isClosed)
+    }
+
+    @Test
+    fun nothingIsSentToOrAcceptedFromAnAddressThatIsNotLocal() = runBlocking {
+        val a = fixture("a.json")
+        // A server that refuses the address closes the connection before reading anything.
+        val server = ServerSocket(0, 8, loopback)
+        var merged = false
+        val serving = launch { SyncSession.serve(server, isAllowed = { false }) { incoming, _ -> merged = true; incoming } }
+        assertNull(SyncSession.exchange(loopback, server.localPort, a))
+        assertFalse(merged)
+        serving.cancelAndJoin()
+        // A client never connects to an address that is not local.
+        assertNull(SyncSession.exchange(InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8)), 443, a))
+    }
+
+    @Test
+    fun aServerAnswersNothingToWhatIsNotASnapshot() = runBlocking {
+        val server = ServerSocket(0, 8, loopback)
+        val serving = launch { SyncSession.serve(server) { incoming, _ -> incoming } }
+        val answer = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            java.net.Socket(loopback, server.localPort).use { socket ->
+                SyncNetwork.writeFrame(socket.getOutputStream(), "not json".encodeToByteArray())
+                socket.getInputStream().read()
+            }
+        }
+        assertEquals(-1, answer)
+        serving.cancelAndJoin()
     }
 }

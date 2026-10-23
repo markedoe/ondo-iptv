@@ -34,7 +34,8 @@ of its device ID>` with TXT records:
 
 - `d`: its device ID, a random UUID made once per installation (lowercase);
 - `v`: `1`;
-- `n`: a name for the device list (the device model, at most 40 characters).
+- `n`: a name for the device list (the device's name in the system settings, or its model; at most 40
+  characters).
 
 Devices are recognised by `d`. A device ignores its own `d`.
 
@@ -58,12 +59,14 @@ own, keeps the result, and answers with the merged snapshot (one frame); the cli
 Connecting gets 10 seconds and the whole session 30 seconds. A server handles at most 4 sessions at once and
 closes further connections.
 
-Between two Android devices, the one with the smaller device ID (as a string) connects.
-
 **When.** A client syncs when it finds a device, then every 60 seconds while the app is open, and a few seconds
-after a local change (a playlist, My List, a list, or the end of a playback). After a failed session it tries
-that device again after 15 seconds, then 1 minute, then 5 minutes, then waits until the device comes back or a
-session succeeds.
+after a local change (a playlist, My List, a list, or the end of a playback). After a failed session it finds the
+device's address again and tries after 15 seconds, then 1 minute, then every 5 minutes while Bonjour still finds
+the device.
+
+Between two Android devices, the one with the smaller device ID (as a string) connects when it finds the other and
+every 60 seconds; either one connects a few seconds after a change of its own. An Android device that keeps what
+an iPhone, iPad or Mac sent thus passes it on to the other Android devices.
 
 ## Snapshot
 

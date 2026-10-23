@@ -11,6 +11,7 @@ import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.Reminder
 import com.markedoe.ondo.player.PlayRequest
 import com.markedoe.ondo.ui.model.ChannelRow
@@ -344,6 +345,11 @@ class OndoViewModel(
     fun setAppearance(appearance: Appearance) = repository.setAppearance(appearance)
     fun setShowAdultCategories(show: Boolean) = repository.setShowAdultCategories(show)
     fun setHideWatchedMovies(hide: Boolean) = repository.setHideWatchedMovies(hide)
+
+    fun setSyncOnLocalNetwork(on: Boolean) = repository.setSyncOnLocalNetwork(on)
+
+    /** The devices sync on the local network found or heard from. */
+    val syncDevices: StateFlow<List<SyncDevice>> = repository.syncDevices
     fun setPosterSort(sort: PosterSort) = repository.setPosterSort(sort)
     fun setLiveBuffer(seconds: Int) = repository.setLiveBuffer(seconds)
     fun setVodBuffer(seconds: Int) = repository.setVodBuffer(seconds)

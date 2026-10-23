@@ -137,6 +137,10 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Données** : les affiches, les vignettes et les pages des films et séries restent sur l'appareil, comme sur
   Apple : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même quand le fournisseur
   ne répond pas.
+- **Synchroniser sur ce réseau** (Réglages, désactivé tant qu'on ne l'active pas) : tant qu'Ondo est ouvert, les
+  appareils Android d'un réseau domestique gardent les mêmes playlists, Ma liste, collections et progression, et
+  iPhone, iPad et Mac se synchronisent avec eux ; directement entre les appareils, vers des adresses locales
+  uniquement, rien ne passe par internet ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **Réglages** : playlists, apparence, catégories adultes masquées par défaut, langues et catégories, langue de
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur ; écran d'accueil avec démo.
 - **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande

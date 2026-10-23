@@ -14,6 +14,7 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Showcase
+import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ChannelRow
@@ -403,7 +404,7 @@ object UiMappers {
         )
     }
 
-    fun settings(state: OndoState, version: String, kindLabel: (Boolean) -> String): SettingsUiState = SettingsUiState(
+    fun settings(state: OndoState, version: String, syncDevices: List<SyncDevice> = emptyList(), kindLabel: (Boolean) -> String): SettingsUiState = SettingsUiState(
         playlists = state.playlists.map { playlist ->
             val host = runCatching { java.net.URI(playlist.url.trim()).host }.getOrNull()
             PlaylistSummary(playlist.id, playlist.name, listOfNotNull(kindLabel(playlist.isXtream), host).joinToString(" · "), playlist.id == state.activePlaylistId, playlist.isXtream)
@@ -416,6 +417,8 @@ object UiMappers {
         version = version,
         isRefreshing = state.isLoading,
         hideWatchedMovies = state.settings.hideWatchedMovies,
+        syncOnLocalNetwork = state.settings.syncOnLocalNetwork,
+        syncDevices = if (state.settings.syncOnLocalNetwork) syncDevices else emptyList(),
     )
 
     /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"). */

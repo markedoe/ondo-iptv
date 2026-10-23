@@ -162,7 +162,15 @@ private fun Onboarding(viewModel: OndoViewModel) {
         )
     } else {
         Box(Modifier.fillMaxSize()) {
-            WelcomeScreen(onAddPlaylist = { adding = true }, onTryDemo = { viewModel.addDemo(demoName) }, isLoading = state.isLoading)
+            val syncDevices by viewModel.syncDevices.collectAsStateWithLifecycle()
+            WelcomeScreen(
+                onAddPlaylist = { adding = true },
+                onTryDemo = { viewModel.addDemo(demoName) },
+                isLoading = state.isLoading,
+                syncOn = state.settings.syncOnLocalNetwork,
+                syncDevices = syncDevices,
+                onSync = viewModel::setSyncOnLocalNetwork,
+            )
             ErrorSnackbar(viewModel, Modifier.align(Alignment.BottomCenter), onRetry = { viewModel.addDemo(demoName) })
         }
     }
@@ -582,7 +590,8 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
     val m3u = stringResource(R.string.kind_m3u)
     val xtream = stringResource(R.string.kind_xtream)
     val browse = rememberPageOpener(navController)
-    val ui = UiMappers.settings(state, appVersion()) { isXtream -> if (isXtream) xtream else m3u }
+    val syncDevices by viewModel.syncDevices.collectAsStateWithLifecycle()
+    val ui = UiMappers.settings(state, appVersion(), syncDevices) { isXtream -> if (isXtream) xtream else m3u }
     val actions = SettingsActions(
             onBack = { navController.popBackStack() },
             onAddPlaylist = { navController.navigate(Routes.AddPlaylist) },
@@ -592,6 +601,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onAppearance = viewModel::setAppearance,
             onShowAdultCategories = viewModel::setShowAdultCategories,
             onHideWatchedMovies = viewModel::setHideWatchedMovies,
+            onSyncOnLocalNetwork = viewModel::setSyncOnLocalNetwork,
             onUpdateAwards = viewModel::setUpdateAwards,
             onLiveBuffer = viewModel::setLiveBuffer,
             onVodBuffer = viewModel::setVodBuffer,

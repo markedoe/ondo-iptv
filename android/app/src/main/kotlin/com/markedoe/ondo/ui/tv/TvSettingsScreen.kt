@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
@@ -34,6 +35,7 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.SupportAgent
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.material.icons.rounded.VisibilityOff
@@ -79,11 +81,13 @@ import com.markedoe.ondo.ui.screens.PlaylistSummary
 import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsUiState
 import com.markedoe.ondo.ui.screens.bufferLabel
+import com.markedoe.ondo.ui.screens.syncDetail
 import com.markedoe.ondo.ui.theme.OndoColors
 
 /** The parts of the TV's Settings, listed on the left. */
 enum class TvSettingsSection(val label: Int, val icon: ImageVector, val tag: String) {
     PLAYLISTS(R.string.playlists, Icons.Rounded.Tv, "settingsPlaylists"),
+    SYNC(R.string.sync_section, Icons.Rounded.Sync, "settingsSync"),
     PLAYER(R.string.player, Icons.Rounded.Speed, "settingsPlayer"),
     CATALOGUE(R.string.settings_catalogue, Icons.Rounded.VideoLibrary, "settingsCatalogue"),
     ABOUT(R.string.about, Icons.Rounded.Info, "settingsAbout"),
@@ -150,6 +154,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
         ) {
             when (section) {
                 TvSettingsSection.PLAYLISTS -> playlists(state, actions, paneFirst, ::returnTo, onDelete = { deleting = it; focusBack = "delete:${it.id}" })
+                TvSettingsSection.SYNC -> sync(state, actions, paneFirst)
                 TvSettingsSection.PLAYER -> player(state, actions, paneFirst, ::returnTo, onChoose = { choosingBuffer = it; focusBack = it.key })
                 TvSettingsSection.CATALOGUE -> catalogue(state, actions, paneFirst, canChooseAppLanguage)
                 TvSettingsSection.ABOUT -> about(state, actions, paneFirst)
@@ -352,6 +357,34 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
     if (canChooseAppLanguage) {
         item(key = "language") {
             SettingRow(stringResource(R.string.app_language), Icons.Rounded.Language, subtitle = stringResource(R.string.app_language_hint), onClick = actions.onAppLanguage, modifier = Modifier.testTag("appLanguageRow"))
+        }
+    }
+}
+
+/** Sync on the local network: the switch, what it does, and the devices it found while it is on. */
+private fun LazyListScope.sync(state: SettingsUiState, actions: SettingsActions, first: FocusRequester) {
+    title(R.string.sync_section)
+    item(key = "sync") {
+        SwitchRow(stringResource(R.string.sync_title), stringResource(R.string.sync_summary), Icons.Rounded.Sync, state.syncOnLocalNetwork, actions.onSyncOnLocalNetwork, Modifier.focusRequester(first).testTag("syncSwitch"))
+    }
+    item(key = "syncHint") {
+        Text(stringResource(R.string.sync_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.widthIn(max = 640.dp).padding(vertical = 8.dp))
+    }
+    if (!state.syncOnLocalNetwork) return
+    if (state.syncDevices.isEmpty()) {
+        item(key = "syncLooking") { DeviceRow(stringResource(R.string.sync_looking), null) }
+    }
+    items(state.syncDevices, key = { "sync:${it.id}" }) { device -> DeviceRow(device.name, syncDetail(device)) }
+}
+
+/** A device sync found: shown, not something the remote goes to. */
+@Composable
+private fun DeviceRow(name: String, detail: String?) {
+    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag("syncDevice"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Icon(Icons.Rounded.Devices, contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column {
+            Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            detail?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }

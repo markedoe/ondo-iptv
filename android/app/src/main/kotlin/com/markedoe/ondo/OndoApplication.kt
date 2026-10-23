@@ -2,6 +2,8 @@ package com.markedoe.ondo
 
 import android.app.ActivityManager
 import android.app.Application
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
@@ -13,16 +15,18 @@ import coil3.request.crossfade
 import com.markedoe.ondo.core.net.OkHttpClientAdapter
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.AwardsDownload
+import com.markedoe.ondo.data.LocalSync
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.WorkManagerReminderScheduler
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.map
 import okhttp3.Dispatcher
 import okhttp3.OkHttpClient
 
-/** Owns the app-wide objects: one HTTP client, the repository, the image loader. */
+/** Owns the app-wide objects: one HTTP client, the repository, sync on the local network, the image loader. */
 class OndoApplication : Application(), SingletonImageLoader.Factory {
     /** Playlists, guides and artwork share connections and the cache. */
     val okHttp: OkHttpClient by lazy { OkHttpClientAdapter.defaultClient() }
@@ -48,6 +52,11 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             reminderScheduler = WorkManagerReminderScheduler(this),
             awardsDownload = AwardsDownload(AwardsDownload.URL, cacheDir.resolve("awards.json")),
         )
+    }
+
+    /** Sync on the local network, while Ondo is in front (the player included) and the setting is on. */
+    val localSync: LocalSync by lazy {
+        LocalSync(this, repository, ProcessLifecycleOwner.get().lifecycle.currentStateFlow.map { it.isAtLeast(Lifecycle.State.STARTED) })
     }
 
     /**

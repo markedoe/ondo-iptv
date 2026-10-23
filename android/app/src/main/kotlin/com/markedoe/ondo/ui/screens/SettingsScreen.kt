@@ -22,10 +22,12 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -49,6 +51,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -59,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
+import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.ui.theme.Appearance
 import com.markedoe.ondo.ui.tv.focusFrame
 
@@ -75,6 +79,9 @@ data class SettingsUiState(
     val version: String = "",
     val isRefreshing: Boolean = false,
     val hideWatchedMovies: Boolean = false,
+    val syncOnLocalNetwork: Boolean = false,
+    /** The devices sync found or heard from (only while it is on). */
+    val syncDevices: List<SyncDevice> = emptyList(),
 )
 
 class SettingsActions(
@@ -86,6 +93,7 @@ class SettingsActions(
     val onAppearance: (Appearance) -> Unit = {},
     val onShowAdultCategories: (Boolean) -> Unit = {},
     val onHideWatchedMovies: (Boolean) -> Unit = {},
+    val onSyncOnLocalNetwork: (Boolean) -> Unit = {},
     val onUpdateAwards: (Boolean) -> Unit = {},
     val onLiveBuffer: (Int) -> Unit = {},
     val onVodBuffer: (Int) -> Unit = {},
@@ -127,6 +135,34 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     leadingContent = { Icon(Icons.Rounded.Add, contentDescription = null) },
                     modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onAddPlaylist),
                 )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.sync_title)) },
+                    supportingContent = { Text(stringResource(R.string.sync_hint)) },
+                    leadingContent = { Icon(Icons.Rounded.Sync, contentDescription = null) },
+                    trailingContent = {
+                        val label = stringResource(R.string.sync_title)
+                        Switch(
+                            checked = state.syncOnLocalNetwork,
+                            onCheckedChange = actions.onSyncOnLocalNetwork,
+                            modifier = Modifier.testTag("syncSwitch").semantics { contentDescription = label },
+                        )
+                    },
+                )
+            }
+            if (state.syncOnLocalNetwork) {
+                if (state.syncDevices.isEmpty()) {
+                    item { ListItem(headlineContent = { Text(stringResource(R.string.sync_looking)) }, leadingContent = { Icon(Icons.Rounded.Devices, contentDescription = null) }) }
+                }
+                items(state.syncDevices, key = { "sync:${it.id}" }) { device ->
+                    ListItem(
+                        headlineContent = { Text(device.name) },
+                        supportingContent = { Text(syncDetail(device)) },
+                        leadingContent = { Icon(Icons.Rounded.Devices, contentDescription = null) },
+                        modifier = Modifier.testTag("syncDevice"),
+                    )
+                }
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
             item { SectionTitle(stringResource(R.string.appearance)) }
@@ -273,4 +309,12 @@ private fun SectionTitle(text: String) {
     Row(Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Start) {
         Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
     }
+}
+
+/** Where sync is with a device: when the last session worked, or that it could not be reached. */
+@Composable
+fun syncDetail(device: SyncDevice): String = when {
+    device.unreachable -> stringResource(R.string.sync_not_reached)
+    device.syncedAt != null -> stringResource(R.string.sync_synced_at, android.text.format.DateFormat.getTimeFormat(LocalContext.current).format(java.util.Date(device.syncedAt)))
+    else -> stringResource(R.string.sync_found)
 }

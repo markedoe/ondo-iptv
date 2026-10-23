@@ -14,6 +14,8 @@ data class SavedPlaylist(
     val password: String? = null,
     val epgUrl: String? = null,
     val addedAt: Long = 0,
+    /** When it was added or last edited, for sync; 0 for playlists saved before sync (then [addedAt]). */
+    val updatedAt: Long = 0,
 ) {
     val isXtream: Boolean get() = username != null && password != null
 }
@@ -39,4 +41,8 @@ data class AppSettings(
     val vodBuffer: Int = 0,
     /** Movies finished (see [WatchEntry.isFinished]) left out where the viewer browses movies; search and My List keep them. */
     val hideWatchedMovies: Boolean = false,
+    /** Sync with Ondo on other devices of the local network (docs/SYNC.md); off until the viewer turns it on. */
+    val syncOnLocalNetwork: Boolean = false,
+    /** This installation's ID for sync, made once. */
+    val syncDeviceId: String = "",
 )

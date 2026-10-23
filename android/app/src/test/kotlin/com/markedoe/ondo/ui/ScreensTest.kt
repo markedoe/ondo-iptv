@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -14,6 +15,7 @@ import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -29,10 +31,11 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.MediaDetails
+import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
+import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.WatchEntry
-import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.player.ProblemReportDialog
 import com.markedoe.ondo.player.StreamStatistics
 import com.markedoe.ondo.player.StreamStatisticsPanel
@@ -48,13 +51,13 @@ import com.markedoe.ondo.ui.screens.CollectionScreen
 import com.markedoe.ondo.ui.screens.CollectionUiState
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.GuideActions
-import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.GuideRow
 import com.markedoe.ondo.ui.screens.GuideScreen
 import com.markedoe.ondo.ui.screens.GuideUiState
 import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeScreen
+import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.MovieDetailScreen
 import com.markedoe.ondo.ui.screens.MyListActions
 import com.markedoe.ondo.ui.screens.MyListKind
@@ -368,6 +371,39 @@ class ScreensTest {
         compose.onNodeWithText("M3U playlist · example.com").assertExists()
         compose.onNodeWithTag("adultSwitch").performClick()
         assertEquals(true, shown)
+    }
+
+    /** Settings, Sync on this network: the switch, then the devices found and where sync is with each. */
+    @Test
+    fun settingsTurnSyncOnAndListTheDevicesFound() {
+        val turned = mutableListOf<Boolean>()
+        val off = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
+        compose.setContent { OndoTheme { SettingsScreen(off, SettingsActions(onSyncOnLocalNetwork = { turned += it })) } }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("syncSwitch"))
+        compose.onNodeWithText("turn this on at home only", substring = true).assertExists()
+        compose.onAllNodesWithTag("syncDevice").assertCountEquals(0)
+        compose.onNodeWithTag("syncSwitch").performClick()
+        assertEquals(listOf(true), turned)
+    }
+
+    @Test
+    fun settingsShowTheDevicesSyncFound() {
+        val devices = listOf(SyncDevice("a", "Living room TV", syncedAt = 1_760_000_000_000L, unreachable = false), SyncDevice("b", "Office Mac", syncedAt = null, unreachable = true))
+        val state = UiMappers.settings(Fixtures.state().let { it.copy(settings = it.settings.copy(syncOnLocalNetwork = true)) }, "1.0.0", devices) { if (it) "Xtream Codes" else "M3U playlist" }
+        compose.setContent { OndoTheme { SettingsScreen(state, SettingsActions()) } }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasText("Office Mac"))
+        compose.onNodeWithText("Living room TV").assertExists()
+        compose.onNodeWithText("Synced at", substring = true).assertExists()
+        compose.onNodeWithText("Not reached, trying again").assertExists()
+    }
+
+    @Test
+    fun welcomeOffersToSyncWithTheDevicesNearby() {
+        val turned = mutableListOf<Boolean>()
+        compose.setContent { OndoTheme { WelcomeScreen(onAddPlaylist = {}, onTryDemo = {}, isLoading = false, syncOn = true, onSync = { turned += it }) } }
+        compose.onNodeWithText("Looking for other devices with Ondo open…").assertExists()
+        compose.onNodeWithTag("welcomeSync").performScrollTo().performClick()
+        assertEquals(listOf(false), turned)
     }
 
     /** Settings, Player: a buffer length is chosen from its menu, automatic first. */

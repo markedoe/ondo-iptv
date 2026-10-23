@@ -142,7 +142,7 @@
     <string name="help_playback_title">无法播放时</string>
     <string name="help_playback_body">Ondo 会说明问题出在服务商、网络还是格式。\n\n如果服务商拒绝播放，可能是订阅已过期，或同时观看的设备太多：大多数服务商一次只允许一到两个流。\n\n如果无法连接服务器，请检查网络连接后重试。\n\n如果画面时不时卡住，“更多”&gt;“流统计信息”会显示收到的数据、视频所需的数据，以及卡顿来自网络或服务商，还是来自播放器。\n\n缓冲更长时（“设置”&gt;“直播缓冲”和“电影和剧集缓冲”），服务商较长的中断不会显现，但画面出现所需的时间更长。\n\n在播放器中，“更多”&gt;“报告问题…”会显示本次播放的报告（启动和跳转时间、卡顿、统计信息；不含地址、登录信息或标题），可通过邮件或消息发送，或提交到 GitHub 问题中。</string>
     <string name="help_privacy_title">隐私</string>
-    <string name="help_privacy_body">Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上，并且不会包含在设备备份中。你打开过的电影和剧集页面及海报也保存在设备上，因此可以立即显示，即使服务商无法连接也能打开。\n\nOndo 会连接你添加的服务器，并每周连接一次 GitHub，获取最新的奖项和电影节入选信息（不会发送任何关于你的信息；可在“设置”中关闭“自动更新获奖信息”）。</string>
+    <string name="help_privacy_body">Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上，并且不会包含在设备备份中。你打开过的电影和剧集页面及海报也保存在设备上，因此可以立即显示，即使服务商无法连接也能打开。开启“在此网络上同步”后，你的播放列表、我的片单、合集和播放进度也会发送到同一网络中的其他 Ondo 设备，绝不经过互联网。\n\nOndo 会连接你添加的服务器，并每周连接一次 GitHub，获取最新的奖项和电影节入选信息（不会发送任何关于你的信息；可在“设置”中关闭“自动更新获奖信息”）。</string>
     <string name="error_load_denied">服务商拒绝了访问（HTTP %1$d）。请检查用户名、密码和你的订阅。</string>
     <string name="error_load_provider">服务商没有发送播放列表。请检查地址和你的订阅。</string>
     <string name="error_load_format">这不是 Ondo 能读取的播放列表（M3U、Xtream Codes、XSPF 或 JSON）。</string>
@@ -276,4 +276,14 @@
     <string name="stats_smooth">没有卡顿：播放流畅。</string>
     <string name="stats_network">数据到达太慢或中断：原因在于网络或服务商。</string>
     <string name="stats_player">数据按时到达：卡顿或丢帧来自播放器或设备。</string>
+    <string name="sync_section">同步</string>
+    <string name="sync_title">在此网络上同步</string>
+    <string name="sync_summary">播放列表、我的片单、合集和播放进度</string>
+    <string name="sync_hint">Ondo 打开时，此网络上开启此设置的设备会保持相同的播放列表、我的片单、合集和播放进度。iPhone、iPad 和 Mac 通过一台 Android 设备同步。数据不会离开本地网络，但播放列表的登录信息在其中以未加密方式传输：请只在家中开启。</string>
+    <string name="sync_looking">正在查找其他打开了 Ondo 的设备…</string>
+    <string name="sync_synced_at">已于 %1$s 同步</string>
+    <string name="sync_not_reached">无法连接，稍后重试</string>
+    <string name="sync_found">已找到</string>
+    <string name="help_sync_title">同步你的设备</string>
+    <string name="help_sync_body">设置 → 在此网络上同步，可让你家中的设备保持相同的播放列表、我的片单、合集和播放进度。在每台设备上开启此设置并保持 Ondo 打开：Android 电视、手机或平板会自动找到其他设备；iPhone、iPad 和 Mac 通过一台 Android 设备同步。还没有播放列表的设备也可以这样获得你的播放列表：在欢迎页面开启即可。\n\n所有数据都在你的网络中直接从一台设备传到另一台，绝不经过互联网。没有配对，登录信息在网络中以未加密方式传输，因此请只在家中开启。设置、隐藏的分类和从文件导入的播放列表保留在各自的设备上。</string>
 </resources>

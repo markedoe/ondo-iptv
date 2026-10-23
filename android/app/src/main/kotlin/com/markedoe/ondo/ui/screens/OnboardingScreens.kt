@@ -16,15 +16,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -36,6 +40,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -55,6 +60,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,6 +69,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.data.SyncDevice
+import com.markedoe.ondo.ui.tv.focusFrame
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -85,9 +93,19 @@ fun OndoLogo(size: Dp = 96.dp) {
     }
 }
 
-/** First launch: what Ondo is, the player-only disclaimer, add a playlist or try the demo. */
+/**
+ * First launch: what Ondo is, the player-only disclaimer, add a playlist or try the demo, or turn sync on to get the
+ * playlists of the devices nearby where Ondo is open (typing a login with a TV remote is the slow way).
+ */
 @Composable
-fun WelcomeScreen(onAddPlaylist: () -> Unit, onTryDemo: () -> Unit, isLoading: Boolean) {
+fun WelcomeScreen(
+    onAddPlaylist: () -> Unit,
+    onTryDemo: () -> Unit,
+    isLoading: Boolean,
+    syncOn: Boolean = false,
+    syncDevices: List<SyncDevice> = emptyList(),
+    onSync: ((Boolean) -> Unit)? = null,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -121,6 +139,10 @@ fun WelcomeScreen(onAddPlaylist: () -> Unit, onTryDemo: () -> Unit, isLoading: B
         OutlinedButton(onClick = onTryDemo, enabled = !isLoading, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().padding(top = 8.dp).testTag("demoButton")) {
             if (isLoading) ButtonProgress() else Text(stringResource(R.string.try_demo))
         }
+        if (onSync != null) {
+            Spacer(Modifier.height(20.dp))
+            WelcomeSync(syncOn, syncDevices, onSync)
+        }
         Text(
             stringResource(R.string.disclaimer),
             style = MaterialTheme.typography.bodySmall,
@@ -128,6 +150,45 @@ fun WelcomeScreen(onAddPlaylist: () -> Unit, onTryDemo: () -> Unit, isLoading: B
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 24.dp).widthIn(max = 480.dp),
         )
+    }
+}
+
+/** Sync on this network from the welcome screen: the switch, what it does, and the devices found while it is on. */
+@Composable
+private fun WelcomeSync(on: Boolean, devices: List<SyncDevice>, onChange: (Boolean) -> Unit) {
+    Column(Modifier.widthIn(max = 480.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusFrame(RoundedCornerShape(12.dp), grow = 1f)
+                .toggleable(value = on, role = Role.Switch, onValueChange = onChange)
+                .padding(vertical = 8.dp, horizontal = 4.dp)
+                .testTag("welcomeSync"),
+        ) {
+            Icon(Icons.Rounded.Sync, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                Text(stringResource(R.string.sync_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.sync_summary), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Switch(checked = on, onCheckedChange = null)
+        }
+        Text(stringResource(R.string.sync_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (on) {
+            if (devices.isEmpty()) WelcomeDevice(stringResource(R.string.sync_looking), null)
+            devices.forEach { WelcomeDevice(it.name, syncDetail(it)) }
+        }
+    }
+}
+
+@Composable
+private fun WelcomeDevice(name: String, detail: String?) {
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(horizontal = 4.dp).testTag("syncDevice")) {
+        Icon(Icons.Rounded.Devices, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.padding(start = 14.dp)) {
+            Text(name, style = MaterialTheme.typography.bodyLarge)
+            detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
     }
 }
 

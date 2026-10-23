@@ -21,6 +21,8 @@ import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.core.sync.SyncMerge
+import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.PlayRequest
 import java.util.UUID
@@ -171,6 +173,7 @@ class OndoRepository(
             password = password,
             epgUrl = epgUrl?.trim()?.ifBlank { null },
             addedAt = now(),
+            updatedAt = now(),
         )
         _state.update { it.copy(isLoading = true, error = null) }
         return try {
@@ -220,7 +223,7 @@ class OndoRepository(
         val removed = _state.value.playlists.firstOrNull { it.id == id } ?: return
         val playlists = _state.value.playlists.filterNot { it.id == id }
         _state.value.library.reminders.filter { it.playlistId == id }.forEach(reminderScheduler::cancel)
-        val library = _state.value.library.removingPlaylist(id)
+        val library = _state.value.library.removingPlaylist(id, now())
         val settings = _state.value.settings.let { if (it.activePlaylistId == id) it.copy(activePlaylistId = playlists.firstOrNull()?.id) else it }
         persist {
             savePlaylists(playlists, removed)
@@ -243,6 +246,78 @@ class OndoRepository(
     fun setAppearance(appearance: com.markedoe.ondo.ui.theme.Appearance) = updateSettings { it.copy(appearance = appearance) }
 
     fun setShowAdultCategories(show: Boolean) = updateSettings { it.copy(showAdultCategories = show) }
+
+    // MARK: Sync on the local network (docs/SYNC.md)
+
+    fun setSyncOnLocalNetwork(on: Boolean) = updateSettings { it.copy(syncOnLocalNetwork = on) }
+
+    private val _syncDevices = MutableStateFlow<List<SyncDevice>>(emptyList())
+
+    /** The devices sync found or heard from while it runs (LocalSync reports them). */
+    val syncDevices: StateFlow<List<SyncDevice>> = _syncDevices.asStateFlow()
+
+    fun reportSyncDevices(devices: List<SyncDevice>) {
+        _syncDevices.value = devices
+    }
+
+    /** This installation's sync ID, made the first time it is asked for. */
+    fun syncDeviceId(): String {
+        _state.value.settings.syncDeviceId.ifEmpty { null }?.let { return it }
+        val id = UUID.randomUUID().toString()
+        updateSettings { it.copy(syncDeviceId = id) }
+        return id
+    }
+
+    /** What this device sends to sync; null until its data is loaded. Main thread. */
+    fun syncSnapshot(deviceName: String?): SyncSnapshot? {
+        if (!_state.value.isReady) return null
+        return SyncData.snapshot(_state.value, syncDeviceId(), deviceName, now())
+    }
+
+    /**
+     * Merges [incoming] with this device's data as it is now, keeps the result and returns it (what a server answers,
+     * what a client keeps). Main thread: a change made during the session is part of the merge, so none is lost.
+     */
+    fun mergeSync(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
+        val local = syncSnapshot(deviceName) ?: return null
+        val merged = SyncMerge.merge(local, incoming)
+        applySync(merged)
+        return merged
+    }
+
+    private fun applySync(merged: SyncSnapshot) {
+        val state = _state.value
+        val applied = SyncData.apply(state, merged)
+        if (applied.playlists == state.playlists && applied.library == state.library) return
+        val removedIds = applied.removed.mapTo(HashSet()) { it.id }
+        state.library.reminders.filter { it.playlistId in removedIds }.forEach(reminderScheduler::cancel)
+        // The playlist in use stays unless it was deleted; a device without one takes the first that arrived.
+        val active = state.settings.activePlaylistId?.takeIf { id -> applied.playlists.any { it.id == id } } ?: applied.playlists.firstOrNull()?.id
+        val settings = state.settings.copy(activePlaylistId = active)
+        val before = state.activePlaylist
+        persist {
+            if (applied.removed.isEmpty()) savePlaylists(applied.playlists) else applied.removed.forEach { savePlaylists(applied.playlists, it) }
+            saveLibrary(applied.library)
+            saveSettings(settings)
+            applied.removed.forEach {
+                deleteContent(it.id)
+                deleteDetails(it.id)
+            }
+        }
+        _state.update { it.copy(playlists = applied.playlists, library = applied.library, settings = settings) }
+        val after = _state.value.activePlaylist
+        when {
+            after == null -> {
+                openJob?.cancel()
+                refreshJob?.cancel()
+                guideJob?.cancel()
+                _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, isLoading = false, isRestoring = false) }
+            }
+            before?.id != after.id -> activate(after.id)
+            // Another address or login for the playlist in use: its catalogue comes again from there.
+            before.url != after.url || before.username != after.username || before.password != after.password -> load(after)
+        }
+    }
 
     fun setHideWatchedMovies(hide: Boolean) = updateSettings { it.copy(hideWatchedMovies = hide) }
 
@@ -363,7 +438,7 @@ class OndoRepository(
         updateLibrary { it.updateProgress(key, position, duration, now()) }
     }
 
-    fun removeFromHistory(entry: WatchEntry) = updateLibrary { it.remove(entry) }
+    fun removeFromHistory(entry: WatchEntry) = updateLibrary { it.remove(entry, now()) }
 
     // MARK: Reminders
 
@@ -392,7 +467,7 @@ class OndoRepository(
 
     fun renameCollection(id: String, name: String) = updateLibrary { it.renamingCollection(id, name, now()) }
 
-    fun deleteCollection(id: String) = updateLibrary { it.deletingCollection(id) }
+    fun deleteCollection(id: String) = updateLibrary { it.deletingCollection(id, now()) }
 
     /** Adds an item of the current playlist to a collection, or takes it out. */
     fun toggleInCollection(id: String, kind: ItemKind, itemId: String, title: String, imageUrl: String?) {
