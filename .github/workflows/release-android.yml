@@ -17,6 +17,11 @@ on:
         type: choice
         default: completed
         options: [completed, draft]
+      listing:
+        description: "upload: the build with the listing texts and screenshots; skip: the build alone (the listing in review stays as it is)"
+        type: choice
+        default: upload
+        options: [upload, skip]
 
 # One release at a time, whatever the tag: two uploads at once would race on the same Google Play app.
 concurrency:
@@ -36,6 +41,7 @@ jobs:
     env:
       TRACK: ${{ github.event.inputs.track || 'internal' }}
       RELEASE_STATUS: ${{ github.event.inputs.status || 'completed' }}
+      LISTING: ${{ github.event.inputs.listing || 'upload' }}
     steps:
       - name: Production comes from a version tag
         # From a branch, or another tag, the bundle would keep the default versionName of
