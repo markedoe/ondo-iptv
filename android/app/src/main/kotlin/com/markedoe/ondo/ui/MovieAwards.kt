@@ -24,7 +24,8 @@ object MovieAwards {
 
     fun rows(state: OndoState, movie: Movie, locale: Locale): List<AwardRow> {
         val language = if (locale.language == "zh") "zh-Hans" else locale.language
-        return of(state)[movie.id].orEmpty().mapNotNull { entry ->
+        // The awards file can list a film twice for one award and year (won, and nominated): once, the win first.
+        return of(state)[movie.id].orEmpty().distinctBy { it.awardId to it.year }.mapNotNull { entry ->
             val award = state.awards.award(entry.awardId) ?: return@mapNotNull null
             AwardRow(award.name(language), entry.year, entry.won, award.group in festivals, award.id)
         }
