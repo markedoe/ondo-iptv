@@ -2,8 +2,7 @@
 <resources>
     <style name="Theme.Ondo" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/brand_background</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- No bar colours here (deprecated from Android 15): each activity calls enableEdgeToEdge(). -->
     </style>
 
     <style name="Theme.Ondo.Starting" parent="Theme.SplashScreen">

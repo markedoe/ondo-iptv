@@ -23,6 +23,8 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
@@ -65,7 +67,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
-import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
@@ -194,7 +195,8 @@ class PlayerActivity : ComponentActivity() {
         // Recreated (Android stopped the app in the background, or a setting changed): what played, from where it was.
         request = savedInstanceState?.getString(EXTRA_REQUEST)?.let(::decodeRequest)
             ?: requireNotNull(intent.playRequest()) { "PlayerActivity needs a play request" }
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Edge to edge on every Android version (the default from Android 15), light bars over the black video.
+        enableEdgeToEdge(SystemBarStyle.dark(android.graphics.Color.TRANSPARENT), SystemBarStyle.dark(android.graphics.Color.TRANSPARENT))
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
