@@ -42,10 +42,14 @@ object CategoryTags {
             return code to rest.substring(length).trimStart { it.isWhitespace() || it.toString() in separators }
         }
         var bracketed = false
-        while (rest.isNotEmpty() && rest.substring(0, 1) in openers) {
+        // By index: cutting the name once per bracket copied it each time.
+        var start = 0
+        while (start < rest.length && rest[start].toString() in openers) {
             bracketed = true
-            rest = rest.substring(1).trimStart()
+            start++
+            while (start < rest.length && rest[start].isWhitespace()) start++
         }
+        rest = rest.substring(start)
         val token = readToken(rest)
         if (token.length !in 2..6 || token.none { it.isLetter() }) return null
         var after = rest.substring(token.length).trimStart()
@@ -64,12 +68,17 @@ object CategoryTags {
     /** ASCII letters and digits, with inner hyphens between upper-case parts ("EX-YU"). */
     private fun readToken(text: String): String {
         val token = StringBuilder()
+        // Whether the token has a lower-case letter so far (the token is ASCII: upper-casing changes only those).
+        var hasLowercase = false
         var index = 0
         while (index < text.length) {
             val character = text[index]
             when {
-                character.code < 128 && character.isLetterOrDigit() -> token.append(character)
-                character == '-' && token.isNotEmpty() && token.toString() == token.toString().uppercase() &&
+                character.code < 128 && character.isLetterOrDigit() -> {
+                    token.append(character)
+                    if (character in 'a'..'z') hasLowercase = true
+                }
+                character == '-' && token.isNotEmpty() && !hasLowercase &&
                     index + 1 < text.length && text[index + 1].code < 128 && text[index + 1].isUpperCase() -> token.append(character)
                 else -> break
             }
