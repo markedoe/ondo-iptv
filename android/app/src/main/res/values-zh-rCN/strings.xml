@@ -288,4 +288,5 @@
     <string name="help_sync_body">设置 → 在此网络上同步，可让你家中的设备保持相同的播放列表、我的片单、合集和播放进度。在每台设备上开启此设置并保持 Ondo 打开：Android 电视、手机或平板会自动找到其他设备；iPhone、iPad 和 Mac 通过一台 Android 设备同步。还没有播放列表的设备也可以这样获得你的播放列表：在欢迎页面开启即可。\n\n所有数据都在你的网络中直接从一台设备传到另一台，绝不经过互联网。没有配对，登录信息在网络中以未加密方式传输，因此请只在家中开启。设置、隐藏的分类和从文件导入的播放列表保留在各自的设备上。</string>
     <string name="last_crash">上次崩溃：%1$s</string>
     <string name="last_crash_hint">Ondo 停止运行时在此设备上记录。拍照发送有助于修复问题；其中不含地址和登录信息。</string>
+    <string name="web_page_unavailable">此页面无法在此设备上打开。请在手机或电脑上访问 %1$s。</string>
 </resources>

@@ -68,6 +68,9 @@ class LocalSync(
                             throw cancelled
                         } catch (_: Exception) {
                             delay(RESTART_MS)
+                        } catch (_: OutOfMemoryError) {
+                            // A frame from another device too large for this one's memory: not a stop of the app.
+                            delay(RESTART_MS)
                         }
                     }
                 }
