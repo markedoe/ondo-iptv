@@ -389,10 +389,12 @@ object UiMappers {
         val episodeProgress = details?.seasons.orEmpty().flatMap { it.episodes }
             .mapNotNull { episode -> progress(showcase.progress(series, episode))?.let { episode.id to it } }
             .toMap()
+        // A panel can list an episode twice in a season (kept so in the details on disk): each row once.
+        val seasons = details?.seasons.orEmpty().map { season -> season.copy(episodes = season.episodes.distinctBy { it.id }) }
         return SeriesDetailUiState(
             item = item,
             details = details?.info,
-            seasons = details?.seasons.orEmpty(),
+            seasons = seasons,
             selectedSeason = selectedSeason ?: next?.second?.number,
             next = next?.first,
             nextProgress = next?.first?.let { episodeProgress[it.id] },
