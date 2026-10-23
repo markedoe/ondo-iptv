@@ -117,7 +117,12 @@ final class OndoUITests: XCTestCase {
                   let time = formatter.date(from: String(label[comma.upperBound..<dash.lowerBound])) else { continue }
             let parts = calendar.dateComponents([.hour, .minute], from: time)
             guard var start = calendar.date(bySettingHour: parts.hour ?? 0, minute: parts.minute ?? 0, second: 0, of: now) else { continue }
-            if start < now.addingTimeInterval(-12 * 3600) { start = start.addingTimeInterval(86_400) }
+            // The labels give the time only: the nearest day is meant (just after midnight, 11:30 PM was yesterday).
+            if start < now.addingTimeInterval(-12 * 3600) {
+                start = start.addingTimeInterval(86_400)
+            } else if start > now.addingTimeInterval(12 * 3600) {
+                start = start.addingTimeInterval(-86_400)
+            }
             if start > now.addingTimeInterval(120) { return cell }
         }
         return nil
