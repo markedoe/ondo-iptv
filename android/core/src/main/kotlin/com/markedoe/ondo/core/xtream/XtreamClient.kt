@@ -345,10 +345,13 @@ class XtreamClient(
     }
 
     companion object {
-        /** Items sometimes reference categories the panel does not list: add "Other" buckets for them. */
+        /**
+         * Items sometimes reference categories the panel does not list: add "Other" buckets for them. A category
+         * listed twice is kept once (the first), as the lists of the app show one row per id.
+         */
         internal fun categoriesWithOrphans(categories: List<MediaCategory>, itemCategoryIds: List<String>, type: ContentType): List<MediaCategory> {
-            val known = categories.mapTo(HashSet()) { it.id }
-            val result = categories.toMutableList()
+            val result = categories.distinctBy { it.id }.toMutableList()
+            val known = result.mapTo(HashSet()) { it.id }
             val added = LinkedHashSet<String>()
             for (id in itemCategoryIds) {
                 if (id in known || !added.add(id)) continue

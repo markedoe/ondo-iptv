@@ -275,8 +275,10 @@ internal data class XtreamSeriesInfoResponse(
         fun from(json: JsonElement): XtreamSeriesInfoResponse? {
             val o = json as? JsonObject ?: return null
             val result = LinkedHashMap<Int, MutableList<XtreamEpisodeDto>>()
+            val seen = HashMap<Int, MutableSet<String>>()
             fun add(season: Int, episode: XtreamEpisodeDto) {
-                result.getOrPut(season) { ArrayList() }.add(episode)
+                // An episode listed twice in a season is kept once: the app's list shows one row per id.
+                if (seen.getOrPut(season) { HashSet() }.add(episode.id)) result.getOrPut(season) { ArrayList() }.add(episode)
             }
             when (val episodes = o["episodes"]) {
                 // {"1": [...], "2": [...]}
