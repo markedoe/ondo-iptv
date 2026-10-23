@@ -1,0 +1,307 @@
+package com.markedoe.ondo.ui.tv
+
+import android.icu.text.ListFormatter
+import android.text.format.DateUtils
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.tv.material3.Card
+import androidx.tv.material3.CardDefaults
+import androidx.tv.material3.Icon
+import androidx.tv.material3.LocalContentColor
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.TagSuggestion
+import com.markedoe.ondo.ui.components.HeroPage
+import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
+import com.markedoe.ondo.ui.components.PlayIcon
+import com.markedoe.ondo.ui.screens.HomeActions
+import com.markedoe.ondo.ui.screens.HomeUiState
+import com.markedoe.ondo.ui.screens.myListState
+import kotlinx.coroutines.delay
+
+private val HeroHeight = 380.dp
+private const val HERO_ADVANCE_MS = 8_000L
+
+/**
+ * Home on a TV: the featured titles full screen behind their title, facts, plot and buttons, then rows of cards.
+ * The focus starts on Play; Right past the last button turns the page (the drawer is on the left). The titles turn
+ * by themselves every 8 s while the focus is elsewhere.
+ */
+@Composable
+fun TvHomeScreen(
+    state: HomeUiState,
+    actions: HomeActions,
+    autoAdvance: Boolean = LocalCarouselAutoAdvance.current,
+    preparingKey: String? = null,
+) {
+    val titles = HomeTitles(
+        movies = stringResource(R.string.movies_in_progress),
+        series = stringResource(R.string.series_in_progress),
+        myList = stringResource(R.string.my_list),
+        newMovies = stringResource(R.string.new_movies),
+        newSeries = stringResource(R.string.new_series),
+        channels = stringResource(if (state.channelsAreFavorites) R.string.favorite_channels else R.string.live_tv),
+    )
+    val (resumeSeries, resumeMovies) = state.continueWatching.partition { it.isSeries }
+    LazyColumn(
+        modifier = Modifier.fillMaxSize().background(TvTokens.Ink).testTag("home"),
+        contentPadding = PaddingValues(bottom = 40.dp),
+        verticalArrangement = Arrangement.spacedBy(22.dp),
+    ) {
+        item(key = "hero") {
+            if (state.hero.isNotEmpty()) TvHero(state.hero, actions, autoAdvance, preparingKey) else TvHomeHeader(state)
+        }
+        state.tagSuggestion?.let { suggestion -> item(key = "suggestion") { TvTagSuggestion(suggestion, actions) } }
+        if (resumeMovies.isNotEmpty()) {
+            tvShelf(titles.movies, "shelfResumeMovies") {
+                items(resumeMovies, key = { it.key }) { item ->
+                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey)
+                }
+            }
+        }
+        if (resumeSeries.isNotEmpty()) {
+            tvShelf(titles.series, "shelfResumeSeries") {
+                items(resumeSeries, key = { it.key }) { item ->
+                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey)
+                }
+            }
+        }
+        if (state.myList.isNotEmpty()) {
+            tvShelf(titles.myList, "shelfMyList") {
+                items(state.myList, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("myList:${item.key}")) }
+                item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true) }
+            }
+        }
+        if (!state.hasVod) channelShelf(state, titles.channels, actions)
+        if (state.newMovies.isNotEmpty()) {
+            tvShelf(titles.newMovies, "shelfNewMovies") {
+                items(state.newMovies, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newMovies:${item.key}")) }
+            }
+        }
+        if (state.newSeries.isNotEmpty()) {
+            tvShelf(titles.newSeries, "shelfNewSeries") {
+                items(state.newSeries, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newSeries:${item.key}")) }
+            }
+        }
+        if (state.hasVod) channelShelf(state, titles.channels, actions)
+        if (!state.hasVod && state.channels.isEmpty() && !state.isLoading && !state.isRestoring) {
+            item(key = "empty") {
+                Text(
+                    stringResource(R.string.home_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = TvTokens.ContentStart, end = TvTokens.EdgeEnd),
+                )
+            }
+        }
+    }
+}
+
+private data class HomeTitles(val movies: String, val series: String, val myList: String, val newMovies: String, val newSeries: String, val channels: String)
+
+private fun androidx.compose.foundation.lazy.LazyListScope.channelShelf(state: HomeUiState, title: String, actions: HomeActions) {
+    if (state.channels.isEmpty()) return
+    tvShelf(title, "shelfChannels") {
+        items(state.channels, key = { it.channel.id }) { row ->
+            TvChannelCard(row, onClick = { actions.onPlayChannel(row) }, modifier = Modifier.focusMemory("channel:${row.channel.id}"))
+        }
+        item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllLive, tall = false) }
+    }
+}
+
+@Composable
+private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boolean, preparingKey: String?) {
+    var index by rememberSaveable { mutableIntStateOf(0) }
+    val current = index.coerceIn(0, pages.lastIndex)
+    val page = pages[current]
+    var hasFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(autoAdvance, hasFocus, pages.size, current) {
+        if (!autoAdvance || hasFocus || pages.size < 2) return@LaunchedEffect
+        delay(HERO_ADVANCE_MS)
+        index = (current + 1) % pages.size
+    }
+    val ink = TvTokens.Ink
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(HeroHeight)
+            // The whole carousel comes into view with its buttons, never cut at the top.
+            .bringIntoViewAsAWhole()
+            .onFocusChanged { hasFocus = it.hasFocus }
+            .testTag("hero"),
+    ) {
+        Crossfade(page, label = "heroArt") { TvArtwork(it.backdropUrl, it.item.posterUrl, it.item.title, Modifier.fillMaxSize()) }
+        Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink, 0.32f to ink.copy(alpha = 0.88f), 0.62f to ink.copy(alpha = 0.25f), 1f to Color.Transparent)))
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to ink)))
+        Column(
+            Modifier.padding(start = TvTokens.ContentStart, top = 56.dp).widthIn(max = 500.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                page.item.title,
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("heroTitle"),
+            )
+            Text(page.meta, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
+            page.plot?.takeIf { it.isNotBlank() }?.let {
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.72f), maxLines = 3, overflow = TextOverflow.Ellipsis)
+            }
+            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                TvActionButton(
+                    onClick = { actions.onPlay(page.item) },
+                    modifier = Modifier.focusMemory("hero-play", initial = true).testTag("heroPlay"),
+                ) {
+                    PlayIcon(page.item.key == preparingKey, Modifier.size(20.dp), tint = LocalContentColor.current)
+                    Spacer(Modifier.width(8.dp))
+                    Text(playLabel(page.resumable))
+                }
+                val listState = myListState(page.inMyList)
+                TvActionButton(
+                    onClick = { actions.onToggleMyList(page.item) },
+                    modifier = Modifier.semantics { stateDescription = listState }.testTag("heroMyList"),
+                ) {
+                    Icon(if (page.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.my_list))
+                }
+                TvActionButton(
+                    onClick = { actions.onOpen(page.item) },
+                    // Right past the last button: the next title.
+                    modifier = Modifier
+                        .onPreviewKeyEvent { event ->
+                            val next = event.key == Key.DirectionRight && pages.size > 1
+                            if (next && event.type == KeyEventType.KeyDown) index = (current + 1) % pages.size
+                            next
+                        }
+                        .testTag("heroInfo"),
+                ) {
+                    Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(stringResource(R.string.more_info))
+                }
+            }
+            if (pages.size > 1) PageDots(pages.size, current, Modifier.padding(top = 14.dp))
+        }
+    }
+}
+
+/** Which of the featured titles is shown: a dash for the current one, dots for the others. */
+@Composable
+private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        repeat(count) { index ->
+            Box(
+                Modifier
+                    .height(4.dp)
+                    .width(if (index == current) 22.dp else 7.dp)
+                    .background(Color.White.copy(alpha = if (index == current) 1f else 0.35f), RoundedCornerShape(2.dp)),
+            )
+        }
+    }
+}
+
+/** A playlist without movies or series: its name and when it was updated, above the channels. */
+@Composable
+private fun TvHomeHeader(state: HomeUiState) {
+    Column(Modifier.padding(start = TvTokens.ContentStart, top = 48.dp, end = TvTokens.EdgeEnd)) {
+        Text(state.playlistName, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        state.updatedAt?.let { updatedAt ->
+            val ago = DateUtils.getRelativeTimeSpanString(minOf(updatedAt, state.now - DateUtils.MINUTE_IN_MILLIS), state.now, DateUtils.MINUTE_IN_MILLIS)
+            Text(stringResource(R.string.updated_ago, ago), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** The one-time offer to keep only the viewer's languages, with its three answers. */
+@Composable
+private fun TvTagSuggestion(suggestion: TagSuggestion, actions: HomeActions) {
+    val kept = remember(suggestion) { ListFormatter.getInstance().format(suggestion.keptNames) }
+    val count = suggestion.kept.size + suggestion.hidden.size
+    Column(
+        Modifier
+            .padding(start = TvTokens.ContentStart, end = TvTokens.EdgeEnd)
+            .fillMaxWidth()
+            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+            .padding(20.dp)
+            .testTag("tagSuggestion"),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(stringResource(R.string.tag_suggestion_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+        Text(pluralStringResource(R.plurals.tag_suggestion_message, count, count, kept), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            TvActionButton(onClick = { actions.onAcceptSuggestion(suggestion) }, modifier = Modifier.testTag("keepMyLanguages")) { Text(stringResource(R.string.keep_only_these)) }
+            TvActionButton(onClick = actions.onChooseCategories) { Text(stringResource(R.string.choose)) }
+            TvActionButton(onClick = actions.onDismissSuggestion) { Text(stringResource(R.string.not_now)) }
+        }
+    }
+}
+
+/** The end of a row: everything in it, on a page of its own. */
+@Composable
+private fun TvSeeAllCard(onClick: () -> Unit, tall: Boolean) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.width(if (tall) TvTokens.PosterWidth else 156.dp).aspectRatio(if (tall) 2f / 3f else 16f / 9f).testTag("seeAll"),
+        shape = CardDefaults.shape(TvTokens.CardShape),
+        colors = CardDefaults.colors(containerColor = Color.White.copy(alpha = 0.08f), focusedContainerColor = Color.White),
+        scale = CardDefaults.scale(focusedScale = 1.08f),
+    ) {
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null)
+            Spacer(Modifier.height(6.dp))
+            Text(stringResource(R.string.see_all), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}

@@ -84,6 +84,9 @@ data class HeroPage(
     val meta: String,
     val inMyList: Boolean,
     val resumable: Boolean,
+    /** A wide picture from the title's details, once they are known (the TV shows it full screen). */
+    val backdropUrl: String? = null,
+    val plot: String? = null,
 )
 
 /**

@@ -97,11 +97,11 @@ class TelevisionTest {
     private fun focusedTag(): String =
         compose.onNode(isFocused()).fetchSemanticsNode().config.getOrNull(SemanticsProperties.TestTag).orEmpty()
 
-    /** From the page, to the rail, onto the tab at [index] (Home is 0), and opens it. */
+    /** From the page, to the drawer, onto the tab at [index] (Home is 0, below Search), and opens it. */
     private fun openTab(index: Int) {
         repeat(6) { if (!focusedTag().startsWith("tab")) press(Key.DirectionLeft) }
-        press(Key.DirectionUp, times = 5)
-        press(Key.DirectionDown, times = index)
+        press(Key.DirectionUp, times = 6)
+        press(Key.DirectionDown, times = index + 1)
         press(Key.DirectionCenter)
         // The page's content (computed in the background), then the focus entering it: the test's clocks (the main
         // thread's and Compose's) keep pace with real time, as on a device.
@@ -142,18 +142,16 @@ class TelevisionTest {
     private fun heroShows(title: String) = compose.onAllNodesWithText(title).fetchSemanticsNodes().isNotEmpty()
 
     @Test
-    fun rightPastTheLastItemTurnsTheCarouselPage() {
+    fun rightPastTheLastButtonTurnsTheCarouselPage() {
         start()
         assertTrue(heroShows("Northern Lights"))
-        // Play → My List → the poster beside them → the next page, on its Play.
-        press(Key.DirectionRight, times = 3)
-        compose.onNodeWithTag("heroPlay").assertIsFocused()
+        // Play → My List → More Info → the next title, the focus staying on More Info.
+        press(Key.DirectionRight, times = 2)
+        compose.onNodeWithTag("heroInfo").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("heroInfo").assertIsFocused()
         assertTrue(heroShows("Harbor Lights"))
         assertTrue(!heroShows("Northern Lights"))
-        // Left past Play goes back a page.
-        press(Key.DirectionLeft)
-        compose.onNodeWithTag("heroPlay").assertIsFocused()
-        assertTrue(heroShows("Northern Lights"))
     }
 
     @Test
@@ -213,9 +211,48 @@ class TelevisionTest {
     }
 
     @Test
-    fun leftFromPlayOnTheFirstPageReachesTheTabs() {
+    fun leftFromPlayReachesTheDrawerOnHome() {
         start()
         press(Key.DirectionLeft)
-        assertTrue("the focus is on a tab: ${focused()}", focusedTag().startsWith("tab"))
+        assertEquals("tabHome", focusedTag())
+    }
+
+    @Test
+    fun leftFromATabsPageLandsOnThatTab() {
+        start()
+        openTab(1)
+        press(Key.DirectionDown)
+        repeat(6) { if (!focusedTag().startsWith("tab")) press(Key.DirectionLeft) }
+        assertEquals("tabMovies", focusedTag())
+    }
+
+    @Test
+    fun backGoesToTheDrawerThenHomeThenOut() {
+        start()
+        openTab(2)
+        // From the page: the drawer, on the tab shown.
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+        assertEquals("tabSeries", focusedTag())
+        // From the drawer: Home.
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("home").fetchSemanticsNodes().isNotEmpty() }
+        // From Home's drawer, Back is the system's (out of the app).
+        repeat(6) { if (!focusedTag().startsWith("tab")) press(Key.DirectionLeft) }
+        compose.runOnIdle { assertTrue(!compose.activity.onBackPressedDispatcher.hasEnabledCallbacks()) }
+    }
+
+    @Test
+    fun aMoviePageHasNoBackButtonAndOpensOnPlay() {
+        start()
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        compose.waitUntil(10_000) { compose.onAllNodesWithTag("detail").fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
+        compose.onNodeWithTag("detailPlay").assertIsFocused()
+        assertTrue(compose.onAllNodesWithContentDescription("Back").fetchSemanticsNodes().isEmpty())
+        // No drawer beside a movie: Left from Play stays on the page.
+        press(Key.DirectionLeft)
+        compose.onNodeWithTag("detailPlay").assertIsFocused()
     }
 }

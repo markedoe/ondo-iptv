@@ -9,14 +9,15 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.gestures.BringIntoViewSpec
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ripple.RippleAlpha
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RippleConfiguration
-import androidx.compose.material3.LocalRippleConfiguration
-import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -70,8 +71,9 @@ val TvScrolling: BringIntoViewSpec = object : BringIntoViewSpec {
 val TvSafeArea = PaddingValues(horizontal = 48.dp, vertical = 27.dp)
 
 /**
- * The whole app on a TV: nothing in the 5 % the screen may crop (overscan, TV-OV) while the background still fills
- * it, and lists scrolling the focused item to a third of the way ([TvScrolling]). Elsewhere, [content] as it is.
+ * The whole app on a TV: Compose for TV's theme in Ondo's colours, the dark ground across the whole screen, and lists
+ * scrolling the focused item to a third of the way ([TvScrolling]). The pages keep clear of the 5 % the screen may crop
+ * themselves ([tvSafeArea]), so pictures can still run to the edges. Elsewhere, [content] as it is.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -80,9 +82,30 @@ fun TelevisionFrame(content: @Composable () -> Unit) {
         content()
         return
     }
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(TvSafeArea)) {
-        CompositionLocalProvider(LocalBringIntoViewSpec provides TvScrolling, content = content)
+    OndoTvTheme {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            // Material's text outside a surface takes the light colour of the dark ground (no scaffold around pages).
+            CompositionLocalProvider(
+                LocalBringIntoViewSpec provides TvScrolling,
+                LocalContentColor provides MaterialTheme.colorScheme.onBackground,
+                content = content,
+            )
+        }
     }
+}
+
+/**
+ * On a TV, keeps a page clear of the 5 % the screen may crop (TV-OV), and of the closed drawer when [besideDrawer].
+ * Elsewhere, nothing.
+ */
+fun Modifier.tvSafeArea(besideDrawer: Boolean = false): Modifier = composed {
+    if (!isTelevision()) return@composed this
+    padding(
+        start = if (besideDrawer) TvTokens.ContentStart else TvTokens.EdgeEnd,
+        top = TvTokens.EdgeTop,
+        end = TvTokens.EdgeEnd,
+        bottom = TvTokens.EdgeTop,
+    )
 }
 
 /**

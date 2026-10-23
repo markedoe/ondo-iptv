@@ -32,11 +32,14 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   on disk by Coil 3 (up to 512 MB, in the app's cache; `OndoApplication.kt`).
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi
   (`res/values-*`), also offered in Android 13's per-app language setting (`res/xml/locales_config.xml`).
-- **Android TV / Google TV** (`ui/tv/Television.kt`): a Leanback launcher entry and banner (320 × 180 at xhdpi,
-  drawn by `fastlane/creative/render.mjs --tv`), touch screen not required; the same Compose screens, with a
-  navigation rail, the TV's safe area (48 × 27 dp), a frame around the focused item, a focus that comes back to
-  the card left (`FocusMemory`) and enters each page by itself (`FocusEntry`), rows scrolled to a third of the
-  way, a side-by-side carousel and detail header on short landscape screens (also a phone on its side). Player:
+- **Android TV / Google TV** (`ui/tv/`): a Leanback launcher entry and banner (320 × 180 at xhdpi,
+  drawn by `fastlane/creative/render.mjs --tv`), touch screen not required. Compose for TV (`androidx.tv:tv-material`)
+  in Ondo's colours (`TvDesign.kt`): a navigation drawer with Search, the tabs and Settings (`TvShell.kt`; Back goes
+  from a page to the drawer, then to Home, then out), a full-screen Home (`TvHomeScreen.kt`) and movie and series
+  pages (`TvDetailScreens.kt`) with backdrops behind the text, cards that grow with a white border on focus and
+  rows peeking past the right edge; the other pages are the Compose screens within the TV's safe area
+  (48 × 27 dp). A focus that comes back to the card left (`FocusMemory`) and enters each page by itself
+  (`FocusEntry`), rows scrolled to a third of the way. Player:
   OK pauses, Left / Right seek, Up / Down, CH+ / CH−, the number keys and Last Channel change channel
   (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), a channel banner, Back hides the controls. Google's
   TV app quality: no Picture-in-Picture on a TV, the screen kept on while playing only, no browser (the privacy

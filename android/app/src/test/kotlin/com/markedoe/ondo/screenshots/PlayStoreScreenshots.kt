@@ -1,7 +1,9 @@
 package com.markedoe.ondo.screenshots
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.markedoe.ondo.Fixtures
@@ -25,6 +27,12 @@ import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.TelevisionFrame
+import com.markedoe.ondo.ui.tv.TvHomeScreen
+import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
+import com.markedoe.ondo.ui.tv.TvNavigationFrame
+import com.markedoe.ondo.ui.tv.TvPlace
+import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
+import com.markedoe.ondo.ui.tv.tvSafeArea
 import java.util.Locale
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -34,7 +42,7 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Google Play listing screenshots, from the fixture catalogue: phone (1080×1920), 7" (1920×1080) and
- * 10" (2560×1440) tablets and TV (1920×1080, inside the TV's safe area), in English and French. Written to `src/test/screenshots/play/<locale>/<device>/`
+ * 10" (2560×1440) tablets and TV (1920×1080, with its drawer and its own pages), in English and French. Written to `src/test/screenshots/play/<locale>/<device>/`
  * by `./gradlew :app:recordRoborazziDebug`; the release workflow copies them into the store listing.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
@@ -75,7 +83,10 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
 
     private val state get() = Fixtures.state(library)
 
-    private fun capture(name: String, tab: TopLevel, content: @Composable () -> Unit) {
+    private val tv get() = device == Device.TV
+
+    /** On a TV, the drawer beside the tabs' pages ([drawer]); the pages beyond them take the whole screen. */
+    private fun capture(name: String, tab: TopLevel, drawer: Boolean = true, content: @Composable () -> Unit) {
         val language = locale.substringBefore('-')
         val region = locale.substringAfter('-')
         RuntimeEnvironment.setQualifiers("$language-r$region-${device.qualifiers}")
@@ -85,7 +96,13 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
         ) {
             OndoTheme {
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
-                    TelevisionFrame { OndoNavigationFrame(tab, onSelect = {}) { content() } }
+                    TelevisionFrame {
+                        if (tv) {
+                            TvNavigationFrame(TvPlace.Tab(tab), showDrawer = drawer, onSelect = {}, onSearch = {}, onSettings = {}) { content() }
+                        } else {
+                            OndoNavigationFrame(tab, onSelect = {}) { content() }
+                        }
+                    }
                 }
             }
         }
@@ -93,22 +110,27 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
 
     @Test
     fun home() = capture("01-home", TopLevel.HOME) {
-        HomeScreen(UiMappers.home(state, labels, Fixtures.NOW).copy(channels = emptyList()), HomeActions())
+        val home = UiMappers.home(state, labels, Fixtures.NOW).copy(channels = emptyList())
+        if (tv) TvHomeScreen(home, HomeActions()) else HomeScreen(home, HomeActions())
     }
 
     @Test
-    fun movie() = capture("02-movie", TopLevel.MOVIES) {
-        MovieDetailScreen(UiMappers.movieDetail(state, Fixtures.glassCity), DetailActions())
+    fun movie() = capture("02-movie", TopLevel.MOVIES, drawer = false) {
+        val movie = UiMappers.movieDetail(state, Fixtures.glassCity)
+        if (tv) TvMovieDetailScreen(movie, DetailActions()) else MovieDetailScreen(movie, DetailActions())
     }
 
     @Test
-    fun series() = capture("03-series", TopLevel.SERIES) {
-        SeriesDetailScreen(UiMappers.seriesDetail(state, Fixtures.harborLights, null, null), DetailActions())
+    fun series() = capture("03-series", TopLevel.SERIES, drawer = false) {
+        val series = UiMappers.seriesDetail(state, Fixtures.harborLights, null, null)
+        if (tv) TvSeriesDetailScreen(series, DetailActions()) else SeriesDetailScreen(series, DetailActions())
     }
 
     @Test
     fun movies() = capture("04-movies", TopLevel.MOVIES) {
-        VodScreen(UiMappers.vod(state, series = false, title = if (french) "Films" else "Movies"), VodActions())
+        Box(Modifier.tvSafeArea(besideDrawer = true)) {
+            VodScreen(UiMappers.vod(state, series = false, title = if (french) "Films" else "Movies"), VodActions())
+        }
     }
 
     @Test
@@ -119,11 +141,13 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
             listOf("Evening News" to "Weather", "World in Focus" to "The Debate", "Cup Final" to "Highlights", "Alpine Tour" to "Stage Finish")
         }
         val live = UiMappers.live(state, null, false, Fixtures.NOW)
-        LiveScreen(
-            live.copy(channels = live.channels.mapIndexed { index, row ->
-                row.copy(nowTitle = programmes[index].first, nowProgress = 0.2f + 0.18f * index, nextTitle = programmes[index].second)
-            }),
-            LiveActions(),
-        )
+        Box(Modifier.tvSafeArea(besideDrawer = true)) {
+            LiveScreen(
+                live.copy(channels = live.channels.mapIndexed { index, row ->
+                    row.copy(nowTitle = programmes[index].first, nowProgress = 0.2f + 0.18f * index, nextTitle = programmes[index].second)
+                }),
+                LiveActions(),
+            )
+        }
     }
 }

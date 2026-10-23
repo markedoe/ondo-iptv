@@ -127,7 +127,15 @@ object UiMappers {
         val hidden = hiddenCategoryIds(state)
         val hero = showcase.heroItems(now).map { item ->
             val resumable = (item as? ShowcaseItem.MovieItem)?.let { showcase.progress(it.movie)?.isResumable } == true
-            HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable)
+            val details = when (item) {
+                is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
+                is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
+            }
+            val plot = when (item) {
+                is ShowcaseItem.MovieItem -> item.movie.plot
+                is ShowcaseItem.SeriesItem -> item.series.plot
+            }
+            HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable, details?.backdropUrl, details?.plot ?: plot)
         }
         val channelsById = state.content.channels.filter { it.categoryId !in hidden }.associateBy { it.id }
         val favoriteChannels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }

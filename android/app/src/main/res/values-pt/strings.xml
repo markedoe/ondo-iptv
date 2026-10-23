@@ -10,6 +10,7 @@
     <string name="play">Reproduzir</string>
     <string name="resume">Retomar</string>
     <string name="my_list">Minha lista</string>
+    <string name="more_info">Mais informações</string>
     <string name="in_my_list">Na Minha lista</string>
     <string name="not_in_my_list">Fora da Minha lista</string>
     <string name="from_start">Do início</string>
@@ -228,7 +229,7 @@
     <string name="help_guide_title">Guia de TV e lembretes</string>
     <string name="help_guide_body">O botão de guia da TV ao vivo mostra os programas dos canais escolhidos ali (Minha lista, uma categoria ou todos). O guia vem do seu provedor, ou do endereço XMLTV informado ao adicionar uma playlist M3U.\n\nAbra um programa futuro e crie um lembrete: uma notificação chega alguns minutos antes do início. O sino do guia lista seus lembretes.</string>
     <string name="help_remote_title">Com o controle remoto</string>
-    <string name="help_remote_body">Navegue com as setas e aperte OK para escolher; Voltar volta, e Voltar no Início fecha o Ondo.\n\nNo player, OK pausa, retoma e mostra os controles (a tecla Info também os mostra; Mais fica embaixo, com os outros botões); Esquerda e Direita voltam e avançam. Em um canal ao vivo, Cima e Baixo ou as teclas de canal mudam de canal, os números levam direto a um canal e a tecla de canal anterior volta para o que você assistia antes.\n\nNa TV ao vivo, mantenha OK pressionado em um canal para adicioná-lo à Minha lista.</string>
+    <string name="help_remote_body">Navegue com as setas e aperte OK para escolher. O menu fica à esquerda: Pesquisar, as abas e Configurações. Voltar fecha uma página; em uma aba, leva ao menu e depois ao Início, e Voltar no menu do Início fecha o Ondo.\n\nNo player, OK pausa, retoma e mostra os controles (a tecla Info também os mostra; Mais fica embaixo, com os outros botões); Esquerda e Direita voltam e avançam. Em um canal ao vivo, Cima e Baixo ou as teclas de canal mudam de canal, os números levam direto a um canal e a tecla de canal anterior volta para o que você assistia antes.\n\nNa TV ao vivo, mantenha OK pressionado em um canal para adicioná-lo à Minha lista.</string>
     <plurals name="guide_row_limit">
         <item quantity="one">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>
         <item quantity="many">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>

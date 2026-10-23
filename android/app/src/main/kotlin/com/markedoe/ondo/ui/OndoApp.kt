@@ -14,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -23,10 +22,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScope
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -38,14 +34,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavBackStackEntry
@@ -108,7 +102,12 @@ import com.markedoe.ondo.ui.tv.FocusEntry
 import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
 import com.markedoe.ondo.ui.tv.TelevisionFrame
-import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.TvHomeScreen
+import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
+import com.markedoe.ondo.ui.tv.TvNavigationFrame
+import com.markedoe.ondo.ui.tv.TvPlace
+import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
+import com.markedoe.ondo.ui.tv.tvSafeArea
 import com.markedoe.ondo.ui.tv.isTelevision
 import com.markedoe.ondo.ui.tv.rememberFocusMemory
 import kotlinx.coroutines.Dispatchers
@@ -137,7 +136,7 @@ fun OndoApp(viewModel: OndoViewModel) {
     TelevisionFrame {
         when {
             !state.isReady -> Box(Modifier.fillMaxSize())
-            state.playlists.isEmpty() -> FocusEntry { Onboarding(viewModel) }
+            state.playlists.isEmpty() -> FocusEntry(Modifier.tvSafeArea()) { Onboarding(viewModel) }
             else -> MainTabs(viewModel)
         }
     }
@@ -177,7 +176,24 @@ private fun MainTabs(viewModel: OndoViewModel) {
         val destination = entry?.destination ?: return@LaunchedEffect
         TopLevel.entries.firstOrNull { destination.hasRoute(it.route::class) }?.let { selected = it }
     }
-    OndoNavigationFrame(selected, onSelect = navController::openTab) {
+    val destination = entry?.destination
+    val searching = destination?.hasRoute(Routes.Search::class) == true
+    val tabPage = searching || TopLevel.entries.any { destination?.hasRoute(it.route::class) == true }
+    val frame: @Composable (@Composable () -> Unit) -> Unit = if (isTelevision()) {
+        { pages ->
+            TvNavigationFrame(
+                place = if (searching) TvPlace.Search else TvPlace.Tab(selected),
+                showDrawer = tabPage,
+                onSelect = navController::openTab,
+                onSearch = { navController.navigate(Routes.Search) { launchSingleTop = true } },
+                onSettings = { navController.navigate(Routes.Settings) },
+                content = pages,
+            )
+        }
+    } else {
+        { pages -> OndoNavigationFrame(selected, onSelect = navController::openTab, content = pages) }
+    }
+    frame {
         Box(Modifier.fillMaxSize()) {
             // A short fade between pages (the default crossfade lasts 700 ms).
             NavHost(
@@ -188,14 +204,14 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 popEnterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
                 popExitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
             ) {
-                page<Routes.Home> { HomeDestination(viewModel, navController) }
-                page<Routes.Movies> { VodDestination(viewModel, navController, series = false) }
-                page<Routes.Series> { VodDestination(viewModel, navController, series = true) }
-                page<Routes.Live> { LiveDestination(viewModel, navController) }
-                page<Routes.Search> { SearchDestination(viewModel, navController) }
-                page<Routes.MyList> { MyListDestination(viewModel, navController) }
-                page<Routes.MovieDetail> { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
-                page<Routes.SeriesDetail> { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
+                page<Routes.Home>(TvMargins.NONE) { HomeDestination(viewModel, navController) }
+                page<Routes.Movies>(TvMargins.BESIDE_DRAWER) { VodDestination(viewModel, navController, series = false) }
+                page<Routes.Series>(TvMargins.BESIDE_DRAWER) { VodDestination(viewModel, navController, series = true) }
+                page<Routes.Live>(TvMargins.BESIDE_DRAWER) { LiveDestination(viewModel, navController) }
+                page<Routes.Search>(TvMargins.BESIDE_DRAWER) { SearchDestination(viewModel, navController) }
+                page<Routes.MyList>(TvMargins.BESIDE_DRAWER) { MyListDestination(viewModel, navController) }
+                page<Routes.MovieDetail>(TvMargins.NONE) { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
+                page<Routes.SeriesDetail>(TvMargins.NONE) { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
                 page<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
                 page<Routes.Browse> { BrowseDestination(viewModel, navController, it.toRoute()) }
                 page<Routes.Guide> { GuideDestination(viewModel, navController) }
@@ -237,34 +253,23 @@ private fun MainTabs(viewModel: OndoViewModel) {
     }
 }
 
-/** The tabs around the pages: a bottom bar on phones, a rail on tablets, Chromebooks and TVs. */
+/** The tabs around the pages: a bottom bar on phones, a rail on tablets and Chromebooks (a TV has its drawer). */
 @Composable
 fun OndoNavigationFrame(selected: TopLevel, onSelect: (TopLevel) -> Unit, content: @Composable () -> Unit) {
-    val television = isTelevision()
-    // On a TV, a frame shows which tab the remote is on (the selected one keeps its pill).
-    val frame = if (television) Modifier.focusFrame(RoundedCornerShape(16.dp), grow = 1f) else Modifier
-    val items: NavigationSuiteScope.() -> Unit = {
-        TopLevel.entries.forEach { tab ->
-            item(
-                selected = tab == selected,
-                onClick = { onSelect(tab) },
-                icon = { Icon(tab.icon, contentDescription = null) },
-                label = { Text(stringResource(tab.label)) },
-                modifier = frame.testTag(tab.tag),
-            )
-        }
-    }
-    if (television) {
-        // A rail whatever the window's size class, on the page's own background.
-        NavigationSuiteScaffold(
-            navigationSuiteItems = items,
-            layoutType = NavigationSuiteType.NavigationRail,
-            navigationSuiteColors = NavigationSuiteDefaults.colors(navigationRailContainerColor = Color.Transparent),
-            content = content,
-        )
-    } else {
-        NavigationSuiteScaffold(navigationSuiteItems = items, content = content)
-    }
+    NavigationSuiteScaffold(
+        navigationSuiteItems = {
+            TopLevel.entries.forEach { tab ->
+                item(
+                    selected = tab == selected,
+                    onClick = { onSelect(tab) },
+                    icon = { Icon(tab.icon, contentDescription = null) },
+                    label = { Text(stringResource(tab.label)) },
+                    modifier = Modifier.testTag(tab.tag),
+                )
+            }
+        },
+        content = content,
+    )
 }
 
 /** Loading failures (the cached catalogue stays on screen), with a retry. */
@@ -283,10 +288,17 @@ private fun ErrorSnackbar(viewModel: OndoViewModel, modifier: Modifier, onRetry:
     SnackbarHost(host, modifier.testTag("errorSnackbar"))
 }
 
+/** How a page keeps clear of a TV's edges: by itself (pictures to the edges), beside the drawer, or within the margins. */
+private enum class TvMargins { NONE, BESIDE_DRAWER, SAFE_AREA }
+
 /** A page of the app, which keeps where the remote's focus was while another page is open (see [FocusMemory]). */
-private inline fun <reified T : Any> NavGraphBuilder.page(noinline content: @Composable (NavBackStackEntry) -> Unit) {
+private inline fun <reified T : Any> NavGraphBuilder.page(
+    margins: TvMargins = TvMargins.SAFE_AREA,
+    noinline content: @Composable (NavBackStackEntry) -> Unit,
+) {
     composable<T> { entry ->
-        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) { FocusEntry { content(entry) } }
+        val modifier = if (margins == TvMargins.NONE) Modifier else Modifier.tvSafeArea(besideDrawer = margins == TvMargins.BESIDE_DRAWER)
+        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) { FocusEntry(modifier) { content(entry) } }
     }
 }
 
@@ -317,10 +329,7 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
     val state = home ?: return Loading()
     // The series of the carousel and of Continue watching are fetched ahead while Home is shown: Play starts at once.
     LaunchedEffect(state.hero.map { it.item.key }, state.continueWatching.map { it.key }) { viewModel.prefetchSeries(state) }
-    HomeScreen(
-        state = state,
-        preparingKey = preparing,
-        actions = HomeActions(
+    val actions = HomeActions(
             onOpen = navController::open,
             onPlay = viewModel::play,
             onToggleMyList = viewModel::toggleMyList,
@@ -337,8 +346,8 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
                 navController.navigate(Routes.Categories())
             },
             onDismissSuggestion = viewModel::dismissTagSuggestion,
-        ),
-    )
+        )
+    if (isTelevision()) TvHomeScreen(state, actions, preparingKey = preparing) else HomeScreen(state = state, preparingKey = preparing, actions = actions)
 }
 
 @Composable
@@ -406,9 +415,7 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
     }
     val ui = detail ?: return Loading()
     val movie = ui.item.movie
-    MovieDetailScreen(
-        state = ui,
-        actions = DetailActions(
+    val actions = DetailActions(
             onBack = { navController.popBackStack() },
             onPlay = { viewModel.playMovie(id) },
             onPlayFromStart = { viewModel.playMovie(id, fromStart = true) },
@@ -418,8 +425,8 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
             onBrowse = { kind, value -> navController.navigate(Routes.Browse(kind.name, value)) },
             onToggleCollection = { viewModel.toggleInCollection(it, ShowcaseItem.MovieItem(movie)) },
             onNewCollection = { viewModel.newCollection(it, ShowcaseItem.MovieItem(movie)) },
-        ),
-    )
+        )
+    if (isTelevision()) TvMovieDetailScreen(ui, actions) else MovieDetailScreen(ui, actions)
 }
 
 @Composable
@@ -435,9 +442,7 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
     val computed = detail ?: return Loading()
     // The season chosen and a loading error show at once, without computing the page again.
     val ui = computed.copy(selectedSeason = season ?: computed.selectedSeason, error = errors[id]?.let { loadErrorText(it) })
-    SeriesDetailScreen(
-        state = ui,
-        actions = DetailActions(
+    val actions = DetailActions(
             onBack = { navController.popBackStack() },
             onPlay = { ui.next?.let { viewModel.playEpisode(id, it) } },
             onToggleMyList = { viewModel.toggleMyList(ui.item) },
@@ -448,8 +453,8 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onPlayEpisode = { viewModel.playEpisode(id, it) },
             onToggleCollection = { viewModel.toggleInCollection(it, ui.item) },
             onNewCollection = { viewModel.newCollection(it, ui.item) },
-        ),
-    )
+        )
+    if (isTelevision()) TvSeriesDetailScreen(ui, actions) else SeriesDetailScreen(ui, actions)
 }
 
 @Composable

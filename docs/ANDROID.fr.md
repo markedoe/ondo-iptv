@@ -36,12 +36,15 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Langues** : anglais, français, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi (`res/values-*`), proposées aussi dans le réglage de langue par app d'Android 13
   (`res/xml/locales_config.xml`).
-- **Android TV / Google TV** (`ui/tv/Television.kt`) : une entrée et une bannière dans le lanceur Leanback
-  (320 × 180 en xhdpi, dessinée par `fastlane/creative/render.mjs --tv`), écran tactile non requis ; les mêmes
-  écrans Compose, avec un rail de navigation, la zone sûre de la TV (48 × 27 dp), un cadre autour de l'élément
-  sélectionné, une sélection qui revient sur la carte quittée (`FocusMemory`) et entre d'elle-même dans chaque
-  page (`FocusEntry`), des rangées qui défilent jusqu'au tiers, un carrousel et un en-tête de fiche côte à côte sur
-  les écrans bas en paysage (un téléphone couché aussi). Lecteur : OK met en pause, Gauche / Droite reculent et
+- **Android TV / Google TV** (`ui/tv/`) : une entrée et une bannière dans le lanceur Leanback
+  (320 × 180 en xhdpi, dessinée par `fastlane/creative/render.mjs --tv`), écran tactile non requis. Compose for TV
+  (`androidx.tv:tv-material`) aux couleurs d'Ondo (`TvDesign.kt`) : un menu latéral avec Recherche, les onglets et
+  Réglages (`TvShell.kt` ; Retour mène d'une page au menu, puis à l'Accueil, puis hors de l'app), un Accueil plein
+  écran (`TvHomeScreen.kt`) et des fiches film et série (`TvDetailScreens.kt`) avec l'image de fond derrière le
+  texte, des cartes qui grandissent avec un contour blanc à la sélection et des rangées qui dépassent du bord droit ;
+  les autres pages sont les écrans Compose dans la zone sûre de la TV (48 × 27 dp). Une sélection qui revient sur
+  la carte quittée (`FocusMemory`) et entre d'elle-même dans chaque page (`FocusEntry`), des rangées qui défilent
+  jusqu'au tiers. Lecteur : OK met en pause, Gauche / Droite reculent et
   avancent, Haut / Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de chaîne
   (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), un bandeau de chaîne, Retour masque les commandes.
   Qualité des apps TV de Google : pas d'image dans l'image sur une TV, l'écran gardé allumé seulement pendant la
