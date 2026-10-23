@@ -2,7 +2,6 @@ package com.markedoe.ondo.core.net
 
 import java.io.BufferedInputStream
 import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.util.zip.GZIPInputStream
@@ -34,10 +33,21 @@ object Gzip {
     /**
      * Inflates gzip (concatenated members included) or zlib data. A truncated stream keeps what could be
      * inflated (a partial guide is better than none); nothing inflatable throws [GzipException].
+     *
+     * The inflated size is measured first, keeping nothing, then the data is inflated into an array of that size: a
+     * few hundred kilobytes can inflate to the limit, and a buffer grown towards it (doubled, then copied) needed
+     * several times the limit in memory, so the app ran out of memory before the limit was reached.
      */
     fun gunzip(bytes: ByteArray, limit: Long = MAX_GUNZIPPED_SIZE): ByteArray {
         if (bytes.isEmpty()) return bytes
-        val output = ByteArrayOutputStream(minOf(bytes.size.toLong() * 6, 64L * 1024 * 1024).toInt())
+        val size = inflate(bytes, limit, into = null)
+        return ByteArray(size).also { inflate(bytes, limit, into = it) }
+    }
+
+    /** Inflates `bytes` into [into] (until it is full), or only counts the inflated bytes when it is null. */
+    private fun inflate(bytes: ByteArray, limit: Long, into: ByteArray?): Int {
+        val ceiling = minOf(limit, Int.MAX_VALUE - 8L)
+        var count = 0
         try {
             val input: InputStream = if (isGzipped(bytes)) {
                 GZIPInputStream(ByteArrayInputStream(bytes), BUFFER_SIZE)
@@ -45,20 +55,23 @@ object Gzip {
                 InflaterInputStream(ByteArrayInputStream(bytes))
             }
             input.use { stream ->
-                val buffer = ByteArray(BUFFER_SIZE)
+                val buffer = into ?: ByteArray(BUFFER_SIZE)
                 while (true) {
-                    val read = stream.read(buffer)
+                    val offset = if (into == null) 0 else count
+                    val length = if (into == null) buffer.size else into.size - count
+                    if (length == 0) break
+                    val read = stream.read(buffer, offset, length)
                     if (read < 0) break
-                    if (output.size() + read > limit) throw GzipTooLargeException(limit)
-                    output.write(buffer, 0, read)
+                    if (count.toLong() + read > ceiling) throw GzipTooLargeException(limit)
+                    count += read
                 }
             }
         } catch (e: GzipTooLargeException) {
             throw e
         } catch (e: IOException) {
-            if (output.size() == 0) throw GzipException("Could not inflate the data: ${e.message}", e)
+            if (count == 0) throw GzipException("Could not inflate the data: ${e.message}", e)
         }
-        return output.toByteArray()
+        return count
     }
 
     /**
