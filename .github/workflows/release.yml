@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: What to deliver
+        description: "What to deliver (builds: iOS and macOS without the listing, what a push to main sends to TestFlight)"
         type: choice
         default: all
-        options: [all, ios, mac, metadata, metadata-ios, metadata-mac, submit, status]
+        options: [all, builds, ios, mac, metadata, metadata-ios, metadata-mac, submit, status]
       edition:
         description: "testflight: with downloads, for testers only; app-store: without downloads, the build to submit"
         type: choice
@@ -92,19 +92,19 @@ jobs:
       - name: Privacy manifest and Mac sandbox checks
         # Every upload, TestFlight edition included: App Store Connect refuses a build that uses a required reason
         # API its privacy manifest does not declare, and the Mac app needs exactly its sandbox entitlements.
-        if: env.TARGET == 'all' || env.TARGET == 'ios' || env.TARGET == 'mac' || env.TARGET == 'submit'
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'mac' || env.TARGET == 'submit'
         run: |
           python3 .github/scripts/check_privacy_manifest.py
           python3 .github/scripts/check_mac_entitlements.py
       - name: Generate Xcode project
         # Here, without secrets, rather than in the fastlane lanes that sign and upload.
-        if: env.TARGET == 'all' || env.TARGET == 'ios' || env.TARGET == 'mac'
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios' || env.TARGET == 'mac'
         run: |
           brew install xcodegen || true
           xcodegen generate
       - name: iOS → TestFlight
         id: ios
-        if: env.TARGET == 'all' || env.TARGET == 'ios'
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'ios'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
@@ -113,7 +113,7 @@ jobs:
         run: bundle exec fastlane ios beta
       - name: macOS → TestFlight
         id: mac
-        if: env.TARGET == 'all' || env.TARGET == 'mac'
+        if: env.TARGET == 'all' || env.TARGET == 'builds' || env.TARGET == 'mac'
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}

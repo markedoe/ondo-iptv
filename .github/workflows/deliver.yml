@@ -1,0 +1,75 @@
+name: Deliver
+
+# A push to main, once green, goes to the testers by itself: iOS and macOS to TestFlight (TestFlight edition) when CI
+# passed and the Apple app changed, Android to Google Play internal testing (the build alone, not the listing) when
+# the Android workflow passed and android/ changed. Nothing is submitted for review here: a version tag does that
+# (release.yml, release-android.yml; CLAUDE.md, App Store).
+on:
+  workflow_run:
+    workflows: [CI, Android]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: write
+  contents: read
+
+# One decision at a time per source; the release workflows keep their own one-at-a-time order.
+concurrency:
+  group: deliver-${{ github.event.workflow_run.name }}
+  cancel-in-progress: false
+
+jobs:
+  testers:
+    name: To the testers
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      SHA: ${{ github.event.workflow_run.head_sha }}
+      SOURCE: ${{ github.event.workflow_run.name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Send the push's builds
+        run: |
+          # A release workflow run by hand builds main as it is now: only when that is the commit that passed.
+          main=$(git rev-parse HEAD)
+          if [ "$main" != "$SHA" ]; then
+            echo "main is now at $main, newer than $SHA: that push's own delivery sends it."
+            exit 0
+          fi
+          if git tag --points-at "$SHA" | grep -q '^v'; then
+            echo "$SHA carries a version tag: the tag's release delivers it."
+            exit 0
+          fi
+          if [ "$SOURCE" = CI ]; then
+            source_workflow=ci.yml
+            paths="App AppTests Packages project.yml fastlane/Fastfile Gemfile Gemfile.lock"
+          else
+            source_workflow=android.yml
+            paths="android"
+          fi
+          # What changed since the previous green push of the same workflow, the last one delivered.
+          previous=$(gh run list --repo "$REPO" --workflow "$source_workflow" --branch main --event push --status success \
+            --limit 10 --json headSha --jq "[.[] | .headSha | select(. != \"$SHA\")][0] // empty")
+          if [ -n "$previous" ] && git cat-file -e "$previous^{commit}" 2>/dev/null; then
+            # shellcheck disable=SC2086 # the paths are words
+            changed=$(git diff --name-only "$previous" "$SHA" -- $paths | head -20)
+            if [ -z "$changed" ]; then
+              echo "Nothing the apps ship changed since $previous: no new build."
+              exit 0
+            fi
+            printf 'Changed since %s:\n%s\n' "$previous" "$changed"
+          fi
+          if [ "$SOURCE" = CI ]; then
+            gh workflow run release.yml --repo "$REPO" --ref main -f target=builds -f edition=testflight
+            echo "TestFlight: iOS and macOS builds of $SHA started (Release, target builds)."
+          else
+            gh workflow run release-android.yml --repo "$REPO" --ref main -f track=internal -f status=completed -f listing=skip
+            echo "Google Play internal testing: build of $SHA started (Release Android)."
+          fi
