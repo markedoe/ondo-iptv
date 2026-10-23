@@ -3,8 +3,8 @@ package com.markedoe.ondo.core.parsing
 import com.markedoe.ondo.core.model.HttpHeaders
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.nilIfBlank
+import com.markedoe.ondo.core.parseJsonOrNull
 import com.markedoe.ondo.core.toStrictDoubleOrNull
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -290,11 +290,7 @@ object M3uParser {
 
     /** `#EXTHTTP:{"cookie":"…","User-Agent":"…"}`. */
     internal fun applyExtHttp(json: String, headers: HttpHeaders): HttpHeaders {
-        val obj = try {
-            Json.parseToJsonElement(json) as? JsonObject
-        } catch (_: IllegalArgumentException) {
-            null
-        } ?: return headers
+        val obj = parseJsonOrNull(json) as? JsonObject ?: return headers
         var result = headers
         for ((key, value) in obj) {
             if (value is JsonPrimitive && value.isString) result = setHeader(key, value.content, result)

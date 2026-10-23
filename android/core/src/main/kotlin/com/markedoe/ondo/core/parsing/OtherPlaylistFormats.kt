@@ -5,9 +5,9 @@ import com.markedoe.ondo.core.model.HttpHeaders
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.nonEmptyLines
 import com.markedoe.ondo.core.numberString
+import com.markedoe.ondo.core.parseJsonOrNull
 import com.markedoe.ondo.core.toStrictDoubleOrNull
 import java.io.ByteArrayInputStream
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -109,11 +109,7 @@ object XspfParser {
  */
 object JsonPlaylistParser {
     fun parse(bytes: ByteArray): M3uPlaylist {
-        val root = try {
-            Json.parseToJsonElement(bytes.decodeToStringWithoutBom())
-        } catch (_: IllegalArgumentException) {
-            return M3uPlaylist(emptyMap(), emptyList())
-        }
+        val root = parseJsonOrNull(bytes.decodeToStringWithoutBom()) ?: return M3uPlaylist(emptyMap(), emptyList())
         // Objects of the list; a stray `null` or string among them is skipped rather than failing the whole list.
         val items: List<JsonObject> = when (root) {
             is JsonArray -> root.filterIsInstance<JsonObject>()
