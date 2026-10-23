@@ -153,4 +153,26 @@ final class SyncMappingTests: XCTestCase {
         let decoded = try? JSONDecoder().decode(SyncState.self, from: Data("{}".utf8))
         XCTAssertEqual(decoded?.deviceID.count, 36)
     }
+
+    /// Int64.max milliseconds comes back from `Date` as 2^63, past Int64: it saturates instead of trapping.
+    func testTimesAtTheEndsOfInt64Saturate() {
+        XCTAssertEqual(Date(syncMilliseconds: .max).syncMilliseconds, .max)
+        XCTAssertEqual(Date(syncMilliseconds: .min).syncMilliseconds, .min)
+        XCTAssertEqual(Date(timeIntervalSince1970: 1e300).syncMilliseconds, .max)
+        XCTAssertEqual(Date(timeIntervalSince1970: -1e300).syncMilliseconds, .min)
+
+        let (playlists, library, state) = model()
+        let x = xtreamID.uuidString.lowercased()
+        let received = SyncSnapshot(
+            device: "other",
+            favorites: [SyncFavorite(playlist: x, kind: "movie", item: "m9", title: "Far", addedAt: .max)],
+            progress: [SyncProgress(playlist: x, kind: "movie", item: "m8", title: "Later", position: 60, duration: 600, watchedAt: .max)],
+            lists: [SyncList(id: UUID().uuidString.lowercased(), name: "Far", updatedAt: .max)]
+        )
+        let applied = SyncMapping.library(library, applying: received)
+        let snapshot = SyncMapping.snapshot(playlists: playlists, library: applied, state: state, deviceName: nil, now: t0)
+        XCTAssertEqual(snapshot.favorites.first { $0.item == "m9" }?.addedAt, .max)
+        XCTAssertEqual(snapshot.progress.first { $0.item == "m8" }?.watchedAt, .max)
+        XCTAssertEqual(snapshot.lists.first?.updatedAt, .max)
+    }
 }

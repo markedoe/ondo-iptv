@@ -39,8 +39,14 @@ struct SyncState: Codable, Equatable {
 }
 
 extension Date {
-    /// Milliseconds since 1970, as sync writes times.
-    var syncMilliseconds: Int64 { Int64((timeIntervalSince1970 * 1000).rounded()) }
+    /// Milliseconds since 1970, as sync writes times. Past Int64's range it saturates, as Kotlin's `toLong()` does: a
+    /// time of `Int64.max` from another device comes back from `Date` as 2^63, which `Int64(_:)` traps on.
+    var syncMilliseconds: Int64 {
+        let milliseconds = (timeIntervalSince1970 * 1000).rounded()
+        if let exact = Int64(exactly: milliseconds) { return exact }
+        if milliseconds.isNaN { return 0 }
+        return milliseconds < 0 ? .min : .max
+    }
 
     init(syncMilliseconds milliseconds: Int64) {
         self.init(timeIntervalSince1970: Double(milliseconds) / 1000)
