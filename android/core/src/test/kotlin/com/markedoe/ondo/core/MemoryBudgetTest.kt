@@ -16,9 +16,9 @@ import kotlinx.coroutines.runBlocking
 /**
  * Large catalogues and guides load within a small heap: run by `:core:memoryTest` under 64 MB (see build.gradle.kts),
  * left out of `test`. Measured with `MemoryLadder` before they were read element by element and from disk: the Xtream
- * catalogue below needed 111 MB, and a guide about 3.5 times its size (93 MB for 26 MB, 360 MB for 106 MB). An
- * entry-level TV gives an app little more (the device's figures are in the crash report, Settings → About). The M3U
- * playlist guards today's figure (50,000 entries needed 81 MB).
+ * catalogue below needed 111 MB, the M3U playlist 81 MB, and a guide about 3.5 times its size (93 MB for 26 MB,
+ * 360 MB for 106 MB). An entry-level TV gives an app little more (the device's figures are in the crash report,
+ * Settings → About).
  */
 class MemoryBudgetTest {
     private val folder = Files.createTempDirectory("memory").toFile()
@@ -37,12 +37,12 @@ class MemoryBudgetTest {
     }
 
     @Test
-    fun anM3uOf25000EntriesLoads() = runBlocking {
+    fun anM3uOf50000EntriesLoads() = runBlocking {
         val url = "http://provider.example.com/list.m3u"
-        val file = LargeCatalogue.m3u(folder.resolve("list.m3u"), 25_000)
+        val file = LargeCatalogue.m3u(folder.resolve("list.m3u"), 50_000)
         val content = PlaylistLoader(FileHttp(mapOf(url to file)), downloadFolder = folder.resolve("downloads"))
             .load(Playlist(name = "M", source = PlaylistSource.Remote(url)))
-        assertEquals(25_000, content.channels.size + content.movies.size + content.series.sumOf { it.episodes.size })
+        assertEquals(50_000, content.channels.size + content.movies.size + content.series.sumOf { it.episodes.size })
     }
 
     @Test
