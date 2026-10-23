@@ -124,6 +124,17 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(truncated.programs["TV1.fr"]?.map(\.title), ["Le JT", "Film du soir"], "what was read before the damage is kept")
     }
 
+    func testEpisodeNumbersPastIntRangeAreKeptAsText() throws {
+        let xml = """
+        <?xml version="1.0"?><tv><programme channel="a" start="20251009200000 +0000" stop="20251009210000 +0000">\
+        <title>T</title><episode-num system="xmltv_ns">9223372036854775807.0.</episode-num></programme>\
+        <programme channel="a" start="20251009210000 +0000" stop="20251009220000 +0000">\
+        <title>U</title><episode-num system="xmltv_ns">1.9223372036854775807.</episode-num></programme></tv>
+        """
+        let data = try XMLTVParser.parse(Data(xml.utf8))
+        XCTAssertEqual(data.programs["a"]?.map(\.episode), ["9223372036854775807.0.", "1.9223372036854775807."])
+    }
+
     func testInsertShortEPG() {
         var index = EPGIndex.empty
         let channel = Channel(id: "x1", name: "TV1", categoryID: "c", streamURL: URL(string: "http://x/1")!, epgID: "TV1.fr")

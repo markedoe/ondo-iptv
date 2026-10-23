@@ -266,6 +266,8 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
             Int(part.split(separator: "/").first?.trimmingCharacters(in: .whitespaces) ?? "")
         }
         guard let season = number(parts[0]), let episode = number(parts[1]) else { return value }
+        // The guide's text: `Int.max + 1` would trap.
+        guard season < Int.max, episode < Int.max else { return value }
         return String(format: "S%02dE%02d", season + 1, episode + 1)
     }
 }
