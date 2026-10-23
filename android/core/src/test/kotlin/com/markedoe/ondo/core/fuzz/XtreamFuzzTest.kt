@@ -48,6 +48,8 @@ class XtreamFuzzTest {
         "api:get_simple_data_table" to "xtream_short_epg.json",
     ).mapValues { (_, name) -> Fixtures.bytes(name) }
 
+    private val seriesInfoAsArrays = Fixtures.bytes("xtream_series_info_array.json")
+
     private fun http(overrides: Map<String, ByteArray> = emptyMap()) = MockHttpClient().apply {
         routes.putAll(fixtures)
         routes.putAll(overrides)
@@ -138,7 +140,8 @@ class XtreamFuzzTest {
         JsonPrimitive("../../x"), JsonPrimitive("%zz"), JsonPrimitive("Europe/Nowhere"), JsonPrimitive("+99:00"),
         JsonPrimitive("https://image.tmdb.org/t/p/w1280"), JsonPrimitive("\u0000"), JsonPrimitive("\u202Eevil"),
         JsonPrimitive("#raw:1e999"), JsonPrimitive("#raw:-1e999"), JsonPrimitive("#raw:huge"), JsonPrimitive("#raw:-0"), JsonPrimitive("#raw:1E+2"),
-        (1..50).fold(JsonArray(emptyList()) as JsonElement) { inner, _ -> JsonArray(listOf(inner)) },
+        (1..100).fold(JsonArray(emptyList()) as JsonElement) { inner, _ -> JsonArray(listOf(inner)) },
+        (1..100).fold(JsonObject(emptyMap()) as JsonElement) { inner, _ -> JsonObject(mapOf("1" to inner)) },
     )
 
     private fun mutate(element: JsonElement, fuzz: Fuzz): JsonElement = when {
@@ -194,7 +197,11 @@ class XtreamFuzzTest {
         val routes = fixtures.keys.toList()
         repeat(CASES) { case ->
             val damagedRoutes = List(1 + fuzz.int(2)) { fuzz.pick(routes) }.distinct()
-            val overrides = damagedRoutes.associateWith { damaged(fixtures.getValue(it), fuzz) }
+            val overrides = damagedRoutes.associateWith { route ->
+                // Series details come with their episodes keyed by season or as arrays.
+                val original = if (route == "api:get_series_info" && fuzz.chance(50)) seriesInfoAsArrays else fixtures.getValue(route)
+                damaged(original, fuzz)
+            }
             val input = { "case $case: " + overrides.entries.joinToString { (route, body) -> "$route=${describe(body)}" } }
             val http = http(overrides)
             val client = client(http)
