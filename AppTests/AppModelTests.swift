@@ -582,6 +582,44 @@ final class AppModelTests: XCTestCase {
         XCTAssertFalse(FileManager.default.fileExists(atPath: catalogue.path), "the deleted playlist's catalogue is written again")
         XCTAssertTrue(model.playlists.isEmpty)
     }
+
+    /// Sync turned off and on while a session waits for a playlist's download: the next session adds the playlist
+    /// another device added, and the first one, going on afterwards, does not add it a second time.
+    func testAPlaylistFromAnotherDeviceIsAddedOnceWhenTwoSessionsApplyIt() async throws {
+        let held = HeldAnswers()
+        defer { held.release() }
+        let text = Self.playlistText
+        let server = try LocalHTTPServer { _ in
+            held.waitUnlessFirst()
+            return LocalHTTPServer.Response.text(text)
+        }
+        let base = try await server.start()
+        let model = makeModel()
+        await model.bootstrap()
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(base.appending(path: "list.m3u")), autoRefreshHours: 0))
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        // The other device moved this playlist to another address, and has one added long ago (merged first).
+        let moved = SyncPlaylist(id: playlist.id.uuidString.lowercased(), name: "Test", kind: SyncPlaylist.m3u,
+                                 url: base.appending(path: "moved.m3u").absoluteString, addedAt: playlist.createdAt.syncMilliseconds,
+                                 updatedAt: Date().syncMilliseconds + 60_000)
+        let newID = UUID()
+        let new = SyncPlaylist(id: newID.uuidString.lowercased(), name: "Kitchen", kind: SyncPlaylist.m3u,
+                               url: "http://127.0.0.1:9/kitchen.m3u", addedAt: 1, updatedAt: 1)
+        let received = SyncSnapshot(device: "other", playlists: [moved, new])
+
+        let first = Task { await model.applySync(received) }
+        let deadline = Date().addingTimeInterval(10)
+        while server.requests.count < 2 {
+            guard Date() < deadline else { return XCTFail("the first session never downloaded the moved playlist") }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        await model.applySync(received)
+        XCTAssertEqual(model.playlists.filter { $0.id == newID }.count, 1)
+        held.release()
+        await first.value
+        XCTAssertEqual(model.playlists.filter { $0.id == newID }.count, 1, "the playlist is added a second time")
+        XCTAssertEqual(model.playlists.map(\.id), [playlist.id, newID])
+    }
 }
 
 final class CastabilityTests: XCTestCase {

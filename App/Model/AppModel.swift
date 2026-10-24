@@ -864,6 +864,10 @@ extension AppModel {
     /// Playlists another device has (sync): saved like an added playlist, their catalogue downloaded in the background,
     /// without opening them, unless this device had no playlist open.
     func addSyncedPlaylists(_ added: [Playlist]) async {
+        // Not those another session added while this one waited for a download (sync turned off and on meanwhile).
+        let known = Set(playlists.map(\.id))
+        let added = added.filter { !known.contains($0.id) }
+        guard !added.isEmpty else { return }
         let hadPlaylist = activePlaylist != nil
         playlists.append(contentsOf: added)
         savePlaylists()
