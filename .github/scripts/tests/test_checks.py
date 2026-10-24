@@ -491,6 +491,24 @@ class AppStoreTests(CheckTestCase):
                    "let alphabet = \"betamax\"\n")
         self.assertPasses("app_store")
 
+    def test_the_app_store_edition_never_speaks_of_downloads(self):
+        self.write("App/Player/Cast.swift", "#if TESTFLIGHT_DOWNLOADS || DEBUG\nlet tab = Text(\"Downloads\")\n#endif\n"
+                   "let message = String(localized: \"Downloaded files can't be sent to a Chromecast.\")\n")
+        self.assertFails("app_store", "App/Player/Cast.swift: the App Store edition speaks of downloads")
+        for text in ("Downloads", "Delete Download", "12 MB downloaded", "Resume the download.", "Watch offline"):
+            with self.subTest(text):
+                self.write("App/Player/Cast.swift", f"let label = Text(\"{text}\")\n")
+                self.assertFails("app_store", "App/Player/Cast.swift: the App Store edition speaks of downloads")
+
+    def test_fetching_a_playlist_is_not_the_download_feature(self):
+        self.write("App/Model/Loading.swift", "#if TESTFLIGHT_DOWNLOADS || DEBUG\nlet title = Text(\"Download Details\")\n"
+                   "#endif\nlet phase = String(localized: \"Downloading playlist…\")\n"
+                   "let awards = Text(\"Once a week, Ondo downloads the latest awards.\")\n"
+                   "let limit = Text(\"Without signing in, 5 downloads a day.\")\n"
+                   "let count = Label(\"\\(downloads)\", systemImage: \"arrow.down.circle\")\n"
+                   "let offline = Text(\"It may be offline.\")\n")
+        self.assertPasses("app_store")
+
     def test_the_site_pages_the_listing_opens_have_no_test_words(self):
         self.write("site/index.html", "<h1>Ondo</h1>\n<p><b>Beta</b>: still changing.</p>\n")
         self.write("site/notes.html", "<p>Beta builds on TestFlight.</p>\n")
