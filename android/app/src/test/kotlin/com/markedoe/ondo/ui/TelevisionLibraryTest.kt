@@ -301,6 +301,22 @@ class TelevisionLibraryTest {
         assertTrue("the Catalogue part is still shown", exists("adultSwitch"))
     }
 
+    /** The privacy policy opens in a page of the app (a web view): back from it, the remote is on its row again. */
+    @Test
+    fun backFromThePrivacyPolicyLandsOnItsRowInSettings() {
+        start()
+        openSettingsRow("settingsAbout", "helpRow")
+        press(Key.DirectionDown)
+        waitFor { focusedTag() == "privacyRow" }
+        press(Key.DirectionCenter)
+        waitFor { !exists("settings") }
+        settle()
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        waitFor { exists("settings") }
+        settle(1_000)
+        assertEquals("privacyRow", focusedTag())
+    }
+
     @Test
     fun backFromTheHelpLandsOnItsRowInSettings() {
         start()

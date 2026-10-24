@@ -185,6 +185,83 @@ final class MatroskaRemuxTests: XCTestCase {
         XCTAssertEqual(profile7.codec, .hevc(hvcC, dolbyVision: nil), "the HDR10 base layer")
     }
 
+    // MARK: Reads stopped
+
+    /// Waits up to 5 s for `condition`, which fails the test if it never holds.
+    private func eventually(_ condition: () -> Bool, file: StaticString = #filePath, line: UInt = #line) async throws {
+        let deadline = Date().addingTimeInterval(5)
+        while !condition(), Date() < deadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertTrue(condition(), "never happened", file: file, line: line)
+    }
+
+    /// The player closed, another film, VLC taking over: the read on its way stops, and nothing is read after it, not
+    /// even the next segment ahead.
+    func testClosingStopsTheReadOnItsWayAndReadsNothingMore() async throws {
+        let source = HeldSource(MatroskaBytes.film())
+        let remux = try await MatroskaRemux.open(source, targetDuration: 1)
+        source.hold()
+        let request = Task { try await remux.segment(0) }
+        try await eventually { source.started == 1 }
+        await remux.close()
+        do {
+            _ = try await request.value
+            XCTFail("a closed remux makes nothing")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+        try await eventually { source.cancelled == 1 }
+        do {
+            _ = try await remux.segment(1)
+            XCTFail("a closed remux reads nothing")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(source.started, 1, "no read starts after the remux is closed")
+    }
+
+    /// The player closed the connection of a segment it asked for: the read for it stops (the provider's single
+    /// connection is free again).
+    func testAReadStopsWhenItsRequestIsCancelled() async throws {
+        let source = HeldSource(MatroskaBytes.film())
+        let remux = try await MatroskaRemux.open(source, targetDuration: 1)
+        source.hold()
+        let request = Task { try await remux.segment(0) }
+        try await eventually { source.started == 1 }
+        request.cancel()
+        try await eventually { source.cancelled == 1 }
+        _ = try? await request.value
+        await remux.close()
+    }
+
+    /// A seek: the read of the segment the player left stops, so that the segment it asks for now does not wait behind
+    /// it on the provider's single connection; that one goes on.
+    func testASeekStopsTheReadThePlayerLeft() async throws {
+        let film = MatroskaBytes.film(clusterTimes: [0, 1_000, 2_000, 3_000, 4_000, 5_000, 6_000], duration: 7_000)
+        let source = HeldSource(film)
+        let remux = try await MatroskaRemux.open(source, targetDuration: 1)
+        XCTAssertEqual(remux.segments.count, 7)
+        source.hold()
+        let left = Task { try await remux.segment(0) }
+        try await eventually { source.started == 1 }
+        let asked = Task { try await remux.segment(5) }
+        try await eventually { source.cancelled == 1 }
+        do {
+            _ = try await left.value
+            XCTFail("the read the player left stops")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+        try await eventually { source.started == 2 }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(source.cancelled, 1, "the read of the segment asked for goes on")
+        await remux.close()
+        try await eventually { source.cancelled == 2 }
+        _ = try? await asked.value
+    }
+
     /// Remuxes any file for a check with ffmpeg: REMUX_INPUT=film.mkv REMUX_DUMP=folder swift test --filter testDump.
     func testDump() async throws {
         let environment = ProcessInfo.processInfo.environment
@@ -448,5 +525,46 @@ final class MatroskaRemuxTests: XCTestCase {
         let tracks = [track(2, "eng", isDefault: true), track(3, "fre", isDefault: false)]
         XCTAssertEqual(try MatroskaRemux.chooseAudio(tracks, preferredLanguages: ["fr-FR", "en"])?.number, 3)
         XCTAssertEqual(try MatroskaRemux.chooseAudio(tracks, preferredLanguages: ["de"])?.number, 2)
+    }
+}
+
+/// A film in memory whose reads, once `hold()` is called, wait until they are cancelled, as a provider's slow answer
+/// does: how many started, and how many were cancelled.
+private final class HeldSource: ByteSource, @unchecked Sendable {
+    private let base: DataByteSource
+    private let lock = NSLock()
+    private var holding = false
+    private var startedReads = 0
+    private var cancelledReads = 0
+
+    init(_ data: Data) {
+        base = DataByteSource(data)
+    }
+
+    var started: Int { lock.withLock { startedReads } }
+    var cancelled: Int { lock.withLock { cancelledReads } }
+
+    func hold() {
+        lock.withLock { holding = true }
+    }
+
+    func size() async throws -> Int64? {
+        try await base.size()
+    }
+
+    func read(_ range: Range<Int64>) async throws -> Data {
+        let held: Bool = lock.withLock {
+            if holding { startedReads += 1 }
+            return holding
+        }
+        guard held else { return try await base.read(range) }
+        do {
+            // Long past any test's wait, short enough that a read never cancelled fails the test instead of hanging it.
+            try await Task.sleep(nanoseconds: 30_000_000_000)
+        } catch {
+            lock.withLock { cancelledReads += 1 }
+            throw error
+        }
+        return try await base.read(range)
     }
 }

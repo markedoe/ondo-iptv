@@ -35,7 +35,7 @@ final class CastManager {
     nonisolated static func castability(of item: PlaybackItem) -> Castability {
         let candidates = item.candidateURLs.filter { !$0.isFileURL }
         guard !candidates.isEmpty else {
-            return .impossible(String(localized: "Downloaded files can't be sent to a Chromecast. Use AirPlay instead."))
+            return .impossible(String(localized: "Local files can't be sent to a Chromecast. Use AirPlay instead."))
         }
         let castable = ["m3u8", "mp4", "m4v", "webm", "mp3", "aac", "mpd"]
         let best = candidates.first { castable.contains($0.pathExtension.lowercased()) }

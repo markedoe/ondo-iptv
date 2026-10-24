@@ -6797,46 +6797,6 @@
         }
       }
     },
-    "Downloaded files can't be sent to a Chromecast. Use AirPlay instead.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les fichiers téléchargés ne peuvent pas être envoyés à un Chromecast. Utilisez AirPlay."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los archivos descargados no se pueden enviar a un Chromecast. Usa AirPlay."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arquivos baixados não podem ser enviados a um Chromecast. Use o AirPlay."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已下载的文件无法发送到 Chromecast，请改用 AirPlay。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "لا يمكن إرسال الملفات المنزّلة إلى Chromecast. استخدم AirPlay بدلًا من ذلك."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "डाउनलोड की गई फ़ाइलें Chromecast पर नहीं भेजी जा सकतीं। इसकी जगह AirPlay इस्तेमाल करें।"
-          }
-        }
-      }
-    },
     "Downloading playlist…": {
       "localizations": {
         "fr": {
@@ -10713,6 +10673,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "टीवी गाइड लोड हो रहा है…"
+          }
+        }
+      }
+    },
+    "Local files can't be sent to a Chromecast. Use AirPlay instead.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les fichiers locaux ne peuvent pas être envoyés à un Chromecast. Utilisez AirPlay."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los archivos locales no se pueden enviar a un Chromecast. Usa AirPlay."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arquivos locais não podem ser enviados a um Chromecast. Use o AirPlay."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本地文件无法发送到 Chromecast，请改用 AirPlay。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يمكن إرسال الملفات المحلية إلى Chromecast. استخدم AirPlay بدلًا من ذلك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "स्थानीय फ़ाइलें Chromecast पर नहीं भेजी जा सकतीं। इसकी जगह AirPlay इस्तेमाल करें।"
           }
         }
       }
@@ -22079,6 +22079,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "कनेक्शन टेस्ट करें"
+          }
+        }
+      }
+    },
+    "The Apple engine cannot play this MKV film. Choose Automatic or VLC (More, Player Engine).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le moteur Apple ne peut pas lire ce film MKV. Choisissez Automatique ou VLC (Plus, Moteur de lecture)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El motor de Apple no puede reproducir esta película MKV. Elige Automático o VLC (Más, Motor de reproducción)."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O motor Apple não consegue reproduzir este filme MKV. Escolha Automático ou VLC (Mais, Motor do player)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 引擎无法播放此 MKV 影片。请选择“自动”或 VLC（更多 > 播放引擎）。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يستطيع محرك Apple تشغيل فيلم MKV هذا. اختر تلقائي أو VLC (المزيد، محرك التشغيل)."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple इंजन यह MKV फ़िल्म नहीं चला सकता। स्वचालित या VLC चुनें (ज़्यादा, प्लेयर इंजन)।"
           }
         }
       }

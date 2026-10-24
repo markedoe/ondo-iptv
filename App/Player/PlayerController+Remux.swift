@@ -21,8 +21,9 @@ extension PlayerController {
         let opened = clock
         remuxTask = Task { [weak self] in
             do {
-                let remux = try await MatroskaRemux.open(HTTPByteSource(url: url, headers: headers), preferredLanguages: languages)
-                let server = try RemuxServer(remux: remux)
+                let source = HTTPByteSource(url: url, headers: headers)
+                let remux = try await MatroskaRemux.open(source, preferredLanguages: languages)
+                let server = try RemuxServer(remux: remux, source: source)
                 let address = try await server.start()
                 guard let self, !Task.isCancelled, self.item?.id == item.id else {
                     server.stop()
@@ -34,6 +35,12 @@ extension PlayerController {
                 server.onRequest = { [weak self] request in
                     Task { @MainActor in self?.note("remux served \(request)") }
                 }
+                server.onListenerFailure = { [weak self, weak server] failure in
+                    Task { @MainActor in
+                        guard let server else { return }
+                        self?.remuxServerFailed(server, failure)
+                    }
+                }
                 self.remuxServer = server
                 let codecs = remux.tracks.map { FragmentWriter.codecName($0.codec) }.joined(separator: ", ")
                 let wait = String(format: "%.1f", self.clock - opened)
@@ -43,10 +50,8 @@ extension PlayerController {
                 self.startApple(url: address, headers: [:])
             } catch {
                 guard let self, !Task.isCancelled, self.item?.id == item.id else { return }
-                self.note("remux not possible (\(error)): VLC plays the film")
                 self.remuxTask = nil
-                self.forceVLCForItem = true
-                self.loadCurrentCandidate()
+                self.remuxFailed(error)
             }
         }
         return true
@@ -55,7 +60,48 @@ extension PlayerController {
         #endif
     }
 
-    /// Ends the remux of the film that played (a new item, a fallback, the player closing).
+    /// The remux could not start: VLC plays the film, unless the Apple engine is chosen, which cannot open the MKV file
+    /// itself (AVPlayer would fail with a message about Xtream's HLS format): a message names the engines that can.
+    func remuxFailed(_ error: Error) {
+        guard enginePreference == .apple else {
+            note("remux not possible (\(error)): VLC plays the film")
+            forceVLCForItem = true
+            loadCurrentCandidate()
+            return
+        }
+        // Not forced to VLC: a retry tries the remux again, rather than AVPlayer opening the MKV file itself.
+        note("remux not possible (\(error)): the Apple engine cannot open the MKV file")
+        let message = String(localized: "The Apple engine cannot play this MKV film. Choose Automatic or VLC (More, Player Engine).")
+        state = .failed(message: message, attribution: .app)
+    }
+
+    #if os(iOS)
+    /// The film's server stopped listening: iOS takes back the sockets of an app left suspended a while (a paused film,
+    /// the phone locked). The remux starts again where the film was, paused if it was, rather than VLC taking over
+    /// (which has no HDR, Dolby Atmos or Picture in Picture).
+    func remuxServerFailed(_ server: RemuxServer, _ failure: String) {
+        guard remuxServer === server, item != nil else { return }
+        note("remux server failed (\(failure)): the remux starts again")
+        keepPositionForFallback()
+        loadCurrentCandidate()
+    }
+    #endif
+
+    /// AVPlayer failed on a remuxed film whose server stopped listening before the player heard of it: the remux starts
+    /// again (`remuxServerFailed`) instead of VLC taking over. True when it does.
+    func restartRemuxIfItsServerFailed() -> Bool {
+        #if os(iOS)
+        guard let server = remuxServer, server.hasFailed else { return false }
+        remuxServerFailed(server, "the system player could not reach it")
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    /// Ends the remux of the film that played (a new item, a fallback, the player closing): while it opens, cancelling
+    /// its task stops its requests; once it plays, the server's `stop()` closes the remux and its source, so that the
+    /// provider sends nothing more for it (subscriptions often allow a single connection).
     func stopRemux() {
         remuxTask?.cancel()
         remuxTask = nil
