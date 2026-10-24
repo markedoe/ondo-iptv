@@ -152,7 +152,7 @@ class XtreamClient(
                 posterUrl = Urls.lenient(dto.icon),
                 categoryId = "movie-${dto.categoryId ?: "0"}",
                 streamUrl = urls.movieUrl(dto.streamId, dto.containerExtension),
-                rating = dto.rating ?: dto.rating5?.times(2),
+                rating = dto.rating ?: dto.rating5?.times(2)?.takeIf { it.isFinite() },
                 year = dto.year ?: yearInTitle,
                 addedAt = dto.added,
                 plot = dto.plot,

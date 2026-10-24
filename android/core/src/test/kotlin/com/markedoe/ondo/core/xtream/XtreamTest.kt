@@ -310,6 +310,16 @@ class XtreamTest {
         assertFailsWith<SocketTimeoutException> { XtreamClient(credentials, http).fetchContent(XtreamOutputFormat.M3U8) }
     }
 
+    /** A five-star rating too large to double is dropped: an infinite rating could not be saved with the catalogue. */
+    @Test
+    fun aFiveStarRatingTooLargeToDoubleIsDropped() = runTest {
+        val http = mock().apply {
+            routes["api:get_vod_streams"] =
+                """[{"stream_id":1,"name":"Quiet Water","rating_5based":"-1e308"},{"stream_id":2,"name":"Long Road","rating_5based":1e308}]""".encodeToByteArray()
+        }
+        assertEquals(listOf(null, null), XtreamClient(credentials, http).movies().map { it.rating })
+    }
+
     @Test
     fun anAccountThatListsNothingIsAnError() = runTest {
         val http = MockHttpClient().apply { routes["api:"] = Fixtures.bytes("xtream_auth.json") }
