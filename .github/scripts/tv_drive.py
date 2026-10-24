@@ -107,14 +107,9 @@ class Tv:
         return all(w in all_text for w in words)
 
     def key(self, name, times=1, pause=0.4):
-        # The arrows come from the emulator's own keys, a physical device as a remote is: Compose moves the focus out
-        # of a text field only for those (keys injected with `input` come from a virtual device). OK is injected.
-        hardware = {"UP": "KEY_UP", "DOWN": "KEY_DOWN", "LEFT": "KEY_LEFT", "RIGHT": "KEY_RIGHT"}.get(name)
+        code = f"DPAD_{name}" if name in ("UP", "DOWN", "LEFT", "RIGHT") else name
         for _ in range(times):
-            if hardware:
-                self.adb("emu", "event", "send", f"EV_KEY:{hardware}:1", f"EV_KEY:{hardware}:0")
-            else:
-                self.shell(f"input keyevent KEYCODE_{name}")
+            self.shell(f"input keyevent KEYCODE_{code}")
             time.sleep(pause)
 
     def wait_for(self, what, condition, timeout, every=2.0):
@@ -136,6 +131,10 @@ class Tv:
                 focused = [i for i, n in enumerate(fields) if n.get("focused") == "true"]
                 if focused and focused[-1] == index:
                     return fields[index]
+                # Injected arrows stay in a text field (Compose moves out of one for a physical remote only): Tab
+                # goes on to the next field, as Next on the TV's keyboard does.
+                self.key("TAB" if focused else "DOWN")
+                continue
             self.key("DOWN")
         self.screenshot(f"never-focused-field-{index}")
         raise TimeoutError(f"the focus never reached text field {index}")
@@ -189,7 +188,7 @@ def main():
             field = tv.focus_on_field(index)
             tv.say(f"field {index}: {field.get('text')!r}")
         tv.screenshot("filled")
-        tv.focus_on("Add", keys=("DOWN",), editable=False)
+        tv.focus_on("Add", keys=("TAB",), editable=False)
         tv.say("pressing Add")
         tv.key("DPAD_CENTER")
         if args.wrong_password_first:
@@ -202,7 +201,7 @@ def main():
             tv.key("MOVE_END")
             tv.key("DEL", times=8, pause=0.1)
             tv.shell("input text 'secret'")
-            tv.focus_on("Add", keys=("DOWN",), editable=False)
+            tv.focus_on("Add", keys=("TAB",), editable=False)
             tv.key("DPAD_CENTER")
         start = time.time()
         # The catalogue arrives: the welcome and the form are replaced by the tabs (Live TV in the drawer).
