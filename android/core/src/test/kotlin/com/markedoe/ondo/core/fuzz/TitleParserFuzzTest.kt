@@ -34,7 +34,8 @@ class TitleParserFuzzTest {
 
     /**
      * The linear patterns find exactly what the former ones found, except that a line break after the episode
-     * marker no longer hides the episode (the former tail `(.*)$` stopped at it).
+     * marker no longer hides the episode (the former tail `(.*)$` stopped at it). The rule on years later than next
+     * year (part of the title, not a release year) applies to both.
      */
     @Test(timeout = 60_000)
     fun titleParserMatchesItsFormerPatterns() {
@@ -65,7 +66,7 @@ class TitleParserFuzzTest {
             if (title.length < 4 || title.none { it in '0'..'9' }) return TitleParser.TitleAndYear(title, null)
             val match = formerYear.matcher(title)
             if (!match.find()) return TitleParser.TitleAndYear(title, null)
-            val year = match.group(2)?.toIntOrNull() ?: return TitleParser.TitleAndYear(title, null)
+            val year = match.group(2)?.toIntOrNull()?.takeIf { it <= java.time.Year.now().value + 1 } ?: return TitleParser.TitleAndYear(title, null)
             val name = match.group(1).orEmpty().trim()
             return if (name.isEmpty()) TitleParser.TitleAndYear(title, year) else TitleParser.TitleAndYear(name, year)
         }

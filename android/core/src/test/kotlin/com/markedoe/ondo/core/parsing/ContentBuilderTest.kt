@@ -153,8 +153,21 @@ class ContentBuilderTest {
         assertNull(TitleParser.parseEpisode("TV1 HD"))
         assertEquals("Sandstorm", TitleParser.splitYear("Sandstorm [2021]").name)
         assertEquals(2021, TitleParser.splitYear("Sandstorm [2021]").year)
-        assertEquals(2049, TitleParser.splitYear("Star Runner 2049").year)
         assertNull(TitleParser.splitYear("Lattice").year)
+    }
+
+    /**
+     * A number at the end of a title later than next year cannot be its release year: it is part of the title, as in
+     * "Star Runner 2049". The year after it still is one, and so are this year and next (a film announced for then).
+     */
+    @Test
+    fun aNumberLaterThanNextYearIsPartOfTheTitle() {
+        val thisYear = java.time.Year.now().value
+        assertEquals(TitleParser.TitleAndYear("Star Runner 2049", null), TitleParser.splitYear("Star Runner 2049"))
+        assertEquals(TitleParser.TitleAndYear("Star Runner 2049", 2017), TitleParser.splitYear("Star Runner 2049 (2017)"))
+        assertEquals(TitleParser.TitleAndYear("Quiet Water", thisYear + 1), TitleParser.splitYear("Quiet Water (${thisYear + 1})"))
+        assertEquals(TitleParser.TitleAndYear("Quiet Water", thisYear), TitleParser.splitYear("Quiet Water $thisYear"))
+        assertEquals(TitleParser.TitleAndYear("Quiet Water ${thisYear + 2}", null), TitleParser.splitYear("Quiet Water ${thisYear + 2}"))
     }
 
     @Test

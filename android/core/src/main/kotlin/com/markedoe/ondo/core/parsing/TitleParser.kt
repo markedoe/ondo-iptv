@@ -65,12 +65,21 @@ object TitleParser {
 
     private val yearPattern: Pattern = Pattern.compile("""^(.*?)(?<![\s\-_.])[\s\-_.]*[(\[]?((?:19|20)\d{2})[)\]]?\s*$""")
 
-    /** `"Lighthouse (2010)"` -> (`"Lighthouse"`, 2010). */
+    /**
+     * Next year, the latest a release year can be (a film announced for then). Read once: titles are split by the
+     * thousand while a catalogue loads.
+     */
+    private val latestYear = java.time.Year.now().value + 1
+
+    /**
+     * `"Lighthouse (2010)"` -> (`"Lighthouse"`, 2010). A number later than next year is part of the title
+     * (`"Star Runner 2049"`), not its release year.
+     */
     fun splitYear(title: String): TitleAndYear {
         if (title.length < 4 || title.none { it in '0'..'9' }) return TitleAndYear(title, null)
         val match = yearPattern.matcher(title)
         if (!match.find()) return TitleAndYear(title, null)
-        val year = match.group(2)?.toIntOrNull() ?: return TitleAndYear(title, null)
+        val year = match.group(2)?.toIntOrNull()?.takeIf { it <= latestYear } ?: return TitleAndYear(title, null)
         val name = match.group(1).orEmpty().trim()
         return if (name.isEmpty()) TitleAndYear(title, year) else TitleAndYear(name, year)
     }
