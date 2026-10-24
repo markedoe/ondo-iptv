@@ -199,8 +199,9 @@ user-selected files).
      complete and the review notes mention downloads or `network.server`, the screenshots compared with the
      `appstore-screenshots` branch, and the review submissions.
 3. **TestFlight**: builds appear after 10 to 30 min of processing. Internal testers group
-   (up to 100 team members, no review) to try it on your devices. The uploads turn off TestFlight's e-mail to
-   the testers for each new build (`quiet_testers` in the Fastfile): the TestFlight app shows the latest one.
+   (up to 100 team members, no review) to try it on your devices. The uploads of pushes to `main` turn off
+   TestFlight's e-mail to the testers for each new build (`quiet_testers` in the Fastfile; a tag's upload waits for
+   the processing, so Apple may have sent it already): the TestFlight app shows the latest one.
    Each tester can also turn off the e-mails of an app in the TestFlight app (the app's page, *Email
    Notifications*).
 
