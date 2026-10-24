@@ -174,7 +174,7 @@ final class AppModel {
     ///   - reminderScheduler: delivers programme reminders (system notifications by default).
     init(storageRoot: URL? = nil, secrets: SecretStore = KeychainSecretStore(), reminderScheduler: ReminderScheduling? = nil) {
         userStore = FileStore(directory: storageRoot?.appendingPathComponent("Support", isDirectory: true) ?? AppPaths.support)
-        cacheStore = FileStore(directory: storageRoot?.appendingPathComponent("Caches", isDirectory: true) ?? AppPaths.caches)
+        cacheStore = FileStore(directory: storageRoot?.appendingPathComponent("Caches", isDirectory: true) ?? AppPaths.caches, disposable: true)
         libraryWriter = LibraryWriter(store: userStore)
         self.secrets = secrets
         #if DEBUG  // only in test builds: UI tests must never hit the system permission prompt

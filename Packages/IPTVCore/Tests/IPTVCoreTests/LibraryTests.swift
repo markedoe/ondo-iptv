@@ -155,6 +155,23 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("playlists.json.corrupt-7.json")), Data("garbage".utf8))
     }
 
+    /// A cache that cannot be read is deleted: kept aside, it would stay for good, counted in the size Settings shows,
+    /// and Clear Cache, which removes the documents by name, could not remove it.
+    func testADamagedCacheIsDeletedNotKeptAside() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory, disposable: true)
+        try store.save(["channel"], name: "content-1")
+        try store.save(["channel"], name: "content-1")
+        for file in [store.url(for: "content-1"), store.url(for: "content-1").appendingPathExtension("bak")] {
+            try Data("{corrupt".utf8).write(to: file)
+        }
+        XCTAssertNil(store.load([String].self, name: "content-1"))
+        store.remove(name: "content-1")
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path), [])
+        XCTAssertEqual(store.diskUsage(), 0)
+    }
+
     func testBackupArchive() throws {
         let playlist = Playlist(name: "Mine", source: .xtream(XtreamCredentials(server: URL(string: "http://p")!, username: "u", password: "")))
         var library = UserLibrary()

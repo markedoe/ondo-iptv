@@ -4,16 +4,20 @@ import Foundation
 ///
 /// Every document is wrapped in `{ "version": n, "savedAt": …, "value": … }` and written atomically,
 /// and the previous file is kept as `.bak` so an update can never silently wipe user data. A file that
-/// cannot be read is moved aside as `name.corrupt-<time>.json`: left in place, the next save would rotate
-/// it over the good `.bak`, and the one after would lose the data for good.
+/// cannot be read is moved aside as `name.corrupt-<time>.json` (deleted in a `disposable` store): left in place, the
+/// next save would rotate it over the good `.bak`, and the one after would lose the data for good.
 public final class FileStore: Sendable {
     public let directory: URL
+    /// Documents that can be downloaded again (the caches): one that cannot be read is deleted instead of kept aside,
+    /// where nothing would ever remove it.
+    public let disposable: Bool
     private let lock = NSLock()
 
     public static let currentVersion = 1
 
-    public init(directory: URL) {
+    public init(directory: URL, disposable: Bool = false) {
         self.directory = directory
+        self.disposable = disposable
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -35,6 +39,10 @@ public final class FileStore: Sendable {
             guard let data = try? Data(contentsOf: candidate) else { continue }
             if let envelope = try? decoder.decode(Envelope<T>.self, from: data) {
                 return envelope.value
+            }
+            if disposable {
+                try? FileManager.default.removeItem(at: candidate)
+                continue
             }
             let aside = directory.appendingPathComponent("\(candidate.lastPathComponent).corrupt-\(Int(now.timeIntervalSince1970)).json")
             try? FileManager.default.moveItem(at: candidate, to: aside)
