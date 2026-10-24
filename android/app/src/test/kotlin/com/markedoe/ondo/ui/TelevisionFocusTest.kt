@@ -1,6 +1,8 @@
 package com.markedoe.ondo.ui
 
+import android.os.Bundle
 import android.os.Looper
+import android.os.Parcel
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.FocusDirection
@@ -25,6 +27,7 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
+import androidx.test.platform.app.InstrumentationRegistry
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.UncaughtErrors
 import com.markedoe.ondo.core.model.PlaylistContent
@@ -59,6 +62,7 @@ import org.robolectric.annotation.Config
  * Android TV: where the remote's focus is when the catalogue under it changes — it arrives on a Home already shown, or
  * the playlist is replaced by another device's copy.
  * What a page does when its title leaves the catalogue.
+ * What is kept of the screens when Ondo goes to the background.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -301,5 +305,32 @@ class TelevisionFocusTest {
         start(answers = withoutTitles, stored = Fixtures.content)
         openFromHome(rows = 2)
         refreshWithoutTheTitle { repository.state.value.content.series.isEmpty() }
+    }
+
+    /**
+     * A cast field with no separator in a long run of text, then a name: the first card opens its page. What Android
+     * keeps of the screens when Ondo goes to the background (the pages open, their arguments and focus) must stay far
+     * within the 1 MB a binder transaction carries, or the app stops with a TransactionTooLargeException.
+     */
+    @Test
+    fun aCastFieldWithoutSeparatorsKeepsWhatIsSavedOfTheScreensSmall() {
+        val cast = "A" + "b".repeat(300_000) + ", Ada Example"
+        val content = Fixtures.content.copy(series = Fixtures.content.series.map { if (it.id == Fixtures.harborLights.id) it.copy(cast = cast) else it })
+        start(answers = emptyMap(), stored = content)
+        openFromHome(rows = 2)
+        pressUntil(Key.DirectionDown, max = 20) { focusedIn("people") }
+        press(Key.DirectionCenter)
+        waitFor { exists("person") }
+        settle(500)
+        val saved = Bundle()
+        compose.runOnIdle { InstrumentationRegistry.getInstrumentation().callActivityOnSaveInstanceState(compose.activity, saved) }
+        val parcel = Parcel.obtain()
+        val size = try {
+            saved.writeToParcel(parcel, 0)
+            parcel.dataSize()
+        } finally {
+            parcel.recycle()
+        }
+        assertTrue("saved state of $size bytes", size < 100_000)
     }
 }

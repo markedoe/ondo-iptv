@@ -18,12 +18,18 @@ object People {
         return part.substring(0, end).replace(role, "") + part.substring(end)
     }
 
+    /**
+     * Longer than any name: a field without separators in a long run of text. A name opens its own page, and the name
+     * goes with the page into what Android keeps of the screens (a binder transaction, 1 MB at most).
+     */
+    const val MAX_NAME_LENGTH = 200
+
     fun names(text: String?): List<String> {
         if (text.isNullOrEmpty()) return emptyList()
         val seen = HashSet<String>()
         return text.split(separators)
             .map { part -> withoutRoles(part).trim { it.isWhitespace() || it == '.' || it == '…' } }
-            .filter { name -> name.length > 1 && name.any(Char::isLetter) && seen.add(TextNormalizer.normalize(name)) }
+            .filter { name -> name.length in 2..MAX_NAME_LENGTH && name.any(Char::isLetter) && seen.add(TextNormalizer.normalize(name)) }
     }
 
     /** Whether a cast or director field names this person (accents and case ignored). */
