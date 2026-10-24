@@ -175,6 +175,11 @@ class TvPlayerControlsTest {
         }
         compose.waitForIdle()
         row("trackOff").assertIsFocused()
+        // A media key (Play/Pause) keeps the panel open.
+        compose.runOnIdle { controls.show() }
+        compose.waitForIdle()
+        assertEquals(TvPanel.SUBTITLES, controls.panel)
+        row("trackOff").assertIsFocused()
         // Back (the activity's) closes the panel: the remote is on Subtitles.
         compose.runOnIdle { assertTrue(controls.back()) }
         compose.waitForIdle()

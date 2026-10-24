@@ -1,5 +1,6 @@
 package com.markedoe.ondo.player
 
+import androidx.annotation.OptIn
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -11,6 +12,7 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
+import androidx.media3.common.util.UnstableApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -26,6 +28,7 @@ enum class TvPanel { SUBTITLES, AUDIO, SPEED, MORE }
  * keep their hidden-controls meaning meanwhile. The timers run on [scope] (the player's, on the main thread).
  */
 @Stable
+@OptIn(UnstableApi::class)
 class TvControls(private val scope: CoroutineScope, private val onShownChange: (Boolean) -> Unit = {}) {
     /** The buttons are on screen and the remote moves through them. */
     var shown by mutableStateOf(false)
@@ -97,10 +100,10 @@ class TvControls(private val scope: CoroutineScope, private val onShownChange: (
         clockMs = System.currentTimeMillis()
     }
 
-    /** The controls, with the focus on Play/Pause (or on [panel]). */
+    /** The controls, with the focus on Play/Pause (or on [panel]); a panel already open stays (a media key). */
     fun show(panel: TvPanel? = null) {
         endPeek()
-        this.panel = panel
+        if (panel != null || !shown) this.panel = panel
         if (!shown) {
             shown = true
             shows++
