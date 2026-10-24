@@ -45,4 +45,8 @@ data class AppSettings(
     val syncOnLocalNetwork: Boolean = false,
     /** This installation's ID for sync, made once. */
     val syncDeviceId: String = "",
+    /** The viewer's sound and subtitle languages, learned from their choices in the player (see `TrackPreferences`). */
+    val preferredAudioLanguage: String? = null,
+    val preferredSubtitleLanguage: String? = null,
+    val subtitlesOn: Boolean = false,
 )

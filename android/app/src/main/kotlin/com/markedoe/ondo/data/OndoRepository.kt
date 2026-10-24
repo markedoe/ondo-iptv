@@ -398,6 +398,13 @@ class OndoRepository(
 
     fun setVodBuffer(seconds: Int) = updateSettings { it.copy(vodBuffer = seconds) }
 
+    /** The languages the viewer chose in the player, for the next streams. Nothing written when nothing changed. */
+    fun setTrackLanguages(audio: String?, subtitles: String?, subtitlesOn: Boolean) {
+        val settings = _state.value.settings
+        if (settings.preferredAudioLanguage == audio && settings.preferredSubtitleLanguage == subtitles && settings.subtitlesOn == subtitlesOn) return
+        updateSettings { it.copy(preferredAudioLanguage = audio, preferredSubtitleLanguage = subtitles, subtitlesOn = subtitlesOn) }
+    }
+
     fun setCategoryHidden(categoryId: String, hidden: Boolean) = setCategoriesHidden(listOf(categoryId), hidden)
 
     /** Hide all / Show all: one change, one save of the library. */

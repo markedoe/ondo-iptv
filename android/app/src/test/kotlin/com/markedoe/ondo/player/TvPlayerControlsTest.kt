@@ -105,8 +105,10 @@ class TvPlayerControlsTest {
         row("trackOff").assertIsFocused()
         press(Key.DirectionCenter)
         val off = movie.trackParameters
-        assertTrue("subtitles off", C.TRACK_TYPE_TEXT in off.disabledTrackTypes)
+        // Off as Media3's own controls do it: no subtitle track chosen, only the forced ones may still show.
         assertTrue(off.overrides.values.none { it.type == C.TRACK_TYPE_TEXT })
+        assertEquals(TrackPreferences.SUBTITLES_OFF, off.ignoredTextSelectionFlags)
+        assertFalse(TrackPreferences.learned(TrackLanguages(subtitles = "en", subtitlesOn = true), off).subtitlesOn)
     }
 
     @Test

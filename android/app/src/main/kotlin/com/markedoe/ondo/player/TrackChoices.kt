@@ -34,7 +34,7 @@ data class TrackWords(
 /**
  * The tracks the player can play of one type (audio or text), named for a person: the language's name in the app's
  * language rather than its code, then the channels, the codec and the roles. Choosing one is a track selection
- * override; subtitles off disables the text tracks.
+ * override; subtitles off leaves only the forced ones.
  */
 @OptIn(UnstableApi::class)
 object TrackChoices {
@@ -69,13 +69,18 @@ object TrackChoices {
     /** Whether no track of [type] plays: subtitles off. */
     fun noneSelected(tracks: Tracks, type: Int): Boolean = tracks.groups.none { it.type == type && it.isSelected }
 
-    /** The selection with [choice] for its type, or with the type turned off (subtitles off) when it is null. */
+    /**
+     * The selection with [choice] for its type; subtitles off when it is null, as Media3's own controls turn them off:
+     * the forced ones (foreign dialogue) still show.
+     */
     fun select(parameters: TrackSelectionParameters, type: Int, choice: TrackChoice?): TrackSelectionParameters {
-        val builder = parameters.buildUpon()
+        val builder = parameters.buildUpon().setTrackTypeDisabled(type, false)
         if (choice == null) {
-            builder.clearOverridesOfType(type).setTrackTypeDisabled(type, true)
+            builder.clearOverridesOfType(type)
+            if (type == C.TRACK_TYPE_TEXT) builder.setPreferredTextLanguages().setIgnoredTextSelectionFlags(TrackPreferences.SUBTITLES_OFF)
         } else {
-            builder.setTrackTypeDisabled(type, false).setOverrideForType(TrackSelectionOverride(choice.group.mediaTrackGroup, choice.index))
+            builder.setOverrideForType(TrackSelectionOverride(choice.group.mediaTrackGroup, choice.index))
+            if (type == C.TRACK_TYPE_TEXT) builder.setIgnoredTextSelectionFlags(0)
         }
         return builder.build()
     }

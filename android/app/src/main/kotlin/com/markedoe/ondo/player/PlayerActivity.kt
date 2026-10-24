@@ -77,6 +77,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
+import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
@@ -85,6 +86,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.DecoderCounters
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.SeekParameters
@@ -396,6 +398,16 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    private fun trackLanguages(): TrackLanguages = repository.state.value.settings.let {
+        TrackLanguages(it.preferredAudioLanguage, it.preferredSubtitleLanguage, it.subtitlesOn)
+    }
+
+    /** The device's languages, the first first ("fr", "en"). */
+    private fun deviceLanguages(): List<String> {
+        val locales = resources.configuration.locales
+        return (0 until locales.size()).map { locales[it].language }.filter { it.isNotEmpty() }.distinct()
+    }
+
     /** What the TV's controls say at the top: the title and its line, or a live channel's number, name and programme. */
     private fun tvPlayerInfo(now: Long): TvPlayerInfo {
         val current = request
@@ -441,7 +453,9 @@ class PlayerActivity : ComponentActivity() {
             .setDefaultRequestProperties(request.headers)
             .setTransferListener(ByteCounter(AtomicLong().also { receivedBytes = it }))
         request.headers.entries.firstOrNull { it.key.equals("User-Agent", ignoreCase = true) }?.let { http.setUserAgent(it.value) }
-        return ExoPlayer.Builder(this)
+        // A decoder that fails to start (a 4K stream beyond the TV's first one, a codec it has twice) gives way to the next.
+        val renderers = DefaultRenderersFactory(this).setEnableDecoderFallback(true)
+        return ExoPlayer.Builder(this, renderers)
             .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(http))
             .setLoadControl(loadControl())
             // A key frame within 1 s of the target, else the exact position: providers often space key frames
@@ -454,7 +468,15 @@ class PlayerActivity : ComponentActivity() {
             .build()
             .apply {
                 val exoPlayer = this
+                // The viewer's languages, before the listener: what the app sets is no choice of the viewer's.
+                trackSelectionParameters = TrackPreferences.parameters(trackSelectionParameters, trackLanguages(), deviceLanguages())
                 addListener(object : Player.Listener {
+                    // A choice in the panels (or in Media3's phone controls) is kept for the next streams.
+                    override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) {
+                        val learned = TrackPreferences.learned(trackLanguages(), parameters)
+                        repository.setTrackLanguages(learned.audio, learned.subtitles, learned.subtitlesOn)
+                    }
+
                     override fun onPlayerError(error: PlaybackException) {
                         val messages = generateSequence<Throwable>(error) { it.cause }.take(4).mapNotNull { it.message }.distinct().toList()
                         reporter.error(error.errorCodeName, messages)
