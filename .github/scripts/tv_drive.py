@@ -893,7 +893,9 @@ def keyboard_shown(tv):
     """Whether the TV's keyboard is on screen, from the input method service's own account (the lines are logged)."""
     out = tv.shell("dumpsys input_method")
     lines = [line.strip() for line in out.splitlines() if re.search(r"mInputShown=|mWindowVisible=|mIsInputViewShown=|mImeWindowVis=", line)]
-    shown = any(re.search(r"mInputShown=true|mWindowVisible=true|mIsInputViewShown=true", line) for line in lines)
+    # mIsInputViewShown stays true once the keyboard has been shown: the service's mInputShown and the keyboard's
+    # window say whether it is on screen now.
+    shown = any(re.search(r"mInputShown=true|mWindowVisible=true", line) for line in lines)
     return shown, " ; ".join(dict.fromkeys(lines))[:300]
 
 
