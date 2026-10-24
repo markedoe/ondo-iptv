@@ -321,6 +321,7 @@ final class PlayerController: NSObject {
         guard playerItem == player.currentItem, activeEngine == .apple else { return }
         noteAppleFailure(error, item: playerItem)
         keepPositionForFallback()
+        if restartRemuxIfItsServerFailed() { return }
         // AirPlay: the TV plays the stream itself, so VLC (which plays on this device only) is no fallback:
         // it would leave the TV connected without a picture.
         let onTV = isExternalPlaybackActive || player.isExternalPlaybackActive
@@ -795,7 +796,7 @@ extension PlayerController {
     }
 
     /// A film that fails after a while restarts where it was, not at the position it was opened at.
-    private func keepPositionForFallback() {
+    func keepPositionForFallback() {
         guard var current = item, !current.isLive, pendingStart == nil, currentTime > 5 else { return }
         current.startPosition = currentTime
         item = current
