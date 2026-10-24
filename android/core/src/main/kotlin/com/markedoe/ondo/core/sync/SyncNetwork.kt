@@ -57,9 +57,12 @@ object SyncNetwork {
             (first == 0xFE && (second and 0xC0) == 0x80)
     }
 
-    /** Writes one frame: the length on 4 bytes (big-endian), then [payload]. */
+    /**
+     * Writes one frame: the length on 4 bytes (big-endian), then [payload]. A payload over [MAX_FRAME] is not written
+     * at all: an error, like a session that fails.
+     */
     fun writeFrame(output: OutputStream, payload: ByteArray) {
-        require(payload.size <= MAX_FRAME) { "frame too large" }
+        if (payload.size > MAX_FRAME) throw IOException("frame too large")
         val size = payload.size
         output.write(byteArrayOf((size ushr 24).toByte(), (size ushr 16).toByte(), (size ushr 8).toByte(), size.toByte()))
         output.write(payload)
