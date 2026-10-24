@@ -196,6 +196,23 @@ class XtreamTest {
         assertEquals("Le magazine du soir", programs[1].description)
     }
 
+    /** A timestamp too far to count in milliseconds is the farthest time there is, not a wrapped-around one. */
+    @Test
+    fun aTimestampTooFarForMillisecondsIsTheFarthestTime() = runTest {
+        val far = Long.MAX_VALUE / 1000 + 1
+        val http = MockHttpClient()
+        http.routes["api:"] = """{"user_info":{"auth":1,"status":"Active","exp_date":"$far","created_at":$far}}""".encodeToByteArray()
+        val account = XtreamClient(credentials, http).authenticate()
+        assertEquals(Long.MAX_VALUE, account.expiresAt)
+        assertEquals(Long.MAX_VALUE, account.createdAt)
+        http.routes["api:get_short_epg"] = """
+            {"epg_listings":[{"title":"Film","start_timestamp":1760032800,"stop_timestamp":$far},
+            {"title":"Show","start_timestamp":$far,"stop_timestamp":$far}]}
+        """.encodeToByteArray()
+        val programs = XtreamClient(credentials, http).shortEpg(101, "TV1.fr")
+        assertEquals(listOf(1_760_032_800_000L to Long.MAX_VALUE, Long.MAX_VALUE to Long.MAX_VALUE), programs.map { it.start to it.end })
+    }
+
     /** Some panels start their JSON with a UTF-8 byte order mark. */
     @Test
     fun anAnswerStartingWithAByteOrderMarkIsRead() = runTest {

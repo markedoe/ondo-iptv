@@ -107,8 +107,8 @@ class XtreamClient(
             username = user.username ?: credentials.username,
             status = status,
             isTrial = user.isTrial,
-            expiresAt = user.expDate?.times(1000),
-            createdAt = user.createdAt?.times(1000),
+            expiresAt = user.expDate?.let { millis(it) },
+            createdAt = user.createdAt?.let { millis(it) },
             activeConnections = user.activeConnections,
             maxConnections = user.maxConnections,
             allowedOutputFormats = user.allowedOutputFormats,
@@ -335,8 +335,8 @@ class XtreamClient(
         return listings.map {
             EpgProgram(
                 channelId = epgChannelId,
-                start = it.start * 1000,
-                end = it.end * 1000,
+                start = millis(it.start),
+                end = millis(it.end),
                 title = it.title,
                 description = it.description,
             )
@@ -368,6 +368,9 @@ class XtreamClient(
                 val uri = runCatching { URI(url) }.getOrNull() ?: return@firstOrNull true
                 uri.host?.endsWith("tmdb.org") != true || uri.path.orEmpty().substringAfterLast('/').contains('.')
             }
+
+        /** Epoch [seconds] (positive, as decoded) in millis; too far to count in millis, the farthest time there is. */
+        internal fun millis(seconds: Long): Long = if (seconds > Long.MAX_VALUE / 1000) Long.MAX_VALUE else seconds * 1000
 
         /** `"Copper Valley - S01E01 - Pilot"` -> `"Pilot"`. */
         internal fun cleanEpisodeTitle(title: String): String {
