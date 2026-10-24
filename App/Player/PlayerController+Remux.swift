@@ -21,8 +21,9 @@ extension PlayerController {
         let opened = clock
         remuxTask = Task { [weak self] in
             do {
-                let remux = try await MatroskaRemux.open(HTTPByteSource(url: url, headers: headers), preferredLanguages: languages)
-                let server = try RemuxServer(remux: remux)
+                let source = HTTPByteSource(url: url, headers: headers)
+                let remux = try await MatroskaRemux.open(source, preferredLanguages: languages)
+                let server = try RemuxServer(remux: remux, source: source)
                 let address = try await server.start()
                 guard let self, !Task.isCancelled, self.item?.id == item.id else {
                     server.stop()
@@ -68,7 +69,9 @@ extension PlayerController {
         state = .failed(message: message, attribution: .app)
     }
 
-    /// Ends the remux of the film that played (a new item, a fallback, the player closing).
+    /// Ends the remux of the film that played (a new item, a fallback, the player closing): while it opens, cancelling
+    /// its task stops its requests; once it plays, the server's `stop()` closes the remux and its source, so that the
+    /// provider sends nothing more for it (subscriptions often allow a single connection).
     func stopRemux() {
         remuxTask?.cancel()
         remuxTask = nil

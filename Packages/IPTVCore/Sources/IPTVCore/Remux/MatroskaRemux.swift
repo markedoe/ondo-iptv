@@ -41,7 +41,10 @@ public actor MatroskaRemux {
     private var frameTicks: Int64?
     private var grid: Grid?
     private var made: [Int: Data] = [:]
+    /// The reads on their way, the one a segment request waits for included, so that a seek or `close()` stops it.
     private var fetches: [Int: Task<Data, Error>] = [:]
+    /// Set by `close()`: nothing is read any more.
+    private var isClosed = false
 
     /// The decoding-time grid, set by the first segment made.
     struct Grid {
@@ -334,31 +337,54 @@ public actor MatroskaRemux {
     // MARK: Making segments
 
     /// The media segment `index` (moof and mdat), read from the file and kept for a retry; the next one is read ahead.
+    /// Cancelling the task that asks (the player closed the connection) cancels the read.
     public func segment(_ index: Int) async throws -> Data {
+        guard !isClosed else { throw CancellationError() }
         guard segments.indices.contains(index) else { throw RemuxError("no segment \(index)") }
         if let data = made[index] { return data }
         let bytes = try await fetch(index)
+        // Closed while it was read (a source that does not stop when cancelled): nothing more is made or read.
+        guard !isClosed else { throw CancellationError() }
         let data = try build(index, bytes: bytes)
         made = made.filter { abs($0.key - index) <= 1 }
         made[index] = data
-        if segments.indices.contains(index + 1), fetches[index + 1] == nil, made[index + 1] == nil {
-            let next = segments[index + 1]
-            fetches[index + 1] = Task { [source, file] in try await Self.read(next, file: file, source: source) }
-        }
+        if segments.indices.contains(index + 1), made[index + 1] == nil { _ = reading(index + 1) }
         return data
     }
 
+    /// Stops reading the file (the player closed, another film, VLC taking over): the reads on their way are cancelled,
+    /// and no segment is read or read ahead any more.
+    public func close() {
+        isClosed = true
+        for task in fetches.values { task.cancel() }
+        fetches = [:]
+        made = [:]
+    }
+
     private func fetch(_ index: Int) async throws -> (data: Data, offset: Int64) {
-        let segment = segments[index]
-        let task = fetches[index] ?? Task { [source, file] in try await Self.read(segment, file: file, source: source) }
-        fetches[index] = nil
-        // Reads ahead that the player went past are dropped.
-        for (key, stale) in fetches where key < index || key > index + 1 {
+        let task = reading(index)
+        // Reads the player went past (a seek) are stopped: the provider often allows a single connection, which the
+        // segment asked for now needs.
+        for (key, stale) in fetches where key < index - 1 || key > index + 1 {
             stale.cancel()
             fetches[key] = nil
         }
-        let data = try await task.value
+        defer { if fetches[index] == task { fetches[index] = nil } }
+        let data = try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
+        }
         return (data, Self.rangeStart(segments[index], file: file))
+    }
+
+    /// The read of segment `index` on its way, or a new one: a cancelled read is never waited for again.
+    private func reading(_ index: Int) -> Task<Data, Error> {
+        if let task = fetches[index], !task.isCancelled { return task }
+        let segment = segments[index]
+        let task = Task { [source, file] in try await Self.read(segment, file: file, source: source) }
+        fetches[index] = task
+        return task
     }
 
     static func rangeStart(_ segment: Segment, file: MatroskaFile) -> Int64 {
