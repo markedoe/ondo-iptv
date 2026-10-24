@@ -25,6 +25,10 @@ on:
         description: Type a wrong password first (refused), then the right one
         type: boolean
         default: false
+      paths:
+        description: "More paths after the tabs, each from a fresh start (all, or some of: settings,search,details,player,guide,mylist,playlists,restore,browse,sync,crash)"
+        required: false
+        default: ""
 
 concurrency:
   group: tv-release-check-${{ inputs.ref }}-${{ inputs.panel }}-${{ inputs.api-level }}-${{ inputs.heap-size }}
@@ -63,9 +67,21 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Streams that play (a two-minute clip made with ffmpeg)
+        if: inputs.paths != ''
+        run: |
+          command -v ffmpeg > /dev/null || { sudo apt-get update -q && sudo apt-get install -y -q ffmpeg; }
+          mkdir -p media
+          ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc2=size=640x360:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 \
+            -t 120 -c:v libx264 -preset veryfast -g 50 -pix_fmt yuv420p -c:a aac -b:a 64k media/clip.mkv
+          ffmpeg -hide_banner -loglevel error -i media/clip.mkv -c copy -f mpegts media/clip.ts
+          ffmpeg -hide_banner -loglevel error -i media/clip.mkv -c copy -f hls -hls_time 4 -hls_list_size 0 -hls_playlist_type vod \
+            -hls_segment_filename media/seg%03d.ts media/live.m3u8
+          ls -la media
       - name: Made-up Xtream panel
         env:
           PANEL: ${{ inputs.panel }}
+          MEDIA: ${{ inputs.paths != '' && 'media' || '' }}
         run: |
           mkdir -p out
           case "$PANEL" in
@@ -74,11 +90,13 @@ jobs:
             *) sizes="--live 5000 --movies 20000 --series 5000 --guide-channels 2000 --guide-days 3" ;;
           esac
           # shellcheck disable=SC2086
-          nohup python3 -I .github/scripts/fake_xtream_panel.py --port 8080 $sizes --log out/panel-requests.log > out/panel.log 2>&1 &
+          nohup python3 -I .github/scripts/fake_xtream_panel.py --port 8080 $sizes --log out/panel-requests.log --media "$MEDIA" > out/panel.log 2>&1 &
           for _ in $(seq 1 300); do grep -q "panel on" out/panel.log && break; sleep 1; done
           cat out/panel.log
           head -1 out/panel-requests.log
       - name: Add a playlist on the TV with the remote
+        env:
+          PATHS: ${{ inputs.paths }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ inputs.api-level }}
@@ -92,7 +110,7 @@ jobs:
           script: |
             adb install -r build-src/android/app/build/outputs/apk/release/app-release.apk
             adb reverse tcp:8080 tcp:8080
-            python3 -I .github/scripts/tv_drive.py out/tv ${{ inputs.wrong-password-first && '--wrong-password-first' || '' }}
+            python3 -I .github/scripts/tv_drive.py out/tv --paths="$PATHS" ${{ inputs.wrong-password-first && '--wrong-password-first' || '' }}
       - name: Crash with the app's names (R8 mapping)
         if: always()
         run: |

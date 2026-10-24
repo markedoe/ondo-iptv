@@ -3,12 +3,17 @@
 first launch, Add a Playlist, Xtream Codes (the made-up panel of fake_xtream_panel.py, reached through
 `adb reverse`), Add, then every tab. Watches the app's process the whole time: a crash, an ANR or Android ending the
 app fails the run. Screenshots, the screen's text, logcat, the exit reasons and memory use go to the output folder.
+With --paths, more of the app after that, each path from a fresh start of the app (the saved playlist read again):
+settings, search, details, player, guide, mylist, playlists, restore, browse, sync, crash (see PATHS).
 
-Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240]
+Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240] [--paths settings,search,...]
 """
 import argparse
+import json
 import os
 import re
+import socket
+import struct
 import subprocess
 import sys
 import time
@@ -122,8 +127,9 @@ class Tv:
         self.screenshot(f"timeout-{what.replace(' ', '-')}")
         raise TimeoutError(f"{what} never came in {timeout} s")
 
-    def focus_on_field(self, index, max_presses=14):
-        """Presses Down until the focused element is the form's text field number [index] (from 0, top to bottom)."""
+    def focus_on_field(self, index, max_presses=14, towards="DOWN"):
+        """Presses Down (or [towards]) until the focused element is the form's text field number [index] (from 0, top to
+        bottom)."""
         for _ in range(max_presses + 1):
             root = self.screen()
             if root is not None:
@@ -133,9 +139,9 @@ class Tv:
                     return fields[index]
                 # Injected arrows stay in a text field (Compose moves out of one for a physical remote only): Tab
                 # goes on to the next field, as Next on the TV's keyboard does.
-                self.key("TAB" if focused else "DOWN")
+                self.key("TAB" if focused else towards)
                 continue
-            self.key("DOWN")
+            self.key(towards)
         self.screenshot(f"never-focused-field-{index}")
         raise TimeoutError(f"the focus never reached text field {index}")
 
@@ -150,6 +156,750 @@ class Tv:
         self.screenshot(f"never-focused-{label}")
         raise TimeoutError(f"the focus never reached '{label}' (on: {joined})")
 
+    # The paths after the first walk (--paths).
+
+    def note_screen(self, name):
+        """A screenshot, and the screen's words and the focused element in the steps log (to find the way next time)."""
+        self.screenshot(name)
+        root = self.screen()
+        if root is None:
+            return
+        words = " | ".join(dict.fromkeys(self.texts(root)))
+        _, focused = self.focused(root)
+        self.say(f"  [{name}] focus: {' | '.join(focused)[:120]!r}; screen: {words[:700]!r}")
+
+    def focus_exact(self, label, keys=("DOWN",), max_presses=14):
+        """Presses [keys] in turn until the focused element has a text (or description) that is exactly [label]."""
+        joined = ""
+        for i in range(max_presses + 1):
+            node, texts = self.focused()
+            joined = " | ".join(texts)
+            if node is not None and label in texts:
+                return node
+            self.key(keys[i % len(keys)])
+        self.screenshot(f"never-focused-{label}")
+        raise TimeoutError(f"the focus never reached '{label}' (on: {joined})")
+
+    def open(self, label, keys=("DOWN",), max_presses=14, exact=False, wait=3.0):
+        """Moves to [label] and presses OK."""
+        if exact:
+            self.focus_exact(label, keys, max_presses)
+        else:
+            self.focus_on(label, keys, max_presses)
+        self.key("DPAD_CENTER")
+        time.sleep(wait)
+        self.check_alive(f"{label} pressed")
+
+    def restart(self):
+        """Ondo stopped and started again: Home with the saved playlist, read back from the device's storage."""
+        self.shell(f"am force-stop {PACKAGE}")
+        time.sleep(1)
+        self.shell(f"am start -W -n {ACTIVITY}")
+        self.pid = self.current_pid()
+        self.say(f"restarted, pid {self.pid}")
+        self.wait_for("home after a restart", lambda: self.visible("Live TV") and not self.visible("Try the demo"), 60)
+        time.sleep(3)
+        self.check_alive("home after a restart")
+
+    @staticmethod
+    def left_edge(node):
+        """The node's left edge in pixels (bounds="[x1,y1][x2,y2]")."""
+        found = re.match(r"\[(-?\d+),", node.get("bounds", "")) if node is not None else None
+        return int(found.group(1)) if found else 10_000
+
+    def in_drawer(self):
+        """The focus on one of the drawer's places: its words, at the screen's left edge (a page's chips have the same words)."""
+        node, texts = self.focused()
+        return node is not None and any(t in DRAWER for t in texts) and self.left_edge(node) < 260
+
+    def to_drawer(self):
+        """The focus on the drawer: Back from a page lands on its tab (never Back from the drawer: on Home it leaves)."""
+        for attempt in range(10):
+            if self.in_drawer():
+                return
+            # Back up through the pages opened from a tab (a movie, a genre, a grid…), then Left.
+            self.key("BACK" if attempt < 6 else "LEFT")
+            time.sleep(1)
+        raise TimeoutError("the drawer never took the focus")
+
+    def drawer(self, item):
+        """Opens a place of the drawer (a tab, Search or Settings)."""
+        self.to_drawer()
+        for i in range(18):
+            node, texts = self.focused()
+            if node is not None and item in texts and self.left_edge(node) < 260:
+                break
+            self.key("UP" if i < 8 else "DOWN")
+        else:
+            raise TimeoutError(f"the drawer's {item} never had the focus")
+        self.key("DPAD_CENTER")
+        time.sleep(4)
+        self.check_alive(f"{item} opened")
+
+    def stay(self, seconds, where):
+        """Waits while watching the app."""
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            time.sleep(min(3, max(0, deadline - time.time())))
+            self.check_alive(where)
+
+    def view_focus(self):
+        """The focused View of the window in front (`dumpsys activity top`): the player's controls are Views, which
+        uiautomator does not list inside a Compose screen. None when no View has the focus."""
+        found = None
+        for line in self.shell("dumpsys activity top", timeout=60).splitlines():
+            match = re.search(r"([\w.$]+)\{[0-9a-f]+ [VIG.]\S{8} .F\S{6} ([^}]*)\}", line)
+            if match:
+                found = f"{match.group(1)} {match.group(2)}"
+        return found
+
+    def player_shown(self):
+        return f"{PACKAGE}/.player.PlayerActivity" in self.shell("dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity'")
+
+    def leave_player(self):
+        """Back until the player is gone (the first Back may only hide its controls)."""
+        for _ in range(4):
+            if not self.player_shown():
+                return
+            self.key("BACK")
+            time.sleep(2)
+        if self.player_shown():
+            raise TimeoutError("Back never closed the player")
+
+
+DRAWER = ("Search", "Home", "Movies", "Series", "Live TV", "My List", "Settings")
+
+
+def settings_section(tv, section):
+    """Settings open, the remote on one of its parts on the left (its page shows on the right)."""
+    tv.focus_exact(section, keys=("UP",) * 5 + ("DOWN",) * 5, max_presses=10)
+    time.sleep(1)
+
+
+def path_settings(tv, args):
+    """Every part of Settings and what opens from it; Refresh last (the whole catalogue loaded again beside the one shown)."""
+    tv.drawer("Settings")
+    tv.note_screen("settings")
+    settings_section(tv, "Sync")
+    tv.key("RIGHT")
+    tv.open("Sync on this network", keys=("UP",), max_presses=3)
+    tv.stay(10, "sync on")
+    tv.note_screen("settings-sync-on")
+    tv.key("DPAD_CENTER")
+    tv.stay(3, "sync off")
+    tv.key("LEFT")
+    settings_section(tv, "Player")
+    tv.key("RIGHT")
+    for row in ("Buffer for live TV", "Buffer for movies & series"):
+        tv.open(row, keys=("DOWN",), max_presses=3)
+        tv.note_screen("settings-buffer-choice")
+        tv.key("DOWN")
+        tv.key("DPAD_CENTER")
+        time.sleep(2)
+        tv.check_alive(f"{row} chosen")
+    tv.key("LEFT")
+    settings_section(tv, "Catalog")
+    tv.key("RIGHT")
+    tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
+    tv.note_screen("settings-categories")
+    # A word to hide (Styles), then every category hidden and shown. The remote has not found its way to the second
+    # text field yet (Tab from the first one goes on to the list): noted, and the rest of Settings goes on.
+    try:
+        tv.focus_on_field(1, towards="TAB", max_presses=20)
+        tv.shell("input text 'Films%s3'")
+        tv.focus_on("Add", keys=("TAB",), max_presses=4, editable=False)
+        tv.key("DPAD_CENTER")
+        tv.stay(4, "a word hidden from the categories")
+        tv.note_screen("settings-styles-word-hidden")
+        tv.open("Show", keys=("UP", "DOWN", "TAB"), max_presses=8, exact=True, wait=4)
+        tv.note_screen("settings-styles-word-shown")
+        tv.open("Hide all", keys=("TAB",), max_presses=40, exact=True, wait=6)
+        tv.note_screen("settings-categories-all-hidden")
+        tv.open("Show all", keys=("LEFT",), max_presses=3, exact=True, wait=6)
+        tv.note_screen("settings-categories-all-shown")
+    except TimeoutError as problem:
+        tv.say(f"  not driven in the categories: {problem}")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.check_alive("back from the categories")
+    if not tv.visible("Show adult categories"):
+        settings_section(tv, "Catalog")
+        tv.key("RIGHT")
+    for row in ("Show adult categories", "Hide watched movies", "Update awards automatically"):
+        tv.open(row, keys=("DOWN",), max_presses=5, wait=2)
+        tv.key("DPAD_CENTER")
+        time.sleep(2)
+    tv.stay(5, "catalogue switches turned over")
+    tv.note_screen("settings-catalogue")
+    tv.key("LEFT")
+    settings_section(tv, "About")
+    tv.key("RIGHT")
+    tv.open("Help", keys=("UP",), max_presses=3, wait=3)
+    tv.note_screen("settings-help")
+    tv.key("BACK")
+    time.sleep(2)
+    for row in ("Privacy policy", "Support"):
+        if not tv.visible("Privacy policy"):
+            settings_section(tv, "About")
+            tv.key("RIGHT")
+        tv.open(row, keys=("DOWN",), max_presses=4, wait=8)
+        tv.note_screen(f"settings-{row.split()[0].lower()}")
+        tv.key("BACK")
+        time.sleep(3)
+        tv.check_alive(f"back from {row}")
+    if not tv.visible("Privacy policy"):
+        settings_section(tv, "About")
+        tv.key("RIGHT")
+    tv.key("DOWN", 6)
+    tv.note_screen("settings-about-end")
+    tv.key("LEFT")
+    settings_section(tv, "Playlists")
+    tv.key("RIGHT")
+    tv.open("Refresh", keys=("UP", "LEFT"), max_presses=4, wait=1)
+    tv.note_screen("settings-refreshing")
+    tv.stay(100, "the catalogue and its guide refreshed from the Settings")
+    tv.note_screen("settings-refreshed")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.check_alive("back from the Settings")
+
+
+def path_search(tv, args):
+    """Search typed with the remote's keys: a movie opened, then a person (actor, director) and one of their titles."""
+    tv.drawer("Search")
+    tv.note_screen("search")
+    tv.focus_on_field(0)
+    tv.shell("input text 'Movie%s12'")
+    tv.stay(4, "search typed")
+    tv.note_screen("search-typed")
+    tv.key("TAB")
+    time.sleep(1)
+    tv.open("Movie 12", keys=("DOWN", "RIGHT", "TAB"), max_presses=12, wait=5)
+    tv.note_screen("search-movie")
+    tv.open("Actor One", keys=("DOWN", "RIGHT"), max_presses=8, wait=4)
+    tv.note_screen("search-person")
+    tv.key("DOWN")
+    tv.key("DPAD_CENTER")
+    time.sleep(4)
+    tv.check_alive("a title of the person opened")
+    tv.note_screen("search-person-title")
+    for _ in range(3):
+        tv.key("BACK")
+        time.sleep(2)
+    tv.check_alive("back to the search")
+    tv.drawer("Search")
+    tv.focus_on_field(0, towards="UP")
+    tv.key("MOVE_END")
+    tv.key("DEL", times=10, pause=0.1)
+    tv.shell("input text 'Director'")
+    tv.stay(4, "a person searched")
+    tv.note_screen("search-people")
+    tv.key("TAB")
+    tv.open("Director", keys=("DOWN", "RIGHT", "TAB"), max_presses=12, wait=4)
+    tv.note_screen("search-director")
+
+
+def path_details(tv, args):
+    """A movie's page (get_vod_info) and a series' page (get_series_info): seasons, an episode played."""
+    tv.drawer("Series")
+    tv.key("DOWN", 2)
+    tv.key("RIGHT", 2)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("a series page", lambda: tv.visible("Season 1"), 30)
+    tv.note_screen("series")
+    tv.focus_exact("Season 1", keys=("DOWN",), max_presses=6)
+    tv.key("RIGHT")
+    tv.key("DPAD_CENTER")
+    time.sleep(3)
+    tv.key("RIGHT")
+    tv.key("DPAD_CENTER")
+    time.sleep(3)
+    tv.check_alive("seasons changed")
+    tv.note_screen("series-season3")
+    tv.key("DOWN")
+    time.sleep(1)
+    tv.note_screen("series-episodes")
+    tv.key("RIGHT")
+    tv.key("DPAD_CENTER")
+    time.sleep(8)
+    tv.check_alive("an episode played")
+    tv.note_screen("series-episode-player")
+    tv.leave_player()
+    tv.check_alive("back from an episode")
+    tv.key("DOWN", 4)
+    tv.note_screen("series-bottom")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.drawer("Movies")
+    tv.key("DOWN", 2)
+    tv.key("RIGHT", 1)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    tv.stay(3, "a movie page")
+    tv.note_screen("movie")
+    tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=8)
+    tv.note_screen("movie-player")
+    tv.leave_player()
+    tv.check_alive("back from a movie")
+    tv.open("Collection", keys=("RIGHT",), max_presses=4, wait=2)
+    tv.note_screen("movie-collection")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.key("DOWN", 6, pause=0.6)
+    tv.note_screen("movie-bottom")
+    tv.key("DPAD_CENTER")
+    time.sleep(4)
+    tv.check_alive("a title further down a movie's page")
+    tv.note_screen("movie-bottom-opened")
+
+
+def path_player(tv, args):
+    """A live channel and a movie in the player, the remote's keys pressed: OK, arrows, channels, figures, Info, the menu."""
+    tv.drawer("Live TV")
+    tv.key("DOWN")
+    tv.key("DPAD_CENTER")
+    time.sleep(8)
+    tv.check_alive("a live channel opened")
+    tv.note_screen("player-live")
+    if not tv.player_shown():
+        raise TimeoutError("the player never opened from Live TV")
+    for key in ("DPAD_CENTER", "DPAD_CENTER", "UP", "UP", "DOWN", "CHANNEL_UP", "CHANNEL_DOWN", "LAST_CHANNEL"):
+        tv.key(key, pause=2.5)
+        tv.check_alive(f"{key} in the live player")
+    tv.key("1", pause=0.3)
+    tv.key("2", pause=3)
+    tv.check_alive("a channel number typed")
+    tv.key("9", pause=0.2)
+    tv.key("9", pause=0.2)
+    tv.key("9", pause=0.2)
+    tv.key("9", pause=3)
+    tv.check_alive("a channel number that does not exist")
+    tv.note_screen("player-live-zapped")
+    for key in ("INFO", "GUIDE", "MENU", "MEDIA_PLAY_PAUSE", "MEDIA_PLAY_PAUSE"):
+        tv.key(key, pause=2)
+        tv.check_alive(f"{key} in the live player")
+    tv.key("INFO", pause=1)
+    if not tv.view_focus():
+        tv.key("INFO", pause=1)
+    tv.note_screen("player-live-controls")
+    tv.say(f"  player focus: {tv.view_focus()}")
+    # Down to the row of buttons (past the time bar), then Right to the last one, More (a button without an id).
+    tv.key("DOWN", 2, pause=0.6)
+    for _ in range(8):
+        focus = tv.view_focus()
+        if focus and "ImageButton" in focus and "app:id/" not in focus:
+            break
+        tv.key("RIGHT", pause=0.6)
+    tv.say(f"  player focus: {tv.view_focus()}")
+    tv.key("DPAD_CENTER")
+    time.sleep(2)
+    tv.check_alive("More pressed in the player")
+    tv.note_screen("player-menu")
+    tv.open("Report a Problem…", keys=("DOWN",), max_presses=4, wait=3)
+    tv.note_screen("player-report")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.leave_player()
+    tv.check_alive("back from the live player")
+    tv.drawer("Movies")
+    tv.key("DOWN", 2)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=10)
+    tv.note_screen("player-movie")
+    for key in ("DPAD_CENTER", "DPAD_CENTER", "RIGHT", "RIGHT", "LEFT", "MEDIA_FAST_FORWARD", "MEDIA_REWIND", "UP", "DOWN", "INFO", "INFO"):
+        tv.key(key, pause=2.5)
+        tv.check_alive(f"{key} in the movie player")
+    tv.note_screen("player-movie-keys")
+    tv.shell("input keyevent --longpress KEYCODE_DPAD_RIGHT")
+    time.sleep(3)
+    tv.check_alive("a long press in the movie player")
+    tv.leave_player()
+    tv.stay(4, "back from the movie player")
+    tv.note_screen("player-movie-closed")
+
+
+def path_guide(tv, args):
+    """The TV guide: scrolled, a programme opened, a reminder set; its WorkManager job run at once."""
+    tv.drawer("Live TV")
+    tv.key("UP", 3)
+    tv.open("TV guide", keys=("RIGHT",), max_presses=8, wait=8)
+    tv.wait_for("the guide", lambda: tv.visible("All channels") or tv.visible("Reminders"), 60)
+    tv.note_screen("guide")
+    tv.key("DOWN", 6, pause=0.5)
+    tv.key("RIGHT", 4, pause=0.5)
+    tv.key("UP", 3, pause=0.5)
+    tv.check_alive("the guide scrolled")
+    tv.note_screen("guide-scrolled")
+    tv.key("DPAD_CENTER")
+    time.sleep(3)
+    tv.note_screen("guide-programme")
+    tv.open("Remind me", keys=("DOWN", "TAB", "RIGHT"), max_presses=8, wait=3)
+    tv.note_screen("guide-reminder-set")
+    tv.key("BACK")
+    time.sleep(2)
+    jobs = tv.shell("dumpsys jobscheduler")
+    ids = sorted(set(re.findall(r"JOB #u\d+a\d+/(\d+): \S+ " + re.escape(PACKAGE) + r"/androidx\.work", jobs)))
+    tv.say(f"WorkManager jobs: {ids}")
+    for job in ids:
+        tv.say("run job " + job + ": " + tv.shell(f"cmd jobscheduler run -f {PACKAGE} {job}").strip())
+    tv.stay(10, "the reminder's job run")
+    notes = tv.shell("dumpsys notification --noredact")
+    shown = [line.strip() for line in notes.splitlines() if PACKAGE in line and "NotificationRecord" in line]
+    tv.say(f"notifications: {shown}")
+    if not shown:
+        raise TimeoutError("no reminder notification after its WorkManager job ran")
+    tv.open("Reminders", keys=("UP", "RIGHT"), max_presses=10, wait=3)
+    tv.note_screen("guide-reminders")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.key("BACK")
+    time.sleep(2)
+    tv.check_alive("back from the guide")
+
+
+def path_mylist(tv, args):
+    """A movie and a channel added to My List and taken out again; the long press on a channel."""
+    tv.drawer("Movies")
+    tv.key("DOWN", 2)
+    tv.key("RIGHT", 3)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    tv.open("My List", keys=("RIGHT",), max_presses=4, wait=2)
+    tv.note_screen("mylist-added")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.drawer("Live TV")
+    tv.key("DOWN")
+    tv.shell("input keyevent --longpress KEYCODE_DPAD_CENTER")
+    time.sleep(3)
+    tv.check_alive("a long press on a channel")
+    tv.note_screen("mylist-channel-longpress")
+    tv.drawer("My List")
+    tv.note_screen("mylist")
+    for segment in ("Movies", "Channels"):
+        tv.open(segment, keys=("UP", "RIGHT", "RIGHT", "RIGHT", "LEFT", "LEFT", "LEFT"), max_presses=14, exact=True, wait=2)
+        tv.note_screen(f"mylist-{segment.lower()}")
+        tv.key("DOWN")
+        tv.key("DPAD_CENTER")
+        time.sleep(5)
+        tv.check_alive(f"an item of My List's {segment} opened")
+        tv.note_screen(f"mylist-{segment.lower()}-opened")
+        tv.leave_player()
+        if segment == "Movies":
+            tv.open("My List", keys=("UP", "RIGHT"), max_presses=6, wait=2)
+            tv.note_screen("mylist-removed")
+        tv.key("BACK")
+        time.sleep(2)
+        tv.drawer("My List")
+
+
+def path_playlists(tv, args):
+    """A second Xtream playlist added from the Settings, the first used again, the second deleted."""
+    tv.drawer("Settings")
+    settings_section(tv, "Playlists")
+    tv.key("RIGHT")
+    tv.open("Add a Playlist", keys=("DOWN",), max_presses=6, wait=3)
+    tv.wait_for("add form", lambda: tv.visible("Server", "Username", "Password"), 30)
+    for index, value in ((0, "Second"), (1, args.server), (2, "viewer"), (3, "secret")):
+        tv.focus_on_field(index)
+        tv.shell(f"input text '{value}'")
+        time.sleep(0.5)
+    tv.focus_on("Add", keys=("TAB",), editable=False)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("the second playlist", lambda: tv.visible("Second") and not tv.visible("Username"), args.wait_load, every=3)
+    tv.stay(5, "the second playlist loaded")
+    tv.note_screen("playlists-two")
+    if not tv.visible("Use"):
+        settings_section(tv, "Playlists")
+        tv.key("RIGHT")
+    tv.open("Use", keys=("DOWN", "UP"), max_presses=8, exact=True, wait=1)
+    tv.stay(40, "the first playlist used again")
+    tv.note_screen("playlists-switched")
+    settings_section(tv, "Playlists")
+    tv.key("RIGHT")
+    tv.focus_exact("Delete Second", keys=("DOWN", "RIGHT", "RIGHT", "UP", "DOWN"), max_presses=12)
+    tv.key("DPAD_CENTER")
+    time.sleep(2)
+    tv.note_screen("playlists-confirm")
+    tv.key("RIGHT")
+    tv.key("DPAD_CENTER")
+    tv.stay(8, "a playlist deleted")
+    tv.note_screen("playlists-deleted")
+    if tv.visible("Second"):
+        raise TimeoutError("the second playlist is still there after Delete")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.check_alive("back from the Settings")
+
+
+def path_browse(tv, args):
+    """Pages opened with arguments: a category's grid (and every movie's), a genre and a year (Browse: its kind read
+    back by name), a new collection and its page, the filters of Search, Live TV and the guide."""
+    tv.drawer("Movies")
+    tv.open("FR | Films 2", keys=("UP", "RIGHT", "RIGHT", "RIGHT"), max_presses=8, exact=True, wait=5)
+    tv.note_screen("browse-category-grid")
+    tv.key("DOWN")
+    tv.key("RIGHT", 2)
+    tv.key("DPAD_CENTER")
+    time.sleep(4)
+    tv.check_alive("a movie of a category's grid opened")
+    tv.note_screen("browse-grid-movie")
+    tv.open("Drama", keys=("DOWN", "DOWN", "DOWN", "UP"), max_presses=10, exact=True, wait=5)
+    tv.note_screen("browse-genre")
+    tv.key("DOWN")
+    tv.key("DPAD_CENTER")
+    time.sleep(4)
+    tv.check_alive("a title of a genre opened")
+    tv.note_screen("browse-genre-movie")
+    tv.focus_exact("Drama", keys=("DOWN", "DOWN", "DOWN", "UP"), max_presses=10)
+    tv.open("Year ", keys=("RIGHT",), max_presses=4, wait=5)
+    tv.note_screen("browse-year")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.open("Collection", keys=("UP", "UP", "UP", "UP", "RIGHT"), max_presses=10, exact=True, wait=2)
+    tv.open("New collection", keys=("DOWN",), max_presses=4, wait=2)
+    tv.note_screen("browse-collection-name")
+    tv.focus_on("Create", keys=("TAB",), max_presses=6, editable=False)
+    tv.key("DPAD_CENTER")
+    tv.stay(3, "a collection created")
+    tv.note_screen("browse-collection-created")
+    # The picker stays open with the new collection ticked: Back closes it.
+    tv.key("BACK")
+    time.sleep(2)
+    tv.drawer("My List")
+    tv.open("Collections", keys=("UP", "RIGHT", "RIGHT", "RIGHT", "RIGHT"), max_presses=10, exact=True, wait=2)
+    tv.open("Collection ", keys=("DOWN",), max_presses=4, wait=4)
+    tv.note_screen("browse-collection-page")
+    tv.key("DOWN")
+    tv.key("DPAD_CENTER")
+    time.sleep(4)
+    tv.check_alive("a title of a collection opened")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.key("BACK")
+    time.sleep(2)
+    tv.drawer("Search")
+    tv.focus_on_field(0)
+    tv.shell("input text 'Series%s1'")
+    tv.stay(3, "search typed")
+    tv.open("Filters", keys=("TAB",), max_presses=4, wait=3)
+    tv.note_screen("browse-search-filters")
+    tv.key("DOWN", 2)
+    tv.key("DPAD_CENTER")
+    time.sleep(2)
+    tv.check_alive("a search filter chosen")
+    tv.note_screen("browse-search-filter-chosen")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.drawer("Live TV")
+    tv.key("UP", 3)
+    tv.open("Categories", keys=("RIGHT",), max_presses=8, exact=True, wait=3)
+    tv.note_screen("browse-live-categories")
+    tv.key("DOWN", 3)
+    tv.key("DPAD_CENTER")
+    time.sleep(3)
+    tv.check_alive("a live category chosen")
+    tv.note_screen("browse-live-category")
+
+
+def listening_ports(tv):
+    """The TCP ports the app listens on (its sync server), from the system's socket tables."""
+    uid = re.search(r"userId=(\d+)", tv.shell(f"dumpsys package {PACKAGE}"))
+    if not uid:
+        return []
+    ports = []
+    for table in ("/proc/net/tcp6", "/proc/net/tcp"):
+        for line in tv.shell(f"cat {table}").splitlines()[1:]:
+            fields = line.split()
+            # sl local_address rem_address st tx:rx tr:when retrnsmt uid ...
+            if len(fields) > 7 and fields[3] == "0A" and fields[7] == uid.group(1):
+                ports.append(int(fields[1].rsplit(":", 1)[1], 16))
+    return sorted(set(ports))
+
+
+def sync_exchange(port, snapshot):
+    """One sync session as another device runs it (docs/SYNC.md): a frame (4-byte length, JSON) each way."""
+    payload = json.dumps(snapshot).encode()
+    with socket.create_connection(("127.0.0.1", port), timeout=30) as connection:
+        connection.sendall(struct.pack(">I", len(payload)) + payload)
+        header = b""
+        while len(header) < 4:
+            chunk = connection.recv(4 - len(header))
+            if not chunk:
+                return None
+            header += chunk
+        size = struct.unpack(">I", header)[0]
+        body = b""
+        while len(body) < size:
+            chunk = connection.recv(min(1 << 16, size - len(body)))
+            if not chunk:
+                return None
+            body += chunk
+    return json.loads(body)
+
+
+def path_sync(tv, args):
+    """Sync on the local network turned on, and a session from another device (a made-up phone, through adb forward):
+    its snapshot read by the release build, merged (a playlist, My List, progress, a list), and the answer written."""
+    tv.drawer("Settings")
+    settings_section(tv, "Sync")
+    tv.key("RIGHT")
+    tv.open("Sync on this network", keys=("UP",), max_presses=3, wait=6)
+    ports = listening_ports(tv)
+    tv.say(f"the app listens on {ports}")
+    if not ports:
+        raise TimeoutError("no sync server listening after sync was turned on")
+    tv.adb("forward", "tcp:18765", f"tcp:{ports[0]}")
+    now = int(time.time() * 1000)
+    playlist = "6f1c0d3e-0000-4000-8000-00000000a001"
+    snapshot = {
+        "type": "ondo-sync", "version": 1, "device": "0f0f0f0f-0000-4000-8000-0000000000aa", "deviceName": "Test phone",
+        "playlists": [{"id": playlist, "name": "Synced", "kind": "xtream", "url": args.server, "username": "viewer",
+                       "password": "secret", "addedAt": now, "updatedAt": now}],
+        "favorites": [{"playlist": playlist, "kind": "movie", "item": "x12", "title": "Movie 12", "addedAt": now},
+                      {"playlist": playlist, "kind": "live", "item": "x3", "title": "Channel 3", "addedAt": now}],
+        "progress": [{"playlist": playlist, "kind": "movie", "item": "x12", "title": "Movie 12", "position": 60.0,
+                      "duration": 5400.0, "watchedAt": now}],
+        "lists": [{"id": "6f1c0d3e-0000-4000-8000-00000000b001", "name": "Weekend", "updatedAt": now,
+                   "items": [{"playlist": playlist, "kind": "movie", "item": "x12", "title": "Movie 12"}]}],
+        "deleted": {}, "replaced": {},
+    }
+    try:
+        answer = sync_exchange(18765, snapshot)
+    except (OSError, ValueError) as problem:
+        answer = None
+        tv.say(f"sync session: {problem!r}")
+    tv.check_alive("a sync session from another device")
+    if answer is None:
+        raise TimeoutError("the app's sync server gave no answer")
+    tv.say(f"sync answer from {answer.get('deviceName')!r}: {len(answer.get('playlists', []))} playlists, "
+           f"{len(answer.get('favorites', []))} in My List, {len(answer.get('progress', []))} progress, {len(answer.get('lists', []))} lists")
+    tv.stay(10, "a sync merged")
+    tv.note_screen("sync-heard")
+    tv.key("LEFT")
+    settings_section(tv, "Playlists")
+    tv.stay(3, "the playlists after a sync")
+    tv.note_screen("sync-playlists")
+    settings_section(tv, "Sync")
+    tv.key("RIGHT")
+    tv.open("Sync on this network", keys=("UP",), max_presses=3, wait=3)
+    tv.adb("forward", "--remove", "tcp:18765")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.drawer("My List")
+    tv.note_screen("sync-mylist")
+
+
+def recreated(tv, where):
+    """The screen made again by Android (a system setting changed: night mode, and back), its saved state read back."""
+    for mode in ("yes", "no"):
+        tv.shell(f"cmd uimode night {mode}")
+        tv.stay(5, f"{where}: recreated (night mode {mode})")
+    tv.note_screen(f"recreated-{where}")
+
+
+def killed_in_background(tv, where, expect):
+    """Home, Android ends the app in the background (am kill, as it does for memory), then Ondo opened again: Android
+    recreates the screens from their saved state in a new process."""
+    tv.key("HOME")
+    time.sleep(4)
+    tv.shell(f"am kill {PACKAGE}")
+    time.sleep(3)
+    before, after = tv.pid, tv.current_pid()
+    if after == before:
+        raise TimeoutError(f"{where}: am kill left the app's process {before}")
+    tv.shell(f"am start -W -n {ACTIVITY}")
+    tv.pid = tv.current_pid()
+    tv.say(f"{where}: process {before} ended in the background, {tv.pid} now, screens restored")
+    tv.stay(8, f"{where}: restored after the process ended")
+    tv.note_screen(f"restored-{where}")
+    if expect and not tv.visible(expect):
+        tv.say(f"  {where}: '{expect}' not on screen after the restore")
+
+
+def path_restore(tv, args):
+    """Saved state: pages recreated by Android (configuration change), and restored in a new process after Android
+    ended the app in the background (navigation's routes, the player's request, the remembered values)."""
+    tv.drawer("Movies")
+    tv.key("DOWN", 2)
+    tv.key("RIGHT", 2)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    recreated(tv, "movie")
+    killed_in_background(tv, "movie", "Collection")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.check_alive("Back after the restore")
+    tv.note_screen("restored-movie-back")
+    tv.drawer("Settings")
+    settings_section(tv, "Catalog")
+    tv.key("RIGHT")
+    tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
+    recreated(tv, "categories")
+    killed_in_background(tv, "categories", "Styles")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.check_alive("Back to the Settings after the restore")
+    tv.note_screen("restored-settings")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.drawer("Live TV")
+    tv.key("UP", 3)
+    tv.open("TV guide", keys=("RIGHT",), max_presses=8, wait=8)
+    tv.key("DOWN", 3)
+    recreated(tv, "guide")
+    killed_in_background(tv, "guide", "Reminders")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.drawer("Movies")
+    tv.key("DOWN", 2)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=8)
+    if not tv.player_shown():
+        raise TimeoutError("the player never opened from a movie page")
+    recreated(tv, "player")
+    killed_in_background(tv, "player", None)
+    tv.say(f"  player in front after the restore: {tv.player_shown()}")
+    tv.stay(8, "the player restored")
+    tv.leave_player()
+    tv.stay(4, "back from the restored player")
+    tv.note_screen("restored-player-closed")
+
+
+def path_crash(tv, args):
+    """The last crash in Settings → About: a crash made on purpose (am crash), then the next start shows it."""
+    tv.say("making the app crash on purpose (am crash): not a failure")
+    tv.shell(f"am crash {PACKAGE}")
+    time.sleep(5)
+    tv.adb("logcat", "-b", "crash", "-c")
+    tv.restart()
+    tv.drawer("Settings")
+    settings_section(tv, "About")
+    tv.key("RIGHT")
+    tv.focus_on("Last crash", keys=("DOWN",), max_presses=10)
+    tv.stay(3, "the last crash shown")
+    tv.note_screen("settings-last-crash")
+    tv.key("BACK")
+    time.sleep(2)
+
+
+PATHS = {
+    "settings": path_settings,
+    "search": path_search,
+    "details": path_details,
+    "player": path_player,
+    "guide": path_guide,
+    "mylist": path_mylist,
+    "playlists": path_playlists,
+    "restore": path_restore,
+    "browse": path_browse,
+    "sync": path_sync,
+    # Last: it crashes the app on purpose.
+    "crash": path_crash,
+}
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -157,7 +907,12 @@ def main():
     parser.add_argument("--server", default="http://localhost:8080")
     parser.add_argument("--wait-load", type=int, default=240)
     parser.add_argument("--wrong-password-first", action="store_true")
+    parser.add_argument("--paths", default="", help=f"more paths after the first walk, comma-separated: {','.join(PATHS)} (or all)")
     args = parser.parse_args()
+    paths = list(PATHS) if args.paths.strip() == "all" else [p.strip() for p in args.paths.split(",") if p.strip()]
+    unknown = [p for p in paths if p not in PATHS]
+    if unknown:
+        parser.error(f"unknown paths {unknown}: {', '.join(PATHS)}")
     os.makedirs(args.out, exist_ok=True)
     tv = Tv(args.out)
     result = 1
@@ -248,7 +1003,21 @@ def main():
             time.sleep(3)
             tv.check_alive("idle at the end")
         tv.screenshot("end")
-        tv.say("PASS: no crash, no ANR, the app ran throughout")
+        # Each path from a fresh start: a path the remote could not finish does not stop the others; a crash does.
+        missed = []
+        for name in paths:
+            tv.say(f"path {name}")
+            try:
+                tv.restart()
+                PATHS[name](tv, args)
+                tv.say(f"path {name}: done")
+            except TimeoutError as problem:
+                missed.append(name)
+                tv.say(f"path {name}: NOT DRIVEN to its end: {problem}")
+                tv.note_screen(f"{name}-stuck")
+        if missed:
+            raise RuntimeError(f"no crash, but the remote never got through: {', '.join(missed)}")
+        tv.say("PASS: no crash, no ANR, the app ran throughout" + (f" (paths: {', '.join(paths)})" if paths else ""))
         result = 0
     except (Stopped, TimeoutError, RuntimeError, subprocess.TimeoutExpired) as problem:
         tv.say(f"FAIL: {problem}")
