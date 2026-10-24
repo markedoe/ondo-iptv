@@ -1,7 +1,7 @@
 name: CI
 
-# Probe run only (branch claude/night-apple-traps): what each macOS version's own JSONDecoder and XMLParser do with a
-# key or a name that is not valid UTF-8. The real workflow comes back in the next commit.
+# Probe run only (branch claude/night-apple-traps): the key tests on each macOS version, whose own JSONDecoder may stop on a
+# key that is not valid UTF-8. The real workflow comes back in the next commit.
 on:
   workflow_dispatch:
 
@@ -13,7 +13,6 @@ jobs:
     name: Decoder probe (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
-    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -32,8 +31,6 @@ jobs:
           fi
           xcodebuild -version
           swift --version
-      - name: Probe tests (one process per test)
+      - name: Key tests after the check (one process per test)
         working-directory: Packages/IPTVCore
-        env:
-          ONDO_DECODER_PROBE: "1"
-        run: swift test --parallel --filter AppleDecoderProbeTests 2>&1 | tee probe.log; grep -E "PROBE|signal|crash|Crash|Exited|error:" probe.log | sort | uniq
+        run: swift test --parallel --filter 'UnreadableKeyTests|JSONListFileTests|XtreamTests|LibraryTests|SyncTests|TMDbTests|SubtitleSearchTests|AwardsTests'
