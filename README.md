@@ -163,8 +163,10 @@ device's languages:
 | Hindi | `hi` | `values-hi/` |
 
 Every text of a new feature is translated into all seven languages in the same change, plural forms included.
-CI enforces it: `check_translations.py` fails on a missing Apple translation and Android lint on a missing
-Android one. The store listings, the website and this documentation are in English and French.
+CI enforces it: `check_translations.py` fails on a missing Apple translation or one whose placeholders (`%@`,
+`%lld`) or plural forms differ, Android lint on a missing Android one, and `TranslationFormatsTest` on an Android
+translation that cannot be formatted. The store listings, the website and this documentation are in English and
+French.
 
 ## Structure
 

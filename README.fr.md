@@ -175,8 +175,10 @@ par app, il ouvre les langues de l'appareil :
 | Hindi | `hi` | `values-hi/` |
 
 Chaque texte d'une nouvelle fonctionnalité est traduit dans les sept langues dans le même changement, pluriels
-compris. La CI y veille : `check_translations.py` échoue s'il manque une traduction Apple, le lint Android s'il
-en manque une sur Android. Les fiches des stores, le site et cette documentation sont en anglais et en français.
+compris. La CI y veille : `check_translations.py` échoue s'il manque une traduction Apple ou si ses paramètres
+(`%@`, `%lld`) ou ses formes du pluriel diffèrent, le lint Android s'il en manque une sur Android, et
+`TranslationFormatsTest` si une traduction Android ne peut pas être formatée. Les fiches des stores, le site et
+cette documentation sont en anglais et en français.
 
 ## Structure
 
