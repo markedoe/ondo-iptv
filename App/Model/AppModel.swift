@@ -583,7 +583,9 @@ final class AppModel {
     private func apply(_ newContent: PlaylistContent, for playlist: Playlist) async {
         let edits = playlist.channelEdits
         let (edited, built, tags) = await Task.detached {
-            let edited = newContent.applying(edits)
+            // The names IPTVCore gives in English where the provider gives none read in the app's language on screen,
+            // in search and in the lists; `rawContent` and the saved catalogue keep IPTVCore's.
+            let edited = PlaceholderNames.app().renaming(newContent.applying(edits))
             return (edited, ContentIndex(content: edited), CategoryTagIndex(content: edited))
         }.value
         // While the catalogue was being built, another playlist may have been opened (its catalogue must

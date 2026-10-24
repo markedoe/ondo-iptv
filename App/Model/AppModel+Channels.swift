@@ -28,9 +28,9 @@ extension AppModel {
         activePlaylist?.channelEdits[channel.id] ?? ChannelEdit()
     }
 
-    /// Name given by the provider, before any rename.
+    /// Name given by the provider, before any rename (IPTVCore's "Channel 12" for none, in the app's language).
     func originalName(of channel: Channel) -> String {
-        rawContent.channels.first { $0.id == channel.id }?.name ?? channel.name
+        rawContent.channels.first { $0.id == channel.id }.map { PlaceholderNames.app().renaming($0).name } ?? channel.name
     }
 
     /// Number given by the provider, before any change.

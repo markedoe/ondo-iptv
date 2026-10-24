@@ -160,6 +160,7 @@ struct OrderedCategories {
     init(type: ContentType) { self.type = type }
 
     mutating func category(named rawName: String?) -> MediaCategory {
+        // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
         let name = rawName?.nilIfBlank ?? "Uncategorized"
         if let existing = byName[name] { return existing }
         let category = MediaCategory(id: "\(type.rawValue)-" + StableHash.hex(name), name: name, type: type)
@@ -322,6 +323,7 @@ public enum TitleParser {
                 rest = String(String(title[restRange]).unicodeScalars.drop(while: { separators.contains($0) }))
                     .trimmingCharacters(in: .whitespaces)
             }
+            // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
             let episodeTitle = rest.isEmpty
                 ? "Episode \(episode)"
                 : rest

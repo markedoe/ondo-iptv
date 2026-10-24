@@ -158,8 +158,14 @@ extension AppModel {
     }
 
     /// The kept episodes while they are recent (`DetailsArchive.seriesMaxAge`: a series gains episodes), else the
-    /// provider's; the kept ones when the provider cannot be reached.
+    /// provider's; the kept ones when the provider cannot be reached. An episode the provider does not name reads in the
+    /// app's language ("Épisode 4"); the kept ones stay in IPTVCore's words, as they are saved.
     func details(for series: Series) async throws -> SeriesDetails {
+        let details = try await loadedDetails(for: series)
+        return PlaceholderNames.app().renaming(details)
+    }
+
+    private func loadedDetails(for series: Series) async throws -> SeriesDetails {
         await storedDetailsLoaded()
         let kept = seriesDetailsCache[series.id]
         guard let seriesID = series.xtreamSeriesID, let playlist = activePlaylist,
@@ -193,5 +199,20 @@ extension AppModel {
         detailsRevision += 1
         scheduleStoredDetailsSave()
         return details
+    }
+}
+
+extension PlaceholderNames {
+    /// The app's words for the names IPTVCore gives in English where the provider gives none.
+    static func app(bundle: Bundle = .main) -> PlaceholderNames {
+        PlaceholderNames(
+            uncategorized: String(localized: "Uncategorized", bundle: bundle),
+            other: String(localized: "Other", bundle: bundle),
+            otherNumbered: { String(localized: "Other \($0)", bundle: bundle) },
+            channel: { String(localized: "Channel \($0)", bundle: bundle) },
+            movie: { String(localized: "Movie \($0)", bundle: bundle) },
+            series: { String(localized: "Series \($0)", bundle: bundle) },
+            episode: { String(localized: "Episode \($0)", bundle: bundle) }
+        )
     }
 }

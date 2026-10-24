@@ -232,6 +232,7 @@ public struct XtreamClient: Sendable {
         var result = categories
         var added = Set<String>()
         for id in itemCategoryIDs where !known.contains(id) && added.insert(id).inserted {
+            // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
             result.append(MediaCategory(id: id, name: added.count == 1 ? "Other" : "Other \(added.count)", type: type))
         }
         return result
@@ -289,6 +290,7 @@ public struct XtreamClient: Sendable {
             let episodes = (response.episodes[number] ?? []).filter { seen.insert($0.id).inserted }.enumerated().map { index, dto in
                 Episode(
                     id: dto.id,
+                    // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
                     title: dto.title.map { Self.cleanEpisodeTitle($0) } ?? "Episode \(dto.episodeNumber ?? index + 1)",
                     season: number,
                     number: dto.episodeNumber ?? index + 1,
