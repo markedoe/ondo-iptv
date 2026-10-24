@@ -107,9 +107,9 @@ class Tv:
         return all(w in all_text for w in words)
 
     def key(self, name, times=1, pause=0.4):
-        # The arrows and OK come from the emulator's own keys, a physical device as a remote is: Compose moves the
-        # focus out of a text field only for those (keys injected with `input` come from a virtual device).
-        hardware = {"UP": "KEY_UP", "DOWN": "KEY_DOWN", "LEFT": "KEY_LEFT", "RIGHT": "KEY_RIGHT", "DPAD_CENTER": "KEY_SELECT"}.get(name)
+        # The arrows come from the emulator's own keys, a physical device as a remote is: Compose moves the focus out
+        # of a text field only for those (keys injected with `input` come from a virtual device). OK is injected.
+        hardware = {"UP": "KEY_UP", "DOWN": "KEY_DOWN", "LEFT": "KEY_LEFT", "RIGHT": "KEY_RIGHT"}.get(name)
         for _ in range(times):
             if hardware:
                 self.adb("emu", "event", "send", f"EV_KEY:{hardware}:1", f"EV_KEY:{hardware}:0")
