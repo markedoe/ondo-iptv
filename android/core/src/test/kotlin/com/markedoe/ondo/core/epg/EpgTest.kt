@@ -258,6 +258,28 @@ class EpgTest {
         assertTrue(EpgIndex.EMPTY.isEmpty)
     }
 
+    /** A long programme around shorter ones: it airs between and after them, and what is over is not upcoming. */
+    @Test
+    fun overlappingProgrammes() {
+        val channel = Channel(id = "x1", name = "TV1", categoryId = "c", streamUrl = "http://x/1", epgId = "TV1.fr")
+        val index = EpgIndex(
+            listOf(
+                EpgProgram("TV1.fr", utc(2025, 1, 1, 0), utc(2025, 1, 1, 6), "A"),
+                EpgProgram("TV1.fr", utc(2025, 1, 1, 1), utc(2025, 1, 1, 2), "B"),
+                EpgProgram("TV1.fr", utc(2025, 1, 1, 2), utc(2025, 1, 1, 3), "C"),
+            ),
+        )
+        assertEquals("A", index.current(channel, utc(2025, 1, 1, 4))?.title)
+        assertEquals(listOf("A"), index.upcoming(channel, utc(2025, 1, 1, 4)).map { it.title })
+        assertEquals("C", index.current(channel, utc(2025, 1, 1, 2, 30))?.title, "the latest to start")
+        assertEquals("B", index.current(channel, utc(2025, 1, 1, 1, 30))?.title)
+        assertEquals(listOf("B", "C"), index.upcoming(channel, utc(2025, 1, 1, 1, 30)).map { it.title })
+        assertEquals(listOf("A", "B", "C"), index.upcoming(channel, utc(2025, 1, 1, 0, 30), count = 3).map { it.title })
+        assertNull(index.current(channel, utc(2025, 1, 1, 7)))
+        assertEquals(emptyList(), index.upcoming(channel, utc(2025, 1, 1, 7)))
+        assertEquals("A", index.current("TV1.fr", utc(2025, 1, 1, 5))?.title)
+    }
+
     @Test
     fun gzipRoundTripErrors() {
         assertFalse(Gzip.isGzipped("plain".encodeToByteArray()))
