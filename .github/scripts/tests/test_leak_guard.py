@@ -4,6 +4,7 @@ send, and leave alone the placeholders the repository's code, tests and docs use
 The made-up secrets are put together at run time, so that neither the guard nor gitleaks finds them in this file.
 Run: python3 -m unittest discover -s .github/scripts/tests
 """
+import base64
 import importlib.util
 import os
 import shutil
@@ -59,6 +60,17 @@ class SecretShapesTests(unittest.TestCase):
         body = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC" * 2
         self.assertFinds('{"type": "service_account", "private_key": "' + PEM_BEGIN + "\\n" + body + '\\n"}', "private key")
         self.assertFinds(PEM_BEGIN + "\n" + body + "\n", "private key")
+
+    def test_a_release_key_or_keystore_in_base64(self):
+        # docs/RELEASE.md takes the .p8 or its base64; docs/RELEASE-ANDROID.md puts the .jks in a secret as base64.
+        p8_body = "MIGTAgEAMBMG" + "ByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg" + RANDOM * 3
+        self.assertFinds(p8_body, "private key")
+        pem = PEM_BEGIN + "\n" + p8_body + "\n-----END PRIVATE KEY-----\n"
+        self.assertFinds("ASC_KEY_P8=" + base64.b64encode(pem.encode()).decode(), "private key")
+        jks = bytes.fromhex("feedfeed00000002") + RANDOM.encode() * 8
+        self.assertFinds(base64.b64encode(jks).decode(), "keystore")
+        pkcs12 = bytes.fromhex("308209f4020103308209") + RANDOM.encode() * 8  # what keytool makes by default
+        self.assertFinds(base64.b64encode(pkcs12).decode(), "keystore")
 
     def test_placeholders_examples_and_lookups_pass(self):
         for text in (
