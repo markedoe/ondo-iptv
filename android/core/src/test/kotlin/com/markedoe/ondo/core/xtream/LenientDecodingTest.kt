@@ -108,6 +108,15 @@ class LenientDecodingTest {
         assertNull(field("\"-9.3e18\"").lenientLong())
     }
 
+    /** A number too large for a double is dropped whether the panel quotes it or not: it could not be saved. */
+    @Test
+    fun doublesBeyondTheRangeAreIgnored() {
+        assertNull(field("1e999").lenientDouble())
+        assertNull(field("\"1e999\"").lenientDouble())
+        assertNull(field("\"-1e999\"").lenientDouble())
+        assertNull(field("\"" + "9".repeat(400) + "\"").lenientDouble())
+    }
+
     @Test
     fun base64() {
         assertEquals("Le JT", XtreamEpgListingDto.base64Text("TGUgSlQ="))

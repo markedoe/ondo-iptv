@@ -78,7 +78,7 @@ internal fun JsonElement?.lenientInt(): Int? =
 internal fun JsonElement?.lenientDouble(): Double? {
     val p = primitive ?: return null
     if (!p.isString) return p.numberLiteral()
-    return p.content.trim().replace(",", ".").toStrictDoubleOrNull()
+    return p.content.trim().replace(",", ".").toStrictDoubleOrNull()?.takeIf { it.isFinite() }
 }
 
 /** Boolean, non-zero number, or `"true"` / `"yes"` / `"active"`. */

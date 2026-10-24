@@ -114,6 +114,28 @@ class OndoRepositoryTest {
         assertFalse(repository.state.value.isLoading)
     }
 
+    /** A rating too large for a number ("1e999") must not keep the catalogue from being saved. */
+    @Test
+    fun anXtreamCatalogueWithARatingOutOfRangeIsSaved() = runTest {
+        val panel = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
+                if (!url.contains("/player_api.php")) throw HttpException.BadStatus(404)
+                return when (Regex("[?&]action=([^&]+)").find(url)?.groupValues?.get(1)) {
+                    null -> """{"user_info":{"username":"demo","auth":1,"status":"Active"},"server_info":{}}"""
+                    "get_vod_streams" -> """[{"stream_id":1,"name":"Quiet Water","category_id":"1","rating":"1e999"},""" +
+                        """{"stream_id":2,"name":"Long Road","category_id":"1","rating_5based":"${"9".repeat(400)}"}]"""
+                    else -> "[]"
+                }.encodeToByteArray()
+            }
+        }
+        val repository = repository(panel)
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Panel", "http://panel.example.com", "demo", "secret").isSuccess)
+        val id = requireNotNull(repository.state.value.activePlaylistId)
+        assertEquals(listOf("Quiet Water", "Long Road"), disk().loadContent(id)?.movies?.map { it.name })
+    }
+
     /** The last error that stopped the app is read at start, for Settings → About. */
     @Test
     fun theLastCrashIsReadAtStart() = runTest {
