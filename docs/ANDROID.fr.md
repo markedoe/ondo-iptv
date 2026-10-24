@@ -34,6 +34,19 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   vidéo et reçu, fluidité, gels et images perdues, et s'ils viennent du réseau ou du lecteur : `core/playback/PlaybackHealth.kt`, les règles d'Apple), Plus → Signaler un
   problème… (un rapport de lecture sans adresse, identifiant ni titre). Les fiches des films et séries indiquent
   le format (MKV, HLS…).
+  Sur un téléphone, ses propres commandes Compose par-dessus la vue vidéo de Media3 (`player/PhonePlayerControls.kt`,
+  les commandes de Media3 désactivées) : un toucher les affiche, deux touchers sur un tiers latéral sautent 10 s (les
+  touchers s'additionnent), un doigt posé 500 ms lit en 2×, des glissements règlent la luminosité (celle de la
+  fenêtre) et le volume (celui de la musique), un pincement remplit ou ajuste, un verrou ; Sous-titres, Audio,
+  Vitesse, Format d'image et Plus dans des volets ; image dans l'image. À suivre (`player/UpNext.kt`) : les
+  20 dernières secondes d'un épisode proposent le suivant, lu à la fin sauf refus. La liste Chaînes d'une chaîne en
+  direct (`player/ChannelList.kt`, un volet sur un téléphone, un panneau latéral sur une TV).
+- **Replay** depuis l'archive du fournisseur (`OndoRepository.replayRequest`, `core/catchup/`) : Lire le replay sur
+  un programme passé du guide, Depuis le début sur celui en cours (guide, commandes du téléphone et de la TV),
+  Retour au direct ; un replay garde sa chaîne (touches de chaîne, liste Chaînes), n'entre dans aucun historique, et
+  l'archive Xtream est demandée à l'heure du serveur (`content.account`). Une chaîne en direct sans fenêtre où
+  reculer, mise en pause par le spectateur 10 s ou plus, reprend depuis l'archive là où elle a été arrêtée
+  (`player/LivePause.kt`, comme sur Apple).
 - **Stockage** : documents JSON dans le stockage privé de l'app (`data/AppStore.kt`), exclus des sauvegardes
   (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`) : réglages, playlists avec leurs identifiants, Ma
   liste, collections, progression et rappels, catalogue de chaque playlist, et fiches de films et de séries
@@ -60,7 +73,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   les autres pages sont les écrans Compose dans la zone sûre de la TV (48 × 27 dp). Une sélection qui revient sur
   la carte quittée (`FocusMemory`) et entre d'elle-même dans chaque page (`FocusEntry`), des rangées qui défilent
   jusqu'au tiers. Lecteur : ses propres commandes pour la télécommande, par-dessus la vue vidéo de Media3
-  (`player/TvPlayerControls.kt`, `player/TvControls.kt`) : de grands boutons ronds, une barre de progression dont la
+  (`player/TvPlayerControls.kt`, `player/PlayerControls.kt`) : de grands boutons ronds, une barre de progression dont la
   cible avance par pas de plus en plus grands, la vidéo s'y rendant quand la télécommande s'arrête (un saut par
   déplacement), des panneaux Sous-titres, Audio, Vitesse et Plus avec les pistes nommées par langue
   (`player/TrackChoices.kt`) ; pendant la lecture, les commandes se masquent 5 s après la dernière touche. OK met en
@@ -72,10 +85,11 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   limitée à elles), pas de sélecteur de fichier ni de bouton de partage quand la TV n'en a pas, un cache d'images
   en mémoire plus petit sur un appareil à peu de mémoire.
 - **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), la
-  télécommande sur une TV (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), captures Roborazzi qui servent de captures
+  télécommande sur une TV (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), les gestes du
+  lecteur du téléphone (`PhonePlayerOverlayTest`), captures Roborazzi qui servent de captures
   Google Play (téléphone, tablettes 7" et 10", TV, anglais et français).
 
-Prévu ensuite (non inclus en v1) : replay depuis le guide, Chromecast, téléchargements, profils et PIN,
+Prévu ensuite (non inclus en v1) : Chromecast, téléchargements, profils et PIN,
 sous-titres en ligne, second moteur libVLC ; sur une TV, chaînes du lanceur et recherche vocale.
 
 ## Plan initial

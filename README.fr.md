@@ -143,6 +143,14 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   (MKV, MP4…), comme sur Apple, et **Signaler un problème…** : un rapport de lecture sans adresse, identifiant
   ni titre, à partager ou envoyer dans un ticket GitHub. Les fiches des films et séries indiquent le format
   qu'envoie le fournisseur.
+- **Lecteur du téléphone** : ses propres commandes, avec des gestes : un toucher les affiche, deux touchers sur un
+  côté sautent 10 secondes (les touchers s'additionnent), un doigt posé lit en 2×, des glissements règlent la
+  luminosité et le volume, un pincement remplit l'écran, un verrou ; Sous-titres, Audio, Vitesse et Format d'image
+  dans des volets ; **À suivre** à la fin d'un épisode ; sur une chaîne en direct, une liste **Chaînes** avec ce qui
+  passe.
+- **Replay**, quand le fournisseur garde une archive : **Lire le replay** sur un programme passé du guide, **Depuis
+  le début** sur celui en cours (guide et lecteur), Retour au direct ; une chaîne en direct mise en pause plus de
+  10 secondes reprend là où elle a été arrêtée. Une archive Xtream est demandée à l'heure du serveur.
 - **Données** : les affiches, les vignettes et les pages des films et séries restent sur l'appareil, comme sur
   Apple : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même quand le fournisseur
   ne répond pas.
@@ -158,9 +166,10 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   progression pour se déplacer dans la vidéo, des panneaux Sous-titres et Audio qui listent les pistes par langue,
   Vitesse et Plus ; OK met en pause, Gauche et Droite reculent et avancent de 10 secondes quand le flux le permet
   (sinon elles affichent les commandes), Haut et Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de
-  chaîne ; maintenez OK sur une chaîne pour l'ajouter à Ma liste ; Aide, Avec la télécommande. Les règles de
+  chaîne ; un panneau Chaînes avec ce qui passe, Depuis le début, À suivre à la fin d'un épisode ; maintenez OK
+  sur une chaîne pour l'ajouter à Ma liste ; Aide, Avec la télécommande. Les règles de
   confidentialité et la page d'aide s'ouvrent dans l'app.
-- À venir : replay, Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un second moteur
+- À venir : Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un second moteur
   (libVLC). Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
 ## Langues

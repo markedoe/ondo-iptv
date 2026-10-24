@@ -30,6 +30,17 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   Statistics (format, video and received bitrates, smoothness, freezes and lost pictures, and whether they come from the
   network or the player: `core/playback/PlaybackHealth.kt`, the Apple rules), More → Report a Problem… (a
   playback report with no address, login or title). Movie and series pages show the format (MKV, HLS…).
+  On a phone, its own Compose controls over Media3's video view (`player/PhonePlayerControls.kt`, Media3's own
+  controller off): a tap shows them, a double tap on a side third skips 10 s (taps add up), a finger held 500 ms
+  plays at 2×, slides change the brightness (the window's) and the volume (the music stream's), a pinch fills or
+  fits, a lock; Subtitles, Audio, Speed, Aspect ratio and More in bottom sheets; Picture-in-Picture. Up next
+  (`player/UpNext.kt`): the last 20 seconds of an episode offer the next one, played at the end unless declined. A
+  live channel's Channels list (`player/ChannelList.kt`, a sheet on a phone, a side panel on a TV).
+- **Replay** from the provider's archive (`OndoRepository.replayRequest`, `core/catchup/`): Play replay on a past
+  programme of the guide, Restart on the one on now (guide, phone and TV controls), Back to live; a replay keeps its
+  channel (channel keys, Channels list), goes in no history, and the Xtream archive is asked for in the panel's time
+  zone (`content.account`). A live channel without a window to seek in, paused by the viewer for 10 s or more,
+  resumes from the archive where it was paused (`player/LivePause.kt`, as on Apple).
 - **Storage**: JSON documents in the app's private storage (`data/AppStore.kt`), left out of backups
   (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`): settings, playlists with their logins, My List,
   collections, progress and reminders, each playlist's catalogue, and the movie and series pages opened (up to
@@ -52,7 +63,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   rows peeking past the right edge; the other pages are the Compose screens within the TV's safe area
   (48 × 27 dp). A focus that comes back to the card left (`FocusMemory`) and enters each page by itself
   (`FocusEntry`), rows scrolled to a third of the way. Player: its own controls for the remote over Media3's video
-  view (`player/TvPlayerControls.kt`, `player/TvControls.kt`): large round buttons, a progress bar whose target moves
+  view (`player/TvPlayerControls.kt`, `player/PlayerControls.kt`): large round buttons, a progress bar whose target moves
   in growing steps and is reached once the remote stops (one seek per move), Subtitles, Audio, Speed and More panels
   with the tracks named by language (`player/TrackChoices.kt`), hidden 5 s after the last key while playing; OK
   pauses, Left / Right go back and forward 10 s where the stream allows it (else they show the controls), Up / Down,
@@ -61,10 +72,11 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   policy and support pages open in an in-app page limited to them), no file picker or share button where the TV
   has none, a smaller image memory cache on a low-memory device.
 - **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), the remote on a TV
-  (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), Roborazzi screenshots that double as Google Play screenshots (phone,
+  (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), the phone player's gestures
+  (`PhonePlayerOverlayTest`), Roborazzi screenshots that double as Google Play screenshots (phone,
   7" and 10" tablets, TV, English and French).
 
-Planned next (not included in v1): catch-up from the guide, Chromecast, downloads, profiles and PIN, online
+Planned next (not included in v1): Chromecast, downloads, profiles and PIN, online
 subtitles, second libVLC engine; on a TV, launcher channels and voice search.
 
 ## Initial plan

@@ -40,8 +40,11 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.isTelevision
 
-/** One page of the help: what a feature does and where it is; [television] ones show on a TV only. */
-data class HelpTopic(val id: String, @StringRes val title: Int, @StringRes val body: Int, val television: Boolean = false)
+/**
+ * One page of the help: what a feature does and where it is; [television] ones show on a TV only, [touch] ones
+ * everywhere but on a TV.
+ */
+data class HelpTopic(val id: String, @StringRes val title: Int, @StringRes val body: Int, val television: Boolean = false, val touch: Boolean = false)
 
 val helpTopics = listOf(
     HelpTopic("remote", R.string.help_remote_title, R.string.help_remote_body, television = true),
@@ -50,6 +53,7 @@ val helpTopics = listOf(
     HelpTopic("search", R.string.help_search_title, R.string.help_search_body),
     HelpTopic("categories", R.string.help_categories_title, R.string.help_categories_body),
     HelpTopic("my-list", R.string.help_mylist_title, R.string.help_mylist_body),
+    HelpTopic("player", R.string.help_player_title, R.string.help_player_body, touch = true),
     HelpTopic("guide", R.string.help_guide_title, R.string.help_guide_body),
     HelpTopic("playback", R.string.help_playback_title, R.string.help_playback_body),
     HelpTopic("sync", R.string.help_sync_title, R.string.help_sync_body),
@@ -69,10 +73,10 @@ fun HelpScreen(onBack: () -> Unit, onSupport: () -> Unit) {
             },
             windowInsets = WindowInsets(0),
         )
-        // The remote's keys first on a TV; nowhere else.
+        // The remote's keys first on a TV, nowhere else; the touch screen's gestures everywhere else.
         val television = isTelevision()
         LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-            items(helpTopics.filter { television || !it.television }, key = { it.id }) { topic ->
+            items(helpTopics.filter { if (television) !it.touch else !it.television }, key = { it.id }) { topic ->
                 val expanded = open == topic.id
                 Column(Modifier.fillMaxWidth().animateContentSize()) {
                     ListItem(

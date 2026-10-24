@@ -133,6 +133,13 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   network freeze from a player one and show the format (MKV, MP4…), as on Apple, and **Report a Problem…**: a
   playback report with no address, login or title, to share or send in a GitHub issue. Movie and series pages
   show the format their provider sends.
+- **Phone player**: its own controls, with gestures: a tap shows them, a double tap on a side skips 10 seconds
+  (taps add up), a finger held plays at 2×, slides change the brightness and the volume, a pinch fills the screen,
+  a lock; Subtitles, Audio, Speed and Aspect ratio in sheets; **Up next** at the end of an episode; on a live
+  channel, a **Channels** list with what is on now.
+- **Replay**, when the provider keeps an archive: **Play replay** on a past programme of the guide, **Restart** on
+  the one on now (guide and player), Back to live; a live channel paused for more than 10 seconds resumes where it
+  was paused. An Xtream archive is asked for in the panel's time zone.
 - **Data**: posters, thumbnails and the movie and series pages stay on the device, like on Apple: they show at
   once at the next launch, and the pages still open when the provider cannot be reached.
 - **Sync on this network** (Settings, off until turned on): while Ondo is open, the Android devices of a home
@@ -145,9 +152,10 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   the remote: large buttons, a progress bar to move through the video, Subtitles and Audio panels that list the
   tracks by language, Speed and More; OK pauses, Left and Right go back and forward 10 seconds where the stream
   allows it (otherwise they show the controls), Up and Down, CH+ / CH−, the number keys and Last Channel change
-  channel; hold OK on a channel to add it to My List; Help, With the remote. The privacy policy and support pages
+  channel; a Channels panel with what is on now, Restart, Up next at the end of an episode; hold OK on a channel
+  to add it to My List; Help, With the remote. The privacy policy and support pages
   open inside the app.
-- Coming next: catch-up, Chromecast, downloads, profiles and PIN, online subtitles, a second engine (libVLC).
+- Coming next: Chromecast, downloads, profiles and PIN, online subtitles, a second engine (libVLC).
   Details: [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Languages

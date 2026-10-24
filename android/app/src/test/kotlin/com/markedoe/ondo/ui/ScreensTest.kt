@@ -93,8 +93,10 @@ class ScreensTest {
     fun helpOpensATopicAndLinksToSupport() {
         var support = 0
         compose.setContent { OndoTheme { HelpScreen(onBack = {}, onSupport = { support++ }) } }
-        // The remote's keys are for a TV only.
+        // The remote's keys are for a TV only; the gestures of the player for a touch screen.
         compose.onNodeWithTag("help-remote").assertDoesNotExist()
+        compose.onNodeWithTag("help-player").performClick()
+        compose.onNodeWithText("Double-tap the left or right side", substring = true).assertExists()
         compose.onNodeWithText("|PT|", substring = true).assertDoesNotExist()
         compose.onNodeWithTag("help-home").performClick()
         compose.onNodeWithText("Movies in Progress and Series in Progress", substring = true).assertExists()

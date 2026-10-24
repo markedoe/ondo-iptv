@@ -291,6 +291,9 @@ class TelevisionTest {
         compose.setContent { OndoTheme { HelpScreen(onBack = {}, onSupport = {}) } }
         compose.onNodeWithTag("help-remote").performClick()
         compose.onNodeWithText("hold OK on a channel", substring = true).assertExists()
+        compose.onNodeWithText("Restart plays the programme from its start", substring = true).assertExists()
+        // No touch screen on a TV.
+        compose.onNodeWithTag("help-player").assertDoesNotExist()
     }
 
     @Test
