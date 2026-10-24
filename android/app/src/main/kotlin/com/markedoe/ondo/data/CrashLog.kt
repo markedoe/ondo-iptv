@@ -84,6 +84,10 @@ object CrashLog {
     private val connectTo = Regex("""(?i)\bto [a-z0-9-]+(\.[a-z0-9-]+)+(?=[/\s(])""")
     private val ipv4 = Regex("""\b\d{1,3}(\.\d{1,3}){3}\b""")
 
+    // IPv6, full or compressed ("2001:db8::7", "fe80::1%wlan0"), bare or in brackets: the rule of the problem reports
+    // (`PrivacyScrubber`), so times ("12:34:56") stay.
+    private val ipv6 = Regex("""\[([0-9A-Fa-f:]+)(?:%[^\]\s]*)?]|(?<![\w:.])([0-9A-Fa-f]{0,4}(?::[0-9A-Fa-f]{0,4}){2,8})(?:%\w+)?(?![\w:])""")
+
     /** Web addresses (panels, guides, streams), host names, IP addresses, Xtream paths and logins are replaced by `…`. */
     fun redact(text: String): String = text
         .replace(address) { "${it.groupValues[1]}://…" }
@@ -92,4 +96,21 @@ object CrashLog {
         .replace(host) { "${it.groupValues[1]} …" }
         .replace(connectTo, "to …")
         .replace(ipv4, "…")
+        .replace(ipv6) { if (isIpv6(it.groups[1]?.value ?: it.groupValues[2])) "…" else it.value }
+
+    /** One `::` with seven groups at most, or five to eight groups in full, of one to four hexadecimal digits. */
+    private fun isIpv6(candidate: String): Boolean {
+        fun groups(part: String): Int? =
+            if (part.isEmpty()) 0 else part.split(':').takeIf { list -> list.all { it.length in 1..4 } }?.size
+        val halves = candidate.split("::")
+        return when (halves.size) {
+            1 -> (groups(candidate) ?: 0) in 5..8
+            2 -> {
+                val before = groups(halves[0]) ?: return false
+                val after = groups(halves[1]) ?: return false
+                before + after in 1..7
+            }
+            else -> false
+        }
+    }
 }
