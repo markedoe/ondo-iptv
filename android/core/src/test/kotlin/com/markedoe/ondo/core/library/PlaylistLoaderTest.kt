@@ -190,6 +190,28 @@ class PlaylistLoaderTest {
         assertTrue(PlaylistLoader.guideKey("http://a.example.com/g.xml") != PlaylistLoader.guideKey("http://b.example.com/g.xml"))
     }
 
+    /** A path and its parameters count their case (a file name, a password): only the host's case does not. */
+    @Test
+    fun guidesDifferingInTheCaseOfTheirPathOrParametersAreBothDownloaded() = runTest {
+        val http = MockHttpClient()
+        val guide = "<tv><channel id=\"TV1.fr\"><display-name>TV1</display-name></channel></tv>".encodeToByteArray()
+        val addresses = listOf(
+            "http://guides.example.com/FR.xml",
+            "http://guides.example.com/fr.xml",
+            "http://panel.example.com/xmltv.php?username=demo&password=pw",
+            "http://panel.example.com/xmltv.php?username=demo&password=PW",
+        )
+        for (address in addresses) http.routes[address] = guide
+        val playlist = Playlist(name = "P", source = PlaylistSource.Remote("http://example.com/list.m3u"), epgUrls = addresses)
+        val content = PlaylistContent(
+            channels = listOf(Channel(id = "1", name = "TV1", categoryId = "c", streamUrl = "http://h/1", epgId = "TV1.fr")),
+        )
+        val result = PlaylistLoader(http).loadEpg(playlist, content)
+        assertEquals(addresses, http.requested)
+        assertTrue(result.failures.isEmpty())
+        assertEquals(PlaylistLoader.guideKey("http://guides.example.com/FR.xml"), PlaylistLoader.guideKey("http://GUIDES.Example.com/FR.xml"))
+    }
+
     /**
      * A guide load cancelled while it parses (another playlist opened, a newer catalogue arrived) stops reading the
      * guide: two guides are not parsed at once. The guide comes through a pipe, so what the loader stops reading is

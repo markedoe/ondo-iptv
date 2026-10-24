@@ -201,11 +201,17 @@ class PlaylistLoader(
     }
 
     internal companion object {
-        /** The same address however it is written: scheme, case, trailing slash and order of the parameters aside. */
+        /**
+         * The same address however it is written: scheme, the host's case, trailing slash and order of the parameters
+         * aside. A path and its parameters keep their case: two files, or two accounts' passwords, can differ only by it.
+         */
         fun guideKey(url: String): String {
             val trimmed = url.trim().substringBefore('#')
-            val address = trimmed.substringAfter("://", trimmed).substringBefore('?').trimEnd('/').lowercase()
-            val query = trimmed.substringAfter('?', "").split('&').filter { it.isNotEmpty() }.map { it.lowercase() }.sorted()
+            val written = trimmed.substringAfter("://", trimmed).substringBefore('?').trimEnd('/')
+            val authority = written.substringBefore('/')
+            val host = authority.substringAfterLast('@')
+            val address = authority.dropLast(host.length) + host.lowercase() + written.drop(authority.length)
+            val query = trimmed.substringAfter('?', "").split('&').filter { it.isNotEmpty() }.sorted()
             return if (query.isEmpty()) address else address + "?" + query.joinToString("&")
         }
     }
