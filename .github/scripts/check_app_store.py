@@ -67,9 +67,10 @@ RUNTIME_SWITCH = re.compile(
     r"UserDefaults|@AppStorage|NSUbiquitousKeyValueStore|ProcessInfo|CommandLine|\bgetenv\b|URLSession|\bURL\(|"
     r"\bDate\b|FileManager|contentsOf|Keychain|Bundle\.main")
 # The app reading its launch arguments or environment: a switch anyone can turn from the command line, so test hooks
-# (`-uitest…`) stay in `#if DEBUG` code.
+# (`-uitest…`) stay in `#if DEBUG` code. A `-key value` argument also lands in UserDefaults (its argument domain).
 LAUNCH_SWITCH = re.compile(
-    r"\bProcessInfo(?:\.processInfo|\(\))\.(?:arguments|environment)\b|\bCommandLine\.\w+|\bgetenv\(")
+    r"\bProcessInfo(?:\.processInfo|\(\))\.(?:arguments|environment)\b|\bCommandLine\.\w+|\bgetenv\(|"
+    r"\bUserDefaults\b.*\bforKey:\s*\"-?uitest|\bargumentDomain\b")
 # A Bonjour service type written in the code ("_ondo._tcp").
 BONJOUR_SERVICE = re.compile(r'"(_[A-Za-z0-9-]+\._(?:tcp|udp))"')
 # Ondo's own service: sync on the local network, which the Local Network prompt must give as a reason.

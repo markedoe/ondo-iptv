@@ -436,6 +436,18 @@ class AppStoreTests(CheckTestCase):
         self.write("Packages/IPTVCore/Sources/IPTVCore/Mode.swift", "let verbose = false\n")
         self.assertPasses("app_store")
 
+    def test_launch_arguments_read_through_user_defaults_are_a_hidden_switch_too(self):
+        # `-uitest-route home` on the command line lands in UserDefaults (its argument domain).
+        hook = 'private static let route = UserDefaults.standard.string(forKey: "uitest-route")\n'
+        self.write("App/Model/ScreenshotRoute.swift", hook)
+        self.write("App/Model/Unlock.swift",
+                   'let unlocked = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)["x"] != nil\n')
+        self.assertFails("app_store", "App/Model/ScreenshotRoute.swift: the App Store edition reads its launch arguments",
+                         "App/Model/Unlock.swift: the App Store edition reads its launch arguments")
+        self.write("App/Model/ScreenshotRoute.swift", f"#if DEBUG\n{hook}#endif\n")
+        self.write("App/Model/Unlock.swift", 'let sort = UserDefaults.standard.string(forKey: "sortOrder")\n')
+        self.assertPasses("app_store")
+
     def test_a_private_api_fails(self):
         self.write("Packages/IPTVCore/Sources/IPTVCore/Hack.swift", "let selector = NSSelectorFromString(\"_hidden\")\n")
         self.assertFails("app_store", "Packages/IPTVCore/Sources/IPTVCore/Hack.swift: looks up or swaps code by name")
