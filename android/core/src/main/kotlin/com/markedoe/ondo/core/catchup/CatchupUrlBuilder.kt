@@ -56,7 +56,8 @@ object CatchupUrlBuilder {
         context: CatchupContext = CatchupContext(),
     ): List<String> {
         val catchup = channel.catchup ?: return emptyList()
-        val durationSeconds = maxOf((end - start) / 1000, 60L).toInt()
+        // Whole: a far stop time (an XMLTV year 9999) is past what an Int counts in seconds.
+        val durationSeconds = maxOf((end - start) / 1000, 60L)
         val live = channel.streamUrl
 
         return when (catchup.mode) {
@@ -84,7 +85,8 @@ object CatchupUrlBuilder {
 
     // Modes
 
-    private fun xtreamUrls(channel: Channel, start: Long, durationSeconds: Int, context: CatchupContext): List<String> {
+    private fun xtreamUrls(channel: Channel, start: Long, durationSeconds: Long, context: CatchupContext): List<String> {
+        // At most Int.MAX_VALUE: the conversion saturates.
         val minutes = ceil(durationSeconds / 60.0).toInt()
         var streamId = channel.xtreamStreamId
         val builder = if (context.xtream != null) {
@@ -116,7 +118,7 @@ object CatchupUrlBuilder {
      * `http://host/ch/index.m3u8?token=x` -> `http://host/ch/index-{start}-{duration}.m3u8?token=x`;
      * `http://host/ch/mpegts?token=x` -> `http://host/ch/timeshift_abs-{start}.ts?token=x`.
      */
-    private fun flussonicUrl(live: String, start: Long, durationSeconds: Int): String? {
+    private fun flussonicUrl(live: String, start: Long, durationSeconds: Long): String? {
         val parsed = Urls.parse(live) ?: return null
         val stamp = start / 1000
         val path = parsed.path
