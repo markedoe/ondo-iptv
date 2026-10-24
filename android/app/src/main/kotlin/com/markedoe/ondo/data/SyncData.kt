@@ -154,6 +154,15 @@ object SyncData {
             )
         }
 
+        val playlists = kept + added
+        // A playlist removed because it is another one (the same one added on two devices): that one, as kept here.
+        fun replacement(id: String): SavedPlaylist? {
+            var current = id.lowercase()
+            repeat(MAX_REPLACEMENTS) { current = merged.replaced[current] ?: return@repeat }
+            return playlists.firstOrNull { it.id.equals(current, ignoreCase = true) && !it.id.equals(id, ignoreCase = true) }
+        }
+        val replacements = removed.mapNotNull { old -> replacement(old.id)?.let { old.id to it.id } }
+
         val library = state.library
         val removedIds = removed.mapTo(HashSet()) { it.id }
         // What does not sync stays: the channels watched, and everything of a file playlist.
@@ -199,6 +208,16 @@ object SyncData {
             syncDeleted = merged.deleted,
             syncReplaced = merged.replaced,
         ).let { kept -> removedIds.fold(kept) { result, id -> result.removingPlaylist(id, merged.deleted[SyncKeys.playlist(id)] ?: 0) } }
-        return Applied(kept + added, removed, applied)
+            .let { result ->
+                // The categories hidden in a replaced playlist stay hidden in its replacement, as on Apple devices.
+                val carried = replacements.flatMap { (old, into) ->
+                    library.hiddenCategories.filter { it.startsWith("$old|") }.map { into + it.substring(old.length) }
+                }
+                if (carried.isEmpty()) result else result.copy(hiddenCategories = result.hiddenCategories + carried)
+            }
+        return Applied(playlists, removed, applied)
     }
+
+    /** Replacements followed at most, as the merge follows them (docs/SYNC.md, "Merge"). */
+    private const val MAX_REPLACEMENTS = 10
 }

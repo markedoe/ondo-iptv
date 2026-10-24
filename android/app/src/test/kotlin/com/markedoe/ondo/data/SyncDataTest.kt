@@ -3,6 +3,7 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
+import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -171,6 +172,25 @@ class SyncDataTest {
         val favorites = (0 until 30_000).map { Favorite(java.util.UUID(1, it.toLong()).toString(), ItemKind.MOVIE, "m$it", "Movie $it", addedAt = 2) }
         val state = OndoState(isReady = true, playlists = playlists, library = LibraryState(favorites = favorites))
         assertEquals(favorites.size, SyncData.snapshot(state, "device", "TV", now = 10).favorites.size)
+    }
+
+    /** The same playlist added on another device first: the categories hidden here stay hidden in the one kept. */
+    @Test
+    fun aPlaylistReplacedByTheSameOneKeepsItsHiddenCategories() {
+        val sports = SavedPlaylist("P1", "Sports", "http://provider.example.com/sports.m3u", addedAt = 1)
+        val mine = SavedPlaylist("P2", "Living room", list, addedAt = 3)
+        val state = OndoState(
+            isReady = true,
+            playlists = listOf(sports, mine),
+            library = LibraryState(hiddenCategories = setOf("P1|live-a", "P2|live-b")),
+        )
+        val tv = SyncSnapshot(device = "tv", playlists = listOf(SyncPlaylist("p3", "Home", SyncPlaylist.M3U, list, addedAt = 2, updatedAt = 2)))
+        val merged = SyncMerge.merge(SyncData.snapshot(state, "phone", null, now = 10), tv)
+        assertEquals(mapOf("p2" to "p3"), merged.replaced)
+
+        val applied = SyncData.apply(state, merged)
+        assertEquals(listOf("P1", "p3"), applied.playlists.map { it.id })
+        assertEquals(setOf("P1|live-a", "p3|live-b"), applied.library.hiddenCategories)
     }
 
     /** What another device sends that this one cannot use changes nothing and breaks nothing. */
