@@ -30,7 +30,7 @@ on:
         type: boolean
         default: false
       paths:
-        description: "More paths after the tabs, each from a fresh start (all, or some of: settings,search,details,player,guide,mylist,playlists)"
+        description: "More paths after the tabs, each from a fresh start (all, or some of: settings,search,details,player,guide,mylist,playlists,crash)"
         required: false
         default: ""
 

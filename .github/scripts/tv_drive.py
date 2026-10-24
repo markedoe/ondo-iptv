@@ -4,7 +4,7 @@ first launch, Add a Playlist, Xtream Codes (the made-up panel of fake_xtream_pan
 `adb reverse`), Add, then every tab. Watches the app's process the whole time: a crash, an ANR or Android ending the
 app fails the run. Screenshots, the screen's text, logcat, the exit reasons and memory use go to the output folder.
 With --paths, more of the app after that, each path from a fresh start of the app (the saved playlist read again):
-settings, search, details, player, guide, mylist, playlists (see PATHS).
+settings, search, details, player, guide, mylist, playlists, crash (see PATHS).
 
 Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240] [--paths settings,search,...]
 """
@@ -197,20 +197,49 @@ class Tv:
         time.sleep(3)
         self.check_alive("home after a restart")
 
+    @staticmethod
+    def left_edge(node):
+        """The node's left edge in pixels (bounds="[x1,y1][x2,y2]")."""
+        found = re.match(r"\[(-?\d+),", node.get("bounds", "")) if node is not None else None
+        return int(found.group(1)) if found else 10_000
+
+    def in_drawer(self):
+        """The focus on one of the drawer's places: its words, at the screen's left edge (a page's chips have the same words)."""
+        node, texts = self.focused()
+        return node is not None and any(t in DRAWER for t in texts) and self.left_edge(node) < 260
+
     def to_drawer(self):
         """The focus on the drawer: Back from a page lands on its tab (never Back from the drawer: on Home it leaves)."""
         for attempt in range(8):
-            _, texts = self.focused()
-            if any(t in DRAWER for t in texts):
+            if self.in_drawer():
                 return
             self.key("BACK" if attempt < 3 else "LEFT")
             time.sleep(1)
         raise TimeoutError("the drawer never took the focus")
 
+    def wait_enabled(self, label, timeout, what):
+        """Waits until the element showing [label] can be pressed again (a button greyed out while something loads)."""
+        def enabled():
+            root = self.screen()
+            if root is None:
+                return False
+            for n in root.iter("node"):
+                if label in self.texts(n) and n.get("enabled") == "true" and n.get("clickable") == "true":
+                    return True
+            return False
+        time.sleep(3)
+        self.wait_for(what, enabled, timeout, every=4)
+
     def drawer(self, item):
         """Opens a place of the drawer (a tab, Search or Settings)."""
         self.to_drawer()
-        self.focus_exact(item, keys=("UP",) * 8 + ("DOWN",) * 9, max_presses=17)
+        for i in range(18):
+            node, texts = self.focused()
+            if node is not None and item in texts and self.left_edge(node) < 260:
+                break
+            self.key("UP" if i < 8 else "DOWN")
+        else:
+            raise TimeoutError(f"the drawer's {item} never had the focus")
         self.key("DPAD_CENTER")
         time.sleep(4)
         self.check_alive(f"{item} opened")
@@ -271,14 +300,16 @@ def path_settings(tv, args):
     tv.key("RIGHT")
     tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
     tv.note_screen("settings-categories")
-    tv.key("DOWN", 3)
+    # Tab goes through everything in order (an arrow stays in the page's text fields).
+    tv.open("Children", keys=("TAB",), max_presses=40, exact=True, wait=3)
+    tv.note_screen("settings-styles-kids-hidden")
     tv.key("DPAD_CENTER")
-    time.sleep(2)
-    tv.key("RIGHT")
-    tv.key("DPAD_CENTER")
-    time.sleep(2)
-    tv.check_alive("a category filter changed")
-    tv.note_screen("settings-categories-changed")
+    time.sleep(3)
+    tv.check_alive("a style turned over twice")
+    tv.open("Hide all", keys=("TAB",), max_presses=40, exact=True, wait=6)
+    tv.note_screen("settings-categories-all-hidden")
+    tv.open("Show all", keys=("LEFT",), max_presses=3, exact=True, wait=6)
+    tv.note_screen("settings-categories-all-shown")
     tv.key("BACK")
     time.sleep(3)
     tv.check_alive("back from the categories")
@@ -315,9 +346,10 @@ def path_settings(tv, args):
     tv.key("LEFT")
     settings_section(tv, "Playlists")
     tv.key("RIGHT")
-    tv.open("Refresh", keys=("UP", "LEFT"), max_presses=4, wait=3)
+    tv.open("Refresh", keys=("UP", "LEFT"), max_presses=4, wait=1)
     tv.note_screen("settings-refreshing")
-    tv.stay(args.wait_load, "the catalogue refreshing from the Settings")
+    tv.wait_enabled("Refresh", args.wait_load, "the catalogue refreshed from the Settings")
+    tv.stay(20, "the catalogue refreshed from the Settings")
     tv.note_screen("settings-refreshed")
     tv.key("BACK")
     time.sleep(3)
@@ -471,7 +503,7 @@ def path_guide(tv, args):
     tv.drawer("Live TV")
     tv.key("UP", 3)
     tv.open("TV guide", keys=("RIGHT",), max_presses=8, wait=8)
-    tv.wait_for("the guide", lambda: tv.visible("TV guide"), 60)
+    tv.wait_for("the guide", lambda: tv.visible("All channels") or tv.visible("Reminders"), 60)
     tv.note_screen("guide")
     tv.key("DOWN", 6, pause=0.5)
     tv.key("RIGHT", 4, pause=0.5)
@@ -555,13 +587,14 @@ def path_playlists(tv, args):
     tv.focus_on("Add", keys=("TAB",), editable=False)
     tv.key("DPAD_CENTER")
     tv.wait_for("the second playlist", lambda: tv.visible("Second") and not tv.visible("Username"), args.wait_load, every=3)
-    tv.stay(20, "the second playlist loaded")
+    tv.stay(5, "the second playlist loaded")
     tv.note_screen("playlists-two")
     if not tv.visible("Use"):
         settings_section(tv, "Playlists")
         tv.key("RIGHT")
-    tv.open("Use", keys=("DOWN", "UP"), max_presses=8, exact=True, wait=5)
-    tv.stay(30, "the first playlist used again")
+    tv.open("Use", keys=("DOWN", "UP"), max_presses=8, exact=True, wait=1)
+    tv.wait_enabled("Refresh", args.wait_load, "the first playlist used again")
+    tv.stay(5, "the first playlist used again")
     tv.note_screen("playlists-switched")
     tv.focus_exact("Delete Second", keys=("DOWN", "RIGHT", "UP", "LEFT"), max_presses=12)
     tv.key("DPAD_CENTER")
@@ -578,6 +611,23 @@ def path_playlists(tv, args):
     tv.check_alive("back from the Settings")
 
 
+def path_crash(tv, args):
+    """The last crash in Settings → About: a crash made on purpose (am crash), then the next start shows it."""
+    tv.say("making the app crash on purpose (am crash): not a failure")
+    tv.shell(f"am crash {PACKAGE}")
+    time.sleep(5)
+    tv.adb("logcat", "-b", "crash", "-c")
+    tv.restart()
+    tv.drawer("Settings")
+    settings_section(tv, "About")
+    tv.key("RIGHT")
+    tv.focus_on("Last crash", keys=("DOWN",), max_presses=10)
+    tv.stay(3, "the last crash shown")
+    tv.note_screen("settings-last-crash")
+    tv.key("BACK")
+    time.sleep(2)
+
+
 PATHS = {
     "settings": path_settings,
     "search": path_search,
@@ -586,6 +636,8 @@ PATHS = {
     "guide": path_guide,
     "mylist": path_mylist,
     "playlists": path_playlists,
+    # Last: it crashes the app on purpose.
+    "crash": path_crash,
 }
 
 
