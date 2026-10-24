@@ -103,8 +103,8 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 
 ### Android (phones, tablets and TV)
 
-- **Home**: carousel, movies and series in progress (one row each), My List, new releases, channels; when the
-  playlist was last updated, above its name.
+- **Home**: carousel, movies and series in progress (one row each; long-press a card, or hold OK on a TV, to take
+  it out), My List, new releases, channels; when the playlist was last updated, above its name.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), watched movies hidden if you like, detail pages (Resume, From Start, next
   episode, seasons, More Like This); a director's or an actor's name opens their other movies and series
@@ -125,8 +125,11 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin
   and tested with the same cases).
 - **Player** (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses, resume,
-  picture-in-picture, media controls; a channel that falls behind goes back to the live edge on its own;
-  explained errors, **buffer length** for live TV and for movies & series, **stream statistics** that tell a
+  picture-in-picture, media controls; a channel that falls behind goes back to the live edge on its own; the
+  **audio and subtitle languages** you pick are used for the next streams (forced subtitles still show with Off);
+  More → **Aspect ratio** (Fit, Fill (crop), Stretch, kept for the next videos) and **Sleep timer** (15 to 120
+  minutes, then the player pauses); explained errors, **buffer length** for live TV and for movies & series, a
+  buffer that fits in the app's memory (a 4K film plays on a TV box), **stream statistics** that tell a
   network freeze from a player one and show the format (MKV, MP4…), as on Apple, and **Report a Problem…**: a
   playback report with no address, login or title, to share or send in a GitHub issue. Movie and series pages
   show the format their provider sends.
@@ -140,9 +143,10 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible
   focus that comes back to the card you left, layouts that keep clear of the screen's edges); a player drawn for
   the remote: large buttons, a progress bar to move through the video, Subtitles and Audio panels that list the
-  tracks by language, Speed and More; OK pauses, Left and Right go back and forward 10 seconds, Up and Down,
-  CH+ / CH−, the number keys and Last Channel change channel; hold OK on a channel to add it to My List; Help,
-  With the remote. The privacy policy and support pages open inside the app.
+  tracks by language, Speed and More; OK pauses, Left and Right go back and forward 10 seconds where the stream
+  allows it (otherwise they show the controls), Up and Down, CH+ / CH−, the number keys and Last Channel change
+  channel; hold OK on a channel to add it to My List; Help, With the remote. The privacy policy and support pages
+  open inside the app.
 - Coming next: catch-up, Chromecast, downloads, profiles and PIN, online subtitles, a second engine (libVLC).
   Details: [docs/ANDROID.md](docs/ANDROID.md).
 
@@ -254,6 +258,10 @@ Some defects only show up in real conditions, where tests on simulated data cann
 - **Playback lab** (`tools/playback-lab`, when the VLC engine or the playback code changes): libVLC, the library
   of the VLC engine, plays generated streams from a provider that misbehaves on purpose; freezes, film start
   and seek times, the resume position and the app's freeze verdict are checked against limits.
+- **Release build on an Android TV emulator** (*TV release check*, run by hand): the R8 build driven with the
+  remote's keys against a made-up Xtream panel, from adding a playlist to the player, the guide, sync and a movie
+  at a 4K film's bitrate; a crash, an ANR or Android ending the app fails it. A TV box's memory limit is asked
+  for, applied when the emulator allows it; the limit in force is printed.
 - **Mutation testing** of the Kotlin core, once a week (Pitest): small bugs are planted in the code and those
   no test catches are reported; it does not fail the build.
 - **Before each release**: the demo playlist used by Apple's and Google's review must answer.

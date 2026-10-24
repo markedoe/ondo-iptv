@@ -11,8 +11,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **App** `android/app` (Compose, Material 3, Navigation type-safe, barre d'onglets ou rail selon l'écran) :
   accueil (carrousel, Films en cours, Séries en cours, Ma liste, Nouveaux films, Nouvelles séries, chaînes),
   onglets Films et Séries (Continuer à regarder, Ma liste, Films primés dans Films, une rangée par catégorie,
-  grilles filtrables), fiches film et série (reprise, depuis le début, épisode suivant, saisons, titres
-  similaires, prix, casting et réalisation cliquables), TV en direct (catégories, Ma liste, programme en cours
+  grilles filtrables), un appui long qui retire une carte en cours de l'Accueil ou de Continuer à regarder (un menu
+  sur un téléphone, OK maintenu et une question sur une TV : `ui/components/Shelves.kt`), fiches film et série
+  (reprise, depuis le début, épisode suivant, saisons, titres similaires, prix, casting et réalisation
+  cliquables), TV en direct (catégories, Ma liste, programme en cours
   et suivant), grille du guide TV avec rappels de programmes (notifications WorkManager), onglet Ma liste avec
   collections, recherche (chaînes, films, séries, acteurs et réalisateurs ; filtres par années de sortie et
   par festival ou cérémonie), catégories masquées par code de langue ou de pays, par style ou par mot, ou une
@@ -20,10 +22,16 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   automatiquement, Langues et catégories, Langue de l'app, mémoires tampons du lecteur), accueil avec
   démonstration et avertissement « lecteur sans contenu ».
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
-  reprise, image dans l'image, MediaSession, pistes audio et sous-titres, mémoires tampons distinctes pour le
-  direct et pour les films et séries, retour automatique au direct quand une chaîne prend du retard, Plus →
-  Statistiques du flux (format, débits de la vidéo et reçu, fluidité, gels et images perdues, et s'ils viennent
-  du réseau ou du lecteur : `core/playback/PlaybackHealth.kt`, les règles d'Apple), Plus → Signaler un
+  reprise, image dans l'image, MediaSession, pistes audio et sous-titres, les langues de l'audio et des
+  sous-titres apprises des choix du spectateur et utilisées d'abord pour les flux suivants, les sous-titres forcés
+  toujours affichés avec les sous-titres désactivés (`player/TrackPreferences.kt`), mémoires tampons distinctes
+  pour le direct et pour les films et séries, jamais plus de la moitié de la mémoire qui reste à l'app quand le
+  lecteur démarre, pour qu'un film 4K se lise sur un boîtier TV qui donne 128 Mo à l'app
+  (`player/PlayerLoadControl.kt`, `core/playback/PlaybackBuffer.kt`), retour automatique au direct quand une
+  chaîne prend du retard, Plus → Format d'image (Ajuster, Remplir (rogner), Étirer, gardé pour les vidéos
+  suivantes), Plus → Minuterie de sommeil (Désactivé, 15, 30, 45, 60, 90, 120 min ; le lecteur se met en pause
+  quand elle arrive à son terme : `player/SleepTimer.kt`), Plus → Statistiques du flux (format, débits de la
+  vidéo et reçu, fluidité, gels et images perdues, et s'ils viennent du réseau ou du lecteur : `core/playback/PlaybackHealth.kt`, les règles d'Apple), Plus → Signaler un
   problème… (un rapport de lecture sans adresse, identifiant ni titre). Les fiches des films et séries indiquent
   le format (MKV, HLS…).
 - **Stockage** : documents JSON dans le stockage privé de l'app (`data/AppStore.kt`), exclus des sauvegardes
@@ -56,8 +64,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   cible avance par pas de plus en plus grands, la vidéo s'y rendant quand la télécommande s'arrête (un saut par
   déplacement), des panneaux Sous-titres, Audio, Vitesse et Plus avec les pistes nommées par langue
   (`player/TrackChoices.kt`) ; pendant la lecture, les commandes se masquent 5 s après la dernière touche. OK met en
-  pause, Gauche / Droite reculent et avancent de 10 s, Haut / Bas, CH+ / CH−, les chiffres et la chaîne précédente
-  changent de chaîne (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), un bandeau de chaîne, Retour ferme
+  pause, Gauche / Droite reculent et avancent de 10 s quand le flux le permet (sinon elles affichent les commandes),
+  Haut / Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de chaîne (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), un bandeau de chaîne, Retour ferme
   un panneau, puis les commandes.
   Qualité des apps TV de Google : pas d'image dans l'image sur une TV, l'écran gardé allumé seulement pendant la
   lecture, pas de navigateur (les règles de confidentialité et la page d'aide s'ouvrent dans une page de l'app

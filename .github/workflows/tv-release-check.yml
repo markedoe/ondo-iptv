@@ -19,7 +19,7 @@ on:
         description: Android TV system image (API level)
         default: "30"
       heap-size:
-        description: The app's memory limit (a TV box's, e.g. 192M or 128M)
+        description: The app's memory limit to ask for (a TV box's, e.g. 192M or 128M), applied when the emulator allows it; the run prints the limit in force
         default: "192M"
       wrong-password-first:
         description: Type a wrong password first (refused), then the right one

@@ -109,8 +109,9 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 
 ### Android (téléphones, tablettes et TV)
 
-- **Accueil** : carrousel, films et séries en cours (une rangée chacun), Ma liste, nouveautés, chaînes ;
-  la date de dernière mise à jour de la playlist, au-dessus de son nom.
+- **Accueil** : carrousel, films et séries en cours (une rangée chacun ; appuyez longuement sur une carte, ou
+  maintenez OK sur une TV, pour la retirer), Ma liste, nouveautés, chaînes ; la date de dernière mise à jour de la
+  playlist, au-dessus de son nom.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), films déjà vus masqués si vous le souhaitez, fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
@@ -133,7 +134,11 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   testé avec les mêmes cas).
 - **Lecteur** (Media3 / ExoPlayer) : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
   reprise, image dans l'image, commandes multimédia ; une chaîne qui prend du retard revient d'elle-même au
-  direct ; erreurs expliquées, **mémoire tampon** réglable pour le direct et pour les films et séries,
+  direct ; les **langues de l'audio et des sous-titres** que vous choisissez servent pour les flux suivants (les
+  sous-titres forcés restent affichés avec Désactivé) ; Plus → **Format d'image** (Ajuster, Remplir (rogner),
+  Étirer, gardé pour les vidéos suivantes) et **Minuterie de sommeil** (de 15 à 120 minutes, puis le lecteur se
+  met en pause) ; erreurs expliquées, **mémoire tampon** réglable pour le direct et pour les films et séries, une
+  mémoire tampon qui tient dans la mémoire de l'app (un film 4K se lit sur un boîtier TV),
   **statistiques du flux** qui distinguent un gel dû au réseau d'un gel dû au lecteur et montrent le format
   (MKV, MP4…), comme sur Apple, et **Signaler un problème…** : un rapport de lecture sans adresse, identifiant
   ni titre, à partager ou envoyer dans un ticket GitHub. Les fiches des films et séries indiquent le format
@@ -151,10 +156,10 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   (une sélection bien visible, qui revient sur la carte que vous avez quittée, des mises en page qui restent à
   l'écart des bords de l'écran) ; un lecteur dessiné pour la télécommande : de grands boutons, une barre de
   progression pour se déplacer dans la vidéo, des panneaux Sous-titres et Audio qui listent les pistes par langue,
-  Vitesse et Plus ; OK met en pause, Gauche et Droite reculent et avancent de 10 secondes, Haut et Bas, CH+ / CH−,
-  les chiffres et la chaîne précédente changent de chaîne ; maintenez OK sur une chaîne pour l'ajouter à Ma liste ;
-  Aide, Avec la télécommande. Les règles de confidentialité et la page d'aide s'ouvrent
-  dans l'app.
+  Vitesse et Plus ; OK met en pause, Gauche et Droite reculent et avancent de 10 secondes quand le flux le permet
+  (sinon elles affichent les commandes), Haut et Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de
+  chaîne ; maintenez OK sur une chaîne pour l'ajouter à Ma liste ; Aide, Avec la télécommande. Les règles de
+  confidentialité et la page d'aide s'ouvrent dans l'app.
 - À venir : replay, Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un second moteur
   (libVLC). Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
@@ -270,6 +275,11 @@ Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur donné
   libVLC, la bibliothèque du moteur VLC, lit des flux générés servis par un fournisseur qui se comporte mal
   exprès ; gels, temps de démarrage et de saut des films, position de reprise et diagnostic des gels de l'app
   sont comparés à des limites.
+- **Build de release sur un émulateur Android TV** (*TV release check*, lancé à la main) : le build R8 piloté avec
+  les touches de la télécommande face à un panel Xtream fictif, de l'ajout d'une playlist au lecteur, au guide, à
+  la synchronisation et à un film au débit d'un film 4K ; un plantage, un ANR ou Android qui arrête l'app le fait
+  échouer. La limite de mémoire d'un boîtier TV est demandée, appliquée quand l'émulateur le permet ; la limite en
+  vigueur est affichée.
 - **Tests de mutation** du cœur Kotlin, une fois par semaine (Pitest) : de petits bugs sont introduits dans le
   code et ceux qu'aucun test ne détecte sont signalés ; ils ne font pas échouer la CI.
 - **Avant chaque publication** : la playlist de démonstration utilisée par la review d'Apple et de Google

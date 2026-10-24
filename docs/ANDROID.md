@@ -11,17 +11,23 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **App** `android/app` (Compose, Material 3, type-safe Navigation, tab bar or rail depending on the screen):
   home (carousel, Movies in Progress, Series in Progress, My List, New Movies, New Series, channels),
   Movies and Series tabs (Continue Watching, My List, Award winners in Movies, one row per category, filterable
-  grids), movie and series pages (Resume, From Start, next episode, seasons, More Like This, awards, tappable
-  cast and director), live TV (categories, My List, current and next programme), TV guide grid with programme
+  grids), a long press that takes a card in progress out of Home or Continue Watching (a menu on a phone, OK held
+  and a question on a TV: `ui/components/Shelves.kt`), movie and series pages (Resume, From Start, next episode,
+  seasons, More Like This, awards, tappable cast and director), live TV (categories, My List, current and next programme), TV guide grid with programme
   reminders (WorkManager notifications), My List tab with collections, search (channels, movies, series, actors
   and directors; filters by release years and by festival or ceremony), categories hidden by language or
   country code, by style or word, or one by one, help, settings (playlists, appearance, adult categories hidden
   by default, Update awards automatically, Languages and categories, App language, player buffers), welcome
   screen with a demo and a "player without content" disclaimer.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
-  resume, picture-in-picture, MediaSession, audio and subtitle tracks, separate buffers for live TV and for
-  movies & series, back to the live edge on its own when a channel falls behind, More → Stream Statistics
-  (format, video and received bitrates, smoothness, freezes and lost pictures, and whether they come from the
+  resume, picture-in-picture, MediaSession, audio and subtitle tracks, the viewer's audio and subtitle languages
+  learned from their choices and used first for the next streams, forced subtitles still shown with subtitles off
+  (`player/TrackPreferences.kt`), separate buffers for live TV and for movies & series, never more than half of
+  the memory the app has left when the player starts, so that a 4K film plays on a TV box that gives the app
+  128 MB (`player/PlayerLoadControl.kt`, `core/playback/PlaybackBuffer.kt`), back to the live edge on its own when
+  a channel falls behind, More → Aspect ratio (Fit, Fill (crop), Stretch, kept for the next videos), More → Sleep
+  timer (Off, 15, 30, 45, 60, 90, 120 min; the player pauses when it is up: `player/SleepTimer.kt`), More → Stream
+  Statistics (format, video and received bitrates, smoothness, freezes and lost pictures, and whether they come from the
   network or the player: `core/playback/PlaybackHealth.kt`, the Apple rules), More → Report a Problem… (a
   playback report with no address, login or title). Movie and series pages show the format (MKV, HLS…).
 - **Storage**: JSON documents in the app's private storage (`data/AppStore.kt`), left out of backups
@@ -49,8 +55,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   view (`player/TvPlayerControls.kt`, `player/TvControls.kt`): large round buttons, a progress bar whose target moves
   in growing steps and is reached once the remote stops (one seek per move), Subtitles, Audio, Speed and More panels
   with the tracks named by language (`player/TrackChoices.kt`), hidden 5 s after the last key while playing; OK
-  pauses, Left / Right go back and forward 10 s, Up / Down, CH+ / CH−, the number keys and Last Channel change channel
-  (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), a channel banner, Back closes a panel, then the controls. Google's
+  pauses, Left / Right go back and forward 10 s where the stream allows it (else they show the controls), Up / Down,
+  CH+ / CH−, the number keys and Last Channel change channel (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), a channel banner, Back closes a panel, then the controls. Google's
   TV app quality: no Picture-in-Picture on a TV, the screen kept on while playing only, no browser (the privacy
   policy and support pages open in an in-app page limited to them), no file picker or share button where the TV
   has none, a smaller image memory cache on a low-memory device.
