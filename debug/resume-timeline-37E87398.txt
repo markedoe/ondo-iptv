@@ -1,0 +1,4 @@
+   0.0s state=loading engine=apple item=0 control=0 waiting=- clock=0.0 shown=300.0 loaded=[] error=- log=-
+   0.4s state=loading engine=apple item=1 control=1 waiting=AVPlayerWaitingToMinimizeStallsReason clock=300.0 shown=300.0 loaded=[] error=- log=-
+   1.3s state=loading engine=apple item=1 control=1 waiting=AVPlayerWaitingToMinimizeStallsReason clock=300.0 shown=300.0 loaded=[282+17] error=- log=-
+   1.5s state=playing engine=apple item=1 control=2 waiting=- clock=300.0 shown=300.0 loaded=[282+27] error=- log=-
