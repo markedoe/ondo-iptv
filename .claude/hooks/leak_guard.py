@@ -120,6 +120,14 @@ SECRET_RULES = [
     ("credentials in a URL", re.compile(
         r"(?i)\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)/(?:live|movie|series|timeshift)/[^/\s?#'\"<>]+/"
         r"(?P<value>[^/\s?#'\"<>]+)/[^\s'\"<>]*\d"), url_path_secret),
+    # The short form of a live stream in panels' M3U exports: `http://panel/jdoe42/<password>/1234`. Not an API's
+    # numbered version (`/3/tv/1399`).
+    ("credentials in a URL", re.compile(
+        r"(?i)\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)/(?P<user>[^/\s?#'\"<>]+)/(?P<value>[^/\s?#'\"<>]+)/\d+"
+        r"(?:\.[a-z0-9]{2,4})?(?![^\s'\"<>?#])"),
+     lambda match: url_path_secret(match) and not match.group("user").isdigit() and not match.group("value").isdigit()),
+    # A TMDb API key (32 hexadecimal digits) in an address.
+    ("credentials in a URL", re.compile(r"(?i)[?&]api_?key=[0-9a-f]{32}(?![0-9a-z])")),
     ("hard-coded secret", re.compile(
         rf"(?i)(?<![?&]){SECRET_NAME}[\"'`]?(?:\s*:\s*[A-Za-z_][\w.<>?\[\]]*\s*(?==))?\s*(?:=>|:=|\?=|=|:)[ \t]*"
         r"(?:(?P<quote>[\"'`])(?P<quoted>[^\"'`\s]{8,})(?P=quote)|(?P<bare>[^\s\"'`.$<>{}()\[\]\\,;#&?]{8,})(?=[\s,;)\]}]|$))"),

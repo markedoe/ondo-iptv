@@ -55,6 +55,13 @@ class SecretShapesTests(unittest.TestCase):
         self.assertFinds(f"/get.php?username=jdoe42&password={SHORT}&type=m3u_plus", "credentials in a URL")
         self.assertFinds(f"http://{PANEL}/live/jdoe42/{SHORT}/1234.ts", "credentials in a URL")
         self.assertFinds(f"http://{PANEL}/timeshift/jdoe42/{SHORT}/60/2025-10-09:20-00/1234.ts", "credentials in a URL")
+        # Panels' M3U exports name live streams without /live/.
+        self.assertFinds(f"http://{PANEL}/jdoe42/{SHORT}/1234", "credentials in a URL")
+        self.assertFinds(f"http://{PANEL}/jdoe42/{SHORT}/1234.ts", "credentials in a URL")
+
+    def test_a_tmdb_api_key_in_an_address(self):
+        key = RANDOM.lower().encode().hex()[:32]  # 32 hexadecimal digits, as a TMDb API key
+        self.assertFinds(f"https://api.themoviedb.org/3/movie/550?language=en-US&api_key={key}", "credentials in a URL")
 
     def test_a_private_key_in_a_json_service_account(self):
         body = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC" * 2
@@ -84,6 +91,9 @@ class SecretShapesTests(unittest.TestCase):
                 "http://p.example.com/player_api.php?username=user%20name&password=p%26ss=%23?",
                 'URL(string: "\\(base)/live/\\(user)/\\(pass)/\\(streamID).ts")',
                 "https://api.themoviedb.org/3/movie/550/credits",
+                "https://api.themoviedb.org/3/movie/910001?language=en-US&api_key=KEY",
+                "http://host:port/user/pass/123", "http://panel.example.com:8080/viewer/secret/1234.ts",
+                "https://api.themoviedb.org/3/tv/1399", "https://github.com/markedoe/ondo-iptv/issues/42",
                 "          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}",
                 'echo "$ANDROID_KEYSTORE_PASSWORD"; password=$ANDROID_KEYSTORE_PASSWORD',
                 'storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")',
