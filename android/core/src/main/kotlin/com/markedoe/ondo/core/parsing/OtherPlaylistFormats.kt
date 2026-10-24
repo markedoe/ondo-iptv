@@ -162,7 +162,8 @@ object JsonPlaylistParser {
 /** One URL per line (lines starting with `#` are ignored). */
 object PlainListParser {
     fun parse(bytes: ByteArray): M3uPlaylist {
-        val entries = bytes.decodeToString().nonEmptyLines().mapNotNull { line ->
+        // Without a byte order mark: before the first address, it made that address invalid.
+        val entries = bytes.decodeToStringWithoutBom().nonEmptyLines().mapNotNull { line ->
             val trimmed = line.trim()
             if (trimmed.startsWith("#")) return@mapNotNull null
             val url = Urls.lenient(trimmed) ?: return@mapNotNull null
