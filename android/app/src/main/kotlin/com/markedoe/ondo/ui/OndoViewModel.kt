@@ -310,6 +310,8 @@ class OndoViewModel(
                 throw cancelled
             } catch (_: Exception) {
                 // Play asks again, and says why if it still fails.
+            } catch (_: OutOfMemoryError) {
+                // A page too large for this device (the HTTP client hands the error over): not a stop of the app.
             }
         }
     }
