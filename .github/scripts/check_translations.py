@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Every interface text of the Apple app must be translated into every language of the app.
 
-1. Every key of App/Resources/Localizable.xcstrings (and InfoPlist.xcstrings, the permission prompts) has a
-   translation marked "translated" in each language of LANGUAGES (plural variations included). Stale keys
-   (no longer in the code) are ignored.
+1. Every key of App/Resources/Localizable.xcstrings (and InfoPlist.xcstrings, the permission prompts, which has every
+   NS…UsageDescription of project.yml) has a translation marked "translated" in each language of LANGUAGES (plural
+   variations included). Stale keys (no longer in the code) are ignored.
 2. Every literal shown by a localizing SwiftUI API in App/ (Text("…"), Label("…", …), Button("…"),
    .navigationTitle("…"), String(localized: "…"), Shelf(title: "…"), …) exists in the catalogue:
    a string added in the code but not in the catalogue appears in English in the other languages.
@@ -25,6 +25,8 @@ CATALOGUE = ROOT / "App/Resources/Localizable.xcstrings"
 # Texts of Info.plist (the system's permission prompts), translated like the app's.
 INFO_PLIST_CATALOGUE = ROOT / "App/Resources/InfoPlist.xcstrings"
 SOURCES = ROOT / "App"
+# Info.plist is generated from project.yml (XcodeGen).
+PROJECT = ROOT / "project.yml"
 
 STRING = r'"((?:[^"\\\n]|\\.)*)"'
 # The first argument of these initialisers and modifiers is a LocalizedStringKey when it is a literal.
@@ -111,8 +113,15 @@ def main() -> int:
     problems = []
 
     catalogues = [(CATALOGUE.name, strings)]
+    prompts = {}
     if INFO_PLIST_CATALOGUE.exists():
-        catalogues.append((INFO_PLIST_CATALOGUE.name, json.loads(INFO_PLIST_CATALOGUE.read_text(encoding="utf-8"))["strings"]))
+        prompts = json.loads(INFO_PLIST_CATALOGUE.read_text(encoding="utf-8"))["strings"]
+        catalogues.append((INFO_PLIST_CATALOGUE.name, prompts))
+    # Each permission prompt of Info.plist (project.yml) has its entry: without one, it shows in English everywhere.
+    if PROJECT.exists():
+        for key in sorted(set(re.findall(r"^\s*(NS\w+UsageDescription):", PROJECT.read_text(encoding="utf-8"), re.MULTILINE))):
+            if key not in prompts:
+                problems.append(f"{key} (project.yml) is not in {INFO_PLIST_CATALOGUE.name}: it shows in English in every language")
     for file_name, entries in catalogues:
         for key, entry in entries.items():
             if entry.get("shouldTranslate") is False or entry.get("extractionState") == "stale":

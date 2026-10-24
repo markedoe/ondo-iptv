@@ -99,6 +99,17 @@ class TranslationsTests(CheckTestCase):
                    json.dumps({"sourceLanguage": "en", "strings": {"NSLocalNetworkUsageDescription": prompt}, "version": "1.0"}))
         self.assertFails("translations", "no Arabic translation in InfoPlist.xcstrings", "NSLocalNetworkUsageDescription")
 
+    def test_a_permission_prompt_missing_from_its_catalogue_fails(self):
+        # The system shows the prompt in English in every language when InfoPlist.xcstrings has no entry for it.
+        self.catalogue({"New Movies": french("Nouveaux films")})
+        self.write("project.yml", "    info:\n      properties:\n        NSLocalNetworkUsageDescription: Ondo looks for TVs.\n"
+                                  "        NSCameraUsageDescription: Ondo scans a playlist's QR code.\n")
+        self.write("App/Resources/InfoPlist.xcstrings", json.dumps(
+            {"sourceLanguage": "en", "strings": {"NSLocalNetworkUsageDescription": french("Ondo cherche les TV.")}, "version": "1.0"}))
+        self.assertFails("translations", "NSCameraUsageDescription")
+        self.write("project.yml", "    info:\n      properties:\n        NSLocalNetworkUsageDescription: Ondo looks for TVs.\n")
+        self.assertPasses("translations")
+
     def test_stale_keys_are_ignored(self):
         self.catalogue({"Old Row": {"extractionState": "stale", "localizations": {}}})
         self.assertPasses("translations")
