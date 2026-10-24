@@ -296,4 +296,23 @@
     <string name="last_crash">上次崩溃：%1$s</string>
     <string name="last_crash_hint">Ondo 停止运行时在此设备上记录。拍照发送有助于修复问题；其中不含地址和登录信息。</string>
     <string name="web_page_unavailable">此页面无法在此设备上打开。请在手机或电脑上访问 %1$s。</string>
+    <string name="pause">暂停</string>
+    <string name="skip_back_10">后退 10 秒</string>
+    <string name="skip_forward_10">前进 10 秒</string>
+    <string name="subtitles">字幕</string>
+    <string name="audio">音频</string>
+    <string name="speed">速度</string>
+    <string name="speed_normal">正常</string>
+    <string name="off">关闭</string>
+    <string name="live_badge">直播</string>
+    <string name="track_number">轨道 %1$d</string>
+    <string name="track_forced">强制</string>
+    <string name="track_hearing_impaired">面向听障人士</string>
+    <string name="track_commentary">解说</string>
+    <string name="track_audio_description">口述影像</string>
+    <string name="track_mono">单声道</string>
+    <string name="track_stereo">立体声</string>
+    <string name="tracks_pending">开始播放后会显示可选的轨道。</string>
+    <string name="no_subtitles">此流没有字幕。</string>
+    <string name="no_audio">此流没有声音。</string>
 </resources>

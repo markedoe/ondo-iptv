@@ -304,4 +304,23 @@
     <string name="last_crash">पिछला क्रैश: %1$s</string>
     <string name="last_crash_hint">Ondo के रुकने पर इस डिवाइस पर दर्ज किया गया। इसकी फ़ोटो समस्या ठीक करने में मदद करती है; इसमें पते और लॉगिन शामिल नहीं हैं।</string>
     <string name="web_page_unavailable">यह पेज इस डिवाइस पर नहीं खुल सकता। फ़ोन या कंप्यूटर से %1$s पर जाएँ।</string>
+    <string name="pause">पॉज़ करें</string>
+    <string name="skip_back_10">10 सेकंड पीछे</string>
+    <string name="skip_forward_10">10 सेकंड आगे</string>
+    <string name="subtitles">सबटाइटल</string>
+    <string name="audio">ऑडियो</string>
+    <string name="speed">स्पीड</string>
+    <string name="speed_normal">सामान्य</string>
+    <string name="off">बंद</string>
+    <string name="live_badge">लाइव</string>
+    <string name="track_number">ट्रैक %1$d</string>
+    <string name="track_forced">फ़ोर्स्ड</string>
+    <string name="track_hearing_impaired">बधिर और कम सुनने वालों के लिए</string>
+    <string name="track_commentary">कमेंट्री</string>
+    <string name="track_audio_description">ऑडियो विवरण</string>
+    <string name="track_mono">मोनो</string>
+    <string name="track_stereo">स्टीरियो</string>
+    <string name="tracks_pending">स्ट्रीम चलते ही ट्रैक दिखेंगे।</string>
+    <string name="no_subtitles">इस स्ट्रीम में सबटाइटल नहीं हैं।</string>
+    <string name="no_audio">इस स्ट्रीम में आवाज़ नहीं है।</string>
 </resources>

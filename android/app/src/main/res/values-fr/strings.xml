@@ -312,4 +312,23 @@
     <string name="last_crash">Dernier plantage : %1$s</string>
     <string name="last_crash_hint">Enregistré sur cet appareil quand Ondo s’est arrêté. Une photo aide à corriger le problème ; les adresses et identifiants n’y figurent pas.</string>
     <string name="web_page_unavailable">Cette page ne peut pas s’ouvrir sur cet appareil. Consultez %1$s depuis un téléphone ou un ordinateur.</string>
+    <string name="pause">Pause</string>
+    <string name="skip_back_10">Reculer de 10 secondes</string>
+    <string name="skip_forward_10">Avancer de 10 secondes</string>
+    <string name="subtitles">Sous-titres</string>
+    <string name="audio">Audio</string>
+    <string name="speed">Vitesse</string>
+    <string name="speed_normal">Normale</string>
+    <string name="off">Désactivé</string>
+    <string name="live_badge">DIRECT</string>
+    <string name="track_number">Piste %1$d</string>
+    <string name="track_forced">Forcés</string>
+    <string name="track_hearing_impaired">Pour sourds et malentendants</string>
+    <string name="track_commentary">Commentaire</string>
+    <string name="track_audio_description">Audiodescription</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Stéréo</string>
+    <string name="tracks_pending">Les pistes s’affichent dès que le flux est lu.</string>
+    <string name="no_subtitles">Ce flux n’a pas de sous-titres.</string>
+    <string name="no_audio">Ce flux n’a pas de son.</string>
 </resources>

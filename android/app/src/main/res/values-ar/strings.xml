@@ -336,4 +336,23 @@
     <string name="last_crash">آخر توقف مفاجئ: %1$s</string>
     <string name="last_crash_hint">سُجِّل على هذا الجهاز عندما توقف Ondo. تساعد صورة منه على إصلاح المشكلة، ولا تتضمن العناوين أو بيانات تسجيل الدخول.</string>
     <string name="web_page_unavailable">لا يمكن فتح هذه الصفحة على هذا الجهاز. زُر %1$s من هاتف أو كمبيوتر.</string>
+    <string name="pause">إيقاف مؤقت</string>
+    <string name="skip_back_10">رجوع 10 ثوانٍ</string>
+    <string name="skip_forward_10">تقديم 10 ثوانٍ</string>
+    <string name="subtitles">الترجمة</string>
+    <string name="audio">الصوت</string>
+    <string name="speed">السرعة</string>
+    <string name="speed_normal">عادية</string>
+    <string name="off">إيقاف</string>
+    <string name="live_badge">مباشر</string>
+    <string name="track_number">المسار %1$d</string>
+    <string name="track_forced">إجبارية</string>
+    <string name="track_hearing_impaired">للصم وضعاف السمع</string>
+    <string name="track_commentary">تعليق</string>
+    <string name="track_audio_description">الوصف الصوتي</string>
+    <string name="track_mono">أحادي</string>
+    <string name="track_stereo">ستيريو</string>
+    <string name="tracks_pending">تظهر المسارات بمجرد بدء تشغيل البث.</string>
+    <string name="no_subtitles">لا يحتوي هذا البث على ترجمة.</string>
+    <string name="no_audio">لا يحتوي هذا البث على صوت.</string>
 </resources>

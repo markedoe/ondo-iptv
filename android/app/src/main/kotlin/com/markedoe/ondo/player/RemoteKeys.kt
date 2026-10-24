@@ -17,6 +17,10 @@ sealed interface RemoteAction {
     data object ShowControls : RemoteAction
     data object HideControls : RemoteAction
 
+    /** The remote's own subtitles and audio keys: their panel, with the controls. */
+    data object Subtitles : RemoteAction
+    data object Audio : RemoteAction
+
     /** A figure of a channel number being typed. */
     data class Digit(val value: Int) : RemoteAction
 }
@@ -26,7 +30,8 @@ sealed interface RemoteAction {
  * Left and Right go back and forward, Up and Down change channel on a live one; another arrow shows the controls.
  * With the controls shown, the arrows and OK move through them (Back hides them: `PlayerActivity`, through the
  * system's back, which the key itself no longer reaches from Android 13). Channel keys, figures and "last channel"
- * work on a live channel at any time, the media keys on everything. Null: the key does what it does by default.
+ * work on a live channel at any time, the media keys on everything, and a remote's subtitles and audio keys open their
+ * panel. Null: the key does what it does by default.
  */
 object RemoteKeys {
     fun action(keyCode: Int, controlsShown: Boolean, zapping: Boolean, seekable: Boolean): RemoteAction? {
@@ -41,6 +46,8 @@ object RemoteKeys {
             KeyEvent.KEYCODE_CHANNEL_DOWN, KeyEvent.KEYCODE_MEDIA_PREVIOUS -> return RemoteAction.PreviousChannel.takeIf { zapping }
             KeyEvent.KEYCODE_LAST_CHANNEL -> return RemoteAction.LastChannel.takeIf { zapping }
             KeyEvent.KEYCODE_INFO -> return if (controlsShown) RemoteAction.HideControls else RemoteAction.ShowControls
+            KeyEvent.KEYCODE_CAPTIONS -> return RemoteAction.Subtitles
+            KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK -> return RemoteAction.Audio
         }
         if (controlsShown) return null
         return when (keyCode) {

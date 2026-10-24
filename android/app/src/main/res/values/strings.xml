@@ -308,4 +308,24 @@
     <string name="last_crash">Last crash: %1$s</string>
     <string name="last_crash_hint">Recorded on this device when Ondo stopped. A photo of it helps fix the problem; addresses and logins are left out.</string>
     <string name="web_page_unavailable">This page cannot open on this device. Visit %1$s from a phone or a computer.</string>
+    <!-- The TV player: its buttons, the Subtitles and Audio panels (a track's details), the live badge. -->
+    <string name="pause">Pause</string>
+    <string name="skip_back_10">Back 10 seconds</string>
+    <string name="skip_forward_10">Forward 10 seconds</string>
+    <string name="subtitles">Subtitles</string>
+    <string name="audio">Audio</string>
+    <string name="speed">Speed</string>
+    <string name="speed_normal">Normal</string>
+    <string name="off">Off</string>
+    <string name="live_badge">LIVE</string>
+    <string name="track_number">Track %1$d</string>
+    <string name="track_forced">Forced</string>
+    <string name="track_hearing_impaired">For the deaf and hard of hearing</string>
+    <string name="track_commentary">Commentary</string>
+    <string name="track_audio_description">Audio description</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Stereo</string>
+    <string name="tracks_pending">The tracks show once the stream plays.</string>
+    <string name="no_subtitles">This stream has no subtitles.</string>
+    <string name="no_audio">This stream has no sound.</string>
 </resources>

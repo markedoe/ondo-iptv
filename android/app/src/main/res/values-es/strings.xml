@@ -312,4 +312,23 @@
     <string name="last_crash">Último cierre inesperado: %1$s</string>
     <string name="last_crash_hint">Registrado en este dispositivo cuando Ondo se cerró. Una foto ayuda a corregir el problema; no incluye direcciones ni datos de acceso.</string>
     <string name="web_page_unavailable">Esta página no se puede abrir en este dispositivo. Visita %1$s desde un teléfono o un ordenador.</string>
+    <string name="pause">Pausa</string>
+    <string name="skip_back_10">Retroceder 10 segundos</string>
+    <string name="skip_forward_10">Avanzar 10 segundos</string>
+    <string name="subtitles">Subtítulos</string>
+    <string name="audio">Audio</string>
+    <string name="speed">Velocidad</string>
+    <string name="speed_normal">Normal</string>
+    <string name="off">Desactivado</string>
+    <string name="live_badge">DIRECTO</string>
+    <string name="track_number">Pista %1$d</string>
+    <string name="track_forced">Forzados</string>
+    <string name="track_hearing_impaired">Para personas sordas o con discapacidad auditiva</string>
+    <string name="track_commentary">Comentarios</string>
+    <string name="track_audio_description">Audiodescripción</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Estéreo</string>
+    <string name="tracks_pending">Las pistas aparecen en cuanto se reproduce el flujo.</string>
+    <string name="no_subtitles">Este flujo no tiene subtítulos.</string>
+    <string name="no_audio">Este flujo no tiene sonido.</string>
 </resources>

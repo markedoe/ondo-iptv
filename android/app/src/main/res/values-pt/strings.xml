@@ -312,4 +312,23 @@
     <string name="last_crash">Última falha: %1$s</string>
     <string name="last_crash_hint">Registrado neste dispositivo quando o Ondo fechou. Uma foto ajuda a corrigir o problema; endereços e logins ficam de fora.</string>
     <string name="web_page_unavailable">Esta página não pode ser aberta neste dispositivo. Acesse %1$s pelo celular ou pelo computador.</string>
+    <string name="pause">Pausar</string>
+    <string name="skip_back_10">Voltar 10 segundos</string>
+    <string name="skip_forward_10">Avançar 10 segundos</string>
+    <string name="subtitles">Legendas</string>
+    <string name="audio">Áudio</string>
+    <string name="speed">Velocidade</string>
+    <string name="speed_normal">Normal</string>
+    <string name="off">Desativado</string>
+    <string name="live_badge">AO VIVO</string>
+    <string name="track_number">Faixa %1$d</string>
+    <string name="track_forced">Forçadas</string>
+    <string name="track_hearing_impaired">Para surdos e ensurdecidos</string>
+    <string name="track_commentary">Comentários</string>
+    <string name="track_audio_description">Audiodescrição</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Estéreo</string>
+    <string name="tracks_pending">As faixas aparecem assim que o stream começa.</string>
+    <string name="no_subtitles">Este stream não tem legendas.</string>
+    <string name="no_audio">Este stream não tem som.</string>
 </resources>
