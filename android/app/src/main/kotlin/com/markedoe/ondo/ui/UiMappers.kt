@@ -356,7 +356,8 @@ object UiMappers {
     fun channelRow(channel: Channel, state: OndoState, now: Long): ChannelRow {
         val guide = state.guide ?: return ChannelRow(channel, null, null, null)
         val current = guide.current(channel, now)
-        val next = guide.upcoming(channel, now, 1).firstOrNull()
+        // The programme on now comes first in `upcoming`; in a gap, the next one does.
+        val next = guide.upcoming(channel, now, 2).firstOrNull { it != current }
         return ChannelRow(channel, current?.title, current?.progress(now)?.toFloat(), next?.title)
     }
 
