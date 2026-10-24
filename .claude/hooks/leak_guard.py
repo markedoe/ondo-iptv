@@ -63,6 +63,12 @@ def url_path_secret(match):
         not placeholder(match.group("value"))
 
 
+def url_short_path_secret(match):
+    """`http://panel/jdoe42/<password>/1234`: the same account in the short live address, where a digit in the user or
+    the password tells it from a page's path (`/forums/thread/725013`, `/about/versions/14`)."""
+    return url_path_secret(match) and bool(re.search(r"\d", match.group("user") + match.group("value")))
+
+
 def assigned_secret(match):
     """A value given to a name that ends with a secret word (`storePassword`, `ANDROID_KEYSTORE_PASSWORD`,
     `tmdbToken`, `password:` in YAML): quoted, 16 characters or more, or 8 with letters and digits; bare (YAML,
@@ -136,7 +142,7 @@ SECRET_RULES = [
     ("credentials in a URL", re.compile(
         r"(?i)\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)/(?P<user>[^/\s?#'\"<>]+)/(?P<value>[^/\s?#'\"<>]+)/\d+"
         r"(?:\.[a-z0-9]{2,4})?(?![^\s'\"<>?#])"),
-     lambda match: url_path_secret(match) and not match.group("user").isdigit() and not match.group("value").isdigit()),
+     lambda match: url_short_path_secret(match) and not match.group("user").isdigit() and not match.group("value").isdigit()),
     # A TMDb API key (32 hexadecimal digits) in an address.
     ("credentials in a URL", re.compile(r"(?i)[?&]api_?key=[0-9a-f]{32}(?![0-9a-z])")),
     ("hard-coded secret", re.compile(

@@ -141,6 +141,7 @@ class SecretShapesTests(unittest.TestCase):
                 f"http://192.0.2.10:8080/get.php?username=jdoe42&password={SHORT}",
                 f"http://198.51.100.7/live/jdoe42/{SHORT}/1.ts", f"http://203.0.113.5:8080/jdoe42/{SHORT}/12345",
                 "https://api.themoviedb.org/3/tv/1399", "https://news.site.org/2026/10/24",
+                "https://developer.apple.com/forums/thread/725013", "https://developer.android.com/about/versions/14",
                 "IPv6 fc00::/7 (unique local), fe80::/10 (link-local) and ::1", 'host.hasPrefix("fe80:")',
                 "let mask = 0xfd12:", "fe80::1%en0", "fc00::1", "[fe80::1]:8080"):
             with self.subTest(text=text):
