@@ -104,7 +104,8 @@ public struct PlaylistLoader: Sendable {
 
     /// Memory the programmes of a playlist's guides may take: a quarter of what the system still lets the app use, on
     /// the devices that stop an app past a limit (iPhone, iPad, Apple TV). No limit elsewhere: a Mac compresses and
-    /// swaps memory instead.
+    /// swaps memory instead. What is kept is then saved as the guide's cache (`FileStore`), whose encoding took about
+    /// 1.7 times what the programmes take on top of them (measured on Linux: 310 MB more for 179 MB of programmes).
     public static func guideMemoryBudget() -> Int? {
         #if os(iOS) || os(tvOS)
         let available = os_proc_available_memory()
