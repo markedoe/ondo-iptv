@@ -19,10 +19,14 @@ import com.markedoe.ondo.core.parsing.PlaylistFormat
 import com.markedoe.ondo.core.parsing.XspfParser
 import com.markedoe.ondo.core.xtream.XtreamClient
 import java.io.File
+import java.io.FilterInputStream
+import java.io.InputStream
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 
 /** The downloaded data is not a usable playlist. */
@@ -153,7 +157,7 @@ class PlaylistLoader(
                 val sourceFilter = if (budget == null) {
                     filter
                 } else {
-                    val estimate = withContext(parsingDispatcher) { download.inputStream().use { parser.estimateGuide(it, filter, shift, now) } }
+                    val estimate = withContext(parsingDispatcher) { download.inputStream().cancellable(this).use { parser.estimateGuide(it, filter, shift, now) } }
                     if (estimate.totalBytes <= budget) {
                         remaining = budget - estimate.totalBytes
                         filter
@@ -163,7 +167,7 @@ class PlaylistLoader(
                         filter.within(selection.window)
                     }
                 }
-                val parsed = withContext(parsingDispatcher) { download.inputStream().use { parser.parseGuide(it, sourceFilter, shift) } }
+                val parsed = withContext(parsingDispatcher) { download.inputStream().cancellable(this).use { parser.parseGuide(it, sourceFilter, shift) } }
                 merged = merged.merged(parsed)
             } catch (e: CancellationException) {
                 throw e
@@ -177,6 +181,19 @@ class PlaylistLoader(
             }
         }
         return EpgLoadResult(merged.copy(fetchedAt = clock()), failures)
+    }
+
+    /** Stops reading once [scope] is cancelled: a guide nobody waits for any more is not parsed to its end. */
+    private fun InputStream.cancellable(scope: CoroutineScope): InputStream = object : FilterInputStream(this) {
+        override fun read(): Int {
+            scope.ensureActive()
+            return super.read()
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            scope.ensureActive()
+            return super.read(b, off, len)
+        }
     }
 
     internal companion object {

@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.library
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.LargeCatalogue
 import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.epg.XmltvParseException
 import com.markedoe.ondo.core.model.Channel
@@ -15,11 +16,14 @@ import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.utc
 import com.markedoe.ondo.core.xtream.XtreamException
 import com.markedoe.ondo.core.xtream.XtreamUrlBuilder
+import java.io.File
 import java.io.FileNotFoundException
+import java.io.FileOutputStream
 import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.nio.file.Files
+import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -27,7 +31,15 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
+import org.junit.Assume.assumeTrue
 
 class PlaylistLoaderTest {
     private val clock = { 1_234L }
@@ -170,6 +182,59 @@ class PlaylistLoaderTest {
             PlaylistLoader.guideKey(" http://PANEL.example.com/xmltv.php/?username=demo&password=pw#top"),
         )
         assertTrue(PlaylistLoader.guideKey("http://a.example.com/g.xml") != PlaylistLoader.guideKey("http://b.example.com/g.xml"))
+    }
+
+    /**
+     * A guide load cancelled while it parses (another playlist opened, a newer catalogue arrived) stops reading the
+     * guide: two guides are not parsed at once. The guide comes through a pipe, so what the loader stops reading is
+     * what it stops parsing.
+     */
+    @Test
+    fun aCancelledGuideLoadStopsReadingTheGuide() = runBlocking {
+        assumeTrue("needs mkfifo", File("/usr/bin/mkfifo").canExecute() || File("/bin/mkfifo").canExecute())
+        val folder = Files.createTempDirectory("guides").toFile()
+        try {
+            val guide = LargeCatalogue.xmltv(File(folder, "guide.xml"), channels = 100, days = 2, perDay = 48, start = utc(2025, 10, 9, 0)).readBytes()
+            val partRead = CompletableDeferred<Unit>()
+            val readerStopped = CompletableDeferred<Boolean>()
+            val http = object : HttpClient {
+                override suspend fun get(url: String, headers: Map<String, String>): ByteArray = error("downloaded to a file")
+
+                override suspend fun download(url: String, headers: Map<String, String>, file: File) {
+                    file.delete()
+                    check(ProcessBuilder("mkfifo", file.path).start().waitFor() == 0)
+                    thread {
+                        try {
+                            FileOutputStream(file).use { out ->
+                                out.write(guide, 0, guide.size / 4)
+                                partRead.complete(Unit)
+                                var at = guide.size / 4
+                                while (at < guide.size) {
+                                    val count = minOf(16 * 1024, guide.size - at)
+                                    out.write(guide, at, count)
+                                    at += count
+                                }
+                            }
+                            readerStopped.complete(false)
+                        } catch (_: IOException) {
+                            readerStopped.complete(true) // broken pipe: the loader closed the guide
+                        }
+                    }
+                }
+            }
+            val playlist = Playlist(name = "P", source = PlaylistSource.Remote("http://example.com/list.m3u"), epgUrls = listOf("http://epg.example.com/guide.xml"))
+            val content = PlaylistContent(channels = listOf(Channel(id = "1", name = "Channel 1", categoryId = "c", streamUrl = "http://h/1", epgId = "channel1.example")))
+            val loader = PlaylistLoader(http, downloadFolder = File(folder, "downloads"))
+            // Not a child of the test: a reading stuck in the pipe fails the test on time rather than holding it.
+            val load = CoroutineScope(Dispatchers.Default).launch { loader.loadEpg(playlist, content, TimeWindow(utc(2025, 10, 9, 0), utc(2025, 10, 11, 0))) }
+            withTimeout(60_000) {
+                partRead.await()
+                load.cancelAndJoin()
+                assertTrue(readerStopped.await(), "the cancelled load read its guide to the end")
+            }
+        } finally {
+            folder.deleteRecursively()
+        }
     }
 
     /**
