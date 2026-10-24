@@ -144,6 +144,12 @@ class OndoRepository(
         return shown
     }
 
+    /** The catalogue left the screen: nothing of it is kept (a large one is most of a TV's memory). Main thread. */
+    private fun forgetContent() {
+        loadedContent = PlaylistContent.EMPTY
+        shownContent = PlaylistContent.EMPTY
+    }
+
     /**
      * The app's words for the names the core gives in English, again after the app's language changes (the activity is
      * recreated, not the repository): the catalogue on screen is shown in them. Main thread.
@@ -268,6 +274,7 @@ class OndoRepository(
         refreshJob?.cancel()
         guideJob?.cancel()
         startDetails(playlist.id)
+        forgetContent()
         _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(), error = null, isLoading = false, isRestoring = true) }
         open(playlist)
     }
@@ -295,6 +302,7 @@ class OndoRepository(
             openJob?.cancel()
             refreshJob?.cancel()
             guideJob?.cancel()
+            forgetContent()
             _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, isLoading = false, isRestoring = it.playlists.isNotEmpty()) }
             _state.value.activePlaylist?.let { open(it) }
         }
@@ -371,6 +379,7 @@ class OndoRepository(
                 openJob?.cancel()
                 refreshJob?.cancel()
                 guideJob?.cancel()
+                forgetContent()
                 _state.update { it.copy(content = PlaylistContent.EMPTY, guide = null, isLoading = false, isRestoring = false) }
             }
             before?.id != after.id -> activate(after.id)

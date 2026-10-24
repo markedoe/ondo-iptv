@@ -473,6 +473,31 @@ class OndoRepositoryTest {
         assertTrue("a catalogue taken off the screen does not come back", repository.state.value.content.isEmpty)
     }
 
+    /**
+     * A catalogue taken off the screen is not kept: on a TV a large one is most of the memory the app has, and it would
+     * stay while the next playlist's loads.
+     */
+    @Test
+    fun aCatalogueTakenOffTheScreenIsNotKept() = runTest {
+        val repository = repository()
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Home", list).isSuccess)
+        val shown = java.lang.ref.WeakReference(repository.state.value.content)
+        assertFalse(shown.get()!!.isEmpty)
+
+        repository.delete(repository.state.value.activePlaylistId!!)
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(repository.state.value.content.isEmpty)
+        for (attempt in 0 until 50) {
+            if (shown.get() == null) break
+            System.gc()
+            Thread.sleep(20)
+        }
+        assertNull("the deleted playlist's catalogue is still held", shown.get())
+    }
+
     @Test
     fun activatingAnotherPlaylistShowsItsCatalogueAndIsRemembered() = runTest {
         val other = "http://other.example.com/list.m3u"
