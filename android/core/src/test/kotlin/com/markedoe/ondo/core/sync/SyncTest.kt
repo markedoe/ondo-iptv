@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
+import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.util.concurrent.atomic.AtomicInteger
@@ -16,6 +17,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 /** Local-network sync (docs/SYNC.md): the shared examples, the merge rules, local addresses and frames. */
@@ -102,6 +104,34 @@ class SyncTest {
         // Too large, or cut short: refused.
         assertFailsWith<IOException> { SyncNetwork.readFrame(ByteArrayInputStream(byteArrayOf(0x7F, 0, 0, 0))) }
         assertFailsWith<IOException> { SyncNetwork.readFrame(ByteArrayInputStream(byteArrayOf(0, 0, 0, 9, 1, 2))) }
+    }
+
+    /**
+     * A frame's length is only what the other side claims: memory is taken as its bytes arrive. A header claiming
+     * almost 16 MiB followed by a thousand bytes and the end fails having taken a few kilobytes, where it took 16 MiB
+     * before anything came (up to four sessions at a time, each held for the session's 30 seconds). Measured with the
+     * JVM's count of the bytes this thread allocates.
+     */
+    @Test
+    fun aFrameTakesMemoryOnlyForTheBytesThatArrive() {
+        val threads = ManagementFactory.getThreadMXBean() as? com.sun.management.ThreadMXBean
+        assumeTrue("needs the count of allocated bytes", threads != null && threads.isThreadAllocatedMemorySupported)
+        threads!!.isThreadAllocatedMemoryEnabled = true
+        val claim = byteArrayOf(0, 0xFF.toByte(), 0xFF.toByte(), 0xFF.toByte()) + ByteArray(1_000)
+        val before = threads.currentThreadAllocatedBytes
+        assertFailsWith<IOException> { SyncNetwork.readFrame(ByteArrayInputStream(claim)) }
+        val allocated = threads.currentThreadAllocatedBytes - before
+        assertTrue("$allocated bytes allocated for a frame that sent 1,000", allocated < 1024 * 1024)
+
+        // A frame larger than the first piece read still comes whole, without copies piling up as it grows.
+        val payload = ByteArray(3 * 1024 * 1024 + 7) { (it * 31).toByte() }
+        val output = ByteArrayOutputStream()
+        SyncNetwork.writeFrame(output, payload)
+        val frame = output.toByteArray()
+        val start = threads.currentThreadAllocatedBytes
+        assertTrue(payload.contentEquals(SyncNetwork.readFrame(ByteArrayInputStream(frame))))
+        val used = threads.currentThreadAllocatedBytes - start
+        assertTrue("$used bytes allocated for a frame of ${payload.size}", used < 3L * payload.size)
     }
 
     private val loopback: InetAddress = InetAddress.getLoopbackAddress()

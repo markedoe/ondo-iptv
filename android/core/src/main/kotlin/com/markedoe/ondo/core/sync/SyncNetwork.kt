@@ -71,21 +71,38 @@ object SyncNetwork {
 
     /** Reads one frame; a frame over [MAX_FRAME] or cut short is an error. */
     fun readFrame(input: InputStream): ByteArray {
-        val header = readFully(input, 4)
+        val header = ByteArray(4).also { readFully(input, it, 0) }
         val size = ((header[0].toInt() and 0xFF) shl 24) or ((header[1].toInt() and 0xFF) shl 16) or
             ((header[2].toInt() and 0xFF) shl 8) or (header[3].toInt() and 0xFF)
         if (size < 0 || size > MAX_FRAME) throw IOException("frame too large")
-        return readFully(input, size)
+        // The length is only what the other side claims: the memory grows with the bytes that arrive (at most twice
+        // them), instead of being reserved for the whole frame before any of it came (16 MiB per session, four at a
+        // time, on a TV that gives an app 128 MB).
+        var bytes = ByteArray(minOf(size, FIRST_READ))
+        var read = 0
+        while (true) {
+            readFully(input, bytes, read)
+            if (bytes.size == size) return bytes
+            read = bytes.size
+            bytes = try {
+                bytes.copyOf(minOf(size.toLong(), 2L * bytes.size).toInt())
+            } catch (e: OutOfMemoryError) {
+                // A frame this device cannot hold ends its session, like one cut short, not every session.
+                throw IOException("frame too large for this device's memory", e)
+            }
+        }
     }
 
-    private fun readFully(input: InputStream, size: Int): ByteArray {
-        val bytes = ByteArray(size)
-        var read = 0
-        while (read < size) {
-            val count = input.read(bytes, read, size - read)
+    /** Fills [bytes] from [from] on; a stream that ends first is a frame cut short. */
+    private fun readFully(input: InputStream, bytes: ByteArray, from: Int) {
+        var filled = from
+        while (filled < bytes.size) {
+            val count = input.read(bytes, filled, bytes.size - filled)
             if (count < 0) throw EOFException("frame cut short")
-            read += count
+            filled += count
         }
-        return bytes
     }
+
+    /** What a frame takes in memory before its bytes arrive. */
+    private const val FIRST_READ = 64 * 1024
 }
