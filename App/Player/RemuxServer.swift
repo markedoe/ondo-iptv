@@ -21,6 +21,12 @@ final class RemuxServer: @unchecked Sendable {
     var onFailure: (@Sendable (String) -> Void)?
     /// The first requests and every refused one, for the playback log: path, status, size and time taken.
     var onRequest: (@Sendable (String) -> Void)?
+    /// The listener failed once ready (on the server's queue): iOS takes back the sockets of an app left suspended a
+    /// while (a paused film, the phone locked), and the player can no longer connect.
+    var onListenerFailure: (@Sendable (String) -> Void)?
+    /// Set before `onListenerFailure` is called, for a player that fails before the callback reaches it.
+    var hasFailed: Bool { failed.isSet }
+    private let failed = Flag()
     private let served = Counter()
 
     init(remux: MatroskaRemux, source: HTTPByteSource) throws {
@@ -40,7 +46,7 @@ final class RemuxServer: @unchecked Sendable {
     func start() async throws -> URL {
         let resumed = Resumed()
         return try await withCheckedThrowingContinuation { continuation in
-            listener.stateUpdateHandler = { [listener] state in
+            listener.stateUpdateHandler = { [weak self, listener] state in
                 switch state {
                 case .ready:
                     guard resumed.claim() else { return }
@@ -50,7 +56,11 @@ final class RemuxServer: @unchecked Sendable {
                     }
                     continuation.resume(returning: url)
                 case .failed(let error):
-                    if resumed.claim() { continuation.resume(throwing: error) }
+                    if resumed.claim() {
+                        continuation.resume(throwing: error)
+                    } else {
+                        self?.listenerFailed(error)
+                    }
                 case .cancelled:
                     if resumed.claim() { continuation.resume(throwing: CancellationError()) }
                 default:
@@ -60,6 +70,13 @@ final class RemuxServer: @unchecked Sendable {
             listener.newConnectionHandler = { [weak self] connection in self?.accept(connection) }
             listener.start(queue: queue)
         }
+    }
+
+    /// The listener failed after it was ready (on the server's queue); stopping the server cancels it, which is no failure.
+    private func listenerFailed(_ error: NWError) {
+        guard !stopped else { return }
+        failed.set()
+        onListenerFailure?("\(error)")
     }
 
     /// Closes the connections, drops the answers being made and stops reading the provider's file (the player closed,
@@ -224,6 +241,18 @@ private final class Client: @unchecked Sendable {
 
     init(_ connection: NWConnection) {
         self.connection = connection
+    }
+}
+
+/// A flag set on the server's queue and read by the player.
+private final class Flag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = false
+
+    var isSet: Bool { lock.withLock { value } }
+
+    func set() {
+        lock.withLock { value = true }
     }
 }
 

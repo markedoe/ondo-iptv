@@ -35,6 +35,12 @@ extension PlayerController {
                 server.onRequest = { [weak self] request in
                     Task { @MainActor in self?.note("remux served \(request)") }
                 }
+                server.onListenerFailure = { [weak self, weak server] failure in
+                    Task { @MainActor in
+                        guard let server else { return }
+                        self?.remuxServerFailed(server, failure)
+                    }
+                }
                 self.remuxServer = server
                 let codecs = remux.tracks.map { FragmentWriter.codecName($0.codec) }.joined(separator: ", ")
                 let wait = String(format: "%.1f", self.clock - opened)
@@ -67,6 +73,30 @@ extension PlayerController {
         note("remux not possible (\(error)): the Apple engine cannot open the MKV file")
         let message = String(localized: "The Apple engine cannot play this MKV film. Choose Automatic or VLC (More, Player Engine).")
         state = .failed(message: message, attribution: .app)
+    }
+
+    #if os(iOS)
+    /// The film's server stopped listening: iOS takes back the sockets of an app left suspended a while (a paused film,
+    /// the phone locked). The remux starts again where the film was, paused if it was, rather than VLC taking over
+    /// (which has no HDR, Dolby Atmos or Picture in Picture).
+    func remuxServerFailed(_ server: RemuxServer, _ failure: String) {
+        guard remuxServer === server, item != nil else { return }
+        note("remux server failed (\(failure)): the remux starts again")
+        keepPositionForFallback()
+        loadCurrentCandidate()
+    }
+    #endif
+
+    /// AVPlayer failed on a remuxed film whose server stopped listening before the player heard of it: the remux starts
+    /// again (`remuxServerFailed`) instead of VLC taking over. True when it does.
+    func restartRemuxIfItsServerFailed() -> Bool {
+        #if os(iOS)
+        guard let server = remuxServer, server.hasFailed else { return false }
+        remuxServerFailed(server, "the system player could not reach it")
+        return true
+        #else
+        return false
+        #endif
     }
 
     /// Ends the remux of the film that played (a new item, a fallback, the player closing): while it opens, cancelling
