@@ -74,7 +74,7 @@ windows = multi-screen).
 - [x] Normalized search (accents, case, prefixes, ranking)
 - [x] Versioned JSON storage with a fallback copy, tolerant decoding, backup/restore
 - [x] SRT / WebVTT subtitles, TMDb trending + matching against the catalogue
-- [x] Unit tests: 66 at the end of phase 1, 243 today (+ performance guards: 60,000 entries, 100,000 programmes)
+- [x] Unit tests: 66 at the end of phase 1, 260 today (+ performance guards: 60,000 entries, 100,000 programmes)
 
 ### Phase 2 — iPhone + Mac MVP app (P1) ✅
 - [x] XcodeGen project, Info.plist (ATS, background audio), Mac sandbox, original icon

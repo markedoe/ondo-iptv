@@ -74,7 +74,7 @@ raccourcis, lecteur dans sa propre fenêtre (plusieurs fenêtres = multi-écran)
 - [x] Recherche normalisée (accents, casse, préfixes, classement)
 - [x] Stockage JSON versionné avec copie de secours, décodage tolérant, sauvegarde/restauration
 - [x] Sous-titres SRT / WebVTT, tendances TMDb + rapprochement avec le catalogue
-- [x] Tests unitaires : 66 à la fin de la phase 1, 243 aujourd'hui (+ garde-fous de performance : 60 000 entrées, 100 000 programmes)
+- [x] Tests unitaires : 66 à la fin de la phase 1, 260 aujourd'hui (+ garde-fous de performance : 60 000 entrées, 100 000 programmes)
 
 ### Phase 2 — App MVP iPhone + Mac (P1) ✅
 - [x] Projet XcodeGen, Info.plist (ATS, audio en arrière-plan), sandbox Mac, icône originale
