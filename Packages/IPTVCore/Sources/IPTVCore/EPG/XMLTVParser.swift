@@ -64,6 +64,13 @@ public enum XMLTVParser {
         try read(stream(file), XMLTVDelegate(filter: filter, timeShift: timeShift)).result()
     }
 
+    /// What `parsePlainXML` would keep with the same filter and shift, by hour around `now`, without keeping anything:
+    /// read once to size it, a guide is read again within a window that fits the memory it may take.
+    static func estimatePlainXML(at file: URL, filter: EPGFilter, timeShift: TimeInterval, now: Date) throws -> GuideEstimate {
+        let delegate = try read(stream(file), XMLTVDelegate(filter: filter, timeShift: timeShift, estimateAround: now))
+        return GuideEstimate(now: now, bytesByHour: delegate.bytesByHour)
+    }
+
     private static func stream(_ file: URL) throws -> InputStream {
         guard let stream = InputStream(url: file) else { throw CocoaError(.fileReadUnknown, userInfo: [NSURLErrorKey: file]) }
         return stream
@@ -166,9 +173,15 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
     /// Lowercased guide channel id -> keep?
     private var decisionCache: [String: Bool] = [:]
 
-    init(filter: EPGFilter, timeShift: TimeInterval) {
+    /// When set, programmes are counted (`GuideEstimate`) around this date instead of kept.
+    private let estimateAround: Date?
+    /// Hour of start relative to `estimateAround` -> bytes the programmes starting then would take.
+    private(set) var bytesByHour: [Int: Int] = [:]
+
+    init(filter: EPGFilter, timeShift: TimeInterval, estimateAround: Date? = nil) {
         self.filter = filter
         self.timeShift = timeShift
+        self.estimateAround = estimateAround
     }
 
     func result() -> EPGData {
@@ -258,7 +271,11 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
         case "programme":
             if keepProgramme, var current = programme {
                 if current.title.isEmpty { current.title = "—" }
-                programs[current.channelID, default: []].append(current)
+                if let now = estimateAround {
+                    bytesByHour[GuideEstimate.hour(of: current.start, around: now), default: 0] += GuideEstimate.bytes(of: current)
+                } else {
+                    programs[current.channelID, default: []].append(current)
+                }
                 programCount += 1
             }
             programme = nil
