@@ -23,6 +23,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
@@ -54,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -64,6 +67,7 @@ import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.rememberLeaveField
 
 /** Release years and awards the search is limited to. One year alone keeps the other end open. */
 data class SearchFilters(
@@ -114,6 +118,7 @@ fun SearchScreen(
     // Filtered results are a grid inset from the edges; shelves scroll from edge to edge and inset themselves.
     val edge = if (filters.isActive) metrics.gutter else 0.dp
     val inset = metrics.gutter - edge
+    val leaveField = rememberLeaveField()
     LazyVerticalGrid(
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
         modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).testTag("search"),
@@ -129,6 +134,9 @@ fun SearchScreen(
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     placeholder = { Text(stringResource(R.string.search_prompt)) },
+                    // Done, as before; on a TV, on to the results.
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
                     modifier = Modifier.weight(1f).testTag("searchField"),
                 )
                 IconButton(

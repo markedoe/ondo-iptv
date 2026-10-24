@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Sort
@@ -45,6 +47,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.MediaCategory
@@ -55,6 +58,7 @@ import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.rememberLeaveField
 
 data class CategoryRow(val category: MediaCategory, val items: List<ShowcaseItem>)
 
@@ -190,6 +194,7 @@ fun PosterGridScreen(
 ) {
     var sorting by remember { mutableStateOf(false) }
     val metrics = rememberShelfMetrics()
+    val leaveField = rememberLeaveField()
     LazyVerticalGrid(
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
         contentPadding = PaddingValues(start = metrics.gutter, end = metrics.gutter, bottom = 32.dp),
@@ -243,6 +248,9 @@ fun PosterGridScreen(
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(stringResource(R.string.filter)) },
+                // Done, as before; on a TV, on to the posters.
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
                 modifier = Modifier.fillMaxWidth(),
             )
         }

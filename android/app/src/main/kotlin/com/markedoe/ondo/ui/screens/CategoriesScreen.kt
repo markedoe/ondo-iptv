@@ -49,6 +49,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.CategoryStyles
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.ui.CategoriesUiState
+import com.markedoe.ondo.ui.tv.rememberLeaveField
 
 class CategoriesActions(
     val onBack: () -> Unit = {},
@@ -73,6 +74,7 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
             newWord = ""
         }
     }
+    val leaveField = rememberLeaveField()
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).testTag("categories")) {
         TopAppBar(
             title = { Text(stringResource(R.string.categories)) },
@@ -89,6 +91,9 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                     placeholder = { Text(stringResource(R.string.filter_categories)) },
+                    // Done, as before; on a TV, on to what follows.
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
@@ -153,7 +158,11 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                             singleLine = true,
                             placeholder = { Text(stringResource(R.string.word_to_hide)) },
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { addWord() }),
+                            // The word is hidden; on a TV, on to the categories.
+                            keyboardActions = KeyboardActions(onDone = {
+                                addWord()
+                                leaveField()
+                            }),
                             modifier = Modifier.weight(1f).testTag("wordToHide"),
                         )
                         TextButton(onClick = { addWord() }, enabled = CategoryStyles.ruleForWord(newWord) != null, modifier = Modifier.testTag("addWord")) {

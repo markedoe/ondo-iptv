@@ -31,6 +31,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -38,6 +39,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -137,6 +139,19 @@ fun Modifier.focusFrame(shape: Shape = RoundedCornerShape(12.dp), grow: Float = 
             scaleY = scale
         }
         .border(3.dp, color, shape)
+}
+
+/**
+ * For the keyboard's action key of a single-line field: on a TV, moves the focus from the field to what is below it,
+ * and tells whether it did. A phone used as the TV's remote sends its arrows from a virtual device, which Compose keeps
+ * in a text field (it moves the focus out only for a physical D-pad): the action key is then the way on. Elsewhere,
+ * false.
+ */
+@Composable
+fun rememberLeaveField(): () -> Boolean {
+    val television = isTelevision()
+    val focusManager = LocalFocusManager.current
+    return { television && focusManager.moveFocus(FocusDirection.Down) }
 }
 
 /**

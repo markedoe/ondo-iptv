@@ -3,6 +3,9 @@ package com.markedoe.ondo.ui
 import android.os.Bundle
 import android.os.Looper
 import android.os.Parcel
+import android.view.View
+import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.FocusDirection
@@ -41,6 +44,7 @@ import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
+import com.markedoe.ondo.ui.tv.SEARCH_TAG
 import com.markedoe.ondo.ui.theme.OndoTheme
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
@@ -64,7 +68,8 @@ import org.robolectric.annotation.Config
  * the playlist is replaced by another device's copy.
  * What a page does when its title leaves the catalogue.
  * What is kept of the screens when Ondo goes to the background.
- * The add-playlist form, with arrows that come from a virtual device (a phone used as a remote).
+ * The text fields (add a playlist, Search, filters), with arrows that come from a virtual device (a phone used as a
+ * remote).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -364,6 +369,98 @@ class TelevisionFocusTest {
             settle()
             assertEquals("the focus is on ${focused()}", next, focusedTag())
         }
+    }
+
+    /**
+     * The keyboard's action key on the focused field, as the system keyboard sends it: the action the field gave the
+     * keyboard (Done for a single-line field without one of its own).
+     */
+    private fun keyboardActionKey() {
+        compose.runOnIdle {
+            fun find(view: View): View? = if (view.javaClass.name.endsWith("AndroidComposeView")) view else
+                (view as? ViewGroup)?.let { group -> (0 until group.childCount).firstNotNullOfOrNull { find(group.getChildAt(it)) } }
+            val view = checkNotNull(find(compose.activity.window.decorView)) { "no Compose view" }
+            val info = EditorInfo()
+            val connection = checkNotNull(view.onCreateInputConnection(info)) { "the focused field takes no keyboard" }
+            connection.performEditorAction(info.imeOptions and EditorInfo.IME_MASK_ACTION)
+        }
+        settle()
+    }
+
+    private fun editing() = focusedNode()?.config?.contains(SemanticsProperties.EditableText) == true
+
+    private val movieTitles = Fixtures.content.movies.map { it.name }.toSet()
+
+    /** From the page, to the drawer, onto [tag], and opens it; the remote then moves into the page. */
+    private fun openFromDrawer(tag: String) {
+        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionUp) { focusedTag() == SEARCH_TAG }
+        pressUntil(Key.DirectionDown) { focusedTag() == tag }
+        press(Key.DirectionCenter)
+        waitFor { focusedNode() != null && !focusedTag().startsWith("tab") }
+        settle(500)
+    }
+
+    /** Search with a phone as the remote: arrows stay in the field; the keyboard's action key goes on to the results. */
+    @Test
+    fun searchsKeyboardActionGoesOnToTheResults() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openFromDrawer(SEARCH_TAG)
+        waitFor { focusedTag() == "searchField" }
+        focusedInteraction().performTextInput("the")
+        settle(1_000)
+        virtualKey(Key.DirectionDown)
+        assertEquals("searchField", focusedTag())
+        keyboardActionKey()
+        assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn("search") && !editing() && focusedTag() != "searchFilters")
+    }
+
+    /** A poster grid's filter, the same: its keyboard's action key goes on to the posters. */
+    @Test
+    fun aPosterGridsFilterGoesOnToThePostersWithTheKeyboardsAction() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openFromDrawer("tabMovies")
+        // Up from the first poster: its category's chip, which opens the category's posters.
+        pressUntil(Key.DirectionDown) { focused() in movieTitles }
+        pressUntil(Key.DirectionUp) { focused() == "Drama" }
+        press(Key.DirectionCenter)
+        waitFor { exists("grid") && focusedIn("grid") }
+        // Onto the first poster, then up onto the filter: the key goes down, then up a moment later, as on a remote.
+        pressUntil(Key.DirectionDown) { focused() == "Northern Lights" }
+        focusedInteraction().performKeyInput { keyDown(Key.DirectionUp) }
+        settle()
+        focusedInteraction().performKeyInput { keyUp(Key.DirectionUp) }
+        settle()
+        assertTrue("the focus is on ${focused()}", editing())
+        focusedInteraction().performTextInput("north")
+        settle(1_000)
+        virtualKey(Key.DirectionDown)
+        assertTrue("the focus is on ${focused()}", editing())
+        keyboardActionKey()
+        assertEquals("the focus is on ${if (editing()) "the filter" else focused()}", "Northern Lights", focused())
+    }
+
+    /**
+     * Which categories are shown, the same: the filter's keyboard action goes on to the next field (a word to hide),
+     * whose action adds the word and goes on to the categories.
+     */
+    @Test
+    fun theCategoriesFieldsGoOnWithTheKeyboardsAction() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openFromDrawer("tabMovies")
+        pressUntil(Key.DirectionUp) { focusedTag() == "categoryFilter" }
+        press(Key.DirectionCenter)
+        waitFor { exists("categories") && focusedIn("categories") }
+        pressUntil(Key.DirectionDown) { editing() }
+        virtualKey(Key.DirectionDown)
+        assertTrue("the focus is on ${focused()}", editing() && focusedTag() != "wordToHide")
+        keyboardActionKey()
+        assertEquals("the focus is on ${focused()}", "wordToHide", focusedTag())
+        focusedInteraction().performTextInput("trailer")
+        settle()
+        keyboardActionKey()
+        waitFor { "trailer" in repository.state.value.library.hiddenWords }
+        assertTrue("the focus is on ${focused()}", focusedIn("categories") && !editing())
     }
 
     /**
