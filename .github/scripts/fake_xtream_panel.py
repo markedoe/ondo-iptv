@@ -5,6 +5,9 @@ Answers player_api.php (account, categories, channels, movies, series, their det
 channels) and images (one generated poster), in the shapes providers send, at the size asked: a large provider
 has thousands of channels and tens of thousands of movies. Every request is written to the log given, so a run
 shows what the app asked for. Login: viewer / secret. Names and addresses are made up (example.com).
+
+With --media, the streams play: every channel answers with the folder's live.m3u8 (and its seg*.ts) or clip.ts, every
+movie and episode with clip.mkv (byte ranges served, for seeking). Without it, a stream's address answers 404.
 """
 import argparse
 import gzip
@@ -130,6 +133,7 @@ def main():
     parser.add_argument("--guide-channels", type=int, default=2000)
     parser.add_argument("--guide-days", type=int, default=3)
     parser.add_argument("--log", default="panel-requests.log")
+    parser.add_argument("--media", default="", help="folder with clip.mkv, clip.ts, live.m3u8 and its seg*.ts (streams that play)")
     args = parser.parse_args()
     base = f"http://localhost:{args.port}"
     folder = tempfile.mkdtemp(prefix="panel")
@@ -156,14 +160,56 @@ def main():
             self.end_headers()
             self.wfile.write(body)
 
-        def send_file(self, file, kind):
-            self.send_response(200)
+        def send_file(self, file, kind, ranges=False):
+            size = os.path.getsize(file)
+            start, end = 0, size - 1
+            wanted = self.headers.get("Range", "") if ranges else ""
+            if wanted.startswith("bytes="):
+                first, _, last = wanted[6:].split(",")[0].partition("-")
+                if first.strip():
+                    start = int(first)
+                    end = min(int(last), size - 1) if last.strip() else size - 1
+                elif last.strip():
+                    start = max(0, size - int(last))
+                if start >= size:
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{size}")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+            self.send_response(206 if wanted.startswith("bytes=") else 200)
             self.send_header("Content-Type", kind)
-            self.send_header("Content-Length", str(os.path.getsize(file)))
+            self.send_header("Content-Length", str(end - start + 1))
+            if ranges:
+                self.send_header("Accept-Ranges", "bytes")
+            if wanted.startswith("bytes="):
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
             self.end_headers()
             with open(file, "rb") as source:
-                while chunk := source.read(1 << 16):
+                source.seek(start)
+                left = end - start + 1
+                while left > 0 and (chunk := source.read(min(1 << 16, left))):
                     self.wfile.write(chunk)
+                    left -= len(chunk)
+
+        def send_stream(self, path):
+            """A channel, a movie or an episode: /live|movie|series/<user>/<password>/<id>.<extension>."""
+            parts = path.strip("/").split("/")
+            if not args.media or len(parts) != 4 or parts[0] not in ("live", "movie", "series"):
+                return False
+            if parts[1] != USERNAME or parts[2] != PASSWORD:
+                self.send(403, b"forbidden", "text/plain")
+                return True
+            leaf = os.path.basename(parts[3])
+            if leaf.endswith(".m3u8"):
+                self.send_file(os.path.join(args.media, "live.m3u8"), "application/vnd.apple.mpegurl")
+            elif leaf.startswith("seg") and leaf.endswith(".ts") and os.path.isfile(os.path.join(args.media, leaf)):
+                self.send_file(os.path.join(args.media, leaf), "video/mp2t")
+            elif leaf.endswith(".ts"):
+                self.send_file(os.path.join(args.media, "clip.ts"), "video/mp2t")
+            else:
+                self.send_file(os.path.join(args.media, "clip.mkv"), "video/x-matroska", ranges=True)
+            return True
 
         def do_GET(self):
             url = urlparse(self.path)
@@ -173,6 +219,8 @@ def main():
             try:
                 if url.path.startswith("/img/"):
                     return self.send(200, poster, "image/png")
+                if self.send_stream(url.path):
+                    return
                 if url.path in ("/player_api.php", "/xmltv.php"):
                     if query.get("username") != USERNAME or query.get("password") != PASSWORD:
                         return self.send(200, b'{"user_info":{"auth":0}}')
