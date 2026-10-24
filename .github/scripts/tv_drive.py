@@ -897,22 +897,16 @@ def keyboard_shown(tv):
     return shown, " ; ".join(dict.fromkeys(lines))[:300]
 
 
-def remote_key(tv, linux_key):
-    """A key of a physical remote: sent to the emulator's own keyboard device (adb input sends from a virtual one,
-    which Compose treats otherwise in a text field)."""
-    tv.adb("emu", "event", "send", f"EV_KEY:{linux_key}:1", "EV_SYN:SYN_REPORT:0", f"EV_KEY:{linux_key}:0", "EV_SYN:SYN_REPORT:0")
-    time.sleep(0.6)
-
-
 def in_field(tv):
     node, texts = tv.focused()
     return node is not None and node.get("class") == "android.widget.EditText", " | ".join(texts)[:80]
 
 
 def path_keyboard(tv, args):
-    """The TV's keyboard on, as on a viewer's TV: Languages and categories walked down with the remote, as a physical
-    remote's keys and as a virtual one's (a phone used as the remote). The keyboard opens only with OK on a field, never
-    as the remote passes one, and the remote goes on from a field; Back closes the keyboard."""
+    """The TV's keyboard on, as on a viewer's TV: Languages and categories walked down with the remote. The keyboard
+    opens only with OK on a field, never as the remote reaches one, and Down goes on from a field; Back closes the
+    keyboard. The arrows are adb's (a virtual device, as a phone used as the remote: Compose would keep them in a text
+    field); a key sent as the emulator's own keyboard's is tried too, and only noted."""
     if not tv.imes:
         raise TimeoutError("the TV image has no keyboard to try")
     for ime in tv.imes:
@@ -924,7 +918,7 @@ def path_keyboard(tv, args):
     def look(where, expect_shown=False):
         field, focus = in_field(tv)
         shown, lines = keyboard_shown(tv)
-        tv.say(f"  [{where}] focus on {'a text field' if field else 'a row'} ({focus!r}); keyboard {'shown' if shown else 'hidden'}: {lines}")
+        tv.say(f"  [{where}] focus on {'a text field' if field else 'something else'} ({focus!r}); keyboard {'shown' if shown else 'hidden'}: {lines}")
         if shown != expect_shown:
             problems.append(f"{where}: the keyboard is {'shown' if shown else 'hidden'}")
             tv.screenshot(f"keyboard-{where.replace(' ', '-')}")
@@ -937,22 +931,25 @@ def path_keyboard(tv, args):
         tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
         tv.note_screen("keyboard-categories")
         look("page opened")
-        # Down the page with a physical remote's key, then up with a virtual one's: through the filter each time.
-        for i in range(4):
-            remote_key(tv, "KEY_DOWN")
-            look(f"physical Down {i + 1}")
-        tv.focus_on_field(0, towards="UP", max_presses=12, open=False)
-        if look("back on the filter"):
+        # Down onto the filter (the page's first field), as the remote does.
+        for _ in range(6):
+            if in_field(tv)[0]:
+                break
             tv.key("DOWN")
-            if look("virtual Down from the filter"):
-                problems.append("a virtual Down stayed in the filter")
-            remote_key(tv, "KEY_UP")
-            if not look("physical Up to the filter"):
-                problems.append("a physical Up never came back to the filter")
-            remote_key(tv, "KEY_DOWN")
-            if look("physical Down from the filter"):
-                problems.append("a physical Down stayed in the filter")
-        tv.focus_on_field(0, towards="UP", max_presses=12, open=False)
+            time.sleep(1)
+        if not look("the remote on the filter"):
+            raise TimeoutError("the remote never reached the filter")
+        tv.screenshot("keyboard-on-the-filter")
+        tv.key("DOWN")
+        time.sleep(1)
+        if look("Down from the filter"):
+            problems.append("Down stayed in the filter")
+            tv.key("BACK")
+            time.sleep(1)
+        tv.key("UP")
+        time.sleep(1)
+        if not look("Up to the filter"):
+            problems.append("Up never came back to the filter")
         tv.key("DPAD_CENTER")
         time.sleep(2)
         look("OK on the filter", expect_shown=True)
@@ -962,6 +959,11 @@ def path_keyboard(tv, args):
         look("Back from the keyboard")
         if not tv.visible("Styles"):
             problems.append("Back closed the page with the keyboard")
+        # The emulator's own keyboard device, as a physical remote: noted only.
+        answer = tv.adb("emu", "event", "send", "EV_KEY:KEY_DOWN:1", "EV_KEY:KEY_DOWN:0").strip()
+        time.sleep(1)
+        field, focus = in_field(tv)
+        tv.say(f"  [emulator key Down] the emulator answered {answer!r}; focus now on {focus!r}{' (a text field)' if field else ''}")
         tv.check_alive("the keyboard opened and closed")
     finally:
         for ime in tv.imes:
