@@ -127,8 +127,8 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Player** (Media3 / ExoPlayer): HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses, resume,
   picture-in-picture, media controls; a channel that falls behind goes back to the live edge on its own; the
   **audio and subtitle languages** you pick are used for the next streams (forced subtitles still show with Off);
-  More → **Aspect ratio** (Fit, Fill (crop), Stretch, kept for the next videos) and **Sleep timer** (15 to 120
-  minutes, then the player pauses); explained errors, **buffer length** for live TV and for movies & series, a
+  More → **Aspect ratio** (Fit, Fill (crop), Stretch, kept for the next videos), **Subtitle size** (Small to Extra
+  large, kept too) and **Sleep timer** (15 to 120 minutes, then the player pauses); explained errors, **buffer length** for live TV and for movies & series, a
   buffer that fits in the app's memory (a 4K film plays on a TV box), **stream statistics** that tell a
   network freeze from a player one and show the format (MKV, MP4…), as on Apple, and **Report a Problem…**: a
   playback report with no address, login or title, to share or send in a GitHub issue. Movie and series pages

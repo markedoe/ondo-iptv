@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.MoreHoriz
@@ -103,6 +104,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
+import com.markedoe.ondo.data.SubtitleSize
 import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.tv.TvSwitchRow
@@ -136,6 +138,7 @@ fun TvPlayerOverlay(
     channels: ChannelList? = null,
     onRestart: () -> Unit = {},
     onWatchLive: () -> Unit = {},
+    subtitles: SubtitleSizing? = null,
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -221,6 +224,7 @@ fun TvPlayerOverlay(
                 onScale = onScale,
                 sleep = sleep,
                 channels = channels,
+                subtitles = subtitles,
             )
         }
     }
@@ -566,6 +570,7 @@ private fun SidePanel(
     onScale: (VideoScale) -> Unit,
     sleep: SleepTimer,
     channels: ChannelList?,
+    subtitles: SubtitleSizing?,
 ) {
     val first = remember(panel) { FocusRequester() }
     Surface(
@@ -585,6 +590,7 @@ private fun SidePanel(
             PlayerPanel.SPEED -> R.string.speed
             PlayerPanel.MORE -> R.string.more
             PlayerPanel.ASPECT -> R.string.aspect_ratio
+            PlayerPanel.SUBTITLE_SIZE -> R.string.subtitle_size
             PlayerPanel.SLEEP -> R.string.sleep_timer
             PlayerPanel.CHANNELS -> R.string.channels
         }
@@ -604,6 +610,7 @@ private fun SidePanel(
                 PlayerPanel.SPEED -> SPEEDS.indexOf(controls.speed).takeIf { it >= 0 } ?: SPEEDS.indexOf(1f)
                 PlayerPanel.MORE -> 0
                 PlayerPanel.ASPECT -> scale.ordinal
+                PlayerPanel.SUBTITLE_SIZE -> subtitles?.size?.ordinal ?: 0
                 PlayerPanel.SLEEP -> SLEEP_CHOICES.indexOf(sleep.minutes).coerceAtLeast(0)
                 PlayerPanel.CHANNELS -> channelChoices.indexOfFirst { it.playing }.coerceAtLeast(0)
             }
@@ -612,8 +619,9 @@ private fun SidePanel(
                 when (panel) {
                     PlayerPanel.SUBTITLES, PlayerPanel.AUDIO -> tracks(player, controls, type, choices, first)
                     PlayerPanel.SPEED -> speeds(player, controls, locale, first)
-                    PlayerPanel.MORE -> more(controls, scale, sleep, statisticsShown, onToggleStatistics, onReportProblem, first)
+                    PlayerPanel.MORE -> more(controls, scale, subtitles, sleep, statisticsShown, onToggleStatistics, onReportProblem, first)
                     PlayerPanel.ASPECT -> scales(controls, scale, onScale, first)
+                    PlayerPanel.SUBTITLE_SIZE -> subtitles?.let { sizes(controls, it, first) }
                     PlayerPanel.SLEEP -> sleeps(controls, sleep, first)
                     PlayerPanel.CHANNELS -> channelRows(controls, channelChoices, first) { id -> channels?.onChoose?.invoke(id) }
                 }
@@ -696,6 +704,7 @@ private fun LazyListScope.speeds(player: Player, controls: PlayerControls, local
 private fun LazyListScope.more(
     controls: PlayerControls,
     scale: VideoScale,
+    subtitles: SubtitleSizing?,
     sleep: SleepTimer,
     statisticsShown: Boolean,
     onToggleStatistics: () -> Unit,
@@ -703,10 +712,19 @@ private fun LazyListScope.more(
     first: FocusRequester,
 ) {
     // The remote starts on the first row, or on the row of the panel Back came from.
-    val focusSleep = controls.cameBackFrom == PlayerPanel.SLEEP
+    val back = controls.cameBackFrom
+    val focusSleep = back == PlayerPanel.SLEEP
+    val focusSize = back == PlayerPanel.SUBTITLE_SIZE && subtitles != null
     item(key = "aspect") {
-        MoreRow(stringResource(R.string.aspect_ratio), stringResource(scale.label), Icons.Rounded.AspectRatio, tag = "tvAspect", modifier = if (!focusSleep) Modifier.focusRequester(first) else Modifier) {
+        MoreRow(stringResource(R.string.aspect_ratio), stringResource(scale.label), Icons.Rounded.AspectRatio, tag = "tvAspect", modifier = if (!focusSleep && !focusSize) Modifier.focusRequester(first) else Modifier) {
             controls.open(PlayerPanel.ASPECT)
+        }
+    }
+    if (subtitles != null) {
+        item(key = "subtitleSize") {
+            MoreRow(stringResource(R.string.subtitle_size), stringResource(subtitles.size.label), Icons.Rounded.FormatSize, tag = "tvSubtitleSize", modifier = if (focusSize) Modifier.focusRequester(first) else Modifier) {
+                controls.open(PlayerPanel.SUBTITLE_SIZE)
+            }
         }
     }
     item(key = "sleep") {
@@ -736,6 +754,18 @@ private fun LazyListScope.more(
             shape = ListItemDefaults.shape(RoundedCornerShape(14.dp)),
             scale = ListItemDefaults.scale(focusedScale = 1.02f),
         )
+    }
+}
+
+private fun LazyListScope.sizes(controls: PlayerControls, subtitles: SubtitleSizing, first: FocusRequester) {
+    SubtitleSize.entries.forEach { option ->
+        item(key = "size-$option") {
+            val selected = option == subtitles.size
+            ChoiceRow(stringResource(option.label), null, selected = selected, tag = "size-${option.name}", modifier = if (selected) Modifier.focusRequester(first) else Modifier) {
+                subtitles.onChange(option)
+                controls.closePanel()
+            }
+        }
     }
 }
 

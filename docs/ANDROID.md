@@ -25,7 +25,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   (`player/TrackPreferences.kt`), separate buffers for live TV and for movies & series, never more than half of
   the memory the app has left when the player starts, so that a 4K film plays on a TV box that gives the app
   128 MB (`player/PlayerLoadControl.kt`, `core/playback/PlaybackBuffer.kt`), back to the live edge on its own when
-  a channel falls behind, More → Aspect ratio (Fit, Fill (crop), Stretch, kept for the next videos), More → Sleep
+  a channel falls behind, More → Aspect ratio (Fit, Fill (crop), Stretch, kept for the next videos), More → Subtitle
+  size (75 % to 160 % of the size Android's caption settings give, kept too: `player/SubtitleSizing.kt`), More → Sleep
   timer (Off, 15, 30, 45, 60, 90, 120 min; the player pauses when it is up: `player/SleepTimer.kt`), More → Stream
   Statistics (format, video and received bitrates, smoothness, freezes and lost pictures, and whether they come from the
   network or the player: `core/playback/PlaybackHealth.kt`, the Apple rules), More → Report a Problem… (a

@@ -28,6 +28,10 @@ enum class PosterSort { PLAYLIST, NAME, RECENT, RELEASE, RATING }
 @Serializable
 enum class VideoScale { FIT, FILL, STRETCH }
 
+/** How large subtitles are, against the size Android's caption settings give them. */
+@Serializable
+enum class SubtitleSize(val scale: Float) { SMALL(0.75f), NORMAL(1f), LARGE(1.3f), EXTRA_LARGE(1.6f) }
+
 @Serializable
 data class AppSettings(
     val appearance: Appearance = Appearance.DARK,
@@ -55,4 +59,6 @@ data class AppSettings(
     val subtitlesOn: Boolean = false,
     /** The aspect ratio last chosen in the player, kept for the next videos. */
     val videoScale: VideoScale = VideoScale.FIT,
+    /** The subtitle size last chosen in the player, kept for the next videos. */
+    val subtitleSize: SubtitleSize = SubtitleSize.NORMAL,
 )

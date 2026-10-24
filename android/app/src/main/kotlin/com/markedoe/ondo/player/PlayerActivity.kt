@@ -27,6 +27,7 @@ import android.view.Surface
 import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.CaptioningManager
 import androidx.activity.ComponentActivity
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
@@ -121,6 +122,7 @@ import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.data.SubtitleSize
 import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.theme.OndoTheme
@@ -261,6 +263,21 @@ class PlayerActivity : ComponentActivity() {
         repository.state.map { it.settings.videoScale }.stateIn(lifecycleScope, SharingStarted.Eagerly, repository.state.value.settings.videoScale)
     }
 
+    /** The subtitle size last chosen (the player's More), kept in the settings for the next videos. */
+    private val subtitleSize: StateFlow<SubtitleSize> by lazy {
+        repository.state.map { it.settings.subtitleSize }.stateIn(lifecycleScope, SharingStarted.Eagerly, repository.state.value.settings.subtitleSize)
+    }
+
+    /** The subtitles' height as a fraction of the video's, as set on Media3's view (tests). */
+    @VisibleForTesting
+    internal var subtitleFraction: Float = SubtitleView.DEFAULT_TEXT_SIZE_FRACTION
+        private set
+
+    /** The size of Android's caption settings, as Media3's view reads it: 1 while captions are off there. */
+    private val captionScale: Float by lazy {
+        getSystemService(CaptioningManager::class.java)?.takeIf { it.isEnabled }?.fontScale ?: 1f
+    }
+
     /** Pauses the video when its time is up (the player's More); it keeps running across the channels zapped to. */
     private val sleepTimer by lazy {
         SleepTimer(lifecycleScope) {
@@ -315,6 +332,7 @@ class PlayerActivity : ComponentActivity() {
         setContent {
             val safeArea = if (television) Modifier.padding(TvSafeArea) else Modifier
             val scale by videoScale.collectAsState()
+            val sizeOfSubtitles by subtitleSize.collectAsState()
             OndoTheme {
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     AndroidView(
@@ -335,7 +353,11 @@ class PlayerActivity : ComponentActivity() {
                             }.also { playerView = it }
                         },
                         modifier = Modifier.fillMaxSize(),
-                        update = { view -> view.resizeMode = scale.resizeMode },
+                        update = { view ->
+                            view.resizeMode = scale.resizeMode
+                            subtitleFraction = sizeOfSubtitles.fraction(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION, captionScale)
+                            view.subtitleView?.setFractionalTextSize(subtitleFraction)
+                        },
                     )
                     // On a TV, the controls drawn for the remote; none over an error, where Try Again has the focus.
                     val shownPlayer = player
@@ -357,6 +379,7 @@ class PlayerActivity : ComponentActivity() {
                                 channels = channelList.takeIf { request.channelId != null },
                                 onRestart = ::restartProgramme,
                                 onWatchLive = ::watchLive,
+                                subtitles = SubtitleSizing(sizeOfSubtitles, repository::setSubtitleSize),
                             )
                         }
                     }
@@ -385,6 +408,7 @@ class PlayerActivity : ComponentActivity() {
                             channels = channelList.takeIf { request.channelId != null },
                             onRestart = ::restartProgramme,
                             onWatchLive = ::watchLive,
+                            subtitles = SubtitleSizing(sizeOfSubtitles, repository::setSubtitleSize),
                         )
                     }
                     upNext?.let { offer ->

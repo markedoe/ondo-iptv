@@ -136,7 +136,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   reprise, image dans l'image, commandes multimédia ; une chaîne qui prend du retard revient d'elle-même au
   direct ; les **langues de l'audio et des sous-titres** que vous choisissez servent pour les flux suivants (les
   sous-titres forcés restent affichés avec Désactivé) ; Plus → **Format d'image** (Ajuster, Remplir (rogner),
-  Étirer, gardé pour les vidéos suivantes) et **Minuterie de sommeil** (de 15 à 120 minutes, puis le lecteur se
+  Étirer, gardé pour les vidéos suivantes), **Taille des sous-titres** (de Petite à Très grande, gardée aussi) et
+  **Minuterie de sommeil** (de 15 à 120 minutes, puis le lecteur se
   met en pause) ; erreurs expliquées, **mémoire tampon** réglable pour le direct et pour les films et séries, une
   mémoire tampon qui tient dans la mémoire de l'app (un film 4K se lit sur un boîtier TV),
   **statistiques du flux** qui distinguent un gel dû au réseau d'un gel dû au lecteur et montrent le format

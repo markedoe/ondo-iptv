@@ -50,6 +50,7 @@ import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
+import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Lock
@@ -117,6 +118,7 @@ import androidx.compose.ui.unit.dp
 import androidx.media3.common.C
 import androidx.media3.common.Player
 import com.markedoe.ondo.R
+import com.markedoe.ondo.data.SubtitleSize
 import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.ui.theme.OndoColors
 import java.text.NumberFormat
@@ -166,6 +168,7 @@ fun PhonePlayerOverlay(
     channels: ChannelList? = null,
     onRestart: () -> Unit = {},
     onWatchLive: () -> Unit = {},
+    subtitles: SubtitleSizing? = null,
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -359,7 +362,7 @@ fun PhonePlayerOverlay(
             contentColor = Color.White,
             modifier = Modifier.testTag("playerSheet"),
         ) {
-            PanelContent(panel, player, controls, statisticsShown, onToggleStatistics, onReportProblem, scale, onScale, sleep, channels)
+            PanelContent(panel, player, controls, statisticsShown, onToggleStatistics, onReportProblem, scale, onScale, sleep, channels, subtitles)
         }
     }
 }
@@ -693,6 +696,7 @@ private fun PanelContent(
     onScale: (VideoScale) -> Unit,
     sleep: SleepTimer,
     channels: ChannelList?,
+    subtitles: SubtitleSizing?,
 ) {
     val title = when (panel) {
         PlayerPanel.SUBTITLES -> R.string.subtitles
@@ -700,6 +704,7 @@ private fun PanelContent(
         PlayerPanel.SPEED -> R.string.speed
         PlayerPanel.MORE -> R.string.more
         PlayerPanel.ASPECT -> R.string.aspect_ratio
+        PlayerPanel.SUBTITLE_SIZE -> R.string.subtitle_size
         PlayerPanel.SLEEP -> R.string.sleep_timer
         PlayerPanel.CHANNELS -> R.string.channels
     }
@@ -716,8 +721,9 @@ private fun PanelContent(
             when (panel) {
                 PlayerPanel.SUBTITLES, PlayerPanel.AUDIO -> trackRows(player, controls, type, choices)
                 PlayerPanel.SPEED -> speedRows(player, controls, locale)
-                PlayerPanel.MORE -> moreRows(controls, scale, sleep, statisticsShown, onToggleStatistics, onReportProblem)
+                PlayerPanel.MORE -> moreRows(controls, scale, subtitles, sleep, statisticsShown, onToggleStatistics, onReportProblem)
                 PlayerPanel.ASPECT -> scaleRows(controls, scale, onScale)
+                PlayerPanel.SUBTITLE_SIZE -> subtitles?.let { sizeRows(controls, it) }
                 PlayerPanel.SLEEP -> sleepRows(controls, sleep)
                 PlayerPanel.CHANNELS -> channelRows(controls, channelChoices) { id -> channels?.onChoose?.invoke(id) }
             }
@@ -764,6 +770,7 @@ private fun LazyListScope.speedRows(player: Player, controls: PlayerControls, lo
 private fun LazyListScope.moreRows(
     controls: PlayerControls,
     scale: VideoScale,
+    subtitles: SubtitleSizing?,
     sleep: SleepTimer,
     statisticsShown: Boolean,
     onToggleStatistics: () -> Unit,
@@ -771,6 +778,11 @@ private fun LazyListScope.moreRows(
 ) {
     item(key = "aspect") {
         SheetRow(Icons.Rounded.AspectRatio, stringResource(R.string.aspect_ratio), stringResource(scale.label), tag = "menuAspect") { controls.open(PlayerPanel.ASPECT) }
+    }
+    if (subtitles != null) {
+        item(key = "subtitleSize") {
+            SheetRow(Icons.Rounded.FormatSize, stringResource(R.string.subtitle_size), stringResource(subtitles.size.label), tag = "menuSubtitleSize") { controls.open(PlayerPanel.SUBTITLE_SIZE) }
+        }
     }
     item(key = "sleep") {
         val value = sleep.endsAt?.let { stringResource(R.string.sleep_ends_at, DateFormat.getTimeFormat(LocalContext.current).format(Date(it))) } ?: stringResource(R.string.off)
@@ -795,6 +807,17 @@ private fun LazyListScope.moreRows(
         SheetRow(Icons.Rounded.BugReport, stringResource(R.string.report_problem), null, tag = "reportProblem", chevron = false) {
             controls.closePanel()
             onReportProblem()
+        }
+    }
+}
+
+private fun LazyListScope.sizeRows(controls: PlayerControls, subtitles: SubtitleSizing) {
+    SubtitleSize.entries.forEach { option ->
+        item(key = "size-$option") {
+            SheetChoice(stringResource(option.label), null, selected = option == subtitles.size, tag = "size-${option.name}") {
+                subtitles.onChange(option)
+                controls.closePanel()
+            }
         }
     }
 }

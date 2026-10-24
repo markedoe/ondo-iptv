@@ -29,7 +29,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   lecteur démarre, pour qu'un film 4K se lise sur un boîtier TV qui donne 128 Mo à l'app
   (`player/PlayerLoadControl.kt`, `core/playback/PlaybackBuffer.kt`), retour automatique au direct quand une
   chaîne prend du retard, Plus → Format d'image (Ajuster, Remplir (rogner), Étirer, gardé pour les vidéos
-  suivantes), Plus → Minuterie de sommeil (Désactivé, 15, 30, 45, 60, 90, 120 min ; le lecteur se met en pause
+  suivantes), Plus → Taille des sous-titres (de 75 % à 160 % de la taille donnée par les réglages de sous-titres
+  d'Android, gardée aussi : `player/SubtitleSizing.kt`), Plus → Minuterie de sommeil (Désactivé, 15, 30, 45, 60, 90, 120 min ; le lecteur se met en pause
   quand elle arrive à son terme : `player/SleepTimer.kt`), Plus → Statistiques du flux (format, débits de la
   vidéo et reçu, fluidité, gels et images perdues, et s'ils viennent du réseau ou du lecteur : `core/playback/PlaybackHealth.kt`, les règles d'Apple), Plus → Signaler un
   problème… (un rapport de lecture sans adresse, identifiant ni titre). Les fiches des films et séries indiquent

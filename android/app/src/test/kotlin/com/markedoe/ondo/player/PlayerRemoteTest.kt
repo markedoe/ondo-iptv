@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.core.view.children
 import androidx.lifecycle.Lifecycle
 import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.SubtitleView
 import androidx.media3.ui.PlayerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -19,6 +20,7 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
+import com.markedoe.ondo.data.SubtitleSize
 import com.markedoe.ondo.data.VideoScale
 import java.time.Duration
 import org.junit.After
@@ -165,8 +167,8 @@ class PlayerRemoteTest {
         compose.onNodeWithTag("tvMore").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNodeWithTag("tvAspect").assertIsFocused()
-        // Aspect ratio, Sleep timer, then Stream statistics.
-        repeat(2) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+        // Aspect ratio, Subtitle size, Sleep timer, then Stream statistics.
+        repeat(3) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
         compose.onNodeWithTag("statisticsToggle").assertIsFocused()
         compose.onNodeWithTag("playerMore").assertDoesNotExist()
         compose.onNodeWithContentDescription("Close").assertDoesNotExist()
@@ -219,11 +221,27 @@ class PlayerRemoteTest {
         assertEquals(VideoScale.STRETCH, app.repository.state.value.settings.videoScale)
     }
 
+    /** The subtitle size chosen applies at once, and the next film opens with it. */
+    @Test
+    fun theSubtitleSizeChosenStaysForTheNextFilm() {
+        launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
+        scenario.onActivity { assertEquals(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION, it.subtitleFraction, 0.0001f) }
+        openMoreRow(1)
+        // Small, Normal (the one in use), Large, Extra large.
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        assertEquals(SubtitleSize.LARGE, app.repository.state.value.settings.subtitleSize)
+        scenario.onActivity { assertEquals(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 1.3f, it.subtitleFraction, 0.0001f) }
+        scenario.close()
+        launch(app.repository.playRequest(app.repository.state.value.content.movies.last()))
+        scenario.onActivity { assertEquals(SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * 1.3f, it.subtitleFraction, 0.0001f) }
+    }
+
     /** The sleep timer pauses the film when its time is up. */
     @Test
     fun theSleepTimerPausesTheFilm() {
         launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
-        openMoreRow(1)
+        openMoreRow(2)
         // Off, then 15 min.
         press(KeyEvent.KEYCODE_DPAD_DOWN)
         press(KeyEvent.KEYCODE_DPAD_CENTER)

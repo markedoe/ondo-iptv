@@ -68,6 +68,7 @@ class PhonePlayerOverlayTest {
     )
 
     private var chosen: String? = null
+    private var subtitleSize by mutableStateOf(com.markedoe.ondo.data.SubtitleSize.NORMAL)
     private var restarted = 0
     private var wentLive = 0
     private val channelList = ChannelList(
@@ -85,6 +86,7 @@ class PhonePlayerOverlayTest {
                     player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
                     scale = scale, onScale = { scale = it }, sleep = sleep, levels = levels, onClose = {}, onPictureInPicture = {},
                     channels = channels, onRestart = { restarted++ }, onWatchLive = { wentLive++ },
+                    subtitles = SubtitleSizing(subtitleSize) { subtitleSize = it },
                 )
             }
         }
@@ -299,6 +301,22 @@ class PhonePlayerOverlayTest {
         compose.onNodeWithTag("phoneWatchLive").assertTextContains("Back to live").performClick()
         settle()
         assertEquals(1, wentLive)
+    }
+
+    @Test
+    fun moreChangesTheSubtitleSize() {
+        start()
+        compose.runOnIdle { controls.show() }
+        settle()
+        compose.onNodeWithTag("playerMore").performClick()
+        settle()
+        compose.onNodeWithTag("menuSubtitleSize").assertTextContains("Subtitle size").assertTextContains("Normal").performClick()
+        settle()
+        compose.onNodeWithTag("size-NORMAL").assertIsSelected()
+        compose.onNodeWithTag("size-EXTRA_LARGE").assertTextContains("Extra large").performClick()
+        settle()
+        assertEquals(com.markedoe.ondo.data.SubtitleSize.EXTRA_LARGE, subtitleSize)
+        assertFalse(exists("playerSheet"))
     }
 
     @Test

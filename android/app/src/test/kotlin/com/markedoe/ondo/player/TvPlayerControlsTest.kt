@@ -67,7 +67,9 @@ class TvPlayerControlsTest {
     private var restarted = 0
     private var wentLive = 0
 
-    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false, channels: ChannelList? = null) {
+    private var subtitleSize by mutableStateOf(com.markedoe.ondo.data.SubtitleSize.NORMAL)
+
+    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false, channels: ChannelList? = null, sizes: Boolean = false) {
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
@@ -80,6 +82,7 @@ class TvPlayerControlsTest {
                         player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
                         scale = scale, onScale = { scale = it }, sleep = sleep, channels = channels,
                         onRestart = { restarted++ }, onWatchLive = { wentLive++ },
+                        subtitles = if (sizes) SubtitleSizing(subtitleSize) { subtitleSize = it } else null,
                     )
                 }
             }
@@ -399,6 +402,33 @@ class TvPlayerControlsTest {
         compose.onNodeWithTag("tvWatchLive").assertIsFocused()
         press(Key.DirectionCenter)
         assertEquals(1, wentLive)
+    }
+
+    /** More, Subtitle size: the size in use ticked, another one chosen; Back from the sizes is back on their row. */
+    @Test
+    fun moreChangesTheSubtitleSize() {
+        start(sizes = true)
+        press(Key.DirectionRight, 5)
+        compose.onNodeWithTag("tvMore").assertIsFocused()
+        press(Key.DirectionCenter)
+        press(Key.DirectionDown)
+        row("tvSubtitleSize").assertIsFocused().assertTextContains("Subtitle size").assertTextContains("Normal")
+        press(Key.DirectionCenter)
+        row("size-NORMAL").assertIsFocused().assertIsSelected()
+        press(Key.DirectionDown)
+        row("size-LARGE").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertEquals(com.markedoe.ondo.data.SubtitleSize.LARGE, subtitleSize)
+        compose.onNodeWithTag("tvTrackPanel").assertDoesNotExist()
+        compose.onNodeWithTag("tvMore").assertIsFocused()
+        press(Key.DirectionCenter)
+        press(Key.DirectionDown)
+        row("tvSubtitleSize").assertTextContains("Large")
+        press(Key.DirectionCenter)
+        // Back: More again, on Subtitle size.
+        compose.runOnIdle { assertTrue(controls.back()) }
+        compose.waitForIdle()
+        row("tvSubtitleSize").assertIsFocused()
     }
 
     private companion object {
