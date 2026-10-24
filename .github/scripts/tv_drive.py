@@ -107,11 +107,14 @@ class Tv:
         return all(w in all_text for w in words)
 
     def key(self, name, times=1, pause=0.4):
-        code = f"DPAD_{name}" if name in ("UP", "DOWN", "LEFT", "RIGHT") else name
-        # From a D-pad, as a remote's keys come: Compose moves the focus out of a text field only for those.
-        source = "dpad " if code.startswith("DPAD_") else ""
+        # The arrows and OK come from the emulator's own keys, a physical device as a remote is: Compose moves the
+        # focus out of a text field only for those (keys injected with `input` come from a virtual device).
+        hardware = {"UP": "KEY_UP", "DOWN": "KEY_DOWN", "LEFT": "KEY_LEFT", "RIGHT": "KEY_RIGHT", "DPAD_CENTER": "KEY_SELECT"}.get(name)
         for _ in range(times):
-            self.shell(f"input {source}keyevent KEYCODE_{code}")
+            if hardware:
+                self.adb("emu", "event", "send", f"EV_KEY:{hardware}:1", f"EV_KEY:{hardware}:0")
+            else:
+                self.shell(f"input keyevent KEYCODE_{name}")
             time.sleep(pause)
 
     def wait_for(self, what, condition, timeout, every=2.0):
