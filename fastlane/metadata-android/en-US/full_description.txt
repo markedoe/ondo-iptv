@@ -31,6 +31,6 @@ IN YOUR LANGUAGE
 • English, French, Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi
 
 PRIVATE BY DESIGN
-• No account, no tracking, no ads: your playlists stay on your device.
+• No account, no tracking, no ads: your playlists stay on your device. When you turn on Sync on this network, they also go to your other Ondo devices on the same network, never through the internet.
 
 Ondo does not include any channel, playlist or subscription and is not affiliated with any IPTV provider.

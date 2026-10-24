@@ -40,4 +40,4 @@ LANGUAGES
 • English, French, Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi
 
 PRIVACY
-• No account, no ads and no analytics of its own: your playlists and history stay on your device.
+• No account, no ads and no analytics of its own: your playlists and history stay on your device. When you turn on Sync on this network, they also go to your other Ondo devices on the same network, never through the internet.
