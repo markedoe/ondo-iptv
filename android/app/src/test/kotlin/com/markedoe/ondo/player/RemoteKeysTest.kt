@@ -67,6 +67,14 @@ class RemoteKeysTest {
     }
 
     @Test
+    fun theRemotesSubtitlesAndAudioKeysOpenTheirPanel() {
+        assertEquals(RemoteAction.Subtitles, hidden(KeyEvent.KEYCODE_CAPTIONS))
+        assertEquals(RemoteAction.Subtitles, shown(KeyEvent.KEYCODE_CAPTIONS, live = true))
+        assertEquals(RemoteAction.Audio, hidden(KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK, live = true))
+        assertEquals(RemoteAction.Audio, shown(KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK))
+    }
+
+    @Test
     fun aChannelNumberIsCompleteAfterFourFiguresOrWhenTypingStops() {
         val entry = ChannelNumberEntry()
         assertNull(entry.add(1))

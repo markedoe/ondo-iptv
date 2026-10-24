@@ -4,11 +4,11 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performClick
 import androidx.core.view.children
 import androidx.lifecycle.Lifecycle
 import androidx.media3.ui.PlayerView
@@ -20,7 +20,6 @@ import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import java.time.Duration
 import org.junit.After
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -149,39 +148,36 @@ class PlayerRemoteTest {
     }
 
     /**
-     * On a TV, More is one of the player's own buttons: the remote moves to it from Settings, OK opens the menu (TV-DP).
-     * No Close button for the focus to wander to: Back closes.
+     * On a TV, More is one of the player's own buttons, drawn for the remote (Media3's controls are not used): the remote
+     * moves to it from Play/Pause, OK opens its panel (TV-DP). No Close button for the focus to wander to: Back closes.
      */
     @Test
     fun onATvMoreIsAmongThePlayersButtons() {
         launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
-        scenario.onActivity { playerView(it).showController() }
-        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100))
-        compose.waitForIdle()
-        scenario.onActivity { activity ->
-            val view = playerView(activity)
-            val more = view.findViewWithTag<View>(PlayerActivity.MORE_BUTTON)
-            assertTrue(more.isFocusable)
-            assertEquals(more, view.findViewById<View>(androidx.media3.ui.R.id.exo_settings).focusSearch(View.FOCUS_RIGHT))
-            more.performClick()
-        }
+        scenario.onActivity { assertFalse("Media3's controls are not used", playerView(it).useController) }
+        press(KeyEvent.KEYCODE_INFO)
+        compose.onNodeWithTag("tvPlayPause").assertIsFocused()
+        // Play/Pause, 10 s forward, Subtitles, Audio, Speed, More.
+        repeat(5) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        compose.onNodeWithTag("tvMore").assertIsFocused()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.onNodeWithTag("statisticsToggle").assertIsFocused()
         compose.onNodeWithTag("playerMore").assertDoesNotExist()
         compose.onNodeWithContentDescription("Close").assertDoesNotExist()
-        compose.onNodeWithTag("statisticsToggle").performClick()
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNodeWithTag("streamStatistics").assertExists()
     }
 
     @Test
     fun onAMovieAnArrowShowsTheControlsAndBackHidesThemBeforeLeaving() {
         launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
-        scenario.onActivity { playerView(it).hideController() }
         press(KeyEvent.KEYCODE_DPAD_DOWN)
-        scenario.onActivity { assertTrue("the controls show", playerView(it).isControllerFullyVisible) }
+        compose.onNodeWithTag("tvPlayerControls").assertExists()
         // The system's back (a remote's Back from Android 13): the controls first, then the player.
         scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
+        compose.onNodeWithTag("tvPlayerControls").assertDoesNotExist()
         scenario.onActivity {
-            assertFalse("the controls are hidden", playerView(it).isControllerFullyVisible)
             assertFalse("the player stays", it.isFinishing)
             it.onBackPressedDispatcher.onBackPressed()
             assertTrue("then Back leaves", it.isFinishing)

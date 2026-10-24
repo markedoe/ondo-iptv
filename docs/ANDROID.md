@@ -45,14 +45,17 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   reach of the remote (`TvSettingsScreen.kt`; Delete asks first, starting on Cancel), cards that grow with a white border on focus and
   rows peeking past the right edge; the other pages are the Compose screens within the TV's safe area
   (48 × 27 dp). A focus that comes back to the card left (`FocusMemory`) and enters each page by itself
-  (`FocusEntry`), rows scrolled to a third of the way. Player:
-  OK pauses, Left / Right seek, Up / Down, CH+ / CH−, the number keys and Last Channel change channel
-  (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), a channel banner, Back hides the controls. Google's
+  (`FocusEntry`), rows scrolled to a third of the way. Player: its own controls for the remote over Media3's video
+  view (`player/TvPlayerControls.kt`, `player/TvControls.kt`): large round buttons, a progress bar whose target moves
+  in growing steps and is reached once the remote stops (one seek per move), Subtitles, Audio, Speed and More panels
+  with the tracks named by language (`player/TrackChoices.kt`), hidden 5 s after the last key while playing; OK
+  pauses, Left / Right go back and forward 10 s, Up / Down, CH+ / CH−, the number keys and Last Channel change channel
+  (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), a channel banner, Back closes a panel, then the controls. Google's
   TV app quality: no Picture-in-Picture on a TV, the screen kept on while playing only, no browser (the privacy
   policy and support pages open in an in-app page limited to them), no file picker or share button where the TV
   has none, a smaller image memory cache on a low-memory device.
 - **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), the remote on a TV
-  (`TelevisionTest`, `PlayerRemoteTest`), Roborazzi screenshots that double as Google Play screenshots (phone,
+  (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), Roborazzi screenshots that double as Google Play screenshots (phone,
   7" and 10" tablets, TV, English and French).
 
 Planned next (not included in v1): catch-up from the guide, Chromecast, downloads, profiles and PIN, online

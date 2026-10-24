@@ -242,7 +242,7 @@
     <string name="help_guide_title">Guía de TV y recordatorios</string>
     <string name="help_guide_body">El botón de guía de TV en directo muestra los programas de los canales elegidos allí (Mi lista, una categoría o todos). La guía viene de tu proveedor, o de la dirección XMLTV indicada al añadir una playlist M3U.\n\nAbre un programa próximo y crea un recordatorio: llega una notificación unos minutos antes de que empiece. La campana de la guía muestra tus recordatorios.</string>
     <string name="help_remote_title">Con el mando</string>
-    <string name="help_remote_body">Muévete con las flechas y pulsa OK para elegir. El menú está a la izquierda: Buscar, las pestañas y Ajustes. Atrás cierra una página; en una pestaña, lleva al menú y luego a Inicio, y Atrás en el menú de Inicio cierra Ondo.\n\nEn el reproductor, OK pausa, reanuda y muestra los controles (la tecla Info también los muestra; Más está abajo con los demás botones); Izquierda y Derecha retroceden y avanzan. En un canal en directo, Arriba y Abajo o las teclas de canal cambian de canal, los números llevan directamente a un canal y la tecla de canal anterior vuelve al que veías antes.\n\nEn TV en directo, mantén pulsado OK sobre un canal para añadirlo a Mi lista.</string>
+    <string name="help_remote_body">Muévete con las flechas y pulsa OK para elegir. El menú está a la izquierda: Buscar, las pestañas y Ajustes. Atrás cierra una página; en una pestaña, lleva al menú y luego a Inicio, y Atrás en el menú de Inicio cierra Ondo.\n\nEn el reproductor, OK pausa, reanuda y muestra los controles (la tecla Info también los muestra); Izquierda y Derecha retroceden y avanzan 10 segundos. Los controles son botones grandes: Reproducir/Pausa, retroceder y avanzar 10 segundos, Subtítulos y Audio, que muestran las pistas por idioma, Velocidad y Más (Estadísticas del flujo, Informar de un problema…); las teclas de subtítulos y de audio del mando abren directamente su lista. Arriba desde los botones lleva a la barra de progreso: Izquierda y Derecha se mueven por ella, más rápido si las mantienes pulsadas, y el vídeo va allí cuando te detienes o pulsas OK. Atrás cierra una lista y luego los controles. En un canal en directo, Arriba y Abajo o las teclas de canal cambian de canal, los números llevan directamente a un canal y la tecla de canal anterior vuelve al que veías antes.\n\nEn TV en directo, mantén pulsado OK sobre un canal para añadirlo a Mi lista.</string>
     <plurals name="guide_row_limit">
         <item quantity="one">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
         <item quantity="many">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
@@ -314,4 +314,23 @@
     <string name="last_crash">Último cierre inesperado: %1$s</string>
     <string name="last_crash_hint">Registrado en este dispositivo cuando Ondo se cerró. Una foto ayuda a corregir el problema; no incluye direcciones ni datos de acceso.</string>
     <string name="web_page_unavailable">Esta página no se puede abrir en este dispositivo. Visita %1$s desde un teléfono o un ordenador.</string>
+    <string name="pause">Pausa</string>
+    <string name="skip_back_10">Retroceder 10 segundos</string>
+    <string name="skip_forward_10">Avanzar 10 segundos</string>
+    <string name="subtitles">Subtítulos</string>
+    <string name="audio">Audio</string>
+    <string name="speed">Velocidad</string>
+    <string name="speed_normal">Normal</string>
+    <string name="off">Desactivado</string>
+    <string name="live_badge">DIRECTO</string>
+    <string name="track_number">Pista %1$d</string>
+    <string name="track_forced">Forzados</string>
+    <string name="track_hearing_impaired">Para personas sordas o con discapacidad auditiva</string>
+    <string name="track_commentary">Comentarios</string>
+    <string name="track_audio_description">Audiodescripción</string>
+    <string name="track_mono">Mono</string>
+    <string name="track_stereo">Estéreo</string>
+    <string name="tracks_pending">Las pistas aparecen en cuanto se reproduce el flujo.</string>
+    <string name="no_subtitles">Este flujo no tiene subtítulos.</string>
+    <string name="no_audio">Este flujo no tiene sonido.</string>
 </resources>

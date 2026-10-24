@@ -149,9 +149,11 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur ; écran d'accueil avec démo.
 - **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande
   (une sélection bien visible, qui revient sur la carte que vous avez quittée, des mises en page qui restent à
-  l'écart des bords de l'écran) ; dans le lecteur, OK met en pause, Gauche et Droite reculent et avancent, Haut et
-  Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de chaîne ; maintenez OK sur une chaîne pour
-  l'ajouter à Ma liste ; Aide, Avec la télécommande. Les règles de confidentialité et la page d'aide s'ouvrent
+  l'écart des bords de l'écran) ; un lecteur dessiné pour la télécommande : de grands boutons, une barre de
+  progression pour se déplacer dans la vidéo, des panneaux Sous-titres et Audio qui listent les pistes par langue,
+  Vitesse et Plus ; OK met en pause, Gauche et Droite reculent et avancent de 10 secondes, Haut et Bas, CH+ / CH−,
+  les chiffres et la chaîne précédente changent de chaîne ; maintenez OK sur une chaîne pour l'ajouter à Ma liste ;
+  Aide, Avec la télécommande. Les règles de confidentialité et la page d'aide s'ouvrent
   dans l'app.
 - À venir : replay, Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un second moteur
   (libVLC). Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).

@@ -465,7 +465,7 @@ def path_details(tv, args):
 
 
 def path_player(tv, args):
-    """A live channel and a movie in the player, the remote's keys pressed: OK, arrows, channels, figures, Info, the menu."""
+    """A live channel and a movie in the player, the remote's keys pressed: OK, arrows, channels, figures, Info, the Subtitles, Audio and More panels."""
     tv.drawer("Live TV")
     tv.key("DOWN")
     tv.key("DPAD_CENTER")
@@ -489,23 +489,13 @@ def path_player(tv, args):
     for key in ("INFO", "GUIDE", "MENU", "MEDIA_PLAY_PAUSE", "MEDIA_PLAY_PAUSE"):
         tv.key(key, pause=2)
         tv.check_alive(f"{key} in the live player")
-    tv.key("INFO", pause=1)
-    if not tv.view_focus():
+    if not tv.visible("Subtitles"):
         tv.key("INFO", pause=1)
     tv.note_screen("player-live-controls")
-    tv.say(f"  player focus: {tv.view_focus()}")
-    # Down to the row of buttons (past the time bar), then Right to the last one, More (a button without an id).
-    tv.key("DOWN", 2, pause=0.6)
-    for _ in range(8):
-        focus = tv.view_focus()
-        if focus and "ImageButton" in focus and "app:id/" not in focus:
-            break
-        tv.key("RIGHT", pause=0.6)
-    tv.say(f"  player focus: {tv.view_focus()}")
-    tv.key("DPAD_CENTER")
-    time.sleep(2)
-    tv.check_alive("More pressed in the player")
-    tv.note_screen("player-menu")
+    # The player's own buttons, right of Play/Pause: Subtitles (Off at least), Audio, then More.
+    player_panel(tv, "Subtitles", "live-subtitles", expect="Off")
+    player_panel(tv, "Audio", "live-audio")
+    player_panel(tv, "More", "player-menu", close=False)
     tv.open("Report a Problem…", keys=("DOWN",), max_presses=4, wait=3)
     tv.note_screen("player-report")
     tv.key("BACK")
@@ -518,6 +508,9 @@ def path_player(tv, args):
     tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
     tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=10)
     tv.note_screen("player-movie")
+    # The panels first: the clip lasts two minutes, and the movie's end closes the player.
+    player_panel(tv, "Subtitles", "movie-subtitles", expect="Off")
+    player_panel(tv, "Audio", "movie-audio", expect="Mono · AAC")
     for key in ("DPAD_CENTER", "DPAD_CENTER", "RIGHT", "RIGHT", "LEFT", "MEDIA_FAST_FORWARD", "MEDIA_REWIND", "UP", "DOWN", "INFO", "INFO"):
         tv.key(key, pause=2.5)
         tv.check_alive(f"{key} in the movie player")
@@ -528,6 +521,35 @@ def path_player(tv, args):
     tv.leave_player()
     tv.stay(4, "back from the movie player")
     tv.note_screen("player-movie-closed")
+
+
+def player_panel(tv, button, name, expect=None, close=True):
+    """Right through the player's buttons to [button] (its description), OK: its side panel, noted as [name], [expect]
+    checked, closed with Back unless [close] is false. The controls go away 5 s after a key while the video plays: Info
+    shows them again, the focus on Play/Pause (an arrow with the controls hidden would skip or change channel)."""
+    # From Play/Pause: Info hides the controls when they show, and shows them again.
+    if tv.visible("Subtitles"):
+        tv.key("INFO", pause=1)
+    tv.key("INFO", pause=1)
+    for _ in range(12):
+        root = tv.screen()
+        node, texts = tv.focused(root)
+        if node is not None and button in " | ".join(texts):
+            break
+        shown = root is not None and "Subtitles" in tv.texts(root)
+        tv.key("RIGHT" if shown else "INFO", pause=0.6)
+    else:
+        tv.screenshot(f"never-focused-{button}")
+        raise TimeoutError(f"the focus never reached the player's {button} button")
+    tv.key("DPAD_CENTER")
+    time.sleep(2)
+    tv.check_alive(f"{button} pressed in the player")
+    tv.note_screen(name)
+    if expect and not tv.visible(expect):
+        raise TimeoutError(f"the player's {button} panel did not show '{expect}'")
+    if close:
+        tv.key("BACK", pause=1.5)
+        tv.check_alive(f"the {button} panel closed")
 
 
 def path_guide(tv, args):
