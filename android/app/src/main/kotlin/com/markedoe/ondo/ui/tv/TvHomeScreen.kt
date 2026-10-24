@@ -103,7 +103,7 @@ fun TvHomeScreen(
         verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
         item(key = "hero") {
-            if (state.hero.isNotEmpty()) TvHero(state.hero, actions, autoAdvance, preparingKey) else TvHomeHeader(state)
+            if (state.hero.isNotEmpty()) TvHero(state.hero, actions, autoAdvance, preparingKey, source = playlistLine(state)) else TvHomeHeader(state)
         }
         state.tagSuggestion?.let { suggestion -> item(key = "suggestion") { TvTagSuggestion(suggestion, actions) } }
         if (resumeMovies.isNotEmpty()) {
@@ -164,7 +164,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.channelShelf(state: H
 }
 
 @Composable
-private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boolean, preparingKey: String?) {
+private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boolean, preparingKey: String?, source: String) {
     var index by rememberSaveable { mutableIntStateOf(0) }
     val current = index.coerceIn(0, pages.lastIndex)
     val page = pages[current]
@@ -191,6 +191,14 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
             Modifier.padding(start = TvTokens.ContentStart, top = 56.dp).widthIn(max = 500.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            Text(
+                source,
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("lastUpdate"),
+            )
             Text(
                 page.item.title,
                 style = MaterialTheme.typography.displaySmall,
@@ -257,14 +265,25 @@ private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
     }
 }
 
+/** "Updated 5 minutes ago": when the playlist was last fetched from the provider. */
+@Composable
+private fun updatedAgo(state: HomeUiState): String? = state.updatedAt?.let { updatedAt ->
+    // At least a minute ago: "0 minutes ago" reads oddly right after a refresh.
+    val ago = DateUtils.getRelativeTimeSpanString(minOf(updatedAt, state.now - DateUtils.MINUTE_IN_MILLIS), state.now, DateUtils.MINUTE_IN_MILLIS)
+    stringResource(R.string.updated_ago, ago)
+}
+
+/** Above the featured titles: the playlist Home shows, and when it was updated. */
+@Composable
+private fun playlistLine(state: HomeUiState): String = listOfNotNull(state.playlistName, updatedAgo(state)).joinToString(" · ")
+
 /** A playlist without movies or series: its name and when it was updated, above the channels. */
 @Composable
 private fun TvHomeHeader(state: HomeUiState) {
     Column(Modifier.padding(start = TvTokens.ContentStart, top = 48.dp, end = TvTokens.EdgeEnd)) {
         Text(state.playlistName, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        state.updatedAt?.let { updatedAt ->
-            val ago = DateUtils.getRelativeTimeSpanString(minOf(updatedAt, state.now - DateUtils.MINUTE_IN_MILLIS), state.now, DateUtils.MINUTE_IN_MILLIS)
-            Text(stringResource(R.string.updated_ago, ago), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        updatedAgo(state)?.let {
+            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("lastUpdate"))
         }
     }
 }

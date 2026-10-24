@@ -9,7 +9,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -118,6 +121,14 @@ class TelevisionTest {
     fun homeOpensWithPlayFocused() {
         start()
         compose.onNodeWithTag("heroPlay").assertIsFocused()
+    }
+
+    /** Above the featured titles: which playlist Home shows, and when it was last updated from the provider. */
+    @Test
+    fun homeShowsThePlaylistAndItsLastUpdateAboveTheCarousel() {
+        start()
+        compose.onNodeWithTag("lastUpdate", useUnmergedTree = true).assertIsDisplayed().assert(hasText("Updated", substring = true))
+        compose.onNodeWithTag("lastUpdate", useUnmergedTree = true).assert(hasText(Fixtures.playlist.name, substring = true))
     }
 
     @Test
