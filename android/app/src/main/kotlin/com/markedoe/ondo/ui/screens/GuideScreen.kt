@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +57,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -132,9 +134,18 @@ fun GuideScreen(state: GuideUiState, actions: GuideActions) {
     // One formatter for every time label (hundreds of programmes), not one per label.
     val context = LocalContext.current
     val timeFormat = remember(context) { DateFormat.getTimeFormat(context) }
-    // Opens half an hour before now.
+    // Opens half an hour before now. Then the window moves on every half hour: the times on screen stay where they
+    // are, with the programme the viewer is on, rather than going back to now.
+    val shown = remember { ShownStart() }
     LaunchedEffect(state.start) {
-        if (state.start > 0) scroll.scrollTo(((now - state.start - HOUR / 2).coerceAtLeast(0) * pxPerHour / HOUR).roundToInt())
+        if (state.start <= 0) return@LaunchedEffect
+        val previous = shown.start
+        shown.start = state.start
+        if (previous <= 0) {
+            scroll.scrollTo(((now - state.start - HOUR / 2).coerceAtLeast(0) * pxPerHour / HOUR).roundToInt())
+        } else {
+            scroll.scrollBy(-(state.start - previous) * pxPerHour / HOUR)
+        }
     }
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).testTag("guide")) {
         TopAppBar(
@@ -196,6 +207,11 @@ fun GuideScreen(state: GuideUiState, actions: GuideActions) {
             onDismiss = { selected = null },
         )
     }
+}
+
+/** The start of the window the guide shows, to keep its place when the window moves on. */
+private class ShownStart {
+    var start = 0L
 }
 
 /** My List, every channel, or one category: the same choice as on Live TV. */
@@ -283,36 +299,40 @@ private fun Programmes(
                     modifier = Modifier.align(Alignment.CenterStart).padding(start = 12.dp),
                 )
             }
+            // By start: when a programme leaves the start of the window, the others keep their place and the focus
+            // stays on its programme (by position, it would pass to the next one).
             row.programs.forEach { program ->
-                val start = maxOf(program.start, state.start)
-                val end = minOf(program.end, state.end)
-                val airing = program.start <= now && now < program.end
-                val width = with(LocalDensity.current) { (px(end) - px(start)).toDp() } - 2.dp
-                Column(
-                    Modifier
-                        .offset { IntOffset(px(start), 0) }
-                        .width(width.coerceAtLeast(2.dp))
-                        .fillMaxHeight()
-                        .padding(vertical = 3.dp)
-                        .focusFrame(RoundedCornerShape(6.dp), grow = 1f)
-                        .focusMemory("guide:${row.channel.id}:${program.start}", initial = first && airing)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (airing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
-                        .clickable { onSelect(program) }
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if ("${row.channel.id}|${program.start}" in state.reminders) {
-                            Icon(
-                                Icons.Rounded.NotificationsActive,
-                                contentDescription = stringResource(R.string.reminder_set),
-                                modifier = Modifier.size(12.dp).padding(end = 2.dp),
-                            )
+                key(program.start) {
+                    val start = maxOf(program.start, state.start)
+                    val end = minOf(program.end, state.end)
+                    val airing = program.start <= now && now < program.end
+                    val width = with(LocalDensity.current) { (px(end) - px(start)).toDp() } - 2.dp
+                    Column(
+                        Modifier
+                            .offset { IntOffset(px(start), 0) }
+                            .width(width.coerceAtLeast(2.dp))
+                            .fillMaxHeight()
+                            .padding(vertical = 3.dp)
+                            .focusFrame(RoundedCornerShape(6.dp), grow = 1f)
+                            .focusMemory("guide:${row.channel.id}:${program.start}", initial = first && airing)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (airing) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+                            .clickable { onSelect(program) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if ("${row.channel.id}|${program.start}" in state.reminders) {
+                                Icon(
+                                    Icons.Rounded.NotificationsActive,
+                                    contentDescription = stringResource(R.string.reminder_set),
+                                    modifier = Modifier.size(12.dp).padding(end = 2.dp),
+                                )
+                            }
+                            Text(program.title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
-                        Text(program.title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(timeRange(program, timeFormat), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                     }
-                    Text(timeRange(program, timeFormat), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
             }
             if (now in state.start until state.end) {

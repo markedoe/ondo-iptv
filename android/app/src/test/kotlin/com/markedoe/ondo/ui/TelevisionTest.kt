@@ -3,6 +3,9 @@ package com.markedoe.ondo.ui
 import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
@@ -235,6 +238,52 @@ class TelevisionTest {
         assertTrue("the programme on air has the focus: ${focused()}", focused().contains("Morning News"))
         press(Key.DirectionRight)
         assertTrue("then the next one: ${focused()}", focused().contains("Weather"))
+    }
+
+    /**
+     * The guide's window moves on every half hour (it starts two hours back, from the half hour): a viewer browsing
+     * later programmes stays where they are, on the same programme.
+     */
+    @Test
+    fun theGuideKeepsItsPlaceWhenItsWindowMovesOn() {
+        val halfHour = 1_800_000L
+        val start = Fixtures.NOW / halfHour * halfHour - 4 * halfHour
+        val now = start + 4 * halfHour + 600_000
+        val (channel, other) = Fixtures.channels
+        val programmes = (0 until 36).map { EpgProgram("c1.test", start + it * halfHour, start + (it + 1) * halfHour, "Show $it") }
+        // A guide may give two programmes at the same time.
+        val overlapping = (0 until 36).flatMap { listOf("News $it", "Sport $it").map { title -> EpgProgram("c2.test", start + it * halfHour, start + (it + 1) * halfHour, title) } }
+        // As the app makes it: the programmes of the window only.
+        fun guideAt(windowStart: Long, time: Long): GuideUiState {
+            val end = windowStart + 28 * halfHour
+            fun inWindow(list: List<EpgProgram>) = list.filter { it.end > windowStart && it.start < end }
+            val rows = listOf(GuideRow(channel, inWindow(programmes)), GuideRow(other, inWindow(overlapping)))
+            return GuideUiState(rows = rows, total = 2, start = windowStart, end = end, now = time, hasGuide = true)
+        }
+        var state by mutableStateOf(guideAt(start, now))
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            OndoTheme {
+                CompositionLocalProvider(LocalFocusMemory provides FocusMemory()) { TelevisionFrame { GuideScreen(state, GuideActions()) } }
+            }
+        }
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        compose.waitForIdle()
+        assertTrue("the programme on air has the focus: ${focused()}", focused().contains("Show 4"))
+        // Six hours later along the row.
+        press(Key.DirectionRight, times = 12)
+        assertTrue(focused(), focused().contains("Show 16"))
+        val before = compose.onNode(isFocused()).fetchSemanticsNode().boundsInRoot
+        // Half an hour on: the window starts half an hour later, without its first programme.
+        state = guideAt(start + halfHour, now + halfHour)
+        compose.waitForIdle()
+        val guide = compose.onNodeWithTag("guide").fetchSemanticsNode().boundsInRoot
+        val after = compose.onNode(isFocused()).fetchSemanticsNode().boundsInRoot
+        // A programme scrolled out of the guide has empty bounds.
+        assertTrue("the focused programme is still on screen: $after in $guide", !after.isEmpty && after.left >= guide.left && after.right <= guide.right)
+        assertTrue("the same programme has the focus: ${focused()}", focused().contains("Show 16"))
+        assertEquals("the programme stays where it was", before.left, after.left, 2f)
     }
 
     @Test
