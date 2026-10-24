@@ -208,10 +208,11 @@ def main():
         tv.wait_for("catalogue", lambda: not tv.visible("Server", "Username") and tv.visible("Live TV"), args.wait_load, every=3)
         tv.say(f"catalogue on screen after {time.time() - start:.0f} s")
         tv.screenshot("home")
-        # The guide and the details load in the background: stay a while, then walk the pages.
-        for _ in range(10):
+        # The guide and the details load in the background: stay a while (a large guide takes a minute), then walk.
+        for _ in range(30):
             time.sleep(3)
             tv.check_alive("home, guide loading")
+        tv.say(f"still running {time.time() - start:.0f} s after Add")
         tv.key("DOWN", 2)
         tv.key("RIGHT", 3)
         tv.screenshot("home-moved")
@@ -221,8 +222,15 @@ def main():
         tv.screenshot("opened")
         tv.key("BACK")
         time.sleep(2)
+        tabs = ("Home", "Movies", "Series", "Live TV", "My List")
         for tab in ("Movies", "Series", "Live TV", "My List", "Home"):
-            tv.key("LEFT", 4)
+            # To the drawer: Back from a page lands on its tab (never Back from the drawer: on Home it leaves the app).
+            for attempt in range(6):
+                _, texts = tv.focused()
+                if any(t in tabs for t in texts):
+                    break
+                tv.key("BACK" if attempt < 2 else "LEFT")
+                time.sleep(1)
             tv.focus_on(tab, keys=("UP", "UP", "UP", "UP", "UP", "UP", "DOWN", "DOWN", "DOWN", "DOWN", "DOWN", "DOWN", "DOWN", "DOWN"), max_presses=16)
             tv.key("DPAD_CENTER")
             time.sleep(4)
