@@ -154,6 +154,20 @@ final class SyncMappingTests: XCTestCase {
         XCTAssertEqual(decoded?.deviceID.count, 36)
     }
 
+    /// File playlists stay on their device: a `file:` address from another device is taken neither as a playlist nor as
+    /// its guide.
+    func testAFileAddressFromAnotherDeviceIsRefused() {
+        let id = UUID().uuidString.lowercased()
+        var file = SyncPlaylist(id: id, name: "F", kind: SyncPlaylist.m3u, url: "file:///list.m3u", addedAt: 1, updatedAt: 1)
+        XCTAssertNil(SyncMapping.playlist(from: file, base: nil))
+        file.url = "FILE:///list.m3u"
+        XCTAssertNil(SyncMapping.playlist(from: file, base: nil))
+        let guide = SyncPlaylist(id: id, name: "G", kind: SyncPlaylist.m3u, url: "http://example.com/list.m3u",
+                                 epgUrl: "file:///guide.xml", addedAt: 1, updatedAt: 1)
+        XCTAssertEqual(SyncMapping.playlist(from: guide, base: nil)?.epgURLs, [])
+        XCTAssertEqual(SyncMapping.playlist(from: guide, base: nil)?.source, PlaylistSource.remote(URL(string: "http://example.com/list.m3u")!))
+    }
+
     /// Int64.max milliseconds comes back from `Date` as 2^63, past Int64: it saturates instead of trapping.
     func testTimesAtTheEndsOfInt64Saturate() {
         XCTAssertEqual(Date(syncMilliseconds: .max).syncMilliseconds, .max)

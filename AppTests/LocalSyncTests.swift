@@ -8,6 +8,9 @@ import Network
 @MainActor
 final class LocalSyncTests: XCTestCase {
     private var root: URL!
+    /// Serves the catalogue on 127.0.0.1 as a provider does, for the whole test: the other device downloads the playlist
+    /// from it too. A playlist address from another device is never a file (`SyncMapping`).
+    private var server: LocalHTTPServer?
 
     private static let catalogue = """
     #EXTM3U
@@ -23,6 +26,7 @@ final class LocalSyncTests: XCTestCase {
     }
 
     override func tearDown() async throws {
+        server = nil
         try? FileManager.default.removeItem(at: root)
     }
 
@@ -36,10 +40,14 @@ final class LocalSyncTests: XCTestCase {
 
     /// A device with an M3U playlist, a favourite channel and movie, a movie half watched and a collection.
     private func deviceWithLibrary() async throws -> AppModel {
-        let file = root.appendingPathComponent("list.m3u")
-        try Data(Self.catalogue.utf8).write(to: file)
+        let catalogue = Self.catalogue
+        let server = try LocalHTTPServer { request in
+            request.path == "/list.m3u" ? LocalHTTPServer.Response.text(catalogue, type: "audio/x-mpegurl") : LocalHTTPServer.Response.notFound
+        }
+        self.server = server
+        let address = try await server.start().appending(path: "list.m3u")
         let model = try await device("first")
-        try await model.addPlaylist(Playlist(name: "Test", source: .remote(file), autoRefreshHours: 0))
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(address), autoRefreshHours: 0))
         let playlist = try XCTUnwrap(model.activePlaylist)
         let news = try XCTUnwrap(model.content.channels.first { $0.name == "Test News" })
         let movie = try XCTUnwrap(model.content.movies.first)
