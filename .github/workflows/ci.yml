@@ -1,36 +1,340 @@
 name: CI
 
-# Probe run only (branch claude/night-apple-traps): the key tests on each macOS version, whose own JSONDecoder may stop on a
-# key that is not valid UTF-8. The real workflow comes back in the next commit.
+# Apple app and its Swift core: once per commit on main (work branches are pushed to main too), pull
+# requests and on demand. Android-only, documentation-only, website-only and store-listing-only changes skip
+# it: nothing here reads them (Android has its own workflow; the leak scan and the neutrality check run on
+# every commit, see security.yml). The string catalogue (App/Resources/Localizable.xcstrings) is app code:
+# a change to it runs CI.
 on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - android/**
+      - fastlane/metadata/**
+      - fastlane/metadata-android/**
+      - docs/**
+      - site/**
+      - '**/*.md'
+      - .github/workflows/android.yml
+      - .github/workflows/release-android.yml
+      - .github/workflows/security.yml
+  pull_request:
+    paths-ignore:
+      - android/**
+      - fastlane/metadata/**
+      - fastlane/metadata-android/**
+      - docs/**
+      - site/**
+      - '**/*.md'
+      - .github/workflows/android.yml
+      - .github/workflows/release-android.yml
+      - .github/workflows/security.yml
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  probe:
-    name: Decoder probe (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-14, macos-15, macos-26]
+  core-linux:
+    name: Lint + IPTVCore tests (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: swift:6.0-noble
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Pick a Swift 6 Xcode
+      - name: SwiftLint
         run: |
-          sw_vers
-          if ! swift --version 2>&1 | grep -q 'Swift version [6-9]'; then
-            XCODE=$(ls -d /Applications/Xcode_16*.app | sort -V | tail -1)
-            echo "Using $XCODE"
-            sudo xcode-select -s "$XCODE"
-          fi
+          apt-get update -qq && apt-get install -y -qq unzip curl ca-certificates python3 >/dev/null
+          curl -sSfL -o /tmp/swiftlint.zip https://github.com/realm/SwiftLint/releases/download/0.57.1/swiftlint_linux.zip
+          # The 0.57.1 release asset: a replaced or corrupted download stops here instead of running.
+          echo "81cb02135897dc982b4d1049dba8510db3e982b0b0e8e138293982d77e4154e0  /tmp/swiftlint.zip" | sha256sum -c -
+          unzip -q /tmp/swiftlint.zip -d /tmp/swiftlint
+          /tmp/swiftlint/swiftlint lint --reporter github-actions-logging
+      - name: Shipped configuration (translations in seven languages, privacy manifest, Mac sandbox, awards data, App Store edition)
+        if: success() || failure()
+        # What tests on simulated data cannot see: an untranslated text, an App Store upload rejected for
+        # an undeclared API, a Mac app whose sandbox blocks the network or the file pickers. The neutrality
+        # check runs on every commit in security.yml (this workflow skips documentation and Android changes).
+        run: |
+          status=0
+          # The checks' own tests first: each must reject the defect it exists for (.github/scripts/tests).
+          python3 -m unittest discover -s .github/scripts/tests || status=1
+          for check in translations privacy_manifest mac_entitlements awards app_store; do
+            python3 .github/scripts/check_$check.py || status=1
+          done
+          exit $status
+      - name: Tests with coverage
+        working-directory: Packages/IPTVCore
+        run: |
+          swift test --parallel --enable-code-coverage -Xswiftc -warnings-as-errors
+          BIN=$(swift build --show-bin-path)
+          llvm-cov report "$BIN/IPTVCorePackageTests.xctest" \
+            -instr-profile "$BIN/codecov/default.profdata" \
+            -ignore-filename-regex='(Tests|\.build)/' | tee coverage.txt | tail -25
+          echo "### IPTVCore coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -1 coverage.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+  apple:
+    name: Build iOS + macOS
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Show toolchain
+        run: |
           xcodebuild -version
           swift --version
-      - name: Key tests after the check (one process per test)
+      - name: Core tests (macOS)
         working-directory: Packages/IPTVCore
-        run: swift test --parallel --filter 'UnreadableKeyTests|JSONListFileTests|XtreamTests|LibraryTests|SyncTests|TMDbTests|SubtitleSearchTests|AwardsTests'
+        run: swift test --parallel
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen xcbeautify || true
+          xcodegen generate
+      - name: Cache Swift packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/spm
+          # project.yml pins the package versions (Package.resolved is not committed); any other edit to it
+          # still starts from the previous checkouts.
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
+      - name: Build for iOS Simulator
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/ios \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions || \
+          (echo "::error::iOS build failed"; exit 1)
+      - name: Build for macOS
+        if: success() || failure()
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/macos \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions || \
+          (echo "::error::macOS build failed"; exit 1)
+      - name: Verify VLC and Google Cast are compiled in
+        run: |
+          # VLCBackend.swift is wrapped in `#if canImport(VLCKitSPM)`: make sure it really referenced VLCKit.
+          for dir in build/ios build/macos; do
+            OBJ=$(find "$dir" -name "VLCBackend.o" | head -1)
+            if [ -n "$OBJ" ] && nm -u "$OBJ" | grep -q "VLCMediaPlayer"; then
+              echo "$dir: VLC engine compiled ($OBJ)"
+            else
+              echo "::error::VLC engine missing in $dir"; exit 1
+            fi
+          done
+          # Chromecast (iOS only): CastManager must reference the Google Cast SDK.
+          OBJ=$(find build/ios -name "CastManager.o" | head -1)
+          if nm -u "$OBJ" | grep -q "GCKCastContext"; then echo "iOS: Google Cast compiled"; else echo "::error::Google Cast missing"; exit 1; fi
+
+      - name: Launch macOS app (smoke test)
+        run: |
+          APP="build/macos/Build/Products/Debug/Ondo.app"
+          codesign --force --deep --sign - --entitlements App/Resources/Ondo-macOS-Debug.entitlements "$APP"
+          "$APP/Contents/MacOS/Ondo" -uitest-reset > macos-launch.log 2>&1 &
+          PID=$!
+          sleep 20
+          mkdir -p screenshots
+          screencapture -x screenshots/macos-launch.png || true
+          if kill -0 $PID 2>/dev/null; then
+            echo "macOS app still running after 20 s"
+            kill $PID
+          else
+            echo "::error::macOS app exited early"; cat macos-launch.log; exit 1
+          fi
+          tail -20 macos-launch.log || true
+      - name: Upload macOS screenshot
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: macos-screenshot
+          path: screenshots
+          if-no-files-found: ignore
+
+  release-build:
+    name: Release build, App Store edition (iOS + macOS)
+    runs-on: macos-26
+    timeout-minutes: 60
+    # Debug is what the other jobs build and test; the App Store gets Release, without the `#if DEBUG`
+    # code (UI test catalogue, screenshot routes) and without the TestFlight edition's downloads
+    # (`#if TESTFLIGHT_DOWNLOADS || DEBUG`). A break of the edition that gets submitted shows here, not at archive time.
+    # The TestFlight edition (Release with TESTFLIGHT_DOWNLOADS) is built too, for iOS only: its own code (`#if
+    # TESTFLIGHT_DOWNLOADS`: beta badge, version text) is shared by both platforms, and the iOS build also has the
+    # iOS-only download code and the Cast SDK.
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen xcbeautify || true
+          xcodegen generate
+      - name: Cache Swift packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/spm
+          # project.yml pins the package versions (Package.resolved is not committed); any other edit to it
+          # still starts from the previous checkouts.
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
+      - name: Build for iOS Simulator (Release)
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/release \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: Build for macOS (Release)
+        if: success() || failure()
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/release-macos \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: Build for iOS Simulator (Release, TestFlight edition)
+        if: success() || failure()
+        # The release lanes' setting for this edition (fastlane/Fastfile, build_settings_args).
+        run: |
+          set -o pipefail
+          # shellcheck disable=SC2016 # $(inherited) is for xcodebuild, not the shell
+          xcodebuild build \
+            -project Ondo.xcodeproj -scheme Ondo -configuration Release \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/release \
+            -clonedSourcePackagesDirPath build/spm \
+            CODE_SIGNING_ALLOWED=NO \
+            'SWIFT_ACTIVE_COMPILATION_CONDITIONS=$(inherited) TESTFLIGHT_DOWNLOADS' | xcbeautify --renderer github-actions
+
+  ui-tests:
+    name: App tests — unit + UI (iPhone simulator)
+    runs-on: macos-26
+    timeout-minutes: 75
+    needs: apple
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen xcbeautify || true
+          xcodegen generate
+      - name: Cache Swift packages
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/spm
+          # project.yml pins the package versions (Package.resolved is not committed); any other edit to it
+          # still starts from the previous checkouts.
+          key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
+          restore-keys: spm-${{ runner.os }}-
+      - name: Pick a simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 .github/scripts/pick_simulator.py)
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices | grep "$UDID"
+          # Booted before the tests: a simulator still starting made the first UI test time out at launch
+          # ("Timed out while requesting launch progress").
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+      - name: Run unit and UI tests
+        # A test that hangs fails by name after its allowance (10 min, less where a test sets its own) instead of
+        # holding the job until its timeout with nothing in the log.
+        run: |
+          set -o pipefail
+          xcodebuild test -enableCodeCoverage YES \
+            -project Ondo.xcodeproj -scheme Ondo \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build/uitests \
+            -clonedSourcePackagesDirPath build/spm \
+            -resultBundlePath build/UITests.xcresult \
+            -skip-testing:OndoUITests/AppStoreScreenshots \
+            -test-timeouts-enabled YES \
+            -default-test-execution-time-allowance 600 \
+            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: App coverage
+        if: always()
+        run: |
+          xcrun xccov view --report --only-targets build/UITests.xcresult | tee app-coverage.txt || true
+          echo "### App coverage" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat app-coverage.txt >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Export screenshots
+        if: always()
+        run: |
+          mkdir -p raw screenshots
+          xcrun xcresulttool export attachments --path build/UITests.xcresult --output-path raw || true
+          python3 .github/scripts/collect_screenshots.py raw screenshots
+      - name: Fetch macOS screenshot
+        if: always()
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-screenshot
+          path: macos-shot
+        continue-on-error: true
+      - name: Add the macOS screenshot
+        if: always()
+        run: |
+          mkdir -p screenshots
+          if [ -f macos-shot/macos-launch.png ]; then
+            sips -s format jpeg -s formatOptions 70 -Z 1400 macos-shot/macos-launch.png --out screenshots/99-macos-launch.jpg >/dev/null
+          fi
+          ls -la screenshots
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ui-screenshots
+          path: screenshots
+
+  publish-screenshots:
+    name: Publish screenshots to the ci-screenshots branch
+    needs: ui-tests
+    # Failed runs too: the screens and the debug/ texts explain a UI test failure. A job of its own, so the
+    # write token is never in reach of the build and its dependencies.
+    if: ${{ !cancelled() && github.event_name == 'push' && needs.ui-tests.result != 'skipped' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ui-screenshots
+          path: screenshots
+      - name: Push
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd screenshots
+          echo "Screenshots of ${GITHUB_REF_NAME} @ ${GITHUB_SHA} (run ${GITHUB_RUN_ID})" > README.md
+          git init -q
+          git checkout -q -b ci-screenshots
+          git config user.name "ci"
+          git config user.email "ci@users.noreply.github.com"
+          git add .
+          git commit -q -m "UI screenshots for ${GITHUB_SHA}"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-screenshots
