@@ -1,6 +1,8 @@
 package com.markedoe.ondo.ui
 
 import android.os.Looper
+import android.os.SystemClock
+import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.focus.FocusDirection
@@ -8,6 +10,7 @@ import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsNode
@@ -23,6 +26,7 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performKeyPress
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
@@ -31,6 +35,7 @@ import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.CrashLog
 import com.markedoe.ondo.data.FakeHttp
+import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.OndoRepository
@@ -46,6 +51,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -66,6 +72,7 @@ class TelevisionLibraryTest {
     @get:Rule val folder = TemporaryFolder()
 
     private lateinit var repository: OndoRepository
+    private lateinit var viewModel: OndoViewModel
     private var focusManager: FocusManager? = null
 
     private val backup = SavedPlaylist(id = "p2", name = "Backup", url = "http://example.com/backup.m3u", addedAt = Fixtures.NOW + 1)
@@ -77,7 +84,7 @@ class TelevisionLibraryTest {
         library?.let(store::saveLibrary)
         playlists.forEach { store.saveContent(it.id, Fixtures.content.copy(fetchedAt = System.currentTimeMillis())) }
         repository = OndoRepository(store, FakeHttp(answers), CoroutineScope(SupervisorJob() + Dispatchers.Main))
-        val viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
+        viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
@@ -397,6 +404,69 @@ class TelevisionLibraryTest {
         press(Key.DirectionDown)
         assertEquals("pickNewCollection", focusedTag())
     }
+
+    /**
+     * OK held as a remote sends it: the key, then after a moment the same key repeated while it is held, then up. Each
+     * goes where the focus is at that moment (the window when nothing has it), as on a device. [whileHeld]: repeats
+     * keep coming until it is false (at most 3 s), then [repeats] more.
+     */
+    private fun holdOk(repeats: Int, whileHeld: () -> Boolean = { false }) {
+        val down = SystemClock.uptimeMillis()
+        var count = 0
+        fun send(action: Int, repeat: Int) {
+            val target = if (focusedNode() != null) focusedInteraction() else compose.onAllNodes(isRoot()).onLast()
+            target.performKeyPress(KeyEvent(AndroidKeyEvent(down, SystemClock.uptimeMillis(), action, AndroidKeyEvent.KEYCODE_DPAD_CENTER, repeat)))
+        }
+        send(AndroidKeyEvent.ACTION_DOWN, 0)
+        settle(500)
+        while (whileHeld() && count < 50) {
+            send(AndroidKeyEvent.ACTION_DOWN, ++count)
+            settle(60)
+        }
+        repeat(repeats) {
+            send(AndroidKeyEvent.ACTION_DOWN, ++count)
+            settle(60)
+        }
+        send(AndroidKeyEvent.ACTION_UP, 0)
+        settle(300)
+    }
+
+    /** The texts of the focused item (a channel row's description is its My List mark). */
+    private fun focusedText(): String = focusedNode()?.config?.getOrNull(SemanticsProperties.Text)?.joinToString(" ").orEmpty()
+
+    private fun favouriteChannels() = repository.state.value.library.favorites.filter { it.kind == ItemKind.CHANNEL }.map { it.itemId }
+
+    /**
+     * Live TV showing My List, OK held on its second channel: that one leaves the list, and the rest of the press (OK
+     * repeated, then let go) reaches no other channel, held briefly ([repeats] few) or long.
+     */
+    private fun okHeldInMyListTakesOutOnlyThatChannel(repeats: Int) {
+        val (first, second) = Fixtures.channels
+        val library = LibraryState(favorites = listOf(first, second).map { Favorite(Fixtures.PLAYLIST_ID, ItemKind.CHANNEL, it.id, it.name, addedAt = Fixtures.NOW) })
+        start(library = library, manualClock = true)
+        viewModel.setLiveFilter(LiveFilter(favoritesOnly = true))
+        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionDown) { focusedTag() == "tabLive" }
+        press(Key.DirectionCenter)
+        waitFor { exists("live") && focusedText().contains(first.name) }
+        press(Key.DirectionDown)
+        assertTrue("on the second channel: ${focusedText()}", focusedText().contains(second.name))
+        holdOk(repeats) { compose.onAllNodesWithText(second.name).fetchSemanticsNodes().isNotEmpty() }
+        waitFor { second.id !in favouriteChannels() }
+        settle(1_000)
+        assertNull("no channel started", shadowOf(compose.activity).nextStartedActivity)
+        assertEquals("the other channel is still in My List", listOf(first.id), favouriteChannels())
+        // A new press of OK plays the channel the remote is on.
+        assertTrue("on the other channel: ${focusedText()}", focusedText().contains(first.name))
+        press(Key.DirectionCenter)
+        waitFor { shadowOf(compose.activity).nextStartedActivity != null }
+    }
+
+    @Test
+    fun okHeldBrieflyOnAChannelOfMyListStartsNoOtherChannel() = okHeldInMyListTakesOutOnlyThatChannel(repeats = 2)
+
+    @Test
+    fun okHeldLongOnAChannelOfMyListTakesNoOtherChannelOut() = okHeldInMyListTakesOutOnlyThatChannel(repeats = 14)
 
     @Test
     fun holdingOkOnAChannelAddsItToMyListAndHoldingItAgainTakesItOut() {

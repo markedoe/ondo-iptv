@@ -46,6 +46,7 @@ import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ProgressBar
 import com.markedoe.ondo.ui.model.ChannelRow
+import com.markedoe.ondo.ui.tv.LocalHeldOk
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
 
@@ -72,6 +73,7 @@ class LiveActions(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun LiveScreen(state: LiveUiState, actions: LiveActions) {
+    val heldOk = LocalHeldOk.current
     LazyColumn(modifier = Modifier.fillMaxSize().testTag("live"), contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
             TopAppBar(
@@ -118,7 +120,11 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                     .combinedClickable(
                         onClick = { actions.onPlay(row) },
                         onLongClickLabel = stringResource(R.string.toggle_favorite_action),
-                        onLongClick = { actions.onToggleFavorite(row) },
+                        onLongClick = {
+                            // Shown in My List, the channel leaves it: the rest of OK held is for no other channel.
+                            if (state.showingFavorites) heldOk?.arm()
+                            actions.onToggleFavorite(row)
+                        },
                     )
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,

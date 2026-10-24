@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -98,18 +99,56 @@ fun TelevisionFrame(content: @Composable () -> Unit) {
         content()
         return
     }
+    val heldOk = remember { HeldOk() }
     OndoTvTheme {
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).dropsRestOfHeldOk(heldOk)) {
             // Material's text outside a surface takes the light colour of the dark ground (no scaffold around pages).
             CompositionLocalProvider(
                 LocalBringIntoViewSpec provides TvScrolling,
                 LocalContentColor provides MaterialTheme.colorScheme.onBackground,
                 LocalKeyboardHandoff provides remember { KeyboardHandoff() },
+                LocalHeldOk provides heldOk,
                 content = content,
             )
         }
     }
 }
+
+/**
+ * OK held on an item that leaves the page with its long press (a channel taken out of My List while My List is
+ * shown): the rest of that press, OK repeated then let go, would reach the item that takes the focus next, as a click
+ * or as a long press of its own. The long press [arm]s it, and the TV's frame drops OK from then until it is let go.
+ * A new press of OK works as always.
+ */
+class HeldOk {
+    internal var armed = false
+
+    /** Only when the item leaves: the item that stays needs the rest of its press (its own key up). */
+    fun arm() {
+        armed = true
+    }
+}
+
+/** The TV's [HeldOk]; none elsewhere. */
+val LocalHeldOk = staticCompositionLocalOf<HeldOk?> { null }
+
+private fun Modifier.dropsRestOfHeldOk(held: HeldOk): Modifier = onPreviewKeyEvent { event ->
+    when {
+        !held.armed || !event.isOk -> false
+        // A new press: the held one ended where it could not be seen (a dialog's window).
+        event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0 -> {
+            held.armed = false
+            false
+        }
+        else -> {
+            if (event.type == KeyEventType.KeyUp) held.armed = false
+            true
+        }
+    }
+}
+
+private val KeyEvent.isOk: Boolean
+    get() = key == Key.DirectionCenter || key == Key.Enter || key == Key.NumPadEnter
 
 /**
  * On a TV, keeps a page clear of the 5 % the screen may crop (TV-OV), and of the closed drawer when [besideDrawer].
@@ -377,9 +416,8 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
 fun Modifier.newOkPressesOnly(): Modifier = composed {
     val press = remember { OkPress() }
     onPreviewKeyEvent { event ->
-        val ok = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
-        if (ok && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) press.new = true
-        ok && !press.new
+        if (event.isOk && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) press.new = true
+        event.isOk && !press.new
     }
 }
 
