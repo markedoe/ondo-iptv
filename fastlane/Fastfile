@@ -129,6 +129,29 @@ def upload_build(platform)
   )
 end
 
+# TestFlight e-mails every tester for each new build unless the build's "notify testers" is off: Ondo's uploads
+# turn it off (testers find each build in the TestFlight app). Set while App Store Connect still processes the
+# build, before it is offered. Best effort: a failure here leaves the upload as it is.
+def quiet_testers(platform, number)
+  api_key # also authorizes Spaceship::ConnectAPI
+  app = Spaceship::ConnectAPI::App.find(APP_ID)
+  detail = nil
+  40.times do
+    build = Spaceship::ConnectAPI::Build.all(app_id: app.id, build_number: number.to_s, platform: Spaceship::ConnectAPI::Platform.map(platform)).first
+    detail = build&.build_beta_detail
+    break if detail
+    sleep 15
+  end
+  if detail
+    Spaceship::ConnectAPI.patch_build_beta_details(build_beta_details_id: detail.id, attributes: { autoNotifyEnabled: false })
+    UI.message("Build #{number}: testers are not e-mailed")
+  else
+    UI.important("Build #{number} not found on App Store Connect yet: testers may be e-mailed for it")
+  end
+rescue StandardError => e
+  UI.important("Build #{number}: could not turn off the testers' e-mail (#{e.message})")
+end
+
 # The build number of this upload for the steps after it (the submission in release.yml).
 def report_build_number(number)
   File.write(ENV["GITHUB_OUTPUT"], "build=#{number}\n", mode: "a") if ENV["GITHUB_OUTPUT"]
@@ -333,6 +356,7 @@ platform :ios do
       xcargs: "#{signing_xcargs} #{build_settings_args(number)}"
     )
     upload_build("ios")
+    quiet_testers("ios", number)
     report_build_number(number)
   end
 
@@ -415,6 +439,7 @@ platform :mac do
       xcargs: "#{signing_xcargs} #{build_settings_args(number)}"
     )
     upload_build("osx")
+    quiet_testers("osx", number)
     report_build_number(number)
   end
 end

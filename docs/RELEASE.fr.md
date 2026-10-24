@@ -201,7 +201,10 @@ réseau, fichiers choisis par l'utilisateur).
      est complet et si les notes pour la review parlent de téléchargements ou de `network.server`, les
      captures comparées à la branche `appstore-screenshots`, et les soumissions à la review.
 3. **TestFlight** : les builds apparaissent après 10 à 30 min de traitement. Groupe de testeurs internes
-   (jusqu'à 100 membres de l'équipe, sans review) pour essayer sur vos appareils.
+   (jusqu'à 100 membres de l'équipe, sans review) pour essayer sur vos appareils. Les envois coupent l'e-mail
+   de TestFlight aux testeurs pour chaque nouveau build (`quiet_testers` dans le Fastfile) : l'app TestFlight
+   montre le dernier. Chaque testeur peut aussi couper les e-mails d'une app dans l'app TestFlight (la page de
+   l'app, *Notifications par e-mail*).
 
    **Deux éditions.** *Run workflow* demande une `edition` : `testflight` (par défaut) construit l'app avec les
    téléchargements, pour les testeurs internes seulement ; `app-store` la construit sans (règle 5.2.3 d'Apple
