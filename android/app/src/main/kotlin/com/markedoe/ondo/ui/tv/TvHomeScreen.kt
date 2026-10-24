@@ -109,14 +109,14 @@ fun TvHomeScreen(
         if (resumeMovies.isNotEmpty()) {
             tvShelf(titles.movies, "shelfResumeMovies") {
                 items(resumeMovies, key = { it.key }) { item ->
-                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey)
+                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { actions.onRemoveResume(item) })
                 }
             }
         }
         if (resumeSeries.isNotEmpty()) {
             tvShelf(titles.series, "shelfResumeSeries") {
                 items(resumeSeries, key = { it.key }) { item ->
-                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey)
+                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { actions.onRemoveResume(item) })
                 }
             }
         }

@@ -17,6 +17,8 @@
     <string name="play_episode">Lire %1$s</string>
     <string name="resume_episode">Reprendre %1$s</string>
     <string name="continue_watching">Continuer à regarder</string>
+    <string name="remove_from_history">Retirer de l\'historique</string>
+    <string name="remove_from_history_text">L\'endroit où vous vous étiez arrêté sera oublié.</string>
     <string name="beta">Bêta</string>
     <string name="movies_in_progress">Films en cours</string>
     <string name="series_in_progress">Séries en cours</string>

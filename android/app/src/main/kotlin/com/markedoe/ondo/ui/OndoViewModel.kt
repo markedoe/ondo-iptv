@@ -251,6 +251,9 @@ class OndoViewModel(
         }
     }
 
+    /** Long press on a "Continue watching" card: the card goes. */
+    fun removeFromContinueWatching(key: String) = repository.removeFromContinueWatching(key)
+
     /** A "Continue watching" card: the movie, episode or channel it stands for. */
     fun resume(key: String) {
         val current = state.value

@@ -370,6 +370,23 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
         }
 }
 
+/**
+ * A dialog opened while OK is still held (a long press): the rest of that press, OK repeated then let go, is no click
+ * on what the dialog focuses first. A new press of OK works as always.
+ */
+fun Modifier.newOkPressesOnly(): Modifier = composed {
+    val press = remember { OkPress() }
+    onPreviewKeyEvent { event ->
+        val ok = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
+        if (ok && event.type == KeyEventType.KeyDown && event.nativeKeyEvent.repeatCount == 0) press.new = true
+        ok && !press.new
+    }
+}
+
+private class OkPress {
+    var new = false
+}
+
 /** Whether an item has the focus, as it leaves the page. */
 private class HeldFocus {
     var held = false

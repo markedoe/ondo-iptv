@@ -17,6 +17,8 @@
     <string name="play_episode">%1$s चलाएँ</string>
     <string name="resume_episode">%1$s जारी रखें</string>
     <string name="continue_watching">देखना जारी रखें</string>
+    <string name="remove_from_history">इतिहास से हटाएँ</string>
+    <string name="remove_from_history_text">आपने जहाँ रोका था, वह याद नहीं रखा जाएगा।</string>
     <string name="beta">बीटा</string>
     <string name="movies_in_progress">देखी जा रही फ़िल्में</string>
     <string name="series_in_progress">देखी जा रही सीरीज़</string>

@@ -514,7 +514,11 @@ class OndoRepository(
         updateLibrary { it.updateProgress(key, position, duration, now()) }
     }
 
-    fun removeFromHistory(entry: WatchEntry) = updateLibrary { it.remove(entry, now()) }
+    /** Takes a "Continue watching" card away: the movie, or the series' episodes in progress. */
+    fun removeFromContinueWatching(key: String) {
+        val entry = _state.value.library.progress(key) ?: return
+        updateLibrary { it.removingFromContinueWatching(entry, now()) }
+    }
 
     // MARK: Reminders
 

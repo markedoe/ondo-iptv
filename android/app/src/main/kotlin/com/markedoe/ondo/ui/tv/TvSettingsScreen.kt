@@ -476,7 +476,7 @@ fun TvSwitchRow(
     )
 }
 
-/** A question before something that cannot be undone: the remote starts on Cancel. */
+/** A question before something that cannot be undone: the remote starts on Cancel, the OK that opened it held or not. */
 @Composable
 fun TvConfirmDialog(title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val cancel = remember { FocusRequester() }
@@ -485,7 +485,7 @@ fun TvConfirmDialog(title: String, text: String, confirm: String, onConfirm: () 
             shape = RoundedCornerShape(24.dp),
             colors = SurfaceDefaults.colors(containerColor = OndoColors.SurfaceHigh, contentColor = Color.White),
             border = Border(BorderStroke(1.dp, Color.White.copy(alpha = 0.12f))),
-            modifier = Modifier.widthIn(max = 560.dp).testTag("confirmDialog"),
+            modifier = Modifier.widthIn(max = 560.dp).newOkPressesOnly().testTag("confirmDialog"),
         ) {
             Column(Modifier.padding(32.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
@@ -524,7 +524,7 @@ fun <T> TvChoiceDialog(title: String, options: List<T>, selected: T, label: @Com
         Surface(
             shape = RoundedCornerShape(24.dp),
             colors = SurfaceDefaults.colors(containerColor = OndoColors.SurfaceHigh, contentColor = Color.White),
-            modifier = Modifier.widthIn(min = 360.dp, max = 480.dp).testTag("choiceDialog"),
+            modifier = Modifier.widthIn(min = 360.dp, max = 480.dp).newOkPressesOnly().testTag("choiceDialog"),
         ) {
             Column(Modifier.padding(vertical = 24.dp, horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, bottom = 12.dp))

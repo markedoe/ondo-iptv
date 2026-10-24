@@ -344,6 +344,7 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onPlay = viewModel::play,
             onToggleMyList = viewModel::toggleMyList,
             onResume = { viewModel.resume(it.key) },
+            onRemoveResume = { viewModel.removeFromContinueWatching(it.key) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = false, myList = true, anyType = true)) },
             onSeeAllLive = { navController.openTab(TopLevel.LIVE) },
             onPlayChannel = viewModel::playChannel,
@@ -371,6 +372,7 @@ private fun VodDestination(viewModel: OndoViewModel, navController: NavHostContr
         actions = VodActions(
             onOpen = navController::open,
             onResume = { viewModel.resume(it.key) },
+            onRemoveResume = { viewModel.removeFromContinueWatching(it.key) },
             onCategory = { category -> navController.navigate(Routes.Grid(series = series, categoryId = category?.id)) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = series, myList = true)) },
             onSearch = { navController.navigate(Routes.Search) },

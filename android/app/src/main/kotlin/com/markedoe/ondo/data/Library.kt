@@ -145,6 +145,15 @@ data class LibraryState(
     fun remove(entry: WatchEntry, now: Long = entry.lastWatchedAt): LibraryState =
         copy(history = history.filterNot { it.key == entry.key }).let { if (SyncKeys.syncs(entry)) it.deleting(SyncKeys.progress(entry), now) else it }
 
+    /**
+     * Takes a card out of Continue watching: the movie, or the series with its other episodes in progress (the one
+     * before would take the card's place). Episodes watched to the end stay watched.
+     */
+    fun removingFromContinueWatching(entry: WatchEntry, now: Long): LibraryState =
+        history
+            .filter { it.key == entry.key || (entry.kind == ItemKind.SERIES && it.playlistId == entry.playlistId && it.kind == entry.kind && it.itemId == entry.itemId && it.isResumable) }
+            .fold(this) { library, gone -> library.remove(gone, now) }
+
     /** Movies and episodes in progress, most recent first, one entry per series. */
     fun continueWatching(playlistId: String, limit: Int = 20): List<WatchEntry> {
         val seen = mutableSetOf<String>()

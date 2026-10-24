@@ -212,13 +212,30 @@ fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = M
     }
 }
 
-/** A 16:9 "continue watching" card: the picture with its progress, the title and the time left beneath. */
+/**
+ * A 16:9 "continue watching" card: the picture with its progress, the title and the time left beneath. OK held down
+ * asks whether to take the card away ([onRemove]).
+ */
 @Composable
-fun TvResumeCard(item: ResumeItem, onClick: () -> Unit, modifier: Modifier = Modifier, preparing: Boolean = false) {
+fun TvResumeCard(item: ResumeItem, onClick: () -> Unit, modifier: Modifier = Modifier, preparing: Boolean = false, onRemove: (() -> Unit)? = null) {
     val (scale, border, glow) = cardFocus()
+    var asking by remember { mutableStateOf(false) }
+    if (asking && onRemove != null) {
+        TvConfirmDialog(
+            item.title,
+            stringResource(R.string.remove_from_history_text),
+            stringResource(R.string.remove_from_history),
+            onConfirm = {
+                asking = false
+                onRemove()
+            },
+            onDismiss = { asking = false },
+        )
+    }
     Column(modifier.width(TvTokens.WideCardWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
+            onLongClick = onRemove?.let { { asking = true } },
             modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).semantics { contentDescription = item.title },
             shape = CardDefaults.shape(TvTokens.CardShape),
             scale = scale,
