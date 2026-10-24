@@ -65,7 +65,7 @@ import org.robolectric.annotation.Config
 
 /**
  * Android TV: where the remote's focus is when the catalogue under it changes — it arrives on a Home already shown, or
- * the playlist is replaced by another device's copy.
+ * the playlist is replaced by another device's copy, or what the remote is on leaves the page (a refresh, an answer).
  * What a page does when its title leaves the catalogue.
  * What is kept of the screens when Ondo goes to the background.
  * The text fields (add a playlist, Search, filters), with arrows that come from a virtual device (a phone used as a
@@ -95,8 +95,8 @@ class TelevisionFocusTest {
 
     private lateinit var http: SlowHttp
 
-    /** The welcome page; with [stored], that playlist and its catalogue already saved, Home. */
-    private fun start(answers: Map<String, String> = smallPanel(), stored: PlaylistContent? = null) {
+    /** The welcome page; with [stored], that playlist and its catalogue already saved, Home ([shown] on it). */
+    private fun start(answers: Map<String, String> = smallPanel(), stored: PlaylistContent? = null, shown: String = "hero") {
         val store = AppStore(folder.root.resolve("ondo"))
         if (stored != null) {
             store.savePlaylists(listOf(Fixtures.playlist))
@@ -118,7 +118,7 @@ class TelevisionFocusTest {
             focusManager = LocalFocusManager.current
             OndoTheme { CompositionLocalProvider(LocalCarouselAutoAdvance provides false) { OndoApp(viewModel) } }
         }
-        compose.waitUntil(10_000) { exists(if (stored == null) "welcome" else "hero") }
+        compose.waitUntil(10_000) { exists(if (stored == null) "welcome" else shown) }
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
         settle()
@@ -462,6 +462,111 @@ class TelevisionFocusTest {
         waitFor { "trailer" in repository.state.value.library.hiddenWords }
         assertTrue("the focus is on ${focused()}", focusedIn("categories") && !editing())
     }
+
+    /** The stored playlist's list once refreshed: another channel and another film in place of those shown. */
+    private val otherTitles = mapOf(
+        Fixtures.playlist.url to "#EXTM3U\n#EXTINF:-1 group-title=\"News\",Other News\nhttp://example.com/live/c9.m3u8\n" +
+            "#EXTINF:-1 group-title=\"Drama\",Other Film\nhttp://example.com/movie/9.mp4\n",
+    )
+
+    /** A refresh takes away what the remote is on; the next press moves on the page, not in the drawer. */
+    private fun refreshUnderTheRemote(page: String) {
+        compose.runOnIdle { repository.refresh() }
+        waitFor { repository.state.value.content.channels.map { it.name } == listOf("Other News") && !repository.state.value.isLoading }
+        settle(1_000)
+        press(Key.DirectionDown)
+        assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn(page) && !focusedTag().startsWith("tab"))
+    }
+
+    @Test
+    fun theRemoteStaysOnLiveTvWhenARefreshTakesAwayItsChannel() {
+        start(answers = otherTitles, stored = Fixtures.content)
+        openFromDrawer("tabLive")
+        assertTrue("the focus is on ${focused()}", focusedIn("live"))
+        refreshUnderTheRemote("live")
+    }
+
+    @Test
+    fun theRemoteStaysOnMyListWhenARefreshTakesAwayItsPoster() {
+        start(answers = otherTitles, stored = Fixtures.content)
+        // The carousel's first title in My List.
+        waitFor { focusedTag() == "heroPlay" }
+        press(Key.DirectionRight)
+        press(Key.DirectionCenter)
+        waitFor { repository.state.value.library.favorites.isNotEmpty() }
+        val title = repository.state.value.library.favorites.single().title
+        openFromDrawer("tabMyList")
+        pressUntil(Key.DirectionDown) { focused() == title }
+        refreshUnderTheRemote("myList")
+    }
+
+    /** Movies, a poster chosen, then the playlist typed here becomes the phone's: its catalogue empty, then back. */
+    @Test
+    fun theRemoteComesBackToMoviesWhenThePlaylistTypedHereBecomesThePhones() {
+        start()
+        addWithTheRemote()
+        waitFor { exists("home") && focusedTag() == "heroPlay" }
+        openFromDrawer("tabMovies")
+        pressUntil(Key.DirectionDown) { focused().startsWith("Movie ") }
+        press(Key.DirectionRight)
+        http.open.value = false
+        compose.runOnIdle { repository.mergeSync(fromThePhone(progress = false), "Phone") }
+        waitFor { repository.state.value.activePlaylistId == phonePlaylist }
+        settle(1_000)
+        http.open.value = true
+        waitFor { repository.state.value.content.movies.isNotEmpty() && exists("vod") }
+        settle(1_000)
+        press(Key.DirectionDown)
+        assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn("vod") && !focusedTag().startsWith("tab"))
+    }
+
+    /** Channels only (no carousel, no Play): the stored playlist, then the same list from the phone, which replaces it. */
+    @Test
+    fun theRemoteComesBackToAHomeOfChannelsOnlyWhenThePlaylistBecomesThePhones() {
+        val channelsOnly = Fixtures.content.copy(movies = emptyList(), series = emptyList(), movieCategories = emptyList(), seriesCategories = emptyList())
+        start(answers = mapOf(Fixtures.playlist.url to "#EXTM3U\n#EXTINF:-1 group-title=\"News\",Ondo News\nhttp://example.com/live/c1.m3u8\n"), stored = channelsOnly, shown = "shelfChannels")
+        waitFor { focusedIn("shelfChannels") }
+        http.open.value = false
+        val phone = SyncSnapshot(
+            device = "11111111-2222-3333-4444-555555555555",
+            deviceName = "Phone",
+            playlists = listOf(SyncPlaylist(id = phonePlaylist, name = "Home", kind = SyncPlaylist.M3U, url = Fixtures.playlist.url, addedAt = 1, updatedAt = 1)),
+        )
+        compose.runOnIdle { repository.mergeSync(phone, "Phone") }
+        waitFor { repository.state.value.activePlaylistId == phonePlaylist }
+        settle(1_000)
+        http.open.value = true
+        waitFor { repository.state.value.content.channels.isNotEmpty() && exists("shelfChannels") }
+        settle(1_000)
+        press(Key.DirectionDown)
+        assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn("home") && !focusedTag().startsWith("tab"))
+    }
+
+    /** Categories with a language tag, each on two of them: English, French and German (the viewer reads English). */
+    private val tagged = Fixtures.content.copy(
+        movieCategories = listOf(Fixtures.drama.copy(name = "EN | Drama"), Fixtures.sciFi.copy(name = "FR | Science Fiction"), Fixtures.thriller.copy(name = "DE | Thriller"), Fixtures.adultMovies),
+        seriesCategories = listOf(Fixtures.seriesDrama.copy(name = "FR | Drama"), Fixtures.seriesMystery.copy(name = "DE | Mystery")),
+        liveCategories = listOf(Fixtures.news.copy(name = "EN | News"), Fixtures.sports),
+    )
+
+    /** The suggestion to keep only the viewer's languages, answered with the remote: the remote stays on Home. */
+    private fun answerTheSuggestion(button: String) {
+        start(answers = emptyMap(), stored = tagged)
+        waitFor { focusedTag() == "heroPlay" && exists("tagSuggestion") }
+        pressUntil(Key.DirectionDown) { focusedIn("tagSuggestion") }
+        pressUntil(Key.DirectionRight) { focused() == button }
+        press(Key.DirectionCenter)
+        waitFor { !exists("tagSuggestion") }
+        settle(1_000)
+        press(Key.DirectionDown)
+        assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn("home") && !focusedTag().startsWith("tab"))
+    }
+
+    @Test
+    fun notNowKeepsTheRemoteOnHome() = answerTheSuggestion("Not now")
+
+    @Test
+    fun keepOnlyTheseKeepsTheRemoteOnHome() = answerTheSuggestion("Keep only these")
 
     /**
      * A genre field with no separator in a long run of text, then a genre: the first chip opens the titles of its genre.

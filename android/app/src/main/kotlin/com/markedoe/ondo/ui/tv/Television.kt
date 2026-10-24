@@ -20,15 +20,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RippleConfiguration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.focus.FocusDirection
@@ -43,6 +47,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * Android TV and Google TV: the remote's five-way pad moves a visible focus from item to item (Google's TV app
@@ -170,7 +175,8 @@ fun FocusEntry(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     var hasFocus by remember { mutableStateOf(false) }
     val mode = LocalInputModeManager.current.inputMode
     val memory = LocalFocusMemory.current
-    LaunchedEffect(mode) {
+    // Again when the item with the focus leaves the page with it ([FocusMemory.dropped]).
+    LaunchedEffect(mode, memory?.drops) {
         // The page's own first item (or the one to come back to) takes it first; the content may still be loading.
         repeat(50) {
             delay(100)
@@ -209,6 +215,20 @@ class FocusMemory(key: String? = null) {
         chosen = false
     }
 
+    /** How many times the item with the focus left the page with it ([dropped]). */
+    var drops: Int by mutableIntStateOf(0)
+        private set
+
+    /**
+     * The item with the focus left the page while it had it (its title gone from the catalogue, its question
+     * answered): the focus went to the drawer, or nowhere. The page's first item, or the page ([FocusEntry]), takes it
+     * back.
+     */
+    fun dropped() {
+        chosen = false
+        drops++
+    }
+
     fun restored() {
         restore = null
     }
@@ -227,7 +247,7 @@ val LocalFocusMemory = staticCompositionLocalOf<FocusMemory?> { null }
 /**
  * Records this item as the page's last focus under [key], and takes the focus back when the page comes back to it.
  * On a TV, the page's first item ([initial]) takes the focus when there is nothing to come back to: no place yet, or
- * one the viewer did not choose ([FocusMemory.chosen]).
+ * one the viewer did not choose ([FocusMemory.chosen]), as when the item with the focus leaves the page with it.
  */
 fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = composed {
     val memory = LocalFocusMemory.current
@@ -236,14 +256,35 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
     val restoring = memory?.restore
     // Items take the focus in keyboard mode only (a remote, a keyboard): tried again when the mode changes.
     val mode = LocalInputModeManager.current.inputMode
-    LaunchedEffect(restoring, television, mode) {
+    LaunchedEffect(restoring, television, mode, memory?.drops) {
         val wanted = when {
             restoring != null -> restoring == key
             else -> television && initial && (memory?.last == null || !memory.chosen)
         }
         if (wanted && runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.restored()
     }
+    val focus = remember { HeldFocus() }
+    val scope = rememberCoroutineScope()
+    DisposableEffect(memory) { onDispose { if (focus.held) memory?.dropped() } }
     this
         .focusRequester(requester)
-        .onFocusChanged { if (it.isFocused) memory?.focused(key) }
+        .onFocusChanged {
+            val change = ++focus.changes
+            if (it.isFocused) {
+                focus.held = true
+                memory?.focused(key)
+            } else if (focus.held) {
+                // An item leaving the page loses the focus just before it goes: it still holds it until the next frame.
+                scope.launch {
+                    withFrameNanos {}
+                    if (focus.changes == change) focus.held = false
+                }
+            }
+        }
+}
+
+/** Whether an item has the focus, as it leaves the page. */
+private class HeldFocus {
+    var held = false
+    var changes = 0
 }

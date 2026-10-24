@@ -286,9 +286,10 @@ private fun TvTagSuggestion(suggestion: TagSuggestion, actions: HomeActions) {
         Text(stringResource(R.string.tag_suggestion_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
         Text(pluralStringResource(R.plurals.tag_suggestion_message, count, count, kept), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TvActionButton(onClick = { actions.onAcceptSuggestion(suggestion) }, modifier = Modifier.testTag("keepMyLanguages")) { Text(stringResource(R.string.keep_only_these)) }
-            TvActionButton(onClick = actions.onChooseCategories) { Text(stringResource(R.string.choose)) }
-            TvActionButton(onClick = actions.onDismissSuggestion) { Text(stringResource(R.string.not_now)) }
+            // Answered, the suggestion goes with the button that has the focus: Home takes the focus back (focusMemory).
+            TvActionButton(onClick = { actions.onAcceptSuggestion(suggestion) }, modifier = Modifier.focusMemory("suggestion-keep").testTag("keepMyLanguages")) { Text(stringResource(R.string.keep_only_these)) }
+            TvActionButton(onClick = actions.onChooseCategories, modifier = Modifier.focusMemory("suggestion-choose")) { Text(stringResource(R.string.choose)) }
+            TvActionButton(onClick = actions.onDismissSuggestion, modifier = Modifier.focusMemory("suggestion-dismiss")) { Text(stringResource(R.string.not_now)) }
         }
     }
 }
