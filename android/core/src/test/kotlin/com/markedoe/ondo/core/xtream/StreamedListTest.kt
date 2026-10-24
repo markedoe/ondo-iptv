@@ -6,17 +6,29 @@ import com.markedoe.ondo.core.MockHttpClient
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.model.XtreamOutputFormat
 import com.markedoe.ondo.core.net.GzipException
+import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.nio.file.Files
 import java.util.zip.GZIPOutputStream
+import kotlin.concurrent.thread
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
+import org.junit.Assume.assumeTrue
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -82,6 +94,64 @@ class StreamedListTest {
         assertEquals("x7", content.movies[6].id)
         assertTrue(content.movieCategories.size >= 200)
         assertEquals(emptyList(), downloads.listFiles()!!.map { it.name })
+    }
+
+    /**
+     * A load cancelled while it decodes a list (another playlist opened, sync changed the login) stops reading it: the
+     * cancelled catalogue does not keep growing in memory beside the one loaded next. The list comes through a pipe, so
+     * what the client stops reading is what it stops decoding.
+     */
+    @Test
+    fun aCancelledLoadStopsReadingTheListItDecodes() = runBlocking {
+        assumeTrue("needs mkfifo", File("/usr/bin/mkfifo").canExecute() || File("/bin/mkfifo").canExecute())
+        val routes = LargeCatalogue.xtream(File(folder, "api"), live = 1, movies = 20_000, series = 1)
+        val movies = routes.getValue("get_vod_streams").readBytes()
+        val partRead = CompletableDeferred<Unit>()
+        val readerStopped = CompletableDeferred<Boolean>()
+        val files = FileHttp(routes)
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>) = files.get(url, headers)
+
+            override suspend fun download(url: String, headers: Map<String, String>, file: File) {
+                if (!url.contains("action=get_vod_streams")) return files.download(url, headers, file)
+                fun pipe(at: File) = check(ProcessBuilder("mkfifo", at.path).start().waitFor() == 0)
+                file.delete()
+                pipe(file)
+                thread {
+                    // Once whole for the check of its nesting, then for the decoding: through another pipe, put in
+                    // place before this one ends so that the second reading cannot open the first pipe again.
+                    FileOutputStream(file).use { out ->
+                        out.write(movies)
+                        val next = File(file.path + ".next")
+                        pipe(next)
+                        check(next.renameTo(file))
+                    }
+                    try {
+                        FileOutputStream(file).use { out ->
+                            out.write(movies, 0, movies.size / 4)
+                            partRead.complete(Unit)
+                            var at = movies.size / 4
+                            while (at < movies.size) {
+                                val count = minOf(16 * 1024, movies.size - at)
+                                out.write(movies, at, count)
+                                at += count
+                            }
+                        }
+                        readerStopped.complete(false)
+                    } catch (_: IOException) {
+                        readerStopped.complete(true) // broken pipe: the client closed the list
+                    }
+                }
+            }
+        }
+        val client = XtreamClient(XtreamCredentials("http://panel.example.com", "demo", "demo"), http, downloadFolder = File(folder, "downloads"))
+        // Not a child of the test: a reading stuck in the pipe fails the test on time rather than holding it.
+        val load = CoroutineScope(Dispatchers.Default).launch { client.fetchContent(XtreamOutputFormat.M3U8) }
+        withTimeout(60_000) {
+            partRead.await()
+            load.cancelAndJoin()
+            assertTrue(readerStopped.await(), "the cancelled load read its list to the end")
+        }
     }
 
     /** A fake answering through `get` only (as most test fakes do) still works: `download` defaults to it. */

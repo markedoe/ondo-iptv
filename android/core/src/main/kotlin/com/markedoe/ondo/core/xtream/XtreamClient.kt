@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonElement
 
@@ -74,7 +75,8 @@ class XtreamClient(
         }
         try {
             http.download(urls.apiUrl(action, emptyMap()), headers.toMap(), file)
-            return withContext(parsingDispatcher) { decodeList(file, decode) }
+            // A cancelled load stops at the next element: a list nobody waits for is not decoded to its end.
+            return withContext(parsingDispatcher) { decodeList(file) { ensureActive(); decode(it) } }
         } finally {
             withContext(NonCancellable + Dispatchers.IO) { file.delete() }
         }
