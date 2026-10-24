@@ -4,13 +4,16 @@ first launch, Add a Playlist, Xtream Codes (the made-up panel of fake_xtream_pan
 `adb reverse`), Add, then every tab. Watches the app's process the whole time: a crash, an ANR or Android ending the
 app fails the run. Screenshots, the screen's text, logcat, the exit reasons and memory use go to the output folder.
 With --paths, more of the app after that, each path from a fresh start of the app (the saved playlist read again):
-settings, search, details, player, guide, mylist, playlists, restore, crash (see PATHS).
+settings, search, details, player, guide, mylist, playlists, restore, browse, sync, crash (see PATHS).
 
 Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240] [--paths settings,search,...]
 """
 import argparse
+import json
 import os
 import re
+import socket
+import struct
 import subprocess
 import sys
 import time
@@ -645,6 +648,161 @@ def path_playlists(tv, args):
     tv.check_alive("back from the Settings")
 
 
+def path_browse(tv, args):
+    """Pages opened with arguments: a category's grid (and every movie's), a genre and a year (Browse: its kind read
+    back by name), a new collection and its page, the filters of Search, Live TV and the guide."""
+    tv.drawer("Movies")
+    tv.open("FR | Films 2", keys=("UP", "RIGHT", "RIGHT", "RIGHT"), max_presses=8, exact=True, wait=5)
+    tv.note_screen("browse-category-grid")
+    tv.key("DOWN")
+    tv.key("RIGHT", 2)
+    tv.key("DPAD_CENTER")
+    time.sleep(4)
+    tv.check_alive("a movie of a category's grid opened")
+    tv.note_screen("browse-grid-movie")
+    tv.open("Drama", keys=("DOWN", "DOWN", "DOWN", "UP"), max_presses=10, exact=True, wait=5)
+    tv.note_screen("browse-genre")
+    tv.key("DOWN")
+    tv.key("DPAD_CENTER")
+    time.sleep(4)
+    tv.check_alive("a title of a genre opened")
+    tv.note_screen("browse-genre-movie")
+    tv.focus_exact("Drama", keys=("DOWN", "DOWN", "DOWN", "UP"), max_presses=10)
+    tv.open("Year ", keys=("RIGHT",), max_presses=4, wait=5)
+    tv.note_screen("browse-year")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.open("Collection", keys=("UP", "UP", "UP", "UP", "RIGHT"), max_presses=10, exact=True, wait=2)
+    tv.open("New collection", keys=("DOWN",), max_presses=4, wait=2)
+    tv.note_screen("browse-collection-name")
+    tv.focus_on("Create", keys=("TAB",), max_presses=6, editable=False)
+    tv.key("DPAD_CENTER")
+    tv.stay(3, "a collection created")
+    tv.note_screen("browse-collection-created")
+    tv.drawer("My List")
+    tv.open("Collections", keys=("UP", "RIGHT", "RIGHT", "RIGHT", "RIGHT"), max_presses=10, exact=True, wait=2)
+    tv.open("Collection 1", keys=("DOWN",), max_presses=4, wait=4)
+    tv.note_screen("browse-collection-page")
+    tv.key("DOWN")
+    tv.key("DPAD_CENTER")
+    time.sleep(4)
+    tv.check_alive("a title of a collection opened")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.key("BACK")
+    time.sleep(2)
+    tv.drawer("Search")
+    tv.focus_on_field(0)
+    tv.shell("input text 'Series%s1'")
+    tv.stay(3, "search typed")
+    tv.open("Filters", keys=("TAB",), max_presses=4, wait=3)
+    tv.note_screen("browse-search-filters")
+    tv.key("DOWN", 2)
+    tv.key("DPAD_CENTER")
+    time.sleep(2)
+    tv.check_alive("a search filter chosen")
+    tv.note_screen("browse-search-filter-chosen")
+    tv.key("BACK")
+    time.sleep(2)
+    tv.drawer("Live TV")
+    tv.key("UP", 3)
+    tv.open("Categories", keys=("RIGHT",), max_presses=8, exact=True, wait=3)
+    tv.note_screen("browse-live-categories")
+    tv.key("DOWN", 3)
+    tv.key("DPAD_CENTER")
+    time.sleep(3)
+    tv.check_alive("a live category chosen")
+    tv.note_screen("browse-live-category")
+
+
+def listening_ports(tv):
+    """The TCP ports the app listens on (its sync server), from the system's socket tables."""
+    uid = re.search(r"userId=(\d+)", tv.shell(f"dumpsys package {PACKAGE}"))
+    if not uid:
+        return []
+    ports = []
+    for table in ("/proc/net/tcp6", "/proc/net/tcp"):
+        for line in tv.shell(f"cat {table}").splitlines()[1:]:
+            fields = line.split()
+            # sl local_address rem_address st tx:rx tr:when retrnsmt uid ...
+            if len(fields) > 7 and fields[3] == "0A" and fields[7] == uid.group(1):
+                ports.append(int(fields[1].rsplit(":", 1)[1], 16))
+    return sorted(set(ports))
+
+
+def sync_exchange(port, snapshot):
+    """One sync session as another device runs it (docs/SYNC.md): a frame (4-byte length, JSON) each way."""
+    payload = json.dumps(snapshot).encode()
+    with socket.create_connection(("127.0.0.1", port), timeout=30) as connection:
+        connection.sendall(struct.pack(">I", len(payload)) + payload)
+        header = b""
+        while len(header) < 4:
+            chunk = connection.recv(4 - len(header))
+            if not chunk:
+                return None
+            header += chunk
+        size = struct.unpack(">I", header)[0]
+        body = b""
+        while len(body) < size:
+            chunk = connection.recv(min(1 << 16, size - len(body)))
+            if not chunk:
+                return None
+            body += chunk
+    return json.loads(body)
+
+
+def path_sync(tv, args):
+    """Sync on the local network turned on, and a session from another device (a made-up phone, through adb forward):
+    its snapshot read by the release build, merged (a playlist, My List, progress, a list), and the answer written."""
+    tv.drawer("Settings")
+    settings_section(tv, "Sync")
+    tv.key("RIGHT")
+    tv.open("Sync on this network", keys=("UP",), max_presses=3, wait=6)
+    ports = listening_ports(tv)
+    tv.say(f"the app listens on {ports}")
+    if not ports:
+        raise TimeoutError("no sync server listening after sync was turned on")
+    tv.adb("forward", "tcp:18765", f"tcp:{ports[0]}")
+    now = int(time.time() * 1000)
+    playlist = "6f1c0d3e-0000-4000-8000-00000000a001"
+    snapshot = {
+        "type": "ondo-sync", "version": 1, "device": "0f0f0f0f-0000-4000-8000-0000000000aa", "deviceName": "Test phone",
+        "playlists": [{"id": playlist, "name": "Synced", "kind": "xtream", "url": args.server, "username": "viewer",
+                       "password": "secret", "addedAt": now, "updatedAt": now}],
+        "favorites": [{"playlist": playlist, "kind": "movie", "item": "12", "title": "Movie 12", "addedAt": now},
+                      {"playlist": playlist, "kind": "live", "item": "3", "title": "Channel 3", "addedAt": now}],
+        "progress": [{"playlist": playlist, "kind": "movie", "item": "12", "title": "Movie 12", "position": 60.0,
+                      "duration": 5400.0, "watchedAt": now}],
+        "lists": [{"id": "6f1c0d3e-0000-4000-8000-00000000b001", "name": "Weekend", "updatedAt": now,
+                   "items": [{"playlist": playlist, "kind": "movie", "item": "12", "title": "Movie 12"}]}],
+        "deleted": {}, "replaced": {},
+    }
+    try:
+        answer = sync_exchange(18765, snapshot)
+    except (OSError, ValueError) as problem:
+        answer = None
+        tv.say(f"sync session: {problem!r}")
+    tv.check_alive("a sync session from another device")
+    if answer is None:
+        raise TimeoutError("the app's sync server gave no answer")
+    tv.say(f"sync answer from {answer.get('deviceName')!r}: {len(answer.get('playlists', []))} playlists, "
+           f"{len(answer.get('favorites', []))} in My List, {len(answer.get('progress', []))} progress, {len(answer.get('lists', []))} lists")
+    tv.stay(10, "a sync merged")
+    tv.note_screen("sync-heard")
+    tv.key("LEFT")
+    settings_section(tv, "Playlists")
+    tv.stay(3, "the playlists after a sync")
+    tv.note_screen("sync-playlists")
+    settings_section(tv, "Sync")
+    tv.key("RIGHT")
+    tv.open("Sync on this network", keys=("UP",), max_presses=3, wait=3)
+    tv.adb("forward", "--remove", "tcp:18765")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.drawer("My List")
+    tv.note_screen("sync-mylist")
+
+
 def recreated(tv, where):
     """The screen made again by Android (a system setting changed: night mode, and back), its saved state read back."""
     for mode in ("yes", "no"):
@@ -748,6 +906,8 @@ PATHS = {
     "mylist": path_mylist,
     "playlists": path_playlists,
     "restore": path_restore,
+    "browse": path_browse,
+    "sync": path_sync,
     # Last: it crashes the app on purpose.
     "crash": path_crash,
 }
