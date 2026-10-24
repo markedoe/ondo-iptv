@@ -75,6 +75,13 @@ private const val TWO_POW_63 = 9.223372036854775808e18
 internal fun JsonElement?.lenientInt(): Int? =
     lenientLong()?.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.toInt()
 
+/**
+ * A year (2021, "2021"), else the one [date] starts with ("2021-05-04"): anything but four digits (0 for none, -1,
+ * 1e18) is no year.
+ */
+internal fun JsonElement?.lenientYear(date: String? = null): Int? =
+    listOfNotNull(lenientInt(), date?.take(4)?.toIntOrNull()).firstOrNull { it in 1_000..9_999 }
+
 /** Number, or numeric string (`","` accepted as decimal separator). Booleans are not numbers. */
 internal fun JsonElement?.lenientDouble(): Double? {
     val p = primitive ?: return null

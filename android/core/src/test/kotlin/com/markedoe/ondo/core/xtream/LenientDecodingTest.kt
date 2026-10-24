@@ -108,6 +108,17 @@ class LenientDecodingTest {
         assertNull(field("\"-9.3e18\"").lenientLong())
     }
 
+    /** Only four-digit years are years (0 for none, -1, 1e18 are not); a series without one takes its release date's. */
+    @Test
+    fun yearsThatAreNotYearsAreIgnored() {
+        val movies = Json.parseToJsonElement("""[{"stream_id":1,"year":"-9223372036854775808"},{"stream_id":2,"year":0},{"stream_id":3,"year":"2021"},{"stream_id":4,"year":1e18},{"stream_id":5,"year":-1}]""")
+            .lossyList(XtreamVodStreamDto::from)
+        assertEquals(listOf(null, null, 2021, null, null), movies.map { it.year })
+        val series = Json.parseToJsonElement("""[{"series_id":1,"year":"0","releaseDate":"2019-05-04"},{"series_id":2,"release_date":"-999-01-01"},{"series_id":3,"year":2008}]""")
+            .lossyList(XtreamSeriesDto::from)
+        assertEquals(listOf(2019, null, 2008), series.map { it.year })
+    }
+
     /** A number too large for a double is dropped whether the panel quotes it or not: it could not be saved. */
     @Test
     fun doublesBeyondTheRangeAreIgnored() {

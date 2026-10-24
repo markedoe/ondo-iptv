@@ -125,7 +125,7 @@ internal data class XtreamVodStreamDto(
                 rating5 = o["rating_5based"].lenientDouble(),
                 added = o["added"].lenientEpochSeconds(),
                 containerExtension = o["container_extension"].lenientString()?.nilIfBlank(),
-                year = o["year"].lenientInt(),
+                year = o["year"].lenientYear(),
                 plot = o["plot"].lenientString()?.nilIfBlank(),
             )
         }
@@ -163,7 +163,7 @@ internal data class XtreamSeriesDto(
                 rating = o["rating"].lenientDouble(),
                 categoryId = o["category_id"].lenientString(),
                 lastModified = o["last_modified"].lenientEpochSeconds(),
-                year = o["year"].lenientInt() ?: releaseDate?.take(4)?.toIntOrNull(),
+                year = o["year"].lenientYear(releaseDate),
             )
         }
     }
