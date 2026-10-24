@@ -152,6 +152,11 @@ PERSONAL_RULES = [
     ("home folder", re.compile(r"(?:/Users/(?!runner\b|Shared\b|\$|<)[A-Za-z0-9._-]+|/home/(?!runner\b|user\b|\$|<)[A-Za-z0-9._-]+"
                                r"|/root/\.claude\b[^\s'\"]*|[A-Z]:\\Users\\[A-Za-z0-9._-]+)")),
     ("private network address", re.compile(r"\b(?:192\.168|10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}\b")),
+    # The other local addresses of docs/SYNC.md: IPv4 link-local, IPv6 unique local (fc00::/7) and link-local
+    # (fe80::/10) with at least two groups after the first (not the ranges, nor the usual examples fe80::1, fc00::1).
+    ("local network address", re.compile(
+        r"(?i)\b169\.254\.\d{1,3}\.\d{1,3}\b|(?<![\w:])(?:f[cd][0-9a-f]{2}|fe[89ab][0-9a-f])(?::{1,2}[0-9a-f]{1,4}){2,7}"
+        r"(?![\w:])")),
 ]
 
 FORBIDDEN_FILES = re.compile(

@@ -100,6 +100,14 @@ class SecretShapesTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertFinds(text, "App Store Connect key ID, issuer ID or team ID")
 
+    def test_local_network_addresses(self):
+        # The local addresses of docs/SYNC.md: the private IPv4 ranges, IPv4 and IPv6 link-local, IPv6 unique local.
+        self.assertFinds(f"the TV box is at {LOCAL_ADDRESS}", "private network address")
+        for text in ("169.254." + "12.7", "fd12:3456:" + "789a:1::20", "fe80::1c2b:" + "3a4d:5e6f:7a8b%en0",
+                     "[fe80::1c2b:" + "3a4d]:8080"):
+            with self.subTest(text=text):
+                self.assertFinds(f"sync peer {text}", "local network address")
+
     def test_placeholders_examples_and_lookups_pass(self):
         for text in (
                 "Use username/password, or USERNAME and PASSWORD.",
@@ -129,7 +137,9 @@ class SecretShapesTests(unittest.TestCase):
                 "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= | xcbeautify", "DEVELOPMENT_TEAM=XXXXXXXXXX",
                 '"kid": self.key_id', '"private_key_id": "0123456789abcdef0123456789abcdef01234567"',
                 "http://h.example.com:8080/u/p/42", "https://api.themoviedb.org/3/movie/550",
-                "https://api.themoviedb.org/3/tv/1399", "https://news.site.org/2026/10/24"):
+                "https://api.themoviedb.org/3/tv/1399", "https://news.site.org/2026/10/24",
+                "IPv6 fc00::/7 (unique local), fe80::/10 (link-local) and ::1", 'host.hasPrefix("fe80:")',
+                "let mask = 0xfd12:", "fe80::1%en0", "fc00::1", "[fe80::1]:8080"):
             with self.subTest(text=text):
                 self.assertClean(text)
 
