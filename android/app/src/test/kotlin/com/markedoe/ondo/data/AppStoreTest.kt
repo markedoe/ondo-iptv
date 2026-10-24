@@ -80,4 +80,24 @@ class AppStoreTest {
         assertTrue(!folder.root.resolve("content-p.json.bak").exists())
         assertTrue(folder.root.resolve("content-p.json").exists())
     }
+
+    /** Files chosen on the device for a playlist that was never saved (form closed, copy failed) do not pile up. */
+    @Test
+    fun copiesOfFilesNoPlaylistUsesAreDeletedOnceOld() {
+        val day = 24 * 3_600_000L
+        val now = 100 * day
+        val store = AppStore(folder.root.resolve("ondo"), now = { now })
+        val imports = store.imports.apply { mkdirs() }
+        val used = imports.resolve("used.m3u").apply { writeText("#EXTM3U"); setLastModified(now - 10 * day) }
+        val old = imports.resolve("old.m3u").apply { writeText("#EXTM3U"); setLastModified(now - 2 * day) }
+        // Maybe in a form still open.
+        val fresh = imports.resolve("fresh.m3u").apply { writeText("#EXTM3U"); setLastModified(now - 60_000) }
+        val playlists = listOf(SavedPlaylist(id = "p", name = "File", url = used.toURI().toString()))
+
+        store.forgetUnusedImports(playlists)
+
+        assertTrue(used.exists())
+        assertTrue(fresh.exists())
+        assertTrue("an old copy no playlist uses is deleted", !old.exists())
+    }
 }

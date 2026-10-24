@@ -50,6 +50,16 @@ class AppStore(private val directory: File, private val now: () -> Long = System
     /** Where playlist files chosen on the device are copied (`ui/PlaylistFilePicker.kt`), next to this folder. */
     val imports: File get() = File(directory.absoluteFile.parentFile, "imports")
 
+    /**
+     * Deletes the copies of chosen files that no playlist uses (a form closed without saving, a copy that failed), once a
+     * day old: a form may still be open on a fresh one.
+     */
+    fun forgetUnusedImports(playlists: List<SavedPlaylist>) {
+        val used = playlists.mapNotNull { importedFile(it.url)?.canonicalFile }.toSet()
+        val time = now()
+        imports.listFiles()?.filter { it.isFile && it.canonicalFile !in used && time - it.lastModified() > UNUSED_IMPORT_MS }?.forEach(File::delete)
+    }
+
     private fun importedFile(url: String): File? =
         runCatching { File(URI(url)) }.getOrNull()?.takeIf { it.canonicalFile.parentFile == imports.canonicalFile }
 
@@ -118,5 +128,9 @@ class AppStore(private val directory: File, private val now: () -> Long = System
             target.delete()
             temporary.renameTo(target)
         }
+    }
+
+    private companion object {
+        const val UNUSED_IMPORT_MS = 24 * 3_600_000L
     }
 }

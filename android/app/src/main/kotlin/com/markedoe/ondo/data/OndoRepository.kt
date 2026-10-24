@@ -184,8 +184,9 @@ class OndoRepository(
             val playlists = withContext(io) { store.loadPlaylists() }
             val saved = withContext(io) { store.loadLibrary() }
             val lastCrash = withContext(io) {
-                // Downloads left half-read by a stop.
+                // Downloads left half-read by a stop, and copies of files chosen for a playlist that was not saved.
                 downloadFolder?.listFiles()?.forEach { it.delete() }
+                store.forgetUnusedImports(playlists)
                 store.loadLastCrash()
             }
             val pending = pendingLibraryChanges.toList()
