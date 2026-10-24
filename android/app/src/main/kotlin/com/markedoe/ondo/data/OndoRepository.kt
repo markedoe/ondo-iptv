@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.ErrorAttribution
@@ -25,6 +26,7 @@ import com.markedoe.ondo.core.playback.ProblemReport
 import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.core.xtream.XtreamClient
+import com.markedoe.ondo.player.LivePause
 import com.markedoe.ondo.player.PlayRequest
 import com.markedoe.ondo.ui.UiMappers
 import java.io.File
@@ -756,6 +758,64 @@ class OndoRepository(
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(channel)
         val entry = WatchEntry(playlist.id, ItemKind.CHANNEL, channel.id, null, channel.name, null, channel.logoUrl, lastWatchedAt = now())
         return start(item, entry, fromStart = true).copy(channelId = channel.id)
+    }
+
+    /**
+     * [channel] from [start] to [end] from the provider's archive (catch-up): null when the channel has no archive or
+     * [start] is outside it. It keeps the channel (the channel keys, the Channels list and Back to live work from it)
+     * and goes in no history: it is no film to resume.
+     */
+    private fun replayRequest(channel: Channel, start: Long, end: Long, title: String?, artworkUrl: String?, now: Long): PlayRequest? {
+        val state = _state.value
+        val playlist = state.activePlaylist ?: return null
+        // The panel's time zone: an Xtream archive is asked for in the panel's own time.
+        val item = PlaybackFactory(playlist.toCorePlaylist(), state.content.account).catchupItem(channel, start, end, title, artworkUrl, now) ?: return null
+        return PlayRequest(
+            title = item.title,
+            subtitle = item.subtitle,
+            urls = item.urls,
+            headers = item.headers?.toMap().orEmpty(),
+            isLive = false,
+            artworkUrl = item.artworkUrl,
+            kind = ProblemReport.kind(item),
+            liveBuffer = state.settings.liveBuffer,
+            vodBuffer = state.settings.vodBuffer,
+            channelId = channel.id,
+            replayStart = start,
+        )
+    }
+
+    /** A programme of the guide on [channel], from its start: on now (Restart) or past (Play Replay). */
+    fun replayRequest(channel: Channel, programme: EpgProgram, now: Long = now()): PlayRequest? =
+        replayRequest(channel, programme.start, programme.end, programme.title, programme.iconUrl, now).takeIf { canReplay(channel, programme, now) }
+
+    /** Whether [programme] of [channel] can be played from its start: it has begun, and is in the channel's archive. */
+    fun canReplay(channel: Channel, programme: EpgProgram, now: Long = now()): Boolean = CatchupUrlBuilder.isAvailable(channel, programme.start, now)
+
+    /** The programme on now on [channelId], from its start (Restart); null when the guide does not know it. */
+    fun restartRequest(channelId: String, now: Long = now()): PlayRequest? {
+        val (channel, programme) = airing(channelId, now) ?: return null
+        return replayRequest(channel, programme, now)
+    }
+
+    /** Whether the programme on now on [channelId] can start over ([restartRequest]). */
+    fun canRestart(channelId: String, now: Long = now()): Boolean = airing(channelId, now)?.let { (channel, programme) -> canReplay(channel, programme, now) } == true
+
+    /**
+     * A live channel paused at [pausedAt], from there ([LivePause]): the archive up to [LivePause.WINDOW_MS] later.
+     * Null without an archive.
+     */
+    fun pausedLiveRequest(channelId: String, pausedAt: Long, now: Long = now()): PlayRequest? {
+        val channel = _state.value.content.channels.firstOrNull { it.id == channelId } ?: return null
+        return replayRequest(channel, pausedAt, pausedAt + LivePause.WINDOW_MS, null, null, now)
+    }
+
+    /** The channel of [channelId] with its programme on now, when it has an archive and the guide knows the programme. */
+    private fun airing(channelId: String, now: Long): Pair<Channel, EpgProgram>? {
+        val state = _state.value
+        val channel = state.content.channels.firstOrNull { it.id == channelId }?.takeIf { it.hasCatchup } ?: return null
+        val programme = state.guide?.current(channel, now) ?: return null
+        return channel to programme
     }
 
     private fun start(item: PlaybackItem, entry: WatchEntry, fromStart: Boolean): PlayRequest {

@@ -329,6 +329,102 @@ class OndoRepositoryTest {
         assertNull(repository.nextEpisode(requireNotNull(repository.playRequest(repository.state.value.content.movies.first()))))
     }
 
+    /** An XMLTV guide of [programmes]: channel id, start, end, title. */
+    private fun guide(vararg programmes: EpgProgram): String {
+        val time = java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss Z").withZone(java.time.ZoneOffset.UTC)
+        val channels = programmes.map { it.channelId }.distinct().joinToString("") { """<channel id="$it"><display-name>$it</display-name></channel>""" }
+        val shows = programmes.joinToString("") { """<programme start="${time.format(java.time.Instant.ofEpochMilli(it.start))}" stop="${time.format(java.time.Instant.ofEpochMilli(it.end))}" channel="${it.channelId}"><title>${it.title}</title></programme>""" }
+        return """<?xml version="1.0" encoding="UTF-8"?><tv>$channels$shows</tv>"""
+    }
+
+    /**
+     * A channel with the provider's archive (catch-up): its programme on now starts over, a past one of the archive
+     * replays, a live pause resumes where it stopped. A replay keeps its channel, goes in no history, and is no film
+     * to resume. Without an archive, or outside it, nothing.
+     */
+    @Test
+    fun aChannelWithAnArchiveRestartsReplaysAndResumesAPause() = runTest {
+        val replayList = "http://provider.example.com/replay.m3u"
+        val replayGuide = "http://provider.example.com/guide.xml"
+        val airing = EpgProgram("news.test", clock - 30 * 60_000, clock + 30 * 60_000, "Evening News")
+        val past = EpgProgram("news.test", clock - 3 * 3_600_000, clock - 2 * 3_600_000, "Morning Show")
+        val old = EpgProgram("news.test", clock - 5 * 86_400_000L, clock - 5 * 86_400_000L + 3_600_000, "Old Show")
+        val later = EpgProgram("news.test", clock + 30 * 60_000, clock + 90 * 60_000, "Late Show")
+        val match = EpgProgram("sport.test", clock - 30 * 60_000, clock + 30 * 60_000, "Match")
+        val m3u = """
+            #EXTM3U url-tvg="$replayGuide"
+            #EXTINF:-1 tvg-id="news.test" catchup="shift" catchup-days="3" group-title="News",Test News
+            http://provider.example.com/news.m3u8
+            #EXTINF:-1 tvg-id="sport.test" group-title="News",Test Sport
+            http://provider.example.com/sport.m3u8
+        """.trimIndent()
+        val repository = repository(FakeHttp(mapOf(replayList to m3u, replayGuide to guide(airing, past, old, later, match))))
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Home", replayList).isSuccess)
+        repository.awaitState { it.guide != null }
+        val news = repository.state.value.content.channels.single { it.name == "Test News" }
+        val sport = repository.state.value.content.channels.single { it.name == "Test Sport" }
+        val library = repository.state.value.library
+
+        assertTrue(repository.canRestart(news.id))
+        val restart = requireNotNull(repository.restartRequest(news.id))
+        assertEquals("http://provider.example.com/news.m3u8?utc=${airing.start / 1000}&lutc=${clock / 1000}", restart.urls.first())
+        assertEquals("Evening News", restart.title)
+        assertFalse(restart.isLive)
+        assertTrue(restart.isReplay)
+        assertEquals(news.id, restart.channelId)
+        assertEquals(airing.start, restart.replayStart)
+        assertNull("no film to resume", restart.progressKey)
+        assertEquals("catch-up", restart.kind)
+
+        val replay = requireNotNull(repository.replayRequest(news, past))
+        assertEquals("http://provider.example.com/news.m3u8?utc=${past.start / 1000}&lutc=${clock / 1000}", replay.urls.first())
+        assertEquals(past.start, replay.replayStart)
+        assertTrue(repository.canReplay(news, past))
+        assertFalse("older than the archive", repository.canReplay(news, old))
+        assertNull(repository.replayRequest(news, old))
+        assertNull("not on yet", repository.replayRequest(news, later))
+
+        val paused = requireNotNull(repository.pausedLiveRequest(news.id, clock - 60_000))
+        assertEquals("http://provider.example.com/news.m3u8?utc=${(clock - 60_000) / 1000}&lutc=${clock / 1000}", paused.urls.first())
+        assertEquals(clock - 60_000, paused.replayStart)
+        assertEquals(news.id, paused.channelId)
+
+        assertFalse(repository.canRestart(sport.id))
+        assertNull(repository.restartRequest(sport.id))
+        assertNull(repository.replayRequest(sport, match))
+        assertNull(repository.pausedLiveRequest(sport.id, clock - 60_000))
+        assertEquals("a replay goes in no history", library, repository.state.value.library)
+    }
+
+    /** An Xtream panel's archive is asked for in the panel's own time, not in UTC: else another programme plays. */
+    @Test
+    fun anXtreamReplayStartsInThePanelsTime() = runTest {
+        val panel = "http://panel.example.com"
+        fun api(action: String? = null) = "$panel/player_api.php?username=viewer&password=secret" + (action?.let { "&action=$it" } ?: "")
+        val airing = EpgProgram("news.panel", clock - 30 * 60_000, clock + 30 * 60_000, "Evening News")
+        val answers = mapOf(
+            api() to """{"user_info":{"username":"viewer","auth":1,"status":"Active"},"server_info":{"url":"panel.example.com","timezone":"Europe/Paris"}}""",
+            api("get_live_categories") to """[{"category_id":"1","category_name":"News"}]""",
+            api("get_live_streams") to """[{"num":1,"name":"Panel News","stream_id":11,"category_id":"1","epg_channel_id":"news.panel","tv_archive":1,"tv_archive_duration":3}]""",
+            api("get_vod_categories") to "[]",
+            api("get_vod_streams") to "[]",
+            api("get_series_categories") to "[]",
+            api("get_series") to "[]",
+            "$panel/xmltv.php?username=viewer&password=secret" to guide(airing),
+        )
+        val repository = repository(FakeHttp(answers))
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Panel", panel, "viewer", "secret").isSuccess)
+        repository.awaitState { it.guide != null }
+        val channel = repository.state.value.content.channels.single()
+        val restart = requireNotNull(repository.restartRequest(channel.id))
+        // 08:23 UTC is 10:23 in Paris in October.
+        assertEquals("$panel/timeshift/viewer/secret/60/2025-10-09:10-23/11.m3u8", restart.urls.first())
+    }
+
     @Test
     fun aReminderIsScheduledThenCancelled() = runTest {
         val scheduler = RecordingScheduler()

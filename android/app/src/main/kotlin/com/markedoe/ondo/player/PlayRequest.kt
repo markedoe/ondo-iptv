@@ -27,7 +27,15 @@ data class PlayRequest(
     val vodBuffer: Int = 0,
     /** The live channel played: the remote's channel keys change from it (zapping). */
     val channelId: String? = null,
+    /**
+     * A replay of [channelId] from the provider's archive (catch-up): the instant it starts at (epoch milliseconds).
+     * The player plays it as a film, with Back to live.
+     */
+    val replayStart: Long? = null,
 ) {
+    /** A channel played from its archive: its programme from the start, a past one, a live pause resumed. */
+    val isReplay: Boolean get() = replayStart != null && channelId != null
+
     /** The buffer setting for this item. */
     val bufferSeconds: Int get() = PlaybackBuffer.setting(isLive, liveBuffer, vodBuffer)
 }
