@@ -75,8 +75,8 @@ class XtreamClient(
         }
         try {
             http.download(urls.apiUrl(action, emptyMap()), headers.toMap(), file)
-            // A cancelled load stops at the next element: a list nobody waits for is not decoded to its end.
-            return withContext(parsingDispatcher) { decodeList(file) { ensureActive(); decode(it) } }
+            // A cancelled load stops at the next read or element: a list nobody waits for is not read to its end.
+            return withContext(parsingDispatcher) { decodeList(file, checkActive = { ensureActive() }) { ensureActive(); decode(it) } }
         } finally {
             withContext(NonCancellable + Dispatchers.IO) { file.delete() }
         }
