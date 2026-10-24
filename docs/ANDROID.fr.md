@@ -51,15 +51,20 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   Supprimer demande d'abord, en commençant sur Annuler), des cartes qui grandissent avec un contour blanc à la sélection et des rangées qui dépassent du bord droit ;
   les autres pages sont les écrans Compose dans la zone sûre de la TV (48 × 27 dp). Une sélection qui revient sur
   la carte quittée (`FocusMemory`) et entre d'elle-même dans chaque page (`FocusEntry`), des rangées qui défilent
-  jusqu'au tiers. Lecteur : OK met en pause, Gauche / Droite reculent et
-  avancent, Haut / Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de chaîne
-  (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), un bandeau de chaîne, Retour masque les commandes.
+  jusqu'au tiers. Lecteur : ses propres commandes pour la télécommande, par-dessus la vue vidéo de Media3
+  (`player/TvPlayerControls.kt`, `player/TvControls.kt`) : de grands boutons ronds, une barre de progression dont la
+  cible avance par pas de plus en plus grands, la vidéo s'y rendant quand la télécommande s'arrête (un saut par
+  déplacement), des panneaux Sous-titres, Audio, Vitesse et Plus avec les pistes nommées par langue
+  (`player/TrackChoices.kt`) ; pendant la lecture, les commandes se masquent 5 s après la dernière touche. OK met en
+  pause, Gauche / Droite reculent et avancent de 10 s, Haut / Bas, CH+ / CH−, les chiffres et la chaîne précédente
+  changent de chaîne (`player/RemoteKeys.kt`, `core/library/ChannelZapping.kt`), un bandeau de chaîne, Retour ferme
+  un panneau, puis les commandes.
   Qualité des apps TV de Google : pas d'image dans l'image sur une TV, l'écran gardé allumé seulement pendant la
   lecture, pas de navigateur (les règles de confidentialité et la page d'aide s'ouvrent dans une page de l'app
   limitée à elles), pas de sélecteur de fichier ni de bouton de partage quand la TV n'en a pas, un cache d'images
   en mémoire plus petit sur un appareil à peu de mémoire.
 - **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), la
-  télécommande sur une TV (`TelevisionTest`, `PlayerRemoteTest`), captures Roborazzi qui servent de captures
+  télécommande sur une TV (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), captures Roborazzi qui servent de captures
   Google Play (téléphone, tablettes 7" et 10", TV, anglais et français).
 
 Prévu ensuite (non inclus en v1) : replay depuis le guide, Chromecast, téléchargements, profils et PIN,

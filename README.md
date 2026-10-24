@@ -138,9 +138,11 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Settings**: playlists, appearance, adult categories hidden by default, languages and categories, app language,
   automatic awards updates, player buffers; welcome screen with a demo.
 - **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible
-  focus that comes back to the card you left, layouts that keep clear of the screen's edges); in the player, OK
-  pauses, Left and Right seek, Up and Down, CH+ / CH−, the number keys and Last Channel change channel; hold OK on
-  a channel to add it to My List; Help, With the remote. The privacy policy and support pages open inside the app.
+  focus that comes back to the card you left, layouts that keep clear of the screen's edges); a player drawn for
+  the remote: large buttons, a progress bar to move through the video, Subtitles and Audio panels that list the
+  tracks by language, Speed and More; OK pauses, Left and Right go back and forward 10 seconds, Up and Down,
+  CH+ / CH−, the number keys and Last Channel change channel; hold OK on a channel to add it to My List; Help,
+  With the remote. The privacy policy and support pages open inside the app.
 - Coming next: catch-up, Chromecast, downloads, profiles and PIN, online subtitles, a second engine (libVLC).
   Details: [docs/ANDROID.md](docs/ANDROID.md).
 
