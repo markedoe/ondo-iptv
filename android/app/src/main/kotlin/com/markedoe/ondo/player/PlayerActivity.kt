@@ -7,14 +7,17 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Rect
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
 import android.text.format.DateFormat
 import android.util.Rational
 import android.view.KeyEvent
@@ -104,6 +107,8 @@ import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ChannelZapping
 import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.Episode
+import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.net.DEFAULT_IPTV_USER_AGENT
 import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.core.playback.PlaybackBuffer
@@ -119,6 +124,7 @@ import com.markedoe.ondo.ui.tv.isTelevision
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -135,11 +141,13 @@ import kotlinx.serialization.json.Json
  * Picture-in-Picture (entered when the user leaves while a video plays), media session (headset and remote
  * buttons). Progress is saved every 10 s. More, Stream Statistics shows what arrives and the freezes, explained
  * ([PlaybackHealth], sampled twice a second); More, Report a Problem… shows a report of the playback ([PlaybackReporter]).
- * On a TV, the controls are drawn for the remote ([TvPlayerOverlay], [TvControls]): Media3's view only shows the video.
+ * The controls are the player's own ([PlayerControls]): drawn for the remote on a TV ([TvPlayerOverlay]), for touch on
+ * a phone or a tablet ([PhonePlayerOverlay], with gestures); Media3's view only shows the video, the subtitles and the
+ * spinner.
  */
 @OptIn(UnstableApi::class)
 class PlayerActivity : ComponentActivity() {
-    /** The player of what plays now (a new one for each channel): the TV's controls follow it. */
+    /** The player of what plays now (a new one for each channel): the controls follow it. */
     private var player: ExoPlayer? by mutableStateOf(null)
     private var session: MediaSession? = null
     private val requestState = mutableStateOf<PlayRequest?>(null)
@@ -169,20 +177,18 @@ class PlayerActivity : ComponentActivity() {
      */
     private val television by lazy { resources.configuration.isTelevision }
 
-    /** The TV's controls: shown, their panel, what the player does. */
-    private val tvControls: TvControls by lazy {
-        TvControls(lifecycleScope) { shown ->
-            hideControlsOnBack.isEnabled = shown
+    /** The player's own controls, on a TV and on a phone: shown, their panel, what the player does. */
+    private val controls: PlayerControls by lazy {
+        PlayerControls(lifecycleScope) { shown ->
+            // On a TV, Back hides the controls before it leaves; on a phone it leaves.
+            hideControlsOnBack.isEnabled = shown && television
             // The subtitles rise above the controls while they show.
             playerView?.subtitleView?.setBottomPaddingFraction(if (shown) RAISED_SUBTITLES else SubtitleView.DEFAULT_BOTTOM_PADDING_FRACTION)
         }.apply { playing = { player?.playWhenReady == true } }
     }
 
-    /** Media3's controls are on screen, on a phone or a tablet. */
-    private var phoneControlsShown = false
-
     /** The player's controls are on screen (the remote's arrows then move through them). */
-    private val controlsShown: Boolean get() = if (television) tvControls.shown else phoneControlsShown
+    private val controlsShown: Boolean get() = controls.shown
 
     /** The channel just zapped to, shown a moment at the top. */
     private var banner by mutableStateOf<ChannelBanner?>(null)
@@ -205,7 +211,7 @@ class PlayerActivity : ComponentActivity() {
      */
     private val hideControlsOnBack: OnBackPressedCallback = object : OnBackPressedCallback(false) {
         override fun handleOnBackPressed() {
-            if (tvControls.back()) return
+            if (controls.back()) return
             isEnabled = false
             onBackPressedDispatcher.onBackPressed()
         }
@@ -217,12 +223,18 @@ class PlayerActivity : ComponentActivity() {
     private var showsStatistics by mutableStateOf(false)
     private var statistics by mutableStateOf<StreamStatistics?>(null)
 
-    /**
-     * The More menu (Aspect Ratio, Sleep Timer, Stream Statistics, Report a Problem) is open, on a phone or a tablet,
-     * on [menuPage] (null for its first list); a TV has its More panel.
-     */
-    private var menuOpen by mutableStateOf(false)
-    private var menuPage by mutableStateOf<TvPanel?>(null)
+
+    /** The episode after this one (a series), looked up when it starts: null for a movie, a channel or the last one. */
+    private var nextEpisode: Pair<Series, Episode>? = null
+
+    /** Up next is on screen, near the end of an episode; null otherwise, and once the viewer declined it. */
+    private var upNext by mutableStateOf<UpNext?>(null)
+    private var upNextDeclined = false
+
+    /** On a TV, Back while Up next shows declines it (the remote's Back no longer reaches the keys). */
+    private val declineUpNextOnBack: OnBackPressedCallback = object : OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() = declineUpNext()
+    }
 
     /** The aspect ratio last chosen (the player's More), kept in the settings for the next videos. */
     private val videoScale: StateFlow<VideoScale> by lazy {
@@ -258,11 +270,17 @@ class PlayerActivity : ComponentActivity() {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
 
+        // A phone turns sideways for the video, either way round; a tablet stays as it is held.
+        if (!television && resources.configuration.smallestScreenWidthDp < TABLET_WIDTH_DP) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        }
         reporter = PlaybackReporter(request, SystemClock::elapsedRealtime)
         // The channel list for the remote's channel keys, when the player was opened again alone (after Android
         // stopped the app in the background).
         repository.bootstrap()
         onBackPressedDispatcher.addCallback(this, hideControlsOnBack)
+        onBackPressedDispatcher.addCallback(this, declineUpNextOnBack)
+        nextEpisode = repository.nextEpisode(request)
         val exoPlayer = buildPlayer()
         player = exoPlayer
         // Opened again alone, before the settings were read: the viewer's languages as soon as they are.
@@ -284,18 +302,14 @@ class PlayerActivity : ComponentActivity() {
                             PlayerView(context).apply {
                                 layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                                 player = exoPlayer
-                                setShowSubtitleButton(true)
-                                setShowNextButton(false)
-                                setShowPreviousButton(false)
                                 // The spinner while the stream starts, after a seek and when it waits for data.
                                 setShowBuffering(PlayerView.SHOW_BUFFERING_WHEN_PLAYING)
                                 // The screen stays on while the video plays only: paused, it may dim and a TV may
                                 // show its screen saver (TV-BU, TV-BY).
                                 keepScreenOn = exoPlayer.isPlaying
-                                // A TV draws its own controls for the remote over this view (TvPlayerOverlay): Media3's
-                                // keep drawing the picture, the subtitles and the spinner.
-                                useController = !television
-                                setControllerVisibilityListener(PlayerView.ControllerVisibilityListener { phoneControlsShown = it == View.VISIBLE })
+                                // The player draws its own controls over this view (TvPlayerOverlay, PhonePlayerOverlay):
+                                // Media3's view keeps drawing the picture, the subtitles and the spinner.
+                                useController = false
                                 // The video's place on screen, for the animation into Picture-in-Picture.
                                 videoSurfaceView?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updatePictureInPictureParams() }
                             }.also { playerView = it }
@@ -306,14 +320,14 @@ class PlayerActivity : ComponentActivity() {
                     // On a TV, the controls drawn for the remote; none over an error, where Try Again has the focus.
                     val shownPlayer = player
                     // The programme on now, looked up again each minute.
-                    val minute by remember { derivedStateOf { tvControls.clockMs / 60_000 } }
+                    val minute by remember { derivedStateOf { controls.clockMs / 60_000 } }
                     if (television && !inPictureInPicture && shownPlayer != null && errorMessage == null) {
                         OndoTvTheme {
                             TvPlayerOverlay(
                                 player = shownPlayer,
-                                controls = tvControls,
+                                controls = controls,
                                 // Looked up once a minute and for each channel, not on each frame of the controls.
-                                info = remember(request, minute) { tvPlayerInfo(minute * 60_000) },
+                                info = remember(request, minute) { playerInfo(minute * 60_000) },
                                 statisticsShown = showsStatistics,
                                 onToggleStatistics = ::toggleStatistics,
                                 onReportProblem = { shownReport = problemReport() },
@@ -331,52 +345,38 @@ class PlayerActivity : ComponentActivity() {
                         )
                     }
                     // The small Picture-in-Picture window shows the video only: the system draws its own controls.
-                    // On a TV, the remote's Back closes (no Close button for the focus to wander to) and More is one
-                    // of the player's own buttons, with its own panel.
-                    if (!inPictureInPicture && !television) {
+                    if (!television && !inPictureInPicture && shownPlayer != null && errorMessage == null) {
+                        PhonePlayerOverlay(
+                            player = shownPlayer,
+                            controls = controls,
+                            info = remember(request, minute) { playerInfo(minute * 60_000) },
+                            statisticsShown = showsStatistics,
+                            onToggleStatistics = ::toggleStatistics,
+                            onReportProblem = { shownReport = problemReport() },
+                            scale = scale,
+                            onScale = repository::setVideoScale,
+                            sleep = sleepTimer,
+                            levels = levels,
+                            onClose = ::finish,
+                            onPictureInPicture = if (supportsPictureInPicture) ::enterPictureInPicture else null,
+                        )
+                    }
+                    upNext?.let { offer ->
+                        UpNextCard(
+                            offer,
+                            television = television,
+                            onPlay = ::playNextEpisode,
+                            onDecline = ::declineUpNext,
+                            modifier = Modifier.align(Alignment.BottomEnd).windowInsetsPadding(WindowInsets.safeDrawing).then(safeArea).padding(24.dp),
+                        )
+                    }
+                    // Over an error, a way out on a phone (a TV's Back closes; no button for the focus to wander to).
+                    if (!television && !inPictureInPicture && errorMessage != null) {
                         IconButton(
                             onClick = { finish() },
-                            modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp),
+                            modifier = Modifier.align(Alignment.TopStart).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp).testTag("playerClose"),
                         ) {
                             Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.close), tint = Color.White)
-                        }
-                        Box(Modifier.align(Alignment.TopEnd).windowInsetsPadding(WindowInsets.safeDrawing).padding(8.dp)) {
-                            IconButton(onClick = { menuOpen = true }, modifier = Modifier.testTag("playerMore")) {
-                                Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more), tint = Color.White)
-                            }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = ::closeMenu) {
-                                when (menuPage) {
-                                    TvPanel.ASPECT -> VideoScale.entries.forEach { option ->
-                                        MenuChoice(stringResource(option.label), selected = option == scale, tag = "scale-${option.name}") {
-                                            closeMenu()
-                                            repository.setVideoScale(option)
-                                        }
-                                    }
-                                    TvPanel.SLEEP -> (listOf(null) + SleepTimer.CHOICES).forEach { minutes ->
-                                        val name = if (minutes == null) stringResource(R.string.off) else stringResource(R.string.sleep_minutes, minutes)
-                                        MenuChoice(name, selected = sleepTimer.minutes == minutes, tag = "sleep-${minutes ?: "off"}") {
-                                            closeMenu()
-                                            sleepTimer.set(minutes)
-                                        }
-                                    }
-                                    else -> {
-                                        MenuRow(stringResource(R.string.aspect_ratio), stringResource(scale.label), tag = "menuAspect") { menuPage = TvPanel.ASPECT }
-                                        val sleepValue = sleepTimer.endsAt?.let { stringResource(R.string.sleep_ends_at, DateFormat.getTimeFormat(this@PlayerActivity).format(Date(it))) }
-                                        MenuRow(stringResource(R.string.sleep_timer), sleepValue ?: stringResource(R.string.off), tag = "menuSleep") { menuPage = TvPanel.SLEEP }
-                                        MenuChoice(stringResource(R.string.stream_statistics), selected = showsStatistics, tag = "statisticsToggle") {
-                                            closeMenu()
-                                            toggleStatistics()
-                                        }
-                                        DropdownMenuItem(
-                                            text = { Text(stringResource(R.string.report_problem)) },
-                                            onClick = {
-                                                closeMenu()
-                                                shownReport = problemReport()
-                                            },
-                                        )
-                                    }
-                                }
-                            }
                         }
                     }
                     shownReport?.takeIf { !inPictureInPicture }?.let { report ->
@@ -438,15 +438,14 @@ class PlayerActivity : ComponentActivity() {
                 sampleHealth()
             }
         }
-        if (television) {
-            // The title and where the video starts, a moment, without taking the remote's keys.
-            tvControls.peek()
-            lifecycleScope.launch {
-                while (isActive) {
-                    delay(500)
-                    // Where the video is, while the controls show it.
-                    if (tvControls.shown || tvControls.peeking) player?.let(tvControls::refresh)
-                }
+        // The title and where the video starts, a moment, without taking the remote's keys.
+        if (television) controls.peek()
+        lifecycleScope.launch {
+            while (isActive) {
+                delay(500)
+                // Where the video is, while the controls show it.
+                if (controls.shown || controls.peeking) player?.let(controls::refresh)
+                checkUpNext()
             }
         }
     }
@@ -462,12 +461,12 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** What the TV's controls say at the top: the title and its line, or a live channel's number, name and programme. */
-    private fun tvPlayerInfo(now: Long): TvPlayerInfo {
+    private fun playerInfo(now: Long): PlayerInfo {
         val current = request
         val state = repository.state.value
         val channel = current.channelId?.takeIf { current.isLive }?.let { id -> state.content.channels.firstOrNull { it.id == id } }
         val programme = channel?.let { state.guide?.current(it, now) }
-        return TvPlayerInfo(
+        return PlayerInfo(
             title = channel?.let { listOfNotNull(it.number?.toString(), it.name).joinToString("  ") } ?: current.title,
             subtitle = programme?.title ?: current.subtitle,
             live = current.isLive,
@@ -476,36 +475,36 @@ class PlayerActivity : ComponentActivity() {
         )
     }
 
-    private fun closeMenu() {
-        menuOpen = false
-        menuPage = null
+    /** Up next shows in the last [UP_NEXT_MS] of an episode that has a next one, with the seconds left. */
+    private fun checkUpNext() {
+        val next = nextEpisode
+        val exoPlayer = player
+        val duration = exoPlayer?.duration?.takeIf { it != C.TIME_UNSET && it > 0 }
+        val left = if (exoPlayer != null && duration != null) duration - exoPlayer.currentPosition else Long.MAX_VALUE
+        upNext = if (next == null || upNextDeclined || errorMessage != null || inPictureInPicture || left > UP_NEXT_MS) {
+            null
+        } else {
+            val (series, episode) = next
+            UpNext(series.name, "${episode.code} · ${episode.title}", ((left + 999) / 1_000).toInt().coerceAtLeast(0))
+        }
+        declineUpNextOnBack.isEnabled = television && upNext != null
     }
 
-    /** A row of the phone's More menu that opens a list of choices: what it sets, its value beneath. */
-    @Composable
-    private fun MenuRow(title: String, value: String, tag: String, onClick: () -> Unit) {
-        DropdownMenuItem(
-            text = {
-                Column {
-                    Text(title)
-                    Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            },
-            onClick = onClick,
-            trailingIcon = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
-            modifier = Modifier.testTag(tag),
-        )
+    private fun playNextEpisode() {
+        val (series, episode) = nextEpisode ?: return
+        saveProgress(ended = true)
+        val next = repository.playRequest(series, episode)
+        if (next == null) {
+            finish()
+            return
+        }
+        switchTo(next)
     }
 
-    /** A choice of the phone's More menu, ticked when in use. */
-    @Composable
-    private fun MenuChoice(name: String, selected: Boolean, tag: String, onClick: () -> Unit) {
-        DropdownMenuItem(
-            text = { Text(name) },
-            onClick = onClick,
-            trailingIcon = { if (selected) Icon(Icons.Rounded.Check, contentDescription = null) },
-            modifier = Modifier.testTag(tag).semantics { this.selected = selected },
-        )
+    private fun declineUpNext() {
+        upNextDeclined = true
+        upNext = null
+        declineUpNextOnBack.isEnabled = false
     }
 
     private fun toggleStatistics() {
@@ -513,19 +512,13 @@ class PlayerActivity : ComponentActivity() {
         statistics = if (showsStatistics) currentStatistics() else null
     }
 
-    /** The controls, with where the video is now (the TV's are kept up to date only while they show). */
-    private fun showControls(panel: TvPanel? = null) {
-        if (!television) {
-            playerView?.showController()
-            return
-        }
-        player?.let(tvControls::refresh)
-        tvControls.show(panel)
+    /** The controls, with where the video is now (they are kept up to date only while they show). */
+    private fun showControls(panel: PlayerPanel? = null) {
+        player?.let(controls::refresh)
+        controls.show(panel)
     }
 
-    private fun hideControls() {
-        if (television) tvControls.hide() else playerView?.hideController()
-    }
+    private fun hideControls() = controls.hide()
 
     private fun buildPlayer(): ExoPlayer {
         // Streams go out with the same player identity as the catalogue (providers filter on it), unless
@@ -589,6 +582,9 @@ class PlayerActivity : ComponentActivity() {
                         if (state != Player.STATE_ENDED) return
                         if (request.isLive) {
                             reopenLive()
+                        } else if (nextEpisode != null && !upNextDeclined) {
+                            // The end of an episode: the next one plays.
+                            playNextEpisode()
                         } else {
                             // The end of a movie or an episode: it counts as watched, back to the app.
                             saveProgress(ended = true)
@@ -676,10 +672,14 @@ class PlayerActivity : ComponentActivity() {
         setIntent(PlayerActivity.intent(this, next))
         urlIndex = 0
         liveRecovery.reset()
+        nextEpisode = repository.nextEpisode(next)
+        upNext = null
+        upNextDeclined = false
+        declineUpNextOnBack.isEnabled = false
         errorMessage = null
         shownReport = null
         // The controls and their panels belong to the player that goes: the channel's banner shows instead.
-        if (television) tvControls.hide()
+        controls.hide()
         player?.release()
         session?.release()
         reporter = PlaybackReporter(request, SystemClock::elapsedRealtime)
@@ -723,10 +723,15 @@ class PlayerActivity : ComponentActivity() {
         if (inPictureInPicture) return false
         if (event.action == KeyEvent.ACTION_UP) return handledKeys.remove(event.keyCode)
         if (event.action != KeyEvent.ACTION_DOWN) return false
-        val view = playerView ?: return false
         val exoPlayer = player ?: return false
-        // On a TV, each key keeps the controls a while longer.
-        if (television) tvControls.touch()
+        // Up next on a TV: OK plays the next episode now.
+        if (television && upNext != null && !controls.shown && (event.keyCode == KeyEvent.KEYCODE_DPAD_CENTER || event.keyCode == KeyEvent.KEYCODE_ENTER)) {
+            playNextEpisode()
+            handledKeys += event.keyCode
+            return true
+        }
+        // Each key keeps the controls a while longer.
+        controls.touch()
         val zapping = request.isLive && request.channelId != null
         val action = RemoteKeys.action(event.keyCode, controlsShown, zapping, exoPlayer.isCurrentMediaItemSeekable)
             ?: return television && showsControlsFor(event)
@@ -734,8 +739,6 @@ class PlayerActivity : ComponentActivity() {
         val changesChannel = action is RemoteAction.Digit || action == RemoteAction.NextChannel ||
             action == RemoteAction.PreviousChannel || action == RemoteAction.LastChannel
         if (errorMessage != null && !changesChannel) return false
-        // A phone has no panels: its subtitles are in Media3's settings.
-        if (!television && (action == RemoteAction.Subtitles || action == RemoteAction.Audio)) return false
         // A key held down repeats: seeking goes on, the rest happens once per press (each channel builds a new player).
         val seeks = action == RemoteAction.SeekBack || action == RemoteAction.SeekForward
         if (event.repeatCount > 0 && !seeks) return true
@@ -746,26 +749,16 @@ class PlayerActivity : ComponentActivity() {
             }
             RemoteAction.Play -> Util.handlePlayButtonAction(exoPlayer)
             RemoteAction.Pause -> Util.handlePauseButtonAction(exoPlayer)
-            // On a TV, 10 s, where the video lands shown a moment (the controls stay hidden: the next press skips again).
-            RemoteAction.SeekBack -> if (television) {
-                tvControls.skip(exoPlayer, -TvControls.SKIP_MS)
-            } else {
-                exoPlayer.seekBack()
-                view.showController()
-            }
-            RemoteAction.SeekForward -> if (television) {
-                tvControls.skip(exoPlayer, TvControls.SKIP_MS)
-            } else {
-                exoPlayer.seekForward()
-                view.showController()
-            }
+            // 10 s, where the video lands shown a moment on a TV (the controls stay hidden: the next press skips again).
+            RemoteAction.SeekBack -> controls.skip(exoPlayer, -PlayerControls.SKIP_MS)
+            RemoteAction.SeekForward -> controls.skip(exoPlayer, PlayerControls.SKIP_MS)
             RemoteAction.NextChannel -> zap(1)
             RemoteAction.PreviousChannel -> zap(-1)
             RemoteAction.LastChannel -> backToLastChannel()
             RemoteAction.ShowControls -> showControls()
             RemoteAction.HideControls -> hideControls()
-            RemoteAction.Subtitles -> showControls(TvPanel.SUBTITLES)
-            RemoteAction.Audio -> showControls(TvPanel.AUDIO)
+            RemoteAction.Subtitles -> showControls(PlayerPanel.SUBTITLES)
+            RemoteAction.Audio -> showControls(PlayerPanel.AUDIO)
             is RemoteAction.Digit -> typeDigit(action.value)
         }
         handledKeys += event.keyCode
@@ -917,9 +910,9 @@ class PlayerActivity : ComponentActivity() {
         showError(getString(message))
     }
 
-    /** The error and Try Again, alone on screen: the TV's controls go. */
+    /** The error and Try Again, alone on screen: the controls go. */
     private fun showError(message: String) {
-        if (television) tvControls.hide()
+        controls.hide()
         errorMessage = message
     }
 
@@ -1100,6 +1093,39 @@ class PlayerActivity : ComponentActivity() {
         if (supportsPictureInPicture) runCatching { setPictureInPictureParams(pictureInPictureParams()) }
     }
 
+    /** The Picture-in-Picture button of the phone's controls. */
+    private fun enterPictureInPicture() {
+        controls.hide()
+        runCatching { enterPictureInPictureMode(pictureInPictureParams()) }
+    }
+
+    /**
+     * The swipes' brightness (this window's, the system's until the first swipe) and volume (the media stream's): the
+     * window's brightness goes back to the system's when the player closes.
+     */
+    private val levels: PlayerLevels by lazy {
+        object : PlayerLevels {
+            private val audio = getSystemService(AudioManager::class.java)
+
+            override val brightness: Float
+                get() = window.attributes.screenBrightness.takeIf { it >= 0f }
+                    ?: (Settings.System.getInt(contentResolver, Settings.System.SCREEN_BRIGHTNESS, SYSTEM_BRIGHTNESS_MAX / 2) / SYSTEM_BRIGHTNESS_MAX.toFloat())
+
+            override fun setBrightness(level: Float) {
+                window.attributes = window.attributes.apply { screenBrightness = level.coerceIn(MIN_BRIGHTNESS, 1f) }
+            }
+
+            override val volume: Float
+                get() = audio?.let { it.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / it.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1) } ?: 0f
+
+            override fun setVolume(level: Float) {
+                val manager = audio ?: return
+                val max = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+                manager.setStreamVolume(AudioManager.STREAM_MUSIC, (level * max).roundToInt().coerceIn(0, max), 0)
+            }
+        }
+    }
+
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && supportsPictureInPicture && player?.isPlaying == true) {
@@ -1110,7 +1136,7 @@ class PlayerActivity : ComponentActivity() {
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
         super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
         inPictureInPicture = isInPictureInPictureMode
-        playerView?.useController = !isInPictureInPictureMode && !television
+        if (isInPictureInPictureMode) controls.hide()
         if (!isInPictureInPictureMode && !lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) {
             // The PiP window was closed (not expanded): the player goes away with it instead of staying allocated.
             saveProgress()
@@ -1163,6 +1189,18 @@ class PlayerActivity : ComponentActivity() {
 
         /** Where the subtitles sit while the TV's controls show: above them (a fraction of the video's height). */
         private const val RAISED_SUBTITLES = 0.3f
+
+        /** Up next shows in the last seconds of an episode. */
+        private const val UP_NEXT_MS = 20_000L
+
+        /** Narrower than this (in dp, the shorter side), a phone. */
+        private const val TABLET_WIDTH_DP = 600
+
+        /** The system's brightness setting goes up to this. */
+        private const val SYSTEM_BRIGHTNESS_MAX = 255
+
+        /** The darkest the swipe makes the screen: not black, the video stays visible. */
+        private const val MIN_BRIGHTNESS = 0.01f
 
         /** The durations Media3 uses on its own (automatic), for the report. */
         private val MEDIA3_BUFFER = PlaybackBuffer.Durations(

@@ -110,17 +110,6 @@ import java.util.Date
 import java.util.Locale
 import kotlinx.coroutines.delay
 
-/** What the TV player's top lines say. */
-data class TvPlayerInfo(
-    /** The movie, the series or the channel. */
-    val title: String,
-    /** The episode's code and title, a movie's year, or the programme on now on a live channel. */
-    val subtitle: String?,
-    val live: Boolean,
-    /** A live channel's programme on now, from the guide: its start and end (epoch milliseconds). */
-    val programmeStart: Long? = null,
-    val programmeEnd: Long? = null,
-)
 
 /**
  * The player's controls on a TV, drawn for the remote over Media3's video view (which still draws the picture, the
@@ -132,8 +121,8 @@ data class TvPlayerInfo(
 @Composable
 fun TvPlayerOverlay(
     player: Player,
-    controls: TvControls,
-    info: TvPlayerInfo,
+    controls: PlayerControls,
+    info: PlayerInfo,
     statisticsShown: Boolean,
     onToggleStatistics: () -> Unit,
     onReportProblem: () -> Unit,
@@ -151,12 +140,12 @@ fun TvPlayerOverlay(
         onDispose { player.removeListener(listener) }
     }
     val playPause = remember { FocusRequester() }
-    val buttons = remember { TvPanel.entries.associateWith { FocusRequester() } }
+    val buttons = remember { PlayerPanel.entries.associateWith { FocusRequester() } }
     // Play/Pause takes the focus each time the controls come; a closed panel gives it back to its button.
     LaunchedEffect(controls.shows) {
         if (controls.shown && controls.panel == null) takeFocus(playPause)
     }
-    var openPanel by remember { mutableStateOf<TvPanel?>(null) }
+    var openPanel by remember { mutableStateOf<PlayerPanel?>(null) }
     LaunchedEffect(controls.panel) {
         val closed = openPanel
         openPanel = controls.panel
@@ -209,7 +198,7 @@ fun TvPlayerOverlay(
             modifier = Modifier.align(Alignment.CenterEnd),
         ) {
             // The last panel stays drawn while it slides out.
-            var shownPanel by remember { mutableStateOf(panel ?: TvPanel.SUBTITLES) }
+            var shownPanel by remember { mutableStateOf(panel ?: PlayerPanel.SUBTITLES) }
             if (panel != null) shownPanel = panel
             SidePanel(
                 panel = shownPanel,
@@ -243,7 +232,7 @@ private suspend fun takeFocus(requester: FocusRequester) {
  * sleep timer pauses the player ([sleepEndsAt]).
  */
 @Composable
-private fun TopLines(info: TvPlayerInfo, clock: Long?, sleepEndsAt: Long?, modifier: Modifier = Modifier) {
+private fun TopLines(info: PlayerInfo, clock: Long?, sleepEndsAt: Long?, modifier: Modifier = Modifier) {
     Row(
         modifier
             .fillMaxWidth()
@@ -277,7 +266,7 @@ private fun clockText(now: Long): String = DateFormat.getTimeFormat(LocalContext
 
 /** A live channel: the LIVE badge, and the programme on now with its times and how far it is. */
 @Composable
-private fun LiveLine(info: TvPlayerInfo, now: Long) {
+private fun LiveLine(info: PlayerInfo, now: Long) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         LiveBadge()
         val start = info.programmeStart
@@ -304,15 +293,15 @@ private fun LiveBadge() {
     }
 }
 
-private val LiveRed = Color(0xFFE53935)
+internal val LiveRed = Color(0xFFE53935)
 
 /**
  * The progress bar, with the part already loaded. With the focus, Left and Right move a target along it (faster while
- * held) and the player goes there once the remote stops, or on OK ([TvControls.scrub]). A [live] stream that can go
+ * held) and the player goes there once the remote stops, or on OK ([PlayerControls.scrub]). A [live] stream that can go
  * back has it too, with LIVE.
  */
 @Composable
-private fun SeekBar(player: Player, controls: TvControls, focusable: Boolean, live: Boolean) {
+private fun SeekBar(player: Player, controls: PlayerControls, focusable: Boolean, live: Boolean) {
     var focused by remember { mutableStateOf(false) }
     val locale = LocalConfiguration.current.locales[0]
     val duration = controls.durationMs
@@ -404,14 +393,14 @@ internal fun time(ms: Long, locale: Locale): String {
 }
 
 @Composable
-private fun ButtonRow(player: Player, controls: TvControls, info: TvPlayerInfo, playPause: FocusRequester, buttons: Map<TvPanel, FocusRequester>) {
+private fun ButtonRow(player: Player, controls: PlayerControls, info: PlayerInfo, playPause: FocusRequester, buttons: Map<PlayerPanel, FocusRequester>) {
     // Where the player cannot seek (a live channel, a film without an index), a skip would start the video over.
     val transport = controls.seekable
     val playing = controls.playWhenReady
     Row(Modifier.fillMaxWidth().focusGroup(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         if (transport) {
             RoundButton(Icons.Rounded.Replay10, stringResource(R.string.skip_back_10), tag = "tvSkipBack", labelAlignment = Alignment.TopStart) {
-                controls.skip(player, -TvControls.SKIP_MS)
+                controls.skip(player, -PlayerControls.SKIP_MS)
             }
         }
         RoundButton(
@@ -427,24 +416,24 @@ private fun ButtonRow(player: Player, controls: TvControls, info: TvPlayerInfo, 
         }
         if (transport) {
             RoundButton(Icons.Rounded.Forward10, stringResource(R.string.skip_forward_10), tag = "tvSkipForward") {
-                controls.skip(player, TvControls.SKIP_MS)
+                controls.skip(player, PlayerControls.SKIP_MS)
             }
         }
         Spacer(Modifier.weight(1f))
         val subtitlesOn = !TrackChoices.noneSelected(controls.tracks, C.TRACK_TYPE_TEXT)
-        RoundButton(Icons.Rounded.Subtitles, stringResource(R.string.subtitles), tag = "tvSubtitles", on = subtitlesOn, modifier = Modifier.focusRequester(buttons.getValue(TvPanel.SUBTITLES))) {
-            controls.open(TvPanel.SUBTITLES)
+        RoundButton(Icons.Rounded.Subtitles, stringResource(R.string.subtitles), tag = "tvSubtitles", on = subtitlesOn, modifier = Modifier.focusRequester(buttons.getValue(PlayerPanel.SUBTITLES))) {
+            controls.open(PlayerPanel.SUBTITLES)
         }
-        RoundButton(Icons.Rounded.RecordVoiceOver, stringResource(R.string.audio), tag = "tvAudio", modifier = Modifier.focusRequester(buttons.getValue(TvPanel.AUDIO))) {
-            controls.open(TvPanel.AUDIO)
+        RoundButton(Icons.Rounded.RecordVoiceOver, stringResource(R.string.audio), tag = "tvAudio", modifier = Modifier.focusRequester(buttons.getValue(PlayerPanel.AUDIO))) {
+            controls.open(PlayerPanel.AUDIO)
         }
         if (!info.live) {
-            RoundButton(Icons.Rounded.Speed, stringResource(R.string.speed), tag = "tvSpeed", on = controls.speed != 1f, modifier = Modifier.focusRequester(buttons.getValue(TvPanel.SPEED))) {
-                controls.open(TvPanel.SPEED)
+            RoundButton(Icons.Rounded.Speed, stringResource(R.string.speed), tag = "tvSpeed", on = controls.speed != 1f, modifier = Modifier.focusRequester(buttons.getValue(PlayerPanel.SPEED))) {
+                controls.open(PlayerPanel.SPEED)
             }
         }
-        RoundButton(Icons.Rounded.MoreHoriz, stringResource(R.string.more), tag = "tvMore", labelAlignment = Alignment.TopEnd, modifier = Modifier.focusRequester(buttons.getValue(TvPanel.MORE))) {
-            controls.open(TvPanel.MORE)
+        RoundButton(Icons.Rounded.MoreHoriz, stringResource(R.string.more), tag = "tvMore", labelAlignment = Alignment.TopEnd, modifier = Modifier.focusRequester(buttons.getValue(PlayerPanel.MORE))) {
+            controls.open(PlayerPanel.MORE)
         }
     }
 }
@@ -521,10 +510,10 @@ private fun SkipBadge(direction: Int, modifier: Modifier = Modifier) {
 /** The side panel of [panel], on the end side, the remote kept inside it until Back. */
 @Composable
 private fun SidePanel(
-    panel: TvPanel,
+    panel: PlayerPanel,
     open: Boolean,
     player: Player,
-    controls: TvControls,
+    controls: PlayerControls,
     statisticsShown: Boolean,
     onToggleStatistics: () -> Unit,
     onReportProblem: () -> Unit,
@@ -545,38 +534,38 @@ private fun SidePanel(
         colors = SurfaceDefaults.colors(containerColor = OndoColors.SurfaceHigh.copy(alpha = 0.97f), contentColor = Color.White),
     ) {
         val title = when (panel) {
-            TvPanel.SUBTITLES -> R.string.subtitles
-            TvPanel.AUDIO -> R.string.audio
-            TvPanel.SPEED -> R.string.speed
-            TvPanel.MORE -> R.string.more
-            TvPanel.ASPECT -> R.string.aspect_ratio
-            TvPanel.SLEEP -> R.string.sleep_timer
+            PlayerPanel.SUBTITLES -> R.string.subtitles
+            PlayerPanel.AUDIO -> R.string.audio
+            PlayerPanel.SPEED -> R.string.speed
+            PlayerPanel.MORE -> R.string.more
+            PlayerPanel.ASPECT -> R.string.aspect_ratio
+            PlayerPanel.SLEEP -> R.string.sleep_timer
         }
         Column(Modifier.fillMaxSize().padding(start = 28.dp, top = TvTokens.EdgeTop + 16.dp, end = TvTokens.EdgeEnd, bottom = TvTokens.EdgeTop)) {
             Text(stringResource(title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, bottom = 16.dp))
             val words = trackWords()
             val locale = LocalConfiguration.current.locales[0]
-            val type = if (panel == TvPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
-            val choices = if (panel == TvPanel.SUBTITLES || panel == TvPanel.AUDIO) TrackChoices.of(controls.tracks, type, words, locale) else emptyList()
+            val type = if (panel == PlayerPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
+            val choices = if (panel == PlayerPanel.SUBTITLES || panel == PlayerPanel.AUDIO) TrackChoices.of(controls.tracks, type, words, locale) else emptyList()
             // Again when the tracks come (the line saying there are none goes, and had the focus).
             LaunchedEffect(panel, open, choices.isEmpty()) { if (open) takeFocus(first) }
             // The list opens on the row in use: a row far down a long list is not drawn yet, and could not take the focus.
             val selectedRow = when (panel) {
-                TvPanel.SUBTITLES -> choices.indexOfFirst { it.selected } + 1
-                TvPanel.AUDIO -> choices.indexOfFirst { it.selected }.coerceAtLeast(0)
-                TvPanel.SPEED -> SPEEDS.indexOf(controls.speed).takeIf { it >= 0 } ?: SPEEDS.indexOf(1f)
-                TvPanel.MORE -> 0
-                TvPanel.ASPECT -> scale.ordinal
-                TvPanel.SLEEP -> SLEEP_CHOICES.indexOf(sleep.minutes).coerceAtLeast(0)
+                PlayerPanel.SUBTITLES -> choices.indexOfFirst { it.selected } + 1
+                PlayerPanel.AUDIO -> choices.indexOfFirst { it.selected }.coerceAtLeast(0)
+                PlayerPanel.SPEED -> SPEEDS.indexOf(controls.speed).takeIf { it >= 0 } ?: SPEEDS.indexOf(1f)
+                PlayerPanel.MORE -> 0
+                PlayerPanel.ASPECT -> scale.ordinal
+                PlayerPanel.SLEEP -> SLEEP_CHOICES.indexOf(sleep.minutes).coerceAtLeast(0)
             }
             val list = remember(panel) { LazyListState(firstVisibleItemIndex = selectedRow) }
             LazyColumn(state = list, verticalArrangement = Arrangement.spacedBy(4.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
                 when (panel) {
-                    TvPanel.SUBTITLES, TvPanel.AUDIO -> tracks(player, controls, type, choices, first)
-                    TvPanel.SPEED -> speeds(player, controls, locale, first)
-                    TvPanel.MORE -> more(controls, scale, sleep, statisticsShown, onToggleStatistics, onReportProblem, first)
-                    TvPanel.ASPECT -> scales(controls, scale, onScale, first)
-                    TvPanel.SLEEP -> sleeps(controls, sleep, first)
+                    PlayerPanel.SUBTITLES, PlayerPanel.AUDIO -> tracks(player, controls, type, choices, first)
+                    PlayerPanel.SPEED -> speeds(player, controls, locale, first)
+                    PlayerPanel.MORE -> more(controls, scale, sleep, statisticsShown, onToggleStatistics, onReportProblem, first)
+                    PlayerPanel.ASPECT -> scales(controls, scale, onScale, first)
+                    PlayerPanel.SLEEP -> sleeps(controls, sleep, first)
                 }
             }
         }
@@ -584,7 +573,7 @@ private fun SidePanel(
 }
 
 @Composable
-private fun trackWords(): TrackWords {
+internal fun trackWords(): TrackWords {
     val resources = LocalResources.current
     return TrackWords(
         track = { resources.getString(R.string.track_number, it) },
@@ -597,7 +586,7 @@ private fun trackWords(): TrackWords {
     )
 }
 
-private fun LazyListScope.tracks(player: Player, controls: TvControls, type: Int, choices: List<TrackChoice>, first: FocusRequester) {
+private fun LazyListScope.tracks(player: Player, controls: PlayerControls, type: Int, choices: List<TrackChoice>, first: FocusRequester) {
     val off = choices.none { it.selected }
     val choose = { choice: TrackChoice? ->
         player.trackSelectionParameters = TrackChoices.select(player.trackSelectionParameters, type, choice)
@@ -636,9 +625,9 @@ private fun LazyListScope.tracks(player: Player, controls: TvControls, type: Int
     }
 }
 
-private val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
+internal val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)
 
-private fun LazyListScope.speeds(player: Player, controls: TvControls, locale: Locale, first: FocusRequester) {
+private fun LazyListScope.speeds(player: Player, controls: PlayerControls, locale: Locale, first: FocusRequester) {
     val numbers = NumberFormat.getNumberInstance(locale)
     SPEEDS.forEach { speed ->
         item(key = "speed-$speed") {
@@ -655,7 +644,7 @@ private fun LazyListScope.speeds(player: Player, controls: TvControls, locale: L
 }
 
 private fun LazyListScope.more(
-    controls: TvControls,
+    controls: PlayerControls,
     scale: VideoScale,
     sleep: SleepTimer,
     statisticsShown: Boolean,
@@ -664,16 +653,16 @@ private fun LazyListScope.more(
     first: FocusRequester,
 ) {
     // The remote starts on the first row, or on the row of the panel Back came from.
-    val focusSleep = controls.cameBackFrom == TvPanel.SLEEP
+    val focusSleep = controls.cameBackFrom == PlayerPanel.SLEEP
     item(key = "aspect") {
         MoreRow(stringResource(R.string.aspect_ratio), stringResource(scale.label), Icons.Rounded.AspectRatio, tag = "tvAspect", modifier = if (!focusSleep) Modifier.focusRequester(first) else Modifier) {
-            controls.open(TvPanel.ASPECT)
+            controls.open(PlayerPanel.ASPECT)
         }
     }
     item(key = "sleep") {
         val value = sleep.endsAt?.let { stringResource(R.string.sleep_ends_at, clockText(it)) } ?: stringResource(R.string.off)
         MoreRow(stringResource(R.string.sleep_timer), value, Icons.Rounded.Bedtime, tag = "tvSleep", modifier = if (focusSleep) Modifier.focusRequester(first) else Modifier) {
-            controls.open(TvPanel.SLEEP)
+            controls.open(PlayerPanel.SLEEP)
         }
     }
     item(key = "statistics") {
@@ -700,7 +689,7 @@ private fun LazyListScope.more(
     }
 }
 
-private fun LazyListScope.scales(controls: TvControls, scale: VideoScale, onScale: (VideoScale) -> Unit, first: FocusRequester) {
+private fun LazyListScope.scales(controls: PlayerControls, scale: VideoScale, onScale: (VideoScale) -> Unit, first: FocusRequester) {
     VideoScale.entries.forEach { option ->
         item(key = "scale-$option") {
             val selected = option == scale
@@ -713,9 +702,9 @@ private fun LazyListScope.scales(controls: TvControls, scale: VideoScale, onScal
 }
 
 /** Off, then the minutes of [SleepTimer.CHOICES]. */
-private val SLEEP_CHOICES: List<Int?> = listOf(null) + SleepTimer.CHOICES
+internal val SLEEP_CHOICES: List<Int?> = listOf(null) + SleepTimer.CHOICES
 
-private fun LazyListScope.sleeps(controls: TvControls, sleep: SleepTimer, first: FocusRequester) {
+private fun LazyListScope.sleeps(controls: PlayerControls, sleep: SleepTimer, first: FocusRequester) {
     SLEEP_CHOICES.forEach { minutes ->
         val tag = "sleep-${minutes ?: "off"}"
         item(key = tag) {

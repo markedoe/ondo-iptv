@@ -735,6 +735,22 @@ class OndoRepository(
         return start(item, entry, fromStart = false)
     }
 
+    /**
+     * The episode after the one [request] plays, with its series, for the player's Up next: in the series' seasons
+     * (its page, once opened) or its playlist's list; null after the last one, or for a movie or a channel.
+     */
+    fun nextEpisode(request: PlayRequest): Pair<Series, Episode>? {
+        val parts = request.progressKey?.split('|') ?: return null
+        if (parts.size != 4 || parts[1] != ItemKind.SERIES.name || parts[3].isEmpty()) return null
+        val state = _state.value
+        if (parts[0] != state.activePlaylistId) return null
+        val series = state.content.series.firstOrNull { it.id == parts[2] } ?: return null
+        val episodes = state.seriesDetails[series.id]?.seasons?.sortedBy { it.number }?.flatMap { season -> season.episodes.sortedBy { it.number } }
+            ?: series.episodes.sortedWith(compareBy({ it.season }, { it.number }))
+        val index = episodes.indexOfFirst { it.id == parts[3] }
+        return episodes.getOrNull(index + 1)?.takeIf { index >= 0 }?.let { series to it }
+    }
+
     fun playRequest(channel: Channel): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(channel)

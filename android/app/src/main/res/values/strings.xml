@@ -326,6 +326,16 @@
     <string name="sleep_timer">Sleep timer</string>
     <string name="sleep_minutes">%1$d min</string>
     <string name="sleep_ends_at">Ends at %1$s</string>
+    <string name="lock_controls">Lock controls</string>
+    <string name="unlock_controls">Unlock</string>
+    <string name="picture_in_picture">Picture-in-picture</string>
+    <string name="back_to_live">Back to live</string>
+    <string name="seconds_short">%1$d s</string>
+    <string name="brightness">Brightness</string>
+    <string name="volume">Volume</string>
+    <string name="up_next">Up next</string>
+    <string name="play_now">Play now</string>
+    <string name="plays_in_seconds">Plays in %1$d s</string>
     <string name="live_badge">LIVE</string>
     <string name="track_number">Track %1$d</string>
     <string name="track_forced">Forced</string>

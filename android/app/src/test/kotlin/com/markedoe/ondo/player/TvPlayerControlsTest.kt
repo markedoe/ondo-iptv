@@ -46,7 +46,7 @@ import org.robolectric.annotation.Config
 class TvPlayerControlsTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private lateinit var controls: TvControls
+    private lateinit var controls: PlayerControls
     private lateinit var sleep: SleepTimer
     private var scale by mutableStateOf(VideoScale.FIT)
     private var sleepEnds = 0
@@ -63,12 +63,12 @@ class TvPlayerControlsTest {
         initiallySelected = setOf(0),
     )
 
-    private fun start(player: FakeTracksPlayer = movie, info: TvPlayerInfo = TvPlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false) {
+    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false) {
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
             val scope = rememberCoroutineScope()
-            controls = androidx.compose.runtime.remember { TvControls(scope) }
+            controls = androidx.compose.runtime.remember { PlayerControls(scope) }
             sleep = androidx.compose.runtime.remember { SleepTimer(scope, now = { NOW }) { sleepEnds++ } }
             CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
                 OndoTvTheme {
@@ -165,7 +165,7 @@ class TvPlayerControlsTest {
     @Test
     fun aLiveChannelShowsLiveInsteadOfTheBar() {
         val channel = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("de", MimeTypes.AUDIO_MPEG_L2, channels = 2)), initiallySelected = setOf(0), seekable = false)
-        start(channel, TvPlayerInfo("4  Cycling TV", "Tour stage 12", live = true))
+        start(channel, PlayerInfo("4  Cycling TV", "Tour stage 12", live = true))
         compose.onNodeWithTag("liveBadge").assertExists()
         compose.onNodeWithTag("tvSeekBar").assertDoesNotExist()
         compose.onNodeWithTag("tvSkipBack").assertDoesNotExist()
@@ -192,7 +192,7 @@ class TvPlayerControlsTest {
     @Test
     fun aLiveStreamThatCanGoBackKeepsItsBarWithLive() {
         val timeshift = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("de", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = true)
-        start(timeshift, TvPlayerInfo("4  Cycling TV", null, live = true))
+        start(timeshift, PlayerInfo("4  Cycling TV", null, live = true))
         compose.onNodeWithTag("tvSeekBar").assertExists()
         compose.onNodeWithTag("liveBadge").assertExists()
         compose.onNodeWithTag("tvSkipBack").assertExists()
@@ -203,14 +203,14 @@ class TvPlayerControlsTest {
         start()
         compose.runOnIdle {
             controls.hide()
-            controls.open(TvPanel.SUBTITLES)
+            controls.open(PlayerPanel.SUBTITLES)
         }
         compose.waitForIdle()
         row("trackOff").assertIsFocused()
         // A media key (Play/Pause) keeps the panel open.
         compose.runOnIdle { controls.show() }
         compose.waitForIdle()
-        assertEquals(TvPanel.SUBTITLES, controls.panel)
+        assertEquals(PlayerPanel.SUBTITLES, controls.panel)
         row("trackOff").assertIsFocused()
         // Back (the activity's) closes the panel: the remote is on Subtitles.
         compose.runOnIdle { assertTrue(controls.back()) }
@@ -232,7 +232,7 @@ class TvPlayerControlsTest {
         // The remote's audio key with the controls hidden: the same.
         compose.runOnIdle {
             controls.hide()
-            controls.open(TvPanel.AUDIO)
+            controls.open(PlayerPanel.AUDIO)
         }
         compose.waitForIdle()
         compose.onNodeWithTag("tracksHint").assertIsFocused()
@@ -244,7 +244,7 @@ class TvPlayerControlsTest {
         start(rtl = true)
         compose.runOnIdle {
             controls.hide()
-            controls.skip(movie, -TvControls.SKIP_MS)
+            controls.skip(movie, -PlayerControls.SKIP_MS)
         }
         compose.waitForIdle()
         val badge = compose.onNodeWithTag("tvSkipBadge").fetchSemanticsNode().boundsInRoot
@@ -259,7 +259,7 @@ class TvPlayerControlsTest {
         start(stream)
         compose.onNodeWithTag("tvSkipBack").assertDoesNotExist()
         compose.onNodeWithTag("tvPlayPause").assertIsFocused()
-        compose.runOnIdle { controls.skip(stream, TvControls.SKIP_MS) }
+        compose.runOnIdle { controls.skip(stream, PlayerControls.SKIP_MS) }
         compose.waitForIdle()
         assertEquals(emptyList<Long>(), stream.seeks)
     }
@@ -270,7 +270,7 @@ class TvPlayerControlsTest {
         start()
         compose.runOnIdle {
             controls.hide()
-            repeat(6) { controls.skip(movie, TvControls.SKIP_MS) }
+            repeat(6) { controls.skip(movie, PlayerControls.SKIP_MS) }
         }
         compose.waitForIdle()
         compose.mainClock.advanceTimeBy(2_000)
@@ -293,7 +293,7 @@ class TvPlayerControlsTest {
         // Back: More again, on the row the remote came from.
         compose.runOnIdle { assertTrue(controls.back()) }
         compose.waitForIdle()
-        assertEquals(TvPanel.MORE, controls.panel)
+        assertEquals(PlayerPanel.MORE, controls.panel)
         row("tvAspect").assertIsFocused()
         press(Key.DirectionCenter)
         press(Key.DirectionDown)

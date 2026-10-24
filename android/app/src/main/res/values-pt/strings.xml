@@ -329,6 +329,16 @@
     <string name="sleep_timer">Timer para dormir</string>
     <string name="sleep_minutes">%1$d min</string>
     <string name="sleep_ends_at">Termina às %1$s</string>
+    <string name="lock_controls">Bloquear controles</string>
+    <string name="unlock_controls">Desbloquear</string>
+    <string name="picture_in_picture">Picture in Picture</string>
+    <string name="back_to_live">Voltar ao vivo</string>
+    <string name="seconds_short">%1$d s</string>
+    <string name="brightness">Brilho</string>
+    <string name="volume">Volume</string>
+    <string name="up_next">A seguir</string>
+    <string name="play_now">Assistir agora</string>
+    <string name="plays_in_seconds">Começa em %1$d s</string>
     <string name="live_badge">AO VIVO</string>
     <string name="track_number">Faixa %1$d</string>
     <string name="track_forced">Forçadas</string>

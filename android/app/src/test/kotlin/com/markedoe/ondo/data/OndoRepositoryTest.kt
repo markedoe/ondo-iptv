@@ -314,6 +314,21 @@ class OndoRepositoryTest {
         assertEquals(settings, disk().loadSettings())
     }
 
+    /** Up next: the episode after the one playing, none after the last, none for a movie. */
+    @Test
+    fun theNextEpisodeIsTheOneAfterThePlayingOne() = runTest {
+        val repository = repository()
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Home", list).isSuccess)
+        val series = repository.state.value.content.series.single { it.name.startsWith("Harbor") }
+        val (first, second) = series.episodes.sortedBy { it.number }
+        val playing = requireNotNull(repository.playRequest(series, first))
+        assertEquals(series.id to second.id, repository.nextEpisode(playing)?.let { (s, e) -> s.id to e.id })
+        assertNull(repository.nextEpisode(requireNotNull(repository.playRequest(series, second))))
+        assertNull(repository.nextEpisode(requireNotNull(repository.playRequest(repository.state.value.content.movies.first()))))
+    }
+
     @Test
     fun aReminderIsScheduledThenCancelled() = runTest {
         val scheduler = RecordingScheduler()

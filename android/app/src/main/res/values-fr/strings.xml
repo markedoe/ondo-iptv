@@ -329,6 +329,16 @@
     <string name="sleep_timer">Minuterie de sommeil</string>
     <string name="sleep_minutes">%1$d min</string>
     <string name="sleep_ends_at">Fin à %1$s</string>
+    <string name="lock_controls">Verrouiller les commandes</string>
+    <string name="unlock_controls">Déverrouiller</string>
+    <string name="picture_in_picture">Image dans l’image</string>
+    <string name="back_to_live">Retour au direct</string>
+    <string name="seconds_short">%1$d s</string>
+    <string name="brightness">Luminosité</string>
+    <string name="volume">Volume</string>
+    <string name="up_next">À suivre</string>
+    <string name="play_now">Lire maintenant</string>
+    <string name="plays_in_seconds">Lecture dans %1$d s</string>
     <string name="live_badge">DIRECT</string>
     <string name="track_number">Piste %1$d</string>
     <string name="track_forced">Forcés</string>

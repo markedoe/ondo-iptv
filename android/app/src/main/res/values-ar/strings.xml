@@ -353,6 +353,16 @@
     <string name="sleep_timer">مؤقت النوم</string>
     <string name="sleep_minutes">%1$d د</string>
     <string name="sleep_ends_at">ينتهي عند %1$s</string>
+    <string name="lock_controls">قفل عناصر التحكم</string>
+    <string name="unlock_controls">إلغاء القفل</string>
+    <string name="picture_in_picture">صورة داخل صورة</string>
+    <string name="back_to_live">العودة إلى البث المباشر</string>
+    <string name="seconds_short">%1$d ث</string>
+    <string name="brightness">السطوع</string>
+    <string name="volume">مستوى الصوت</string>
+    <string name="up_next">التالي</string>
+    <string name="play_now">تشغيل الآن</string>
+    <string name="plays_in_seconds">يبدأ خلال %1$d ث</string>
     <string name="live_badge">مباشر</string>
     <string name="track_number">المسار %1$d</string>
     <string name="track_forced">إجبارية</string>

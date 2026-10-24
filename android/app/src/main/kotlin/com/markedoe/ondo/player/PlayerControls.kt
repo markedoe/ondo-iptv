@@ -19,23 +19,23 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** A side panel of the TV player, opened from its button, or from a row of More ([parent]). */
-enum class TvPanel {
+/** A panel of the player (a side panel on a TV, a sheet on a phone), opened from its button, or from a row of More ([parent]). */
+enum class PlayerPanel {
     SUBTITLES, AUDIO, SPEED, MORE, ASPECT, SLEEP;
 
     /** The panel Back returns to, null for a panel of the button row. */
-    val parent: TvPanel? get() = if (this == ASPECT || this == SLEEP) MORE else null
+    val parent: PlayerPanel? get() = if (this == ASPECT || this == SLEEP) MORE else null
 }
 
 /**
- * What the TV player shows over the video, and what it knows of the player for that ([refresh]). The controls show on
- * a key and go away [TIMEOUT_MS] after the last one while the video plays; paused, they stay. A peek shows the title and
+ * What the player shows over the video, on a TV and on a phone, and what it knows of the player for that ([refresh]).
+ * The controls show on a key or a tap and go away [TIMEOUT_MS] after the last one while the video plays; paused, they stay. A peek shows the title and
  * where the video is, without the buttons, at the start and after a skip with the controls hidden: the remote's keys
  * keep their hidden-controls meaning meanwhile. The timers run on [scope] (the player's, on the main thread).
  */
 @Stable
 @OptIn(UnstableApi::class)
-class TvControls(
+class PlayerControls(
     private val scope: CoroutineScope,
     private val clock: () -> Long = SystemClock::uptimeMillis,
     private val onShownChange: (Boolean) -> Unit = {},
@@ -44,11 +44,11 @@ class TvControls(
     var shown by mutableStateOf(false)
         private set
 
-    var panel by mutableStateOf<TvPanel?>(null)
+    var panel by mutableStateOf<PlayerPanel?>(null)
         private set
 
-    /** The panel Back just left for its [TvPanel.parent]: the parent's remote starts on the row that opened it. */
-    var cameBackFrom by mutableStateOf<TvPanel?>(null)
+    /** The panel Back just left for its [PlayerPanel.parent]: the parent's remote starts on the row that opened it. */
+    var cameBackFrom by mutableStateOf<PlayerPanel?>(null)
         private set
 
     /** The title and the progress, for a moment, without the buttons. */
@@ -118,7 +118,7 @@ class TvControls(
     }
 
     /** The controls, with the focus on Play/Pause (or on [panel]); a panel already open stays (a media key). */
-    fun show(panel: TvPanel? = null) {
+    fun show(panel: PlayerPanel? = null) {
         endPeek()
         if (panel != null || !shown) {
             this.panel = panel
@@ -153,7 +153,7 @@ class TvControls(
         }
     }
 
-    fun open(panel: TvPanel) = show(panel)
+    fun open(panel: PlayerPanel) = show(panel)
 
     /** Closes the panels (a choice was made): the remote goes back to the button of the row. */
     fun closePanel() {
@@ -248,6 +248,15 @@ class TvControls(
             delay(SCRUB_APPLY_MS)
             commitScrub(player)
         }
+    }
+
+    /** A finger on the progress bar: the target follows it, the player goes there when it lifts ([commitScrub]). */
+    fun scrubTo(player: Player, ms: Long) {
+        if (!player.isCurrentMediaItemSeekable) return
+        val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
+        scrubJob?.cancel()
+        scrubMs = ms.coerceIn(0, duration)
+        touch()
     }
 
     fun commitScrub(player: Player) {

@@ -5,9 +5,11 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
 import androidx.core.view.children
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
@@ -27,7 +29,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** The phone player's More menu: the aspect ratio and the sleep timer, as on a TV. */
+/** The phone player's More sheet: the aspect ratio and the sleep timer, as on a TV. */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = OndoApplication::class, qualifiers = "w411dp-h891dp-xxhdpi")
 class PhonePlayerMenuTest {
@@ -55,9 +57,17 @@ class PhonePlayerMenuTest {
         compose.waitForIdle()
     }
 
+    /** A tap on the video: the controls. */
+    private fun showControls() {
+        compose.onNodeWithTag("phonePlayer").performTouchInput { click(center) }
+        compose.mainClock.advanceTimeBy(600)
+        compose.waitForIdle()
+    }
+
     @Test
     fun moreSetsTheAspectRatio() {
         launch()
+        showControls()
         tap("playerMore")
         compose.onNodeWithTag("menuAspect").assertTextContains("Aspect ratio").assertTextContains("Fit")
         tap("menuAspect")
@@ -65,6 +75,7 @@ class PhonePlayerMenuTest {
         tap("scale-FILL")
         scenario.onActivity { assertEquals(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, playerView(it).resizeMode) }
         assertEquals(VideoScale.FILL, app.repository.state.value.settings.videoScale)
+        showControls()
         tap("playerMore")
         compose.onNodeWithTag("menuAspect").assertTextContains("Fill (crop)")
     }
@@ -72,11 +83,13 @@ class PhonePlayerMenuTest {
     @Test
     fun theSleepTimerPausesTheFilm() {
         launch()
+        showControls()
         tap("playerMore")
         compose.onNodeWithTag("menuSleep").assertTextContains("Sleep timer").assertTextContains("Off")
         tap("menuSleep")
         tap("sleep-15")
         scenario.onActivity { assertTrue(playerView(it).player!!.playWhenReady) }
+        showControls()
         tap("playerMore")
         compose.onNodeWithTag("menuSleep").assertTextContains("Ends at", substring = true)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(15).plusSeconds(1))

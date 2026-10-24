@@ -137,18 +137,18 @@ class TvPlayerRemoteTest {
     @Test
     fun theControlsGoAwayByThemselvesWhilePlayingAndStayWhilePaused() {
         showControls()
-        settle(TvControls.TIMEOUT_MS - 1_000)
+        settle(PlayerControls.TIMEOUT_MS - 1_000)
         assertTrue("still shown before the timeout", controlsShown())
         // A key starts the wait again.
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
-        settle(TvControls.TIMEOUT_MS - 1_000)
+        settle(PlayerControls.TIMEOUT_MS - 1_000)
         assertTrue("a key keeps them", controlsShown())
         settle(1_500)
         assertFalse("they go away", controlsShown())
         // Paused (OK with the controls hidden), they stay.
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         assertFalse(player().playWhenReady)
-        settle(TvControls.TIMEOUT_MS * 2)
+        settle(PlayerControls.TIMEOUT_MS * 2)
         assertTrue("paused, they stay", controlsShown())
     }
 
