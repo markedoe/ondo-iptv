@@ -1,5 +1,6 @@
 package com.markedoe.ondo.player
 
+import android.os.SystemClock
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -29,7 +30,11 @@ enum class TvPanel { SUBTITLES, AUDIO, SPEED, MORE }
  */
 @Stable
 @OptIn(UnstableApi::class)
-class TvControls(private val scope: CoroutineScope, private val onShownChange: (Boolean) -> Unit = {}) {
+class TvControls(
+    private val scope: CoroutineScope,
+    private val clock: () -> Long = SystemClock::uptimeMillis,
+    private val onShownChange: (Boolean) -> Unit = {},
+) {
     /** The buttons are on screen and the remote moves through them. */
     var shown by mutableStateOf(false)
         private set
@@ -79,6 +84,9 @@ class TvControls(private val scope: CoroutineScope, private val onShownChange: (
 
     /** Whether the controls may go away by themselves (the video plays); set by the player screen. */
     var playing: () -> Boolean = { playWhenReady }
+
+    /** When the last skip was asked ([clock]): the presses of a run are gathered into one seek. */
+    private var lastSkipAt = Long.MIN_VALUE / 2
 
     private var hideJob: Job? = null
     private var peekJob: Job? = null
@@ -169,13 +177,31 @@ class TvControls(private val scope: CoroutineScope, private val onShownChange: (
         skipped = 0
     }
 
-    /** [byMs] forward (or back), within the video: the buttons and, with the controls hidden, Left and Right. */
+    /**
+     * [byMs] forward (or back), within the video: the buttons and, with the controls hidden, Left and Right. The first
+     * press seeks at once; the next ones of a run (a key held down repeats) move a target, and the player goes there
+     * once they stop ([SKIP_RUN_MS]): one request to the provider, not one per press. Nothing where the player cannot
+     * seek: it would start the video over.
+     */
     fun skip(player: Player, byMs: Long) {
-        cancelScrub()
+        if (!player.isCurrentMediaItemSeekable) return
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 }
-        val target = (player.currentPosition + byMs).coerceAtLeast(0).let { if (duration != null) it.coerceAtMost(duration) else it }
-        player.seekTo(target)
-        refresh(player)
+        fun within(ms: Long) = ms.coerceAtLeast(0).let { if (duration != null) it.coerceAtMost(duration) else it }
+        val now = clock()
+        val inRun = now - lastSkipAt < SKIP_RUN_MS
+        lastSkipAt = now
+        if (inRun) {
+            scrubMs = within((scrubMs ?: player.currentPosition) + byMs)
+            scrubJob?.cancel()
+            scrubJob = scope.launch {
+                delay(SKIP_RUN_MS)
+                commitScrub(player)
+            }
+        } else {
+            cancelScrub()
+            player.seekTo(within(player.currentPosition + byMs))
+            refresh(player)
+        }
         if (shown) touch() else peek(SKIP_PEEK_MS, if (byMs < 0) -1 else 1)
     }
 
@@ -185,6 +211,7 @@ class TvControls(private val scope: CoroutineScope, private val onShownChange: (
      * seek for a move, not one per press, each seek being a new request to the provider and a wait for the picture.
      */
     fun scrub(player: Player, forward: Boolean, repeat: Int) {
+        if (!player.isCurrentMediaItemSeekable) return
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
         val step = when {
             repeat < 5 -> 10_000L
@@ -230,5 +257,8 @@ class TvControls(private val scope: CoroutineScope, private val onShownChange: (
 
         /** The buttons' and the remote's skip. */
         const val SKIP_MS = 10_000L
+
+        /** Skips closer than this make one run: the player goes there this long after the last one. */
+        const val SKIP_RUN_MS = 600L
     }
 }

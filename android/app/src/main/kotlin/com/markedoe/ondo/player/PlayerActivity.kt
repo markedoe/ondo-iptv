@@ -275,7 +275,8 @@ class PlayerActivity : ComponentActivity() {
                             TvPlayerOverlay(
                                 player = shownPlayer,
                                 controls = tvControls,
-                                info = tvPlayerInfo(minute * 60_000),
+                                // Looked up once a minute and for each channel, not on each frame of the controls.
+                                info = remember(request, minute) { tvPlayerInfo(minute * 60_000) },
                                 statisticsShown = showsStatistics,
                                 onToggleStatistics = ::toggleStatistics,
                                 onReportProblem = { shownReport = problemReport() },

@@ -99,8 +99,8 @@ class TvPlayerRemoteTest {
     fun theControlsOpenOnPlayPauseAndTheRemoteReachesSubtitlesAndAudio() {
         showControls()
         compose.onNodeWithTag("tvPlayPause").assertIsFocused()
-        press(KeyEvent.KEYCODE_DPAD_RIGHT)
-        compose.onNodeWithTag("tvSkipForward").assertIsFocused()
+        // The stream has not answered yet: the player cannot seek in it, so no skip buttons until it can.
+        compose.onNodeWithTag("tvSkipForward").assertDoesNotExist()
         press(KeyEvent.KEYCODE_DPAD_RIGHT)
         compose.onNodeWithTag("tvSubtitles").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
@@ -114,6 +114,8 @@ class TvPlayerRemoteTest {
         compose.onNodeWithTag("tvAudio").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNodeWithTag("tvTrackPanel").assertExists()
+        // No track known yet: the line saying so keeps the remote in the panel.
+        compose.onNodeWithTag("tracksHint").assertIsFocused()
     }
 
     @Test

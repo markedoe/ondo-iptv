@@ -1,11 +1,13 @@
 package com.markedoe.ondo.player
 
 import androidx.activity.ComponentActivity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextContains
@@ -15,6 +17,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
 import com.markedoe.ondo.ui.tv.OndoTvTheme
@@ -51,14 +54,16 @@ class TvPlayerControlsTest {
         initiallySelected = setOf(0),
     )
 
-    private fun start(player: FakeTracksPlayer = movie, info: TvPlayerInfo = TvPlayerInfo("Northern Lights", "2025", live = false)) {
+    private fun start(player: FakeTracksPlayer = movie, info: TvPlayerInfo = TvPlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false) {
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
             val scope = rememberCoroutineScope()
             controls = androidx.compose.runtime.remember { TvControls(scope) }
-            OndoTvTheme {
-                TvPlayerOverlay(player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {})
+            CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
+                OndoTvTheme {
+                    TvPlayerOverlay(player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {})
+                }
             }
         }
         // A TV has no touch screen: the remote's keys put it in keyboard mode.
@@ -196,5 +201,65 @@ class TvPlayerControlsTest {
         compose.runOnIdle { assertTrue(controls.back()) }
         compose.waitForIdle()
         compose.onNodeWithTag("tvSubtitles").assertIsFocused()
+    }
+
+    /** No audio track yet (a channel just opened) or none at all: the remote is still in the panel, on its line. */
+    @Test
+    fun anAudioPanelWithoutTracksKeepsTheRemoteInside() {
+        val silent = FakeTracksPlayer(listOf(FakeTracksPlayer.text("en")), initiallySelected = emptySet())
+        start(silent)
+        press(Key.DirectionRight, 3)
+        compose.onNodeWithTag("tvAudio").assertIsFocused()
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("tracksHint").assertIsFocused().assertTextContains("This stream has no sound.")
+        press(Key.DirectionLeft)
+        compose.onNodeWithTag("tracksHint").assertIsFocused()
+        // The remote's audio key with the controls hidden: the same.
+        compose.runOnIdle {
+            controls.hide()
+            controls.open(TvPanel.AUDIO)
+        }
+        compose.waitForIdle()
+        compose.onNodeWithTag("tracksHint").assertIsFocused()
+    }
+
+    /** The video's time runs left to right in every language: back is on the left in Arabic too. */
+    @Test
+    fun aSkipBackShowsItsIconOnTheLeftInArabic() {
+        start(rtl = true)
+        compose.runOnIdle {
+            controls.hide()
+            controls.skip(movie, -TvControls.SKIP_MS)
+        }
+        compose.waitForIdle()
+        val badge = compose.onNodeWithTag("tvSkipBadge").fetchSemanticsNode().boundsInRoot
+        val width = compose.onRoot().fetchSemanticsNode().boundsInRoot.width
+        assertTrue("the back icon is on the left (${badge.left} of $width)", badge.right < width / 2)
+    }
+
+    /** A film the player cannot seek in (a stream without an index): a skip would start it over, so there is none. */
+    @Test
+    fun aFilmThatCannotSeekHasNoSkipButtons() {
+        val stream = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = false)
+        start(stream)
+        compose.onNodeWithTag("tvSkipBack").assertDoesNotExist()
+        compose.onNodeWithTag("tvPlayPause").assertIsFocused()
+        compose.runOnIdle { controls.skip(stream, TvControls.SKIP_MS) }
+        compose.waitForIdle()
+        assertEquals(emptyList<Long>(), stream.seeks)
+    }
+
+    /** Right held down with the controls hidden: the target moves with each repeat, the player goes there once. */
+    @Test
+    fun skipsPressedInARowMakeOneSeek() {
+        start()
+        compose.runOnIdle {
+            controls.hide()
+            repeat(6) { controls.skip(movie, TvControls.SKIP_MS) }
+        }
+        compose.waitForIdle()
+        compose.mainClock.advanceTimeBy(2_000)
+        compose.waitForIdle()
+        assertEquals("the first at once, then one for the rest", listOf(610_000L, 660_000L), movie.seeks)
     }
 }

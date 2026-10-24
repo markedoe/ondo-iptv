@@ -51,6 +51,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -183,7 +184,8 @@ fun TvPlayerOverlay(
                         }
                     }
                 }
-                if (controls.skipped != 0) SkipBadge(controls.skipped, Modifier.align(if (controls.skipped < 0) Alignment.CenterStart else Alignment.CenterEnd))
+                // Back on the left, forward on the right, as the bar, in every language.
+                if (controls.skipped != 0) SkipBadge(controls.skipped, Modifier.align(if (controls.skipped < 0) AbsoluteAlignment.CenterLeft else AbsoluteAlignment.CenterRight))
             }
         }
         val panel = controls.panel
@@ -381,7 +383,8 @@ internal fun time(ms: Long, locale: Locale): String {
 
 @Composable
 private fun ButtonRow(player: Player, controls: TvControls, info: TvPlayerInfo, playPause: FocusRequester, buttons: Map<TvPanel, FocusRequester>) {
-    val transport = !info.live || controls.seekable
+    // Where the player cannot seek (a live channel, a film without an index), a skip would start the video over.
+    val transport = controls.seekable
     val playing = controls.playWhenReady
     Row(Modifier.fillMaxWidth().focusGroup(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         if (transport) {
@@ -505,7 +508,6 @@ private fun SidePanel(
     onReportProblem: () -> Unit,
 ) {
     val first = remember(panel) { FocusRequester() }
-    LaunchedEffect(panel, open) { if (open) takeFocus(first) }
     Surface(
         modifier = Modifier
             .fillMaxHeight()
@@ -529,6 +531,8 @@ private fun SidePanel(
             val locale = LocalConfiguration.current.locales[0]
             val type = if (panel == TvPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
             val choices = if (panel == TvPanel.SUBTITLES || panel == TvPanel.AUDIO) TrackChoices.of(controls.tracks, type, words, locale) else emptyList()
+            // Again when the tracks come (the line saying there are none goes, and had the focus).
+            LaunchedEffect(panel, open, choices.isEmpty()) { if (open) takeFocus(first) }
             // The list opens on the row in use: a row far down a long list is not drawn yet, and could not take the focus.
             val selectedRow = when (panel) {
                 TvPanel.SUBTITLES -> choices.indexOfFirst { it.selected } + 1
@@ -586,7 +590,17 @@ private fun LazyListScope.tracks(player: Player, controls: TvControls, type: Int
                 type == C.TRACK_TYPE_TEXT -> R.string.no_subtitles
                 else -> R.string.no_audio
             }
-            Text(stringResource(hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).testTag("tracksHint"))
+            // With no row to choose, the line itself keeps the remote in the panel (Subtitles has Off).
+            val holdsFocus = type == C.TRACK_TYPE_AUDIO
+            Text(
+                stringResource(hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .then(if (holdsFocus) Modifier.focusRequester(first).focusable() else Modifier)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .testTag("tracksHint"),
+            )
         }
     }
 }
