@@ -136,8 +136,10 @@ class PlaylistLoader(
             window = window,
             // Guide channels picked by hand are kept even when nothing else matches them.
             channelIds = content.channels.mapNotNullTo(HashSet()) { it.epgId } + playlist.epgChannelOverrides.values.filter { it.isNotEmpty() },
+            // The names `EpgIndex.automaticGuideId` matches by, the `tvg-id` among them (`TV9` for the guide's `TV9.fr`):
+            // a programme dropped here is one the index would have shown.
             channelNameKeys = content.channels
-                .flatMap { listOfNotNull(it.name, it.epgName) }
+                .flatMap { listOfNotNull(it.name, it.epgName, it.epgId) }
                 .mapTo(HashSet(), TextNormalizer::channelMatchKey),
         )
         val shift = (playlist.epgTimeShiftHours * 3_600_000).toLong()

@@ -165,6 +165,25 @@ class PlaylistLoaderTest {
         assertTrue(withoutProvider.data.programs.isEmpty())
     }
 
+    /**
+     * A channel whose `tvg-id` names the guide channel only by its display name (`TV9` for `TV9.fr`) is matched by the
+     * guide's index: the loader keeps that channel's programmes too, instead of dropping what the index would show.
+     */
+    @Test
+    fun aGuideChannelMatchedByTheNameInTheTvgIdIsKept() = runTest {
+        val now = utc(2025, 10, 9, 18, 10)
+        val http = MockHttpClient()
+        http.routes["http://epg.example.com/guide.xml"] = """
+            <tv><channel id="TV9.fr"><display-name>TV9</display-name></channel>
+            <programme start="20251009180000 +0000" stop="20251009183000 +0000" channel="TV9.fr"><title>Le JT</title></programme></tv>
+        """.trimIndent().encodeToByteArray()
+        val channel = Channel(id = "1", name = "Première", categoryId = "c", streamUrl = "http://h/1", epgId = "TV9")
+        val playlist = Playlist(name = "P", source = PlaylistSource.Remote("http://example.com/list.m3u"), epgUrls = listOf("http://epg.example.com/guide.xml"))
+        val result = PlaylistLoader(http, clock = { now }).loadEpg(playlist, PlaylistContent(channels = listOf(channel)))
+        assertEquals(1, result.data.programCount)
+        assertEquals("Le JT", com.markedoe.ondo.core.epg.EpgIndex(result.data).current(channel, now)?.title)
+    }
+
     /** The user's copy of the provider's guide address, written another way, is downloaded once. */
     @Test
     fun aGuideWrittenTwoWaysIsDownloadedOnce() = runTest {
