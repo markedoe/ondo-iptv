@@ -113,8 +113,10 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
     val returns = remember { HashMap<String, FocusRequester>() }
     fun returnTo(key: String) = returns.getOrPut(key) { FocusRequester() }
     var focusBack by remember { mutableStateOf("") }
-    // From the left, the remote enters the right side on its first item (then on the one it left).
+    // From the left, the remote enters the right side on its first item (then on the one it left); not while the page
+    // gives the focus back to the row that opened another page ([FocusMemory.restore]): that row takes it.
     val paneFirst = remember(section) { FocusRequester() }
+    val restoring = LocalFocusMemory.current?.restore != null
     FocusBackAfter(open = deleting != null || choosingBuffer != null, requester = returnTo(focusBack))
     Row(
         Modifier
@@ -153,7 +155,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
         }
         Box(Modifier.padding(horizontal = 24.dp).width(1.dp).fillMaxHeight().background(Color.White.copy(alpha = 0.1f)))
         LazyColumn(
-            Modifier.weight(1f).fillMaxHeight().focusRestorer(paneFirst).testTag("settingsPane"),
+            Modifier.weight(1f).fillMaxHeight().focusRestorer(if (restoring) FocusRequester.Default else paneFirst).testTag("settingsPane"),
             contentPadding = PaddingValues(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -388,7 +390,7 @@ private fun DeviceRow(name: String, detail: String?) {
 private fun LazyListScope.about(state: SettingsUiState, actions: SettingsActions, first: FocusRequester) {
     title(R.string.about)
     item(key = "help") { SettingRow(stringResource(R.string.help), Icons.AutoMirrored.Rounded.HelpOutline, onClick = actions.onHelp, modifier = Modifier.focusRequester(first).focusMemory("settings-help").testTag("helpRow")) }
-    item(key = "privacy") { SettingRow(stringResource(R.string.privacy_policy), Icons.Rounded.Lock, onClick = actions.onPrivacy, modifier = Modifier.focusMemory("settings-privacy")) }
+    item(key = "privacy") { SettingRow(stringResource(R.string.privacy_policy), Icons.Rounded.Lock, onClick = actions.onPrivacy, modifier = Modifier.focusMemory("settings-privacy").testTag("privacyRow")) }
     item(key = "support") { SettingRow(stringResource(R.string.support), Icons.Rounded.SupportAgent, onClick = actions.onSupport, modifier = Modifier.focusMemory("settings-support")) }
     item(key = "disclaimer") {
         Text(stringResource(R.string.disclaimer), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.widthIn(max = 640.dp).padding(top = 8.dp))
