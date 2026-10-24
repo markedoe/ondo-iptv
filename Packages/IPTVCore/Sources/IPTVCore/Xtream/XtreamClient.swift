@@ -120,7 +120,8 @@ public struct XtreamClient: Sendable {
                 posterURL: URL.lenient(dto.icon),
                 categoryID: "movie-\(dto.categoryID ?? "0")",
                 streamURL: urls.movieURL(streamID: dto.streamID, containerExtension: dto.containerExtension),
-                rating: dto.rating ?? dto.rating5.map { $0 * 2 },
+                // Out of 10; a five-star rating too large to double would be infinity.
+                rating: dto.rating ?? dto.rating5.map { $0 * 2 }.flatMap { $0.isFinite ? $0 : nil },
                 year: dto.year ?? yearInTitle,
                 addedAt: dto.added,
                 plot: dto.plot,
