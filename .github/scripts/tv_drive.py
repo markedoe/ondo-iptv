@@ -280,10 +280,28 @@ class Tv:
 DRAWER = ("Search", "Home", "Movies", "Series", "Live TV", "My List", "Settings")
 
 
+SETTINGS_SECTIONS = ("Playlists", "Sync", "Player", "Catalog", "About")
+
+
 def settings_section(tv, section):
-    """Settings open, the remote on one of its parts on the left (its page shows on the right)."""
+    """Settings open, the remote on one of its parts on the left (its page shows on the right). From a row of the
+    right side, Left first: Up and Down stay among the rows (a button that turns into another keeps the remote)."""
+    _, texts = tv.focused()
+    if not any(part in texts for part in SETTINGS_SECTIONS):
+        tv.key("LEFT")
+        time.sleep(1)
     tv.focus_exact(section, keys=("UP",) * 5 + ("DOWN",) * 5, max_presses=10)
     time.sleep(1)
+
+
+def back_to_settings_row(tv, page):
+    """Back from a page a row of Settings opened: the remote should be on that row; noted when it is on the part on
+    the left instead, and Right goes back to the rows."""
+    _, texts = tv.focused()
+    if any(part in texts for part in SETTINGS_SECTIONS):
+        tv.say(f"  back from {page}: the remote is on the part '{' | '.join(texts)}', not on the row that opened it")
+        tv.key("RIGHT")
+        time.sleep(1)
 
 
 def path_settings(tv, args):
@@ -349,6 +367,7 @@ def path_settings(tv, args):
     tv.note_screen("settings-help")
     tv.key("BACK")
     time.sleep(2)
+    back_to_settings_row(tv, "Help")
     for row in ("Privacy policy", "Support"):
         if not tv.visible("Privacy policy"):
             settings_section(tv, "About")
@@ -358,6 +377,7 @@ def path_settings(tv, args):
         tv.key("BACK")
         time.sleep(3)
         tv.check_alive(f"back from {row}")
+        back_to_settings_row(tv, row)
     if not tv.visible("Privacy policy"):
         settings_section(tv, "About")
         tv.key("RIGHT")
@@ -698,7 +718,7 @@ def path_browse(tv, args):
     tv.key("BACK")
     time.sleep(2)
     tv.drawer("My List")
-    tv.open("Collections", keys=("UP", "RIGHT", "RIGHT", "RIGHT", "RIGHT"), max_presses=10, exact=True, wait=2)
+    my_list_tab(tv, "Collections")
     tv.open("Collection ", keys=("DOWN",), max_presses=4, wait=4)
     tv.note_screen("browse-collection-page")
     tv.key("DOWN")
@@ -731,6 +751,31 @@ def path_browse(tv, args):
     time.sleep(3)
     tv.check_alive("a live category chosen")
     tv.note_screen("browse-live-category")
+
+
+MY_LIST_TABS = ("Movies", "Series", "Channels", "Collections")
+
+
+def my_list_tab(tv, tab):
+    """My List's tab [tab] opened: from the content Up reaches the tabs, from Search (above them, on the right) Down
+    does; along the tabs, Right (Collections is the last one) then Left."""
+    for i in range(14):
+        node, texts = tv.focused()
+        if tab in texts:
+            tv.key("DPAD_CENTER")
+            time.sleep(2)
+            return
+        if node is not None and tv.left_edge(node) < 260:
+            # Still in the drawer: into the page.
+            tv.key("RIGHT")
+        elif any(name in texts for name in MY_LIST_TABS):
+            tv.key("RIGHT" if i < 8 else "LEFT")
+        elif "Search" in texts:
+            tv.key("DOWN")
+        else:
+            tv.key("UP")
+    tv.screenshot(f"never-focused-{tab}")
+    raise TimeoutError(f"the focus never reached My List's tab '{tab}' (on: {' | '.join(tv.focused()[1])})")
 
 
 def listening_ports(tv):
@@ -770,7 +815,9 @@ def sync_exchange(port, snapshot):
 
 
 def path_sync(tv, args):
-    """Sync on the local network turned on, and a session from another device (a made-up phone, through adb forward):
+    """Sync on the local network turned on, and a session from another device (a made-up phone, through the emulator's
+    port redirection: it arrives from the host's own address on the emulator's network, as from another device;
+    adb forward would arrive from the device itself, which the app refuses):
     its snapshot read by the release build, merged (a playlist, My List, progress, a list), and the answer written."""
     tv.drawer("Settings")
     settings_section(tv, "Sync")
@@ -780,7 +827,7 @@ def path_sync(tv, args):
     tv.say(f"the app listens on {ports}")
     if not ports:
         raise TimeoutError("no sync server listening after sync was turned on")
-    tv.adb("forward", "tcp:18765", f"tcp:{ports[0]}")
+    tv.say("redirection: " + tv.adb("emu", "redir", "add", f"tcp:18765:{ports[0]}").strip())
     now = int(time.time() * 1000)
     playlist = "6f1c0d3e-0000-4000-8000-00000000a001"
     snapshot = {
@@ -814,7 +861,7 @@ def path_sync(tv, args):
     settings_section(tv, "Sync")
     tv.key("RIGHT")
     tv.open("Sync on this network", keys=("UP",), max_presses=3, wait=3)
-    tv.adb("forward", "--remove", "tcp:18765")
+    tv.adb("emu", "redir", "del", "tcp:18765")
     tv.key("BACK")
     time.sleep(3)
     tv.drawer("My List")
@@ -1025,13 +1072,20 @@ def path_bitrate(tv, args):
     player keeps ahead of the picture must fit in the app's memory with it. The Java heap is noted every 10 s. The app
     running out of memory fails, even when the player only shows an error, and so does the error itself."""
     tv.drawer("Movies")
-    tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=1)
-    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=3)
+    def movie_page():
+        return (tv.visible("Play") or tv.visible("From Start")) and tv.visible("Collection")
+    if not movie_page():
+        # OK pressed while the catalogue was still being laid out: once more, on Movie 1 again.
+        tv.say("  bitrate: no movie page 3 s after OK; OK again on Movie 1")
+        tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=3)
+    tv.wait_for("a movie page", movie_page, 30)
     if not tv.visible("Movie 1 "):
         tv.say("  bitrate: the page opened is not Movie 1's")
     since = tv.shell("date '+%m-%d %H:%M:%S.000'").strip()
     started = time.monotonic()
-    tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=5)
+    # A movie watched by an earlier path plays from the start.
+    tv.open("From Start" if tv.visible("From Start") else "Play", keys=("UP", "LEFT"), max_presses=4, wait=5)
     if not tv.player_shown():
         raise TimeoutError("the player never opened from Movie 1")
     limit = tv.shell("getprop dalvik.vm.heapgrowthlimit").strip()
