@@ -113,10 +113,11 @@ class WorkflowScriptTestCase(unittest.TestCase):
         """Runs [script] as a `run:` step at main's last commit; the output and the runs it started."""
         (self.root / "runs.json").write_text(json.dumps(runs), encoding="utf-8")
         (self.root / "step.sh").write_text(script, encoding="utf-8")
+        log = self.root / "dispatched.txt"
+        log.unlink(missing_ok=True)
         result = subprocess.run(["bash", "-e", str(self.root / "step.sh")], cwd=self.repository,
                                 env={**self.environment, **environment}, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        log = self.root / "dispatched.txt"
         dispatched = log.read_text(encoding="utf-8").splitlines() if log.exists() else []
         return result.stdout + result.stderr, dispatched
 
@@ -181,6 +182,27 @@ class DeliverTests(WorkflowScriptTestCase):
         output, dispatched = self.deliver("CI", "change", runs)
         self.assertEqual(dispatched, [], output)
         self.assertIn("already waiting", output)
+
+    def test_a_change_to_android_goes_to_internal_testing(self):
+        self.commit("first", "android/app/src/main/Main.kt")
+        self.commit("change", "android/core/src/main/Core.kt")
+        runs = {"android.yml": [green(self.commits["change"]), green(self.commits["first"])],
+                "release-android.yml": [run_in("in_progress")]}
+        output, dispatched = self.deliver("Android", "change", runs)
+        self.assertEqual(dispatched, [INTERNAL_TESTING], output)
+
+    def test_a_waiting_promotion_or_play_status_is_never_replaced(self):
+        # They share the release-android group with Release Android: a new run there would cancel them.
+        self.commit("first", "android/app/src/main/Main.kt")
+        self.commit("change", "android/core/src/main/Core.kt")
+        for workflow in ("release-android.yml", "promote-android.yml", "play-status.yml"):
+            with self.subTest(waiting=workflow):
+                runs = {"android.yml": [green(self.commits["change"]), green(self.commits["first"])],
+                        "release-android.yml": [run_in("in_progress")]}
+                runs.setdefault(workflow, []).insert(0, run_in("pending"))
+                output, dispatched = self.deliver("Android", "change", runs)
+                self.assertEqual(dispatched, [], output)
+                self.assertIn("already waiting", output)
 
 
 class TestFlightEditionAgainTests(WorkflowScriptTestCase):
