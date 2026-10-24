@@ -152,6 +152,27 @@ class SyncDataTest {
         assertTrue(applied.library.favorites.any { it.playlistId == "P1" && it.itemId == "m1" })
     }
 
+    /**
+     * A snapshot of many lists, or of many records of playlists this device does not know, is applied and sent again
+     * in one pass: sync runs on the main thread, and the next session works on everything the first one kept.
+     */
+    @Test(timeout = 5_000)
+    fun manyListsAreAppliedAgainWithoutAQuadraticPass() {
+        val lists = (0 until 40_000).map { SyncList(java.util.UUID(0, it.toLong()).toString(), "List $it", updatedAt = time) }
+        val merged = SyncSnapshot(device = "other", lists = lists)
+        val kept = SyncData.apply(OndoState(isReady = true), merged).library
+        // The next session: the same lists, onto the device that kept them.
+        assertEquals(lists.size, SyncData.apply(OndoState(isReady = true, library = kept), merged).library.collections.size)
+    }
+
+    @Test(timeout = 5_000)
+    fun manyRecordsOfUnknownPlaylistsAreSentWithoutAQuadraticPass() {
+        val playlists = (0 until 30_000).map { SavedPlaylist(java.util.UUID(0, it.toLong()).toString(), "P$it", "http://provider.example.com/$it.m3u", addedAt = 1) }
+        val favorites = (0 until 30_000).map { Favorite(java.util.UUID(1, it.toLong()).toString(), ItemKind.MOVIE, "m$it", "Movie $it", addedAt = 2) }
+        val state = OndoState(isReady = true, playlists = playlists, library = LibraryState(favorites = favorites))
+        assertEquals(favorites.size, SyncData.snapshot(state, "device", "TV", now = 10).favorites.size)
+    }
+
     /** What another device sends that this one cannot use changes nothing and breaks nothing. */
     @Test
     fun anOddSnapshotIsKeptOutWithoutHarm() = runTest {

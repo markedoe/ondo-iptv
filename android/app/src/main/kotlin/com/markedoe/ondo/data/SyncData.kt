@@ -57,9 +57,10 @@ object SyncData {
     fun snapshot(state: OndoState, device: String, deviceName: String?, now: Long): SyncSnapshot {
         val synced = state.playlists.filter(SyncKeys::syncs)
         val ids = synced.mapTo(HashSet()) { it.id.lowercase() }
+        val known = state.playlists.mapTo(HashSet()) { it.id.lowercase() }
         val library = state.library
         // Records of a file playlist stay here; those of a playlist this device does not know (yet) still travel.
-        fun travels(playlistId: String) = playlistId.lowercase() in ids || state.playlists.none { it.id.equals(playlistId, ignoreCase = true) }
+        fun travels(playlistId: String) = playlistId.lowercase().let { it in ids || it !in known }
         return SyncSnapshot(
             device = device,
             deviceName = deviceName,
@@ -173,9 +174,12 @@ object SyncData {
             )
         }.filter { it.playlistId !in filePlaylists }
         val localItems = library.collections.flatMap { it.items }.associateBy { "${it.playlistId.lowercase()}|${SyncKeys.kind(it.kind)}|${it.itemId}" }
+        // The device's own list IDs, whatever their case (the first of each, as a search in order would find).
+        val localLists = HashMap<String, String>()
+        library.collections.forEach { localLists.putIfAbsent(it.id.lowercase(), it.id) }
         val collections = merged.lists.map { synced ->
             UserCollection(
-                id = library.collections.firstOrNull { it.id.equals(synced.id, ignoreCase = true) }?.id ?: synced.id,
+                id = localLists[synced.id.lowercase()] ?: synced.id,
                 name = synced.name,
                 items = synced.items.mapNotNull { item ->
                     val kind = SyncKeys.itemKind(item.kind) ?: return@mapNotNull null
