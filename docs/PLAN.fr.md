@@ -36,6 +36,7 @@ ondo-iptv/
 │   ├── Playback/      PlaybackHealth, PlaybackLog, ProblemReport, BufferPolicy
 │   ├── Remux/         MatroskaRemux (MKV → HLS en MP4 fragmenté), EBML, Matroska, FragmentWriter
 │   ├── Subtitles/     OnlineSubtitles, OpenSubtitles, SubDL, SubSource, Addic7ed
+│   ├── Sync/          SyncSnapshot, SyncMerge, SyncNetwork (synchronisation sur le réseau local, SYNC.fr.md)
 │   ├── Networking/    HTTPClient, TransferMeter, DownloadDiagnosis + DownloadReport (téléchargements, édition TestFlight)
 │   └── Utilities/     Gzip (CZlib), ZipArchive, TextUtilities
 ├── App/
@@ -100,7 +101,9 @@ raccourcis, lecteur dans sa propre fenêtre (plusieurs fenêtres = multi-écran)
 
 ### Phase 4 — Bibliothèque et synchro (P2) ✅
 - ~~Synchro iCloud~~ : retirée (décision du 13/10) ; la bibliothèque garde sa fusion déterministe
-      (marqueurs de suppression), utile pour une future synchro ou la restauration de sauvegardes
+      (marqueurs de suppression), qui sert à la restauration des sauvegardes
+- [x] À la place, synchronisation sur le réseau local ([SYNC.fr.md](SYNC.fr.md)) : iPhone, iPad et Mac se
+      connectent aux appareils Android du même réseau, rien ne passe par internet
 - [x] Profils (« Qui regarde ? »), PIN de profil, profils enfant
 - [x] Gestionnaire de listes personnalisées, catégories masquées
 
