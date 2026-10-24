@@ -123,6 +123,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -264,6 +265,11 @@ class PlayerActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this, hideControlsOnBack)
         val exoPlayer = buildPlayer()
         player = exoPlayer
+        // Opened again alone, before the settings were read: the viewer's languages as soon as they are.
+        if (!repository.state.value.isReady) lifecycleScope.launch {
+            repository.state.first { it.isReady }
+            player?.let { it.trackSelectionParameters = TrackPreferences.parameters(it.trackSelectionParameters, trackLanguages(), deviceLanguages()) }
+        }
         // Prepared first: the media session starts from a player that is already loading.
         play(urlIndex, request.startPositionMs)
         openSession(exoPlayer)

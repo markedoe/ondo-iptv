@@ -131,6 +131,9 @@ class OndoRepository(
      */
     private val pendingLibraryChanges = mutableListOf<(LibraryState) -> LibraryState>()
 
+    /** Settings changed before the saved ones were read (the player opened again alone): applied to them once read. */
+    private val pendingSettingsChanges = mutableListOf<(AppSettings) -> AppSettings>()
+
     /** Saves run one at a time, in order: the last change is the one on disk. */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val writer = io.limitedParallelism(1)
@@ -177,7 +180,7 @@ class OndoRepository(
         if (_state.value.isReady || bootstrapping) return
         bootstrapping = true
         scope.launch {
-            val settings = withContext(io) { store.loadSettings() }
+            val savedSettings = withContext(io) { store.loadSettings() }
             val playlists = withContext(io) { store.loadPlaylists() }
             val saved = withContext(io) { store.loadLibrary() }
             val lastCrash = withContext(io) {
@@ -188,11 +191,15 @@ class OndoRepository(
             val pending = pendingLibraryChanges.toList()
             pendingLibraryChanges.clear()
             val library = pending.fold(saved) { library, change -> change(library) }
+            val pendingSettings = pendingSettingsChanges.toList()
+            pendingSettingsChanges.clear()
+            val settings = pendingSettings.fold(savedSettings) { settings, change -> change(settings) }
             // With a playlist, its saved catalogue is read next: restoring from the same update (no "empty" moment).
             _state.update {
                 it.copy(settings = settings, playlists = playlists, library = library, lastCrash = lastCrash, isReady = true, isRestoring = playlists.isNotEmpty())
             }
             if (pending.isNotEmpty()) persist { saveLibrary(library) }
+            if (pendingSettings.isNotEmpty()) persist { saveSettings(settings) }
             _state.value.activePlaylist?.let { open(it) }
             awardsSource?.let { source ->
                 val awards = withContext(io) { runCatching { source()?.let(AwardsCatalogue::parse) }.getOrNull() }
@@ -437,6 +444,12 @@ class OndoRepository(
     fun clearError() = _state.update { it.copy(error = null) }
 
     private fun updateSettings(change: (AppSettings) -> AppSettings) {
+        // Before the saved settings are read, saving would put the defaults over them.
+        if (!_state.value.isReady) {
+            pendingSettingsChanges += change
+            bootstrap()
+            return
+        }
         val settings = change(_state.value.settings)
         _state.update { it.copy(settings = settings) }
         persist { saveSettings(settings) }

@@ -301,6 +301,19 @@ class OndoRepositoryTest {
         assertEquals(1_200.0, saved.progress(watched.key)!!.position, 0.0)
     }
 
+    /** The player, opened again alone, learns a language before the settings are read: the settings are kept. */
+    @Test
+    fun aSettingChangedBeforeTheSettingsLoadKeepsTheSettings() = runTest {
+        AppStore(folder.root).saveSettings(AppSettings(activePlaylistId = "p1", syncOnLocalNetwork = true, syncDeviceId = "d1", vodBuffer = 30))
+
+        val repository = repository() // nobody called bootstrap(): only the player exists
+        repository.setTrackLanguages("fr", "en", subtitlesOn = true)
+
+        val settings = repository.awaitState { it.isReady }.settings
+        assertEquals(AppSettings(activePlaylistId = "p1", syncOnLocalNetwork = true, syncDeviceId = "d1", vodBuffer = 30, preferredAudioLanguage = "fr", preferredSubtitleLanguage = "en", subtitlesOn = true), settings)
+        assertEquals(settings, disk().loadSettings())
+    }
+
     @Test
     fun aReminderIsScheduledThenCancelled() = runTest {
         val scheduler = RecordingScheduler()
