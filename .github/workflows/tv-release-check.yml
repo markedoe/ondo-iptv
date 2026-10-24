@@ -26,7 +26,7 @@ on:
         type: boolean
         default: false
       paths:
-        description: "More paths after the tabs, each from a fresh start (all, or some of: settings,search,details,player,guide,mylist,playlists,restore,browse,sync,keyboard,crash)"
+        description: "More paths after the tabs, each from a fresh start (all, or some of: settings,search,details,player,guide,mylist,playlists,restore,browse,sync,keyboard,bitrate,crash)"
         required: false
         default: ""
 
@@ -69,6 +69,8 @@ jobs:
           sudo udevadm trigger --name-match=kvm
       - name: Streams that play (a two-minute clip made with ffmpeg)
         if: inputs.paths != ''
+        env:
+          PATHS: ${{ inputs.paths }}
         run: |
           command -v ffmpeg > /dev/null || { sudo apt-get update -q && sudo apt-get install -y -q ffmpeg; }
           mkdir -p media
@@ -77,6 +79,13 @@ jobs:
           ffmpeg -hide_banner -loglevel error -i media/clip.mkv -c copy -f mpegts media/clip.ts
           ffmpeg -hide_banner -loglevel error -i media/clip.mkv -c copy -f hls -hls_time 4 -hls_list_size 0 -hls_playlist_type vod \
             -hls_segment_filename media/seg%03d.ts media/live.m3u8
+          # Movie 1 at a 4K film's bitrate (40 Mbit/s; 1080p, which the emulator decodes), for the bitrate path.
+          case ",$PATHS," in
+            *,bitrate,*|*,all,*)
+              ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc2=size=1920x1080:rate=25,noise=alls=60:allf=t" \
+                -f lavfi -i sine=frequency=440:sample_rate=48000 -t 75 -c:v libx264 -preset ultrafast -b:v 40M -maxrate 40M \
+                -bufsize 40M -g 50 -pix_fmt yuv420p -c:a aac -b:a 128k media/heavy.mkv ;;
+          esac
           ls -la media
       - name: Made-up Xtream panel
         env:

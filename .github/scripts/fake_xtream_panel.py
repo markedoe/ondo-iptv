@@ -7,7 +7,8 @@ has thousands of channels and tens of thousands of movies. Every request is writ
 shows what the app asked for. Login: viewer / secret. Names and addresses are made up (example.com).
 
 With --media, the streams play: every channel answers with the folder's live.m3u8 (and its seg*.ts) or clip.ts, every
-movie and episode with clip.mkv (byte ranges served, for seeking). Without it, a stream's address answers 404.
+movie and episode with clip.mkv (byte ranges served, for seeking); movie 1 with heavy.mkv when the folder has one (a
+high-bitrate film, as a 4K one weighs). Without it, a stream's address answers 404.
 """
 import argparse
 import gzip
@@ -207,6 +208,8 @@ def main():
                 self.send_file(os.path.join(args.media, leaf), "video/mp2t")
             elif leaf.endswith(".ts"):
                 self.send_file(os.path.join(args.media, "clip.ts"), "video/mp2t")
+            elif parts[0] == "movie" and leaf.split(".")[0] == "1" and os.path.isfile(os.path.join(args.media, "heavy.mkv")):
+                self.send_file(os.path.join(args.media, "heavy.mkv"), "video/x-matroska", ranges=True)
             else:
                 self.send_file(os.path.join(args.media, "clip.mkv"), "video/x-matroska", ranges=True)
             return True

@@ -4,7 +4,7 @@ first launch, Add a Playlist, Xtream Codes (the made-up panel of fake_xtream_pan
 `adb reverse`), Add, then every tab. Watches the app's process the whole time: a crash, an ANR or Android ending the
 app fails the run. Screenshots, the screen's text, logcat, the exit reasons and memory use go to the output folder.
 With --paths, more of the app after that, each path from a fresh start of the app (the saved playlist read again):
-settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, crash (see PATHS).
+settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, bitrate, crash (see PATHS).
 
 Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240] [--paths settings,search,...]
 """
@@ -975,6 +975,37 @@ def path_keyboard(tv, args):
         raise TimeoutError("; ".join(problems))
 
 
+def java_heap_kb(tv):
+    """The app's Java heap in use, in kB (`dumpsys meminfo`), or None."""
+    match = re.search(r"Java Heap:\s+(\d+)", tv.shell(f"dumpsys meminfo {PACKAGE}", timeout=120))
+    return int(match.group(1)) if match else None
+
+
+def path_bitrate(tv, args):
+    """Movie 1 at a 4K film's bitrate (heavy.mkv, 40 Mbit/s) played two minutes beside the catalogue: what the player
+    keeps ahead of the picture must fit in the app's memory with it. The Java heap is noted every 10 s; a stop fails."""
+    tv.drawer("Movies")
+    tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=1)
+    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    if not tv.visible("Movie 1 "):
+        tv.say("  bitrate: the page opened is not Movie 1's")
+    tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=5)
+    if not tv.player_shown():
+        raise TimeoutError("the player never opened from Movie 1")
+    limit = tv.shell("getprop dalvik.vm.heapgrowthlimit").strip()
+    peak = 0
+    for second in range(0, 120, 10):
+        heap = java_heap_kb(tv)
+        peak = max(peak, heap or 0)
+        tv.say(f"  bitrate: {second} s, Java heap {heap} kB (growth limit {limit})")
+        tv.check_alive(f"{second} s into the heavy movie")
+        time.sleep(10)
+    tv.note_screen("bitrate-playing")
+    tv.say(f"  bitrate: peak Java heap {peak} kB")
+    tv.leave_player()
+    tv.check_alive("back from the heavy movie")
+
+
 PATHS = {
     "settings": path_settings,
     "search": path_search,
@@ -987,6 +1018,7 @@ PATHS = {
     "browse": path_browse,
     "sync": path_sync,
     "keyboard": path_keyboard,
+    "bitrate": path_bitrate,
     # Last: it crashes the app on purpose.
     "crash": path_crash,
 }
