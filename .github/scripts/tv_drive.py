@@ -508,6 +508,9 @@ def path_player(tv, args):
     tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
     tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=10)
     tv.note_screen("player-movie")
+    # The panels first: the clip lasts two minutes, and the movie's end closes the player.
+    player_panel(tv, "Subtitles", "movie-subtitles", expect="Off")
+    player_panel(tv, "Audio", "movie-audio", expect="Mono · AAC")
     for key in ("DPAD_CENTER", "DPAD_CENTER", "RIGHT", "RIGHT", "LEFT", "MEDIA_FAST_FORWARD", "MEDIA_REWIND", "UP", "DOWN", "INFO", "INFO"):
         tv.key(key, pause=2.5)
         tv.check_alive(f"{key} in the movie player")
@@ -515,8 +518,6 @@ def path_player(tv, args):
     tv.shell("input keyevent --longpress KEYCODE_DPAD_RIGHT")
     time.sleep(3)
     tv.check_alive("a long press in the movie player")
-    player_panel(tv, "Subtitles", "movie-subtitles", expect="Off")
-    player_panel(tv, "Audio", "movie-audio")
     tv.leave_player()
     tv.stay(4, "back from the movie player")
     tv.note_screen("player-movie-closed")
