@@ -63,21 +63,30 @@ class StreamedListTest {
         assertEquals(emptyList(), ids("{}".encodeToByteArray()))
         assertEquals(emptyList(), ids("null".encodeToByteArray()))
         assertEquals(emptyList(), ids("false".encodeToByteArray()))
+        assertEquals(emptyList(), ids("0".encodeToByteArray()))
+        assertEquals(emptyList(), ids("""{"error":"disabled"}""".encodeToByteArray()))
         assertEquals(listOf("a", "b"), ids("""{"1":{"id":"b"},"0":{"id":"a"}}""".encodeToByteArray()))
     }
 
+    /**
+     * An answer that is not JSON is a list the panel could not send (cut short, an error printed half-way, a page in
+     * place of the list): a broken list, which the client asks again and then fails the refresh with (`XtreamTest`),
+     * never an empty section.
+     */
     @Test
-    fun brokenAnswersFailWithTheSameErrorsAsBefore() {
-        // A page instead of JSON reads as one unquoted value, as it did read whole: an empty list.
-        assertEquals(emptyList(), ids("<html><body>Forbidden</body></html>".encodeToByteArray()))
+    fun brokenAnswersFailAsBrokenLists() {
         assertFailsWith<HttpException.EmptyResponse> { ids(ByteArray(0)) }
         assertFailsWith<HttpException.EmptyResponse> { ids(gzip(ByteArray(0))) }
         assertFailsWith<XtreamException.InvalidResponse> { ids("  \n ".encodeToByteArray()) }
-        assertFailsWith<XtreamException.InvalidResponse> { ids("""[{"id":"1"},{"id":""".encodeToByteArray()) }
-        assertFailsWith<XtreamException.InvalidResponse> { ids("""[{"id":"1"} {"id":"2"}]""".encodeToByteArray()) }
-        assertFailsWith<XtreamException.InvalidResponse> { ids("""[{"id":"1"}] <!-- served by -->""".encodeToByteArray()) }
+        assertFailsWith<XtreamException.BrokenList> { ids("""[{"id":"1"},{"id":""".encodeToByteArray()) }
+        assertFailsWith<XtreamException.BrokenList> { ids("""[{"id":"1"} {"id":"2"}]""".encodeToByteArray()) }
+        assertFailsWith<XtreamException.BrokenList> { ids("""[{"id":"1"}] <!-- served by -->""".encodeToByteArray()) }
+        assertFailsWith<XtreamException.BrokenList> { ids("""{"0":{"id":"1"},"1":""".encodeToByteArray()) }
         val cut = gzip("""[{"id":"1"},{"id":"2"},{"id":"3"}]""".repeat(200).encodeToByteArray())
-        assertFailsWith<XtreamException.InvalidResponse> { ids(cut.copyOf(cut.size / 2)) }
+        assertFailsWith<XtreamException.BrokenList> { ids(cut.copyOf(cut.size / 2)) }
+        // A page instead of JSON, with spaces or without (kotlinx reads a lone word without quotes as a value).
+        assertFailsWith<XtreamException.BrokenList> { ids("<html><body>Forbidden</body></html>".encodeToByteArray()) }
+        assertFailsWith<XtreamException.BrokenList> { ids("<html><body>502 Bad Gateway</body></html>".encodeToByteArray()) }
         assertFailsWith<GzipException> { ids(byteArrayOf(0x1f, 0x8b.toByte(), 8, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)) }
     }
 

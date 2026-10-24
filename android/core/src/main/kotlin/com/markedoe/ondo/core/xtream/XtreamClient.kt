@@ -47,6 +47,12 @@ sealed class XtreamException(message: String) : Exception(message) {
 
     /** The answer is not JSON shaped like an Xtream Codes panel's. */
     class InvalidResponse : XtreamException("The server did not answer like an Xtream Codes panel.")
+
+    /**
+     * A list of the catalogue that could not be read to its end: cut short, an error printed in the middle (PHP runs
+     * out of memory on large catalogues), or a page in place of the list. Not a section the panel does not offer.
+     */
+    class BrokenList : XtreamException("The server sent an incomplete list. Try again later.")
 }
 
 /**
@@ -233,9 +239,9 @@ class XtreamClient(
 
     /**
      * One list of the catalogue. A section the panel does not offer (some disable VOD or series: 404, an
-     * empty or non-list answer) is empty. Any other failure (network, server error, refusal) is retried
-     * once on its own, as busy panels refuse parallel requests, then thrown: a refresh that quietly lost a
-     * section would replace the saved catalogue with a partial one.
+     * empty answer, JSON that is not a list) is empty. Any other failure (network, server error, refusal, a
+     * list cut short or not JSON at all) is retried once on its own, as busy panels refuse parallel requests,
+     * then thrown: a refresh that quietly lost a section would replace the saved catalogue with a partial one.
      */
     private suspend fun <T> section(first: Result<List<T>>, retry: suspend () -> List<T>): List<T> {
         val error = first.exceptionOrNull() ?: return first.getOrThrow()

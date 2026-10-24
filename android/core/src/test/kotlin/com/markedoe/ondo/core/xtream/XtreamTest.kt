@@ -300,14 +300,18 @@ class XtreamTest {
 
     @Test
     fun aSectionThePanelDoesNotOfferIsEmpty() = runTest {
-        val http = mock().apply {
-            routes.remove("api:get_vod_streams") // 404
-            routes["api:get_series"] = """{"error":"disabled"}""".encodeToByteArray()
+        for (empty in listOf("{}", "null")) {
+            val http = mock().apply {
+                routes.remove("api:get_vod_streams") // 404
+                routes["api:get_series"] = """{"error":"disabled"}""".encodeToByteArray()
+                routes["api:get_series_categories"] = empty.encodeToByteArray()
+            }
+            val content = XtreamClient(credentials, http).fetchContent(XtreamOutputFormat.M3U8)
+            assertEquals(4, content.channels.size)
+            assertTrue(content.movies.isEmpty())
+            assertTrue(content.series.isEmpty())
+            assertTrue(content.seriesCategories.isEmpty(), empty)
         }
-        val content = XtreamClient(credentials, http).fetchContent(XtreamOutputFormat.M3U8)
-        assertEquals(4, content.channels.size)
-        assertTrue(content.movies.isEmpty())
-        assertTrue(content.series.isEmpty())
     }
 
     @Test
@@ -325,6 +329,31 @@ class XtreamTest {
             failures["api:get_live_streams"] = mutableListOf(SocketTimeoutException("slow"), SocketTimeoutException("slow"))
         }
         assertFailsWith<SocketTimeoutException> { XtreamClient(credentials, http).fetchContent(XtreamOutputFormat.M3U8) }
+    }
+
+    /**
+     * A list the panel starts and does not finish (PHP's memory error printed half-way, a download cut short) is not
+     * a section the panel does not offer: it is asked again, and when it stays broken the refresh fails, so the saved
+     * catalogue is kept instead of being replaced by one without its movies.
+     */
+    @Test
+    fun aListBrokenHalfWayFailsTheRefreshAfterARetry() = runTest {
+        val broken = """[{"stream_id":1,"name":"A","category_id":"1"},{"stream_id":2,"na<br /><b>Fatal error</b>:  Allowed memory size of 134217728 bytes exhausted"""
+        val http = mock().apply { routes["api:get_vod_streams"] = broken.encodeToByteArray() }
+        assertFailsWith<XtreamException.BrokenList> { PlaylistLoader(http).load(Playlist(name = "X", source = PlaylistSource.Xtream(credentials))) }
+        assertTrue(http.requested.count { "get_vod_streams" in it } >= 2, "the broken list was not asked again")
+    }
+
+    /** The same for a gzip answer cut short, and for an error page sent with a 200 in place of the list. */
+    @Test
+    fun aCutOrUnreadableListFailsTheRefreshAfterARetry() = runTest {
+        val list = (1..200).joinToString(",", "[", "]") { """{"stream_id":$it,"name":"Movie $it","category_id":"1"}""" }
+        val packed = java.io.ByteArrayOutputStream().also { out -> java.util.zip.GZIPOutputStream(out).use { it.write(list.encodeToByteArray()) } }.toByteArray()
+        for (answer in listOf(packed.copyOf(packed.size - 12), "<html><body><h1>Service unavailable</h1></body></html>".encodeToByteArray())) {
+            val http = mock().apply { routes["api:get_vod_streams"] = answer }
+            assertFailsWith<XtreamException.BrokenList> { PlaylistLoader(http).load(Playlist(name = "X", source = PlaylistSource.Xtream(credentials))) }
+            assertTrue(http.requested.count { "get_vod_streams" in it } >= 2, "the unreadable list was not asked again")
+        }
     }
 
     /** A five-star rating too large to double is dropped: an infinite rating could not be saved with the catalogue. */

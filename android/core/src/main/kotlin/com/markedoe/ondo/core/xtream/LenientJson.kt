@@ -127,7 +127,10 @@ internal inline fun <T> JsonElement?.lossyList(decode: (JsonElement) -> T?): Lis
  * empty list, an object keyed by index) is small and read whole, as [lossyList] reads it.
  * [checkActive] runs before each read of the check of the nesting, and throws to stop it.
  * @throws HttpException.EmptyResponse for an empty answer
- * @throws XtreamException.InvalidResponse for anything that is not JSON, or nests deeper than [MAX_JSON_DEPTH]
+ * @throws XtreamException.InvalidResponse for an answer of spaces only, or one that nests deeper than [MAX_JSON_DEPTH]
+ * @throws XtreamException.BrokenList for an answer that is not JSON: a list cut short or broken half-way (an error
+ *   printed in the middle, a gzip download cut off), or a page in place of the list. Unlike `{}` or a 404, it does
+ *   not mean that the panel offers nothing there.
  */
 @OptIn(ExperimentalSerializationApi::class)
 internal fun <T> decodeList(file: File, checkActive: () -> Unit = {}, decode: (JsonElement) -> T?): List<T> = try {
@@ -160,14 +163,21 @@ internal fun <T> decodeList(file: File, checkActive: () -> Unit = {}, decode: (J
         if (first == '['.code) {
             Json.decodeToSequence(input, JsonElement.serializer(), DecodeSequenceMode.ARRAY_WRAPPED).mapNotNull(decode).toList()
         } else {
-            Json.parseToJsonElement(input.readBytes().decodeToString()).lossyList(decode)
+            val element = Json.parseToJsonElement(input.readBytes().decodeToString())
+            // kotlinx takes a lone word without quotes (a page without spaces, `<html>…</html>`) for a value.
+            if (element is JsonPrimitive && element !is JsonNull && !element.isString && !element.isBooleanLiteral() &&
+                element.content.toDoubleOrNull() == null
+            ) {
+                throw XtreamException.BrokenList()
+            }
+            element.lossyList(decode)
         }
     }
 } catch (e: IllegalArgumentException) { // SerializationException: not JSON, or cut off
-    throw XtreamException.InvalidResponse()
+    throw XtreamException.BrokenList()
 } catch (e: java.util.zip.ZipException) {
     throw GzipException("Could not inflate the data: ${e.message}", e)
 } catch (e: java.io.EOFException) {
     // A gzip answer cut off: what was inflated is JSON cut off too.
-    throw XtreamException.InvalidResponse()
+    throw XtreamException.BrokenList()
 }
