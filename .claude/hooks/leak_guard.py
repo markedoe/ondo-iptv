@@ -83,14 +83,14 @@ PEM_PRIVATE_KEY = re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----(?:[A-Za-z
 
 
 def base64_private_key(match):
-    """A PEM file in base64 (`base64 -i AuthKey_….p8`, which the ASC_KEY_P8 secret also takes): a private key once
-    decoded."""
+    """A PEM file in base64 (`base64 -i AuthKey_….p8`, which the ASC_KEY_P8 secret also takes), whole or as the first
+    line of `base64` (76 characters): a private key once decoded."""
     run = match.group(0)
     try:
         decoded = base64.b64decode(run[:len(run) // 4 * 4]).decode("utf-8", "replace")
     except ValueError:
         return False
-    return bool(PEM_PRIVATE_KEY.search(decoded))
+    return "PRIVATE KEY-----" in decoded
 
 
 def apple_id(match):
@@ -107,7 +107,7 @@ SECRET_RULES = [
     ("private key", re.compile(
         r"\b(?:MIG[HT]AgEAMBMGByqGSM49AgEGCCqGSM49AwEHB|MII[A-Za-z0-9+/]{2}QIBADANBgkqhkiG9w0BAQEFAASC)[A-Za-z0-9+/]{40,}")),
     # A PEM file in base64: "-----BEGIN" is `LS0tLS1CRUdJTi`.
-    ("private key", re.compile(r"LS0tLS1CRUdJTi[A-Za-z0-9+/=]{60,}"), base64_private_key),
+    ("private key", re.compile(r"(?<![A-Za-z0-9+/])LS0tLS1CRUdJTi[A-Za-z0-9+/]{22,}={0,2}"), base64_private_key),
     # A keystore in base64 (`base64 -w0 ondo-upload.jks`, docs/RELEASE-ANDROID.md): JKS starts with FEEDFEED, PKCS #12
     # (what keytool makes by default) with a SEQUENCE then version 3.
     ("keystore", re.compile(r"(?<![A-Za-z0-9+/])(?:/u3\+7QAAAA|MII[A-Za-z0-9+/]{2}[AQgw]IBAzCC)[A-Za-z0-9+/]{60,}")),

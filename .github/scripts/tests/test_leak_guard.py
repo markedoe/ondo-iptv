@@ -79,6 +79,13 @@ class SecretShapesTests(unittest.TestCase):
         pkcs12 = bytes.fromhex("308209f4020103308209") + RANDOM.encode() * 8  # what keytool makes by default
         self.assertFinds(base64.b64encode(pkcs12).decode(), "keystore")
 
+    def test_a_private_key_as_base64(self):
+        # docs/RELEASE.md: the ASC_KEY_P8 secret may hold the base64 of the .p8 file (one line, or 76 per line).
+        key = (PEM_BEGIN + "\n" + "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkw" * 3 + "\n-----END PRIVATE KEY-----\n").encode()
+        self.assertFinds(f"ASC_KEY_P8={base64.b64encode(key).decode()}", "private key")
+        self.assertFinds(base64.encodebytes(key).decode(), "private key")
+        self.assertFinds('{"ASC_KEY_P8": "' + base64.b64encode(key).decode() + '"}', "private key")
+
     def test_the_app_store_connect_ids_and_the_team_id(self):
         # CLAUDE.md: the Key ID, the Issuer ID and the Team ID go only into GitHub secrets.
         key_id, team_id = "Q7XK2" + "M9PL4", "A1B2C" + "3D4E5"
