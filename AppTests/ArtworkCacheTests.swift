@@ -34,6 +34,24 @@ final class ArtworkCacheTests: XCTestCase {
         XCTAssertEqual(server.requests.count, 1, "no new download")
     }
 
+    /// A provider's logo naming a file of the device outside the app is not loaded: Nuke reads a file whole, and
+    /// `/dev/zero` never ends. The web, `data:` addresses and the app's own files (the UI test fixture) are.
+    func testArtworkComesFromTheWebOrTheAppsOwnFiles() throws {
+        for refused in ["file:///dev/zero", "FILE:///etc/hosts", "ftp://example.com/logo.png", "javascript:alert(1)"] {
+            XCTAssertNil(Artwork.loadable(try XCTUnwrap(URL(string: refused))), refused)
+        }
+        let climbing = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(String(repeating: "../", count: 30) + "dev/zero")
+        XCTAssertNil(Artwork.loadable(climbing))
+        XCTAssertNil(Artwork.request(try XCTUnwrap(URL(string: "file:///dev/zero")), maxPixelSize: 300).url)
+        XCTAssertNil(Artwork.blurredRequest(try XCTUnwrap(URL(string: "file:///dev/zero"))).url)
+
+        for kept in ["http://example.com/logo.png", "HTTPS://example.com/poster.jpg", "data:image/png;base64,iVBORw0KGgo="] {
+            XCTAssertNotNil(Artwork.loadable(try XCTUnwrap(URL(string: kept))), kept)
+        }
+        let own = AppPaths.importedPlaylists.appendingPathComponent("fixture-artwork/logo.png")
+        XCTAssertEqual(Artwork.loadable(own), own)
+    }
+
     func testTheCacheIsLargeEnoughForABigCatalogue() {
         #if os(macOS)
         XCTAssertEqual(Artwork.diskLimit, 1024 * 1024 * 1024)

@@ -38,12 +38,26 @@ enum Artwork {
     /// Decoded straight at `maxPixelSize` by ImageIO (a thumbnail of the downloaded file): a 2000×3000 poster is
     /// never decoded whole (24 MB) to be shrunk afterwards.
     static func request(_ url: URL, maxPixelSize: CGFloat) -> ImageRequest {
-        ImageRequest(url: url, userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(maxPixelSize: Float(maxPixelSize))])
+        ImageRequest(url: loadable(url), userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(maxPixelSize: Float(maxPixelSize))])
     }
 
     /// A small copy of the picture, blurred once and kept in the cache (see `SoftBlur`).
     static func blurredRequest(_ url: URL) -> ImageRequest {
-        ImageRequest(url: url, processors: [SoftBlur(sigma: 5)], userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(maxPixelSize: 64)])
+        ImageRequest(url: loadable(url), processors: [SoftBlur(sigma: 5)], userInfo: [.thumbnailKey: ImageRequest.ThumbnailOptions(maxPixelSize: 64)])
+    }
+
+    /// The address when artwork can come from it: the web, a `data:` address, or a file of the app's own folder.
+    /// Nuke reads a file address whole and at once: a provider's logo naming `/dev/zero` would never end.
+    static func loadable(_ url: URL) -> URL? {
+        switch url.scheme?.lowercased() {
+        case "http", "https", "data":
+            return url
+        case "file":
+            let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true).resolvingSymlinksInPath().path + "/"
+            return url.standardizedFileURL.resolvingSymlinksInPath().path.hasPrefix(home) ? url : nil
+        default:
+            return nil
+        }
     }
 
     /// Decoded thumbnail (Now Playing artwork…).
