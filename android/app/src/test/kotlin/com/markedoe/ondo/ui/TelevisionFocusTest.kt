@@ -24,6 +24,7 @@ import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
@@ -63,6 +64,7 @@ import org.robolectric.annotation.Config
  * the playlist is replaced by another device's copy.
  * What a page does when its title leaves the catalogue.
  * What is kept of the screens when Ondo goes to the background.
+ * The add-playlist form, with arrows that come from a virtual device (a phone used as a remote).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -332,5 +334,35 @@ class TelevisionFocusTest {
             parcel.recycle()
         }
         assertTrue("saved state of $size bytes", size < 100_000)
+    }
+
+    /** A key with no physical device behind it: what `adb shell input` and apps that turn a phone into a remote send. */
+    private fun virtualKey(key: Key) {
+        focusedInteraction().performKeyInput { pressKey(key) }
+        settle(120)
+    }
+
+    /**
+     * The add-playlist form with a phone as the remote: its arrows come from a virtual device, which Compose keeps in a
+     * text field (it moves the focus out only for a physical D-pad; that stays so). The keyboard's action key goes on
+     * from field to field, then to Add.
+     */
+    @Test
+    fun theAddPlaylistFormIsFilledWithArrowsFromAVirtualDevice() {
+        start()
+        pressUntil(Key.DirectionUp) { focusedTag() == "addPlaylist" }
+        press(Key.DirectionCenter)
+        waitFor { exists("addPlaylistScreen") }
+        pressUntil(Key.DirectionDown) { focusedNode()?.config?.contains(SemanticsProperties.EditableText) == true }
+        val name = focusedNode()!!.id
+        repeat(3) { virtualKey(Key.DirectionDown) }
+        assertEquals("the focus is on ${focused()}", name, focusedNode()?.id)
+        for ((text, next) in listOf("Panel" to "serverField", panel to "usernameField", "viewer" to "passwordField", "secret" to "savePlaylist")) {
+            focusedInteraction().performTextInput(text)
+            settle()
+            focusedInteraction().performImeAction()
+            settle()
+            assertEquals("the focus is on ${focused()}", next, focusedTag())
+        }
     }
 }
