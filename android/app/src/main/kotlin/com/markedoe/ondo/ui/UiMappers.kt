@@ -427,8 +427,15 @@ object UiMappers {
         lastCrash = state.lastCrash,
     )
 
+    /**
+     * Longer than any genre: a field without separators in a long run of text. A genre opens its own page, and the
+     * genre goes with the page into what Android keeps of the screens (a binder transaction, 1 MB at most).
+     */
+    const val MAX_GENRE_LENGTH = 200
+
     /** The genres of a genre field ("Drama, Thriller", "Action / Adventure"), each once ("Action & Adventure, Adventure"). */
-    fun genres(field: String?): List<String> = field.orEmpty().split(',', '/', '|', '&').map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+    fun genres(field: String?): List<String> =
+        field.orEmpty().split(',', '/', '|', '&').map { it.trim() }.filter { it.length in 1..MAX_GENRE_LENGTH }.distinct()
 
     /** The titles of the playlist sharing a value of a movie's or a series' page, hidden categories left out. */
     fun browse(state: OndoState, kind: BrowseKind, value: String, locale: Locale = Locale.getDefault()): BrowseUiState {

@@ -365,4 +365,31 @@ class TelevisionFocusTest {
             assertEquals("the focus is on ${focused()}", next, focusedTag())
         }
     }
+
+    /**
+     * A genre field with no separator in a long run of text, then a genre: the first chip opens the titles of its genre.
+     * What Android keeps of the screens when Ondo goes to the background must stay far within the 1 MB a binder
+     * transaction carries.
+     */
+    @Test
+    fun aGenreFieldWithoutSeparatorsKeepsWhatIsSavedOfTheScreensSmall() {
+        val genre = "A" + "b".repeat(300_000) + ", Drama"
+        val content = Fixtures.content.copy(series = Fixtures.content.series.map { if (it.id == Fixtures.harborLights.id) it.copy(genre = genre) else it })
+        start(answers = emptyMap(), stored = content)
+        openFromHome(rows = 2)
+        pressUntil(Key.DirectionDown, max = 20) { focusedIn("explore") }
+        press(Key.DirectionCenter)
+        waitFor { exists("browse") }
+        settle(500)
+        val saved = Bundle()
+        compose.runOnIdle { InstrumentationRegistry.getInstrumentation().callActivityOnSaveInstanceState(compose.activity, saved) }
+        val parcel = Parcel.obtain()
+        val size = try {
+            saved.writeToParcel(parcel, 0)
+            parcel.dataSize()
+        } finally {
+            parcel.recycle()
+        }
+        assertTrue("saved state of $size bytes", size < 100_000)
+    }
 }
