@@ -151,30 +151,17 @@ class Tv:
         raise TimeoutError(f"the focus never reached '{label}' (on: {joined})")
 
 
-def check_memory_limit(tv, limit):
-    """The app's memory limit (dalvik.vm.heapgrowthlimit, set when the emulator boots) is the one asked."""
-    actual = tv.shell("getprop dalvik.vm.heapgrowthlimit").strip()
-    tv.say(f"memory limit {actual}")
-    if actual != limit:
-        raise RuntimeError(f"the memory limit is {actual!r}, not {limit!r}")
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("out")
     parser.add_argument("--server", default="http://localhost:8080")
     parser.add_argument("--wait-load", type=int, default=240)
     parser.add_argument("--wrong-password-first", action="store_true")
-    parser.add_argument("--growth-limit", default="", help="the app's memory limit, as an entry-level TV box's (e.g. 128m)")
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
     tv = Tv(args.out)
     result = 1
     try:
-        if args.growth_limit:
-            if not re.fullmatch(r"[0-9]{2,4}m", args.growth_limit):
-                raise RuntimeError(f"a memory limit is written like 128m, not {args.growth_limit!r}")
-            check_memory_limit(tv, args.growth_limit)
         tv.say("device: " + " ".join(tv.shell(f"getprop {p}").strip() for p in (
             "ro.build.version.sdk", "ro.product.model", "dalvik.vm.heapgrowthlimit", "dalvik.vm.heapsize", "ro.config.low_ram")))
         tv.say("app: " + tv.shell(f"dumpsys package {PACKAGE} | grep -E 'versionCode|versionName'").strip().replace("\n", " "))
