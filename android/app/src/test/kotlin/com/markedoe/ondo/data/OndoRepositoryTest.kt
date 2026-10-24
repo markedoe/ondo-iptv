@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
@@ -432,6 +433,44 @@ class OndoRepositoryTest {
         repository.delete(second)
         val state = repository.awaitState { it.activePlaylist?.name == "First" }
         assertEquals(listOf("First"), state.playlists.map { it.name })
+    }
+
+    /**
+     * The names the core gives in English show in the app's words, again when its language changes; the saved catalogue
+     * keeps the core's, and a catalogue taken off the screen does not come back with another language.
+     */
+    @Test
+    fun theCoresNamesShowInTheAppsWordsAndStayInEnglishOnDisk() = runTest {
+        fun words(uncategorized: String, episode: String) = PlaceholderNames(uncategorized, "-", "- %1\$d", "- %1\$d", "- %1\$d", "- %1\$d", episode)
+        val untitled = """
+            #EXTM3U
+            #EXTINF:-1,Test News
+            http://provider.example.com/news.m3u8
+            #EXTINF:2700 group-title="Series | Drama",Harbor S01E02
+            http://provider.example.com/h102.mp4
+        """.trimIndent()
+        val repository = OndoRepository(
+            AppStore(folder.root), FakeHttp(mapOf(list to untitled)), backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler),
+            placeholderNames = words("Non classé", "Épisode %1\$d"),
+        )
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Home", list).isSuccess)
+        val id = repository.state.value.activePlaylistId!!
+        assertEquals(listOf("Non classé"), repository.state.value.content.liveCategories.map { it.name })
+        assertEquals(listOf("Uncategorized"), disk().loadContent(id)?.liveCategories?.map { it.name })
+        val harbor = repository.state.value.content.series.single()
+        assertEquals("Épisode 2", repository.details(harbor).seasons.single().episodes.single().title)
+
+        // Another app language: the catalogue on screen and a series' episodes follow.
+        repository.setPlaceholderNames(words("Sin categoría", "Episodio %1\$d"))
+        assertEquals(listOf("Sin categoría"), repository.state.value.content.liveCategories.map { it.name })
+        val again = repository.state.value.content.series.single()
+        assertEquals("Episodio 2", repository.details(again).seasons.single().episodes.single().title)
+
+        repository.delete(id)
+        repository.setPlaceholderNames(words("未分类", "第 %1\$d 集"))
+        assertTrue("a catalogue taken off the screen does not come back", repository.state.value.content.isEmpty)
     }
 
     @Test

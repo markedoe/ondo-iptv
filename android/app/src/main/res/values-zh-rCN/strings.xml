@@ -109,6 +109,13 @@
     <string name="kind_m3u">M3U 播放列表</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">第 %1$d 季</string>
+    <string name="placeholder_uncategorized">未分类</string>
+    <string name="placeholder_other">其他</string>
+    <string name="placeholder_other_number">其他 %1$d</string>
+    <string name="placeholder_channel">频道 %1$d</string>
+    <string name="placeholder_movie">电影 %1$d</string>
+    <string name="placeholder_series">剧集 %1$d</string>
+    <string name="placeholder_episode">第 %1$d 集</string>
     <string name="choose_file">选择文件</string>
     <string name="categories">分类</string>
     <string name="categories_hint">按语言或国家/地区，或逐个选择要显示的分类。</string>

@@ -56,6 +56,7 @@ internal data class XtreamCategoryDto(val id: String, val name: String) {
         fun from(json: JsonElement): XtreamCategoryDto? {
             val o = json as? JsonObject ?: return null
             val id = o["category_id"].lenientString() ?: return null
+            // An English name of the core's own: the app shows it in its language (PlaceholderNames).
             return XtreamCategoryDto(id, o["category_name"].lenientString() ?: "Uncategorized")
         }
     }
@@ -78,6 +79,7 @@ internal data class XtreamLiveStreamDto(
             return XtreamLiveStreamDto(
                 streamId = streamId,
                 number = o["num"].lenientInt(),
+                // An English name of the core's own: the app shows it in its language (PlaceholderNames).
                 name = o["name"].lenientString()?.trim() ?: "Channel $streamId",
                 icon = o["stream_icon"].lenientString(),
                 epgChannelId = o["epg_channel_id"].lenientString()?.nilIfBlank(),
@@ -118,6 +120,7 @@ internal data class XtreamVodStreamDto(
             val streamId = o["stream_id"].lenientInt() ?: return null
             return XtreamVodStreamDto(
                 streamId = streamId,
+                // An English name of the core's own: the app shows it in its language (PlaceholderNames).
                 name = o["name"].lenientString()?.trim() ?: "Movie $streamId",
                 icon = o["stream_icon"].lenientString(),
                 categoryId = o["category_id"].lenientString(),
@@ -153,6 +156,7 @@ internal data class XtreamSeriesDto(
             val releaseDate = (o["releaseDate"].lenientString() ?: o["release_date"].lenientString())?.nilIfBlank()
             return XtreamSeriesDto(
                 seriesId = seriesId,
+                // An English name of the core's own: the app shows it in its language (PlaceholderNames).
                 name = o["name"].lenientString()?.trim() ?: "Series $seriesId",
                 cover = o["cover"].lenientString(),
                 plot = o["plot"].lenientString()?.nilIfBlank(),

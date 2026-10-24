@@ -3,6 +3,7 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.ErrorAttribution
+import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.library.PlaybackFactory
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.Channel
@@ -62,6 +63,11 @@ data class OndoState(
     val awards: AwardsCatalogue = AwardsCatalogue.EMPTY,
     /** The last error that stopped the app, shown in Settings → About. */
     val lastCrash: LastCrash? = null,
+    /**
+     * The app's words for the names the core gives in English where the provider gives none ("Uncategorized",
+     * "Channel 12"…): [content] has them; the episodes of [seriesDetails] are kept as they came (they are saved).
+     */
+    val placeholderNames: PlaceholderNames = PlaceholderNames.ENGLISH,
 ) {
     val activePlaylist: SavedPlaylist? get() = playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull()
     val activePlaylistId: String? get() = activePlaylist?.id
@@ -95,8 +101,10 @@ class OndoRepository(
     private val downloadFolder: File? = null,
     /** Memory the guide's programmes may take (see `PlaylistLoader`); null: no limit. */
     private val guideBudgetBytes: Long? = null,
+    /** The app's words for the names the core gives in English (see [OndoState.placeholderNames]). */
+    placeholderNames: PlaceholderNames = PlaceholderNames.ENGLISH,
 ) {
-    private val _state = MutableStateFlow(OndoState())
+    private val _state = MutableStateFlow(OndoState(placeholderNames = placeholderNames))
     val state: StateFlow<OndoState> = _state.asStateFlow()
     private var refreshJob: Job? = null
     private var openJob: Job? = null
@@ -123,6 +131,37 @@ class OndoRepository(
     /** Saves run one at a time, in order: the last change is the one on disk. */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val writer = io.limitedParallelism(1)
+
+    /** The catalogue as loaded, with the core's English names (as saved), and its copy in [OndoState.content]. */
+    private var loadedContent = PlaylistContent.EMPTY
+    private var shownContent = PlaylistContent.EMPTY
+
+    /** [content] as the screens show it, in the words of [OndoState.placeholderNames]. Main thread. */
+    private fun shown(content: PlaylistContent): PlaylistContent {
+        val shown = _state.value.placeholderNames.rename(content)
+        loadedContent = content
+        shownContent = shown
+        return shown
+    }
+
+    /**
+     * The app's words for the names the core gives in English, again after the app's language changes (the activity is
+     * recreated, not the repository): the catalogue on screen is shown in them. Main thread.
+     */
+    fun setPlaceholderNames(names: PlaceholderNames) {
+        if (names == _state.value.placeholderNames) return
+        val before = shownContent
+        val renamed = names.rename(loadedContent)
+        shownContent = renamed
+        // The episodes of a playlist's own series came with its catalogue, in the former words: they are made again.
+        val provided = seriesFetchedAt.keys.toSet()
+        _state.update { state ->
+            val details = state.seriesDetails.filterKeys { it in provided }
+            // A catalogue replaced meanwhile (another playlist opened) is not brought back.
+            if (state.content === before) state.copy(placeholderNames = names, content = renamed, seriesDetails = details)
+            else state.copy(placeholderNames = names, seriesDetails = details)
+        }
+    }
 
     fun bootstrap() {
         if (_state.value.isReady || bootstrapping) return
@@ -204,10 +243,11 @@ class OndoRepository(
             .map { content ->
                 withContext(writer) { runCatching { store.saveContent(saved.id, content) } }
                 startDetails(saved.id)
+                val shown = shown(content)
                 // The playlists and settings as they are once saved: a playlist synced or added meanwhile stays.
                 _state.update {
                     it.copy(
-                        playlists = it.playlists + saved, settings = it.settings.copy(activePlaylistId = saved.id), content = content,
+                        playlists = it.playlists + saved, settings = it.settings.copy(activePlaylistId = saved.id), content = shown,
                         isLoading = false, isRestoring = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(),
                     )
                 }
@@ -392,7 +432,8 @@ class OndoRepository(
             // one's opening ends the restoring).
             if (_state.value.activePlaylistId != playlist.id) return@launch
             if (cached != null) {
-                _state.update { it.copy(content = cached, isRestoring = false) }
+                val shown = shown(cached)
+                _state.update { it.copy(content = shown, isRestoring = false) }
                 loadGuide(playlist, cached)
             }
             if (cached == null || now() - cached.fetchedAt > REFRESH_AFTER_MS) load(playlist)
@@ -407,7 +448,8 @@ class OndoRepository(
                 .onSuccess { content ->
                     withContext(writer) { runCatching { store.saveContent(playlist.id, content) } }
                     if (_state.value.activePlaylistId == playlist.id) {
-                        _state.update { it.copy(content = content, isLoading = false) }
+                        val shown = shown(content)
+                        _state.update { it.copy(content = shown, isLoading = false) }
                         loadGuide(playlist, content)
                     } else {
                         _state.update { it.copy(isLoading = false) }
@@ -644,8 +686,10 @@ class OndoRepository(
 
     fun playRequest(series: Series, episode: Episode): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
-        val item = PlaybackFactory(playlist.toCorePlaylist()).item(episode, series)
-        val entry = WatchEntry(playlist.id, ItemKind.SERIES, series.id, episode.id, series.name, "${episode.code} · ${episode.title}", episode.posterUrl ?: series.coverUrl, lastWatchedAt = now())
+        // The episodes of the provider's details are kept in the core's words (see OndoState.placeholderNames).
+        val shown = _state.value.placeholderNames.rename(episode)
+        val item = PlaybackFactory(playlist.toCorePlaylist()).item(shown, series)
+        val entry = WatchEntry(playlist.id, ItemKind.SERIES, series.id, shown.id, series.name, "${shown.code} · ${shown.title}", shown.posterUrl ?: series.coverUrl, lastWatchedAt = now())
         return start(item, entry, fromStart = false)
     }
 

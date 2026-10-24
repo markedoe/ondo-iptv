@@ -111,6 +111,13 @@
     <string name="kind_m3u">M3U प्लेलिस्ट</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">सीज़न %1$d</string>
+    <string name="placeholder_uncategorized">अवर्गीकृत</string>
+    <string name="placeholder_other">अन्य</string>
+    <string name="placeholder_other_number">अन्य %1$d</string>
+    <string name="placeholder_channel">चैनल %1$d</string>
+    <string name="placeholder_movie">फ़िल्म %1$d</string>
+    <string name="placeholder_series">सीरीज़ %1$d</string>
+    <string name="placeholder_episode">एपिसोड %1$d</string>
     <string name="choose_file">फ़ाइल चुनें</string>
     <string name="categories">श्रेणियाँ</string>
     <string name="categories_hint">भाषा या देश के अनुसार, या एक-एक करके, दिखाई जाने वाली श्रेणियाँ चुनें।</string>

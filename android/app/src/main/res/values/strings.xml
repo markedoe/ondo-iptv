@@ -113,6 +113,14 @@
     <string name="kind_m3u">M3U playlist</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Season %1$d</string>
+    <!-- The names the core gives in English where the provider gives none (PlaceholderNames). -->
+    <string name="placeholder_uncategorized">Uncategorized</string>
+    <string name="placeholder_other">Other</string>
+    <string name="placeholder_other_number">Other %1$d</string>
+    <string name="placeholder_channel">Channel %1$d</string>
+    <string name="placeholder_movie">Movie %1$d</string>
+    <string name="placeholder_series">Series %1$d</string>
+    <string name="placeholder_episode">Episode %1$d</string>
     <string name="choose_file">Choose a file</string>
     <string name="categories">Categories</string>
     <string name="categories_hint">Choose the categories shown, by language or country or one by one.</string>

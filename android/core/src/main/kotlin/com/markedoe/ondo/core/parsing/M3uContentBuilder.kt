@@ -186,6 +186,7 @@ internal class OrderedCategories(private val type: ContentType) {
         get() = byName.values.toList()
 
     fun category(rawName: String?): MediaCategory {
+        // An English name of the core's own: the app shows it in its language (PlaceholderNames).
         val name = rawName?.nilIfBlank() ?: "Uncategorized"
         return byName.getOrPut(name) { MediaCategory("${type.rawValue}-" + StableHash.hex(name), name, type) }
     }

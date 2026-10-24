@@ -113,6 +113,13 @@
     <string name="kind_m3u">Playlist M3U</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Temporada %1$d</string>
+    <string name="placeholder_uncategorized">Sem categoria</string>
+    <string name="placeholder_other">Outros</string>
+    <string name="placeholder_other_number">Outros %1$d</string>
+    <string name="placeholder_channel">Canal %1$d</string>
+    <string name="placeholder_movie">Filme %1$d</string>
+    <string name="placeholder_series">Série %1$d</string>
+    <string name="placeholder_episode">Episódio %1$d</string>
     <string name="choose_file">Escolher um arquivo</string>
     <string name="categories">Categorias</string>
     <string name="categories_hint">Escolha as categorias exibidas, por idioma ou país, ou uma a uma.</string>

@@ -386,7 +386,8 @@ object UiMappers {
     fun seriesDetail(state: OndoState, series: Series, selectedSeason: Int?, error: String?): SeriesDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.SeriesItem(series)
-        val details = state.seriesDetails[series.id]
+        // The provider's episodes as they came (they are saved): an episode it does not name reads in the app's words.
+        val details = state.seriesDetails[series.id]?.let { state.placeholderNames.rename(it) }
         val next = details?.let { showcase.nextEpisode(series, it) }
         val episodeProgress = details?.seasons.orEmpty().flatMap { it.episodes }
             .mapNotNull { episode -> progress(showcase.progress(series, episode))?.let { episode.id to it } }

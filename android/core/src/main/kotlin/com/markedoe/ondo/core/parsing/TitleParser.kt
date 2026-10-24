@@ -42,6 +42,7 @@ object TitleParser {
             if (name.isEmpty()) continue
             // Strip leading separators only: "... - Cat's in the Bag..." keeps its ellipsis.
             val rest = match.group(4).orEmpty().trimStart { it in REST_SEPARATORS }.trim()
+            // An English name of the core's own: the app shows it in its language (PlaceholderNames).
             val episodeTitle = rest.ifEmpty { "Episode $episode" }
             return EpisodeInfo(name, season, episode, episodeTitle)
         }

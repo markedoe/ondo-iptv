@@ -297,6 +297,7 @@ class XtreamClient(
                 val episodeNumber = dto.episodeNumber ?: (index + 1)
                 Episode(
                     id = dto.id,
+                    // An English name of the core's own: the app shows it in its language (PlaceholderNames).
                     title = dto.title?.let(::cleanEpisodeTitle) ?: "Episode $episodeNumber",
                     season = number,
                     number = episodeNumber,
@@ -354,6 +355,7 @@ class XtreamClient(
             val added = LinkedHashSet<String>()
             for (id in itemCategoryIds) {
                 if (id in known || !added.add(id)) continue
+                // An English name of the core's own: the app shows it in its language (PlaceholderNames).
                 result.add(MediaCategory(id, if (added.size == 1) "Other" else "Other ${added.size}", type))
             }
             return result

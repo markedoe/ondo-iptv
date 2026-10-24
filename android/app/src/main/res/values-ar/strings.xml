@@ -119,6 +119,13 @@
     <string name="kind_m3u">قائمة تشغيل M3U</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">الموسم %1$d</string>
+    <string name="placeholder_uncategorized">غير مصنف</string>
+    <string name="placeholder_other">أخرى</string>
+    <string name="placeholder_other_number">أخرى %1$d</string>
+    <string name="placeholder_channel">القناة %1$d</string>
+    <string name="placeholder_movie">الفيلم %1$d</string>
+    <string name="placeholder_series">المسلسل %1$d</string>
+    <string name="placeholder_episode">الحلقة %1$d</string>
     <string name="choose_file">اختيار ملف</string>
     <string name="categories">الفئات</string>
     <string name="categories_hint">اختر الفئات المعروضة حسب اللغة أو البلد أو واحدة تلو الأخرى.</string>
