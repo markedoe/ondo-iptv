@@ -29,7 +29,8 @@ final class PlayerController: NSObject {
     let player = AVPlayer()
 
     private(set) var item: PlaybackItem?
-    private(set) var state: State = .idle
+    /// Set by the engines' observers, and when an MKV film can be neither remuxed nor played (PlayerController+Remux).
+    var state: State = .idle
     private(set) var currentTime: Double = 0
     private(set) var duration: Double = 0
     /// Set by the engines' observers, and by the freeze watch for VLC (PlayerController+Health).

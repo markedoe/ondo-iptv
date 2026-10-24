@@ -22083,6 +22083,46 @@
         }
       }
     },
+    "The Apple engine cannot play this MKV film. Choose Automatic or VLC (More, Player Engine).": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le moteur Apple ne peut pas lire ce film MKV. Choisissez Automatique ou VLC (Plus, Moteur de lecture)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El motor de Apple no puede reproducir esta película MKV. Elige Automático o VLC (Más, Motor de reproducción)."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O motor Apple não consegue reproduzir este filme MKV. Escolha Automático ou VLC (Mais, Motor do player)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 引擎无法播放此 MKV 影片。请选择“自动”或 VLC（更多 > 播放引擎）。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يستطيع محرك Apple تشغيل فيلم MKV هذا. اختر تلقائي أو VLC (المزيد، محرك التشغيل)."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple इंजन यह MKV फ़िल्म नहीं चला सकता। स्वचालित या VLC चुनें (ज़्यादा, प्लेयर इंजन)।"
+          }
+        }
+      }
+    },
     "The PINs do not match.": {
       "localizations": {
         "fr": {

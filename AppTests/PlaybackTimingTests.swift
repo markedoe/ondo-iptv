@@ -156,6 +156,28 @@ final class PlaybackTimingTests: XCTestCase {
         try await Task.sleep(for: .seconds(2))
     }
 
+    /// With the Apple engine chosen, an MKV film the remux cannot read fails with a message naming the engines that play
+    /// it, rather than AVPlayer opening the MKV file itself and failing with a message about Xtream's HLS format.
+    func testTheAppleEngineNamesTheEnginesThatPlayAnMKVFilmTheRemuxCannotRead() async throws {
+        let server = try filmServer(wholeFileAnswers: 1)
+        let base = try await server.start()
+        let controller = PlayerController()
+        controller.isMuted = true
+        controller.enginePreference = .apple
+        defer { controller.stop() }
+        controller.load(film(at: base.appendingPathComponent("movie/viewer/secret/46.mkv")))
+        try await wait(seconds: 45) {
+            if case .failed = controller.state { return true }
+            return false
+        }
+        let log = controller.log.entries.map(\.event)
+        guard case .failed(let message, let attribution) = controller.state else { return XCTFail(log.joined(separator: "\n")) }
+        XCTAssertEqual(attribution, .app)
+        XCTAssertTrue(message.contains("VLC"), message)
+        XCTAssertTrue(log.contains { $0.hasPrefix("remux not possible") }, log.joined(separator: "\n"))
+        XCTAssertFalse(log.contains { $0.hasSuffix("with AVPlayer") }, log.joined(separator: "\n"))
+    }
+
     /// Raw MPEG-TS over HTTP goes straight to VLC: AVPlayer cannot open it, and trying cost every channel change.
     func testRawTransportStreamsGoToVLC() {
         XCTAssertTrue(PlayerEngine.prefersVLC(for: URL(string: "http://example.com/live/user/pass/1.ts")!))

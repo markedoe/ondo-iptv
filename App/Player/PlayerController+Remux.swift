@@ -43,16 +43,29 @@ extension PlayerController {
                 self.startApple(url: address, headers: [:])
             } catch {
                 guard let self, !Task.isCancelled, self.item?.id == item.id else { return }
-                self.note("remux not possible (\(error)): VLC plays the film")
                 self.remuxTask = nil
-                self.forceVLCForItem = true
-                self.loadCurrentCandidate()
+                self.remuxFailed(error)
             }
         }
         return true
         #else
         return false
         #endif
+    }
+
+    /// The remux could not start: VLC plays the film, unless the Apple engine is chosen, which cannot open the MKV file
+    /// itself (AVPlayer would fail with a message about Xtream's HLS format): a message names the engines that can.
+    func remuxFailed(_ error: Error) {
+        guard enginePreference == .apple else {
+            note("remux not possible (\(error)): VLC plays the film")
+            forceVLCForItem = true
+            loadCurrentCandidate()
+            return
+        }
+        // Not forced to VLC: a retry tries the remux again, rather than AVPlayer opening the MKV file itself.
+        note("remux not possible (\(error)): the Apple engine cannot open the MKV file")
+        let message = String(localized: "The Apple engine cannot play this MKV film. Choose Automatic or VLC (More, Player Engine).")
+        state = .failed(message: message, attribution: .app)
     }
 
     /// Ends the remux of the film that played (a new item, a fallback, the player closing).
