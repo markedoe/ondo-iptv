@@ -49,6 +49,11 @@ A device sends or accepts nothing unless the other end's address is local. Both 
 - the server closes a connection from another address before reading it;
 - a client connects only to an address found by Bonjour, and only if it is local (never to an address typed in).
 
+The Android app also refuses a loopback address (`127.0.0.0/8`, `::1`, also written `::ffff:127.0.0.1`), in both
+directions: at that address is another app of the same device, not another device (`LocalSync.isPeerAddress`; the
+shared rule keeps loopback for the tests). And it syncs only while a Wi-Fi or wired network is connected, with or
+without internet: on mobile data alone, private addresses belong to the carrier's network, not to the viewer's home.
+
 ## Transport
 
 TCP. A **frame** is a 4-byte big-endian length followed by that many bytes of UTF-8 JSON. A frame over 16 MiB is

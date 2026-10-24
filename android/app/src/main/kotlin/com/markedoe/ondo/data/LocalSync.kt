@@ -1,6 +1,10 @@
 package com.markedoe.ondo.data
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
@@ -21,9 +25,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
@@ -38,9 +44,10 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Sync on the local network (docs/SYNC.md) while Ondo is in front and the setting is on: this device listens for
- * sessions and announces itself with Bonjour (`_ondo._tcp`), finds the other Android devices that do the same and
- * syncs with them. iPhone, iPad and Mac connect to it. Only local addresses are ever reached or answered.
+ * Sync on the local network (docs/SYNC.md) while Ondo is in front, the setting is on and a Wi-Fi or wired network is
+ * connected: this device listens for sessions and announces itself with Bonjour (`_ondo._tcp`), finds the other
+ * Android devices that do the same and syncs with them. iPhone, iPad and Mac connect to it. Only other devices of the
+ * local network are ever reached or answered ([isPeerAddress]).
  */
 class LocalSync(
     private val context: Context,
@@ -48,6 +55,8 @@ class LocalSync(
     /** Whether Ondo is in front (the process has a started screen). */
     private val foreground: Flow<Boolean>,
     private val now: () -> Long = System::currentTimeMillis,
+    /** Whether a Wi-Fi or wired network is connected: not on mobile data alone. */
+    private val localNetwork: Flow<Boolean> = onLocalNetwork(context),
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var started = false
@@ -56,8 +65,7 @@ class LocalSync(
         if (started) return
         started = true
         scope.launch {
-            combine(foreground, repository.state.map { it.isReady && it.settings.syncOnLocalNetwork }) { front, on -> front && on }
-                .distinctUntilChanged()
+            runs(foreground, repository.state.map { it.isReady && it.settings.syncOnLocalNetwork }, localNetwork)
                 .collectLatest { on ->
                     // Sync never takes the app down: after an error it starts again a minute later.
                     while (on) {
@@ -123,7 +131,7 @@ class LocalSync(
         }
         val events = Channel<Event>(Channel.UNLIMITED)
         launch {
-            SyncSession.serve(server) { incoming, _ ->
+            SyncSession.serve(server, isAllowed = ::isPeerAddress) { incoming, _ ->
                 withContext(Dispatchers.Main) {
                     if (incoming.device == me || incoming.device.isBlank()) return@withContext null
                     merge(incoming, name)?.also { events.trySend(Event.Heard(incoming.device, incoming.deviceName)) }
@@ -176,7 +184,7 @@ class LocalSync(
                         port = found?.second ?: 0
                     }
                     val snapshot = repository.syncSnapshot(name)
-                    val answer = if (address == null || snapshot == null) null else SyncSession.exchange(address, port, snapshot)
+                    val answer = if (address == null || snapshot == null) null else SyncSession.exchange(address, port, snapshot, isAllowed = ::isPeerAddress)
                     val worked = answer != null && answer.device != me && merge(answer, name) != null
                     if (worked && peer.stale) {
                         peer.address = address
@@ -268,11 +276,11 @@ class LocalSync(
         }
     }
 
-    /** The service's address and port, when its address is local (IPv4 first: an IPv6 link-local one needs its interface). */
+    /** The service's address and port, when it is another device's (IPv4 first: an IPv6 link-local one needs its interface). */
     private fun endpoint(service: NsdServiceInfo): Pair<InetAddress, Int>? {
         @Suppress("DEPRECATION")
         val addresses = if (Build.VERSION.SDK_INT >= 34) service.hostAddresses else listOfNotNull(service.host)
-        val address = addresses.filter(SyncNetwork::isLocal).sortedBy { it !is Inet4Address }.firstOrNull() ?: return null
+        val address = addresses.filter(::isPeerAddress).sortedBy { it !is Inet4Address }.firstOrNull() ?: return null
         return (address to service.port).takeIf { service.port in 1..65535 }
     }
 
@@ -313,14 +321,64 @@ class LocalSync(
     private fun deviceName(): String =
         (Settings.Global.getString(context.contentResolver, Settings.Global.DEVICE_NAME)?.trim()?.ifBlank { null } ?: Build.MODEL).take(MAX_NAME)
 
-    private companion object {
-        const val TICK_MS = 5_000L
-        const val PERIOD_MS = 60_000L
-        const val CHANGE_DELAY_MS = 3_000L
-        const val RESOLVE_TIMEOUT_MS = 10_000L
-        const val RESTART_MS = 60_000L
-        const val MAX_ID = 64
-        const val MAX_NAME = 40
-        val RETRIES_MS = longArrayOf(15_000L, 60_000L, 300_000L)
+    companion object {
+        private const val TICK_MS = 5_000L
+        private const val PERIOD_MS = 60_000L
+        private const val CHANGE_DELAY_MS = 3_000L
+        private const val RESOLVE_TIMEOUT_MS = 10_000L
+        private const val RESTART_MS = 60_000L
+        private const val MAX_ID = 64
+        private const val MAX_NAME = 40
+        private val RETRIES_MS = longArrayOf(15_000L, 60_000L, 300_000L)
+
+        /**
+         * Another device of the local network ([SyncNetwork.isLocal]), never this one: another app of this device could
+         * listen or ask on a loopback address, and the snapshots hold the playlists' logins.
+         */
+        fun isPeerAddress(address: InetAddress): Boolean = !address.isLoopbackAddress && SyncNetwork.isLocal(address)
+
+        /** Wi-Fi or wired networks, with or without internet (a home network may have none). */
+        internal fun localNetworkRequest(): NetworkRequest = NetworkRequest.Builder()
+            .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .addTransportType(NetworkCapabilities.TRANSPORT_ETHERNET)
+            .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .build()
+
+        /**
+         * Whether a Wi-Fi or wired network is connected. On mobile data alone, private addresses belong to the
+         * carrier's network, not to the viewer's home: sync waits.
+         */
+        fun onLocalNetwork(context: Context): Flow<Boolean> = callbackFlow {
+            val connectivity = context.getSystemService(ConnectivityManager::class.java)
+            val networks = HashSet<Network>()
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    synchronized(networks) {
+                        networks += network
+                        trySend(true)
+                    }
+                }
+
+                override fun onLost(network: Network) {
+                    synchronized(networks) {
+                        networks -= network
+                        trySend(networks.isNotEmpty())
+                    }
+                }
+            }
+            val watching = connectivity != null && try {
+                connectivity.registerNetworkCallback(localNetworkRequest(), callback)
+                true
+            } catch (_: RuntimeException) {
+                false
+            }
+            // Until the system answers, no network; without its answers at all, sync is not held back.
+            if (watching) trySend(synchronized(networks) { networks.isNotEmpty() }) else trySend(true)
+            awaitClose { if (watching) runCatching { connectivity.unregisterNetworkCallback(callback) } }
+        }.distinctUntilChanged()
+
+        /** Sync runs while Ondo is in [front], the setting is [on] and a local network is connected ([lan]). */
+        internal fun runs(front: Flow<Boolean>, on: Flow<Boolean>, lan: Flow<Boolean>): Flow<Boolean> =
+            combine(front, on, lan) { inFront, settingOn, onLan -> inFront && settingOn && onLan }.distinctUntilChanged()
     }
 }

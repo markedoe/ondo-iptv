@@ -53,6 +53,12 @@ refusé :
 - un client ne se connecte qu’à une adresse trouvée par Bonjour, et seulement si elle est locale (jamais à une
   adresse saisie).
 
+L’app Android refuse aussi une adresse de bouclage (`127.0.0.0/8`, `::1`, écrite aussi `::ffff:127.0.0.1`), dans les
+deux sens : à cette adresse se trouve une autre app du même appareil, pas un autre appareil
+(`LocalSync.isPeerAddress` ; la règle commune garde le bouclage pour les tests). Et elle ne synchronise que tant
+qu’un réseau Wi-Fi ou filaire est connecté, avec ou sans internet : sur les données mobiles seules, les adresses
+privées sont celles du réseau de l’opérateur, pas du domicile du spectateur.
+
 ## Transport
 
 TCP. Une **trame** est une longueur sur 4 octets (gros-boutiste) suivie d’autant d’octets de JSON en UTF-8. Une
