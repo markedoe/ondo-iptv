@@ -10,9 +10,10 @@ final class HTTPByteSource: ByteSource, @unchecked Sendable {
     private let url: URL
     private let headers: [String: String]
     private let session: URLSession
-    /// Guards `knownSize`.
+    /// Guards `knownSize` and `isCancelled`.
     private let lock = NSLock()
     private var knownSize: Int64?
+    private var isCancelled = false
 
     init(url: URL, headers: [String: String]) {
         self.url = url
@@ -26,6 +27,22 @@ final class HTTPByteSource: ByteSource, @unchecked Sendable {
 
     deinit {
         session.invalidateAndCancel()
+    }
+
+    /// Stops the requests on their way and refuses new ones (the remux ends), without waiting until the source is
+    /// freed. The session itself stays valid until then: a request a read could be starting right now must not land in
+    /// an invalidated session, which raises an exception.
+    func cancel() {
+        lock.withLock { isCancelled = true }
+        session.getAllTasks { tasks in
+            for task in tasks { task.cancel() }
+        }
+    }
+
+    /// No request once the source or the read asking is cancelled.
+    private func checkNotCancelled() throws {
+        try Task.checkCancellation()
+        if lock.withLock({ isCancelled }) { throw CancellationError() }
     }
 
     private func request(_ range: Range<Int64>) -> URLRequest {
@@ -42,6 +59,7 @@ final class HTTPByteSource: ByteSource, @unchecked Sendable {
     /// answer is dropped before the body comes.
     func size() async throws -> Int64? {
         if let known = lock.withLock({ knownSize }) { return known }
+        try checkNotCancelled()
         let (bytes, response) = try await session.bytes(for: request(0..<1))
         bytes.task.cancel()
         try remember(response)
@@ -50,6 +68,7 @@ final class HTTPByteSource: ByteSource, @unchecked Sendable {
 
     func read(_ range: Range<Int64>) async throws -> Data {
         if let known = lock.withLock({ knownSize }), range.lowerBound >= known { return Data() }
+        try checkNotCancelled()
         let (data, response) = try await session.data(for: request(range))
         if (response as? HTTPURLResponse)?.statusCode == 416 { return Data() }
         try remember(response)

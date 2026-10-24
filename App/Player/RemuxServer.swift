@@ -10,10 +10,12 @@ import Network
 /// player takes HLS media segments only from an HTTP server, not from a resource loader.
 final class RemuxServer: @unchecked Sendable {
     private let remux: MatroskaRemux
+    /// The provider's file, read for `remux`: its requests stop with the server.
+    private let source: HTTPByteSource
     private let listener: NWListener
     private let queue = DispatchQueue(label: "Ondo.RemuxServer")
     /// The connections open, closed with the server (on the server's queue).
-    private var connections: [ObjectIdentifier: NWConnection] = [:]
+    private var clients: [ObjectIdentifier: Client] = [:]
     private var stopped = false
     /// A segment that could not be made, for the playback log (on the server's queue).
     var onFailure: (@Sendable (String) -> Void)?
@@ -21,12 +23,13 @@ final class RemuxServer: @unchecked Sendable {
     var onRequest: (@Sendable (String) -> Void)?
     private let served = Counter()
 
-    init(remux: MatroskaRemux) throws {
+    init(remux: MatroskaRemux, source: HTTPByteSource) throws {
         let parameters = NWParameters.tcp
         // Bound to 127.0.0.1: nothing outside this device can connect.
         parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: .any)
         listener = try NWListener(using: parameters)
         self.remux = remux
+        self.source = source
     }
 
     deinit {
@@ -59,13 +62,18 @@ final class RemuxServer: @unchecked Sendable {
         }
     }
 
+    /// Closes the connections, drops the answers being made and stops reading the provider's file (the player closed,
+    /// another film, VLC taking over): nothing is downloaded for this film any more.
     func stop() {
         listener.cancel()
         queue.async { [self] in
             stopped = true
-            for connection in connections.values { connection.cancel() }
-            connections = [:]
+            let open = clients.values
+            clients = [:]
+            for client in open { close(client) }
         }
+        Task { [remux] in await remux.close() }
+        source.cancel()
     }
 
     private func accept(_ connection: NWConnection) {
@@ -73,49 +81,67 @@ final class RemuxServer: @unchecked Sendable {
             connection.cancel()
             return
         }
-        connections[ObjectIdentifier(connection)] = connection
-        connection.stateUpdateHandler = { [weak self, weak connection] state in
-            guard let self, let connection else { return }
+        let client = Client(connection)
+        clients[ObjectIdentifier(connection)] = client
+        connection.stateUpdateHandler = { [weak self, weak client] state in
+            guard let self, let client else { return }
             switch state {
-            case .cancelled, .failed: self.connections[ObjectIdentifier(connection)] = nil
+            case .cancelled, .failed: self.close(client)
             default: break
             }
         }
         connection.start(queue: queue)
-        receive(on: connection, buffer: Data())
+        read(client)
     }
 
-    /// Reads a request, answers it, then waits for the next one on the same connection (the player keeps it open).
-    private func receive(on connection: NWConnection, buffer: Data) {
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
+    /// The connection is closed, by the player or the server: the answer being made is dropped, and with it the read of
+    /// the provider's file it waits for, which would hold the provider's single connection (a seek waiting behind it).
+    private func close(_ client: Client) {
+        client.answer?.cancel()
+        client.answer = nil
+        client.connection.cancel()
+        if clients[ObjectIdentifier(client.connection)] === client { clients[ObjectIdentifier(client.connection)] = nil }
+    }
+
+    /// Reads all the time, also while an answer is made, so that the player closing the connection (a seek, the player
+    /// closing) is seen at once; the requests received are answered one after the other (the player keeps the
+    /// connection open).
+    private func read(_ client: Client) {
+        client.connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
             guard let self else {
-                connection.cancel()
+                client.connection.cancel()
                 return
             }
-            var buffer = buffer
-            if let data { buffer.append(data) }
-            guard let end = buffer.range(of: Data("\r\n\r\n".utf8)) else {
-                if isComplete || error != nil || buffer.count > 64 * 1024 {
+            if let data { client.buffer.append(data) }
+            guard !isComplete, error == nil, client.buffer.count <= 64 * 1024 else {
+                self.close(client)
+                return
+            }
+            self.answerNext(client)
+            self.read(client)
+        }
+    }
+
+    /// Answers the next request received, once the answer before it is sent (on the server's queue).
+    private func answerNext(_ client: Client) {
+        guard !stopped, client.answer == nil, clients[ObjectIdentifier(client.connection)] === client,
+              let end = client.buffer.range(of: Data("\r\n\r\n".utf8)) else { return }
+        let head = String(decoding: client.buffer[client.buffer.startIndex..<end.lowerBound], as: UTF8.self)
+        client.buffer = Data(client.buffer[end.upperBound...])
+        let connection = client.connection
+        client.answer = Task {
+            let started = Date()
+            let response = await self.respond(to: head)
+            guard !Task.isCancelled else { return }
+            self.log(head, response: response, since: started)
+            connection.send(content: response, completion: .contentProcessed { [weak self] error in
+                guard let self, error == nil else {
                     connection.cancel()
-                } else {
-                    self.receive(on: connection, buffer: buffer)
+                    return
                 }
-                return
-            }
-            let head = String(decoding: buffer[buffer.startIndex..<end.lowerBound], as: UTF8.self)
-            let rest = Data(buffer[end.upperBound...])
-            Task {
-                let started = Date()
-                let response = await self.respond(to: head)
-                self.log(head, response: response, since: started)
-                connection.send(content: response, completion: .contentProcessed { error in
-                    guard error == nil else {
-                        connection.cancel()
-                        return
-                    }
-                    self.receive(on: connection, buffer: rest)
-                })
-            }
+                client.answer = nil
+                self.answerNext(client)
+            })
         }
     }
 
@@ -138,7 +164,8 @@ final class RemuxServer: @unchecked Sendable {
             guard let (body, type) = try await content(for: path) else { return Self.response(status: 404) }
             return Self.response(body: body, type: type, range: range, headOnly: request[0] == "HEAD")
         } catch {
-            onFailure?("\(path): \(error)")
+            // A request the player gave up, or the server stopping, is no failure of the remux.
+            if !Task.isCancelled { onFailure?("\(path): \(error)") }
             return Self.response(status: 500)
         }
     }
@@ -185,6 +212,18 @@ final class RemuxServer: @unchecked Sendable {
         var head = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: \(type)\r\nContent-Length: \(body.count)\r\n"
         head += "Accept-Ranges: bytes\r\nCache-Control: no-cache\r\nConnection: keep-alive\r\n\(extra)\r\n"
         return Data(head.utf8) + (headOnly ? Data() : body)
+    }
+}
+
+/// A connection of the player, used on the server's queue: what it sent that is not answered yet, and the answer being
+/// made (one at a time).
+private final class Client: @unchecked Sendable {
+    let connection: NWConnection
+    var buffer = Data()
+    var answer: Task<Void, Never>?
+
+    init(_ connection: NWConnection) {
+        self.connection = connection
     }
 }
 
