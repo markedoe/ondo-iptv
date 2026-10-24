@@ -114,8 +114,11 @@ class OndoRepositoryTest {
             tasks.add(block)
         }
 
-        /** The next step, once it is there (parsing runs on another thread, and sends its result here). */
-        fun runNext() = requireNotNull(tasks.poll(10, TimeUnit.SECONDS)) { "no step came" }.run()
+        /**
+         * The next step, once it is there (parsing runs on another thread, and sends its result here). The wait is long:
+         * on a busy machine, the first parse in a test JVM (class loading, a cold JIT) has taken over 10 seconds.
+         */
+        fun runNext() = requireNotNull(tasks.poll(60, TimeUnit.SECONDS)) { "no step came" }.run()
 
         fun runAll() {
             while (true) (tasks.poll() ?: return).run()
