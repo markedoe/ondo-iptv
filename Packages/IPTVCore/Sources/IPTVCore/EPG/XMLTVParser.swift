@@ -48,6 +48,8 @@ public enum XMLTVParser {
         parser.delegate = delegate
         // Some platforms report a premature end only through `parserError`, with `parse()` returning true.
         let failed = !parser.parse() || parser.parserError != nil
+        // A replaced load: what was read is not a guide cut short.
+        if delegate.wasCancelled { throw CancellationError() }
         // A guide cut short or damaged near its end keeps what was read before the damage. A file that yields
         // nothing is an error when it is broken or is not a guide at all: providers answer some refusals with an
         // HTML page and a 200, which must not pass for an empty guide.
@@ -117,6 +119,8 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
     var programCount = 0
     /// Whether the document has the `<tv>` element of an XMLTV guide.
     private(set) var sawGuideElement = false
+    /// The task parsing was cancelled: reading stopped at the next programme.
+    private(set) var wasCancelled = false
 
     // Channel being parsed.
     private var channelID: String?
@@ -168,6 +172,11 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
         case "tv":
             sawGuideElement = true
         case "programme":
+            if Task.isCancelled {
+                wasCancelled = true
+                parser.abortParsing()
+                return
+            }
             guard let channel = attributes["channel"],
                   let start = attributes["start"].flatMap(XMLTVParser.parseDate) else {
                 keepProgramme = false

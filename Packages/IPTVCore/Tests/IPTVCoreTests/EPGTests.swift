@@ -124,6 +124,28 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(truncated.programs["TV1.fr"]?.map(\.title), ["Le JT", "Film du soir"], "what was read before the damage is kept")
     }
 
+    /// A replaced load (another playlist opened, the guide settings changed) stops reading its guide instead of parsing
+    /// it to the end beside the next one, and is not taken for a guide cut short.
+    func testACancelledLoadStopsReadingTheGuide() async throws {
+        var xml = "<?xml version=\"1.0\"?><tv>"
+        for p in 0..<2_000 {
+            xml += "<programme channel=\"ch\(p)\" start=\"20251009200000 +0000\" stop=\"20251009210000 +0000\"><title>Show \(p)</title></programme>"
+        }
+        xml += "</tv>"
+        let data = Data(xml.utf8)
+        XCTAssertEqual(try XMLTVParser.parse(data).programCount, 2_000)
+        let parse = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try XMLTVParser.parse(data)
+        }
+        do {
+            let guide = try await parse.value
+            XCTFail("a cancelled load read \(guide.programCount) programmes")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+    }
+
     func testEpisodeNumbersPastIntRangeAreKeptAsText() throws {
         let xml = """
         <?xml version="1.0"?><tv><programme channel="a" start="20251009200000 +0000" stop="20251009210000 +0000">\
