@@ -141,9 +141,15 @@ class Tv:
                     if open:
                         self.key("DPAD_CENTER")
                     return fields[index]
-                # Injected arrows stay in a text field (Compose moves out of one for a physical remote only): Tab
-                # goes on to the next field, as Next on the TV's keyboard does.
-                self.key("TAB" if focused else towards)
+                # The app's arrows go on from a text field; an older build kept injected arrows in one (Compose
+                # moves out of one for a physical remote only): there, Tab goes on, as Next on the TV's keyboard does.
+                before = focused[-1] if focused else None
+                self.key(towards)
+                if before is not None:
+                    after = self.screen()
+                    still = after is not None and [i for i, n in enumerate(n for n in after.iter("node") if n.get("class") == "android.widget.EditText") if n.get("focused") == "true"]
+                    if still and still[-1] == before:
+                        self.key("TAB")
                 continue
             self.key(towards)
         self.screenshot(f"never-focused-field-{index}")
@@ -306,10 +312,11 @@ def path_settings(tv, args):
     tv.key("RIGHT")
     tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
     tv.note_screen("settings-categories")
-    # A word to hide (Styles), then every category hidden and shown. The remote has not found its way to the second
-    # text field yet (Tab from the first one goes on to the list): noted, and the rest of Settings goes on.
+    # A word to hide (Styles), then every category hidden and shown; noted when not reached, and the rest of Settings
+    # goes on. The field by its label: the list keeps only what is near the screen, so the fields' order changes.
     try:
-        tv.focus_on_field(1, towards="TAB", max_presses=20)
+        tv.focus_on("Word to hide", keys=("DOWN",), max_presses=20, editable=True)
+        tv.key("DPAD_CENTER")
         tv.shell("input text 'Films%s3'")
         tv.focus_on("Add", keys=("TAB",), max_presses=4, editable=False)
         tv.key("DPAD_CENTER")
@@ -643,10 +650,7 @@ def path_browse(tv, args):
     tv.drawer("Movies")
     tv.open("FR | Films 2", keys=("UP", "RIGHT", "RIGHT", "RIGHT"), max_presses=8, exact=True, wait=5)
     tv.note_screen("browse-category-grid")
-    tv.key("DOWN")
-    tv.key("RIGHT", 2)
-    tv.key("DPAD_CENTER")
-    time.sleep(4)
+    tv.open("Movie ", keys=("DOWN", "DOWN", "RIGHT"), max_presses=8, wait=4)
     tv.check_alive("a movie of a category's grid opened")
     tv.note_screen("browse-grid-movie")
     tv.open("Drama", keys=("DOWN", "DOWN", "DOWN", "UP"), max_presses=10, exact=True, wait=5)
@@ -826,9 +830,7 @@ def path_restore(tv, args):
     """Saved state: pages recreated by Android (configuration change), and restored in a new process after Android
     ended the app in the background (navigation's routes, the player's request, the remembered values)."""
     tv.drawer("Movies")
-    tv.key("DOWN", 2)
-    tv.key("RIGHT", 2)
-    tv.key("DPAD_CENTER")
+    tv.open("Movie ", keys=("DOWN", "DOWN", "RIGHT"), max_presses=10, wait=1)
     tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
     recreated(tv, "movie")
     killed_in_background(tv, "movie", "Collection")
@@ -857,8 +859,7 @@ def path_restore(tv, args):
     tv.key("BACK")
     time.sleep(3)
     tv.drawer("Movies")
-    tv.key("DOWN", 2)
-    tv.key("DPAD_CENTER")
+    tv.open("Movie ", keys=("DOWN", "DOWN", "RIGHT"), max_presses=10, wait=1)
     tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
     tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=8)
     if not tv.player_shown():
