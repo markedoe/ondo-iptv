@@ -153,7 +153,7 @@ struct SeriesDetailView: View {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.2)) { selectedSeason = item.number }
                             } label: {
-                                Text(item.name)
+                                Text(item.displayName())
                                     .font(.subheadline.weight(.semibold))
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
@@ -287,5 +287,13 @@ struct EpisodeRow: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+    }
+}
+
+extension Season {
+    /// The name on the season's button: the provider's, except a bare "Season 2" (the provider's default, and the
+    /// English name IPTVCore gives a season the provider does not name), which reads in the app's language.
+    func displayName(bundle: Bundle = .main) -> String {
+        name == "Season \(number)" ? String(localized: "Season \(number)", bundle: bundle) : name
     }
 }
