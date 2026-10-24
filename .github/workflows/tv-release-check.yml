@@ -21,13 +21,17 @@ on:
       heap-size:
         description: The app's memory limit (a TV box's, e.g. 192M or 128M)
         default: "192M"
+      growth-limit:
+        description: The app's memory limit set on the emulator (e.g. 128m for an entry-level TV box; empty — the image's)
+        required: false
+        default: ""
       wrong-password-first:
         description: Type a wrong password first (refused), then the right one
         type: boolean
         default: false
 
 concurrency:
-  group: tv-release-check-${{ inputs.ref }}-${{ inputs.panel }}-${{ inputs.api-level }}-${{ inputs.heap-size }}
+  group: tv-release-check-${{ inputs.ref }}-${{ inputs.panel }}-${{ inputs.api-level }}-${{ inputs.heap-size }}-${{ inputs.growth-limit }}
   cancel-in-progress: false
 
 permissions:
@@ -79,6 +83,8 @@ jobs:
           cat out/panel.log
           head -1 out/panel-requests.log
       - name: Add a playlist on the TV with the remote
+        env:
+          GROWTH_LIMIT: ${{ inputs.growth-limit }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ inputs.api-level }}
@@ -92,7 +98,7 @@ jobs:
           script: |
             adb install -r build-src/android/app/build/outputs/apk/release/app-release.apk
             adb reverse tcp:8080 tcp:8080
-            python3 -I .github/scripts/tv_drive.py out/tv ${{ inputs.wrong-password-first && '--wrong-password-first' || '' }}
+            python3 -I .github/scripts/tv_drive.py out/tv --growth-limit="$GROWTH_LIMIT" ${{ inputs.wrong-password-first && '--wrong-password-first' || '' }}
       - name: Crash with the app's names (R8 mapping)
         if: always()
         run: |
@@ -109,6 +115,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: tv-release-check-${{ inputs.panel }}-api${{ inputs.api-level }}-${{ inputs.heap-size }}
+          name: tv-release-check-${{ inputs.panel }}-api${{ inputs.api-level }}-${{ inputs.heap-size }}-${{ inputs.growth-limit }}
           path: out
           if-no-files-found: ignore

@@ -151,17 +151,39 @@ class Tv:
         raise TimeoutError(f"the focus never reached '{label}' (on: {joined})")
 
 
+def limit_memory(tv, limit):
+    """Sets the memory limit of every app (dalvik.vm.heapgrowthlimit) and restarts Android's runtime to apply it."""
+    tv.adb("root", timeout=60)
+    tv.adb("wait-for-device", timeout=120)
+    tv.shell(f"setprop dalvik.vm.heapgrowthlimit {limit}")
+    tv.shell("stop")
+    tv.shell("start")
+    deadline = time.time() + 240
+    while time.time() < deadline:
+        time.sleep(5)
+        ready = tv.shell("getprop sys.boot_completed").strip() == "1" and "package:" in tv.shell("pm path android")
+        if ready and tv.shell("pidof com.android.systemui").strip():
+            break
+    time.sleep(20)
+    tv.say(f"memory limit set to {tv.shell('getprop dalvik.vm.heapgrowthlimit').strip()}")
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("out")
     parser.add_argument("--server", default="http://localhost:8080")
     parser.add_argument("--wait-load", type=int, default=240)
     parser.add_argument("--wrong-password-first", action="store_true")
+    parser.add_argument("--growth-limit", default="", help="the app's memory limit, as an entry-level TV box's (e.g. 128m)")
     args = parser.parse_args()
     os.makedirs(args.out, exist_ok=True)
     tv = Tv(args.out)
     result = 1
     try:
+        if args.growth_limit:
+            if not re.fullmatch(r"[0-9]{2,4}m", args.growth_limit):
+                raise RuntimeError(f"a memory limit is written like 128m, not {args.growth_limit!r}")
+            limit_memory(tv, args.growth_limit)
         tv.say("device: " + " ".join(tv.shell(f"getprop {p}").strip() for p in (
             "ro.build.version.sdk", "ro.product.model", "dalvik.vm.heapgrowthlimit", "dalvik.vm.heapsize", "ro.config.low_ram")))
         tv.say("app: " + tv.shell(f"dumpsys package {PACKAGE} | grep -E 'versionCode|versionName'").strip().replace("\n", " "))
