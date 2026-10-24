@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -105,6 +106,13 @@ class OndoViewModel(
 
     private val _liveFilter = MutableStateFlow(LiveFilter())
     val liveFilter: StateFlow<LiveFilter> = _liveFilter.asStateFlow()
+
+    init {
+        // Another playlist opens on all its channels: a category chosen on the previous one is not carried over.
+        viewModelScope.launch {
+            state.map { it.activePlaylistId }.distinctUntilChanged().drop(1).collect { _liveFilter.value = LiveFilter() }
+        }
+    }
 
     val live: StateFlow<LiveUiState?> = combine(state, _liveFilter, minutes) { state, filter, now ->
         UiMappers.live(state, filter.categoryId, filter.favoritesOnly, now)

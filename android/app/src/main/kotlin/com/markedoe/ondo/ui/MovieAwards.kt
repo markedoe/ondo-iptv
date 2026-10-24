@@ -22,6 +22,10 @@ object MovieAwards {
         return state.awards.match(state.content.movies).also { cached = Triple(state.content, state.awards, it) }
     }
 
+    internal fun forget() {
+        cached = null
+    }
+
     fun rows(state: OndoState, movie: Movie, locale: Locale): List<AwardRow> {
         val language = if (locale.language == "zh") "zh-Hans" else locale.language
         // The awards file can list a film twice for one award and year (won, and nominated): once, the win first.

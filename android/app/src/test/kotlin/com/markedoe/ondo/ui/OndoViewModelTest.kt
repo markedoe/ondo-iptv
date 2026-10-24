@@ -223,4 +223,30 @@ class OndoViewModelTest {
             assertEquals("http://provider.example.com/road.mp4", request.urls.first())
         }
     }
+
+    /** A Live TV category chosen on one playlist does not follow the viewer to another one, nor outlive its category. */
+    @Test
+    fun aLiveCategoryChosenOnOnePlaylistDoesNotFollowToTheNext() = runTest {
+        val other = "http://other.example.com/list.m3u"
+        val otherList = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",Other News\nhttp://other.example.com/news.m3u8\n" +
+            "#EXTINF:-1 group-title=\"Sport\",Other Sport\nhttp://other.example.com/sport.m3u8\n"
+        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to otherList)), backgroundScope, io = StandardTestDispatcher(testScheduler))
+        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        repository.bootstrap()
+        viewModel.state.first { it.isReady }
+        assertTrue(repository.addPlaylist("Home", list).isSuccess)
+        val home = viewModel.state.value.activePlaylistId
+        val news = viewModel.state.value.content.liveCategories.single { it.name == "News" }.id
+        viewModel.setLiveFilter(LiveFilter(categoryId = news))
+        assertEquals(news, viewModel.live.first { it?.selectedCategoryId == news }?.selectedCategoryId)
+
+        assertTrue(repository.addPlaylist("Other", other).isSuccess)
+        val shown = viewModel.live.first { it != null && viewModel.state.value.activePlaylistId != home && it.channels.size + it.categories.size > 0 }!!
+        assertEquals("all channels, as on a playlist just opened", null, shown.selectedCategoryId)
+        assertEquals(2, shown.channels.size)
+        // A category that is gone (hidden, or another playlist's): all channels, none selected.
+        val gone = UiMappers.live(viewModel.state.value, "gone", favoritesOnly = false, now = 0)
+        assertEquals(null, gone.selectedCategoryId)
+        assertEquals(2, gone.channels.size)
+    }
 }

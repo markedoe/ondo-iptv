@@ -6,6 +6,9 @@ import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncSnapshot
+import com.markedoe.ondo.ui.CategoryFilter
+import com.markedoe.ondo.ui.MovieAwards
+import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.theme.Appearance
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -502,13 +505,28 @@ class OndoRepositoryTest {
         assertTrue(repository.addPlaylist("Home", list).isSuccess)
         val deleted = repository.state.value.content
         assertFalse(deleted.isEmpty)
+        // What the screens build from it: Home's category filter, a detail page's index, Search, the awards.
+        UiMappers.index(deleted)
+        CategoryFilter.tags(deleted)
+        UiMappers.SearchIndex.of(deleted, emptySet())
+        MovieAwards.of(repository.state.value)
 
         repository.delete(repository.state.value.activePlaylistId!!)
         testScheduler.advanceUntilIdle()
 
         assertTrue(repository.state.value.content.isEmpty)
         assertNull("the deleted playlist's catalogue is still held", pathTo(deleted, from = repository))
+        // The screens' indexes are kept in objects, which live as long as the app.
+        listOf(UiMappers::class.java, UiMappers.SearchIndex::class.java, CategoryFilter::class.java, MovieAwards::class.java).forEach { type ->
+            assertNull("the deleted playlist's catalogue is still held by ${type.simpleName}", pathFromStatics(deleted, type))
+        }
     }
+
+    /** As [pathTo], from the static fields of [type] (an object's properties). */
+    private fun pathFromStatics(target: Any, type: Class<*>): String? =
+        type.declaredFields.filter { java.lang.reflect.Modifier.isStatic(it.modifiers) && !it.type.isPrimitive }.firstNotNullOfOrNull { field ->
+            runCatching { field.isAccessible = true; field.get(null) }.getOrNull()?.let { value -> pathTo(target, from = value)?.let { "${type.simpleName}.${field.name}" + it.removePrefix("repository") } }
+        }
 
     /** The fields leading from [from] to [target] ("repository.a.b"), or null when none does. */
     private fun pathTo(target: Any, from: Any): String? {

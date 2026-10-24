@@ -80,6 +80,17 @@ object UiMappers {
 
     @Volatile private var catalogueIndex: Pair<PlaylistContent, CatalogueIndex>? = null
 
+    /**
+     * Drops what the screens built from a catalogue that left them (switched or deleted playlist): these objects live as
+     * long as the app, and a large catalogue and its indexes are most of a TV's memory. Main thread.
+     */
+    fun forgetCatalogue() {
+        catalogueIndex = null
+        SearchIndex.forget()
+        CategoryFilter.forget()
+        MovieAwards.forget()
+    }
+
     /** Built once per catalogue, in the background (it goes through the whole catalogue). */
     fun index(content: PlaylistContent): CatalogueIndex {
         catalogueIndex?.let { (known, index) -> if (known === content) return index }
@@ -237,7 +248,7 @@ object UiMappers {
         val selection = liveChannels(state, categoryId, favoritesOnly)
         return LiveUiState(
             categories = selection.categories,
-            selectedCategoryId = categoryId,
+            selectedCategoryId = selection.categoryId,
             showingFavorites = favoritesOnly,
             channels = selection.channels.map { channelRow(it, state, now) },
             favoriteIds = selection.favoriteIds,
@@ -250,23 +261,29 @@ object UiMappers {
         return state.content.channels.filter { it.categoryId !in hidden }
     }
 
-    /** The channels of a Live TV choice (My List, a category or all), the categories that have some, the favourites. */
-    private class ChannelSelection(val channels: List<Channel>, val categories: List<MediaCategory>, val favoriteIds: Set<String>)
+    /**
+     * The channels of a Live TV choice (My List, a category or all), the categories that have some, the favourites, and
+     * the category shown ([categoryId] when it is still among them).
+     */
+    private class ChannelSelection(val channels: List<Channel>, val categories: List<MediaCategory>, val favoriteIds: Set<String>, val categoryId: String?)
 
     private fun liveChannels(state: OndoState, categoryId: String?, favoritesOnly: Boolean): ChannelSelection {
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val favoriteIds = state.library.favorites(playlistId, ItemKind.CHANNEL).mapTo(HashSet()) { it.itemId }
         val visible = state.content.channels.filter { it.categoryId !in hidden }
+        val used = visible.mapTo(HashSet()) { it.categoryId }
+        val categories = state.content.liveCategories.filter { it.id in used }.distinctBy { it.id }
+        // A category hidden since, or gone with a refresh: all channels again, rather than an empty list with no chip on.
+        val shown = categoryId?.takeIf { id -> categories.any { it.id == id } }
         val channels = visible.filter {
             when {
                 favoritesOnly -> it.id in favoriteIds
-                categoryId != null -> it.categoryId == categoryId
+                shown != null -> it.categoryId == shown
                 else -> true
             }
         }
-        val used = visible.mapTo(HashSet()) { it.categoryId }
-        return ChannelSelection(channels, state.content.liveCategories.filter { it.id in used }.distinctBy { it.id }, favoriteIds)
+        return ChannelSelection(channels, categories, favoriteIds, shown)
     }
 
     /** Rows of the TV guide at most: each row lays out its programmes. Beyond, a note asks to choose a category. */
@@ -294,7 +311,7 @@ object UiMappers {
             hasGuide = guide != null,
             isLoading = state.isLoading,
             categories = selection.categories,
-            selectedCategoryId = categoryId,
+            selectedCategoryId = selection.categoryId,
             showingFavorites = favoritesOnly,
             reminders = state.library.upcomingReminders(playlistId, now).mapTo(HashSet()) { "${it.channelId}|${it.start}" },
         )
@@ -516,6 +533,10 @@ object UiMappers {
             fun of(content: PlaylistContent, hidden: Set<String>): SearchIndex {
                 cached?.let { (known, knownHidden, index) -> if (known === content && knownHidden == hidden) return index }
                 return SearchIndex(content, hidden).also { cached = Triple(content, hidden, it) }
+            }
+
+            internal fun forget() {
+                cached = null
             }
         }
     }

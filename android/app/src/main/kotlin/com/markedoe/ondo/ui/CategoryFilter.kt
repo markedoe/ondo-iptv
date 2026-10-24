@@ -70,6 +70,10 @@ object CategoryFilter {
         return TagIndex(content).also { cached = content to it }
     }
 
+    internal fun forget() {
+        cached = null
+    }
+
     /** The language or country a tag stands for, in [locale]; null for other tags ("EX-YU", "VIP"). */
     fun name(tag: String, locale: Locale): String? {
         val name = when {

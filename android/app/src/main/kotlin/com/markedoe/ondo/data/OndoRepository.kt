@@ -26,6 +26,7 @@ import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.PlayRequest
+import com.markedoe.ondo.ui.UiMappers
 import java.io.File
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
@@ -150,6 +151,7 @@ class OndoRepository(
     private fun forgetContent() {
         loadedContent = PlaylistContent.EMPTY
         shownContent = PlaylistContent.EMPTY
+        UiMappers.forgetCatalogue()
     }
 
     /**
