@@ -202,17 +202,20 @@ class OndoRepository(
     private suspend fun add(saved: SavedPlaylist): Result<Unit> =
         loadCatching { withContext(io) { loader().load(saved.toCorePlaylist()) } }
             .map { content ->
-                val playlists = _state.value.playlists + saved
-                val settings = _state.value.settings.copy(activePlaylistId = saved.id)
-                withContext(writer) {
-                    runCatching {
-                        store.savePlaylists(playlists)
-                        store.saveSettings(settings)
-                        store.saveContent(saved.id, content)
-                    }
-                }
+                withContext(writer) { runCatching { store.saveContent(saved.id, content) } }
                 startDetails(saved.id)
-                _state.update { it.copy(playlists = playlists, settings = settings, content = content, isLoading = false, isRestoring = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap()) }
+                // The playlists and settings as they are once saved: a playlist synced or added meanwhile stays.
+                _state.update {
+                    it.copy(
+                        playlists = it.playlists + saved, settings = it.settings.copy(activePlaylistId = saved.id), content = content,
+                        isLoading = false, isRestoring = false, guide = null, movieDetails = emptyMap(), seriesDetails = emptyMap(),
+                    )
+                }
+                val state = _state.value
+                persist {
+                    savePlaylists(state.playlists)
+                    saveSettings(state.settings)
+                }
                 loadGuide(saved, content)
             }
             .onFailure { error -> _state.update { it.copy(isLoading = false, error = LoadError.of(error)) } }

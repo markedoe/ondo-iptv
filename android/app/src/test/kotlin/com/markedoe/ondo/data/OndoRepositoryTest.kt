@@ -3,7 +3,13 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
+import com.markedoe.ondo.core.sync.SyncPlaylist
+import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.ui.theme.Appearance
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -98,6 +104,76 @@ class OndoRepositoryTest {
         adding.join()
         assertFalse(repository.state.value.isLoading)
         assertTrue(repository.state.value.playlists.isEmpty())
+    }
+
+    /** Runs the repository's file and network work only when the test says so: the test acts between two of its steps. */
+    private class StepDispatcher : CoroutineDispatcher() {
+        private val tasks = LinkedBlockingQueue<Runnable>()
+
+        override fun dispatch(context: CoroutineContext, block: Runnable) {
+            tasks.add(block)
+        }
+
+        /** The next step, once it is there (parsing runs on another thread, and sends its result here). */
+        fun runNext() = requireNotNull(tasks.poll(10, TimeUnit.SECONDS)) { "no step came" }.run()
+
+        fun runAll() {
+            while (true) (tasks.poll() ?: return).run()
+        }
+    }
+
+    /** Runs the test's tasks (background ones included) and the steps until [done]. */
+    private fun TestScope.runSteps(io: StepDispatcher, done: () -> Boolean) {
+        val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
+        while (!done()) {
+            check(System.nanoTime() < deadline) { "the repository never got there" }
+            testScheduler.runCurrent()
+            io.runAll()
+        }
+    }
+
+    /** A playlist that arrives by sync while an added one is being saved stays, in memory and on disk. */
+    @Test
+    fun aPlaylistSyncedWhileAnotherIsAddedIsKept() = runTest {
+        val io = StepDispatcher()
+        val other = "http://provider.example.com/other.m3u"
+        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io)
+        repository.bootstrap()
+        runSteps(io) { repository.state.value.isReady }
+        val adding = launch { repository.addPlaylist("Home", list) }
+        testScheduler.runCurrent() // the add asks for its download
+        io.runNext() // downloaded, parsing
+        io.runNext() // parsed
+        testScheduler.runCurrent() // the add saves its playlists, on the writer
+        val synced = SyncPlaylist(id = "from-phone", name = "Phone", kind = SyncPlaylist.M3U, url = other, addedAt = clock, updatedAt = clock)
+        assertNotNull(repository.mergeSync(SyncSnapshot(device = "phone", playlists = listOf(synced)), "TV"))
+        runSteps(io) { adding.isCompleted }
+        assertEquals(setOf("Home", "Phone"), repository.state.value.playlists.map { it.name }.toSet())
+        assertEquals("Home", repository.state.value.activePlaylist?.name)
+        io.runAll()
+        assertEquals(setOf("Home", "Phone"), AppStore(folder.root).loadPlaylists().map { it.name }.toSet())
+    }
+
+    /** Two playlists added at once (a second tap on Save while the first loads): both stay, in memory and on disk. */
+    @Test
+    fun twoPlaylistsAddedAtOnceAreBothKept() = runTest {
+        val io = StepDispatcher()
+        val other = "http://provider.example.com/other.m3u"
+        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io)
+        repository.bootstrap()
+        runSteps(io) { repository.state.value.isReady }
+        val first = launch { assertTrue(repository.addPlaylist("Home", list).isSuccess) }
+        val second = launch { assertTrue(repository.addPlaylist("Office", other).isSuccess) }
+        testScheduler.runCurrent() // both ask for their download
+        io.runNext()
+        io.runNext() // both downloaded, parsing
+        io.runNext()
+        io.runNext() // both parsed
+        testScheduler.runCurrent() // each saves the playlists it read, on the writer
+        runSteps(io) { first.isCompleted && second.isCompleted }
+        assertEquals(setOf("Home", "Office"), repository.state.value.playlists.map { it.name }.toSet())
+        io.runAll()
+        assertEquals(setOf("Home", "Office"), AppStore(folder.root).loadPlaylists().map { it.name }.toSet())
     }
 
     /** A catalogue too large for the device's memory (an entry-level TV) is an error on screen, not a stop of the app. */
