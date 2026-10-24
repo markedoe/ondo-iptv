@@ -83,12 +83,12 @@ public struct TMDbClient: Sendable {
     }
 
     /// Asks TMDb whether it accepts the key or token (`/authentication`), before it is saved: false when TMDb
-    /// refuses it (401); a network failure throws.
+    /// refuses it (401); a network failure, or an answer that is not TMDb's (`{"success": …}`), throws.
     public func isAccepted() async throws -> Bool {
         do {
             let data = try await get("authentication")
-            struct Answer: Decodable { var success: Bool? }
-            return (try? JSONDecoder().decode(Answer.self, from: data))?.success ?? true
+            struct Answer: Decodable { var success: Bool }
+            return try JSONDecoder().decode(Answer.self, from: data).success
         } catch HTTPClientError.badStatus(let status) where status == 401 {
             return false
         }

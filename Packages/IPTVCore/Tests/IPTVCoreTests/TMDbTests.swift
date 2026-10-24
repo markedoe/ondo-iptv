@@ -80,6 +80,24 @@ final class TMDbTests: XCTestCase {
         }
     }
 
+    /// Only TMDb's own answer accepts a key: a page that is not it (a proxy's, a network's sign-in page) checks nothing,
+    /// and the key is not saved as accepted.
+    func testAnAnswerThatIsNotTMDbsAcceptsNoKey() async throws {
+        let http = MockHTTPClient()
+        for (key, body) in [("PAGE", "<html><body>Sign in to the network</body></html>"), ("EMPTY", "{}")] {
+            http.routes["https://api.themoviedb.org/3/authentication?language=en-US&api_key=\(key)"] = Data(body.utf8)
+            do {
+                let accepted = try await TMDbClient(credential: key, http: http).isAccepted()
+                XCTFail("\(body) is not TMDb's answer, yet the key was \(accepted ? "accepted" : "refused")")
+            } catch {}
+        }
+        // TMDb's own answer refusing a key without a 401 still refuses it.
+        http.routes["https://api.themoviedb.org/3/authentication?language=en-US&api_key=NO"] =
+            Data(#"{"success":false,"status_code":7,"status_message":"Invalid API key."}"#.utf8)
+        let refused = try await TMDbClient(credential: "NO", http: http).isAccepted()
+        XCTAssertFalse(refused)
+    }
+
     /// Search finds actors and directors by any word of their name, the ones named most often first.
     func testPeopleAreFoundByName() {
         let index = PeopleIndex(fields: ["Ada Vance, Tom Reyes", "Ada Vance (voice)", "Lena Moss", nil, "Éva Adams, Tomás Ruiz"])
