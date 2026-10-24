@@ -108,6 +108,56 @@ class TranslationsTests(CheckTestCase):
         self.write("App/Home.swift", 'let a = 1\nShelf(title: "Brand New Row", metrics: metrics)\n')
         self.assertFails("translations", "App/Home.swift:2", "Brand New Row")
 
+    def test_placeholders_kept_in_another_order_pass(self):
+        self.catalogue({"Starts at %1$@ on %2$@": french("Sur %2$@ à %1$@"), "%@ of %@": french("%2$@ : %1$@"),
+                        "%lld%% watched": french("%lld %% vu")})
+        self.assertPasses("translations")
+
+    def test_a_number_read_as_a_text_fails(self):
+        self.catalogue({"Season %lld": french("Saison %@")})
+        self.assertFails("translations", "French text in Localizable.xcstrings does not keep the placeholders of 'Season %lld'")
+
+    def test_a_missing_or_extra_placeholder_fails(self):
+        self.catalogue({"Next: %@": french("À suivre"), "Delete “%@”?": french("Supprimer « %@ » de %@ ?")})
+        self.assertFails("translations", "'Next: %@'", "'Delete “%@”?'")
+
+    def test_a_stray_percent_sign_fails(self):
+        self.catalogue({"Next: %@": french("À suivre : %@ (50 %)")})
+        self.assertFails("translations", "'Next: %@'")
+
+    def test_an_arabic_digit_inside_a_placeholder_fails(self):
+        self.catalogue({"Starts at %1$@ on %2$@": french("يبدأ في %١$@ على %2$@")})
+        self.assertFails("translations", "'Starts at %1$@ on %2$@'")
+
+    def test_positional_and_plain_placeholders_mixed_fail(self):
+        self.catalogue({"%@ of %@": french("%2$@ sur %@")})
+        self.assertFails("translations", "'%@ of %@'")
+
+    def plural(self, forms: dict) -> dict:
+        """%lld seasons in every language, with the plural forms given for Arabic and French."""
+        values = {"fr": {"one": "%lld saison", "many": "%lld saisons", "other": "%lld saisons"},
+                  "es": {"one": "%lld temporada", "many": "%lld temporadas", "other": "%lld temporadas"},
+                  "pt": {"one": "%lld temporada", "many": "%lld temporadas", "other": "%lld temporadas"},
+                  "zh-Hans": {"other": "%lld 季"}, "hi": {"one": "%lld सीज़न", "other": "%lld सीज़न"},
+                  "ar": {"zero": "%lld موسم", "one": "موسم واحد", "two": "موسمان", "few": "%lld مواسم",
+                         "many": "%lld موسمًا", "other": "%lld موسم"}}
+        values.update(forms)
+        return {"localizations": {code: {"variations": {"plural": {
+            case: {"stringUnit": {"state": "translated", "value": value}} for case, value in cases.items()}}}
+            for code, cases in values.items()}}
+
+    def test_plural_forms_of_each_language_pass(self):
+        self.catalogue({"%lld seasons": self.plural({})})
+        self.assertPasses("translations")
+
+    def test_arabic_without_its_dual_fails(self):
+        self.catalogue({"%lld seasons": self.plural({"ar": {"one": "موسم واحد", "few": "%lld مواسم", "other": "%lld موسم"}})})
+        self.assertFails("translations", "Arabic plural forms in Localizable.xcstrings are ['few', 'one', 'other']", "%lld seasons")
+
+    def test_a_plural_form_with_another_placeholder_fails(self):
+        self.catalogue({"%lld seasons": self.plural({"fr": {"one": "%lld saison", "many": "%lld saisons", "other": "%@ saisons"}})})
+        self.assertFails("translations", "French plural.other text in Localizable.xcstrings", "%lld seasons")
+
 
 class PrivacyManifestTests(CheckTestCase):
     def manifest(self, *categories: str, reasons=("C617.1",)) -> None:
