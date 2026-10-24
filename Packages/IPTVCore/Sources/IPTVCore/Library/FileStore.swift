@@ -50,7 +50,10 @@ public final class FileStore: Sendable {
         return nil
     }
 
-    public func save<T: Codable>(_ value: T, name: String) throws {
+    /// Saves [value] as the document [name]. `keepingPrevious: false` leaves nothing of the previous version behind,
+    /// neither the `.bak` copy nor a damaged copy set aside: for a document something was deleted from (a playlist and
+    /// its login).
+    public func save<T: Codable>(_ value: T, name: String, keepingPrevious: Bool = true) throws {
         let encoder = JSONEncoder()
         let data = try encoder.encode(Envelope(version: Self.currentVersion, savedAt: Date(), value: value))
         lock.lock()
@@ -58,11 +61,18 @@ public final class FileStore: Sendable {
         let target = url(for: name)
         let backup = target.appendingPathExtension("bak")
         let fileManager = FileManager.default
-        if fileManager.fileExists(atPath: target.path) {
+        if keepingPrevious, fileManager.fileExists(atPath: target.path) {
             try? fileManager.removeItem(at: backup)
             try? fileManager.copyItem(at: target, to: backup)
         }
         try data.write(to: target, options: .atomic)
+        guard !keepingPrevious else { return }
+        try? fileManager.removeItem(at: backup)
+        let asides = [target.lastPathComponent + ".corrupt-", backup.lastPathComponent + ".corrupt-"]
+        for file in (try? fileManager.contentsOfDirectory(atPath: directory.path)) ?? []
+        where asides.contains(where: file.hasPrefix) {
+            try? fileManager.removeItem(at: directory.appendingPathComponent(file))
+        }
     }
 
     public func remove(name: String) {

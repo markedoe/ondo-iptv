@@ -256,7 +256,8 @@ final class AppModel {
         return copy
     }
 
-    private func savePlaylists() {
+    /// - Parameter keepingPrevious: false once a playlist was deleted: no previous version keeps its login.
+    private func savePlaylists(keepingPrevious: Bool = true) {
         // Passwords live in the keychain, not in the JSON file (unless the keychain is unavailable,
         // in which case dropping them would lose the login).
         let sanitized = playlists.map { playlist -> Playlist in
@@ -267,7 +268,7 @@ final class AppModel {
             copy.source = playlist.source.withSecret("")
             return copy
         }
-        try? userStore.save(sanitized, name: "playlists")
+        try? userStore.save(sanitized, name: "playlists", keepingPrevious: keepingPrevious)
     }
 
     func updateSettings(_ change: (inout AppSettings) -> Void) {
@@ -452,7 +453,7 @@ final class AppModel {
     /// `recordsSyncDeletion` is false when sync deletes it: the deletion keeps the time it was made elsewhere.
     func deletePlaylist(_ playlist: Playlist, recordsSyncDeletion: Bool = true) async {
         playlists.removeAll { $0.id == playlist.id }
-        savePlaylists()
+        savePlaylists(keepingPrevious: false)
         notePlaylistDeletedForSync(playlist, recordsDeletion: recordsSyncDeletion)
         secrets.set(nil, for: Keychain.passwordKey(for: playlist.id))
         cacheStore.remove(name: "content-\(playlist.id.uuidString)")

@@ -551,6 +551,29 @@ final class AppModelTests: XCTestCase {
         XCTAssertTrue(model.library.favorites.isEmpty)
     }
 
+    /// A deleted playlist leaves no copy of itself (its address may hold a login) in the saved files: not in the
+    /// previous version of the playlists kept as `.bak`.
+    func testADeletedPlaylistLeavesNoCopyBehind() async throws {
+        let model = try await modelWithPlaylist()
+        let goneFile = root.appendingPathComponent("gone-login.m3u")
+        try Data(Self.playlistText.utf8).write(to: goneFile)
+        try await model.addPlaylist(Playlist(name: "Gone", source: .remote(goneFile), autoRefreshHours: 0))
+        let gone = try XCTUnwrap(model.playlists.first { $0.name == "Gone" })
+
+        await model.deletePlaylist(gone)
+
+        XCTAssertEqual(model.playlists.map(\.name), ["Test"])
+        let support = root.appendingPathComponent("Support", isDirectory: true)
+        for file in try FileManager.default.contentsOfDirectory(atPath: support.path) {
+            guard let data = FileManager.default.contents(atPath: support.appendingPathComponent(file).path) else { continue }
+            let text = String(decoding: data, as: UTF8.self)
+            XCTAssertFalse(text.contains("gone-login"), "\(file) still holds the deleted playlist")
+        }
+        let reopened = makeModel()
+        await reopened.bootstrap()
+        XCTAssertEqual(reopened.playlists.map(\.name), ["Test"])
+    }
+
     /// A playlist deleted while its catalogue downloads again leaves no catalogue on disk: Clear Cache only knows the
     /// playlists there are, so one written after the deletion would stay for good.
     func testAPlaylistDeletedWhileItRefreshesLeavesNoCatalogue() async throws {

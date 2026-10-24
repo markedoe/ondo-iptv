@@ -172,6 +172,32 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(store.diskUsage(), 0)
     }
 
+    /// A playlist deleted leaves nothing of its login behind: not in the previous version kept as `.bak`, not in a
+    /// damaged copy set aside.
+    func testSavingWithoutThePreviousVersionLeavesNoCopyOfIt() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory)
+        let kept = "http://example.com/kept.m3u"
+        let deleted = "http://example.com/get.php?username=viewer&password=gone"
+        try store.save([kept, deleted], name: "playlists")
+        try store.save([kept, deleted], name: "playlists")
+        for aside in ["playlists.json.corrupt-1.json", "playlists.json.bak.corrupt-2.json"] {
+            try Data(deleted.utf8).write(to: directory.appendingPathComponent(aside))
+        }
+        try Data(deleted.utf8).write(to: directory.appendingPathComponent("settings.json.corrupt-3.json"))
+
+        try store.save([kept], name: "playlists", keepingPrevious: false)
+
+        XCTAssertEqual(store.load([String].self, name: "playlists"), [kept])
+        let files = try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted()
+        XCTAssertEqual(files, ["playlists.json", "settings.json.corrupt-3.json"])
+        XCTAssertFalse(String(decoding: try Data(contentsOf: store.url(for: "playlists")), as: UTF8.self).contains("gone"))
+        // An ordinary save keeps the previous version again.
+        try store.save([kept], name: "playlists")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.url(for: "playlists").appendingPathExtension("bak").path))
+    }
+
     func testBackupArchive() throws {
         let playlist = Playlist(name: "Mine", source: .xtream(XtreamCredentials(server: URL(string: "http://p")!, username: "u", password: "")))
         var library = UserLibrary()
