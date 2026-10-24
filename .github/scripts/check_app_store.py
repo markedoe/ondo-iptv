@@ -9,7 +9,8 @@ submitted, its listing and its review notes are checked here, before any upload:
    tag, the release that gets submitted, builds it; `FeatureFlags` reads nothing at run time and switches nothing off
    for good (code no build can use is left out of the build), and no code reads the launch arguments or the
    environment (test hooks are `#if DEBUG`). It never says "beta": betas belong on TestFlight, not
-   on the App Store (2.2); the TestFlight edition's beta badge is left out of this build.
+   on the App Store (2.2); the TestFlight edition's beta badge is left out of this build. Nor do its texts speak of
+   downloads ("Downloads", "Downloaded files…"): App Review would look for a feature the build does not have (2.3.1).
 2. No private API: no class, selector or symbol looked up by name, no method swapped, no script run (2.5.1, 2.5.2).
 3. The listing (fastlane/metadata, every language) fits App Store Connect's limits, names no other platform, promises
    nothing to come, has no test or placeholder words, says nothing of downloads (not in this edition), and its
@@ -61,6 +62,12 @@ SITE_PAGE = re.compile(r"https://[\w-]+\.github\.io/ondo-iptv/([\w.-]*)")
 SITE_LINK = re.compile(r'href="(?![a-z][a-z0-9+.-]*:|#)([^"#?]*)')
 # A string the App Store edition would show that calls the app a beta (2.2).
 BETA_TEXT = re.compile(r'(?i)"[^"\n]*(?<![\w])(?:beta|bêta)(?![\w])[^"\n]*"')
+# A string the App Store edition would show that speaks of downloads, which it does not have (2.3.1): the feature's
+# words ("Downloads", "Download Details", "Downloaded", "the download", watch offline). Fetching a playlist or the
+# awards ("Downloading playlist…", "Ondo downloads the latest awards") is not that feature.
+DOWNLOAD_TEXT = re.compile(
+    r'"[^"\n]*(?:\bDownloads?\b|(?i:\bdownloaded\b)|(?i:\b(?:the|a|this|your|no|resume|cancel|delete)\s+downloads?\b)|'
+    r'(?i:\b(?:watch|watching|view|play)\s+offline\b|\boffline\s+(?:viewing|playback|mode)\b))[^"\n]*"')
 # What a flag could read to turn a feature on after review: settings (local or iCloud), launch arguments and the
 # environment, a server, a date, a file, the keychain, the bundle.
 RUNTIME_SWITCH = re.compile(
@@ -220,6 +227,9 @@ def check_code(problems: list) -> None:
             if relative.startswith("App/") and BETA_TEXT.search(line):
                 problems.append(f"{relative}: the App Store edition calls the app a beta: {line.strip()} (betas belong "
                                 "on TestFlight, not the App Store, 2.2: put it under `#if TESTFLIGHT_DOWNLOADS`)")
+            if relative.startswith("App/") and DOWNLOAD_TEXT.search(line):
+                problems.append(f"{relative}: the App Store edition speaks of downloads, which it does not have: "
+                                f"{line.strip()} (2.3.1: put it under `#if TESTFLIGHT_DOWNLOADS || DEBUG`, or reword it)")
         match = re.search(r"\benum FeatureFlags\b", code)
         if match:
             flags = braced_body(code, match.end())
