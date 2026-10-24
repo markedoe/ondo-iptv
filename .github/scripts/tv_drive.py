@@ -346,7 +346,7 @@ def path_settings(tv, args):
     tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
     tv.note_screen("settings-categories")
     # A word to hide (Styles): the second text field; Tab goes on from a text field (an arrow stays in it).
-    tv.focus_on_field(1)
+    tv.focus_on_field(1, towards="TAB", max_presses=20)
     tv.shell("input text 'Films%s3'")
     tv.focus_on("Add", keys=("TAB",), max_presses=4, editable=False)
     tv.key("DPAD_CENTER")
@@ -703,9 +703,12 @@ def path_browse(tv, args):
     tv.key("DPAD_CENTER")
     tv.stay(3, "a collection created")
     tv.note_screen("browse-collection-created")
+    # The picker stays open with the new collection ticked: Back closes it.
+    tv.key("BACK")
+    time.sleep(2)
     tv.drawer("My List")
     tv.open("Collections", keys=("UP", "RIGHT", "RIGHT", "RIGHT", "RIGHT"), max_presses=10, exact=True, wait=2)
-    tv.open("Collection 1", keys=("DOWN",), max_presses=4, wait=4)
+    tv.open("Collection ", keys=("DOWN",), max_presses=4, wait=4)
     tv.note_screen("browse-collection-page")
     tv.key("DOWN")
     tv.key("DPAD_CENTER")
