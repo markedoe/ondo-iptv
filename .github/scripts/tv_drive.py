@@ -127,8 +127,9 @@ class Tv:
         self.screenshot(f"timeout-{what.replace(' ', '-')}")
         raise TimeoutError(f"{what} never came in {timeout} s")
 
-    def focus_on_field(self, index, max_presses=14):
-        """Presses Down until the focused element is the form's text field number [index] (from 0, top to bottom)."""
+    def focus_on_field(self, index, max_presses=14, towards="DOWN"):
+        """Presses Down (or [towards]) until the focused element is the form's text field number [index] (from 0, top to
+        bottom)."""
         for _ in range(max_presses + 1):
             root = self.screen()
             if root is not None:
@@ -138,9 +139,9 @@ class Tv:
                     return fields[index]
                 # Injected arrows stay in a text field (Compose moves out of one for a physical remote only): Tab
                 # goes on to the next field, as Next on the TV's keyboard does.
-                self.key("TAB" if focused else "DOWN")
+                self.key("TAB" if focused else towards)
                 continue
-            self.key("DOWN")
+            self.key(towards)
         self.screenshot(f"never-focused-field-{index}")
         raise TimeoutError(f"the focus never reached text field {index}")
 
@@ -285,6 +286,16 @@ class Tv:
             time.sleep(min(3, max(0, deadline - time.time())))
             self.check_alive(where)
 
+    def view_focus(self):
+        """The focused View of the window in front (`dumpsys activity top`): the player's controls are Views, which
+        uiautomator does not list inside a Compose screen. None when no View has the focus."""
+        found = None
+        for line in self.shell("dumpsys activity top", timeout=60).splitlines():
+            match = re.search(r"([\w.$]+)\{[0-9a-f]+ [VIG.]\S{8} .F\S{6} ([^}]*)\}", line)
+            if match:
+                found = f"{match.group(1)} {match.group(2)}"
+        return found
+
     def player_shown(self):
         return f"{PACKAGE}/.player.PlayerActivity" in self.shell("dumpsys activity activities | grep -E 'mResumedActivity|topResumedActivity'")
 
@@ -334,12 +345,15 @@ def path_settings(tv, args):
     tv.key("RIGHT")
     tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
     tv.note_screen("settings-categories")
-    # Tab goes through everything in order (an arrow stays in the page's text fields).
-    tv.open("Children", keys=("TAB",), max_presses=40, exact=True, wait=3)
-    tv.note_screen("settings-styles-kids-hidden")
+    # A word to hide (Styles): the second text field; Tab goes on from a text field (an arrow stays in it).
+    tv.focus_on_field(1)
+    tv.shell("input text 'Films%s3'")
+    tv.focus_on("Add", keys=("TAB",), max_presses=4, editable=False)
     tv.key("DPAD_CENTER")
-    time.sleep(3)
-    tv.check_alive("a style turned over twice")
+    tv.stay(4, "a word hidden from the categories")
+    tv.note_screen("settings-styles-word-hidden")
+    tv.open("Show", keys=("UP", "DOWN", "TAB"), max_presses=8, exact=True, wait=4)
+    tv.note_screen("settings-styles-word-shown")
     tv.open("Hide all", keys=("TAB",), max_presses=40, exact=True, wait=6)
     tv.note_screen("settings-categories-all-hidden")
     tv.open("Show all", keys=("LEFT",), max_presses=3, exact=True, wait=6)
@@ -413,7 +427,7 @@ def path_search(tv, args):
         time.sleep(2)
     tv.check_alive("back to the search")
     tv.drawer("Search")
-    tv.focus_on_field(0)
+    tv.focus_on_field(0, towards="UP")
     tv.key("MOVE_END")
     tv.key("DEL", times=10, pause=0.1)
     tv.shell("input text 'Director'")
@@ -503,12 +517,22 @@ def path_player(tv, args):
     for key in ("INFO", "GUIDE", "MENU", "MEDIA_PLAY_PAUSE", "MEDIA_PLAY_PAUSE"):
         tv.key(key, pause=2)
         tv.check_alive(f"{key} in the live player")
-    for _ in range(3):
-        if tv.visible("More"):
-            break
+    tv.key("INFO", pause=1)
+    if not tv.view_focus():
         tv.key("INFO", pause=1)
     tv.note_screen("player-live-controls")
-    tv.open("More", keys=("DOWN", "RIGHT", "RIGHT", "RIGHT", "RIGHT", "RIGHT"), max_presses=12, wait=2)
+    tv.say(f"  player focus: {tv.view_focus()}")
+    # Down to the row of buttons (past the time bar), then Right to the last one, More (a button without an id).
+    tv.key("DOWN", 2, pause=0.6)
+    for _ in range(8):
+        focus = tv.view_focus()
+        if focus and "ImageButton" in focus and "app:id/" not in focus:
+            break
+        tv.key("RIGHT", pause=0.6)
+    tv.say(f"  player focus: {tv.view_focus()}")
+    tv.key("DPAD_CENTER")
+    time.sleep(2)
+    tv.check_alive("More pressed in the player")
     tv.note_screen("player-menu")
     tv.open("Report a Problem…", keys=("DOWN",), max_presses=4, wait=3)
     tv.note_screen("player-report")
