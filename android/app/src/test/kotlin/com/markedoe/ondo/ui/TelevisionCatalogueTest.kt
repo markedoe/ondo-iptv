@@ -254,6 +254,8 @@ class TelevisionCatalogueTest {
     private fun typePanel() {
         fun type(tag: String, text: String) {
             pressUntil(Key.DirectionDown) { focusedTag() == tag }
+            // OK opens the field's keyboard.
+            press(Key.DirectionCenter)
             focusedInteraction().performTextInput(text)
             settle()
         }
@@ -381,8 +383,10 @@ class TelevisionCatalogueTest {
         waitFor { exists("live") && !exists("guide") }
         openFromDrawer("tabMyList")
         walkRows("myList", rows = 4)
-        // Search, typed with the TV's keyboard.
+        // Search, typed with the TV's keyboard (OK on the field opens it).
         openFromDrawer("tabSearch")
+        waitFor { focusedTag() == "searchField" }
+        press(Key.DirectionCenter)
         for (query in listOf("movie 1", "أفلام", "ana")) {
             compose.onNodeWithTag("searchField").performTextClearance()
             compose.onNodeWithTag("searchField").performTextInput(query)

@@ -102,6 +102,7 @@ import com.markedoe.ondo.ui.tv.FocusEntry
 import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
 import com.markedoe.ondo.ui.tv.TelevisionFrame
+import com.markedoe.ondo.ui.tv.TvCategoriesScreen
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
@@ -649,20 +650,16 @@ private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHo
         value = withContext(Dispatchers.Default) { CategoryFilter.categories(state, type, filter, locale) }
     }
     val ui = categories ?: return Loading()
-    CategoriesScreen(
-        state = ui,
-        type = type,
-        filter = filter,
-        actions = CategoriesActions(
-            onBack = { navController.popBackStack() },
-            onType = { type = it },
-            onFilter = { filter = it },
-            onTag = { tag, hidden -> viewModel.setTagsHidden(listOf(tag), hidden) },
-            onWord = viewModel::setWordHidden,
-            onCategory = viewModel::setCategoryHidden,
-            onAll = { hidden -> viewModel.setCategoriesHidden(ui.categories.filter { it.hiddenWith == null }.map { it.id }, hidden) },
-        ),
+    val actions = CategoriesActions(
+        onBack = { navController.popBackStack() },
+        onType = { type = it },
+        onFilter = { filter = it },
+        onTag = { tag, hidden -> viewModel.setTagsHidden(listOf(tag), hidden) },
+        onWord = viewModel::setWordHidden,
+        onCategory = viewModel::setCategoryHidden,
+        onAll = { hidden -> viewModel.setCategoriesHidden(ui.categories.filter { it.hiddenWith == null }.map { it.id }, hidden) },
     )
+    if (isTelevision()) TvCategoriesScreen(ui, type, filter, actions) else CategoriesScreen(ui, type, filter, actions)
 }
 
 /** Opens a web page in the browser (nothing happens on a device without one). */

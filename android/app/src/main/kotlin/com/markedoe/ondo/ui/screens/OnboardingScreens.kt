@@ -72,6 +72,8 @@ import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.rememberNextField
+import com.markedoe.ondo.ui.tv.rememberTvTextField
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -248,9 +250,11 @@ fun AddPlaylistScreen(
         if (name.isBlank()) name = pickedFile.name
     }
 
-    // The keyboard's action key goes on to the next field, then to Add: with a phone as a TV's remote, its arrows come
-    // from a virtual device, which Compose keeps in a text field (it moves the focus out only for a physical D-pad).
+    // The keyboard's action key goes on to the next field, then to Add; on a TV with the keyboard still open from one
+    // field to the next (it opens with OK, see rememberTvTextField).
     val next = KeyboardOptions(imeAction = ImeAction.Next)
+    val onNext = rememberNextField()
+    val fields = List(6) { rememberTvTextField() }
 
     Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).testTag("addPlaylistScreen")) {
         TopAppBar(
@@ -269,14 +273,14 @@ fun AddPlaylistScreen(
                     }
                 }
             }
-            OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name)) }, singleLine = true, keyboardOptions = next, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.name)) }, singleLine = true, keyboardActions = onNext, readOnly = fields[0].readOnly, keyboardOptions = next, modifier = Modifier.fillMaxWidth().then(fields[0].modifier))
             if (kind == 0) {
-                OutlinedTextField(server, { server = it }, label = { Text(stringResource(R.string.server)) }, placeholder = { Text("http://provider.example:8080") }, singleLine = true, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().testTag("serverField"))
-                OutlinedTextField(username, { username = it }, label = { Text(stringResource(R.string.username)) }, singleLine = true, keyboardOptions = next, modifier = Modifier.fillMaxWidth().testTag("usernameField"))
-                OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.password)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), keyboardOptions = next.copy(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().testTag("passwordField"))
+                OutlinedTextField(server, { server = it }, label = { Text(stringResource(R.string.server)) }, placeholder = { Text("http://provider.example:8080") }, singleLine = true, keyboardActions = onNext, readOnly = fields[1].readOnly, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().then(fields[1].modifier).testTag("serverField"))
+                OutlinedTextField(username, { username = it }, label = { Text(stringResource(R.string.username)) }, singleLine = true, keyboardActions = onNext, readOnly = fields[2].readOnly, keyboardOptions = next, modifier = Modifier.fillMaxWidth().then(fields[2].modifier).testTag("usernameField"))
+                OutlinedTextField(password, { password = it }, label = { Text(stringResource(R.string.password)) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), keyboardActions = onNext, readOnly = fields[3].readOnly, keyboardOptions = next.copy(keyboardType = KeyboardType.Password), modifier = Modifier.fillMaxWidth().then(fields[3].modifier).testTag("passwordField"))
                 Text(stringResource(R.string.xtream_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                OutlinedTextField(url, { url = it }, label = { Text(stringResource(R.string.playlist_url)) }, singleLine = true, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().testTag("urlField"))
+                OutlinedTextField(url, { url = it }, label = { Text(stringResource(R.string.playlist_url)) }, singleLine = true, keyboardActions = onNext, readOnly = fields[4].readOnly, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().then(fields[4].modifier).testTag("urlField"))
                 if (onPickFile != null) {
                     OutlinedButton(onClick = onPickFile, modifier = Modifier.testTag("pickFile")) {
                         Icon(Icons.Rounded.FolderOpen, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -284,7 +288,7 @@ fun AddPlaylistScreen(
                         Text(stringResource(R.string.choose_file))
                     }
                 }
-                OutlinedTextField(epg, { epg = it }, label = { Text(stringResource(R.string.guide_url_optional)) }, singleLine = true, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(epg, { epg = it }, label = { Text(stringResource(R.string.guide_url_optional)) }, singleLine = true, keyboardActions = onNext, readOnly = fields[5].readOnly, keyboardOptions = next.copy(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth().then(fields[5].modifier))
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
             Button(

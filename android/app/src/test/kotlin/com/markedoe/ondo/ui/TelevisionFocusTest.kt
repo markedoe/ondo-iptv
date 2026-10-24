@@ -220,6 +220,8 @@ class TelevisionFocusTest {
         waitFor { exists("addPlaylistScreen") }
         for ((tag, text) in listOf("serverField" to panel, "usernameField" to "viewer", "passwordField" to "secret")) {
             pressUntil(Key.DirectionDown) { focusedTag() == tag }
+            // OK opens the field's keyboard.
+            press(Key.DirectionCenter)
             focusedInteraction().performTextInput(text)
             settle()
         }
@@ -348,9 +350,9 @@ class TelevisionFocusTest {
     }
 
     /**
-     * The add-playlist form with a phone as the remote: its arrows come from a virtual device, which Compose keeps in a
-     * text field (it moves the focus out only for a physical D-pad; that stays so). The keyboard's action key goes on
-     * from field to field, then to Add.
+     * The add-playlist form with a phone as the remote: its arrows come from a virtual device, which Compose would keep
+     * in a text field; they move from field to field as the remote's do. OK opens the keyboard, whose action key goes
+     * on from field to field with the keyboard open, then to Add.
      */
     @Test
     fun theAddPlaylistFormIsFilledWithArrowsFromAVirtualDevice() {
@@ -360,8 +362,11 @@ class TelevisionFocusTest {
         waitFor { exists("addPlaylistScreen") }
         pressUntil(Key.DirectionDown) { focusedNode()?.config?.contains(SemanticsProperties.EditableText) == true }
         val name = focusedNode()!!.id
-        repeat(3) { virtualKey(Key.DirectionDown) }
+        virtualKey(Key.DirectionDown)
+        assertEquals("the focus is on ${focused()}", "serverField", focusedTag())
+        virtualKey(Key.DirectionUp)
         assertEquals("the focus is on ${focused()}", name, focusedNode()?.id)
+        virtualKey(Key.DirectionCenter)
         for ((text, next) in listOf("Panel" to "serverField", panel to "usernameField", "viewer" to "passwordField", "secret" to "savePlaylist")) {
             focusedInteraction().performTextInput(text)
             settle()
@@ -401,16 +406,15 @@ class TelevisionFocusTest {
         settle(500)
     }
 
-    /** Search with a phone as the remote: arrows stay in the field; the keyboard's action key goes on to the results. */
+    /** Search with a phone as the remote: OK opens the keyboard, whose action key goes on to the results. */
     @Test
     fun searchsKeyboardActionGoesOnToTheResults() {
         start(answers = emptyMap(), stored = Fixtures.content)
         openFromDrawer(SEARCH_TAG)
         waitFor { focusedTag() == "searchField" }
+        virtualKey(Key.DirectionCenter)
         focusedInteraction().performTextInput("the")
         settle(1_000)
-        virtualKey(Key.DirectionDown)
-        assertEquals("searchField", focusedTag())
         keyboardActionKey()
         assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn("search") && !editing() && focusedTag() != "searchFilters")
     }
@@ -432,17 +436,16 @@ class TelevisionFocusTest {
         focusedInteraction().performKeyInput { keyUp(Key.DirectionUp) }
         settle()
         assertTrue("the focus is on ${focused()}", editing())
+        virtualKey(Key.DirectionCenter)
         focusedInteraction().performTextInput("north")
         settle(1_000)
-        virtualKey(Key.DirectionDown)
-        assertTrue("the focus is on ${focused()}", editing())
         keyboardActionKey()
         assertEquals("the focus is on ${if (editing()) "the filter" else focused()}", "Northern Lights", focused())
     }
 
     /**
-     * Which categories are shown, the same: the filter's keyboard action goes on to the next field (a word to hide),
-     * whose action adds the word and goes on to the categories.
+     * Which categories are shown, the same: the filter's keyboard action goes on to the row below it; the word to hide's
+     * adds the word and goes on below.
      */
     @Test
     fun theCategoriesFieldsGoOnWithTheKeyboardsAction() {
@@ -452,10 +455,12 @@ class TelevisionFocusTest {
         press(Key.DirectionCenter)
         waitFor { exists("categories") && focusedIn("categories") }
         pressUntil(Key.DirectionDown) { editing() }
-        virtualKey(Key.DirectionDown)
-        assertTrue("the focus is on ${focused()}", editing() && focusedTag() != "wordToHide")
+        assertEquals("categoriesFilter", focusedTag())
+        virtualKey(Key.DirectionCenter)
         keyboardActionKey()
-        assertEquals("the focus is on ${focused()}", "wordToHide", focusedTag())
+        assertTrue("the focus is on ${focused()}", focusedIn("categories") && !editing())
+        pressUntil(Key.DirectionDown) { focusedTag() == "wordToHide" }
+        virtualKey(Key.DirectionCenter)
         focusedInteraction().performTextInput("trailer")
         settle()
         keyboardActionKey()

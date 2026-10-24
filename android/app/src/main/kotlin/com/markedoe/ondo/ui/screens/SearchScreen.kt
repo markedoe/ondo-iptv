@@ -56,10 +56,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
@@ -68,6 +68,7 @@ import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.rememberLeaveField
+import com.markedoe.ondo.ui.tv.rememberTvTextField
 
 /** Release years and awards the search is limited to. One year alone keeps the other end open. */
 data class SearchFilters(
@@ -128,6 +129,7 @@ fun SearchScreen(
     ) {
         fullWidth {
             Row(Modifier.padding(start = inset, end = (inset - 8.dp).coerceAtLeast(0.dp)), verticalAlignment = Alignment.CenterVertically) {
+                val field = rememberTvTextField()
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = onQuery,
@@ -137,7 +139,8 @@ fun SearchScreen(
                     // Done, as before; on a TV, on to the results.
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
-                    modifier = Modifier.weight(1f).testTag("searchField"),
+                    readOnly = field.readOnly,
+                    modifier = Modifier.weight(1f).then(field.modifier).testTag("searchField"),
                 )
                 IconButton(
                     onClick = { editingFilters = true },

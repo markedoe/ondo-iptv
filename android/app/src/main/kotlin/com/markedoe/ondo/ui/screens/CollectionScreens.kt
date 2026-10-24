@@ -68,6 +68,7 @@ import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.rememberTvTextField
 
 /** A collection in My List: its name and how many items of the current playlist it holds. */
 data class CollectionRow(val id: String, val name: String, val count: Int)
@@ -245,6 +246,7 @@ fun CollectionNameDialog(title: String, initial: String, confirm: String, onConf
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
+            val field = rememberTvTextField()
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
@@ -253,7 +255,8 @@ fun CollectionNameDialog(title: String, initial: String, confirm: String, onConf
                 // The keyboard's Done (the TV's too) makes the collection.
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { if (name.isNotBlank()) onConfirm(name.trim()) }),
-                modifier = Modifier.testTag("collectionName"),
+                readOnly = field.readOnly,
+                modifier = Modifier.then(field.modifier).testTag("collectionName"),
             )
         },
         confirmButton = { TextButton(onClick = { onConfirm(name.trim()) }, enabled = name.isNotBlank()) { Text(confirm) } },

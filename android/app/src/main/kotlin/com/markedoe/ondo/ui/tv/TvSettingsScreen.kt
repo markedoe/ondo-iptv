@@ -204,14 +204,15 @@ private fun SectionItem(item: TvSettingsSection, selected: Boolean, onFocus: () 
         headlineContent = { Text(stringResource(item.label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingContent = { Icon(item.icon, contentDescription = null, modifier = Modifier.size(22.dp)) },
         modifier = modifier.onFocusChanged { if (it.isFocused) onFocus() }.testTag(item.tag),
-        colors = rowColors(),
+        colors = tvRowColors(),
         shape = ListItemDefaults.shape(RoundedCornerShape(14.dp)),
         scale = ListItemDefaults.scale(focusedScale = 1.03f),
     )
 }
 
+/** A row of a TV page: white when the remote is on it. */
 @Composable
-private fun rowColors() = ListItemDefaults.colors(
+fun tvRowColors() = ListItemDefaults.colors(
     containerColor = Color.Transparent,
     contentColor = Color.White.copy(alpha = 0.85f),
     focusedContainerColor = Color.White,
@@ -436,7 +437,7 @@ private fun SettingRow(title: String, icon: ImageVector, modifier: Modifier = Mo
         supportingContent = subtitle?.let { { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
         leadingContent = { Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp)) },
         modifier = modifier,
-        colors = rowColors(),
+        colors = tvRowColors(),
         shape = ListItemDefaults.shape(RoundedCornerShape(14.dp)),
         scale = ListItemDefaults.scale(focusedScale = 1.02f),
     )
@@ -444,16 +445,32 @@ private fun SettingRow(title: String, icon: ImageVector, modifier: Modifier = Mo
 
 /** An on / off setting: OK on the row turns it over. */
 @Composable
-private fun SwitchRow(title: String, subtitle: String, icon: ImageVector, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+private fun SwitchRow(title: String, subtitle: String, icon: ImageVector, checked: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) =
+    TvSwitchRow(title, subtitle, checked, onChange, modifier, icon)
+
+/**
+ * An on / off row, the whole row in the remote's reach: OK on it turns it over, and the focused row turns white. A row
+ * that cannot be turned over ([enabled] false, its reason in [subtitle]) still takes the focus, to be read.
+ */
+@Composable
+fun TvSwitchRow(
+    title: String,
+    subtitle: String?,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    enabled: Boolean = true,
+) {
     ListItem(
         selected = false,
-        onClick = { onChange(!checked) },
+        onClick = { if (enabled) onChange(!checked) },
         headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        supportingContent = { Text(subtitle, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-        leadingContent = { Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp)) },
-        trailingContent = { Switch(checked = checked, onCheckedChange = null) },
+        supportingContent = subtitle?.let { { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
+        leadingContent = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(24.dp)) } },
+        trailingContent = { Switch(checked = checked, onCheckedChange = null, enabled = enabled) },
         modifier = modifier.semantics { this.selected = checked },
-        colors = rowColors(),
+        colors = tvRowColors(),
         shape = ListItemDefaults.shape(RoundedCornerShape(14.dp)),
         scale = ListItemDefaults.scale(focusedScale = 1.02f),
     )
@@ -523,7 +540,7 @@ fun <T> TvChoiceDialog(title: String, options: List<T>, selected: T, label: @Com
                             .then(if (isSelected) Modifier.focusRequester(current) else Modifier)
                             .semantics { this.selected = isSelected }
                             .testTag("choice-$option"),
-                        colors = rowColors(),
+                        colors = tvRowColors(),
                         shape = ListItemDefaults.shape(RoundedCornerShape(12.dp)),
                     )
                 }

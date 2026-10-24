@@ -139,6 +139,8 @@ class TelevisionFirstPlaylistTest {
 
     private fun type(tag: String, text: String) {
         pressUntil(Key.DirectionDown) { focusedTag() == tag }
+        // OK opens the field's keyboard.
+        press(Key.DirectionCenter)
         focusedInteraction().performTextInput(text)
         settle()
     }

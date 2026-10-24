@@ -286,6 +286,8 @@ class TelevisionLibraryTest {
     /** Moves to the field [tag] and types [text] with the TV's keyboard. */
     private fun type(tag: String, text: String) {
         pressUntil(Key.DirectionDown) { focusedTag() == tag }
+        // OK opens the field's keyboard.
+        press(Key.DirectionCenter)
         focusedInteraction().performTextInput(text)
         settle()
     }
@@ -340,6 +342,7 @@ class TelevisionLibraryTest {
         // The right password: saved and in use.
         assertEquals("savePlaylist", focusedTag())
         pressUntil(Key.DirectionUp) { focusedTag() == "passwordField" }
+        press(Key.DirectionCenter)
         focusedInteraction().performTextClearance()
         focusedInteraction().performTextInput("secret")
         settle()

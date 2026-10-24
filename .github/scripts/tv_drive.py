@@ -4,7 +4,7 @@ first launch, Add a Playlist, Xtream Codes (the made-up panel of fake_xtream_pan
 `adb reverse`), Add, then every tab. Watches the app's process the whole time: a crash, an ANR or Android ending the
 app fails the run. Screenshots, the screen's text, logcat, the exit reasons and memory use go to the output folder.
 With --paths, more of the app after that, each path from a fresh start of the app (the saved playlist read again):
-settings, search, details, player, guide, mylist, playlists, restore, browse, sync, crash (see PATHS).
+settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, crash (see PATHS).
 
 Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240] [--paths settings,search,...]
 """
@@ -32,6 +32,8 @@ class Tv:
         self.out = out
         self.step = 0
         self.pid = None
+        # The TV's keyboards, turned off for the walks (text comes as key presses) and on again for the keyboard path.
+        self.imes = []
         self.log = open(os.path.join(out, "steps.log"), "a", buffering=1)
 
     def say(self, text):
@@ -127,15 +129,17 @@ class Tv:
         self.screenshot(f"timeout-{what.replace(' ', '-')}")
         raise TimeoutError(f"{what} never came in {timeout} s")
 
-    def focus_on_field(self, index, max_presses=14, towards="DOWN"):
+    def focus_on_field(self, index, max_presses=14, towards="DOWN", open=True):
         """Presses Down (or [towards]) until the focused element is the form's text field number [index] (from 0, top to
-        bottom)."""
+        bottom); then OK, which opens the field for typing ([open]: the app's text fields on a TV wait for it)."""
         for _ in range(max_presses + 1):
             root = self.screen()
             if root is not None:
                 fields = [n for n in root.iter("node") if n.get("class") == "android.widget.EditText"]
                 focused = [i for i, n in enumerate(fields) if n.get("focused") == "true"]
                 if focused and focused[-1] == index:
+                    if open:
+                        self.key("DPAD_CENTER")
                     return fields[index]
                 # Injected arrows stay in a text field (Compose moves out of one for a physical remote only): Tab
                 # goes on to the next field, as Next on the TV's keyboard does.
@@ -885,6 +889,87 @@ def path_crash(tv, args):
     time.sleep(2)
 
 
+def keyboard_shown(tv):
+    """Whether the TV's keyboard is on screen, from the input method service's own account (the lines are logged)."""
+    out = tv.shell("dumpsys input_method")
+    lines = [line.strip() for line in out.splitlines() if re.search(r"mInputShown=|mWindowVisible=|mIsInputViewShown=|mImeWindowVis=", line)]
+    shown = any(re.search(r"mInputShown=true|mWindowVisible=true|mIsInputViewShown=true", line) for line in lines)
+    return shown, " ; ".join(dict.fromkeys(lines))[:300]
+
+
+def remote_key(tv, linux_key):
+    """A key of a physical remote: sent to the emulator's own keyboard device (adb input sends from a virtual one,
+    which Compose treats otherwise in a text field)."""
+    tv.adb("emu", "event", "send", f"EV_KEY:{linux_key}:1", "EV_SYN:SYN_REPORT:0", f"EV_KEY:{linux_key}:0", "EV_SYN:SYN_REPORT:0")
+    time.sleep(0.6)
+
+
+def in_field(tv):
+    node, texts = tv.focused()
+    return node is not None and node.get("class") == "android.widget.EditText", " | ".join(texts)[:80]
+
+
+def path_keyboard(tv, args):
+    """The TV's keyboard on, as on a viewer's TV: Languages and categories walked down with the remote, as a physical
+    remote's keys and as a virtual one's (a phone used as the remote). The keyboard opens only with OK on a field, never
+    as the remote passes one, and the remote goes on from a field; Back closes the keyboard."""
+    if not tv.imes:
+        raise TimeoutError("the TV image has no keyboard to try")
+    for ime in tv.imes:
+        tv.shell(f"ime enable {ime}")
+    tv.shell(f"ime set {tv.imes[0]}")
+    tv.say(f"  keyboards on: {', '.join(tv.imes)}")
+    problems = []
+
+    def look(where, expect_shown=False):
+        field, focus = in_field(tv)
+        shown, lines = keyboard_shown(tv)
+        tv.say(f"  [{where}] focus on {'a text field' if field else 'a row'} ({focus!r}); keyboard {'shown' if shown else 'hidden'}: {lines}")
+        if shown != expect_shown:
+            problems.append(f"{where}: the keyboard is {'shown' if shown else 'hidden'}")
+            tv.screenshot(f"keyboard-{where.replace(' ', '-')}")
+        return field
+
+    try:
+        tv.drawer("Settings")
+        settings_section(tv, "Catalog")
+        tv.key("RIGHT")
+        tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
+        tv.note_screen("keyboard-categories")
+        look("page opened")
+        # Down the page with a physical remote's key, then up with a virtual one's: through the filter each time.
+        for i in range(4):
+            remote_key(tv, "KEY_DOWN")
+            look(f"physical Down {i + 1}")
+        tv.focus_on_field(0, towards="UP", max_presses=12, open=False)
+        if look("back on the filter"):
+            tv.key("DOWN")
+            if look("virtual Down from the filter"):
+                problems.append("a virtual Down stayed in the filter")
+            remote_key(tv, "KEY_UP")
+            if not look("physical Up to the filter"):
+                problems.append("a physical Up never came back to the filter")
+            remote_key(tv, "KEY_DOWN")
+            if look("physical Down from the filter"):
+                problems.append("a physical Down stayed in the filter")
+        tv.focus_on_field(0, towards="UP", max_presses=12, open=False)
+        tv.key("DPAD_CENTER")
+        time.sleep(2)
+        look("OK on the filter", expect_shown=True)
+        tv.screenshot("keyboard-open")
+        tv.key("BACK")
+        time.sleep(2)
+        look("Back from the keyboard")
+        if not tv.visible("Styles"):
+            problems.append("Back closed the page with the keyboard")
+        tv.check_alive("the keyboard opened and closed")
+    finally:
+        for ime in tv.imes:
+            tv.shell(f"ime disable {ime}")
+    if problems:
+        raise TimeoutError("; ".join(problems))
+
+
 PATHS = {
     "settings": path_settings,
     "search": path_search,
@@ -896,6 +981,7 @@ PATHS = {
     "restore": path_restore,
     "browse": path_browse,
     "sync": path_sync,
+    "keyboard": path_keyboard,
     # Last: it crashes the app on purpose.
     "crash": path_crash,
 }
@@ -921,7 +1007,8 @@ def main():
             "ro.build.version.sdk", "ro.product.model", "dalvik.vm.heapgrowthlimit", "dalvik.vm.heapsize", "ro.config.low_ram")))
         tv.say("app: " + tv.shell(f"dumpsys package {PACKAGE} | grep -E 'versionCode|versionName'").strip().replace("\n", " "))
         # No on-screen keyboard: the remote's arrows move between the fields, text comes as key presses.
-        for ime in tv.shell("ime list -s").split():
+        tv.imes = tv.shell("ime list -s").split()
+        for ime in tv.imes:
             tv.shell(f"ime disable {ime}")
         tv.adb("logcat", "-c")
         tv.adb("logcat", "-b", "crash", "-c")

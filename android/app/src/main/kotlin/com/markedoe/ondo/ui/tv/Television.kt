@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui.tv
 
 import android.content.res.Configuration
+import android.os.SystemClock
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.ripple.RippleAlpha
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalRippleConfiguration
@@ -42,9 +44,16 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -95,6 +104,7 @@ fun TelevisionFrame(content: @Composable () -> Unit) {
             CompositionLocalProvider(
                 LocalBringIntoViewSpec provides TvScrolling,
                 LocalContentColor provides MaterialTheme.colorScheme.onBackground,
+                LocalKeyboardHandoff provides remember { KeyboardHandoff() },
                 content = content,
             )
         }
@@ -145,6 +155,83 @@ fun Modifier.focusFrame(shape: Shape = RoundedCornerShape(12.dp), grow: Float = 
         }
         .border(3.dp, color, shape)
 }
+
+/**
+ * A single-line text field on a TV ([rememberTvTextField]): give it [readOnly] and [modifier]. Elsewhere, both leave
+ * the field as it is.
+ */
+class TvTextField(val readOnly: Boolean, val modifier: Modifier)
+
+/**
+ * A single-line text field on a TV: its keyboard opens when the viewer presses OK on it, not when the remote passes
+ * over it (the keyboard would then take the remote's arrows until closed, empty). Until OK the field is read-only:
+ * Compose's text fields open the keyboard as soon as they take the focus otherwise. Up and Down move on from the
+ * field, from whatever device they come (a phone used as the TV's remote sends its arrows from a virtual device, which
+ * Compose keeps in a text field). Elsewhere, nothing changes.
+ */
+@Composable
+fun rememberTvTextField(): TvTextField {
+    val television = isTelevision()
+    var editing by remember { mutableStateOf(false) }
+    if (!television) return TvTextField(readOnly = false, modifier = Modifier)
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val handoff = LocalKeyboardHandoff.current
+    val modifier = Modifier
+        .onFocusChanged {
+            // On from the field before with its keyboard open ([rememberNextField]): typing goes on here.
+            if (it.isFocused) {
+                if (handoff.take()) editing = true
+            } else {
+                editing = false
+            }
+        }
+        .onPreviewKeyEvent { event ->
+            when {
+                event.type != KeyEventType.KeyDown -> false
+                event.key == Key.DirectionDown -> focusManager.moveFocus(FocusDirection.Down)
+                event.key == Key.DirectionUp -> focusManager.moveFocus(FocusDirection.Up)
+                // OK: the field becomes writable and its keyboard opens (again, once closed). Enter too, the first time
+                // only: then it is the keyboard's own action key (Done, Next), for the field.
+                event.key == Key.DirectionCenter || (!editing && (event.key == Key.Enter || event.key == Key.NumPadEnter)) -> {
+                    editing = true
+                    keyboard?.show()
+                    true
+                }
+                else -> false
+            }
+        }
+    return TvTextField(readOnly = !editing, modifier = modifier)
+}
+
+/**
+ * The keyboard's Next key of a form's field: on to the next field as everywhere, and on a TV with the keyboard still
+ * open when that one is a text field too ([rememberTvTextField]), the way a form is typed.
+ */
+@Composable
+fun rememberNextField(): KeyboardActions {
+    val television = isTelevision()
+    val handoff = LocalKeyboardHandoff.current
+    return remember(television, handoff) {
+        KeyboardActions(onNext = {
+            if (television) handoff.give()
+            defaultKeyboardAction(ImeAction.Next)
+        })
+    }
+}
+
+/** The keyboard handed from a field to the next one by its Next key, for a moment (the focus moves after it). */
+class KeyboardHandoff(private val clock: () -> Long = { SystemClock.uptimeMillis() }) {
+    private var until = 0L
+
+    fun give() {
+        until = clock() + 1_000
+    }
+
+    fun take(): Boolean = (clock() < until).also { until = 0 }
+}
+
+val LocalKeyboardHandoff = staticCompositionLocalOf { KeyboardHandoff() }
 
 /**
  * For the keyboard's action key of a single-line field: on a TV, moves the focus from the field to what is below it,

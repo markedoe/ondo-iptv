@@ -59,6 +59,7 @@ import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.rememberLeaveField
+import com.markedoe.ondo.ui.tv.rememberTvTextField
 
 data class CategoryRow(val category: MediaCategory, val items: List<ShowcaseItem>)
 
@@ -242,6 +243,7 @@ fun PosterGridScreen(
             )
         }
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+            val field = rememberTvTextField()
             OutlinedTextField(
                 value = filter,
                 onValueChange = onFilter,
@@ -251,7 +253,8 @@ fun PosterGridScreen(
                 // Done, as before; on a TV, on to the posters.
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
-                modifier = Modifier.fillMaxWidth(),
+                readOnly = field.readOnly,
+                modifier = Modifier.fillMaxWidth().then(field.modifier),
             )
         }
         items(items, key = { it.key }) { item -> PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = true) }
