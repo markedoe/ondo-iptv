@@ -184,7 +184,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
 
     public mutating func updateProgress(_ reference: MediaReference, position: Double, duration: Double, now: Date = Date()) {
         guard let index = history.firstIndex(where: { $0.reference.isSamePlayback(as: reference) }) else { return }
-        history[index].position = max(position, 0)
+        // NaN or infinite (a clock not known yet) has no JSON form: the library could no longer be saved.
+        if position.isFinite { history[index].position = max(position, 0) }
         if duration.isFinite && duration > 0 { history[index].duration = duration }
         history[index].lastWatchedAt = now
     }
