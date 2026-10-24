@@ -262,10 +262,13 @@ enum SyncMapping {
         return library
     }
 
-    /// The image address received; the device's own `URL` when it is the same one.
+    /// The image address received; the device's own `URL` when it is the same one. Another device's is a web address:
+    /// Nuke reads a `file:` or `data:` address inline and whole, a file of this device included.
     private static func image(_ text: String?, keeping current: URL?) -> URL? {
         guard let text else { return nil }
-        return current?.absoluteString == text ? current : URL(string: text)
+        if current?.absoluteString == text { return current }
+        guard let url = URL(string: text), ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return nil }
+        return url
     }
 }
 

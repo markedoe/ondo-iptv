@@ -168,6 +168,36 @@ final class SyncMappingTests: XCTestCase {
         XCTAssertEqual(SyncMapping.playlist(from: guide, base: nil)?.source, PlaylistSource.remote(URL(string: "http://example.com/list.m3u")!))
     }
 
+    /// Artwork from another device is a web address: Nuke reads a `file:` or `data:` one inline and whole, so another
+    /// device could have this one read its own files. The device's own artwork comes back as it went, whatever it is.
+    func testArtworkFromAnotherDeviceIsAWebAddress() {
+        let x = xtreamID.uuidString.lowercased()
+        func applied(_ image: String) -> [URL?] {
+            let received = SyncSnapshot(
+                device: "other",
+                favorites: [SyncFavorite(playlist: x, kind: "movie", item: "m1", title: "Glass City", image: image, addedAt: 1)],
+                progress: [SyncProgress(playlist: x, kind: "movie", item: "m1", title: "Glass City", image: image, position: 60,
+                                        duration: 600, watchedAt: 1)],
+                lists: [SyncList(id: UUID().uuidString.lowercased(), name: "Weekend",
+                                 items: [SyncListItem(playlist: x, kind: "movie", item: "m1", title: "Glass City", image: image)], updatedAt: 1)]
+            )
+            let library = SyncMapping.library(UserLibrary(), applying: received)
+            return [library.favorites.first?.imageURL, library.history.first?.imageURL, library.customLists.first?.items.first?.imageURL]
+        }
+        for image in ["file:///etc/hosts", "FILE:///etc/hosts", "data:image/png;base64,iVBORw0KGgo=", "ftp://example.com/a.png"] {
+            XCTAssertEqual(applied(image), [nil, nil, nil], image)
+        }
+        for image in ["http://example.com/a.png", "HTTPS://example.com/a.png"] {
+            XCTAssertEqual(applied(image), Array(repeating: URL(string: image), count: 3), image)
+        }
+
+        var library = UserLibrary()
+        let own = URL(string: "file:///logo.png")
+        library.favorites = [FavoriteEntry(reference: ref(xtreamID, .movie, "m1"), title: "Glass City", imageURL: own, addedAt: t0, sortIndex: 0)]
+        let snapshot = SyncMapping.snapshot(playlists: [], library: library, state: SyncState(), deviceName: nil, now: t0)
+        XCTAssertEqual(SyncMapping.library(library, applying: snapshot).favorites.first?.imageURL, own)
+    }
+
     /// Int64.max milliseconds comes back from `Date` as 2^63, past Int64: it saturates instead of trapping.
     func testTimesAtTheEndsOfInt64Saturate() {
         XCTAssertEqual(Date(syncMilliseconds: .max).syncMilliseconds, .max)
