@@ -121,6 +121,14 @@ final class ContentBuilderTests: XCTestCase {
         XCTAssertEqual(json.movies.map(\.name), ["JSON Movie"])
     }
 
+    /// A list of addresses saved with a byte order mark (as some editors save UTF-8) keeps its first address.
+    func testAPlainListStartingWithAByteOrderMarkKeepsItsFirstAddress() throws {
+        let data = Data([0xEF, 0xBB, 0xBF]) + Data("http://a.example.com/1.m3u8\nhttp://a.example.com/2.m3u8\n".utf8)
+        XCTAssertEqual(PlainListParser.parse(data).entries.map(\.title), ["1.m3u8", "2.m3u8"])
+        let loader = PlaylistLoader(http: MockHTTPClient(), localFileURL: { URL(fileURLWithPath: $0) })
+        XCTAssertEqual(try loader.parse(data).channels.map(\.name), ["1.m3u8", "2.m3u8"])
+    }
+
     func testAJSONListWithAStrayValueKeepsItsChannels() {
         let array = #"[{"name":"One","url":"http://stream.example.com/1.m3u8"},null,"junk",{"name":"Two","url":"http://stream.example.com/2.m3u8"}]"#
         XCTAssertEqual(JSONPlaylistParser.parse(Data(array.utf8)).entries.map(\.title), ["One", "Two"])
