@@ -796,12 +796,12 @@ def path_sync(tv, args):
         "type": "ondo-sync", "version": 1, "device": "0f0f0f0f-0000-4000-8000-0000000000aa", "deviceName": "Test phone",
         "playlists": [{"id": playlist, "name": "Synced", "kind": "xtream", "url": args.server, "username": "viewer",
                        "password": "secret", "addedAt": now, "updatedAt": now}],
-        "favorites": [{"playlist": playlist, "kind": "movie", "item": "12", "title": "Movie 12", "addedAt": now},
-                      {"playlist": playlist, "kind": "live", "item": "3", "title": "Channel 3", "addedAt": now}],
-        "progress": [{"playlist": playlist, "kind": "movie", "item": "12", "title": "Movie 12", "position": 60.0,
+        "favorites": [{"playlist": playlist, "kind": "movie", "item": "x12", "title": "Movie 12", "addedAt": now},
+                      {"playlist": playlist, "kind": "live", "item": "x3", "title": "Channel 3", "addedAt": now}],
+        "progress": [{"playlist": playlist, "kind": "movie", "item": "x12", "title": "Movie 12", "position": 60.0,
                       "duration": 5400.0, "watchedAt": now}],
         "lists": [{"id": "6f1c0d3e-0000-4000-8000-00000000b001", "name": "Weekend", "updatedAt": now,
-                   "items": [{"playlist": playlist, "kind": "movie", "item": "12", "title": "Movie 12"}]}],
+                   "items": [{"playlist": playlist, "kind": "movie", "item": "x12", "title": "Movie 12"}]}],
         "deleted": {}, "replaced": {},
     }
     try:
