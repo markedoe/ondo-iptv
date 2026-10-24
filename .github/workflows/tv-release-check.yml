@@ -1,0 +1,113 @@
+name: TV release check
+
+# The release build (minified by R8, as Google Play serves it) run on an Android TV emulator: first launch, an
+# Xtream playlist added with the remote's keys from a made-up panel, every tab opened. A crash, an ANR or Android
+# ending the app fails the run; screenshots, logcat, exit reasons and memory use are kept as an artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Commit, branch or tag to build (empty — this workflow's commit)
+        required: false
+        default: ""
+      panel:
+        description: Size of the provider's catalogue
+        type: choice
+        options: [large, small, huge]
+        default: large
+      api-level:
+        description: Android TV system image (API level)
+        default: "30"
+      heap-size:
+        description: The app's memory limit (a TV box's, e.g. 192M or 128M)
+        default: "192M"
+      wrong-password-first:
+        description: Type a wrong password first (refused), then the right one
+        type: boolean
+        default: false
+
+concurrency:
+  group: tv-release-check-${{ inputs.ref }}-${{ inputs.panel }}-${{ inputs.api-level }}-${{ inputs.heap-size }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tv:
+    name: Release APK on an Android TV emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Source to build
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.ref || github.sha }}
+          path: build-src
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Release APK (R8, signed with the debug key)
+        working-directory: build-src/android
+        run: |
+          git log -1 --format='Building %h %s'
+          ./gradlew :app:assembleRelease --stacktrace
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Made-up Xtream panel
+        env:
+          PANEL: ${{ inputs.panel }}
+        run: |
+          mkdir -p out
+          case "$PANEL" in
+            small) sizes="--live 20 --movies 60 --series 15 --guide-channels 20 --guide-days 2" ;;
+            huge) sizes="--live 20000 --movies 100000 --series 20000 --guide-channels 6000 --guide-days 3" ;;
+            *) sizes="--live 5000 --movies 20000 --series 5000 --guide-channels 2000 --guide-days 3" ;;
+          esac
+          # shellcheck disable=SC2086
+          nohup python3 -I .github/scripts/fake_xtream_panel.py --port 8080 $sizes --log out/panel-requests.log > out/panel.log 2>&1 &
+          for _ in $(seq 1 300); do grep -q "panel on" out/panel.log && break; sleep 1; done
+          cat out/panel.log
+          head -1 out/panel-requests.log
+      - name: Add a playlist on the TV with the remote
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ inputs.api-level }}
+          target: android-tv
+          arch: x86
+          ram-size: 2048M
+          heap-size: ${{ inputs.heap-size }}
+          disk-size: 6000M
+          disable-animations: true
+          script: |
+            adb install -r build-src/android/app/build/outputs/apk/release/app-release.apk
+            adb reverse tcp:8080 tcp:8080
+            python3 -I .github/scripts/tv_drive.py out/tv ${{ inputs.wrong-password-first && '--wrong-password-first' || '' }}
+      - name: Crash with the app's names (R8 mapping)
+        if: always()
+        run: |
+          mapping=build-src/android/app/build/outputs/mapping/release/mapping.txt
+          retrace=$(ls "$ANDROID_HOME"/cmdline-tools/*/bin/retrace 2>/dev/null | head -1)
+          if [ -s out/tv/crash.txt ] && [ -n "$retrace" ]; then "$retrace" "$mapping" out/tv/crash.txt > out/tv/crash-retraced.txt || true; fi
+          cp "$mapping" out/ 2>/dev/null || true
+          tail -40 out/tv/steps.log 2>/dev/null || true
+          cat out/tv/crash-retraced.txt 2>/dev/null || cat out/tv/crash.txt 2>/dev/null || true
+          grep -A12 "ApplicationExitInfo" out/tv/exit-info.txt 2>/dev/null | head -40 || true
+          grep -E "TOTAL|Java Heap|Native Heap" out/tv/meminfo.txt 2>/dev/null || true
+          tail -30 out/panel-requests.log 2>/dev/null || true
+      - name: Screenshots, logs, memory
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: tv-release-check-${{ inputs.panel }}-api${{ inputs.api-level }}-${{ inputs.heap-size }}
+          path: out
+          if-no-files-found: ignore
