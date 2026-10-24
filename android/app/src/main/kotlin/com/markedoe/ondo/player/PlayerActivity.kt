@@ -11,6 +11,7 @@ import android.content.pm.ActivityInfo
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Rect
+import android.hardware.display.DisplayManager
 import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
@@ -20,7 +21,10 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.text.format.DateFormat
 import android.util.Rational
+import android.view.Display
 import android.view.KeyEvent
+import android.view.Surface
+import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
@@ -77,6 +81,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaLibraryInfo
 import androidx.media3.common.MediaMetadata
@@ -92,6 +97,7 @@ import androidx.media3.datasource.DataSpec
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.TransferListener
 import androidx.media3.exoplayer.DecoderCounters
+import androidx.media3.exoplayer.DecoderReuseEvaluation
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -124,6 +130,7 @@ import com.markedoe.ondo.ui.tv.isTelevision
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -134,6 +141,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 
 /**
@@ -204,6 +213,14 @@ class PlayerActivity : ComponentActivity() {
 
     /** When the viewer paused a live channel ([LivePause]). */
     private var livePausedAt: Long? = null
+
+    /**
+     * A film, an episode or a replay on a TV with Android 12 or later: it asks the screen for its own frame rate
+     * ([FrameRateMatching]), once per video.
+     */
+    private val matchesFrameRate: Boolean get() = television && !request.isLive && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    private var frameRateAsked = false
+    private var frameRateWait: Job? = null
 
     /** Keys the player handled when pressed: their release is consumed too. */
     private val handledKeys = HashSet<Int>()
@@ -490,6 +507,53 @@ class PlayerActivity : ComponentActivity() {
         )
     }
 
+    /**
+     * The screen at a rate that fits the film's [frameRate] ([FrameRateMatching]). A switch the viewer allowed blanks the
+     * screen a moment: the player waits for it, at most [FrameRateMatching.WAIT_MS], as Google recommends for movies.
+     */
+    private fun matchFrameRate(exoPlayer: ExoPlayer, frameRate: Float) {
+        if (!matchesFrameRate || frameRateAsked || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+        val surface = (playerView?.videoSurfaceView as? SurfaceView)?.holder?.surface?.takeIf { it.isValid } ?: return
+        val displays = getSystemService(DisplayManager::class.java) ?: return
+        val display = displays.getDisplay(Display.DEFAULT_DISPLAY) ?: return
+        val mode = display.mode
+        val rates = display.supportedModes.filter { it.physicalWidth == mode.physicalWidth && it.physicalHeight == mode.physicalHeight }.map { it.refreshRate }
+        val allowed = displays.matchContentFrameRateUserPreference == DisplayManager.MATCH_CONTENT_FRAMERATE_ALWAYS
+        val plan = FrameRateMatching.plan(frameRate, long = true, refreshRate = mode.refreshRate, refreshRates = rates, viewerAllows = allowed)
+        if (plan == FrameRateMatching.Plan.NONE) return
+        frameRateAsked = true
+        if (plan == FrameRateMatching.Plan.SEAMLESS) {
+            surface.setFrameRate(frameRate, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE, Surface.CHANGE_FRAME_RATE_ONLY_IF_SEAMLESS)
+            return
+        }
+        reporter.note("frame rate: the screen switches for ${"%.3f".format(java.util.Locale.ROOT, frameRate)} fps")
+        val resume = exoPlayer.playWhenReady
+        exoPlayer.pause()
+        surface.setFrameRate(frameRate, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE, Surface.CHANGE_FRAME_RATE_ALWAYS)
+        frameRateWait = lifecycleScope.launch {
+            withTimeoutOrNull(FrameRateMatching.WAIT_MS) { screenFits(displays, display.displayId, frameRate) }
+            delay(FrameRateMatching.SETTLE_MS)
+            if (resume && player === exoPlayer) exoPlayer.play()
+        }
+    }
+
+    /** Waits until the screen runs at a rate that fits [frameRate]. */
+    private suspend fun screenFits(displays: DisplayManager, displayId: Int, frameRate: Float) = suspendCancellableCoroutine { waiting ->
+        val listener = object : DisplayManager.DisplayListener {
+            override fun onDisplayAdded(id: Int) = Unit
+            override fun onDisplayRemoved(id: Int) = Unit
+            override fun onDisplayChanged(id: Int) {
+                val refresh = displays.getDisplay(id)?.mode?.refreshRate ?: return
+                if (id == displayId && FrameRateMatching.fits(refresh, frameRate) && waiting.isActive) {
+                    displays.unregisterDisplayListener(this)
+                    waiting.resume(Unit)
+                }
+            }
+        }
+        displays.registerDisplayListener(listener, Handler(Looper.getMainLooper()))
+        waiting.invokeOnCancellation { displays.unregisterDisplayListener(listener) }
+    }
+
     /** The programme on now, from its start, from the provider's archive. */
     private fun restartProgramme() {
         val channelId = request.channelId?.takeIf { request.isLive } ?: return
@@ -587,6 +651,8 @@ class PlayerActivity : ComponentActivity() {
             .build()
             .apply {
                 val exoPlayer = this
+                // A film on a TV asks the screen for its own frame rate itself ([matchFrameRate]).
+                if (matchesFrameRate) setVideoChangeFrameRateStrategy(C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_OFF)
                 // The viewer's languages, before the listener: what the app sets is no choice of the viewer's.
                 trackSelectionParameters = TrackPreferences.parameters(trackSelectionParameters, trackLanguages(), deviceLanguages())
                 addListener(object : Player.Listener {
@@ -638,6 +704,9 @@ class PlayerActivity : ComponentActivity() {
                     }
                 })
                 addAnalyticsListener(object : AnalyticsListener {
+                    override fun onVideoInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) =
+                        matchFrameRate(exoPlayer, format.frameRate)
+
                     override fun onRenderedFirstFrame(eventTime: AnalyticsListener.EventTime, output: Any, renderTimeMs: Long) = reporter.firstFrame()
 
                     override fun onDroppedVideoFrames(eventTime: AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) =
@@ -718,6 +787,8 @@ class PlayerActivity : ComponentActivity() {
         urlIndex = 0
         liveRecovery.reset()
         livePausedAt = null
+        frameRateAsked = false
+        frameRateWait?.cancel()
         nextEpisode = repository.nextEpisode(next)
         upNext = null
         upNextDeclined = false

@@ -152,7 +152,8 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   the remote: large buttons, a progress bar to move through the video, Subtitles and Audio panels that list the
   tracks by language, Speed and More; OK pauses, Left and Right go back and forward 10 seconds where the stream
   allows it (otherwise they show the controls), Up and Down, CH+ / CH−, the number keys and Last Channel change
-  channel; a Channels panel with what is on now, Restart, Up next at the end of an episode; hold OK on a channel
+  channel; a Channels panel with what is on now, Restart, Up next at the end of an episode; a film at its own frame
+  rate when the TV is set to match the content (Android 12 and later); hold OK on a channel
   to add it to My List; Help, With the remote. The privacy policy and support pages
   open inside the app.
 - Coming next: Chromecast, downloads, profiles and PIN, online subtitles, a second engine (libVLC).

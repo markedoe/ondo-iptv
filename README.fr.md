@@ -166,7 +166,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   progression pour se déplacer dans la vidéo, des panneaux Sous-titres et Audio qui listent les pistes par langue,
   Vitesse et Plus ; OK met en pause, Gauche et Droite reculent et avancent de 10 secondes quand le flux le permet
   (sinon elles affichent les commandes), Haut et Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de
-  chaîne ; un panneau Chaînes avec ce qui passe, Depuis le début, À suivre à la fin d'un épisode ; maintenez OK
+  chaîne ; un panneau Chaînes avec ce qui passe, Depuis le début, À suivre à la fin d'un épisode ; un film à sa
+  propre fréquence d'image quand la TV est réglée pour l'adapter au contenu (Android 12 et plus) ; maintenez OK
   sur une chaîne pour l'ajouter à Ma liste ; Aide, Avec la télécommande. Les règles de
   confidentialité et la page d'aide s'ouvrent dans l'app.
 - À venir : Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un second moteur

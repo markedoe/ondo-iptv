@@ -41,6 +41,10 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   channel (channel keys, Channels list), goes in no history, and the Xtream archive is asked for in the panel's time
   zone (`content.account`). A live channel without a window to seek in, paused by the viewer for 10 s or more,
   resumes from the archive where it was paused (`player/LivePause.kt`, as on Apple).
+- **Frame rate** on a TV with Android 12 or later: a film, an episode or a replay asks the screen for its own frame
+  rate with `Surface.setFrameRate(…, CHANGE_FRAME_RATE_ALWAYS)`, as Google recommends for movies; Android switches
+  only if the viewer set the TV to match the content's frame rate, and the player waits for the screen meanwhile
+  (`player/FrameRateMatching.kt`). Live channels keep the screen as it is (each channel change would blank it).
 - **Storage**: JSON documents in the app's private storage (`data/AppStore.kt`), left out of backups
   (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`): settings, playlists with their logins, My List,
   collections, progress and reminders, each playlist's catalogue, and the movie and series pages opened (up to

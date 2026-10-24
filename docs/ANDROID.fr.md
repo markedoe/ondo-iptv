@@ -47,6 +47,11 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   l'archive Xtream est demandée à l'heure du serveur (`content.account`). Une chaîne en direct sans fenêtre où
   reculer, mise en pause par le spectateur 10 s ou plus, reprend depuis l'archive là où elle a été arrêtée
   (`player/LivePause.kt`, comme sur Apple).
+- **Fréquence d'image** sur une TV Android 12 ou plus : un film, un épisode ou un replay demande à l'écran sa propre
+  fréquence avec `Surface.setFrameRate(…, CHANGE_FRAME_RATE_ALWAYS)`, comme Google le recommande pour les films ;
+  Android ne change que si le spectateur a réglé la TV pour adapter sa fréquence au contenu, et le lecteur attend
+  l'écran pendant ce temps (`player/FrameRateMatching.kt`). Les chaînes en direct gardent l'écran tel quel (chaque
+  changement de chaîne le noircirait).
 - **Stockage** : documents JSON dans le stockage privé de l'app (`data/AppStore.kt`), exclus des sauvegardes
   (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`) : réglages, playlists avec leurs identifiants, Ma
   liste, collections, progression et rappels, catalogue de chaque playlist, et fiches de films et de séries
