@@ -30,10 +30,11 @@ PLACEHOLDER = re.compile(
     r"(?i)^(?:x{3,}|(?:your|my|the|some|a)?[_-]?(?:pass(?:word|wd)?|secret|token|(?:api[_-]?)?key|user(?:name)?|login|"
     r"value|changeme)s?[_-]?\d{0,2})$|example|placeholder|dummy|redacted|not[_-]?(?:a[_-]?)?(?:real|secret)")
 SECRET_WORD = re.compile(r"(?i)pass(?:word|wd|phrase)|secret|token|api[_-]?key|private[_-]?key")
-# Hosts of no real service: the reserved example names, this machine, a bare name (`h`, `host:port`, `server`).
+# Hosts of no real service: the reserved example names, this machine, the documentation addresses (RFC 5737), a bare
+# name (`h`, `host:port`, `server`).
 SAFE_HOST = re.compile(
-    r"(?i)^(?:[^@/]*@)?(?:(?:[\w-]+\.)*(?:example(?:\.(?:com|org|net))?|test|invalid|localhost)|127(?:\.\d+){3}|[^.:\[]+)"
-    r"(?::[^/]*)?$")
+    r"(?i)^(?:[^@/]*@)?(?:(?:[\w-]+\.)*(?:example(?:\.(?:com|org|net))?|test|invalid|localhost)|127(?:\.\d+){3}|"
+    r"(?:192\.0\.2|198\.51\.100|203\.0\.113)\.\d{1,3}|[^.:\[]+)(?::[^/]*)?$")
 
 
 def placeholder(value):
