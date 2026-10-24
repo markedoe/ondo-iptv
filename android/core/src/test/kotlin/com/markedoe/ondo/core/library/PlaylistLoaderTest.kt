@@ -184,6 +184,32 @@ class PlaylistLoaderTest {
         assertEquals("Le JT", com.markedoe.ondo.core.epg.EpgIndex(result.data).current(channel, now)?.title)
     }
 
+    /**
+     * A guide that still stops part of the way (cut short, or an entity no guide declares) keeps what came before, and
+     * says so instead of passing for complete. One that ends with junk after `</tv>` is complete.
+     */
+    @Test
+    fun aGuideThatStopsPartOfTheWayIsReportedAsIncomplete() = runTest {
+        val programmes = (0 until 10).joinToString("") { i ->
+            val title = if (i == 6) "Caf&eacute;" else "Show $i"
+            "<programme start=\"202510091${i}0000 +0000\" stop=\"202510091${i}3000 +0000\" channel=\"TV1.fr\"><title>$title</title></programme>"
+        }
+        val guide = "<tv><channel id=\"TV1.fr\"><display-name>TV1</display-name></channel>$programmes</tv>"
+        val http = MockHttpClient()
+        http.routes["http://epg.example.com/entity.xml"] = guide.encodeToByteArray()
+        http.routes["http://epg.example.com/cut.xml"] = guide.replace("Caf&eacute;", "Show 6").substringBefore("<programme start=\"2025100918").encodeToByteArray()
+        http.routes["http://epg.example.com/junk.xml"] = (guide.replace("Caf&eacute;", "Show 6") + "<br />Notice: done").encodeToByteArray()
+        val content = PlaylistContent(channels = listOf(Channel(id = "1", name = "TV1", categoryId = "c", streamUrl = "http://h/1", epgId = "TV1.fr")))
+        val window = TimeWindow(utc(2025, 10, 9, 0), utc(2025, 10, 10, 0))
+        for ((url, kept) in listOf("http://epg.example.com/entity.xml" to 6, "http://epg.example.com/cut.xml" to 8, "http://epg.example.com/junk.xml" to 10)) {
+            val playlist = Playlist(name = "P", source = PlaylistSource.Remote("http://example.com/list.m3u"), epgUrls = listOf(url), epgTimeShiftHours = 0.0)
+            val result = PlaylistLoader(http, clock = clock).loadEpg(playlist, content, window)
+            assertEquals(kept, result.data.programCount, url)
+            assertTrue(result.failures.isEmpty(), url)
+            if (kept < 10) assertIs<XmltvParseException>(result.incomplete[url], url) else assertTrue(result.incomplete.isEmpty(), url)
+        }
+    }
+
     /** The user's copy of the provider's guide address, written another way, is downloaded once. */
     @Test
     fun aGuideWrittenTwoWaysIsDownloadedOnce() = runTest {

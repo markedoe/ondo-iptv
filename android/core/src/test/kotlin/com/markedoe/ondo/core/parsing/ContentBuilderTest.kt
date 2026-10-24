@@ -171,6 +171,17 @@ class ContentBuilderTest {
     }
 
     @Test
+    fun anAmpersandLeftUnescapedInAnXspfPlaylistDoesNotStopIt() {
+        val xspf = """<?xml version="1.0" encoding="UTF-8"?><playlist version="1" xmlns="http://xspf.org/ns/0/"><trackList>
+            <track><location>http://example.com/live?id=1&token=a</location><title>News & Weather</title></track>
+            <track><location>http://example.com/live?id=2</location><title>Sport</title></track>
+            </trackList></playlist>"""
+        val content = loader.parse(xspf.encodeToByteArray())
+        assertEquals(listOf("News & Weather", "Sport"), content.channels.map { it.name })
+        assertEquals("http://example.com/live?id=1&token=a", content.channels.first().streamUrl)
+    }
+
+    @Test
     fun xspfAndJson() {
         val xspf = loader.parse(Fixtures.bytes("sample.xspf"))
         assertEquals(listOf("Channel A", "Channel B"), xspf.channels.map { it.name })

@@ -22,10 +22,11 @@ class XmltvParseException(message: String, cause: Throwable? = null) : IOExcepti
 
 /**
  * Streaming XMLTV parser (SAX). Gzip input is detected and inflated on the fly. Programmes outside the
- * filter's window or channels are dropped while parsing, so huge guides stay cheap in memory. A guide that
- * breaks half-way keeps what was read before the error. A file that yields nothing is an error when it is
- * broken or is not a guide at all: providers answer some refusals with an HTML page and a 200, which must not
- * pass for an empty guide.
+ * filter's window or channels are dropped while parsing, so huge guides stay cheap in memory. The faults
+ * providers' guides commonly have are mended while reading (see `XmlText`); a guide that still breaks half-way
+ * keeps what was read before the error, and [readGuide] says where it stopped. A file that yields nothing is an
+ * error when it is broken or is not a guide at all: providers answer some refusals with an HTML page and a 200,
+ * which must not pass for an empty guide.
  */
 class XmltvParser {
     /**
@@ -47,7 +48,16 @@ class XmltvParser {
 
     /** [sizeLimit]: largest inflated size of a gzip guide; a larger one throws [GzipTooLargeException]. */
     internal fun parseGuide(input: InputStream, filter: EpgFilter, timeShiftMillis: Long, sizeLimit: Long): EpgData =
-        read(input, XmltvHandler(filter, timeShiftMillis), sizeLimit).result()
+        readGuide(input, filter, timeShiftMillis, sizeLimit).data
+
+    /** A guide read, and the error it stopped at when it broke after something was read (null when it was read whole). */
+    internal class GuideRead(val data: EpgData, val stoppedBy: XmltvParseException?)
+
+    /** [parseGuide], saying whether the guide was read to its end. */
+    internal fun readGuide(input: InputStream, filter: EpgFilter, timeShiftMillis: Long, sizeLimit: Long = Gzip.MAX_GUNZIPPED_SIZE): GuideRead {
+        val handler = read(input, XmltvHandler(filter, timeShiftMillis), sizeLimit)
+        return GuideRead(handler.result(), handler.stoppedBy)
+    }
 
     /**
      * What [parseGuide] would keep with the same [filter] and shift, by hour around [now], without keeping anything:
@@ -60,14 +70,22 @@ class XmltvParser {
         try {
             Sax.parse(Gzip.decompressingStream(input, sizeLimit), handler)
         } catch (e: SAXException) {
-            tooLarge(e)?.let { throw it }
-            if (handler.isEmpty) throw XmltvParseException("Invalid XMLTV guide: ${e.message}", e)
+            stopped(handler, e)
         } catch (e: IOException) {
-            tooLarge(e)?.let { throw it }
-            if (handler.isEmpty) throw XmltvParseException("Invalid XMLTV guide: ${e.message}", e)
+            stopped(handler, e)
         }
         if (handler.isEmpty && !handler.sawGuideElement) throw XmltvParseException("Invalid XMLTV guide: no <tv> element")
         return handler
+    }
+
+    /**
+     * What was read before [error] is kept, and the error noted, unless it came after the end of the guide (junk after
+     * `</tv>`: nothing is missing). Nothing read at all is not a guide.
+     */
+    private fun stopped(handler: XmltvHandler, error: Exception) {
+        tooLarge(error)?.let { throw it }
+        if (handler.isEmpty) throw XmltvParseException("Invalid XMLTV guide: ${error.message}", error)
+        if (!handler.sawGuideEnd) handler.stoppedBy = XmltvParseException("The guide stops early: ${error.message}", error)
     }
 
     /** The size limit reached while parsing, which the parser may have wrapped. */
@@ -208,6 +226,13 @@ private class XmltvHandler(
     var sawGuideElement = false
         private set
 
+    /** Whether the `<tv>` element was read to its end. */
+    var sawGuideEnd = false
+        private set
+
+    /** The error the guide stopped at, after what was read before it. */
+    var stoppedBy: XmltvParseException? = null
+
     // Channel being parsed.
     private var channelId: String? = null
     private var channelNames = ArrayList<String>()
@@ -304,6 +329,8 @@ private class XmltvHandler(
 
     override fun endElement(uri: String?, localName: String?, qName: String) {
         when (qName) {
+            "tv" -> sawGuideEnd = true
+
             "programme" -> {
                 val current = programme
                 if (keepProgramme && current != null) {

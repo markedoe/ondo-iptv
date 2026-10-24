@@ -17,7 +17,10 @@ internal object Sax {
         "http://apache.org/xml/features/nonvalidating/load-external-dtd",
     )
 
-    /** Parses `input` with `handler` (element names arrive as `qName`). Throws on malformed XML. */
+    /**
+     * Parses `input` with `handler` (element names arrive as `qName`), read through [XmlText]: the faults providers'
+     * files commonly have do not stop it. Throws on what is still malformed.
+     */
     fun parse(input: InputStream, handler: DefaultHandler) {
         val factory = SAXParserFactory.newInstance()
         factory.isNamespaceAware = false
@@ -33,6 +36,6 @@ internal object Sax {
         reader.contentHandler = handler
         reader.errorHandler = handler
         reader.setEntityResolver { _, _ -> InputSource(StringReader("")) }
-        reader.parse(InputSource(input))
+        reader.parse(InputSource(XmlText.reader(input)))
     }
 }

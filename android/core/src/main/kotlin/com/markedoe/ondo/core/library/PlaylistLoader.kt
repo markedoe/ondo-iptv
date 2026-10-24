@@ -37,8 +37,11 @@ sealed class PlaylistLoaderException(message: String) : Exception(message) {
     class EmptyPlaylist : PlaylistLoaderException("The playlist was downloaded but contains no channels.")
 }
 
-/** Merged guide of a playlist, and the sources that could not be loaded (by URL). */
-data class EpgLoadResult(val data: EpgData, val failures: Map<String, Throwable>)
+/**
+ * Merged guide of a playlist, the sources that could not be loaded (by URL), and the sources whose guide stopped part
+ * of the way (a file cut short, or a fault the reading does not mend): what came before the error is in [data].
+ */
+data class EpgLoadResult(val data: EpgData, val failures: Map<String, Throwable>, val incomplete: Map<String, Throwable> = emptyMap())
 
 /**
  * Downloads and parses any playlist source into [PlaylistContent].
@@ -125,7 +128,8 @@ class PlaylistLoader(
 
     /**
      * Loads, merges and filters every guide of a playlist: the user's sources first (they win on overlaps),
-     * then the provider's when [Playlist.useProviderEpg]. Individual source failures are reported, not thrown.
+     * then the provider's when [Playlist.useProviderEpg]. Individual source failures are reported, not thrown; a
+     * guide that stops part of the way is kept as far as it goes, and reported in [EpgLoadResult.incomplete].
      */
     suspend fun loadEpg(
         playlist: Playlist,
@@ -153,6 +157,7 @@ class PlaylistLoader(
         var remaining = guideBudgetBytes
         var merged = EpgData()
         val failures = LinkedHashMap<String, Throwable>()
+        val incomplete = LinkedHashMap<String, Throwable>()
         for (url in sources) {
             var file: File? = null
             try {
@@ -178,8 +183,9 @@ class PlaylistLoader(
                         filter.within(selection.window)
                     }
                 }
-                val parsed = withContext(parsingDispatcher) { download.inputStream().cancellable(this).use { parser.parseGuide(it, sourceFilter, shift) } }
-                merged = merged.merged(parsed)
+                val parsed = withContext(parsingDispatcher) { download.inputStream().cancellable(this).use { parser.readGuide(it, sourceFilter, shift) } }
+                merged = merged.merged(parsed.data)
+                parsed.stoppedBy?.let { incomplete[url] = it }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -191,7 +197,7 @@ class PlaylistLoader(
                 file?.let { withContext(NonCancellable + ioDispatcher) { it.delete() } }
             }
         }
-        return EpgLoadResult(merged.copy(fetchedAt = clock()), failures)
+        return EpgLoadResult(merged.copy(fetchedAt = clock()), failures, incomplete)
     }
 
     /** Stops reading once [scope] is cancelled: a guide nobody waits for any more is not parsed to its end. */
