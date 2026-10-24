@@ -82,6 +82,12 @@ jobs:
           for _ in $(seq 1 300); do grep -q "panel on" out/panel.log && break; sleep 1; done
           cat out/panel.log
           head -1 out/panel-requests.log
+      - name: Memory limit asked
+        env:
+          GROWTH_LIMIT: ${{ inputs.growth-limit }}
+        run: |
+          # Written like 128m, or empty (the image's own limit).
+          [[ -z "$GROWTH_LIMIT" || "$GROWTH_LIMIT" =~ ^[0-9]{2,4}m$ ]] || { echo "::error::a memory limit is written like 128m"; exit 1; }
       - name: Add a playlist on the TV with the remote
         env:
           GROWTH_LIMIT: ${{ inputs.growth-limit }}
@@ -95,6 +101,8 @@ jobs:
           heap-size: ${{ inputs.heap-size }}
           disk-size: 6000M
           disable-animations: true
+          # The default options, and the app's memory limit set at boot when one is asked (Android reads it once).
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim ${{ inputs.growth-limit && format('-prop dalvik.vm.heapgrowthlimit={0}', inputs.growth-limit) || '' }}
           script: |
             adb install -r build-src/android/app/build/outputs/apk/release/app-release.apk
             adb reverse tcp:8080 tcp:8080
