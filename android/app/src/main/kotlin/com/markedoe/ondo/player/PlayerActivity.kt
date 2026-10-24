@@ -150,7 +150,7 @@ class PlayerActivity : ComponentActivity() {
         }
     private var urlIndex = 0
     private var errorMessage by mutableStateOf<String?>(null)
-    private val liveReopening = LiveReopening()
+    private val liveRecovery = LiveRecovery()
     private var shownReport by mutableStateOf<String?>(null)
     private lateinit var reporter: PlaybackReporter
     private var inPictureInPicture by mutableStateOf(false)
@@ -614,10 +614,8 @@ class PlayerActivity : ComponentActivity() {
      * keeps Media3's own durations, and waits longer before playing again once the provider has stopped twice.
      */
     private fun loadControl(): LoadControl {
-        val runtime = Runtime.getRuntime()
-        val usedBytes = runtime.totalMemory() - runtime.freeMemory()
-        val targetBytes = PlaybackBuffer.targetBytes(runtime.maxMemory(), usedBytes)
-        reporter.note("buffer up to ${targetBytes / MEGABYTE} MB (app memory ${usedBytes / MEGABYTE} of ${runtime.maxMemory() / MEGABYTE} MB used)")
+        val (targetBytes, usedBytes) = bufferBudget
+        reporter.note("buffer up to ${targetBytes / MEGABYTE} MB (app memory ${usedBytes / MEGABYTE} of ${Runtime.getRuntime().maxMemory() / MEGABYTE} MB used)")
         val main = Handler(Looper.getMainLooper())
         return playerLoadControl(request.bufferSeconds, request.isLive, targetBytes) { raisedMs ->
             // From the player's thread: the reporter lives on the main one.
@@ -625,10 +623,19 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * The buffer's size in bytes and the app memory in use, measured once, before the first player: measured again at a
+     * channel change, the memory of the player just released (not collected yet) would shrink each new buffer.
+     */
+    private val bufferBudget: Pair<Int, Long> by lazy {
+        val runtime = Runtime.getRuntime()
+        val usedBytes = runtime.totalMemory() - runtime.freeMemory()
+        PlaybackBuffer.targetBytes(runtime.maxMemory(), usedBytes) to usedBytes
+    }
+
     private fun play(index: Int, startMs: Long) {
         val url = request.urls.getOrNull(index) ?: return
         reporter.attempt(index, url)
-        liveReopening.reset()
         health.restart()
         val item = MediaItem.Builder()
             .setUri(url)
@@ -668,6 +675,7 @@ class PlayerActivity : ComponentActivity() {
         // The channel zapped to is the one to open again from the recent apps.
         setIntent(PlayerActivity.intent(this, next))
         urlIndex = 0
+        liveRecovery.reset()
         errorMessage = null
         shownReport = null
         // The controls and their panels belong to the player that goes: the channel's banner shows instead.
@@ -833,38 +841,68 @@ class PlayerActivity : ComponentActivity() {
         errorMessage = null
         reporter.retry()
         urlIndex = 0
+        liveRecovery.reset()
         play(0, if (request.isLive) 0 else player?.currentPosition ?: 0)
     }
 
-    /** A live stream has no end: its server closed the connection ([LiveReopening]). */
+    private val hasNextAddress: Boolean get() = urlIndex + 1 < request.urls.size
+
+    /** Another address of the title (format or version of the channel): its tries start again. */
+    private fun playNextAddress() {
+        urlIndex += 1
+        liveRecovery.reset()
+        play(urlIndex, player?.currentPosition ?: 0)
+    }
+
+    /**
+     * A live stream has no end: its server closed the connection ([LiveRecovery]). It is opened again from its address,
+     * not sought in what the player kept: an HLS playlist that got an end mark would only replay its last segments.
+     */
     private fun reopenLive() {
-        if (!liveReopening.reopens(SystemClock.elapsedRealtime())) {
-            reporter.note("live stream ended again: error shown")
-            showError(getString(R.string.error_generic))
-            return
-        }
-        reporter.note("live stream ended: opened again")
-        player?.apply {
-            seekToDefaultPosition()
-            prepare()
+        when (liveRecovery.ended(SystemClock.elapsedRealtime(), hasNextAddress)) {
+            LiveRecovery.Step.OPEN_AGAIN -> {
+                reporter.note("live stream ended: opened again")
+                play(urlIndex, 0)
+            }
+            LiveRecovery.Step.NEXT_ADDRESS -> {
+                reporter.note("live stream ended again: next address")
+                playNextAddress()
+            }
+            else -> {
+                reporter.note("live stream ended again: error shown")
+                showError(getString(R.string.error_generic))
+            }
         }
     }
 
     private fun handleError(error: PlaybackException) {
-        // A live stream fell behind its window: back to the live edge.
+        // A live stream fell behind its window: back to the live edge, a few times in a row at most.
         if (error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
-            reporter.note("behind the live window: back to the live edge")
-            player?.apply {
-                seekToDefaultPosition()
-                prepare()
+            when (liveRecovery.behindWindow(SystemClock.elapsedRealtime(), hasNextAddress)) {
+                LiveRecovery.Step.BACK_TO_LIVE_EDGE -> {
+                    reporter.note("behind the live window: back to the live edge")
+                    player?.apply {
+                        seekToDefaultPosition()
+                        prepare()
+                    }
+                    return
+                }
+                LiveRecovery.Step.NEXT_ADDRESS -> {
+                    reporter.note("behind the live window again: next address")
+                    playNextAddress()
+                    return
+                }
+                else -> {
+                    reporter.note("behind the live window again: error shown")
+                    showError(getString(R.string.error_generic))
+                    return
+                }
             }
-            return
         }
         // Another address (format or version of the channel) before giving up.
-        if (urlIndex + 1 < request.urls.size) {
+        if (hasNextAddress) {
             reporter.note("fallback to the next address")
-            urlIndex += 1
-            play(urlIndex, player?.currentPosition ?: 0)
+            playNextAddress()
             return
         }
         val (message, cause) = when (error.errorCode) {

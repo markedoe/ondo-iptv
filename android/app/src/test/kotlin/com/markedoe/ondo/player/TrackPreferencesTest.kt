@@ -92,6 +92,15 @@ class TrackPreferencesTest {
         assertEquals("en" to "fr", picked(parameters, *film))
     }
 
+    /** Subtitles learned on, then Off in a panel: no subtitle track, even one in the language the viewer had. */
+    @Test
+    fun offTurnsOffSubtitlesThatCameInTheViewersLanguage() {
+        val on = TrackPreferences.parameters(base, TrackLanguages(audio = "en", subtitles = "fr", subtitlesOn = true), deviceLanguages = listOf("fr"))
+        assertEquals("en" to "fr", picked(on, *film))
+        val off = TrackChoices.select(on, C.TRACK_TYPE_TEXT, null)
+        assertEquals("en" to null, picked(off, *film))
+    }
+
     @Test
     fun aChoiceInAPanelIsLearnedForTheNextStreams() {
         val french = TrackGroup(audio("fr"))
