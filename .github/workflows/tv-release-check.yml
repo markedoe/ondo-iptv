@@ -106,6 +106,7 @@ jobs:
       - name: Add a playlist on the TV with the remote
         env:
           PATHS: ${{ inputs.paths }}
+          HEAP: ${{ inputs.heap-size }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: ${{ inputs.api-level }}
@@ -117,6 +118,7 @@ jobs:
           disk-size: 6000M
           disable-animations: true
           script: |
+            sh .github/scripts/tv_heap_limit.sh "$HEAP"
             adb install -r build-src/android/app/build/outputs/apk/release/app-release.apk
             adb reverse tcp:8080 tcp:8080
             python3 -I .github/scripts/tv_drive.py out/tv --paths="$PATHS" ${{ inputs.wrong-password-first && '--wrong-password-first' || '' }}

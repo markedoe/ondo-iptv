@@ -1008,27 +1008,33 @@ def path_bitrate(tv, args):
     if not tv.visible("Movie 1 "):
         tv.say("  bitrate: the page opened is not Movie 1's")
     since = tv.shell("date '+%m-%d %H:%M:%S.000'").strip()
+    started = time.monotonic()
     tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=5)
     if not tv.player_shown():
         raise TimeoutError("the player never opened from Movie 1")
     limit = tv.shell("getprop dalvik.vm.heapgrowthlimit").strip()
     peak = 0
     problems = []
-    # 50 s: the film lasts 75 s, and the player must still be up for its error to be seen.
-    for second in range(0, 50, 10):
+    # Every 10 s for 50 s by the clock (dumpsys takes seconds): the film lasts 75 s, and the player must still be up
+    # for its error to be seen.
+    while (elapsed := time.monotonic() - started) < 50:
         if not tv.player_shown():
-            problems.append(f"the player closed within {second} s of the heavy movie")
+            problems.append(f"the player closed {elapsed:.0f} s into the heavy movie")
             break
         heap = java_heap_kb(tv)
         peak = max(peak, heap or 0)
-        tv.say(f"  bitrate: {second} s, Java heap {heap} kB (growth limit {limit})")
-        tv.check_alive(f"{second} s into the heavy movie")
+        tv.say(f"  bitrate: {elapsed:.0f} s, Java heap {heap} kB (growth limit {limit})")
+        tv.check_alive(f"{elapsed:.0f} s into the heavy movie")
         if out_of_memory_since(tv, since):
-            problems.append(f"the app ran out of memory within {second} s of the heavy movie")
+            problems.append(f"the app ran out of memory within {elapsed:.0f} s of the heavy movie")
             break
-        time.sleep(10)
+        time.sleep(max(0.0, 10 - (time.monotonic() - started - elapsed)))
     tv.note_screen("bitrate-playing")
-    tv.say(f"  bitrate: peak Java heap {peak} kB; {blocking_gcs_since(tv, since)} waits for a blocking GC")
+    waits = blocking_gcs_since(tv, since)
+    tv.say(f"  bitrate: peak Java heap {peak} kB; {waits} waits for a blocking GC")
+    # The fitted buffer waits none; one too large for the memory dozens (each one a stutter).
+    if waits > 5:
+        problems.append(f"the picture stuttered: {waits} waits for the memory to be cleaned")
     for line in out_of_memory_since(tv, since)[:3]:
         tv.say(f"  bitrate: {line.strip()[:220]}")
     if tv.visible("cannot be played"):
