@@ -272,6 +272,45 @@ class TelevisionLibraryTest {
         waitFor { repository.state.value.activePlaylistId == "p2" }
         // The playlist in use is refreshed from its own card, not used again.
         waitFor { exists("refresh-Backup") && !exists("use-Backup") }
+        // The remote stays on the card's button, now Refresh.
+        settle()
+        assertEquals("refresh-Backup", focusedTag())
+    }
+
+    /** Settings, down the menu to [section], then right onto its first row, [row]. */
+    private fun openSettingsRow(section: String, row: String) {
+        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        press(Key.DirectionCenter)
+        waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
+        pressUntil(Key.DirectionDown) { focusedTag() == section }
+        press(Key.DirectionRight)
+        waitFor { focusedTag() == row }
+    }
+
+    @Test
+    fun backFromLanguagesAndCategoriesLandsOnItsRowInSettings() {
+        start()
+        openSettingsRow("settingsCatalogue", "categoriesRow")
+        press(Key.DirectionCenter)
+        waitFor { exists("categories") && !exists("settings") }
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        waitFor { exists("settings") && !exists("categories") }
+        settle()
+        assertEquals("categoriesRow", focusedTag())
+        assertTrue("the Catalogue part is still shown", exists("adultSwitch"))
+    }
+
+    @Test
+    fun backFromTheHelpLandsOnItsRowInSettings() {
+        start()
+        openSettingsRow("settingsAbout", "helpRow")
+        press(Key.DirectionCenter)
+        waitFor { !exists("settings") }
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        waitFor { exists("settings") }
+        settle()
+        assertEquals("helpRow", focusedTag())
     }
 
     private val m3u = """

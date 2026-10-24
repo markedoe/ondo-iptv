@@ -100,7 +100,8 @@ enum class TvSettingsSection(val label: Int, val icon: ImageVector, val tag: Str
 /**
  * Settings on a TV, as the TV's own settings: the parts on the left, the one the remote is on shown on the right.
  * Each playlist is a card with its buttons in reach of the remote: use it (or refresh it, the one in use) and
- * delete it, after a confirmation that starts on Cancel. No back button: Back closes the page.
+ * delete it, after a confirmation that starts on Cancel. No back button: Back closes the page. Each part and each row
+ * keeps its own place ([focusMemory]): back from a page a row opened, the remote is on that row again.
  */
 @Composable
 fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChooseAppLanguage: Boolean = true) {
@@ -146,7 +147,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
                     onFocus = { section = item },
                     modifier = Modifier
                         .focusRequester(requesters.getValue(item))
-                        .then(if (item == TvSettingsSection.PLAYLISTS) Modifier.focusMemory("settings-nav", initial = true) else Modifier),
+                        .focusMemory(item.tag, initial = item == TvSettingsSection.PLAYLISTS),
                 )
             }
         }
@@ -286,25 +287,15 @@ private fun PlaylistCard(playlist: PlaylistSummary, refreshing: Boolean, actions
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            if (playlist.active) {
-                TvActionButton(
-                    onClick = actions.onRefresh,
-                    enabled = !refreshing,
-                    modifier = first.focusMemory("refresh:${playlist.id}").testTag("refresh-${playlist.name}"),
-                ) {
-                    Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.refresh), maxLines = 1)
-                }
-            } else {
-                TvActionButton(
-                    onClick = { actions.onActivate(playlist.id) },
-                    modifier = first.focusMemory("use:${playlist.id}").testTag("use-${playlist.name}"),
-                ) {
-                    Icon(Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.use_playlist), maxLines = 1)
-                }
+            // One button, Use then Refresh once the playlist is in use: the remote stays on it.
+            TvActionButton(
+                onClick = { if (playlist.active) actions.onRefresh() else actions.onActivate(playlist.id) },
+                enabled = !(playlist.active && refreshing),
+                modifier = first.focusMemory("use:${playlist.id}").testTag(if (playlist.active) "refresh-${playlist.name}" else "use-${playlist.name}"),
+            ) {
+                Icon(if (playlist.active) Icons.Rounded.Refresh else Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(if (playlist.active) R.string.refresh else R.string.use_playlist), maxLines = 1)
             }
             val deleteLabel = stringResource(R.string.delete)
             Button(
@@ -337,31 +328,31 @@ private fun LazyListScope.player(state: SettingsUiState, actions: SettingsAction
     title(R.string.player, hint = R.string.buffer_hint)
     item(key = "liveBuffer") {
         val title = stringResource(R.string.buffer_live)
-        SettingRow(title, Icons.Rounded.Speed, subtitle = bufferLabel(state.liveBuffer), modifier = Modifier.focusRequester(first).focusRequester(returnTo("liveBuffer")).testTag("liveBufferRow"), onClick = { onChoose(BufferChoice("liveBuffer", title, state.liveBuffer, actions.onLiveBuffer)) })
+        SettingRow(title, Icons.Rounded.Speed, subtitle = bufferLabel(state.liveBuffer), modifier = Modifier.focusRequester(first).focusRequester(returnTo("liveBuffer")).focusMemory("settings-liveBuffer").testTag("liveBufferRow"), onClick = { onChoose(BufferChoice("liveBuffer", title, state.liveBuffer, actions.onLiveBuffer)) })
     }
     item(key = "vodBuffer") {
         val title = stringResource(R.string.buffer_vod)
-        SettingRow(title, Icons.Rounded.Speed, subtitle = bufferLabel(state.vodBuffer), modifier = Modifier.focusRequester(returnTo("vodBuffer")).testTag("vodBufferRow"), onClick = { onChoose(BufferChoice("vodBuffer", title, state.vodBuffer, actions.onVodBuffer)) })
+        SettingRow(title, Icons.Rounded.Speed, subtitle = bufferLabel(state.vodBuffer), modifier = Modifier.focusRequester(returnTo("vodBuffer")).focusMemory("settings-vodBuffer").testTag("vodBufferRow"), onClick = { onChoose(BufferChoice("vodBuffer", title, state.vodBuffer, actions.onVodBuffer)) })
     }
 }
 
 private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsActions, first: FocusRequester, canChooseAppLanguage: Boolean) {
     title(R.string.settings_catalogue)
     item(key = "categories") {
-        SettingRow(stringResource(R.string.languages_and_categories), Icons.Rounded.FilterList, subtitle = stringResource(R.string.categories_hint), onClick = actions.onCategories, modifier = Modifier.focusRequester(first).testTag("categoriesRow"))
+        SettingRow(stringResource(R.string.languages_and_categories), Icons.Rounded.FilterList, subtitle = stringResource(R.string.categories_hint), onClick = actions.onCategories, modifier = Modifier.focusRequester(first).focusMemory("settings-categories").testTag("categoriesRow"))
     }
     item(key = "adult") {
-        SwitchRow(stringResource(R.string.adult_categories), stringResource(R.string.adult_categories_hint), Icons.Rounded.Lock, state.showAdultCategories, actions.onShowAdultCategories, Modifier.testTag("adultSwitch"))
+        SwitchRow(stringResource(R.string.adult_categories), stringResource(R.string.adult_categories_hint), Icons.Rounded.Lock, state.showAdultCategories, actions.onShowAdultCategories, Modifier.focusMemory("settings-adult").testTag("adultSwitch"))
     }
     item(key = "hideWatched") {
-        SwitchRow(stringResource(R.string.hide_watched), stringResource(R.string.hide_watched_hint), Icons.Rounded.VisibilityOff, state.hideWatchedMovies, actions.onHideWatchedMovies, Modifier.testTag("hideWatchedSwitch"))
+        SwitchRow(stringResource(R.string.hide_watched), stringResource(R.string.hide_watched_hint), Icons.Rounded.VisibilityOff, state.hideWatchedMovies, actions.onHideWatchedMovies, Modifier.focusMemory("settings-hideWatched").testTag("hideWatchedSwitch"))
     }
     item(key = "awards") {
-        SwitchRow(stringResource(R.string.update_awards), stringResource(R.string.update_awards_hint), Icons.Rounded.Refresh, state.updateAwards, actions.onUpdateAwards, Modifier.testTag("awardsSwitch"))
+        SwitchRow(stringResource(R.string.update_awards), stringResource(R.string.update_awards_hint), Icons.Rounded.Refresh, state.updateAwards, actions.onUpdateAwards, Modifier.focusMemory("settings-awards").testTag("awardsSwitch"))
     }
     if (canChooseAppLanguage) {
         item(key = "language") {
-            SettingRow(stringResource(R.string.app_language), Icons.Rounded.Language, subtitle = stringResource(R.string.app_language_hint), onClick = actions.onAppLanguage, modifier = Modifier.testTag("appLanguageRow"))
+            SettingRow(stringResource(R.string.app_language), Icons.Rounded.Language, subtitle = stringResource(R.string.app_language_hint), onClick = actions.onAppLanguage, modifier = Modifier.focusMemory("settings-language").testTag("appLanguageRow"))
         }
     }
 }
@@ -370,7 +361,7 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
 private fun LazyListScope.sync(state: SettingsUiState, actions: SettingsActions, first: FocusRequester) {
     title(R.string.sync_section)
     item(key = "sync") {
-        SwitchRow(stringResource(R.string.sync_title), stringResource(R.string.sync_summary), Icons.Rounded.Sync, state.syncOnLocalNetwork, actions.onSyncOnLocalNetwork, Modifier.focusRequester(first).testTag("syncSwitch"))
+        SwitchRow(stringResource(R.string.sync_title), stringResource(R.string.sync_summary), Icons.Rounded.Sync, state.syncOnLocalNetwork, actions.onSyncOnLocalNetwork, Modifier.focusRequester(first).focusMemory("settings-sync").testTag("syncSwitch"))
     }
     item(key = "syncHint") {
         Text(stringResource(R.string.sync_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.widthIn(max = 640.dp).padding(vertical = 8.dp))
@@ -396,9 +387,9 @@ private fun DeviceRow(name: String, detail: String?) {
 
 private fun LazyListScope.about(state: SettingsUiState, actions: SettingsActions, first: FocusRequester) {
     title(R.string.about)
-    item(key = "help") { SettingRow(stringResource(R.string.help), Icons.AutoMirrored.Rounded.HelpOutline, onClick = actions.onHelp, modifier = Modifier.focusRequester(first).testTag("helpRow")) }
-    item(key = "privacy") { SettingRow(stringResource(R.string.privacy_policy), Icons.Rounded.Lock, onClick = actions.onPrivacy) }
-    item(key = "support") { SettingRow(stringResource(R.string.support), Icons.Rounded.SupportAgent, onClick = actions.onSupport) }
+    item(key = "help") { SettingRow(stringResource(R.string.help), Icons.AutoMirrored.Rounded.HelpOutline, onClick = actions.onHelp, modifier = Modifier.focusRequester(first).focusMemory("settings-help").testTag("helpRow")) }
+    item(key = "privacy") { SettingRow(stringResource(R.string.privacy_policy), Icons.Rounded.Lock, onClick = actions.onPrivacy, modifier = Modifier.focusMemory("settings-privacy")) }
+    item(key = "support") { SettingRow(stringResource(R.string.support), Icons.Rounded.SupportAgent, onClick = actions.onSupport, modifier = Modifier.focusMemory("settings-support")) }
     item(key = "disclaimer") {
         Text(stringResource(R.string.disclaimer), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.widthIn(max = 640.dp).padding(top = 8.dp))
     }
@@ -416,7 +407,7 @@ private fun CrashCard(crash: LastCrash) {
         shape = RoundedCornerShape(14.dp),
         colors = SurfaceDefaults.colors(containerColor = Color.White.copy(alpha = 0.06f), contentColor = Color.White),
         border = Border(BorderStroke(2.dp, if (focused) Color.White else Color.Transparent)),
-        modifier = Modifier.widthIn(max = 900.dp).padding(top = 8.dp).onFocusChanged { focused = it.isFocused }.focusable().testTag("lastCrash"),
+        modifier = Modifier.widthIn(max = 900.dp).padding(top = 8.dp).onFocusChanged { focused = it.isFocused }.focusMemory("settings-lastCrash").focusable().testTag("lastCrash"),
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(lastCrashTitle(crash), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
