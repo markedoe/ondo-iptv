@@ -48,6 +48,9 @@ public struct HTTPRequest: Sendable, Equatable {
 public protocol HTTPClient: Sendable {
     func data(from url: URL, headers: [String: String]) async throws -> Data
     func send(_ request: HTTPRequest) async throws -> Data
+    /// Saves the answer to `file` (created, or replaced) instead of keeping it in memory: large guides and catalogues
+    /// are then read from disk a piece at a time. On failure the file is removed.
+    func download(from url: URL, headers: [String: String], to file: URL) async throws
 }
 
 extension HTTPClient {
@@ -55,6 +58,16 @@ extension HTTPClient {
     public func send(_ request: HTTPRequest) async throws -> Data {
         guard request.method == "GET", request.body == nil else { throw HTTPClientError.unsupportedRequest }
         return try await data(from: request.url, headers: request.headers)
+    }
+
+    /// Clients that keep answers in memory write them out whole.
+    public func download(from url: URL, headers: [String: String], to file: URL) async throws {
+        do {
+            try await data(from: url, headers: headers).write(to: file)
+        } catch {
+            try? FileManager.default.removeItem(at: file)
+            throw error
+        }
     }
 }
 
@@ -100,6 +113,30 @@ public final class URLSessionHTTPClient: HTTPClient, Sendable {
     }
 
     public func send(_ httpRequest: HTTPRequest) async throws -> Data {
+        try await run(httpRequest, into: nil)
+    }
+
+    /// Each piece of the answer is written to the file as it arrives, within the same limit as answers kept in memory.
+    public func download(from url: URL, headers: [String: String], to file: URL) async throws {
+        let fileManager = FileManager.default
+        do {
+            try? fileManager.removeItem(at: file)
+            if url.isFileURL {
+                try fileManager.copyItem(at: url, to: file)
+                return
+            }
+            guard fileManager.createFile(atPath: file.path, contents: nil) else { throw CocoaError(.fileWriteUnknown, userInfo: [NSURLErrorKey: file]) }
+            let handle = try FileHandle(forWritingTo: file)
+            defer { try? handle.close() }
+            _ = try await run(HTTPRequest(url: url, headers: headers), into: handle)
+        } catch {
+            try? fileManager.removeItem(at: file)
+            throw error
+        }
+    }
+
+    /// The answer's body, or with `file`, the answer written to it (and an empty body).
+    private func run(_ httpRequest: HTTPRequest, into file: FileHandle?) async throws -> Data {
         var request = URLRequest(url: httpRequest.url, timeoutInterval: timeout)
         request.httpMethod = httpRequest.method
         request.httpBody = httpRequest.body
@@ -113,7 +150,7 @@ public final class URLSessionHTTPClient: HTTPClient, Sendable {
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 let task = session.dataTask(with: request)
-                receiver.expect(task) { continuation.resume(with: $0) }
+                receiver.expect(task, into: file) { continuation.resume(with: $0) }
                 running.start(task)
             }
         } onCancel: {
@@ -122,16 +159,22 @@ public final class URLSessionHTTPClient: HTTPClient, Sendable {
     }
 }
 
-/// Collects the answers of a client's session, each up to the limit. An error status or an answer past the limit
-/// cancels its task and drops what came; what URLSession still delivers after that is not kept.
+/// Collects the answers of a client's session, each up to the limit, in memory or in a file. An error status, an answer
+/// past the limit or a file that cannot be written cancels its task and drops what came; what URLSession still delivers
+/// after that is not kept.
 private final class AnswerReceiver: NSObject, URLSessionDataDelegate, @unchecked Sendable {
     private final class Answer {
         var data = Data()
+        /// Bytes received so far.
+        var received = 0
         var checked = false
-        var failure: HTTPClientError?
+        var failure: Error?
+        /// Where the body goes instead of `data`.
+        let file: FileHandle?
         let finish: @Sendable (Result<Data, Error>) -> Void
 
-        init(finish: @escaping @Sendable (Result<Data, Error>) -> Void) {
+        init(file: FileHandle?, finish: @escaping @Sendable (Result<Data, Error>) -> Void) {
+            self.file = file
             self.finish = finish
         }
     }
@@ -145,9 +188,9 @@ private final class AnswerReceiver: NSObject, URLSessionDataDelegate, @unchecked
         self.limit = limit
     }
 
-    /// `finish` receives the task's body or its error, once.
-    func expect(_ task: URLSessionDataTask, finish: @escaping @Sendable (Result<Data, Error>) -> Void) {
-        lock.withLock { answers[task.taskIdentifier] = Answer(finish: finish) }
+    /// `finish` receives the task's body (empty when it goes to `file`) or its error, once.
+    func expect(_ task: URLSessionDataTask, into file: FileHandle?, finish: @escaping @Sendable (Result<Data, Error>) -> Void) {
+        lock.withLock { answers[task.taskIdentifier] = Answer(file: file, finish: finish) }
     }
 
     /// An error status, or a length announced past the limit.
@@ -164,12 +207,20 @@ private final class AnswerReceiver: NSObject, URLSessionDataDelegate, @unchecked
                 answer.checked = true
                 answer.failure = refusal(dataTask.response)
             }
-            if answer.failure == nil, answer.data.count + data.count > limit { answer.failure = .tooLarge(limit) }
+            if answer.failure == nil, answer.received + data.count > limit { answer.failure = HTTPClientError.tooLarge(limit) }
+            if answer.failure == nil, let file = answer.file {
+                do {
+                    try file.write(contentsOf: data)
+                } catch {
+                    answer.failure = error
+                }
+            }
             guard answer.failure == nil else {
                 answer.data = Data()
                 return true
             }
-            answer.data.append(data)
+            answer.received += data.count
+            if answer.file == nil { answer.data.append(data) }
             return false
         }
         if stop { dataTask.cancel() }
@@ -177,7 +228,7 @@ private final class AnswerReceiver: NSObject, URLSessionDataDelegate, @unchecked
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let answer = lock.withLock({ answers.removeValue(forKey: task.taskIdentifier) }) else { return }
-        if let failure = answer.failure ?? refusal(task.response) {
+        if let failure = answer.failure ?? refusal(task.response).map({ $0 as Error }) {
             answer.finish(.failure(failure))
         } else if let error {
             answer.finish(.failure(error))
