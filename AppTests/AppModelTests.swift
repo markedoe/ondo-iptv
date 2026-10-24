@@ -550,6 +550,38 @@ final class AppModelTests: XCTestCase {
         XCTAssertTrue(model.content.isEmpty)
         XCTAssertTrue(model.library.favorites.isEmpty)
     }
+
+    /// A playlist deleted while its catalogue downloads again leaves no catalogue on disk: Clear Cache only knows the
+    /// playlists there are, so one written after the deletion would stay for good.
+    func testAPlaylistDeletedWhileItRefreshesLeavesNoCatalogue() async throws {
+        let held = HeldAnswers()
+        defer { held.release() }
+        let text = Self.playlistText
+        let server = try LocalHTTPServer { _ in
+            held.waitUnlessFirst()
+            return LocalHTTPServer.Response.text(text)
+        }
+        let address = try await server.start().appending(path: "list.m3u")
+        let model = makeModel()
+        await model.bootstrap()
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(address), autoRefreshHours: 0))
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        let catalogue = model.cacheStore.url(for: "content-\(playlist.id.uuidString)")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: catalogue.path))
+
+        let refresh = Task { await model.refreshActivePlaylist() }
+        let deadline = Date().addingTimeInterval(10)
+        while server.requests.count < 2 {
+            guard Date() < deadline else { return XCTFail("the refresh never asked for the playlist") }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        await model.deletePlaylist(playlist)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: catalogue.path))
+        held.release()
+        await refresh.value
+        XCTAssertFalse(FileManager.default.fileExists(atPath: catalogue.path), "the deleted playlist's catalogue is written again")
+        XCTAssertTrue(model.playlists.isEmpty)
+    }
 }
 
 final class CastabilityTests: XCTestCase {
@@ -606,6 +638,24 @@ private final class SlowReminderScheduler: ReminderScheduling, @unchecked Sendab
         let wanted = Dictionary(reminders.map { ($0.id, $0.start.addingTimeInterval(-leadTime)) }, uniquingKeysWith: { first, _ in first })
         lock.withLock { pending = wanted }
     }
+}
+
+/// Lets the first answer of a server go at once and holds the next ones until the test releases them.
+private final class HeldAnswers: @unchecked Sendable {
+    private let lock = NSLock()
+    private var answered = 0
+    private let gate = DispatchSemaphore(value: 0)
+
+    /// On the server's queue.
+    func waitUnlessFirst() {
+        let first = lock.withLock { () -> Bool in
+            answered += 1
+            return answered == 1
+        }
+        if !first { gate.wait() }
+    }
+
+    func release() { gate.signal() }
 }
 
 /// Set from an observation callback, which may run on any thread.

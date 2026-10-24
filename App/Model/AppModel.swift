@@ -554,6 +554,8 @@ final class AppModel {
             let unchanged = activePlaylist?.id == playlist.id
                 ? await Task.detached(priority: .utility) { [current = rawContent] in fresh == current }.value
                 : false
+            // Deleted meanwhile: nothing to keep (Clear Cache only knows the playlists there are).
+            guard playlists.contains(where: { $0.id == playlist.id }) else { return }
             if !unchanged { await saveContentCache(fresh, for: playlist.id) }
             if let position = playlists.firstIndex(where: { $0.id == playlist.id }) {
                 playlists[position].lastRefreshedAt = Date()
