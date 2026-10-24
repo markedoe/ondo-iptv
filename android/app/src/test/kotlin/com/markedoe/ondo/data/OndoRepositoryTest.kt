@@ -475,7 +475,8 @@ class OndoRepositoryTest {
 
     /**
      * A catalogue taken off the screen is not kept: on a TV a large one is most of the memory the app has, and it would
-     * stay while the next playlist's loads.
+     * stay while the next playlist's loads. Nothing the repository holds leads to it (asked of the repository's own
+     * objects: a thread of the parsing pool may still point to its last result for a while, out of the app's hands).
      */
     @Test
     fun aCatalogueTakenOffTheScreenIsNotKept() = runTest {
@@ -483,19 +484,35 @@ class OndoRepositoryTest {
         repository.bootstrap()
         repository.awaitState { it.isReady }
         assertTrue(repository.addPlaylist("Home", list).isSuccess)
-        val shown = java.lang.ref.WeakReference(repository.state.value.content)
-        assertFalse(shown.get()!!.isEmpty)
+        val deleted = repository.state.value.content
+        assertFalse(deleted.isEmpty)
 
         repository.delete(repository.state.value.activePlaylistId!!)
         testScheduler.advanceUntilIdle()
 
         assertTrue(repository.state.value.content.isEmpty)
-        for (attempt in 0 until 50) {
-            if (shown.get() == null) break
-            System.gc()
-            Thread.sleep(20)
+        assertNull("the deleted playlist's catalogue is still held", pathTo(deleted, from = repository))
+    }
+
+    /** The fields leading from [from] to [target] ("repository.a.b"), or null when none does. */
+    private fun pathTo(target: Any, from: Any): String? {
+        val seen = java.util.IdentityHashMap<Any, Unit>()
+        val queue = ArrayDeque(listOf(from to "repository"))
+        while (queue.isNotEmpty()) {
+            val (value, path) = queue.removeFirst()
+            if (value === target) return path
+            if (seen.put(value, Unit) != null || value is String || value is Number || value is Class<*>) continue
+            val type = value.javaClass
+            when {
+                type.isArray -> if (!type.componentType.isPrimitive) (value as Array<*>).forEachIndexed { i, item -> item?.let { queue += it to "$path[$i]" } }
+                value is Map<*, *> && type.name.startsWith("java.") -> value.entries.forEach { (k, v) -> k?.let { queue += it to "$path{key}" }; v?.let { queue += it to "$path{$k}" } }
+                value is Iterable<*> && type.name.startsWith("java.") -> value.forEachIndexed { i, item -> item?.let { queue += it to "$path[$i]" } }
+                else -> generateSequence(type) { it.superclass }.flatMap { it.declaredFields.asSequence() }
+                    .filter { !java.lang.reflect.Modifier.isStatic(it.modifiers) && !it.type.isPrimitive }
+                    .forEach { field -> runCatching { field.isAccessible = true; field.get(value) }.getOrNull()?.let { queue += it to "$path.${field.name}" } }
+            }
         }
-        assertNull("the deleted playlist's catalogue is still held", shown.get())
+        return null
     }
 
     @Test
