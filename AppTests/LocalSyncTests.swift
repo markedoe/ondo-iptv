@@ -184,6 +184,27 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertFalse(model.localSync.isRunning)
     }
 
+    /// A device with tens of thousands of playlists (one snapshot can bring that many) applies the next session in one
+    /// pass: sync runs on the main thread, every minute, and a search per playlist took minutes.
+    func testManyPlaylistsAreAppliedAgainInOnePass() async throws {
+        let folder = root.appendingPathComponent("many", isDirectory: true)
+        let playlists: [Playlist] = (0..<30_000).map { (i: Int) -> Playlist in
+            Playlist(name: "P\(i)", source: .remote(URL(string: "http://127.0.0.1:9/\(i).m3u")!), autoRefreshHours: 0)
+        }
+        try FileStore(directory: folder.appendingPathComponent("Support", isDirectory: true)).save(playlists, name: "playlists")
+        let model = AppModel(storageRoot: folder, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        await model.bootstrap()
+        XCTAssertEqual(model.playlists.count, playlists.count)
+
+        let snapshot = model.syncSnapshot()
+        let start = Date()
+        await model.applySync(snapshot)
+        let elapsed = Date().timeIntervalSince(start)
+        print("\(playlists.count) playlists applied again in \(elapsed)s")
+        XCTAssertEqual(model.playlists.map(\.id), playlists.map(\.id))
+        XCTAssertLessThan(elapsed, 10)
+    }
+
     func testOnlyLocalAddressesAreReached() {
         XCTAssertTrue(LocalSync.isLocal(.hostPort(host: .ipv4(IPv4Address("127.0.0.1")!), port: 9)))
         XCTAssertTrue(LocalSync.isLocal(.hostPort(host: .ipv6(IPv6Address("fe80::1")!), port: 9)))

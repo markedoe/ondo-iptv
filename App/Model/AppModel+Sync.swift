@@ -394,13 +394,19 @@ extension AppModel {
         let merged = SyncMerge.merge(syncSnapshot(now: now), received)
         let records = Dictionary(merged.playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        // Playlists edited elsewhere, then the new ones.
+        // Playlists edited elsewhere, then the new ones. The device's own are found by ID (a snapshot can hold tens of
+        // thousands), and found again after an update, which waits and lets other changes in.
+        func byID() -> [UUID: Playlist] { Dictionary(playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }) }
+        var locals = byID()
         var added: [Playlist] = []
         for record in merged.playlists {
             guard let id = UUID(uuidString: record.id) else { continue }
-            if let local = playlists.first(where: { $0.id == id }) {
+            if let local = locals[id] {
                 guard let updated = SyncMapping.playlist(from: record, base: local) else { continue }
-                if updated != local { await updatePlaylist(updated, recordsSyncChange: false) }
+                if updated != local {
+                    await updatePlaylist(updated, recordsSyncChange: false)
+                    locals = byID()
+                }
             } else if let created = SyncMapping.playlist(from: record, base: duplicate(becoming: record, in: merged)) {
                 added.append(created)
             } else {
