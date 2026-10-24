@@ -67,7 +67,13 @@ class PhonePlayerOverlayTest {
         initiallySelected = setOf(0),
     )
 
-    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false)) {
+    private var chosen: String? = null
+    private val channelList = ChannelList(
+        load = { listOf(ChannelChoice("c1", 1, "World Report", "Evening News", playing = true), ChannelChoice("c2", 2, "Cycling TV", "Mountain Stage", playing = false)) },
+        onChoose = { chosen = it },
+    )
+
+    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), channels: ChannelList? = null) {
         compose.setContent {
             val scope = rememberCoroutineScope()
             controls = remember { PlayerControls(scope) }
@@ -76,6 +82,7 @@ class PhonePlayerOverlayTest {
                 PhonePlayerOverlay(
                     player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
                     scale = scale, onScale = { scale = it }, sleep = sleep, levels = levels, onClose = {}, onPictureInPicture = {},
+                    channels = channels,
                 )
             }
         }
@@ -228,5 +235,29 @@ class PhonePlayerOverlayTest {
         compose.onNodeWithTag("phonePlayer").performTouchInput { doubleClick(Offset(width * 0.9f, height / 2f)) }
         settle(1_500)
         assertTrue(channel.seeks.isEmpty())
+    }
+
+    /** A live channel: its Channels list, the one playing ticked, another one chosen. */
+    @Test
+    fun theChannelsListZapsToAnother() {
+        val channel = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = false)
+        start(channel, PlayerInfo("World Report", "Evening News", live = true), channelList)
+        compose.runOnIdle { controls.show() }
+        settle()
+        compose.onNodeWithTag("phoneChannels").performClick()
+        settle()
+        compose.onNodeWithTag("channel-c1").assertIsSelected().assertTextContains("1  World Report").assertTextContains("Evening News")
+        compose.onNodeWithTag("channel-c2").assertTextContains("Mountain Stage").performClick()
+        settle()
+        assertEquals("c2", chosen)
+        assertFalse(exists("playerSheet"))
+    }
+
+    @Test
+    fun aFilmHasNoChannelsList() {
+        start()
+        compose.runOnIdle { controls.show() }
+        settle()
+        assertFalse(exists("phoneChannels"))
     }
 }

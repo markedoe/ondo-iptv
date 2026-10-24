@@ -334,6 +334,7 @@ class PlayerActivity : ComponentActivity() {
                                 scale = scale,
                                 onScale = repository::setVideoScale,
                                 sleep = sleepTimer,
+                                channels = channelList.takeIf { request.isLive && request.channelId != null },
                             )
                         }
                     }
@@ -359,6 +360,7 @@ class PlayerActivity : ComponentActivity() {
                             levels = levels,
                             onClose = ::finish,
                             onPictureInPicture = if (supportsPictureInPicture) ::enterPictureInPicture else null,
+                            channels = channelList.takeIf { request.isLive && request.channelId != null },
                         )
                     }
                     upNext?.let { offer ->
@@ -784,6 +786,18 @@ class PlayerActivity : ComponentActivity() {
         val channel = ChannelZapping.byNumber(UiMappers.zappingChannels(repository.state.value), number)
         if (channel == null) showBanner(ChannelBanner(getString(R.string.no_channel_number, number), null)) else playChannel(channel)
     }
+
+    /** The Channels list of a live channel's controls: the channels zapped through, with the programme on now. */
+    private val channelList = ChannelList(
+        load = {
+            val state = repository.state.value
+            val now = System.currentTimeMillis()
+            UiMappers.zappingChannels(state).map { channel ->
+                ChannelChoice(channel.id, channel.number, channel.name, state.guide?.current(channel, now)?.title, playing = channel.id == request.channelId)
+            }
+        },
+        onChoose = { id -> UiMappers.zappingChannels(repository.state.value).firstOrNull { it.id == id }?.let(::playChannel) },
+    )
 
     private fun playChannel(channel: Channel) {
         if (channel.id == request.channelId) return

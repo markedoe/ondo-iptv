@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Bedtime
@@ -157,6 +158,7 @@ fun PhonePlayerOverlay(
     onClose: () -> Unit,
     onPictureInPicture: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    channels: ChannelList? = null,
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -295,7 +297,7 @@ fun PhonePlayerOverlay(
             },
     ) {
         AnimatedVisibility(visible = controls.shown && !locked, enter = fadeIn(), exit = fadeOut()) {
-            Controls(player, controls, info, sleep, onClose, onPictureInPicture, onLock = {
+            Controls(player, controls, info, sleep, channels, onClose, onPictureInPicture, onLock = {
                 locked = true
                 controls.hide()
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -350,7 +352,7 @@ fun PhonePlayerOverlay(
             contentColor = Color.White,
             modifier = Modifier.testTag("playerSheet"),
         ) {
-            PanelContent(panel, player, controls, statisticsShown, onToggleStatistics, onReportProblem, scale, onScale, sleep)
+            PanelContent(panel, player, controls, statisticsShown, onToggleStatistics, onReportProblem, scale, onScale, sleep, channels)
         }
     }
 }
@@ -363,6 +365,7 @@ private fun Controls(
     controls: PlayerControls,
     info: PlayerInfo,
     sleep: SleepTimer,
+    channels: ChannelList?,
     onClose: () -> Unit,
     onPictureInPicture: (() -> Unit)?,
     onLock: () -> Unit,
@@ -450,6 +453,9 @@ private fun Controls(
                 }
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (channels != null) {
+                    ActionChip(Icons.AutoMirrored.Rounded.List, stringResource(R.string.channels), "phoneChannels") { controls.open(PlayerPanel.CHANNELS) }
+                }
                 ActionChip(Icons.Rounded.Subtitles, stringResource(R.string.subtitles), "phoneSubtitles") { controls.open(PlayerPanel.SUBTITLES) }
                 ActionChip(Icons.Rounded.RecordVoiceOver, stringResource(R.string.audio), "phoneAudio") { controls.open(PlayerPanel.AUDIO) }
                 if (controls.seekable) {
@@ -650,6 +656,7 @@ private fun PanelContent(
     scale: VideoScale,
     onScale: (VideoScale) -> Unit,
     sleep: SleepTimer,
+    channels: ChannelList?,
 ) {
     val title = when (panel) {
         PlayerPanel.SUBTITLES -> R.string.subtitles
@@ -658,6 +665,7 @@ private fun PanelContent(
         PlayerPanel.MORE -> R.string.more
         PlayerPanel.ASPECT -> R.string.aspect_ratio
         PlayerPanel.SLEEP -> R.string.sleep_timer
+        PlayerPanel.CHANNELS -> R.string.channels
     }
     val words = trackWords()
     val locale = LocalConfiguration.current.locales[0]
@@ -665,7 +673,9 @@ private fun PanelContent(
     val choices = if (panel == PlayerPanel.SUBTITLES || panel == PlayerPanel.AUDIO) TrackChoices.of(controls.tracks, type, words, locale) else emptyList()
     Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 8.dp)) {
         Text(stringResource(title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 24.dp, end = 24.dp, bottom = 8.dp))
-        val list = remember(panel) { LazyListState() }
+        val channelChoices = remember(panel) { if (panel == PlayerPanel.CHANNELS) channels?.load().orEmpty() else emptyList() }
+        // The channel playing in view, among the others.
+        val list = remember(panel) { LazyListState(firstVisibleItemIndex = (channelChoices.indexOfFirst { it.playing } - 2).coerceAtLeast(0)) }
         LazyColumn(state = list) {
             when (panel) {
                 PlayerPanel.SUBTITLES, PlayerPanel.AUDIO -> trackRows(player, controls, type, choices)
@@ -673,6 +683,7 @@ private fun PanelContent(
                 PlayerPanel.MORE -> moreRows(controls, scale, sleep, statisticsShown, onToggleStatistics, onReportProblem)
                 PlayerPanel.ASPECT -> scaleRows(controls, scale, onScale)
                 PlayerPanel.SLEEP -> sleepRows(controls, sleep)
+                PlayerPanel.CHANNELS -> channelRows(controls, channelChoices) { id -> channels?.onChoose?.invoke(id) }
             }
         }
     }
@@ -771,6 +782,17 @@ private fun LazyListScope.sleepRows(controls: PlayerControls, sleep: SleepTimer)
             SheetChoice(name, null, selected = sleep.minutes == minutes, tag = tag) {
                 sleep.set(minutes)
                 controls.closePanel()
+            }
+        }
+    }
+}
+
+private fun LazyListScope.channelRows(controls: PlayerControls, choices: List<ChannelChoice>, onChoose: (String) -> Unit) {
+    choices.forEach { channel ->
+        item(key = "channel-${channel.id}") {
+            SheetChoice(channel.label, channel.now, selected = channel.playing, tag = "channel-${channel.id}") {
+                controls.closePanel()
+                if (!channel.playing) onChoose(channel.id)
             }
         }
     }

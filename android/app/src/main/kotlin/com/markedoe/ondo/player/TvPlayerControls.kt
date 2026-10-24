@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material.icons.rounded.AspectRatio
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BugReport
@@ -130,6 +131,7 @@ fun TvPlayerOverlay(
     onScale: (VideoScale) -> Unit,
     sleep: SleepTimer,
     modifier: Modifier = Modifier,
+    channels: ChannelList? = null,
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -177,7 +179,7 @@ fun TvPlayerOverlay(
                         }
                         if (controls.shown) {
                             Spacer(Modifier.height(18.dp))
-                            ButtonRow(player, controls, info, playPause, buttons)
+                            ButtonRow(player, controls, info, playPause, buttons, channels)
                         }
                     }
                 }
@@ -214,6 +216,7 @@ fun TvPlayerOverlay(
                 scale = scale,
                 onScale = onScale,
                 sleep = sleep,
+                channels = channels,
             )
         }
     }
@@ -393,7 +396,7 @@ internal fun time(ms: Long, locale: Locale): String {
 }
 
 @Composable
-private fun ButtonRow(player: Player, controls: PlayerControls, info: PlayerInfo, playPause: FocusRequester, buttons: Map<PlayerPanel, FocusRequester>) {
+private fun ButtonRow(player: Player, controls: PlayerControls, info: PlayerInfo, playPause: FocusRequester, buttons: Map<PlayerPanel, FocusRequester>, channels: ChannelList?) {
     // Where the player cannot seek (a live channel, a film without an index), a skip would start the video over.
     val transport = controls.seekable
     val playing = controls.playWhenReady
@@ -420,6 +423,12 @@ private fun ButtonRow(player: Player, controls: PlayerControls, info: PlayerInfo
             }
         }
         Spacer(Modifier.weight(1f))
+        // A live channel: the others, with what is on now (a mini-guide).
+        if (channels != null) {
+            RoundButton(Icons.AutoMirrored.Rounded.List, stringResource(R.string.channels), tag = "tvChannels", modifier = Modifier.focusRequester(buttons.getValue(PlayerPanel.CHANNELS))) {
+                controls.open(PlayerPanel.CHANNELS)
+            }
+        }
         val subtitlesOn = !TrackChoices.noneSelected(controls.tracks, C.TRACK_TYPE_TEXT)
         RoundButton(Icons.Rounded.Subtitles, stringResource(R.string.subtitles), tag = "tvSubtitles", on = subtitlesOn, modifier = Modifier.focusRequester(buttons.getValue(PlayerPanel.SUBTITLES))) {
             controls.open(PlayerPanel.SUBTITLES)
@@ -520,6 +529,7 @@ private fun SidePanel(
     scale: VideoScale,
     onScale: (VideoScale) -> Unit,
     sleep: SleepTimer,
+    channels: ChannelList?,
 ) {
     val first = remember(panel) { FocusRequester() }
     Surface(
@@ -540,6 +550,7 @@ private fun SidePanel(
             PlayerPanel.MORE -> R.string.more
             PlayerPanel.ASPECT -> R.string.aspect_ratio
             PlayerPanel.SLEEP -> R.string.sleep_timer
+            PlayerPanel.CHANNELS -> R.string.channels
         }
         Column(Modifier.fillMaxSize().padding(start = 28.dp, top = TvTokens.EdgeTop + 16.dp, end = TvTokens.EdgeEnd, bottom = TvTokens.EdgeTop)) {
             Text(stringResource(title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, bottom = 16.dp))
@@ -547,6 +558,7 @@ private fun SidePanel(
             val locale = LocalConfiguration.current.locales[0]
             val type = if (panel == PlayerPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
             val choices = if (panel == PlayerPanel.SUBTITLES || panel == PlayerPanel.AUDIO) TrackChoices.of(controls.tracks, type, words, locale) else emptyList()
+            val channelChoices = remember(panel, open) { if (panel == PlayerPanel.CHANNELS && open) channels?.load().orEmpty() else emptyList() }
             // Again when the tracks come (the line saying there are none goes, and had the focus).
             LaunchedEffect(panel, open, choices.isEmpty()) { if (open) takeFocus(first) }
             // The list opens on the row in use: a row far down a long list is not drawn yet, and could not take the focus.
@@ -557,6 +569,7 @@ private fun SidePanel(
                 PlayerPanel.MORE -> 0
                 PlayerPanel.ASPECT -> scale.ordinal
                 PlayerPanel.SLEEP -> SLEEP_CHOICES.indexOf(sleep.minutes).coerceAtLeast(0)
+                PlayerPanel.CHANNELS -> channelChoices.indexOfFirst { it.playing }.coerceAtLeast(0)
             }
             val list = remember(panel) { LazyListState(firstVisibleItemIndex = selectedRow) }
             LazyColumn(state = list, verticalArrangement = Arrangement.spacedBy(4.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
@@ -566,6 +579,7 @@ private fun SidePanel(
                     PlayerPanel.MORE -> more(controls, scale, sleep, statisticsShown, onToggleStatistics, onReportProblem, first)
                     PlayerPanel.ASPECT -> scales(controls, scale, onScale, first)
                     PlayerPanel.SLEEP -> sleeps(controls, sleep, first)
+                    PlayerPanel.CHANNELS -> channelRows(controls, channelChoices, first) { id -> channels?.onChoose?.invoke(id) }
                 }
             }
         }
@@ -713,6 +727,18 @@ private fun LazyListScope.sleeps(controls: PlayerControls, sleep: SleepTimer, fi
             ChoiceRow(name, null, selected = selected, tag = tag, modifier = if (selected) Modifier.focusRequester(first) else Modifier) {
                 sleep.set(minutes)
                 controls.closePanel()
+            }
+        }
+    }
+}
+
+private fun LazyListScope.channelRows(controls: PlayerControls, choices: List<ChannelChoice>, first: FocusRequester, onChoose: (String) -> Unit) {
+    choices.forEachIndexed { index, channel ->
+        item(key = "channel-${channel.id}") {
+            val focusFirst = channel.playing || (index == 0 && choices.none { it.playing })
+            ChoiceRow(channel.label, channel.now, selected = channel.playing, tag = "channel-${channel.id}", modifier = if (focusFirst) Modifier.focusRequester(first) else Modifier) {
+                controls.closePanel()
+                if (!channel.playing) onChoose(channel.id)
             }
         }
     }

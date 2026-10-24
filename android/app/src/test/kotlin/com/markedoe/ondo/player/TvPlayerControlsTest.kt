@@ -63,7 +63,9 @@ class TvPlayerControlsTest {
         initiallySelected = setOf(0),
     )
 
-    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false) {
+    private var chosen: String? = null
+
+    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false, channels: ChannelList? = null) {
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
@@ -74,7 +76,7 @@ class TvPlayerControlsTest {
                 OndoTvTheme {
                     TvPlayerOverlay(
                         player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
-                        scale = scale, onScale = { scale = it }, sleep = sleep,
+                        scale = scale, onScale = { scale = it }, sleep = sleep, channels = channels,
                     )
                 }
             }
@@ -343,6 +345,27 @@ class TvPlayerControlsTest {
         assertEquals(null, sleep.minutes)
         compose.onNodeWithTag("sleepEndsAt").assertDoesNotExist()
         assertEquals(0, sleepEnds)
+    }
+
+    /** A live channel: Channels next to Play/Pause lists the others with what is on now; OK on one zaps to it. */
+    @Test
+    fun theChannelsPanelIsAMiniGuide() {
+        val channel = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = false)
+        val list = ChannelList(
+            load = { listOf(ChannelChoice("c1", 1, "World Report", "Evening News", playing = true), ChannelChoice("c2", 2, "Cycling TV", "Mountain Stage", playing = false)) },
+            onChoose = { chosen = it },
+        )
+        start(channel, PlayerInfo("World Report", "Evening News", live = true), channels = list)
+        compose.onNodeWithTag("tvPlayPause").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("tvChannels").assertIsFocused()
+        press(Key.DirectionCenter)
+        row("channel-c1").assertIsFocused().assertIsSelected().assertTextContains("Evening News")
+        press(Key.DirectionDown)
+        row("channel-c2").assertIsFocused().assertTextContains("Mountain Stage")
+        press(Key.DirectionCenter)
+        assertEquals("c2", chosen)
+        compose.onNodeWithTag("tvTrackPanel").assertDoesNotExist()
     }
 
     private companion object {
