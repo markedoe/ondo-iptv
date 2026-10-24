@@ -240,6 +240,50 @@ final class EPGTests: XCTestCase {
         }
     }
 
+    /// A file inflated a piece at a time gives what the whole data gives, wherever the pieces end: members, padding,
+    /// junk, a file cut short, a damaged one, the size limit.
+    func testGzipInflatedInPiecesMatchesTheWholeData() throws {
+        let compressed = try Fixture.data("epg.xml.gz")
+        var inputs = [compressed, compressed + compressed, compressed + Data(count: 16), compressed + Data("<html>junk</html>".utf8),
+                      Data([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xff]), compressed + Data([0x1f, 0x8b, 0x08])]
+        inputs += [10, 20, compressed.count / 2, compressed.count - 8, compressed.count - 1].map { compressed.prefix($0) }
+        func outcome(_ work: () throws -> Data) -> String {
+            do { return "data \(try work().base64EncodedString())" } catch { return "error \(error)" }
+        }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ondo-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        for (index, input) in inputs.enumerated() {
+            for limit in [Data.maxGunzippedSize, 1_000] {
+                let whole = outcome { try input.gunzipped(limit: limit) }
+                for size in [1, 3, 64, 4_096] {
+                    let pieces = outcome {
+                        let inflater = try GzipInflater(limit: limit)
+                        var output = Data()
+                        for start in stride(from: 0, to: input.count, by: size) {
+                            try input[(input.startIndex + start)..<(input.startIndex + min(start + size, input.count))].withUnsafeBytes {
+                                try inflater.feed($0) { output.append($0) }
+                            }
+                        }
+                        try inflater.finish()
+                        return output
+                    }
+                    XCTAssertEqual(pieces, whole, "input \(index), limit \(limit), pieces of \(size) bytes")
+                }
+                let source = folder.appendingPathComponent("\(index).gz")
+                let target = folder.appendingPathComponent("\(index).xml")
+                try input.write(to: source)
+                let file = outcome {
+                    try GzipInflater.decompress(source, to: target, limit: limit)
+                    return try Data(contentsOf: target)
+                }
+                XCTAssertEqual(file, whole, "input \(index) as a file, limit \(limit)")
+                if file.hasPrefix("error") { XCTAssertFalse(FileManager.default.fileExists(atPath: target.path), "nothing left of a failed file") }
+            }
+        }
+        XCTAssertTrue(GzipInflater.isGzipFile(folder.appendingPathComponent("0.gz")))
+    }
+
     func testABrokenGuideIsTheProvidersFault() {
         XCTAssertEqual(ErrorAttribution.classify(GzipError.inflateFailed(-3)), .provider, "a broken file is the provider's")
         XCTAssertEqual(ErrorAttribution.classify(XMLTVParser.ParseError.invalidXML("x")), .provider)
