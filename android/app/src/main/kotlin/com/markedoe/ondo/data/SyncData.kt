@@ -110,8 +110,16 @@ object SyncData {
         ).pruned(now)
     }
 
-    /** What applying [merged] gives: the playlists and the library to keep (everything not synced stays as it is). */
-    class Applied(val playlists: List<SavedPlaylist>, val removed: List<SavedPlaylist>, val library: LibraryState)
+    /**
+     * What applying [merged] gives: the playlists and the library to keep (everything not synced stays as it is), and
+     * for a playlist removed because it is another one (the same one added on two devices) the ID of that one.
+     */
+    class Applied(
+        val playlists: List<SavedPlaylist>,
+        val removed: List<SavedPlaylist>,
+        val library: LibraryState,
+        val replacements: Map<String, String> = emptyMap(),
+    )
 
     private fun usable(playlist: SyncPlaylist) = playlist.id.isNotBlank() && playlist.url.isNotBlank() && !SyncKeys.isFile(playlist.url) && when (playlist.kind) {
         SyncPlaylist.M3U -> true
@@ -215,7 +223,7 @@ object SyncData {
                 }
                 if (carried.isEmpty()) result else result.copy(hiddenCategories = result.hiddenCategories + carried)
             }
-        return Applied(playlists, removed, applied)
+        return Applied(playlists, removed, applied, replacements.toMap())
     }
 
     /** Replacements followed at most, as the merge follows them (docs/SYNC.md, "Merge"). */

@@ -308,8 +308,11 @@ class OndoRepository(
         if (applied.playlists == state.playlists && applied.library == state.library) return
         val removedIds = applied.removed.mapTo(HashSet()) { it.id }
         state.library.reminders.filter { it.playlistId in removedIds }.forEach(reminderScheduler::cancel)
-        // The playlist in use stays unless it was deleted; a device without one takes the first that arrived.
-        val active = state.settings.activePlaylistId?.takeIf { id -> applied.playlists.any { it.id == id } } ?: applied.playlists.firstOrNull()?.id
+        // The playlist in use stays unless it was deleted, or becomes the same one from another device that replaced it;
+        // a device without one takes the first that arrived.
+        val active = state.settings.activePlaylistId?.takeIf { id -> applied.playlists.any { it.id == id } }
+            ?: state.activePlaylistId?.let { applied.replacements[it] }
+            ?: applied.playlists.firstOrNull()?.id
         val settings = state.settings.copy(activePlaylistId = active)
         val before = state.activePlaylist
         persist {

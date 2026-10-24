@@ -33,10 +33,12 @@ class SyncDataTest {
         http://provider.example.com/quiet.mp4
     """.trimIndent()
 
+    private val sports = "http://provider.example.com/sports.m3u"
+
     private var time = 1_760_000_000_000L
 
     private fun TestScope.device(name: String) =
-        OndoRepository(AppStore(folder.newFolder(name)), FakeHttp(mapOf(list to catalogue)), backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
+        OndoRepository(AppStore(folder.newFolder(name)), FakeHttp(mapOf(list to catalogue, sports to catalogue)), backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
 
     private suspend fun OndoRepository.ready(): OndoRepository {
         bootstrap()
@@ -172,6 +174,25 @@ class SyncDataTest {
         val favorites = (0 until 30_000).map { Favorite(java.util.UUID(1, it.toLong()).toString(), ItemKind.MOVIE, "m$it", "Movie $it", addedAt = 2) }
         val state = OndoState(isReady = true, playlists = playlists, library = LibraryState(favorites = favorites))
         assertEquals(favorites.size, SyncData.snapshot(state, "device", "TV", now = 10).favorites.size)
+    }
+
+    /** The playlist in use, added on another device first: the one kept is in use, not another playlist of the device. */
+    @Test
+    fun thePlaylistInUseStaysInUseWhenTheSameOneReplacesIt() = runTest {
+        val tv = device("tv").ready()
+        val phone = device("phone").ready()
+        tv.addPlaylist("Home", list)
+        time += 1_000
+        phone.addPlaylist("Sports", sports)
+        time += 1_000
+        phone.addPlaylist("Living room", list)
+        assertEquals("Living room", phone.state.value.activePlaylist?.name)
+
+        session(phone, tv)
+        val kept = tv.state.value.playlists.single { it.url == list }
+        assertEquals(setOf("Sports", "Home"), phone.state.value.playlists.map { it.name }.toSet())
+        assertEquals("Home", phone.state.value.activePlaylist?.name)
+        assertTrue(kept.id.equals(phone.state.value.activePlaylistId, ignoreCase = true))
     }
 
     /** The same playlist added on another device first: the categories hidden here stay hidden in the one kept. */
