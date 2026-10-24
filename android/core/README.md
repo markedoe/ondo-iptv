@@ -19,6 +19,7 @@ the specification; behaviour and edge cases are kept unless listed under *Differ
 | `library` | `PlaylistLoader`, `PlaybackFactory`, `UserLibrary` (favourites, history, lists, reminders, hidden channels, deterministic merge), `SearchEngine`, `ChannelNumbering`, `ChannelZapping` (the remote's channel keys), `People` (actors and directors), `Awards` (festival awards and selections), `CategoryStyles` and `CategoryTags` (hiding categories by style, word, language or country), `JsonFileStore`, `BackupArchive`, TMDb (`TmdbClient`, `CatalogueMatcher`), `ErrorAttribution` |
 | `net` | `HttpClient` interface, `OkHttpClientAdapter`, `HttpException`, `Gzip`, `Urls` |
 | `playback` | `PlaybackBuffer` (buffer settings → Media3 buffer durations), `PlaybackHealth` (freezes, data rate, pictures lost), `MediaFormat` (MKV, MP4, HLS… for Stream Statistics), `PlaybackLog` and `PrivacyScrubber`, `ProblemReport` (the playback problem report, with no address, login or title) |
+| `sync` | Sync on the local network ([docs/SYNC.md](../../docs/SYNC.md)): `SyncSnapshot` (what a device sends), `SyncMerge` (the deterministic merge), `SyncNetwork` (local addresses, frames), `SyncSession` (one exchange, server and client) |
 
 ## Conventions
 

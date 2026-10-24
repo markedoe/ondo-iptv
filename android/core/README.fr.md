@@ -20,6 +20,7 @@ bas sous *Différences*.
 | `library` | `PlaylistLoader`, `PlaybackFactory`, `UserLibrary` (favoris, historique, listes, rappels, chaînes masquées, fusion déterministe), `SearchEngine`, `ChannelNumbering`, `ChannelZapping` (les touches de chaîne de la télécommande), `People` (acteurs et réalisateurs), `Awards` (prix et sélections des festivals), `CategoryStyles` et `CategoryTags` (masquer des catégories par style, mot, langue ou pays), `JsonFileStore`, `BackupArchive`, TMDb (`TmdbClient`, `CatalogueMatcher`), `ErrorAttribution` |
 | `net` | Interface `HttpClient`, `OkHttpClientAdapter`, `HttpException`, `Gzip`, `Urls` |
 | `playback` | `PlaybackBuffer` (réglages du tampon → durées du tampon Media3), `PlaybackHealth` (gels, débit, images perdues), `MediaFormat` (MKV, MP4, HLS… pour Statistiques du flux), `PlaybackLog` et `PrivacyScrubber`, `ProblemReport` (le rapport de problème de lecture, sans adresse, identifiant ni titre) |
+| `sync` | Synchronisation sur le réseau local ([docs/SYNC.fr.md](../../docs/SYNC.fr.md)) : `SyncSnapshot` (ce qu'envoie un appareil), `SyncMerge` (la fusion déterministe), `SyncNetwork` (adresses locales, trames), `SyncSession` (un échange, serveur et client) |
 
 ## Conventions
 
