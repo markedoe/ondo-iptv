@@ -79,6 +79,16 @@ class SecretShapesTests(unittest.TestCase):
         pkcs12 = bytes.fromhex("308209f4020103308209") + RANDOM.encode() * 8  # what keytool makes by default
         self.assertFinds(base64.b64encode(pkcs12).decode(), "keystore")
 
+    def test_the_app_store_connect_ids_and_the_team_id(self):
+        # CLAUDE.md: the Key ID, the Issuer ID and the Team ID go only into GitHub secrets.
+        key_id, team_id = "Q7XK2" + "M9PL4", "A1B2C" + "3D4E5"
+        issuer_id = "-".join(("69a6de7e", "1d2c", "47e3", "e053", "5b8c7c11a4d1"))
+        for text in (f"ASC_KEY_ID={key_id}", f'ASC_ISSUER_ID: "{issuer_id}"', f"export DEVELOPMENT_TEAM={team_id}",
+                     f'key_id: "{key_id}", issuer_id: "{issuer_id}"', f'team_id("{team_id}")',
+                     f"DEVELOPMENT_TEAM = {team_id};", f"<key>teamID</key>\n<string>{team_id}</string>"):
+            with self.subTest(text=text):
+                self.assertFinds(text, "App Store Connect key ID, issuer ID or team ID")
+
     def test_placeholders_examples_and_lookups_pass(self):
         for text in (
                 "Use username/password, or USERNAME and PASSWORD.",
@@ -102,7 +112,11 @@ class SecretShapesTests(unittest.TestCase):
                 "let password: String", "PASSWORD_MIN_LENGTH = 8", 'const val PREF_TOKEN = "tmdb_token_v4"',
                 '"token": "key-example-0001"', 'apiKey = "YOUR_API_KEY"', 'secret: "xxxxxxxxxxxxxxxx"',
                 'password = "{password}"', "token: <your API Read Access Token>", "let token = tokens[0]",
-                "The ASC_KEY_P8 secret holds the whole -----BEGIN PRIVATE KEY----- block."):
+                "The ASC_KEY_P8 secret holds the whole -----BEGIN PRIVATE KEY----- block.",
+                "          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}", 'key_id: ENV.fetch("ASC_KEY_ID"),',
+                "\"-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')}\"", 'team_id(ENV["DEVELOPMENT_TEAM"])',
+                "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= | xcbeautify", "DEVELOPMENT_TEAM=XXXXXXXXXX",
+                '"kid": self.key_id', '"private_key_id": "0123456789abcdef0123456789abcdef01234567"'):
             with self.subTest(text=text):
                 self.assertClean(text)
 

@@ -93,6 +93,12 @@ def base64_private_key(match):
     return bool(PEM_PRIVATE_KEY.search(decoded))
 
 
+def apple_id(match):
+    """The App Store Connect Key ID and the Team ID (10 capitals and digits) or the Issuer ID (a UUID), which CLAUDE.md
+    keeps in GitHub secrets: given to their names (`ASC_KEY_ID=`, `issuer_id:`, `DEVELOPMENT_TEAM =`, `team_id("…")`)."""
+    value = match.group("value")
+    return not placeholder(value) and bool(re.search(r"\d", value))
+
 # Secrets: specific formats first, then credentials in addresses and values given to secret names. An optional third
 # item decides on each match (placeholders, example hosts).
 SECRET_RULES = [
@@ -113,6 +119,10 @@ SECRET_RULES = [
     ("Anthropic / OpenAI key", re.compile(r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}")),
     ("JSON Web Token", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}")),
     ("App Store Connect key file", re.compile(r"\bAuthKey_[A-Z0-9]{10}\.p8\b")),
+    ("App Store Connect key ID, issuer ID or team ID", re.compile(
+        r"(?i)(?:key[_-]?id|issuer[_-]?id|team[_-]?id(?:entifier)?|development[_-]?team)"
+        r"(?:[\"'`]?[ \t]*(?:=>|:=|=|:|\()[ \t]*[\"'`]?|</key>\s*<string>)"
+        r"(?P<value>(?-i:[A-Z0-9]{10})|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?![\w-])"), apple_id),
     ("credentials in a URL", re.compile(r"\b[a-z][a-z0-9+.-]*://[^/\s:@'\"]+:[^/\s:@'\"$]{6,}@[^\s'\"]+")),
     ("credentials in a URL", re.compile(
         r"(?i)(?:\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)[^\s?#'\"<>]*\?(?:[^\s#'\"<>]*?&)?|[?&])"
