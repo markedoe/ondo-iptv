@@ -161,7 +161,8 @@ user-selected files).
      the build it just uploaded and submits it for review, released as soon as Apple approves it. A submission of
      the same version still waiting for review is withdrawn first: the new build replaces it. The Mac is
      released even when iOS fails (two independent versions). Then the TestFlight edition of the tag is built again
-     for the testers. The same tag sends Android to closed testing (RELEASE-ANDROID.md).
+     for the testers, unless another *Release* run is already waiting (a newer tag's, a push's builds): it is not
+     replaced. The same tag sends Android to closed testing (RELEASE-ANDROID.md).
    - **Rehearsal**: *Actions → Release → Run workflow*, target `release`, `submit` off (the default): the App
      Store edition builds and the listing, without the submission.
 

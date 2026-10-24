@@ -160,7 +160,8 @@ réseau, fichiers choisis par l'utilisateur).
      build qu'il vient d'envoyer et le soumet à la review, publié dès qu'Apple l'approuve. Une soumission de la
      même version encore en attente de review est d'abord retirée : le nouveau build la remplace. Le Mac part même
      si iOS échoue (deux versions indépendantes). Ensuite l'édition TestFlight du tag est reconstruite pour les
-     testeurs. Le même tag envoie Android en test fermé (RELEASE-ANDROID.fr.md).
+     testeurs, sauf si un autre lancement de *Release* attend déjà (celui d'un tag plus récent, les builds d'un
+     push) : il n'est pas remplacé. Le même tag envoie Android en test fermé (RELEASE-ANDROID.fr.md).
    - **Répétition** : *Actions → Release → Run workflow*, cible `release`, `submit` décoché (par défaut) : les
      builds de l'édition App Store et la fiche, sans la soumission.
 
