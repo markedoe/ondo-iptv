@@ -25,7 +25,7 @@ public struct Addic7edClient: SubtitleProvider {
         guard query.isEpisode, let season = query.season, let episodeNumber = query.episode else { return [] }
         let shows: [Show]
         do {
-            shows = try JSONDecoder().decode(ShowSearch.self, from: try await get("/shows/search/\(Self.pathComponent(query.title))")).shows
+            shows = try JSONDecoder().decodeCheckingKeys(ShowSearch.self, from: try await get("/shows/search/\(Self.pathComponent(query.title))")).shows
         } catch HTTPClientError.badStatus(404) {
             return []
         }
@@ -37,7 +37,7 @@ public struct Addic7edClient: SubtitleProvider {
             guard let language = SubtitleLanguages.englishName(of: code) else { continue }
             let listing: SeasonListing
             do {
-                listing = try JSONDecoder().decode(SeasonListing.self, from: try await get("/shows/\(show.id)/\(season)/\(language)"))
+                listing = try JSONDecoder().decodeCheckingKeys(SeasonListing.self, from: try await get("/shows/\(show.id)/\(season)/\(language)"))
             } catch HTTPClientError.badStatus(404) {
                 continue
             }

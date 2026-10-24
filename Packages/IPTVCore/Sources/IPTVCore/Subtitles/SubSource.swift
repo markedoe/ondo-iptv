@@ -35,7 +35,7 @@ public struct SubSourceClient: SubtitleProvider {
     }
 
     public func search(_ query: SubtitleQuery) async throws -> [OnlineSubtitle] {
-        let titles = try JSONDecoder().decode(Envelope<[Title]>.self, from: try await get("/movies/search", [
+        let titles = try JSONDecoder().decodeCheckingKeys(Envelope<[Title]>.self, from: try await get("/movies/search", [
             ("searchType", "text"),
             ("q", query.title),
             ("type", query.isEpisode ? "series" : "movie"),
@@ -47,7 +47,7 @@ public struct SubSourceClient: SubtitleProvider {
         // Two languages at most: one request each, and the service counts them.
         for code in query.languages.prefix(2) {
             guard let name = SubtitleLanguages.englishName(of: code)?.lowercased() else { continue }
-            let subtitles = try JSONDecoder().decode(Envelope<[Subtitle]>.self, from: try await get("/subtitles", [
+            let subtitles = try JSONDecoder().decodeCheckingKeys(Envelope<[Subtitle]>.self, from: try await get("/subtitles", [
                 ("movieId", String(title.movieID)),
                 ("language", name),
                 ("limit", "30"),
