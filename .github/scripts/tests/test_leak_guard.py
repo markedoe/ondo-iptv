@@ -63,6 +63,10 @@ class SecretShapesTests(unittest.TestCase):
         key = RANDOM.lower().encode().hex()[:32]  # 32 hexadecimal digits, as a TMDb API key
         self.assertFinds(f"https://api.themoviedb.org/3/movie/550?language=en-US&api_key={key}", "credentials in a URL")
 
+        # The short live address of Xtream playlists (XtreamURLBuilder.parseLiveURL reads it).
+        self.assertFinds(f"http://{PANEL}/jdoe42/{SHORT}/12345", "credentials in a URL")
+        self.assertFinds(f"#EXTINF:-1,News\nhttp://{PANEL}/jdoe42/{SHORT}/12345.ts\n", "credentials in a URL")
+
     def test_a_private_key_in_a_json_service_account(self):
         body = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC" * 2
         self.assertFinds('{"type": "service_account", "private_key": "' + PEM_BEGIN + "\\n" + body + '\\n"}', "private key")
@@ -123,7 +127,9 @@ class SecretShapesTests(unittest.TestCase):
                 "          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}", 'key_id: ENV.fetch("ASC_KEY_ID"),',
                 "\"-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')}\"", 'team_id(ENV["DEVELOPMENT_TEAM"])',
                 "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= | xcbeautify", "DEVELOPMENT_TEAM=XXXXXXXXXX",
-                '"kid": self.key_id', '"private_key_id": "0123456789abcdef0123456789abcdef01234567"'):
+                '"kid": self.key_id', '"private_key_id": "0123456789abcdef0123456789abcdef01234567"',
+                "http://h.example.com:8080/u/p/42", "https://api.themoviedb.org/3/movie/550",
+                "https://api.themoviedb.org/3/tv/1399", "https://news.site.org/2026/10/24"):
             with self.subTest(text=text):
                 self.assertClean(text)
 
