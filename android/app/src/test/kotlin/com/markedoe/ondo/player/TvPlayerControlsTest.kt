@@ -157,6 +157,18 @@ class TvPlayerControlsTest {
         compose.onNodeWithTag("tracksHint").assertTextContains("This stream has no subtitles.")
     }
 
+    /** A row far down a long list is not drawn until the list scrolls to it: the list opens on it. */
+    @Test
+    fun aLongListOpensOnTheTrackPlaying() {
+        val languages = listOf("ar", "bg", "cs", "da", "de", "el", "es", "et", "fi", "fr", "he", "hu", "it", "ja", "ko", "nl", "no", "pl", "pt", "ro", "ru", "sv", "tr", "zh")
+        start(FakeTracksPlayer(languages.map { FakeTracksPlayer.text(it) }, initiallySelected = setOf(20)))
+        press(Key.DirectionRight, 2)
+        press(Key.DirectionCenter)
+        row("track-20").assertIsFocused().assertIsSelected().assertTextContains("Russian")
+        press(Key.DirectionDown)
+        row("track-21").assertIsFocused().assertTextContains("Swedish")
+    }
+
     @Test
     fun aLiveStreamThatCanGoBackKeepsItsBarWithLive() {
         val timeshift = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("de", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = true)

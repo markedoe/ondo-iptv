@@ -175,7 +175,7 @@ class TvControls(private val scope: CoroutineScope, private val onShownChange: (
         val duration = player.duration.takeIf { it != C.TIME_UNSET && it > 0 }
         val target = (player.currentPosition + byMs).coerceAtLeast(0).let { if (duration != null) it.coerceAtMost(duration) else it }
         player.seekTo(target)
-        positionMs = target
+        refresh(player)
         if (shown) touch() else peek(SKIP_PEEK_MS, if (byMs < 0) -1 else 1)
     }
 
@@ -206,7 +206,7 @@ class TvControls(private val scope: CoroutineScope, private val onShownChange: (
         scrubJob?.cancel()
         scrubMs = null
         player.seekTo(target)
-        positionMs = target
+        refresh(player)
         touch()
     }
 

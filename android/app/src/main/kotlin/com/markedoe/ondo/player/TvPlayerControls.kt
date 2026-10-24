@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -526,12 +527,19 @@ private fun SidePanel(
             Text(stringResource(title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, bottom = 16.dp))
             val words = trackWords()
             val locale = LocalConfiguration.current.locales[0]
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
+            val type = if (panel == TvPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
+            val choices = if (panel == TvPanel.SUBTITLES || panel == TvPanel.AUDIO) TrackChoices.of(controls.tracks, type, words, locale) else emptyList()
+            // The list opens on the row in use: a row far down a long list is not drawn yet, and could not take the focus.
+            val selectedRow = when (panel) {
+                TvPanel.SUBTITLES -> choices.indexOfFirst { it.selected } + 1
+                TvPanel.AUDIO -> choices.indexOfFirst { it.selected }.coerceAtLeast(0)
+                TvPanel.SPEED -> SPEEDS.indexOf(controls.speed).takeIf { it >= 0 } ?: SPEEDS.indexOf(1f)
+                TvPanel.MORE -> 0
+            }
+            val list = remember(panel) { LazyListState(firstVisibleItemIndex = selectedRow) }
+            LazyColumn(state = list, verticalArrangement = Arrangement.spacedBy(4.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
                 when (panel) {
-                    TvPanel.SUBTITLES, TvPanel.AUDIO -> {
-                        val type = if (panel == TvPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
-                        tracks(player, controls, type, words, locale, first)
-                    }
+                    TvPanel.SUBTITLES, TvPanel.AUDIO -> tracks(player, controls, type, choices, first)
                     TvPanel.SPEED -> speeds(player, controls, locale, first)
                     TvPanel.MORE -> more(statisticsShown, onToggleStatistics, onReportProblem, first)
                 }
@@ -554,16 +562,15 @@ private fun trackWords(): TrackWords {
     )
 }
 
-private fun LazyListScope.tracks(player: Player, controls: TvControls, type: Int, words: TrackWords, locale: Locale, first: FocusRequester) {
-    val choices = TrackChoices.of(controls.tracks, type, words, locale)
-    val off = TrackChoices.noneSelected(controls.tracks, type)
+private fun LazyListScope.tracks(player: Player, controls: TvControls, type: Int, choices: List<TrackChoice>, first: FocusRequester) {
+    val off = choices.none { it.selected }
     val choose = { choice: TrackChoice? ->
         player.trackSelectionParameters = TrackChoices.select(player.trackSelectionParameters, type, choice)
         controls.closePanel()
     }
     if (type == C.TRACK_TYPE_TEXT) {
         item(key = "off") {
-            ChoiceRow(stringResource(R.string.off), null, selected = off, tag = "trackOff", modifier = if (off || choices.none { it.selected }) Modifier.focusRequester(first) else Modifier) { choose(null) }
+            ChoiceRow(stringResource(R.string.off), null, selected = off, tag = "trackOff", modifier = if (off) Modifier.focusRequester(first) else Modifier) { choose(null) }
         }
     }
     choices.forEachIndexed { index, choice ->
@@ -591,8 +598,10 @@ private fun LazyListScope.speeds(player: Player, controls: TvControls, locale: L
     SPEEDS.forEach { speed ->
         item(key = "speed-$speed") {
             val selected = controls.speed == speed
+            // Another speed than these (set elsewhere): the remote starts on Normal.
+            val focusFirst = selected || (speed == 1f && controls.speed !in SPEEDS)
             val label = if (speed == 1f) stringResource(R.string.speed_normal) else numbers.format(speed) + "×"
-            ChoiceRow(label, null, selected = selected, tag = "speed-$speed", modifier = if (selected) Modifier.focusRequester(first) else Modifier) {
+            ChoiceRow(label, null, selected = selected, tag = "speed-$speed", modifier = if (focusFirst) Modifier.focusRequester(first) else Modifier) {
                 player.setPlaybackSpeed(speed)
                 controls.closePanel()
             }

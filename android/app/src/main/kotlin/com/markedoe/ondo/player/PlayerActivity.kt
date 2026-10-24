@@ -416,8 +416,14 @@ class PlayerActivity : ComponentActivity() {
         statistics = if (showsStatistics) currentStatistics() else null
     }
 
-    private fun showControls() {
-        if (television) tvControls.show() else playerView?.showController()
+    /** The controls, with where the video is now (the TV's are kept up to date only while they show). */
+    private fun showControls(panel: TvPanel? = null) {
+        if (!television) {
+            playerView?.showController()
+            return
+        }
+        player?.let(tvControls::refresh)
+        tvControls.show(panel)
     }
 
     private fun hideControls() {
@@ -646,8 +652,8 @@ class PlayerActivity : ComponentActivity() {
             RemoteAction.LastChannel -> backToLastChannel()
             RemoteAction.ShowControls -> showControls()
             RemoteAction.HideControls -> hideControls()
-            RemoteAction.Subtitles -> tvControls.open(TvPanel.SUBTITLES)
-            RemoteAction.Audio -> tvControls.open(TvPanel.AUDIO)
+            RemoteAction.Subtitles -> showControls(TvPanel.SUBTITLES)
+            RemoteAction.Audio -> showControls(TvPanel.AUDIO)
             is RemoteAction.Digit -> typeDigit(action.value)
         }
         handledKeys += event.keyCode
