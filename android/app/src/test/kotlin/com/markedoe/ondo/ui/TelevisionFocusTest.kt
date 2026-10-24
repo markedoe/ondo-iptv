@@ -14,6 +14,8 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -42,6 +44,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -165,6 +168,8 @@ class TelevisionFocusTest {
 
     private fun exists(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
 
+    private fun focusedIn(tag: String) = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(tag))).fetchSemanticsNodes().isNotEmpty()
+
     private fun api(action: String? = null) = "$panel/player_api.php?username=viewer&password=secret" + (action?.let { "&action=$it" } ?: "")
 
     private val account = """{"user_info":{"username":"viewer","password":"secret","auth":1,"status":"Active","exp_date":"1900000000","is_trial":"0","active_cons":"0","max_connections":"1","allowed_output_formats":["m3u8","ts"]},"server_info":{"url":"panel.example.com","port":"80","timezone":"UTC"}}"""
@@ -229,5 +234,30 @@ class TelevisionFocusTest {
         waitFor { exists("home") && repository.state.value.content.movies.isNotEmpty() }
         settle(1_000)
         assertEquals("the focus is on ${focused()}", "heroPlay", focusedTag())
+    }
+
+    /**
+     * Typed here, then the same panel from the phone, where it was added first: it replaces this one, and Home is empty
+     * while the catalogue comes again from the panel (the remote can only be in the drawer then). Once it is back, the
+     * remote is on Home again.
+     */
+    @Test
+    fun theRemoteComesBackToHomeWhenThePlaylistTypedHereBecomesThePhones() {
+        start()
+        addWithTheRemote()
+        waitFor { exists("home") && focusedTag() == "heroPlay" }
+        press(Key.DirectionDown)
+        assertTrue("the focus is on ${focused()}", focusedIn("shelfNewMovies"))
+        val typed = repository.state.value.activePlaylistId
+        http.open.value = false
+        compose.runOnIdle { repository.mergeSync(fromThePhone(progress = false), "Phone") }
+        waitFor { repository.state.value.activePlaylistId == phonePlaylist && repository.state.value.activePlaylistId != typed }
+        settle(1_000)
+        http.open.value = true
+        waitFor { repository.state.value.content.movies.isNotEmpty() && exists("hero") }
+        settle(1_000)
+        // The next press moves from something on the page, not from the drawer.
+        press(Key.DirectionDown)
+        assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn("home") && !focusedTag().startsWith("tab"))
     }
 }

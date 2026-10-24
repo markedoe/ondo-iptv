@@ -74,7 +74,8 @@ private const val HERO_ADVANCE_MS = 8_000L
 /**
  * Home on a TV: the featured titles full screen behind their title, facts, plot and buttons, then rows of cards.
  * The focus starts on Play; Right past the last button turns the page (the drawer is on the left). The titles turn
- * by themselves every 8 s while the focus is elsewhere.
+ * by themselves every 8 s while the focus is elsewhere. While Home has nothing to focus (its catalogue replaced and
+ * coming again), the remote can only be in the drawer: Play takes it back once it shows.
  */
 @Composable
 fun TvHomeScreen(
@@ -92,6 +93,10 @@ fun TvHomeScreen(
         channels = stringResource(if (state.channelsAreFavorites) R.string.favorite_channels else R.string.live_tv),
     )
     val (resumeSeries, resumeMovies) = state.continueWatching.partition { it.isSeries }
+    val empty = state.hero.isEmpty() && state.tagSuggestion == null && state.continueWatching.isEmpty() && state.myList.isEmpty() &&
+        state.channels.isEmpty() && state.newMovies.isEmpty() && state.newSeries.isEmpty()
+    val memory = LocalFocusMemory.current
+    LaunchedEffect(empty) { if (empty) memory?.given() }
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(TvTokens.Ink).testTag("home"),
         contentPadding = PaddingValues(bottom = 40.dp),
