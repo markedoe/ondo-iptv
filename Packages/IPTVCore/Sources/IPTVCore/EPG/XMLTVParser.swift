@@ -271,12 +271,13 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
     static func formatEpisode(_ value: String) -> String {
         let parts = value.split(separator: ".", omittingEmptySubsequences: false)
         guard parts.count >= 2 else { return value }
-        func number(_ part: Substring) -> Int? {
-            Int(part.split(separator: "/").first?.trimmingCharacters(in: .whitespaces) ?? "")
+        // 32 bits, as `%02d` prints them (and as on Android): past that, the guide's text.
+        func number(_ part: Substring) -> Int32? {
+            Int32(part.split(separator: "/").first?.trimmingCharacters(in: .whitespaces) ?? "")
         }
         guard let season = number(parts[0]), let episode = number(parts[1]) else { return value }
-        // The guide's text: `Int.max + 1` would trap.
-        guard season < Int.max, episode < Int.max else { return value }
+        // The guide's text: `Int32.max + 1` would trap.
+        guard season < Int32.max, episode < Int32.max else { return value }
         return String(format: "S%02dE%02d", season + 1, episode + 1)
     }
 }

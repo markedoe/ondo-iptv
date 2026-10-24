@@ -166,6 +166,16 @@ class EpgTest {
         assertEquals("E12", programs[2].episode)
     }
 
+    /** A season or episode whose 1-based number does not fit a 32-bit integer keeps the guide's text. */
+    @Test
+    fun episodeNumbersPastIntRangeAreKeptAsText() {
+        assertEquals("2147483647.0.", XmltvParser.formatEpisode("2147483647.0."))
+        assertEquals("1.2147483647.", XmltvParser.formatEpisode("1.2147483647."))
+        assertEquals("9223372036854775807.0.", XmltvParser.formatEpisode("9223372036854775807.0."))
+        assertEquals("S2147483647E01", XmltvParser.formatEpisode("2147483646.0."), "the largest that fits")
+        assertEquals("S02E05", XmltvParser.formatEpisode("1.4.0/1"))
+    }
+
     @Test
     fun indexMatchingAndLookups() {
         val index = EpgIndex(parser.parseGuide(Fixtures.bytes("epg.xml")))

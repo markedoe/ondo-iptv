@@ -157,6 +157,20 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(data.programs["a"]?.map(\.episode), ["9223372036854775807.0.", "1.9223372036854775807."])
     }
 
+    /// `%02d` prints 32 bits: a season or episode whose 1-based number needs more keeps the guide's text too, as on
+    /// Android, instead of "S-2147483648E01" or "S00E01".
+    func testEpisodeNumbersPast32BitsAreKeptAsText() throws {
+        let values = ["2147483647.0.", "1.2147483647.", "4294967295.0.", "4294967296.0.", "-4294967296.0.", "2147483646.0.", "1.4.0/1"]
+        var xml = #"<?xml version="1.0"?><tv>"#
+        for (hour, value) in values.enumerated() {
+            xml += #"<programme channel="a" start="202510091\#(hour)0000 +0000" stop="202510091\#(hour)3000 +0000">"#
+            xml += #"<title>T</title><episode-num system="xmltv_ns">\#(value)</episode-num></programme>"#
+        }
+        let data = try XMLTVParser.parse(Data((xml + "</tv>").utf8))
+        XCTAssertEqual(data.programs["a"]?.map(\.episode),
+                       ["2147483647.0.", "1.2147483647.", "4294967295.0.", "4294967296.0.", "-4294967296.0.", "S2147483647E01", "S02E05"])
+    }
+
     /// A programme's ID is its channel and start second: one listed twice is kept once, or SwiftUI lists get two rows
     /// with one ID.
     func testAProgrammeListedTwiceIsKeptOnce() throws {
