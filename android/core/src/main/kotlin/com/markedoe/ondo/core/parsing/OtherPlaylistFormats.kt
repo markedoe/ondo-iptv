@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.parsing
 
+import com.markedoe.ondo.core.TextDecoding
 import com.markedoe.ondo.core.decodeToStringWithoutBom
 import com.markedoe.ondo.core.model.HttpHeaders
 import com.markedoe.ondo.core.net.Urls
@@ -26,9 +27,14 @@ enum class PlaylistFormat {
     PLAIN_LIST;
 
     companion object {
-        /** Sniffs the first 4 KiB. `null` when it is not a playlist (an HTML error page, for instance). */
+        /**
+         * Sniffs the first 4 KiB, in UTF-16 after its byte order mark (a Windows editor's "Unicode"). `null` when it is
+         * not a playlist (an HTML error page, for instance).
+         */
         fun detect(bytes: ByteArray): PlaylistFormat? {
-            val prefix = String(bytes, 0, minOf(bytes.size, 4096), Charsets.UTF_8)
+            val utf16 = TextDecoding.utf16(bytes)
+            val skipped = if (utf16 == null) 0 else 2
+            val prefix = String(bytes, skipped, minOf(bytes.size, 4096) - skipped, utf16 ?: Charsets.UTF_8)
                 .trim { it.isWhitespace() || it == '﻿' }
             if (prefix.startsWith("#EXTM3U", ignoreCase = true) || prefix.contains("#EXTINF")) return M3U
             if (prefix.startsWith("<") && prefix.lowercase().contains("<playlist")) return XSPF

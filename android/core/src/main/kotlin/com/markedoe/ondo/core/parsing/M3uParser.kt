@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.parsing
 
+import com.markedoe.ondo.core.TextDecoding
 import com.markedoe.ondo.core.model.HttpHeaders
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.nilIfBlank
@@ -61,7 +62,10 @@ data class M3uPlaylist(
 /** `#EXTINF` line content: duration, display title and attributes. */
 internal data class ExtInf(val duration: Double, val title: String, val attributes: Map<String, String>)
 
-/** Extended M3U parser. Byte level: large provider lists (100k+ lines) must parse in well under a second. */
+/**
+ * Extended M3U parser. Byte level: large provider lists (100k+ lines) must parse in well under a second. Reads UTF-8
+ * bytes, any byte that is not UTF-8 as Windows-1252 (a UTF-16 file is converted first, see `PlaylistLoader`).
+ */
 object M3uParser {
     private const val LF: Byte = 0x0A
     private const val CR: Byte = 0x0D
@@ -177,8 +181,11 @@ object M3uParser {
         return true
     }
 
-    private fun string(bytes: ByteArray, start: Int, end: Int): String =
-        if (start >= end) "" else String(bytes, start, end - start, Charsets.UTF_8)
+    /**
+     * Field by field, so that a playlist saved in Windows-1252 (or a UTF-8 one with a few such bytes) reads as written
+     * without a decoded copy of the whole file next to its bytes.
+     */
+    private fun string(bytes: ByteArray, start: Int, end: Int): String = TextDecoding.decode(bytes, start, end)
 
     internal fun parseExtInf(body: String): ExtInf {
         val bytes = body.encodeToByteArray()

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.library
 
+import com.markedoe.ondo.core.TextDecoding
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.epg.EpgFilter
 import com.markedoe.ondo.core.epg.GuideEstimate
@@ -106,12 +107,16 @@ class PlaylistLoader(
     private fun parse(bytes: ByteArray, checkActive: () -> Unit): PlaylistContent {
         val data = Gzip.gunzipIfNeeded(bytes)
         if (data.isEmpty()) throw PlaylistLoaderException.EmptyPlaylist()
-        val content = when (PlaylistFormat.detect(data) ?: throw PlaylistLoaderException.UnsupportedFormat()) {
+        val format = PlaylistFormat.detect(data) ?: throw PlaylistLoaderException.UnsupportedFormat()
+        // The other parsers read UTF-8 bytes: a playlist a Windows editor saved as UTF-16 is converted, once (only then
+        // is there a second copy). The XML parser reads UTF-16 itself.
+        val text = if (format == PlaylistFormat.XSPF) data else TextDecoding.utf8(data)
+        val content = when (format) {
             // Entry by entry into the catalogue: large M3U playlists are the common case.
-            PlaylistFormat.M3U -> M3uContentBuilder.build(M3uParser.headerAttributes(data), M3uParser.entries(data).onEach { checkActive() })
+            PlaylistFormat.M3U -> M3uContentBuilder.build(M3uParser.headerAttributes(text), M3uParser.entries(text).onEach { checkActive() })
             PlaylistFormat.XSPF -> M3uContentBuilder.build(XspfParser.parse(data))
-            PlaylistFormat.JSON -> M3uContentBuilder.build(JsonPlaylistParser.parse(data))
-            PlaylistFormat.PLAIN_LIST -> M3uContentBuilder.build(PlainListParser.parse(data))
+            PlaylistFormat.JSON -> M3uContentBuilder.build(JsonPlaylistParser.parse(text))
+            PlaylistFormat.PLAIN_LIST -> M3uContentBuilder.build(PlainListParser.parse(text))
         }
         // Every entry becomes a channel, a movie or an episode: nothing in the catalogue means no entry.
         if (content.channels.isEmpty() && content.movies.isEmpty() && content.series.isEmpty()) throw PlaylistLoaderException.EmptyPlaylist()

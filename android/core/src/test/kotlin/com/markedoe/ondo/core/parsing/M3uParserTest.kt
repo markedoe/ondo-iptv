@@ -1,6 +1,8 @@
 package com.markedoe.ondo.core.parsing
 
 import com.markedoe.ondo.core.Fixtures
+import com.markedoe.ondo.core.MockHttpClient
+import com.markedoe.ondo.core.library.PlaylistLoader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -125,5 +127,31 @@ class M3uParserTest {
         assertEquals("http://h.example.com/%C3%A9.ts", entries[1].url)
         assertEquals("bare.ts", entries[2].title)
         assertEquals(-1.0, entries[2].duration)
+    }
+
+    /**
+     * Playlists saved by Windows editors come in Windows-1252, or in UTF-16 with a byte order mark ("Unicode"): read
+     * as UTF-8, "Télé" turned into "T\uFFFDl\uFFFD", and a UTF-16 file was not recognised as a playlist at all.
+     */
+    @Test
+    fun playlistsInWindows1252OrUtf16AreRead() {
+        val text = "#EXTM3U\n#EXTINF:-1 group-title=\"Cinéma\",Télé – l’œil\nhttp://example.com/1.m3u8\n"
+        val loader = PlaylistLoader(MockHttpClient())
+
+        val windows = text.toByteArray(charset("windows-1252"))
+        assertEquals(listOf("Télé – l’œil"), M3uParser.parse(windows).entries.map { it.title })
+        assertEquals(listOf("Cinéma"), M3uParser.parse(windows).entries.map { it.groupTitle })
+        assertEquals(listOf("Télé – l’œil"), loader.parse(windows).channels.map { it.name })
+
+        for ((bom, charset) in listOf(byteArrayOf(0xFF.toByte(), 0xFE.toByte()) to Charsets.UTF_16LE, byteArrayOf(0xFE.toByte(), 0xFF.toByte()) to Charsets.UTF_16BE)) {
+            val unicode = bom + text.toByteArray(charset)
+            assertEquals(PlaylistFormat.M3U, PlaylistFormat.detect(unicode), charset.name())
+            assertEquals(listOf("Télé – l’œil"), loader.parse(unicode).channels.map { it.name }, charset.name())
+        }
+
+        // UTF-8, and a UTF-8 file with one stray Windows-1252 byte: each character as it was written.
+        assertEquals(listOf("Télé – l’œil"), M3uParser.parse(text.encodeToByteArray()).entries.map { it.title })
+        val mixed = "#EXTM3U\n#EXTINF:-1,Télé ".encodeToByteArray() + byteArrayOf(0xE9.toByte()) + "\nhttp://example.com/1.m3u8\n".encodeToByteArray()
+        assertEquals(listOf("Télé é"), M3uParser.parse(mixed).entries.map { it.title })
     }
 }
