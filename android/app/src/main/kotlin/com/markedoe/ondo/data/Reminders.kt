@@ -43,7 +43,8 @@ class WorkManagerReminderScheduler(private val context: Context) : ReminderSched
         if (reminder.start <= now) return
         val request = OneTimeWorkRequestBuilder<ReminderWorker>()
             .setInitialDelay((reminder.start - ReminderScheduler.LEAD_TIME - now).coerceAtLeast(0), TimeUnit.MILLISECONDS)
-            .setInputData(workDataOf(KEY_TITLE to reminder.title, KEY_CHANNEL to reminder.channelName, KEY_START to reminder.start))
+            // WorkManager refuses data over 10 KB: a guide's title can be far longer (a notification shows less anyway).
+            .setInputData(workDataOf(KEY_TITLE to reminder.title.take(MAX_TEXT), KEY_CHANNEL to reminder.channelName.take(MAX_TEXT), KEY_START to reminder.start))
             .build()
         WorkManager.getInstance(context).enqueueUniqueWork(workName(reminder), ExistingWorkPolicy.REPLACE, request)
     }
@@ -58,6 +59,9 @@ class WorkManagerReminderScheduler(private val context: Context) : ReminderSched
         const val KEY_TITLE = "title"
         const val KEY_CHANNEL = "channel"
         const val KEY_START = "start"
+
+        /** Characters of the title and of the channel's name kept: both fit in WorkManager's 10 KB, 3 bytes a character. */
+        const val MAX_TEXT = 1_000
     }
 }
 
