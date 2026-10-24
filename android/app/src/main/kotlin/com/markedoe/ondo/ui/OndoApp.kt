@@ -419,9 +419,12 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
     val locale = LocalConfiguration.current.locales[0]
     // Off the main thread: finding the movie, its similar titles, awards and hidden categories go through the whole
     // catalogue. A change (My List, details loaded) keeps the page on screen until the new one is ready.
+    var gone by remember { mutableStateOf(false) }
     val detail by produceState<MovieDetailUiState?>(null, state, id, locale) {
         value = withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale) } }
+        gone = value == null && !state.isLoading && !state.isRestoring
     }
+    BackWhenGone(gone, navController)
     val ui = detail ?: return Loading()
     val movie = ui.item.movie
     val actions = DetailActions(
@@ -445,9 +448,12 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
     var season by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(id) { viewModel.loadSeries(id) }
     // Off the main thread: finding the series, its similar titles and hidden categories go through the whole catalogue.
+    var gone by remember { mutableStateOf(false) }
     val detail by produceState<SeriesDetailUiState?>(null, state, id) {
         value = withContext(Dispatchers.Default) { UiMappers.series(state, id)?.let { UiMappers.seriesDetail(state, it, null, null) } }
+        gone = value == null && !state.isLoading && !state.isRestoring
     }
+    BackWhenGone(gone, navController)
     val computed = detail ?: return Loading()
     // The season chosen and a loading error show at once, without computing the page again.
     val ui = computed.copy(selectedSeason = season ?: computed.selectedSeason, error = errors[id]?.let { loadErrorText(it) })
@@ -464,6 +470,17 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onNewCollection = { viewModel.newCollection(it, ui.item) },
         )
     if (isTelevision()) TvSeriesDetailScreen(ui, actions) else SeriesDetailScreen(ui, actions)
+}
+
+/**
+ * A title's page once the catalogue, loaded, no longer has the title (refreshed without it, or replaced by another
+ * device's copy): back to the page before, as a deleted collection's page goes. Only while the page is the one shown.
+ */
+@Composable
+private fun BackWhenGone(gone: Boolean, navController: NavHostController) {
+    if (!gone) return
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) { navController.popBackStack() } }
 }
 
 @Composable

@@ -15,6 +15,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
@@ -44,6 +45,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -56,6 +58,7 @@ import org.robolectric.annotation.Config
 /**
  * Android TV: where the remote's focus is when the catalogue under it changes — it arrives on a Home already shown, or
  * the playlist is replaced by another device's copy.
+ * What a page does when its title leaves the catalogue.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -259,5 +262,44 @@ class TelevisionFocusTest {
         // The next press moves from something on the page, not from the drawer.
         press(Key.DirectionDown)
         assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn("home") && !focusedTag().startsWith("tab"))
+    }
+
+    /** The stored playlist's list once its movies and series are gone from the provider. */
+    private val withoutTitles = mapOf(
+        Fixtures.playlist.url to "#EXTM3U\n#EXTINF:-1 group-title=\"News\",Ondo News\nhttp://example.com/live/c1.m3u8\n",
+    )
+
+    /** From Home's Play, down [rows] rows, OK: a title's page. */
+    private fun openFromHome(rows: Int) {
+        waitFor { focusedTag() == "heroPlay" }
+        press(Key.DirectionDown, times = rows)
+        press(Key.DirectionCenter)
+        waitFor { exists("detail") }
+        settle(500)
+    }
+
+    private fun spinner() = compose.onAllNodes(hasContentDescription("Loading…")).fetchSemanticsNodes().isNotEmpty()
+
+    /** The catalogue refreshed without the title of the page open: the page goes back, as a deleted collection's does. */
+    private fun refreshWithoutTheTitle(gone: () -> Boolean) {
+        compose.runOnIdle { repository.refresh() }
+        waitFor { gone() && !repository.state.value.isLoading }
+        settle(1_000)
+        assertFalse("the page waits for a title the catalogue no longer has", spinner())
+        waitFor { exists("home") && focusedNode() != null }
+    }
+
+    @Test
+    fun aMoviePageWhoseTitleLeavesTheCatalogueGoesBack() {
+        start(answers = withoutTitles, stored = Fixtures.content)
+        openFromHome(rows = 1)
+        refreshWithoutTheTitle { repository.state.value.content.movies.isEmpty() }
+    }
+
+    @Test
+    fun aSeriesPageWhoseTitleLeavesTheCatalogueGoesBack() {
+        start(answers = withoutTitles, stored = Fixtures.content)
+        openFromHome(rows = 2)
+        refreshWithoutTheTitle { repository.state.value.content.series.isEmpty() }
     }
 }
