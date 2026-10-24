@@ -91,6 +91,35 @@ class OkHttpClientAdapterTest {
         }
     }
 
+    /**
+     * A body whose length is known (a file, an answer with its Content-Length) is read straight into an array of that
+     * size: no copy of it. Read on the calling thread here, where the JVM counts what it allocates.
+     */
+    @Test
+    fun aBodyOfKnownLengthIsReadIntoItsOwnArray() {
+        val size = 24 * 1024 * 1024 + 5
+        val file = Files.createTempFile("ondo", ".m3u").toFile()
+        try {
+            val body = ByteArray(size) { (it * 7).toByte() }
+            file.writeBytes(body)
+            val threads = java.lang.management.ManagementFactory.getThreadMXBean() as? com.sun.management.ThreadMXBean
+            org.junit.Assume.assumeTrue("needs the count of allocated bytes", threads != null && threads.isThreadAllocatedMemorySupported)
+            threads!!.isThreadAllocatedMemoryEnabled = true
+            val sameThread = OkHttpClientAdapter(ioDispatcher = Dispatchers.Unconfined)
+            val before = threads.currentThreadAllocatedBytes
+            val read = runBlocking { sameThread.get(file.toURI().toString()) }
+            val allocated = threads.currentThreadAllocatedBytes - before
+            kotlin.test.assertContentEquals(body, read)
+            assertTrue(allocated < size + 1024 * 1024, "$allocated bytes allocated for a body of $size")
+
+            // An answer with its Content-Length comes whole too.
+            server.enqueue(MockResponse().setBody(okio.Buffer().write(body)))
+            kotlin.test.assertContentEquals(body, runBlocking { client.get(server.url("/list.m3u").toString()) })
+        } finally {
+            file.delete()
+        }
+    }
+
     /** A guide goes to a file, never whole in memory; a file address is copied the same way. */
     @Test
     fun downloadsWriteTheBodyToAFile(): Unit = runBlocking(Dispatchers.IO) {

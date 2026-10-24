@@ -30,14 +30,17 @@ class OkHttpClientAdapter(
 ) : HttpClient {
 
     override suspend fun get(url: String, headers: Map<String, String>): ByteArray =
-        fetch(url, headers) { readLimited(it, MAX_BODY_SIZE) }
+        fetch(url, headers) { body, length -> readLimited(body, MAX_BODY_SIZE, length) }
 
     /** Streams the answer to [file]: a large guide never sits whole in memory. */
     override suspend fun download(url: String, headers: Map<String, String>, file: File) =
-        fetch(url, headers) { copyLimited(it, file, MAX_BODY_SIZE) }
+        fetch(url, headers) { body, _ -> copyLimited(body, file, MAX_BODY_SIZE) }
 
-    /** Opens `url` (http, https or file) and hands its body to [consume], on the I/O thread that reads it. */
-    private suspend fun <T> fetch(url: String, headers: Map<String, String>, consume: (InputStream) -> T): T {
+    /**
+     * Opens `url` (http, https or file) and hands its body to [consume], on the I/O thread that reads it, with its
+     * length when it is known (-1 otherwise).
+     */
+    private suspend fun <T> fetch(url: String, headers: Map<String, String>, consume: (InputStream, Long) -> T): T {
         if (url.startsWith("file:", ignoreCase = true)) {
             val file = try {
                 File(URI(url))
@@ -46,7 +49,7 @@ class OkHttpClientAdapter(
             } catch (e: java.net.URISyntaxException) {
                 throw HttpException.InvalidUrl(url)
             }
-            return withContext(ioDispatcher) { consume(file.inputStream()) }
+            return withContext(ioDispatcher) { file.inputStream().let { consume(it, file.length()) } }
         }
         val httpUrl = url.toHttpUrlOrNull() ?: throw HttpException.InvalidUrl(url)
         val request = Request.Builder().url(httpUrl).headers(requestHeaders(headers)).build()
@@ -65,7 +68,8 @@ class OkHttpClientAdapter(
                             return
                         }
                         val body = try {
-                            consume(it.body.byteStream())
+                            // -1 when OkHttp inflates the answer, or it has no Content-Length.
+                            consume(it.body.byteStream(), it.body.contentLength())
                         } catch (e: IOException) {
                             continuation.resumeWithException(e)
                             return
@@ -89,18 +93,56 @@ class OkHttpClientAdapter(
         /** Largest response read into memory: far above any real playlist or guide, below what would stop the app. */
         const val MAX_BODY_SIZE = 256L * 1024 * 1024
 
-        internal fun readLimited(input: InputStream, limit: Long): ByteArray {
-            val output = java.io.ByteArrayOutputStream()
-            val buffer = ByteArray(256 * 1024)
-            input.use { stream ->
-                while (true) {
-                    val read = stream.read(buffer)
-                    if (read < 0) break
-                    if (output.size() + read > limit) throw HttpException.TooLarge(limit)
-                    output.write(buffer, 0, read)
-                }
+        private const val PIECE = 256 * 1024
+
+        /**
+         * The body, up to [limit] bytes, in an array of its size: straight into it when its length is known
+         * ([expectedLength]), otherwise in pieces copied into it once at the end. A buffer doubled as it grew, then
+         * copied, needed close to four times the body: a 40 MB playlist took about 100 MB at once, on a TV that gives
+         * an app 128.
+         */
+        internal fun readLimited(input: InputStream, limit: Long, expectedLength: Long = -1): ByteArray = input.use { stream ->
+            if (expectedLength > limit) throw HttpException.TooLarge(limit)
+            val pieces = ArrayList<ByteArray>()
+            var total = 0L
+            if (expectedLength >= 0) {
+                val exact = ByteArray(expectedLength.toInt())
+                val read = fill(stream, exact)
+                if (read < exact.size) return exact.copyOf(read) // shorter than announced
+                val next = stream.read()
+                if (next < 0) return exact
+                // Longer than announced (a file still being written): the rest in pieces.
+                pieces.add(exact)
+                pieces.add(byteArrayOf(next.toByte()))
+                total = exact.size + 1L
             }
-            return output.toByteArray()
+            while (true) {
+                val piece = ByteArray(PIECE)
+                val read = fill(stream, piece)
+                total += read
+                if (total > limit) throw HttpException.TooLarge(limit)
+                if (read > 0) pieces.add(if (read == PIECE) piece else piece.copyOf(read))
+                if (read < PIECE) break
+            }
+            if (pieces.size == 1) return pieces[0]
+            val body = ByteArray(total.toInt())
+            var at = 0
+            for (piece in pieces) {
+                System.arraycopy(piece, 0, body, at, piece.size)
+                at += piece.size
+            }
+            body
+        }
+
+        /** Reads into [bytes] until they are full or the stream ends; the count read. */
+        private fun fill(stream: InputStream, bytes: ByteArray): Int {
+            var read = 0
+            while (read < bytes.size) {
+                val count = stream.read(bytes, read, bytes.size - read)
+                if (count < 0) break
+                read += count
+            }
+            return read
         }
 
         internal fun copyLimited(input: InputStream, file: File, limit: Long) {
