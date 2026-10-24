@@ -250,13 +250,30 @@ final class LocalSync {
         }
     }
 
-    /// Whether an endpoint is an address of the local network (`SyncNetwork.isLocal`); a name is not an address.
+    /// Whether an endpoint is an address of the local network (`SyncNetwork.isLocal`) and not this device's loopback:
+    /// another device is never reached there, while any process on this one could advertise the service there. A
+    /// name is not an address.
     nonisolated static func isLocal(_ endpoint: NWEndpoint) -> Bool {
         guard case .hostPort(let host, _) = endpoint else { return false }
+        let bytes: [UInt8]
         switch host {
-        case .ipv4(let address): return SyncNetwork.isLocal([UInt8](address.rawValue))
-        case .ipv6(let address): return SyncNetwork.isLocal([UInt8](address.rawValue))
+        case .ipv4(let address): bytes = [UInt8](address.rawValue)
+        case .ipv6(let address): bytes = [UInt8](address.rawValue)
         default: return false
+        }
+        return SyncNetwork.isLocal(bytes) && !isLoopback(bytes)
+    }
+
+    /// 127/8 and ::1, also an IPv4 loopback address mapped in IPv6.
+    nonisolated static func isLoopback(_ bytes: [UInt8]) -> Bool {
+        switch bytes.count {
+        case 4:
+            return bytes[0] == 127
+        case 16:
+            let mapped = bytes[0..<10].allSatisfy { $0 == 0 } && bytes[10] == 0xFF && bytes[11] == 0xFF
+            return (mapped && bytes[12] == 127) || (bytes[0..<15].allSatisfy { $0 == 0 } && bytes[15] == 1)
+        default:
+            return false
         }
     }
 }

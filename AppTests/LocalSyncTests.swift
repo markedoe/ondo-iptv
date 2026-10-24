@@ -205,9 +205,22 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertLessThan(elapsed, 10)
     }
 
-    func testOnlyLocalAddressesAreReached() {
-        XCTAssertTrue(LocalSync.isLocal(.hostPort(host: .ipv4(IPv4Address("127.0.0.1")!), port: 9)))
+    func testOnlyLocalAddressesAreReached() throws {
+        XCTAssertTrue(LocalSync.isLocal(.hostPort(host: .ipv4(IPv4Address("169.254.3.4")!), port: 9))) // leak-guard: allow
         XCTAssertTrue(LocalSync.isLocal(.hostPort(host: .ipv6(IPv6Address("fe80::1")!), port: 9)))
+        XCTAssertTrue(LocalSync.isLocal(.hostPort(host: .ipv6(IPv6Address("fc00::1")!), port: 9)))
+        // This device's loopback: any process on it could advertise the service there, and no other device is there.
+        for loopback in ["127.0.0.1", "127.1.2.3"] {
+            let address = try XCTUnwrap(IPv4Address(loopback), loopback)
+            XCTAssertFalse(LocalSync.isLocal(.hostPort(host: .ipv4(address), port: 9)), loopback)
+        }
+        for loopback in ["::1", "::ffff:127.0.0.1"] {
+            let address = try XCTUnwrap(IPv6Address(loopback), loopback)
+            XCTAssertFalse(LocalSync.isLocal(.hostPort(host: .ipv6(address), port: 9)), loopback)
+        }
+        XCTAssertTrue(LocalSync.isLoopback([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 127, 0, 0, 1]))
+        XCTAssertFalse(LocalSync.isLoopback([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xFF, 0xFF, 169, 254, 3, 4]))
+        XCTAssertFalse(LocalSync.isLoopback([127, 0, 0]))
         XCTAssertFalse(LocalSync.isLocal(.hostPort(host: .ipv4(IPv4Address("8.8.8.8")!), port: 9)))
         XCTAssertFalse(LocalSync.isLocal(.hostPort(host: .name("example.com", nil), port: 9)), "a name is not an address")
     }
