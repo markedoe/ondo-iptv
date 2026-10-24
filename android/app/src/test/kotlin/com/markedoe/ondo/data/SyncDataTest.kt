@@ -186,6 +186,11 @@ class SyncDataTest {
                 SyncPlaylist("p2", "No address", SyncPlaylist.M3U, " ", addedAt = 1, updatedAt = 1),
                 SyncPlaylist("p3", "Another kind", "stalker", "http://provider.example.com", addedAt = 1, updatedAt = 1),
                 SyncPlaylist("p4", "No login", SyncPlaylist.XTREAM, "http://provider.example.com", addedAt = 1, updatedAt = 1),
+                // A file of this device as a playlist: file playlists never sync, and the app would read it from disk.
+                SyncPlaylist("p5", "A file here", SyncPlaylist.M3U, "file:///data/data/com.markedoe.ondo/files/ondo/library.json", addedAt = 1, updatedAt = 1),
+                SyncPlaylist("p6", "Another file", SyncPlaylist.M3U, " FILE:/dev/zero", addedAt = 1, updatedAt = 1),
+                SyncPlaylist("p7", "A document", SyncPlaylist.M3U, "content://media/list.m3u", addedAt = 1, updatedAt = 1),
+                SyncPlaylist("p8", "A path", SyncPlaylist.M3U, "/sdcard/list.m3u", addedAt = 1, updatedAt = 1),
                 // The playlist in use, renamed into another kind: kept as it is.
                 SyncPlaylist(home.id, "Changed", "other", home.url, addedAt = home.addedAt, updatedAt = time + 1),
             ),

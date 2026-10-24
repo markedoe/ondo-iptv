@@ -31,9 +31,12 @@ object SyncKeys {
     fun syncs(entry: WatchEntry) = entry.kind != ItemKind.CHANNEL
 
     /** A playlist imported from a file is on this device only: it never syncs. */
-    fun syncs(playlist: SavedPlaylist): Boolean {
-        val url = playlist.url.trim().lowercase()
-        return !(url.startsWith("content:") || url.startsWith("file:") || url.startsWith("/"))
+    fun syncs(playlist: SavedPlaylist): Boolean = !isFile(playlist.url)
+
+    /** A file on the device (imported, or a path): what another device sends is never one. */
+    fun isFile(address: String): Boolean {
+        val url = address.trim().lowercase()
+        return url.startsWith("content:") || url.startsWith("file:") || url.startsWith("/")
     }
 }
 
@@ -110,7 +113,7 @@ object SyncData {
     /** What applying [merged] gives: the playlists and the library to keep (everything not synced stays as it is). */
     class Applied(val playlists: List<SavedPlaylist>, val removed: List<SavedPlaylist>, val library: LibraryState)
 
-    private fun usable(playlist: SyncPlaylist) = playlist.id.isNotBlank() && playlist.url.isNotBlank() && when (playlist.kind) {
+    private fun usable(playlist: SyncPlaylist) = playlist.id.isNotBlank() && playlist.url.isNotBlank() && !SyncKeys.isFile(playlist.url) && when (playlist.kind) {
         SyncPlaylist.M3U -> true
         SyncPlaylist.XTREAM -> !playlist.username.isNullOrBlank() && playlist.password != null
         else -> false
@@ -120,7 +123,8 @@ object SyncData {
         // The device's own IDs, whatever their case; IDs it does not know keep the merged (lowercase) form.
         val localIds = state.playlists.associateBy({ it.id.lowercase() }, { it.id })
         fun local(id: String) = localIds[id.lowercase()] ?: id
-        // A playlist this app could not open (no address, another kind, an Xtream one without its login) is left out.
+        // A playlist this app could not open (no address, another kind, an Xtream one without its login), or one that
+        // names a file of this device, is left out.
         val mergedById = merged.playlists.filter(::usable).associateBy { it.id }
         val removed = state.playlists.filter { playlist ->
             SyncKeys.syncs(playlist) && playlist.id.lowercase() !in mergedById && SyncKeys.playlist(playlist.id) in merged.deleted
