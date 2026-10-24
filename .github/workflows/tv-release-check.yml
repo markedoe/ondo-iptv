@@ -84,6 +84,7 @@ jobs:
           api-level: ${{ inputs.api-level }}
           target: android-tv
           arch: x86
+          profile: tv_1080p
           ram-size: 2048M
           heap-size: ${{ inputs.heap-size }}
           disk-size: 6000M

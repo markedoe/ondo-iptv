@@ -108,8 +108,10 @@ class Tv:
 
     def key(self, name, times=1, pause=0.4):
         code = f"DPAD_{name}" if name in ("UP", "DOWN", "LEFT", "RIGHT") else name
+        # From a D-pad, as a remote's keys come: Compose moves the focus out of a text field only for those.
+        source = "dpad " if code.startswith("DPAD_") else ""
         for _ in range(times):
-            self.shell(f"input keyevent KEYCODE_{code}")
+            self.shell(f"input {source}keyevent KEYCODE_{code}")
             time.sleep(pause)
 
     def wait_for(self, what, condition, timeout, every=2.0):
