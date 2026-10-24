@@ -26,6 +26,19 @@ final class ProblemReportTests: XCTestCase {
         XCTAssertEqual(PrivacyScrubber.scrub("VLC 3.0.21, iOS 18.0.1"), "VLC 3.0.21, iOS 18.0.1")
     }
 
+    /// A relative address (a playlist line a player quotes whole) has no scheme: the login in its query or in its Xtream
+    /// path goes too.
+    func testTheScrubberRemovesTheLoginOfARelativeAddress() {
+        let scrubbed = PrivacyScrubber.scrub(
+            "Couldn't match METHOD=(NONE|AES-128) in #EXT-X-KEY:URI=\"key.php?username=viewer&password=secret-pass&token=abc123\" / "  // leak-guard: allow
+                + "Couldn't match NAME=\"(.+?)\" in #EXT-X-MEDIA:TYPE=AUDIO,URI=\"/movie/viewer/secret-pass/42.m3u8\""
+        )
+        for secret in ["secret-pass", "viewer", "abc123"] {
+            XCTAssertFalse(scrubbed.contains(secret), "\(secret) left in: \(scrubbed)")
+        }
+        XCTAssertTrue(scrubbed.contains("Couldn't match METHOD=(NONE|AES-128) in #EXT-X-KEY:URI="), scrubbed)
+    }
+
     /// Hosts under any top-level domain and shortened IPv6 addresses go; the names of errors, codecs and versions stay.
     func testTheScrubberKnowsEveryHostAndKeepsWhatHelps() {
         let samples = [

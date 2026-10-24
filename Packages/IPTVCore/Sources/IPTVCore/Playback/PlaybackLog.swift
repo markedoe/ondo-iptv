@@ -27,6 +27,10 @@ public enum PrivacyScrubber {
     private static let patterns: [(NSRegularExpression, String)] = [
         (#"\b[a-zA-Z][a-zA-Z0-9+.-]*://\S+"#, "<address>"),
         (#"\b[^\s@/:]+:[^\s@/]+@[^\s/]+"#, "<address>"),
+        // What an address without its scheme (a relative one, quoted from a playlist) still carries: the login in its
+        // query or in an Xtream path.
+        (#"(?i)(?<![\p{L}\p{N}_])((?:[\p{L}\p{N}]+_)?(?:username|password|passwd|pass|pwd|user|token|key|auth))=[^&\s"'<>]+"#, "$1=<login>"),
+        (#"(?i)/(live|movie|series|timeshift)/[^/\s"'<>]+/[^/\s"'<>]+/"#, "/$1/<login>/<login>/"),
         (#"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"#, "<e-mail>"),
         (#"\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b"#, "<ip>"),
         (#"\b(?:[0-9A-Fa-f]{1,4}:){4,7}[0-9A-Fa-f]{1,4}\b"#, "<ip>"),

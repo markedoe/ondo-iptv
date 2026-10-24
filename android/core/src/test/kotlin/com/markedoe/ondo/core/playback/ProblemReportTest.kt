@@ -39,6 +39,17 @@ class ProblemReportTest {
         assertEquals("host <host> timed out", PrivacyScrubber.scrub(samples[6]))
     }
 
+    /** Media3 quotes a malformed HLS tag whole ("Couldn't match … in #EXT-X-KEY:…"): a relative address in it has no scheme. */
+    @Test
+    fun theScrubberRemovesTheLoginOfARelativeAddress() {
+        val text = PrivacyScrubber.scrub(
+            "Couldn't match METHOD=(NONE|AES-128) in #EXT-X-KEY:URI=\"key.php?username=viewer&password=secret-pass&token=abc123\" / " + // leak-guard: allow
+                "Couldn't match NAME=\"(.+?)\" in #EXT-X-MEDIA:TYPE=AUDIO,URI=\"/movie/viewer/secret-pass/42.m3u8\"",
+        )
+        for (secret in secrets) assertFalse(secret in text, "$secret left in: $text")
+        assertTrue("Couldn't match METHOD=(NONE|AES-128) in #EXT-X-KEY:URI=" in text, text)
+    }
+
     @Test
     fun theScrubberKeepsTimingsAndVersions() {
         assertEquals("seek to 600.0 s done after 0.4 s", PrivacyScrubber.scrub("seek to 600.0 s done after 0.4 s"))

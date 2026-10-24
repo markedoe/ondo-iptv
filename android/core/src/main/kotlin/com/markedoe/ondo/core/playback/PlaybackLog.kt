@@ -32,6 +32,11 @@ object PrivacyScrubber {
     private val rules: List<Pair<Regex, (MatchResult, CharSequence) -> String>> = listOf(
         Regex("""\b[a-zA-Z][a-zA-Z0-9+.-]*://\S+""") to { _, _ -> "<address>" },
         Regex("""\b[^\s@/:]+:[^\s@/]+@[^\s/]+""") to { _, _ -> "<address>" },
+        // What an address without its scheme (a relative one, quoted from a playlist) still carries: the login in its
+        // query or in an Xtream path.
+        Regex("""(?i)(?<![\p{L}\p{N}_])((?:[\p{L}\p{N}]+_)?(?:username|password|passwd|pass|pwd|user|token|key|auth))=[^&\s"'<>]+""") to
+            { match, _ -> "${match.groupValues[1]}=<login>" },
+        Regex("""(?i)/(live|movie|series|timeshift)/[^/\s"'<>]+/[^/\s"'<>]+/""") to { match, _ -> "/${match.groupValues[1]}/<login>/<login>/" },
         Regex("""\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b""") to { _, _ -> "<e-mail>" },
         Regex("""\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b""") to { _, _ -> "<ip>" },
         // IPv6, full or compressed ("2001:db8::7", "fe80::1%wlan0"), bare or in brackets with a port.
