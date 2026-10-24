@@ -47,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -268,12 +269,14 @@ class PlayerActivity : ComponentActivity() {
                     )
                     // On a TV, the controls drawn for the remote; none over an error, where Try Again has the focus.
                     val shownPlayer = player
+                    // The programme on now, looked up again each minute.
+                    val minute by remember { derivedStateOf { tvControls.clockMs / 60_000 } }
                     if (television && !inPictureInPicture && shownPlayer != null && errorMessage == null) {
                         OndoTvTheme {
                             TvPlayerOverlay(
                                 player = shownPlayer,
                                 controls = tvControls,
-                                info = tvPlayerInfo(),
+                                info = tvPlayerInfo(minute * 60_000),
                                 statisticsShown = showsStatistics,
                                 onToggleStatistics = ::toggleStatistics,
                                 onReportProblem = { shownReport = problemReport() },
@@ -394,11 +397,11 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** What the TV's controls say at the top: the title and its line, or a live channel's number, name and programme. */
-    private fun tvPlayerInfo(): TvPlayerInfo {
+    private fun tvPlayerInfo(now: Long): TvPlayerInfo {
         val current = request
         val state = repository.state.value
         val channel = current.channelId?.takeIf { current.isLive }?.let { id -> state.content.channels.firstOrNull { it.id == id } }
-        val programme = channel?.let { state.guide?.current(it, tvControls.clockMs) }
+        val programme = channel?.let { state.guide?.current(it, now) }
         return TvPlayerInfo(
             title = channel?.let { listOfNotNull(it.number?.toString(), it.name).joinToString("  ") } ?: current.title,
             subtitle = programme?.title ?: current.subtitle,

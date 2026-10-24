@@ -153,7 +153,7 @@ fun TvPlayerOverlay(
         openPanel = controls.panel
         if (controls.panel == null && closed != null && controls.shown) takeFocus(buttons.getValue(closed))
     }
-    val seekBar = info.live.not() || controls.seekable
+    val seekBar = !info.live || controls.seekable
     Box(modifier.fillMaxSize()) {
         AnimatedVisibility(visible = controls.shown || controls.peeking, enter = fadeIn(), exit = fadeOut()) {
             Box(
@@ -172,7 +172,7 @@ fun TvPlayerOverlay(
                     // The video's time runs left to right in every language.
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         if (seekBar) {
-                            SeekBar(player, controls, focusable = controls.shown)
+                            SeekBar(player, controls, focusable = controls.shown, live = info.live)
                         } else {
                             LiveLine(info, controls.clockMs)
                         }
@@ -283,10 +283,11 @@ private val LiveRed = Color(0xFFE53935)
 
 /**
  * The progress bar, with the part already loaded. With the focus, Left and Right move a target along it (faster while
- * held) and the player goes there once the remote stops, or on OK ([TvControls.scrub]).
+ * held) and the player goes there once the remote stops, or on OK ([TvControls.scrub]). A [live] stream that can go
+ * back has it too, with LIVE.
  */
 @Composable
-private fun SeekBar(player: Player, controls: TvControls, focusable: Boolean) {
+private fun SeekBar(player: Player, controls: TvControls, focusable: Boolean, live: Boolean) {
     var focused by remember { mutableStateOf(false) }
     val locale = LocalConfiguration.current.locales[0]
     val duration = controls.durationMs
@@ -325,11 +326,11 @@ private fun SeekBar(player: Player, controls: TvControls, focusable: Boolean) {
             contentAlignment = Alignment.CenterStart,
         ) {
             val barHeight = if (focused) 8.dp else 5.dp
-            Box(Modifier.fillMaxWidth().height(barHeight).clip(CircleShape).background(Color.White.copy(alpha = 0.22f))) {
+            Box(Modifier.fillMaxWidth().height(barHeight).clip(CircleShape).background(Color.White.copy(alpha = if (focused) 0.32f else 0.22f))) {
                 Box(Modifier.fillMaxWidth(buffered).height(barHeight).background(Color.White.copy(alpha = 0.35f)))
                 Box(Modifier.fillMaxWidth(fraction).height(barHeight).background(TvTokens.Lime))
             }
-            val thumb = if (focused) 20.dp else 12.dp
+            val thumb = if (focused) 22.dp else 12.dp
             val x = (maxWidth - thumb) * fraction
             Box(
                 Modifier
@@ -355,9 +356,14 @@ private fun SeekBar(player: Player, controls: TvControls, focusable: Boolean) {
                 )
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 2.dp)) {
+        Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(elapsed, style = MaterialTheme.typography.titleSmall, color = Color.White, modifier = Modifier.testTag("elapsed"))
             Spacer(Modifier.weight(1f))
+            // A live stream that can go back (timeshift): its bar, and LIVE.
+            if (live) {
+                LiveBadge()
+                Spacer(Modifier.width(12.dp))
+            }
             if (duration != null) {
                 Text("−" + time((duration - position).coerceAtLeast(0), locale), style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.testTag("remaining"))
             }
@@ -386,7 +392,7 @@ private fun ButtonRow(player: Player, controls: TvControls, info: TvPlayerInfo, 
             if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
             stringResource(if (playing) R.string.pause else R.string.play),
             tag = "tvPlayPause",
-            size = 60.dp,
+            size = LargeButton,
             labelAlignment = if (transport) Alignment.TopCenter else Alignment.TopStart,
             modifier = Modifier.focusRequester(playPause),
         ) {
@@ -428,18 +434,18 @@ private fun RoundButton(
     label: String,
     tag: String,
     modifier: Modifier = Modifier,
-    size: Dp = 52.dp,
+    size: Dp = 56.dp,
     on: Boolean = false,
     labelAlignment: Alignment = Alignment.TopCenter,
     onClick: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
-    Box(Modifier.height(60.dp + 30.dp)) {
+    Box(Modifier.height(LargeButton + 30.dp)) {
         IconButton(
             onClick = onClick,
             modifier = modifier
                 .align(Alignment.TopCenter)
-                .padding(top = (60.dp - size) / 2)
+                .padding(top = (LargeButton - size) / 2)
                 .size(size)
                 .onFocusChanged { focused = it.isFocused }
                 .semantics { contentDescription = label }
@@ -455,18 +461,21 @@ private fun RoundButton(
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(size * 0.5f))
         }
-        if (on) Box(Modifier.align(Alignment.TopCenter).padding(top = 60.dp + 2.dp).size(5.dp).background(TvTokens.Lime, CircleShape))
+        if (on) Box(Modifier.align(Alignment.TopCenter).padding(top = LargeButton + 3.dp).size(5.dp).background(TvTokens.Lime, CircleShape))
         if (focused) {
             Text(
                 label,
                 style = MaterialTheme.typography.labelLarge,
                 color = Color.White,
                 maxLines = 1,
-                modifier = Modifier.align(labelAlignment).padding(top = 60.dp + 8.dp).wrapContentSize(unbounded = true, align = labelAlignment),
+                modifier = Modifier.align(labelAlignment).padding(top = LargeButton + 8.dp).wrapContentSize(unbounded = true, align = labelAlignment),
             )
         }
     }
 }
+
+/** Play/Pause; the other buttons are a little smaller. */
+private val LargeButton = 64.dp
 
 /** After a skip with the controls hidden: the skip's icon on its side of the screen, for a moment. */
 @Composable

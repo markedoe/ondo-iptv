@@ -156,4 +156,28 @@ class TvPlayerControlsTest {
         press(Key.DirectionCenter)
         compose.onNodeWithTag("tracksHint").assertTextContains("This stream has no subtitles.")
     }
+
+    @Test
+    fun aLiveStreamThatCanGoBackKeepsItsBarWithLive() {
+        val timeshift = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("de", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = true)
+        start(timeshift, TvPlayerInfo("4  Cycling TV", null, live = true))
+        compose.onNodeWithTag("tvSeekBar").assertExists()
+        compose.onNodeWithTag("liveBadge").assertExists()
+        compose.onNodeWithTag("tvSkipBack").assertExists()
+    }
+
+    @Test
+    fun theRemotesSubtitlesKeyOpensThePanelOnTheTrackPlaying() {
+        start()
+        compose.runOnIdle {
+            controls.hide()
+            controls.open(TvPanel.SUBTITLES)
+        }
+        compose.waitForIdle()
+        row("trackOff").assertIsFocused()
+        // Back (the activity's) closes the panel: the remote is on Subtitles.
+        compose.runOnIdle { assertTrue(controls.back()) }
+        compose.waitForIdle()
+        compose.onNodeWithTag("tvSubtitles").assertIsFocused()
+    }
 }
