@@ -88,7 +88,7 @@
     <string name="support">Support</string>
     <string name="version">Version</string>
     <string name="delete_playlist_title">Delete “%1$s”?</string>
-    <string name="delete_playlist_text">Its catalogue, favorites and history on this device are removed.</string>
+    <string name="delete_playlist_text">Its catalogue, its items in My List and collections, and its history on this device are removed.</string>
     <string name="try_again">Try Again</string>
     <string name="loading">Loading…</string>
     <string name="error_provider_refused">The provider refused this stream. Your subscription may have expired or the connection limit is reached.</string>

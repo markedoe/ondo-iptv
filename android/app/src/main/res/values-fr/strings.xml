@@ -86,7 +86,7 @@
     <string name="support">Assistance</string>
     <string name="version">Version</string>
     <string name="delete_playlist_title">Supprimer « %1$s » ?</string>
-    <string name="delete_playlist_text">Son catalogue, ses favoris et son historique sur cet appareil sont effacés.</string>
+    <string name="delete_playlist_text">Son catalogue, ses éléments de Ma liste et des collections, et son historique sur cet appareil sont effacés.</string>
     <string name="try_again">Réessayer</string>
     <string name="loading">Chargement…</string>
     <string name="error_provider_refused">Le fournisseur a refusé ce flux. Votre abonnement a peut-être expiré ou la limite de connexions est atteinte.</string>

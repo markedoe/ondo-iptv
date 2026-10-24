@@ -86,7 +86,7 @@
     <string name="support">الدعم</string>
     <string name="version">الإصدار</string>
     <string name="delete_playlist_title">حذف «%1$s»؟</string>
-    <string name="delete_playlist_text">يُحذف فهرسها ومفضلتها وسجلها على هذا الجهاز.</string>
+    <string name="delete_playlist_text">يُحذف فهرسها وعناصرها في قائمتي والمجموعات وسجلها على هذا الجهاز.</string>
     <string name="try_again">إعادة المحاولة</string>
     <string name="loading">جارٍ التحميل…</string>
     <string name="error_provider_refused">رفض المزوّد هذا البث. ربما انتهى اشتراكك أو بلغت حد الاتصالات.</string>

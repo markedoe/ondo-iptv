@@ -86,7 +86,7 @@
     <string name="support">Suporte</string>
     <string name="version">Versão</string>
     <string name="delete_playlist_title">Excluir “%1$s”?</string>
-    <string name="delete_playlist_text">O catálogo, os favoritos e o histórico dela neste dispositivo são removidos.</string>
+    <string name="delete_playlist_text">O catálogo, os itens dela em Minha lista e nas coleções e o histórico dela neste dispositivo são removidos.</string>
     <string name="try_again">Tentar novamente</string>
     <string name="loading">Carregando…</string>
     <string name="error_provider_refused">O provedor recusou este stream. Sua assinatura pode ter expirado ou o limite de conexões foi atingido.</string>

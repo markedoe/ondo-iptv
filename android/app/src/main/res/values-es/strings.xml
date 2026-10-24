@@ -86,7 +86,7 @@
     <string name="support">Soporte</string>
     <string name="version">Versión</string>
     <string name="delete_playlist_title">¿Eliminar “%1$s”?</string>
-    <string name="delete_playlist_text">Se eliminan su catálogo, sus favoritos y su historial en este dispositivo.</string>
+    <string name="delete_playlist_text">Se eliminan su catálogo, sus elementos de Mi lista y de las colecciones, y su historial en este dispositivo.</string>
     <string name="try_again">Reintentar</string>
     <string name="loading">Cargando…</string>
     <string name="error_provider_refused">El proveedor rechazó esta transmisión. Puede que tu suscripción haya caducado o que se haya alcanzado el límite de conexiones.</string>

@@ -86,7 +86,7 @@
     <string name="support">सहायता</string>
     <string name="version">वर्शन</string>
     <string name="delete_playlist_title">“%1$s” डिलीट करें?</string>
-    <string name="delete_playlist_text">इस डिवाइस पर इसका कैटलॉग, पसंदीदा और इतिहास हटा दिए जाते हैं।</string>
+    <string name="delete_playlist_text">इस डिवाइस पर इसका कैटलॉग, मेरी सूची और संग्रह में इसके आइटम, और इसका इतिहास हटा दिए जाते हैं।</string>
     <string name="try_again">फिर से कोशिश करें</string>
     <string name="loading">लोड हो रहा है…</string>
     <string name="error_provider_refused">प्रदाता ने इस स्ट्रीम का ऐक्सेस नहीं दिया। हो सकता है आपका सब्सक्रिप्शन समाप्त हो गया हो या कनेक्शन सीमा पूरी हो गई हो।</string>
