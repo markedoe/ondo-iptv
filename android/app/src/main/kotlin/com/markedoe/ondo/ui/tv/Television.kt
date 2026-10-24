@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -359,6 +360,14 @@ class FocusMemory(key: String? = null) {
         restore = null
     }
 
+    /**
+     * Gives the focus to the item [key] now, as when the page comes back to it: the item with the focus is about to
+     * leave (a card taken away), and the remote goes on from beside it.
+     */
+    fun handTo(key: String) {
+        restore = key
+    }
+
     companion object {
         val Saver: Saver<FocusMemory, String> = Saver(save = { it.last ?: "" }, restore = { FocusMemory(it.ifEmpty { null }) })
     }
@@ -390,8 +399,10 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
         if (wanted && runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.restored()
     }
     val focus = remember { HeldFocus() }
+    SideEffect { focus.key = key }
     val scope = rememberCoroutineScope()
-    DisposableEffect(memory) { onDispose { if (focus.held) memory?.dropped() } }
+    // Gone with the focus, unless it was handed on just before ([FocusMemory.handTo]): it then went elsewhere already.
+    DisposableEffect(memory) { onDispose { if (focus.held && memory?.last == focus.key) memory?.dropped() } }
     this
         .focusRequester(requester)
         .onFocusChanged {
@@ -429,4 +440,5 @@ private class OkPress {
 private class HeldFocus {
     var held = false
     var changes = 0
+    var key = ""
 }

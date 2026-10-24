@@ -36,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -44,6 +45,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -65,6 +67,7 @@ import com.markedoe.ondo.ui.TagSuggestion
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.components.PlayIcon
+import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.myListState
@@ -100,6 +103,19 @@ fun TvHomeScreen(
         state.channels.isEmpty() && state.newMovies.isEmpty() && state.newSeries.isEmpty()
     val memory = LocalFocusMemory.current
     LaunchedEffect(empty) { if (empty) memory?.given() }
+    val focusManager = LocalFocusManager.current
+    // A card taken away hands the remote on before it goes: to the next card of its row, or the one before; the last
+    // one, its row going with it, to the row below (or above). Not back to the carousel at the top.
+    fun removeResume(row: List<ResumeItem>, item: ResumeItem) {
+        val index = row.indexOfFirst { it.key == item.key }
+        val neighbour = row.getOrNull(index + 1) ?: row.getOrNull(index - 1)
+        if (neighbour != null) {
+            memory?.handTo("resume:${neighbour.key}")
+        } else if (!focusManager.moveFocus(FocusDirection.Down)) {
+            focusManager.moveFocus(FocusDirection.Up)
+        }
+        actions.onRemoveResume(item)
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(TvTokens.Ink).testTag("home"),
         contentPadding = PaddingValues(bottom = 40.dp),
@@ -112,14 +128,14 @@ fun TvHomeScreen(
         if (resumeMovies.isNotEmpty()) {
             tvShelf(titles.movies, "shelfResumeMovies") {
                 items(resumeMovies, key = { it.key }) { item ->
-                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { actions.onRemoveResume(item) })
+                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeMovies, item) })
                 }
             }
         }
         if (resumeSeries.isNotEmpty()) {
             tvShelf(titles.series, "shelfResumeSeries") {
                 items(resumeSeries, key = { it.key }) { item ->
-                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { actions.onRemoveResume(item) })
+                    TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeSeries, item) })
                 }
             }
         }

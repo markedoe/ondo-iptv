@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
@@ -31,6 +32,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
+import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
@@ -67,14 +69,17 @@ class ContinueWatchingRemovalTest {
     private lateinit var repository: OndoRepository
 
     private val movie = Fixtures.glassCity
-    private val entry = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, movie.id, title = movie.name, lastWatchedAt = 1)
+    private val entry = movieEntry(movie)
 
-    private fun start(television: Boolean) {
+    private fun movieEntry(movie: Movie) = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, movie.id, title = movie.name, lastWatchedAt = 1)
+
+    private fun start(television: Boolean, entries: List<WatchEntry> = listOf(entry)) {
         val store = AppStore(folder.root)
         store.savePlaylists(listOf(Fixtures.playlist))
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
         store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content.copy(fetchedAt = System.currentTimeMillis()))
-        store.saveLibrary(LibraryState().recordStart(entry).updateProgress(entry.key, 1_800.0, 6_000.0, now = 2))
+        val library = entries.foldIndexed(LibraryState()) { index, library, entry -> library.recordStart(entry).updateProgress(entry.key, 1_800.0, 6_000.0, now = 2L + index) }
+        store.saveLibrary(library)
         repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main))
         val viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
@@ -121,6 +126,14 @@ class ContinueWatchingRemovalTest {
 
     private fun onTheCard(): Boolean =
         compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfResumeMovies"))).fetchSemanticsNodes().isNotEmpty()
+
+    /** The focus is on a card of one of Home's rows (below the carousel). */
+    private fun inARow(): Boolean {
+        val shelf = SemanticsMatcher("in a row") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith("shelf") == true }
+        return compose.onAllNodes(isFocused() and hasAnyAncestor(shelf)).fetchSemanticsNodes().isNotEmpty()
+    }
+
+    private fun focusedDescription(): String = focusedNode()?.config?.getOrNull(SemanticsProperties.ContentDescription)?.joinToString().orEmpty()
 
     private fun press(key: Key) {
         compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(key) }
@@ -178,8 +191,28 @@ class ContinueWatchingRemovalTest {
         waitFor { !exists("shelfResumeMovies") }
         assertNull(repository.state.value.library.progress(entry.key))
         settle(1_000)
-        assertNotNull("the remote is still somewhere on Home", focusedNode())
+        // The row went with its only card: the remote is on the row that took its place, not back on the carousel.
+        assertTrue("the remote is on a row of Home (${focused()})", inARow())
         assertFalse(exists("confirmDialog"))
+    }
+
+    /** Of two cards, the one taken away hands the remote to the other, where the viewer was. */
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun aTvCardTakenAwayHandsTheRemoteToTheNextOne() {
+        val other = Fixtures.silentHarbor
+        start(television = true, entries = listOf(entry, movieEntry(other)))
+        toTheCard()
+        val removed = focusedDescription()
+        val kept = if (removed == movie.name) other.name else movie.name
+        holdOk()
+        waitFor { exists("confirmDialog") }
+        press(Key.DirectionRight)
+        assertEquals("confirmOk", focusedTag())
+        press(Key.DirectionCenter)
+        waitFor { compose.onAllNodes(hasContentDescription(removed) and hasAnyAncestor(hasTestTag("shelfResumeMovies"))).fetchSemanticsNodes().isEmpty() }
+        settle(1_000)
+        assertTrue("the remote is on the other card (${focused()})", onTheCard() && focusedDescription() == kept)
     }
 
     /** The Movies tab of a TV, where the row is called Continue watching. */
@@ -201,7 +234,8 @@ class ContinueWatchingRemovalTest {
         waitFor { repository.state.value.library.progress(entry.key) == null }
         waitFor { compose.onAllNodes(card).fetchSemanticsNodes().isEmpty() }
         settle(1_000)
-        assertNotNull("the remote is still somewhere (${focused()})", focusedNode())
+        // The first row of the page takes the remote, not the drawer.
+        assertTrue("the remote is on the Movies page (${focused()})", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("vod"))).fetchSemanticsNodes().isNotEmpty())
     }
 
     @Test
