@@ -103,9 +103,9 @@ class WorkflowScriptTestCase(unittest.TestCase):
         for path in paths:
             file = self.repository / path
             file.parent.mkdir(parents=True, exist_ok=True)
-            file.write_text(f"{name}\n", encoding="utf-8")
+            file.write_text(f"{name} {len(self.git('log', '--oneline', '--all').splitlines())}\n", encoding="utf-8")
             self.git("add", path)
-        self.git("commit", "-q", "--allow-empty", "-m", name)
+        self.git("commit", "-q", "-m", name)
         self.commits[name] = self.git("rev-parse", "HEAD")
         return self.commits[name]
 
@@ -166,6 +166,15 @@ class DeliverTests(WorkflowScriptTestCase):
         self.assertEqual(dispatched, [], output)
         self.assertIn("carries a version tag", output)
 
+    def test_a_tag_on_a_newer_commit_that_ships_the_same_app_is_left_to_its_release(self):
+        self.commit("first", "App/OndoApp.swift")
+        self.commit("change", "App/Model/AppModel.swift")
+        self.commit("notes", "docs/RELEASE.md")
+        self.git("tag", "v1.2.0")
+        output, dispatched = self.deliver("CI", "change", {"ci.yml": [green(self.commits["change"]), green(self.commits["first"])]})
+        self.assertEqual(dispatched, [], output)
+        self.assertIn("carries a version tag", output)
+
     def test_a_newer_push_that_changes_the_app_sends_it(self):
         self.commit("first", "App/OndoApp.swift")
         self.commit("change", "App/Model/AppModel.swift")
@@ -173,6 +182,22 @@ class DeliverTests(WorkflowScriptTestCase):
         output, dispatched = self.deliver("CI", "change", {"ci.yml": [green(self.commits["change"]), green(self.commits["first"])]})
         self.assertEqual(dispatched, [], output)
         self.assertIn("own delivery sends it", output)
+
+    def test_a_newer_push_that_ships_the_same_app_does_not_hold_it_back(self):
+        # The workflow skips the newer push (documentation, the other platform) or it changed tests only: no delivery
+        # of its own would send this commit's change.
+        for source, changed, newer in (("CI", "App/Model/AppModel.swift", "docs/RELEASE.md"),
+                                       ("CI", "App/Model/AppModel.swift", "android/app/src/main/Main.kt"),
+                                       ("CI", "App/Model/AppModel.swift", "Packages/IPTVCore/Tests/IPTVCoreTests/ParserTests.swift"),
+                                       ("Android", "android/core/src/main/Core.kt", "App/Model/AppModel.swift"),
+                                       ("Android", "android/core/src/main/Core.kt", "README.md")):
+            with self.subTest(source=source, newer=newer):
+                self.commit("first", "App/OndoApp.swift", "android/app/src/main/Main.kt")
+                self.commit("change", changed)
+                self.commit("newer", newer)
+                workflow = "ci.yml" if source == "CI" else "android.yml"
+                output, dispatched = self.deliver(source, "change", {workflow: [green(self.commits["change"]), green(self.commits["first"])]})
+                self.assertEqual(dispatched, [TESTFLIGHT if source == "CI" else INTERNAL_TESTING], output)
 
     def test_a_waiting_release_is_never_replaced(self):
         self.commit("first", "App/OndoApp.swift")
