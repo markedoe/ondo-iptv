@@ -56,6 +56,23 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(library.history.first?.title, "M1")
     }
 
+    /// A position the player cannot tell (NaN, infinite) keeps the one known: JSON has no such number, and one in the
+    /// history would make every later save of the library fail.
+    func testAnUnknownPositionKeepsTheLibrarySavable() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory)
+        XCTAssertTrue(max(Double.nan, 0).isNaN, "max lets NaN through when it comes first")
+        var library = UserLibrary()
+        library.recordPlayback(HistoryEntry(reference: ref(.movie, "m1"), title: "M1"))
+        library.updateProgress(ref(.movie, "m1"), position: 600, duration: 6000)
+        for position in [Double.nan, .infinity] {
+            library.updateProgress(ref(.movie, "m1"), position: position, duration: 6000)
+            XCTAssertEqual(library.progress(for: ref(.movie, "m1"))?.position, 600, "\(position)")
+            XCTAssertNoThrow(try store.save(library, name: "library"), "\(position)")
+        }
+    }
+
     func testHistoryCap() {
         var library = UserLibrary()
         for i in 0..<(UserLibrary.maxHistory + 20) {
@@ -136,6 +153,49 @@ final class LibraryTests: XCTestCase {
         XCTAssertNil(store.load([Playlist].self, name: "playlists", now: Date(timeIntervalSince1970: 7)))
         try store.save([Playlist](), name: "playlists")
         XCTAssertEqual(try Data(contentsOf: directory.appendingPathComponent("playlists.json.corrupt-7.json")), Data("garbage".utf8))
+    }
+
+    /// A cache that cannot be read is deleted: kept aside, it would stay for good, counted in the size Settings shows,
+    /// and Clear Cache, which removes the documents by name, could not remove it.
+    func testADamagedCacheIsDeletedNotKeptAside() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory, disposable: true)
+        try store.save(["channel"], name: "content-1")
+        try store.save(["channel"], name: "content-1")
+        for file in [store.url(for: "content-1"), store.url(for: "content-1").appendingPathExtension("bak")] {
+            try Data("{corrupt".utf8).write(to: file)
+        }
+        XCTAssertNil(store.load([String].self, name: "content-1"))
+        store.remove(name: "content-1")
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: directory.path), [])
+        XCTAssertEqual(store.diskUsage(), 0)
+    }
+
+    /// A playlist deleted leaves nothing of its login behind: not in the previous version kept as `.bak`, not in a
+    /// damaged copy set aside.
+    func testSavingWithoutThePreviousVersionLeavesNoCopyOfIt() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory)
+        let kept = "http://example.com/kept.m3u"
+        let deleted = "http://example.com/get.php?username=viewer&password=gone"
+        try store.save([kept, deleted], name: "playlists")
+        try store.save([kept, deleted], name: "playlists")
+        for aside in ["playlists.json.corrupt-1.json", "playlists.json.bak.corrupt-2.json"] {
+            try Data(deleted.utf8).write(to: directory.appendingPathComponent(aside))
+        }
+        try Data(deleted.utf8).write(to: directory.appendingPathComponent("settings.json.corrupt-3.json"))
+
+        try store.save([kept], name: "playlists", keepingPrevious: false)
+
+        XCTAssertEqual(store.load([String].self, name: "playlists"), [kept])
+        let files = try FileManager.default.contentsOfDirectory(atPath: directory.path).sorted()
+        XCTAssertEqual(files, ["playlists.json", "settings.json.corrupt-3.json"])
+        XCTAssertFalse(String(decoding: try Data(contentsOf: store.url(for: "playlists")), as: UTF8.self).contains("gone"))
+        // An ordinary save keeps the previous version again.
+        try store.save([kept], name: "playlists")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: store.url(for: "playlists").appendingPathExtension("bak").path))
     }
 
     func testBackupArchive() throws {

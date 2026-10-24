@@ -90,7 +90,8 @@ class PlaylistLoader(
         is PlaylistSource.LocalFile -> parseInBackground(withContext(ioDispatcher) { File(source.path).readBytes() })
     }
 
-    private suspend fun parseInBackground(bytes: ByteArray): PlaylistContent = withContext(parsingDispatcher) { parse(bytes) }
+    // A cancelled load stops at the next entry: a catalogue nobody waits for is not built to its end.
+    private suspend fun parseInBackground(bytes: ByteArray): PlaylistContent = withContext(parsingDispatcher) { parse(bytes) { ensureActive() } }
 
     private fun PlaylistContent.withoutDeviceGuides(): PlaylistContent =
         copy(providerEpgUrls = providerEpgUrls.filterNot { it.startsWith("file:", ignoreCase = true) })
@@ -99,12 +100,15 @@ class PlaylistLoader(
      * Parses M3U, XSPF, JSON or plain URL lists (gzip compressed or not).
      * @throws PlaylistLoaderException when the data is not a playlist or has no entry
      */
-    fun parse(bytes: ByteArray): PlaylistContent {
+    fun parse(bytes: ByteArray): PlaylistContent = parse(bytes) {}
+
+    /** [checkActive] runs before each M3U entry, and throws to stop the parsing. */
+    private fun parse(bytes: ByteArray, checkActive: () -> Unit): PlaylistContent {
         val data = Gzip.gunzipIfNeeded(bytes)
         if (data.isEmpty()) throw PlaylistLoaderException.EmptyPlaylist()
         val content = when (PlaylistFormat.detect(data) ?: throw PlaylistLoaderException.UnsupportedFormat()) {
             // Entry by entry into the catalogue: large M3U playlists are the common case.
-            PlaylistFormat.M3U -> M3uContentBuilder.build(M3uParser.headerAttributes(data), M3uParser.entries(data))
+            PlaylistFormat.M3U -> M3uContentBuilder.build(M3uParser.headerAttributes(data), M3uParser.entries(data).onEach { checkActive() })
             PlaylistFormat.XSPF -> M3uContentBuilder.build(XspfParser.parse(data))
             PlaylistFormat.JSON -> M3uContentBuilder.build(JsonPlaylistParser.parse(data))
             PlaylistFormat.PLAIN_LIST -> M3uContentBuilder.build(PlainListParser.parse(data))
@@ -197,11 +201,17 @@ class PlaylistLoader(
     }
 
     internal companion object {
-        /** The same address however it is written: scheme, case, trailing slash and order of the parameters aside. */
+        /**
+         * The same address however it is written: scheme, the host's case, trailing slash and order of the parameters
+         * aside. A path and its parameters keep their case: two files, or two accounts' passwords, can differ only by it.
+         */
         fun guideKey(url: String): String {
             val trimmed = url.trim().substringBefore('#')
-            val address = trimmed.substringAfter("://", trimmed).substringBefore('?').trimEnd('/').lowercase()
-            val query = trimmed.substringAfter('?', "").split('&').filter { it.isNotEmpty() }.map { it.lowercase() }.sorted()
+            val written = trimmed.substringAfter("://", trimmed).substringBefore('?').trimEnd('/')
+            val authority = written.substringBefore('/')
+            val host = authority.substringAfterLast('@')
+            val address = authority.dropLast(host.length) + host.lowercase() + written.drop(authority.length)
+            val query = trimmed.substringAfter('?', "").split('&').filter { it.isNotEmpty() }.sorted()
             return if (query.isEmpty()) address else address + "?" + query.joinToString("&")
         }
     }

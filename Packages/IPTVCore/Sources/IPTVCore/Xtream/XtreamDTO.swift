@@ -98,6 +98,7 @@ struct XtreamCategoryDTO: Decodable {
             throw DecodingError.dataCorruptedError(forKey: .id, in: c, debugDescription: "missing category_id")
         }
         self.id = id
+        // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
         name = c.lenientString(.name) ?? "Uncategorized"
         parentID = c.lenientInt(.parentID)
     }
@@ -134,6 +135,7 @@ struct XtreamLiveStreamDTO: Decodable {
         }
         self.streamID = streamID
         number = c.lenientInt(.num)
+        // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
         name = c.lenientString(.name)?.trimmingCharacters(in: .whitespaces) ?? "Channel \(streamID)"
         icon = c.lenientString(.icon)
         epgChannelID = c.lenientString(.epgChannelID)?.nilIfBlank
@@ -174,6 +176,7 @@ struct XtreamVODStreamDTO: Decodable {
             throw DecodingError.dataCorruptedError(forKey: .streamID, in: c, debugDescription: "missing stream_id")
         }
         self.streamID = streamID
+        // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
         name = c.lenientString(.name)?.trimmingCharacters(in: .whitespaces) ?? "Movie \(streamID)"
         icon = c.lenientString(.icon)
         categoryID = c.lenientString(.categoryID)
@@ -216,6 +219,7 @@ struct XtreamSeriesDTO: Decodable {
             throw DecodingError.dataCorruptedError(forKey: .seriesID, in: c, debugDescription: "missing series_id")
         }
         self.seriesID = seriesID
+        // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
         name = c.lenientString(.name)?.trimmingCharacters(in: .whitespaces) ?? "Series \(seriesID)"
         cover = c.lenientString(.cover)
         plot = c.lenientString(.plot)?.nilIfBlank

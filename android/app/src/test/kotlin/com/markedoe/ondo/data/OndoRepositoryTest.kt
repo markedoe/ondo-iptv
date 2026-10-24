@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
@@ -114,8 +115,20 @@ class OndoRepositoryTest {
             tasks.add(block)
         }
 
-        /** The next step, once it is there (parsing runs on another thread, and sends its result here). */
-        fun runNext() = requireNotNull(tasks.poll(10, TimeUnit.SECONDS)) { "no step came" }.run()
+        /**
+         * The next step, once it is there (parsing runs on another thread, and sends its result here). The wait is long:
+         * on a busy machine, the first parse in a test JVM (class loading, a cold JIT) has taken over 10 seconds.
+         */
+        fun runNext() = requireNotNull(tasks.poll(60, TimeUnit.SECONDS)) { "no step came" }.run()
+
+        /** Waits until [count] steps are there: parsing on other threads ends in any order and at any time. */
+        fun awaitQueued(count: Int) {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
+            while (tasks.size < count) {
+                check(System.nanoTime() < deadline) { "only ${tasks.size} of $count steps came" }
+                Thread.sleep(5)
+            }
+        }
 
         fun runAll() {
             while (true) (tasks.poll() ?: return).run()
@@ -165,11 +178,12 @@ class OndoRepositoryTest {
         val first = launch { assertTrue(repository.addPlaylist("Home", list).isSuccess) }
         val second = launch { assertTrue(repository.addPlaylist("Office", other).isSuccess) }
         testScheduler.runCurrent() // both ask for their download
+        io.awaitQueued(2)
         io.runNext()
-        io.runNext() // both downloaded, parsing
+        io.runNext() // both downloaded, parsing on other threads
+        io.awaitQueued(2) // both parsed: each continues on the steps' dispatcher
         io.runNext()
-        io.runNext() // both parsed
-        testScheduler.runCurrent() // each saves the playlists it read, on the writer
+        io.runNext() // each has read the playlists and saves its catalogue on the writer
         runSteps(io) { first.isCompleted && second.isCompleted }
         assertEquals(setOf("Home", "Office"), repository.state.value.playlists.map { it.name }.toSet())
         io.runAll()
@@ -419,6 +433,86 @@ class OndoRepositoryTest {
         repository.delete(second)
         val state = repository.awaitState { it.activePlaylist?.name == "First" }
         assertEquals(listOf("First"), state.playlists.map { it.name })
+    }
+
+    /**
+     * The names the core gives in English show in the app's words, again when its language changes; the saved catalogue
+     * keeps the core's, and a catalogue taken off the screen does not come back with another language.
+     */
+    @Test
+    fun theCoresNamesShowInTheAppsWordsAndStayInEnglishOnDisk() = runTest {
+        fun words(uncategorized: String, episode: String) = PlaceholderNames(uncategorized, "-", "- %1\$d", "- %1\$d", "- %1\$d", "- %1\$d", episode)
+        val untitled = """
+            #EXTM3U
+            #EXTINF:-1,Test News
+            http://provider.example.com/news.m3u8
+            #EXTINF:2700 group-title="Series | Drama",Harbor S01E02
+            http://provider.example.com/h102.mp4
+        """.trimIndent()
+        val repository = OndoRepository(
+            AppStore(folder.root), FakeHttp(mapOf(list to untitled)), backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler),
+            placeholderNames = words("Non classé", "Épisode %1\$d"),
+        )
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Home", list).isSuccess)
+        val id = repository.state.value.activePlaylistId!!
+        assertEquals(listOf("Non classé"), repository.state.value.content.liveCategories.map { it.name })
+        assertEquals(listOf("Uncategorized"), disk().loadContent(id)?.liveCategories?.map { it.name })
+        val harbor = repository.state.value.content.series.single()
+        assertEquals("Épisode 2", repository.details(harbor).seasons.single().episodes.single().title)
+
+        // Another app language: the catalogue on screen and a series' episodes follow.
+        repository.setPlaceholderNames(words("Sin categoría", "Episodio %1\$d"))
+        assertEquals(listOf("Sin categoría"), repository.state.value.content.liveCategories.map { it.name })
+        val again = repository.state.value.content.series.single()
+        assertEquals("Episodio 2", repository.details(again).seasons.single().episodes.single().title)
+
+        repository.delete(id)
+        repository.setPlaceholderNames(words("未分类", "第 %1\$d 集"))
+        assertTrue("a catalogue taken off the screen does not come back", repository.state.value.content.isEmpty)
+    }
+
+    /**
+     * A catalogue taken off the screen is not kept: on a TV a large one is most of the memory the app has, and it would
+     * stay while the next playlist's loads. Nothing the repository holds leads to it (asked of the repository's own
+     * objects: a thread of the parsing pool may still point to its last result for a while, out of the app's hands).
+     */
+    @Test
+    fun aCatalogueTakenOffTheScreenIsNotKept() = runTest {
+        val repository = repository()
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Home", list).isSuccess)
+        val deleted = repository.state.value.content
+        assertFalse(deleted.isEmpty)
+
+        repository.delete(repository.state.value.activePlaylistId!!)
+        testScheduler.advanceUntilIdle()
+
+        assertTrue(repository.state.value.content.isEmpty)
+        assertNull("the deleted playlist's catalogue is still held", pathTo(deleted, from = repository))
+    }
+
+    /** The fields leading from [from] to [target] ("repository.a.b"), or null when none does. */
+    private fun pathTo(target: Any, from: Any): String? {
+        val seen = java.util.IdentityHashMap<Any, Unit>()
+        val queue = ArrayDeque(listOf(from to "repository"))
+        while (queue.isNotEmpty()) {
+            val (value, path) = queue.removeFirst()
+            if (value === target) return path
+            if (seen.put(value, Unit) != null || value is String || value is Number || value is Class<*>) continue
+            val type = value.javaClass
+            when {
+                type.isArray -> if (!type.componentType.isPrimitive) (value as Array<*>).forEachIndexed { i, item -> item?.let { queue += it to "$path[$i]" } }
+                value is Map<*, *> && type.name.startsWith("java.") -> value.entries.forEach { (k, v) -> k?.let { queue += it to "$path{key}" }; v?.let { queue += it to "$path{$k}" } }
+                value is Iterable<*> && type.name.startsWith("java.") -> value.forEachIndexed { i, item -> item?.let { queue += it to "$path[$i]" } }
+                else -> generateSequence(type) { it.superclass }.flatMap { it.declaredFields.asSequence() }
+                    .filter { !java.lang.reflect.Modifier.isStatic(it.modifiers) && !it.type.isPrimitive }
+                    .forEach { field -> runCatching { field.isAccessible = true; field.get(value) }.getOrNull()?.let { queue += it to "$path.${field.name}" } }
+            }
+        }
+        return null
     }
 
     @Test

@@ -56,6 +56,24 @@ class CrashLogTest {
         assertTrue(text, text.endsWith("\tat com.markedoe.ondo.data.OndoRepository.load(OndoRepository.kt:391)"))
     }
 
+    /** The system's network errors name IPv6 addresses too, the device's own among them ("from /…"). */
+    @Test
+    fun ipv6AddressesAreLeftOut() {
+        val text = CrashLog.redact(
+            "java.net.ConnectException: failed to connect to /2001:db8::7 (port 8080) from /2001:db8:1:2:3:4:5:25 (port 41234) after 10000ms\n" +
+                "java.net.ConnectException: Failed to connect to panel.example.com/[2001:db8::8]:8080\n" +
+                "java.net.SocketException: connect to /fe80::1c2b:3cff:fe4d:5e6f%wlan0 failed\n" +
+                "Thread: main 12:34:56\n" +
+                "\tat com.markedoe.ondo.data.OndoRepository.load(OndoRepository.kt:391)",
+        )
+        for (private in listOf("2001:db8", "fe80", "3cff:fe4d")) {
+            assertFalse("$private in:\n$text", text.contains(private))
+        }
+        assertTrue(text, text.contains("failed to connect to /… (port 8080) from /… (port 41234)"))
+        // Times and the trace stay readable.
+        assertTrue(text, text.contains("Thread: main 12:34:56\n\tat com.markedoe.ondo.data.OndoRepository.load(OndoRepository.kt:391)"))
+    }
+
     /** Android ended the run (out of memory, not responding): its reason and the memory in use, unless already on file. */
     @Test
     fun anExitByAndroidIsRecordedOnce() {

@@ -250,4 +250,14 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - run: gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f target=builds -f edition=testflight
+      - name: Start the TestFlight edition build
+        run: |
+          # GitHub keeps one waiting run per group and a new one replaces it: a run already waiting (a newer tag's
+          # release, a push's TestFlight builds) is never pushed out; it gives the testers a TestFlight edition build.
+          waiting=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow release.yml --limit 20 --json status \
+            --jq '[.[] | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | length')
+          if [ "$waiting" -gt 0 ]; then
+            echo "A release.yml run is already waiting: no new one, so as not to replace it."
+            exit 0
+          fi
+          gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$GITHUB_REF_NAME" -f target=builds -f edition=testflight

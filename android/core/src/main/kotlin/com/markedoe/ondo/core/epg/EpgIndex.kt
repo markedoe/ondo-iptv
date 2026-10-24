@@ -110,8 +110,12 @@ class EpgIndex private constructor(
     /** Current programme (or the next one in a gap) followed by the next `count - 1` ones. */
     fun upcoming(channel: Channel, now: Long = System.currentTimeMillis(), count: Int = 2): List<EpgProgram> {
         val list = programs(channel)
-        if (list.isEmpty()) return emptyList()
-        val start = indexOfProgram(list, now) ?: list.indexOfFirst { it.start > now }.takeIf { it >= 0 } ?: return emptyList()
+        if (count < 1 || list.isEmpty()) return emptyList()
+        indexOfProgram(list, now)?.let { current ->
+            // Inside a long programme, the shorter ones after the current one may already be over.
+            return listOf(list[current]) + list.subList(current + 1, list.size).asSequence().filter { it.end > now }.take(count - 1)
+        }
+        val start = list.indexOfFirst { it.start > now }.takeIf { it >= 0 } ?: return emptyList()
         return list.subList(start, minOf(start + count, list.size)).toList()
     }
 
@@ -202,19 +206,20 @@ class EpgIndex private constructor(
     companion object {
         val EMPTY = EpgIndex(EpgData.EMPTY)
 
-        /** Binary search for the programme airing at `instant` (lists are sorted by start). */
+        /**
+         * The programme airing at `instant` (lists are sorted by start): the last one started by then that has not
+         * ended. Programmes can overlap (a film around a news flash): going back from the last start passes those
+         * already over.
+         */
         internal fun indexOfProgram(list: List<EpgProgram>, instant: Long): Int? {
+            // Binary search for the first programme that starts after `instant`.
             var low = 0
-            var high = list.size - 1
-            while (low <= high) {
+            var high = list.size
+            while (low < high) {
                 val mid = (low + high) ushr 1
-                val program = list[mid]
-                when {
-                    program.end <= instant -> low = mid + 1
-                    program.start > instant -> high = mid - 1
-                    else -> return mid
-                }
+                if (list[mid].start <= instant) low = mid + 1 else high = mid
             }
+            for (index in low - 1 downTo 0) if (list[index].end > instant) return index
             return null
         }
 

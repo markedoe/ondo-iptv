@@ -3,6 +3,7 @@ package com.markedoe.ondo
 import android.app.ActivityManager
 import android.app.Application
 import android.app.ApplicationExitInfo
+import android.content.res.Resources
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.core.content.pm.PackageInfoCompat
@@ -16,6 +17,7 @@ import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.crossfade
+import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.net.OkHttpClientAdapter
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.AwardsDownload
@@ -103,6 +105,7 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             downloadFolder = cacheDir.resolve("downloads"),
             // A quarter of what the device gives the app: the catalogue, the screens and the images need the rest.
             guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
+            placeholderNames = resources.placeholderNames(),
         )
     }
 
@@ -127,3 +130,15 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
         .crossfade(true)
         .build()
 }
+
+/** The app's words for the names the core gives in English where the provider gives none ("Uncategorized", "Channel 12"…). */
+fun Resources.placeholderNames(): PlaceholderNames = PlaceholderNames(
+    uncategorized = getString(R.string.placeholder_uncategorized),
+    other = getString(R.string.placeholder_other),
+    otherNumbered = getString(R.string.placeholder_other_number),
+    channel = getString(R.string.placeholder_channel),
+    movie = getString(R.string.placeholder_movie),
+    series = getString(R.string.placeholder_series),
+    episode = getString(R.string.placeholder_episode),
+    locale = configuration.locales[0],
+)

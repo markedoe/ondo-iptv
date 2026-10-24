@@ -12,11 +12,13 @@ import com.markedoe.ondo.core.model.Playlist
 import com.markedoe.ondo.core.model.PlaylistSource
 import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.model.XtreamOutputFormat
+import com.markedoe.ondo.core.epg.XmltvParser
 import com.markedoe.ondo.core.utc
 import java.time.ZoneId
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -92,6 +94,22 @@ class CatchupTest {
         assertEquals("http://fl.example.com/nation2/timeshift_abs-1760032800.ts?token=abc", CatchupUrlBuilder.urls(ts, start, end, now).first())
         val other = channel("http://fl.example.com/nation2/", CatchupInfo(CatchupInfo.Mode.FLUSSONIC, 3))
         assertEquals("http://fl.example.com/nation2/timeshift_abs-1760032800.ts", CatchupUrlBuilder.urls(other, start, end, now).first())
+    }
+
+    /** A guide's far stop time (an XMLTV year 9999) keeps its whole duration: it no longer wraps to a negative one. */
+    @Test
+    fun aFarEndKeepsItsWholeDuration() {
+        val far = assertNotNull(XmltvParser.parseDate("99991231235900 +0000"))
+        val seconds = (far - start) / 1000
+        val hls = channel("http://fl.example.com/nation2/index.m3u8?token=abc", CatchupInfo(CatchupInfo.Mode.FLUSSONIC, 3))
+        assertEquals("http://fl.example.com/nation2/index-1760032800-$seconds.m3u8?token=abc", CatchupUrlBuilder.urls(hls, start, far, now).first())
+        val credentials = XtreamCredentials("http://p.example.com:8080", "u", "p")
+        val xtream = channel("http://p.example.com:8080/live/u/p/101.m3u8", CatchupInfo(CatchupInfo.Mode.XTREAM, 7), xtreamId = 101)
+        assertEquals(
+            "http://p.example.com:8080/timeshift/u/p/${Int.MAX_VALUE}/2025-10-09:18-00/101.m3u8",
+            CatchupUrlBuilder.urls(xtream, start, far, now, CatchupContext(credentials)).first(),
+            "as many minutes as a timeshift address takes, not one",
+        )
     }
 
     @Test

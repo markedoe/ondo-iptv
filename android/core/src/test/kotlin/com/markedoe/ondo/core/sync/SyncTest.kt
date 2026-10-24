@@ -6,6 +6,8 @@ import java.io.File
 import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
@@ -146,6 +148,35 @@ class SyncTest {
             }
         }
         assertEquals(-1, answer)
+        serving.cancelAndJoin()
+    }
+
+    /** A snapshot over the frame limit is not sent, not even its length: the session fails, nothing throws. */
+    @Test
+    fun aSnapshotTooLargeToSendIsNotSent() = runBlocking {
+        val huge = fixture("a.json").copy(deviceName = "x".repeat(SyncNetwork.MAX_FRAME))
+        val server = ServerSocket(0, 8, loopback)
+        val received = AtomicInteger()
+        val serving = launch { SyncSession.serve(server) { incoming, _ -> received.incrementAndGet(); incoming } }
+        assertNull(SyncSession.exchange(loopback, server.localPort, huge))
+        assertEquals(0, received.get())
+        serving.cancelAndJoin()
+        val output = ByteArrayOutputStream()
+        assertFailsWith<IOException> { SyncNetwork.writeFrame(output, ByteArray(SyncNetwork.MAX_FRAME + 1)) }
+        assertEquals(0, output.size())
+    }
+
+    /** A server whose answer is over the frame limit answers nothing, and goes on serving. */
+    @Test
+    fun anAnswerTooLargeToSendEndsOnlyItsSession() = runBlocking {
+        val a = fixture("a.json")
+        val huge = a.copy(deviceName = "x".repeat(SyncNetwork.MAX_FRAME))
+        val server = ServerSocket(0, 8, loopback)
+        val answerWith = AtomicReference<SyncSnapshot>(huge)
+        val serving = launch { SyncSession.serve(server) { _, _ -> answerWith.get() } }
+        assertNull(SyncSession.exchange(loopback, server.localPort, a))
+        answerWith.set(a)
+        assertEquals(a, SyncSession.exchange(loopback, server.localPort, a))
         serving.cancelAndJoin()
     }
 }

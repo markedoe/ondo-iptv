@@ -59,7 +59,7 @@ public struct AwardsCatalogue: Decodable, Sendable {
     }
 
     public init(data: Data) throws {
-        self = try JSONDecoder().decode(AwardsCatalogue.self, from: data)
+        self = try JSONDecoder().decodeCheckingKeys(AwardsCatalogue.self, from: data)
     }
 
     private enum CodingKeys: String, CodingKey { case awards, films, generated }

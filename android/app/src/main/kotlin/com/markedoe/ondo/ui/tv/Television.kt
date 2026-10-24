@@ -141,8 +141,9 @@ fun Modifier.focusFrame(shape: Shape = RoundedCornerShape(12.dp), grow: Float = 
 
 /**
  * On a TV, the focus enters [content] when nothing in it has the focus once it shows (a page without its own first
- * item, or one still loading): the remote's first press then moves from something on screen. Elsewhere, [content]
- * as it is.
+ * item, or one still loading): the remote's first press then moves from something on screen. That place is not one
+ * the viewer chose: the page's first item still takes the focus when it shows (see [focusMemory]). Elsewhere,
+ * [content] as it is.
  */
 @Composable
 fun FocusEntry(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
@@ -153,12 +154,13 @@ fun FocusEntry(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val requester = remember { FocusRequester() }
     var hasFocus by remember { mutableStateOf(false) }
     val mode = LocalInputModeManager.current.inputMode
+    val memory = LocalFocusMemory.current
     LaunchedEffect(mode) {
         // The page's own first item (or the one to come back to) takes it first; the content may still be loading.
         repeat(50) {
             delay(100)
             if (hasFocus) return@LaunchedEffect
-            runCatching { requester.requestFocus() }
+            if (runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.given()
         }
     }
     Box(modifier.focusRequester(requester).onFocusChanged { hasFocus = it.hasFocus }.focusGroup()) { content() }
@@ -175,8 +177,21 @@ class FocusMemory(key: String? = null) {
     var restore: String? by mutableStateOf(key)
         private set
 
+    /** Whether [last] is where the viewer moved to, rather than where the focus was put for them ([given]). */
+    var chosen: Boolean = true
+        private set
+
     fun focused(key: String) {
         last = key
+        chosen = true
+    }
+
+    /**
+     * [last] is no place the viewer chose: the focus was put there for them, or what had it left the page. The page's
+     * first item may take the focus.
+     */
+    fun given() {
+        chosen = false
     }
 
     fun restored() {
@@ -196,7 +211,8 @@ val LocalFocusMemory = staticCompositionLocalOf<FocusMemory?> { null }
 
 /**
  * Records this item as the page's last focus under [key], and takes the focus back when the page comes back to it.
- * On a TV, the page's first item ([initial]) takes the focus when there is nothing to come back to.
+ * On a TV, the page's first item ([initial]) takes the focus when there is nothing to come back to: no place yet, or
+ * one the viewer did not choose ([FocusMemory.chosen]).
  */
 fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = composed {
     val memory = LocalFocusMemory.current
@@ -208,7 +224,7 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
     LaunchedEffect(restoring, television, mode) {
         val wanted = when {
             restoring != null -> restoring == key
-            else -> television && initial && memory?.last == null
+            else -> television && initial && (memory?.last == null || !memory.chosen)
         }
         if (wanted && runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.restored()
     }

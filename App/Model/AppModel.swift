@@ -174,7 +174,7 @@ final class AppModel {
     ///   - reminderScheduler: delivers programme reminders (system notifications by default).
     init(storageRoot: URL? = nil, secrets: SecretStore = KeychainSecretStore(), reminderScheduler: ReminderScheduling? = nil) {
         userStore = FileStore(directory: storageRoot?.appendingPathComponent("Support", isDirectory: true) ?? AppPaths.support)
-        cacheStore = FileStore(directory: storageRoot?.appendingPathComponent("Caches", isDirectory: true) ?? AppPaths.caches)
+        cacheStore = FileStore(directory: storageRoot?.appendingPathComponent("Caches", isDirectory: true) ?? AppPaths.caches, disposable: true)
         libraryWriter = LibraryWriter(store: userStore)
         self.secrets = secrets
         #if DEBUG  // only in test builds: UI tests must never hit the system permission prompt
@@ -256,7 +256,8 @@ final class AppModel {
         return copy
     }
 
-    private func savePlaylists() {
+    /// - Parameter keepingPrevious: false once a playlist was deleted: no previous version keeps its login.
+    private func savePlaylists(keepingPrevious: Bool = true) {
         // Passwords live in the keychain, not in the JSON file (unless the keychain is unavailable,
         // in which case dropping them would lose the login).
         let sanitized = playlists.map { playlist -> Playlist in
@@ -267,7 +268,7 @@ final class AppModel {
             copy.source = playlist.source.withSecret("")
             return copy
         }
-        try? userStore.save(sanitized, name: "playlists")
+        try? userStore.save(sanitized, name: "playlists", keepingPrevious: keepingPrevious)
     }
 
     func updateSettings(_ change: (inout AppSettings) -> Void) {
@@ -452,7 +453,7 @@ final class AppModel {
     /// `recordsSyncDeletion` is false when sync deletes it: the deletion keeps the time it was made elsewhere.
     func deletePlaylist(_ playlist: Playlist, recordsSyncDeletion: Bool = true) async {
         playlists.removeAll { $0.id == playlist.id }
-        savePlaylists()
+        savePlaylists(keepingPrevious: false)
         notePlaylistDeletedForSync(playlist, recordsDeletion: recordsSyncDeletion)
         secrets.set(nil, for: Keychain.passwordKey(for: playlist.id))
         cacheStore.remove(name: "content-\(playlist.id.uuidString)")
@@ -554,6 +555,8 @@ final class AppModel {
             let unchanged = activePlaylist?.id == playlist.id
                 ? await Task.detached(priority: .utility) { [current = rawContent] in fresh == current }.value
                 : false
+            // Deleted meanwhile: nothing to keep (Clear Cache only knows the playlists there are).
+            guard playlists.contains(where: { $0.id == playlist.id }) else { return }
             if !unchanged { await saveContentCache(fresh, for: playlist.id) }
             if let position = playlists.firstIndex(where: { $0.id == playlist.id }) {
                 playlists[position].lastRefreshedAt = Date()
@@ -580,7 +583,9 @@ final class AppModel {
     private func apply(_ newContent: PlaylistContent, for playlist: Playlist) async {
         let edits = playlist.channelEdits
         let (edited, built, tags) = await Task.detached {
-            let edited = newContent.applying(edits)
+            // The names IPTVCore gives in English where the provider gives none read in the app's language on screen,
+            // in search and in the lists; `rawContent` and the saved catalogue keep IPTVCore's.
+            let edited = PlaceholderNames.app().renaming(newContent.applying(edits))
             return (edited, ContentIndex(content: edited), CategoryTagIndex(content: edited))
         }.value
         // While the catalogue was being built, another playlist may have been opened (its catalogue must
@@ -862,6 +867,10 @@ extension AppModel {
     /// Playlists another device has (sync): saved like an added playlist, their catalogue downloaded in the background,
     /// without opening them, unless this device had no playlist open.
     func addSyncedPlaylists(_ added: [Playlist]) async {
+        // Not those another session added while this one waited for a download (sync turned off and on meanwhile).
+        let known = Set(playlists.map(\.id))
+        let added = added.filter { !known.contains($0.id) }
+        guard !added.isEmpty else { return }
         let hadPlaylist = activePlaylist != nil
         playlists.append(contentsOf: added)
         savePlaylists()

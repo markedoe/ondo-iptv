@@ -273,6 +273,21 @@ class UiMappersTest {
         assertEquals(4, UiMappers.guide(state, null, false, now).total)
     }
 
+    /** A row of Live TV: the programme on now, and the one after it (in a gap, the next one only). */
+    @Test
+    fun aChannelRowShowsTheProgrammeOnNowAndTheNextOne() {
+        val now = Fixtures.NOW
+        val morning = EpgProgram("c1.test", now - 30 * 60_000, now + 30 * 60_000, "Morning News")
+        val noon = EpgProgram("c1.test", now + 30 * 60_000, now + 90 * 60_000, "Noon News")
+        val evening = EpgProgram("c1.test", now + 3 * 3_600_000, now + 4 * 3_600_000, "Evening News")
+        val state = Fixtures.state().copy(guide = EpgIndex(listOf(morning, noon, evening)))
+        fun row(at: Long) = UiMappers.live(state, Fixtures.news.id, false, at).channels.first { it.channel.id == "c1" }
+        assertEquals("Morning News", row(now).nowTitle)
+        assertEquals("Noon News", row(now).nextTitle)
+        assertNull(row(now + 2 * 3_600_000).nowTitle)
+        assertEquals("Evening News", row(now + 2 * 3_600_000).nextTitle)
+    }
+
     @Test
     fun seriesDetailPointsAtTheNextEpisode() {
         val series = Fixtures.harborLights

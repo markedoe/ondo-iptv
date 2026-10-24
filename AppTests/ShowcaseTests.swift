@@ -105,6 +105,21 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertNil(model.progress(episode: episodes[0], in: series), "episodes keep their own progress")
     }
 
+    /// An episode listed twice (the same address, as some M3U playlists list it): after it comes the next one, not its copy.
+    func testAfterAnEpisodeListedTwiceComesTheNextOne() async throws {
+        let twice = Self.catalogue.replacingOccurrences(
+            of: "S01E01\nhttp://127.0.0.1:9/h101.mp4",
+            with: "S01E01\nhttp://127.0.0.1:9/h101.mp4\n#EXTINF:2700 group-title=\"Series | Drama\",Harbor (\(Self.thisYear)) S01E01\nhttp://127.0.0.1:9/h101.mp4"
+        )
+        let model = try await model(with: twice)
+        let series = try XCTUnwrap(model.content.series.first)
+        let details = try await model.details(for: series)
+        let episodes = details.seasons.flatMap(\.episodes)
+        let first = try XCTUnwrap(episodes.first)
+        try await watch(model.downloadItem(for: first, in: series), in: model, fraction: 0.99, duration: 2_700)
+        XCTAssertEqual(model.nextEpisode(in: series, details: details)?.episode.code, "S01E02")
+    }
+
     func testHeroPutsContinueWatchingFirstWithoutDuplicates() async throws {
         let model = try await model()
         let road = try movie("Long Road", in: model)

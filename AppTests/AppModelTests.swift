@@ -550,6 +550,99 @@ final class AppModelTests: XCTestCase {
         XCTAssertTrue(model.content.isEmpty)
         XCTAssertTrue(model.library.favorites.isEmpty)
     }
+
+    /// A deleted playlist leaves no copy of itself (its address may hold a login) in the saved files: not in the
+    /// previous version of the playlists kept as `.bak`.
+    func testADeletedPlaylistLeavesNoCopyBehind() async throws {
+        let model = try await modelWithPlaylist()
+        let goneFile = root.appendingPathComponent("gone-login.m3u")
+        try Data(Self.playlistText.utf8).write(to: goneFile)
+        try await model.addPlaylist(Playlist(name: "Gone", source: .remote(goneFile), autoRefreshHours: 0))
+        let gone = try XCTUnwrap(model.playlists.first { $0.name == "Gone" })
+
+        await model.deletePlaylist(gone)
+
+        XCTAssertEqual(model.playlists.map(\.name), ["Test"])
+        let support = root.appendingPathComponent("Support", isDirectory: true)
+        for file in try FileManager.default.contentsOfDirectory(atPath: support.path) {
+            guard let data = FileManager.default.contents(atPath: support.appendingPathComponent(file).path) else { continue }
+            let text = String(decoding: data, as: UTF8.self)
+            XCTAssertFalse(text.contains("gone-login"), "\(file) still holds the deleted playlist")
+        }
+        let reopened = makeModel()
+        await reopened.bootstrap()
+        XCTAssertEqual(reopened.playlists.map(\.name), ["Test"])
+    }
+
+    /// A playlist deleted while its catalogue downloads again leaves no catalogue on disk: Clear Cache only knows the
+    /// playlists there are, so one written after the deletion would stay for good.
+    func testAPlaylistDeletedWhileItRefreshesLeavesNoCatalogue() async throws {
+        let held = HeldAnswers()
+        defer { held.release() }
+        let text = Self.playlistText
+        let server = try LocalHTTPServer { _ in
+            held.waitUnlessFirst()
+            return LocalHTTPServer.Response.text(text)
+        }
+        let address = try await server.start().appending(path: "list.m3u")
+        let model = makeModel()
+        await model.bootstrap()
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(address), autoRefreshHours: 0))
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        let catalogue = model.cacheStore.url(for: "content-\(playlist.id.uuidString)")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: catalogue.path))
+
+        let refresh = Task { await model.refreshActivePlaylist() }
+        let deadline = Date().addingTimeInterval(10)
+        while server.requests.count < 2 {
+            guard Date() < deadline else { return XCTFail("the refresh never asked for the playlist") }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        await model.deletePlaylist(playlist)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: catalogue.path))
+        held.release()
+        await refresh.value
+        XCTAssertFalse(FileManager.default.fileExists(atPath: catalogue.path), "the deleted playlist's catalogue is written again")
+        XCTAssertTrue(model.playlists.isEmpty)
+    }
+
+    /// Sync turned off and on while a session waits for a playlist's download: the next session adds the playlist
+    /// another device added, and the first one, going on afterwards, does not add it a second time.
+    func testAPlaylistFromAnotherDeviceIsAddedOnceWhenTwoSessionsApplyIt() async throws {
+        let held = HeldAnswers()
+        defer { held.release() }
+        let text = Self.playlistText
+        let server = try LocalHTTPServer { _ in
+            held.waitUnlessFirst()
+            return LocalHTTPServer.Response.text(text)
+        }
+        let base = try await server.start()
+        let model = makeModel()
+        await model.bootstrap()
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(base.appending(path: "list.m3u")), autoRefreshHours: 0))
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        // The other device moved this playlist to another address, and has one added long ago (merged first).
+        let moved = SyncPlaylist(id: playlist.id.uuidString.lowercased(), name: "Test", kind: SyncPlaylist.m3u,
+                                 url: base.appending(path: "moved.m3u").absoluteString, addedAt: playlist.createdAt.syncMilliseconds,
+                                 updatedAt: Date().syncMilliseconds + 60_000)
+        let newID = UUID()
+        let new = SyncPlaylist(id: newID.uuidString.lowercased(), name: "Kitchen", kind: SyncPlaylist.m3u,
+                               url: "http://127.0.0.1:9/kitchen.m3u", addedAt: 1, updatedAt: 1)
+        let received = SyncSnapshot(device: "other", playlists: [moved, new])
+
+        let first = Task { await model.applySync(received) }
+        let deadline = Date().addingTimeInterval(10)
+        while server.requests.count < 2 {
+            guard Date() < deadline else { return XCTFail("the first session never downloaded the moved playlist") }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        await model.applySync(received)
+        XCTAssertEqual(model.playlists.filter { $0.id == newID }.count, 1)
+        held.release()
+        await first.value
+        XCTAssertEqual(model.playlists.filter { $0.id == newID }.count, 1, "the playlist is added a second time")
+        XCTAssertEqual(model.playlists.map(\.id), [playlist.id, newID])
+    }
 }
 
 final class CastabilityTests: XCTestCase {
@@ -606,6 +699,24 @@ private final class SlowReminderScheduler: ReminderScheduling, @unchecked Sendab
         let wanted = Dictionary(reminders.map { ($0.id, $0.start.addingTimeInterval(-leadTime)) }, uniquingKeysWith: { first, _ in first })
         lock.withLock { pending = wanted }
     }
+}
+
+/// Lets the first answer of a server go at once and holds the next ones until the test releases them.
+private final class HeldAnswers: @unchecked Sendable {
+    private let lock = NSLock()
+    private var answered = 0
+    private let gate = DispatchSemaphore(value: 0)
+
+    /// On the server's queue.
+    func waitUnlessFirst() {
+        let first = lock.withLock { () -> Bool in
+            answered += 1
+            return answered == 1
+        }
+        if !first { gate.wait() }
+    }
+
+    func release() { gate.signal() }
 }
 
 /// Set from an observation callback, which may run on any thread.

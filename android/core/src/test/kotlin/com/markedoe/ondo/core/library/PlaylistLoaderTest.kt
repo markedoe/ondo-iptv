@@ -13,6 +13,7 @@ import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.GzipException
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
+import com.markedoe.ondo.core.parsing.M3uContentBuilder
 import com.markedoe.ondo.core.utc
 import com.markedoe.ondo.core.xtream.XtreamException
 import com.markedoe.ondo.core.xtream.XtreamUrlBuilder
@@ -23,10 +24,13 @@ import java.io.IOException
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
 import java.nio.file.Files
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -34,11 +38,13 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assume.assumeTrue
 
 class PlaylistLoaderTest {
@@ -184,6 +190,28 @@ class PlaylistLoaderTest {
         assertTrue(PlaylistLoader.guideKey("http://a.example.com/g.xml") != PlaylistLoader.guideKey("http://b.example.com/g.xml"))
     }
 
+    /** A path and its parameters count their case (a file name, a password): only the host's case does not. */
+    @Test
+    fun guidesDifferingInTheCaseOfTheirPathOrParametersAreBothDownloaded() = runTest {
+        val http = MockHttpClient()
+        val guide = "<tv><channel id=\"TV1.fr\"><display-name>TV1</display-name></channel></tv>".encodeToByteArray()
+        val addresses = listOf(
+            "http://guides.example.com/FR.xml",
+            "http://guides.example.com/fr.xml",
+            "http://panel.example.com/xmltv.php?username=demo&password=pw",
+            "http://panel.example.com/xmltv.php?username=demo&password=PW",
+        )
+        for (address in addresses) http.routes[address] = guide
+        val playlist = Playlist(name = "P", source = PlaylistSource.Remote("http://example.com/list.m3u"), epgUrls = addresses)
+        val content = PlaylistContent(
+            channels = listOf(Channel(id = "1", name = "TV1", categoryId = "c", streamUrl = "http://h/1", epgId = "TV1.fr")),
+        )
+        val result = PlaylistLoader(http).loadEpg(playlist, content)
+        assertEquals(addresses, http.requested)
+        assertTrue(result.failures.isEmpty())
+        assertEquals(PlaylistLoader.guideKey("http://guides.example.com/FR.xml"), PlaylistLoader.guideKey("http://GUIDES.Example.com/FR.xml"))
+    }
+
     /**
      * A guide load cancelled while it parses (another playlist opened, a newer catalogue arrived) stops reading the
      * guide: two guides are not parsed at once. The guide comes through a pipe, so what the loader stops reading is
@@ -233,6 +261,39 @@ class PlaylistLoaderTest {
                 assertTrue(readerStopped.await(), "the cancelled load read its guide to the end")
             }
         } finally {
+            folder.deleteRecursively()
+        }
+    }
+
+    /**
+     * A playlist load cancelled while it parses (another playlist opened, sync changed the address) stops at the next
+     * entry: the cancelled catalogue is not built to its end beside the one loaded next. The loader reads its clock
+     * once the catalogue is built, so a clock read means a catalogue built.
+     */
+    @Test
+    fun aCancelledPlaylistLoadStopsParsing() = runBlocking {
+        val folder = Files.createTempDirectory("playlists").toFile()
+        val parsing = Executors.newSingleThreadExecutor { Thread(it, "parsing") }
+        try {
+            val list = LargeCatalogue.m3u(File(folder, "list.m3u"), entries = 200_000).readBytes()
+            val http = object : HttpClient {
+                override suspend fun get(url: String, headers: Map<String, String>): ByteArray = list
+            }
+            val parser = parsing.submit<Thread> { Thread.currentThread() }.get()
+            val built = AtomicBoolean(false)
+            val loader = PlaylistLoader(http, parsingDispatcher = parsing.asCoroutineDispatcher(), clock = { built.set(true); 0L })
+            // Not a child of the test: a parse that never ends fails the test on time rather than holding it.
+            val load = CoroutineScope(Dispatchers.Default).launch {
+                loader.load(Playlist(name = "P", source = PlaylistSource.Remote("http://example.com/list.m3u")))
+            }
+            withTimeout(60_000) {
+                // Cancelled while the catalogue is being built, not before the parsing starts.
+                while (parser.stackTrace.none { it.className == M3uContentBuilder::class.java.name }) yield()
+                load.cancelAndJoin()
+            }
+            assertFalse(built.get(), "the cancelled load built its catalogue to the end")
+        } finally {
+            parsing.shutdownNow()
             folder.deleteRecursively()
         }
     }

@@ -272,6 +272,31 @@ final class XtreamTests: XCTestCase {
         XCTAssertEqual(list[1].tvArchiveDuration, 7)
     }
 
+    /// A rating too large for a number ("1e999"), or that is no number ("nan", "inf"), is dropped, and so is a five-star
+    /// rating too large to double: JSON has no infinity, so the catalogue holding it could not be saved.
+    func testRatingsBeyondTheRangeAreDroppedAndTheCatalogueIsSaved() async throws {
+        let http = try mock()
+        http.routes["api:get_vod_streams"] = Data(#"""
+        [{"stream_id":1,"name":"Quiet Water","rating":"1e999"},{"stream_id":2,"name":"Long Road","rating":"-1e999"},
+         {"stream_id":3,"name":"Glass City","rating":"nan"},{"stream_id":4,"name":"Harbor","rating":"inf"},
+         {"stream_id":5,"name":"Copper Valley","rating_5based":"\#(String(repeating: "9", count: 400))"},
+         {"stream_id":6,"name":"North Light","rating_5based":1e308},{"stream_id":7,"name":"Low Tide","rating_5based":"-1e308"},
+         {"stream_id":8,"name":"Lighthouse","rating":"7,5"}]
+        """#.utf8)
+        http.routes["api:get_series"] = Data(#"[{"series_id":1,"name":"Harbor Lights","rating":"Infinity"}]"#.utf8)
+        let content = try await XtreamClient(credentials: credentials, http: http).fetchContent(format: .m3u8)
+        XCTAssertEqual(content.movies.map(\.rating), [nil, nil, nil, nil, nil, nil, nil, 7.5])
+        XCTAssertEqual(content.series.map(\.rating), [nil])
+        let details = try await XtreamClient(credentials: credentials, http: http).movieDetails(streamID: 5001)
+        XCTAssertEqual(details.rating, 8.8)
+
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory)
+        XCTAssertNoThrow(try store.save(content, name: "content"))
+        XCTAssertEqual(store.load(PlaylistContent.self, name: "content")?.movies.map(\.name).count, 8)
+    }
+
     func testYearsThatAreNotYearsAreIgnored() throws {
         let movies = #"""
         [{"stream_id":1,"year":"-9223372036854775808"},{"stream_id":2,"year":0},{"stream_id":3,"year":"2021"},{"stream_id":4,"year":1e18}]

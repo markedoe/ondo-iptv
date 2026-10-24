@@ -221,7 +221,10 @@ extension AppModel {
             return (episode, first)
         }
         if last.entry.isFinished, let index = last.season.episodes.firstIndex(of: last.episode) {
-            if index + 1 < last.season.episodes.count { return (last.season.episodes[index + 1], last.season) }
+            // An episode listed twice (the same address) is not the one after it.
+            if let following = last.season.episodes[(index + 1)...].first(where: { $0.streamURL != last.episode.streamURL }) {
+                return (following, last.season)
+            }
             if let seasonIndex = details.seasons.firstIndex(of: last.season), seasonIndex + 1 < details.seasons.count,
                let next = details.seasons[seasonIndex + 1].episodes.first {
                 return (next, details.seasons[seasonIndex + 1])

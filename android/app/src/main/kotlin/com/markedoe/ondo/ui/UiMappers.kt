@@ -356,7 +356,8 @@ object UiMappers {
     fun channelRow(channel: Channel, state: OndoState, now: Long): ChannelRow {
         val guide = state.guide ?: return ChannelRow(channel, null, null, null)
         val current = guide.current(channel, now)
-        val next = guide.upcoming(channel, now, 1).firstOrNull()
+        // The programme on now comes first in `upcoming`; in a gap, the next one does.
+        val next = guide.upcoming(channel, now, 2).firstOrNull { it != current }
         return ChannelRow(channel, current?.title, current?.progress(now)?.toFloat(), next?.title)
     }
 
@@ -385,7 +386,8 @@ object UiMappers {
     fun seriesDetail(state: OndoState, series: Series, selectedSeason: Int?, error: String?): SeriesDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.SeriesItem(series)
-        val details = state.seriesDetails[series.id]
+        // The provider's episodes as they came (they are saved): an episode it does not name reads in the app's words.
+        val details = state.seriesDetails[series.id]?.let { state.placeholderNames.rename(it) }
         val next = details?.let { showcase.nextEpisode(series, it) }
         val episodeProgress = details?.seasons.orEmpty().flatMap { it.episodes }
             .mapNotNull { episode -> progress(showcase.progress(series, episode))?.let { episode.id to it } }

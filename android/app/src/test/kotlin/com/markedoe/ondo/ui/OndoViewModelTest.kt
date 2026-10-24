@@ -137,6 +137,28 @@ class OndoViewModelTest {
         assertEquals(OndoViewModel.PREFETCH_LIMIT, panel.seriesRequests.size)
     }
 
+    /**
+     * A series page too large for the memory left: the HTTP client hands the OutOfMemoryError to its caller (it would
+     * stop the app on OkHttp's thread). Fetching ahead, which Home starts by itself, gives up on that series.
+     */
+    @Test
+    fun homeFetchingAheadSurvivesASeriesPageTooLargeForTheMemory() = runTest {
+        val panel = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = throw OutOfMemoryError("Failed to allocate")
+        }
+        val store = AppStore(folder.root)
+        val shows = MediaCategory("s-shows", "Shows", ContentType.SERIES)
+        store.savePlaylists(listOf(SavedPlaylist("x1", "Panel", "http://panel.example.com", username = "viewer", password = "example")))
+        store.saveSettings(AppSettings(activePlaylistId = "x1"))
+        store.saveContent("x1", PlaylistContent(series = listOf(Series(id = "1", name = "Show", categoryId = shows.id, year = 2025, xtreamSeriesId = 1)), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
+        val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler))
+        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series
+        val home = HomeUiState("Panel", hero = series.map { HeroPage(ShowcaseItem.SeriesItem(it), "", inMyList = false, resumable = false) })
+        viewModel.prefetchSeries(home)
+        assertTrue(viewModel.state.value.seriesDetails.isEmpty())
+    }
+
     @Test
     fun leavingHomeStopsFetchingAhead() = runTest {
         val gate = CompletableDeferred<Unit>()

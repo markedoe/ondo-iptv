@@ -154,6 +154,57 @@ class StreamedListTest {
         }
     }
 
+    /**
+     * A load cancelled while it checks how deep its list nests (read once whole before the decoding) stops reading it
+     * too: a list nobody waits for is not read to its end. Through a pipe, as above; once it is read to the end, the
+     * decoding reads an ordinary file.
+     */
+    @Test
+    fun aCancelledLoadStopsCheckingTheNestingOfItsList() = runBlocking {
+        assumeTrue("needs mkfifo", File("/usr/bin/mkfifo").canExecute() || File("/bin/mkfifo").canExecute())
+        val routes = LargeCatalogue.xtream(File(folder, "api"), live = 1, movies = 20_000, series = 1)
+        val movies = routes.getValue("get_vod_streams").readBytes()
+        val partRead = CompletableDeferred<Unit>()
+        val readerStopped = CompletableDeferred<Boolean>()
+        val files = FileHttp(routes)
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>) = files.get(url, headers)
+
+            override suspend fun download(url: String, headers: Map<String, String>, file: File) {
+                if (!url.contains("action=get_vod_streams")) return files.download(url, headers, file)
+                file.delete()
+                check(ProcessBuilder("mkfifo", file.path).start().waitFor() == 0)
+                val whole = File(file.path + ".whole").apply { writeBytes(movies) }
+                thread {
+                    try {
+                        FileOutputStream(file).use { out ->
+                            out.write(movies, 0, movies.size / 4)
+                            partRead.complete(Unit)
+                            var at = movies.size / 4
+                            while (at < movies.size) {
+                                val count = minOf(16 * 1024, movies.size - at)
+                                out.write(movies, at, count)
+                                at += count
+                            }
+                            check(whole.renameTo(file))
+                        }
+                        readerStopped.complete(false)
+                    } catch (_: IOException) {
+                        readerStopped.complete(true) // broken pipe: the client closed the list
+                    }
+                }
+            }
+        }
+        val client = XtreamClient(XtreamCredentials("http://panel.example.com", "demo", "demo"), http, downloadFolder = File(folder, "downloads"))
+        // Not a child of the test: a reading stuck in the pipe fails the test on time rather than holding it.
+        val load = CoroutineScope(Dispatchers.Default).launch { client.fetchContent(XtreamOutputFormat.M3U8) }
+        withTimeout(60_000) {
+            partRead.await()
+            load.cancelAndJoin()
+            assertTrue(readerStopped.await(), "the cancelled load read its list to the end")
+        }
+    }
+
     /** A fake answering through `get` only (as most test fakes do) still works: `download` defaults to it. */
     @Test
     fun clientsWithoutDownloadStillWork() = runTest {

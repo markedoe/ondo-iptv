@@ -86,7 +86,7 @@
     <string name="support">Assistance</string>
     <string name="version">Version</string>
     <string name="delete_playlist_title">Supprimer « %1$s » ?</string>
-    <string name="delete_playlist_text">Son catalogue, ses favoris et son historique sur cet appareil sont effacés.</string>
+    <string name="delete_playlist_text">Son catalogue, ses éléments de Ma liste et des collections, et son historique sur cet appareil sont effacés.</string>
     <string name="try_again">Réessayer</string>
     <string name="loading">Chargement…</string>
     <string name="error_provider_refused">Le fournisseur a refusé ce flux. Votre abonnement a peut-être expiré ou la limite de connexions est atteinte.</string>
@@ -113,6 +113,13 @@
     <string name="kind_m3u">Playlist M3U</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Saison %1$d</string>
+    <string name="placeholder_uncategorized">Non classé</string>
+    <string name="placeholder_other">Autre</string>
+    <string name="placeholder_other_number">Autre %1$d</string>
+    <string name="placeholder_channel">Chaîne %1$d</string>
+    <string name="placeholder_movie">Film %1$d</string>
+    <string name="placeholder_series">Série %1$d</string>
+    <string name="placeholder_episode">Épisode %1$d</string>
     <string name="choose_file">Choisir un fichier</string>
     <string name="categories">Catégories</string>
     <string name="categories_hint">Choisissez les catégories affichées, par langue ou pays, ou une par une.</string>

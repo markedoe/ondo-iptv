@@ -17,6 +17,17 @@ class PeopleFuzzTest {
         assertEquals(listOf("Ann Lee", "Bo Chen"), People.names("Ann Lee (voice), Bo Chen [uncredited]"))
     }
 
+    /** A long run of text without a separator is no name: it would open a page carrying all of it. */
+    @Test
+    fun aPartLongerThanAnyNameIsNoName() {
+        val run = "A" + "b".repeat(300_000)
+        assertEquals(listOf("Ann Lee"), People.names("$run, Ann Lee"))
+        assertEquals(listOf("Ann Lee"), People.names("Ann Lee / $run (voice)"))
+        assertEquals(listOf("A" + "b".repeat(People.MAX_NAME_LENGTH - 1)), People.names("A" + "b".repeat(People.MAX_NAME_LENGTH - 1)))
+        assertEquals(emptyList(), People.names("A" + "b".repeat(People.MAX_NAME_LENGTH)))
+        assertEquals(false, People.mentions(run, run))
+    }
+
     /** The linear search finds the names the former regular expression found. */
     @Test(timeout = 30_000)
     fun peopleNamesMatchTheFormerSplitting() {

@@ -41,20 +41,58 @@ public enum XMLTVParser {
 
     public static func parse(_ data: Data, filter: EPGFilter = .none, timeShift: TimeInterval = 0) throws -> EPGData {
         let xml = try data.gunzippedIfNeeded()
-        let delegate = XMLTVDelegate(filter: filter, timeShift: timeShift)
-        let parser = XMLParser(data: xml)
+        return try read(InputStream(data: xml), XMLTVDelegate(filter: filter, timeShift: timeShift)).result()
+    }
+
+    /// A guide saved on disk, plain or gzip, read a piece at a time: given its data whole, the parser copied it (measured
+    /// on Linux: a 151 MB guide took 290 MB more than its data while parsed, before what it keeps), and a large guide
+    /// is hundreds of megabytes.
+    public static func parse(contentsOf file: URL, filter: EPGFilter = .none, timeShift: TimeInterval = 0) throws -> EPGData {
+        try withPlainXML(at: file) { try parsePlainXML(at: $0, filter: filter, timeShift: timeShift) }
+    }
+
+    /// `body` reads the guide's XML from the file it is given: `file` itself, or a temporary file holding it inflated.
+    static func withPlainXML<T>(at file: URL, _ body: (URL) throws -> T) throws -> T {
+        guard GzipInflater.isGzipFile(file) else { return try body(file) }
+        let inflated = FileManager.default.temporaryDirectory.appendingPathComponent("guide-\(UUID().uuidString).xml")
+        defer { try? FileManager.default.removeItem(at: inflated) }
+        try GzipInflater.decompress(file, to: inflated)
+        return try body(inflated)
+    }
+
+    static func parsePlainXML(at file: URL, filter: EPGFilter, timeShift: TimeInterval) throws -> EPGData {
+        try read(stream(file), XMLTVDelegate(filter: filter, timeShift: timeShift)).result()
+    }
+
+    /// What `parsePlainXML` would keep with the same filter and shift, by hour around `now`, without keeping anything:
+    /// read once to size it, a guide is read again within a window that fits the memory it may take.
+    static func estimatePlainXML(at file: URL, filter: EPGFilter, timeShift: TimeInterval, now: Date) throws -> GuideEstimate {
+        let delegate = try read(stream(file), XMLTVDelegate(filter: filter, timeShift: timeShift, estimateAround: now))
+        return GuideEstimate(now: now, bytesByHour: delegate.bytesByHour)
+    }
+
+    private static func stream(_ file: URL) throws -> InputStream {
+        guard let stream = InputStream(url: file) else { throw CocoaError(.fileReadUnknown, userInfo: [NSURLErrorKey: file]) }
+        return stream
+    }
+
+    /// Runs `delegate` over the XML the stream gives.
+    private static func read(_ stream: InputStream, _ delegate: XMLTVDelegate) throws -> XMLTVDelegate {
+        let parser = XMLParser(stream: stream)
         parser.shouldProcessNamespaces = false
         parser.shouldResolveExternalEntities = false
         parser.delegate = delegate
         // Some platforms report a premature end only through `parserError`, with `parse()` returning true.
         let failed = !parser.parse() || parser.parserError != nil
+        // A replaced load: what was read is not a guide cut short.
+        if delegate.wasCancelled { throw CancellationError() }
         // A guide cut short or damaged near its end keeps what was read before the damage. A file that yields
         // nothing is an error when it is broken or is not a guide at all: providers answer some refusals with an
         // HTML page and a 200, which must not pass for an empty guide.
         if delegate.programCount == 0, delegate.channels.isEmpty, failed || !delegate.sawGuideElement {
             throw ParseError.invalidXML(parser.parserError?.localizedDescription ?? "no <tv> element")
         }
-        return delegate.result()
+        return delegate
     }
 
     /// Parses `20240101203000 +0100`, `20240101203000+0100`, `20240101203000` (UTC), `202401012030`.
@@ -117,6 +155,8 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
     var programCount = 0
     /// Whether the document has the `<tv>` element of an XMLTV guide.
     private(set) var sawGuideElement = false
+    /// The task parsing was cancelled: reading stopped at the next programme.
+    private(set) var wasCancelled = false
 
     // Channel being parsed.
     private var channelID: String?
@@ -133,9 +173,15 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
     /// Lowercased guide channel id -> keep?
     private var decisionCache: [String: Bool] = [:]
 
-    init(filter: EPGFilter, timeShift: TimeInterval) {
+    /// When set, programmes are counted (`GuideEstimate`) around this date instead of kept.
+    private let estimateAround: Date?
+    /// Hour of start relative to `estimateAround` -> bytes the programmes starting then would take.
+    private(set) var bytesByHour: [Int: Int] = [:]
+
+    init(filter: EPGFilter, timeShift: TimeInterval, estimateAround: Date? = nil) {
         self.filter = filter
         self.timeShift = timeShift
+        self.estimateAround = estimateAround
     }
 
     func result() -> EPGData {
@@ -168,6 +214,11 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
         case "tv":
             sawGuideElement = true
         case "programme":
+            if Task.isCancelled {
+                wasCancelled = true
+                parser.abortParsing()
+                return
+            }
             guard let channel = attributes["channel"],
                   let start = attributes["start"].flatMap(XMLTVParser.parseDate) else {
                 keepProgramme = false
@@ -220,7 +271,11 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
         case "programme":
             if keepProgramme, var current = programme {
                 if current.title.isEmpty { current.title = "—" }
-                programs[current.channelID, default: []].append(current)
+                if let now = estimateAround {
+                    bytesByHour[GuideEstimate.hour(of: current.start, around: now), default: 0] += GuideEstimate.bytes(of: current)
+                } else {
+                    programs[current.channelID, default: []].append(current)
+                }
                 programCount += 1
             }
             programme = nil
@@ -262,12 +317,13 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
     static func formatEpisode(_ value: String) -> String {
         let parts = value.split(separator: ".", omittingEmptySubsequences: false)
         guard parts.count >= 2 else { return value }
-        func number(_ part: Substring) -> Int? {
-            Int(part.split(separator: "/").first?.trimmingCharacters(in: .whitespaces) ?? "")
+        // 32 bits, as `%02d` prints them (and as on Android): past that, the guide's text.
+        func number(_ part: Substring) -> Int32? {
+            Int32(part.split(separator: "/").first?.trimmingCharacters(in: .whitespaces) ?? "")
         }
         guard let season = number(parts[0]), let episode = number(parts[1]) else { return value }
-        // The guide's text: `Int.max + 1` would trap.
-        guard season < Int.max, episode < Int.max else { return value }
+        // The guide's text: `Int32.max + 1` would trap.
+        guard season < Int32.max, episode < Int32.max else { return value }
         return String(format: "S%02dE%02d", season + 1, episode + 1)
     }
 }

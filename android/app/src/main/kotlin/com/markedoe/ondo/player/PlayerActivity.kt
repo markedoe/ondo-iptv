@@ -530,7 +530,9 @@ class PlayerActivity : ComponentActivity() {
      */
     private fun openSession(exoPlayer: ExoPlayer) {
         session?.release()
-        session = MediaSession.Builder(this, exoPlayer).build()
+        // Media3 refuses two sessions of one ID: a player opened just after another was closed is created before
+        // Android destroys the closed one, which still holds its session then.
+        session = MediaSession.Builder(this, exoPlayer).setId("player-${++sessionCount}").build()
     }
 
     /** Whether the media session is open (tests). */
@@ -927,6 +929,9 @@ class PlayerActivity : ComponentActivity() {
 
     companion object {
         private const val EXTRA_REQUEST = "request"
+
+        /** Sessions opened by the players of this process, for their IDs (main thread). */
+        private var sessionCount = 0
 
         /** The tag of the More button among the player's buttons on a TV (tests). */
         internal const val MORE_BUTTON = "playerMoreTv"

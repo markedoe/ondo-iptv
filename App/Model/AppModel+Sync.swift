@@ -169,8 +169,12 @@ enum SyncMapping {
         return playlist
     }
 
+    /// Never a file: file playlists stay on their device (docs/SYNC.md), and a `file:` address from another device would
+    /// make this one read its own files as a playlist or a guide, whole, past the download limit.
     private static func address(_ text: String) -> URL? {
-        URL(string: text) ?? URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines))
+        guard let url = URL(string: text) ?? URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
+              !url.isFileURL, url.scheme?.lowercased() != "file" else { return nil }
+        return url
     }
 
     /// The Xtream server as written when it is a full address, else completed as the app completes a typed one.
@@ -258,10 +262,13 @@ enum SyncMapping {
         return library
     }
 
-    /// The image address received; the device's own `URL` when it is the same one.
+    /// The image address received; the device's own `URL` when it is the same one. Another device's is a web address:
+    /// Nuke reads a `file:` or `data:` address inline and whole, a file of this device included.
     private static func image(_ text: String?, keeping current: URL?) -> URL? {
         guard let text else { return nil }
-        return current?.absoluteString == text ? current : URL(string: text)
+        if current?.absoluteString == text { return current }
+        guard let url = URL(string: text), ["http", "https"].contains(url.scheme?.lowercased() ?? "") else { return nil }
+        return url
     }
 }
 
@@ -387,13 +394,19 @@ extension AppModel {
         let merged = SyncMerge.merge(syncSnapshot(now: now), received)
         let records = Dictionary(merged.playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        // Playlists edited elsewhere, then the new ones.
+        // Playlists edited elsewhere, then the new ones. The device's own are found by ID (a snapshot can hold tens of
+        // thousands), and found again after an update, which waits and lets other changes in.
+        func byID() -> [UUID: Playlist] { Dictionary(playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }) }
+        var locals = byID()
         var added: [Playlist] = []
         for record in merged.playlists {
             guard let id = UUID(uuidString: record.id) else { continue }
-            if let local = playlists.first(where: { $0.id == id }) {
+            if let local = locals[id] {
                 guard let updated = SyncMapping.playlist(from: record, base: local) else { continue }
-                if updated != local { await updatePlaylist(updated, recordsSyncChange: false) }
+                if updated != local {
+                    await updatePlaylist(updated, recordsSyncChange: false)
+                    locals = byID()
+                }
             } else if let created = SyncMapping.playlist(from: record, base: duplicate(becoming: record, in: merged)) {
                 added.append(created)
             } else {

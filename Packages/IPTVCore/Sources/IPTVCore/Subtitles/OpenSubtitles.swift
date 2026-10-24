@@ -58,7 +58,7 @@ public actor OpenSubtitlesClient: SubtitleProvider {
         } catch {
             throw SubtitleHTTP.translate(error, service: service)
         }
-        let response = try JSONDecoder().decode(SearchResponse.self, from: data)
+        let response = try JSONDecoder().decodeCheckingKeys(SearchResponse.self, from: data)
         return response.data.compactMap { item in
             guard let file = item.attributes.files?.first else { return nil }
             let attributes = item.attributes
@@ -99,7 +99,7 @@ public actor OpenSubtitlesClient: SubtitleProvider {
         guard let id = Int(fileID) else { throw SubtitleSearchError.serviceError(service, "unknown file") }
         let body = try JSONEncoder().encode(["file_id": id])
         let data = try await http.send(HTTPRequest(url: url("/download"), method: "POST", headers: headers(json: true), body: body))
-        return try JSONDecoder().decode(DownloadResponse.self, from: data)
+        return try JSONDecoder().decodeCheckingKeys(DownloadResponse.self, from: data)
     }
 
     private func logIn() async throws {
@@ -115,7 +115,7 @@ public actor OpenSubtitlesClient: SubtitleProvider {
         } catch {
             throw SubtitleHTTP.translate(error, service: service)
         }
-        let login = try JSONDecoder().decode(LoginResponse.self, from: data)
+        let login = try JSONDecoder().decodeCheckingKeys(LoginResponse.self, from: data)
         session = (login.token, login.baseURL ?? Self.host)
     }
 

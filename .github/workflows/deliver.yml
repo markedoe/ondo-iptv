@@ -37,22 +37,25 @@ jobs:
           persist-credentials: false
       - name: Send the push's builds
         run: |
-          # A release workflow run by hand builds main as it is now: only when that is the commit that passed.
-          main=$(git rev-parse HEAD)
-          if [ "$main" != "$SHA" ]; then
-            echo "main is now at $main, newer than $SHA: that push's own delivery sends it."
-            exit 0
-          fi
-          if git tag --points-at "$SHA" | grep -q '^v'; then
-            echo "$SHA carries a version tag: the tag's release delivers it."
-            exit 0
-          fi
           if [ "$SOURCE" = CI ]; then
             source_workflow=ci.yml
             paths="App Packages :(exclude)Packages/*/Tests/* project.yml fastlane/Fastfile Gemfile Gemfile.lock"
           else
             source_workflow=android.yml
             paths="android :(exclude)android/*/src/test/*"
+          fi
+          # A release workflow run by hand builds main as it is now: the commit that passed, or a newer one that ships
+          # the same app (this workflow skips the commits after it, such as documentation or the other platform, or they
+          # changed tests only). A newer change to what the apps ship is sent by its own push's delivery.
+          main=$(git rev-parse HEAD)
+          # shellcheck disable=SC2086 # the paths are words
+          if [ "$main" != "$SHA" ] && ! git diff --quiet "$SHA" "$main" -- $paths; then
+            echo "main is now at $main, which changes what the apps ship since $SHA: that push's own delivery sends it."
+            exit 0
+          fi
+          if { git tag --points-at "$SHA"; git tag --points-at "$main"; } | grep -q '^v'; then
+            echo "$SHA or main ($main) carries a version tag: the tag's release delivers it."
+            exit 0
           fi
           # What the apps ship (tests left out) changed since the previous green push of the same workflow, the last one
           # delivered.
@@ -68,14 +71,17 @@ jobs:
             printf 'Changed since %s:\n%s\n' "$previous" "$changed"
           fi
           # GitHub keeps one waiting run per release group, and a new one replaces it: never push out a waiting run
-          # (a version tag's release among them). The waiting run, or the next push, delivers this commit.
-          if [ "$SOURCE" = CI ]; then release_workflow=release.yml; else release_workflow=release-android.yml; fi
-          waiting=$(gh run list --repo "$REPO" --workflow "$release_workflow" --limit 20 --json status \
-            --jq '[.[] | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | length')
-          if [ "$waiting" -gt 0 ]; then
-            echo "A $release_workflow run is already waiting: no new one, so as not to replace it."
-            exit 0
-          fi
+          # (a version tag's release among them). The waiting run, or the next push, delivers this commit. The
+          # release-android group also holds Promote Android and Google Play status.
+          if [ "$SOURCE" = CI ]; then group_workflows="release.yml"; else group_workflows="release-android.yml promote-android.yml play-status.yml"; fi
+          for workflow in $group_workflows; do
+            waiting=$(gh run list --repo "$REPO" --workflow "$workflow" --limit 20 --json status \
+              --jq '[.[] | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | length')
+            if [ "$waiting" -gt 0 ]; then
+              echo "A $workflow run is already waiting: no new one, so as not to replace it."
+              exit 0
+            fi
+          done
           if [ "$SOURCE" = CI ]; then
             gh workflow run release.yml --repo "$REPO" --ref main -f target=builds -f edition=testflight
             echo "TestFlight: iOS and macOS builds of $SHA started (Release, target builds)."

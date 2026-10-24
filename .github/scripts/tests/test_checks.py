@@ -99,6 +99,17 @@ class TranslationsTests(CheckTestCase):
                    json.dumps({"sourceLanguage": "en", "strings": {"NSLocalNetworkUsageDescription": prompt}, "version": "1.0"}))
         self.assertFails("translations", "no Arabic translation in InfoPlist.xcstrings", "NSLocalNetworkUsageDescription")
 
+    def test_a_permission_prompt_missing_from_its_catalogue_fails(self):
+        # The system shows the prompt in English in every language when InfoPlist.xcstrings has no entry for it.
+        self.catalogue({"New Movies": french("Nouveaux films")})
+        self.write("project.yml", "    info:\n      properties:\n        NSLocalNetworkUsageDescription: Ondo looks for TVs.\n"
+                                  "        NSCameraUsageDescription: Ondo scans a playlist's QR code.\n")
+        self.write("App/Resources/InfoPlist.xcstrings", json.dumps(
+            {"sourceLanguage": "en", "strings": {"NSLocalNetworkUsageDescription": french("Ondo cherche les TV.")}, "version": "1.0"}))
+        self.assertFails("translations", "NSCameraUsageDescription")
+        self.write("project.yml", "    info:\n      properties:\n        NSLocalNetworkUsageDescription: Ondo looks for TVs.\n")
+        self.assertPasses("translations")
+
     def test_stale_keys_are_ignored(self):
         self.catalogue({"Old Row": {"extractionState": "stale", "localizations": {}}})
         self.assertPasses("translations")
@@ -107,6 +118,56 @@ class TranslationsTests(CheckTestCase):
         self.catalogue({"New Movies": french("Nouveaux films")})
         self.write("App/Home.swift", 'let a = 1\nShelf(title: "Brand New Row", metrics: metrics)\n')
         self.assertFails("translations", "App/Home.swift:2", "Brand New Row")
+
+    def test_placeholders_kept_in_another_order_pass(self):
+        self.catalogue({"Starts at %1$@ on %2$@": french("Sur %2$@ à %1$@"), "%@ of %@": french("%2$@ : %1$@"),
+                        "%lld%% watched": french("%lld %% vu")})
+        self.assertPasses("translations")
+
+    def test_a_number_read_as_a_text_fails(self):
+        self.catalogue({"Season %lld": french("Saison %@")})
+        self.assertFails("translations", "French text in Localizable.xcstrings does not keep the placeholders of 'Season %lld'")
+
+    def test_a_missing_or_extra_placeholder_fails(self):
+        self.catalogue({"Next: %@": french("À suivre"), "Delete “%@”?": french("Supprimer « %@ » de %@ ?")})
+        self.assertFails("translations", "'Next: %@'", "'Delete “%@”?'")
+
+    def test_a_stray_percent_sign_fails(self):
+        self.catalogue({"Next: %@": french("À suivre : %@ (50 %)")})
+        self.assertFails("translations", "'Next: %@'")
+
+    def test_an_arabic_digit_inside_a_placeholder_fails(self):
+        self.catalogue({"Starts at %1$@ on %2$@": french("يبدأ في %١$@ على %2$@")})
+        self.assertFails("translations", "'Starts at %1$@ on %2$@'")
+
+    def test_positional_and_plain_placeholders_mixed_fail(self):
+        self.catalogue({"%@ of %@": french("%2$@ sur %@")})
+        self.assertFails("translations", "'%@ of %@'")
+
+    def plural(self, forms: dict) -> dict:
+        """%lld seasons in every language, with the plural forms given for Arabic and French."""
+        values = {"fr": {"one": "%lld saison", "many": "%lld saisons", "other": "%lld saisons"},
+                  "es": {"one": "%lld temporada", "many": "%lld temporadas", "other": "%lld temporadas"},
+                  "pt": {"one": "%lld temporada", "many": "%lld temporadas", "other": "%lld temporadas"},
+                  "zh-Hans": {"other": "%lld 季"}, "hi": {"one": "%lld सीज़न", "other": "%lld सीज़न"},
+                  "ar": {"zero": "%lld موسم", "one": "موسم واحد", "two": "موسمان", "few": "%lld مواسم",
+                         "many": "%lld موسمًا", "other": "%lld موسم"}}
+        values.update(forms)
+        return {"localizations": {code: {"variations": {"plural": {
+            case: {"stringUnit": {"state": "translated", "value": value}} for case, value in cases.items()}}}
+            for code, cases in values.items()}}
+
+    def test_plural_forms_of_each_language_pass(self):
+        self.catalogue({"%lld seasons": self.plural({})})
+        self.assertPasses("translations")
+
+    def test_arabic_without_its_dual_fails(self):
+        self.catalogue({"%lld seasons": self.plural({"ar": {"one": "موسم واحد", "few": "%lld مواسم", "other": "%lld موسم"}})})
+        self.assertFails("translations", "Arabic plural forms in Localizable.xcstrings are ['few', 'one', 'other']", "%lld seasons")
+
+    def test_a_plural_form_with_another_placeholder_fails(self):
+        self.catalogue({"%lld seasons": self.plural({"fr": {"one": "%lld saison", "many": "%lld saisons", "other": "%@ saisons"}})})
+        self.assertFails("translations", "French plural.other text in Localizable.xcstrings", "%lld seasons")
 
 
 class PrivacyManifestTests(CheckTestCase):
@@ -238,6 +299,9 @@ class NeutralityTests(CheckTestCase):
             "es": "El mejor reproductor de IPTV gratis.",
             "es-gratuito": "Un reproductor IPTV gratuito.",
             "pt": "Assista IPTV grátis no seu celular.",
+            "pt-de-graca": "Assista IPTV de graça no seu celular.",
+            "en-hyphen": "The best free-IPTV player.",
+            "en-joined": "#freeIPTV",
             "zh": "最佳免费IPTV播放器",
             "zh-de": "免费的 IPTV 播放器",
             "ar": "أفضل مشغل IPTV مجاني",
@@ -384,6 +448,18 @@ class AppStoreTests(CheckTestCase):
                          "Packages/IPTVCore/Sources/IPTVCore/Mode.swift: the App Store edition reads its launch arguments")
         self.write("App/Features/Home/Hero.swift", f"#if DEBUG\n{hook}#else\nprivate static let autoAdvances = true\n#endif\n")
         self.write("Packages/IPTVCore/Sources/IPTVCore/Mode.swift", "let verbose = false\n")
+        self.assertPasses("app_store")
+
+    def test_launch_arguments_read_through_user_defaults_are_a_hidden_switch_too(self):
+        # `-uitest-route home` on the command line lands in UserDefaults (its argument domain).
+        hook = 'private static let route = UserDefaults.standard.string(forKey: "uitest-route")\n'
+        self.write("App/Model/ScreenshotRoute.swift", hook)
+        self.write("App/Model/Unlock.swift",
+                   'let unlocked = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)["x"] != nil\n')
+        self.assertFails("app_store", "App/Model/ScreenshotRoute.swift: the App Store edition reads its launch arguments",
+                         "App/Model/Unlock.swift: the App Store edition reads its launch arguments")
+        self.write("App/Model/ScreenshotRoute.swift", f"#if DEBUG\n{hook}#endif\n")
+        self.write("App/Model/Unlock.swift", 'let sort = UserDefaults.standard.string(forKey: "sortOrder")\n')
         self.assertPasses("app_store")
 
     def test_a_private_api_fails(self):

@@ -1,4 +1,7 @@
 import Foundation
+#if os(iOS) || os(tvOS)
+import os
+#endif
 
 public enum PlaylistLoaderError: Error, LocalizedError, Equatable {
     case unsupportedFormat
@@ -99,11 +102,28 @@ public struct PlaylistLoader: Sendable {
         return content
     }
 
+    /// Memory the programmes of a playlist's guides may take: a quarter of what the system still lets the app use, on
+    /// the devices that stop an app past a limit (iPhone, iPad, Apple TV). No limit elsewhere: a Mac compresses and
+    /// swaps memory instead. What is kept is then saved as the guide's cache (`FileStore`), whose encoding took about
+    /// 1.7 times what the programmes take on top of them (measured on Linux: 310 MB more for 179 MB of programmes).
+    public static func guideMemoryBudget() -> Int? {
+        #if os(iOS) || os(tvOS)
+        let available = os_proc_available_memory()
+        return available > 0 ? available / 4 : nil
+        #else
+        return nil
+        #endif
+    }
+
     /// Loads, merges and indexes every guide of a playlist. Individual source failures are reported, not thrown.
+    /// With a `budget` (bytes), a guide whose programmes would take more is kept within a narrower window around `now`
+    /// (what is on and what comes next first), and the guides after it share what is left.
     public func loadEPG(
         for playlist: Playlist,
         content: PlaylistContent,
-        window: DateInterval = EPGFilter.standard()
+        window: DateInterval = EPGFilter.standard(),
+        budget: Int? = PlaylistLoader.guideMemoryBudget(),
+        now: Date = Date()
     ) async -> (data: EPGData, failures: [URL: Error]) {
         var sources = playlist.epgURLs
         if playlist.useProviderEPG {
@@ -118,10 +138,19 @@ public struct PlaylistLoader: Sendable {
         let shift = playlist.epgTimeShiftHours * 3600
         var merged = EPGData()
         var failures: [URL: Error] = [:]
+        var remaining = budget
         for url in sources {
+            // On disk, then read while parsed: a large guide (hundreds of megabytes) never sits whole in memory.
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("guide-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: file) }
             do {
-                let raw = try await http.data(from: url, headers: playlist.headers.dictionary)
-                let parsed = try XMLTVParser.parse(raw, filter: filter, timeShift: shift)
+                try await http.download(from: url, headers: playlist.headers.dictionary, to: file)
+                let budget = remaining
+                let parsed = try XMLTVParser.withPlainXML(at: file) { xml in
+                    let sized = try Self.filter(filter, within: budget, for: xml, timeShift: shift, now: now)
+                    return try XMLTVParser.parsePlainXML(at: xml, filter: sized, timeShift: shift)
+                }
+                if let budget { remaining = max(budget - GuideEstimate.bytes(of: parsed), 0) }
                 merged.merge(parsed)
             } catch {
                 failures[url] = error
@@ -129,5 +158,18 @@ public struct PlaylistLoader: Sendable {
         }
         merged.fetchedAt = Date()
         return (merged, failures)
+    }
+
+    /// `filter`, its window narrowed when the guide's programmes would take more than `budget`. A guide too small to
+    /// reach the budget is not sized first: a kept programme takes at most eight times its XML (`GuideEstimate.bytes`).
+    static func filter(_ filter: EPGFilter, within budget: Int?, for xml: URL, timeShift: TimeInterval, now: Date) throws -> EPGFilter {
+        guard let budget else { return filter }
+        let size = (try? xml.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? Int.max
+        guard size > budget / 8 else { return filter }
+        let estimate = try XMLTVParser.estimatePlainXML(at: xml, filter: filter, timeShift: timeShift, now: now)
+        guard estimate.totalBytes > budget else { return filter }
+        var narrowed = filter
+        narrowed.window = estimate.window(budget: budget, full: filter.window).window
+        return narrowed
     }
 }

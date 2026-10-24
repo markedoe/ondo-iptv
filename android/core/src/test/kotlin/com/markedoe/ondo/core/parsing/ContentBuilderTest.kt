@@ -196,6 +196,14 @@ class ContentBuilderTest {
         assertEquals(listOf("JSON One"), loader.parse(bom + Fixtures.bytes("sample.json")).channels.map { it.name })
     }
 
+    /** A list of addresses saved with a byte order mark (as some editors save UTF-8) keeps its first address. */
+    @Test
+    fun aPlainListStartingWithAByteOrderMarkKeepsItsFirstAddress() {
+        val bom = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
+        val list = "http://a.example.com/1.m3u8\nhttp://a.example.com/2.m3u8\n".encodeToByteArray()
+        assertEquals(listOf("1.m3u8", "2.m3u8"), loader.parse(bom + list).channels.map { it.name })
+    }
+
     @Test
     fun fileExtensionComesFromThePathNeverTheHost() {
         assertEquals("", ContentClassifier.fileExtension("http://stream.example.com"))

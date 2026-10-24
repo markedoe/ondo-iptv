@@ -75,8 +75,8 @@ class XtreamClient(
         }
         try {
             http.download(urls.apiUrl(action, emptyMap()), headers.toMap(), file)
-            // A cancelled load stops at the next element: a list nobody waits for is not decoded to its end.
-            return withContext(parsingDispatcher) { decodeList(file) { ensureActive(); decode(it) } }
+            // A cancelled load stops at the next read or element: a list nobody waits for is not read to its end.
+            return withContext(parsingDispatcher) { decodeList(file, checkActive = { ensureActive() }) { ensureActive(); decode(it) } }
         } finally {
             withContext(NonCancellable + Dispatchers.IO) { file.delete() }
         }
@@ -107,8 +107,8 @@ class XtreamClient(
             username = user.username ?: credentials.username,
             status = status,
             isTrial = user.isTrial,
-            expiresAt = user.expDate?.times(1000),
-            createdAt = user.createdAt?.times(1000),
+            expiresAt = user.expDate?.let { millis(it) },
+            createdAt = user.createdAt?.let { millis(it) },
             activeConnections = user.activeConnections,
             maxConnections = user.maxConnections,
             allowedOutputFormats = user.allowedOutputFormats,
@@ -297,6 +297,7 @@ class XtreamClient(
                 val episodeNumber = dto.episodeNumber ?: (index + 1)
                 Episode(
                     id = dto.id,
+                    // An English name of the core's own: the app shows it in its language (PlaceholderNames).
                     title = dto.title?.let(::cleanEpisodeTitle) ?: "Episode $episodeNumber",
                     season = number,
                     number = episodeNumber,
@@ -335,8 +336,8 @@ class XtreamClient(
         return listings.map {
             EpgProgram(
                 channelId = epgChannelId,
-                start = it.start * 1000,
-                end = it.end * 1000,
+                start = millis(it.start),
+                end = millis(it.end),
                 title = it.title,
                 description = it.description,
             )
@@ -354,6 +355,7 @@ class XtreamClient(
             val added = LinkedHashSet<String>()
             for (id in itemCategoryIds) {
                 if (id in known || !added.add(id)) continue
+                // An English name of the core's own: the app shows it in its language (PlaceholderNames).
                 result.add(MediaCategory(id, if (added.size == 1) "Other" else "Other ${added.size}", type))
             }
             return result
@@ -368,6 +370,9 @@ class XtreamClient(
                 val uri = runCatching { URI(url) }.getOrNull() ?: return@firstOrNull true
                 uri.host?.endsWith("tmdb.org") != true || uri.path.orEmpty().substringAfterLast('/').contains('.')
             }
+
+        /** Epoch [seconds] (positive, as decoded) in millis; too far to count in millis, the farthest time there is. */
+        internal fun millis(seconds: Long): Long = if (seconds > Long.MAX_VALUE / 1000) Long.MAX_VALUE else seconds * 1000
 
         /** `"Copper Valley - S01E01 - Pilot"` -> `"Pilot"`. */
         internal fun cleanEpisodeTitle(title: String): String {

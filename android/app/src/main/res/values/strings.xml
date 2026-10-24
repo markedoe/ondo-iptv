@@ -88,7 +88,7 @@
     <string name="support">Support</string>
     <string name="version">Version</string>
     <string name="delete_playlist_title">Delete “%1$s”?</string>
-    <string name="delete_playlist_text">Its catalogue, favorites and history on this device are removed.</string>
+    <string name="delete_playlist_text">Its catalogue, its items in My List and collections, and its history on this device are removed.</string>
     <string name="try_again">Try Again</string>
     <string name="loading">Loading…</string>
     <string name="error_provider_refused">The provider refused this stream. Your subscription may have expired or the connection limit is reached.</string>
@@ -113,6 +113,14 @@
     <string name="kind_m3u">M3U playlist</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Season %1$d</string>
+    <!-- The names the core gives in English where the provider gives none (PlaceholderNames). -->
+    <string name="placeholder_uncategorized">Uncategorized</string>
+    <string name="placeholder_other">Other</string>
+    <string name="placeholder_other_number">Other %1$d</string>
+    <string name="placeholder_channel">Channel %1$d</string>
+    <string name="placeholder_movie">Movie %1$d</string>
+    <string name="placeholder_series">Series %1$d</string>
+    <string name="placeholder_episode">Episode %1$d</string>
     <string name="choose_file">Choose a file</string>
     <string name="categories">Categories</string>
     <string name="categories_hint">Choose the categories shown, by language or country or one by one.</string>

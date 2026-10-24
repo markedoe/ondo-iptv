@@ -31,9 +31,12 @@ object SyncKeys {
     fun syncs(entry: WatchEntry) = entry.kind != ItemKind.CHANNEL
 
     /** A playlist imported from a file is on this device only: it never syncs. */
-    fun syncs(playlist: SavedPlaylist): Boolean {
-        val url = playlist.url.trim().lowercase()
-        return !(url.startsWith("content:") || url.startsWith("file:") || url.startsWith("/"))
+    fun syncs(playlist: SavedPlaylist): Boolean = !isFile(playlist.url)
+
+    /** A file on the device (imported, or a path): what another device sends is never one. */
+    fun isFile(address: String): Boolean {
+        val url = address.trim().lowercase()
+        return url.startsWith("content:") || url.startsWith("file:") || url.startsWith("/")
     }
 }
 
@@ -57,9 +60,10 @@ object SyncData {
     fun snapshot(state: OndoState, device: String, deviceName: String?, now: Long): SyncSnapshot {
         val synced = state.playlists.filter(SyncKeys::syncs)
         val ids = synced.mapTo(HashSet()) { it.id.lowercase() }
+        val known = state.playlists.mapTo(HashSet()) { it.id.lowercase() }
         val library = state.library
         // Records of a file playlist stay here; those of a playlist this device does not know (yet) still travel.
-        fun travels(playlistId: String) = playlistId.lowercase() in ids || state.playlists.none { it.id.equals(playlistId, ignoreCase = true) }
+        fun travels(playlistId: String) = playlistId.lowercase().let { it in ids || it !in known }
         return SyncSnapshot(
             device = device,
             deviceName = deviceName,
@@ -106,10 +110,18 @@ object SyncData {
         ).pruned(now)
     }
 
-    /** What applying [merged] gives: the playlists and the library to keep (everything not synced stays as it is). */
-    class Applied(val playlists: List<SavedPlaylist>, val removed: List<SavedPlaylist>, val library: LibraryState)
+    /**
+     * What applying [merged] gives: the playlists and the library to keep (everything not synced stays as it is), and
+     * for a playlist removed because it is another one (the same one added on two devices) the ID of that one.
+     */
+    class Applied(
+        val playlists: List<SavedPlaylist>,
+        val removed: List<SavedPlaylist>,
+        val library: LibraryState,
+        val replacements: Map<String, String> = emptyMap(),
+    )
 
-    private fun usable(playlist: SyncPlaylist) = playlist.id.isNotBlank() && playlist.url.isNotBlank() && when (playlist.kind) {
+    private fun usable(playlist: SyncPlaylist) = playlist.id.isNotBlank() && playlist.url.isNotBlank() && !SyncKeys.isFile(playlist.url) && when (playlist.kind) {
         SyncPlaylist.M3U -> true
         SyncPlaylist.XTREAM -> !playlist.username.isNullOrBlank() && playlist.password != null
         else -> false
@@ -119,7 +131,8 @@ object SyncData {
         // The device's own IDs, whatever their case; IDs it does not know keep the merged (lowercase) form.
         val localIds = state.playlists.associateBy({ it.id.lowercase() }, { it.id })
         fun local(id: String) = localIds[id.lowercase()] ?: id
-        // A playlist this app could not open (no address, another kind, an Xtream one without its login) is left out.
+        // A playlist this app could not open (no address, another kind, an Xtream one without its login), or one that
+        // names a file of this device, is left out.
         val mergedById = merged.playlists.filter(::usable).associateBy { it.id }
         val removed = state.playlists.filter { playlist ->
             SyncKeys.syncs(playlist) && playlist.id.lowercase() !in mergedById && SyncKeys.playlist(playlist.id) in merged.deleted
@@ -149,6 +162,15 @@ object SyncData {
             )
         }
 
+        val playlists = kept + added
+        // A playlist removed because it is another one (the same one added on two devices): that one, as kept here.
+        fun replacement(id: String): SavedPlaylist? {
+            var current = id.lowercase()
+            repeat(MAX_REPLACEMENTS) { current = merged.replaced[current] ?: return@repeat }
+            return playlists.firstOrNull { it.id.equals(current, ignoreCase = true) && !it.id.equals(id, ignoreCase = true) }
+        }
+        val replacements = removed.mapNotNull { old -> replacement(old.id)?.let { old.id to it.id } }
+
         val library = state.library
         val removedIds = removed.mapTo(HashSet()) { it.id }
         // What does not sync stays: the channels watched, and everything of a file playlist.
@@ -173,9 +195,12 @@ object SyncData {
             )
         }.filter { it.playlistId !in filePlaylists }
         val localItems = library.collections.flatMap { it.items }.associateBy { "${it.playlistId.lowercase()}|${SyncKeys.kind(it.kind)}|${it.itemId}" }
+        // The device's own list IDs, whatever their case (the first of each, as a search in order would find).
+        val localLists = HashMap<String, String>()
+        library.collections.forEach { localLists.putIfAbsent(it.id.lowercase(), it.id) }
         val collections = merged.lists.map { synced ->
             UserCollection(
-                id = library.collections.firstOrNull { it.id.equals(synced.id, ignoreCase = true) }?.id ?: synced.id,
+                id = localLists[synced.id.lowercase()] ?: synced.id,
                 name = synced.name,
                 items = synced.items.mapNotNull { item ->
                     val kind = SyncKeys.itemKind(item.kind) ?: return@mapNotNull null
@@ -191,6 +216,16 @@ object SyncData {
             syncDeleted = merged.deleted,
             syncReplaced = merged.replaced,
         ).let { kept -> removedIds.fold(kept) { result, id -> result.removingPlaylist(id, merged.deleted[SyncKeys.playlist(id)] ?: 0) } }
-        return Applied(kept + added, removed, applied)
+            .let { result ->
+                // The categories hidden in a replaced playlist stay hidden in its replacement, as on Apple devices.
+                val carried = replacements.flatMap { (old, into) ->
+                    library.hiddenCategories.filter { it.startsWith("$old|") }.map { into + it.substring(old.length) }
+                }
+                if (carried.isEmpty()) result else result.copy(hiddenCategories = result.hiddenCategories + carried)
+            }
+        return Applied(playlists, removed, applied, replacements.toMap())
     }
+
+    /** Replacements followed at most, as the merge follows them (docs/SYNC.md, "Merge"). */
+    private const val MAX_REPLACEMENTS = 10
 }

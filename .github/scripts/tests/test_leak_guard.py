@@ -4,6 +4,7 @@ send, and leave alone the placeholders the repository's code, tests and docs use
 The made-up secrets are put together at run time, so that neither the guard nor gitleaks finds them in this file.
 Run: python3 -m unittest discover -s .github/scripts/tests
 """
+import base64
 import importlib.util
 import os
 import shutil
@@ -54,11 +55,58 @@ class SecretShapesTests(unittest.TestCase):
         self.assertFinds(f"/get.php?username=jdoe42&password={SHORT}&type=m3u_plus", "credentials in a URL")
         self.assertFinds(f"http://{PANEL}/live/jdoe42/{SHORT}/1234.ts", "credentials in a URL")
         self.assertFinds(f"http://{PANEL}/timeshift/jdoe42/{SHORT}/60/2025-10-09:20-00/1234.ts", "credentials in a URL")
+        # Panels' M3U exports name live streams without /live/.
+        self.assertFinds(f"http://{PANEL}/jdoe42/{SHORT}/1234", "credentials in a URL")
+        self.assertFinds(f"http://{PANEL}/jdoe42/{SHORT}/1234.ts", "credentials in a URL")
+
+    def test_a_tmdb_api_key_in_an_address(self):
+        key = RANDOM.lower().encode().hex()[:32]  # 32 hexadecimal digits, as a TMDb API key
+        self.assertFinds(f"https://api.themoviedb.org/3/movie/550?language=en-US&api_key={key}", "credentials in a URL")
+
+        # The short live address of Xtream playlists (XtreamURLBuilder.parseLiveURL reads it).
+        self.assertFinds(f"http://{PANEL}/jdoe42/{SHORT}/12345", "credentials in a URL")
+        self.assertFinds(f"#EXTINF:-1,News\nhttp://{PANEL}/jdoe42/{SHORT}/12345.ts\n", "credentials in a URL")
 
     def test_a_private_key_in_a_json_service_account(self):
         body = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASC" * 2
         self.assertFinds('{"type": "service_account", "private_key": "' + PEM_BEGIN + "\\n" + body + '\\n"}', "private key")
         self.assertFinds(PEM_BEGIN + "\n" + body + "\n", "private key")
+
+    def test_a_release_key_or_keystore_in_base64(self):
+        # docs/RELEASE.md takes the .p8 or its base64; docs/RELEASE-ANDROID.md puts the .jks in a secret as base64.
+        p8_body = "MIGTAgEAMBMG" + "ByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQg" + RANDOM * 3
+        self.assertFinds(p8_body, "private key")
+        pem = PEM_BEGIN + "\n" + p8_body + "\n-----END PRIVATE KEY-----\n"
+        self.assertFinds("ASC_KEY_P8=" + base64.b64encode(pem.encode()).decode(), "private key")
+        jks = bytes.fromhex("feedfeed00000002") + RANDOM.encode() * 8
+        self.assertFinds(base64.b64encode(jks).decode(), "keystore")
+        pkcs12 = bytes.fromhex("308209f4020103308209") + RANDOM.encode() * 8  # what keytool makes by default
+        self.assertFinds(base64.b64encode(pkcs12).decode(), "keystore")
+
+    def test_a_private_key_as_base64(self):
+        # docs/RELEASE.md: the ASC_KEY_P8 secret may hold the base64 of the .p8 file (one line, or 76 per line).
+        key = (PEM_BEGIN + "\n" + "MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkw" * 3 + "\n-----END PRIVATE KEY-----\n").encode()
+        self.assertFinds(f"ASC_KEY_P8={base64.b64encode(key).decode()}", "private key")
+        self.assertFinds(base64.encodebytes(key).decode(), "private key")
+        self.assertFinds('{"ASC_KEY_P8": "' + base64.b64encode(key).decode() + '"}', "private key")
+
+    def test_the_app_store_connect_ids_and_the_team_id(self):
+        # CLAUDE.md: the Key ID, the Issuer ID and the Team ID go only into GitHub secrets.
+        key_id, team_id = "Q7XK2" + "M9PL4", "A1B2C" + "3D4E5"
+        issuer_id = "-".join(("69a6de7e", "1d2c", "47e3", "e053", "5b8c7c11a4d1"))
+        for text in (f"ASC_KEY_ID={key_id}", f'ASC_ISSUER_ID: "{issuer_id}"', f"export DEVELOPMENT_TEAM={team_id}",
+                     f'key_id: "{key_id}", issuer_id: "{issuer_id}"', f'team_id("{team_id}")',
+                     f"DEVELOPMENT_TEAM = {team_id};", f"<key>teamID</key>\n<string>{team_id}</string>"):
+            with self.subTest(text=text):
+                self.assertFinds(text, "App Store Connect key ID, issuer ID or team ID")
+
+    def test_local_network_addresses(self):
+        # The local addresses of docs/SYNC.md: the private IPv4 ranges, IPv4 and IPv6 link-local, IPv6 unique local.
+        self.assertFinds(f"the TV box is at {LOCAL_ADDRESS}", "private network address")
+        for text in ("169.254." + "12.7", "fd12:3456:" + "789a:1::20", "fe80::1c2b:" + "3a4d:5e6f:7a8b%en0",
+                     "[fe80::1c2b:" + "3a4d]:8080"):
+            with self.subTest(text=text):
+                self.assertFinds(f"sync peer {text}", "local network address")
 
     def test_placeholders_examples_and_lookups_pass(self):
         for text in (
@@ -72,6 +120,9 @@ class SecretShapesTests(unittest.TestCase):
                 "http://p.example.com/player_api.php?username=user%20name&password=p%26ss=%23?",
                 'URL(string: "\\(base)/live/\\(user)/\\(pass)/\\(streamID).ts")',
                 "https://api.themoviedb.org/3/movie/550/credits",
+                "https://api.themoviedb.org/3/movie/910001?language=en-US&api_key=KEY",
+                "http://host:port/user/pass/123", "http://panel.example.com:8080/viewer/secret/1234.ts",
+                "https://api.themoviedb.org/3/tv/1399", "https://github.com/markedoe/ondo-iptv/issues/42",
                 "          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}",
                 'echo "$ANDROID_KEYSTORE_PASSWORD"; password=$ANDROID_KEYSTORE_PASSWORD',
                 'storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")',
@@ -80,7 +131,19 @@ class SecretShapesTests(unittest.TestCase):
                 "let password: String", "PASSWORD_MIN_LENGTH = 8", 'const val PREF_TOKEN = "tmdb_token_v4"',
                 '"token": "key-example-0001"', 'apiKey = "YOUR_API_KEY"', 'secret: "xxxxxxxxxxxxxxxx"',
                 'password = "{password}"', "token: <your API Read Access Token>", "let token = tokens[0]",
-                "The ASC_KEY_P8 secret holds the whole -----BEGIN PRIVATE KEY----- block."):
+                "The ASC_KEY_P8 secret holds the whole -----BEGIN PRIVATE KEY----- block.",
+                "          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}", 'key_id: ENV.fetch("ASC_KEY_ID"),',
+                "\"-authenticationKeyID #{ENV.fetch('ASC_KEY_ID')}\"", 'team_id(ENV["DEVELOPMENT_TEAM"])',
+                "CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= | xcbeautify", "DEVELOPMENT_TEAM=XXXXXXXXXX",
+                '"kid": self.key_id', '"private_key_id": "0123456789abcdef0123456789abcdef01234567"',
+                "http://h.example.com:8080/u/p/42", "https://api.themoviedb.org/3/movie/550",
+                # The documentation addresses (RFC 5737) of no real panel.
+                f"http://192.0.2.10:8080/get.php?username=jdoe42&password={SHORT}",
+                f"http://198.51.100.7/live/jdoe42/{SHORT}/1.ts", f"http://203.0.113.5:8080/jdoe42/{SHORT}/12345",
+                "https://api.themoviedb.org/3/tv/1399", "https://news.site.org/2026/10/24",
+                "https://developer.apple.com/forums/thread/725013", "https://developer.android.com/about/versions/14",
+                "IPv6 fc00::/7 (unique local), fe80::/10 (link-local) and ::1", 'host.hasPrefix("fe80:")',
+                "let mask = 0xfd12:", "fe80::1%en0", "fc00::1", "[fe80::1]:8080"):
             with self.subTest(text=text):
                 self.assertClean(text)
 

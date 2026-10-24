@@ -22,9 +22,9 @@ RULES = [
     # In every language of the apps and their listings. No `\b` next to Chinese, Arabic or Hindi words:
     # Chinese has no spaces ("最佳免费IPTV"), and a letter followed by "IPTV" is no word boundary.
     ("calls IPTV free", re.compile(
-        r"(?i)\bfree\s+iptv\b|\biptv\s+(?:for\s+)?free\b"
-        # French, Spanish, Portuguese: gratuit(e)(s), gratuito/a(s), gratis, grátis.
-        r"|\biptv\s+(?:gratuit[eoa]?s?|gr[aá]tis)\b|\b(?:gratuit[eoa]?s?|gr[aá]tis)\s+iptv\b"
+        r"(?i)\bfree[\s-]*iptv\b|\biptv[\s-]*(?:for\s+)?free\b"
+        # French, Spanish, Portuguese: gratuit(e)(s), gratuito/a(s), gratis, grátis, de graça.
+        r"|\biptv\s+(?:gratuit[eoa]?s?|gr[aá]tis|de\s+gra[çc]a)\b|\b(?:gratuit[eoa]?s?|gr[aá]tis)\s+iptv\b"
         # Chinese (simplified and traditional): 免费IPTV, 免费的IPTV, IPTV免费.
         r"|免[费費]\s*的?\s*iptv|iptv\s*免[费費]"
         # Arabic: IPTV مجاني / مجانية / مجانا, and the reverse order.

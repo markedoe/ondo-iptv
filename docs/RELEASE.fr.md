@@ -147,8 +147,8 @@ réseau, fichiers choisis par l'utilisateur).
    - **Un push sur `main`.** Une fois *CI* au vert, le workflow *Deliver* lance *Release* avec la cible `builds`
      et l'édition `testflight` : iOS et macOS partent sur TestFlight (testeurs internes, sans review). Il n'envoie
      rien quand le commit ne change rien de ce que l'app embarque (`App/`, `Packages/` sans leurs tests,
-     `project.yml`, `fastlane/Fastfile`, `Gemfile*`), quand un push plus récent est déjà sur `main` (sa propre
-     livraison l'envoie), ou quand le commit porte un tag de version.
+     `project.yml`, `fastlane/Fastfile`, `Gemfile*`), quand un push plus récent sur `main` change ce que l'app
+     embarque (sa propre livraison l'envoie), ou quand le commit porte un tag de version.
    - **Un tag de version : votre go pour la review d'Apple** (CLAUDE.md). Le tag doit être égal à
      `MARKETING_VERSION` de `project.yml` et au `versionName` de `android/app/build.gradle.kts` (sinon le lancement
      s'arrête) :
@@ -160,7 +160,8 @@ réseau, fichiers choisis par l'utilisateur).
      build qu'il vient d'envoyer et le soumet à la review, publié dès qu'Apple l'approuve. Une soumission de la
      même version encore en attente de review est d'abord retirée : le nouveau build la remplace. Le Mac part même
      si iOS échoue (deux versions indépendantes). Ensuite l'édition TestFlight du tag est reconstruite pour les
-     testeurs. Le même tag envoie Android en test fermé (RELEASE-ANDROID.fr.md).
+     testeurs, sauf si un autre lancement de *Release* attend déjà (celui d'un tag plus récent, les builds d'un
+     push) : il n'est pas remplacé. Le même tag envoie Android en test fermé (RELEASE-ANDROID.fr.md).
    - **Répétition** : *Actions → Release → Run workflow*, cible `release`, `submit` décoché (par défaut) : les
      builds de l'édition App Store et la fiche, sans la soumission.
 

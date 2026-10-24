@@ -3,6 +3,7 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
+import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -32,10 +33,12 @@ class SyncDataTest {
         http://provider.example.com/quiet.mp4
     """.trimIndent()
 
+    private val sports = "http://provider.example.com/sports.m3u"
+
     private var time = 1_760_000_000_000L
 
     private fun TestScope.device(name: String) =
-        OndoRepository(AppStore(folder.newFolder(name)), FakeHttp(mapOf(list to catalogue)), backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
+        OndoRepository(AppStore(folder.newFolder(name)), FakeHttp(mapOf(list to catalogue, sports to catalogue)), backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
 
     private suspend fun OndoRepository.ready(): OndoRepository {
         bootstrap()
@@ -152,6 +155,65 @@ class SyncDataTest {
         assertTrue(applied.library.favorites.any { it.playlistId == "P1" && it.itemId == "m1" })
     }
 
+    /**
+     * A snapshot of many lists, or of many records of playlists this device does not know, is applied and sent again
+     * in one pass: sync runs on the main thread, and the next session works on everything the first one kept.
+     */
+    @Test(timeout = 5_000)
+    fun manyListsAreAppliedAgainWithoutAQuadraticPass() {
+        val lists = (0 until 40_000).map { SyncList(java.util.UUID(0, it.toLong()).toString(), "List $it", updatedAt = time) }
+        val merged = SyncSnapshot(device = "other", lists = lists)
+        val kept = SyncData.apply(OndoState(isReady = true), merged).library
+        // The next session: the same lists, onto the device that kept them.
+        assertEquals(lists.size, SyncData.apply(OndoState(isReady = true, library = kept), merged).library.collections.size)
+    }
+
+    @Test(timeout = 5_000)
+    fun manyRecordsOfUnknownPlaylistsAreSentWithoutAQuadraticPass() {
+        val playlists = (0 until 30_000).map { SavedPlaylist(java.util.UUID(0, it.toLong()).toString(), "P$it", "http://provider.example.com/$it.m3u", addedAt = 1) }
+        val favorites = (0 until 30_000).map { Favorite(java.util.UUID(1, it.toLong()).toString(), ItemKind.MOVIE, "m$it", "Movie $it", addedAt = 2) }
+        val state = OndoState(isReady = true, playlists = playlists, library = LibraryState(favorites = favorites))
+        assertEquals(favorites.size, SyncData.snapshot(state, "device", "TV", now = 10).favorites.size)
+    }
+
+    /** The playlist in use, added on another device first: the one kept is in use, not another playlist of the device. */
+    @Test
+    fun thePlaylistInUseStaysInUseWhenTheSameOneReplacesIt() = runTest {
+        val tv = device("tv").ready()
+        val phone = device("phone").ready()
+        tv.addPlaylist("Home", list)
+        time += 1_000
+        phone.addPlaylist("Sports", sports)
+        time += 1_000
+        phone.addPlaylist("Living room", list)
+        assertEquals("Living room", phone.state.value.activePlaylist?.name)
+
+        session(phone, tv)
+        val kept = tv.state.value.playlists.single { it.url == list }
+        assertEquals(setOf("Sports", "Home"), phone.state.value.playlists.map { it.name }.toSet())
+        assertEquals("Home", phone.state.value.activePlaylist?.name)
+        assertTrue(kept.id.equals(phone.state.value.activePlaylistId, ignoreCase = true))
+    }
+
+    /** The same playlist added on another device first: the categories hidden here stay hidden in the one kept. */
+    @Test
+    fun aPlaylistReplacedByTheSameOneKeepsItsHiddenCategories() {
+        val sports = SavedPlaylist("P1", "Sports", "http://provider.example.com/sports.m3u", addedAt = 1)
+        val mine = SavedPlaylist("P2", "Living room", list, addedAt = 3)
+        val state = OndoState(
+            isReady = true,
+            playlists = listOf(sports, mine),
+            library = LibraryState(hiddenCategories = setOf("P1|live-a", "P2|live-b")),
+        )
+        val tv = SyncSnapshot(device = "tv", playlists = listOf(SyncPlaylist("p3", "Home", SyncPlaylist.M3U, list, addedAt = 2, updatedAt = 2)))
+        val merged = SyncMerge.merge(SyncData.snapshot(state, "phone", null, now = 10), tv)
+        assertEquals(mapOf("p2" to "p3"), merged.replaced)
+
+        val applied = SyncData.apply(state, merged)
+        assertEquals(listOf("P1", "p3"), applied.playlists.map { it.id })
+        assertEquals(setOf("P1|live-a", "p3|live-b"), applied.library.hiddenCategories)
+    }
+
     /** What another device sends that this one cannot use changes nothing and breaks nothing. */
     @Test
     fun anOddSnapshotIsKeptOutWithoutHarm() = runTest {
@@ -165,6 +227,11 @@ class SyncDataTest {
                 SyncPlaylist("p2", "No address", SyncPlaylist.M3U, " ", addedAt = 1, updatedAt = 1),
                 SyncPlaylist("p3", "Another kind", "stalker", "http://provider.example.com", addedAt = 1, updatedAt = 1),
                 SyncPlaylist("p4", "No login", SyncPlaylist.XTREAM, "http://provider.example.com", addedAt = 1, updatedAt = 1),
+                // A file of this device as a playlist: file playlists never sync, and the app would read it from disk.
+                SyncPlaylist("p5", "A file here", SyncPlaylist.M3U, "file:///data/data/com.markedoe.ondo/files/ondo/library.json", addedAt = 1, updatedAt = 1),
+                SyncPlaylist("p6", "Another file", SyncPlaylist.M3U, " FILE:/dev/zero", addedAt = 1, updatedAt = 1),
+                SyncPlaylist("p7", "A document", SyncPlaylist.M3U, "content://media/list.m3u", addedAt = 1, updatedAt = 1),
+                SyncPlaylist("p8", "A path", SyncPlaylist.M3U, "/sdcard/list.m3u", addedAt = 1, updatedAt = 1),
                 // The playlist in use, renamed into another kind: kept as it is.
                 SyncPlaylist(home.id, "Changed", "other", home.url, addedAt = home.addedAt, updatedAt = time + 1),
             ),

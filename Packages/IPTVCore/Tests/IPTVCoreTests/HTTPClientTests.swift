@@ -132,6 +132,55 @@ final class HTTPClientTests: XCTestCase {
         }
     }
 
+    /// Downloads write the answer to a file as it comes, refuse what answers in memory refuse, and leave no file behind
+    /// when they fail.
+    func testDownloadsGoToAFileWithinTheSameLimit() async throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ondo-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let file = folder.appendingPathComponent("guide.xml")
+        let limit = 64 * 1_024
+        let client = URLSessionHTTPClient(timeout: 30, maxBodySize: limit)
+        let body = Data((0..<limit).map { UInt8($0 % 251) })
+        let answering = try AnsweringServer(answer(["HTTP/1.1 200 OK", "Content-Length: \(body.count)"], body))
+        try Data("an older file".utf8).write(to: file)
+        try await client.download(from: try answering.url("guide.xml"), headers: [:], to: file)
+        XCTAssertEqual(try Data(contentsOf: file), body, "replaced by the answer")
+
+        let failing = [
+            (try AnsweringServer(answer(["HTTP/1.1 200 OK"], Data(count: 4 * limit))), HTTPClientError.tooLarge(limit)),
+            (try AnsweringServer(answer(["HTTP/1.1 404 Not Found", "Content-Length: 9"], Data("Not found".utf8))), HTTPClientError.badStatus(404)),
+        ]
+        for (server, expected) in failing {
+            do {
+                try await client.download(from: try server.url("guide.xml"), headers: [:], to: file)
+                XCTFail("\(expected)")
+            } catch {
+                XCTAssertEqual(error as? HTTPClientError, expected, "\(error)")
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: file.path), "no part of a refused answer is kept")
+        }
+
+        let silent = try SilentServer()
+        let download = Task {
+            try await client.download(from: try XCTUnwrap(URL(string: "http://127.0.0.1:\(silent.port)/guide.xml")), headers: [:], to: file)
+        }
+        try await Task.sleep(nanoseconds: 200_000_000)
+        download.cancel()
+        do {
+            try await download.value
+            XCTFail("a server that never answers cannot produce a file")
+        } catch {
+            XCTAssertEqual((error as? URLError)?.code, .cancelled, "\(error)")
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: file.path))
+
+        let local = folder.appendingPathComponent("local.xml")
+        try Data("<tv/>".utf8).write(to: local)
+        try await client.download(from: local, headers: [:], to: file)
+        XCTAssertEqual(try Data(contentsOf: file), Data("<tv/>".utf8), "a file address is copied")
+    }
+
     func testFileAddressesAreReadFromDisk() async throws {
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("ondo-\(UUID().uuidString).m3u")
         try Data("#EXTM3U\n".utf8).write(to: file)

@@ -9,6 +9,7 @@ import com.markedoe.ondo.core.numberString
 import com.markedoe.ondo.core.toStrictDoubleOrNull
 import java.io.BufferedInputStream
 import java.io.File
+import java.io.FilterInputStream
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.DecodeSequenceMode
 import kotlinx.serialization.json.Json
@@ -74,6 +75,13 @@ private const val TWO_POW_63 = 9.223372036854775808e18
 internal fun JsonElement?.lenientInt(): Int? =
     lenientLong()?.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.toInt()
 
+/**
+ * A year (2021, "2021"), else the one [date] starts with ("2021-05-04"): anything but four digits (0 for none, -1,
+ * 1e18) is no year.
+ */
+internal fun JsonElement?.lenientYear(date: String? = null): Int? =
+    listOfNotNull(lenientInt(), date?.take(4)?.toIntOrNull()).firstOrNull { it in 1_000..9_999 }
+
 /** Number, or numeric string (`","` accepted as decimal separator). Booleans are not numbers. */
 internal fun JsonElement?.lenientDouble(): Double? {
     val p = primitive ?: return null
@@ -117,13 +125,25 @@ internal inline fun <T> JsonElement?.lossyList(decode: (JsonElement) -> T?): Lis
  * The elements of the JSON list saved in [file] (gzip or not, with or without a byte order mark), decoded one at a
  * time: only the element being read is in memory as JSON. An answer that is not an array (`{}` or `null` for an
  * empty list, an object keyed by index) is small and read whole, as [lossyList] reads it.
+ * [checkActive] runs before each read of the check of the nesting, and throws to stop it.
  * @throws HttpException.EmptyResponse for an empty answer
  * @throws XtreamException.InvalidResponse for anything that is not JSON, or nests deeper than [MAX_JSON_DEPTH]
  */
 @OptIn(ExperimentalSerializationApi::class)
-internal fun <T> decodeList(file: File, decode: (JsonElement) -> T?): List<T> = try {
+internal fun <T> decodeList(file: File, checkActive: () -> Unit = {}, decode: (JsonElement) -> T?): List<T> = try {
     // kotlinx reads nested arrays recursively: a few kilobytes of `[` would overflow the stack.
-    if (jsonNestsDeeperThan(Gzip.decompressingStream(file.inputStream()))) throw XtreamException.InvalidResponse()
+    val checked = object : FilterInputStream(Gzip.decompressingStream(file.inputStream())) {
+        override fun read(): Int {
+            checkActive()
+            return super.read()
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            checkActive()
+            return super.read(b, off, len)
+        }
+    }
+    if (jsonNestsDeeperThan(checked)) throw XtreamException.InvalidResponse()
     BufferedInputStream(Gzip.decompressingStream(file.inputStream()), 64 * 1024).use { input ->
         input.mark(4)
         if (!(input.read() == 0xEF && input.read() == 0xBB && input.read() == 0xBF)) input.reset()

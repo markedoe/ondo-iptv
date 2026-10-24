@@ -146,7 +146,8 @@ public enum JSONPlaylistParser {
 
 public enum PlainListParser {
     public static func parse(_ data: Data) -> M3UPlaylist {
-        let text = String(decoding: data, as: UTF8.self)
+        // Without a byte order mark: before the first address, it made that address invalid.
+        let text = String(decoding: data.starts(with: [0xEF, 0xBB, 0xBF]) ? data.dropFirst(3) : data, as: UTF8.self)
         let entries: [M3UEntry] = text.split(whereSeparator: \.isNewline).compactMap { line in
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.hasPrefix("#"), let url = URL.lenient(trimmed) else { return nil }

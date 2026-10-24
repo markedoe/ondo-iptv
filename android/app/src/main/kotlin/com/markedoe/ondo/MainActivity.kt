@@ -34,6 +34,8 @@ class MainActivity : ComponentActivity() {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
         val repository = (application as OndoApplication).repository
+        // Another app language (Settings, App language) recreates the activity, not the repository.
+        repository.setPlaceholderNames(resources.placeholderNames())
         (application as OndoApplication).localSync.start()
         // The splash screen stays until the saved playlists are read (no welcome screen flash), and the saved
         // catalogue too for a moment (Home appears with its content, see keepsSplash).

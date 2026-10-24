@@ -37,6 +37,24 @@ class ShowcaseTest {
         assertNull("episodes keep their own progress", showcase(library).progress(series, e[0]))
     }
 
+    /** An episode listed twice (the same address, as some M3U playlists list it): after it comes the next one, not its copy. */
+    @Test
+    fun afterAnEpisodeListedTwiceComesTheNextOne() {
+        val series = Fixtures.harborLights
+        val base = Fixtures.details(series)
+        val first = base.seasons[0].episodes[0]
+        val copy = first.copy(id = "${first.id}-2")
+        val details = base.copy(seasons = listOf(base.seasons[0].copy(episodes = listOf(first, copy) + base.seasons[0].episodes.drop(1))) + base.seasons.drop(1))
+        val library = LibraryState().watched(ItemKind.SERIES, series.id, first.id, 0.99, 2_700.0, at = 1)
+        assertEquals("S01E02", showcase(library).nextEpisode(series, details)?.first?.code)
+        // The copy last in its season: the next season.
+        val lastSeason = base.seasons[0].episodes
+        val last = lastSeason.last()
+        val atEnd = base.copy(seasons = listOf(base.seasons[0].copy(episodes = lastSeason + last.copy(id = "${last.id}-2"))) + base.seasons.drop(1))
+        val finishedLast = LibraryState().watched(ItemKind.SERIES, series.id, last.id, 0.99, 2_700.0, at = 1)
+        assertEquals("S02E01", showcase(finishedLast).nextEpisode(series, atEnd)?.first?.code)
+    }
+
     @Test
     fun heroPutsContinueWatchingFirstWithoutDuplicates() {
         val road = Fixtures.longRoad

@@ -124,6 +124,56 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(truncated.programs["TV1.fr"]?.map(\.title), ["Le JT", "Film du soir"], "what was read before the damage is kept")
     }
 
+    /// A replaced load (another playlist opened, the guide settings changed) stops reading its guide instead of parsing
+    /// it to the end beside the next one, and is not taken for a guide cut short.
+    func testACancelledLoadStopsReadingTheGuide() async throws {
+        var xml = "<?xml version=\"1.0\"?><tv>"
+        for p in 0..<2_000 {
+            xml += "<programme channel=\"ch\(p)\" start=\"20251009200000 +0000\" stop=\"20251009210000 +0000\"><title>Show \(p)</title></programme>"
+        }
+        xml += "</tv>"
+        let data = Data(xml.utf8)
+        XCTAssertEqual(try XMLTVParser.parse(data).programCount, 2_000)
+        let parse = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try XMLTVParser.parse(data)
+        }
+        do {
+            let guide = try await parse.value
+            XCTFail("a cancelled load read \(guide.programCount) programmes")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(error)")
+        }
+    }
+
+    /// A guide on disk, plain or gzip, reads like its data: filtered, shifted, cut short, or not a guide at all.
+    func testAGuideOnDiskReadsLikeItsData() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ondo-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let xml = try Fixture.data("epg.xml")
+        let guides = [xml, try Fixture.data("epg.xml.gz"), xml.prefix(xml.count - 200), Data("<?xml version=\"1.0\"?><tv></tv>".utf8),
+                      Data("<html><body>Forbidden</body></html>".utf8), Data("Forbidden".utf8), Data()]
+        func outcome(_ parse: () throws -> EPGData) -> String {
+            do {
+                let guide = try parse()
+                return "\(guide.channels.sorted { $0.key < $1.key }) \(guide.programs.sorted { $0.key < $1.key })"
+            } catch {
+                return "\(type(of: error))"
+            }
+        }
+        for (index, data) in guides.enumerated() {
+            let file = folder.appendingPathComponent("guide-\(index)")
+            try data.write(to: file)
+            for filter in [EPGFilter.none, EPGFilter(window: DateInterval(start: .utc(2025, 10, 9, 18, 30), duration: 3_600), channelIDs: ["tv1.FR"])] {
+                let fromDisk = outcome { try XMLTVParser.parse(contentsOf: file, filter: filter, timeShift: 3_600) }
+                XCTAssertEqual(fromDisk, outcome { try XMLTVParser.parse(data, filter: filter, timeShift: 3_600) }, "guide \(index)")
+                XCTAssertEqual(fromDisk.hasPrefix("ParseError"), index >= 4, "guide \(index): \(fromDisk.prefix(80))")
+            }
+        }
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path).count, guides.count, "the files are left as they were")
+    }
+
     func testEpisodeNumbersPastIntRangeAreKeptAsText() throws {
         let xml = """
         <?xml version="1.0"?><tv><programme channel="a" start="20251009200000 +0000" stop="20251009210000 +0000">\
@@ -133,6 +183,20 @@ final class EPGTests: XCTestCase {
         """
         let data = try XMLTVParser.parse(Data(xml.utf8))
         XCTAssertEqual(data.programs["a"]?.map(\.episode), ["9223372036854775807.0.", "1.9223372036854775807."])
+    }
+
+    /// `%02d` prints 32 bits: a season or episode whose 1-based number needs more keeps the guide's text too, as on
+    /// Android, instead of "S-2147483648E01" or "S00E01".
+    func testEpisodeNumbersPast32BitsAreKeptAsText() throws {
+        let values = ["2147483647.0.", "1.2147483647.", "4294967295.0.", "4294967296.0.", "-4294967296.0.", "2147483646.0.", "1.4.0/1"]
+        var xml = #"<?xml version="1.0"?><tv>"#
+        for (hour, value) in values.enumerated() {
+            xml += #"<programme channel="a" start="202510091\#(hour)0000 +0000" stop="202510091\#(hour)3000 +0000">"#
+            xml += #"<title>T</title><episode-num system="xmltv_ns">\#(value)</episode-num></programme>"#
+        }
+        let data = try XMLTVParser.parse(Data((xml + "</tv>").utf8))
+        XCTAssertEqual(data.programs["a"]?.map(\.episode),
+                       ["2147483647.0.", "1.2147483647.", "4294967295.0.", "4294967296.0.", "-4294967296.0.", "S2147483647E01", "S02E05"])
     }
 
     /// A programme's ID is its channel and start second: one listed twice is kept once, or SwiftUI lists get two rows
@@ -202,6 +266,50 @@ final class EPGTests: XCTestCase {
         XCTAssertThrowsError(try compressed.gunzipped(limit: 100)) { error in
             XCTAssertEqual(error as? GzipError, .outputTooLarge(100))
         }
+    }
+
+    /// A file inflated a piece at a time gives what the whole data gives, wherever the pieces end: members, padding,
+    /// junk, a file cut short, a damaged one, the size limit.
+    func testGzipInflatedInPiecesMatchesTheWholeData() throws {
+        let compressed = try Fixture.data("epg.xml.gz")
+        var inputs = [compressed, compressed + compressed, compressed + Data(count: 16), compressed + Data("<html>junk</html>".utf8),
+                      Data([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xff]), compressed + Data([0x1f, 0x8b, 0x08])]
+        inputs += [10, 20, compressed.count / 2, compressed.count - 8, compressed.count - 1].map { compressed.prefix($0) }
+        func outcome(_ work: () throws -> Data) -> String {
+            do { return "data \(try work().base64EncodedString())" } catch { return "error \(error)" }
+        }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ondo-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        for (index, input) in inputs.enumerated() {
+            for limit in [Data.maxGunzippedSize, 1_000] {
+                let whole = outcome { try input.gunzipped(limit: limit) }
+                for size in [1, 3, 64, 4_096] {
+                    let pieces = outcome {
+                        let inflater = try GzipInflater(limit: limit)
+                        var output = Data()
+                        for start in stride(from: 0, to: input.count, by: size) {
+                            try input[(input.startIndex + start)..<(input.startIndex + min(start + size, input.count))].withUnsafeBytes {
+                                try inflater.feed($0) { output.append($0) }
+                            }
+                        }
+                        try inflater.finish()
+                        return output
+                    }
+                    XCTAssertEqual(pieces, whole, "input \(index), limit \(limit), pieces of \(size) bytes")
+                }
+                let source = folder.appendingPathComponent("\(index).gz")
+                let target = folder.appendingPathComponent("\(index).xml")
+                try input.write(to: source)
+                let file = outcome {
+                    try GzipInflater.decompress(source, to: target, limit: limit)
+                    return try Data(contentsOf: target)
+                }
+                XCTAssertEqual(file, whole, "input \(index) as a file, limit \(limit)")
+                if file.hasPrefix("error") { XCTAssertFalse(FileManager.default.fileExists(atPath: target.path), "nothing left of a failed file") }
+            }
+        }
+        XCTAssertTrue(GzipInflater.isGzipFile(folder.appendingPathComponent("0.gz")))
     }
 
     func testABrokenGuideIsTheProvidersFault() {

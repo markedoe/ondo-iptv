@@ -86,7 +86,7 @@
     <string name="support">सहायता</string>
     <string name="version">वर्शन</string>
     <string name="delete_playlist_title">“%1$s” डिलीट करें?</string>
-    <string name="delete_playlist_text">इस डिवाइस पर इसका कैटलॉग, पसंदीदा और इतिहास हटा दिए जाते हैं।</string>
+    <string name="delete_playlist_text">इस डिवाइस पर इसका कैटलॉग, मेरी सूची और संग्रह में इसके आइटम, और इसका इतिहास हटा दिए जाते हैं।</string>
     <string name="try_again">फिर से कोशिश करें</string>
     <string name="loading">लोड हो रहा है…</string>
     <string name="error_provider_refused">प्रदाता ने इस स्ट्रीम का ऐक्सेस नहीं दिया। हो सकता है आपका सब्सक्रिप्शन समाप्त हो गया हो या कनेक्शन सीमा पूरी हो गई हो।</string>
@@ -111,6 +111,13 @@
     <string name="kind_m3u">M3U प्लेलिस्ट</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">सीज़न %1$d</string>
+    <string name="placeholder_uncategorized">अवर्गीकृत</string>
+    <string name="placeholder_other">अन्य</string>
+    <string name="placeholder_other_number">अन्य %1$d</string>
+    <string name="placeholder_channel">चैनल %1$d</string>
+    <string name="placeholder_movie">फ़िल्म %1$d</string>
+    <string name="placeholder_series">सीरीज़ %1$d</string>
+    <string name="placeholder_episode">एपिसोड %1$d</string>
     <string name="choose_file">फ़ाइल चुनें</string>
     <string name="categories">श्रेणियाँ</string>
     <string name="categories_hint">भाषा या देश के अनुसार, या एक-एक करके, दिखाई जाने वाली श्रेणियाँ चुनें।</string>

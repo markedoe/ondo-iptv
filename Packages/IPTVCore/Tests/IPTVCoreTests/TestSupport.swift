@@ -1,4 +1,5 @@
 import Foundation
+import XCTest
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
@@ -75,3 +76,27 @@ extension Date {
         return calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
     }
 }
+
+#if os(Linux)
+/// The process's resident memory, from /proc/self (Linux).
+enum ResidentMemory {
+    private static func value(_ key: String) -> Int {
+        let status = (try? String(contentsOfFile: "/proc/self/status", encoding: .utf8)) ?? ""
+        for line in status.split(separator: "\n") where line.hasPrefix(key + ":") {
+            return (Int(line.split(separator: " ").dropFirst().first ?? "") ?? 0) * 1_024
+        }
+        return 0
+    }
+
+    static var current: Int { value("VmRSS") }
+
+    /// The largest resident size since the last `resetPeak()`.
+    static var peak: Int { value("VmHWM") }
+
+    /// Starts measuring the peak from the current size.
+    static func resetPeak() throws {
+        try "5".write(toFile: "/proc/self/clear_refs", atomically: false, encoding: .utf8)
+        guard peak < current + (8 << 20) else { throw XCTSkip("The peak resident size cannot be reset here.") }
+    }
+}
+#endif

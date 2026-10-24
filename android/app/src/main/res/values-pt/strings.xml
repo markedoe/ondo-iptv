@@ -86,7 +86,7 @@
     <string name="support">Suporte</string>
     <string name="version">Versão</string>
     <string name="delete_playlist_title">Excluir “%1$s”?</string>
-    <string name="delete_playlist_text">O catálogo, os favoritos e o histórico dela neste dispositivo são removidos.</string>
+    <string name="delete_playlist_text">O catálogo, os itens dela em Minha lista e nas coleções e o histórico dela neste dispositivo são removidos.</string>
     <string name="try_again">Tentar novamente</string>
     <string name="loading">Carregando…</string>
     <string name="error_provider_refused">O provedor recusou este stream. Sua assinatura pode ter expirado ou o limite de conexões foi atingido.</string>
@@ -113,6 +113,13 @@
     <string name="kind_m3u">Playlist M3U</string>
     <string name="kind_xtream">Xtream Codes</string>
     <string name="season_number">Temporada %1$d</string>
+    <string name="placeholder_uncategorized">Sem categoria</string>
+    <string name="placeholder_other">Outros</string>
+    <string name="placeholder_other_number">Outros %1$d</string>
+    <string name="placeholder_channel">Canal %1$d</string>
+    <string name="placeholder_movie">Filme %1$d</string>
+    <string name="placeholder_series">Série %1$d</string>
+    <string name="placeholder_episode">Episódio %1$d</string>
     <string name="choose_file">Escolher um arquivo</string>
     <string name="categories">Categorias</string>
     <string name="categories_hint">Escolha as categorias exibidas, por idioma ou país, ou uma a uma.</string>

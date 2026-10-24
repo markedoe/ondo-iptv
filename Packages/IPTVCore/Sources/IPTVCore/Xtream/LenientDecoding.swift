@@ -38,10 +38,12 @@ extension KeyedDecodingContainer {
         [lenientInt(key), date.flatMap { Int($0.prefix(4)) }].lazy.compactMap { $0 }.first { (1_000...9_999).contains($0) }
     }
 
+    /// Finite numbers only: `Double("1e999")` is infinity and `Double("nan")` is NaN, which JSON cannot hold, so a
+    /// catalogue keeping one could not be saved.
     func lenientDouble(_ key: Key) -> Double? {
-        if let value = try? decodeIfPresent(Double.self, forKey: key) { return value }
+        if let value = try? decodeIfPresent(Double.self, forKey: key) { return value.isFinite ? value : nil }
         if let value = try? decodeIfPresent(String.self, forKey: key) {
-            return Double(value.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: "."))
+            return Double(value.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: ",", with: ".")).flatMap { $0.isFinite ? $0 : nil }
         }
         return nil
     }

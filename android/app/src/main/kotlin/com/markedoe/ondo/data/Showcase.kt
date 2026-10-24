@@ -128,8 +128,9 @@ class Showcase(
         }
         val (episode, season, entry) = last
         if (entry.isFinished) {
+            // An episode listed twice (the same address) is not the one after it.
             val index = season.episodes.indexOf(episode)
-            season.episodes.getOrNull(index + 1)?.let { return it to season }
+            season.episodes.drop(index + 1).firstOrNull { it.streamUrl != episode.streamUrl }?.let { return it to season }
             val seasonIndex = details.seasons.indexOf(season)
             details.seasons.getOrNull(seasonIndex + 1)?.let { next -> next.episodes.firstOrNull()?.let { return it to next } }
         }

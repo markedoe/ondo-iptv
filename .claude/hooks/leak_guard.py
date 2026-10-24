@@ -14,6 +14,7 @@ Findings can be allowed with a regex in `.leakguard-allow` (one per line) or wit
 on the line itself. Only standard library: it runs on macOS, Linux and in CI as is.
 Limit: binary files (images, archives) are only checked by name, not by content or metadata.
 """
+import base64
 import json
 import os
 import re
@@ -29,10 +30,11 @@ PLACEHOLDER = re.compile(
     r"(?i)^(?:x{3,}|(?:your|my|the|some|a)?[_-]?(?:pass(?:word|wd)?|secret|token|(?:api[_-]?)?key|user(?:name)?|login|"
     r"value|changeme)s?[_-]?\d{0,2})$|example|placeholder|dummy|redacted|not[_-]?(?:a[_-]?)?(?:real|secret)")
 SECRET_WORD = re.compile(r"(?i)pass(?:word|wd|phrase)|secret|token|api[_-]?key|private[_-]?key")
-# Hosts of no real service: the reserved example names, this machine, a bare name (`h`, `host:port`, `server`).
+# Hosts of no real service: the reserved example names, this machine, the documentation addresses (RFC 5737), a bare
+# name (`h`, `host:port`, `server`).
 SAFE_HOST = re.compile(
-    r"(?i)^(?:[^@/]*@)?(?:(?:[\w-]+\.)*(?:example(?:\.(?:com|org|net))?|test|invalid|localhost)|127(?:\.\d+){3}|[^.:\[]+)"
-    r"(?::[^/]*)?$")
+    r"(?i)^(?:[^@/]*@)?(?:(?:[\w-]+\.)*(?:example(?:\.(?:com|org|net))?|test|invalid|localhost)|127(?:\.\d+){3}|"
+    r"(?:192\.0\.2|198\.51\.100|203\.0\.113)\.\d{1,3}|[^.:\[]+)(?::[^/]*)?$")
 
 
 def placeholder(value):
@@ -61,6 +63,12 @@ def url_path_secret(match):
         not placeholder(match.group("value"))
 
 
+def url_short_path_secret(match):
+    """`http://panel/jdoe42/<password>/1234`: the same account in the short live address, where a digit in the user or
+    the password tells it from a page's path (`/forums/thread/725013`, `/about/versions/14`)."""
+    return url_path_secret(match) and bool(re.search(r"\d", match.group("user") + match.group("value")))
+
+
 def assigned_secret(match):
     """A value given to a name that ends with a secret word (`storePassword`, `ANDROID_KEYSTORE_PASSWORD`,
     `tmdbToken`, `password:` in YAML): quoted, 16 characters or more, or 8 with letters and digits; bare (YAML,
@@ -77,11 +85,39 @@ def assigned_secret(match):
 SECRET_NAME = (r"(?:api[_-]?key|access[_-]?key|secret[_-]?key|private[_-]?key|auth[_-]?key|client[_-]?secret|secret|"
                r"token|password|passwd|passphrase)s?(?![A-Za-z0-9_])")
 
+# The PEM body, also as a JSON string (a service account key: `\n` between the lines).
+PEM_PRIVATE_KEY = re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----(?:[A-Za-z0-9+/=\s]|\\[nr]){40,}")
+
+
+def base64_private_key(match):
+    """A PEM file in base64 (`base64 -i AuthKey_….p8`, which the ASC_KEY_P8 secret also takes), whole or as the first
+    line of `base64` (76 characters): a private key once decoded."""
+    run = match.group(0)
+    try:
+        decoded = base64.b64decode(run[:len(run) // 4 * 4]).decode("utf-8", "replace")
+    except ValueError:
+        return False
+    return "PRIVATE KEY-----" in decoded
+
+
+def apple_id(match):
+    """The App Store Connect Key ID and the Team ID (10 capitals and digits) or the Issuer ID (a UUID), which CLAUDE.md
+    keeps in GitHub secrets: given to their names (`ASC_KEY_ID=`, `issuer_id:`, `DEVELOPMENT_TEAM =`, `team_id("…")`)."""
+    value = match.group("value")
+    return not placeholder(value) and bool(re.search(r"\d", value))
+
 # Secrets: specific formats first, then credentials in addresses and values given to secret names. An optional third
 # item decides on each match (placeholders, example hosts).
 SECRET_RULES = [
-    # The PEM body, also as a JSON string (a service account key: `\n` between the lines).
-    ("private key", re.compile(r"-----BEGIN (?:[A-Z]+ )*PRIVATE KEY-----(?:[A-Za-z0-9+/=\s]|\\[nr]){40,}")),
+    ("private key", PEM_PRIVATE_KEY),
+    # The key without its PEM lines: App Store Connect's .p8 (EC P-256), an RSA key (PKCS #8).
+    ("private key", re.compile(
+        r"\b(?:MIG[HT]AgEAMBMGByqGSM49AgEGCCqGSM49AwEHB|MII[A-Za-z0-9+/]{2}QIBADANBgkqhkiG9w0BAQEFAASC)[A-Za-z0-9+/]{40,}")),
+    # A PEM file in base64: "-----BEGIN" is `LS0tLS1CRUdJTi`.
+    ("private key", re.compile(r"(?<![A-Za-z0-9+/])LS0tLS1CRUdJTi[A-Za-z0-9+/]{22,}={0,2}"), base64_private_key),
+    # A keystore in base64 (`base64 -w0 ondo-upload.jks`, docs/RELEASE-ANDROID.md): JKS starts with FEEDFEED, PKCS #12
+    # (what keytool makes by default) with a SEQUENCE then version 3.
+    ("keystore", re.compile(r"(?<![A-Za-z0-9+/])(?:/u3\+7QAAAA|MII[A-Za-z0-9+/]{2}[AQgw]IBAzCC)[A-Za-z0-9+/]{60,}")),
     ("AWS access key", re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b")),
     ("GitHub token", re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})")),
     ("Slack token", re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}")),
@@ -90,6 +126,10 @@ SECRET_RULES = [
     ("Anthropic / OpenAI key", re.compile(r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}")),
     ("JSON Web Token", re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}")),
     ("App Store Connect key file", re.compile(r"\bAuthKey_[A-Z0-9]{10}\.p8\b")),
+    ("App Store Connect key ID, issuer ID or team ID", re.compile(
+        r"(?i)(?:key[_-]?id|issuer[_-]?id|team[_-]?id(?:entifier)?|development[_-]?team)"
+        r"(?:[\"'`]?[ \t]*(?:=>|:=|=|:|\()[ \t]*[\"'`]?|</key>\s*<string>)"
+        r"(?P<value>(?-i:[A-Z0-9]{10})|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?![\w-])"), apple_id),
     ("credentials in a URL", re.compile(r"\b[a-z][a-z0-9+.-]*://[^/\s:@'\"]+:[^/\s:@'\"$]{6,}@[^\s'\"]+")),
     ("credentials in a URL", re.compile(
         r"(?i)(?:\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)[^\s?#'\"<>]*\?(?:[^\s#'\"<>]*?&)?|[?&])"
@@ -97,6 +137,14 @@ SECRET_RULES = [
     ("credentials in a URL", re.compile(
         r"(?i)\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)/(?:live|movie|series|timeshift)/[^/\s?#'\"<>]+/"
         r"(?P<value>[^/\s?#'\"<>]+)/[^\s'\"<>]*\d"), url_path_secret),
+    # The short form of a live stream in panels' M3U exports: `http://panel/jdoe42/<password>/1234`. Not an API's
+    # numbered version (`/3/tv/1399`).
+    ("credentials in a URL", re.compile(
+        r"(?i)\b[a-z][a-z0-9+.-]*://(?P<host>[^/\s?#'\"<>]+)/(?P<user>[^/\s?#'\"<>]+)/(?P<value>[^/\s?#'\"<>]+)/\d+"
+        r"(?:\.[a-z0-9]{2,4})?(?![^\s'\"<>?#])"),
+     lambda match: url_short_path_secret(match) and not match.group("user").isdigit() and not match.group("value").isdigit()),
+    # A TMDb API key (32 hexadecimal digits) in an address.
+    ("credentials in a URL", re.compile(r"(?i)[?&]api_?key=[0-9a-f]{32}(?![0-9a-z])")),
     ("hard-coded secret", re.compile(
         rf"(?i)(?<![?&]){SECRET_NAME}[\"'`]?(?:\s*:\s*[A-Za-z_][\w.<>?\[\]]*\s*(?==))?\s*(?:=>|:=|\?=|=|:)[ \t]*"
         r"(?:(?P<quote>[\"'`])(?P<quoted>[^\"'`\s]{8,})(?P=quote)|(?P<bare>[^\s\"'`.$<>{}()\[\]\\,;#&?]{8,})(?=[\s,;)\]}]|$))"),
@@ -111,6 +159,11 @@ PERSONAL_RULES = [
     ("home folder", re.compile(r"(?:/Users/(?!runner\b|Shared\b|\$|<)[A-Za-z0-9._-]+|/home/(?!runner\b|user\b|\$|<)[A-Za-z0-9._-]+"
                                r"|/root/\.claude\b[^\s'\"]*|[A-Z]:\\Users\\[A-Za-z0-9._-]+)")),
     ("private network address", re.compile(r"\b(?:192\.168|10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01]))\.\d{1,3}\.\d{1,3}\b")),
+    # The other local addresses of docs/SYNC.md: IPv4 link-local, IPv6 unique local (fc00::/7) and link-local
+    # (fe80::/10) with at least two groups after the first (not the ranges, nor the usual examples fe80::1, fc00::1).
+    ("local network address", re.compile(
+        r"(?i)\b169\.254\.\d{1,3}\.\d{1,3}\b|(?<![\w:])(?:f[cd][0-9a-f]{2}|fe[89ab][0-9a-f])(?::{1,2}[0-9a-f]{1,4}){2,7}"
+        r"(?![\w:])")),
 ]
 
 FORBIDDEN_FILES = re.compile(

@@ -9,3 +9,5 @@
 "pa\+ss/w&rd=1"
 # The private address ranges listed by the local-network sync specification (docs/SYNC.md), not addresses of a network.
 `(10\.0\.0\.0/8|172\.16\.0\.0/12|192\.168\.0\.0/16|169\.254\.0\.0/16|127\.0\.0\.0/8)`
+# The made-up link-local address of an Android crash log test that checks it is left out (history, 3922f99).
+\bfe80::1c2b:3cff:fe4d:5e6f\b

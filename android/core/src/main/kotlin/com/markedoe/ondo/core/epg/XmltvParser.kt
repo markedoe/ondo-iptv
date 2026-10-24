@@ -144,6 +144,8 @@ class XmltvParser {
             fun number(part: String): Int? = part.split('/').firstOrNull { it.isNotEmpty() }?.trim()?.toIntOrNull()
             val season = number(parts[0]) ?: return value
             val episode = number(parts[1]) ?: return value
+            // The guide's text: `Int.MAX_VALUE + 1` would wrap to a negative number.
+            if (season == Int.MAX_VALUE || episode == Int.MAX_VALUE) return value
             return String.format(Locale.ROOT, "S%02dE%02d", season + 1, episode + 1)
         }
     }
