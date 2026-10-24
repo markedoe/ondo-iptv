@@ -26,10 +26,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.model.Episode
+import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.ui.theme.OndoColors
 
 /** The next episode, offered as an episode ends: what it is, and when it plays. */
-data class UpNext(val title: String, val subtitle: String, val seconds: Int)
+data class UpNext(val title: String, val subtitle: String, val seconds: Int) {
+    companion object {
+        /** Up next shows in the last seconds of an episode. */
+        const val SHOWN_MS = 20_000L
+
+        /** The offer of [next] with [leftMs] of the episode left: none before the last [SHOWN_MS], or without a next one. */
+        fun offer(next: Pair<Series, Episode>?, leftMs: Long): UpNext? {
+            val (series, episode) = next ?: return null
+            if (leftMs > SHOWN_MS) return null
+            return UpNext(series.name, "${episode.code} · ${episode.title}", ((leftMs + 999) / 1_000).toInt().coerceAtLeast(0))
+        }
+    }
+}
 
 /**
  * Up next, in the corner as the episode ends: the next episode plays when this one does, or at once with Play now;

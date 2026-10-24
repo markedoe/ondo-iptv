@@ -475,18 +475,13 @@ class PlayerActivity : ComponentActivity() {
         )
     }
 
-    /** Up next shows in the last [UP_NEXT_MS] of an episode that has a next one, with the seconds left. */
+    /** Up next shows in the last seconds of an episode that has a next one ([UpNext.offer]). */
     private fun checkUpNext() {
         val next = nextEpisode
         val exoPlayer = player
         val duration = exoPlayer?.duration?.takeIf { it != C.TIME_UNSET && it > 0 }
         val left = if (exoPlayer != null && duration != null) duration - exoPlayer.currentPosition else Long.MAX_VALUE
-        upNext = if (next == null || upNextDeclined || errorMessage != null || inPictureInPicture || left > UP_NEXT_MS) {
-            null
-        } else {
-            val (series, episode) = next
-            UpNext(series.name, "${episode.code} · ${episode.title}", ((left + 999) / 1_000).toInt().coerceAtLeast(0))
-        }
+        upNext = if (upNextDeclined || errorMessage != null || inPictureInPicture) null else UpNext.offer(next, left)
         declineUpNextOnBack.isEnabled = television && upNext != null
     }
 
@@ -1189,9 +1184,6 @@ class PlayerActivity : ComponentActivity() {
 
         /** Where the subtitles sit while the TV's controls show: above them (a fraction of the video's height). */
         private const val RAISED_SUBTITLES = 0.3f
-
-        /** Up next shows in the last seconds of an episode. */
-        private const val UP_NEXT_MS = 20_000L
 
         /** Narrower than this (in dp, the shorter side), a phone. */
         private const val TABLET_WIDTH_DP = 600
