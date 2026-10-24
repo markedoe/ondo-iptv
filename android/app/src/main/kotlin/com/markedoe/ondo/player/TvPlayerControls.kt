@@ -32,6 +32,9 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.AspectRatio
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Forward10
@@ -97,6 +100,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
+import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.tv.TvSwitchRow
 import com.markedoe.ondo.ui.tv.TvTokens
@@ -122,7 +126,7 @@ data class TvPlayerInfo(
  * The player's controls on a TV, drawn for the remote over Media3's video view (which still draws the picture, the
  * subtitles and the buffering spinner): the title at the top; at the bottom the progress bar (or LIVE) and a row of large
  * round buttons that turn white with the focus, each named beneath when the remote is on it; side panels for the
- * subtitles, the audio, the speed and More. Everything keeps clear of the 5 % the screen may crop (TV-OV). Playback
+ * subtitles, the audio, the speed and More (the aspect ratio, the sleep timer, the statistics). Everything keeps clear of the 5 % the screen may crop (TV-OV). Playback
  * controls are not mirrored in a right-to-left language: they follow the video's time, left to right.
  */
 @Composable
@@ -133,6 +137,9 @@ fun TvPlayerOverlay(
     statisticsShown: Boolean,
     onToggleStatistics: () -> Unit,
     onReportProblem: () -> Unit,
+    scale: VideoScale,
+    onScale: (VideoScale) -> Unit,
+    sleep: SleepTimer,
     modifier: Modifier = Modifier,
 ) {
     DisposableEffect(player) {
@@ -153,7 +160,8 @@ fun TvPlayerOverlay(
     LaunchedEffect(controls.panel) {
         val closed = openPanel
         openPanel = controls.panel
-        if (controls.panel == null && closed != null && controls.shown) takeFocus(buttons.getValue(closed))
+        // From a panel of More, back to More's button.
+        if (controls.panel == null && closed != null && controls.shown) takeFocus(buttons.getValue(closed.parent ?: closed))
     }
     val seekBar = !info.live || controls.seekable
     Box(modifier.fillMaxSize()) {
@@ -163,7 +171,7 @@ fun TvPlayerOverlay(
                     .fillMaxSize()
                     .then(if (controls.shown) Modifier.testTag("tvPlayerControls") else if (controls.peeking) Modifier.testTag("tvPlayerPeek") else Modifier),
             ) {
-                TopLines(info, clock = controls.clockMs.takeIf { controls.shown }, Modifier.align(Alignment.TopCenter))
+                TopLines(info, clock = controls.clockMs.takeIf { controls.shown }, sleepEndsAt = sleep.endsAt, Modifier.align(Alignment.TopCenter))
                 Column(
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -214,6 +222,9 @@ fun TvPlayerOverlay(
                     controls.closePanel()
                     onReportProblem()
                 },
+                scale = scale,
+                onScale = onScale,
+                sleep = sleep,
             )
         }
     }
@@ -227,9 +238,12 @@ private suspend fun takeFocus(requester: FocusRequester) {
     }
 }
 
-/** The title and its line beneath, and the time of day while the controls are shown ([clock]). */
+/**
+ * The title and its line beneath, and the time of day while the controls are shown ([clock]), after the time the
+ * sleep timer pauses the player ([sleepEndsAt]).
+ */
 @Composable
-private fun TopLines(info: TvPlayerInfo, clock: Long?, modifier: Modifier = Modifier) {
+private fun TopLines(info: TvPlayerInfo, clock: Long?, sleepEndsAt: Long?, modifier: Modifier = Modifier) {
     Row(
         modifier
             .fillMaxWidth()
@@ -244,6 +258,14 @@ private fun TopLines(info: TvPlayerInfo, clock: Long?, modifier: Modifier = Modi
             }
         }
         if (clock != null) {
+            if (sleepEndsAt != null) {
+                Spacer(Modifier.width(24.dp))
+                Row(Modifier.semantics(mergeDescendants = true) {}.testTag("sleepEndsAt"), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Bedtime, contentDescription = stringResource(R.string.sleep_timer), tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(clockText(sleepEndsAt), style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.8f))
+                }
+            }
             Spacer(Modifier.width(24.dp))
             Text(clockText(clock), style = MaterialTheme.typography.titleLarge, color = Color.White.copy(alpha = 0.9f))
         }
@@ -506,6 +528,9 @@ private fun SidePanel(
     statisticsShown: Boolean,
     onToggleStatistics: () -> Unit,
     onReportProblem: () -> Unit,
+    scale: VideoScale,
+    onScale: (VideoScale) -> Unit,
+    sleep: SleepTimer,
 ) {
     val first = remember(panel) { FocusRequester() }
     Surface(
@@ -524,6 +549,8 @@ private fun SidePanel(
             TvPanel.AUDIO -> R.string.audio
             TvPanel.SPEED -> R.string.speed
             TvPanel.MORE -> R.string.more
+            TvPanel.ASPECT -> R.string.aspect_ratio
+            TvPanel.SLEEP -> R.string.sleep_timer
         }
         Column(Modifier.fillMaxSize().padding(start = 28.dp, top = TvTokens.EdgeTop + 16.dp, end = TvTokens.EdgeEnd, bottom = TvTokens.EdgeTop)) {
             Text(stringResource(title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, bottom = 16.dp))
@@ -539,13 +566,17 @@ private fun SidePanel(
                 TvPanel.AUDIO -> choices.indexOfFirst { it.selected }.coerceAtLeast(0)
                 TvPanel.SPEED -> SPEEDS.indexOf(controls.speed).takeIf { it >= 0 } ?: SPEEDS.indexOf(1f)
                 TvPanel.MORE -> 0
+                TvPanel.ASPECT -> scale.ordinal
+                TvPanel.SLEEP -> SLEEP_CHOICES.indexOf(sleep.minutes).coerceAtLeast(0)
             }
             val list = remember(panel) { LazyListState(firstVisibleItemIndex = selectedRow) }
             LazyColumn(state = list, verticalArrangement = Arrangement.spacedBy(4.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
                 when (panel) {
                     TvPanel.SUBTITLES, TvPanel.AUDIO -> tracks(player, controls, type, choices, first)
                     TvPanel.SPEED -> speeds(player, controls, locale, first)
-                    TvPanel.MORE -> more(statisticsShown, onToggleStatistics, onReportProblem, first)
+                    TvPanel.MORE -> more(controls, scale, sleep, statisticsShown, onToggleStatistics, onReportProblem, first)
+                    TvPanel.ASPECT -> scales(controls, scale, onScale, first)
+                    TvPanel.SLEEP -> sleeps(controls, sleep, first)
                 }
             }
         }
@@ -623,7 +654,28 @@ private fun LazyListScope.speeds(player: Player, controls: TvControls, locale: L
     }
 }
 
-private fun LazyListScope.more(statisticsShown: Boolean, onToggleStatistics: () -> Unit, onReportProblem: () -> Unit, first: FocusRequester) {
+private fun LazyListScope.more(
+    controls: TvControls,
+    scale: VideoScale,
+    sleep: SleepTimer,
+    statisticsShown: Boolean,
+    onToggleStatistics: () -> Unit,
+    onReportProblem: () -> Unit,
+    first: FocusRequester,
+) {
+    // The remote starts on the first row, or on the row of the panel Back came from.
+    val focusSleep = controls.cameBackFrom == TvPanel.SLEEP
+    item(key = "aspect") {
+        MoreRow(stringResource(R.string.aspect_ratio), stringResource(scale.label), Icons.Rounded.AspectRatio, tag = "tvAspect", modifier = if (!focusSleep) Modifier.focusRequester(first) else Modifier) {
+            controls.open(TvPanel.ASPECT)
+        }
+    }
+    item(key = "sleep") {
+        val value = sleep.endsAt?.let { stringResource(R.string.sleep_ends_at, clockText(it)) } ?: stringResource(R.string.off)
+        MoreRow(stringResource(R.string.sleep_timer), value, Icons.Rounded.Bedtime, tag = "tvSleep", modifier = if (focusSleep) Modifier.focusRequester(first) else Modifier) {
+            controls.open(TvPanel.SLEEP)
+        }
+    }
     item(key = "statistics") {
         TvSwitchRow(
             title = stringResource(R.string.stream_statistics),
@@ -631,7 +683,7 @@ private fun LazyListScope.more(statisticsShown: Boolean, onToggleStatistics: () 
             checked = statisticsShown,
             onChange = { onToggleStatistics() },
             icon = Icons.Rounded.QueryStats,
-            modifier = Modifier.focusRequester(first).testTag("statisticsToggle"),
+            modifier = Modifier.testTag("statisticsToggle"),
         )
     }
     item(key = "report") {
@@ -646,6 +698,52 @@ private fun LazyListScope.more(statisticsShown: Boolean, onToggleStatistics: () 
             scale = ListItemDefaults.scale(focusedScale = 1.02f),
         )
     }
+}
+
+private fun LazyListScope.scales(controls: TvControls, scale: VideoScale, onScale: (VideoScale) -> Unit, first: FocusRequester) {
+    VideoScale.entries.forEach { option ->
+        item(key = "scale-$option") {
+            val selected = option == scale
+            ChoiceRow(stringResource(option.label), null, selected = selected, tag = "scale-${option.name}", modifier = if (selected) Modifier.focusRequester(first) else Modifier) {
+                onScale(option)
+                controls.closePanel()
+            }
+        }
+    }
+}
+
+/** Off, then the minutes of [SleepTimer.CHOICES]. */
+private val SLEEP_CHOICES: List<Int?> = listOf(null) + SleepTimer.CHOICES
+
+private fun LazyListScope.sleeps(controls: TvControls, sleep: SleepTimer, first: FocusRequester) {
+    SLEEP_CHOICES.forEach { minutes ->
+        val tag = "sleep-${minutes ?: "off"}"
+        item(key = tag) {
+            val selected = sleep.minutes == minutes
+            val name = if (minutes == null) stringResource(R.string.off) else stringResource(R.string.sleep_minutes, minutes)
+            ChoiceRow(name, null, selected = selected, tag = tag, modifier = if (selected) Modifier.focusRequester(first) else Modifier) {
+                sleep.set(minutes)
+                controls.closePanel()
+            }
+        }
+    }
+}
+
+/** A row of More that opens a panel: what it sets, its value beneath. */
+@Composable
+private fun MoreRow(title: String, value: String, icon: ImageVector, tag: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    ListItem(
+        selected = false,
+        onClick = onClick,
+        headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingContent = { Text(value, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingContent = { Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp)) },
+        trailingContent = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(22.dp)) },
+        modifier = modifier.testTag(tag),
+        colors = tvRowColors(),
+        shape = ListItemDefaults.shape(RoundedCornerShape(14.dp)),
+        scale = ListItemDefaults.scale(focusedScale = 1.02f),
+    )
 }
 
 /** A row of a panel: the choice, what tells it apart, a tick on the one in use. */

@@ -15,15 +15,16 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.text.format.DateFormat
 import android.util.Rational
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.annotation.OptIn
 import androidx.annotation.VisibleForTesting
 import androidx.compose.foundation.background
@@ -36,6 +37,7 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.MoreVert
@@ -46,7 +48,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -106,15 +110,21 @@ import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.OndoTvTheme
 import com.markedoe.ondo.ui.tv.TvSafeArea
 import com.markedoe.ondo.ui.tv.isTelevision
+import java.util.Date
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicLong
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
@@ -206,8 +216,25 @@ class PlayerActivity : ComponentActivity() {
     private var showsStatistics by mutableStateOf(false)
     private var statistics by mutableStateOf<StreamStatistics?>(null)
 
-    /** The More menu (Stream Statistics, Report a Problem) is open, on a phone or a tablet; a TV has its More panel. */
+    /**
+     * The More menu (Aspect Ratio, Sleep Timer, Stream Statistics, Report a Problem) is open, on a phone or a tablet,
+     * on [menuPage] (null for its first list); a TV has its More panel.
+     */
     private var menuOpen by mutableStateOf(false)
+    private var menuPage by mutableStateOf<TvPanel?>(null)
+
+    /** The aspect ratio last chosen (the player's More), kept in the settings for the next videos. */
+    private val videoScale: StateFlow<VideoScale> by lazy {
+        repository.state.map { it.settings.videoScale }.stateIn(lifecycleScope, SharingStarted.Eagerly, repository.state.value.settings.videoScale)
+    }
+
+    /** Pauses the video when its time is up (the player's More); it keeps running across the channels zapped to. */
+    private val sleepTimer by lazy {
+        SleepTimer(lifecycleScope) {
+            player?.pause()
+            showControls()
+        }
+    }
 
     /** Bytes the player received from the network (counted on its loading threads). */
     private var receivedBytes = AtomicLong()
@@ -243,6 +270,7 @@ class PlayerActivity : ComponentActivity() {
 
         setContent {
             val safeArea = if (television) Modifier.padding(TvSafeArea) else Modifier
+            val scale by videoScale.collectAsState()
             OndoTheme {
                 Box(Modifier.fillMaxSize().background(Color.Black)) {
                     AndroidView(
@@ -267,6 +295,7 @@ class PlayerActivity : ComponentActivity() {
                             }.also { playerView = it }
                         },
                         modifier = Modifier.fillMaxSize(),
+                        update = { view -> view.resizeMode = scale.resizeMode },
                     )
                     // On a TV, the controls drawn for the remote; none over an error, where Try Again has the focus.
                     val shownPlayer = player
@@ -282,6 +311,9 @@ class PlayerActivity : ComponentActivity() {
                                 statisticsShown = showsStatistics,
                                 onToggleStatistics = ::toggleStatistics,
                                 onReportProblem = { shownReport = problemReport() },
+                                scale = scale,
+                                onScale = repository::setVideoScale,
+                                sleep = sleepTimer,
                             )
                         }
                     }
@@ -306,23 +338,38 @@ class PlayerActivity : ComponentActivity() {
                             IconButton(onClick = { menuOpen = true }, modifier = Modifier.testTag("playerMore")) {
                                 Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more), tint = Color.White)
                             }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.stream_statistics)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        toggleStatistics()
-                                    },
-                                    trailingIcon = { if (showsStatistics) Icon(Icons.Rounded.Check, contentDescription = null) },
-                                    modifier = Modifier.testTag("statisticsToggle").semantics { selected = showsStatistics },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.report_problem)) },
-                                    onClick = {
-                                        menuOpen = false
-                                        shownReport = problemReport()
-                                    },
-                                )
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = ::closeMenu) {
+                                when (menuPage) {
+                                    TvPanel.ASPECT -> VideoScale.entries.forEach { option ->
+                                        MenuChoice(stringResource(option.label), selected = option == scale, tag = "scale-${option.name}") {
+                                            closeMenu()
+                                            repository.setVideoScale(option)
+                                        }
+                                    }
+                                    TvPanel.SLEEP -> (listOf(null) + SleepTimer.CHOICES).forEach { minutes ->
+                                        val name = if (minutes == null) stringResource(R.string.off) else stringResource(R.string.sleep_minutes, minutes)
+                                        MenuChoice(name, selected = sleepTimer.minutes == minutes, tag = "sleep-${minutes ?: "off"}") {
+                                            closeMenu()
+                                            sleepTimer.set(minutes)
+                                        }
+                                    }
+                                    else -> {
+                                        MenuRow(stringResource(R.string.aspect_ratio), stringResource(scale.label), tag = "menuAspect") { menuPage = TvPanel.ASPECT }
+                                        val sleepValue = sleepTimer.endsAt?.let { stringResource(R.string.sleep_ends_at, DateFormat.getTimeFormat(this@PlayerActivity).format(Date(it))) }
+                                        MenuRow(stringResource(R.string.sleep_timer), sleepValue ?: stringResource(R.string.off), tag = "menuSleep") { menuPage = TvPanel.SLEEP }
+                                        MenuChoice(stringResource(R.string.stream_statistics), selected = showsStatistics, tag = "statisticsToggle") {
+                                            closeMenu()
+                                            toggleStatistics()
+                                        }
+                                        DropdownMenuItem(
+                                            text = { Text(stringResource(R.string.report_problem)) },
+                                            onClick = {
+                                                closeMenu()
+                                                shownReport = problemReport()
+                                            },
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -420,6 +467,38 @@ class PlayerActivity : ComponentActivity() {
             live = current.isLive,
             programmeStart = programme?.start,
             programmeEnd = programme?.end,
+        )
+    }
+
+    private fun closeMenu() {
+        menuOpen = false
+        menuPage = null
+    }
+
+    /** A row of the phone's More menu that opens a list of choices: what it sets, its value beneath. */
+    @Composable
+    private fun MenuRow(title: String, value: String, tag: String, onClick: () -> Unit) {
+        DropdownMenuItem(
+            text = {
+                Column {
+                    Text(title)
+                    Text(value, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+            onClick = onClick,
+            trailingIcon = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null) },
+            modifier = Modifier.testTag(tag),
+        )
+    }
+
+    /** A choice of the phone's More menu, ticked when in use. */
+    @Composable
+    private fun MenuChoice(name: String, selected: Boolean, tag: String, onClick: () -> Unit) {
+        DropdownMenuItem(
+            text = { Text(name) },
+            onClick = onClick,
+            trailingIcon = { if (selected) Icon(Icons.Rounded.Check, contentDescription = null) },
+            modifier = Modifier.testTag(tag).semantics { this.selected = selected },
         )
     }
 

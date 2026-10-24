@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.core.view.children
 import androidx.lifecycle.Lifecycle
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -18,8 +19,10 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
+import com.markedoe.ondo.data.VideoScale
 import java.time.Duration
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -161,6 +164,9 @@ class PlayerRemoteTest {
         repeat(5) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
         compose.onNodeWithTag("tvMore").assertIsFocused()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
+        compose.onNodeWithTag("tvAspect").assertIsFocused()
+        // Aspect ratio, Sleep timer, then Stream statistics.
+        repeat(2) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
         compose.onNodeWithTag("statisticsToggle").assertIsFocused()
         compose.onNodeWithTag("playerMore").assertDoesNotExist()
         compose.onNodeWithContentDescription("Close").assertDoesNotExist()
@@ -182,5 +188,51 @@ class PlayerRemoteTest {
             it.onBackPressedDispatcher.onBackPressed()
             assertTrue("then Back leaves", it.isFinishing)
         }
+    }
+
+    private fun openMoreRow(row: Int) {
+        press(KeyEvent.KEYCODE_INFO)
+        repeat(5) { press(KeyEvent.KEYCODE_DPAD_RIGHT) }
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        repeat(row) { press(KeyEvent.KEYCODE_DPAD_DOWN) }
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+    }
+
+    /** The aspect ratio chosen fills the screen at once, and the next film opens with it. */
+    @Test
+    fun theAspectRatioChosenStaysForTheNextFilm() {
+        launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
+        scenario.onActivity { assertEquals(AspectRatioFrameLayout.RESIZE_MODE_FIT, playerView(it).resizeMode) }
+        openMoreRow(0)
+        // Fit, Fill (crop), Stretch.
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        scenario.onActivity { assertEquals(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, playerView(it).resizeMode) }
+        assertEquals(VideoScale.FILL, app.repository.state.value.settings.videoScale)
+        scenario.close()
+        launch(app.repository.playRequest(app.repository.state.value.content.movies.last()))
+        scenario.onActivity { assertEquals(AspectRatioFrameLayout.RESIZE_MODE_ZOOM, playerView(it).resizeMode) }
+        openMoreRow(0)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        scenario.onActivity { assertEquals(AspectRatioFrameLayout.RESIZE_MODE_FILL, playerView(it).resizeMode) }
+        assertEquals(VideoScale.STRETCH, app.repository.state.value.settings.videoScale)
+    }
+
+    /** The sleep timer pauses the film when its time is up. */
+    @Test
+    fun theSleepTimerPausesTheFilm() {
+        launch(app.repository.playRequest(app.repository.state.value.content.movies.first()))
+        openMoreRow(1)
+        // Off, then 15 min.
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        press(KeyEvent.KEYCODE_DPAD_CENTER)
+        scenario.onActivity { assertTrue("playing until then", playerView(it).player!!.playWhenReady) }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(14))
+        compose.waitForIdle()
+        scenario.onActivity { assertTrue("still playing a minute before", playerView(it).player!!.playWhenReady) }
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(1).plusSeconds(1))
+        compose.waitForIdle()
+        scenario.onActivity { assertFalse("paused", playerView(it).player!!.playWhenReady) }
     }
 }

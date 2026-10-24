@@ -240,7 +240,7 @@
     <string name="help_guide_body">The guide button on Live TV shows the programmes of the channels chosen there (My List, a category or all of them). The guide comes from your provider, or from the XMLTV address given when adding an M3U playlist.\n\nOpen an upcoming programme and set a reminder: a notification arrives a few minutes before it starts. The bell of the guide lists your reminders.</string>
     <!-- Help, on a TV only. -->
     <string name="help_remote_title">With the remote</string>
-    <string name="help_remote_body">Move with the arrows and press OK to choose. The menu is on the left: Search, the tabs and Settings. Back closes a page; on a tab, it goes to the menu, then to Home, and Back in Home\'s menu leaves Ondo.\n\nIn the player, OK pauses, resumes and shows the controls (the Info key shows them too); Left and Right go back and forward 10 seconds. The controls are large buttons: Play/Pause, back and forward 10 seconds, Subtitles and Audio, which list the tracks by language, Speed and More (Stream Statistics, Report a Problem…); the remote\'s subtitles and audio keys open their list directly. Up from the buttons reaches the progress bar: Left and Right move along it, faster when held, and the video goes there when you stop or press OK. Back closes a list, then the controls. On a live channel, Up and Down or the channel keys change channel, the number keys go straight to a channel, and the last-channel key returns to the one you watched before.\n\nIn Live TV, hold OK on a channel to add it to My List.</string>
+    <string name="help_remote_body">Move with the arrows and press OK to choose. The menu is on the left: Search, the tabs and Settings. Back closes a page; on a tab, it goes to the menu, then to Home, and Back in Home\'s menu leaves Ondo.\n\nIn the player, OK pauses, resumes and shows the controls (the Info key shows them too); Left and Right go back and forward 10 seconds. The controls are large buttons: Play/Pause, back and forward 10 seconds, Subtitles and Audio, which list the tracks by language, Speed and More (Aspect ratio, Sleep timer, Stream Statistics, Report a Problem…); the remote\'s subtitles and audio keys open their list directly. Up from the buttons reaches the progress bar: Left and Right move along it, faster when held, and the video goes there when you stop or press OK. Back closes a list, then the controls. On a live channel, Up and Down or the channel keys change channel, the number keys go straight to a channel, and the last-channel key returns to the one you watched before.\n\nIn Live TV, hold OK on a channel to add it to My List.</string>
     <plurals name="guide_row_limit">
         <item quantity="one">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
         <item quantity="other">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
@@ -319,6 +319,13 @@
     <string name="speed">Speed</string>
     <string name="speed_normal">Normal</string>
     <string name="off">Off</string>
+    <string name="aspect_ratio">Aspect ratio</string>
+    <string name="scale_fit">Fit</string>
+    <string name="scale_fill">Fill (crop)</string>
+    <string name="scale_stretch">Stretch</string>
+    <string name="sleep_timer">Sleep timer</string>
+    <string name="sleep_minutes">%1$d min</string>
+    <string name="sleep_ends_at">Ends at %1$s</string>
     <string name="live_badge">LIVE</string>
     <string name="track_number">Track %1$d</string>
     <string name="track_forced">Forced</string>

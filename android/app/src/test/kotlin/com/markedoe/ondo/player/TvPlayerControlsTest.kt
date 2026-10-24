@@ -1,7 +1,11 @@
 package com.markedoe.ondo.player
 
+import android.text.format.DateFormat
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
@@ -20,7 +24,9 @@ import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.media3.common.C
 import androidx.media3.common.MimeTypes
+import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.ui.tv.OndoTvTheme
+import java.util.Date
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -41,6 +47,9 @@ class TvPlayerControlsTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private lateinit var controls: TvControls
+    private lateinit var sleep: SleepTimer
+    private var scale by mutableStateOf(VideoScale.FIT)
+    private var sleepEnds = 0
 
     private val movie = FakeTracksPlayer(
         listOf(
@@ -60,9 +69,13 @@ class TvPlayerControlsTest {
             inputModes = LocalInputModeManager.current
             val scope = rememberCoroutineScope()
             controls = androidx.compose.runtime.remember { TvControls(scope) }
+            sleep = androidx.compose.runtime.remember { SleepTimer(scope, now = { NOW }) { sleepEnds++ } }
             CompositionLocalProvider(LocalLayoutDirection provides if (rtl) LayoutDirection.Rtl else LayoutDirection.Ltr) {
                 OndoTvTheme {
-                    TvPlayerOverlay(player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {})
+                    TvPlayerOverlay(
+                        player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
+                        scale = scale, onScale = { scale = it }, sleep = sleep,
+                    )
                 }
             }
         }
@@ -263,5 +276,76 @@ class TvPlayerControlsTest {
         compose.mainClock.advanceTimeBy(2_000)
         compose.waitForIdle()
         assertEquals("the first at once, then one for the rest", listOf(610_000L, 660_000L), movie.seeks)
+    }
+
+    /** More, then Aspect ratio: the three ways the picture fills the screen, the one in use ticked; Back returns to More. */
+    @Test
+    fun moreSetsTheAspectRatio() {
+        start()
+        press(Key.DirectionRight, 5)
+        compose.onNodeWithTag("tvMore").assertIsFocused()
+        press(Key.DirectionCenter)
+        row("tvAspect").assertIsFocused().assertTextContains("Aspect ratio").assertTextContains("Fit")
+        press(Key.DirectionCenter)
+        row("scale-FIT").assertIsFocused().assertIsSelected()
+        row("scale-FILL").assertTextContains("Fill (crop)")
+        row("scale-STRETCH").assertTextContains("Stretch")
+        // Back: More again, on the row the remote came from.
+        compose.runOnIdle { assertTrue(controls.back()) }
+        compose.waitForIdle()
+        assertEquals(TvPanel.MORE, controls.panel)
+        row("tvAspect").assertIsFocused()
+        press(Key.DirectionCenter)
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        assertEquals(VideoScale.FILL, scale)
+        // Chosen: the panels close, the remote is back on More, which now says Fill.
+        compose.onNodeWithTag("tvTrackPanel").assertDoesNotExist()
+        compose.onNodeWithTag("tvMore").assertIsFocused()
+        press(Key.DirectionCenter)
+        row("tvAspect").assertTextContains("Fill (crop)")
+        press(Key.DirectionCenter)
+        row("scale-FILL").assertIsFocused().assertIsSelected()
+    }
+
+    /** More, then Sleep timer: Off or a number of minutes; the time it ends shows on the row and by the clock. */
+    @Test
+    fun moreSetsTheSleepTimer() {
+        start()
+        press(Key.DirectionRight, 5)
+        press(Key.DirectionCenter)
+        press(Key.DirectionDown)
+        row("tvSleep").assertIsFocused().assertTextContains("Sleep timer").assertTextContains("Off")
+        press(Key.DirectionCenter)
+        row("sleep-off").assertIsFocused().assertIsSelected()
+        row("sleep-15").assertTextContains("15 min")
+        row("sleep-120").assertExists()
+        // Back: More again, on Sleep timer.
+        compose.runOnIdle { assertTrue(controls.back()) }
+        compose.waitForIdle()
+        row("tvSleep").assertIsFocused()
+        press(Key.DirectionCenter)
+        row("sleep-off").assertIsFocused()
+        press(Key.DirectionDown, 2)
+        row("sleep-30").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertEquals(30, sleep.minutes)
+        compose.onNodeWithTag("tvMore").assertIsFocused()
+        val end = DateFormat.getTimeFormat(compose.activity).format(Date(NOW + 30 * 60_000L))
+        compose.onNodeWithTag("sleepEndsAt").assertTextContains(end)
+        press(Key.DirectionCenter)
+        row("tvSleep").assertTextContains("Ends at $end")
+        press(Key.DirectionDown)
+        press(Key.DirectionCenter)
+        row("sleep-30").assertIsFocused().assertIsSelected()
+        press(Key.DirectionUp, 2)
+        press(Key.DirectionCenter)
+        assertEquals(null, sleep.minutes)
+        compose.onNodeWithTag("sleepEndsAt").assertDoesNotExist()
+        assertEquals(0, sleepEnds)
+    }
+
+    private companion object {
+        const val NOW = 1_700_000_000_000L
     }
 }

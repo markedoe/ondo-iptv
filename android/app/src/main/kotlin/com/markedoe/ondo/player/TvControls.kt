@@ -19,8 +19,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/** A side panel of the TV player, opened from its button. */
-enum class TvPanel { SUBTITLES, AUDIO, SPEED, MORE }
+/** A side panel of the TV player, opened from its button, or from a row of More ([parent]). */
+enum class TvPanel {
+    SUBTITLES, AUDIO, SPEED, MORE, ASPECT, SLEEP;
+
+    /** The panel Back returns to, null for a panel of the button row. */
+    val parent: TvPanel? get() = if (this == ASPECT || this == SLEEP) MORE else null
+}
 
 /**
  * What the TV player shows over the video, and what it knows of the player for that ([refresh]). The controls show on
@@ -40,6 +45,10 @@ class TvControls(
         private set
 
     var panel by mutableStateOf<TvPanel?>(null)
+        private set
+
+    /** The panel Back just left for its [TvPanel.parent]: the parent's remote starts on the row that opened it. */
+    var cameBackFrom by mutableStateOf<TvPanel?>(null)
         private set
 
     /** The title and the progress, for a moment, without the buttons. */
@@ -111,7 +120,10 @@ class TvControls(
     /** The controls, with the focus on Play/Pause (or on [panel]); a panel already open stays (a media key). */
     fun show(panel: TvPanel? = null) {
         endPeek()
-        if (panel != null || !shown) this.panel = panel
+        if (panel != null || !shown) {
+            this.panel = panel
+            cameBackFrom = null
+        }
         if (!shown) {
             shown = true
             shows++
@@ -143,14 +155,24 @@ class TvControls(
 
     fun open(panel: TvPanel) = show(panel)
 
+    /** Closes the panels (a choice was made): the remote goes back to the button of the row. */
     fun closePanel() {
         panel = null
         touch()
     }
 
-    /** Back: closes the panel, else drops the bar's move, else hides the controls; false when nothing was shown. */
+    /**
+     * Back: returns from a panel of More to More, closes another panel, else drops the bar's move, else hides the
+     * controls; false when nothing was shown.
+     */
     fun back(): Boolean {
+        val parent = panel?.parent
         when {
+            parent != null -> {
+                cameBackFrom = panel
+                panel = parent
+                touch()
+            }
             panel != null -> closePanel()
             scrubMs != null -> cancelScrub()
             shown -> hide()

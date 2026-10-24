@@ -242,7 +242,7 @@
     <string name="help_guide_title">Guia de TV e lembretes</string>
     <string name="help_guide_body">O botão de guia da TV ao vivo mostra os programas dos canais escolhidos ali (Minha lista, uma categoria ou todos). O guia vem do seu provedor, ou do endereço XMLTV informado ao adicionar uma playlist M3U.\n\nAbra um programa futuro e crie um lembrete: uma notificação chega alguns minutos antes do início. O sino do guia lista seus lembretes.</string>
     <string name="help_remote_title">Com o controle remoto</string>
-    <string name="help_remote_body">Navegue com as setas e aperte OK para escolher. O menu fica à esquerda: Pesquisar, as abas e Configurações. Voltar fecha uma página; em uma aba, leva ao menu e depois ao Início, e Voltar no menu do Início fecha o Ondo.\n\nNo player, OK pausa, retoma e mostra os controles (a tecla Info também os mostra); Esquerda e Direita voltam e avançam 10 segundos. Os controles são botões grandes: Reproduzir/Pausar, voltar e avançar 10 segundos, Legendas e Áudio, que listam as faixas por idioma, Velocidade e Mais (Estatísticas do stream, Relatar um problema…); as teclas de legendas e de áudio do controle remoto abrem a lista delas direto. Cima, a partir dos botões, leva à barra de progresso: Esquerda e Direita se movem nela, mais rápido se você mantiver a tecla pressionada, e o vídeo vai para lá quando você para ou aperta OK. Voltar fecha uma lista e depois os controles. Em um canal ao vivo, Cima e Baixo ou as teclas de canal mudam de canal, os números levam direto a um canal e a tecla de canal anterior volta para o que você assistia antes.\n\nNa TV ao vivo, mantenha OK pressionado em um canal para adicioná-lo à Minha lista.</string>
+    <string name="help_remote_body">Navegue com as setas e aperte OK para escolher. O menu fica à esquerda: Pesquisar, as abas e Configurações. Voltar fecha uma página; em uma aba, leva ao menu e depois ao Início, e Voltar no menu do Início fecha o Ondo.\n\nNo player, OK pausa, retoma e mostra os controles (a tecla Info também os mostra); Esquerda e Direita voltam e avançam 10 segundos. Os controles são botões grandes: Reproduzir/Pausar, voltar e avançar 10 segundos, Legendas e Áudio, que listam as faixas por idioma, Velocidade e Mais (Proporção, Timer para dormir, Estatísticas do stream, Relatar um problema…); as teclas de legendas e de áudio do controle remoto abrem a lista delas direto. Cima, a partir dos botões, leva à barra de progresso: Esquerda e Direita se movem nela, mais rápido se você mantiver a tecla pressionada, e o vídeo vai para lá quando você para ou aperta OK. Voltar fecha uma lista e depois os controles. Em um canal ao vivo, Cima e Baixo ou as teclas de canal mudam de canal, os números levam direto a um canal e a tecla de canal anterior volta para o que você assistia antes.\n\nNa TV ao vivo, mantenha OK pressionado em um canal para adicioná-lo à Minha lista.</string>
     <plurals name="guide_row_limit">
         <item quantity="one">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>
         <item quantity="many">Mostrando os primeiros %1$d de %2$d canais. Escolha uma categoria para ver os outros.</item>
@@ -322,6 +322,13 @@
     <string name="speed">Velocidade</string>
     <string name="speed_normal">Normal</string>
     <string name="off">Desativado</string>
+    <string name="aspect_ratio">Proporção</string>
+    <string name="scale_fit">Ajustar</string>
+    <string name="scale_fill">Preencher (cortar)</string>
+    <string name="scale_stretch">Esticar</string>
+    <string name="sleep_timer">Timer para dormir</string>
+    <string name="sleep_minutes">%1$d min</string>
+    <string name="sleep_ends_at">Termina às %1$s</string>
     <string name="live_badge">AO VIVO</string>
     <string name="track_number">Faixa %1$d</string>
     <string name="track_forced">Forçadas</string>

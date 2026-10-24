@@ -24,6 +24,10 @@ data class SavedPlaylist(
 @Serializable
 enum class PosterSort { PLAYLIST, NAME, RECENT, RELEASE, RATING }
 
+/** How the picture fills the screen: whole with bars, cropped to fill, or stretched. */
+@Serializable
+enum class VideoScale { FIT, FILL, STRETCH }
+
 @Serializable
 data class AppSettings(
     val appearance: Appearance = Appearance.DARK,
@@ -49,4 +53,6 @@ data class AppSettings(
     val preferredAudioLanguage: String? = null,
     val preferredSubtitleLanguage: String? = null,
     val subtitlesOn: Boolean = false,
+    /** The aspect ratio last chosen in the player, kept for the next videos. */
+    val videoScale: VideoScale = VideoScale.FIT,
 )

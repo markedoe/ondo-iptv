@@ -405,6 +405,10 @@ class OndoRepository(
         updateSettings { it.copy(preferredAudioLanguage = audio, preferredSubtitleLanguage = subtitles, subtitlesOn = subtitlesOn) }
     }
 
+    fun setVideoScale(scale: VideoScale) {
+        if (_state.value.settings.videoScale != scale) updateSettings { it.copy(videoScale = scale) }
+    }
+
     fun setCategoryHidden(categoryId: String, hidden: Boolean) = setCategoriesHidden(listOf(categoryId), hidden)
 
     /** Hide all / Show all: one change, one save of the library. */
