@@ -119,9 +119,12 @@ public struct PlaylistLoader: Sendable {
         var merged = EPGData()
         var failures: [URL: Error] = [:]
         for url in sources {
+            // On disk, then read while parsed: a large guide (hundreds of megabytes) never sits whole in memory.
+            let file = FileManager.default.temporaryDirectory.appendingPathComponent("guide-\(UUID().uuidString)")
+            defer { try? FileManager.default.removeItem(at: file) }
             do {
-                let raw = try await http.data(from: url, headers: playlist.headers.dictionary)
-                let parsed = try XMLTVParser.parse(raw, filter: filter, timeShift: shift)
+                try await http.download(from: url, headers: playlist.headers.dictionary, to: file)
+                let parsed = try XMLTVParser.parse(contentsOf: file, filter: filter, timeShift: shift)
                 merged.merge(parsed)
             } catch {
                 failures[url] = error

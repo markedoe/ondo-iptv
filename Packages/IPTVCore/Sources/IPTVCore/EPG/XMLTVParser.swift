@@ -41,8 +41,37 @@ public enum XMLTVParser {
 
     public static func parse(_ data: Data, filter: EPGFilter = .none, timeShift: TimeInterval = 0) throws -> EPGData {
         let xml = try data.gunzippedIfNeeded()
-        let delegate = XMLTVDelegate(filter: filter, timeShift: timeShift)
-        let parser = XMLParser(data: xml)
+        return try read(InputStream(data: xml), XMLTVDelegate(filter: filter, timeShift: timeShift)).result()
+    }
+
+    /// A guide saved on disk, plain or gzip, read a piece at a time: given its data whole, the parser copied it (measured
+    /// on Linux: a 151 MB guide took 290 MB more than its data while parsed, before what it keeps), and a large guide
+    /// is hundreds of megabytes.
+    public static func parse(contentsOf file: URL, filter: EPGFilter = .none, timeShift: TimeInterval = 0) throws -> EPGData {
+        try withPlainXML(at: file) { try parsePlainXML(at: $0, filter: filter, timeShift: timeShift) }
+    }
+
+    /// `body` reads the guide's XML from the file it is given: `file` itself, or a temporary file holding it inflated.
+    static func withPlainXML<T>(at file: URL, _ body: (URL) throws -> T) throws -> T {
+        guard GzipInflater.isGzipFile(file) else { return try body(file) }
+        let inflated = FileManager.default.temporaryDirectory.appendingPathComponent("guide-\(UUID().uuidString).xml")
+        defer { try? FileManager.default.removeItem(at: inflated) }
+        try GzipInflater.decompress(file, to: inflated)
+        return try body(inflated)
+    }
+
+    static func parsePlainXML(at file: URL, filter: EPGFilter, timeShift: TimeInterval) throws -> EPGData {
+        try read(stream(file), XMLTVDelegate(filter: filter, timeShift: timeShift)).result()
+    }
+
+    private static func stream(_ file: URL) throws -> InputStream {
+        guard let stream = InputStream(url: file) else { throw CocoaError(.fileReadUnknown, userInfo: [NSURLErrorKey: file]) }
+        return stream
+    }
+
+    /// Runs `delegate` over the XML the stream gives.
+    private static func read(_ stream: InputStream, _ delegate: XMLTVDelegate) throws -> XMLTVDelegate {
+        let parser = XMLParser(stream: stream)
         parser.shouldProcessNamespaces = false
         parser.shouldResolveExternalEntities = false
         parser.delegate = delegate
@@ -56,7 +85,7 @@ public enum XMLTVParser {
         if delegate.programCount == 0, delegate.channels.isEmpty, failed || !delegate.sawGuideElement {
             throw ParseError.invalidXML(parser.parserError?.localizedDescription ?? "no <tv> element")
         }
-        return delegate.result()
+        return delegate
     }
 
     /// Parses `20240101203000 +0100`, `20240101203000+0100`, `20240101203000` (UTC), `202401012030`.

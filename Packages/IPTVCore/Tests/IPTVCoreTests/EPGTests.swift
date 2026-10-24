@@ -146,6 +146,34 @@ final class EPGTests: XCTestCase {
         }
     }
 
+    /// A guide on disk, plain or gzip, reads like its data: filtered, shifted, cut short, or not a guide at all.
+    func testAGuideOnDiskReadsLikeItsData() throws {
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("ondo-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let xml = try Fixture.data("epg.xml")
+        let guides = [xml, try Fixture.data("epg.xml.gz"), xml.prefix(xml.count - 200), Data("<?xml version=\"1.0\"?><tv></tv>".utf8),
+                      Data("<html><body>Forbidden</body></html>".utf8), Data("Forbidden".utf8), Data()]
+        func outcome(_ parse: () throws -> EPGData) -> String {
+            do {
+                let guide = try parse()
+                return "\(guide.channels.sorted { $0.key < $1.key }) \(guide.programs.sorted { $0.key < $1.key })"
+            } catch {
+                return "\(type(of: error))"
+            }
+        }
+        for (index, data) in guides.enumerated() {
+            let file = folder.appendingPathComponent("guide-\(index)")
+            try data.write(to: file)
+            for filter in [EPGFilter.none, EPGFilter(window: DateInterval(start: .utc(2025, 10, 9, 18, 30), duration: 3_600), channelIDs: ["tv1.FR"])] {
+                let fromDisk = outcome { try XMLTVParser.parse(contentsOf: file, filter: filter, timeShift: 3_600) }
+                XCTAssertEqual(fromDisk, outcome { try XMLTVParser.parse(data, filter: filter, timeShift: 3_600) }, "guide \(index)")
+                XCTAssertEqual(fromDisk.hasPrefix("ParseError"), index >= 4, "guide \(index): \(fromDisk.prefix(80))")
+            }
+        }
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path).count, guides.count, "the files are left as they were")
+    }
+
     func testEpisodeNumbersPastIntRangeAreKeptAsText() throws {
         let xml = """
         <?xml version="1.0"?><tv><programme channel="a" start="20251009200000 +0000" stop="20251009210000 +0000">\
