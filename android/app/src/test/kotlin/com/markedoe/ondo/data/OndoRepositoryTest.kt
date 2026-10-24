@@ -11,8 +11,10 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -116,8 +118,9 @@ class OndoRepositoryTest {
         }
 
         /**
-         * The next step, once it is there (parsing runs on another thread, and sends its result here). The wait is long:
-         * on a busy machine, the first parse in a test JVM (class loading, a cold JIT) has taken over 10 seconds.
+         * The next step, once it is there (parsing runs on the test's own [parsingThread], and sends its result here).
+         * The wait is long: on a busy machine, the first parse in a test JVM (class loading, a cold JIT) has taken over
+         * 10 seconds.
          */
         fun runNext() = requireNotNull(tasks.poll(60, TimeUnit.SECONDS)) { "no step came" }.run()
 
@@ -135,6 +138,13 @@ class OndoRepositoryTest {
         }
     }
 
+    /**
+     * A thread of the test's own for parsing: on the shared `Dispatchers.Default`, work other tests of the same JVM left
+     * running could hold the parse, and its step, past any wait.
+     */
+    private fun TestScope.parsingThread() = java.util.concurrent.Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+        .also { thread -> backgroundScope.coroutineContext.job.invokeOnCompletion { thread.close() } }
+
     /** Runs the test's tasks (background ones included) and the steps until [done]. */
     private fun TestScope.runSteps(io: StepDispatcher, done: () -> Boolean) {
         val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10)
@@ -149,8 +159,11 @@ class OndoRepositoryTest {
     @Test
     fun aPlaylistSyncedWhileAnotherIsAddedIsKept() = runTest {
         val io = StepDispatcher()
+        val parsing = parsingThread()
         val other = "http://provider.example.com/other.m3u"
-        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io)
+        val repository = OndoRepository(
+            AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io, parsing = parsing,
+        )
         repository.bootstrap()
         runSteps(io) { repository.state.value.isReady }
         val adding = launch { repository.addPlaylist("Home", list) }
@@ -171,8 +184,11 @@ class OndoRepositoryTest {
     @Test
     fun twoPlaylistsAddedAtOnceAreBothKept() = runTest {
         val io = StepDispatcher()
+        val parsing = parsingThread()
         val other = "http://provider.example.com/other.m3u"
-        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io)
+        val repository = OndoRepository(
+            AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to catalogue)), backgroundScope, now = { clock }, io = io, parsing = parsing,
+        )
         repository.bootstrap()
         runSteps(io) { repository.state.value.isReady }
         val first = launch { assertTrue(repository.addPlaylist("Home", list).isSuccess) }

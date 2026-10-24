@@ -103,6 +103,8 @@ class OndoRepository(
     private val guideBudgetBytes: Long? = null,
     /** The app's words for the names the core gives in English (see [OndoState.placeholderNames]). */
     placeholderNames: PlaceholderNames = PlaceholderNames.ENGLISH,
+    /** Where playlists are parsed (tests that run each step themselves give a thread of their own). */
+    private val parsing: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val _state = MutableStateFlow(OndoState(placeholderNames = placeholderNames))
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -728,7 +730,7 @@ class OndoRepository(
         )
     }
 
-    private fun loader() = PlaylistLoader(http, clock = now, downloadFolder = downloadFolder, guideBudgetBytes = guideBudgetBytes)
+    private fun loader() = PlaylistLoader(http, parsingDispatcher = parsing, clock = now, downloadFolder = downloadFolder, guideBudgetBytes = guideBudgetBytes)
 
     private fun SavedPlaylist.credentials(): XtreamCredentials? =
         if (isXtream) XtreamCredentials(XtreamCredentials.normalizeServer(url) ?: url, username.orEmpty(), password.orEmpty()) else null
