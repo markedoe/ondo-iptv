@@ -62,9 +62,10 @@ extension HelpTopic {
             shows when it was last updated. Below it, the carousel shows what you are watching, then Trending titles \
             (with your TMDb token) and new releases.
 
-            Movies in Progress and Series in Progress pick up where you stopped. Then come My List, New Movies and \
-            New Series (released this year or last year), Trending, your Collections, Channels in My List and \
-            Recently Watched, and your Reminders. A playlist with live channels only shows them first.
+            Movies in Progress and Series in Progress pick up where you stopped. To take a card out, long-press it \
+            (Control-click on a Mac) and choose Remove from History. Then come My List, New Movies and New Series \
+            (released this year or last year), Trending, your Collections, Channels in My List and Recently \
+            Watched, and your Reminders. A playlist with live channels only shows them first.
             """
         ),
         HelpTopic(
