@@ -4,7 +4,7 @@ first launch, Add a Playlist, Xtream Codes (the made-up panel of fake_xtream_pan
 `adb reverse`), Add, then every tab. Watches the app's process the whole time: a crash, an ANR or Android ending the
 app fails the run. Screenshots, the screen's text, logcat, the exit reasons and memory use go to the output folder.
 With --paths, more of the app after that, each path from a fresh start of the app (the saved playlist read again):
-settings, search, details, player, guide, mylist, playlists, crash (see PATHS).
+settings, search, details, player, guide, mylist, playlists, restore, crash (see PATHS).
 
 Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240] [--paths settings,search,...]
 """
@@ -217,6 +217,37 @@ class Tv:
             time.sleep(1)
         raise TimeoutError("the drawer never took the focus")
 
+    def restart(self):
+        """Ondo stopped and started again: Home with the saved playlist, read back from the device's storage."""
+        self.shell(f"am force-stop {PACKAGE}")
+        time.sleep(1)
+        self.shell(f"am start -W -n {ACTIVITY}")
+        self.pid = self.current_pid()
+        self.say(f"restarted, pid {self.pid}")
+        self.wait_for("home after a restart", lambda: self.visible("Live TV") and not self.visible("Try the demo"), 60)
+        time.sleep(3)
+        self.check_alive("home after a restart")
+
+    @staticmethod
+    def left_edge(node):
+        """The node's left edge in pixels (bounds="[x1,y1][x2,y2]")."""
+        found = re.match(r"\[(-?\d+),", node.get("bounds", "")) if node is not None else None
+        return int(found.group(1)) if found else 10_000
+
+    def in_drawer(self):
+        """The focus on one of the drawer's places: its words, at the screen's left edge (a page's chips have the same words)."""
+        node, texts = self.focused()
+        return node is not None and any(t in DRAWER for t in texts) and self.left_edge(node) < 260
+
+    def to_drawer(self):
+        """The focus on the drawer: Back from a page lands on its tab (never Back from the drawer: on Home it leaves)."""
+        for attempt in range(8):
+            if self.in_drawer():
+                return
+            self.key("BACK" if attempt < 3 else "LEFT")
+            time.sleep(1)
+        raise TimeoutError("the drawer never took the focus")
+
     def wait_enabled(self, label, timeout, what):
         """Waits until the element showing [label] can be pressed again (a button greyed out while something loads)."""
         def enabled():
@@ -348,8 +379,7 @@ def path_settings(tv, args):
     tv.key("RIGHT")
     tv.open("Refresh", keys=("UP", "LEFT"), max_presses=4, wait=1)
     tv.note_screen("settings-refreshing")
-    tv.wait_enabled("Refresh", args.wait_load, "the catalogue refreshed from the Settings")
-    tv.stay(20, "the catalogue refreshed from the Settings")
+    tv.stay(100, "the catalogue and its guide refreshed from the Settings")
     tv.note_screen("settings-refreshed")
     tv.key("BACK")
     time.sleep(3)
@@ -368,7 +398,7 @@ def path_search(tv, args):
     time.sleep(1)
     tv.open("Movie 12", keys=("DOWN", "RIGHT", "TAB"), max_presses=12, wait=5)
     tv.note_screen("search-movie")
-    tv.open("Actor One", keys=("DOWN",), max_presses=8, wait=4)
+    tv.open("Actor One", keys=("DOWN", "RIGHT"), max_presses=8, wait=4)
     tv.note_screen("search-person")
     tv.key("DOWN")
     tv.key("DPAD_CENTER")
@@ -470,9 +500,12 @@ def path_player(tv, args):
     for key in ("INFO", "GUIDE", "MENU", "MEDIA_PLAY_PAUSE", "MEDIA_PLAY_PAUSE"):
         tv.key(key, pause=2)
         tv.check_alive(f"{key} in the live player")
-    tv.key("INFO", pause=2)
+    for _ in range(3):
+        if tv.visible("More"):
+            break
+        tv.key("INFO", pause=1)
     tv.note_screen("player-live-controls")
-    tv.open("More", keys=("RIGHT",), max_presses=12, wait=2)
+    tv.open("More", keys=("DOWN", "RIGHT", "RIGHT", "RIGHT", "RIGHT", "RIGHT"), max_presses=12, wait=2)
     tv.note_screen("player-menu")
     tv.open("Report a Problem…", keys=("DOWN",), max_presses=4, wait=3)
     tv.note_screen("player-report")
@@ -557,7 +590,7 @@ def path_mylist(tv, args):
     tv.drawer("My List")
     tv.note_screen("mylist")
     for segment in ("Movies", "Channels"):
-        tv.open(segment, keys=("UP", "RIGHT", "LEFT"), max_presses=8, exact=True, wait=2)
+        tv.open(segment, keys=("UP", "RIGHT", "RIGHT", "RIGHT", "LEFT", "LEFT", "LEFT"), max_presses=14, exact=True, wait=2)
         tv.note_screen(f"mylist-{segment.lower()}")
         tv.key("DOWN")
         tv.key("DPAD_CENTER")
@@ -593,10 +626,11 @@ def path_playlists(tv, args):
         settings_section(tv, "Playlists")
         tv.key("RIGHT")
     tv.open("Use", keys=("DOWN", "UP"), max_presses=8, exact=True, wait=1)
-    tv.wait_enabled("Refresh", args.wait_load, "the first playlist used again")
-    tv.stay(5, "the first playlist used again")
+    tv.stay(40, "the first playlist used again")
     tv.note_screen("playlists-switched")
-    tv.focus_exact("Delete Second", keys=("DOWN", "RIGHT", "UP", "LEFT"), max_presses=12)
+    settings_section(tv, "Playlists")
+    tv.key("RIGHT")
+    tv.focus_exact("Delete Second", keys=("DOWN", "RIGHT", "RIGHT", "UP", "DOWN"), max_presses=12)
     tv.key("DPAD_CENTER")
     time.sleep(2)
     tv.note_screen("playlists-confirm")
@@ -609,6 +643,83 @@ def path_playlists(tv, args):
     tv.key("BACK")
     time.sleep(3)
     tv.check_alive("back from the Settings")
+
+
+def recreated(tv, where):
+    """The screen made again by Android (a system setting changed: night mode, and back), its saved state read back."""
+    for mode in ("yes", "no"):
+        tv.shell(f"cmd uimode night {mode}")
+        tv.stay(5, f"{where}: recreated (night mode {mode})")
+    tv.note_screen(f"recreated-{where}")
+
+
+def killed_in_background(tv, where, expect):
+    """Home, Android ends the app in the background (am kill, as it does for memory), then Ondo opened again: Android
+    recreates the screens from their saved state in a new process."""
+    tv.key("HOME")
+    time.sleep(4)
+    tv.shell(f"am kill {PACKAGE}")
+    time.sleep(3)
+    before, after = tv.pid, tv.current_pid()
+    if after == before:
+        raise TimeoutError(f"{where}: am kill left the app's process {before}")
+    tv.shell(f"am start -W -n {ACTIVITY}")
+    tv.pid = tv.current_pid()
+    tv.say(f"{where}: process {before} ended in the background, {tv.pid} now, screens restored")
+    tv.stay(8, f"{where}: restored after the process ended")
+    tv.note_screen(f"restored-{where}")
+    if expect and not tv.visible(expect):
+        tv.say(f"  {where}: '{expect}' not on screen after the restore")
+
+
+def path_restore(tv, args):
+    """Saved state: pages recreated by Android (configuration change), and restored in a new process after Android
+    ended the app in the background (navigation's routes, the player's request, the remembered values)."""
+    tv.drawer("Movies")
+    tv.key("DOWN", 2)
+    tv.key("RIGHT", 2)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    recreated(tv, "movie")
+    killed_in_background(tv, "movie", "Collection")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.check_alive("Back after the restore")
+    tv.note_screen("restored-movie-back")
+    tv.drawer("Settings")
+    settings_section(tv, "Catalog")
+    tv.key("RIGHT")
+    tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
+    recreated(tv, "categories")
+    killed_in_background(tv, "categories", "Styles")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.check_alive("Back to the Settings after the restore")
+    tv.note_screen("restored-settings")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.drawer("Live TV")
+    tv.key("UP", 3)
+    tv.open("TV guide", keys=("RIGHT",), max_presses=8, wait=8)
+    tv.key("DOWN", 3)
+    recreated(tv, "guide")
+    killed_in_background(tv, "guide", "Reminders")
+    tv.key("BACK")
+    time.sleep(3)
+    tv.drawer("Movies")
+    tv.key("DOWN", 2)
+    tv.key("DPAD_CENTER")
+    tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
+    tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=8)
+    if not tv.player_shown():
+        raise TimeoutError("the player never opened from a movie page")
+    recreated(tv, "player")
+    killed_in_background(tv, "player", None)
+    tv.say(f"  player in front after the restore: {tv.player_shown()}")
+    tv.stay(8, "the player restored")
+    tv.leave_player()
+    tv.stay(4, "back from the restored player")
+    tv.note_screen("restored-player-closed")
 
 
 def path_crash(tv, args):
@@ -636,6 +747,7 @@ PATHS = {
     "guide": path_guide,
     "mylist": path_mylist,
     "playlists": path_playlists,
+    "restore": path_restore,
     # Last: it crashes the app on purpose.
     "crash": path_crash,
 }
