@@ -3,6 +3,7 @@ package com.markedoe.ondo.core.net
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
+import java.net.ProtocolException
 import java.net.URI
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -67,6 +68,10 @@ class OkHttpClientAdapter(
                             consume(it.body.byteStream())
                         } catch (e: IOException) {
                             continuation.resumeWithException(e)
+                            return
+                        } catch (e: Exception) {
+                            // A body OkHttp cannot read (a negative Content-Length…): on OkHttp's thread, it would stop the app.
+                            continuation.resumeWithException(ProtocolException("Unreadable answer: ${e.message}").apply { initCause(e) })
                             return
                         } catch (e: OutOfMemoryError) {
                             // Thrown on OkHttp's thread, it would stop the app: the caller gets it instead.

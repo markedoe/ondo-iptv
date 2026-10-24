@@ -114,6 +114,37 @@ class OkHttpClientAdapterTest {
         }
     }
 
+    /**
+     * A body OkHttp cannot read for another reason than a network error (here a negative `Content-Length`) fails the
+     * request. Thrown on OkHttp's own thread, it would stop the app and leave the caller waiting.
+     */
+    @Test
+    fun anUnreadableBodyFailsTheRequestNotOkHttpsThread(): Unit = runBlocking(Dispatchers.IO) {
+        val uncaught = java.util.concurrent.CopyOnWriteArrayList<Throwable>()
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { _, error -> uncaught += error }
+        val raw = java.net.ServerSocket(0, 1, java.net.InetAddress.getLoopbackAddress())
+        val answering = kotlin.concurrent.thread {
+            raw.accept().use { connection ->
+                connection.getInputStream().read(ByteArray(16 * 1024))
+                connection.getOutputStream().apply {
+                    write("HTTP/1.1 200 OK\r\nContent-Length: -5\r\n\r\n#EXTM3U".encodeToByteArray())
+                    flush()
+                }
+                Thread.sleep(2_000)
+            }
+        }
+        try {
+            val result = runCatching { withTimeout(5_000) { client.get("http://localhost:${raw.localPort}/list.m3u") } }
+            assertEquals(emptyList(), uncaught.map { it.toString() }, "nothing thrown on OkHttp's thread")
+            assertTrue(result.exceptionOrNull() is java.io.IOException, "an error for the caller: $result")
+        } finally {
+            Thread.setDefaultUncaughtExceptionHandler(previous)
+            raw.close()
+            answering.join()
+        }
+    }
+
     @Test
     fun cancellationCancelsTheCall(): Unit = runBlocking(Dispatchers.IO) {
         server.enqueue(MockResponse().setBody("late").setBodyDelay(10, TimeUnit.SECONDS))
