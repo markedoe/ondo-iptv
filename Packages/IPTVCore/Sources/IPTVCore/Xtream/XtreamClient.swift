@@ -41,6 +41,32 @@ public struct XtreamClient: Sendable {
         }
     }
 
+    /// A catalogue list: downloaded to a file and decoded an element at a time (`JSONListFile`), each element passed
+    /// as soon as it is read through a transform (`nil` drops it) that `transform` makes. An answer that is not a plain
+    /// list is decoded whole, through a new transform: what the first one saw (the items already listed) is forgotten.
+    private func list<T: Decodable, U>(_ type: T.Type, action: String, _ transform: () -> (T) -> U?) async throws -> [U] {
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("xtream-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: file) }
+        try await http.download(from: urls.apiURL(action: action, parameters: [:]), headers: headers.dictionary, to: file)
+        guard GzipInflater.isGzipFile(file) else { return try Self.decodeList(T.self, in: file, transform) }
+        let inflated = FileManager.default.temporaryDirectory.appendingPathComponent("xtream-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: inflated) }
+        try GzipInflater.decompress(file, to: inflated)
+        return try Self.decodeList(T.self, in: inflated, transform)
+    }
+
+    static func decodeList<T: Decodable, U>(_ type: T.Type, in file: URL, _ transform: () -> (T) -> U?) throws -> [U] {
+        guard ((try? file.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 1) > 0 else { throw HTTPClientError.emptyResponse }
+        do {
+            if let elements = try JSONListFile.elements(T.self, in: file, transform()) { return elements }
+            return try JSONDecoder().decode(LossyArray<T>.self, from: Data(contentsOf: file)).elements.compactMap(transform())
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw XtreamError.invalidResponse
+        }
+    }
+
     // MARK: Account
 
     public func authenticate() async throws -> XtreamAccountInfo {
@@ -69,10 +95,13 @@ public struct XtreamClient: Sendable {
     // MARK: Catalogue
 
     func categories(action: String, type: ContentType) async throws -> [MediaCategory] {
-        let list = try await get(LossyArray<XtreamCategoryDTO>.self, action: action).elements
-        // An item listed twice would give two rows one ID, which SwiftUI lists do not allow: the first is kept.
-        var seen = Set<String>()
-        return list.filter { seen.insert($0.id).inserted }.map { MediaCategory(id: "\(type.rawValue)-\($0.id)", name: $0.name, type: type) }
+        try await list(XtreamCategoryDTO.self, action: action) {
+            // An item listed twice would give two rows one ID, which SwiftUI lists do not allow: the first is kept.
+            var seen = Set<String>()
+            return { dto in
+                seen.insert(dto.id).inserted ? MediaCategory(id: "\(type.rawValue)-\(dto.id)", name: dto.name, type: type) : nil
+            }
+        }
     }
 
     public func liveCategories() async throws -> [MediaCategory] {
@@ -88,68 +117,74 @@ public struct XtreamClient: Sendable {
     }
 
     public func liveStreams(format: XtreamOutputFormat) async throws -> [Channel] {
-        let list = try await get(LossyArray<XtreamLiveStreamDTO>.self, action: "get_live_streams").elements
-        var seen = Set<Int>()
-        return list.filter { seen.insert($0.streamID).inserted }.map { dto in
-            var catchup: CatchupInfo?
-            if dto.tvArchive {
-                catchup = CatchupInfo(mode: .xtream, days: max(dto.tvArchiveDuration ?? 1, 1))
+        try await list(XtreamLiveStreamDTO.self, action: "get_live_streams") {
+            var seen = Set<Int>()
+            return { dto in
+                guard seen.insert(dto.streamID).inserted else { return nil }
+                var catchup: CatchupInfo?
+                if dto.tvArchive {
+                    catchup = CatchupInfo(mode: .xtream, days: max(dto.tvArchiveDuration ?? 1, 1))
+                }
+                return Channel(
+                    id: "x\(dto.streamID)",
+                    name: dto.name,
+                    number: dto.number,
+                    logoURL: URL.lenient(dto.icon),
+                    categoryID: "live-\(dto.categoryID ?? "0")",
+                    streamURL: urls.liveURL(streamID: dto.streamID, format: format),
+                    epgID: dto.epgChannelID,
+                    catchup: catchup,
+                    xtreamStreamID: dto.streamID
+                )
             }
-            return Channel(
-                id: "x\(dto.streamID)",
-                name: dto.name,
-                number: dto.number,
-                logoURL: URL.lenient(dto.icon),
-                categoryID: "live-\(dto.categoryID ?? "0")",
-                streamURL: urls.liveURL(streamID: dto.streamID, format: format),
-                epgID: dto.epgChannelID,
-                catchup: catchup,
-                xtreamStreamID: dto.streamID
-            )
         }
     }
 
     public func movies() async throws -> [Movie] {
-        let list = try await get(LossyArray<XtreamVODStreamDTO>.self, action: "get_vod_streams").elements
-        var seen = Set<Int>()
-        return list.filter { seen.insert($0.streamID).inserted }.map { dto in
-            let (name, yearInTitle) = TitleParser.splitYear(dto.name)
-            return Movie(
-                id: "x\(dto.streamID)",
-                name: name,
-                posterURL: URL.lenient(dto.icon),
-                categoryID: "movie-\(dto.categoryID ?? "0")",
-                streamURL: urls.movieURL(streamID: dto.streamID, containerExtension: dto.containerExtension),
-                // Out of 10; a five-star rating too large to double would be infinity.
-                rating: dto.rating ?? dto.rating5.map { $0 * 2 }.flatMap { $0.isFinite ? $0 : nil },
-                year: dto.year ?? yearInTitle,
-                addedAt: dto.added,
-                plot: dto.plot,
-                xtreamStreamID: dto.streamID,
-                containerExtension: dto.containerExtension
-            )
+        try await list(XtreamVODStreamDTO.self, action: "get_vod_streams") {
+            var seen = Set<Int>()
+            return { dto in
+                guard seen.insert(dto.streamID).inserted else { return nil }
+                let (name, yearInTitle) = TitleParser.splitYear(dto.name)
+                return Movie(
+                    id: "x\(dto.streamID)",
+                    name: name,
+                    posterURL: URL.lenient(dto.icon),
+                    categoryID: "movie-\(dto.categoryID ?? "0")",
+                    streamURL: urls.movieURL(streamID: dto.streamID, containerExtension: dto.containerExtension),
+                    // Out of 10; a five-star rating too large to double would be infinity.
+                    rating: dto.rating ?? dto.rating5.map { $0 * 2 }.flatMap { $0.isFinite ? $0 : nil },
+                    year: dto.year ?? yearInTitle,
+                    addedAt: dto.added,
+                    plot: dto.plot,
+                    xtreamStreamID: dto.streamID,
+                    containerExtension: dto.containerExtension
+                )
+            }
         }
     }
 
     public func series() async throws -> [Series] {
-        let list = try await get(LossyArray<XtreamSeriesDTO>.self, action: "get_series").elements
-        var seen = Set<Int>()
-        return list.filter { seen.insert($0.seriesID).inserted }.map { dto in
-            let (name, yearInTitle) = TitleParser.splitYear(dto.name)
-            return Series(
-                id: "x\(dto.seriesID)",
-                name: name,
-                coverURL: URL.lenient(dto.cover),
-                categoryID: "series-\(dto.categoryID ?? "0")",
-                plot: dto.plot,
-                rating: dto.rating,
-                year: dto.year ?? yearInTitle,
-                genre: dto.genre,
-                cast: dto.cast,
-                director: dto.director,
-                addedAt: dto.lastModified,
-                xtreamSeriesID: dto.seriesID
-            )
+        try await list(XtreamSeriesDTO.self, action: "get_series") {
+            var seen = Set<Int>()
+            return { dto in
+                guard seen.insert(dto.seriesID).inserted else { return nil }
+                let (name, yearInTitle) = TitleParser.splitYear(dto.name)
+                return Series(
+                    id: "x\(dto.seriesID)",
+                    name: name,
+                    coverURL: URL.lenient(dto.cover),
+                    categoryID: "series-\(dto.categoryID ?? "0")",
+                    plot: dto.plot,
+                    rating: dto.rating,
+                    year: dto.year ?? yearInTitle,
+                    genre: dto.genre,
+                    cast: dto.cast,
+                    director: dto.director,
+                    addedAt: dto.lastModified,
+                    xtreamSeriesID: dto.seriesID
+                )
+            }
         }
     }
 
