@@ -73,7 +73,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     /// Reads a snapshot, with its IDs in lowercase; nil when it is not one, or of another version (it is refused, not
     /// guessed).
     public static func decode(_ data: Data) -> SyncSnapshot? {
-        guard let snapshot = try? JSONDecoder().decode(SyncSnapshot.self, from: data),
+        guard let snapshot = try? JSONDecoder().decodeCheckingKeys(SyncSnapshot.self, from: data),
               snapshot.type == typeName, snapshot.version == currentVersion else { return nil }
         return snapshot.normalized()
     }

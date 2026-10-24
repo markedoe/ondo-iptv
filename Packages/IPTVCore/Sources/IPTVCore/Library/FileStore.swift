@@ -37,7 +37,7 @@ public final class FileStore: Sendable {
         let decoder = JSONDecoder()
         for candidate in [url(for: name), url(for: name).appendingPathExtension("bak")] {
             guard let data = try? Data(contentsOf: candidate) else { continue }
-            if let envelope = try? decoder.decode(Envelope<T>.self, from: data) {
+            if let envelope = try? decoder.decodeCheckingKeys(Envelope<T>.self, from: data) {
                 return envelope.value
             }
             if disposable {
@@ -120,6 +120,6 @@ public struct BackupArchive: Codable, Sendable {
 
     public static func decode(_ data: Data) throws -> BackupArchive {
         let decoder = JSONDecoder()
-        return try decoder.decode(BackupArchive.self, from: data)
+        return try decoder.decodeCheckingKeys(BackupArchive.self, from: data)
     }
 }

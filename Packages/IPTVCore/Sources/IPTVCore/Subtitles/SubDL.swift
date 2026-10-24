@@ -29,7 +29,7 @@ public struct SubDLClient: SubtitleProvider {
         } catch {
             throw SubtitleHTTP.translate(error, service: service)
         }
-        let response = try JSONDecoder().decode(Response.self, from: data)
+        let response = try JSONDecoder().decodeCheckingKeys(Response.self, from: data)
         if response.status == false {
             let message = response.error ?? response.message ?? "no result"
             if message.lowercased().contains("api") || message.lowercased().contains("key") {

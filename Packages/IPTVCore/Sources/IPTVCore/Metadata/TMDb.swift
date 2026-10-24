@@ -88,7 +88,7 @@ public struct TMDbClient: Sendable {
         do {
             let data = try await get("authentication")
             struct Answer: Decodable { var success: Bool }
-            return try JSONDecoder().decode(Answer.self, from: data).success
+            return try JSONDecoder().decodeCheckingKeys(Answer.self, from: data).success
         } catch HTTPClientError.badStatus(let status) where status == 401 {
             return false
         }
@@ -97,7 +97,7 @@ public struct TMDbClient: Sendable {
     public func trending(window: String = "week") async throws -> [TMDbItem] {
         let data = try await get("trending/all/\(window)")
         struct Page: Decodable { var results: [TMDbItem] }
-        return try JSONDecoder().decode(Page.self, from: data).results.filter { $0.mediaType == .movie || $0.mediaType == .tv }
+        return try JSONDecoder().decodeCheckingKeys(Page.self, from: data).results.filter { $0.mediaType == .movie || $0.mediaType == .tv }
     }
 
     /// The backdrop TMDb has for a movie or a series whose provider gave none that loads: by its TMDb id when the
@@ -106,14 +106,14 @@ public struct TMDbClient: Sendable {
     public func backdropURL(of type: ContentType, tmdbID: String?, title: String, year: Int?) async throws -> URL? {
         let kind = type == .series ? "tv" : "movie"
         if let id = tmdbID.flatMap({ Int($0.trimmingCharacters(in: .whitespaces)) }), let data = try? await get("\(kind)/\(id)"),
-           let url = (try? JSONDecoder().decode(TMDbItem.self, from: data))?.backdropURL {
+           let url = (try? JSONDecoder().decodeCheckingKeys(TMDbItem.self, from: data))?.backdropURL {
             return url
         }
         let key = CatalogueMatcher.key(title)
         guard !key.isEmpty else { return nil }
         let data = try await get("search/\(kind)", query: [URLQueryItem(name: "query", value: CatalogueMatcher.searchQuery(title))])
         struct Page: Decodable { var results: [TMDbItem] }
-        return try JSONDecoder().decode(Page.self, from: data).results.lazy
+        return try JSONDecoder().decodeCheckingKeys(Page.self, from: data).results.lazy
             .filter { item in
                 guard [item.title, item.originalTitle].compactMap({ $0 }).map(CatalogueMatcher.key).contains(key) else { return false }
                 guard let year, let released = item.year else { return true }
@@ -129,7 +129,7 @@ public struct TMDbClient: Sendable {
         guard !trimmed.isEmpty else { return [] }
         let data = try await get("search/person", query: [URLQueryItem(name: "query", value: trimmed)])
         struct Page: Decodable { var results: [TMDbPerson] }
-        return try JSONDecoder().decode(Page.self, from: data).results.sorted { $0.popularity > $1.popularity }
+        return try JSONDecoder().decodeCheckingKeys(Page.self, from: data).results.sorted { $0.popularity > $1.popularity }
     }
 
     /// The person TMDb knows best by this name (its most popular match), if any.
@@ -138,7 +138,7 @@ public struct TMDbClient: Sendable {
         guard !trimmed.isEmpty else { return nil }
         let data = try await get("search/person", query: [URLQueryItem(name: "query", value: trimmed)])
         struct Page: Decodable { var results: [TMDbPerson] }
-        return try JSONDecoder().decode(Page.self, from: data).results.max { $0.popularity < $1.popularity }
+        return try JSONDecoder().decodeCheckingKeys(Page.self, from: data).results.max { $0.popularity < $1.popularity }
     }
 
     /// Movies and series a person played in or worked on (directing, writing…), newest first, each once.
@@ -148,7 +148,7 @@ public struct TMDbClient: Sendable {
             var cast: [TMDbItem]?
             var crew: [TMDbItem]?
         }
-        let credits = try JSONDecoder().decode(Credits.self, from: data)
+        let credits = try JSONDecoder().decodeCheckingKeys(Credits.self, from: data)
         var seen = Set<String>()
         return ((credits.cast ?? []) + (credits.crew ?? []))
             .filter { ($0.mediaType == .movie || $0.mediaType == .tv) && seen.insert("\($0.mediaType.rawValue)-\($0.id)").inserted }

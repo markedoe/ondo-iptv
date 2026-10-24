@@ -22,7 +22,8 @@ enum JSONListFile {
             try Task.checkCancellation()
             let regular = piece.withUnsafeBytes { bytes in
                 splitter.split(bytes) { element in
-                    if let value = try? decoder.decode(T.self, from: element) {
+                    // A key the decoder cannot read would stop the app (`JSONKeys`): such an element is not a `T`.
+                    if JSONKeys.areReadable(element), let value = try? decoder.decode(T.self, from: element) {
                         if let result = transform(value) { results.append(result) }
                         return true
                     }

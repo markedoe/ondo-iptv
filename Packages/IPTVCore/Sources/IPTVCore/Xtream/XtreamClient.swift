@@ -35,7 +35,7 @@ public struct XtreamClient: Sendable {
         let data = try await http.data(from: url, headers: headers.dictionary).gunzippedIfNeeded()
         guard !data.isEmpty else { throw HTTPClientError.emptyResponse }
         do {
-            return try JSONDecoder().decode(T.self, from: data)
+            return try JSONDecoder().decodeCheckingKeys(T.self, from: data)
         } catch {
             throw XtreamError.invalidResponse
         }
@@ -59,7 +59,7 @@ public struct XtreamClient: Sendable {
         guard ((try? file.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 1) > 0 else { throw HTTPClientError.emptyResponse }
         do {
             if let elements = try JSONListFile.elements(T.self, in: file, transform()) { return elements }
-            return try JSONDecoder().decode(LossyArray<T>.self, from: Data(contentsOf: file)).elements.compactMap(transform())
+            return try JSONDecoder().decodeCheckingKeys(LossyArray<T>.self, from: Data(contentsOf: file)).elements.compactMap(transform())
         } catch is CancellationError {
             throw CancellationError()
         } catch {
