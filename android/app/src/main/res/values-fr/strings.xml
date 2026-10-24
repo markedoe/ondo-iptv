@@ -333,6 +333,9 @@
     <string name="unlock_controls">Déverrouiller</string>
     <string name="picture_in_picture">Image dans l’image</string>
     <string name="back_to_live">Retour au direct</string>
+    <string name="restart_programme">Depuis le début</string>
+    <string name="replay_badge">REPLAY</string>
+    <string name="play_replay">Lire le replay</string>
     <string name="seconds_short">%1$d s</string>
     <string name="brightness">Luminosité</string>
     <string name="volume">Volume</string>

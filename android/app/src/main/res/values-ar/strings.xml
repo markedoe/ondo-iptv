@@ -357,6 +357,9 @@
     <string name="unlock_controls">إلغاء القفل</string>
     <string name="picture_in_picture">صورة داخل صورة</string>
     <string name="back_to_live">العودة إلى البث المباشر</string>
+    <string name="restart_programme">من البداية</string>
+    <string name="replay_badge">إعادة عرض</string>
+    <string name="play_replay">تشغيل إعادة العرض</string>
     <string name="seconds_short">%1$d ث</string>
     <string name="brightness">السطوع</string>
     <string name="volume">مستوى الصوت</string>

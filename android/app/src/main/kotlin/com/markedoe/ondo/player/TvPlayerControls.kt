@@ -39,12 +39,14 @@ import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Forward10
+import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.runtime.Composable
@@ -132,6 +134,8 @@ fun TvPlayerOverlay(
     sleep: SleepTimer,
     modifier: Modifier = Modifier,
     channels: ChannelList? = null,
+    onRestart: () -> Unit = {},
+    onWatchLive: () -> Unit = {},
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -173,13 +177,13 @@ fun TvPlayerOverlay(
                     // The video's time runs left to right in every language.
                     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                         if (seekBar) {
-                            SeekBar(player, controls, focusable = controls.shown, live = info.live)
+                            SeekBar(player, controls, focusable = controls.shown, live = info.live, replay = info.replay)
                         } else {
                             LiveLine(info, controls.clockMs)
                         }
                         if (controls.shown) {
                             Spacer(Modifier.height(18.dp))
-                            ButtonRow(player, controls, info, playPause, buttons, channels)
+                            ButtonRow(player, controls, info, playPause, buttons, channels, onRestart, onWatchLive)
                         }
                     }
                 }
@@ -296,15 +300,27 @@ private fun LiveBadge() {
     }
 }
 
+/** A channel played from the provider's archive, not live. */
+@Composable
+private fun ReplayBadge() {
+    Text(
+        stringResource(R.string.replay_badge),
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.ExtraBold,
+        color = Color.White,
+        modifier = Modifier.border(1.5.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(6.dp)).padding(horizontal = 10.dp, vertical = 3.dp).testTag("replayBadge"),
+    )
+}
+
 internal val LiveRed = Color(0xFFE53935)
 
 /**
  * The progress bar, with the part already loaded. With the focus, Left and Right move a target along it (faster while
  * held) and the player goes there once the remote stops, or on OK ([PlayerControls.scrub]). A [live] stream that can go
- * back has it too, with LIVE.
+ * back has it too, with LIVE; a channel played from its archive ([replay]) has REPLAY.
  */
 @Composable
-private fun SeekBar(player: Player, controls: PlayerControls, focusable: Boolean, live: Boolean) {
+private fun SeekBar(player: Player, controls: PlayerControls, focusable: Boolean, live: Boolean, replay: Boolean) {
     var focused by remember { mutableStateOf(false) }
     val locale = LocalConfiguration.current.locales[0]
     val duration = controls.durationMs
@@ -381,6 +397,10 @@ private fun SeekBar(player: Player, controls: PlayerControls, focusable: Boolean
                 LiveBadge()
                 Spacer(Modifier.width(12.dp))
             }
+            if (replay) {
+                ReplayBadge()
+                Spacer(Modifier.width(12.dp))
+            }
             if (duration != null) {
                 Text("−" + time((duration - position).coerceAtLeast(0), locale), style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.75f), modifier = Modifier.testTag("remaining"))
             }
@@ -396,7 +416,16 @@ internal fun time(ms: Long, locale: Locale): String {
 }
 
 @Composable
-private fun ButtonRow(player: Player, controls: PlayerControls, info: PlayerInfo, playPause: FocusRequester, buttons: Map<PlayerPanel, FocusRequester>, channels: ChannelList?) {
+private fun ButtonRow(
+    player: Player,
+    controls: PlayerControls,
+    info: PlayerInfo,
+    playPause: FocusRequester,
+    buttons: Map<PlayerPanel, FocusRequester>,
+    channels: ChannelList?,
+    onRestart: () -> Unit,
+    onWatchLive: () -> Unit,
+) {
     // Where the player cannot seek (a live channel, a film without an index), a skip would start the video over.
     val transport = controls.seekable
     val playing = controls.playWhenReady
@@ -421,6 +450,13 @@ private fun ButtonRow(player: Player, controls: PlayerControls, info: PlayerInfo
             RoundButton(Icons.Rounded.Forward10, stringResource(R.string.skip_forward_10), tag = "tvSkipForward") {
                 controls.skip(player, PlayerControls.SKIP_MS)
             }
+        }
+        // The programme on now from its start, from the provider's archive; from a replay, back to the channel.
+        if (info.live && info.canRestart) {
+            RoundButton(Icons.Rounded.SkipPrevious, stringResource(R.string.restart_programme), tag = "tvRestart", onClick = onRestart)
+        }
+        if (info.replay) {
+            RoundButton(Icons.Rounded.LiveTv, stringResource(R.string.back_to_live), tag = "tvWatchLive", onClick = onWatchLive)
         }
         Spacer(Modifier.weight(1f))
         // A live channel: the others, with what is on now (a mini-guide).

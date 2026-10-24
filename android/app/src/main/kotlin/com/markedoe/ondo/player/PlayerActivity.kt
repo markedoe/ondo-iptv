@@ -202,6 +202,9 @@ class PlayerActivity : ComponentActivity() {
     /** The channel watched before this one (the remote's "last channel" key). */
     private var lastChannel: PlayRequest? = null
 
+    /** When the viewer paused a live channel ([LivePause]). */
+    private var livePausedAt: Long? = null
+
     /** Keys the player handled when pressed: their release is consumed too. */
     private val handledKeys = HashSet<Int>()
 
@@ -334,7 +337,9 @@ class PlayerActivity : ComponentActivity() {
                                 scale = scale,
                                 onScale = repository::setVideoScale,
                                 sleep = sleepTimer,
-                                channels = channelList.takeIf { request.isLive && request.channelId != null },
+                                channels = channelList.takeIf { request.channelId != null },
+                                onRestart = ::restartProgramme,
+                                onWatchLive = ::watchLive,
                             )
                         }
                     }
@@ -360,7 +365,9 @@ class PlayerActivity : ComponentActivity() {
                             levels = levels,
                             onClose = ::finish,
                             onPictureInPicture = if (supportsPictureInPicture) ::enterPictureInPicture else null,
-                            channels = channelList.takeIf { request.isLive && request.channelId != null },
+                            channels = channelList.takeIf { request.channelId != null },
+                            onRestart = ::restartProgramme,
+                            onWatchLive = ::watchLive,
                         )
                     }
                     upNext?.let { offer ->
@@ -462,19 +469,56 @@ class PlayerActivity : ComponentActivity() {
         return (0 until locales.size()).map { locales[it].language }.filter { it.isNotEmpty() }.distinct()
     }
 
-    /** What the TV's controls say at the top: the title and its line, or a live channel's number, name and programme. */
+    /**
+     * What the controls say at the top: the title and its line, or a channel's number, name and programme (on now, or
+     * the one the replay is at).
+     */
     private fun playerInfo(now: Long): PlayerInfo {
         val current = request
         val state = repository.state.value
-        val channel = current.channelId?.takeIf { current.isLive }?.let { id -> state.content.channels.firstOrNull { it.id == id } }
-        val programme = channel?.let { state.guide?.current(it, now) }
+        val channel = current.channelId?.let { id -> state.content.channels.firstOrNull { it.id == id } }
+        val replayAt = current.replayStart?.takeIf { current.isReplay }?.let { it + (player?.currentPosition ?: 0) }
+        val programme = channel?.let { state.guide?.current(it, replayAt ?: now) }
         return PlayerInfo(
             title = channel?.let { listOfNotNull(it.number?.toString(), it.name).joinToString("  ") } ?: current.title,
-            subtitle = programme?.title ?: current.subtitle,
+            subtitle = programme?.title ?: current.title.takeIf { channel != null && current.isReplay } ?: current.subtitle,
             live = current.isLive,
-            programmeStart = programme?.start,
-            programmeEnd = programme?.end,
+            programmeStart = programme?.start?.takeIf { current.isLive },
+            programmeEnd = programme?.end?.takeIf { current.isLive },
+            canRestart = current.isLive && channel != null && repository.canRestart(channel.id, now),
+            replay = current.isReplay,
         )
+    }
+
+    /** The programme on now, from its start, from the provider's archive. */
+    private fun restartProgramme() {
+        val channelId = request.channelId?.takeIf { request.isLive } ?: return
+        repository.restartRequest(channelId)?.let(::switchTo)
+    }
+
+    /** From a replay, the channel live again. */
+    private fun watchLive() {
+        val channelId = request.channelId?.takeIf { request.isReplay } ?: return
+        val channel = repository.state.value.content.channels.firstOrNull { it.id == channelId } ?: return
+        repository.playRequest(channel)?.let(::switchTo)
+    }
+
+    /**
+     * The viewer paused or played ([LivePause]): a live channel paused a while resumes where it was paused, from the
+     * provider's archive. After the player's own listener: the player changes once its callback is over.
+     */
+    private fun livePause(playing: Boolean) {
+        val exoPlayer = player ?: return
+        if (!playing) {
+            livePausedAt = LivePause.pausedAt(request, exoPlayer.isCurrentMediaItemSeekable, System.currentTimeMillis())
+            return
+        }
+        val from = LivePause.resumeFrom(livePausedAt, System.currentTimeMillis())
+        livePausedAt = null
+        val channelId = request.channelId ?: return
+        val replay = from?.let { repository.pausedLiveRequest(channelId, it) } ?: return
+        reporter.note("live pause: resumed from the archive")
+        lifecycleScope.launch { switchTo(replay) }
     }
 
     /** Up next shows in the last seconds of an episode that has a next one ([UpNext.offer]). */
@@ -564,7 +608,11 @@ class PlayerActivity : ComponentActivity() {
                         updatePictureInPictureParams()
                     }
 
-                    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) = reporter.playWhenReady(playWhenReady)
+                    override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                        reporter.playWhenReady(playWhenReady)
+                        // The viewer's own pause, not the system's (a call, the audio focus lost, the end of the video).
+                        if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) livePause(playWhenReady)
+                    }
 
                     override fun onPositionDiscontinuity(oldPosition: Player.PositionInfo, newPosition: Player.PositionInfo, reason: Int) {
                         if (reason == Player.DISCONTINUITY_REASON_SEEK) {
@@ -669,6 +717,7 @@ class PlayerActivity : ComponentActivity() {
         setIntent(PlayerActivity.intent(this, next))
         urlIndex = 0
         liveRecovery.reset()
+        livePausedAt = null
         nextEpisode = repository.nextEpisode(next)
         upNext = null
         upNextDeclined = false
@@ -729,7 +778,8 @@ class PlayerActivity : ComponentActivity() {
         }
         // Each key keeps the controls a while longer.
         controls.touch()
-        val zapping = request.isLive && request.channelId != null
+        // A replay keeps its channel: the channel keys go on from it.
+        val zapping = request.channelId != null
         val action = RemoteKeys.action(event.keyCode, controlsShown, zapping, exoPlayer.isCurrentMediaItemSeekable)
             ?: return television && showsControlsFor(event)
         // A stream that failed: OK presses Try Again; the channel keys still lead to another channel.
@@ -800,9 +850,11 @@ class PlayerActivity : ComponentActivity() {
     )
 
     private fun playChannel(channel: Channel) {
-        if (channel.id == request.channelId) return
+        // The channel on now: nothing to change. From its replay, it plays live again.
+        if (channel.id == request.channelId && request.isLive) return
         val next = repository.playRequest(channel) ?: return
-        lastChannel = request
+        // Last channel goes back into a replay where it was.
+        lastChannel = if (request.isReplay) request.copy(startPositionMs = player?.currentPosition ?: 0) else request
         switchTo(next)
         val now = repository.state.value.guide?.current(channel, System.currentTimeMillis())?.title
         showBanner(ChannelBanner(listOfNotNull(channel.number?.toString(), channel.name).joinToString("  "), now))

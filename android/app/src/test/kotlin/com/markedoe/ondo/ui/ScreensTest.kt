@@ -237,6 +237,35 @@ class ScreensTest {
         assertEquals(listOf("Weather"), reminded)
     }
 
+    /** A channel with the provider's archive: a past programme replays, the one on now starts over; without, neither. */
+    @Test
+    fun theGuideReplaysWhatTheArchiveKeeps() {
+        val now = Fixtures.NOW
+        val archived = Fixtures.channels.first().copy(catchup = com.markedoe.ondo.core.model.CatchupInfo(com.markedoe.ondo.core.model.CatchupInfo.Mode.SHIFT, days = 3))
+        val plain = Fixtures.channels[1]
+        val past = EpgProgram(archived.epgId!!, now - 4_200_000, now - 600_000, "Early Edition")
+        val airing = EpgProgram(archived.epgId!!, now - 600_000, now + 1_200_000, "Morning News")
+        val plainPast = EpgProgram(plain.epgId!!, now - 4_200_000, now - 600_000, "Cartoons")
+        val window = UiMappers.guideWindow(now)
+        val state = GuideUiState(
+            rows = listOf(GuideRow(archived, listOf(past, airing)), GuideRow(plain, listOf(plainPast))),
+            total = 2, start = window.first, end = window.last, now = now, hasGuide = true,
+        )
+        val replayed = mutableListOf<String>()
+        compose.setContent { OndoTheme { GuideScreen(state, GuideActions(onReplay = { _, program -> replayed += program.title })) } }
+        compose.onNodeWithText("Early Edition").performClick()
+        compose.onNodeWithTag("replayButton").assert(hasText("Play replay")).performClick()
+        assertEquals(listOf("Early Edition"), replayed)
+        compose.onNodeWithTag("programSheet").assertDoesNotExist()
+        compose.onNodeWithText("Morning News").performClick()
+        compose.onNodeWithText("Watch live").assertExists()
+        compose.onNodeWithTag("restartButton").assert(hasText("Restart")).performClick()
+        assertEquals(listOf("Early Edition", "Morning News"), replayed)
+        compose.onNodeWithText("Cartoons").performClick()
+        compose.onNodeWithTag("programSheet").assertExists()
+        compose.onNodeWithTag("replayButton").assertDoesNotExist()
+    }
+
     @Test
     fun remindersSayHowToSetOne() {
         compose.setContent { OndoTheme { RemindersScreen(emptyList(), onRemove = {}, onBack = {}) } }

@@ -64,6 +64,8 @@ class TvPlayerControlsTest {
     )
 
     private var chosen: String? = null
+    private var restarted = 0
+    private var wentLive = 0
 
     private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false, channels: ChannelList? = null) {
         var inputModes: InputModeManager? = null
@@ -77,6 +79,7 @@ class TvPlayerControlsTest {
                     TvPlayerOverlay(
                         player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
                         scale = scale, onScale = { scale = it }, sleep = sleep, channels = channels,
+                        onRestart = { restarted++ }, onWatchLive = { wentLive++ },
                     )
                 }
             }
@@ -366,6 +369,36 @@ class TvPlayerControlsTest {
         press(Key.DirectionCenter)
         assertEquals("c2", chosen)
         compose.onNodeWithTag("tvTrackPanel").assertDoesNotExist()
+    }
+
+    /** A live channel with the provider's archive: Restart, next to Play/Pause, plays its programme from the start. */
+    @Test
+    fun aLiveChannelWithAnArchiveRestartsItsProgramme() {
+        val channel = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = false)
+        start(channel, PlayerInfo("World Report", "Evening News", live = true, canRestart = true))
+        compose.onNodeWithTag("tvPlayPause").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("tvRestart").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertEquals(1, restarted)
+        compose.onNodeWithTag("tvWatchLive").assertDoesNotExist()
+    }
+
+    /** A replay: its bar says REPLAY, and Back to live comes after the skips. */
+    @Test
+    fun aReplaySaysSoAndGoesBackToLive() {
+        start(info = PlayerInfo("1  World Report", "Morning Show", live = false, replay = true))
+        compose.onNodeWithTag("replayBadge").assertExists()
+        compose.onNodeWithTag("liveBadge").assertDoesNotExist()
+        compose.onNodeWithTag("tvRestart").assertDoesNotExist()
+        compose.onNodeWithTag("tvPlayPause").assertIsFocused()
+        // After the skips: a replay seeks as a film.
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("tvSkipForward").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("tvWatchLive").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertEquals(1, wentLive)
     }
 
     private companion object {

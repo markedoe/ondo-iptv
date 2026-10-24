@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -13,6 +14,7 @@ import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -33,6 +35,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,6 +51,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.Forward10
+import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.MoreVert
@@ -57,6 +61,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -159,6 +164,8 @@ fun PhonePlayerOverlay(
     onPictureInPicture: (() -> Unit)?,
     modifier: Modifier = Modifier,
     channels: ChannelList? = null,
+    onRestart: () -> Unit = {},
+    onWatchLive: () -> Unit = {},
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -297,7 +304,7 @@ fun PhonePlayerOverlay(
             },
     ) {
         AnimatedVisibility(visible = controls.shown && !locked, enter = fadeIn(), exit = fadeOut()) {
-            Controls(player, controls, info, sleep, channels, onClose, onPictureInPicture, onLock = {
+            Controls(player, controls, info, sleep, channels, onClose, onPictureInPicture, onRestart, onWatchLive, onLock = {
                 locked = true
                 controls.hide()
                 haptics.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -368,6 +375,8 @@ private fun Controls(
     channels: ChannelList?,
     onClose: () -> Unit,
     onPictureInPicture: (() -> Unit)?,
+    onRestart: () -> Unit,
+    onWatchLive: () -> Unit,
     onLock: () -> Unit,
 ) {
     Box(
@@ -447,14 +456,22 @@ private fun Controls(
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                 if (!info.live || controls.seekable) {
-                    TimeBar(player, controls, live = info.live)
+                    TimeBar(player, controls, live = info.live, replay = info.replay)
                 } else {
                     PhoneLiveLine(info, controls.clockMs)
                 }
             }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            // A narrow screen scrolls the chips rather than cutting the last one.
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (channels != null) {
                     ActionChip(Icons.AutoMirrored.Rounded.List, stringResource(R.string.channels), "phoneChannels") { controls.open(PlayerPanel.CHANNELS) }
+                }
+                // The programme on now from its start, from the provider's archive; from a replay, back to the channel.
+                if (info.live && info.canRestart) {
+                    ActionChip(Icons.Rounded.SkipPrevious, stringResource(R.string.restart_programme), "phoneRestart") { onRestart() }
+                }
+                if (info.replay) {
+                    ActionChip(Icons.Rounded.LiveTv, stringResource(R.string.back_to_live), "phoneWatchLive") { onWatchLive() }
                 }
                 ActionChip(Icons.Rounded.Subtitles, stringResource(R.string.subtitles), "phoneSubtitles") { controls.open(PlayerPanel.SUBTITLES) }
                 ActionChip(Icons.Rounded.RecordVoiceOver, stringResource(R.string.audio), "phoneAudio") { controls.open(PlayerPanel.AUDIO) }
@@ -469,9 +486,12 @@ private fun Controls(
     }
 }
 
-/** The progress bar, with the time played and the time left (or LIVE and Back to live on a live stream with a window). */
+/**
+ * The progress bar, with the time played and the time left (or LIVE and Back to live on a live stream with a window);
+ * REPLAY on a channel played from its archive.
+ */
 @Composable
-private fun TimeBar(player: Player, controls: PlayerControls, live: Boolean) {
+private fun TimeBar(player: Player, controls: PlayerControls, live: Boolean, replay: Boolean) {
     val locale = LocalConfiguration.current.locales[0]
     val duration = controls.durationMs ?: 0L
     val shown = (controls.scrubMs ?: controls.positionMs).coerceIn(0, maxOf(duration, 0))
@@ -488,8 +508,12 @@ private fun TimeBar(player: Player, controls: PlayerControls, live: Boolean) {
                     Spacer(Modifier.width(6.dp))
                     Text(stringResource(if (atEdge) R.string.live_badge else R.string.back_to_live), style = MaterialTheme.typography.labelLarge, color = Color.White)
                 }
-            } else if (duration > 0) {
-                Text("−" + time(duration - shown, locale), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.8f))
+            } else {
+                if (replay) {
+                    ReplayBadge()
+                    Spacer(Modifier.width(10.dp))
+                }
+                if (duration > 0) Text("−" + time(duration - shown, locale), style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.8f))
             }
         }
     }
@@ -580,6 +604,18 @@ private fun PhoneLiveLine(info: PlayerInfo, now: Long) {
             }
         }
     }
+}
+
+/** A channel played from the provider's archive, not live. */
+@Composable
+private fun ReplayBadge() {
+    Text(
+        stringResource(R.string.replay_badge),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.ExtraBold,
+        color = Color.White,
+        modifier = Modifier.border(1.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp).testTag("replayBadge"),
+    )
 }
 
 @Composable

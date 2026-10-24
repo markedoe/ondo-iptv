@@ -317,6 +317,9 @@
     <string name="unlock_controls">解锁</string>
     <string name="picture_in_picture">画中画</string>
     <string name="back_to_live">返回直播</string>
+    <string name="restart_programme">从头播放</string>
+    <string name="replay_badge">回看</string>
+    <string name="play_replay">播放回看</string>
     <string name="seconds_short">%1$d 秒</string>
     <string name="brightness">亮度</string>
     <string name="volume">音量</string>

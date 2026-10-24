@@ -68,6 +68,8 @@ class PhonePlayerOverlayTest {
     )
 
     private var chosen: String? = null
+    private var restarted = 0
+    private var wentLive = 0
     private val channelList = ChannelList(
         load = { listOf(ChannelChoice("c1", 1, "World Report", "Evening News", playing = true), ChannelChoice("c2", 2, "Cycling TV", "Mountain Stage", playing = false)) },
         onChoose = { chosen = it },
@@ -82,7 +84,7 @@ class PhonePlayerOverlayTest {
                 PhonePlayerOverlay(
                     player, controls, info, statisticsShown = false, onToggleStatistics = {}, onReportProblem = {},
                     scale = scale, onScale = { scale = it }, sleep = sleep, levels = levels, onClose = {}, onPictureInPicture = {},
-                    channels = channels,
+                    channels = channels, onRestart = { restarted++ }, onWatchLive = { wentLive++ },
                 )
             }
         }
@@ -259,5 +261,53 @@ class PhonePlayerOverlayTest {
         compose.runOnIdle { controls.show() }
         settle()
         assertFalse(exists("phoneChannels"))
+    }
+
+    /** A live channel with the provider's archive: Restart plays its programme from the start. */
+    @Test
+    fun aLiveChannelWithAnArchiveRestartsItsProgramme() {
+        val channel = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = false)
+        start(channel, PlayerInfo("World Report", "Evening News", live = true, canRestart = true), channelList)
+        compose.runOnIdle { controls.show() }
+        settle()
+        compose.onNodeWithTag("phoneRestart").assertTextContains("Restart").performClick()
+        settle()
+        assertEquals(1, restarted)
+        assertFalse("live, not a replay", exists("replayBadge"))
+    }
+
+    @Test
+    fun aLiveChannelWithoutAnArchiveHasNoRestart() {
+        val channel = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AAC, channels = 2)), initiallySelected = setOf(0), seekable = false)
+        start(channel, PlayerInfo("World Report", "Evening News", live = true), channelList)
+        compose.runOnIdle { controls.show() }
+        settle()
+        assertFalse(exists("phoneRestart"))
+        assertFalse(exists("phoneWatchLive"))
+    }
+
+    /** A replay plays as a film, said so, with Back to live; its channel's list stays. */
+    @Test
+    fun aReplaySaysSoAndGoesBackToLive() {
+        start(info = PlayerInfo("1  World Report", "Morning Show", live = false, replay = true), channels = channelList)
+        compose.runOnIdle { controls.show() }
+        settle()
+        assertTrue(exists("replayBadge"))
+        assertTrue("a replay seeks", exists("phoneSeekBar"))
+        assertTrue(exists("phoneChannels"))
+        assertFalse(exists("phoneRestart"))
+        compose.onNodeWithTag("phoneWatchLive").assertTextContains("Back to live").performClick()
+        settle()
+        assertEquals(1, wentLive)
+    }
+
+    @Test
+    fun aFilmIsNoReplay() {
+        start()
+        compose.runOnIdle { controls.show() }
+        settle()
+        assertFalse(exists("replayBadge"))
+        assertFalse(exists("phoneWatchLive"))
+        assertFalse(exists("phoneRestart"))
     }
 }

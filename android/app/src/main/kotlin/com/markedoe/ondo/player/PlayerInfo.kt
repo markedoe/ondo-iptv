@@ -10,4 +10,8 @@ data class PlayerInfo(
     /** A live channel's programme on now, from the guide: its start and end (epoch milliseconds). */
     val programmeStart: Long? = null,
     val programmeEnd: Long? = null,
+    /** A live channel whose programme on now can start over, from the provider's archive (Restart). */
+    val canRestart: Boolean = false,
+    /** A channel played from its archive: REPLAY, and Back to live. */
+    val replay: Boolean = false,
 )

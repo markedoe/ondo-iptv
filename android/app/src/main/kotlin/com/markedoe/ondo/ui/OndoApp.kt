@@ -497,6 +497,7 @@ private fun GuideDestination(viewModel: OndoViewModel, navController: NavHostCon
             onCategory = { viewModel.setLiveFilter(LiveFilter(categoryId = it)) },
             onFavorites = { viewModel.setLiveFilter(LiveFilter(favoritesOnly = true)) },
             onPlay = { channel -> state.rows.firstOrNull { it.channel.id == channel.id }?.let { viewModel.playChannel(UiMappers.channelRow(it.channel, viewModel.state.value, state.now)) } },
+            onReplay = viewModel::playReplay,
             onToggleReminder = viewModel::toggleReminder,
             onReminders = { navController.navigate(Routes.Reminders) },
         ),

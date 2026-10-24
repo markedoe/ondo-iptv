@@ -37,10 +37,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -77,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.MediaCategory
@@ -114,6 +117,8 @@ class GuideActions(
     val onCategory: (String?) -> Unit = {},
     val onFavorites: () -> Unit = {},
     val onPlay: (Channel) -> Unit = {},
+    /** A programme from its start, from the provider's archive: a past one, or the one on now (Restart). */
+    val onReplay: (Channel, EpgProgram) -> Unit = { _, _ -> },
     val onToggleReminder: (Channel, EpgProgram) -> Unit = { _, _ -> },
     val onReminders: () -> Unit = {},
 )
@@ -203,6 +208,7 @@ fun GuideScreen(state: GuideUiState, actions: GuideActions) {
             timeFormat = timeFormat,
             hasReminder = "${channel.id}|${program.start}" in state.reminders,
             onPlay = { selected = null; actions.onPlay(channel) },
+            onReplay = { selected = null; actions.onReplay(channel, program) },
             onToggleReminder = { actions.onToggleReminder(channel, program) },
             onDismiss = { selected = null },
         )
@@ -355,6 +361,7 @@ private fun ProgramSheet(
     timeFormat: java.text.DateFormat,
     hasReminder: Boolean,
     onPlay: () -> Unit,
+    onReplay: () -> Unit,
     onToggleReminder: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -376,10 +383,23 @@ private fun ProgramSheet(
             Text("${channel.name} · $day · ${timeRange(program, timeFormat)}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             program.description?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 8.dp)) {
+                // What the provider's archive keeps: a past programme, or the one on now from its start.
+                val replay = CatchupUrlBuilder.isAvailable(channel, program, now)
                 if (program.start <= now && now < program.end) {
                     Button(onClick = onPlay) {
                         Icon(Icons.Rounded.PlayArrow, contentDescription = null)
                         Text(stringResource(R.string.watch_live), modifier = Modifier.padding(start = 6.dp))
+                    }
+                    if (replay) {
+                        FilledTonalButton(onClick = onReplay, modifier = Modifier.testTag("restartButton")) {
+                            Icon(Icons.Rounded.SkipPrevious, contentDescription = null)
+                            Text(stringResource(R.string.restart_programme), modifier = Modifier.padding(start = 6.dp))
+                        }
+                    }
+                } else if (program.end <= now && replay) {
+                    Button(onClick = onReplay, modifier = Modifier.testTag("replayButton")) {
+                        Icon(Icons.Rounded.History, contentDescription = null)
+                        Text(stringResource(R.string.play_replay), modifier = Modifier.padding(start = 6.dp))
                     }
                 }
                 if (program.start > now) {

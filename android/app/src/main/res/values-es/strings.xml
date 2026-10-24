@@ -333,6 +333,9 @@
     <string name="unlock_controls">Desbloquear</string>
     <string name="picture_in_picture">Imagen dentro de imagen</string>
     <string name="back_to_live">Volver al directo</string>
+    <string name="restart_programme">Desde el principio</string>
+    <string name="replay_badge">DIFERIDO</string>
+    <string name="play_replay">Ver en diferido</string>
     <string name="seconds_short">%1$d s</string>
     <string name="brightness">Brillo</string>
     <string name="volume">Volumen</string>

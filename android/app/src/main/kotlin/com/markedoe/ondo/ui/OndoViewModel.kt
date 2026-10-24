@@ -251,6 +251,9 @@ class OndoViewModel(
 
     fun playChannel(row: ChannelRow) = emit(repository.playRequest(row.channel))
 
+    /** A programme of the guide from its start, from the provider's archive. */
+    fun playReplay(channel: com.markedoe.ondo.core.model.Channel, programme: EpgProgram) = emit(repository.replayRequest(channel, programme))
+
     /** Movie: plays it. Series: the next episode (details loaded first when needed, see [preparing]). */
     fun play(item: ShowcaseItem) {
         when (item) {
