@@ -69,4 +69,18 @@ class PlaybackBufferTest {
         // Four seconds from the live edge: two seconds at most.
         assertEquals(2_000_000L, policy.waitUs(true, 3_000, 4_000_000))
     }
+
+    /**
+     * The player keeps its buffer in the app's memory: half of what is left when it starts, never Media3's own 144 MB
+     * on a TV that gives the app 128 MB (the picture stuttered, then Android stopped the app).
+     */
+    @Test
+    fun theBufferFitsInTheMemoryTheAppHasLeft() {
+        val mb = 1024L * 1024
+        assertEquals((34 * mb).toInt(), PlaybackBuffer.targetBytes(maxHeapBytes = 128 * mb, usedHeapBytes = 60 * mb))
+        assertTrue(PlaybackBuffer.targetBytes(128 * mb, 0) < 128 * mb, "never the whole memory")
+        assertEquals(PlaybackBuffer.MAX_TARGET_BYTES, PlaybackBuffer.targetBytes(512 * mb, 50 * mb), "Media3's own on a roomy device")
+        assertEquals(PlaybackBuffer.MIN_TARGET_BYTES, PlaybackBuffer.targetBytes(128 * mb, 125 * mb), "a few seconds whatever happens")
+        assertEquals(144_179_200, PlaybackBuffer.MAX_TARGET_BYTES)
+    }
 }

@@ -981,29 +981,62 @@ def java_heap_kb(tv):
     return int(match.group(1)) if match else None
 
 
+def out_of_memory_since(tv, since):
+    """The app's OutOfMemoryError lines in the log since [since] (the device's `date` format logcat takes)."""
+    pid = tv.current_pid()
+    if not pid:
+        return []
+    log = tv.adb("logcat", "-d", "-T", since, f"--pid={pid}", timeout=120)
+    return [line for line in log.splitlines() if "OutOfMemoryError" in line]
+
+
+def blocking_gcs_since(tv, since):
+    """How many times a thread of the app waited for the memory to be cleaned before it could go on (a stutter)."""
+    pid = tv.current_pid()
+    if not pid:
+        return 0
+    return tv.adb("logcat", "-d", "-T", since, f"--pid={pid}", timeout=120).count("Waiting for a blocking GC Alloc")
+
+
 def path_bitrate(tv, args):
-    """Movie 1 at a 4K film's bitrate (heavy.mkv, 40 Mbit/s) played two minutes beside the catalogue: what the player
-    keeps ahead of the picture must fit in the app's memory with it. The Java heap is noted every 10 s; a stop fails."""
+    """Movie 1 at a 4K film's bitrate (heavy.mkv, 40 Mbit/s, 75 s) played for 50 s beside the catalogue: what the
+    player keeps ahead of the picture must fit in the app's memory with it. The Java heap is noted every 10 s. The app
+    running out of memory fails, even when the player only shows an error, and so does the error itself."""
     tv.drawer("Movies")
     tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=1)
     tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
     if not tv.visible("Movie 1 "):
         tv.say("  bitrate: the page opened is not Movie 1's")
+    since = tv.shell("date '+%m-%d %H:%M:%S.000'").strip()
     tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=5)
     if not tv.player_shown():
         raise TimeoutError("the player never opened from Movie 1")
     limit = tv.shell("getprop dalvik.vm.heapgrowthlimit").strip()
     peak = 0
-    for second in range(0, 120, 10):
+    problems = []
+    # 50 s: the film lasts 75 s, and the player must still be up for its error to be seen.
+    for second in range(0, 50, 10):
+        if not tv.player_shown():
+            problems.append(f"the player closed within {second} s of the heavy movie")
+            break
         heap = java_heap_kb(tv)
         peak = max(peak, heap or 0)
         tv.say(f"  bitrate: {second} s, Java heap {heap} kB (growth limit {limit})")
         tv.check_alive(f"{second} s into the heavy movie")
+        if out_of_memory_since(tv, since):
+            problems.append(f"the app ran out of memory within {second} s of the heavy movie")
+            break
         time.sleep(10)
     tv.note_screen("bitrate-playing")
-    tv.say(f"  bitrate: peak Java heap {peak} kB")
+    tv.say(f"  bitrate: peak Java heap {peak} kB; {blocking_gcs_since(tv, since)} waits for a blocking GC")
+    for line in out_of_memory_since(tv, since)[:3]:
+        tv.say(f"  bitrate: {line.strip()[:220]}")
+    if tv.visible("cannot be played"):
+        problems.append("the player shows an error instead of the movie")
     tv.leave_player()
     tv.check_alive("back from the heavy movie")
+    if problems:
+        raise Stopped("bitrate: " + "; ".join(dict.fromkeys(problems)))
 
 
 PATHS = {

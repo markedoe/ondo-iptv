@@ -105,7 +105,6 @@ import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
-import com.markedoe.ondo.core.playback.RebufferPolicy
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.TvSafeArea
@@ -450,19 +449,16 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /**
-     * The buffer chosen in Settings. Automatic keeps Media3's own durations, and waits longer before playing again
-     * once the provider has stopped twice ([AdaptiveLoadControl]).
+     * The buffer chosen in Settings, no larger than what the app's memory has left ([playerLoadControl]). Automatic
+     * keeps Media3's own durations, and waits longer before playing again once the provider has stopped twice.
      */
     private fun loadControl(): LoadControl {
-        PlaybackBuffer.durations(request.bufferSeconds)?.let { buffer ->
-            return DefaultLoadControl.Builder()
-                .setBufferDurationsMs(buffer.minBufferMs, buffer.maxBufferMs, buffer.bufferForPlaybackMs, buffer.bufferForPlaybackAfterRebufferMs)
-                .setPrioritizeTimeOverSizeThresholds(true)
-                .build()
-        }
-        val raisedMs = if (request.isLive) PlaybackBuffer.RAISED_LIVE_MS else PlaybackBuffer.RAISED_VOD_MS
+        val runtime = Runtime.getRuntime()
+        val usedBytes = runtime.totalMemory() - runtime.freeMemory()
+        val targetBytes = PlaybackBuffer.targetBytes(runtime.maxMemory(), usedBytes)
+        reporter.note("buffer up to ${targetBytes / MEGABYTE} MB (app memory ${usedBytes / MEGABYTE} of ${runtime.maxMemory() / MEGABYTE} MB used)")
         val main = Handler(Looper.getMainLooper())
-        return AdaptiveLoadControl(DefaultLoadControl(), RebufferPolicy(raisedMs * 1_000L)) {
+        return playerLoadControl(request.bufferSeconds, request.isLive, targetBytes) { raisedMs ->
             // From the player's thread: the reporter lives on the main one.
             main.post { reporter.note("second rebuffering: waits ${raisedMs / 1_000} s of video before playing again") }
         }
@@ -932,6 +928,8 @@ class PlayerActivity : ComponentActivity() {
 
         /** Sessions opened by the players of this process, for their IDs (main thread). */
         private var sessionCount = 0
+
+        private const val MEGABYTE = 1024 * 1024
 
         /** The tag of the More button among the player's buttons on a TV (tests). */
         internal const val MORE_BUTTON = "playerMoreTv"

@@ -24,6 +24,19 @@ object PlaybackBuffer {
     const val RAISED_LIVE_MS = 6_000
     const val RAISED_VOD_MS = 5_000
 
+    /** Media3's smallest buffer (200 × 64 KB), and its own for a stream from the network: video and audio, 2 200 × 64 KB. */
+    const val MIN_TARGET_BYTES = 13_107_200
+    const val MAX_TARGET_BYTES = 144_179_200
+
+    /**
+     * Bytes of video and sound the player may keep ahead: half of what the app's memory has left when it starts,
+     * between Media3's smallest buffer and its own. Media3 keeps the buffer in the app's memory: on a TV that gives
+     * the app 128 MB, its own 144 MB fill it with a 4K film, the memory is cleaned again and again (the picture
+     * stutters) until Android stops the app.
+     */
+    fun targetBytes(maxHeapBytes: Long, usedHeapBytes: Long): Int =
+        ((maxHeapBytes - usedHeapBytes) / 2).coerceIn(MIN_TARGET_BYTES.toLong(), MAX_TARGET_BYTES.toLong()).toInt()
+
     /** The setting that applies: live channels have theirs, movies, episodes and catch-up the other. */
     fun setting(isLive: Boolean, live: Int, vod: Int): Int = if (isLive) live else vod
 
