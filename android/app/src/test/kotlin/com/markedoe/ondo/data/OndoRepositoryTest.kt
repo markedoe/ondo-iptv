@@ -120,6 +120,15 @@ class OndoRepositoryTest {
          */
         fun runNext() = requireNotNull(tasks.poll(60, TimeUnit.SECONDS)) { "no step came" }.run()
 
+        /** Waits until [count] steps are there: parsing on other threads ends in any order and at any time. */
+        fun awaitQueued(count: Int) {
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
+            while (tasks.size < count) {
+                check(System.nanoTime() < deadline) { "only ${tasks.size} of $count steps came" }
+                Thread.sleep(5)
+            }
+        }
+
         fun runAll() {
             while (true) (tasks.poll() ?: return).run()
         }
@@ -168,11 +177,12 @@ class OndoRepositoryTest {
         val first = launch { assertTrue(repository.addPlaylist("Home", list).isSuccess) }
         val second = launch { assertTrue(repository.addPlaylist("Office", other).isSuccess) }
         testScheduler.runCurrent() // both ask for their download
+        io.awaitQueued(2)
         io.runNext()
-        io.runNext() // both downloaded, parsing
+        io.runNext() // both downloaded, parsing on other threads
+        io.awaitQueued(2) // both parsed: each continues on the steps' dispatcher
         io.runNext()
-        io.runNext() // both parsed
-        testScheduler.runCurrent() // each saves the playlists it read, on the writer
+        io.runNext() // each has read the playlists and saves its catalogue on the writer
         runSteps(io) { first.isCompleted && second.isCompleted }
         assertEquals(setOf("Home", "Office"), repository.state.value.playlists.map { it.name }.toSet())
         io.runAll()
