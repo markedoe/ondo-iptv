@@ -165,6 +165,29 @@ class TelevisionTest {
         assertTrue(!heroShows("Northern Lights"))
     }
 
+    private fun heroTitle(): String =
+        compose.onNodeWithTag("heroTitle", useUnmergedTree = true).fetchSemanticsNode().config.getOrNull(SemanticsProperties.Text)?.joinToString(" ").orEmpty()
+
+    /** In Arabic the buttons run from the right: Left past the last one turns the page, Right goes back along them. */
+    @Test
+    @Config(qualifiers = "ar-rSA-w960dp-h540dp-land-television-xhdpi")
+    fun inArabicLeftPastTheLastButtonTurnsTheCarouselPage() {
+        start()
+        val first = heroTitle()
+        // Play → My List → More Info, leftwards.
+        press(Key.DirectionLeft, times = 2)
+        compose.onNodeWithTag("heroInfo").assertIsFocused()
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("heroMyList").assertIsFocused()
+        assertEquals(first, heroTitle())
+        press(Key.DirectionLeft)
+        compose.onNodeWithTag("heroInfo").assertIsFocused()
+        // Left past the last button: the next title, the focus staying on More Info.
+        press(Key.DirectionLeft)
+        compose.onNodeWithTag("heroInfo").assertIsFocused()
+        assertTrue("the carousel turned from $first", heroTitle() != first)
+    }
+
     @Test
     fun everyTabOpensWithTheFocusInIt() {
         start()

@@ -44,6 +44,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -51,6 +52,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -73,9 +75,10 @@ private const val HERO_ADVANCE_MS = 8_000L
 
 /**
  * Home on a TV: the featured titles full screen behind their title, facts, plot and buttons, then rows of cards.
- * The focus starts on Play; Right past the last button turns the page (the drawer is on the left). The titles turn
- * by themselves every 8 s while the focus is elsewhere. While Home has nothing to focus (its catalogue replaced and
- * coming again), the remote can only be in the drawer: Play takes it back once it shows.
+ * The focus starts on Play; past the last button, away from the drawer (Right, Left in a right-to-left language),
+ * turns the page. The titles turn by themselves every 8 s while the focus is elsewhere. While Home has nothing to
+ * focus (its catalogue replaced and coming again), the remote can only be in the drawer: Play takes it back once it
+ * shows.
  */
 @Composable
 fun TvHomeScreen(
@@ -175,6 +178,8 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
         index = (current + 1) % pages.size
     }
     val ink = TvTokens.Ink
+    // Past the last button: Right, or Left where the buttons run from the right.
+    val onward = if (LocalLayoutDirection.current == LayoutDirection.Rtl) Key.DirectionLeft else Key.DirectionRight
     Box(
         Modifier
             .fillMaxWidth()
@@ -231,10 +236,10 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
                 }
                 TvActionButton(
                     onClick = { actions.onOpen(page.item) },
-                    // Right past the last button: the next title.
+                    // Past the last button: the next title.
                     modifier = Modifier
                         .onPreviewKeyEvent { event ->
-                            val next = event.key == Key.DirectionRight && pages.size > 1
+                            val next = event.key == onward && pages.size > 1
                             if (next && event.type == KeyEventType.KeyDown) index = (current + 1) % pages.size
                             next
                         }
