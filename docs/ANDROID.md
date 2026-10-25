@@ -17,8 +17,13 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   reminders (WorkManager notifications), My List tab with collections, search (channels, movies, series, actors
   and directors; filters by release years and by festival or ceremony), categories hidden by language or
   country code, by style or word, or one by one, help, settings (playlists, appearance, adult categories hidden
-  by default, Update awards automatically, Languages and categories, App language, player buffers), welcome
-  screen with a demo and a "player without content" disclaimer.
+  by default, Update awards automatically, Languages and categories, App language, player buffers, TMDb token),
+  welcome screen with a demo and a "player without content" disclaimer.
+- **TMDb** with the viewer's own token (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`): checked
+  with TMDb's `/authentication` before it is saved (accepted, refused, unreachable), kept in the app's private
+  storage and carried by sync (`key:tmdb`, docs/SYNC.md); a Trending row and carousel titles, TMDb's backdrop when
+  the provider's is missing or does not load, TMDb's people in Search, and a person's titles from TMDb's credits.
+  A 401 later (a token revoked, or one that came by sync) shows as refused in Settings, and nothing more is asked.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
   resume, picture-in-picture, MediaSession, audio and subtitle tracks, the viewer's audio and subtitle languages
   learned from their choices and used first for the next streams, forced subtitles still shown with subtitles off

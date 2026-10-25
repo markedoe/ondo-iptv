@@ -147,8 +147,11 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   network keep the same playlists, My List, collections, progress and TMDb token, and iPhone, iPad and Mac sync with
   them; directly between the devices, to local addresses only, nothing through the internet
   ([docs/SYNC.md](docs/SYNC.md)).
+- **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a
+  Trending row on Home and in the carousel, TMDb's background image when the provider's is missing or broken, the
+  people TMDb knows in Search, and all the titles of the playlist on an actor's or a director's page.
 - **Settings**: playlists, appearance, adult categories hidden by default, languages and categories, app language,
-  automatic awards updates, player buffers; welcome screen with a demo.
+  automatic awards updates, player buffers, TMDb token; welcome screen with a demo.
 - **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible
   focus that comes back to the card you left, layouts that keep clear of the screen's edges); a player drawn for
   the remote: large buttons, a progress bar to move through the video, Subtitles and Audio panels that list the

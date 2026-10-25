@@ -159,8 +159,12 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   appareils Android d'un réseau domestique gardent les mêmes playlists, Ma liste, collections, progression et jeton
   TMDb, et iPhone, iPad et Mac se synchronisent avec eux ; directement entre les appareils, vers des adresses locales
   uniquement, rien ne passe par internet ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
+- **TMDb**, avec votre propre jeton (Réglages → TMDb, vérifié auprès de TMDb à l'enregistrement, transmis par la
+  synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel, l'image de fond de TMDb quand celle du
+  fournisseur manque ou ne se charge pas, les personnes que TMDb connaît dans la recherche, et tous les titres de la
+  playlist sur la page d'un acteur ou d'un réalisateur.
 - **Réglages** : playlists, apparence, catégories adultes masquées par défaut, langues et catégories, langue de
-  l'app, mise à jour automatique des prix, mémoire tampon du lecteur ; écran d'accueil avec démo.
+  l'app, mise à jour automatique des prix, mémoire tampon du lecteur, jeton TMDb ; écran d'accueil avec démo.
 - **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande
   (une sélection bien visible, qui revient sur la carte que vous avez quittée, des mises en page qui restent à
   l'écart des bords de l'écran) ; un lecteur dessiné pour la télécommande : de grands boutons, une barre de

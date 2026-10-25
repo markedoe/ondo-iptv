@@ -19,8 +19,14 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   collections, recherche (chaînes, films, séries, acteurs et réalisateurs ; filtres par années de sortie et
   par festival ou cérémonie), catégories masquées par code de langue ou de pays, par style ou par mot, ou une
   à une, aide, réglages (playlists, apparence, catégories adultes masquées par défaut, Mettre à jour les prix
-  automatiquement, Langues et catégories, Langue de l'app, mémoires tampons du lecteur), accueil avec
+  automatiquement, Langues et catégories, Langue de l'app, mémoires tampons du lecteur, jeton TMDb), accueil avec
   démonstration et avertissement « lecteur sans contenu ».
+- **TMDb** avec le jeton de l'utilisateur (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`) :
+  vérifié par `/authentication` de TMDb avant d'être enregistré (accepté, refusé, injoignable), gardé dans le
+  stockage privé de l'app et transmis par la synchronisation (`key:tmdb`, docs/SYNC.fr.md) ; une rangée Tendances et
+  des titres du carrousel, l'image de fond de TMDb quand celle du fournisseur manque ou ne se charge pas, les
+  personnes de TMDb dans la recherche, et les titres d'une personne d'après ses crédits TMDb. Un 401 plus tard (un
+  jeton révoqué, ou arrivé par la synchronisation) s'affiche comme refusé dans les Réglages, et plus rien n'est demandé.
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
   reprise, image dans l'image, MediaSession, pistes audio et sous-titres, les langues de l'audio et des
   sous-titres apprises des choix du spectateur et utilisées d'abord pour les flux suivants, les sous-titres forcés
