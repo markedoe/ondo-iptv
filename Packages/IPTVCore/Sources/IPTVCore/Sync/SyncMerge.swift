@@ -77,6 +77,8 @@ public enum SyncMerge {
             list.items = list.items.filter { alive($0.playlist) }
             return list
         }
+        // A side without keys (a device that does not sync them) removes none: only a deletion does.
+        let keys = pick(left.keys + right.keys, key: \.key, time: \.updatedAt, tie: { $0.value.isBefore($1.value) }, deleted: deleted)
 
         var result = left
         result.playlists = kept.sorted { before(($0.addedAt, $0.id), ($1.addedAt, $1.id)) }
@@ -85,6 +87,7 @@ public enum SyncMerge {
             first.watchedAt != second.watchedAt ? first.watchedAt > second.watchedAt : first.key.isBefore(second.key)
         }
         result.lists = lists.sorted { $0.id.isBefore($1.id) }
+        result.keys = keys.sorted { $0.service.isBefore($1.service) }
         result.deleted = deleted
         result.replaced = replaced
         return result

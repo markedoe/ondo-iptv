@@ -61,7 +61,12 @@ extension AppModel {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard hasTMDbKey, trimmed.count >= 3, let credential = secrets.get(Keychain.tmdbKey) else { return [] }
         let client = TMDbClient(credential: credential, http: http, language: Locale.preferredLanguages.first ?? "en-US")
-        return (try? await client.people(matching: trimmed))?.prefix(8).map(\.name) ?? []
+        do {
+            return try await client.people(matching: trimmed).prefix(8).map(\.name)
+        } catch {
+            noteTMDbFailure(error, credential: credential)
+            return []
+        }
     }
 
     /// The pages already opened, then the person's credits on TMDb (when a key is set) that the playlist has.
@@ -69,8 +74,14 @@ extension AppModel {
         var works = knownWorks(of: name)
         guard let credential = secrets.get(Keychain.tmdbKey) else { return works }
         let client = TMDbClient(credential: credential, http: http, language: Locale.preferredLanguages.first ?? "en-US")
-        guard let person = try? await client.person(named: name),
-              let credits = try? await client.credits(ofPerson: person.id) else { return works }
+        let credits: [TMDbItem]
+        do {
+            guard let person = try await client.person(named: name) else { return works }
+            credits = try await client.credits(ofPerson: person.id)
+        } catch {
+            noteTMDbFailure(error, credential: credential)
+            return works
+        }
         works.searchedOnline = true
         let movies = content.movies
         let series = content.series

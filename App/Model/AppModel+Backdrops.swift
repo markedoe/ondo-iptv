@@ -44,8 +44,12 @@ extension AppModel {
         let title = details.map(\.title).flatMap { $0.isEmpty ? nil : $0 } ?? item.title
         let year = item.year ?? details?.releaseDate.flatMap { Int($0.prefix(4)) }
         let client = TMDbClient(credential: credential, http: http, language: Locale.preferredLanguages.first ?? "en-US")
-        guard let found = try? await client.backdropURL(of: item.contentType, tmdbID: details?.tmdbID, title: title, year: year)
-        else { return }
-        backdrops.fromTMDb[item.id] = found
+        do {
+            guard let found = try await client.backdropURL(of: item.contentType, tmdbID: details?.tmdbID, title: title, year: year)
+            else { return }
+            backdrops.fromTMDb[item.id] = found
+        } catch {
+            noteTMDbFailure(error, credential: credential)
+        }
     }
 }

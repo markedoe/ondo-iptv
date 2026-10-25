@@ -166,6 +166,9 @@ final class AppModel {
     /// Trending titles (TMDb) that exist in the active catalogue.
     private(set) var trending: [TrendingMatch] = []
     private(set) var hasTMDbKey = false
+    /// TMDb answered 401 to a call made with the saved key (one that came by sync is used as it comes): Settings says
+    /// TMDb refused it.
+    private(set) var isTMDbKeyRefused = false
     @ObservationIgnored private var trendingLoadedFor: (playlist: UUID, date: Date)?
 
     /// - Parameters:
@@ -354,12 +357,42 @@ final class AppModel {
 
     // MARK: - Trending (TMDb)
 
-    func setTMDbCredential(_ value: String?) {
+    /// Saves the viewer's TMDb token (once TMDb accepted it), or removes it with nil: other devices get the change by
+    /// sync, dated now.
+    func setTMDbCredential(_ value: String?, now: Date = Date()) {
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
-        secrets.set(trimmed?.isEmpty == false ? trimmed : nil, for: Keychain.tmdbKey)
-        hasTMDbKey = trimmed?.isEmpty == false
+        let saved = trimmed?.isEmpty == false ? trimmed : nil
+        guard storeTMDbCredential(saved) else { return }
+        if saved == nil {
+            syncState.tmdbKeyUpdatedAt = nil
+            syncState.deleted["key:" + SyncKey.tmdb] = now.syncMilliseconds
+        } else {
+            syncState.tmdbKeyUpdatedAt = now.syncMilliseconds
+        }
+        saveSyncState(now: now)
+        syncSoon()
+    }
+
+    /// Writes the TMDb key to the keychain (nil removes it) and refreshes what depends on it; sync calls it without
+    /// dating the key again. False when the keychain refused the write.
+    @discardableResult
+    func storeTMDbCredential(_ value: String?) -> Bool {
+        let stored = secrets.set(value, for: Keychain.tmdbKey)
+        hasTMDbKey = secrets.get(Keychain.tmdbKey) != nil
+        isTMDbKeyRefused = false
         trendingLoadedFor = nil
         if !hasTMDbKey { trending = [] }
+        return stored
+    }
+
+    /// A call to TMDb made with `credential` failed: a 401 for the key still saved means TMDb refuses it now.
+    func noteTMDbFailure(_ error: Error, credential: String) {
+        switch error {
+        case HTTPClientError.badStatus(401):
+            if credential == secrets.get(Keychain.tmdbKey) { isTMDbKeyRefused = true }
+        default:
+            break
+        }
     }
 
     func loadTrending(force: Bool = false) async {
@@ -372,7 +405,13 @@ final class AppModel {
             return
         }
         let language = Locale.preferredLanguages.first ?? "en-US"
-        guard let items = try? await TMDbClient(credential: credential, http: http, language: language).trending() else { return }
+        let items: [TMDbItem]
+        do {
+            items = try await TMDbClient(credential: credential, http: http, language: language).trending()
+        } catch {
+            noteTMDbFailure(error, credential: credential)
+            return
+        }
         let movies = content.movies
         let series = content.series
         let matches = await Task.detached { CatalogueMatcher.match(items, movies: movies, series: series) }.value

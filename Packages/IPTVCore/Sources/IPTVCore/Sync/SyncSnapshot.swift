@@ -1,7 +1,7 @@
 import Foundation
 
-/// What a device sends to sync on the local network: its playlists, My List and favourite channels, lists and
-/// playback progress, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+/// What a device sends to sync on the local network: its playlists, My List and favourite channels, lists, playback
+/// progress and the keys of outside services, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
 ///
 /// The same document as the Kotlin `SyncSnapshot` (android/core): both read the examples of `fixtures/sync`.
 public struct SyncSnapshot: Codable, Hashable, Sendable {
@@ -18,6 +18,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public var favorites: [SyncFavorite]
     public var progress: [SyncProgress]
     public var lists: [SyncList]
+    /// The keys typed in Settings for outside services (the TMDb token); none from a device that does not sync them.
+    public var keys: [SyncKey]
     public var deleted: [String: Int64]
     /// Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID.
     public var replaced: [String: String]
@@ -31,6 +33,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         favorites: [SyncFavorite] = [],
         progress: [SyncProgress] = [],
         lists: [SyncList] = [],
+        keys: [SyncKey] = [],
         deleted: [String: Int64] = [:],
         replaced: [String: String] = [:]
     ) {
@@ -42,12 +45,13 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         self.favorites = favorites
         self.progress = progress
         self.lists = lists
+        self.keys = keys
         self.deleted = deleted
         self.replaced = replaced
     }
 
     enum CodingKeys: String, CodingKey {
-        case type, version, device, deviceName, playlists, favorites, progress, lists, deleted, replaced
+        case type, version, device, deviceName, playlists, favorites, progress, lists, keys, deleted, replaced
     }
 
     /// A missing field takes its default; a field present with the wrong type, or `null` where a value is needed, makes
@@ -62,6 +66,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         favorites = try c.value(.favorites, default: [])
         progress = try c.value(.progress, default: [])
         lists = try c.value(.lists, default: [])
+        keys = try c.value(.keys, default: [])
         deleted = try c.value(.deleted, default: [:])
         replaced = try c.value(.replaced, default: [:])
     }
@@ -250,6 +255,23 @@ public struct SyncListItem: Codable, Hashable, Sendable {
     }
 
     public var key: String { "\(playlist)|\(kind)|\(item)" }
+}
+
+/// The key or token of an outside service, typed in Settings: `service` `tmdb` for TMDb's token (or API Key).
+public struct SyncKey: Codable, Hashable, Sendable {
+    public static let tmdb = "tmdb"
+
+    public var service: String
+    public var value: String
+    public var updatedAt: Int64
+
+    public init(service: String, value: String, updatedAt: Int64) {
+        self.service = service
+        self.value = value
+        self.updatedAt = updatedAt
+    }
+
+    public var key: String { "key:" + service }
 }
 
 private extension KeyedDecodingContainer {

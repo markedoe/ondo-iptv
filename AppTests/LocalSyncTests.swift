@@ -143,6 +143,38 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertNotNil(deleted["progress:\(id)|movie|\(movie.id)|"], "Clear Watch History reaches the other devices")
     }
 
+    func testTheTMDbKeyTravelsAndSoDoesItsRemoval() async throws {
+        let first = try await device("first")
+        let second = try await device("second")
+        first.setTMDbCredential(" example-tmdb-token-a ")
+        let snapshot = first.syncSnapshot()
+        XCTAssertEqual(snapshot.keys.map(\.service), [SyncKey.tmdb])
+        XCTAssertEqual(snapshot.keys.map(\.value), ["example-tmdb-token-a"], "as saved, without the spaces")
+
+        await second.applySync(snapshot)
+        XCTAssertEqual(second.secrets.get(Keychain.tmdbKey), "example-tmdb-token-a")
+        XCTAssertTrue(second.hasTMDbKey)
+        XCTAssertEqual(second.syncSnapshot().keys, snapshot.keys, "sent on with the time it was saved")
+        // A device that does not sync keys answers without them: that removes nothing.
+        await second.applySync(SyncSnapshot(device: "old"))
+        XCTAssertEqual(second.secrets.get(Keychain.tmdbKey), "example-tmdb-token-a")
+
+        // Removed afterwards on the first device: removed here too.
+        try await Task.sleep(for: .milliseconds(5))
+        first.setTMDbCredential(nil)
+        XCTAssertNotNil(first.syncSnapshot().deleted["key:tmdb"])
+        await second.applySync(first.syncSnapshot())
+        XCTAssertNil(second.secrets.get(Keychain.tmdbKey))
+        XCTAssertFalse(second.hasTMDbKey)
+        XCTAssertTrue(second.syncSnapshot().keys.isEmpty)
+
+        // The key of a service this app does not use is passed on, never used.
+        let other = SyncKey(service: "future-service", value: "example-other-key", updatedAt: 300)
+        await second.applySync(SyncSnapshot(device: "b", keys: [other]))
+        XCTAssertEqual(second.syncSnapshot().keys, [other])
+        XCTAssertNil(second.secrets.get(Keychain.tmdbKey))
+    }
+
     func testOnlyAnEditOfWhatSyncCarriesDatesThePlaylist() async throws {
         let first = try await deviceWithLibrary()
         var playlist = try XCTUnwrap(first.activePlaylist)

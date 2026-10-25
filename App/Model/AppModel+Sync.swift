@@ -5,25 +5,33 @@ import UIKit
 #endif
 
 /// What sync keeps on this device besides the library (docs/SYNC.md): its ID, when each playlist was added or last
-/// edited, what was deleted and when, and which playlists became another. Kept in `sync.json`, next to the library,
-/// and never in a backup: another device restored from one must not take this device's ID.
+/// edited, when the TMDb key was saved, the keys of other services passed on, what was deleted and when, and which
+/// playlists became another. Kept in `sync.json`, next to the library, and never in a backup: another device restored
+/// from one must not take this device's ID.
 struct SyncState: Codable, Equatable {
     /// A random UUID made once (lowercase), sent as `device`.
     var deviceID = UUID().uuidString.lowercased()
     /// Milliseconds since 1970, by playlist ID (lowercase): when its name, address, login or guide last changed.
     var playlistUpdatedAt: [String: Int64] = [:]
+    /// Milliseconds since 1970: when the TMDb key of the keychain was saved, here or on the device it came from. Nil for
+    /// a key saved before sync carried it, which counts as the oldest.
+    var tmdbKeyUpdatedAt: Int64?
+    /// The keys of services this app does not use, as other devices sent them: kept only to pass them on.
+    var otherKeys: [SyncKey] = []
     /// Deleted records (`playlist:…`, `list:…`, `progress:…`, and those other devices sent) and when, in milliseconds.
     var deleted: [String: Int64] = [:]
     var replaced: [String: String] = [:]
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case deviceID, playlistUpdatedAt, deleted, replaced }
+    enum CodingKeys: String, CodingKey { case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, deleted, replaced }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         deviceID = (try? c.decodeIfPresent(String.self, forKey: .deviceID)) ?? UUID().uuidString.lowercased()
         playlistUpdatedAt = (try? c.decodeIfPresent([String: Int64].self, forKey: .playlistUpdatedAt)) ?? [:]
+        tmdbKeyUpdatedAt = try? c.decodeIfPresent(Int64.self, forKey: .tmdbKeyUpdatedAt)
+        otherKeys = (try? c.decodeIfPresent([SyncKey].self, forKey: .otherKeys)) ?? []
         deleted = (try? c.decodeIfPresent([String: Int64].self, forKey: .deleted)) ?? [:]
         replaced = (try? c.decodeIfPresent([String: String].self, forKey: .replaced)) ?? [:]
     }
@@ -58,7 +66,8 @@ extension Date {
 enum SyncMapping {
     // MARK: Model → snapshot
 
-    static func snapshot(playlists: [Playlist], library: UserLibrary, state: SyncState, deviceName: String?, now: Date) -> SyncSnapshot {
+    static func snapshot(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, deviceName: String?,
+                         now: Date) -> SyncSnapshot {
         var deleted = state.deleted
         func delete(_ key: String, at date: Date) {
             deleted[key] = max(deleted[key] ?? date.syncMilliseconds, date.syncMilliseconds)
@@ -94,10 +103,27 @@ enum SyncMapping {
                                  item: item.reference.itemID, title: item.title, image: item.imageURL?.absoluteString)
                 }, updatedAt: list.updatedAt.syncMilliseconds)
             },
+            keys: keys(tmdbKey: tmdbKey, state: state),
             deleted: deleted,
             replaced: state.replaced
         )
         return snapshot.pruned(now: now.syncMilliseconds)
+    }
+
+    /// The keychain's TMDb key, dated when it was saved (0 when that is not known: the oldest), and the keys passed on
+    /// for the services this app does not use.
+    static func keys(tmdbKey: String?, state: SyncState) -> [SyncKey] {
+        var keys = state.otherKeys.filter { $0.service != SyncKey.tmdb }
+        if let tmdbKey, !tmdbKey.isEmpty {
+            keys.append(SyncKey(service: SyncKey.tmdb, value: tmdbKey, updatedAt: state.tmdbKeyUpdatedAt ?? 0))
+        }
+        return keys
+    }
+
+    /// A key from another device as it can be used: not empty, no spaces or control characters (it goes into a header
+    /// or an address).
+    static func isUsableKey(_ value: String) -> Bool {
+        !value.isEmpty && value.rangeOfCharacter(from: CharacterSet.whitespacesAndNewlines.union(.controlCharacters)) == nil
     }
 
     /// An M3U address or an Xtream login; nil for a file playlist, which stays on its device.
@@ -288,7 +314,8 @@ extension AppModel {
     }
 
     func syncSnapshot(now: Date = Date()) -> SyncSnapshot {
-        SyncMapping.snapshot(playlists: playlists, library: library, state: syncState, deviceName: Self.syncDeviceName, now: now)
+        SyncMapping.snapshot(playlists: playlists, library: library, state: syncState, tmdbKey: secrets.get(Keychain.tmdbKey),
+                             deviceName: Self.syncDeviceName, now: now)
     }
 
     /// The snapshot to send, or nil when this device does not sync now (not started, another profile).
@@ -387,8 +414,9 @@ extension AppModel {
     }
 
     /// Keeps the merged snapshot a device answered with (docs/SYNC.md, end of "Merge"): new playlists are added (and
-    /// their catalogue downloaded), changed ones updated, deleted ones removed, and My List, favourite channels, lists
-    /// and progress replaced. Merged again with the current state first, so nothing changed during the session is lost.
+    /// their catalogue downloaded), changed ones updated, deleted ones removed, My List, favourite channels, lists and
+    /// progress replaced, and the TMDb key saved or removed. Merged again with the current state first, so nothing
+    /// changed during the session is lost (and an answer without keys removes none).
     func applySync(_ received: SyncSnapshot, now: Date = Date()) async {
         guard isReady, syncsThisProfile else { return }
         let merged = SyncMerge.merge(syncSnapshot(now: now), received)
@@ -443,9 +471,28 @@ extension AppModel {
         let latest = SyncMerge.merge(syncSnapshot(), merged)
         let applied = SyncMapping.library(library, applying: latest)
         if applied != library { updateLibrary { $0 = applied } }
+        applySyncedKeys(latest)
         syncState.deleted = latest.deleted
         syncState.replaced = latest.replaced
         saveSyncState()
+    }
+
+    /// The keys of the merged snapshot: TMDb's saved when it changed (TMDb checked it on the device where it was typed),
+    /// removed when it was removed elsewhere since it was saved here; those of other services kept to pass on, never
+    /// used.
+    private func applySyncedKeys(_ snapshot: SyncSnapshot) {
+        let tmdb = snapshot.keys.first(where: { $0.service == SyncKey.tmdb })
+        if let tmdb, SyncMapping.isUsableKey(tmdb.value) {
+            // Dated as the merge dated it only once the keychain holds it.
+            if tmdb.value == secrets.get(Keychain.tmdbKey) || storeTMDbCredential(tmdb.value) {
+                syncState.tmdbKeyUpdatedAt = tmdb.updatedAt
+            }
+        } else if tmdb == nil, let removed = snapshot.deleted["key:" + SyncKey.tmdb], removed >= (syncState.tmdbKeyUpdatedAt ?? 0),
+                  secrets.get(Keychain.tmdbKey) != nil {
+            // Removed elsewhere: no new deletion here, the other device's time stays.
+            if storeTMDbCredential(nil) { syncState.tmdbKeyUpdatedAt = nil }
+        }
+        syncState.otherKeys = snapshot.keys.filter { $0.service != SyncKey.tmdb }
     }
 
     /// The device's own playlist that the merge found to be `record` under another ID (the same account added on two

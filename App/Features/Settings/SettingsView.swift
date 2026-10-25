@@ -62,20 +62,29 @@ struct SettingsView: View {
     private var tmdbStatus: some View {
         switch tmdbCheck {
         case .refused:
-            Label("TMDb refused it. Copy the whole API Read Access Token again (the API Key works too).", systemImage: "xmark.octagon")
-                .font(.caption)
-                .foregroundStyle(.red)
+            tmdbRefused
         case .unreachable:
             Label("TMDb could not be reached, so nothing was saved. Check the connection and try again.", systemImage: "wifi.exclamationmark")
                 .font(.caption)
                 .foregroundStyle(.orange)
         case .checking, .accepted, nil:
             if model.hasTMDbKey {
-                Label("Accepted by TMDb: trending titles, missing background images and filmographies come from TMDb.", systemImage: "checkmark.circle")
-                    .font(.caption)
-                    .foregroundStyle(.green)
+                // The saved token, refused later (one that came from another device is used as it comes).
+                if model.isTMDbKeyRefused {
+                    tmdbRefused
+                } else {
+                    Label("Accepted by TMDb: trending titles, missing background images and filmographies come from TMDb.", systemImage: "checkmark.circle")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                }
             }
         }
+    }
+
+    private var tmdbRefused: some View {
+        Label("TMDb refused it. Copy the whole API Read Access Token again (the API Key works too).", systemImage: "xmark.octagon")
+            .font(.caption)
+            .foregroundStyle(.red)
     }
 
     /// The language Ondo shows itself in, in that language ("Français").

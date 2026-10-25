@@ -59,6 +59,24 @@ final class SyncTests: XCTestCase {
         XCTAssertTrue(SyncMerge.merge(a, SyncSnapshot(device: "b", deleted: [favorite.key: 10])).favorites.isEmpty)
     }
 
+    func testKeysOfOutsideServicesFollowTheLaterSaveAndTheirRemoval() throws {
+        let merged = SyncMerge.merge(try fixture("a.json"), try fixture("b.json"))
+        // The later save wins, a removal after a save drops it, the key of a service this device does not know stays.
+        XCTAssertEqual(merged.keys, [
+            SyncKey(service: "future-service", value: "example-other-key", updatedAt: 300),
+            SyncKey(service: "tmdb", value: "example-tmdb-token-b", updatedAt: 2500),
+        ])
+        XCTAssertEqual(merged.deleted["key:opensubtitles"], 800)
+        // A device that does not sync keys sends none: that removes nothing.
+        let mine = SyncSnapshot(device: "a", keys: [SyncKey(service: SyncKey.tmdb, value: "example-tmdb-token-a", updatedAt: 1500)])
+        XCTAssertEqual(SyncMerge.merge(mine, SyncSnapshot(device: "old")).keys, mine.keys)
+        XCTAssertEqual(SyncMerge.merge(SyncSnapshot(device: "old"), mine).keys, mine.keys)
+        // On equal times, the smaller value wins, whatever the order.
+        let other = SyncSnapshot(device: "b", keys: [SyncKey(service: SyncKey.tmdb, value: "example-tmdb-token-0", updatedAt: 1500)])
+        XCTAssertEqual(SyncMerge.merge(mine, other).keys.map(\.value), ["example-tmdb-token-0"])
+        XCTAssertEqual(SyncMerge.merge(other, mine).keys.map(\.value), ["example-tmdb-token-0"])
+    }
+
     /// On equal times both platforms keep the same record: strings compare as UTF-16 code units (Kotlin's order), not
     /// as Swift orders them.
     func testTiesCompareStringsAsUTF16CodeUnits() {
