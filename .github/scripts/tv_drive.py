@@ -294,6 +294,21 @@ def settings_section(tv, section):
     time.sleep(1)
 
 
+def settings_button(tv, label, max_presses=12):
+    """On Settings' right side, the remote moved to a playlist's button [label] (Use, Refresh…): up through the cards,
+    left along a card's buttons, back to the right side if it went over to the parts."""
+    for i in range(max_presses + 1):
+        _, texts = tv.focused()
+        if label in texts:
+            return
+        if any(part in texts for part in SETTINGS_SECTIONS):
+            tv.key("RIGHT")
+        else:
+            tv.key("UP" if i % 2 == 0 else "LEFT")
+    tv.screenshot(f"never-focused-{label}")
+    raise TimeoutError(f"the focus never reached the button '{label}' (on: {' | '.join(tv.focused()[1])})")
+
+
 def back_to_settings_row(tv, page):
     """Back from a page a row of Settings opened: the remote should be on that row; noted when it is on the part on
     the left instead, and Right goes back to the rows."""
@@ -666,7 +681,10 @@ def path_playlists(tv, args):
     if not tv.visible("Use"):
         settings_section(tv, "Playlists")
         tv.key("RIGHT")
-    tv.open("Use", keys=("DOWN", "UP"), max_presses=8, exact=True, wait=1)
+    # Back from the form, the remote is on Add a Playlist again; Use is on the first card.
+    settings_button(tv, "Use")
+    tv.key("DPAD_CENTER")
+    time.sleep(1)
     tv.stay(40, "the first playlist used again")
     tv.note_screen("playlists-switched")
     settings_section(tv, "Playlists")
@@ -1071,14 +1089,16 @@ def path_bitrate(tv, args):
     """Movie 1 at a 4K film's bitrate (heavy.mkv, 40 Mbit/s, 75 s) played for 50 s beside the catalogue: what the
     player keeps ahead of the picture must fit in the app's memory with it. The Java heap is noted every 10 s. The app
     running out of memory fails, even when the player only shows an error, and so does the error itself."""
-    tv.drawer("Movies")
-    tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=3)
+    # Movie 1 found by its name: the Movies tab's rows move as the earlier paths change the library.
+    tv.drawer("Search")
+    tv.focus_on_field(0)
+    tv.shell("input text 'Movie%s1'")
+    tv.stay(4, "Movie 1 searched")
+    tv.key("TAB")
+    time.sleep(1)
+    tv.open("Movie 1", keys=("DOWN", "RIGHT", "TAB"), max_presses=12, exact=True, wait=3)
     def movie_page():
         return (tv.visible("Play") or tv.visible("From Start")) and tv.visible("Collection")
-    if not movie_page():
-        # OK pressed while the catalogue was still being laid out: once more, on Movie 1 again.
-        tv.say("  bitrate: no movie page 3 s after OK; OK again on Movie 1")
-        tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=3)
     tv.wait_for("a movie page", movie_page, 30)
     if not tv.visible("Movie 1 "):
         tv.say("  bitrate: the page opened is not Movie 1's")
