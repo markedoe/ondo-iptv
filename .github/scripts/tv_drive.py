@@ -1096,7 +1096,9 @@ def path_bitrate(tv, args):
     tv.stay(4, "Movie 1 searched")
     tv.key("TAB")
     time.sleep(1)
-    tv.open("Movie 1", keys=("DOWN", "RIGHT", "TAB"), max_presses=12, exact=True, wait=3)
+    # Down lands on the card under the focus, in the row's middle; the exact name is the row's first card.
+    tv.focus_on("Movie 1", keys=("DOWN",), max_presses=4, editable=False)
+    tv.open("Movie 1", keys=("LEFT",), max_presses=20, exact=True, wait=3)
     def movie_page():
         return (tv.visible("Play") or tv.visible("From Start")) and tv.visible("Collection")
     tv.wait_for("a movie page", movie_page, 30)
@@ -1142,8 +1144,7 @@ def path_bitrate(tv, args):
 
 
 PATHS = {
-    # First: the heavy film beside the catalogue as it loads, before the other paths change the library (a watched
-    # Movie 1 moves in the rows and the search).
+    # First: the heavy film beside the catalogue as it loads, before the other paths change the library.
     "bitrate": path_bitrate,
     "settings": path_settings,
     "search": path_search,
