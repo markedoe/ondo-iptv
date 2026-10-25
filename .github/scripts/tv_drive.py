@@ -294,6 +294,21 @@ def settings_section(tv, section):
     time.sleep(1)
 
 
+def settings_button(tv, label, max_presses=12):
+    """On Settings' right side, the remote moved to a playlist's button [label] (Use, Refresh…): up through the cards,
+    left along a card's buttons, back to the right side if it went over to the parts."""
+    for i in range(max_presses + 1):
+        _, texts = tv.focused()
+        if label in texts:
+            return
+        if any(part in texts for part in SETTINGS_SECTIONS):
+            tv.key("RIGHT")
+        else:
+            tv.key("UP" if i % 2 == 0 else "LEFT")
+    tv.screenshot(f"never-focused-{label}")
+    raise TimeoutError(f"the focus never reached the button '{label}' (on: {' | '.join(tv.focused()[1])})")
+
+
 def back_to_settings_row(tv, page):
     """Back from a page a row of Settings opened: the remote should be on that row; noted when it is on the part on
     the left instead, and Right goes back to the rows."""
@@ -666,7 +681,10 @@ def path_playlists(tv, args):
     if not tv.visible("Use"):
         settings_section(tv, "Playlists")
         tv.key("RIGHT")
-    tv.open("Use", keys=("DOWN", "UP"), max_presses=8, exact=True, wait=1)
+    # Back from the form, the remote is on Add a Playlist again; Use is on the first card.
+    settings_button(tv, "Use")
+    tv.key("DPAD_CENTER")
+    time.sleep(1)
     tv.stay(40, "the first playlist used again")
     tv.note_screen("playlists-switched")
     settings_section(tv, "Playlists")
