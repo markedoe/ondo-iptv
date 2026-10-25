@@ -204,14 +204,26 @@ class Tv:
         time.sleep(wait)
         self.check_alive(f"{label} pressed")
 
+    def catalogue_on_screen(self):
+        """A title of the made-up panel's catalogue on screen (Home's carousel or rows), not only the app's own words."""
+        root = self.screen()
+        return root is not None and any(re.search(r"\b(Movie|Series) \d+", text) for text in self.texts(root))
+
     def restart(self):
-        """Ondo stopped and started again: Home with the saved playlist, read back from the device's storage."""
+        """Ondo stopped and started again: Home with the saved playlist, read back from the device's storage. How long
+        its titles took to show is noted (the catalogue read again, nothing downloaded)."""
         self.shell(f"am force-stop {PACKAGE}")
         time.sleep(1)
+        started = time.time()
         self.shell(f"am start -W -n {ACTIVITY}")
         self.pid = self.current_pid()
         self.say(f"restarted, pid {self.pid}")
         self.wait_for("home after a restart", lambda: self.visible("Live TV") and not self.visible("Try the demo"), 60)
+        try:
+            self.wait_for("the catalogue after a restart", self.catalogue_on_screen, 90, every=0.5)
+            self.say(f"  catalogue on screen {time.time() - started:.1f} s after the restart")
+        except TimeoutError:
+            self.say("  no title of the catalogue on screen 90 s after the restart")
         time.sleep(3)
         self.check_alive("home after a restart")
 
@@ -1171,7 +1183,26 @@ def path_bitrate(tv, args):
         raise Stopped("bitrate: " + "; ".join(dict.fromkeys(problems)))
 
 
+def path_rows(tv, args):
+    """The remote along Home's rows, filmed (rows.mp4 with the screenshots): how a row moves when a card takes the
+    focus, and the page when the next row does."""
+    tv.shell("rm -f /sdcard/rows.mp4")
+    recorder = subprocess.Popen(["adb", "shell", "screenrecord", "--time-limit", "30", "--bit-rate", "8000000", "/sdcard/rows.mp4"])
+    time.sleep(2)
+    for row in range(3):
+        tv.key("DOWN", pause=1.0)
+        for _ in range(6):
+            tv.key("RIGHT", pause=0.8)
+    tv.key("UP", pause=1.0)
+    recorder.wait(timeout=60)
+    time.sleep(2)
+    tv.adb("pull", "/sdcard/rows.mp4", os.path.join(tv.out, "rows.mp4"), timeout=120)
+    tv.note_screen("rows-filmed")
+    tv.check_alive("along the rows")
+
+
 PATHS = {
+    "rows": path_rows,
     "settings": path_settings,
     "search": path_search,
     "details": path_details,
