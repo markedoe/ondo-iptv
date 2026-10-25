@@ -1114,8 +1114,11 @@ def path_bitrate(tv, args):
         tv.say("  bitrate: the page opened is not Movie 1's")
     since = tv.shell("date '+%m-%d %H:%M:%S.000'").strip()
     started = time.monotonic()
-    # A movie watched by an earlier path plays from the start.
-    tv.open("From Start" if tv.visible("From Start") else "Play", keys=("UP", "LEFT"), max_presses=4, wait=5)
+    # A movie watched by an earlier path plays from the start: From Start is right of Resume.
+    if tv.visible("From Start"):
+        tv.open("From Start", keys=("RIGHT",), max_presses=3, wait=5)
+    else:
+        tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=5)
     if not tv.player_shown():
         raise TimeoutError("the player never opened from Movie 1")
     limit = tv.shell("getprop dalvik.vm.heapgrowthlimit").strip()
