@@ -4,7 +4,7 @@ first launch, Add a Playlist, Xtream Codes (the made-up panel of fake_xtream_pan
 `adb reverse`), Add, then every tab. Watches the app's process the whole time: a crash, an ANR or Android ending the
 app fails the run. Screenshots, the screen's text, logcat, the exit reasons and memory use go to the output folder.
 With --paths, more of the app after that, each path from a fresh start of the app (the saved playlist read again):
-bitrate, settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, crash (see PATHS).
+settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, bitrate, crash (see PATHS).
 
 Usage: tv_drive.py <output folder> [--server http://localhost:8080] [--wait-load 240] [--paths settings,search,...]
 """
@@ -1152,8 +1152,6 @@ def path_bitrate(tv, args):
 
 
 PATHS = {
-    # First: the heavy film beside the catalogue as it loads, before the other paths change the library.
-    "bitrate": path_bitrate,
     "settings": path_settings,
     "search": path_search,
     "details": path_details,
@@ -1165,6 +1163,8 @@ PATHS = {
     "browse": path_browse,
     "sync": path_sync,
     "keyboard": path_keyboard,
+    # Near the end: Movie 1, watched here, then resumes on OK where it stopped instead of opening its page.
+    "bitrate": path_bitrate,
     # Last: it crashes the app on purpose.
     "crash": path_crash,
 }
