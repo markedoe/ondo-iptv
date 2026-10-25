@@ -3,10 +3,13 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.library.PlaybackFactory
 import com.markedoe.ondo.core.library.PlaylistLoader
+import com.markedoe.ondo.core.library.TmdbClient
+import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
@@ -23,6 +26,7 @@ import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.core.xtream.XtreamClient
@@ -30,6 +34,7 @@ import com.markedoe.ondo.player.LivePause
 import com.markedoe.ondo.player.PlayRequest
 import com.markedoe.ondo.ui.UiMappers
 import java.io.File
+import java.util.Locale
 import java.util.UUID
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -71,6 +76,12 @@ data class OndoState(
      * "Channel 12"…): [content] has them; the episodes of [seriesDetails] are kept as they came (they are saved).
      */
     val placeholderNames: PlaceholderNames = PlaceholderNames.ENGLISH,
+    /** TMDb's trending titles found in the catalogue (with the viewer's token), in TMDb's order. */
+    val trending: List<TrendingMatch> = emptyList(),
+    /** TMDb's backdrop for a title whose provider gave none that loads, by `movie:<id>` or `series:<id>`. */
+    val tmdbBackdrops: Map<String, String> = emptyMap(),
+    /** TMDb refused the saved token when it was used (it was checked elsewhere, or revoked since): Settings says so. */
+    val tmdbRefused: Boolean = false,
 ) {
     val activePlaylist: SavedPlaylist? get() = playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull()
     val activePlaylistId: String? get() = activePlaylist?.id
@@ -367,7 +378,8 @@ class OndoRepository(
     private fun applySync(merged: SyncSnapshot) {
         val state = _state.value
         val applied = SyncData.apply(state, merged)
-        if (applied.playlists == state.playlists && applied.library == state.library) return
+        val keysChanged = applied.keys != state.settings.serviceKeys
+        if (applied.playlists == state.playlists && applied.library == state.library && !keysChanged) return
         val removedIds = applied.removed.mapTo(HashSet()) { it.id }
         state.library.reminders.filter { it.playlistId in removedIds }.forEach(reminderScheduler::cancel)
         // The playlist in use stays unless it was deleted, or becomes the same one from another device that replaced it;
@@ -375,7 +387,7 @@ class OndoRepository(
         val active = state.settings.activePlaylistId?.takeIf { id -> applied.playlists.any { it.id == id } }
             ?: state.activePlaylistId?.let { applied.replacements[it] }
             ?: applied.playlists.firstOrNull()?.id
-        val settings = state.settings.copy(activePlaylistId = active)
+        val settings = state.settings.copy(activePlaylistId = active, serviceKeys = applied.keys)
         val before = state.activePlaylist
         persist {
             if (applied.removed.isEmpty()) savePlaylists(applied.playlists) else applied.removed.forEach { savePlaylists(applied.playlists, it) }
@@ -400,6 +412,8 @@ class OndoRepository(
             // Another address or login for the playlist in use: its catalogue comes again from there.
             before.url != after.url || before.username != after.username || before.password != after.password -> load(after)
         }
+        // A TMDb token saved, changed or removed on another device: used from now on, as if typed here.
+        if (state.settings.tmdbToken != settings.tmdbToken) tmdbTokenChanged()
     }
 
     fun setHideWatchedMovies(hide: Boolean) = updateSettings { it.copy(hideWatchedMovies = hide) }
@@ -479,6 +493,7 @@ class OndoRepository(
                 val shown = shown(cached)
                 _state.update { it.copy(content = shown, isRestoring = false) }
                 loadGuide(playlist, cached)
+                loadTrending()
             }
             if (cached == null || now() - cached.fetchedAt > REFRESH_AFTER_MS) load(playlist)
         }
@@ -495,6 +510,7 @@ class OndoRepository(
                         val shown = shown(content)
                         _state.update { it.copy(content = shown, isLoading = false) }
                         loadGuide(playlist, content)
+                        loadTrending()
                     } else {
                         _state.update { it.copy(isLoading = false) }
                     }
@@ -853,8 +869,116 @@ class OndoRepository(
         epgUrls = listOfNotNull(epgUrl),
     )
 
+    // MARK: TMDb (the viewer's own token, checked with TMDb when saved; sync carries it, docs/SYNC.md)
+
+    /** When the trending titles were last asked for, and for which playlist. */
+    private var trendingLoadedFor: Pair<String, Long>? = null
+    private val backdropsSearched = HashSet<String>()
+
+    private fun tmdbClient(): TmdbClient? =
+        _state.value.settings.tmdbToken?.takeUnless { _state.value.tmdbRefused }?.let { TmdbClient(it, http, Locale.getDefault().toLanguageTag()) }
+
+    /** Asks TMDb whether it accepts [value], and saves it only then (refused or out of reach: nothing is saved). */
+    suspend fun checkAndSaveTmdbToken(value: String): TmdbCheck {
+        val trimmed = value.trim()
+        if (trimmed.isEmpty()) return TmdbCheck.REFUSED
+        val accepted = try {
+            withContext(io) { TmdbClient(trimmed, http).isAccepted() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return TmdbCheck.UNREACHABLE
+        }
+        if (!accepted) return TmdbCheck.REFUSED
+        updateSettings { settings -> settings.copy(serviceKeys = settings.serviceKeys.filterNot { it.service == SyncKey.TMDB } + SyncKey(SyncKey.TMDB, trimmed, now())) }
+        tmdbTokenChanged()
+        return TmdbCheck.ACCEPTED
+    }
+
+    /** Removes the TMDb token here, and on the other devices with the next sync. */
+    fun removeTmdbToken() {
+        if (_state.value.settings.serviceKeys.none { it.service == SyncKey.TMDB }) return
+        updateSettings { settings -> settings.copy(serviceKeys = settings.serviceKeys.filterNot { it.service == SyncKey.TMDB }) }
+        updateLibrary { it.deleting("key:${SyncKey.TMDB}", now()) }
+        tmdbTokenChanged()
+    }
+
+    private fun tmdbTokenChanged() {
+        trendingLoadedFor = null
+        backdropsSearched.clear()
+        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap()) }
+        loadTrending()
+    }
+
+    /** TMDb answered 401: the token no longer works. Settings says so, and nothing more is asked with it. */
+    private fun noteTmdbFailure(error: Throwable) {
+        if ((error as? HttpException.BadStatus)?.code == 401) _state.update { it.copy(tmdbRefused = true, trending = emptyList()) }
+    }
+
+    private suspend fun <T> tmdb(block: suspend TmdbClient.() -> T): T? {
+        val client = tmdbClient() ?: return null
+        return try {
+            withContext(io) { client.block() }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            noteTmdbFailure(e)
+            null
+        }
+    }
+
+    /** TMDb's trending movies and series that the playlist has, asked again after [TRENDING_FRESH_MS]. */
+    fun loadTrending(force: Boolean = false) {
+        val state = _state.value
+        val playlist = state.activePlaylistId ?: return
+        if (state.settings.tmdbToken == null || state.tmdbRefused || state.content.movies.isEmpty() && state.content.series.isEmpty()) return
+        val loaded = trendingLoadedFor
+        if (!force && loaded != null && loaded.first == playlist && now() - loaded.second < TRENDING_FRESH_MS) return
+        trendingLoadedFor = playlist to now()
+        scope.launch {
+            val items = tmdb { trending() }
+            if (items == null) {
+                trendingLoadedFor = null
+                return@launch
+            }
+            val content = _state.value.content
+            val matches = withContext(Dispatchers.Default) { CatalogueMatcher.match(items, content.movies, content.series) }
+            if (_state.value.activePlaylistId == playlist) _state.update { it.copy(trending = matches) }
+        }
+    }
+
+    /**
+     * With the viewer's token, looks once a session for TMDb's backdrop of a title whose provider gave none that
+     * loads: by the TMDb id the provider gave, else by title and year. Only those are sent.
+     */
+    fun findTmdbBackdrop(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
+        if (_state.value.settings.tmdbToken == null || key in _state.value.tmdbBackdrops || !backdropsSearched.add(key)) return
+        scope.launch {
+            val found = tmdb { backdropUrl(series, tmdbId, title, year) } ?: return@launch
+            _state.update { it.copy(tmdbBackdrops = it.tmdbBackdrops + (key to found)) }
+        }
+    }
+
+    /** With the viewer's token, the names of the people TMDb finds for a search (only the words typed are sent). */
+    suspend fun tmdbPeople(query: String): List<String> {
+        val trimmed = query.trim()
+        if (trimmed.length < 3) return emptyList()
+        return tmdb { people(trimmed) }?.map { it.name }?.filter { it.isNotBlank() }?.distinct()?.take(8).orEmpty()
+    }
+
+    /** With the viewer's token, the person's movies and series on TMDb that the playlist has; null without a token. */
+    suspend fun tmdbWorks(name: String): List<TrendingMatch>? {
+        if (_state.value.settings.tmdbToken == null) return null
+        val credits = tmdb { person(name)?.let { credits(it.id) } } ?: return null
+        val content = _state.value.content
+        return withContext(Dispatchers.Default) { CatalogueMatcher.match(credits, content.movies, content.series) }
+    }
+
     companion object {
         const val REFRESH_AFTER_MS = 24 * 60 * 60 * 1000L
+
+        /** TMDb's trending titles are asked for again after this (as on Apple devices). */
+        const val TRENDING_FRESH_MS = 6 * 60 * 60 * 1000L
         private const val DETAILS_SAVE_DELAY_MS = 2_000L
 
         fun hostName(url: String): String = runCatching { java.net.URI(url.trim()).host }.getOrNull()?.removePrefix("www.") ?: "Playlist"

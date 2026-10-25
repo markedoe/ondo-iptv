@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.sync.SyncFavorite
+import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
 import com.markedoe.ondo.core.sync.SyncPlaylist
@@ -55,6 +56,7 @@ object SyncData {
         state.library.collections,
         state.library.syncDeleted,
         state.library.history.filter(SyncKeys::syncs).map { it.key to it.isFinished },
+        state.settings.serviceKeys,
     )
 
     fun snapshot(state: OndoState, device: String, deviceName: String?, now: Long): SyncSnapshot {
@@ -105,6 +107,7 @@ object SyncData {
                     updatedAt = list.updatedAt,
                 )
             },
+            keys = state.settings.serviceKeys.filter { it.value.isNotBlank() },
             deleted = library.syncDeleted,
             replaced = library.syncReplaced,
         ).pruned(now)
@@ -119,6 +122,8 @@ object SyncData {
         val removed: List<SavedPlaylist>,
         val library: LibraryState,
         val replacements: Map<String, String> = emptyMap(),
+        /** The keys of outside services to keep: the merged ones (this device's own were part of the merge). */
+        val keys: List<SyncKey> = emptyList(),
     )
 
     private fun usable(playlist: SyncPlaylist) = playlist.id.isNotBlank() && playlist.url.isNotBlank() && !SyncKeys.isFile(playlist.url) && when (playlist.kind) {
@@ -223,7 +228,7 @@ object SyncData {
                 }
                 if (carried.isEmpty()) result else result.copy(hiddenCategories = result.hiddenCategories + carried)
             }
-        return Applied(playlists, removed, applied, replacements.toMap())
+        return Applied(playlists, removed, applied, replacements.toMap(), merged.keys)
     }
 
     /** Replacements followed at most, as the merge follows them (docs/SYNC.md, "Merge"). */

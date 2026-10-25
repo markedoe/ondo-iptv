@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.ui.theme.Appearance
 import kotlinx.serialization.Serializable
 
@@ -61,4 +62,13 @@ data class AppSettings(
     val videoScale: VideoScale = VideoScale.FIT,
     /** The subtitle size last chosen in the player, kept for the next videos. */
     val subtitleSize: SubtitleSize = SubtitleSize.NORMAL,
-)
+    /**
+     * The keys of outside services saved in Settings (the viewer's TMDb token), each with the time it was saved; sync
+     * carries them (docs/SYNC.md), the keys of services this version does not know included.
+     */
+    val serviceKeys: List<SyncKey> = emptyList(),
+) {
+    /** The viewer's TMDb token (or API Key), typed here or arrived by sync. */
+    val tmdbToken: String?
+        get() = serviceKeys.firstOrNull { it.service == SyncKey.TMDB }?.value?.takeIf { it.isNotBlank() }
+}
