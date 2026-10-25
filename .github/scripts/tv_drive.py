@@ -27,6 +27,10 @@ class Stopped(Exception):
     pass
 
 
+class Wrong(Exception):
+    """A path driven to its end that found the app doing the wrong thing: the run fails, the next paths still run."""
+
+
 class Tv:
     def __init__(self, out):
         self.out = out
@@ -310,13 +314,15 @@ def settings_button(tv, label, max_presses=12):
 
 
 def back_to_settings_row(tv, page):
-    """Back from a page a row of Settings opened: the remote should be on that row; noted when it is on the part on
-    the left instead, and Right goes back to the rows."""
+    """Back from a page a row of Settings opened: the remote should be on that row. When it is on the part on the left
+    instead, Right goes back to the rows and the page is returned (the path fails at its end)."""
     _, texts = tv.focused()
     if any(part in texts for part in SETTINGS_SECTIONS):
         tv.say(f"  back from {page}: the remote is on the part '{' | '.join(texts)}', not on the row that opened it")
         tv.key("RIGHT")
         time.sleep(1)
+        return [page]
+    return []
 
 
 def path_settings(tv, args):
@@ -382,7 +388,7 @@ def path_settings(tv, args):
     tv.note_screen("settings-help")
     tv.key("BACK")
     time.sleep(2)
-    back_to_settings_row(tv, "Help")
+    misplaced = back_to_settings_row(tv, "Help")
     for row in ("Privacy policy", "Support"):
         if not tv.visible("Privacy policy"):
             settings_section(tv, "About")
@@ -392,7 +398,7 @@ def path_settings(tv, args):
         tv.key("BACK")
         time.sleep(3)
         tv.check_alive(f"back from {row}")
-        back_to_settings_row(tv, row)
+        misplaced += back_to_settings_row(tv, row)
     if not tv.visible("Privacy policy"):
         settings_section(tv, "About")
         tv.key("RIGHT")
@@ -408,6 +414,8 @@ def path_settings(tv, args):
     tv.key("BACK")
     time.sleep(3)
     tv.check_alive("back from the Settings")
+    if misplaced:
+        raise Wrong(f"back from {', '.join(misplaced)}: the remote was on the part on the left, not on the row that opened it")
 
 
 def path_search(tv, args):
@@ -1265,8 +1273,10 @@ def main():
             time.sleep(3)
             tv.check_alive("idle at the end")
         tv.screenshot("end")
-        # Each path from a fresh start: a path the remote could not finish does not stop the others; a crash does.
+        # Each path from a fresh start: a path the remote could not finish, or one that found the app wrong, does not
+        # stop the others; a crash does.
         missed = []
+        wrong = []
         for name in paths:
             tv.say(f"path {name}")
             try:
@@ -1277,8 +1287,16 @@ def main():
                 missed.append(name)
                 tv.say(f"path {name}: NOT DRIVEN to its end: {problem}")
                 tv.note_screen(f"{name}-stuck")
+            except Wrong as problem:
+                wrong.append(name)
+                tv.say(f"path {name}: WRONG: {problem}")
+        problems = []
         if missed:
-            raise RuntimeError(f"no crash, but the remote never got through: {', '.join(missed)}")
+            problems.append(f"the remote never got through: {', '.join(missed)}")
+        if wrong:
+            problems.append(f"the app did the wrong thing: {', '.join(wrong)}")
+        if problems:
+            raise RuntimeError("no crash, but " + "; ".join(problems))
         tv.say("PASS: no crash, no ANR, the app ran throughout" + (f" (paths: {', '.join(paths)})" if paths else ""))
         result = 0
     except (Stopped, TimeoutError, RuntimeError, subprocess.TimeoutExpired) as problem:
