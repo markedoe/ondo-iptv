@@ -158,6 +158,28 @@ class OndoViewModelTest {
         assertEquals(1, searches.size)
     }
 
+    /** Search with the viewer's TMDb token: the people TMDb knows by the words typed join the playlist's own. */
+    @Test
+    fun searchAddsThePeopleTmdbKnows() = runTest {
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
+                url == list -> catalogue
+                url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
+                url.startsWith("https://api.themoviedb.org/3/search/person?") ->
+                    """{"results":[{"id":3,"name":"Anna Sample","known_for_department":"Acting","popularity":5.0}]}"""
+                else -> throw HttpException.BadStatus(404)
+            }.encodeToByteArray()
+        }
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
+        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        repository.addPlaylist("Home", list)
+        viewModel.state.first { it.content.movies.isNotEmpty() }
+        backgroundScope.launch { viewModel.search.collect {} }
+        assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
+        viewModel.setQuery("Anna")
+        assertEquals(listOf("Anna Sample"), viewModel.search.first { it.query == "Anna" && it.people.isNotEmpty() }.people)
+    }
+
     @Test
     fun playOnASeriesShowsProgressAndASecondTapDoesNotPlayTwice() = runTest {
         val gate = CompletableDeferred<Unit>()

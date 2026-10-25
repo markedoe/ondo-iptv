@@ -528,17 +528,30 @@ object UiMappers {
      * The movies and series whose opened page names this person (cast or director), and the series whose list entry
      * does (series lists name their cast; movie lists do not), newest first.
      */
-    fun person(state: OndoState, name: String): PersonUiState {
+    fun person(state: OndoState, name: String, online: List<TrendingMatch>? = null): PersonUiState {
         val hidden = hiddenCategoryIds(state)
         fun names(details: MediaDetails) = People.mentions(details.cast, name) || People.mentions(details.director, name)
         val movieIds = state.movieDetails.filterValues(::names).keys
         val seriesIds = state.seriesDetails.filterValues { names(it.info) }.keys
         val watched = hiddenMovieIds(state)
-        val movies = state.content.movies.filter { it.id in movieIds && it.categoryId !in hidden && it.id !in watched }.map { ShowcaseItem.MovieItem(it) }
+        // With the viewer's TMDb token, the titles TMDb credits the person with that the playlist has.
+        val onlineMovies = online.orEmpty().mapNotNullTo(HashSet()) { (it as? TrendingMatch.MovieMatch)?.movie?.id }
+        val onlineSeries = online.orEmpty().mapNotNullTo(HashSet()) { (it as? TrendingMatch.SeriesMatch)?.series?.id }
+        val movies = state.content.movies
+            .filter { (it.id in movieIds || it.id in onlineMovies) && it.categoryId !in hidden && it.id !in watched }
+            .distinctBy { it.id }
+            .map { ShowcaseItem.MovieItem(it) }
         val series = state.content.series.filter { show ->
-            show.categoryId !in hidden && (show.id in seriesIds || People.mentions(show.cast, name) || People.mentions(show.director, name))
-        }.map { ShowcaseItem.SeriesItem(it) }
-        return PersonUiState(name, sorted(movies, PosterSort.RELEASE), sorted(series, PosterSort.RELEASE))
+            show.categoryId !in hidden &&
+                (show.id in seriesIds || show.id in onlineSeries || People.mentions(show.cast, name) || People.mentions(show.director, name))
+        }.distinctBy { it.id }.map { ShowcaseItem.SeriesItem(it) }
+        return PersonUiState(
+            name,
+            sorted(movies, PosterSort.RELEASE),
+            sorted(series, PosterSort.RELEASE),
+            searchedOnline = online != null,
+            hasTmdbToken = state.settings.tmdbToken != null,
+        )
     }
 
     /** Normalised titles, built once per catalogue (see [of]). */
@@ -627,6 +640,17 @@ object UiMappers {
             movies = sorted(movies, PosterSort.RELEASE).take(FILTERED_LIMIT),
             series = sorted(series, PosterSort.RELEASE).take(FILTERED_LIMIT),
         )
+    }
+
+    /**
+     * The people of a search: the playlist's, then those TMDb knows by the words typed (with the viewer's token), each
+     * name once. [online] is TMDb's answer for [query]; one for an older query, or a filtered search, adds nobody.
+     */
+    fun withTmdbPeople(search: SearchUiState, query: String, online: List<String>): SearchUiState {
+        if (online.isEmpty() || search.query != query || search.filters.isActive) return search
+        val seen = search.people.mapTo(HashSet()) { TextNormalizer.normalize(it) }
+        val added = online.filter { it.isNotBlank() && seen.add(TextNormalizer.normalize(it)) }
+        return if (added.isEmpty()) search else search.copy(people = search.people + added)
     }
 
     /** The festivals and ceremonies some visible movie took part in, in the order of the awards file. */

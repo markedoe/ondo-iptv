@@ -1,9 +1,11 @@
 package com.markedoe.ondo.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -15,6 +17,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -23,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -38,9 +42,17 @@ data class PersonUiState(
     val name: String = "",
     val movies: List<ShowcaseItem> = emptyList(),
     val series: List<ShowcaseItem> = emptyList(),
+    /** TMDb's credits were searched (with the viewer's token): all the person's titles of the playlist are listed. */
+    val searchedOnline: Boolean = false,
+    /** TMDb is being asked. */
+    val searching: Boolean = false,
+    val hasTmdbToken: Boolean = false,
 )
 
-/** A name tapped in a movie's or series' credits: their movies and series among the pages already opened. */
+/**
+ * A name tapped in a movie's or series' credits: their movies and series among the pages already opened, and with the
+ * viewer's TMDb token all those of the playlist TMDb credits them with.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: () -> Unit) {
@@ -64,7 +76,9 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
         }
         works(R.string.movies, state.movies, onOpen)
         works(R.string.series, state.series, onOpen)
-        if (state.movies.isEmpty() && state.series.isEmpty()) {
+        if (state.searching && state.movies.isEmpty() && state.series.isEmpty()) {
+            fullWidth { Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
+        } else if (state.movies.isEmpty() && state.series.isEmpty()) {
             fullWidth {
                 Column(Modifier.padding(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.person_nothing_title), style = MaterialTheme.typography.titleMedium)
@@ -72,12 +86,16 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
                 }
             }
         }
-        fullWidth {
-            Text(
-                stringResource(R.string.person_opened_pages),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        // Without TMDb's credits, only the pages already opened name their cast.
+        if (!state.searchedOnline && !state.searching) {
+            fullWidth {
+                Text(
+                    stringResource(if (state.hasTmdbToken) R.string.person_opened_pages else R.string.person_opened_pages_tmdb),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("personHint"),
+                )
+            }
         }
     }
 }

@@ -58,6 +58,7 @@ import androidx.lifecycle.Lifecycle
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
+import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.player.PlayerActivity
@@ -559,9 +560,16 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
 @Composable
 private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostController, name: String) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    // With the viewer's TMDb token, the person's credits on TMDb (asked once per name and token).
+    val token = state.settings.tmdbToken
+    val online by produceState<Pair<Boolean, List<TrendingMatch>?>>(false to null, name, token) {
+        value = false to null
+        value = true to (if (token == null) null else viewModel.tmdbWorks(name))
+    }
     // Off the main thread: it looks through the whole catalogue.
-    val works by produceState(PersonUiState(name), state, name) {
-        value = withContext(Dispatchers.Default) { UiMappers.person(state, name) }
+    val works by produceState(PersonUiState(name), state, name, online) {
+        val (asked, matches) = online
+        value = withContext(Dispatchers.Default) { UiMappers.person(state, name, matches).copy(searching = token != null && !asked) }
     }
     PersonScreen(works, onOpen = navController::open, onBack = { navController.popBackStack() })
 }

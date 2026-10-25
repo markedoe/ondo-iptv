@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.BuildConfig
+import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.Series
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -147,7 +149,7 @@ class OndoViewModel(
     val searchFilters: StateFlow<SearchFilters> = _searchFilters.asStateFlow()
 
     /** A newer query stops the search under way (it is not finished for nothing). */
-    val search: StateFlow<SearchUiState> = combine(searchIndex, _query.debounce(200), _searchFilters, searchState) { index, query, filters, state ->
+    private val playlistSearch: Flow<SearchUiState> = combine(searchIndex, _query.debounce(200), _searchFilters, searchState) { index, query, filters, state ->
         SearchInput(index, query, filters, state)
     }
         .mapLatest { input ->
@@ -155,6 +157,13 @@ class OndoViewModel(
             UiMappers.search(input.index, input.query, input.state, clock(), input.filters, checkCancelled = { job.ensureActive() })
         }
         .flowOn(computation)
+
+    /** With the viewer's TMDb token, the people TMDb knows by the words typed, once typing pauses (not for a filtered search). */
+    private val tmdbPeople: Flow<Pair<String, List<String>>> = combine(_query.debounce(TMDB_PEOPLE_DEBOUNCE_MS), _searchFilters) { query, filters -> query to filters }
+        .mapLatest { (query, filters) -> query to if (filters.isActive) emptyList() else repository.tmdbPeople(query) }
+        .onStart { emit("" to emptyList()) }
+
+    val search: StateFlow<SearchUiState> = combine(playlistSearch, tmdbPeople) { search, (query, online) -> UiMappers.withTmdbPeople(search, query, online) }
         .stateIn(viewModelScope, sharing, SearchUiState())
 
     private val _preparing = MutableStateFlow<String?>(null)
@@ -220,6 +229,9 @@ class OndoViewModel(
         val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
         repository.findTmdbBackdrop(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
     }
+
+    /** With the viewer's TMDb token, the person's titles on TMDb that the playlist has; null without one, or if TMDb fails. */
+    suspend fun tmdbWorks(name: String): List<TrendingMatch>? = repository.tmdbWorks(name)
 
     /** The backdrop at [url] did not load: the title shows TMDb's instead when the viewer has a token. */
     fun backdropFailed(item: ShowcaseItem, url: String) {
@@ -414,6 +426,9 @@ class OndoViewModel(
 
         /** Series whose details Home fetches ahead, at most. */
         const val PREFETCH_LIMIT = 4
+
+        /** TMDb is asked for people once typing pauses this long. */
+        const val TMDB_PEOPLE_DEBOUNCE_MS = 400L
 
         /** Public channels listed by the iptv-org project, the same demo as on iPhone. */
         const val DEMO_PLAYLIST_URL = "https://iptv-org.github.io/iptv/countries/fr.m3u"

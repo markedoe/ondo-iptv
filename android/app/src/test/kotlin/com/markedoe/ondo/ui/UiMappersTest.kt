@@ -22,6 +22,7 @@ import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.CollectionChoice
 import com.markedoe.ondo.ui.screens.CollectionRow
 import com.markedoe.ondo.ui.screens.SearchFilters
+import com.markedoe.ondo.ui.screens.SearchUiState
 import java.util.Locale
 import kotlin.coroutines.cancellation.CancellationException
 import org.junit.Assert.assertEquals
@@ -93,6 +94,41 @@ class UiMappersTest {
         assertEquals(found, UiMappers.backdrop(dead.copy(tmdbBackdrops = mapOf(item.key to found)), item))
         assertEquals(found, UiMappers.movieDetail(dead.copy(tmdbBackdrops = mapOf(item.key to found)), movie).backdropUrl)
         assertNull(UiMappers.backdrop(dead.copy(trending = emptyList()), item))
+    }
+
+    /** Search: the people TMDb knows by the words typed follow the playlist's own, each name once, for that query only. */
+    @Test
+    fun tmdbPeopleFollowThePlaylistsOwnInSearch() {
+        val local = SearchUiState(query = "ann", people = listOf("Ann Example"))
+        val merged = UiMappers.withTmdbPeople(local, "ann", listOf("ANN EXAMPLE", "Anna Sample", ""))
+        assertEquals(listOf("Ann Example", "Anna Sample"), merged.people)
+        // An answer for an older query, or a filtered search, adds nobody.
+        assertEquals(local, UiMappers.withTmdbPeople(local, "an", listOf("Anna Sample")))
+        val filtered = local.copy(filters = SearchFilters(fromYear = 2020))
+        assertEquals(filtered, UiMappers.withTmdbPeople(filtered, "ann", listOf("Anna Sample")))
+    }
+
+    /**
+     * A person's page: the pages already opened, and with TMDb's credits all the titles of the playlist TMDb credits
+     * them with, without a hidden category or a finished movie Settings hides.
+     */
+    @Test
+    fun aPersonsPageAddsTheTitlesTmdbCreditsThemWith() {
+        fun movie(movie: Movie) = TrendingMatch.MovieMatch(movie, TmdbItem(1, TmdbItem.MediaType.MOVIE, movie.name))
+        val online = listOf(movie(Fixtures.glassCity), movie(Fixtures.adultMovie), TrendingMatch.SeriesMatch(Fixtures.theArchive, TmdbItem(2, TmdbItem.MediaType.TV, "The Archive")))
+        val opened = mapOf(Fixtures.northernLights.id to MediaDetails(title = "Northern Lights", cast = "Ann Example, Bo Sample"))
+        val state = Fixtures.state().copy(movieDetails = opened)
+        val known = UiMappers.person(state, "Ann Example")
+        assertEquals(listOf("Northern Lights"), known.movies.map { it.title })
+        assertFalse(known.searchedOnline)
+        assertFalse(known.hasTmdbToken)
+
+        val found = UiMappers.person(state, "Ann Example", online)
+        assertEquals(setOf("Northern Lights", "Glass City"), found.movies.map { it.title }.toSet())
+        assertEquals(listOf("The Archive"), found.series.map { it.title })
+        assertTrue(found.searchedOnline)
+        // TMDb answered, but nothing of the playlist: still searched.
+        assertTrue(UiMappers.person(state, "Ann Example", emptyList()).searchedOnline)
     }
 
     @Test

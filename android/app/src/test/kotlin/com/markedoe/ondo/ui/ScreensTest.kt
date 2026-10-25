@@ -431,6 +431,22 @@ class ScreensTest {
         compose.onNodeWithText("Not reached, trying again").assertExists()
     }
 
+    /** A person's page says how to find all their titles: with a TMDb token, unless TMDb's credits were searched. */
+    @Test
+    fun aPersonsPageTellsHowToFindAllTheirTitles() {
+        var state by mutableStateOf(PersonUiState("Ann Example", movies = listOf(ShowcaseItem.MovieItem(Fixtures.northernLights))))
+        compose.setContent { OndoTheme { PersonScreen(state, onOpen = {}, onBack = {}) } }
+        compose.onNodeWithText("Add your TMDb API Read Access Token", substring = true).assertExists()
+        state = state.copy(hasTmdbToken = true, searching = true)
+        compose.onAllNodesWithTag("personHint").assertCountEquals(0)
+        state = state.copy(searching = false, searchedOnline = true)
+        compose.onAllNodesWithTag("personHint").assertCountEquals(0)
+        // A token TMDb did not answer for: the pages opened only, and no advice to add one.
+        state = state.copy(searchedOnline = false)
+        compose.onNodeWithTag("personHint").assertExists()
+        compose.onNodeWithText("Add your TMDb", substring = true).assertDoesNotExist()
+    }
+
     /** Settings, TMDb: a token TMDb refuses is not saved and says why; an accepted one is, and Remove takes it away. */
     @Test
     fun settingsCheckTheTmdbTokenBeforeSavingIt() {
