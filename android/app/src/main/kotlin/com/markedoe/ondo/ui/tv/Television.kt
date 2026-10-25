@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -391,12 +392,18 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
     val restoring = memory?.restore
     // Items take the focus in keyboard mode only (a remote, a keyboard): tried again when the mode changes.
     val mode = LocalInputModeManager.current.inputMode
+    val host = LocalView.current
     LaunchedEffect(restoring, television, mode, memory?.drops) {
         val wanted = when {
             restoring != null -> restoring == key
             else -> television && initial && (memory?.last == null || !memory.chosen)
         }
-        if (wanted && runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.restored()
+        if (!wanted) return@LaunchedEffect
+        // Back from a page shown in an Android view (a web page): that view keeps Android's focus until it has left,
+        // and Android hands the focus on again as it goes. The item takes it once the view has let it go.
+        var frames = 0
+        while (host.hasFocus() && host.findFocus() !== host && frames++ < 90) withFrameNanos {}
+        if (runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.restored()
     }
     val focus = remember { HeldFocus() }
     SideEffect { focus.key = key }
