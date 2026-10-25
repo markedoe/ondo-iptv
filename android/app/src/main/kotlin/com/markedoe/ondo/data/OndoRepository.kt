@@ -11,6 +11,7 @@ import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.library.TmdbClient
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.EpgData
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
@@ -306,8 +307,9 @@ class OndoRepository(
         open(playlist)
     }
 
+    /** The catalogue downloaded again, and its guide too (the viewer asked: what is kept is not enough). */
     fun refresh() {
-        _state.value.activePlaylist?.let { load(it) }
+        _state.value.activePlaylist?.let { load(it, newGuide = true) }
     }
 
     fun delete(id: String) {
@@ -322,6 +324,7 @@ class OndoRepository(
             saveSettings(settings)
             deleteContent(id)
             deleteDetails(id)
+            deleteGuide(id)
         }
         val wasActive = _state.value.activePlaylistId == id
         _state.update { it.copy(playlists = playlists, library = library, settings = settings) }
@@ -398,6 +401,7 @@ class OndoRepository(
             applied.removed.forEach {
                 deleteContent(it.id)
                 deleteDetails(it.id)
+                deleteGuide(it.id)
             }
         }
         _state.update { it.copy(playlists = applied.playlists, library = applied.library, settings = settings) }
@@ -501,7 +505,7 @@ class OndoRepository(
         }
     }
 
-    private fun load(playlist: SavedPlaylist) {
+    private fun load(playlist: SavedPlaylist, newGuide: Boolean = false) {
         refreshJob?.cancel()
         refreshJob = scope.launch {
             _state.update { it.copy(isLoading = true, isRestoring = false, error = null) }
@@ -511,7 +515,7 @@ class OndoRepository(
                     if (_state.value.activePlaylistId == playlist.id) {
                         val shown = shown(content)
                         _state.update { it.copy(content = shown, isLoading = false) }
-                        loadGuide(playlist, content)
+                        loadGuide(playlist, content, download = newGuide)
                         loadTrending()
                     } else {
                         _state.update { it.copy(isLoading = false) }
@@ -524,19 +528,48 @@ class OndoRepository(
         }
     }
 
-    /** The guides of the playlist (the user's, then the provider's), indexed off the main thread. */
-    private fun loadGuide(playlist: SavedPlaylist, content: PlaylistContent) {
+    /**
+     * The guides of the playlist (the user's, then the provider's), indexed off the main thread. The one kept on the
+     * device is used while it is recent ([GUIDE_FRESH_MS]) and for the same guide: a launch does not download it again.
+     * Otherwise, or when [download] (the viewer refreshed), it is downloaded; the kept one stays the fallback when that
+     * fails. Only one guide is in memory at a time (a large one is a good part of a TV's memory).
+     */
+    private fun loadGuide(playlist: SavedPlaylist, content: PlaylistContent, download: Boolean = false) {
         val core = playlist.toCorePlaylist()
         if (core.epgUrls.isEmpty() && content.providerEpgUrls.isEmpty()) return
+        val sources = guideSources(playlist, content)
         // A newer catalogue or another playlist replaces the guide being loaded.
         guideJob?.cancel()
         guideJob = scope.launch {
+            suspend fun kept(): StoredGuide? = withContext(io) { store.loadGuide(playlist.id) }?.takeIf { it.sources == sources }
+            suspend fun show(data: EpgData) {
+                val guide = withContext(Dispatchers.Default) { EpgIndex(data) }
+                if (_state.value.activePlaylistId == playlist.id) _state.update { it.copy(guide = guide) }
+            }
+            if (!download) {
+                val stored = kept()
+                if (stored != null && now() - stored.data.fetchedAt in 0 until GUIDE_FRESH_MS) {
+                    show(stored.data)
+                    return@launch
+                }
+            }
             // Downloading, matching to the catalogue's channels, merging and indexing: all of it off the main thread.
-            val guide = loadCatching {
-                withContext(Dispatchers.Default) { EpgIndex(loader().loadEpg(core, content).data) }
-            }.getOrNull() ?: return@launch
-            if (_state.value.activePlaylistId == playlist.id) _state.update { it.copy(guide = guide) }
+            val data = loadCatching { withContext(Dispatchers.Default) { loader().loadEpg(core, content).data } }.getOrNull()
+            if (data != null && data.programs.isNotEmpty()) {
+                show(data)
+                persist { saveGuide(playlist.id, StoredGuide(sources, data)) }
+            } else {
+                // Out of reach, or nothing came: the kept guide, however old, rather than none.
+                (kept()?.data ?: data)?.let { show(it) }
+            }
         }
+    }
+
+    /** Which guide a playlist has: its address, the provider's, and the channels it is matched to. */
+    private fun guideSources(playlist: SavedPlaylist, content: PlaylistContent): String {
+        var channels = 17
+        for (channel in content.channels) channels = 31 * channels + (channel.epgId ?: channel.name).hashCode()
+        return listOf(playlist.epgUrl.orEmpty(), content.providerEpgUrls.joinToString(" "), "${content.channels.size}:$channels").joinToString("\n")
     }
 
     /**
@@ -983,6 +1016,9 @@ class OndoRepository(
 
     companion object {
         const val REFRESH_AFTER_MS = 24 * 60 * 60 * 1000L
+
+        /** A guide kept on the device is used for this long before it is downloaded again (as on Apple devices). */
+        const val GUIDE_FRESH_MS = 6 * 60 * 60 * 1000L
 
         /** TMDb's trending titles are asked for again after this (as on Apple devices). */
         const val TRENDING_FRESH_MS = 6 * 60 * 60 * 1000L

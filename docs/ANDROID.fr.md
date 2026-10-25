@@ -61,7 +61,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   changement de chaîne le noircirait).
 - **Stockage** : documents JSON dans le stockage privé de l'app (`data/AppStore.kt`), exclus des sauvegardes
   (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`) : réglages, playlists avec leurs identifiants, Ma
-  liste, collections, progression et rappels, catalogue de chaque playlist, et fiches de films et de séries
+  liste, collections, progression et rappels, catalogue et guide de chaque playlist (le guide servi 6 heures avant
+  d'être téléchargé à nouveau, comme sur les appareils Apple ; Actualiser le télécharge tout de suite), et fiches de films et de séries
   ouvertes (jusqu'à 1 000 films et 300 séries par playlist, téléchargées à nouveau après 7 jours pour un film
   et 12 heures pour une série, toujours affichées quand le fournisseur est injoignable ;
   `data/DetailsArchive.kt`). Affiches et vignettes sont gardées sur le disque par Coil 3 (jusqu'à 512 Mo, dans

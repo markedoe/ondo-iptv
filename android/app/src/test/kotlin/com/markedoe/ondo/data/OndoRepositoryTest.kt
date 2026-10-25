@@ -338,6 +338,80 @@ class OndoRepositoryTest {
     }
 
     /**
+     * The guide is kept on the device: a launch within 6 hours shows it without downloading it again; an older one, or
+     * Refresh, downloads it again; and when the download fails, the kept one is still shown.
+     */
+    @Test
+    fun theGuideIsKeptOnTheDeviceForSixHours() = runTest {
+        val guideUrl = "http://provider.example.com/guide.xml"
+        val m3u = """
+            #EXTM3U url-tvg="$guideUrl"
+            #EXTINF:-1 tvg-id="news.test" group-title="News",Test News
+            http://provider.example.com/news.m3u8
+        """.trimIndent()
+        var time = clock
+        val answers = mutableMapOf(list to m3u, guideUrl to guide(EpgProgram("news.test", clock - 30 * 60_000, clock + 12 * 3_600_000, "Evening News")))
+        val http = object : HttpClient {
+            val guides = mutableListOf<Long>()
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
+                if (url == guideUrl) guides += time
+                return answers[url]?.encodeToByteArray() ?: throw HttpException.BadStatus(404)
+            }
+        }
+        fun TestScope.launch(): OndoRepository = OndoRepository(AppStore(folder.root), http, backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
+        fun TestScope.saved() {
+            repeat(50) { testScheduler.runCurrent() }
+            check(folder.root.listFiles().orEmpty().any { it.name.startsWith("guide-") && it.name.endsWith(".json") }) { "the guide was not saved" }
+        }
+        suspend fun OndoRepository.programme() = awaitState { it.guide != null }.let { state ->
+            state.guide!!.programs(state.content.channels.single()).map { it.title }
+        }
+
+        val first = launch()
+        first.bootstrap()
+        first.awaitState { it.isReady }
+        assertTrue(first.addPlaylist("Home", list).isSuccess)
+        assertEquals(listOf("Evening News"), first.programme())
+        assertEquals(1, http.guides.size)
+        saved()
+
+        // Launched again an hour later: the kept guide, nothing downloaded.
+        time += 3_600_000
+        val second = launch()
+        second.bootstrap()
+        assertEquals(listOf("Evening News"), second.programme())
+        repeat(50) { testScheduler.runCurrent() }
+        assertEquals(1, http.guides.size)
+
+        // Seven hours after the download: downloaded again.
+        time += 6 * 3_600_000
+        val third = launch()
+        third.bootstrap()
+        third.programme()
+        assertEquals(2, http.guides.size)
+        saved()
+
+        // Refresh asks for it again, however recent (the guide is read on a thread of its own: waited for in real time).
+        third.refresh()
+        val deadline = System.currentTimeMillis() + 30_000
+        while (http.guides.size < 3) {
+            check(System.currentTimeMillis() < deadline) { "Refresh did not download the guide again" }
+            testScheduler.runCurrent()
+            Thread.sleep(10)
+        }
+        repeat(50) { testScheduler.runCurrent() }
+        assertEquals(3, http.guides.size)
+
+        // Old again and out of reach: the kept guide is shown rather than none.
+        answers.remove(guideUrl)
+        time += 7 * 3_600_000
+        val fourth = launch()
+        fourth.bootstrap()
+        assertEquals(listOf("Evening News"), fourth.programme())
+        assertEquals(4, http.guides.size)
+    }
+
+    /**
      * A channel with the provider's archive (catch-up): its programme on now starts over, a past one of the archive
      * replays, a live pause resumes where it stopped. A replay keeps its channel, goes in no history, and is no film
      * to resume. Without an archive, or outside it, nothing.

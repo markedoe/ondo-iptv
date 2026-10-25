@@ -53,7 +53,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   (`player/FrameRateMatching.kt`). Live channels keep the screen as it is (each channel change would blank it).
 - **Storage**: JSON documents in the app's private storage (`data/AppStore.kt`), left out of backups
   (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`): settings, playlists with their logins, My List,
-  collections, progress and reminders, each playlist's catalogue, and the movie and series pages opened (up to
+  collections, progress and reminders, each playlist's catalogue and guide (the guide used for 6 hours before it
+  is downloaded again, as on Apple devices; Refresh downloads it at once), and the movie and series pages opened (up to
   1,000 movies and 300 series per playlist, fetched again after 7 days for a movie and 12 hours for a series,
   still shown when the provider cannot be reached; `data/DetailsArchive.kt`). Posters and thumbnails are kept
   on disk by Coil 3 (up to 512 MB, in the app's cache; `OndoApplication.kt`).

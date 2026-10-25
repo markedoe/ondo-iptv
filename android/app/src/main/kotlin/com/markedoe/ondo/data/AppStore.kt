@@ -74,6 +74,14 @@ class AppStore(private val directory: File, private val now: () -> Long = System
         File(directory, "content-$playlistId.json").delete()
     }
 
+    /** A playlist's guide as it was last downloaded ([StoredGuide]); it can be downloaded again: no previous version is kept. */
+    fun loadGuide(playlistId: String): StoredGuide? = read("guide-$playlistId.json", StoredGuide.serializer(), disposable = true)
+    fun saveGuide(playlistId: String, guide: StoredGuide) =
+        write("guide-$playlistId.json", StoredGuide.serializer(), guide, keepPrevious = false)
+    fun deleteGuide(playlistId: String) {
+        File(directory, "guide-$playlistId.json").delete()
+    }
+
     /** The movie and series details kept for a playlist; they can be fetched again: no previous version is kept. */
     fun loadDetails(playlistId: String): DetailsArchive? = read("details-$playlistId.json", DetailsArchive.serializer(), disposable = true)
     fun saveDetails(playlistId: String, archive: DetailsArchive) =
