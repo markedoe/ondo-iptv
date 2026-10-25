@@ -131,7 +131,10 @@ Ondo n'a ni serveur, ni compte, ni statistiques, ni publicité, ni rapport de pl
 restent sur l'appareil. Les requêtes réseau vont aux serveurs que l'utilisateur a saisis, à la playlist
 publique de démonstration (projet iptv-org) quand il touche *Essayer la démo*, et une fois par semaine, sauf
 si c'est désactivé dans les Réglages (*Mettre à jour les prix automatiquement*), à GitHub pour le fichier
-public des prix ; rien concernant l'utilisateur n'est envoyé (voir les règles de confidentialité).
+public des prix ; rien concernant l'utilisateur n'est envoyé (voir les règles de confidentialité). Avec un jeton
+TMDb saisi par l'utilisateur (ou arrivé par la synchronisation), l'app interroge aussi TMDb, avec ce jeton, pour
+les tendances, les images de fond, les personnes et leurs crédits : comme les serveurs de l'utilisateur, un
+service qu'il a configuré, interrogé à sa demande.
 
 - *Votre application collecte-t-elle ou partage-t-elle des types de données utilisateur requis ?* **Non.**
 - Le formulaire demande alors seulement de confirmer. (Pas de Google Cast sur Android, contrairement à

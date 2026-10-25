@@ -126,7 +126,9 @@ requirements.
 Ondo has no server, no account, no analytics, no ads and no crash reporting: all data stays on the device.
 Network requests go to the servers the user has entered, to the public demo playlist (iptv-org project) when
 *Try the demo* is tapped, and once a week, unless turned off in Settings (*Update awards automatically*), to
-GitHub for the public awards file; nothing about the user is sent (see the privacy policy).
+GitHub for the public awards file; nothing about the user is sent (see the privacy policy). With a TMDb token the
+user entered (or that came by sync), the app also asks TMDb, with that token, for trending titles, backdrops,
+people and their credits: like the user's own servers, a service the user set up, asked at the user's request.
 
 - *Does your app collect or share any of the required user data types?* **No.**
 - The form then only asks you to confirm. (No Google Cast on Android, unlike the iPhone: nothing to

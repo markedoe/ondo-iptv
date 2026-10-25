@@ -104,7 +104,9 @@ class ScreensTest {
         compose.onNodeWithText("Movies in Progress and Series in Progress", substring = true).assertExists()
         compose.onNodeWithTag("help-categories").performClick()
         compose.onNodeWithText("|PT|", substring = true).assertExists()
-        compose.onNodeWithText("Support").performScrollTo().performClick()
+        // The last row: the list composes it once scrolled to.
+        compose.onNodeWithTag("helpList").performScrollToNode(hasText("Support"))
+        compose.onNodeWithText("Support").performClick()
         assertEquals(1, support)
     }
 

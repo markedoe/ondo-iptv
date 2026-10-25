@@ -381,6 +381,23 @@ def path_settings(tv, args):
         time.sleep(2)
     tv.stay(5, "catalogue switches turned over")
     tv.note_screen("settings-catalogue")
+    # The TMDb token typed with the remote: OK opens the keyboard, then Check and Save below asks TMDb. A made-up
+    # token, so TMDb refuses it (or cannot be reached from the emulator) and nothing is saved; the answer shows under
+    # the field.
+    try:
+        tv.focus_on("API Read Access Token", keys=("DOWN",), max_presses=8, editable=True)
+        tv.key("DPAD_CENTER")
+        tv.shell("input text 'example-not-a-token'")
+        tv.focus_on("Check and Save", keys=("DOWN", "TAB"), max_presses=4, editable=False)
+        tv.key("DPAD_CENTER")
+        tv.stay(8, "a TMDb token checked")
+        tv.note_screen("settings-tmdb-checked")
+        if not (tv.visible("TMDb refused it") or tv.visible("TMDb could not be reached")):
+            tv.say("  no TMDb answer under the field")
+        # Back up to a row (Up leaves the field), then to the parts on the left.
+        tv.key("UP", 2)
+    except TimeoutError as problem:
+        tv.say(f"  not driven in the TMDb token: {problem}")
     tv.key("LEFT")
     settings_section(tv, "About")
     tv.key("RIGHT")

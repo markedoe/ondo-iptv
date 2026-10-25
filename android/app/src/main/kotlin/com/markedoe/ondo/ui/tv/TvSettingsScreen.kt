@@ -407,10 +407,10 @@ private fun TvTmdbToken(state: SettingsUiState, actions: SettingsActions) {
             singleLine = true,
             visualTransformation = PasswordVisualTransformation(),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done, autoCorrectEnabled = false),
-            // Done checks the token and goes on to the buttons below, the keyboard closed.
+            // Done checks the token and goes on to the buttons below; the keyboard closes either way.
             keyboardActions = KeyboardActions(onDone = {
                 submit()
-                leaveField()
+                if (!leaveField()) defaultKeyboardAction(ImeAction.Done)
             }),
             readOnly = field.readOnly,
             modifier = Modifier.fillMaxWidth().then(field.modifier).focusMemory("settings-tmdb").testTag("tmdbTokenField"),

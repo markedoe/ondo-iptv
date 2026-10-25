@@ -76,7 +76,7 @@ fun HelpScreen(onBack: () -> Unit, onSupport: () -> Unit) {
         )
         // The remote's keys first on a TV, nowhere else; the touch screen's gestures everywhere else.
         val television = isTelevision()
-        LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+        LazyColumn(Modifier.testTag("helpList"), contentPadding = PaddingValues(bottom = 24.dp)) {
             items(helpTopics.filter { if (television) !it.touch else !it.television }, key = { it.id }) { topic ->
                 val expanded = open == topic.id
                 Column(Modifier.fillMaxWidth().animateContentSize()) {
