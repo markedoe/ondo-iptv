@@ -26,6 +26,7 @@
     <string name="new_movies">नई फ़िल्में</string>
     <string name="new_series">नई सीरीज़</string>
     <string name="more_like_this">इससे मिलते-जुलते</string>
+    <string name="trailer">ट्रेलर</string>
     <string name="episodes">एपिसोड</string>
     <string name="watched">देखा गया</string>
     <string name="director">निर्देशक</string>
@@ -355,7 +356,7 @@
     <string name="tmdb_token_label">API Read Access Token</string>
     <string name="tmdb_check_and_save">जाँचें और सहेजें</string>
     <string name="tmdb_checking">जाँच हो रही है…</string>
-    <string name="tmdb_accepted">TMDb ने स्वीकार किया: ट्रेंडिंग टाइटल, न मिलने वाली बैकग्राउंड इमेज और फ़िल्मोग्राफ़ी TMDb से आती हैं।</string>
+    <string name="tmdb_accepted">TMDb ने स्वीकार किया: ट्रेंडिंग टाइटल, न मिलने वाली बैकग्राउंड इमेज, कलाकारों की फ़ोटो और फ़िल्मोग्राफ़ी TMDb से आती हैं।</string>
     <string name="tmdb_refused">TMDb ने इसे अस्वीकार कर दिया। “API Read Access Token” को फिर से पूरा कॉपी करें (“API Key” भी काम करती है)।</string>
     <string name="tmdb_unreachable">TMDb से संपर्क नहीं हो सका, इसलिए कुछ भी सहेजा नहीं गया। कनेक्शन जाँचें और फिर से कोशिश करें।</string>
     <string name="tmdb_open_api_page">TMDb का API पेज खोलें</string>
@@ -364,5 +365,5 @@
     <string name="tmdb_help">themoviedb.org पर: आपका खाता → Settings → API। “API Read Access Token” (लंबा वाला) कॉपी करें; “API Key” भी काम करती है। यह प्रोडक्ट TMDB API का इस्तेमाल करता है, लेकिन TMDB इसका समर्थन या प्रमाणन नहीं करता।</string>
     <string name="person_opened_pages_tmdb">फ़िल्में केवल उन्हीं पेजों में मिलती हैं जिन्हें आपने खोला है। सभी ढूँढने के लिए सेटिंग्स में अपना TMDb “API Read Access Token” जोड़ें।</string>
     <string name="help_tmdb_title">TMDb: ट्रेंडिंग और फ़िल्मोग्राफ़ी</string>
-    <string name="help_tmdb_body">अपने TMDb टोकन के साथ, Ondo होम में एक ट्रेंडिंग पंक्ति जोड़ता है, जिसमें इस समय के वे टाइटल होते हैं जो आपकी प्लेलिस्ट में हैं; जब आपके प्रोवाइडर की बैकग्राउंड इमेज न हो या न दिखे, तो TMDb की इमेज दिखाता है; खोज में वे लोग ढूँढता है जिन्हें TMDb जानता है; और किसी अभिनेता या निर्देशक की वे सभी फ़िल्में दिखाता है जो आपकी प्लेलिस्ट में हैं।\n\nthemoviedb.org पर: आपका खाता → Settings → API। “API Read Access Token” (लंबा वाला; “API Key” भी काम करती है) कॉपी करें और सेटिंग्स में TMDb के नीचे पेस्ट करें: Ondo सेव करने से पहले TMDb से इसकी जाँच करता है। इस नेटवर्क पर सिंक करें चालू होने पर यह आपके दूसरे डिवाइस तक पहुँच जाता है, इसलिए रिमोट से टाइप करने की ज़रूरत नहीं। TMDb को सिर्फ़ टाइटल, साल और नाम भेजे जाते हैं। यह प्रोडक्ट TMDB API का इस्तेमाल करता है, लेकिन TMDB इसका समर्थन या प्रमाणन नहीं करता।</string>
+    <string name="help_tmdb_body">अपने TMDb टोकन के साथ, Ondo होम में एक ट्रेंडिंग पंक्ति जोड़ता है, जिसमें इस समय के वे टाइटल होते हैं जो आपकी प्लेलिस्ट में हैं; जब आपके प्रोवाइडर की बैकग्राउंड इमेज न हो या न दिखे, तो TMDb की इमेज दिखाता है; किसी टाइटल के पेज पर कलाकारों की फ़ोटो दिखाता है; खोज में वे लोग ढूँढता है जिन्हें TMDb जानता है; और किसी अभिनेता या निर्देशक की वे सभी फ़िल्में दिखाता है जो आपकी प्लेलिस्ट में हैं।\n\nthemoviedb.org पर: आपका खाता → Settings → API। “API Read Access Token” (लंबा वाला; “API Key” भी काम करती है) कॉपी करें और सेटिंग्स में TMDb के नीचे पेस्ट करें: Ondo सेव करने से पहले TMDb से इसकी जाँच करता है। इस नेटवर्क पर सिंक करें चालू होने पर यह आपके दूसरे डिवाइस तक पहुँच जाता है, इसलिए रिमोट से टाइप करने की ज़रूरत नहीं। TMDb को सिर्फ़ टाइटल, साल और नाम भेजे जाते हैं। यह प्रोडक्ट TMDB API का इस्तेमाल करता है, लेकिन TMDB इसका समर्थन या प्रमाणन नहीं करता।</string>
 </resources>

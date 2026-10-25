@@ -158,6 +158,54 @@ class OndoViewModelTest {
         assertEquals(1, searches.size)
     }
 
+    /**
+     * A title's page with the viewer's TMDb token: the photos TMDb has of its cast, by the TMDb id the provider gave
+     * (once a session), matched to the provider's names with accents and case ignored. Without a token, nothing is
+     * asked; without it again, the photos go.
+     */
+    @Test
+    fun aTitlesCastGetsTmdbsPhotosWithTheToken() = runTest {
+        val credits = mutableListOf<String>()
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
+                "get_series_info" in url -> """{"info":{"name":"Harbor","cast":"José Silva, Ana Lima","tmdb_id":"77"},"episodes":{"1":[{"id":"101","episode_num":1,"title":"Pilot","container_extension":"mp4"}]}}"""
+                url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
+                url.startsWith("https://api.themoviedb.org/3/tv/77/credits?") -> {
+                    credits += url
+                    """{"cast":[{"id":1,"name":"Jose Silva","profile_path":"/jose.jpg"},{"id":2,"name":"Ana Lima","profile_path":null},{"id":3,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}"""
+                }
+                else -> throw HttpException.BadStatus(404)
+            }.encodeToByteArray()
+        }
+        val store = AppStore(folder.root)
+        val shows = MediaCategory("s-shows", "Shows", ContentType.SERIES)
+        store.savePlaylists(listOf(SavedPlaylist("x1", "Panel", "http://panel.example.com", username = "viewer", password = "example")))
+        store.saveSettings(AppSettings(activePlaylistId = "x1"))
+        val harbor = Series(id = "1", name = "Harbor", categoryId = shows.id, year = 2025, cast = "José Silva, Ana Lima", xtreamSeriesId = 1)
+        store.saveContent("x1", PlaylistContent(series = listOf(harbor), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
+        val repository = OndoRepository(store, http, backgroundScope, io = StandardTestDispatcher(testScheduler))
+        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series.single()
+        fun faces() = UiMappers.seriesDetail(viewModel.state.value, series, null, null).faces
+
+        viewModel.loadSeries(series.id)
+        settle()
+        assertTrue(credits.isEmpty())
+        assertTrue(faces().isEmpty())
+
+        assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
+        viewModel.loadSeries(series.id)
+        settle()
+        assertEquals(mapOf("jose silva" to "https://image.tmdb.org/t/p/w185/jose.jpg", "ruth ames" to "https://image.tmdb.org/t/p/w185/ruth.jpg"), faces())
+        viewModel.loadSeries(series.id)
+        settle()
+        assertEquals("once a session", 1, credits.size)
+
+        repository.removeTmdbToken()
+        settle()
+        assertTrue(faces().isEmpty())
+    }
+
     /** Search with the viewer's TMDb token: the people TMDb knows by the words typed join the playlist's own. */
     @Test
     fun searchAddsThePeopleTmdbKnows() = runTest {

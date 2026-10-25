@@ -26,6 +26,7 @@
     <string name="new_movies">Nouveaux films</string>
     <string name="new_series">Nouvelles séries</string>
     <string name="more_like_this">Titres similaires</string>
+    <string name="trailer">Bande-annonce</string>
     <string name="episodes">Épisodes</string>
     <string name="watched">Vu</string>
     <string name="director">Réalisation</string>
@@ -363,7 +364,7 @@
     <string name="tmdb_token_label">Jeton d\'accès en lecture à l\'API</string>
     <string name="tmdb_check_and_save">Vérifier et enregistrer</string>
     <string name="tmdb_checking">Vérification…</string>
-    <string name="tmdb_accepted">Accepté par TMDb : les tendances, les images de fond manquantes et les filmographies viennent de TMDb.</string>
+    <string name="tmdb_accepted">Accepté par TMDb : les tendances, les images de fond manquantes, les photos du casting et les filmographies viennent de TMDb.</string>
     <string name="tmdb_refused">TMDb l\'a refusé. Copiez à nouveau le « Jeton d\'accès en lecture à l\'API » en entier (la « Clé d\'API » fonctionne aussi).</string>
     <string name="tmdb_unreachable">TMDb est injoignable, rien n\'a été enregistré. Vérifiez la connexion et réessayez.</string>
     <string name="tmdb_open_api_page">Ouvrir la page API de TMDb</string>
@@ -372,5 +373,5 @@
     <string name="tmdb_help">Sur themoviedb.org : votre compte → Paramètres → API. Copiez le « Jeton d\'accès en lecture à l\'API » (le long) ; la « Clé d\'API » fonctionne aussi. Ce produit utilise l\'API TMDB mais n\'est ni approuvé ni certifié par TMDB.</string>
     <string name="person_opened_pages_tmdb">Les films ne sont trouvés que parmi les fiches déjà ouvertes. Ajoutez votre « Jeton d\'accès en lecture à l\'API » TMDb dans les Réglages pour les trouver tous.</string>
     <string name="help_tmdb_title">TMDb : tendances et filmographies</string>
-    <string name="help_tmdb_body">Avec votre propre jeton TMDb, Ondo ajoute une rangée Tendances à l’Accueil avec les titres du moment que votre playlist propose, affiche l’image de fond de TMDb quand celle de votre fournisseur manque ou ne s’affiche pas, trouve dans la recherche les personnes que TMDb connaît, et liste tous les films d’un acteur ou d’un réalisateur que votre playlist propose.\n\nSur themoviedb.org : votre compte → Paramètres → API. Copiez le « Jeton d’accès en lecture à l’API » (le long ; la « Clé d’API » fonctionne aussi) et collez-le dans les Réglages, sous TMDb : Ondo le vérifie auprès de TMDb avant de l’enregistrer. Avec Synchroniser sur ce réseau, il arrive sur vos autres appareils : inutile de le saisir avec une télécommande. Seuls des titres, des années et des noms sont envoyés à TMDb. Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.</string>
+    <string name="help_tmdb_body">Avec votre propre jeton TMDb, Ondo ajoute une rangée Tendances à l’Accueil avec les titres du moment que votre playlist propose, affiche l’image de fond de TMDb quand celle de votre fournisseur manque ou ne s’affiche pas et les photos du casting sur la fiche d’un titre, trouve dans la recherche les personnes que TMDb connaît, et liste tous les films d’un acteur ou d’un réalisateur que votre playlist propose.\n\nSur themoviedb.org : votre compte → Paramètres → API. Copiez le « Jeton d’accès en lecture à l’API » (le long ; la « Clé d’API » fonctionne aussi) et collez-le dans les Réglages, sous TMDb : Ondo le vérifie auprès de TMDb avant de l’enregistrer. Avec Synchroniser sur ce réseau, il arrive sur vos autres appareils : inutile de le saisir avec une télécommande. Seuls des titres, des années et des noms sont envoyés à TMDb. Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.</string>
 </resources>

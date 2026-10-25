@@ -3,17 +3,19 @@ package com.markedoe.ondo.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.BuildConfig
+import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
+import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
-import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.Reminder
+import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.player.PlayRequest
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -36,7 +38,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -53,6 +54,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -201,6 +203,7 @@ class OndoViewModel(
             val movie = withContext(computation) { UiMappers.movie(state.value, id) } ?: return@launch
             repository.details(movie)
             wantBackdrop(ShowcaseItem.MovieItem(movie))
+            wantFaces(ShowcaseItem.MovieItem(movie))
         }
     }
 
@@ -211,6 +214,7 @@ class OndoViewModel(
                 .onSuccess { _seriesErrors.value -= id }
                 .onFailure { error -> _seriesErrors.value += (id to LoadError.of(error)) }
             wantBackdrop(ShowcaseItem.SeriesItem(series))
+            wantFaces(ShowcaseItem.SeriesItem(series))
         }
     }
 
@@ -221,13 +225,30 @@ class OndoViewModel(
     fun wantBackdrop(item: ShowcaseItem) {
         val state = state.value
         if (state.settings.tmdbToken == null || UiMappers.backdrop(state, item) != null) return
-        val details = when (item) {
-            is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
-            is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
-        }
+        val details = details(state, item)
         val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
         val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
         repository.findTmdbBackdrop(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
+    }
+
+    /**
+     * With the viewer's TMDb token, looks once a session for the photos of a title's cast and directors (when the
+     * provider names any): by the TMDb id its provider gave, else by its title and year.
+     */
+    fun wantFaces(item: ShowcaseItem) {
+        val state = state.value
+        if (state.settings.tmdbToken == null) return
+        val details = details(state, item)
+        val series = (item as? ShowcaseItem.SeriesItem)?.series
+        if (People.names(details?.director ?: series?.director).isEmpty() && People.names(details?.cast ?: series?.cast).isEmpty()) return
+        val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
+        val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
+        repository.findTmdbFaces(item.key, series != null, details?.tmdbId, title, year)
+    }
+
+    private fun details(state: OndoState, item: ShowcaseItem): MediaDetails? = when (item) {
+        is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
+        is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
     }
 
     /** With the viewer's TMDb token, the person's titles on TMDb that the playlist has; null without one, or if TMDb fails. */

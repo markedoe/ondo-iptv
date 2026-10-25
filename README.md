@@ -108,7 +108,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   it out), My List, new releases, channels; when the playlist was last updated, above its name.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), watched movies hidden if you like, detail pages (Resume, From Start, next
-  episode, seasons, More Like This); a director's or an actor's name opens their other movies and series
+  episode, seasons, the provider's trailer on YouTube, More Like This); a director's or an actor's name opens their other movies and series
   (series always, movies among the pages already opened), and a genre, the year or an award the titles that share it.
 - **Live TV**: categories, My List, current and next programme.
 - **Search** (the magnifying glass of Home, Movies, Series, Live TV and My List): channels, movies, series and
@@ -148,8 +148,9 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   them; directly between the devices, to local addresses only, nothing through the internet
   ([docs/SYNC.md](docs/SYNC.md)).
 - **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a
-  Trending row on Home and in the carousel, TMDb's background image when the provider's is missing or broken, the
-  people TMDb knows in Search, and all the titles of the playlist on an actor's or a director's page.
+  Trending row on Home and in the carousel, TMDb's background image when the provider's is missing or broken, photos
+  of the cast on a title's page, the people TMDb knows in Search, and all the titles of the playlist on an actor's
+  or a director's page.
 - **Settings**: playlists, appearance, adult categories hidden by default, languages and categories, app language,
   automatic awards updates, player buffers, TMDb token; welcome screen with a demo.
 - **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible

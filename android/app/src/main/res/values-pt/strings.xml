@@ -26,6 +26,7 @@
     <string name="new_movies">Novos filmes</string>
     <string name="new_series">Novas séries</string>
     <string name="more_like_this">Títulos semelhantes</string>
+    <string name="trailer">Trailer</string>
     <string name="episodes">Episódios</string>
     <string name="watched">Assistido</string>
     <string name="director">Direção</string>
@@ -363,7 +364,7 @@
     <string name="tmdb_token_label">API Read Access Token</string>
     <string name="tmdb_check_and_save">Verificar e salvar</string>
     <string name="tmdb_checking">Verificando…</string>
-    <string name="tmdb_accepted">Aceito pelo TMDb: as tendências, as imagens de fundo que faltam e as filmografias vêm do TMDb.</string>
+    <string name="tmdb_accepted">Aceito pelo TMDb: as tendências, as imagens de fundo que faltam, as fotos do elenco e as filmografias vêm do TMDb.</string>
     <string name="tmdb_refused">O TMDb recusou. Copie de novo o “API Read Access Token” inteiro (a “API Key” também funciona).</string>
     <string name="tmdb_unreachable">Não foi possível acessar o TMDb, então nada foi salvo. Verifique a conexão e tente de novo.</string>
     <string name="tmdb_open_api_page">Abrir a página de API do TMDb</string>
@@ -372,5 +373,5 @@
     <string name="tmdb_help">No themoviedb.org: sua conta → Settings → API. Copie o “API Read Access Token” (o longo); a “API Key” também funciona. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB.</string>
     <string name="person_opened_pages_tmdb">Os filmes só são encontrados entre as páginas que você já abriu. Adicione seu “API Read Access Token” do TMDb em Ajustes para encontrar todos.</string>
     <string name="help_tmdb_title">TMDb: em alta e filmografias</string>
-    <string name="help_tmdb_body">Com o seu próprio token do TMDb, o Ondo adiciona ao Início uma fileira Em alta com os títulos do momento que a sua playlist tem, mostra a imagem de fundo do TMDb quando a do seu provedor está faltando ou não carrega, encontra na pesquisa as pessoas que o TMDb conhece e lista todos os filmes de um ator ou de um diretor que a sua playlist tem.\n\nNo themoviedb.org: sua conta → Settings → API. Copie o “API Read Access Token” (o longo; a “API Key” também funciona) e cole em Configurações, em TMDb: o Ondo confere com o TMDb antes de salvar. Com Sincronizar nesta rede, ele chega aos seus outros dispositivos, sem precisar digitá-lo com o controle remoto. Só títulos, anos e nomes são enviados ao TMDb. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB.</string>
+    <string name="help_tmdb_body">Com o seu próprio token do TMDb, o Ondo adiciona ao Início uma fileira Em alta com os títulos do momento que a sua playlist tem, mostra a imagem de fundo do TMDb quando a do seu provedor está faltando ou não carrega e as fotos do elenco na página de um título, encontra na pesquisa as pessoas que o TMDb conhece e lista todos os filmes de um ator ou de um diretor que a sua playlist tem.\n\nNo themoviedb.org: sua conta → Settings → API. Copie o “API Read Access Token” (o longo; a “API Key” também funciona) e cole em Configurações, em TMDb: o Ondo confere com o TMDb antes de salvar. Com Sincronizar nesta rede, ele chega aos seus outros dispositivos, sem precisar digitá-lo com o controle remoto. Só títulos, anos e nomes são enviados ao TMDb. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB.</string>
 </resources>

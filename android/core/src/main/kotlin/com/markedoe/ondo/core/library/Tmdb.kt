@@ -123,15 +123,40 @@ class TmdbClient(
         tmdbId?.trim()?.toIntOrNull()?.let { id ->
             runCatching { TmdbItem.from(get("$kind/$id"))?.backdropUrl }.getOrNull()?.let { return it }
         }
+        return sameTitle(kind, title, year).firstNotNullOfOrNull { it.backdropUrl }
+    }
+
+    /** TMDb's search results with this title (and a year one apart at most, when known), in TMDb's order. */
+    private suspend fun sameTitle(kind: String, title: String, year: Int?): Sequence<TmdbItem> {
         val key = CatalogueMatcher.key(title)
-        if (key.isEmpty()) return null
+        if (key.isEmpty()) return emptySequence()
         return results(get("search/$kind", listOf("query" to CatalogueMatcher.searchQuery(title))))
             .asSequence()
             .filter { item ->
                 listOfNotNull(item.title, item.originalTitle).map(CatalogueMatcher::key).contains(key) &&
                     (year == null || item.year == null || CatalogueMatcher.closeYears(year, item.year))
             }
-            .firstNotNullOfOrNull { it.backdropUrl }
+    }
+
+    /**
+     * The cast and the directors TMDb lists for a movie or a series, with their photos: by the TMDb id the provider
+     * gave, else the first search result with the same title (and a year one apart at most, when known). Empty rather
+     * than another title's people.
+     */
+    suspend fun cast(series: Boolean, tmdbId: String?, title: String, year: Int?): List<TmdbPerson> {
+        val kind = if (series) "tv" else "movie"
+        tmdbId?.trim()?.toIntOrNull()?.let { id ->
+            runCatching { castOf(kind, id) }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it }
+        }
+        val id = sameTitle(kind, title, year).firstOrNull()?.id ?: return emptyList()
+        return castOf(kind, id)
+    }
+
+    private suspend fun castOf(kind: String, id: Int): List<TmdbPerson> {
+        val credits = get("$kind/$id/credits") as? JsonObject ?: throw SerializationException("Not a TMDb answer")
+        fun part(name: String) = (credits[name] as? JsonArray).orEmpty()
+        val directors = part("crew").filter { ((it as? JsonObject)?.get("job") as? JsonPrimitive)?.content == "Director" }
+        return (directors + part("cast")).mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }
     }
 
     /** The people TMDb finds for a search (actors, directors…), the most popular first. */

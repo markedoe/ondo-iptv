@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.LibraryAddCheck
+import androidx.compose.material.icons.rounded.OndemandVideo
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.WorkspacePremium
@@ -102,6 +103,10 @@ data class MovieDetailUiState(
     val details: MediaDetails? = null,
     /** The provider's backdrop, else TMDb's (see `UiMappers.backdrop`). */
     val backdropUrl: String? = null,
+    /** The YouTube id of the provider's trailer (see `UiMappers.youTubeId`). */
+    val trailer: String? = null,
+    /** TMDb's photos of the cast and directors, by name (`TextNormalizer.normalize`), with the viewer's token. */
+    val faces: Map<String, String> = emptyMap(),
     val progress: WatchProgress? = null,
     val inMyList: Boolean = false,
     val similar: List<ShowcaseItem> = emptyList(),
@@ -115,6 +120,10 @@ data class SeriesDetailUiState(
     val details: MediaDetails? = null,
     /** The provider's backdrop, else TMDb's (see `UiMappers.backdrop`). */
     val backdropUrl: String? = null,
+    /** The YouTube id of the provider's trailer (see `UiMappers.youTubeId`). */
+    val trailer: String? = null,
+    /** TMDb's photos of the cast and directors, by name (`TextNormalizer.normalize`), with the viewer's token. */
+    val faces: Map<String, String> = emptyMap(),
     val seasons: List<Season> = emptyList(),
     val selectedSeason: Int? = null,
     /** Episode to play next and its progress. */
@@ -144,6 +153,8 @@ class DetailActions(
     val onNewCollection: (String) -> Unit = {},
     /** The backdrop at this address did not load. */
     val onBackdropFailed: (String) -> Unit = {},
+    /** The trailer with this YouTube id. */
+    val onTrailer: (String) -> Unit = {},
 )
 
 @Composable
@@ -172,6 +183,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
                 if (resumable) CircleAction(stringResource(R.string.from_start), Icons.Rounded.Replay, actions.onPlayFromStart)
+                state.trailer?.let { id -> CircleAction(stringResource(R.string.trailer), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
             }
         },
         content = { metrics ->
@@ -253,6 +265,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
+                state.trailer?.let { id -> CircleAction(stringResource(R.string.trailer), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
             }
         },
         content = { metrics ->

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
@@ -83,6 +84,8 @@ data class OndoState(
     val tmdbBackdrops: Map<String, String> = emptyMap(),
     /** Provider backdrops that did not load this session (dead address, refused, not an image): TMDb's show instead. */
     val deadBackdrops: Set<String> = emptySet(),
+    /** TMDb's photos of a title's cast and directors, by the title's key, then by the person's name ([TextNormalizer]). */
+    val tmdbFaces: Map<String, Map<String, String>> = emptyMap(),
     /** TMDb refused the saved token when it was used (it was checked elsewhere, or revoked since): Settings says so. */
     val tmdbRefused: Boolean = false,
 ) {
@@ -909,6 +912,7 @@ class OndoRepository(
     /** When the trending titles were last asked for, and for which playlist. */
     private var trendingLoadedFor: Pair<String, Long>? = null
     private val backdropsSearched = HashSet<String>()
+    private val facesSearched = HashSet<String>()
 
     private fun tmdbClient(): TmdbClient? =
         _state.value.settings.tmdbToken?.takeUnless { _state.value.tmdbRefused }?.let { TmdbClient(it, http, Locale.getDefault().toLanguageTag()) }
@@ -941,7 +945,8 @@ class OndoRepository(
     private fun tmdbTokenChanged() {
         trendingLoadedFor = null
         backdropsSearched.clear()
-        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap()) }
+        facesSearched.clear()
+        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap()) }
         loadTrending()
     }
 
@@ -991,6 +996,22 @@ class OndoRepository(
         scope.launch {
             val found = tmdb { backdropUrl(series, tmdbId, title, year) } ?: return@launch
             _state.update { it.copy(tmdbBackdrops = it.tmdbBackdrops + (key to found)) }
+        }
+    }
+
+    /**
+     * With the viewer's token, looks once a session for the photos TMDb has of a title's cast and directors: by the
+     * TMDb id the provider gave, else by title and year. Only those are sent.
+     */
+    fun findTmdbFaces(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
+        if (_state.value.settings.tmdbToken == null || key in _state.value.tmdbFaces || !facesSearched.add(key)) return
+        scope.launch {
+            val people = tmdb { cast(series, tmdbId, title, year) } ?: return@launch
+            val faces = people.mapNotNull { person -> person.profileUrl?.let { TextNormalizer.normalize(person.name) to it } }
+                .filter { it.first.isNotEmpty() }
+                .distinctBy { it.first }
+                .toMap()
+            _state.update { it.copy(tmdbFaces = it.tmdbFaces + (key to faces)) }
         }
     }
 

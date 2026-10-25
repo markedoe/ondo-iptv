@@ -22,7 +22,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **TMDb** with the viewer's own token (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`): checked
   with TMDb's `/authentication` before it is saved (accepted, refused, unreachable), kept in the app's private
   storage and carried by sync (`key:tmdb`, docs/SYNC.md); a Trending row and carousel titles, TMDb's backdrop when
-  the provider's is missing or does not load, TMDb's people in Search, and a person's titles from TMDb's credits.
+  the provider's is missing or does not load, photos of a title's cast (`TmdbClient.cast`, by the provider's TMDb id
+  or the title), TMDb's people in Search, and a person's titles from TMDb's credits.
   A 401 later (a token revoked, or one that came by sync) shows as refused in Settings, and nothing more is asked.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
   resume, picture-in-picture, MediaSession, audio and subtitle tracks, the viewer's audio and subtitle languages

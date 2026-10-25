@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -59,6 +60,7 @@ import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import androidx.tv.material3.darkColorScheme
+import coil3.compose.AsyncImage
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.ChannelLogo
@@ -327,9 +329,12 @@ fun TvFacts(facts: List<String>, badges: List<String>, modifier: Modifier = Modi
     }
 }
 
-/** A round 1:1 card with initials, for people (cast and crew); [role] beneath the name (Director). */
+/**
+ * A round 1:1 card for people (cast and crew): their photo ([photoUrl], TMDb's), over their initials, which show
+ * while it loads and when there is none; [role] beneath the name (Director).
+ */
 @Composable
-fun TvPersonCard(name: String, onClick: () -> Unit, modifier: Modifier = Modifier, role: String? = null) {
+fun TvPersonCard(name: String, onClick: () -> Unit, modifier: Modifier = Modifier, role: String? = null, photoUrl: String? = null) {
     val (scale, _, glow) = cardFocus()
     Column(modifier.width(88.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
@@ -343,6 +348,9 @@ fun TvPersonCard(name: String, onClick: () -> Unit, modifier: Modifier = Modifie
         ) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Text(initials(name), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.85f))
+                if (photoUrl != null) {
+                    AsyncImage(model = photoUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().testTag("personPhoto"))
+                }
             }
         }
         Text(name, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)

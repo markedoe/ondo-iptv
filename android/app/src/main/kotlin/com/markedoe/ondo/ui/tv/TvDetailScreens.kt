@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.rounded.LibraryAddCheck
 import androidx.compose.material.icons.rounded.LocalOffer
+import androidx.compose.material.icons.rounded.OndemandVideo
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.WorkspacePremium
@@ -83,6 +84,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.playback.MediaFormat
@@ -108,7 +110,7 @@ private val PageStart: Dp = TvTokens.EdgeEnd
 
 /**
  * A movie on a TV: its backdrop across the screen, the title, facts, plot and buttons over it with Play focused,
- * then rows to go further (cast, awards, genres, similar titles). No back button: the remote's Back closes it.
+ * then rows to go further (genres and year, cast, awards, similar titles). No back button: the remote's Back closes it.
  */
 @Composable
 fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
@@ -146,11 +148,12 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                 }
                 MyListButton(state.inMyList, actions.onToggleMyList)
                 CollectionButton(state.collections, collectionButton) { picking = true }
+                state.trailer?.let { TrailerButton(it, actions) }
             }
         }
-        peopleShelf(details?.director, details?.cast, actions)
-        awardsShelf(state.awards, actions)
         exploreShelf(details?.genre, movie.year ?: details?.releaseDate?.take(4)?.toIntOrNull(), actions)
+        peopleShelf(details?.director, details?.cast, state.faces, actions)
+        awardsShelf(state.awards, actions)
         similarShelf(state.similar, actions)
     }
     if (picking) TvCollectionDialog(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
@@ -197,6 +200,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                 }
                 MyListButton(state.inMyList, actions.onToggleMyList)
                 CollectionButton(state.collections, collectionButton) { picking = true }
+                state.trailer?.let { TrailerButton(it, actions) }
             }
         }
         state.error?.let { error ->
@@ -229,8 +233,8 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                 }
             }
         }
-        peopleShelf(details?.director ?: series.director, details?.cast ?: series.cast, actions)
         exploreShelf(details?.genre ?: series.genre, series.year, actions)
+        peopleShelf(details?.director ?: series.director, details?.cast ?: series.cast, state.faces, actions)
         similarShelf(state.similar, actions)
     }
     if (picking) TvCollectionDialog(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
@@ -366,6 +370,14 @@ private fun RowScope.ButtonLabel(icon: ImageVector, text: String) {
     Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
     Spacer(Modifier.width(8.dp))
     Text(text, maxLines = 1)
+}
+
+/** The provider's trailer, in the YouTube app. */
+@Composable
+private fun TrailerButton(youTubeId: String, actions: DetailActions) {
+    TvActionButton(onClick = { actions.onTrailer(youTubeId) }, modifier = Modifier.focusMemory("detail-trailer").testTag("detailTrailer")) {
+        ButtonLabel(Icons.Rounded.OndemandVideo, stringResource(R.string.trailer))
+    }
 }
 
 @Composable
@@ -519,8 +531,11 @@ private fun TvEpisodeCard(episode: Episode, progress: WatchProgress?, onClick: (
     }
 }
 
-/** The director first, then the cast: each opens the titles of the playlist with that person. */
-private fun LazyListScope.peopleShelf(director: String?, cast: String?, actions: DetailActions) {
+/**
+ * The director first, then the cast, with TMDb's photos when the viewer has a token ([faces]): each opens the titles
+ * of the playlist with that person.
+ */
+private fun LazyListScope.peopleShelf(director: String?, cast: String?, faces: Map<String, String>, actions: DetailActions) {
     val directors = People.names(director)
     val actors = People.names(cast).filterNot { it in directors }
     if (directors.isEmpty() && actors.isEmpty()) return
@@ -538,10 +553,10 @@ private fun LazyListScope.peopleShelf(director: String?, cast: String?, actions:
                 horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
             ) {
                 items(directors, key = { "director:$it" }) { name ->
-                    TvPersonCard(name, onClick = { actions.onPerson(name) }, role = directorLabel, modifier = Modifier.focusMemory("person:$name"))
+                    TvPersonCard(name, onClick = { actions.onPerson(name) }, role = directorLabel, photoUrl = faces[TextNormalizer.normalize(name)], modifier = Modifier.focusMemory("person:$name"))
                 }
                 items(actors, key = { "actor:$it" }) { name ->
-                    TvPersonCard(name, onClick = { actions.onPerson(name) }, modifier = Modifier.focusMemory("person:$name"))
+                    TvPersonCard(name, onClick = { actions.onPerson(name) }, photoUrl = faces[TextNormalizer.normalize(name)], modifier = Modifier.focusMemory("person:$name"))
                 }
             }
         }

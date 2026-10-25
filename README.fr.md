@@ -114,7 +114,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   playlist, au-dessus de son nom.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), films déjà vus masqués si vous le souhaitez, fiches (Reprendre, Depuis le début,
-  épisode suivant, saisons, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
+  épisode suivant, saisons, la bande-annonce du fournisseur sur YouTube, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
   films et séries (les séries toujours, les films parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
   partagent.
 - **TV en direct** : catégories, Ma liste, programme en cours et suivant.
@@ -161,8 +161,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   uniquement, rien ne passe par internet ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **TMDb**, avec votre propre jeton (Réglages → TMDb, vérifié auprès de TMDb à l'enregistrement, transmis par la
   synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel, l'image de fond de TMDb quand celle du
-  fournisseur manque ou ne se charge pas, les personnes que TMDb connaît dans la recherche, et tous les titres de la
-  playlist sur la page d'un acteur ou d'un réalisateur.
+  fournisseur manque ou ne se charge pas, les photos du casting sur la fiche d'un titre, les personnes que TMDb
+  connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un réalisateur.
 - **Réglages** : playlists, apparence, catégories adultes masquées par défaut, langues et catégories, langue de
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur, jeton TMDb ; écran d'accueil avec démo.
 - **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande

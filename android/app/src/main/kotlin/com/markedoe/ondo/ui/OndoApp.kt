@@ -422,14 +422,15 @@ private fun SearchDestination(viewModel: OndoViewModel, navController: NavHostCo
 @Composable
 private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostController, id: String) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     LaunchedEffect(id) { viewModel.loadMovie(id) }
     val locale = LocalConfiguration.current.locales[0]
     // Off the main thread: finding the movie, its similar titles, awards and hidden categories go through the whole
     // catalogue. A change (My List, details loaded) keeps the page on screen until the new one is ready.
     var gone by remember { mutableStateOf(false) }
-    val detail by produceState<MovieDetailUiState?>(null, state, id, locale) {
-        value = withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale) } }
-        gone = value == null && !state.isLoading && !state.isRestoring
+    val detail by produceKept<MovieDetailUiState?>("movie", null, state, id, locale) {
+        withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale) } }
+            .also { gone = it == null && !state.isLoading && !state.isRestoring }
     }
     BackWhenGone(gone, navController)
     val ui = detail ?: return Loading()
@@ -445,6 +446,7 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
             onToggleCollection = { viewModel.toggleInCollection(it, ShowcaseItem.MovieItem(movie)) },
             onNewCollection = { viewModel.newCollection(it, ShowcaseItem.MovieItem(movie)) },
             onBackdropFailed = { viewModel.backdropFailed(ShowcaseItem.MovieItem(movie), it) },
+            onTrailer = { context.openTrailer(it) },
         )
     if (isTelevision()) TvMovieDetailScreen(ui, actions) else MovieDetailScreen(ui, actions)
 }
@@ -452,14 +454,15 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
 @Composable
 private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostController, id: String) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     val errors by viewModel.seriesErrors.collectAsStateWithLifecycle()
     var season by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(id) { viewModel.loadSeries(id) }
     // Off the main thread: finding the series, its similar titles and hidden categories go through the whole catalogue.
     var gone by remember { mutableStateOf(false) }
-    val detail by produceState<SeriesDetailUiState?>(null, state, id) {
-        value = withContext(Dispatchers.Default) { UiMappers.series(state, id)?.let { UiMappers.seriesDetail(state, it, null, null) } }
-        gone = value == null && !state.isLoading && !state.isRestoring
+    val detail by produceKept<SeriesDetailUiState?>("series", null, state, id) {
+        withContext(Dispatchers.Default) { UiMappers.series(state, id)?.let { UiMappers.seriesDetail(state, it, null, null) } }
+            .also { gone = it == null && !state.isLoading && !state.isRestoring }
     }
     BackWhenGone(gone, navController)
     val computed = detail ?: return Loading()
@@ -477,6 +480,7 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onToggleCollection = { viewModel.toggleInCollection(it, ui.item) },
             onNewCollection = { viewModel.newCollection(it, ui.item) },
             onBackdropFailed = { viewModel.backdropFailed(ui.item, it) },
+            onTrailer = { context.openTrailer(it) },
         )
     if (isTelevision()) TvSeriesDetailScreen(ui, actions) else SeriesDetailScreen(ui, actions)
 }
@@ -525,8 +529,8 @@ private fun CollectionDestination(viewModel: OndoViewModel, navController: NavHo
     LaunchedEffect(exists) { if (!exists) navController.popBackStack() }
     if (!exists) return
     // Off the main thread: it looks through the whole catalogue.
-    val collection by produceState<CollectionUiState?>(null, state, id) {
-        value = withContext(Dispatchers.Default) { UiMappers.collection(state, id, System.currentTimeMillis()) }
+    val collection by produceKept<CollectionUiState?>("collection", null, state, id) {
+        withContext(Dispatchers.Default) { UiMappers.collection(state, id, System.currentTimeMillis()) }
     }
     CollectionScreen(
         state = collection ?: return Loading(),
@@ -546,8 +550,8 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
     val kind = BrowseKind.valueOf(route.kind)
     val locale = LocalConfiguration.current.locales[0]
     // Off the main thread: it looks through the whole catalogue.
-    val browse by produceState(BrowseUiState(kind, route.value), state, route, locale) {
-        value = withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale) }
+    val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale) {
+        withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale) }
     }
     BrowseScreen(
         browse,
@@ -562,14 +566,13 @@ private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostCo
     val state by viewModel.state.collectAsStateWithLifecycle()
     // With the viewer's TMDb token, the person's credits on TMDb (asked once per name and token).
     val token = state.settings.tmdbToken
-    val online by produceState<Pair<Boolean, List<TrendingMatch>?>>(false to null, name, token) {
-        value = false to null
-        value = true to (if (token == null) null else viewModel.tmdbWorks(name))
+    val online by produceKept<Pair<Boolean, List<TrendingMatch>?>>("tmdb", false to null, name, token, again = false) {
+        true to (if (token == null) null else viewModel.tmdbWorks(name))
     }
     // Off the main thread: it looks through the whole catalogue.
-    val works by produceState(PersonUiState(name), state, name, online) {
+    val works by produceKept("works", PersonUiState(name), state, name, online) {
         val (asked, matches) = online
-        value = withContext(Dispatchers.Default) { UiMappers.person(state, name, matches).copy(searching = token != null && !asked) }
+        withContext(Dispatchers.Default) { UiMappers.person(state, name, matches).copy(searching = token != null && !asked) }
     }
     PersonScreen(works, onOpen = navController::open, onBack = { navController.popBackStack() })
 }
@@ -593,8 +596,8 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
         }
     }
     // Off the main thread: sorting a hundred thousand titles must not freeze the screen while typing.
-    val items by produceState(emptyList<ShowcaseItem>(), state, route, query, sort) {
-        value = withContext(Dispatchers.Default) {
+    val items by produceKept("grid", emptyList<ShowcaseItem>(), state, route, query, sort) {
+        withContext(Dispatchers.Default) {
             UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
         }
     }
@@ -665,8 +668,8 @@ private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHo
     var filter by rememberSaveable { mutableStateOf("") }
     val locale = LocalConfiguration.current.locales[0]
     // Off the main thread: each key typed in the filter counts the whole catalogue's titles by category.
-    val categories by produceState<CategoriesUiState?>(null, state, type, filter, locale) {
-        value = withContext(Dispatchers.Default) { CategoryFilter.categories(state, type, filter, locale) }
+    val categories by produceKept<CategoriesUiState?>("categories", null, state, type, filter, locale) {
+        withContext(Dispatchers.Default) { CategoryFilter.categories(state, type, filter, locale) }
     }
     val ui = categories ?: return Loading()
     val actions = CategoriesActions(

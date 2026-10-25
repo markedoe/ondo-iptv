@@ -79,6 +79,31 @@ class TmdbTest {
         assertNull(client.backdropUrl(series = true, tmdbId = null, title = "Copper Valley", year = null), "TMDb has no backdrop either")
     }
 
+    /** A title's cast and directors with their photos: by the provider's TMDb id, else by title and year. */
+    @Test
+    fun aTitlesCastIsFoundByIdOrByTitle() = runTest {
+        val http = MockHttpClient()
+        http.routes["https://api.themoviedb.org/3/movie/910001/credits?language=en-US&api_key=KEY"] = (
+            """{"id":910001,"cast":[{"id":11,"name":"Ana Lima","profile_path":"/ana.jpg","known_for_department":"Acting"},""" +
+                """{"id":12,"name":"José Silva","profile_path":null}],""" +
+                """"crew":[{"id":13,"name":"Kim Park","job":"Director","profile_path":"/kim.jpg"},{"id":14,"name":"Lee Moss","job":"Editor","profile_path":"/lee.jpg"}]}"""
+            ).encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
+            """{"results":[{"id":5,"name":"Copper Valley Nights","first_air_date":"2020-01-01"},{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20"}]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/tv/7/credits?language=en-US&api_key=KEY"] =
+            """{"id":7,"cast":[{"id":21,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/search/movie?query=paper%20trail&language=en-US&api_key=KEY"] =
+            """{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}""".encodeToByteArray()
+        val client = TmdbClient("KEY", http)
+
+        val movie = client.cast(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010)
+        assertEquals(listOf("Kim Park", "Ana Lima", "José Silva"), movie.map { it.name }, "the director first, no editor")
+        assertEquals(listOf("https://image.tmdb.org/t/p/w185/kim.jpg", "https://image.tmdb.org/t/p/w185/ana.jpg", null), movie.map { it.profileUrl })
+        assertEquals(listOf("Ruth Ames"), client.cast(series = true, tmdbId = null, title = "FR - Copper Valley (US)", year = 2008).map { it.name })
+        assertTrue(client.cast(series = false, tmdbId = null, title = "Paper Trail", year = 1999).isEmpty(), "another Paper Trail's people")
+        assertTrue(client.cast(series = false, tmdbId = null, title = "", year = null).isEmpty())
+    }
+
     /** A key is checked with TMDb before it is saved: accepted, refused, or TMDb out of reach. */
     @Test
     fun aKeyIsCheckedBeforeItIsSaved() = runTest {

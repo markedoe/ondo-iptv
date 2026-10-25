@@ -410,6 +410,21 @@ object UiMappers {
         }
     }
 
+    /**
+     * The YouTube id of a trailer as the provider gives it: the id alone, or a YouTube address (watch, youtu.be,
+     * embed, shorts). Null for anything else: no button rather than a broken one.
+     */
+    fun youTubeId(trailer: String?): String? {
+        val text = trailer?.trim().orEmpty()
+        if (YOUTUBE_ID.matches(text)) return text
+        return YOUTUBE_ADDRESS.find(text)?.groupValues?.get(1)
+    }
+
+    private val YOUTUBE_ID = Regex("[A-Za-z0-9_-]{11}")
+    private val YOUTUBE_ADDRESS = Regex(
+        """^(?:https?://)?(?:(?:www|m)\.)?(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:[^#]*&)?v=|embed/|shorts/|v/)|youtu\.be/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])""",
+    )
+
     fun movieDetail(state: OndoState, movie: Movie, locale: Locale = Locale.getDefault()): MovieDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.MovieItem(movie)
@@ -417,6 +432,8 @@ object UiMappers {
             item = item,
             details = state.movieDetails[movie.id],
             backdropUrl = backdrop(state, item),
+            trailer = youTubeId(state.movieDetails[movie.id]?.trailerYouTubeId),
+            faces = state.tmdbFaces[item.key].orEmpty(),
             progress = progress(showcase.progress(movie)),
             inMyList = isFavorite(state, item),
             similar = showcase.similarMovies(movie).map { ShowcaseItem.MovieItem(it) },
@@ -440,6 +457,8 @@ object UiMappers {
             item = item,
             details = details?.info,
             backdropUrl = backdrop(state, item),
+            trailer = youTubeId(details?.info?.trailerYouTubeId),
+            faces = state.tmdbFaces[item.key].orEmpty(),
             seasons = seasons,
             selectedSeason = selectedSeason ?: next?.second?.number,
             next = next?.first,
