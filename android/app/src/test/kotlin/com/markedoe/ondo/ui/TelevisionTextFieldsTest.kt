@@ -15,6 +15,7 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
@@ -79,12 +80,12 @@ class TelevisionTextFieldsTest {
         fetchedAt = System.currentTimeMillis(),
     )
 
-    private fun start() {
+    private fun start(answers: Map<String, String> = emptyMap()) {
         val store = AppStore(folder.root)
         store.savePlaylists(listOf(Fixtures.playlist))
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
         store.saveContent(Fixtures.PLAYLIST_ID, content)
-        repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main))
+        repository = OndoRepository(store, FakeHttp(answers), CoroutineScope(SupervisorJob() + Dispatchers.Main))
         val viewModel = OndoViewModel(repository, Labels(), minutes = flowOf(Fixtures.NOW))
         var inputModes: InputModeManager? = null
         compose.setContent {
@@ -227,5 +228,29 @@ class TelevisionTextFieldsTest {
         assertFalse("the keyboard opened as the remote reached the search field", keyboardShown())
         press(Key.DirectionCenter)
         assertTrue("OK opens the keyboard", keyboardShown())
+    }
+
+    /** The TMDb token typed with the remote: OK opens the keyboard, Done checks it with TMDb, Remove takes it away. */
+    @Test
+    fun aTmdbTokenIsTypedCheckedAndRemovedWithTheRemote() {
+        start(mapOf("https://api.themoviedb.org/3/authentication?language=en-US&api_key=GOOD" to """{"success":true}"""))
+        waitFor { focusedNode() != null }
+        openSettings()
+        pressUntil(Key.DirectionDown) { focusedTag() == "settingsCatalogue" }
+        press(Key.DirectionRight)
+        pressUntil(Key.DirectionDown, max = 12) { focusedTag() == "tmdbTokenField" }
+        assertFalse("the keyboard opened as the remote reached the field", keyboardShown())
+        press(Key.DirectionCenter)
+        assertTrue("OK opens the keyboard", keyboardShown())
+        compose.onAllNodes(isFocused()).onLast().performTextInput("GOOD")
+        compose.onAllNodes(isFocused()).onLast().performImeAction()
+        waitFor { repository.state.value.settings.tmdbToken == "GOOD" }
+        waitFor { exists("tmdbStatus") }
+        compose.onNodeWithText("Accepted by TMDb", substring = true).assertExists()
+        assertFalse("Done goes on from the field (${focused()})", inAField())
+        pressUntil(Key.DirectionRight, max = 3) { focusedTag() == "tmdbRemove" }
+        press(Key.DirectionCenter)
+        waitFor { repository.state.value.settings.tmdbToken == null }
+        assertFalse(exists("tmdbRemove"))
     }
 }

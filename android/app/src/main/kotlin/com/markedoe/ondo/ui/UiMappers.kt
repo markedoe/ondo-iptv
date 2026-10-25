@@ -442,6 +442,8 @@ object UiMappers {
         syncOnLocalNetwork = state.settings.syncOnLocalNetwork,
         syncDevices = if (state.settings.syncOnLocalNetwork) syncDevices else emptyList(),
         lastCrash = state.lastCrash,
+        hasTmdbToken = state.settings.tmdbToken != null,
+        tmdbRefused = state.tmdbRefused,
     )
 
     /**

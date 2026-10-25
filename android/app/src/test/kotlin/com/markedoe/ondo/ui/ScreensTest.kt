@@ -25,6 +25,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
@@ -36,6 +37,7 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
+import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.player.ProblemReportDialog
 import com.markedoe.ondo.player.StreamStatistics
@@ -427,6 +429,47 @@ class ScreensTest {
         compose.onNodeWithText("Living room TV").assertExists()
         compose.onNodeWithText("Synced at", substring = true).assertExists()
         compose.onNodeWithText("Not reached, trying again").assertExists()
+    }
+
+    /** Settings, TMDb: a token TMDb refuses is not saved and says why; an accepted one is, and Remove takes it away. */
+    @Test
+    fun settingsCheckTheTmdbTokenBeforeSavingIt() {
+        val base = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
+        var saved by mutableStateOf<String?>(null)
+        val checked = mutableListOf<String>()
+        compose.setContent {
+            OndoTheme {
+                SettingsScreen(
+                    base.copy(hasTmdbToken = saved != null),
+                    SettingsActions(
+                        onCheckTmdbToken = { token ->
+                            checked += token
+                            if (token == "GOOD") TmdbCheck.ACCEPTED.also { saved = token } else TmdbCheck.REFUSED
+                        },
+                        onRemoveTmdbToken = { saved = null },
+                    ),
+                )
+            }
+        }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("tmdbCheck"))
+        compose.onNodeWithTag("tmdbCheck").assertIsNotEnabled()
+        compose.onAllNodesWithTag("tmdbRemove").assertCountEquals(0)
+        compose.onNodeWithTag("tmdbTokenField").performTextInput("BAD")
+        compose.onNodeWithTag("tmdbCheck").performClick()
+        compose.onNodeWithText("TMDb refused it", substring = true).assertExists()
+        assertEquals(null, saved)
+        compose.onAllNodesWithTag("tmdbRemove").assertCountEquals(0)
+
+        compose.onNodeWithTag("tmdbTokenField").performTextClearance()
+        compose.onNodeWithTag("tmdbTokenField").performTextInput("GOOD")
+        compose.onNodeWithTag("tmdbCheck").performClick()
+        compose.onNodeWithText("Accepted by TMDb", substring = true).assertExists()
+        assertEquals("GOOD", saved)
+        assertEquals(listOf("BAD", "GOOD"), checked)
+
+        compose.onNodeWithTag("tmdbRemove").performClick()
+        assertEquals(null, saved)
+        compose.onAllNodesWithTag("tmdbStatus").assertCountEquals(0)
     }
 
     /** Settings, About: the last error that stopped the app, to photograph for a report. */

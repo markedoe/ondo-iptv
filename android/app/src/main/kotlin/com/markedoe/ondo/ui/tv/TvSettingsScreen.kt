@@ -22,6 +22,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
@@ -44,6 +47,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,6 +67,9 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -80,6 +87,9 @@ import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.data.LastCrash
+import com.markedoe.ondo.data.TmdbCheck
+import com.markedoe.ondo.ui.components.tmdbStatus
+import com.markedoe.ondo.ui.components.tmdbStatusColor
 import com.markedoe.ondo.ui.screens.PlaylistSummary
 import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsUiState
@@ -87,6 +97,7 @@ import com.markedoe.ondo.ui.screens.bufferLabel
 import com.markedoe.ondo.ui.screens.lastCrashTitle
 import com.markedoe.ondo.ui.screens.syncDetail
 import com.markedoe.ondo.ui.theme.OndoColors
+import kotlinx.coroutines.launch
 
 /** The parts of the TV's Settings, listed on the left. */
 enum class TvSettingsSection(val label: Int, val icon: ImageVector, val tag: String) {
@@ -356,6 +367,74 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
         item(key = "language") {
             SettingRow(stringResource(R.string.app_language), Icons.Rounded.Language, subtitle = stringResource(R.string.app_language_hint), onClick = actions.onAppLanguage, modifier = Modifier.focusMemory("settings-language").testTag("appLanguageRow"))
         }
+    }
+    item(key = "tmdbTitle") {
+        Text("TMDb", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+    }
+    item(key = "tmdb") { TvTmdbToken(state, actions) }
+}
+
+/**
+ * The viewer's own TMDb token on a TV: typed with the remote's keyboard (or arrived by sync), checked with TMDb before
+ * it is saved; Remove takes it away, from the other devices too.
+ */
+@Composable
+private fun TvTmdbToken(state: SettingsUiState, actions: SettingsActions) {
+    var token by rememberSaveable { mutableStateOf("") }
+    var check by remember { mutableStateOf<TmdbCheck?>(null) }
+    var checking by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun submit() {
+        if (token.isBlank() || checking) return
+        checking = true
+        scope.launch {
+            val answer = actions.onCheckTmdbToken(token)
+            check = answer
+            checking = false
+            if (answer == TmdbCheck.ACCEPTED) token = ""
+        }
+    }
+    val leaveField = rememberLeaveField()
+    Column(Modifier.widthIn(max = 900.dp).padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val field = rememberTvTextField()
+        OutlinedTextField(
+            value = token,
+            onValueChange = {
+                token = it
+                check = null
+            },
+            label = { androidx.compose.material3.Text(stringResource(R.string.tmdb_token_label)) },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done, autoCorrectEnabled = false),
+            // Done checks the token and goes on to the buttons below, the keyboard closed.
+            keyboardActions = KeyboardActions(onDone = {
+                submit()
+                leaveField()
+            }),
+            readOnly = field.readOnly,
+            modifier = Modifier.fillMaxWidth().then(field.modifier).focusMemory("settings-tmdb").testTag("tmdbTokenField"),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            TvActionButton(onClick = ::submit, enabled = token.isNotBlank() && !checking, modifier = Modifier.testTag("tmdbCheck")) {
+                Text(stringResource(R.string.tmdb_check_and_save))
+            }
+            if (state.hasTmdbToken) {
+                TvActionButton(
+                    onClick = {
+                        token = ""
+                        check = null
+                        actions.onRemoveTmdbToken()
+                    },
+                    modifier = Modifier.testTag("tmdbRemove"),
+                ) { Text(stringResource(R.string.remove)) }
+            }
+        }
+        if (checking) Text(stringResource(R.string.tmdb_checking), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        tmdbStatus(check, state.hasTmdbToken, state.tmdbRefused)?.let { (text, good) ->
+            Text(stringResource(text), style = MaterialTheme.typography.bodyMedium, color = tmdbStatusColor(good), modifier = Modifier.testTag("tmdbStatus"))
+        }
+        Text(stringResource(R.string.tmdb_help), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -344,4 +344,17 @@
     <string name="tracks_pending">开始播放后会显示可选的轨道。</string>
     <string name="no_subtitles">此流没有字幕。</string>
     <string name="no_audio">此流没有声音。</string>
+    <string name="tmdb_token_label">API Read Access Token</string>
+    <string name="tmdb_check_and_save">验证并保存</string>
+    <string name="tmdb_checking">正在检查…</string>
+    <string name="tmdb_accepted">TMDb 已接受：热门内容、缺少的背景图和影人作品均来自 TMDb。</string>
+    <string name="tmdb_refused">TMDb 拒绝了它。请重新完整复制“API Read Access Token”（“API Key”也可以）。</string>
+    <string name="tmdb_unreachable">无法连接 TMDb，因此未保存任何内容。请检查网络连接后重试。</string>
+    <string name="tmdb_open_api_page">打开 TMDb 的 API 页面</string>
+    <string name="trending">热门</string>
+    <string name="remove">移除</string>
+    <string name="tmdb_help">在 themoviedb.org 上：你的账户 → Settings → API。复制“API Read Access Token”（较长的那个）；“API Key”也可以。本产品使用 TMDB API，但未经 TMDB 认可或认证。</string>
+    <string name="person_opened_pages_tmdb">只能在你打开过的页面中找到电影。在“设置”中添加你的 TMDb“API Read Access Token”即可全部找到。</string>
+    <string name="help_tmdb_title">TMDb：热门与作品年表</string>
+    <string name="help_tmdb_body">使用你自己的 TMDb 令牌后，Ondo 会在首页添加“热门”一行，显示你的播放列表中有的当下热门作品；当提供商的背景图缺失或无法显示时，改用 TMDb 的背景图；在搜索中找到 TMDb 收录的人物；并列出你的播放列表中某位演员或导演的全部电影。\n\n在 themoviedb.org 上：你的账户 → Settings → API。复制“API Read Access Token”（较长的那个；“API Key”也可以），粘贴到设置中的 TMDb 下：Ondo 会先向 TMDb 核对，再保存。开启“在此网络上同步”后，它会到达你的其他设备，无需用遥控器输入。发送给 TMDb 的只有标题、年份和人名。本产品使用 TMDB API，但未经 TMDB 认可或认证。</string>
 </resources>

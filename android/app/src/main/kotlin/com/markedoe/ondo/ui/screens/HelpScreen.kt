@@ -51,6 +51,7 @@ val helpTopics = listOf(
     HelpTopic("playlists", R.string.help_playlists_title, R.string.help_playlists_body),
     HelpTopic("home", R.string.help_home_title, R.string.help_home_body),
     HelpTopic("search", R.string.help_search_title, R.string.help_search_body),
+    HelpTopic("tmdb", R.string.help_tmdb_title, R.string.help_tmdb_body),
     HelpTopic("categories", R.string.help_categories_title, R.string.help_categories_body),
     HelpTopic("my-list", R.string.help_mylist_title, R.string.help_mylist_body),
     HelpTopic("player", R.string.help_player_title, R.string.help_player_body, touch = true),

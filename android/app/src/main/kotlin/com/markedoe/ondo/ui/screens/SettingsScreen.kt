@@ -66,6 +66,8 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
+import com.markedoe.ondo.data.TmdbCheck
+import com.markedoe.ondo.ui.components.TmdbTokenSettings
 import com.markedoe.ondo.ui.theme.Appearance
 import com.markedoe.ondo.ui.tv.focusFrame
 
@@ -87,6 +89,10 @@ data class SettingsUiState(
     val syncDevices: List<SyncDevice> = emptyList(),
     /** The last error that stopped the app, recorded on this device. */
     val lastCrash: LastCrash? = null,
+    /** A TMDb token is saved (typed here or arrived by sync). */
+    val hasTmdbToken: Boolean = false,
+    /** TMDb refused the saved token when it was used. */
+    val tmdbRefused: Boolean = false,
 )
 
 class SettingsActions(
@@ -107,6 +113,10 @@ class SettingsActions(
     val onHelp: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
     val onSupport: () -> Unit = {},
+    /** Checks a TMDb token with TMDb, and saves it only when TMDb accepts it. */
+    val onCheckTmdbToken: suspend (String) -> TmdbCheck = { TmdbCheck.UNREACHABLE },
+    val onRemoveTmdbToken: () -> Unit = {},
+    val onOpenTmdbApiPage: () -> Unit = {},
 )
 
 /** Playlists, appearance, player and about (player-only disclaimer, privacy policy). */
@@ -239,6 +249,11 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     leadingContent = { Icon(Icons.Rounded.Language, contentDescription = null) },
                     modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onAppLanguage).testTag("appLanguageRow"),
                 )
+            }
+            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+            item { SectionTitle("TMDb") }
+            item(key = "tmdb") {
+                TmdbTokenSettings(state.hasTmdbToken, state.tmdbRefused, actions.onCheckTmdbToken, actions.onRemoveTmdbToken, actions.onOpenTmdbApiPage)
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
             item { SectionTitle(stringResource(R.string.player)) }

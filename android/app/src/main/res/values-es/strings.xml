@@ -360,4 +360,17 @@
     <string name="tracks_pending">Las pistas aparecen en cuanto se reproduce el flujo.</string>
     <string name="no_subtitles">Este flujo no tiene subtítulos.</string>
     <string name="no_audio">Este flujo no tiene sonido.</string>
+    <string name="tmdb_token_label">API Read Access Token</string>
+    <string name="tmdb_check_and_save">Comprobar y guardar</string>
+    <string name="tmdb_checking">Comprobando…</string>
+    <string name="tmdb_accepted">Aceptado por TMDb: las tendencias, las imágenes de fondo que faltan y las filmografías vienen de TMDb.</string>
+    <string name="tmdb_refused">TMDb lo rechazó. Vuelve a copiar el «API Read Access Token» completo (la «API Key» también sirve).</string>
+    <string name="tmdb_unreachable">No se pudo contactar con TMDb, así que no se guardó nada. Comprueba la conexión y vuelve a intentarlo.</string>
+    <string name="tmdb_open_api_page">Abrir la página de API de TMDb</string>
+    <string name="trending">Tendencias</string>
+    <string name="remove">Quitar</string>
+    <string name="tmdb_help">En themoviedb.org: tu cuenta → Settings → API. Copia el «API Read Access Token» (el largo); la «API Key» también sirve. Este producto usa la API de TMDB, pero TMDB no lo respalda ni lo certifica.</string>
+    <string name="person_opened_pages_tmdb">Las películas solo se encuentran entre las fichas que ya abriste. Añade tu «API Read Access Token» de TMDb en Ajustes para encontrarlas todas.</string>
+    <string name="help_tmdb_title">TMDb: tendencias y filmografías</string>
+    <string name="help_tmdb_body">Con tu propio token de TMDb, Ondo añade a Inicio una fila Tendencias con los títulos del momento que tiene tu playlist, muestra la imagen de fondo de TMDb cuando la de tu proveedor falta o no carga, encuentra en la búsqueda a las personas que TMDb conoce y muestra todas las películas de un actor o de un director que tiene tu playlist.\n\nEn themoviedb.org: tu cuenta → Settings → API. Copia el «API Read Access Token» (el largo; la «API Key» también sirve) y pégalo en Ajustes, en TMDb: Ondo lo comprueba con TMDb antes de guardarlo. Con Sincronizar en esta red llega a tus otros dispositivos, así que no hace falta escribirlo con un mando. Solo se envían a TMDb títulos, años y nombres. Este producto usa la API de TMDB, pero TMDB no lo respalda ni lo certifica.</string>
 </resources>

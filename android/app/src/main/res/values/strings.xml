@@ -357,4 +357,17 @@
     <string name="tracks_pending">The tracks show once the stream plays.</string>
     <string name="no_subtitles">This stream has no subtitles.</string>
     <string name="no_audio">This stream has no sound.</string>
+    <string name="tmdb_token_label">API Read Access Token</string>
+    <string name="tmdb_check_and_save">Check and Save</string>
+    <string name="tmdb_checking">Checking…</string>
+    <string name="tmdb_accepted">Accepted by TMDb: trending titles, missing background images and filmographies come from TMDb.</string>
+    <string name="tmdb_refused">TMDb refused it. Copy the whole API Read Access Token again (the API Key works too).</string>
+    <string name="tmdb_unreachable">TMDb could not be reached, so nothing was saved. Check the connection and try again.</string>
+    <string name="tmdb_open_api_page">Open TMDb\'s API Page</string>
+    <string name="trending">Trending</string>
+    <string name="remove">Remove</string>
+    <string name="tmdb_help">On themoviedb.org: your account → Settings → API. Copy the API Read Access Token (the long one); the API Key works too. This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
+    <string name="person_opened_pages_tmdb">Movies are only found among the pages you have opened. Add your TMDb API Read Access Token in Settings to find all of them.</string>
+    <string name="help_tmdb_title">TMDb: trending and filmographies</string>
+    <string name="help_tmdb_body">With your own TMDb token, Ondo adds a Trending row to Home with the titles of the moment that your playlist has, shows TMDb’s background image when your provider’s is missing or broken, finds the people TMDb knows in Search, and lists all the movies of an actor or a director that your playlist has.\n\nOn themoviedb.org: your account → Settings → API. Copy the API Read Access Token (the long one; the API Key works too) and paste it in Settings, under TMDb: Ondo checks it with TMDb before saving it. With Sync on this network it reaches your other devices, so there is no need to type it with a remote. Only titles, years and names are sent to TMDb. This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
 </resources>

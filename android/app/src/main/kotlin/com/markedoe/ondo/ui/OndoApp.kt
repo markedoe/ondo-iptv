@@ -61,6 +61,7 @@ import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.player.PlayerActivity
+import com.markedoe.ondo.ui.components.TMDB_API_PAGE
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.BrowseKind
@@ -633,6 +634,9 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onHelp = { navController.navigate(Routes.Help) },
             onPrivacy = { browse(PRIVACY_URL) },
             onSupport = { browse(SUPPORT_URL) },
+            onCheckTmdbToken = viewModel::checkAndSaveTmdbToken,
+            onRemoveTmdbToken = viewModel::removeTmdbToken,
+            onOpenTmdbApiPage = { context.browse(TMDB_API_PAGE) },
         )
     if (isTelevision()) {
         val canChooseLanguage = remember(context) { context.appLanguageSettings() != null }
