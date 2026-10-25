@@ -21,10 +21,10 @@ Ce document est la spécification. L’implémentation Kotlin est dans
 ## Ce qui est synchronisé et ce qui reste
 
 Synchronisés : les playlists (nom, type, adresse, identifiant et mot de passe, adresse du guide), Ma liste et les
-chaînes favorites, les listes (collections), et la progression de lecture (où chaque film et épisode a été
-laissé, et ce qui a été terminé).
+chaînes favorites, les listes (collections), la progression de lecture (où chaque film et épisode a été laissé, et
+ce qui a été terminé), et les clés de services extérieurs saisies dans les Réglages (le jeton TMDb).
 
-Restent sur chaque appareil : les réglages, les catégories masquées, les modifications de chaînes, les rappels,
+Restent sur chaque appareil : les autres réglages, les catégories masquées, les modifications de chaînes, les rappels,
 les profils, les téléchargements, les catalogues eux-mêmes (chaque appareil télécharge ses playlists), et les
 playlists fichier (un fichier importé sur un appareil n’est pas sur les autres). Sur les appareils Apple, seul le
 profil principal est synchronisé ; les profils enfants ne le sont pas.
@@ -92,6 +92,7 @@ appareils Android.
   "favorites": [ … ],
   "progress": [ … ],
   "lists": [ … ],
+  "keys": [ … ],
   "deleted": { "<clé>": 1760000000000 },
   "replaced": { "<id de playlist>": "<id de playlist>" }
 }
@@ -119,6 +120,14 @@ ajoutée ou modifiée).
 `list:<id>` ; instant : `updatedAt` (fixé quand la liste est créée, renommée ou que ses éléments changent). `id`
 est mis en minuscules.
 
+**Clé** (la clé ou le jeton d’un service extérieur, saisi dans les Réglages) — `{"service", "value", "updatedAt"}`.
+`service` nomme le service : `tmdb` pour TMDb (son « API Read Access Token », ou son « API Key ») ; `value` est la
+clé telle qu’enregistrée (sans espaces autour). Clé : `key:<service>` ; instant : `updatedAt` (fixé quand la clé est
+enregistrée ; la retirer ajoute `key:<service>` à `deleted`). Une clé est vérifiée auprès de son service sur
+l’appareil où elle est saisie ; les autres appareils l’utilisent telle qu’elle arrive, et leurs Réglages le disent
+quand le service la refuse plus tard. Un appareil garde et transmet les clés des services qu’il ne connaît pas. Un
+instantané sans `keys` (d’un appareil qui ne les synchronise pas) ne retire rien : seul `deleted` le fait.
+
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil
 les garde 180 jours.
 
@@ -143,7 +152,8 @@ change rien.
    - favori : `title` ;
    - progression : pas de chaîne : la plus grande `position` gagne, puis le plus petit `title` ;
    - liste : `name`, puis la clé de chaque élément (`<playlist>|<kind>|<item>`) dans l’ordre, joints par un saut de
-     ligne.
+     ligne ;
+   - clé : `value`.
 3. Un élément dont l’instant n’est pas postérieur à l’instant de suppression de sa clé est écarté (à instants
    égaux, la suppression gagne).
 4. **La même playlist ajoutée deux fois** (sur deux appareils avant qu’ils se synchronisent) : les playlists de
@@ -157,17 +167,17 @@ change rien.
    `deleted` et aucune playlist gardée n’a cet identifiant) est écarté. Celui dont la playlist est simplement
    inconnue (une playlist fichier d’un autre appareil) est gardé.
 6. Le résultat range les playlists par `addedAt` puis `id`, les favoris par `addedAt` puis clé, les progressions
-   par `watchedAt` (la plus récente d’abord) puis clé, et les listes par `id`.
+   par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, et les clés par `service`.
 
 Un appareil garde l’instantané fusionné comme le sien : il ajoute les playlists qu’il n’avait pas (et les
 télécharge), met à jour celles qui ont changé, supprime celles qui ont été supprimées, et remplace Ma liste, les
-chaînes favorites, les listes et la progression par celles fusionnées. Il garde tout ce qui n’est pas
-synchronisé. Si le spectateur a changé quelque chose pendant la session, l’appareil fusionne à nouveau avec son
+chaînes favorites, les listes et la progression par celles fusionnées, et enregistre les clés des services qu’il
+utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synchronisé. Si le spectateur a changé quelque chose pendant la session, l’appareil fusionne à nouveau avec son
 état actuel, donc aucun changement n’est perdu.
 
 ## Confidentialité
 
-Les instantanés contiennent en clair les identifiants et mots de passe des playlists, le réseau de confiance ayant
-été préféré au chiffrement. Ils ne circulent qu’entre appareils Ondo dont la synchronisation est active, sur le
+Les instantanés contiennent en clair les identifiants et mots de passe des playlists, et les clés des services
+extérieurs (le jeton TMDb), le réseau de confiance ayant été préféré au chiffrement. Ils ne circulent qu’entre appareils Ondo dont la synchronisation est active, sur le
 réseau local ; Ondo ne les envoie nulle part ailleurs. Désactiver la synchronisation arrête aussitôt le serveur,
 l’annonce et la recherche.

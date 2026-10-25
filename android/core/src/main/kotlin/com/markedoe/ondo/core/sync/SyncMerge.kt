@@ -51,11 +51,14 @@ object SyncMerge {
             (left.lists + right.lists).map { list -> list.copy(items = list.items.map { it.copy(playlist = id(it.playlist)) }) },
             { it.key }, { it.updatedAt }, compareBy { list -> (listOf(list.name) + list.items.map { it.key }).joinToString("\n") }, deleted,
         ).map { list -> list.copy(items = list.items.filter { alive(it.playlist) }) }
+        // A side without keys (a device that does not sync them) removes none: only a deletion does.
+        val keys = pick(left.keys + right.keys, { it.key }, { it.updatedAt }, compareBy { it.value }, deleted)
         return left.copy(
             playlists = kept.sortedWith(compareBy<SyncPlaylist> { it.addedAt }.thenBy { it.id }),
             favorites = favorites.sortedWith(compareBy<SyncFavorite> { it.addedAt }.thenBy { it.key }),
             progress = progress.sortedWith(compareByDescending<SyncProgress> { it.watchedAt }.thenBy { it.key }),
             lists = lists.sortedBy { it.id },
+            keys = keys.sortedBy { it.service },
             deleted = deleted.toSortedMap(),
             replaced = replaced.toSortedMap(),
         )

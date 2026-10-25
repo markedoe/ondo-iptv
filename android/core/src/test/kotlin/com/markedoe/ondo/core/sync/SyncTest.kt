@@ -64,6 +64,25 @@ class SyncTest {
     }
 
     @Test
+    fun keysOfOutsideServicesFollowTheLaterSaveAndTheirRemoval() {
+        val merged = SyncMerge.merge(fixture("a.json"), fixture("b.json"))
+        // The later save wins, a removal after a save drops it, the key of a service this device does not know stays.
+        assertEquals(
+            listOf(SyncKey("future-service", "example-other-key", 300), SyncKey("tmdb", "example-tmdb-token-b", 2500)),
+            merged.keys,
+        )
+        assertEquals(800L, merged.deleted["key:opensubtitles"])
+        // A device that does not sync keys sends none: that removes nothing.
+        val mine = SyncSnapshot(device = "a", keys = listOf(SyncKey("tmdb", "example-tmdb-token-a", 1500)))
+        assertEquals(mine.keys, SyncMerge.merge(mine, SyncSnapshot(device = "old")).keys)
+        assertEquals(mine.keys, SyncMerge.merge(SyncSnapshot(device = "old"), mine).keys)
+        // On equal times, the smaller value wins, whatever the order.
+        val other = SyncSnapshot(device = "b", keys = listOf(SyncKey("tmdb", "example-tmdb-token-0", 1500)))
+        assertEquals("example-tmdb-token-0", SyncMerge.merge(mine, other).keys.single().value)
+        assertEquals("example-tmdb-token-0", SyncMerge.merge(other, mine).keys.single().value)
+    }
+
+    @Test
     fun aSnapshotOfAnotherKindOrVersionIsRefused() {
         assertNull(SyncSnapshot.decode("""{"type":"other","version":1,"device":"a"}""".encodeToByteArray()))
         assertNull(SyncSnapshot.decode("""{"type":"ondo-sync","version":2,"device":"a"}""".encodeToByteArray()))

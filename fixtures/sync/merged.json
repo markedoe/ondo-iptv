@@ -71,9 +71,22 @@
     }
   ],
   "lists": [],
+  "keys": [
+    {
+      "service": "future-service",
+      "value": "example-other-key",
+      "updatedAt": 300
+    },
+    {
+      "service": "tmdb",
+      "value": "example-tmdb-token-b",
+      "updatedAt": 2500
+    }
+  ],
   "deleted": {
     "favorite:a0000000-0000-4000-8000-00000000000a|live|c1": 2100,
     "favorite:a0000000-0000-4000-8000-00000000000a|movie|m9": 1900,
+    "key:opensubtitles": 800,
     "list:d0000000-0000-4000-8000-00000000000d": 4500,
     "playlist:b0000000-0000-4000-8000-00000000000b": 5000,
     "playlist:e0000000-0000-4000-8000-00000000000e": 900

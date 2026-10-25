@@ -85,8 +85,21 @@
       "updatedAt": 3900
     }
   ],
+  "keys": [
+    {
+      "service": "tmdb",
+      "value": "example-tmdb-token-b",
+      "updatedAt": 2500
+    },
+    {
+      "service": "future-service",
+      "value": "example-other-key",
+      "updatedAt": 300
+    }
+  ],
   "deleted": {
     "list:d0000000-0000-4000-8000-00000000000d": 4500,
-    "favorite:a0000000-0000-4000-8000-00000000000a|live|c1": 2100
+    "favorite:a0000000-0000-4000-8000-00000000000a|live|c1": 2100,
+    "key:opensubtitles": 800
   }
 }

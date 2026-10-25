@@ -5,8 +5,8 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * What a device sends to sync on the local network: its playlists, My List and favourite channels, lists and
- * playback progress, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+ * What a device sends to sync on the local network: its playlists, My List and favourite channels, lists, playback
+ * progress and the keys of outside services, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
  */
 @Serializable
 data class SyncSnapshot(
@@ -18,6 +18,8 @@ data class SyncSnapshot(
     val favorites: List<SyncFavorite> = emptyList(),
     val progress: List<SyncProgress> = emptyList(),
     val lists: List<SyncList> = emptyList(),
+    /** The keys typed in Settings for outside services (the TMDb token); none from a device that does not sync them. */
+    val keys: List<SyncKey> = emptyList(),
     val deleted: Map<String, Long> = emptyMap(),
     /** Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID. */
     val replaced: Map<String, String> = emptyMap(),
@@ -138,4 +140,18 @@ data class SyncListItem(
     val image: String? = null,
 ) {
     val key: String get() = "$playlist|$kind|$item"
+}
+
+/** The key or token of an outside service, typed in Settings: [service] `tmdb` for TMDb's token (or API Key). */
+@Serializable
+data class SyncKey(
+    val service: String,
+    val value: String,
+    val updatedAt: Long,
+) {
+    val key: String get() = "key:$service"
+
+    companion object {
+        const val TMDB = "tmdb"
+    }
 }

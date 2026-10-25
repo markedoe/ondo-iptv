@@ -67,6 +67,18 @@
       "updatedAt": 4000
     }
   ],
+  "keys": [
+    {
+      "service": "tmdb",
+      "value": "example-tmdb-token-a",
+      "updatedAt": 1500
+    },
+    {
+      "service": "opensubtitles",
+      "value": "example-opensubtitles-key",
+      "updatedAt": 700
+    }
+  ],
   "deleted": {
     "favorite:a0000000-0000-4000-8000-00000000000a|movie|m9": 1900,
     "playlist:e0000000-0000-4000-8000-00000000000e": 900
