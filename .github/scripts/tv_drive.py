@@ -1071,14 +1071,16 @@ def path_bitrate(tv, args):
     """Movie 1 at a 4K film's bitrate (heavy.mkv, 40 Mbit/s, 75 s) played for 50 s beside the catalogue: what the
     player keeps ahead of the picture must fit in the app's memory with it. The Java heap is noted every 10 s. The app
     running out of memory fails, even when the player only shows an error, and so does the error itself."""
-    tv.drawer("Movies")
-    tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=3)
+    # Movie 1 found by its name: the Movies tab's rows move as the earlier paths change the library.
+    tv.drawer("Search")
+    tv.focus_on_field(0)
+    tv.shell("input text 'Movie%s1'")
+    tv.stay(4, "Movie 1 searched")
+    tv.key("TAB")
+    time.sleep(1)
+    tv.open("Movie 1", keys=("DOWN", "RIGHT", "TAB"), max_presses=12, exact=True, wait=3)
     def movie_page():
         return (tv.visible("Play") or tv.visible("From Start")) and tv.visible("Collection")
-    if not movie_page():
-        # OK pressed while the catalogue was still being laid out: once more, on Movie 1 again.
-        tv.say("  bitrate: no movie page 3 s after OK; OK again on Movie 1")
-        tv.open("Movie 1", keys=("DOWN", "DOWN", "RIGHT"), max_presses=12, exact=True, wait=3)
     tv.wait_for("a movie page", movie_page, 30)
     if not tv.visible("Movie 1 "):
         tv.say("  bitrate: the page opened is not Movie 1's")
