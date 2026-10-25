@@ -205,9 +205,10 @@ class Tv:
         self.check_alive(f"{label} pressed")
 
     def catalogue_on_screen(self):
-        """A title of the made-up panel's catalogue on screen (Home's carousel or rows), not only the app's own words."""
+        """A title of the made-up panel's catalogue on screen (Home's carousel or rows, or its channels where Home has no
+        recent title), not only the app's own words."""
         root = self.screen()
-        return root is not None and any(re.search(r"\b(Movie|Series) \d+", text) for text in self.texts(root))
+        return root is not None and any(re.search(r"\b(Movie|Series|Channel) \d+", text) for text in self.texts(root))
 
     def restart(self):
         """Ondo stopped and started again: Home with the saved playlist, read back from the device's storage. How long
@@ -1184,17 +1185,21 @@ def path_bitrate(tv, args):
 
 
 def path_rows(tv, args):
-    """The remote along Home's rows, filmed (rows.mp4 with the screenshots): how a row moves when a card takes the
-    focus, and the page when the next row does."""
+    """The remote along the Movies tab's rows of posters, filmed (rows.mp4 with the screenshots): how a row moves when a
+    card takes the focus, and the page when the next row does."""
+    tv.drawer("Movies")
+    time.sleep(3)
+    tv.key("RIGHT", pause=1.0)
+    tv.note_screen("rows-start")
     tv.shell("rm -f /sdcard/rows.mp4")
-    recorder = subprocess.Popen(["adb", "shell", "screenrecord", "--time-limit", "30", "--bit-rate", "8000000", "/sdcard/rows.mp4"])
+    recorder = subprocess.Popen(["adb", "shell", "screenrecord", "--time-limit", "40", "--bit-rate", "8000000", "/sdcard/rows.mp4"])
     time.sleep(2)
     for row in range(3):
-        tv.key("DOWN", pause=1.0)
+        tv.key("DOWN", pause=1.2)
         for _ in range(6):
-            tv.key("RIGHT", pause=0.8)
-    tv.key("UP", pause=1.0)
-    recorder.wait(timeout=60)
+            tv.key("RIGHT", pause=0.9)
+    tv.key("UP", pause=1.2)
+    recorder.wait(timeout=70)
     time.sleep(2)
     tv.adb("pull", "/sdcard/rows.mp4", os.path.join(tv.out, "rows.mp4"), timeout=120)
     tv.note_screen("rows-filmed")
