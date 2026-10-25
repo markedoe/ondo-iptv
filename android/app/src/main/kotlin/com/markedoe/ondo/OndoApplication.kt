@@ -3,6 +3,7 @@ package com.markedoe.ondo
 import android.app.ActivityManager
 import android.app.Application
 import android.app.ApplicationExitInfo
+import android.content.Context
 import android.content.res.Resources
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -116,9 +117,8 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
 
     /**
      * Posters, thumbnails and logos stay on disk whatever the image server's cache headers say (Coil's default
-     * strategy): one seen once comes back from the disk at the next launch, without a download. The folder is in the
-     * app's cache, which Android empties only when the device runs out of space. In memory, a fifth of the app's
-     * share, a tenth on a low-memory device (an entry-level TV stick: Google's limits, TV-ME).
+     * strategy): one seen once comes back from the disk at the next launch, without a download. In memory, a fifth
+     * of the app's share, a tenth on a low-memory device (an entry-level TV stick: Google's limits, TV-ME).
      */
     override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
         .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttp })) }
@@ -126,8 +126,27 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             val lowMemory = getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
             MemoryCache.Builder().maxSizePercent(context, if (lowMemory) 0.1 else 0.2).build()
         }
-        .diskCache { DiskCache.Builder().directory(cacheDir.resolve("artwork")).maxSizeBytes(512L * 1024 * 1024).build() }
+        .diskCache { artworkCache() }
         .crossfade(true)
+        .build()
+
+}
+
+/**
+ * The images seen, kept until the app is uninstalled: in the app's own storage, not its cache folder, which Android (a
+ * TV with little storage above all) empties to free space. Left out of backups. Up to a tenth of the free space,
+ * between 256 MB and 2 GB; past that, the images seen longest ago go first. Images kept by an earlier version (in the
+ * cache folder) are moved there once.
+ */
+internal fun Context.artworkCache(): DiskCache {
+    val folder = noBackupFilesDir.resolve("artwork")
+    val earlier = cacheDir.resolve("artwork")
+    if (!folder.exists() && earlier.isDirectory) earlier.renameTo(folder)
+    return DiskCache.Builder()
+        .directory(folder)
+        .maxSizePercent(0.1)
+        .minimumMaxSizeBytes(256L * 1024 * 1024)
+        .maximumMaxSizeBytes(2L * 1024 * 1024 * 1024)
         .build()
 }
 

@@ -57,7 +57,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   is downloaded again, as on Apple devices; Refresh downloads it at once), and the movie and series pages opened (up to
   1,000 movies and 300 series per playlist, fetched again after 7 days for a movie and 12 hours for a series,
   still shown when the provider cannot be reached; `data/DetailsArchive.kt`). Posters and thumbnails are kept
-  on disk by Coil 3 (up to 512 MB, in the app's cache; `OndoApplication.kt`).
+  on disk by Coil 3 until the app is uninstalled (in its own storage, not the cache folder Android empties; up to a
+  tenth of the free space, 256 MB to 2 GB; `OndoApplication.kt`).
 - **Sync on the local network** (Settings → Sync on this network, off until turned on; `data/LocalSync.kt`,
   `data/SyncData.kt`, `core/sync/`, specified in [SYNC.md](SYNC.md)): while Ondo is in front, the device announces
   itself with Bonjour (`NsdManager`, `_ondo._tcp`), answers sessions on a TCP port, finds the other Android devices

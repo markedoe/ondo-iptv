@@ -65,8 +65,9 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   d'être téléchargé à nouveau, comme sur les appareils Apple ; Actualiser le télécharge tout de suite), et fiches de films et de séries
   ouvertes (jusqu'à 1 000 films et 300 séries par playlist, téléchargées à nouveau après 7 jours pour un film
   et 12 heures pour une série, toujours affichées quand le fournisseur est injoignable ;
-  `data/DetailsArchive.kt`). Affiches et vignettes sont gardées sur le disque par Coil 3 (jusqu'à 512 Mo, dans
-  le cache de l'app ; `OndoApplication.kt`).
+  `data/DetailsArchive.kt`). Affiches et vignettes sont gardées sur le disque par Coil 3 jusqu'à la désinstallation
+  de l'app (dans son propre stockage, pas le dossier de cache qu'Android vide ; jusqu'à un dixième de l'espace libre,
+  de 256 Mo à 2 Go ; `OndoApplication.kt`).
 - **Synchronisation sur le réseau local** (Réglages → Synchroniser sur ce réseau, désactivée tant qu'on ne l'active
   pas ; `data/LocalSync.kt`, `data/SyncData.kt`, `core/sync/`, spécifiée dans [SYNC.fr.md](SYNC.fr.md)) : tant
   qu'Ondo est au premier plan, l'appareil s'annonce avec Bonjour (`NsdManager`, `_ondo._tcp`), répond aux sessions
