@@ -14917,42 +14917,42 @@
         }
       }
     },
-    "Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device; passwords and keys are kept in the system keychain. Posters and the movie and series pages you have opened are kept on your device too, so that they show at once and open when the provider cannot be reached; Settings, Clear Cache removes them. When you turn on Sync on this network, your playlists, My List, collections and progress also go to your other Ondo devices on the same network, never through the internet.\n\nOndo connects to the servers you add; once a week to GitHub, for the latest awards and festival selections (nothing about you is sent; Update Awards Automatically in Settings turns it off); and, when you use them, to TMDb with your token and to the subtitle services you search. Backups contain your logins: keep them private.": {
+    "Ondo has no account, no ads and no analytics of its own. Your playlists, history and settings stay on your device; passwords and keys are kept in the system keychain. Posters and the movie and series pages you have opened are kept on your device too, so that they show at once and open when the provider cannot be reached; Settings, Clear Cache removes them. When you turn on Sync on this network, your playlists, My List, collections, progress and TMDb token also go to your other Ondo devices on the same network, never through the internet.\n\nOndo connects to the servers you add; once a week to GitHub, for the latest awards and festival selections (nothing about you is sent; Update Awards Automatically in Settings turns it off); and, when you use them, to TMDb with your token and to the subtitle services you search. Backups contain your logins: keep them private.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil ; les mots de passe et les clés sont gardés dans le trousseau du système. Les affiches et les fiches des films et séries que vous avez ouvertes y sont gardées aussi, pour s’afficher tout de suite et s’ouvrir même quand le fournisseur ne répond pas ; Réglages, Vider le cache les efface. Quand vous activez Synchroniser sur ce réseau, vos playlists, Ma liste, vos collections et votre progression vont aussi vers vos autres appareils Ondo du même réseau, jamais par internet.\n\nOndo se connecte aux serveurs que vous ajoutez ; une fois par semaine à GitHub, pour les derniers prix et sélections des festivals (rien sur vous n’est envoyé ; Mettre à jour les prix automatiquement, dans Réglages, le désactive) ; et, quand vous vous en servez, à TMDb avec votre jeton et aux services de sous-titres que vous interrogez. Les sauvegardes contiennent vos identifiants : gardez-les privées."
+            "value": "Ondo n’a ni compte, ni publicité, ni statistiques propres. Vos playlists, votre historique et vos réglages restent sur votre appareil ; les mots de passe et les clés sont gardés dans le trousseau du système. Les affiches et les fiches des films et séries que vous avez ouvertes y sont gardées aussi, pour s’afficher tout de suite et s’ouvrir même quand le fournisseur ne répond pas ; Réglages, Vider le cache les efface. Quand vous activez Synchroniser sur ce réseau, vos playlists, Ma liste, vos collections, votre progression et votre jeton TMDb vont aussi vers vos autres appareils Ondo du même réseau, jamais par internet.\n\nOndo se connecte aux serveurs que vous ajoutez ; une fois par semaine à GitHub, pour les derniers prix et sélections des festivals (rien sur vous n’est envoyé ; Mettre à jour les prix automatiquement, dans Réglages, le désactive) ; et, quand vous vous en servez, à TMDb avec votre jeton et aux services de sous-titres que vous interrogez. Les sauvegardes contiennent vos identifiants : gardez-les privées."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus playlists, tu historial y tus ajustes se quedan en tu dispositivo; las contraseñas y las claves se guardan en el llavero del sistema. Los pósteres y las fichas de las películas y series que has abierto también se guardan en él, para que se muestren al instante y se abran aunque el proveedor no responda; Ajustes, Vaciar caché los borra. Cuando activas Sincronizar en esta red, tus playlists, Mi lista, tus colecciones y tu progreso también van a tus otros dispositivos Ondo de la misma red, nunca por internet.\n\nOndo se conecta a los servidores que añades; una vez por semana a GitHub, para los últimos premios y selecciones de festivales (no se envía nada sobre ti; Actualizar los premios automáticamente, en Ajustes, lo desactiva); y, cuando los usas, a TMDb con tu token y a los servicios de subtítulos en los que buscas. Las copias de seguridad contienen tus datos de acceso: guárdalas en privado."
+            "value": "Ondo no tiene cuenta, ni publicidad, ni estadísticas propias. Tus playlists, tu historial y tus ajustes se quedan en tu dispositivo; las contraseñas y las claves se guardan en el llavero del sistema. Los pósteres y las fichas de las películas y series que has abierto también se guardan en él, para que se muestren al instante y se abran aunque el proveedor no responda; Ajustes, Vaciar caché los borra. Cuando activas Sincronizar en esta red, tus playlists, Mi lista, tus colecciones, tu progreso y tu token de TMDb también van a tus otros dispositivos Ondo de la misma red, nunca por internet.\n\nOndo se conecta a los servidores que añades; una vez por semana a GitHub, para los últimos premios y selecciones de festivales (no se envía nada sobre ti; Actualizar los premios automáticamente, en Ajustes, lo desactiva); y, cuando los usas, a TMDb con tu token y a los servicios de subtítulos en los que buscas. Las copias de seguridad contienen tus datos de acceso: guárdalas en privado."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho; senhas e chaves são guardadas nas chaves do sistema. Os pôsteres e as páginas dos filmes e séries que você abriu também ficam guardados nele, para aparecerem na hora e abrirem mesmo quando o provedor não responde; Ajustes, Limpar cache os apaga. Quando você ativa Sincronizar nesta rede, suas playlists, a Minha lista, suas coleções e seu progresso também vão para seus outros dispositivos Ondo na mesma rede, nunca pela internet.\n\nO Ondo se conecta aos servidores que você adiciona; uma vez por semana ao GitHub, para os prêmios e seleções de festivais mais recentes (nada sobre você é enviado; Atualizar os prêmios automaticamente, em Ajustes, desativa isso); e, quando você os usa, ao TMDb com seu token e aos serviços de legendas em que você busca. Os backups contêm seus logins: mantenha-os privados."
+            "value": "O Ondo não tem conta, nem anúncios, nem estatísticas próprias. Suas playlists, seu histórico e seus ajustes ficam no seu aparelho; senhas e chaves são guardadas nas chaves do sistema. Os pôsteres e as páginas dos filmes e séries que você abriu também ficam guardados nele, para aparecerem na hora e abrirem mesmo quando o provedor não responde; Ajustes, Limpar cache os apaga. Quando você ativa Sincronizar nesta rede, suas playlists, a Minha lista, suas coleções, seu progresso e seu token do TMDb também vão para seus outros dispositivos Ondo na mesma rede, nunca pela internet.\n\nO Ondo se conecta aos servidores que você adiciona; uma vez por semana ao GitHub, para os prêmios e seleções de festivais mais recentes (nada sobre você é enviado; Atualizar os prêmios automaticamente, em Ajustes, desativa isso); e, quando você os usa, ao TMDb com seu token e aos serviços de legendas em que você busca. Os backups contêm seus logins: mantenha-os privados."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上；密码和密钥保存在系统钥匙串中。你打开过的电影和剧集页面及海报也保存在设备上，因此可以立即显示，即使服务商无法连接也能打开；“设置”>“清除缓存”会删除它们。开启“在此网络上同步”后，你的播放列表、我的片单、合集和播放进度也会发送到同一网络中的其他 Ondo 设备，绝不经过互联网。\n\nOndo 会连接你添加的服务器；每周连接一次 GitHub，获取最新的奖项和电影节入选信息（不会发送任何关于你的信息；可在“设置”中关闭“自动更新获奖信息”）；在你使用时，还会用你的令牌连接 TMDb，并连接你搜索的字幕服务。备份包含你的登录信息：请妥善保管，切勿公开。"
+            "value": "Ondo 没有账户、没有广告，也没有自己的统计分析。你的播放列表、观看记录和设置都保存在你的设备上；密码和密钥保存在系统钥匙串中。你打开过的电影和剧集页面及海报也保存在设备上，因此可以立即显示，即使服务商无法连接也能打开；“设置”>“清除缓存”会删除它们。开启“在此网络上同步”后，你的播放列表、我的片单、合集、播放进度和 TMDb 令牌也会发送到同一网络中的其他 Ondo 设备，绝不经过互联网。\n\nOndo 会连接你添加的服务器；每周连接一次 GitHub，获取最新的奖项和电影节入选信息（不会发送任何关于你的信息；可在“设置”中关闭“自动更新获奖信息”）；在你使用时，还会用你的令牌连接 TMDb，并连接你搜索的字幕服务。备份包含你的登录信息：请妥善保管，切勿公开。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "لا يحتوي Ondo على حساب ولا إعلانات ولا إحصاءات خاصة به. تبقى قوائم التشغيل والسجل والإعدادات على جهازك؛ وتُحفظ كلمات المرور والمفاتيح في سلسلة مفاتيح النظام. وتُحفظ عليه أيضًا الملصقات وصفحات الأفلام والمسلسلات التي فتحتها، لتظهر فورًا وتُفتح حتى عندما لا يستجيب المزوّد؛ ويحذفها خيار مسح الذاكرة المؤقتة في الإعدادات. عند تفعيل المزامنة على هذه الشبكة، تنتقل قوائم التشغيل وقائمتي والمجموعات وتقدّم المشاهدة أيضًا إلى أجهزة Ondo الأخرى على الشبكة نفسها، ولا تمر أبدًا عبر الإنترنت.\n\nيتصل Ondo بالخوادم التي تضيفها؛ ومرة في الأسبوع بـ GitHub، لأحدث الجوائز واختيارات المهرجانات (لا يُرسَل أي شيء عنك؛ ويوقفه خيار تحديث الجوائز تلقائيًا في الإعدادات)؛ وعند استخدامها، بـ TMDb برمزك وبخدمات الترجمة التي تبحث فيها. تحتوي النسخ الاحتياطية على بيانات دخولك: لا تشاركها مع أحد."
+            "value": "لا يحتوي Ondo على حساب ولا إعلانات ولا إحصاءات خاصة به. تبقى قوائم التشغيل والسجل والإعدادات على جهازك؛ وتُحفظ كلمات المرور والمفاتيح في سلسلة مفاتيح النظام. وتُحفظ عليه أيضًا الملصقات وصفحات الأفلام والمسلسلات التي فتحتها، لتظهر فورًا وتُفتح حتى عندما لا يستجيب المزوّد؛ ويحذفها خيار مسح الذاكرة المؤقتة في الإعدادات. عند تفعيل المزامنة على هذه الشبكة، تنتقل قوائم التشغيل وقائمتي والمجموعات وتقدّم المشاهدة ورمز TMDb أيضًا إلى أجهزة Ondo الأخرى على الشبكة نفسها، ولا تمر أبدًا عبر الإنترنت.\n\nيتصل Ondo بالخوادم التي تضيفها؛ ومرة في الأسبوع بـ GitHub، لأحدث الجوائز واختيارات المهرجانات (لا يُرسَل أي شيء عنك؛ ويوقفه خيار تحديث الجوائز تلقائيًا في الإعدادات)؛ وعند استخدامها، بـ TMDb برمزك وبخدمات الترجمة التي تبحث فيها. تحتوي النسخ الاحتياطية على بيانات دخولك: لا تشاركها مع أحد."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo में न अकाउंट है, न विज्ञापन, न अपना कोई विश्लेषण। आपकी प्लेलिस्ट, इतिहास और सेटिंग्स आपके डिवाइस पर रहती हैं; पासवर्ड और कुंजियाँ सिस्टम कीचेन में रखी जाती हैं। आपके खोले गए फ़िल्मों और सीरीज़ के पेज और पोस्टर भी डिवाइस पर रखे जाते हैं, ताकि वे तुरंत दिखें और प्रदाता के जवाब न देने पर भी खुलें; सेटिंग्स, कैश साफ़ करें उन्हें हटाता है। इस नेटवर्क पर सिंक करें चालू करने पर, आपकी प्लेलिस्ट, मेरी सूची, संग्रह और देखने की प्रगति उसी नेटवर्क के आपके दूसरे Ondo डिवाइस पर भी जाती है, कभी इंटरनेट से होकर नहीं।\n\nOndo उन सर्वरों से जुड़ता है जिन्हें आप जोड़ते हैं; हफ़्ते में एक बार GitHub से, नए पुरस्कारों और फ़ेस्टिवल चयनों के लिए (आपके बारे में कुछ नहीं भेजा जाता; सेटिंग्स में पुरस्कार अपने-आप अपडेट करें इसे बंद करता है); और जब आप इस्तेमाल करते हैं, तो आपके टोकन के साथ TMDb से और उन सबटाइटल सेवाओं से जिनमें आप खोजते हैं। बैकअप में आपकी लॉगिन जानकारी होती है: इन्हें निजी रखें।"
+            "value": "Ondo में न अकाउंट है, न विज्ञापन, न अपना कोई विश्लेषण। आपकी प्लेलिस्ट, इतिहास और सेटिंग्स आपके डिवाइस पर रहती हैं; पासवर्ड और कुंजियाँ सिस्टम कीचेन में रखी जाती हैं। आपके खोले गए फ़िल्मों और सीरीज़ के पेज और पोस्टर भी डिवाइस पर रखे जाते हैं, ताकि वे तुरंत दिखें और प्रदाता के जवाब न देने पर भी खुलें; सेटिंग्स, कैश साफ़ करें उन्हें हटाता है। इस नेटवर्क पर सिंक करें चालू करने पर, आपकी प्लेलिस्ट, मेरी सूची, संग्रह, देखने की प्रगति और TMDb टोकन उसी नेटवर्क के आपके दूसरे Ondo डिवाइस पर भी जाता है, कभी इंटरनेट से होकर नहीं।\n\nOndo उन सर्वरों से जुड़ता है जिन्हें आप जोड़ते हैं; हफ़्ते में एक बार GitHub से, नए पुरस्कारों और फ़ेस्टिवल चयनों के लिए (आपके बारे में कुछ नहीं भेजा जाता; सेटिंग्स में पुरस्कार अपने-आप अपडेट करें इसे बंद करता है); और जब आप इस्तेमाल करते हैं, तो आपके टोकन के साथ TMDb से और उन सबटाइटल सेवाओं से जिनमें आप खोजते हैं। बैकअप में आपकी लॉगिन जानकारी होती है: इन्हें निजी रखें।"
           }
         }
       }
@@ -20363,42 +20363,42 @@
         }
       }
     },
-    "Settings → Sync on this network keeps the same playlists, My List, collections and progress on your devices at home. Turn it on on each device and keep Ondo open on them: the devices find each other by themselves; iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other.\n\nEverything goes directly from one device to another on your network, never through the internet. There is no pairing and logins travel unencrypted on the network, so turn it on at home only. Settings, hidden categories and playlists imported from a file stay on each device. Only the main profile syncs.": {
+    "Settings → Sync on this network keeps the same playlists, My List, collections, progress and TMDb token on your devices at home. Turn it on on each device and keep Ondo open on them: the devices find each other by themselves; iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other.\n\nEverything goes directly from one device to another on your network, never through the internet. There is no pairing and logins and the TMDb token travel unencrypted on the network, so turn it on at home only. Other settings, hidden categories and playlists imported from a file stay on each device. Only the main profile syncs.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Réglages → Synchroniser sur ce réseau garde les mêmes playlists, Ma liste, collections et reprises de lecture sur vos appareils à la maison. Activez-le sur chaque appareil et gardez Ondo ouvert : les appareils se trouvent tout seuls ; iPhone, iPad et Mac se synchronisent avec les autres appareils Ondo du réseau, pas entre eux.\n\nTout passe directement d’un appareil à l’autre sur votre réseau, jamais par internet. Il n’y a pas d’appairage et les identifiants circulent sans chiffrement sur le réseau : ne l’activez que chez vous. Les réglages, les catégories masquées et les playlists importées d’un fichier restent sur chaque appareil. Seul le profil principal se synchronise."
+            "value": "Réglages → Synchroniser sur ce réseau garde les mêmes playlists, Ma liste, collections, reprises de lecture et jeton TMDb sur vos appareils à la maison. Activez-le sur chaque appareil et gardez Ondo ouvert : les appareils se trouvent tout seuls ; iPhone, iPad et Mac se synchronisent avec les autres appareils Ondo du réseau, pas entre eux.\n\nTout passe directement d’un appareil à l’autre sur votre réseau, jamais par internet. Il n’y a pas d’appairage et les identifiants et le jeton TMDb circulent sans chiffrement sur le réseau : ne l’activez que chez vous. Les autres réglages, les catégories masquées et les playlists importées d’un fichier restent sur chaque appareil. Seul le profil principal se synchronise."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajustes → Sincronizar en esta red mantiene las mismas playlists, Mi lista, colecciones y progreso en tus dispositivos de casa. Actívalo en cada dispositivo y mantén Ondo abierto en ellos: los dispositivos se encuentran solos; iPhone, iPad y Mac se sincronizan con los demás dispositivos Ondo de la red, no entre sí.\n\nTodo va directamente de un dispositivo a otro por tu red, nunca por internet. No hay emparejamiento y los datos de acceso viajan sin cifrar por la red: actívalo solo en casa. Los ajustes, las categorías ocultas y las playlists importadas de un archivo se quedan en cada dispositivo. Solo se sincroniza el perfil principal."
+            "value": "Ajustes → Sincronizar en esta red mantiene las mismas playlists, Mi lista, colecciones, progreso y token de TMDb en tus dispositivos de casa. Actívalo en cada dispositivo y mantén Ondo abierto en ellos: los dispositivos se encuentran solos; iPhone, iPad y Mac se sincronizan con los demás dispositivos Ondo de la red, no entre sí.\n\nTodo va directamente de un dispositivo a otro por tu red, nunca por internet. No hay emparejamiento y los datos de acceso y el token de TMDb viajan sin cifrar por la red: actívalo solo en casa. Los demás ajustes, las categorías ocultas y las playlists importadas de un archivo se quedan en cada dispositivo. Solo se sincroniza el perfil principal."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajustes → Sincronizar nesta rede mantém as mesmas playlists, Minha lista, coleções e progresso nos seus dispositivos de casa. Ative em cada dispositivo e mantenha o Ondo aberto neles: os dispositivos se encontram sozinhos; iPhone, iPad e Mac sincronizam com os outros dispositivos Ondo da rede, não entre si.\n\nTudo vai direto de um dispositivo para outro pela sua rede, nunca pela internet. Não há pareamento e os dados de acesso trafegam sem criptografia na rede: ative apenas em casa. Os ajustes, as categorias ocultas e as playlists importadas de um arquivo ficam em cada dispositivo. Só o perfil principal é sincronizado."
+            "value": "Ajustes → Sincronizar nesta rede mantém as mesmas playlists, Minha lista, coleções, progresso e token do TMDb nos seus dispositivos de casa. Ative em cada dispositivo e mantenha o Ondo aberto neles: os dispositivos se encontram sozinhos; iPhone, iPad e Mac sincronizam com os outros dispositivos Ondo da rede, não entre si.\n\nTudo vai direto de um dispositivo para outro pela sua rede, nunca pela internet. Não há pareamento e os dados de acesso e o token do TMDb trafegam sem criptografia na rede: ative apenas em casa. Os demais ajustes, as categorias ocultas e as playlists importadas de um arquivo ficam em cada dispositivo. Só o perfil principal é sincronizado."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "设置 → 在此网络上同步，可让你家中的设备保持相同的播放列表、我的片单、合集和播放进度。在每台设备上开启此设置并保持 Ondo 打开：设备会自动找到彼此；iPhone、iPad 和 Mac 与网络中的其他 Ondo 设备同步，而不是彼此同步。\n\n所有数据都在你的网络中直接从一台设备传到另一台，绝不经过互联网。没有配对，登录信息在网络中以未加密方式传输，因此请只在家中开启。设置、隐藏的分类和从文件导入的播放列表保留在各自的设备上。只有主个人资料会同步。"
+            "value": "设置 → 在此网络上同步，可让你家中的设备保持相同的播放列表、我的片单、合集、播放进度和 TMDb 令牌。在每台设备上开启此设置并保持 Ondo 打开：设备会自动找到彼此；iPhone、iPad 和 Mac 与网络中的其他 Ondo 设备同步，而不是彼此同步。\n\n所有数据都在你的网络中直接从一台设备传到另一台，绝不经过互联网。没有配对，登录信息和 TMDb 令牌在网络中以未加密方式传输，因此请只在家中开启。其他设置、隐藏的分类和从文件导入的播放列表保留在各自的设备上。只有主个人资料会同步。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "الإعدادات ← المزامنة على هذه الشبكة تُبقي قوائم التشغيل وقائمتي والمجموعات وتقدّم المشاهدة نفسها على أجهزتك في المنزل. فعّلها على كل جهاز وأبقِ Ondo مفتوحًا عليها: تعثر الأجهزة على بعضها بنفسها، وتتزامن أجهزة iPhone وiPad وMac مع أجهزة Ondo الأخرى على الشبكة، وليس فيما بينها.\n\nينتقل كل شيء مباشرةً من جهاز إلى آخر على شبكتك، ولا يمر أبدًا عبر الإنترنت. لا يوجد إقران، وتنتقل بيانات الدخول على الشبكة دون تشفير، لذا فعّلها في المنزل فقط. تبقى الإعدادات والفئات المخفية وقوائم التشغيل المستوردة من ملف على كل جهاز. تتم مزامنة الملف الشخصي الرئيسي فقط."
+            "value": "الإعدادات ← المزامنة على هذه الشبكة تُبقي قوائم التشغيل وقائمتي والمجموعات وتقدّم المشاهدة ورمز TMDb نفسها على أجهزتك في المنزل. فعّلها على كل جهاز وأبقِ Ondo مفتوحًا عليها: تعثر الأجهزة على بعضها بنفسها، وتتزامن أجهزة iPhone وiPad وMac مع أجهزة Ondo الأخرى على الشبكة، وليس فيما بينها.\n\nينتقل كل شيء مباشرةً من جهاز إلى آخر على شبكتك، ولا يمر أبدًا عبر الإنترنت. لا يوجد إقران، وتنتقل بيانات الدخول ورمز TMDb على الشبكة دون تشفير، لذا فعّلها في المنزل فقط. تبقى الإعدادات الأخرى والفئات المخفية وقوائم التشغيل المستوردة من ملف على كل جهاز. تتم مزامنة الملف الشخصي الرئيسي فقط."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "सेटिंग्स → इस नेटवर्क पर सिंक करें से घर के आपके डिवाइस पर एक जैसी प्लेलिस्ट, मेरी सूची, संग्रह और देखने की प्रगति रहती है। इसे हर डिवाइस पर चालू करें और उन पर Ondo खुला रखें: डिवाइस एक-दूसरे को खुद ढूँढ लेते हैं; iPhone, iPad और Mac नेटवर्क के दूसरे Ondo डिवाइस के साथ सिंक होते हैं, आपस में नहीं।\n\nसब कुछ आपके नेटवर्क पर सीधे एक डिवाइस से दूसरे पर जाता है, कभी इंटरनेट से होकर नहीं। कोई पेयरिंग नहीं है और लॉगिन नेटवर्क पर बिना एन्क्रिप्शन के जाते हैं, इसलिए इसे सिर्फ़ घर पर चालू करें। सेटिंग्स, छिपी कैटेगरी और फ़ाइल से इम्पोर्ट की गई प्लेलिस्ट हर डिवाइस पर अलग रहती हैं। सिर्फ़ मुख्य प्रोफ़ाइल सिंक होती है।"
+            "value": "सेटिंग्स → इस नेटवर्क पर सिंक करें से घर के आपके डिवाइस पर एक जैसी प्लेलिस्ट, मेरी सूची, संग्रह, देखने की प्रगति और TMDb टोकन रहता है। इसे हर डिवाइस पर चालू करें और उन पर Ondo खुला रखें: डिवाइस एक-दूसरे को खुद ढूँढ लेते हैं; iPhone, iPad और Mac नेटवर्क के दूसरे Ondo डिवाइस के साथ सिंक होते हैं, आपस में नहीं।\n\nसब कुछ आपके नेटवर्क पर सीधे एक डिवाइस से दूसरे पर जाता है, कभी इंटरनेट से होकर नहीं। कोई पेयरिंग नहीं है और लॉगिन तथा TMDb टोकन नेटवर्क पर बिना एन्क्रिप्शन के जाते हैं, इसलिए इसे सिर्फ़ घर पर चालू करें। बाकी सेटिंग्स, छिपी कैटेगरी और फ़ाइल से इम्पोर्ट की गई प्लेलिस्ट हर डिवाइस पर अलग रहती हैं। सिर्फ़ मुख्य प्रोफ़ाइल सिंक होती है।"
           }
         }
       }
@@ -25123,42 +25123,42 @@
         }
       }
     },
-    "While Ondo is open, devices on this network with this setting on keep the same playlists, My List, collections and progress. iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other. Nothing leaves the local network, but playlist logins travel unencrypted on it: turn this on at home only.": {
+    "While Ondo is open, devices on this network with this setting on keep the same playlists, My List, collections, progress and TMDb token. iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other. Nothing leaves the local network, but playlist logins and the TMDb token travel unencrypted on it: turn this on at home only.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tant qu’Ondo est ouvert, les appareils de ce réseau où ce réglage est activé gardent les mêmes playlists, Ma liste, collections et reprises de lecture. iPhone, iPad et Mac se synchronisent avec les autres appareils Ondo du réseau, pas entre eux. Rien ne sort du réseau local, mais les identifiants des playlists y circulent sans chiffrement : à activer seulement chez vous."
+            "value": "Tant qu’Ondo est ouvert, les appareils de ce réseau où ce réglage est activé gardent les mêmes playlists, Ma liste, collections, reprises de lecture et jeton TMDb. iPhone, iPad et Mac se synchronisent avec les autres appareils Ondo du réseau, pas entre eux. Rien ne sort du réseau local, mais les identifiants des playlists et le jeton TMDb y circulent sans chiffrement : à activer seulement chez vous."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mientras Ondo está abierto, los dispositivos de esta red con este ajuste activado mantienen las mismas playlists, Mi lista, colecciones y progreso. iPhone, iPad y Mac se sincronizan con los demás dispositivos Ondo de la red, no entre sí. Nada sale de la red local, pero los datos de acceso de las playlists viajan sin cifrar por ella: actívalo solo en casa."
+            "value": "Mientras Ondo está abierto, los dispositivos de esta red con este ajuste activado mantienen las mismas playlists, Mi lista, colecciones, progreso y token de TMDb. iPhone, iPad y Mac se sincronizan con los demás dispositivos Ondo de la red, no entre sí. Nada sale de la red local, pero los datos de acceso de las playlists y el token de TMDb viajan sin cifrar por ella: actívalo solo en casa."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Enquanto o Ondo está aberto, os dispositivos desta rede com esta opção ativada mantêm as mesmas playlists, Minha lista, coleções e progresso. iPhone, iPad e Mac sincronizam com os outros dispositivos Ondo da rede, não entre si. Nada sai da rede local, mas os dados de acesso das playlists trafegam nela sem criptografia: ative apenas em casa."
+            "value": "Enquanto o Ondo está aberto, os dispositivos desta rede com esta opção ativada mantêm as mesmas playlists, Minha lista, coleções, progresso e token do TMDb. iPhone, iPad e Mac sincronizam com os outros dispositivos Ondo da rede, não entre si. Nada sai da rede local, mas os dados de acesso das playlists e o token do TMDb trafegam nela sem criptografia: ative apenas em casa."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ondo 打开时，此网络上开启此设置的设备会保持相同的播放列表、我的片单、合集和播放进度。iPhone、iPad 和 Mac 与网络中的其他 Ondo 设备同步，而不是彼此同步。数据不会离开本地网络，但播放列表的登录信息在其中以未加密方式传输：请只在家中开启。"
+            "value": "Ondo 打开时，此网络上开启此设置的设备会保持相同的播放列表、我的片单、合集、播放进度和 TMDb 令牌。iPhone、iPad 和 Mac 与网络中的其他 Ondo 设备同步，而不是彼此同步。数据不会离开本地网络，但播放列表的登录信息和 TMDb 令牌在其中以未加密方式传输：请只在家中开启。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "ما دام Ondo مفتوحًا، تحتفظ الأجهزة على هذه الشبكة التي فُعّل فيها هذا الإعداد بنفس قوائم التشغيل وقائمتي والمجموعات وتقدّم المشاهدة. تتزامن أجهزة iPhone وiPad وMac مع أجهزة Ondo الأخرى على الشبكة، وليس فيما بينها. لا يخرج شيء من الشبكة المحلية، لكن بيانات الدخول لقوائم التشغيل تنتقل عليها دون تشفير: فعّله في المنزل فقط."
+            "value": "ما دام Ondo مفتوحًا، تحتفظ الأجهزة على هذه الشبكة التي فُعّل فيها هذا الإعداد بنفس قوائم التشغيل وقائمتي والمجموعات وتقدّم المشاهدة ورمز TMDb. تتزامن أجهزة iPhone وiPad وMac مع أجهزة Ondo الأخرى على الشبكة، وليس فيما بينها. لا يخرج شيء من الشبكة المحلية، لكن بيانات الدخول لقوائم التشغيل ورمز TMDb تنتقل عليها دون تشفير: فعّله في المنزل فقط."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "जब तक Ondo खुला है, इस नेटवर्क के जिन डिवाइस पर यह सेटिंग चालू है, उनमें एक जैसी प्लेलिस्ट, मेरी सूची, संग्रह और देखने की प्रगति रहती है। iPhone, iPad और Mac नेटवर्क के दूसरे Ondo डिवाइस के साथ सिंक होते हैं, आपस में नहीं। कुछ भी लोकल नेटवर्क से बाहर नहीं जाता, लेकिन प्लेलिस्ट के लॉगिन उस पर बिना एन्क्रिप्शन के जाते हैं: इसे सिर्फ़ घर पर चालू करें।"
+            "value": "जब तक Ondo खुला है, इस नेटवर्क के जिन डिवाइस पर यह सेटिंग चालू है, उनमें एक जैसी प्लेलिस्ट, मेरी सूची, संग्रह, देखने की प्रगति और TMDb टोकन रहता है। iPhone, iPad और Mac नेटवर्क के दूसरे Ondo डिवाइस के साथ सिंक होते हैं, आपस में नहीं। कुछ भी लोकल नेटवर्क से बाहर नहीं जाता, लेकिन प्लेलिस्ट के लॉगिन और TMDb टोकन उस पर बिना एन्क्रिप्शन के जाते हैं: इसे सिर्फ़ घर पर चालू करें।"
           }
         }
       }

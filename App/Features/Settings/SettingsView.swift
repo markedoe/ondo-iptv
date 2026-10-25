@@ -356,7 +356,7 @@ struct SettingsView: View {
             } footer: {
                 // One sentence group, the same as Android's: the translation checks read single-line literals.
                 // swiftlint:disable:next line_length
-                Text("While Ondo is open, devices on this network with this setting on keep the same playlists, My List, collections and progress. iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other. Nothing leaves the local network, but playlist logins travel unencrypted on it: turn this on at home only.")
+                Text("While Ondo is open, devices on this network with this setting on keep the same playlists, My List, collections, progress and TMDb token. iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other. Nothing leaves the local network, but playlist logins and the TMDb token travel unencrypted on it: turn this on at home only.")
             }
 
             Section {

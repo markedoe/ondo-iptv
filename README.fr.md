@@ -101,8 +101,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   quand le fournisseur ne répond pas.
 - **Synchroniser sur ce réseau** (Réglages, désactivé tant qu'on ne l'active pas) : iPhone, iPad et Mac se
   connectent aux appareils Android du même réseau où Ondo est ouvert et gardent les mêmes playlists, Ma liste,
-  collections et progression (profil principal uniquement ; deux appareils Apple se synchronisent via un appareil
-  Android). Adresses locales uniquement ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
+  collections, progression et jeton TMDb (profil principal uniquement ; deux appareils Apple se synchronisent via un
+  appareil Android). Adresses locales uniquement ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **Aide** dans l'app (Réglages, et Aide, Aide Ondo sur Mac) : une page par fonctionnalité, dans chaque langue.
 - **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi.
@@ -156,8 +156,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   Apple : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même quand le fournisseur
   ne répond pas.
 - **Synchroniser sur ce réseau** (Réglages, désactivé tant qu'on ne l'active pas) : tant qu'Ondo est ouvert, les
-  appareils Android d'un réseau domestique gardent les mêmes playlists, Ma liste, collections et progression, et
-  iPhone, iPad et Mac se synchronisent avec eux ; directement entre les appareils, vers des adresses locales
+  appareils Android d'un réseau domestique gardent les mêmes playlists, Ma liste, collections, progression et jeton
+  TMDb, et iPhone, iPad et Mac se synchronisent avec eux ; directement entre les appareils, vers des adresses locales
   uniquement, rien ne passe par internet ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **Réglages** : playlists, apparence, catégories adultes masquées par défaut, langues et catégories, langue de
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur ; écran d'accueil avec démo.

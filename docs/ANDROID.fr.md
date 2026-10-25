@@ -64,8 +64,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   pas ; `data/LocalSync.kt`, `data/SyncData.kt`, `core/sync/`, spécifiée dans [SYNC.fr.md](SYNC.fr.md)) : tant
   qu'Ondo est au premier plan, l'appareil s'annonce avec Bonjour (`NsdManager`, `_ondo._tcp`), répond aux sessions
   sur un port TCP, trouve les autres appareils Android et se synchronise avec eux ; iPhone, iPad et Mac s'y
-  connectent. Playlists, Ma liste, collections et progression ; seules des adresses locales sont contactées ou
-  acceptées.
+  connectent. Playlists, Ma liste, collections, progression et jeton TMDb ; seules des adresses locales sont
+  contactées ou acceptées.
 - **Langues** : anglais, français, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
   hindi (`res/values-*`), proposées aussi dans le réglage de langue par app d'Android 13
   (`res/xml/locales_config.xml`).

@@ -96,8 +96,9 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Data**: JSON backup / restore, clearable cache. Posters, thumbnails and the movie and series pages stay on the
   device: they show at once at the next launch, and the pages still open when the provider cannot be reached.
 - **Sync on this network** (Settings, off until turned on): iPhone, iPad and Mac connect to the Android devices
-  with Ondo open on the same network and keep the same playlists, My List, collections and progress (main profile
-  only; two Apple devices sync through an Android one). Local addresses only ([docs/SYNC.md](docs/SYNC.md)).
+  with Ondo open on the same network and keep the same playlists, My List, collections, progress and TMDb token
+  (main profile only; two Apple devices sync through an Android one). Local addresses only
+  ([docs/SYNC.md](docs/SYNC.md)).
 - **Help** in the app (Settings, and Help, Ondo Help on the Mac): one page per feature, in every language.
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi.
 
@@ -143,8 +144,9 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Data**: posters, thumbnails and the movie and series pages stay on the device, like on Apple: they show at
   once at the next launch, and the pages still open when the provider cannot be reached.
 - **Sync on this network** (Settings, off until turned on): while Ondo is open, the Android devices of a home
-  network keep the same playlists, My List, collections and progress, and iPhone, iPad and Mac sync with them;
-  directly between the devices, to local addresses only, nothing through the internet ([docs/SYNC.md](docs/SYNC.md)).
+  network keep the same playlists, My List, collections, progress and TMDb token, and iPhone, iPad and Mac sync with
+  them; directly between the devices, to local addresses only, nothing through the internet
+  ([docs/SYNC.md](docs/SYNC.md)).
 - **Settings**: playlists, appearance, adult categories hidden by default, languages and categories, app language,
   automatic awards updates, player buffers; welcome screen with a demo.
 - **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible

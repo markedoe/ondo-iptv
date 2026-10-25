@@ -55,8 +55,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **Sync on the local network** (Settings → Sync on this network, off until turned on; `data/LocalSync.kt`,
   `data/SyncData.kt`, `core/sync/`, specified in [SYNC.md](SYNC.md)): while Ondo is in front, the device announces
   itself with Bonjour (`NsdManager`, `_ondo._tcp`), answers sessions on a TCP port, finds the other Android devices
-  and syncs with them; iPhone, iPad and Mac connect to it. Playlists, My List, collections and progress; only local
-  addresses are reached or answered.
+  and syncs with them; iPhone, iPad and Mac connect to it. Playlists, My List, collections, progress and the TMDb
+  token; only local addresses are reached or answered.
 - **Languages**: English, French, Spanish, Portuguese, Chinese (Simplified), Arabic (right to left) and Hindi
   (`res/values-*`), also offered in Android 13's per-app language setting (`res/xml/locales_config.xml`).
 - **Android TV / Google TV** (`ui/tv/`): a Leanback launcher entry and banner (320 × 180 at xhdpi,
