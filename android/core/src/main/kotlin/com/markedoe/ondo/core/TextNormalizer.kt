@@ -75,12 +75,15 @@ object TextNormalizer {
      * Key used to match a playlist channel to a guide channel when ids differ:
      * `"FR: TV1 FHD"` / `"TV1 HD"` / `"tv1"` -> `"tv1"`.
      */
-    fun channelMatchKey(name: String): String {
+    fun channelMatchKey(name: String): String = channelMatchWords(name).joinToString("")
+
+    /** The words [channelMatchKey] is made of, without a leading country tag or quality words. */
+    fun channelMatchWords(name: String): List<String> {
         val tokens = normalize(name).split(' ').filter { it.isNotEmpty() }.toMutableList()
         // Leading "FR", "UK"... country tags ("FR: TV1", "FR | TV1").
         if (tokens.size > 1 && tokens.first() in countryPrefixes) tokens.removeAt(0)
         tokens.removeAll { it in qualityTokens }
-        return tokens.joinToString("")
+        return tokens
     }
 
     /** Words of an already normalised query, ready for [matches]. */

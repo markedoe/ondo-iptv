@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.net.HttpClient
+import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.net.Urls
 import com.markedoe.ondo.core.parsing.TitleParser
 import kotlin.math.abs
@@ -76,22 +77,123 @@ class TmdbClient(
     private val usesBearerToken: Boolean
         get() = credential.length > 40
 
-    /** Trending movies and series (people are filtered out). */
-    suspend fun trending(window: String = "week"): List<TmdbItem> {
-        val items = mutableListOf("language" to language)
-        if (!usesBearerToken) items.add("api_key" to credential)
-        val url = "https://api.themoviedb.org/3/trending/all/$window?" + Urls.query(items)
+    /** GET on the v3 API: the key goes in the query, a v4 token in the Authorization header (never in the address). */
+    private suspend fun get(path: String, query: List<Pair<String, String>> = emptyList()): JsonElement {
+        val items = query + ("language" to language) + if (usesBearerToken) emptyList() else listOf("api_key" to credential)
+        val url = "https://api.themoviedb.org/3/$path?" + Urls.query(items)
         val headers = if (usesBearerToken) {
             mapOf("Authorization" to "Bearer $credential", "Accept" to "application/json")
         } else {
             mapOf("Accept" to "application/json")
         }
-        val page = Json.parseToJsonElement(http.get(url, headers).decodeToString()) as? JsonObject
-            ?: throw SerializationException("Unexpected TMDb response")
-        val results = page["results"] as? JsonArray ?: throw SerializationException("TMDb response without results")
-        return results
-            .map { TmdbItem.from(it) ?: throw SerializationException("TMDb item without id") }
-            .filter { it.mediaType == TmdbItem.MediaType.MOVIE || it.mediaType == TmdbItem.MediaType.TV }
+        return try {
+            Json.parseToJsonElement(http.get(url, headers).decodeToString())
+        } catch (e: IllegalArgumentException) {
+            throw SerializationException("Not a TMDb answer: ${e.message}")
+        }
+    }
+
+    /**
+     * Asks TMDb whether it accepts the key or token (`/authentication`), before it is saved: false when TMDb refuses it
+     * (401, or its own `{"success": false}`); a network failure, or an answer that is not TMDb's, throws.
+     */
+    suspend fun isAccepted(): Boolean {
+        val answer = try {
+            get("authentication")
+        } catch (e: HttpException.BadStatus) {
+            if (e.code == 401) return false
+            throw e
+        }
+        val success = ((answer as? JsonObject)?.get("success") as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }
+            ?: throw SerializationException("Not a TMDb answer")
+        return success.content.toBooleanStrictOrNull() ?: throw SerializationException("Not a TMDb answer")
+    }
+
+    /** Trending movies and series (people are filtered out). */
+    suspend fun trending(window: String = "week"): List<TmdbItem> =
+        results(get("trending/all/$window")).filter { it.mediaType == TmdbItem.MediaType.MOVIE || it.mediaType == TmdbItem.MediaType.TV }
+
+    /**
+     * The backdrop TMDb has for a movie or a series whose provider gave none that loads: by its TMDb id when the provider
+     * gave one, otherwise the search result with the same title (and a year one apart at most, when known). Null rather
+     * than another title's picture.
+     */
+    suspend fun backdropUrl(series: Boolean, tmdbId: String?, title: String, year: Int?): String? {
+        val kind = if (series) "tv" else "movie"
+        tmdbId?.trim()?.toIntOrNull()?.let { id ->
+            runCatching { TmdbItem.from(get("$kind/$id"))?.backdropUrl }.getOrNull()?.let { return it }
+        }
+        val key = CatalogueMatcher.key(title)
+        if (key.isEmpty()) return null
+        return results(get("search/$kind", listOf("query" to CatalogueMatcher.searchQuery(title))))
+            .asSequence()
+            .filter { item ->
+                listOfNotNull(item.title, item.originalTitle).map(CatalogueMatcher::key).contains(key) &&
+                    (year == null || item.year == null || CatalogueMatcher.closeYears(year, item.year))
+            }
+            .firstNotNullOfOrNull { it.backdropUrl }
+    }
+
+    /** The people TMDb finds for a search (actors, directors…), the most popular first. */
+    suspend fun people(query: String): List<TmdbPerson> {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return emptyList()
+        return persons(get("search/person", listOf("query" to trimmed))).sortedByDescending { it.popularity }
+    }
+
+    /** The person TMDb knows best by this name (its most popular match), if any. */
+    suspend fun person(name: String): TmdbPerson? {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return null
+        return persons(get("search/person", listOf("query" to trimmed))).maxByOrNull { it.popularity }
+    }
+
+    /** Movies and series a person played in or worked on (directing, writing…), newest first, each once. */
+    suspend fun credits(personId: Int): List<TmdbItem> {
+        val credits = get("person/$personId/combined_credits") as? JsonObject ?: throw SerializationException("Not a TMDb answer")
+        fun part(name: String) = (credits[name] as? JsonArray)?.map { TmdbItem.from(it) ?: throw SerializationException("TMDb item without id") }.orEmpty()
+        val seen = HashSet<String>()
+        return (part("cast") + part("crew"))
+            .filter { (it.mediaType == TmdbItem.MediaType.MOVIE || it.mediaType == TmdbItem.MediaType.TV) && seen.add("${it.mediaType}-${it.id}") }
+            .sortedByDescending { it.year ?: Int.MIN_VALUE }
+    }
+
+    private fun results(page: JsonElement): List<TmdbItem> {
+        val results = (page as? JsonObject)?.get("results") as? JsonArray ?: throw SerializationException("TMDb response without results")
+        return results.map { TmdbItem.from(it) ?: throw SerializationException("TMDb item without id") }
+    }
+
+    private fun persons(page: JsonElement): List<TmdbPerson> {
+        val results = (page as? JsonObject)?.get("results") as? JsonArray ?: throw SerializationException("TMDb response without results")
+        return results.map { TmdbPerson.from(it) ?: throw SerializationException("TMDb person without id") }
+    }
+}
+
+/** A person on TMDb (actor, director…). */
+data class TmdbPerson(
+    val id: Int,
+    val name: String,
+    /** "Acting", "Directing"… */
+    val department: String? = null,
+    val profilePath: String? = null,
+    val popularity: Double = 0.0,
+) {
+    val profileUrl: String?
+        get() = profilePath?.let { "https://image.tmdb.org/t/p/w185$it" }?.takeIf(Urls::isValidAbsolute)
+
+    companion object {
+        internal fun from(json: JsonElement): TmdbPerson? {
+            val o = json as? JsonObject ?: return null
+            val id = (o["id"] as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }?.content?.toIntOrNull() ?: return null
+            fun string(key: String) = (o[key] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            return TmdbPerson(
+                id = id,
+                name = string("name").orEmpty(),
+                department = string("known_for_department"),
+                profilePath = string("profile_path"),
+                popularity = (o["popularity"] as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }?.content?.toDoubleOrNull() ?: 0.0,
+            )
+        }
     }
 }
 
@@ -116,12 +218,20 @@ object CatalogueMatcher {
     private val bracketed = Regex("""\[[^\]]*]""")
     private val parenthesized = Regex("""\([^)]*\)""")
 
-    internal fun key(title: String): String {
+    internal fun key(title: String): String = words(title).joinToString("")
+
+    /** The words to search a title with: `"FR - Sandstorm (2021) 4K"` -> `"sandstorm"`. */
+    internal fun searchQuery(title: String): String = words(title).joinToString(" ")
+
+    /** Release years one apart at most (release dates differ between countries), however absurd the one a panel sent. */
+    internal fun closeYears(a: Int, b: Int): Boolean = abs(a.toLong() - b.toLong()) <= 1
+
+    private fun words(title: String): List<String> {
         // Remove bracketed tags: [MULTI], (VOSTFR)…
         var name = title.replace(bracketed, " ")
         name = TitleParser.splitYear(name).name
         name = name.replace(parenthesized, " ")
-        return TextNormalizer.channelMatchKey(name)
+        return TextNormalizer.channelMatchWords(name)
     }
 
     /** Matches in trending order; a catalogue item is used once. Movies must be within one year when both are known. */
@@ -140,7 +250,7 @@ object CatalogueMatcher {
                     val best = keys.flatMap { movieIndex[it].orEmpty() }.firstOrNull { movie ->
                         val a = movie.year
                         val b = item.year
-                        a == null || b == null || abs(a - b) <= 1
+                        a == null || b == null || closeYears(a, b)
                     }
                     if (best != null && used.add("m" + best.id)) result.add(TrendingMatch.MovieMatch(best, item))
                 }
