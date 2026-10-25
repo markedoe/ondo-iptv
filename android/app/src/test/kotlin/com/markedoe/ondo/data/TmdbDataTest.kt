@@ -157,7 +157,8 @@ class TmdbDataTest {
         // Nothing more is asked with it.
         val asked = http.requested.size
         tv.loadTrending(force = true)
-        advanceUntilIdle()
+        // What is due now, the repository's work in backgroundScope too (advanceUntilIdle leaves it).
+        repeat(20) { testScheduler.runCurrent() }
         assertEquals(asked, http.requested.size)
         assertFalse(tv.state.value.trending.isNotEmpty())
     }

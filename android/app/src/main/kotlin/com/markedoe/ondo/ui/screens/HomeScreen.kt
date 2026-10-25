@@ -75,6 +75,8 @@ data class HomeUiState(
     /** By release year, not date added (see `Showcase.newMovies`). */
     val newMovies: List<ShowcaseItem> = emptyList(),
     val newSeries: List<ShowcaseItem> = emptyList(),
+    /** Trending on TMDb this week and in the playlist (with the viewer's TMDb token). */
+    val trending: List<ShowcaseItem> = emptyList(),
     val hasVod: Boolean = false,
     val channels: List<ChannelRow> = emptyList(),
     val channelsAreFavorites: Boolean = false,
@@ -103,6 +105,10 @@ class HomeActions(
     val onAcceptSuggestion: (TagSuggestion) -> Unit = {},
     val onChooseCategories: () -> Unit = {},
     val onDismissSuggestion: () -> Unit = {},
+    /** The carousel shows this title's wide picture (a TV): TMDb's is looked for when it has none that loads. */
+    val onShowBackdrop: (ShowcaseItem) -> Unit = {},
+    /** The backdrop at this address of the title did not load. */
+    val onBackdropFailed: (ShowcaseItem, String) -> Unit = { _, _ -> },
 )
 
 /**
@@ -159,6 +165,9 @@ fun HomeScreen(
         }
         if (state.newSeries.isNotEmpty()) {
             item { PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions) }
+        }
+        if (state.trending.isNotEmpty()) {
+            item { PosterShelf(stringResource(R.string.trending), state.trending, metrics, actions) }
         }
         if (hasVod) {
             item { ChannelShelf(state, metrics, actions) }

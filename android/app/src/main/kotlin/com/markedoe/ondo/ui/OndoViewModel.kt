@@ -191,6 +191,7 @@ class OndoViewModel(
         viewModelScope.launch {
             val movie = withContext(computation) { UiMappers.movie(state.value, id) } ?: return@launch
             repository.details(movie)
+            wantBackdrop(ShowcaseItem.MovieItem(movie))
         }
     }
 
@@ -200,7 +201,30 @@ class OndoViewModel(
             runCatching { repository.details(series) }
                 .onSuccess { _seriesErrors.value -= id }
                 .onFailure { error -> _seriesErrors.value += (id to LoadError.of(error)) }
+            wantBackdrop(ShowcaseItem.SeriesItem(series))
         }
+    }
+
+    /**
+     * With the viewer's TMDb token, looks once a session for TMDb's backdrop of a title that has none that loads: by
+     * the TMDb id its provider gave, else by its title and year.
+     */
+    fun wantBackdrop(item: ShowcaseItem) {
+        val state = state.value
+        if (state.settings.tmdbToken == null || UiMappers.backdrop(state, item) != null) return
+        val details = when (item) {
+            is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
+            is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
+        }
+        val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
+        val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
+        repository.findTmdbBackdrop(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
+    }
+
+    /** The backdrop at [url] did not load: the title shows TMDb's instead when the viewer has a token. */
+    fun backdropFailed(item: ShowcaseItem, url: String) {
+        repository.backdropFailed(url)
+        wantBackdrop(item)
     }
 
     // Library

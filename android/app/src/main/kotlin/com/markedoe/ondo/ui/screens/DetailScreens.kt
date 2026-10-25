@@ -100,6 +100,8 @@ data class WatchProgress(val fraction: Float, val minutesLeft: Int, val finished
 data class MovieDetailUiState(
     val item: ShowcaseItem.MovieItem,
     val details: MediaDetails? = null,
+    /** The provider's backdrop, else TMDb's (see `UiMappers.backdrop`). */
+    val backdropUrl: String? = null,
     val progress: WatchProgress? = null,
     val inMyList: Boolean = false,
     val similar: List<ShowcaseItem> = emptyList(),
@@ -111,6 +113,8 @@ data class MovieDetailUiState(
 data class SeriesDetailUiState(
     val item: ShowcaseItem.SeriesItem,
     val details: MediaDetails? = null,
+    /** The provider's backdrop, else TMDb's (see `UiMappers.backdrop`). */
+    val backdropUrl: String? = null,
     val seasons: List<Season> = emptyList(),
     val selectedSeason: Int? = null,
     /** Episode to play next and its progress. */
@@ -138,6 +142,8 @@ class DetailActions(
     val onToggleCollection: (String) -> Unit = {},
     /** Makes a collection with this name, holding the item. */
     val onNewCollection: (String) -> Unit = {},
+    /** The backdrop at this address did not load. */
+    val onBackdropFailed: (String) -> Unit = {},
 )
 
 @Composable
@@ -156,9 +162,10 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
     DetailScaffold(
         title = movie.name,
         posterUrl = state.details?.posterUrl ?: movie.posterUrl,
-        backdropUrl = state.details?.backdropUrl,
+        backdropUrl = state.backdropUrl,
         facts = facts,
         onBack = actions.onBack,
+        onBackdropFailed = actions.onBackdropFailed,
         actions = { metrics ->
             PlayButton(if (resumable) stringResource(R.string.resume) else stringResource(R.string.play), state.progress.takeIf { resumable }, actions.onPlay)
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
@@ -230,9 +237,10 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
     DetailScaffold(
         title = series.name,
         posterUrl = state.details?.posterUrl ?: series.coverUrl,
-        backdropUrl = state.details?.backdropUrl,
+        backdropUrl = state.backdropUrl,
         facts = facts,
         onBack = actions.onBack,
+        onBackdropFailed = actions.onBackdropFailed,
         actions = {
             state.next?.let { next ->
                 val resumable = state.nextProgress?.let { !it.finished && it.fraction > 0f } == true
@@ -289,6 +297,7 @@ private fun DetailScaffold(
     backdropUrl: String?,
     facts: List<String>,
     onBack: () -> Unit,
+    onBackdropFailed: (String) -> Unit,
     actions: @Composable (ShelfMetrics) -> Unit,
     content: LazyListScope.(ShelfMetrics) -> Unit,
 ) {
@@ -300,14 +309,14 @@ private fun DetailScaffold(
     Box(Modifier.fillMaxSize().testTag("detail")) {
         LazyColumn(contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             if (wide) {
-                item { WideHeader(title, posterUrl, backdropUrl, facts, metrics) { actions(metrics) } }
+                item { WideHeader(title, posterUrl, backdropUrl, facts, metrics, onBackdropFailed) { actions(metrics) } }
                 content(metrics)
                 return@LazyColumn
             }
             item {
                 Box {
                     Box(Modifier.fillMaxWidth().height(if (metrics.compact) 300.dp else 380.dp)) {
-                        Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize())
+                        Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize(), onFailed = onBackdropFailed)
                         Box(
                             Modifier.fillMaxSize().background(
                                 Brush.verticalGradient(
@@ -361,10 +370,11 @@ private fun WideHeader(
     backdropUrl: String?,
     facts: List<String>,
     metrics: ShelfMetrics,
+    onBackdropFailed: (String) -> Unit,
     actions: @Composable () -> Unit,
 ) {
     Box(Modifier.fillMaxWidth()) {
-        Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.matchParentSize())
+        Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.matchParentSize(), onFailed = onBackdropFailed)
         Box(
             Modifier
                 .matchParentSize()

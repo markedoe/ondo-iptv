@@ -78,8 +78,10 @@ data class OndoState(
     val placeholderNames: PlaceholderNames = PlaceholderNames.ENGLISH,
     /** TMDb's trending titles found in the catalogue (with the viewer's token), in TMDb's order. */
     val trending: List<TrendingMatch> = emptyList(),
-    /** TMDb's backdrop for a title whose provider gave none that loads, by `movie:<id>` or `series:<id>`. */
+    /** TMDb's backdrop for a title whose provider gave none that loads, by the title's key (`m-<id>`, `s-<id>`). */
     val tmdbBackdrops: Map<String, String> = emptyMap(),
+    /** Provider backdrops that did not load this session (dead address, refused, not an image): TMDb's show instead. */
+    val deadBackdrops: Set<String> = emptySet(),
     /** TMDb refused the saved token when it was used (it was checked elsewhere, or revoked since): Settings says so. */
     val tmdbRefused: Boolean = false,
 ) {
@@ -957,6 +959,11 @@ class OndoRepository(
             val found = tmdb { backdropUrl(series, tmdbId, title, year) } ?: return@launch
             _state.update { it.copy(tmdbBackdrops = it.tmdbBackdrops + (key to found)) }
         }
+    }
+
+    /** A backdrop that did not load: not asked for again this session, and the title gets TMDb's instead when it can. */
+    fun backdropFailed(url: String) {
+        if (url !in _state.value.deadBackdrops) _state.update { it.copy(deadBackdrops = it.deadBackdrops + url) }
     }
 
     /** With the viewer's token, the names of the people TMDb finds for a search (only the words typed are sent). */

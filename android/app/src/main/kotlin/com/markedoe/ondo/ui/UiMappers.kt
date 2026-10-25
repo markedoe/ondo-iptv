@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
+import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
@@ -66,7 +67,7 @@ object UiMappers {
     }
 
     fun showcase(state: OndoState): Showcase =
-        Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies)
+        Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending)
 
     /** The movies left out where the viewer browses: the finished ones, when Settings hides them. */
     fun hiddenMovieIds(state: OndoState): Set<String> =
@@ -103,8 +104,8 @@ object UiMappers {
 
     fun resume(entry: WatchEntry, state: OndoState): ResumeItem {
         val backdrop = when (entry.kind) {
-            ItemKind.MOVIE -> state.movieDetails[entry.itemId]?.backdropUrl
-            ItemKind.SERIES -> state.seriesDetails[entry.itemId]?.info?.backdropUrl
+            ItemKind.MOVIE -> backdrop(state, ItemKind.MOVIE, entry.itemId)
+            ItemKind.SERIES -> backdrop(state, ItemKind.SERIES, entry.itemId)
             ItemKind.CHANNEL -> null
         }
         return ResumeItem(
@@ -116,6 +117,28 @@ object UiMappers {
             minutesLeft = entry.minutesLeft,
             isSeries = entry.kind == ItemKind.SERIES,
         )
+    }
+
+    /**
+     * A title's wide picture (as on Apple devices): the provider's backdrop unless it did not load this session, else
+     * the one found on TMDb, else the trending one.
+     */
+    fun backdrop(state: OndoState, item: ShowcaseItem): String? = when (item) {
+        is ShowcaseItem.MovieItem -> backdrop(state, ItemKind.MOVIE, item.movie.id)
+        is ShowcaseItem.SeriesItem -> backdrop(state, ItemKind.SERIES, item.series.id)
+    }
+
+    private fun backdrop(state: OndoState, kind: ItemKind, id: String): String? {
+        val provider = if (kind == ItemKind.MOVIE) state.movieDetails[id]?.backdropUrl else state.seriesDetails[id]?.info?.backdropUrl
+        provider?.takeIf { it.isNotBlank() && it !in state.deadBackdrops }?.let { return it }
+        state.tmdbBackdrops[(if (kind == ItemKind.MOVIE) "m-" else "s-") + id]?.takeIf { it !in state.deadBackdrops }?.let { return it }
+        val trending = state.trending.firstOrNull { match ->
+            when (match) {
+                is TrendingMatch.MovieMatch -> kind == ItemKind.MOVIE && match.movie.id == id
+                is TrendingMatch.SeriesMatch -> kind == ItemKind.SERIES && match.series.id == id
+            }
+        }
+        return trending?.trending?.backdropUrl?.takeIf { it !in state.deadBackdrops }
     }
 
     fun progress(entry: WatchEntry?): WatchProgress? =
@@ -151,7 +174,7 @@ object UiMappers {
                 is ShowcaseItem.MovieItem -> item.movie.plot
                 is ShowcaseItem.SeriesItem -> item.series.plot
             }
-            HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable, details?.backdropUrl, details?.plot ?: plot)
+            HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable, backdrop(state, item), details?.plot ?: plot)
         }
         val channelsById = state.content.channels.filter { it.categoryId !in hidden }.associateBy { it.id }
         val favoriteChannels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }
@@ -166,6 +189,7 @@ object UiMappers {
             myList = showcase.myList(),
             newMovies = showcase.newMovies(now),
             newSeries = showcase.newSeries(now),
+            trending = showcase.trending(),
             hasVod = showcase.hasVod,
             channels = channels.map { channelRow(it, state, now) },
             channelsAreFavorites = favoriteChannels.isNotEmpty(),
@@ -392,6 +416,7 @@ object UiMappers {
         return MovieDetailUiState(
             item = item,
             details = state.movieDetails[movie.id],
+            backdropUrl = backdrop(state, item),
             progress = progress(showcase.progress(movie)),
             inMyList = isFavorite(state, item),
             similar = showcase.similarMovies(movie).map { ShowcaseItem.MovieItem(it) },
@@ -414,6 +439,7 @@ object UiMappers {
         return SeriesDetailUiState(
             item = item,
             details = details?.info,
+            backdropUrl = backdrop(state, item),
             seasons = seasons,
             selectedSeason = selectedSeason ?: next?.second?.number,
             next = next?.first,

@@ -3,6 +3,8 @@ package com.markedoe.ondo.ui
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.TmdbItem
+import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
@@ -47,6 +49,50 @@ class UiMappersTest {
         assertTrue(UiMappers.hiddenCategoryIds(shown).isEmpty())
         assertTrue(UiMappers.home(shown, labels, Fixtures.NOW).newMovies.any { it.title == "Late Show" })
         assertTrue(UiMappers.vod(shown, series = false, title = "").categories.contains(Fixtures.adultMovies))
+    }
+
+    /**
+     * Trending titles (TMDb) of the playlist: a row of their own and the carousel after what is being watched, in TMDb's
+     * order, without a hidden category or, when Settings hides them, a finished movie.
+     */
+    @Test
+    fun trendingTitlesShowInTheirRowAndTheCarousel() {
+        fun movie(movie: Movie, id: Int) = TrendingMatch.MovieMatch(movie, TmdbItem(id, TmdbItem.MediaType.MOVIE, movie.name, year = movie.year))
+        val trending = listOf(
+            movie(Fixtures.longRoad, 1),
+            TrendingMatch.SeriesMatch(Fixtures.blueHorizon, TmdbItem(2, TmdbItem.MediaType.TV, "Blue Horizon", year = 2023)),
+            movie(Fixtures.adultMovie, 3),
+            movie(Fixtures.summerInLisbon, 4),
+        )
+        val finished = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.summerInLisbon.id, title = "Summer in Lisbon", lastWatchedAt = 1)
+        val library = LibraryState().recordStart(finished).updateProgress(finished.key, 5_900.0, 6_000.0, now = 2)
+        val home = UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, Fixtures.NOW)
+        assertEquals(listOf("The Long Road", "Blue Horizon", "Summer in Lisbon"), home.trending.map { it.title })
+        // Older titles than the new releases: in the carousel only as trending, right after what is being watched.
+        assertEquals(listOf("The Long Road", "Blue Horizon", "Summer in Lisbon"), home.hero.map { it.item.title }.filter { it in home.trending.map { item -> item.title } })
+        assertEquals("The Long Road", home.hero.first().item.title)
+
+        val hidingWatched = Fixtures.state(library, settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, hideWatchedMovies = true)).copy(trending = trending)
+        assertEquals(listOf("The Long Road", "Blue Horizon"), UiMappers.home(hidingWatched, labels, Fixtures.NOW).trending.map { it.title })
+        // Without a token, nothing from TMDb.
+        assertTrue(UiMappers.home(Fixtures.state(), labels, Fixtures.NOW).trending.isEmpty())
+    }
+
+    /** A title's wide picture: the provider's unless it did not load, else TMDb's, else the trending one's. */
+    @Test
+    fun theBackdropIsTheProvidersElseTmdbsElseTheTrendingOne() {
+        val movie = Fixtures.longRoad
+        val item = ShowcaseItem.MovieItem(movie)
+        val provider = "http://example.com/backdrop/road.jpg"
+        val found = "https://image.tmdb.org/t/p/w1280/found.jpg"
+        val trending = TrendingMatch.MovieMatch(movie, TmdbItem(1, TmdbItem.MediaType.MOVIE, movie.name, backdropPath = "/trending.jpg"))
+        val base = Fixtures.state().copy(movieDetails = mapOf(movie.id to MediaDetails(title = movie.name, backdropUrl = provider)), trending = listOf(trending))
+        assertEquals(provider, UiMappers.backdrop(base, item))
+        val dead = base.copy(deadBackdrops = setOf(provider))
+        assertEquals("https://image.tmdb.org/t/p/w1280/trending.jpg", UiMappers.backdrop(dead, item))
+        assertEquals(found, UiMappers.backdrop(dead.copy(tmdbBackdrops = mapOf(item.key to found)), item))
+        assertEquals(found, UiMappers.movieDetail(dead.copy(tmdbBackdrops = mapOf(item.key to found)), movie).backdropUrl)
+        assertNull(UiMappers.backdrop(dead.copy(trending = emptyList()), item))
     }
 
     @Test

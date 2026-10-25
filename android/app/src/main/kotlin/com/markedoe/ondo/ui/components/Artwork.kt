@@ -96,12 +96,13 @@ fun BlurredPoster(url: String?, title: String, modifier: Modifier = Modifier) {
  * nowhere, the poster fills the space, blurred, rather than an empty frame.
  */
 @Composable
-fun Backdrop(url: String?, posterUrl: String?, title: String, modifier: Modifier = Modifier) {
+fun Backdrop(url: String?, posterUrl: String?, title: String, modifier: Modifier = Modifier, onFailed: (String) -> Unit = {}) {
     Box(modifier) {
         BlurredPoster(url = posterUrl, title = title, modifier = Modifier.fillMaxSize())
         if (!url.isNullOrBlank()) {
-            // Over the blurred poster, which stays visible until the backdrop arrives (or for good if it fails).
-            AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            // Over the blurred poster, which stays visible until the backdrop arrives (or for good if it fails: then
+            // [onFailed], and TMDb's may take its place).
+            AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize(), onError = { onFailed(url) })
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
@@ -21,6 +22,8 @@ class Showcase(
     private val excludedCategoryIds: Set<String> = emptySet(),
     /** Finished movies stay out of the new titles, the carousel and similar titles (they stay in My List). */
     private val hideWatchedMovies: Boolean = false,
+    /** Titles of the catalogue that are trending on TMDb (with the viewer's token), in TMDb's order. */
+    private val trendingMatches: List<TrendingMatch> = emptyList(),
 ) {
     private val movies by lazy { content.movies.filter { it.categoryId !in excludedCategoryIds } }
     private val browsableMovies by lazy {
@@ -72,6 +75,17 @@ class Showcase(
         .thenByDescending { it.rating ?: 0.0 }
         .thenBy(String.CASE_INSENSITIVE_ORDER) { it.title }
 
+    /** The trending titles to show: not in an excluded category, and not finished when Settings hides those. */
+    fun trending(): List<ShowcaseItem> {
+        val watched = if (hideWatchedMovies) library.finishedMovies(playlistId) else emptySet()
+        return trendingMatches.mapNotNull { match ->
+            when (match) {
+                is TrendingMatch.MovieMatch -> match.movie.takeIf { it.categoryId !in excludedCategoryIds && it.id !in watched }?.let { ShowcaseItem.MovieItem(it) }
+                is TrendingMatch.SeriesMatch -> match.series.takeIf { it.categoryId !in excludedCategoryIds }?.let { ShowcaseItem.SeriesItem(it) }
+            }
+        }.distinctBy { it.key }
+    }
+
     /** Movies and series of My List, most recently added first. */
     fun myList(): List<ShowcaseItem> =
         library.favorites
@@ -87,13 +101,14 @@ class Showcase(
         ItemKind.CHANNEL -> null
     }
 
-    /** Up to [limit] titles for the carousel: what is being watched first, then new releases, no duplicates. */
+    /** Up to [limit] titles for the carousel: what is being watched first, then trending titles, then new releases, no duplicates. */
     fun heroItems(now: Long, limit: Int = 5): List<ShowcaseItem> {
         val result = LinkedHashMap<String, ShowcaseItem>()
         fun add(item: ShowcaseItem?) {
             if (item != null && result.size < limit) result.putIfAbsent(item.key, item)
         }
         continueWatching().take(2).forEach { add(item(it.kind, it.itemId)) }
+        trending().forEach { add(it) }
         newReleases(now, limit * 2).forEach { add(it) }
         return result.values.toList()
     }

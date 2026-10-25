@@ -127,7 +127,8 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
             TvDetailHeader(
                 title = movie.name,
                 posterUrl = details?.posterUrl ?: movie.posterUrl,
-                backdropUrl = details?.backdropUrl,
+                backdropUrl = state.backdropUrl,
+                onBackdropFailed = actions.onBackdropFailed,
                 award = state.awards.firstOrNull(),
                 facts = facts,
                 badges = listOfNotNull(MediaFormat.label(movie.streamUrl)),
@@ -180,7 +181,8 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             TvDetailHeader(
                 title = series.name,
                 posterUrl = details?.posterUrl ?: series.coverUrl,
-                backdropUrl = details?.backdropUrl,
+                backdropUrl = state.backdropUrl,
+                onBackdropFailed = actions.onBackdropFailed,
                 award = null,
                 facts = facts,
                 badges = listOfNotNull(MediaFormat.label(state.seasons.flatMap { s -> s.episodes.map { it.streamUrl } })),
@@ -251,6 +253,7 @@ private fun TvDetailHeader(
     title: String,
     posterUrl: String?,
     backdropUrl: String?,
+    onBackdropFailed: (String) -> Unit,
     award: AwardRow?,
     facts: List<String>,
     badges: List<String>,
@@ -261,7 +264,7 @@ private fun TvDetailHeader(
 ) {
     val ink = TvTokens.Ink
     Box(Modifier.fillMaxWidth().heightIn(min = 420.dp).bringIntoViewAsAWhole().testTag("detailHeader")) {
-        TvArtwork(backdropUrl, posterUrl, title, Modifier.matchParentSize())
+        TvArtwork(backdropUrl, posterUrl, title, Modifier.matchParentSize(), onBackdropFailed)
         Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink, 0.35f to ink.copy(alpha = 0.9f), 0.7f to ink.copy(alpha = 0.3f), 1f to Color.Transparent)))
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to ink)))
         Column(
@@ -308,10 +311,10 @@ private fun TvDetailHeader(
  * enlarged poster would look blurry on a TV).
  */
 @Composable
-internal fun TvArtwork(backdropUrl: String?, posterUrl: String?, title: String, modifier: Modifier = Modifier) {
+internal fun TvArtwork(backdropUrl: String?, posterUrl: String?, title: String, modifier: Modifier = Modifier, onBackdropFailed: (String) -> Unit = {}) {
     Box(modifier) {
         if (!backdropUrl.isNullOrBlank()) {
-            Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize())
+            Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize(), onFailed = onBackdropFailed)
         } else {
             BlurredPoster(url = posterUrl, title = title, modifier = Modifier.fillMaxSize().alpha(0.55f))
             Artwork(

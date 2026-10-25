@@ -96,11 +96,12 @@ fun TvHomeScreen(
         myList = stringResource(R.string.my_list),
         newMovies = stringResource(R.string.new_movies),
         newSeries = stringResource(R.string.new_series),
+        trending = stringResource(R.string.trending),
         channels = stringResource(if (state.channelsAreFavorites) R.string.favorite_channels else R.string.live_tv),
     )
     val (resumeSeries, resumeMovies) = state.continueWatching.partition { it.isSeries }
     val empty = state.hero.isEmpty() && state.tagSuggestion == null && state.continueWatching.isEmpty() && state.myList.isEmpty() &&
-        state.channels.isEmpty() && state.newMovies.isEmpty() && state.newSeries.isEmpty()
+        state.channels.isEmpty() && state.newMovies.isEmpty() && state.newSeries.isEmpty() && state.trending.isEmpty()
     val memory = LocalFocusMemory.current
     LaunchedEffect(empty) { if (empty) memory?.given() }
     val focusManager = LocalFocusManager.current
@@ -156,6 +157,11 @@ fun TvHomeScreen(
                 items(state.newSeries, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newSeries:${item.key}")) }
             }
         }
+        if (state.trending.isNotEmpty()) {
+            tvShelf(titles.trending, "shelfTrending") {
+                items(state.trending, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("trending:${item.key}")) }
+            }
+        }
         if (state.hasVod) channelShelf(state, titles.channels, actions)
         if (!state.hasVod && state.channels.isEmpty() && !state.isLoading && !state.isRestoring) {
             item(key = "empty") {
@@ -170,7 +176,7 @@ fun TvHomeScreen(
     }
 }
 
-private data class HomeTitles(val movies: String, val series: String, val myList: String, val newMovies: String, val newSeries: String, val channels: String)
+private data class HomeTitles(val movies: String, val series: String, val myList: String, val newMovies: String, val newSeries: String, val trending: String, val channels: String)
 
 private fun androidx.compose.foundation.lazy.LazyListScope.channelShelf(state: HomeUiState, title: String, actions: HomeActions) {
     if (state.channels.isEmpty()) return
@@ -205,7 +211,10 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
             .onFocusChanged { hasFocus = it.hasFocus }
             .testTag("hero"),
     ) {
-        Crossfade(page, label = "heroArt") { TvArtwork(it.backdropUrl, it.item.posterUrl, it.item.title, Modifier.fillMaxSize()) }
+        LaunchedEffect(page.item.key) { actions.onShowBackdrop(page.item) }
+        Crossfade(page, label = "heroArt") { shown ->
+            TvArtwork(shown.backdropUrl, shown.item.posterUrl, shown.item.title, Modifier.fillMaxSize()) { url -> actions.onBackdropFailed(shown.item, url) }
+        }
         Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink, 0.32f to ink.copy(alpha = 0.88f), 0.62f to ink.copy(alpha = 0.25f), 1f to Color.Transparent)))
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to ink)))
         Column(

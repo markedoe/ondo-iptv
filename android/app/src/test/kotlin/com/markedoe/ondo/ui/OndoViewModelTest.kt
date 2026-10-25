@@ -12,6 +12,7 @@ import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.SavedPlaylist
+import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.HomeUiState
@@ -31,6 +32,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -79,6 +81,9 @@ class OndoViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
+    /** Runs what is due now, the repository's work in [TestScope.backgroundScope] too (which advanceUntilIdle leaves). */
+    private fun TestScope.settle() = repeat(20) { testScheduler.runCurrent() }
+
     private fun TestScope.viewModel(): OndoViewModel {
         // The demo address answers with the same fictional catalogue: no network in tests.
         val http = FakeHttp(mapOf(list to catalogue, OndoViewModel.DEMO_PLAYLIST_URL to catalogue))
@@ -102,6 +107,55 @@ class OndoViewModelTest {
         )
         val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler))
         return OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+    }
+
+    /**
+     * A movie page without a backdrop that loads: with the viewer's TMDb token, TMDb's shows instead, found by title and
+     * year (once a session); a provider's backdrop that fails gives way to it too.
+     */
+    @Test
+    fun aTitleWithoutABackdropThatLoadsGetsTmdbsWithTheToken() = runTest {
+        val searches = mutableListOf<String>()
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
+                url == list -> catalogue
+                url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
+                url.startsWith("https://api.themoviedb.org/3/search/movie?") -> {
+                    searches += url
+                    """{"results":[{"id":9,"title":"Long Road","release_date":"2025-03-01","backdrop_path":"/road.jpg"}]}"""
+                }
+                else -> throw HttpException.BadStatus(404)
+            }.encodeToByteArray()
+        }
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
+        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        repository.addPlaylist("Home", list)
+        val movie = viewModel.state.first { it.content.movies.isNotEmpty() }.content.movies.single()
+        val item = ShowcaseItem.MovieItem(movie)
+
+        // Without a token, nothing is asked of TMDb.
+        viewModel.loadMovie(movie.id)
+        settle()
+        assertTrue(searches.isEmpty())
+        assertNull(UiMappers.movieDetail(viewModel.state.value, movie).backdropUrl)
+
+        assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
+        viewModel.loadMovie(movie.id)
+        settle()
+        val tmdb = "https://image.tmdb.org/t/p/w1280/road.jpg"
+        assertEquals(tmdb, UiMappers.movieDetail(viewModel.state.value, movie).backdropUrl)
+        assertTrue("by title (${searches.single()})", Regex("query=long(%20|\\+)road", RegexOption.IGNORE_CASE).containsMatchIn(searches.single()))
+        // Once a session.
+        viewModel.loadMovie(movie.id)
+        settle()
+        assertEquals(1, searches.size)
+
+        // TMDb's picture failing too leaves the blurred poster, and it is not asked for again.
+        viewModel.backdropFailed(item, tmdb)
+        settle()
+        assertTrue(tmdb in viewModel.state.value.deadBackdrops)
+        assertNull(UiMappers.movieDetail(viewModel.state.value, movie).backdropUrl)
+        assertEquals(1, searches.size)
     }
 
     @Test

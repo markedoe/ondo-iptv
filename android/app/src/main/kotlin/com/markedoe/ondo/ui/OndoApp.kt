@@ -358,6 +358,8 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
                 navController.navigate(Routes.Categories())
             },
             onDismissSuggestion = viewModel::dismissTagSuggestion,
+            onShowBackdrop = viewModel::wantBackdrop,
+            onBackdropFailed = viewModel::backdropFailed,
         )
     if (isTelevision()) TvHomeScreen(state, actions, preparingKey = preparing) else HomeScreen(state = state, preparingKey = preparing, actions = actions)
 }
@@ -441,6 +443,7 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
             onBrowse = { kind, value -> navController.navigate(Routes.Browse(kind.name, value)) },
             onToggleCollection = { viewModel.toggleInCollection(it, ShowcaseItem.MovieItem(movie)) },
             onNewCollection = { viewModel.newCollection(it, ShowcaseItem.MovieItem(movie)) },
+            onBackdropFailed = { viewModel.backdropFailed(ShowcaseItem.MovieItem(movie), it) },
         )
     if (isTelevision()) TvMovieDetailScreen(ui, actions) else MovieDetailScreen(ui, actions)
 }
@@ -472,6 +475,7 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
             onPlayEpisode = { viewModel.playEpisode(id, it) },
             onToggleCollection = { viewModel.toggleInCollection(it, ui.item) },
             onNewCollection = { viewModel.newCollection(it, ui.item) },
+            onBackdropFailed = { viewModel.backdropFailed(ui.item, it) },
         )
     if (isTelevision()) TvSeriesDetailScreen(ui, actions) else SeriesDetailScreen(ui, actions)
 }
