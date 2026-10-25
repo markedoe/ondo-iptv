@@ -75,6 +75,8 @@ android {
             isIncludeAndroidResources = true
             all {
                 it.systemProperties["robolectric.pixelCopyRenderMode"] = "hardware"
+                // Each test named as it starts and ends in the log: one that never ends shows by name.
+                it.testLogging { events("started", "passed", "skipped", "failed") }
             }
         }
     }
