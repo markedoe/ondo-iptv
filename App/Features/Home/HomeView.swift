@@ -186,7 +186,7 @@ struct HomeView: View {
         Shelf(title: title, seeAll: .live, metrics: metrics) {
             ForEach(channels) { channel in
                 Button { model.play(channel, in: channels) } label: { ChannelTile(channel: channel) }
-                    .buttonStyle(.plain)
+                    .cardButtonStyle()
             }
         }
     }
@@ -209,8 +209,10 @@ struct HomeView: View {
                         .padding(14)
                         .frame(width: 150, height: 120, alignment: .leading)
                         .background(OndoColor.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .cardLift(cornerRadius: 14)
+                        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    .cardButtonStyle()
                 }
             }
         }

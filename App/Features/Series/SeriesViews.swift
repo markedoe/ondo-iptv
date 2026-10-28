@@ -32,7 +32,7 @@ struct SeriesGridView: View {
                     NavigationLink(value: item) {
                         PosterCard(title: item.name, imageURL: item.coverURL, subtitle: item.year.map(String.init), rating: item.rating)
                     }
-                    .buttonStyle(.plain)
+                    .cardButtonStyle()
                     .contextMenu { SeriesContextMenu(series: item) }
                 }
             }
@@ -268,7 +268,7 @@ struct EpisodeRow: View {
 
     private var still: some View {
         let width: CGFloat = compact ? 150 : 220
-        return Color.secondary.opacity(0.12)
+        return OndoColor.surface
             .frame(width: width, height: width * 9 / 16)
             .overlay {
                 RemoteImage(url: episode.posterURL, placeholderText: episode.code, contentMode: .fill, maxPixelSize: 440)

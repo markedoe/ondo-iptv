@@ -152,7 +152,7 @@ struct VODBrowser: View {
         .font(.subheadline.weight(.semibold))
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(Color.secondary.opacity(0.16), in: Capsule())
+        .background(OndoColor.surfaceHigh, in: Capsule())
         .contentShape(Capsule())
 
         Group {

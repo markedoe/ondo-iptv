@@ -105,11 +105,11 @@ struct ShowcasePoster: View {
         switch item {
         case .movie(let movie):
             NavigationLink(value: movie) { card }
-                .buttonStyle(.plain)
+                .cardButtonStyle()
                 .contextMenu { MovieContextMenu(movie: movie) }
         case .series(let series):
             NavigationLink(value: series) { card }
-                .buttonStyle(.plain)
+                .cardButtonStyle()
                 .contextMenu { SeriesContextMenu(series: series) }
         }
     }
@@ -139,7 +139,7 @@ struct PosterArtwork: View {
     var progress: Double?
 
     var body: some View {
-        Color.secondary.opacity(0.15)
+        OndoColor.surface
             .aspectRatio(2 / 3, contentMode: .fit)
             .overlay {
                 RemoteImage(url: url, placeholderText: title, contentMode: .fill, maxPixelSize: 480)
@@ -154,7 +154,7 @@ struct PosterArtwork: View {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .strokeBorder(.white.opacity(0.08), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+            .cardLift()
             .contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
@@ -166,7 +166,7 @@ struct ProgressBar: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.3))
+                Capsule().fill(.white.opacity(0.25))
                 Capsule().fill(OndoColor.selected).frame(width: proxy.size.width * min(max(value, 0), 1))
             }
         }
@@ -187,7 +187,7 @@ struct ContinueCard: View {
             model.resume(entry)
         } label: {
             VStack(alignment: .leading, spacing: 6) {
-                Color.secondary.opacity(0.15)
+                OndoColor.surface
                     .frame(width: width, height: width * 9 / 16)
                     .overlay {
                         RemoteImage(url: artwork, placeholderText: entry.title, contentMode: .fill, maxPixelSize: 720)
@@ -207,7 +207,7 @@ struct ContinueCard: View {
                         .padding(10)
                     }
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                    .cardLift()
                 Text(entry.title).font(.subheadline.weight(.semibold)).lineLimit(1)
                 if let subtitle = entry.subtitle {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -216,7 +216,7 @@ struct ContinueCard: View {
             .frame(width: width)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .cardButtonStyle()
         .contextMenu {
             Button(role: .destructive) {
                 model.removeFromHistory(entry)

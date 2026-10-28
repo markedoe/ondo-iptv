@@ -68,7 +68,7 @@ struct MovieGridView: View {
                             progress: model.progress(movie: movie)?.progress
                         )
                     }
-                    .buttonStyle(.plain)
+                    .cardButtonStyle()
                     .contextMenu { MovieContextMenu(movie: movie) }
                 }
             }
