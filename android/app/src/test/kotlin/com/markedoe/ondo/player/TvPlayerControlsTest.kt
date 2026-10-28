@@ -170,6 +170,36 @@ class TvPlayerControlsTest {
         compose.onNodeWithTag("seekTarget").assertDoesNotExist()
     }
 
+    /** Paused, a time chosen on the bar: OK plays from there, once the player has gone there by itself too. */
+    @Test
+    fun okOnTheBarPlaysFromTheTimeChosenAndKeepsTheRemoteThere() {
+        start()
+        press(Key.DirectionCenter)
+        assertFalse("paused", movie.playWhenReady)
+        press(Key.DirectionUp)
+        compose.onNodeWithTag("tvSeekBar").assertIsFocused()
+        press(Key.DirectionRight, 2)
+        // The remote stops: the player goes to the target by itself, still paused.
+        compose.mainClock.advanceTimeBy(PlayerControls.SCRUB_APPLY_MS + 200)
+        compose.waitForIdle()
+        assertEquals(listOf(620_000L), movie.seeks)
+        assertFalse("still paused", movie.playWhenReady)
+        press(Key.DirectionCenter)
+        assertTrue("OK plays", movie.playWhenReady)
+        assertEquals("no other seek", listOf(620_000L), movie.seeks)
+        compose.onNodeWithTag("tvSeekBar").assertIsFocused()
+        // Paused again, a move not applied yet: OK goes there and plays at once.
+        compose.runOnIdle { movie.pause() }
+        press(Key.DirectionLeft)
+        press(Key.DirectionCenter)
+        assertEquals(listOf(620_000L, 610_000L), movie.seeks)
+        assertTrue("OK plays", movie.playWhenReady)
+        compose.onNodeWithTag("tvSeekBar").assertIsFocused()
+        // Playing, OK on the bar does not pause.
+        press(Key.DirectionCenter)
+        assertTrue("still playing", movie.playWhenReady)
+    }
+
     @Test
     fun aLiveChannelShowsLiveInsteadOfTheBar() {
         val channel = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("de", MimeTypes.AUDIO_MPEG_L2, channels = 2)), initiallySelected = setOf(0), seekable = false)

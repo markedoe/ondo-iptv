@@ -320,7 +320,8 @@ internal val LiveRed = Color(0xFFE53935)
 
 /**
  * The progress bar, with the part already loaded. With the focus, Left and Right move a target along it (faster while
- * held) and the player goes there once the remote stops, or on OK ([PlayerControls.scrub]). A [live] stream that can go
+ * held) and the player goes there once the remote stops, or on OK ([PlayerControls.scrub]); OK also plays from there
+ * when the video is paused, the remote staying on the bar. A [live] stream that can go
  * back has it too, with LIVE; a channel played from its archive ([replay]) has REPLAY.
  */
 @Composable
@@ -348,7 +349,13 @@ private fun SeekBar(player: Player, controls: PlayerControls, focusable: Boolean
                             true
                         }
                         Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                            if (controls.scrubMs != null) controls.commitScrub(player) else return@onKeyEvent false
+                            // OK plays from the time chosen, the remote staying on the bar: the target if the player
+                            // has not gone there yet, and play if paused. It never pauses: the move may already have
+                            // been applied by itself ([PlayerControls.SCRUB_APPLY_MS]), unseen by the viewer.
+                            controls.commitScrub(player)
+                            if (!player.playWhenReady || player.playbackState == Player.STATE_ENDED) player.play()
+                            controls.refresh(player)
+                            controls.touch()
                             true
                         }
                         else -> false
