@@ -13,8 +13,9 @@ struct SyncState: Codable, Equatable {
     var deviceID = UUID().uuidString.lowercased()
     /// Milliseconds since 1970, by playlist ID (lowercase): when its name, address, login or guide last changed.
     var playlistUpdatedAt: [String: Int64] = [:]
-    /// Milliseconds since 1970: when the TMDb key of the keychain was saved, here or on the device it came from. Nil for
-    /// a key saved before sync carried it, which counts as the oldest.
+    /// Milliseconds since 1970: when the TMDb key of the keychain was saved, here or on the device it came from. A key
+    /// found without a date (saved before sync carried it, or kept by the keychain across a reinstall) is dated when the
+    /// app starts (`loadSyncState`): undated, it would lose to any removal or key another device holds.
     var tmdbKeyUpdatedAt: Int64?
     /// The keys of services this app does not use, as other devices sent them: kept only to pass them on.
     var otherKeys: [SyncKey] = []
@@ -110,7 +111,7 @@ enum SyncMapping {
         return snapshot.pruned(now: now.syncMilliseconds)
     }
 
-    /// The keychain's TMDb key, dated when it was saved (0 when that is not known: the oldest), and the keys passed on
+    /// The keychain's TMDb key, dated when it was saved (0 only before `loadSyncState` dated it), and the keys passed on
     /// for the services this app does not use.
     static func keys(tmdbKey: String?, state: SyncState) -> [SyncKey] {
         var keys = state.otherKeys.filter { $0.service != SyncKey.tmdb }
@@ -349,13 +350,21 @@ extension AppModel {
         localSync.scheduleSoon()
     }
 
-    /// Reads `sync.json`, or makes this device's ID the first time.
-    func loadSyncState() {
+    /// Reads `sync.json`, or makes this device's ID the first time. A TMDb key of the keychain without a date is dated
+    /// now, once: sent undated, it counted as the oldest, so a removal or a key on another device always won over it (the
+    /// other device kept its own, and this one even removed its key) while sync said it went well.
+    func loadSyncState(now: Date = Date()) {
+        var changed = false
         if let state = userStore.load(SyncState.self, name: "sync") {
             syncState = state
         } else {
-            saveSyncState()
+            changed = true
         }
+        if syncState.tmdbKeyUpdatedAt == nil, secrets.get(Keychain.tmdbKey) != nil {
+            syncState.tmdbKeyUpdatedAt = now.syncMilliseconds
+            changed = true
+        }
+        if changed { saveSyncState(now: now) }
     }
 
     func saveSyncState(now: Date = Date()) {

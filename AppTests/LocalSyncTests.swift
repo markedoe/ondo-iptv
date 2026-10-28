@@ -175,6 +175,32 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertNil(second.secrets.get(Keychain.tmdbKey))
     }
 
+    /// A TMDb key saved before sync carried it has no date: the app dates it when it starts, once, so it wins over a
+    /// removal made earlier on another device (a TV) instead of losing to it and being removed here too.
+    func testAnUndatedTMDbKeyIsDatedOnceAndWinsOverAnEarlierRemoval() async throws {
+        let folder = root.appendingPathComponent("iphone", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let secrets = InMemorySecretStore()
+        // In the keychain, with no sync.json yet: as an iPhone that had the key before sync carried it.
+        _ = secrets.set("example-tmdb-token-a", for: Keychain.tmdbKey)
+        let removedOnTheTV = Date().addingTimeInterval(-3_600).syncMilliseconds
+        let iphone = AppModel(storageRoot: folder, secrets: secrets, reminderScheduler: InMemoryReminderScheduler())
+        await iphone.bootstrap()
+        let key = try XCTUnwrap(iphone.syncSnapshot().keys.first { $0.service == SyncKey.tmdb })
+        XCTAssertGreaterThan(key.updatedAt, removedOnTheTV)
+
+        // The TV removed a token of its own an hour ago: the iPhone's key goes to it, and stays on the iPhone.
+        let tv = SyncSnapshot(device: "tv", deleted: ["key:" + SyncKey.tmdb: removedOnTheTV])
+        XCTAssertEqual(SyncMerge.merge(iphone.syncSnapshot(), tv).keys.map(\.value), ["example-tmdb-token-a"])
+        await iphone.applySync(tv)
+        XCTAssertEqual(iphone.secrets.get(Keychain.tmdbKey), "example-tmdb-token-a")
+
+        // Dated once: the next launch keeps that date.
+        let again = AppModel(storageRoot: folder, secrets: secrets, reminderScheduler: InMemoryReminderScheduler())
+        await again.bootstrap()
+        XCTAssertEqual(again.syncSnapshot().keys.first { $0.service == SyncKey.tmdb }?.updatedAt, key.updatedAt)
+    }
+
     func testOnlyAnEditOfWhatSyncCarriesDatesThePlaylist() async throws {
         let first = try await deviceWithLibrary()
         var playlist = try XCTUnwrap(first.activePlaylist)
