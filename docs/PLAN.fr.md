@@ -3,7 +3,7 @@
 [English](PLAN.md) · **Français**
 
 Lecteur IPTV (films, séries, TV en direct) pour **iPhone**, **iPad** et **macOS**, en Swift/SwiftUI natif,
-sous licence MIT. Ondo ne fournit aucun contenu : il lit les sources ajoutées par l'utilisateur. L'app Android
+sous Functional Source License (FSL-1.1-MIT : MIT deux ans après chaque version). Ondo ne fournit aucun contenu : il lit les sources ajoutées par l'utilisateur. L'app Android
 suit son propre plan : [ANDROID.fr.md](ANDROID.fr.md).
 
 ## 1. Choix techniques

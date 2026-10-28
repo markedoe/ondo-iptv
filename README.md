@@ -2,7 +2,7 @@
 
 **English** · [Français](README.fr.md)
 
-[![CI](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml) [![Android](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml) [![Security](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/ci.yml) [![Android](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/android.yml) [![Security](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml/badge.svg)](https://github.com/markedoe/ondo-iptv/actions/workflows/security.yml) [![License: FSL-1.1-MIT](https://img.shields.io/badge/license-FSL--1.1--MIT-blue.svg)](LICENSE)
 
 IPTV player for **iPhone / iPad**, **macOS** and **Android** (phones, tablets and Android TV) — movies, series and live TV —, native on each
 platform (Swift / SwiftUI, Kotlin / Jetpack Compose). It runs on iOS / iPadOS 17, macOS 14 and Android 8.0
@@ -317,4 +317,7 @@ Store and Google Play, as their rules require: the apps link to no other way to 
 
 ## License
 
-MIT, see [LICENSE](LICENSE).
+[Functional Source License 1.1, MIT Future License](LICENSE) (FSL-1.1-MIT). You may use, study, modify and
+share Ondo for any purpose except offering a competing commercial product or service built on it; two years after
+each version is published, that version is also available under the MIT license. Versions published before this
+change remain under the MIT license.
