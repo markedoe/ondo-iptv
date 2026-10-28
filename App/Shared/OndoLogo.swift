@@ -1,28 +1,24 @@
 import SwiftUI
 
-/// The Ondo mark drawn in SwiftUI (same geometry as the app icon): a ring crossed by a wave.
+/// The Ondo mark drawn in SwiftUI (same geometry and colours as the app icon): a white ring crossed by a grey wave, on black.
 struct OndoLogo: View {
     var size: CGFloat = 96
     var showsBackground = true
 
-    private static let lime = Color(red: 0.84, green: 1, blue: 0.24)
-    private static let cream = Color(red: 1, green: 0.965, blue: 0.87)
+    private static let ring = Color.white
+    private static let wave = Color(red: 0.557, green: 0.557, blue: 0.576)
 
     var body: some View {
         ZStack {
             if showsBackground {
                 RoundedRectangle(cornerRadius: size * 0.2237, style: .continuous)
-                    .fill(LinearGradient(
-                        colors: [Color(red: 0.11, green: 0.31, blue: 0.27), Color(red: 0.03, green: 0.11, blue: 0.09)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    ))
+                    .fill(Color.black)
             }
             Circle()
-                .stroke(Self.lime, lineWidth: size * 0.115)
+                .stroke(Self.ring, lineWidth: size * 0.115)
                 .frame(width: size * 0.586, height: size * 0.586)
             WaveShape()
-                .stroke(Self.cream, style: StrokeStyle(lineWidth: size * 0.0625, lineCap: .round))
+                .stroke(Self.wave, style: StrokeStyle(lineWidth: size * 0.0625, lineCap: .round))
                 .frame(width: size * 0.707, height: size * 0.14)
         }
         .frame(width: size, height: size)

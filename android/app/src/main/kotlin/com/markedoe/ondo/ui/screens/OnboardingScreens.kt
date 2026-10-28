@@ -77,12 +77,12 @@ import com.markedoe.ondo.ui.tv.rememberTvTextField
 import kotlin.math.PI
 import kotlin.math.sin
 
-/** The Ondo mark: lime ring and cream wave (same geometry as the app icon). */
+/** The Ondo mark: white ring and grey wave (same geometry and colours as the app icon). */
 @Composable
 fun OndoLogo(size: Dp = 96.dp) {
     Canvas(Modifier.size(size)) {
         val s = this.size.minDimension
-        drawCircle(Color(0xFFD6FF3D), radius = 0.586f * s / 2, style = Stroke(width = 0.115f * s))
+        drawCircle(Color.White, radius = 0.586f * s / 2, style = Stroke(width = 0.115f * s))
         val path = Path()
         val width = 0.707f * s
         val height = 0.14f * s
@@ -92,7 +92,7 @@ fun OndoLogo(size: Dp = 96.dp) {
             val y = center.y + height / 2 * sin(2 * PI * 1.5 * t).toFloat()
             if (step == 0) path.moveTo(x, y) else path.lineTo(x, y)
         }
-        drawPath(path, Color(0xFFFFF6DE), style = Stroke(width = 0.0625f * s, cap = StrokeCap.Round))
+        drawPath(path, Color(0xFF8E8E93), style = Stroke(width = 0.0625f * s, cap = StrokeCap.Round))
     }
 }
 
