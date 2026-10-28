@@ -6,11 +6,16 @@ import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.TmdbItem
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
+import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.EpgProgram
+import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
+import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.ItemKind
@@ -337,6 +342,48 @@ class UiMappersTest {
         assertTrue("three letters at least", UiMappers.search(index, "so", state, Fixtures.NOW).people.isEmpty())
         // A series is found on the person's page through its list entry, without opening it.
         assertEquals(listOf("Harbor Lights"), UiMappers.person(state, "Mara Quinn").series.map { it.title })
+    }
+
+    /**
+     * A language hidden in Settings leaves Search as it leaves the pages: its movies, series and channels, and the people
+     * named only by its titles (a page opened before the language was hidden).
+     */
+    @Test
+    fun searchLeavesOutWhatALanguageHiddenInSettingsHides() {
+        val arMovies = MediaCategory("m-ar", "|AR| Films", ContentType.MOVIE)
+        val arKids = MediaCategory("m-ar-kids", "|AR| Kids", ContentType.MOVIE)
+        val frMovies = MediaCategory("m-fr", "|FR| Films", ContentType.MOVIE)
+        val frKids = MediaCategory("m-fr-kids", "|FR| Kids", ContentType.MOVIE)
+        val arSeries = MediaCategory("s-ar", "|AR| Series", ContentType.SERIES)
+        val arNews = MediaCategory("l-ar", "|AR| News", ContentType.LIVE)
+        fun movie(id: String, name: String, category: MediaCategory) = Movie(id, name, categoryId = category.id, streamUrl = "http://example.com/movie/$id.mp4", year = 2020)
+        val content = Fixtures.content.copy(
+            movies = Fixtures.content.movies + listOf(movie("ar1", "Desert Star", arMovies), movie("ar2", "Desert Kids", arKids), movie("fr1", "Desert Bleu", frMovies), movie("fr2", "Petit Desert", frKids)),
+            series = Fixtures.content.series + Series(id = "sar", name = "Desert Nights", categoryId = arSeries.id, cast = "Omar Haddad"),
+            channels = Fixtures.content.channels + Channel(id = "car", name = "Desert News", categoryId = arNews.id, streamUrl = "http://example.com/live/car.m3u8"),
+            movieCategories = Fixtures.content.movieCategories + listOf(arMovies, arKids, frMovies, frKids),
+            seriesCategories = Fixtures.content.seriesCategories + arSeries,
+            liveCategories = Fixtures.content.liveCategories + arNews,
+        )
+        val shown = Fixtures.state(content = content).copy(movieDetails = mapOf("ar1" to MediaDetails(title = "Desert Star", cast = "Layla Haddad")))
+        val hidden = shown.copy(library = shown.library.settingTagsHidden(listOf("AR"), hidden = true))
+        fun search(state: OndoState, query: String) =
+            UiMappers.search(UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state)), query, state, Fixtures.NOW)
+
+        val before = search(shown, "desert")
+        assertEquals(listOf("Desert Star", "Desert Kids", "Desert Bleu", "Petit Desert"), before.movies.map { it.title })
+        assertEquals(listOf("Desert Nights"), before.series.map { it.title })
+        assertEquals(listOf("Desert News"), before.channels.map { it.channel.name })
+        assertEquals(listOf("Layla Haddad", "Omar Haddad"), search(shown, "haddad").people)
+
+        val after = search(hidden, "desert")
+        assertEquals("the French ones only", listOf("Desert Bleu", "Petit Desert"), after.movies.map { it.title })
+        assertTrue(after.series.isEmpty())
+        assertTrue(after.channels.isEmpty())
+        assertTrue("nobody named only by hidden titles", search(hidden, "haddad").people.isEmpty())
+        // The same with filters: an empty query then lists the whole playlist.
+        val filtered = UiMappers.search(UiMappers.SearchIndex(hidden.content, UiMappers.hiddenCategoryIds(hidden)), "", hidden, Fixtures.NOW, SearchFilters(fromYear = 2020, toYear = 2020))
+        assertEquals(listOf("Desert Bleu", "Petit Desert"), filtered.movies.map { it.title })
     }
 
     @Test

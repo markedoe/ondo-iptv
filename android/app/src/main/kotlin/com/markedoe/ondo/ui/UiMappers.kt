@@ -611,6 +611,7 @@ object UiMappers {
         /** Release years of the movies and series, newest first (the filter's choices). */
         val years: List<Int> = (movies.mapNotNull { it.second.year } + series.mapNotNull { it.second.year }).distinct().sortedDescending()
         val movieIds: Set<String> = movies.mapTo(HashSet()) { it.second.id }
+        val seriesIds: Set<String> = series.mapTo(HashSet()) { it.second.id }
 
         /** Actors and directors of the series lists (movie lists give no cast). */
         val people = PeopleIndex(content.series.filter { it.categoryId !in hidden }.flatMap { listOf(it.cast, it.director) })
@@ -630,11 +631,14 @@ object UiMappers {
         }
     }
 
-    /** Actors and directors whose name matches a search: from the pages already opened, then the series lists. */
+    /**
+     * Actors and directors whose name matches a search: from the pages already opened, then the series lists; only the
+     * pages of titles still shown (one opened before its category was hidden names nobody).
+     */
     fun people(index: SearchIndex, state: OndoState, query: String): List<String> {
         val opened = PeopleIndex(
-            state.movieDetails.values.flatMap { listOf(it.cast, it.director) } +
-                state.seriesDetails.values.flatMap { listOf(it.info.cast, it.info.director) },
+            state.movieDetails.filterKeys { it in index.movieIds }.values.flatMap { listOf(it.cast, it.director) } +
+                state.seriesDetails.filterKeys { it in index.seriesIds }.values.flatMap { listOf(it.info.cast, it.info.director) },
         )
         val seen = HashSet<String>()
         return (opened.names(query) + index.people.names(query)).filter { seen.add(TextNormalizer.normalize(it)) }.take(20)
