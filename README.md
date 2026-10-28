@@ -100,7 +100,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a Trending
   row on Home and in the carousel; for the titles of Home and the pages you open, TMDb's background image when the
   provider's is missing or broken, TMDb's trailer (in the app's language first, then English) when the provider
-  gives none, and the number of votes next to the rating; the people TMDb knows in Search, with their photo, and all
+  gives none, and the number of votes next to the rating; the cast's photos in a row on a title's page; the people TMDb knows in Search, with their photo, and all
   the titles of the playlist on an actor's or a director's page, under their photo. What TMDb answers is kept on the
   device (30 days, 7 for a title TMDb does not know): pages show it at once, offline too, and only what is missing or
   old is asked again, in the background, a few requests a second. A local index of actors and directors, filled
