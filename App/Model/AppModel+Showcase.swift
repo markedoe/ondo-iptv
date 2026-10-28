@@ -54,6 +54,13 @@ enum ShowcaseItem: Identifiable, Hashable {
         case .series: return .series
         }
     }
+
+    var categoryID: String {
+        switch self {
+        case .movie(let movie): return movie.categoryID
+        case .series(let series): return series.categoryID
+        }
+    }
 }
 
 /// What the home screen features: continue watching first, then trending titles and new releases.

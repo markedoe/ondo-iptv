@@ -334,6 +334,8 @@ extension AppModel {
     func setInForeground(_ foreground: Bool) {
         isInForeground = foreground
         refreshLocalSync()
+        // TMDb's background prefetch too.
+        if foreground { resumeMetadataPrefetch() } else { pauseMetadataPrefetch() }
     }
 
     /// Starts or stops looking for devices: only while sync is on, the app in the foreground and the main profile open.

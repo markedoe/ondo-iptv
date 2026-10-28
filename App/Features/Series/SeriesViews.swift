@@ -74,7 +74,7 @@ struct SeriesDetailView: View {
             backdropURL: model.backdropURL(for: .series(series)),
             facts: facts,
             badges: badges,
-            onBackdropFailure: { model.backdropFailed($0, for: .series(series)) }
+            onBackdropFailure: { model.backdropFailed($0, for: .series(series), permanently: $1) }
         ) { metrics in
             metrics.actionsLayout {
                 if let next {
@@ -92,7 +92,7 @@ struct SeriesDetailView: View {
                 HStack(alignment: .top, spacing: 14) {
                     MyListAction(item: .series(series))
                     CollectionAction(item: .series(series))
-                    TrailerAction(youTubeID: details?.info.trailerYouTubeID)
+                    TrailerAction(youTubeID: model.trailerYouTubeID(for: .series(series), provider: details?.info.trailerYouTubeID))
                 }
             }
         } content: { metrics in
@@ -129,6 +129,8 @@ struct SeriesDetailView: View {
                 suggested = model.nextEpisode(in: series, details: stored)?.season.number
                 if selectedSeason == nil { selectedSeason = suggested }
             }
+            // What TMDb said at an earlier visit (backdrop, trailer, votes), from the device.
+            await model.showStoredMetadata(for: .series(series))
             do {
                 let loaded = try await model.details(for: series)
                 details = loaded
@@ -139,7 +141,7 @@ struct SeriesDetailView: View {
             } catch {
                 errorMessage = error.localizedDescription
             }
-            await model.loadTMDbBackdropIfNeeded(for: .series(series))
+            await model.loadTMDbMetadata(for: .series(series))
         }
     }
 
@@ -199,7 +201,7 @@ struct SeriesDetailView: View {
         if let seasons = details?.seasons, !seasons.isEmpty {
             items.append(String(localized: "\(seasons.count) seasons"))
         }
-        if let rating = details?.info.rating ?? series.rating, rating > 0 { items.append("★ " + Formatting.rating(rating)) }
+        if let rating = model.ratingFact(for: .series(series), provider: details?.info.rating ?? series.rating) { items.append(rating) }
         if let genre = details?.info.genre ?? series.genre { items.append(genre) }
         return items
     }

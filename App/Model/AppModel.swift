@@ -101,6 +101,13 @@ final class AppModel {
     /// on screen (`apply`). Read when a search runs, so not observed.
     @ObservationIgnored var peopleIndex = PeopleIndex()
     @ObservationIgnored var peopleTask: Task<Void, Never>?
+    /// The catalogue's movies and series by their title key (`MetadataKey.title`): the titles of the local people index
+    /// that this playlist has. Built with `peopleIndex`.
+    @ObservationIgnored var catalogueByMetadataKey: [String: [ShowcaseItem]] = [:]
+    /// TMDb's answers and the people index, kept between launches (AppModel+TMDbMetadata).
+    @ObservationIgnored let metadataStore: any MetadataStoring
+    /// What the screens show of it: titles read from the store or fetched, people's photos, the prefetch queue.
+    let tmdbMetadata = TMDbMetadata()
     private(set) var epg = EPGIndex.empty
     private(set) var phase: LoadPhase = .idle
     private(set) var epgPhase: LoadPhase = .idle
@@ -179,6 +186,8 @@ final class AppModel {
         userStore = FileStore(directory: storageRoot?.appendingPathComponent("Support", isDirectory: true) ?? AppPaths.support)
         cacheStore = FileStore(directory: storageRoot?.appendingPathComponent("Caches", isDirectory: true) ?? AppPaths.caches, disposable: true)
         libraryWriter = LibraryWriter(store: userStore)
+        metadataStore = Self.openMetadataStore(in: (storageRoot?.appendingPathComponent("Support", isDirectory: true) ?? AppPaths.support)
+            .appendingPathComponent("Metadata", isDirectory: true))
         self.secrets = secrets
         #if DEBUG  // only in test builds: UI tests must never hit the system permission prompt
         let isUITest = ProcessInfo.processInfo.arguments.contains { $0.hasPrefix("-uitest") }
@@ -222,6 +231,7 @@ final class AppModel {
         playlists = (userStore.load([Playlist].self, name: "playlists") ?? []).map(withStoredPassword)
         hasParentalPIN = secrets.get(Keychain.parentalPINKey) != nil
         hasTMDbKey = secrets.get(Keychain.tmdbKey) != nil
+        await loadDeadImages()
         loadSyncState()
         isReady = true
         refreshLocalSync()
@@ -382,6 +392,7 @@ final class AppModel {
         isTMDbKeyRefused = false
         trendingLoadedFor = nil
         if !hasTMDbKey { trending = [] }
+        tmdbCredentialChanged()
         return stored
     }
 

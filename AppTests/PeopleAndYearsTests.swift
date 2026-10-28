@@ -92,4 +92,37 @@ final class PeopleAndYearsTests: XCTestCase {
         let none = await model.tmdbPeople(matching: "Ada Vance")
         XCTAssertEqual(none, [], "no TMDb token: nothing is sent online")
     }
+
+    /// The local people index, kept between launches: a person's titles of this playlist and their search, offline.
+    func testThePeopleIndexFindsAPersonsTitlesWithoutTheNetwork() async throws {
+        let model = try await model()
+        await model.peopleTask?.value
+        let photo = URL(string: "https://image.tmdb.org/t/p/w185/ada.jpg")!
+        model.metadataStore.index([
+            PersonLink(personKey: "ada vance", displayName: "Ada Vance", titleKey: "movie:brightfield:1998"),
+            PersonLink(personKey: "ada vance", displayName: "Ada Vance", titleKey: "movie:elsewhere:2001"),
+            PersonLink(personKey: "lena ward", displayName: "Lena Ward", titleKey: "movie:elsewhere:2001"),
+        ])
+        model.metadataStore.savePeople([PersonRecord(personKey: "ada vance", displayName: "Ada Vance", photoURL: photo)])
+
+        let works = await model.localWorks(of: "Ada Vance")
+        XCTAssertEqual(works.movies.map(\.name), ["Bright Field"], "the titles of this playlist only")
+        XCTAssertFalse(works.searchedOnline)
+        let found = await model.indexedPeople(matching: "vance")
+        XCTAssertEqual(found, ["Ada Vance"])
+        XCTAssertEqual(model.personPhoto(named: "Ada Vance"), photo)
+        let elsewhere = await model.indexedPeople(matching: "ward")
+        XCTAssertEqual(elsewhere, [], "nobody without a title in this playlist")
+
+        // A page opened since then names someone: they join the index for the next launch.
+        let quiet = try movie("Quiet Water", in: model)
+        model.indexProviderPeople([(item: .movie(quiet), details: MediaDetails(title: quiet.name, cast: "Tom Ellery (Ben)"))])
+        let deadline = Date().addingTimeInterval(5)
+        while model.metadataStore.titleKeys(ofPerson: "tom ellery").isEmpty, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertEqual(model.metadataStore.titleKeys(ofPerson: "tom ellery"), ["movie:quietwater:2021"])
+        let tom = await model.localWorks(of: "Tom Ellery")
+        XCTAssertEqual(tom.movies.map(\.name), ["Quiet Water"])
+    }
 }

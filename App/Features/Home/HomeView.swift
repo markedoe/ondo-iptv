@@ -300,9 +300,11 @@ struct HomeView: View {
         Array(model.continueWatching(.movie).prefix(4)) + Array(model.continueWatching(.series).prefix(4))
     }
 
-    /// Loads plots, genres and backdrops for the carousel and the cards of the movies and series in progress.
+    /// Loads plots, genres and backdrops for the carousel and the cards of the movies and series in progress, and
+    /// (with a TMDb token) what TMDb knows of them, ahead of the rows' cards.
     private func prefetchDetails(_ hero: [ShowcaseItem]) async {
         let resume = firstResumeCards().compactMap { model.showcaseItem(for: $0) }
+        model.prefetchMetadata(hero + resume)
         for item in hero + resume where model.cachedDetails(for: item) == nil {
             guard !Task.isCancelled else { return }
             _ = await model.loadDetails(for: item)

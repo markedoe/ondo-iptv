@@ -11,7 +11,7 @@ struct DetailScaffold<Actions: View, Content: View>: View {
     /// Outlined after the facts: the format of the stream (MKV, MP4…).
     var badges: [String] = []
     /// The backdrop did not load.
-    var onBackdropFailure: ((URL) -> Void)?
+    var onBackdropFailure: ((_ url: URL, _ permanently: Bool) -> Void)?
     @ViewBuilder var actions: (ShelfMetrics) -> Actions
     @ViewBuilder var content: (ShelfMetrics) -> Content
     #if os(iOS)

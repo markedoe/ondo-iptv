@@ -81,7 +81,7 @@ struct SearchView: View {
                 Section("People (\(people.count))") {
                     ForEach(people, id: \.self) { name in
                         NavigationLink(value: PersonRoute(name: name)) {
-                            Label(name, systemImage: "person.crop.circle")
+                            PersonRow(name: name, photoURL: model.personPhoto(named: name))
                         }
                     }
                 }
@@ -136,12 +136,17 @@ struct SearchView: View {
                 guard !Task.isCancelled else { return }
                 programs = query.count >= 2 ? await model.searchProgramsInBackground(query) : []
                 guard !Task.isCancelled else { return }
-                people = model.people(matching: query)
-                // With a TMDb token, the people TMDb knows by that name follow.
+                // The pages opened and the series lists, then the local people index (kept between launches, offline
+                // too), then, with a TMDb token, the people TMDb knows by that name: each person once.
+                let opened = model.people(matching: query)
+                people = opened
+                let indexed = await model.indexedPeople(matching: query)
+                guard !Task.isCancelled else { return }
+                people = PeopleSearch.merged(opened, indexed)
+                await model.loadPersonPhotos(people)
                 let online = await model.tmdbPeople(matching: query)
                 guard !Task.isCancelled, !online.isEmpty else { return }
-                var seen = Set(people.map(TextNormalizer.normalize))
-                people += online.filter { seen.insert(TextNormalizer.normalize($0)).inserted }
+                people = PeopleSearch.merged(opened, indexed, online)
             }
         }
         .task(id: [model.content.movies.count, model.content.series.count, model.movieAwards.count]) {
@@ -261,6 +266,22 @@ struct ProgramSearchRow: View {
             }
         }
         .contentShape(Rectangle())
+    }
+}
+
+/// A person found by a search: their photo when TMDb gave one, else their initials.
+struct PersonRow: View {
+    let name: String
+    let photoURL: URL?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            RemoteImage(url: photoURL, placeholderText: name, contentMode: .fill, maxPixelSize: 120)
+                .frame(width: 36, height: 36)
+                .clipShape(Circle())
+                .accessibilityHidden(true)
+            Text(name).lineLimit(1)
+        }
     }
 }
 

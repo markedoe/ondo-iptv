@@ -68,6 +68,29 @@ enum Artwork {
     static func clearCaches() {
         ImagePipeline.shared.cache.removeAll()
     }
+
+    /// Why a picture did not load. `network`: the server could not be reached (offline, a timeout, the connection
+    /// lost), worth one more try and not a reason to give the address up. `cancelled`: nothing to report. Anything
+    /// else (an error status such as 404, something that is not a picture, a host that does not exist) is `broken`.
+    enum Failure {
+        case network
+        case cancelled
+        case broken
+    }
+
+    static func failure(_ error: Error) -> Failure {
+        let underlying = (error as? ImagePipeline.Error)?.dataLoadingError ?? error
+        guard let urlError = underlying as? URLError else { return .broken }
+        switch urlError.code {
+        case .cancelled:
+            return .cancelled
+        case .timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotConnectToHost, .dnsLookupFailed,
+             .internationalRoamingOff, .dataNotAllowed, .callIsActive:
+            return .network
+        default:
+            return .broken
+        }
+    }
 }
 
 /// Async image with a monogram placeholder (channel logos are frequently missing or broken).
@@ -96,8 +119,11 @@ struct BackdropImage: View {
     let backdropURL: URL?
     let posterURL: URL?
     var dimming = 0.25
-    /// Called when the backdrop does not load, so the title can be given another one.
-    var onFailure: ((URL) -> Void)?
+    /// Called when the backdrop does not load, so the title can be given another one; `permanently` when the address
+    /// itself is broken, not the network.
+    var onFailure: ((_ url: URL, _ permanently: Bool) -> Void)?
+    /// The address tried a second time after a network error.
+    @State private var retried: URL?
 
     var body: some View {
         LazyImage(request: backdropURL.map { Artwork.request($0, maxPixelSize: 1600) }) { state in
@@ -120,8 +146,23 @@ struct BackdropImage: View {
         }
         // A cancelled request (scrolled away) reports nothing.
         .onCompletion { result in
-            if case .failure = result, let backdropURL { onFailure?(backdropURL) }
+            guard case .failure(let error) = result, let backdropURL else { return }
+            switch Artwork.failure(error) {
+            case .cancelled:
+                break
+            case .network where retried != backdropURL:
+                // One more try a moment later (a new identity loads it again).
+                Task {
+                    try? await Task.sleep(for: .seconds(2))
+                    retried = backdropURL
+                }
+            case .network:
+                onFailure?(backdropURL, false)
+            case .broken:
+                onFailure?(backdropURL, true)
+            }
         }
+        .id(retried)
     }
 }
 

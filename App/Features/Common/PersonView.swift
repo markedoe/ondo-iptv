@@ -6,7 +6,7 @@ struct PersonRoute: Hashable {
     let name: String
 }
 
-/// The movies and series of the playlist with this actor or director.
+/// The movies and series of the playlist with this actor or director, under their photo when TMDb gave one.
 struct PersonView: View {
     @Environment(AppModel.self) private var model
     let name: String
@@ -15,6 +15,17 @@ struct PersonView: View {
 
     var body: some View {
         List {
+            if let photo = model.personPhoto(named: name) {
+                // TMDb's photo of the person, when known (kept on the device).
+                Section {
+                    RemoteImage(url: photo, placeholderText: name, contentMode: .fill, maxPixelSize: 480)
+                        .frame(width: 128, height: 128)
+                        .clipShape(Circle())
+                        .frame(maxWidth: .infinity)
+                        .accessibilityHidden(true)
+                }
+                .listRowBackground(Color.clear)
+            }
             if !works.movies.isEmpty {
                 Section("Movies (\(works.movies.count))") {
                     ForEach(works.movies) { movie in
@@ -52,7 +63,10 @@ struct PersonView: View {
         }
         .navigationTitle(name)
         .task(id: name) {
+            // The pages opened, then the local people index (offline too), then TMDb's credits.
             works = model.knownWorks(of: name)
+            await model.loadPersonPhotos([name])
+            works = await model.localWorks(of: name)
             works = await model.works(of: name)
             isLoading = false
         }

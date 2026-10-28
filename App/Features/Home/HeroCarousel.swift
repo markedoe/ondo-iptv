@@ -124,7 +124,7 @@ private struct HeroPage: View {
         }
         .foregroundStyle(.white)
         .task(id: isCurrent) {
-            if isCurrent { await model.loadTMDbBackdropIfNeeded(for: item) }
+            if isCurrent { await model.loadTMDbMetadata(for: item) }
         }
     }
 
@@ -137,7 +137,7 @@ private struct HeroPage: View {
                     // A tall frame without a wide picture: the poster itself, rather than its blur.
                     RemoteImage(url: item.posterURL, placeholderText: item.title, contentMode: .fill, maxPixelSize: 900)
                 } else {
-                    BackdropImage(backdropURL: backdrop, posterURL: item.posterURL, dimming: 0.3) { model.backdropFailed($0, for: item) }
+                    BackdropImage(backdropURL: backdrop, posterURL: item.posterURL, dimming: 0.3) { model.backdropFailed($0, for: item, permanently: $1) }
                 }
             }
             .overlay {
@@ -258,8 +258,8 @@ private struct HeroPage: View {
         if case .movie = item, let seconds = details?.durationSeconds, seconds > 0 {
             parts.append(Formatting.duration(seconds))
         }
-        if let rating = details?.rating ?? item.rating, rating > 0 {
-            parts.append("★ " + Formatting.rating(rating))
+        if let rating = model.ratingFact(for: item, provider: details?.rating ?? item.rating) {
+            parts.append(rating)
         }
         return parts
     }
