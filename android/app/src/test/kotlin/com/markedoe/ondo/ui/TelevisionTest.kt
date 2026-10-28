@@ -135,9 +135,9 @@ class TelevisionTest {
         compose.onNodeWithTag("heroPlay").assertIsFocused()
     }
 
-    /** Above the featured titles: which playlist Home shows, and when it was last updated from the provider. */
+    /** Under the featured titles, off the picture: which playlist Home shows, and when it was last updated from the provider. */
     @Test
-    fun homeShowsThePlaylistAndItsLastUpdateAboveTheCarousel() {
+    fun homeShowsThePlaylistAndItsLastUpdateUnderTheCarousel() {
         start()
         compose.onNodeWithTag("lastUpdate", useUnmergedTree = true).assertIsDisplayed().assert(hasText("Updated", substring = true))
         compose.onNodeWithTag("lastUpdate", useUnmergedTree = true).assert(hasText(Fixtures.playlist.name, substring = true))

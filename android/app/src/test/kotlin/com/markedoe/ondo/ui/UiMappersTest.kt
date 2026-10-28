@@ -168,6 +168,13 @@ class UiMappersTest {
         assertNull(UiMappers.ratingFact(null, null, Locale.US))
         assertNull(UiMappers.ratingFact(0.0, null, Locale.US))
         assertEquals("★ 6.0", UiMappers.ratingFact(6.0, null, Locale.US))
+        // A trending title carries TMDb's votes from the trending answer.
+        val movie = Fixtures.longRoad
+        val trending = TrendingMatch.MovieMatch(movie, TmdbItem(1, TmdbItem.MediaType.MOVIE, movie.name, voteAverage = 6.84, voteCount = 980))
+        val withTrending = Fixtures.state().copy(trending = listOf(trending))
+        assertEquals(TmdbRating(6.84, 980), UiMappers.tmdbRating(withTrending, ShowcaseItem.MovieItem(movie)))
+        assertEquals(TmdbRating(6.84, 980), UiMappers.movieDetail(withTrending, movie).votes)
+        assertNull(UiMappers.tmdbRating(Fixtures.state(), ShowcaseItem.MovieItem(movie)))
     }
 
     @Test
