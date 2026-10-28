@@ -30,7 +30,6 @@ import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
-import com.markedoe.ondo.ui.tv.TvPlace
 import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
 import com.markedoe.ondo.ui.tv.tvSafeArea
 import java.util.Locale
@@ -98,7 +97,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
                     TelevisionFrame {
                         if (tv) {
-                            TvNavigationFrame(TvPlace.Tab(tab), showDrawer = drawer, onSelect = {}, onSearch = {}, onSettings = {}) { content() }
+                            TvNavigationFrame(tab, showDrawer = drawer, onSelect = {}, onSearch = {}, onSettings = {}) { content() }
                         } else {
                             OndoNavigationFrame(tab, onSelect = {}) { content() }
                         }

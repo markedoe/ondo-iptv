@@ -246,8 +246,9 @@ private fun FilterLine(icon: androidx.compose.ui.graphics.vector.ImageVector, te
     }
 }
 
+/** The years a search is limited to, in words ("Released since 2020"…). */
 @Composable
-private fun yearsText(filters: SearchFilters): String {
+fun yearsText(filters: SearchFilters): String {
     val from = filters.fromYear
     val to = filters.toYear
     return when {

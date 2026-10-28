@@ -108,7 +108,7 @@ import com.markedoe.ondo.ui.tv.TvCategoriesScreen
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
-import com.markedoe.ondo.ui.tv.TvPlace
+import com.markedoe.ondo.ui.tv.TvSearchScreen
 import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
 import com.markedoe.ondo.ui.tv.TvSettingsScreen
 import com.markedoe.ondo.ui.tv.tvSafeArea
@@ -189,15 +189,15 @@ private fun MainTabs(viewModel: OndoViewModel) {
         TopLevel.entries.firstOrNull { destination.hasRoute(it.route::class) }?.let { selected = it }
     }
     val destination = entry?.destination
-    val searching = destination?.hasRoute(Routes.Search::class) == true
-    val tabPage = searching || TopLevel.entries.any { destination?.hasRoute(it.route::class) == true }
+    // On a TV, Search is a page of its own, beside no drawer: Back closes it.
+    val tabPage = TopLevel.entries.any { destination?.hasRoute(it.route::class) == true }
     val frame: @Composable (@Composable () -> Unit) -> Unit = if (isTelevision()) {
         { pages ->
             TvNavigationFrame(
-                place = if (searching) TvPlace.Search else TvPlace.Tab(selected),
+                selected = selected,
                 showDrawer = tabPage,
                 onSelect = navController::openTab,
-                onSearch = { navController.navigate(Routes.Search) { launchSingleTop = true } },
+                onSearch = { navController.openSearch(viewModel) },
                 onSettings = { navController.navigate(Routes.Settings) },
                 content = pages,
             )
@@ -220,7 +220,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 page<Routes.Movies>(TvMargins.BESIDE_DRAWER) { VodDestination(viewModel, navController, series = false) }
                 page<Routes.Series>(TvMargins.BESIDE_DRAWER) { VodDestination(viewModel, navController, series = true) }
                 page<Routes.Live>(TvMargins.BESIDE_DRAWER) { LiveDestination(viewModel, navController) }
-                page<Routes.Search>(TvMargins.BESIDE_DRAWER) { SearchDestination(viewModel, navController) }
+                page<Routes.Search> { SearchDestination(viewModel, navController) }
                 page<Routes.MyList>(TvMargins.BESIDE_DRAWER) { MyListDestination(viewModel, navController) }
                 page<Routes.MovieDetail>(TvMargins.NONE) { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                 page<Routes.SeriesDetail>(TvMargins.NONE) { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
@@ -314,11 +314,24 @@ private inline fun <reified T : Any> NavGraphBuilder.page(
     }
 }
 
-/** Each tab keeps its own back stack, like the system apps. */
-private fun NavHostController.openTab(tab: TopLevel) = navigate(tab.route) {
-    popUpTo(graph.findStartDestination().id) { saveState = true }
-    launchSingleTop = true
-    restoreState = true
+/**
+ * Each tab keeps its own back stack, like the system apps. Search is no page of the tab it was opened from: a tab
+ * chosen from it, or from a page it opened, leaves it behind (that tab's stack kept without it), so the tab opens on
+ * its own page and not on Search again.
+ */
+private fun NavHostController.openTab(tab: TopLevel) {
+    popBackStack<Routes.Search>(inclusive = true, saveState = false)
+    navigate(tab.route) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+/** Search opened anew from a page (its magnifying glass, the TV's drawer): empty, without the last search's filters. */
+private fun NavHostController.openSearch(viewModel: OndoViewModel) {
+    viewModel.newSearch()
+    navigate(Routes.Search) { launchSingleTop = true }
 }
 
 private fun NavHostController.open(item: ShowcaseItem) = when (item) {
@@ -352,7 +365,7 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onPlayChannel = viewModel::playChannel,
             onPlaylists = { navController.navigate(Routes.Settings) },
             onSettings = { navController.navigate(Routes.Settings) },
-            onSearch = { navController.navigate(Routes.Search) },
+            onSearch = { navController.openSearch(viewModel) },
             onAcceptSuggestion = viewModel::acceptSuggestion,
             onChooseCategories = {
                 viewModel.dismissTagSuggestion()
@@ -379,7 +392,7 @@ private fun VodDestination(viewModel: OndoViewModel, navController: NavHostContr
             onRemoveResume = { viewModel.removeFromContinueWatching(it.key) },
             onCategory = { category -> navController.navigate(Routes.Grid(series = series, categoryId = category?.id)) },
             onSeeAllMyList = { navController.navigate(Routes.Grid(series = series, myList = true)) },
-            onSearch = { navController.navigate(Routes.Search) },
+            onSearch = { navController.openSearch(viewModel) },
             onCategories = { navController.navigate(Routes.Categories(if (series) "series" else "movie")) },
         ),
     )
@@ -398,7 +411,7 @@ private fun LiveDestination(viewModel: OndoViewModel, navController: NavHostCont
             onPlay = viewModel::playChannel,
             onToggleFavorite = viewModel::toggleFavorite,
             onCategories = { navController.navigate(Routes.Categories("live")) },
-            onSearch = { navController.navigate(Routes.Search) },
+            onSearch = { navController.openSearch(viewModel) },
             onGuide = { navController.navigate(Routes.Guide) },
         ),
     )
@@ -409,14 +422,20 @@ private fun SearchDestination(viewModel: OndoViewModel, navController: NavHostCo
     val results by viewModel.search.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val filters by viewModel.searchFilters.collectAsStateWithLifecycle()
-    SearchScreen(
-        state = results.copy(query = query, filters = filters),
-        onQuery = viewModel::setQuery,
-        onFilters = viewModel::setSearchFilters,
-        onOpen = navController::open,
-        onPlayChannel = viewModel::playChannel,
-        onPerson = { navController.navigate(Routes.Person(it)) },
-    )
+    val state = results.copy(query = query, filters = filters)
+    val onPerson: (String) -> Unit = { navController.navigate(Routes.Person(it)) }
+    if (isTelevision()) {
+        TvSearchScreen(state, viewModel::setQuery, navController::open, viewModel::playChannel, viewModel::setSearchFilters, onPerson)
+    } else {
+        SearchScreen(
+            state = state,
+            onQuery = viewModel::setQuery,
+            onFilters = viewModel::setSearchFilters,
+            onOpen = navController::open,
+            onPlayChannel = viewModel::playChannel,
+            onPerson = onPerson,
+        )
+    }
 }
 
 @Composable
@@ -760,7 +779,7 @@ private fun MyListDestination(viewModel: OndoViewModel, navController: NavHostCo
             onKind = { kind = it },
             onOpen = navController::open,
             onPlayChannel = viewModel::playChannel,
-            onSearch = { navController.navigate(Routes.Search) },
+            onSearch = { navController.openSearch(viewModel) },
             onOpenCollection = { navController.navigate(Routes.Collection(it)) },
             onNewCollection = { viewModel.newCollection(it) },
         ),

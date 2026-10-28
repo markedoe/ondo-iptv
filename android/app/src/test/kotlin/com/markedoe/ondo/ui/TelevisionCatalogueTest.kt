@@ -393,6 +393,9 @@ class TelevisionCatalogueTest {
             settle(1_000)
             scrollEverything("search")
         }
+        // Back closes Search (its keyboard first), to the page that opened it and its drawer.
+        repeat(3) { if (exists("search")) compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }; settle(300) }
+        waitFor { !exists("search") }
         // Settings, Languages and categories.
         pressUntil(Key.DirectionLeft, max = 40) { focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }

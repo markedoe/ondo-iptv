@@ -194,6 +194,12 @@ class OndoViewModel(
         _searchFilters.value = filters
     }
 
+    /** Search opened anew (not come back to from a result): no words, no filters left from the last time. */
+    fun newSearch() {
+        _query.value = ""
+        _searchFilters.value = SearchFilters()
+    }
+
     fun setLiveFilter(filter: LiveFilter) {
         _liveFilter.value = filter
     }

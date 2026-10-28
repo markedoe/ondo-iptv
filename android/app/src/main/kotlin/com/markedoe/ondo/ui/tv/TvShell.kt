@@ -55,23 +55,17 @@ import androidx.tv.material3.rememberDrawerState
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TopLevel
 
-/** Where the TV's drawer points: one of the tabs, or Search. */
-sealed interface TvPlace {
-    data class Tab(val tab: TopLevel) : TvPlace
-    data object Search : TvPlace
-}
-
 /**
  * The TV's navigation: a drawer on the left, closed to its icons over the page and opened with its labels when the
- * remote moves onto it (Google's TV navigation). Search sits first, the tabs follow, Settings last. Pages beyond a
- * tab (a movie, the guide, Settings) take the whole screen ([showDrawer] false).
+ * remote moves onto it (Google's TV navigation). Search sits first, the tabs follow, Settings last; [selected] is the
+ * tab shown. Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen ([showDrawer] false).
  *
  * Back follows Google's rule (Navigation on TV): from a tab's page, the focus goes to the drawer, on the tab shown;
  * from the drawer, back to Home; from Home's drawer, out of the app.
  */
 @Composable
 fun TvNavigationFrame(
-    place: TvPlace,
+    selected: TopLevel,
     showDrawer: Boolean,
     onSelect: (TopLevel) -> Unit,
     onSearch: () -> Unit,
@@ -80,12 +74,9 @@ fun TvNavigationFrame(
 ) {
     val requesters = remember { HashMap<String, FocusRequester>() }
     fun requester(tag: String) = requesters.getOrPut(tag) { FocusRequester() }
-    val selectedTag = when (place) {
-        is TvPlace.Tab -> place.tab.tag
-        TvPlace.Search -> SEARCH_TAG
-    }
+    val selectedTag = selected.tag
     var drawerHasFocus by remember { mutableStateOf(false) }
-    val atHome = place == TvPlace.Tab(TopLevel.HOME)
+    val atHome = selected == TopLevel.HOME
     // The content stays in the same place whether the drawer shows or not: its pages keep their state.
     ModalNavigationDrawer(
         drawerState = rememberDrawerState(DrawerValue.Closed),
@@ -108,9 +99,9 @@ fun TvNavigationFrame(
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     OndoMark(Modifier.padding(start = 8.dp, bottom = 28.dp))
-                    DrawerItem(stringResource(R.string.search), Icons.Rounded.Search, place == TvPlace.Search, SEARCH_TAG, requester(SEARCH_TAG), onSearch)
+                    DrawerItem(stringResource(R.string.search), Icons.Rounded.Search, false, SEARCH_TAG, requester(SEARCH_TAG), onSearch)
                     TopLevel.entries.forEach { tab ->
-                        DrawerItem(stringResource(tab.label), tab.icon, place == TvPlace.Tab(tab), tab.tag, requester(tab.tag)) { onSelect(tab) }
+                        DrawerItem(stringResource(tab.label), tab.icon, tab == selected, tab.tag, requester(tab.tag)) { onSelect(tab) }
                     }
                     Spacer(Modifier.weight(1f))
                     DrawerItem(stringResource(R.string.settings), Icons.Rounded.Settings, false, SETTINGS_TAG, requester(SETTINGS_TAG), onSettings)
