@@ -631,7 +631,8 @@ private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostCo
         true to (if (token == null) null else viewModel.tmdbWorks(name))
     }
     // Off the main thread: it looks through the whole catalogue.
-    val works by produceKept("works", PersonUiState(name), state, name, online) {
+    // Searching from the first frame: the page shows it is looking, never "nothing found" before it has looked.
+    val works by produceKept("works", PersonUiState(name, searching = true), state, name, online) {
         val (asked, matches) = online
         withContext(Dispatchers.Default) { UiMappers.person(state, name, matches).copy(searching = token != null && !asked) }
     }

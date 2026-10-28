@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,10 +75,14 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
                 windowInsets = WindowInsets(0),
             )
         }
+        // While TMDb is asked, a bar under the name says the list is still growing (the titles already found show).
+        if (state.searching && (state.movies.isNotEmpty() || state.series.isNotEmpty())) {
+            fullWidth { LinearProgressIndicator(Modifier.fillMaxWidth().testTag("personSearching")) }
+        }
         works(R.string.movies, state.movies, onOpen)
         works(R.string.series, state.series, onOpen)
         if (state.searching && state.movies.isEmpty() && state.series.isEmpty()) {
-            fullWidth { Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator() } }
+            fullWidth { Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.testTag("personSearching")) } }
         } else if (state.movies.isEmpty() && state.series.isEmpty()) {
             fullWidth {
                 Column(Modifier.padding(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

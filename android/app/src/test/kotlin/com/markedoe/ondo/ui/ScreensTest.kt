@@ -441,8 +441,11 @@ class ScreensTest {
         compose.onNodeWithText("Add your TMDb API Read Access Token", substring = true).assertExists()
         state = state.copy(hasTmdbToken = true, searching = true)
         compose.onAllNodesWithTag("personHint").assertCountEquals(0)
+        // While TMDb is asked, the page says it is still looking, above the titles already found.
+        compose.onNodeWithTag("personSearching").assertExists()
         state = state.copy(searching = false, searchedOnline = true)
         compose.onAllNodesWithTag("personHint").assertCountEquals(0)
+        compose.onAllNodesWithTag("personSearching").assertCountEquals(0)
         // A token TMDb did not answer for: the pages opened only, and no advice to add one.
         state = state.copy(searchedOnline = false)
         compose.onNodeWithTag("personHint").assertExists()
