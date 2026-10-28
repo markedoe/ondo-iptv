@@ -9,9 +9,10 @@
 // Needs Playwright's Chromium and the Inter font. The App Store Connect upload is
 // .github/workflows/app-store-assets.yml.
 //
-// With --tv instead of a folder, only the Android TV banners (tv-banner.html, no screenshots needed): the launcher
-// banner, 320 × 180 at xhdpi, in every density of android/app/src/main/res/drawable-*/tv_banner.png, and the Google
-// Play listing's fastlane/metadata-android/<locale>/images/tvBanner.png (the release workflow uploads it).
+// With --tv instead of a folder, only what needs no screenshots: the Android TV banners (tv-banner.html), the
+// launcher banner, 320 × 180 at xhdpi, in every density of android/app/src/main/res/drawable-*/tv_banner.png, and
+// the Google Play listing's fastlane/metadata-android/<locale>/images/tvBanner.png and featureGraphic.png
+// (feature.html, 1024 × 500); the release workflow uploads them.
 //
 //   NODE_PATH="$(npm root -g)" node fastlane/creative/render.mjs --tv
 import { mkdirSync, readFileSync } from "node:fs";
@@ -51,6 +52,19 @@ const origin = `http://127.0.0.1:${server.address().port}`;
 
 const browser = await chromium.launch();
 
+/** The Google Play feature graphic in this language (feature.html), 1024 × 500 PNG. */
+async function feature(locale, file) {
+  const page = await browser.newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 });
+  const url = new URL("/feature.html", origin);
+  url.search = new URLSearchParams({ locale }).toString();
+  await page.goto(url.href);
+  await page.waitForSelector("body[data-ready='1']");
+  mkdirSync(dirname(file), { recursive: true });
+  await page.screenshot({ path: file, type: "png" });
+  await page.close();
+  console.log(file);
+}
+
 /** The banner at this size, as a PNG (Google Play takes PNG or JPEG; the launcher, PNG). */
 async function banner(width, height, file) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
@@ -74,6 +88,7 @@ if (tv) {
     }
     for (const locale of ["en-US", "fr-FR"]) {
       await banner(1280, 720, join(repository, "fastlane", "metadata-android", locale, "images", "tvBanner.png"));
+      await feature(locale, join(repository, "fastlane", "metadata-android", locale, "images", "featureGraphic.png"));
     }
   } finally {
     await browser.close();

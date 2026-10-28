@@ -10,24 +10,22 @@
 <meta charset="utf-8">
 <style>
   :root {
-    --deep: #071a16;
-    --brand: #11362f;
-    --lime: #cef941;
-    --cream: #f5efdc;
+    --ground: #000000;
+    --raised: #1c1c1e;
+    --white: #ffffff;
+    --grey: #8e8e93;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--deep); }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--ground); }
   body {
     position: relative;
     font-family: "Inter Display", "Inter", sans-serif;
-    background:
-      radial-gradient(ellipse 55% 60% at 50% 38%, rgba(206, 249, 65, 0.16), transparent 70%),
-      radial-gradient(ellipse 90% 80% at 50% 110%, rgba(17, 54, 47, 0.95), transparent 70%),
-      linear-gradient(180deg, #0b2621 0%, var(--deep) 100%);
+    /* Pure black, a faint light from above the devices: the pictures on their screens carry the colour. */
+    background: radial-gradient(ellipse 60% 55% at 50% 30%, rgba(255, 255, 255, 0.07), transparent 70%), var(--ground);
   }
   svg.waves { position: absolute; inset: 0; width: 100%; height: 100%; }
   .stage { position: absolute; left: 50%; transform: translateX(-50%); }
-  .device { position: absolute; background: #0b0b0c; box-shadow: 0 0 0 3px #2c2f2e, 0 80px 160px rgba(0, 0, 0, 0.6); }
+  .device { position: absolute; background: #0b0b0c; box-shadow: 0 0 0 3px #2c2c2e, 0 80px 160px rgba(0, 0, 0, 0.8); }
   /* The iPad screenshots carry a rotated orientation tag from the simulator; their pixels are already upright. */
   .device img { display: block; width: 100%; height: 100%; object-fit: cover; image-orientation: none; }
   .tablet { border-radius: 96px; padding: 38px; }
@@ -36,18 +34,19 @@
   .phone img { border-radius: 84px; }
   h1 {
     position: absolute; left: 0; right: 0; text-align: center;
-    color: var(--cream); font-weight: 600; letter-spacing: -0.02em; line-height: 1.08;
+    color: var(--white); font-weight: 700; letter-spacing: -0.03em; line-height: 1.08;
   }
-  h1 span { display: block; color: var(--lime); }
+  /* The phrase under the name: lighter and less tight than the name. */
+  h1 span { display: block; color: var(--grey); font-weight: 500; letter-spacing: -0.01em; }
 </style>
 </head>
 <body>
 <svg class="waves" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
   <!-- The icon's wave, drawn across the whole width behind the devices. -->
   <path d="M -20 610 C 140 610, 200 470, 330 470 S 520 640, 640 640 S 860 500, 1020 520"
-        fill="none" stroke="#f5efdc" stroke-opacity="0.13" stroke-width="7" vector-effect="non-scaling-stroke"/>
+        fill="none" stroke="#ffffff" stroke-opacity="0.07" stroke-width="7" vector-effect="non-scaling-stroke"/>
   <path d="M -20 690 C 160 690, 230 560, 360 560 S 560 720, 690 720 S 880 590, 1020 600"
-        fill="none" stroke="#cef941" stroke-opacity="0.10" stroke-width="5" vector-effect="non-scaling-stroke"/>
+        fill="none" stroke="#8e8e93" stroke-opacity="0.12" stroke-width="5" vector-effect="non-scaling-stroke"/>
 </svg>
 <h1 id="title"></h1>
 <div class="stage" id="stage"></div>
