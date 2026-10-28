@@ -84,12 +84,19 @@ jobs:
 
   apple:
     name: Build iOS + macOS
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Select Xcode 26
+        # macos-15 runners (a larger pool than macos-26's) carry several Xcodes: the newest Xcode 26, as the releases use.
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$XCODE" ] || { echo "::error::No Xcode 26 on this runner"; ls -d /Applications/Xcode*.app; exit 1; }
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
       - name: Show toolchain
         run: |
           xcodebuild -version
@@ -156,7 +163,7 @@ jobs:
 
   release-build:
     name: Release build, App Store edition (iOS + macOS)
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 60
     # Debug is what the other jobs build and test; the App Store gets Release, without the `#if DEBUG`
     # code (UI test catalogue, screenshot routes) and without the TestFlight edition's downloads
@@ -168,6 +175,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Select Xcode 26
+        # macos-15 runners (a larger pool than macos-26's) carry several Xcodes: the newest Xcode 26, as the releases use.
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$XCODE" ] || { echo "::error::No Xcode 26 on this runner"; ls -d /Applications/Xcode*.app; exit 1; }
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
       - name: Generate Xcode project
         run: |
           brew install xcodegen xcbeautify || true
@@ -216,13 +230,20 @@ jobs:
 
   ui-tests:
     name: App tests — unit + UI (iPhone simulator)
-    runs-on: macos-26
+    runs-on: macos-15
     timeout-minutes: 75
     # Not after the macOS job: each builds its own platform, side by side.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Select Xcode 26
+        # macos-15 runners (a larger pool than macos-26's) carry several Xcodes: the newest Xcode 26, as the releases use.
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
+          [ -n "$XCODE" ] || { echo "::error::No Xcode 26 on this runner"; ls -d /Applications/Xcode*.app; exit 1; }
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
       - name: Generate Xcode project
         run: |
           brew install xcodegen xcbeautify || true
