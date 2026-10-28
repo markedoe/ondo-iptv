@@ -14,14 +14,18 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -34,14 +38,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -52,9 +61,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
@@ -100,6 +106,7 @@ import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.WebPageScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
+import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.tv.FocusEntry
 import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
@@ -111,9 +118,9 @@ import com.markedoe.ondo.ui.tv.TvNavigationFrame
 import com.markedoe.ondo.ui.tv.TvSearchScreen
 import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
 import com.markedoe.ondo.ui.tv.TvSettingsScreen
-import com.markedoe.ondo.ui.tv.tvSafeArea
 import com.markedoe.ondo.ui.tv.isTelevision
 import com.markedoe.ondo.ui.tv.rememberFocusMemory
+import com.markedoe.ondo.ui.tv.tvSafeArea
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -265,9 +272,28 @@ private fun MainTabs(viewModel: OndoViewModel) {
     }
 }
 
-/** The tabs around the pages: a bottom bar on phones, a rail on tablets and Chromebooks (a TV has its drawer). */
+/**
+ * The tabs around the pages: a bottom bar on phones, a rail on tablets and Chromebooks (a TV has its top bar). On
+ * black, the chosen tab white on a grey pill, the others grey: no colour of its own.
+ */
 @Composable
 fun OndoNavigationFrame(selected: TopLevel, onSelect: (TopLevel) -> Unit, content: @Composable () -> Unit) {
+    val itemColors = NavigationSuiteDefaults.itemColors(
+        navigationBarItemColors = NavigationBarItemDefaults.colors(
+            selectedIconColor = Color.White,
+            selectedTextColor = Color.White,
+            indicatorColor = OndoColors.SurfaceHigh,
+            unselectedIconColor = OndoColors.Secondary,
+            unselectedTextColor = OndoColors.Secondary,
+        ),
+        navigationRailItemColors = NavigationRailItemDefaults.colors(
+            selectedIconColor = Color.White,
+            selectedTextColor = Color.White,
+            indicatorColor = OndoColors.SurfaceHigh,
+            unselectedIconColor = OndoColors.Secondary,
+            unselectedTextColor = OndoColors.Secondary,
+        ),
+    )
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             TopLevel.entries.forEach { tab ->
@@ -275,11 +301,27 @@ fun OndoNavigationFrame(selected: TopLevel, onSelect: (TopLevel) -> Unit, conten
                     selected = tab == selected,
                     onClick = { onSelect(tab) },
                     icon = { Icon(tab.icon, contentDescription = null) },
-                    label = { Text(stringResource(tab.label)) },
+                    // On one line, smaller where it is long ("TV en direct"), without the extra letter spacing.
+                    label = {
+                        Text(
+                            stringResource(tab.label),
+                            style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.sp),
+                            maxLines = 1,
+                            autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = 12.sp),
+                        )
+                    },
+                    colors = itemColors,
                     modifier = Modifier.testTag(tab.tag),
                 )
             }
         },
+        navigationSuiteColors = NavigationSuiteDefaults.colors(
+            navigationBarContainerColor = OndoColors.Ink,
+            navigationBarContentColor = Color.White,
+            navigationRailContainerColor = OndoColors.Ink,
+            navigationRailContentColor = Color.White,
+        ),
+        containerColor = OndoColors.Ink,
         content = content,
     )
 }
