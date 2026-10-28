@@ -261,6 +261,7 @@ private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String
         Text(
             label,
             fontSize = 15.sp,
+            letterSpacing = 0.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1,
             modifier = Modifier.padding(PaddingValues(horizontal = 16.dp, vertical = 8.dp)),
