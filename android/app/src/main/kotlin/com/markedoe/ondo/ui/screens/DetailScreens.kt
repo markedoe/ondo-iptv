@@ -92,6 +92,7 @@ import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.ui.AwardRow
 import com.markedoe.ondo.ui.UiMappers
+import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.Backdrop
 import com.markedoe.ondo.ui.components.CardShape
@@ -543,7 +544,7 @@ private fun PlayButton(title: String, progress: WatchProgress?, onClick: () -> U
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
                 Box(Modifier.width(200.dp)) { ProgressBar(progress.fraction) }
                 Spacer(Modifier.width(10.dp))
-                Text(pluralStringResource(R.plurals.minutes_left, progress.minutesLeft, progress.minutesLeft), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(timeLeftText(progress.minutesLeft), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

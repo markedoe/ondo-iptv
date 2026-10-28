@@ -90,6 +90,7 @@ import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.ui.AwardRow
 import com.markedoe.ondo.ui.UiMappers
+import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.Backdrop
 import com.markedoe.ondo.ui.components.BlurredPoster
@@ -363,7 +364,7 @@ private fun ProgressLine(progress: WatchProgress) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 6.dp)) {
         TvProgress(progress.fraction, Modifier.width(220.dp).clip(RoundedCornerShape(2.dp)))
         Text(
-            pluralStringResource(R.plurals.minutes_left, progress.minutesLeft, progress.minutesLeft),
+            timeLeftText(progress.minutesLeft),
             style = MaterialTheme.typography.bodySmall,
             color = Color.White.copy(alpha = 0.7f),
         )

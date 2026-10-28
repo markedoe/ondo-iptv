@@ -51,7 +51,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -61,6 +60,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.model.ResumeItem
+import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.TvConfirmDialog
 import com.markedoe.ondo.ui.tv.TvResumeMenu
@@ -205,7 +205,7 @@ fun ContinueCard(
             }
         }
         Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
-        val left = if (item.minutesLeft > 1) pluralStringResource(R.plurals.minutes_left, item.minutesLeft, item.minutesLeft) else stringResource(R.string.resume)
+        val left = if (item.minutesLeft > 1) timeLeftText(item.minutesLeft) else stringResource(R.string.resume)
         Text(
             listOfNotNull(item.subtitle, left).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,

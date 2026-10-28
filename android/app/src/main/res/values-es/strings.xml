@@ -101,6 +101,16 @@
         <item quantity="many">Quedan %d min</item>
         <item quantity="other">Quedan %d min</item>
     </plurals>
+    <plurals name="hours_minutes_left">
+        <item quantity="one">Quedan %1$d h %2$d min</item>
+        <item quantity="many">Quedan %1$d h %2$d min</item>
+        <item quantity="other">Quedan %1$d h %2$d min</item>
+    </plurals>
+    <plurals name="hours_left">
+        <item quantity="one">Queda %d h</item>
+        <item quantity="many">Quedan %d h</item>
+        <item quantity="other">Quedan %d h</item>
+    </plurals>
     <plurals name="seasons">
         <item quantity="one">%d temporada</item>
         <item quantity="many">%d de temporadas</item>

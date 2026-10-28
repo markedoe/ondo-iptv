@@ -101,6 +101,16 @@
         <item quantity="many">%d min restantes</item>
         <item quantity="other">%d min restantes</item>
     </plurals>
+    <plurals name="hours_minutes_left">
+        <item quantity="one">%1$d h %2$d min restantes</item>
+        <item quantity="many">%1$d h %2$d min restantes</item>
+        <item quantity="other">%1$d h %2$d min restantes</item>
+    </plurals>
+    <plurals name="hours_left">
+        <item quantity="one">%d h restante</item>
+        <item quantity="many">%d h restantes</item>
+        <item quantity="other">%d h restantes</item>
+    </plurals>
     <plurals name="seasons">
         <item quantity="one">%d temporada</item>
         <item quantity="many">%d de temporadas</item>

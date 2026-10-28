@@ -100,6 +100,14 @@
         <item quantity="one">%d मिनट बाकी</item>
         <item quantity="other">%d मिनट बाकी</item>
     </plurals>
+    <plurals name="hours_minutes_left">
+        <item quantity="one">%1$d घंटा %2$d मिनट बाकी</item>
+        <item quantity="other">%1$d घंटे %2$d मिनट बाकी</item>
+    </plurals>
+    <plurals name="hours_left">
+        <item quantity="one">%d घंटा बाकी</item>
+        <item quantity="other">%d घंटे बाकी</item>
+    </plurals>
     <plurals name="seasons">
         <item quantity="one">%d सीज़न</item>
         <item quantity="other">%d सीज़न</item>

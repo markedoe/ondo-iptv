@@ -102,6 +102,14 @@
         <item quantity="one">%d min left</item>
         <item quantity="other">%d min left</item>
     </plurals>
+    <plurals name="hours_minutes_left">
+        <item quantity="one">%1$d h %2$d min left</item>
+        <item quantity="other">%1$d h %2$d min left</item>
+    </plurals>
+    <plurals name="hours_left">
+        <item quantity="one">%d h left</item>
+        <item quantity="other">%d h left</item>
+    </plurals>
     <plurals name="seasons">
         <item quantity="one">%d season</item>
         <item quantity="other">%d seasons</item>

@@ -56,7 +56,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -84,6 +83,7 @@ import com.markedoe.ondo.ui.components.PlayIcon
 import com.markedoe.ondo.ui.components.ResumeCardMenu
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
+import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.theme.inter
@@ -352,7 +352,7 @@ fun TvResumeCard(
         Text(
             listOfNotNull(
                 item.subtitle,
-                if (item.minutesLeft > 1) pluralStringResource(R.plurals.minutes_left, item.minutesLeft, item.minutesLeft) else null,
+                if (item.minutesLeft > 1) timeLeftText(item.minutesLeft) else null,
             ).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -104,6 +104,22 @@
         <item quantity="many">متبقٍ %d دقيقة</item>
         <item quantity="other">متبقٍ %d دقيقة</item>
     </plurals>
+    <plurals name="hours_minutes_left">
+        <item quantity="zero">متبقٍ %1$d ساعة و%2$d دقيقة</item>
+        <item quantity="one">متبقٍ ساعة و%2$d دقيقة</item>
+        <item quantity="two">متبقٍ ساعتان و%2$d دقيقة</item>
+        <item quantity="few">متبقٍ %1$d ساعات و%2$d دقيقة</item>
+        <item quantity="many">متبقٍ %1$d ساعة و%2$d دقيقة</item>
+        <item quantity="other">متبقٍ %1$d ساعة و%2$d دقيقة</item>
+    </plurals>
+    <plurals name="hours_left">
+        <item quantity="zero">متبقٍ %d ساعة</item>
+        <item quantity="one">متبقٍ ساعة واحدة</item>
+        <item quantity="two">متبقٍ ساعتان</item>
+        <item quantity="few">متبقٍ %d ساعات</item>
+        <item quantity="many">متبقٍ %d ساعة</item>
+        <item quantity="other">متبقٍ %d ساعة</item>
+    </plurals>
     <plurals name="seasons">
         <item quantity="zero">%d موسم</item>
         <item quantity="one">موسم واحد</item>
