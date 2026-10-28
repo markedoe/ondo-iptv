@@ -49,6 +49,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -107,7 +108,7 @@ class TelevisionTest {
         compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.TestTag) == tag } }
     }
 
-    /** Whether the top bar shows (hidden, it is hidden from TalkBack too). */
+    /** Whether the top bar is there for TalkBack too. */
     private fun barShown(): Boolean =
         compose.onAllNodesWithTag("topBar").fetchSemanticsNodes().any { SemanticsProperties.HideFromAccessibility !in it.config }
 
@@ -348,18 +349,26 @@ class TelevisionTest {
         assertEquals(left, focusedTag())
     }
 
-    /** Far down a tab's page the bar has gone with the page's top; Back brings both back, at once. */
+    /**
+     * Far down a tab's page the bar stays on screen; Up goes back up the rows (not into the bar above them), Back brings
+     * the page's top back with the focus on the bar.
+     */
     @Test
-    fun farDownAPageTheBarGoesAndBackBringsTheTopBack() {
+    fun farDownAPageTheBarStaysAndBackBringsTheTopBack() {
         start()
         press(Key.DirectionDown, times = 4)
-        assertTrue("the bar went with the page's top", compose.onAllNodesWithTag("tabHome").fetchSemanticsNodes().none { it.config.getOrNull(SemanticsProperties.Focused) == true } && !barShown())
+        val deep = focusedTag()
+        assertTrue("the bar stays on screen", barShown())
+        compose.onNodeWithTag("tabHome").assertIsDisplayed()
+        press(Key.DirectionUp)
+        assertFalse("Up went into the bar from far down the page", focusedTag().startsWith("tab"))
+        press(Key.DirectionDown)
+        assertEquals(deep, focusedTag())
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         waitForTag("tabHome")
         compose.mainClock.advanceTimeBy(1_000)
         compose.waitForIdle()
         assertEquals("the bar keeps the focus", "tabHome", focusedTag())
-        assertTrue("the bar is back", barShown())
         compose.onNodeWithTag("hero").assertIsDisplayed()
         // The page is at its top: Down starts from its first item.
         press(Key.DirectionDown)

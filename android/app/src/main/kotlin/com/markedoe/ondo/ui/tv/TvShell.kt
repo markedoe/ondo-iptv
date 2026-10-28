@@ -1,8 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +24,6 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,13 +45,10 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -71,13 +65,12 @@ import com.markedoe.ondo.ui.TopLevel
 import kotlinx.coroutines.launch
 
 /**
- * What the top bar knows of the tab page shown: whether it is scrolled to its top (the bar shows only there, as it
- * scrolls away with the page) and how to bring it back up (Back). Each tab page registers its list
- * ([rememberTabListState], [rememberTabGridState]).
+ * What the top bar knows of the tab page shown: how to bring it back to its top (Back) and where the remote was in it
+ * (Down from the bar). Each tab page registers its list ([rememberTabListState], [rememberTabGridState]).
  */
 @Stable
 class TvTopBar {
-    internal class Page(val atTop: () -> Boolean, val toTop: suspend () -> Unit, val memory: FocusMemory?)
+    internal class Page(val toTop: suspend () -> Unit, val memory: FocusMemory?)
 
     internal var page: Page? by mutableStateOf(null)
 }
@@ -89,22 +82,21 @@ val LocalTvTopBar = staticCompositionLocalOf<TvTopBar?> { null }
 fun tvTopBarSpace(): Dp = if (LocalTvTopBar.current != null) TvTokens.TopBarSpace else 0.dp
 
 @Composable
-private fun RegisterTabPage(atTop: () -> Boolean, toTop: suspend () -> Unit, key: Any) {
+private fun RegisterTabPage(toTop: suspend () -> Unit, key: Any) {
     val bar = LocalTvTopBar.current ?: return
     val memory = LocalFocusMemory.current
     DisposableEffect(bar, key, memory) {
-        val page = TvTopBar.Page(atTop, toTop, memory)
+        val page = TvTopBar.Page(toTop, memory)
         bar.page = page
         onDispose { if (bar.page === page) bar.page = null }
     }
 }
 
-/** A tab page's list: the top bar shows while it is at its top, and Back brings it there. */
+/** A tab page's list, which Back brings to its top. */
 @Composable
 fun rememberTabListState(): LazyListState {
     val state = rememberLazyListState()
-    val slack = with(LocalDensity.current) { TOP_SLACK.roundToPx() }
-    RegisterTabPage({ state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset <= slack }, { state.scrollToItem(0) }, state)
+    RegisterTabPage({ state.scrollToItem(0) }, state)
     return state
 }
 
@@ -112,17 +104,13 @@ fun rememberTabListState(): LazyListState {
 @Composable
 fun rememberTabGridState(): LazyGridState {
     val state = rememberLazyGridState()
-    val slack = with(LocalDensity.current) { TOP_SLACK.roundToPx() }
-    RegisterTabPage({ state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset <= slack }, { state.scrollToItem(0) }, state)
+    RegisterTabPage({ state.scrollToItem(0) }, state)
     return state
 }
 
-/** A page scrolled by less than this still counts as at its top: the bar stays. */
-private val TOP_SLACK = 24.dp
-
 /**
- * The TV's navigation: a bar at the top of the tab pages, over them, that goes with the page as it scrolls down and
- * comes back at its top. Ondo's mark, the tabs, then Search and Settings at the far end.
+ * The TV's navigation: a bar always at the top of the tab pages, which scroll under it. Ondo's mark, the tabs, then
+ * Search and Settings at the far end.
  * [selected] is the tab shown. Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen
  * ([showBar] false).
  *
@@ -144,10 +132,7 @@ fun TvNavigationFrame(
     val selectedTag = selected.tag
     val bar = remember { TvTopBar() }
     var barHasFocus by remember { mutableStateOf(false) }
-    // While Back brings the page up, the bar takes the focus before it has shown.
-    var calling by remember { mutableStateOf(false) }
-    val atTop by remember { derivedStateOf { bar.page?.atTop() != false } }
-    val shown = showBar && (barHasFocus || calling || atTop)
+    val shown = showBar
     val scope = rememberCoroutineScope()
     val pages = remember { FocusRequester() }
     // Down from the bar: back on the item the remote left, else the page's first one.
@@ -160,27 +145,20 @@ fun TvNavigationFrame(
             androidx.compose.runtime.CompositionLocalProvider(LocalTvTopBar provides if (showBar) bar else null, content = content)
         }
         if (showBar) {
-            val visibility by animateFloatAsState(if (shown) 1f else 0f, tween(if (shown) 160 else 120), label = "topBar")
             val ground = MaterialTheme.colorScheme.background
-            // Over a picture, a shade under the bar keeps its words readable.
+            // The page scrolls under a black band, which fades into it just below the bar.
+            val band = TvTokens.TopBarSpace / (TvTokens.TopBarSpace + BAND_FADE)
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(TvTokens.TopBarSpace + 24.dp)
-                    .graphicsLayer { alpha = visibility }
-                    .background(Brush.verticalGradient(0f to ground.copy(alpha = 0.72f), 1f to Color.Transparent)),
+                    .height(TvTokens.TopBarSpace + BAND_FADE)
+                    .background(Brush.verticalGradient(0f to ground, band to ground, 1f to Color.Transparent)),
             )
             Row(
                 Modifier
                     .fillMaxWidth()
                     .padding(start = TvTokens.ContentStart, top = TvTokens.EdgeTop, end = TvTokens.EdgeEnd)
-                    .graphicsLayer {
-                        alpha = visibility
-                        translationY = -(1f - visibility) * 24.dp.toPx()
-                    }
                     .onFocusChanged { barHasFocus = it.hasFocus }
-                    // Gone with the page's top, it is gone for TalkBack too.
-                    .semantics { if (!shown) hideFromAccessibility() }
                     // Coming from the page, the focus lands on the tab shown, not on the item above where it was.
                     .focusProperties {
                         onEnter = { if (requestedFocusDirection != FocusDirection.Enter) runCatching { requester(selectedTag).requestFocus() } }
@@ -209,24 +187,21 @@ fun TvNavigationFrame(
             if (barHasFocus) {
                 onSelect(TopLevel.HOME)
             } else {
-                calling = true
                 scope.launch {
-                    try {
-                        // The bar takes the focus first (once it can, the next frame), then the page goes up: the item
-                        // that had the focus leaves the screen without it, and nothing takes it back to the page.
-                        withFrameNanos { }
-                        runCatching { requester(selectedTag).requestFocus() }
-                        withFrameNanos { }
-                        withFrameNanos { }
-                        bar.page?.toTop()
-                    } finally {
-                        calling = false
-                    }
+                    // The bar takes the focus first, then the page goes up: the item that had the focus leaves the
+                    // screen without it, and nothing takes it back to the page.
+                    runCatching { requester(selectedTag).requestFocus() }
+                    withFrameNanos { }
+                    withFrameNanos { }
+                    bar.page?.toTop()
                 }
             }
         }
     }
 }
+
+/** How far below the bar the black band behind it fades into the page. */
+private val BAND_FADE = 20.dp
 
 const val SEARCH_TAG = "tabSearch"
 const val SETTINGS_TAG = "tabSettings"

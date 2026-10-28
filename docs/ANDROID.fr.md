@@ -81,7 +81,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Android TV / Google TV** (`ui/tv/`) : une entrée et une bannière dans le lanceur Leanback
   (320 × 180 en xhdpi, dessinée par `fastlane/creative/render.mjs --tv`), écran tactile non requis. Compose for TV
   (`androidx.tv:tv-material`) en noir et blanc avec la police Inter (`TvDesign.kt`, `ui/theme/Theme.kt`) : une barre en haut avec les onglets, Recherche et
-  Réglages, qui s'efface avec le haut de la page quand on descend (`TvShell.kt` ; Retour mène en haut de la page et à la barre, puis à l'Accueil, puis hors de l'app), un Accueil ouvert
+  Réglages, qui reste à l'écran quand la page défile dessous (`TvShell.kt` ; Retour mène en haut de la page et à la barre, puis à l'Accueil, puis hors de l'app), un Accueil ouvert
   par une image encadrée (`TvHomeScreen.kt`) et des fiches film et série (`TvDetailScreens.kt`) avec l'image de fond derrière le
   texte et des boutons ronds à côté de Lecture, des Réglages en deux volets où chaque playlist a ses boutons à portée de télécommande (`TvSettingsScreen.kt` ;
   Supprimer demande d'abord, en commençant sur Annuler), des cartes qui se soulèvent avec une ombre douce et un reflet à la sélection et des rangées qui dépassent du bord droit ;
