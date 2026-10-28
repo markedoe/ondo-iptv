@@ -307,11 +307,14 @@ struct SidebarRootView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) { OndoWordmark() }
                 ToolbarItem(placement: .primaryAction) {
+                    // The list's grey tint stops at the list: the bar and the sheet keep the white accent.
                     Button { showingSettings = true } label: { Label("Settings", systemImage: "gearshape") }
+                        .tint(.white)
                 }
             }
             .sheet(isPresented: $showingSettings) {
                 NavigationStack { SettingsView() }
+                    .tint(.white)
             }
             #endif
         } detail: {
