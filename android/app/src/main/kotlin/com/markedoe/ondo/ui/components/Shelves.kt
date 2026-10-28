@@ -1,6 +1,11 @@
 package com.markedoe.ondo.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,7 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
@@ -89,6 +96,7 @@ fun Shelf(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
@@ -105,7 +113,7 @@ fun Shelf(
         TvRow {
             LazyRow(
                 contentPadding = PaddingValues(horizontal = metrics.gutter),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (metrics.compact) 10.dp else 14.dp),
                 content = content,
             )
         }
@@ -128,24 +136,25 @@ fun PosterCard(
     /** The page's first item: it takes the focus on a TV when the page opens. */
     initialFocus: Boolean = false,
 ) {
+    val interaction = remember { MutableInteractionSource() }
     Column(
         modifier = modifier
             .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
+            .pressScale(interaction)
             .focusFrame(PosterShape)
             .focusMemory(focusKey, initialFocus)
             .clip(PosterShape)
-            .clickable(onClick = onClick)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
             .semantics { contentDescription = item.title },
     ) {
         Poster(url = item.posterUrl, title = item.title, progress = progress)
         if (showsTitle) {
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 6.dp),
+                modifier = Modifier.padding(top = 8.dp),
             )
             item.year?.let { Text(it.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
@@ -164,38 +173,55 @@ fun ContinueCard(
     /** A long press (OK held on a remote) offers to take the card away; [onRemove] once the viewer says so. */
     onRemove: (() -> Unit)? = null,
 ) {
-    val shape = RoundedCornerShape(12.dp)
     var asking by remember { mutableStateOf(false) }
-    val click = if (onRemove == null) Modifier.clickable(onClick = onClick)
-    else Modifier.combinedClickable(onClick = onClick, onLongClickLabel = stringResource(R.string.remove_from_history), onLongClick = { asking = true })
-    Column(modifier.width(width).focusFrame(shape).focusMemory("resume:${item.key}", initialFocus).clip(shape).then(click).padding(bottom = 4.dp)) {
+    val interaction = remember { MutableInteractionSource() }
+    val click = if (onRemove == null) {
+        Modifier.clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
+    } else {
+        Modifier.combinedClickable(
+            interactionSource = interaction,
+            indication = LocalIndication.current,
+            onClick = onClick,
+            onLongClickLabel = stringResource(R.string.remove_from_history),
+            onLongClick = { asking = true },
+        )
+    }
+    Column(modifier.width(width).pressScale(interaction).focusFrame(CardShape).focusMemory("resume:${item.key}", initialFocus).clip(CardShape).then(click).padding(bottom = 4.dp)) {
         if (asking && onRemove != null) RemoveFromHistory(item, onRemove, onDismiss = { asking = false })
-        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(shape)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(CardShape)) {
             Artwork(url = item.imageUrl, title = item.title, modifier = Modifier.fillMaxSize(), showsTitleFallback = false)
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))),
+                    .background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))),
             )
-            Column(Modifier.align(Alignment.BottomStart).padding(10.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    PlayIcon(preparing, Modifier.size(16.dp), tint = Color.White)
-                    Text(
-                        text = if (item.minutesLeft > 1) pluralStringResource(R.plurals.minutes_left, item.minutesLeft, item.minutesLeft)
-                        else stringResource(R.string.resume),
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-                ProgressBar(item.progress)
+            PlayIcon(preparing, Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 12.dp).size(22.dp), tint = Color.White)
+            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
+                Box(Modifier.fillMaxWidth(item.progress.coerceIn(0f, 1f)).height(3.dp).background(Color.White))
             }
         }
-        Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp))
-        item.subtitle?.let {
-            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp))
-        }
+        Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        val left = if (item.minutesLeft > 1) pluralStringResource(R.plurals.minutes_left, item.minutesLeft, item.minutesLeft) else stringResource(R.string.resume)
+        Text(
+            listOfNotNull(item.subtitle, left).joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/** The corners of a landscape card (continue watching, channels): as on a TV. */
+val CardShape = RoundedCornerShape(10.dp)
+
+/** A card that gives under the finger: 97 % of its size while [interaction] is pressed. */
+fun Modifier.pressScale(interaction: InteractionSource): Modifier = composed {
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, label = "pressScale")
+    graphicsLayer {
+        scaleX = scale
+        scaleY = scale
     }
 }
 

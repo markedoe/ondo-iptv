@@ -1,7 +1,6 @@
 package com.markedoe.ondo.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -44,7 +43,7 @@ import coil3.request.ImageRequest
 import kotlin.math.PI
 import kotlin.math.sin
 
-val PosterShape = RoundedCornerShape(12.dp)
+val PosterShape = RoundedCornerShape(10.dp)
 
 /** Pixels a blurred copy of a poster is decoded at: the blur hides any more detail. */
 private const val BLURRED_DECODE_SIZE = 96
@@ -217,14 +216,13 @@ private fun Initials(name: String, modifier: Modifier = Modifier, shown: () -> B
     )
 }
 
-/** 2:3 poster with soft corners, a hairline border and an optional progress bar. */
+/** 2:3 poster with soft corners and an optional progress bar. */
 @Composable
 fun Poster(url: String?, title: String, modifier: Modifier = Modifier, progress: Float? = null) {
     Box(
         modifier = modifier
             .aspectRatio(2f / 3f)
-            .clip(PosterShape)
-            .border(1.dp, Color.White.copy(alpha = 0.08f), PosterShape),
+            .clip(PosterShape),
     ) {
         Artwork(url = url, title = title, modifier = Modifier.fillMaxSize())
         if (progress != null && progress > 0f) {
