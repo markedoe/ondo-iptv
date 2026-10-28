@@ -73,6 +73,7 @@ struct SeriesDetailView: View {
             posterURL: details?.info.posterURL ?? series.coverURL,
             backdropURL: model.backdropURL(for: .series(series)),
             facts: facts,
+            badges: badges,
             onBackdropFailure: { model.backdropFailed($0, for: .series(series)) }
         ) { metrics in
             metrics.actionsLayout {
@@ -157,8 +158,8 @@ struct SeriesDetailView: View {
                                     .font(.subheadline.weight(.semibold))
                                     .padding(.horizontal, 16)
                                     .padding(.vertical, 8)
-                                    .foregroundStyle(selected ? Color.appBackground : Color.primary)
-                                    .background(selected ? Color.primary : Color.secondary.opacity(0.16), in: Capsule())
+                                    .foregroundStyle(selected ? Color.black : Color.white)
+                                    .background(selected ? OndoColor.selected : OndoColor.surfaceHigh, in: Capsule())
                             }
                             .buttonStyle(.plain)
                             .accessibilityAddTraits(selected ? .isSelected : [])
@@ -200,11 +201,13 @@ struct SeriesDetailView: View {
         }
         if let rating = details?.info.rating ?? series.rating, rating > 0 { items.append("★ " + Formatting.rating(rating)) }
         if let genre = details?.info.genre ?? series.genre { items.append(genre) }
-        // The format of the episodes, when they all share one.
-        if let episodes = details?.seasons.flatMap(\.episodes), let format = MediaFormat.label(for: episodes.map(\.streamURL)) {
-            items.append(format)
-        }
         return items
+    }
+
+    /// The format of the episodes, when they all share one.
+    private var badges: [String] {
+        guard let episodes = details?.seasons.flatMap(\.episodes), let format = MediaFormat.label(for: episodes.map(\.streamURL)) else { return [] }
+        return [format]
     }
 }
 

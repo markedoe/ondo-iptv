@@ -103,6 +103,8 @@ struct MovieDetailView: View {
             posterURL: details?.posterURL ?? movie.posterURL,
             backdropURL: model.backdropURL(for: .movie(movie)),
             facts: facts,
+            // MKV, MP4…: the format the provider sends (MKV plays differently on each device).
+            badges: MediaFormat.label(for: movie.streamURL).map { [$0] } ?? [],
             onBackdropFailure: { model.backdropFailed($0, for: .movie(movie)) }
         ) { metrics in
             metrics.actionsLayout {
@@ -171,8 +173,6 @@ struct MovieDetailView: View {
         if let seconds = details?.durationSeconds, seconds > 0 { items.append(Formatting.duration(seconds)) }
         if let rating = details?.rating ?? movie.rating, rating > 0 { items.append("★ " + Formatting.rating(rating)) }
         if let genre = details?.genre { items.append(genre) }
-        // MKV, MP4…: the format the provider sends (MKV plays differently on each device).
-        if let format = MediaFormat.label(for: movie.streamURL) { items.append(format) }
         return items
     }
 }

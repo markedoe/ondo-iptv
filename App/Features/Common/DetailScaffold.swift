@@ -8,6 +8,8 @@ struct DetailScaffold<Actions: View, Content: View>: View {
     let posterURL: URL?
     let backdropURL: URL?
     let facts: [String]
+    /// Outlined after the facts: the format of the stream (MKV, MP4…).
+    var badges: [String] = []
     /// The backdrop did not load.
     var onBackdropFailure: ((URL) -> Void)?
     @ViewBuilder var actions: (ShelfMetrics) -> Actions
@@ -87,13 +89,12 @@ struct DetailScaffold<Actions: View, Content: View>: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(title)
                         .font(compact ? .title2.bold() : .system(.largeTitle, weight: .bold))
+                        .tracking(compact ? -0.3 : -0.6)
                         .lineLimit(3)
                         .minimumScaleFactor(0.8)
-                    if !facts.isEmpty {
-                        Text(facts.joined(separator: " · "))
+                    if !facts.isEmpty || !badges.isEmpty {
+                        FactsLine(facts: facts, badges: badges, lineLimit: 2)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
                     }
                 }
                 .padding(.bottom, 4)
@@ -170,11 +171,13 @@ struct CircleAction<Icon: View>: View {
         VStack(spacing: 6) {
             icon()
                 .font(.title3)
+                .foregroundStyle(.white)
                 .frame(width: 50, height: 50)
-                .background(Color.secondary.opacity(0.16), in: Circle())
+                .background(.white.opacity(0.16), in: Circle())
+                .contentShape(Circle())
             Text(title)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(OndoColor.secondary)
                 .lineLimit(1)
         }
         .frame(minWidth: 64)
