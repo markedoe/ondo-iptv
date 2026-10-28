@@ -4,6 +4,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -83,6 +86,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Switch
+import androidx.tv.material3.SwitchColors
+import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
@@ -224,16 +229,78 @@ private fun SectionItem(item: TvSettingsSection, selected: Boolean, onFocus: () 
     )
 }
 
-/** A row of a TV page: white when the remote is on it. */
+/**
+ * A row of a TV page: white with dark content when the remote is on it (or presses it), the chosen one too; the
+ * chosen one lighter otherwise.
+ */
 @Composable
 fun tvRowColors() = ListItemDefaults.colors(
     containerColor = Color.Transparent,
     contentColor = Color.White.copy(alpha = 0.85f),
     focusedContainerColor = Color.White,
     focusedContentColor = TvTokens.Ink,
+    pressedContainerColor = Color.White,
+    pressedContentColor = TvTokens.Ink,
     selectedContainerColor = Color.White.copy(alpha = 0.12f),
     selectedContentColor = Color.White,
+    focusedSelectedContainerColor = Color.White,
+    focusedSelectedContentColor = TvTokens.Ink,
+    pressedSelectedContainerColor = Color.White,
+    pressedSelectedContentColor = TvTokens.Ink,
 )
+
+/**
+ * The switch of a [TvSwitchRow], drawn for the row's ground: on black, on is a white track with a black thumb; on the
+ * white of the focused row ([onWhite]), on is a black track with a white thumb. Off is an outlined track with a grey
+ * thumb on either.
+ */
+@Composable
+fun tvSwitchColors(onWhite: Boolean): SwitchColors {
+    val ink = TvTokens.Ink
+    return if (onWhite) {
+        SwitchDefaults.colors(
+            checkedThumbColor = Color.White,
+            checkedTrackColor = ink,
+            checkedBorderColor = ink,
+            checkedIconColor = ink,
+            uncheckedThumbColor = OffOnWhite,
+            uncheckedTrackColor = Color.Transparent,
+            uncheckedBorderColor = OffOnWhite,
+            uncheckedIconColor = Color.White,
+            disabledCheckedThumbColor = Color.White,
+            disabledCheckedTrackColor = ink.copy(alpha = 0.38f),
+            disabledCheckedBorderColor = Color.Transparent,
+            disabledCheckedIconColor = ink.copy(alpha = 0.38f),
+            disabledUncheckedThumbColor = ink.copy(alpha = 0.3f),
+            disabledUncheckedTrackColor = Color.Transparent,
+            disabledUncheckedBorderColor = ink.copy(alpha = 0.24f),
+            disabledUncheckedIconColor = Color.White,
+        )
+    } else {
+        SwitchDefaults.colors(
+            checkedThumbColor = ink,
+            checkedTrackColor = Color.White,
+            checkedBorderColor = Color.White,
+            checkedIconColor = Color.White,
+            uncheckedThumbColor = OffOnBlack,
+            uncheckedTrackColor = OndoColors.SurfaceHigh,
+            uncheckedBorderColor = OffOnBlack,
+            uncheckedIconColor = OndoColors.SurfaceHigh,
+            disabledCheckedThumbColor = ink,
+            disabledCheckedTrackColor = Color.White.copy(alpha = 0.38f),
+            disabledCheckedBorderColor = Color.Transparent,
+            disabledCheckedIconColor = Color.White.copy(alpha = 0.38f),
+            disabledUncheckedThumbColor = Color.White.copy(alpha = 0.3f),
+            disabledUncheckedTrackColor = Color.Transparent,
+            disabledUncheckedBorderColor = Color.White.copy(alpha = 0.24f),
+            disabledUncheckedIconColor = Color.Transparent,
+        )
+    }
+}
+
+/** An off switch's thumb and outline: grey that reads on the white of a focused row (5.9:1) and on black. */
+private val OffOnWhite = Color(0xFF636366)
+private val OffOnBlack = Color(0xFFC7C7CC)
 
 private fun LazyListScope.title(text: Int, hint: Int? = null) {
     item(key = "title:$text") {
@@ -534,17 +601,22 @@ fun TvSwitchRow(
     icon: ImageVector? = null,
     enabled: Boolean = true,
 ) {
+    // The focused (or pressed) row turns white: its switch then draws dark, not white on white.
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val pressed by interaction.collectIsPressedAsState()
     ListItem(
         selected = false,
         onClick = { if (enabled) onChange(!checked) },
         headlineContent = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = subtitle?.let { { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
         leadingContent = icon?.let { { Icon(it, contentDescription = null, modifier = Modifier.size(24.dp)) } },
-        trailingContent = { Switch(checked = checked, onCheckedChange = null, enabled = enabled) },
+        trailingContent = { Switch(checked = checked, onCheckedChange = null, enabled = enabled, colors = tvSwitchColors(onWhite = focused || pressed)) },
         modifier = modifier.semantics { this.selected = checked },
         colors = tvRowColors(),
         shape = ListItemDefaults.shape(RoundedCornerShape(14.dp)),
         scale = ListItemDefaults.scale(focusedScale = 1.02f),
+        interactionSource = interaction,
     )
 }
 
