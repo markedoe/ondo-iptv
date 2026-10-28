@@ -76,13 +76,15 @@ extension AppModel {
         return tmdbTitle(for: item)?.trailerKey
     }
 
-    /// "★ 7.1 (12,345)" with TMDb's rating and how many gave it, when TMDb gave both; else the provider's "★ 7.1".
+    /// Both ratings side by side: the provider's ("★ 7.1") and TMDb's with how many gave it ("TMDb 7.3 (12,345)"), as
+    /// "★ 7.1 · TMDb 7.3 (12,345)". The provider's alone without TMDb's votes; TMDb's alone when the provider gives
+    /// none or the same.
     func ratingFact(for item: ShowcaseItem, provider rating: Double?) -> String? {
-        if let votes = tmdbTitle(for: item)?.votes {
-            return "★ " + Formatting.rating(votes.average) + " (" + votes.count.formatted() + ")"
-        }
-        guard let rating, rating > 0 else { return nil }
-        return "★ " + Formatting.rating(rating)
+        let own = rating.flatMap { $0 > 0 ? Formatting.rating($0) : nil }
+        guard let votes = tmdbTitle(for: item)?.votes else { return own.map { "★ " + $0 } }
+        let tmdb = "TMDb " + Formatting.rating(votes.average) + " (" + votes.count.formatted() + ")"
+        guard let own, own != Formatting.rating(votes.average) else { return tmdb }
+        return "★ " + own + " · " + tmdb
     }
 
     /// Clear Cache: TMDb's answers, the people index and the dead image addresses leave the store. The titles on screen

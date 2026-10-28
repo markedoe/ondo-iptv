@@ -68,7 +68,9 @@ final class BackdropTests: XCTestCase {
         await model.showStoredMetadata(for: .movie(movie))
         XCTAssertEqual(model.trailerYouTubeID(for: .movie(movie), provider: nil), "trailerEN01", "no trailer from the provider: TMDb's")
         XCTAssertEqual(model.trailerYouTubeID(for: .movie(movie), provider: "provider001"), "provider001", "the provider's first")
-        XCTAssertEqual(model.ratingFact(for: .movie(movie), provider: 6.5), "★ " + Formatting.rating(7.1) + " (" + 12_345.formatted() + ")")
+        XCTAssertEqual(model.ratingFact(for: .movie(movie), provider: 6.5),
+                       "★ " + Formatting.rating(6.5) + " · TMDb " + Formatting.rating(7.1) + " (" + 12_345.formatted() + ")")
+        XCTAssertEqual(model.ratingFact(for: .movie(movie), provider: nil), "TMDb " + Formatting.rating(7.1) + " (" + 12_345.formatted() + ")")
         let other = Movie(id: "m2", name: "Paper Trail", categoryID: "c", streamURL: URL(string: "http://127.0.0.1:9/paper.mp4")!)
         XCTAssertEqual(model.ratingFact(for: .movie(other), provider: 6.5), "★ " + Formatting.rating(6.5), "without TMDb's votes, the provider's rating")
         XCTAssertNil(model.ratingFact(for: .movie(other), provider: 0))
