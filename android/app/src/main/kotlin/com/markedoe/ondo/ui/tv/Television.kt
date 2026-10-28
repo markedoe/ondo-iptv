@@ -57,6 +57,9 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -361,8 +364,23 @@ class FocusMemory(key: String? = null) {
         private set
 
     fun focused(key: String) {
+        if (leaving) return
         last = key
         chosen = true
+    }
+
+    /**
+     * The page is leaving (another page opens over it, its fade still showing it), or not shown: where the focus goes
+     * on it meanwhile (the item that had it gone, the page coming back under the one closing) is no place the viewer
+     * chose. The item they left stays [last], and gets the focus back when the page is shown again ([cameBack]).
+     */
+    internal var leaving = false
+
+    /** The page shown again without being built anew (Back from a page that opened over it): [last] takes the focus. */
+    internal fun cameBack() {
+        if (!leaving) return
+        leaving = false
+        if (chosen) last?.let { restore = it }
     }
 
     /**
@@ -418,8 +436,31 @@ class FocusMemory(key: String? = null) {
     }
 }
 
+/**
+ * The focus memory of a page shown in [lifecycle]'s place (a screen of the navigation): once the page was on screen
+ * (resumed), it is [FocusMemory.leaving] from the moment another page starts to replace it until it is back, and back,
+ * the item the viewer left takes the focus again.
+ */
 @Composable
-fun rememberFocusMemory(): FocusMemory = rememberSaveable(saver = FocusMemory.Saver) { FocusMemory() }
+fun rememberFocusMemory(lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle): FocusMemory {
+    val memory = rememberSaveable(saver = FocusMemory.Saver) { FocusMemory() }
+    DisposableEffect(lifecycle, memory) {
+        var shown = false
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_RESUME -> {
+                    shown = true
+                    memory.cameBack()
+                }
+                Lifecycle.Event.ON_PAUSE -> if (shown) memory.leaving = true
+                else -> Unit
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+    return memory
+}
 
 /** The page's focus memory; none outside a page that keeps one. */
 val LocalFocusMemory = staticCompositionLocalOf<FocusMemory?> { null }

@@ -1,5 +1,11 @@
 package com.markedoe.ondo.ui.tv
 
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -136,19 +141,11 @@ fun TvSearchScreen(
         }
         posterRow(titles[0], "searchMovies", state.movies, onOpen)
         posterRow(titles[1], "searchSeries", state.series, onOpen)
-        if (state.channels.isNotEmpty()) {
-            tvShelf(countedTitle(titles[2], state.channels.size), "searchChannels", start = SearchStart) {
-                items(state.channels, key = { it.channel.id }) { row ->
-                    TvChannelCard(row, onClick = { onPlayChannel(row) }, modifier = Modifier.focusMemory("search-channel:${row.channel.id}"))
-                }
-            }
+        resultRow(countedTitle(titles[2], state.channels.size), "searchChannels", state.channels, key = { it.channel.id }) { row, entry ->
+            TvChannelCard(row, onClick = { onPlayChannel(row) }, modifier = entry.focusMemory("search-channel:${row.channel.id}"))
         }
-        if (state.people.isNotEmpty()) {
-            tvShelf(countedTitle(titles[3], state.people.size), "searchPeople", start = SearchStart) {
-                items(state.people, key = { "person-$it" }) { name ->
-                    TvPersonCard(name, onClick = { onPerson(name) }, modifier = Modifier.focusMemory("search-person:$name").testTag("person-$name"))
-                }
-            }
+        resultRow(countedTitle(titles[3], state.people.size), "searchPeople", state.people, key = { "person-$it" }) { name, entry ->
+            TvPersonCard(name, onClick = { onPerson(name) }, modifier = entry.focusMemory("search-person:$name").testTag("person-$name"))
         }
         val message = when {
             filters.isActive && nothing -> R.string.no_filtered_results
@@ -176,19 +173,97 @@ private fun countedTitle(title: String, count: Int) = "$title ($count)"
 
 /** A row of posters found, each with its title (and year) beneath. */
 private fun LazyListScope.posterRow(title: String, tag: String, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit) {
-    if (posters.isEmpty()) return
-    tvShelf(countedTitle(title, posters.size), tag, start = SearchStart) {
-        items(posters, key = { it.key }) { item ->
-            Column(Modifier.width(TvTokens.PosterWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TvPosterCard(item, onClick = { onOpen(item) }, modifier = Modifier.focusMemory("search:${item.key}"))
-                Text(
-                    item.title,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testTag("resultTitle"),
-                )
-                item.year?.let { Text(it.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    resultRow(countedTitle(title, posters.size), tag, posters, key = { it.key }) { item, entry ->
+        Column(Modifier.width(TvTokens.PosterWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TvPosterCard(item, onClick = { onOpen(item) }, modifier = entry.focusMemory("search:${item.key}"))
+            Text(
+                item.title,
+                style = MaterialTheme.typography.labelLarge,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("resultTitle"),
+            )
+            item.year?.let { Text(it.toString(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+    }
+}
+
+/**
+ * One card of a row of results: [focusMemory] gives the card its place in the page's memory (Back from a title lands on
+ * it) and in its row's (the remote enters the row on it again).
+ */
+private class ResultCard(private val row: ResultRowFocus, private val index: Int) {
+    fun focusMemory(key: String): Modifier = Modifier
+        .focusRequester(row.requester(index))
+        .onFocusChanged { if (it.isFocused) row.last = index }
+        .focusMemory(key)
+}
+
+/**
+ * Where the remote enters a row of results from above or below: the card it was last on in the row, while that one
+ * is on screen, else the first card on screen; the first card of all once the row holds other results.
+ */
+private class ResultRowFocus(var keys: List<Any>) {
+    private val requesters = HashMap<Int, FocusRequester>()
+    var last = 0
+    var hasFocus = false
+
+    fun requester(index: Int): FocusRequester = requesters.getOrPut(index) { FocusRequester() }
+
+    fun enter(state: LazyListState) {
+        val visible = state.layoutInfo.visibleItemsInfo.map { it.index }
+        val target = last.takeIf { it in visible } ?: visible.firstOrNull() ?: return
+        runCatching { requester(target).requestFocus() }
+    }
+}
+
+/**
+ * A row of results under its [title], none when there are no [results]. Whenever its results change (other words, other
+ * filters), it starts again from its first one: a row kept where it was would stay scrolled to wherever one of the
+ * titles before now is, often far along the row. Not while the remote is in it (the card it is on stays put), and
+ * not back from a title (the row is where it was left, and so is the remote).
+ */
+private fun <T> LazyListScope.resultRow(
+    title: String,
+    tag: String,
+    results: List<T>,
+    key: (T) -> Any,
+    card: @Composable (T, ResultCard) -> Unit,
+) {
+    if (results.isEmpty()) return
+    item(key = "shelf:$tag") {
+        val keys = results.map(key)
+        val state = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
+        val focus = remember { ResultRowFocus(keys) }
+        if (focus.keys != keys) {
+            focus.keys = keys
+            if (!focus.hasFocus) {
+                focus.last = 0
+                // Before the new results are laid out: the row does not first follow one of the old ones.
+                state.requestScrollToItem(0)
+            }
+        }
+        Column(Modifier.testTag(tag)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = SearchStart, bottom = 12.dp),
+            )
+            TvRow {
+                LazyRow(
+                    state = state,
+                    contentPadding = PaddingValues(start = SearchStart, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
+                    modifier = Modifier
+                        .onFocusChanged { focus.hasFocus = it.hasFocus }
+                        .focusProperties {
+                            onEnter = { if (requestedFocusDirection == FocusDirection.Down || requestedFocusDirection == FocusDirection.Up) focus.enter(state) }
+                        }
+                        .focusGroup(),
+                ) {
+                    itemsIndexed(results, key = { _, item -> key(item) }) { index, item -> card(item, ResultCard(focus, index)) }
+                }
             }
         }
     }
