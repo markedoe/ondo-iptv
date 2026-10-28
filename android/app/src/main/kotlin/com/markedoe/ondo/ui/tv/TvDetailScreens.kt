@@ -210,18 +210,20 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         }
         if (state.seasons.size > 1) {
             item(key = "seasons") {
-                LazyRow(
-                    contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 4.dp, bottom = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.testTag("seasons"),
-                ) {
-                    items(state.seasons, key = { it.number }) { item ->
-                        TvChip(
-                            text = stringResource(R.string.season_number, item.number),
-                            selected = item.number == season?.number,
-                            onClick = { actions.onSeason(item.number) },
-                            modifier = Modifier.focusMemory("season:${item.number}"),
-                        )
+                TvRow {
+                    LazyRow(
+                        contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 4.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.testTag("seasons"),
+                    ) {
+                        items(state.seasons, key = { it.number }) { item ->
+                            TvChip(
+                                text = stringResource(R.string.season_number, item.number),
+                                selected = item.number == season?.number,
+                                onClick = { actions.onSeason(item.number) },
+                                modifier = Modifier.focusMemory("season:${item.number}"),
+                            )
+                        }
                     }
                 }
             }
@@ -548,15 +550,17 @@ private fun LazyListScope.peopleShelf(director: String?, cast: String?, faces: M
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(start = PageStart, bottom = 12.dp),
             )
-            LazyRow(
-                contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
-            ) {
-                items(directors, key = { "director:$it" }) { name ->
-                    TvPersonCard(name, onClick = { actions.onPerson(name) }, role = directorLabel, photoUrl = faces[TextNormalizer.normalize(name)], modifier = Modifier.focusMemory("person:$name"))
-                }
-                items(actors, key = { "actor:$it" }) { name ->
-                    TvPersonCard(name, onClick = { actions.onPerson(name) }, photoUrl = faces[TextNormalizer.normalize(name)], modifier = Modifier.focusMemory("person:$name"))
+            TvRow {
+                LazyRow(
+                    contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
+                ) {
+                    items(directors, key = { "director:$it" }) { name ->
+                        TvPersonCard(name, onClick = { actions.onPerson(name) }, role = directorLabel, photoUrl = faces[TextNormalizer.normalize(name)], modifier = Modifier.focusMemory("person:$name"))
+                    }
+                    items(actors, key = { "actor:$it" }) { name ->
+                        TvPersonCard(name, onClick = { actions.onPerson(name) }, photoUrl = faces[TextNormalizer.normalize(name)], modifier = Modifier.focusMemory("person:$name"))
+                    }
                 }
             }
         }
@@ -575,23 +579,25 @@ private fun LazyListScope.awardsShelf(awards: List<AwardRow>, actions: DetailAct
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(start = PageStart, bottom = 12.dp),
             )
-            LazyRow(
-                contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 4.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(awards, key = { "${it.awardId}:${it.year}:${it.name}" }) { award ->
-                    val status = when {
-                        award.won -> R.string.award_winner
-                        award.festival -> R.string.award_in_competition
-                        else -> R.string.award_nominated
+            TvRow {
+                LazyRow(
+                    contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 4.dp, bottom = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(awards, key = { "${it.awardId}:${it.year}:${it.name}" }) { award ->
+                        val status = when {
+                            award.won -> R.string.award_winner
+                            award.festival -> R.string.award_in_competition
+                            else -> R.string.award_nominated
+                        }
+                        TvChip(
+                            text = award.name + " · " + stringResource(status, award.year.toString()),
+                            onClick = { actions.onBrowse(BrowseKind.AWARD, award.awardId) },
+                            icon = if (award.won) Icons.Rounded.EmojiEvents else Icons.Rounded.WorkspacePremium,
+                            iconTint = if (award.won) gold else null,
+                            modifier = Modifier.focusMemory("award:${award.awardId}:${award.year}").testTag("award-${award.awardId}"),
+                        )
                     }
-                    TvChip(
-                        text = award.name + " · " + stringResource(status, award.year.toString()),
-                        onClick = { actions.onBrowse(BrowseKind.AWARD, award.awardId) },
-                        icon = if (award.won) Icons.Rounded.EmojiEvents else Icons.Rounded.WorkspacePremium,
-                        iconTint = if (award.won) gold else null,
-                        modifier = Modifier.focusMemory("award:${award.awardId}:${award.year}").testTag("award-${award.awardId}"),
-                    )
                 }
             }
         }
@@ -605,27 +611,29 @@ private fun LazyListScope.exploreShelf(genre: String?, year: Int?, actions: Deta
     item(key = "explore") {
         val genreLabel = stringResource(R.string.genre_label)
         val yearLabel = stringResource(R.string.year_label)
-        LazyRow(
-            contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 4.dp, bottom = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.testTag("explore"),
-        ) {
-            items(genres, key = { "genre:$it" }) { value ->
-                TvChip(
-                    text = value,
-                    icon = Icons.Rounded.LocalOffer,
-                    onClick = { actions.onBrowse(BrowseKind.GENRE, value) },
-                    modifier = Modifier.focusMemory("genre:$value").semantics { contentDescription = "$genreLabel $value" },
-                )
-            }
-            year?.let { value ->
-                item(key = "year") {
+        TvRow {
+            LazyRow(
+                contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.testTag("explore"),
+            ) {
+                items(genres, key = { "genre:$it" }) { value ->
                     TvChip(
-                        text = value.toString(),
-                        icon = Icons.Rounded.CalendarMonth,
-                        onClick = { actions.onBrowse(BrowseKind.YEAR, value.toString()) },
-                        modifier = Modifier.focusMemory("year").semantics { contentDescription = "$yearLabel $value" },
+                        text = value,
+                        icon = Icons.Rounded.LocalOffer,
+                        onClick = { actions.onBrowse(BrowseKind.GENRE, value) },
+                        modifier = Modifier.focusMemory("genre:$value").semantics { contentDescription = "$genreLabel $value" },
                     )
+                }
+                year?.let { value ->
+                    item(key = "year") {
+                        TvChip(
+                            text = value.toString(),
+                            icon = Icons.Rounded.CalendarMonth,
+                            onClick = { actions.onBrowse(BrowseKind.YEAR, value.toString()) },
+                            modifier = Modifier.focusMemory("year").semantics { contentDescription = "$yearLabel $value" },
+                        )
+                    }
                 }
             }
         }
@@ -642,12 +650,14 @@ private fun LazyListScope.similarShelf(similar: List<ShowcaseItem>, actions: Det
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(start = PageStart, bottom = 12.dp),
             )
-            LazyRow(
-                contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
-            ) {
-                items(similar, key = { it.key }) { item ->
-                    TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("similar:${item.key}"))
+            TvRow {
+                LazyRow(
+                    contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
+                ) {
+                    items(similar, key = { it.key }) { item ->
+                        TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("similar:${item.key}"))
+                    }
                 }
             }
         }

@@ -92,6 +92,7 @@ import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.ShelfMetrics
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
 
@@ -273,9 +274,11 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = metrics.gutter)) } }
             if (state.seasons.size > 1) {
                 item {
-                    LazyRow(contentPadding = PaddingValues(horizontal = metrics.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(state.seasons, key = { it.number }) { item ->
-                            FilterChip(selected = item.number == season?.number, onClick = { actions.onSeason(item.number) }, label = { Text(stringResource(R.string.season_number, item.number)) })
+                    TvRow {
+                        LazyRow(contentPadding = PaddingValues(horizontal = metrics.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(state.seasons, key = { it.number }) { item ->
+                                FilterChip(selected = item.number == season?.number, onClick = { actions.onSeason(item.number) }, label = { Text(stringResource(R.string.season_number, item.number)) })
+                            }
                         }
                     }
                 }

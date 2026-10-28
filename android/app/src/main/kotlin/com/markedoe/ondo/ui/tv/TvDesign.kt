@@ -189,11 +189,13 @@ fun LazyListScope.tvShelf(title: String, tag: String, start: Dp = TvTokens.Conte
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.padding(start = start, bottom = 12.dp),
             )
-            LazyRow(
-                contentPadding = PaddingValues(start = start, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
-                content = content,
-            )
+            TvRow {
+                LazyRow(
+                    contentPadding = PaddingValues(start = start, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
+                    content = content,
+                )
+            }
         }
     }
 }

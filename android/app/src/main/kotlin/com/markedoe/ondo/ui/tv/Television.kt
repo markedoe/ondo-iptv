@@ -85,6 +85,37 @@ val TvScrolling: BringIntoViewSpec = object : BringIntoViewSpec {
     }
 }
 
+/**
+ * How a row of cards scrolls on a TV: only once the focused card comes near an edge, and then just enough to show it
+ * with the start of the next one beside it (an eighth of the row). Along the cards on screen, only the focus moves;
+ * a row that slid at every press, the focus staying in place, made the cards jump under it.
+ */
+@ExperimentalFoundationApi
+val TvRowScrolling: BringIntoViewSpec = object : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        val margin = containerSize / 8
+        val trailing = offset + size - (containerSize - margin)
+        return when {
+            // Wider than the space between the margins: its leading edge at the margin.
+            size > containerSize - 2 * margin -> offset - margin
+            offset < margin -> offset - margin
+            trailing > 0 -> trailing
+            else -> 0f
+        }
+    }
+}
+
+/** [content]'s rows scroll as [TvRowScrolling] says on a TV, where the pages scroll as [TvScrolling] says; elsewhere, as they are. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TvRow(content: @Composable () -> Unit) {
+    if (LocalBringIntoViewSpec.current === TvScrolling) {
+        CompositionLocalProvider(LocalBringIntoViewSpec provides TvRowScrolling, content = content)
+    } else {
+        content()
+    }
+}
+
 /** The margins Google asks TV layouts to keep clear (5 % of a 960 × 540 dp screen). */
 val TvSafeArea = PaddingValues(horizontal = 48.dp, vertical = 27.dp)
 

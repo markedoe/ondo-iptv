@@ -38,6 +38,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -73,12 +74,24 @@ class TelevisionScrollTest {
         }
     }
 
+    /** Thirty movies added in the last days: Home's New Movies row runs far past the screen. */
+    private val newMovies = (1..30).map { number ->
+        Movie(
+            id = "n$number",
+            name = "New $number",
+            categoryId = Fixtures.drama.id,
+            streamUrl = "http://example.com/movie/n$number.mp4",
+            year = 2025,
+            addedAt = Fixtures.NOW / 1000 - number * 3_600L,
+        )
+    }
+
     private fun start() {
         val store = AppStore(folder.root)
         store.savePlaylists(listOf(Fixtures.playlist))
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
         val content = Fixtures.content.copy(
-            movies = Fixtures.content.movies + movies,
+            movies = Fixtures.content.movies + movies + newMovies,
             movieCategories = Fixtures.content.movieCategories + categories,
             fetchedAt = System.currentTimeMillis(),
         )
@@ -169,6 +182,29 @@ class TelevisionScrollTest {
         waitFor { exists(page) && !exists("detail") }
         settle(1_500)
         assertEquals("back on $page", poster, focused())
+    }
+
+    /**
+     * Along a row, the focus moves over the cards on screen and the row stays still; only near the right edge does
+     * the row move, by the same step at every press, the focused card whole on screen with the next one beside it.
+     */
+    @Test
+    fun alongARowOnlyTheFocusMovesUntilTheEdge() {
+        start()
+        press(Key.DirectionDown)
+        assertEquals("New 1", focused())
+        val screen = compose.onAllNodes(isRoot()).onLast().fetchSemanticsNode().boundsInRoot.width
+        val lefts = (1..14).map {
+            press(Key.DirectionRight)
+            settle(400)
+            focusedNode()!!.boundsInRoot
+        }
+        assertEquals("New 15", focused())
+        val moving = lefts.zipWithNext().takeWhile { (a, b) -> b.left > a.left }.size
+        assertTrue("the focus moved over ${moving + 1} cards before the row moved: ${lefts.map { it.left }}", moving >= 2)
+        val still = lefts.drop(moving)
+        assertTrue("then the row moved by the same step at every press: ${lefts.map { it.left }}", still.all { it.left == still.first().left })
+        assertTrue("the focused card is whole on screen", still.first().right <= screen)
     }
 
     @Test

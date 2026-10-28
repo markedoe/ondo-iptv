@@ -55,6 +55,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.TvConfirmDialog
+import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
 import com.markedoe.ondo.ui.tv.isTelevision
@@ -101,11 +102,13 @@ fun Shelf(
                 Spacer(Modifier.height(48.dp))
             }
         }
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = metrics.gutter),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            content = content,
-        )
+        TvRow {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = metrics.gutter),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                content = content,
+            )
+        }
     }
 }
 

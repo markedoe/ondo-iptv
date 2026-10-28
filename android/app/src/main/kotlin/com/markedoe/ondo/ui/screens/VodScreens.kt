@@ -58,6 +58,7 @@ import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.rememberLeaveField
 import com.markedoe.ondo.ui.tv.rememberTvTextField
 
@@ -107,15 +108,17 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
             )
         }
         item {
-            LazyRow(contentPadding = PaddingValues(horizontal = metrics.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { AssistChip(onClick = { actions.onCategory(null) }, label = { Text(stringResource(R.string.all)) }) }
-                items(state.categories, key = { it.id }) { category ->
-                    val locked = category.id in state.lockedCategoryIds
-                    AssistChip(
-                        onClick = { actions.onCategory(category) },
-                        label = { Text(category.name, maxLines = 1) },
-                        leadingIcon = if (locked) ({ Icon(Icons.Rounded.Lock, contentDescription = null) }) else null,
-                    )
+            TvRow {
+                LazyRow(contentPadding = PaddingValues(horizontal = metrics.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item { AssistChip(onClick = { actions.onCategory(null) }, label = { Text(stringResource(R.string.all)) }) }
+                    items(state.categories, key = { it.id }) { category ->
+                        val locked = category.id in state.lockedCategoryIds
+                        AssistChip(
+                            onClick = { actions.onCategory(category) },
+                            label = { Text(category.name, maxLines = 1) },
+                            leadingIcon = if (locked) ({ Icon(Icons.Rounded.Lock, contentDescription = null) }) else null,
+                        )
+                    }
                 }
             }
         }

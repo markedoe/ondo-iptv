@@ -47,6 +47,7 @@ import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ProgressBar
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.tv.LocalHeldOk
+import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
 
@@ -91,20 +92,22 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
             )
         }
         item {
-            LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item {
-                    FilterChip(selected = state.selectedCategoryId == null && !state.showingFavorites, onClick = { actions.onCategory(null) }, label = { Text(stringResource(R.string.all)) })
-                }
-                item {
-                    FilterChip(
-                        selected = state.showingFavorites,
-                        onClick = actions.onFavorites,
-                        label = { Text(stringResource(R.string.my_list)) },
-                        leadingIcon = { Icon(Icons.Rounded.Bookmarks, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    )
-                }
-                items(state.categories, key = { it.id }) { category ->
-                    FilterChip(selected = state.selectedCategoryId == category.id, onClick = { actions.onCategory(category.id) }, label = { Text(category.name, maxLines = 1) })
+            TvRow {
+                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    item {
+                        FilterChip(selected = state.selectedCategoryId == null && !state.showingFavorites, onClick = { actions.onCategory(null) }, label = { Text(stringResource(R.string.all)) })
+                    }
+                    item {
+                        FilterChip(
+                            selected = state.showingFavorites,
+                            onClick = actions.onFavorites,
+                            label = { Text(stringResource(R.string.my_list)) },
+                            leadingIcon = { Icon(Icons.Rounded.Bookmarks, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                        )
+                    }
+                    items(state.categories, key = { it.id }) { category ->
+                        FilterChip(selected = state.selectedCategoryId == category.id, onClick = { actions.onCategory(category.id) }, label = { Text(category.name, maxLines = 1) })
+                    }
                 }
             }
         }
