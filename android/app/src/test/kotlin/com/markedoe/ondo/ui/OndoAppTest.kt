@@ -8,10 +8,10 @@ import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
-import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.Fixtures
@@ -53,8 +53,14 @@ class OndoAppTest {
     }
 
     private fun open(title: String) {
-        compose.onNodeWithTag("home").performScrollToNode(hasContentDescription(title))
-        compose.onAllNodesWithContentDescription(title).onFirst().performClick()
+        val home = compose.onNodeWithTag("home")
+        home.performScrollToNode(hasContentDescription(title))
+        // A row just below the screen is laid out ahead, without a size, which the scroll above takes as in sight:
+        // on until the title shows.
+        fun shown() = compose.onAllNodesWithContentDescription(title).fetchSemanticsNodes().indexOfFirst { it.boundsInRoot.height > 0f }
+        var row = 0
+        while (shown() < 0) home.performScrollToIndex(++row)
+        compose.onAllNodesWithContentDescription(title)[shown()].performClick()
         // The page is computed in the background: a moment of the loading look, then the page.
         compose.waitUntil(10_000) { compose.onAllNodesWithTag("detail").fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
