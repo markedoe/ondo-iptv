@@ -109,18 +109,8 @@ jobs:
           # still starts from the previous checkouts.
           key: spm-${{ runner.os }}-${{ hashFiles('project.yml') }}
           restore-keys: spm-${{ runner.os }}-
-      - name: Build for iOS Simulator
-        run: |
-          set -o pipefail
-          xcodebuild build \
-            -project Ondo.xcodeproj -scheme Ondo \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build/ios \
-            -clonedSourcePackagesDirPath build/spm \
-            CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions || \
-          (echo "::error::iOS build failed"; exit 1)
+      # The iOS Simulator debug build is the app tests' (ui-tests), which also check VLC and Cast in it.
       - name: Build for macOS
-        if: success() || failure()
         run: |
           set -o pipefail
           xcodebuild build \
@@ -130,20 +120,15 @@ jobs:
             -clonedSourcePackagesDirPath build/spm \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions || \
           (echo "::error::macOS build failed"; exit 1)
-      - name: Verify VLC and Google Cast are compiled in
+      - name: Verify VLC is compiled in
         run: |
           # VLCBackend.swift is wrapped in `#if canImport(VLCKitSPM)`: make sure it really referenced VLCKit.
-          for dir in build/ios build/macos; do
-            OBJ=$(find "$dir" -name "VLCBackend.o" | head -1)
-            if [ -n "$OBJ" ] && nm -u "$OBJ" | grep -q "VLCMediaPlayer"; then
-              echo "$dir: VLC engine compiled ($OBJ)"
-            else
-              echo "::error::VLC engine missing in $dir"; exit 1
-            fi
-          done
-          # Chromecast (iOS only): CastManager must reference the Google Cast SDK.
-          OBJ=$(find build/ios -name "CastManager.o" | head -1)
-          if nm -u "$OBJ" | grep -q "GCKCastContext"; then echo "iOS: Google Cast compiled"; else echo "::error::Google Cast missing"; exit 1; fi
+          OBJ=$(find build/macos -name "VLCBackend.o" | head -1)
+          if [ -n "$OBJ" ] && nm -u "$OBJ" | grep -q "VLCMediaPlayer"; then
+            echo "macOS: VLC engine compiled ($OBJ)"
+          else
+            echo "::error::VLC engine missing in the macOS build"; exit 1
+          fi
 
       - name: Launch macOS app (smoke test)
         run: |
@@ -215,7 +200,8 @@ jobs:
             -clonedSourcePackagesDirPath build/spm \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
       - name: Build for iOS Simulator (Release, TestFlight edition)
-        if: success() || failure()
+        # A push to main goes on to the Release run (deliver.yml), which builds this edition for real.
+        if: (success() || failure()) && github.event_name != 'push'
         # The release lanes' setting for this edition (fastlane/Fastfile, build_settings_args).
         run: |
           set -o pipefail
@@ -232,7 +218,7 @@ jobs:
     name: App tests — unit + UI (iPhone simulator)
     runs-on: macos-26
     timeout-minutes: 75
-    needs: apple
+    # Not after the macOS job: each builds its own platform, side by side.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -282,27 +268,21 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat app-coverage.txt >> "$GITHUB_STEP_SUMMARY" || true
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify VLC and Google Cast are compiled in
+        if: success() || failure()
+        run: |
+          # VLCBackend.swift is wrapped in `#if canImport(VLCKitSPM)`; Chromecast (iOS only): CastManager must
+          # reference the Google Cast SDK.
+          OBJ=$(find build/uitests -name "VLCBackend.o" -path "*iphonesimulator*" | head -1)
+          if [ -n "$OBJ" ] && nm -u "$OBJ" | grep -q "VLCMediaPlayer"; then echo "iOS: VLC engine compiled"; else echo "::error::VLC engine missing in the iOS build"; exit 1; fi
+          OBJ=$(find build/uitests -name "CastManager.o" -path "*iphonesimulator*" | head -1)
+          if [ -n "$OBJ" ] && nm -u "$OBJ" | grep -q "GCKCastContext"; then echo "iOS: Google Cast compiled"; else echo "::error::Google Cast missing"; exit 1; fi
       - name: Export screenshots
         if: always()
         run: |
           mkdir -p raw screenshots
           xcrun xcresulttool export attachments --path build/UITests.xcresult --output-path raw || true
           python3 .github/scripts/collect_screenshots.py raw screenshots
-      - name: Fetch macOS screenshot
-        if: always()
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: macos-screenshot
-          path: macos-shot
-        continue-on-error: true
-      - name: Add the macOS screenshot
-        if: always()
-        run: |
-          mkdir -p screenshots
-          if [ -f macos-shot/macos-launch.png ]; then
-            sips -s format jpeg -s formatOptions 70 -Z 1400 macos-shot/macos-launch.png --out screenshots/99-macos-launch.jpg >/dev/null
-          fi
-          ls -la screenshots
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -312,7 +292,7 @@ jobs:
 
   publish-screenshots:
     name: Publish screenshots to the ci-screenshots branch
-    needs: ui-tests
+    needs: [apple, ui-tests]
     # Failed runs too: the screens and the debug/ texts explain a UI test failure. A job of its own, so the
     # write token is never in reach of the build and its dependencies.
     if: ${{ !cancelled() && github.event_name == 'push' && needs.ui-tests.result != 'skipped' }}
@@ -325,10 +305,17 @@ jobs:
         with:
           name: ui-screenshots
           path: screenshots
+      - name: Add the macOS screenshot
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: macos-screenshot
+          path: macos-shot
+        continue-on-error: true
       - name: Push
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if [ -f macos-shot/macos-launch.png ]; then cp macos-shot/macos-launch.png screenshots/99-macos-launch.png; fi
           cd screenshots
           echo "Screenshots of ${GITHUB_REF_NAME} @ ${GITHUB_SHA} (run ${GITHUB_RUN_ID})" > README.md
           git init -q

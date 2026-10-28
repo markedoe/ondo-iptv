@@ -104,6 +104,9 @@ jobs:
           bundler-cache: true
       - name: Tests and listing screenshots
         # No secret here: the tests run third-party code (test libraries, Robolectric).
+        # A build alone for internal testing (deliver.yml, after the Android workflow passed on this commit) needs
+        # neither the tests again nor the listing's screenshots.
+        if: env.TRACK != 'internal' || env.LISTING != 'skip'
         working-directory: android
         run: |
           ./gradlew -p core test --stacktrace
@@ -135,6 +138,7 @@ jobs:
             echo "::error::The bundle is signed with the debug key"; exit 1
           fi
       - name: Listing screenshots
+        if: env.TRACK != 'internal' || env.LISTING != 'skip'
         run: |
           for dir in android/app/src/test/screenshots/play/*/*/; do
             locale=$(basename "$(dirname "$dir")")
