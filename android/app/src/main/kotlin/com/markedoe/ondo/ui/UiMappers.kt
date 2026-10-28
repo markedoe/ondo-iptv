@@ -576,15 +576,17 @@ object UiMappers {
      * The movies and series whose opened page names this person (cast or director), and the series whose list entry
      * does (series lists name their cast; movie lists do not), newest first.
      */
-    fun person(state: OndoState, name: String, online: List<TrendingMatch>? = null): PersonUiState {
+    fun person(state: OndoState, name: String, online: List<TrendingMatch>? = null, kept: List<TrendingMatch> = emptyList()): PersonUiState {
         val hidden = hiddenCategoryIds(state)
         fun names(details: MediaDetails) = People.mentions(details.cast, name) || People.mentions(details.director, name)
         val movieIds = state.movieDetails.filterValues(::names).keys
         val seriesIds = state.seriesDetails.filterValues { names(it.info) }.keys
         val watched = hiddenMovieIds(state)
-        // With the viewer's TMDb token, the titles TMDb credits the person with that the playlist has.
-        val onlineMovies = online.orEmpty().mapNotNullTo(HashSet()) { (it as? TrendingMatch.MovieMatch)?.movie?.id }
-        val onlineSeries = online.orEmpty().mapNotNullTo(HashSet()) { (it as? TrendingMatch.SeriesMatch)?.series?.id }
+        // The titles TMDb credits the person with that the playlist has: asked with the viewer's token, and those
+        // kept on the device.
+        val credited = online.orEmpty() + kept
+        val onlineMovies = credited.mapNotNullTo(HashSet()) { (it as? TrendingMatch.MovieMatch)?.movie?.id }
+        val onlineSeries = credited.mapNotNullTo(HashSet()) { (it as? TrendingMatch.SeriesMatch)?.series?.id }
         val movies = state.content.movies
             .filter { (it.id in movieIds || it.id in onlineMovies) && it.categoryId !in hidden && it.id !in watched }
             .distinctBy { it.id }

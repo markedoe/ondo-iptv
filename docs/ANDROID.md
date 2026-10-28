@@ -22,8 +22,13 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **TMDb** with the viewer's own token (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`): checked
   with TMDb's `/authentication` before it is saved (accepted, refused, unreachable), kept in the app's private
   storage and carried by sync (`key:tmdb`, docs/SYNC.md); a Trending row and carousel titles, TMDb's backdrop when
-  the provider's is missing or does not load, photos of a title's cast (`TmdbClient.cast`, by the provider's TMDb id
-  or the title), TMDb's people in Search, and a person's titles from TMDb's credits.
+  the provider's is missing or does not load, its trailer, rating with votes and the photos of its cast and directors
+  (`TmdbClient.titleInfo`, one call, by the provider's TMDb id or the title), TMDb's people in Search, and a person's
+  titles from TMDb's credits. What TMDb answers is kept on the device (`SqliteMetadataStore`, `metadata.sqlite`, like
+  the store on Apple devices; keys `movie:603` or `movie:sandstorm:2021`): pages show it at once, TMDb is asked
+  again only after 30 days (7 for a title it does not know), Home's carousel titles are asked ahead two at a time,
+  the credits kept find people in Search and their titles without network, and a dead image address is remembered
+  for 7 days.
   A 401 later (a token revoked, or one that came by sync) shows as refused in Settings, and nothing more is asked.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
   resume, picture-in-picture, MediaSession, audio and subtitle tracks, the viewer's audio and subtitle languages

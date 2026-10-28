@@ -70,100 +70,85 @@ class TmdbTest {
         assertTrue(runCatching { TmdbClient("k", http).trending("day") }.isFailure)
     }
 
-    /** A page whose provider gave no backdrop that loads: TMDb's, by id first, else by title and year. */
+    /**
+     * Everything shown of a title from TMDb comes in one call: by the provider's TMDb id, its backdrop, its trailer (the
+     * viewer's language first, a trailer before a teaser), its rating with its votes, its directors (no editor) then its
+     * cast, with their photos.
+     */
     @Test
-    fun aBackdropIsFoundByIdOrByTitle() = runTest {
+    fun aTitlesInfoComesInOneCallByItsId() = runTest {
         val http = MockHttpClient()
-        http.routes["https://api.themoviedb.org/3/movie/910001?language=en-US&api_key=KEY"] =
-            """{"id":910001,"title":"Lighthouse","backdrop_path":"/lighthouse-wide.jpg"}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos&include_video_language=fr,en,null&language=fr-FR&api_key=KEY"] = (
+            """{"id":910001,"title":"Lighthouse","backdrop_path":"/lighthouse-wide.jpg","vote_average":7.346,"vote_count":12345,"credits":{""" +
+                """"cast":[{"id":11,"name":"Ana Lima","profile_path":"/ana.jpg","known_for_department":"Acting"},""" +
+                """{"id":12,"name":"José Silva","profile_path":null}],""" +
+                """"crew":[{"id":13,"name":"Kim Park","job":"Director","profile_path":"/kim.jpg"},{"id":14,"name":"Lee Moss","job":"Editor","profile_path":"/lee.jpg"}]},""" +
+                """"videos":{"results":[""" +
+                """{"key":"teaserFR001","site":"YouTube","type":"Teaser","official":true,"iso_639_1":"fr"},""" +
+                """{"key":"trailerEN01","site":"YouTube","type":"Trailer","official":true,"iso_639_1":"en"},""" +
+                """{"key":"trailerFR01","site":"YouTube","type":"Trailer","official":false,"iso_639_1":"fr"},""" +
+                """{"key":"vimeo123456","site":"Vimeo","type":"Trailer","official":true,"iso_639_1":"fr"}]}}"""
+            ).encodeToByteArray()
+        val info = TmdbClient("KEY", http, language = "fr-FR").titleInfo(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010)!!
+        assertEquals(910001, info.tmdbId)
+        assertEquals("https://image.tmdb.org/t/p/w1280/lighthouse-wide.jpg", info.backdropUrl)
+        assertEquals("trailerFR01", info.trailerKey, "a French trailer first")
+        assertEquals(TmdbRating(7.346, 12345), info.rating)
+        assertEquals(listOf("Kim Park"), info.directors.map { it.name }, "no editor")
+        assertEquals(listOf("Ana Lima", "José Silva"), info.cast.map { it.name })
+        assertEquals(listOf("https://image.tmdb.org/t/p/w185/ana.jpg", null), info.cast.map { it.profileUrl })
+        assertEquals(1, http.requested.size, "one call")
+    }
+
+    /**
+     * Without an id (or with one TMDb does not know), the first search result with the same title, a year apart at most;
+     * the search result's backdrop and rating when the details have none. Another title of that name is not taken.
+     */
+    @Test
+    fun aTitlesInfoIsFoundByTitleOtherwise() = runTest {
+        val http = MockHttpClient()
         http.routes["https://api.themoviedb.org/3/search/movie?query=sandstorm&language=en-US&api_key=KEY"] =
             ("""{"results":[{"id":1,"title":"Sandstorm Rising","backdrop_path":"/rising.jpg","release_date":"2021-01-01"},""" +
                 """{"id":2,"title":"Sandstorm","backdrop_path":"/old.jpg","release_date":"1988-05-01"},""" +
-                """{"id":3,"title":"Sandstorm","backdrop_path":"/sandstorm.jpg","release_date":"2021-03-01"}]}""").encodeToByteArray()
+                """{"id":3,"title":"Sandstorm","backdrop_path":"/sandstorm.jpg","release_date":"2021-03-01","vote_average":6.5,"vote_count":80}]}""").encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/movie/3?append_to_response=credits,videos&include_video_language=en,null&language=en-US&api_key=KEY"] =
+            """{"id":3,"title":"Sandstorm","credits":{"cast":[{"id":21,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
-            """{"results":[{"id":7,"name":"Copper Valley","backdrop_path":null}]}""".encodeToByteArray()
-        val client = TmdbClient("KEY", http)
-
-        assertEquals("https://image.tmdb.org/t/p/w1280/lighthouse-wide.jpg", client.backdropUrl(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010))
-        assertEquals(
-            "https://image.tmdb.org/t/p/w1280/sandstorm.jpg",
-            client.backdropUrl(series = false, tmdbId = null, title = "FR - Sandstorm (2020) [4K]", year = 2020),
-            "same title, a year apart at most",
-        )
-        assertNull(client.backdropUrl(series = true, tmdbId = null, title = "Copper Valley", year = null), "TMDb has no backdrop either")
-    }
-
-    /** A title's cast and directors with their photos: by the provider's TMDb id, else by title and year. */
-    @Test
-    fun aTitlesCastIsFoundByIdOrByTitle() = runTest {
-        val http = MockHttpClient()
-        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits&language=en-US&api_key=KEY"] = (
-            """{"id":910001,"title":"Lighthouse","vote_average":7.346,"vote_count":12345,"credits":{""" +
-                """"cast":[{"id":11,"name":"Ana Lima","profile_path":"/ana.jpg","known_for_department":"Acting"},""" +
-                """{"id":12,"name":"José Silva","profile_path":null}],""" +
-                """"crew":[{"id":13,"name":"Kim Park","job":"Director","profile_path":"/kim.jpg"},{"id":14,"name":"Lee Moss","job":"Editor","profile_path":"/lee.jpg"}]}}"""
-            ).encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
-            """{"results":[{"id":5,"name":"Copper Valley Nights","first_air_date":"2020-01-01"},{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20","vote_average":8.9,"vote_count":210}]}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits&language=en-US&api_key=KEY"] =
-            """{"id":7,"name":"Copper Valley","vote_average":0,"vote_count":0,"credits":{"cast":[{"id":21,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}""".encodeToByteArray()
+            """{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20"}]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits,videos&include_video_language=en,null&language=en-US&api_key=KEY"] =
+            """{"id":7,"name":"Copper Valley","videos":{"results":[{"key":"teaserEN001","site":"YouTube","type":"Teaser","iso_639_1":"en"}]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/movie?query=paper%20trail&language=en-US&api_key=KEY"] =
             """{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}""".encodeToByteArray()
         val client = TmdbClient("KEY", http)
 
-        val movie = client.cast(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010)
-        assertEquals(listOf("Kim Park", "Ana Lima", "José Silva"), movie.map { it.name }, "the director first, no editor")
-        assertEquals(listOf("https://image.tmdb.org/t/p/w185/kim.jpg", "https://image.tmdb.org/t/p/w185/ana.jpg", null), movie.map { it.profileUrl })
-        assertEquals(listOf("Ruth Ames"), client.cast(series = true, tmdbId = null, title = "FR - Copper Valley (US)", year = 2008).map { it.name })
-        assertTrue(client.cast(series = false, tmdbId = null, title = "Paper Trail", year = 1999).isEmpty(), "another Paper Trail's people")
-        assertTrue(client.cast(series = false, tmdbId = null, title = "", year = null).isEmpty())
+        // An id TMDb does not know (404): by title.
+        val sandstorm = client.titleInfo(series = false, tmdbId = "404404", title = "FR - Sandstorm (2020) [4K]", year = 2020)!!
+        assertEquals(3, sandstorm.tmdbId, "same title, a year apart at most")
+        assertEquals("https://image.tmdb.org/t/p/w1280/sandstorm.jpg", sandstorm.backdropUrl)
+        assertEquals(TmdbRating(6.5, 80), sandstorm.rating)
+        assertEquals(listOf("Ruth Ames"), sandstorm.cast.map { it.name })
+        assertNull(sandstorm.trailerKey)
+
+        val copper = client.titleInfo(series = true, tmdbId = null, title = "FR - Copper Valley (US)", year = 2008)!!
+        assertEquals("teaserEN001", copper.trailerKey, "a teaser when there is no trailer")
+        assertNull(copper.backdropUrl, "TMDb has no backdrop either")
+        assertNull(copper.rating, "no votes, no rating")
+        assertTrue(copper.cast.isEmpty() && copper.directors.isEmpty())
+
+        assertNull(client.titleInfo(series = false, tmdbId = null, title = "Paper Trail", year = 1999), "another Paper Trail")
+        assertNull(client.titleInfo(series = false, tmdbId = null, title = "", year = null))
     }
 
-    /** A title's trailer on TMDb: by id or by title, in the viewer's language first, a trailer before a teaser. */
+    /** A refused token is not taken for "TMDb does not know this title": it throws. */
     @Test
-    fun aTitlesTrailerIsFoundByIdOrByTitle() = runTest {
+    fun aRefusedTokenIsNotANotFound() = runTest {
         val http = MockHttpClient()
-        http.routes["https://api.themoviedb.org/3/movie/910001/videos?include_video_language=fr,en,null&language=fr-FR&api_key=KEY"] = (
-            """{"id":910001,"results":[""" +
-                """{"key":"teaserFR001","site":"YouTube","type":"Teaser","official":true,"iso_639_1":"fr"},""" +
-                """{"key":"trailerEN01","site":"YouTube","type":"Trailer","official":true,"iso_639_1":"en"},""" +
-                """{"key":"trailerFR01","site":"YouTube","type":"Trailer","official":false,"iso_639_1":"fr"},""" +
-                """{"key":"vimeo123456","site":"Vimeo","type":"Trailer","official":true,"iso_639_1":"fr"},""" +
-                """{"key":"clipFR00001","site":"YouTube","type":"Clip","official":true,"iso_639_1":"fr"}]}"""
-            ).encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=fr-FR&api_key=KEY"] =
-            """{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20"}]}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/tv/7/videos?include_video_language=fr,en,null&language=fr-FR&api_key=KEY"] =
-            """{"id":7,"results":[{"key":"teaserEN001","site":"YouTube","type":"Teaser","official":true,"iso_639_1":"en"}]}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/search/movie?query=paper%20trail&language=fr-FR&api_key=KEY"] =
-            """{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}""".encodeToByteArray()
-        val client = TmdbClient("KEY", http, language = "fr-FR")
-
-        assertEquals("trailerFR01", client.trailer(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010), "a French trailer first")
-        assertEquals("teaserEN001", client.trailer(series = true, tmdbId = null, title = "FR - Copper Valley (US)", year = 2008), "a teaser when there is no trailer")
-        assertNull(client.trailer(series = false, tmdbId = null, title = "Paper Trail", year = 1999), "another Paper Trail's trailer")
-        assertNull(client.trailer(series = false, tmdbId = null, title = "", year = null))
-    }
-
-    /** The same answer gives the title's rating with its number of votes; none when nobody voted. */
-    @Test
-    fun aTitlesRatingComesWithItsVotes() = runTest {
-        val http = MockHttpClient()
-        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits&language=en-US&api_key=KEY"] =
-            """{"id":910001,"vote_average":7.346,"vote_count":12345,"credits":{"cast":[{"id":11,"name":"Ana Lima"}],"crew":[]}}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/movie/910002?append_to_response=credits&language=en-US&api_key=KEY"] =
-            """{"id":910002,"vote_average":0,"vote_count":0,"credits":{"cast":[{"id":12,"name":"José Silva"}],"crew":[]}}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
-            """{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20","vote_average":8.9,"vote_count":210}]}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits&language=en-US&api_key=KEY"] =
-            """{"id":7,"credits":{"cast":[{"id":21,"name":"Ruth Ames"}],"crew":[]}}""".encodeToByteArray()
-        val client = TmdbClient("KEY", http)
-
-        assertEquals(TmdbRating(7.346, 12345), client.castAndRating(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010).rating)
-        assertNull(client.castAndRating(series = false, tmdbId = "910002", title = "Nobody", year = 2010).rating, "no votes, no rating")
-        // Found by title: the search result's rating, when the details have none.
-        assertEquals(TmdbRating(8.9, 210), client.castAndRating(series = true, tmdbId = null, title = "Copper Valley", year = 2008).rating)
-        assertEquals(1, http.requested.count { "910001" in it }, "one call for the cast and the rating")
+        http.failures["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos&include_video_language=en,null&language=en-US&api_key=KEY"] =
+            mutableListOf(HttpException.BadStatus(401))
+        val error = assertFailsWith<HttpException.BadStatus> {
+            TmdbClient("KEY", http).titleInfo(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010)
+        }
+        assertEquals(401, error.code)
     }
 
     /** A key is checked with TMDb before it is saved: accepted, refused, or TMDb out of reach. */

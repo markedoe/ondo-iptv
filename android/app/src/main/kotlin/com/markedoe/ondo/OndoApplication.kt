@@ -25,6 +25,7 @@ import com.markedoe.ondo.data.AwardsDownload
 import com.markedoe.ondo.data.CrashLog
 import com.markedoe.ondo.data.LocalSync
 import com.markedoe.ondo.data.OndoRepository
+import com.markedoe.ondo.data.SqliteMetadataStore
 import com.markedoe.ondo.data.WorkManagerReminderScheduler
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -107,6 +108,7 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             // A quarter of what the device gives the app: the catalogue, the screens and the images need the rest.
             guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
             placeholderNames = resources.placeholderNames(),
+            metadata = SqliteMetadataStore(this),
         )
     }
 

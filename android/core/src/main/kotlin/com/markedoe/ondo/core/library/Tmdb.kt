@@ -126,23 +126,6 @@ class TmdbClient(
     suspend fun trending(window: String = "week"): List<TmdbItem> =
         results(get("trending/all/$window")).filter { it.mediaType == TmdbItem.MediaType.MOVIE || it.mediaType == TmdbItem.MediaType.TV }
 
-    /**
-     * The backdrop TMDb has for a movie or a series whose provider gave none that loads: by its TMDb id when the provider
-     * gave one, otherwise the search result with the same title (and a year one apart at most, when known). Null rather
-     * than another title's picture.
-     */
-    suspend fun backdropUrl(series: Boolean, tmdbId: String?, title: String, year: Int?): String? =
-        withBackdrop(series, tmdbId, title, year)?.backdropUrl
-
-    /** The title [backdropUrl] takes its picture from, with its rating ([TmdbItem.rating]). */
-    suspend fun withBackdrop(series: Boolean, tmdbId: String?, title: String, year: Int?): TmdbItem? {
-        val kind = if (series) "tv" else "movie"
-        tmdbId?.trim()?.toIntOrNull()?.let { id ->
-            runCatching { TmdbItem.from(get("$kind/$id")) }.getOrNull()?.takeIf { it.backdropUrl != null }?.let { return it }
-        }
-        return sameTitle(kind, title, year).firstOrNull { it.backdropUrl != null }
-    }
-
     /** TMDb's search results with this title (and a year one apart at most, when known), in TMDb's order. */
     private suspend fun sameTitle(kind: String, title: String, year: Int?): Sequence<TmdbItem> {
         val key = CatalogueMatcher.key(title)
@@ -156,53 +139,40 @@ class TmdbClient(
     }
 
     /**
-     * The cast and the directors TMDb lists for a movie or a series, with their photos: by the TMDb id the provider
-     * gave, else the first search result with the same title (and a year one apart at most, when known). Empty rather
-     * than another title's people.
+     * Everything the app shows of a title from TMDb, in one call: its backdrop, trailer ([TmdbVideo.best]), rating, directors
+     * and first billed cast. By the TMDb id the provider gave, else the first search result with the same title (and a year
+     * one apart at most, when known). Null when TMDb has no such title; a failed request throws.
      */
-    suspend fun cast(series: Boolean, tmdbId: String?, title: String, year: Int?): List<TmdbPerson> = castAndRating(series, tmdbId, title, year).people
-
-    /** [cast], with the title's rating on TMDb from the same answer ([TmdbItem.rating]): no call more. */
-    suspend fun castAndRating(series: Boolean, tmdbId: String?, title: String, year: Int?): TmdbCast {
+    suspend fun titleInfo(series: Boolean, tmdbId: String?, title: String, year: Int?): TmdbTitleInfo? {
         val kind = if (series) "tv" else "movie"
-        tmdbId?.trim()?.toIntOrNull()?.let { id ->
-            runCatching { castOf(kind, id) }.getOrNull()?.takeIf { it.people.isNotEmpty() }?.let { return it }
+        tmdbId?.trim()?.toIntOrNull()?.takeIf { it > 0 }?.let { id ->
+            try {
+                return infoOf(kind, id)
+            } catch (e: HttpException.BadStatus) {
+                // An id TMDb does not know (a provider's mistake): searched by title instead.
+                if (e.code != 404) throw e
+            } catch (e: SerializationException) {
+                // Not a title's page: searched by title instead.
+            }
         }
-        val match = sameTitle(kind, title, year).firstOrNull() ?: return TmdbCast(emptyList(), null)
-        return castOf(kind, match.id).let { it.copy(rating = it.rating ?: match.rating) }
+        val match = sameTitle(kind, title, year).firstOrNull() ?: return null
+        return infoOf(kind, match.id).let { it.copy(backdropUrl = it.backdropUrl ?: match.backdropUrl, rating = it.rating ?: match.rating) }
     }
 
-    /** A title's details with its credits, in one call. */
-    private suspend fun castOf(kind: String, id: Int): TmdbCast {
-        val details = get("$kind/$id", listOf("append_to_response" to "credits")) as? JsonObject ?: throw SerializationException("Not a TMDb answer")
-        val credits = details["credits"] as? JsonObject ?: throw SerializationException("Not a TMDb answer")
-        fun part(name: String) = (credits[name] as? JsonArray).orEmpty()
-        val directors = part("crew").filter { ((it as? JsonObject)?.get("job") as? JsonPrimitive)?.content == "Director" }
-        val people = (directors + part("cast")).mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }
-        return TmdbCast(people, TmdbItem.from(details)?.rating)
-    }
-
-    /**
-     * The YouTube key of the trailer TMDb lists for a movie or a series whose provider gave none: by the TMDb id the
-     * provider gave, else the first search result with the same title (and a year one apart at most, when known). In the
-     * viewer's language first, then English; trailers before teasers, official ones first. Null rather than another
-     * title's trailer.
-     */
-    suspend fun trailer(series: Boolean, tmdbId: String?, title: String, year: Int?): String? {
-        val kind = if (series) "tv" else "movie"
-        tmdbId?.trim()?.toIntOrNull()?.let { id ->
-            runCatching { trailerOf(kind, id) }.getOrNull()?.let { return it }
-        }
-        val id = sameTitle(kind, title, year).firstOrNull()?.id ?: return null
-        return trailerOf(kind, id)
-    }
-
-    private suspend fun trailerOf(kind: String, id: Int): String? {
+    private suspend fun infoOf(kind: String, id: Int): TmdbTitleInfo {
         val viewer = language.substringBefore('-').lowercase()
-        val answer = get("$kind/$id/videos", listOf("include_video_language" to "$viewer,en,null")) as? JsonObject
+        // Videos in the viewer's language, in English, and without a language.
+        val languages = listOf(viewer, "en", "null").distinct().joinToString(",")
+        val details = get("$kind/$id", listOf("append_to_response" to "credits,videos", "include_video_language" to languages)) as? JsonObject
             ?: throw SerializationException("Not a TMDb answer")
-        val videos = (answer["results"] as? JsonArray).orEmpty().mapNotNull { TmdbVideo.from(it) }
-        return TmdbVideo.best(videos, viewer)?.key
+        val item = TmdbItem.from(details) ?: throw SerializationException("TMDb title without id")
+        val credits = details["credits"] as? JsonObject
+        fun part(name: String) = (credits?.get(name) as? JsonArray).orEmpty()
+        val directors = part("crew").filter { ((it as? JsonObject)?.get("job") as? JsonPrimitive)?.content == "Director" }
+            .mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }.distinctBy { it.id }
+        val cast = part("cast").mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }.distinctBy { it.id }.take(TmdbTitleInfo.CAST_LIMIT)
+        val videos = ((details["videos"] as? JsonObject)?.get("results") as? JsonArray).orEmpty().mapNotNull { TmdbVideo.from(it) }
+        return TmdbTitleInfo(item.id, item.backdropUrl, TmdbVideo.best(videos, viewer)?.key, item.rating, directors, cast)
     }
 
     /** The people TMDb finds for a search (actors, directors…), the most popular first. */
@@ -240,8 +210,21 @@ class TmdbClient(
     }
 }
 
-/** A title's cast and directors on TMDb ([TmdbClient.cast]), and its rating there when anyone voted. */
-data class TmdbCast(val people: List<TmdbPerson>, val rating: TmdbRating?)
+/** What TMDb says about a title ([TmdbClient.titleInfo]). */
+data class TmdbTitleInfo(
+    val tmdbId: Int,
+    val backdropUrl: String?,
+    /** The YouTube key of its trailer. */
+    val trailerKey: String?,
+    val rating: TmdbRating?,
+    val directors: List<TmdbPerson>,
+    /** The first billed, [CAST_LIMIT] at most. */
+    val cast: List<TmdbPerson>,
+) {
+    companion object {
+        const val CAST_LIMIT = 20
+    }
+}
 
 /** A person on TMDb (actor, director…). */
 data class TmdbPerson(

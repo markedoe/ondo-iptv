@@ -632,11 +632,13 @@ private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostCo
     val online by produceKept<Pair<Boolean, List<TrendingMatch>?>>("tmdb", false to null, name, token, again = false) {
         true to (if (token == null) null else viewModel.tmdbWorks(name))
     }
+    // The titles kept on the device that credit the person (their pages opened before), token or not.
+    val kept by produceKept<List<TrendingMatch>>("kept", emptyList(), name, state.content) { viewModel.localWorks(name) }
     // Off the main thread: it looks through the whole catalogue.
     // Searching from the first frame: the page shows it is looking, never "nothing found" before it has looked.
-    val works by produceKept("works", PersonUiState(name, searching = true), state, name, online) {
+    val works by produceKept("works", PersonUiState(name, searching = true), state, name, online, kept) {
         val (asked, matches) = online
-        withContext(Dispatchers.Default) { UiMappers.person(state, name, matches).copy(searching = token != null && !asked) }
+        withContext(Dispatchers.Default) { UiMappers.person(state, name, matches, kept).copy(searching = token != null && !asked) }
     }
     PersonScreen(works, onOpen = navController::open, onBack = { navController.popBackStack() })
 }

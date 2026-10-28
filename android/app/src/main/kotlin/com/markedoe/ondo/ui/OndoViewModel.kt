@@ -3,7 +3,6 @@ package com.markedoe.ondo.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.BuildConfig
-import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
@@ -202,9 +201,7 @@ class OndoViewModel(
         viewModelScope.launch {
             val movie = withContext(computation) { UiMappers.movie(state.value, id) } ?: return@launch
             repository.details(movie)
-            wantBackdrop(ShowcaseItem.MovieItem(movie))
-            wantFaces(ShowcaseItem.MovieItem(movie))
-            wantTrailer(ShowcaseItem.MovieItem(movie))
+            wantTmdb(ShowcaseItem.MovieItem(movie))
         }
     }
 
@@ -214,53 +211,25 @@ class OndoViewModel(
             runCatching { repository.details(series) }
                 .onSuccess { _seriesErrors.value -= id }
                 .onFailure { error -> _seriesErrors.value += (id to LoadError.of(error)) }
-            wantBackdrop(ShowcaseItem.SeriesItem(series))
-            wantFaces(ShowcaseItem.SeriesItem(series))
-            wantTrailer(ShowcaseItem.SeriesItem(series))
+            wantTmdb(ShowcaseItem.SeriesItem(series))
         }
     }
 
     /**
-     * With the viewer's TMDb token, looks once a session for TMDb's backdrop of a title that has none that loads: by
-     * the TMDb id its provider gave, else by its title and year.
+     * What TMDb says about a title whose page opens (backdrop, trailer, rating, cast photos): kept on the device, else
+     * asked with the viewer's token, by the TMDb id its provider gave, else by its title and year. [ahead]: a title
+     * about to be seen (Home's carousel), asked at a pace behind the pages opened.
      */
-    fun wantBackdrop(item: ShowcaseItem) {
+    fun wantTmdb(item: ShowcaseItem, ahead: Boolean = false) {
         val state = state.value
-        if (state.settings.tmdbToken == null || UiMappers.backdrop(state, item) != null) return
         val details = details(state, item)
         val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
         val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
-        repository.findTmdbBackdrop(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
+        repository.findTmdbMetadata(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year, ahead)
     }
 
-    /**
-     * With the viewer's TMDb token, looks once a session for the photos of a title's cast and directors (when the
-     * provider names any): by the TMDb id its provider gave, else by its title and year.
-     */
-    fun wantFaces(item: ShowcaseItem) {
-        val state = state.value
-        if (state.settings.tmdbToken == null) return
-        val details = details(state, item)
-        val series = (item as? ShowcaseItem.SeriesItem)?.series
-        if (People.names(details?.director ?: series?.director).isEmpty() && People.names(details?.cast ?: series?.cast).isEmpty()) return
-        val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
-        val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
-        repository.findTmdbFaces(item.key, series != null, details?.tmdbId, title, year)
-    }
-
-    /**
-     * With the viewer's TMDb token, looks once a session for TMDb's trailer of a title whose provider gave none: by the
-     * TMDb id its provider gave, else by its title and year.
-     */
-    fun wantTrailer(item: ShowcaseItem) {
-        val state = state.value
-        if (state.settings.tmdbToken == null) return
-        val details = details(state, item)
-        if (UiMappers.youTubeId(details?.trailerYouTubeId) != null) return
-        val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
-        val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
-        repository.findTmdbTrailer(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
-    }
+    /** A title Home shows: what TMDb says about it is read or asked ahead (its backdrop when the provider's fails). */
+    fun wantBackdrop(item: ShowcaseItem) = wantTmdb(item, ahead = true)
 
     private fun details(state: OndoState, item: ShowcaseItem): MediaDetails? = when (item) {
         is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
@@ -269,6 +238,9 @@ class OndoViewModel(
 
     /** With the viewer's TMDb token, the person's titles on TMDb that the playlist has; null without one, or if TMDb fails. */
     suspend fun tmdbWorks(name: String): List<TrendingMatch>? = repository.tmdbWorks(name)
+
+    /** The playlist's titles that the titles kept on the device credit the person with, token or not. */
+    suspend fun localWorks(name: String): List<TrendingMatch> = repository.localWorks(name)
 
     /** The backdrop at [url] did not load: the title shows TMDb's instead when the viewer has a token. */
     fun backdropFailed(item: ShowcaseItem, url: String) {

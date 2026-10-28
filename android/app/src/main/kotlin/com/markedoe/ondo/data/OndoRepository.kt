@@ -5,6 +5,13 @@ import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.CatalogueMatcher
+import com.markedoe.ondo.core.library.CreditRecord
+import com.markedoe.ondo.core.library.InMemoryMetadataStore
+import com.markedoe.ondo.core.library.MetadataFreshness
+import com.markedoe.ondo.core.library.MetadataKey
+import com.markedoe.ondo.core.library.MetadataStore
+import com.markedoe.ondo.core.library.MetadataTitles
+import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.library.PlaybackFactory
@@ -51,6 +58,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 
 /** Everything the screens show, in one immutable value. */
@@ -133,6 +142,8 @@ class OndoRepository(
     placeholderNames: PlaceholderNames = PlaceholderNames.ENGLISH,
     /** Where playlists are parsed (tests that run each step themselves give a thread of their own). */
     private val parsing: CoroutineDispatcher = Dispatchers.Default,
+    /** What TMDb said about titles, kept between launches (a SQLite file in the app). */
+    private val metadata: MetadataStore = InMemoryMetadataStore(),
 ) {
     private val _state = MutableStateFlow(OndoState(placeholderNames = placeholderNames))
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -234,6 +245,7 @@ class OndoRepository(
                 if (awards != null) _state.update { it.copy(awards = awards) }
             }
             awardsDownload?.let { updateAwards(it) }
+            loadDeadImages()
         }
     }
 
@@ -938,9 +950,15 @@ class OndoRepository(
 
     /** When the trending titles were last asked for, and for which playlist. */
     private var trendingLoadedFor: Pair<String, Long>? = null
-    private val backdropsSearched = HashSet<String>()
-    private val facesSearched = HashSet<String>()
-    private val trailersSearched = HashSet<String>()
+
+    /** Titles (`m-<id>`, `s-<id>`) looked for this session: the store read, TMDb asked when needed. Main thread. */
+    private val metadataAsked = HashSet<String>()
+
+    /** Requests ahead of the viewer at the same time; they also keep a pace (TMDb's limits are far above). */
+    private val tmdbSlots = Semaphore(MAX_PREFETCHING)
+
+    /** The catalogue's titles by their words, for the people the store knows ([MetadataTitles]). */
+    @Volatile private var metadataTitles: Pair<PlaylistContent, MetadataTitles>? = null
 
     private fun tmdbClient(): TmdbClient? =
         _state.value.settings.tmdbToken?.takeUnless { _state.value.tmdbRefused }?.let { TmdbClient(it, http, Locale.getDefault().toLanguageTag()) }
@@ -972,9 +990,7 @@ class OndoRepository(
 
     private fun tmdbTokenChanged() {
         trendingLoadedFor = null
-        backdropsSearched.clear()
-        facesSearched.clear()
-        trailersSearched.clear()
+        metadataAsked.clear()
         _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbTrailers = emptyMap(), tmdbRatings = emptyMap()) }
         loadTrending()
     }
@@ -1017,59 +1033,124 @@ class OndoRepository(
     }
 
     /**
-     * With the viewer's token, looks once a session for TMDb's backdrop of a title whose provider gave none that
-     * loads: by the TMDb id the provider gave, else by title and year. Only those are sent.
+     * What TMDb says about a title (backdrop, trailer, rating, cast and directors with their photos), once a session:
+     * what the store kept is shown at once, token or not; with the viewer's token, TMDb is asked when the store has
+     * nothing or something old, by the TMDb id the provider gave, else by title (only those are sent). The answer, a
+     * "not found" included, is kept. [ahead]: a title about to be seen (Home), fetched at a pace, two at a time.
      */
-    fun findTmdbBackdrop(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
-        if (_state.value.settings.tmdbToken == null || key in _state.value.tmdbBackdrops || !backdropsSearched.add(key)) return
+    fun findTmdbMetadata(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?, ahead: Boolean = false) {
+        val keys = MetadataKey.all(series, tmdbId, title, year)
+        if (keys.isEmpty() || !metadataAsked.add(key)) return
+        // The token as the page opens: one saved meanwhile asks again (the titles asked are forgotten then).
+        val client = tmdbClient()
         scope.launch {
-            val found = tmdb { withBackdrop(series, tmdbId, title, year) } ?: return@launch
-            val url = found.backdropUrl ?: return@launch
-            _state.update { it.copy(tmdbBackdrops = it.tmdbBackdrops + (key to url), tmdbRatings = it.tmdbRatings.with(key, found.rating)) }
+            val stored = withContext(io) { storedMetadata(keys) }
+            if (stored != null) showMetadata(key, stored.first, stored.second)
+            if (stored != null && MetadataFreshness.isFresh(stored.first, now())) return@launch
+            if (client == null) return@launch
+            val info = try {
+                if (ahead) {
+                    tmdbSlots.withPermit {
+                        withContext(io) { client.titleInfo(series, tmdbId, title, year) }.also { delay(PACE_MS) }
+                    }
+                } else {
+                    withContext(io) { client.titleInfo(series, tmdbId, title, year) }
+                }
+            } catch (e: CancellationException) {
+                metadataAsked.remove(key)
+                throw e
+            } catch (e: Exception) {
+                // Out of reach: asked again the next time the title shows. TMDb refused or failed: not this session.
+                if (e is java.io.IOException && e !is HttpException) metadataAsked.remove(key)
+                noteTmdbFailure(e)
+                return@launch
+            }
+            // Also under the id TMDb gave: found at once when the provider's details name it later.
+            val saved = (keys + listOfNotNull(info?.let { MetadataKey.tmdb(series, it.tmdbId) })).distinct()
+            val at = now()
+            val rows = saved.map { TitleMetadata.of(it, series, info, at) }
+            val credits = info?.let(CreditRecord::of).orEmpty()
+            withContext(io) {
+                metadata.save(rows)
+                if (info != null) metadata.saveCredits(credits, saved)
+            }
+            showMetadata(key, rows.first(), credits)
         }
     }
 
-    /**
-     * With the viewer's token, looks once a session for the photos TMDb has of a title's cast and directors: by the
-     * TMDb id the provider gave, else by title and year. Only those are sent.
-     */
-    fun findTmdbFaces(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
-        if (_state.value.settings.tmdbToken == null || key in _state.value.tmdbFaces || !facesSearched.add(key)) return
-        scope.launch {
-            val found = tmdb { castAndRating(series, tmdbId, title, year) } ?: return@launch
-            val faces = found.people.mapNotNull { person -> person.profileUrl?.let { TextNormalizer.normalize(person.name) to it } }
-                .filter { it.first.isNotEmpty() }
-                .distinctBy { it.first }
-                .toMap()
-            _state.update { it.copy(tmdbFaces = it.tmdbFaces + (key to faces), tmdbRatings = it.tmdbRatings.with(key, found.rating)) }
-        }
+    /** The first of [keys] the store has, with its credits. */
+    private fun storedMetadata(keys: List<String>): Pair<TitleMetadata, List<CreditRecord>>? {
+        val titles = metadata.titles(keys)
+        val title = keys.firstNotNullOfOrNull { titles[it] } ?: return null
+        return title to if (title.found) metadata.credits(title.key) else emptyList()
     }
 
-    /**
-     * With the viewer's token, looks once a session for TMDb's trailer of a title whose provider gave none: by the TMDb
-     * id the provider gave, else by title and year. Only those are sent.
-     */
-    fun findTmdbTrailer(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
-        if (_state.value.settings.tmdbToken == null || key in _state.value.tmdbTrailers || !trailersSearched.add(key)) return
-        scope.launch {
-            val found = tmdb { trailer(series, tmdbId, title, year) } ?: return@launch
-            _state.update { it.copy(tmdbTrailers = it.tmdbTrailers + (key to found)) }
+    private fun showMetadata(key: String, title: TitleMetadata, credits: List<CreditRecord>) {
+        val faces = credits.mapNotNull { credit -> credit.photoUrl?.let { credit.personKey to it } }.distinctBy { it.first }.toMap()
+        _state.update { state ->
+            state.copy(
+                tmdbBackdrops = title.backdropUrl?.let { state.tmdbBackdrops + (key to it) } ?: state.tmdbBackdrops,
+                tmdbTrailers = title.trailerKey?.let { state.tmdbTrailers + (key to it) } ?: state.tmdbTrailers,
+                tmdbRatings = state.tmdbRatings.with(key, title.rating),
+                tmdbFaces = if (faces.isEmpty()) state.tmdbFaces else state.tmdbFaces + (key to faces),
+            )
         }
     }
 
     private fun Map<String, TmdbRating>.with(key: String, rating: TmdbRating?): Map<String, TmdbRating> =
         if (rating == null) this else this + (key to rating)
 
-    /** A backdrop that did not load: not asked for again this session, and the title gets TMDb's instead when it can. */
+    /** A backdrop that did not load: not asked for again for some days, and the title gets TMDb's instead when it can. */
     fun backdropFailed(url: String) {
-        if (url !in _state.value.deadBackdrops) _state.update { it.copy(deadBackdrops = it.deadBackdrops + url) }
+        if (url in _state.value.deadBackdrops) return
+        _state.update { it.copy(deadBackdrops = it.deadBackdrops + url) }
+        val at = now()
+        scope.launch(io) { metadata.markDeadImage(url, at) }
     }
 
-    /** With the viewer's token, the names of the people TMDb finds for a search (only the words typed are sent). */
+    /** The image addresses that led nowhere in the last days: their titles show TMDb's picture or the poster at once. */
+    private suspend fun loadDeadImages() {
+        val dead = withContext(io) { metadata.deadImages(now() - MetadataFreshness.DEAD_IMAGE_MS) }
+        if (dead.isNotEmpty()) _state.update { it.copy(deadBackdrops = it.deadBackdrops + dead) }
+    }
+
+    /**
+     * The people whose name matches a search: those the titles kept on the device credit (token or not), then, with
+     * the viewer's token, those TMDb finds (only the words typed are sent).
+     */
     suspend fun tmdbPeople(query: String): List<String> {
         val trimmed = query.trim()
         if (trimmed.length < 3) return emptyList()
-        return tmdb { people(trimmed) }?.map { it.name }?.filter { it.isNotBlank() }?.distinct()?.take(8).orEmpty()
+        val local = localPeople(trimmed)
+        val online = tmdb { people(trimmed) }?.map { it.name }?.filter { it.isNotBlank() }?.take(8).orEmpty()
+        val seen = HashSet<String>()
+        return (local + online).filter { seen.add(MetadataKey.person(it)) }
+    }
+
+    /** The people the store knows by these words who have titles in this catalogue. */
+    private suspend fun localPeople(query: String): List<String> {
+        val people = withContext(io) { metadata.people(query, LOCAL_PEOPLE_LIMIT) }
+        if (people.isEmpty()) return emptyList()
+        val titles = metadataTitles() ?: return emptyList()
+        return withContext(io) {
+            people.filter { person -> titles.match(metadata.titleKeys(MetadataKey.person(person.name))).isNotEmpty() }.map { it.name }
+        }
+    }
+
+    /** The titles of this catalogue that the store credits the person with (their pages opened here or elsewhere). */
+    suspend fun localWorks(name: String): List<TrendingMatch> {
+        val key = MetadataKey.person(name)
+        if (key.isEmpty()) return emptyList()
+        val keys = withContext(io) { metadata.titleKeys(key) }
+        if (keys.isEmpty()) return emptyList()
+        return metadataTitles()?.match(keys).orEmpty()
+    }
+
+    private suspend fun metadataTitles(): MetadataTitles? {
+        val content = _state.value.content
+        if (content.movies.isEmpty() && content.series.isEmpty()) return null
+        metadataTitles?.let { (known, titles) -> if (known === content) return titles }
+        return withContext(Dispatchers.Default) { MetadataTitles(content.movies, content.series) }.also { metadataTitles = content to it }
     }
 
     /** With the viewer's token, the person's movies and series on TMDb that the playlist has; null without a token. */
@@ -1089,6 +1170,11 @@ class OndoRepository(
         /** TMDb's trending titles are asked for again after this (as on Apple devices). */
         const val TRENDING_FRESH_MS = 6 * 60 * 60 * 1000L
         private const val DETAILS_SAVE_DELAY_MS = 2_000L
+
+        /** Titles asked of TMDb ahead of the viewer at the same time, and the pause after each (as on Apple devices). */
+        private const val MAX_PREFETCHING = 2
+        private const val PACE_MS = 250L
+        private const val LOCAL_PEOPLE_LIMIT = 8
 
         fun hostName(url: String): String = runCatching { java.net.URI(url.trim()).host }.getOrNull()?.removePrefix("www.") ?: "Playlist"
     }

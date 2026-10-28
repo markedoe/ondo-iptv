@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import app.cash.turbine.test
+import com.markedoe.ondo.core.library.InMemoryMetadataStore
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
@@ -144,8 +145,8 @@ class OndoViewModelTest {
                     searches += url
                     """{"results":[{"id":9,"title":"Long Road","release_date":"2025-03-01","backdrop_path":"/road.jpg"}]}"""
                 }
-                url.startsWith("https://api.themoviedb.org/3/movie/9/videos?") ->
-                    """{"id":9,"results":[{"key":"roadTrailer","site":"YouTube","type":"Trailer","official":true,"iso_639_1":"en"}]}"""
+                url.startsWith("https://api.themoviedb.org/3/movie/9?append_to_response=credits,videos&") ->
+                    """{"id":9,"title":"Long Road","videos":{"results":[{"key":"roadTrailer","site":"YouTube","type":"Trailer","official":true,"iso_639_1":"en"}]}}"""
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
         }
@@ -171,20 +172,20 @@ class OndoViewModelTest {
         assertEquals(tmdb, UiMappers.movieDetail(viewModel.state.value, movie).backdropUrl)
         // The provider gave no trailer: TMDb's.
         assertEquals("roadTrailer", UiMappers.movieDetail(viewModel.state.value, movie).trailer)
-        // By title: once for the backdrop, once for the trailer.
-        assertEquals(2, searches.size)
+        // By title, once for all of it.
+        assertEquals(1, searches.size)
         assertTrue("by title (${searches.first()})", searches.all { Regex("query=long(%20|\\+)road", RegexOption.IGNORE_CASE).containsMatchIn(it) })
         // Once a session.
         viewModel.loadMovie(movie.id)
         settle()
-        assertEquals(2, searches.size)
+        assertEquals(1, searches.size)
 
         // TMDb's picture failing too leaves the blurred poster, and it is not asked for again.
         viewModel.backdropFailed(item, tmdb)
         settle()
         assertTrue(tmdb in viewModel.state.value.deadBackdrops)
         assertNull(UiMappers.movieDetail(viewModel.state.value, movie).backdropUrl)
-        assertEquals(2, searches.size)
+        assertEquals(1, searches.size)
     }
 
     /**
@@ -199,7 +200,7 @@ class OndoViewModelTest {
             override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
                 "get_series_info" in url -> """{"info":{"name":"Harbor","cast":"José Silva, Ana Lima","tmdb_id":"77"},"episodes":{"1":[{"id":"101","episode_num":1,"title":"Pilot","container_extension":"mp4"}]}}"""
                 url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
-                url.startsWith("https://api.themoviedb.org/3/tv/77?append_to_response=credits&") -> {
+                url.startsWith("https://api.themoviedb.org/3/tv/77?append_to_response=credits,videos&") -> {
                     credits += url
                     """{"id":77,"vote_average":8.1,"vote_count":4321,"credits":{"cast":[{"id":1,"name":"Jose Silva","profile_path":"/jose.jpg"},""" +
                         """{"id":2,"name":"Ana Lima","profile_path":null},{"id":3,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}"""
@@ -237,6 +238,61 @@ class OndoViewModelTest {
         settle()
         assertTrue(faces().isEmpty())
         assertNull(UiMappers.seriesDetail(viewModel.state.value, series, null, null).votes)
+    }
+
+    /**
+     * What TMDb said is kept on the device: at the next launch, the page shows the backdrop, the trailer, the rating and
+     * the cast's photos without asking TMDb again, and the people of its credits are found by search and lead to it.
+     */
+    @Test
+    fun theNextLaunchShowsWhatTmdbSaidWithoutAskingAgain() = runTest {
+        val tmdbRequests = mutableListOf<String>()
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
+                url == list -> catalogue
+                url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
+                url.startsWith("https://api.themoviedb.org/3/search/person?") -> """{"results":[]}"""
+                url.startsWith("https://api.themoviedb.org/3/search/movie?") -> {
+                    tmdbRequests += url
+                    """{"results":[{"id":9,"title":"Long Road","release_date":"2025-03-01","backdrop_path":"/road.jpg"}]}"""
+                }
+                url.startsWith("https://api.themoviedb.org/3/movie/9?append_to_response=credits,videos&") -> {
+                    tmdbRequests += url
+                    """{"id":9,"title":"Long Road","vote_average":7.4,"vote_count":321,""" +
+                        """"credits":{"cast":[{"id":3,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[{"id":4,"name":"Kim Park","job":"Director"}]},""" +
+                        """"videos":{"results":[{"key":"roadTrailer","site":"YouTube","type":"Trailer","iso_639_1":"en"}]}}"""
+                }
+                else -> throw HttpException.BadStatus(404)
+            }.encodeToByteArray()
+        }
+        val kept = InMemoryMetadataStore()
+        val first = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), metadata = kept)
+        val firstModel = track(OndoViewModel(first, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        first.addPlaylist("Home", list)
+        val movie = firstModel.state.first { it.content.movies.isNotEmpty() }.content.movies.single()
+        assertEquals(TmdbCheck.ACCEPTED, first.checkAndSaveTmdbToken("GOOD"))
+        firstModel.loadMovie(movie.id)
+        settleUntil { UiMappers.movieDetail(firstModel.state.value, movie).trailer != null }
+        assertEquals(2, tmdbRequests.size)
+
+        // The next launch: the same files, the same store.
+        firstModel.viewModelScope.cancel()
+        val next = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), metadata = kept)
+        val nextModel = track(OndoViewModel(next, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        next.bootstrap()
+        nextModel.state.first { it.content.movies.isNotEmpty() && it.settings.tmdbToken != null }
+        nextModel.loadMovie(movie.id)
+        settleUntil { UiMappers.movieDetail(nextModel.state.value, movie).trailer != null }
+        val detail = UiMappers.movieDetail(nextModel.state.value, movie)
+        assertEquals("https://image.tmdb.org/t/p/w1280/road.jpg", detail.backdropUrl)
+        assertEquals("roadTrailer", detail.trailer)
+        assertEquals(TmdbRating(7.4, 321), detail.votes)
+        assertEquals(mapOf("ruth ames" to "https://image.tmdb.org/t/p/w185/ruth.jpg"), nextModel.state.value.tmdbFaces[ShowcaseItem.MovieItem(movie).key])
+        assertEquals("TMDb was not asked again", 2, tmdbRequests.size)
+
+        // Its credits name people the playlist's lists do not: search finds them, and their page lists the movie.
+        assertEquals(listOf("Ruth Ames"), next.tmdbPeople("ruth"))
+        assertEquals(listOf("m-" + movie.id), next.localWorks("Kim Park").map { it.id })
     }
 
     /** Search with the viewer's TMDb token: the people TMDb knows by the words typed join the playlist's own. */

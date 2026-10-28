@@ -178,8 +178,12 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **TMDb**, avec votre propre jeton (Réglages → TMDb, vérifié auprès de TMDb à l'enregistrement, transmis par la
   synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel, l'image de fond de TMDb quand celle du
   fournisseur manque ou ne se charge pas, la bande-annonce de TMDb (d'abord dans la langue de l'app) quand le
-  fournisseur n'en donne pas, les photos du casting sur la fiche d'un titre, les personnes que TMDb
-  connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un réalisateur.
+  fournisseur n'en donne pas, le nombre de votes à côté de la note, les photos du casting sur la fiche d'un titre,
+  les personnes que TMDb connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un
+  réalisateur. Les réponses de TMDb sont gardées sur l'appareil (30 jours, 7 pour un titre que TMDb ne connaît pas) :
+  les fiches les affichent tout de suite, même hors ligne, et les personnes de ces titres se trouvent dans la
+  recherche et sur leur page sans réseau. Une image du fournisseur qui ne mène nulle part n'est pas réessayée
+  pendant 7 jours.
 - **Réglages** : playlists, catégories adultes masquées par défaut, langues et catégories, langue de
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur, jeton TMDb ; écran d'accueil avec démo.
 - **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande
