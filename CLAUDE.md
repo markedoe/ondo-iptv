@@ -58,3 +58,8 @@ screenshots.
   The guard also checks the `git config user.email` address (`noreply` addresses only). It does not read the
   content of binary files: before adding an image, check that it holds no personal metadata (GPS position,
   device name).
+- **Agents and requests sized to the task**: before spawning an agent, decide whether it needs the strongest model
+  or whether a smaller one does the job. Searches, file sweeps, log reading, status checks and mechanical edits go
+  to a Sonnet (or Haiku) agent; design, debugging, review of a change and anything where a wrong answer costs a
+  release keep the strongest model. Do a single lookup directly rather than through an agent, send independent
+  requests together, and read only the part of a file or log that is needed.
