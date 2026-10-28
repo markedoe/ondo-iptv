@@ -43,8 +43,10 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 
 ### iPhone, iPad and Mac
 
-- **Home**: carousel of featured movies and series, movies and series in progress (one row each), My List,
-  new releases, trending; live TV last; when the playlist was last updated, above its name.
+- **Home**: featured movies and series in a large rounded frame (title, facts and buttons inside it), movies and
+  series in progress (one row each), My List, new releases, trending; live TV last; when the playlist was last
+  updated, above its name. Black pages, white for what is chosen; cards rise under the pointer, the keyboard focus
+  or a finger.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
   watched movies hidden if you like (Search and My List keep them),
   detail pages (plot, cast, trailer), seasons / episodes,

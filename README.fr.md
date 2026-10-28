@@ -43,8 +43,10 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 
 ### iPhone, iPad et Mac
 
-- **Accueil** : carrousel de films et séries à la une, films et séries en cours (une rangée chacun), Ma liste,
-  nouveautés, tendances ; le direct en dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom.
+- **Accueil** : films et séries à la une dans un grand cadre arrondi (titre, informations et boutons à
+  l'intérieur), films et séries en cours (une rangée chacun), Ma liste, nouveautés, tendances ; le direct en
+  dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom. Des pages noires, du blanc pour
+  ce qui est choisi ; les cartes se soulèvent sous le pointeur, le focus du clavier ou le doigt.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
   ou note, films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
