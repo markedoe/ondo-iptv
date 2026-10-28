@@ -29,6 +29,7 @@
     <string name="trailer">المقطع الدعائي</string>
     <string name="episodes">الحلقات</string>
     <string name="watched">تمت المشاهدة</string>
+    <string name="now_playing">قيد التشغيل الآن</string>
     <string name="director">الإخراج</string>
     <string name="cast">الممثلون</string>
     <string name="more">المزيد</string>

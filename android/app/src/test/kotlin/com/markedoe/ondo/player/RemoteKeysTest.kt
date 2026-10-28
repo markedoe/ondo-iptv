@@ -35,6 +35,16 @@ class RemoteKeysTest {
     }
 
     @Test
+    fun downOpensAnEpisodesEpisodesAndStillChangesChannelOnLiveTv() {
+        fun down(live: Boolean, shown: Boolean = false) = RemoteKeys.action(KeyEvent.KEYCODE_DPAD_DOWN, controlsShown = shown, zapping = live, seekable = true, episodes = true)
+        assertEquals(RemoteAction.ShowEpisodes, down(live = false))
+        assertEquals(RemoteAction.PreviousChannel, down(live = true))
+        // With the controls shown, the arrows move through them.
+        assertNull(down(live = false, shown = true))
+        assertEquals(RemoteAction.ShowControls, RemoteKeys.action(KeyEvent.KEYCODE_DPAD_UP, controlsShown = false, zapping = false, seekable = true, episodes = true))
+    }
+
+    @Test
     fun channelKeysFiguresAndLastChannelWorkWithTheControlsShownToo() {
         assertEquals(RemoteAction.NextChannel, shown(KeyEvent.KEYCODE_CHANNEL_UP, live = true))
         assertEquals(RemoteAction.PreviousChannel, shown(KeyEvent.KEYCODE_CHANNEL_DOWN, live = true))

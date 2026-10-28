@@ -29,6 +29,7 @@
     <string name="trailer">Bande-annonce</string>
     <string name="episodes">Épisodes</string>
     <string name="watched">Vu</string>
+    <string name="now_playing">En cours de lecture</string>
     <string name="director">Réalisation</string>
     <string name="cast">Casting</string>
     <string name="more">Plus</string>

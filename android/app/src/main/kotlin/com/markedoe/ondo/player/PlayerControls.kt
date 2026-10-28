@@ -51,6 +51,10 @@ class PlayerControls(
     var cameBackFrom by mutableStateOf<PlayerPanel?>(null)
         private set
 
+    /** The Episodes row of a series is open under the buttons (a TV). */
+    var episodesShown by mutableStateOf(false)
+        private set
+
     /** The title and the progress, for a moment, without the buttons. */
     var peeking by mutableStateOf(false)
         private set
@@ -124,6 +128,8 @@ class PlayerControls(
             this.panel = panel
             cameBackFrom = null
         }
+        // A panel (the remote's subtitles key) takes the place of the Episodes row.
+        if (panel != null) episodesShown = false
         if (!shown) {
             shown = true
             shows++
@@ -135,6 +141,7 @@ class PlayerControls(
     fun hide() {
         cancelScrub()
         panel = null
+        episodesShown = false
         hideJob?.cancel()
         endPeek()
         if (shown) {
@@ -149,11 +156,31 @@ class PlayerControls(
         if (!shown) return
         hideJob = scope.launch {
             delay(TIMEOUT_MS)
-            if (panel == null && scrubMs == null && playing()) hide()
+            if (panel == null && !episodesShown && scrubMs == null && playing()) hide()
         }
     }
 
     fun open(panel: PlayerPanel) = show(panel)
+
+    /** The controls with the Episodes row open (Down on a series): the remote goes to the episode playing. */
+    fun showEpisodes() {
+        endPeek()
+        panel = null
+        episodesShown = true
+        if (!shown) {
+            shown = true
+            shows++
+            onShownChange(true)
+        }
+        touch()
+    }
+
+    /** The Episodes row closes (the remote left it, Back): the remote goes back to the Episodes button. */
+    fun hideEpisodes() {
+        if (!episodesShown) return
+        episodesShown = false
+        touch()
+    }
 
     /** Closes the panels (a choice was made): the remote goes back to the button of the row. */
     fun closePanel() {
@@ -162,8 +189,8 @@ class PlayerControls(
     }
 
     /**
-     * Back: returns from a panel of More to More, closes another panel, else drops the bar's move, else hides the
-     * controls; false when nothing was shown.
+     * Back: returns from a panel of More to More, closes another panel, else closes the Episodes row, else drops the
+     * bar's move, else hides the controls; false when nothing was shown.
      */
     fun back(): Boolean {
         val parent = panel?.parent
@@ -174,6 +201,7 @@ class PlayerControls(
                 touch()
             }
             panel != null -> closePanel()
+            episodesShown -> hideEpisodes()
             scrubMs != null -> cancelScrub()
             shown -> hide()
             else -> return false

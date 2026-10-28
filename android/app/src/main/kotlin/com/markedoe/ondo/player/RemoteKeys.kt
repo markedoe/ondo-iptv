@@ -15,6 +15,10 @@ sealed interface RemoteAction {
     /** Back to the channel watched before (the remote's "last channel" key). */
     data object LastChannel : RemoteAction
     data object ShowControls : RemoteAction
+
+    /** A series: the controls with its Episodes row. */
+    data object ShowEpisodes : RemoteAction
+
     data object HideControls : RemoteAction
 
     /** The remote's own subtitles and audio keys: their panel, with the controls. */
@@ -27,14 +31,15 @@ sealed interface RemoteAction {
 
 /**
  * The player's remote keys (Google's TV app quality: TV-PC, TV-PP). With the controls hidden, OK pauses and resumes,
- * Left and Right go back and forward, Up and Down change channel on a live one; another arrow shows the controls.
+ * Left and Right go back and forward, Up and Down change channel on a live one, Down opens an episode's Episodes row;
+ * another arrow shows the controls.
  * With the controls shown, the arrows and OK move through them (Back hides them: `PlayerActivity`, through the
  * system's back, which the key itself no longer reaches from Android 13). Channel keys, figures and "last channel"
  * work on a live channel at any time, the media keys on everything, and a remote's subtitles and audio keys open their
  * panel. Null: the key does what it does by default.
  */
 object RemoteKeys {
-    fun action(keyCode: Int, controlsShown: Boolean, zapping: Boolean, seekable: Boolean): RemoteAction? {
+    fun action(keyCode: Int, controlsShown: Boolean, zapping: Boolean, seekable: Boolean, episodes: Boolean = false): RemoteAction? {
         digit(keyCode)?.let { return if (zapping) RemoteAction.Digit(it) else null }
         when (keyCode) {
             KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_HEADSETHOOK -> return RemoteAction.TogglePlay
@@ -55,7 +60,11 @@ object RemoteKeys {
             KeyEvent.KEYCODE_DPAD_LEFT -> if (seekable) RemoteAction.SeekBack else RemoteAction.ShowControls
             KeyEvent.KEYCODE_DPAD_RIGHT -> if (seekable) RemoteAction.SeekForward else RemoteAction.ShowControls
             KeyEvent.KEYCODE_DPAD_UP -> if (zapping) RemoteAction.NextChannel else RemoteAction.ShowControls
-            KeyEvent.KEYCODE_DPAD_DOWN -> if (zapping) RemoteAction.PreviousChannel else RemoteAction.ShowControls
+            KeyEvent.KEYCODE_DPAD_DOWN -> when {
+                zapping -> RemoteAction.PreviousChannel
+                episodes -> RemoteAction.ShowEpisodes
+                else -> RemoteAction.ShowControls
+            }
             else -> null
         }
     }

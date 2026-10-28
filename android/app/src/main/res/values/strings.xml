@@ -30,6 +30,7 @@
     <string name="trailer">Trailer</string>
     <string name="episodes">Episodes</string>
     <string name="watched">Watched</string>
+    <string name="now_playing">Now Playing</string>
     <string name="director">Director</string>
     <string name="cast">Cast</string>
     <string name="more">More</string>

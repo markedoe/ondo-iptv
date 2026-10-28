@@ -249,6 +249,9 @@ class PlayerActivity : ComponentActivity() {
     /** The episode after this one (a series), looked up when it starts: null for a movie, a channel or the last one. */
     private var nextEpisode: Pair<Series, Episode>? = null
 
+    /** The episodes of the series playing, for the TV controls' Episodes row; null for a movie or a channel. */
+    private var episodes by mutableStateOf<EpisodeList?>(null)
+
     /** Up next is on screen, near the end of an episode; null otherwise, and once the viewer declined it. */
     private var upNext by mutableStateOf<UpNext?>(null)
     private var upNextDeclined = false
@@ -318,6 +321,7 @@ class PlayerActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this, hideControlsOnBack)
         onBackPressedDispatcher.addCallback(this, declineUpNextOnBack)
         nextEpisode = repository.nextEpisode(request)
+        episodes = episodeList(request)
         val exoPlayer = buildPlayer()
         player = exoPlayer
         // Opened again alone, before the settings were read: the viewer's languages as soon as they are.
@@ -380,6 +384,7 @@ class PlayerActivity : ComponentActivity() {
                                 onRestart = ::restartProgramme,
                                 onWatchLive = ::watchLive,
                                 subtitles = SubtitleSizing(sizeOfSubtitles, repository::setSubtitleSize),
+                                episodes = episodes,
                             )
                         }
                     }
@@ -411,7 +416,8 @@ class PlayerActivity : ComponentActivity() {
                             subtitles = SubtitleSizing(sizeOfSubtitles, repository::setSubtitleSize),
                         )
                     }
-                    upNext?.let { offer ->
+                    // Not over the Episodes row, which offers the next episode too.
+                    upNext?.takeIf { !controls.episodesShown }?.let { offer ->
                         UpNextCard(
                             offer,
                             television = television,
@@ -630,6 +636,42 @@ class PlayerActivity : ComponentActivity() {
         switchTo(next)
     }
 
+    /** The Episodes row of the series [request] plays (a TV): its seasons, the episode playing marked. */
+    private fun episodeList(request: PlayRequest): EpisodeList? {
+        if (!television) return null
+        val playing = repository.playingSeries(request) ?: return null
+        val names = repository.state.value.placeholderNames
+        val seasons = playing.seasons.map { season ->
+            EpisodeSeason(
+                season.number,
+                season.episodes.map { provided ->
+                    // The provider's episodes as they came: one it does not name reads in the app's words.
+                    val episode = names.rename(provided)
+                    val progress = repository.episodeProgress(playing.series, episode.id)
+                    EpisodeChoice(
+                        id = episode.id,
+                        code = episode.code,
+                        number = episode.number,
+                        title = episode.title,
+                        imageUrl = episode.posterUrl,
+                        progress = progress?.progress?.toFloat() ?: 0f,
+                        watched = progress?.isFinished == true,
+                    )
+                },
+            )
+        }
+        return EpisodeList(seasons, playing.episodeId, ::playEpisode).takeIf { seasons.isNotEmpty() }
+    }
+
+    /** An episode chosen in the Episodes row: it plays from where the viewer left it. */
+    private fun playEpisode(id: String) {
+        val playing = repository.playingSeries(request) ?: return
+        if (id == playing.episodeId) return
+        val episode = playing.seasons.flatMap { it.episodes }.firstOrNull { it.id == id } ?: return
+        saveProgress()
+        repository.playRequest(playing.series, episode)?.let(::switchTo)
+    }
+
     private fun declineUpNext() {
         upNextDeclined = true
         upNext = null
@@ -814,6 +856,7 @@ class PlayerActivity : ComponentActivity() {
         frameRateAsked = false
         frameRateWait?.cancel()
         nextEpisode = repository.nextEpisode(next)
+        episodes = episodeList(next)
         upNext = null
         upNextDeclined = false
         declineUpNextOnBack.isEnabled = false
@@ -875,7 +918,7 @@ class PlayerActivity : ComponentActivity() {
         controls.touch()
         // A replay keeps its channel: the channel keys go on from it.
         val zapping = request.channelId != null
-        val action = RemoteKeys.action(event.keyCode, controlsShown, zapping, exoPlayer.isCurrentMediaItemSeekable)
+        val action = RemoteKeys.action(event.keyCode, controlsShown, zapping, exoPlayer.isCurrentMediaItemSeekable, episodes = episodes != null)
             ?: return television && showsControlsFor(event)
         // A stream that failed: OK presses Try Again; the channel keys still lead to another channel.
         val changesChannel = action is RemoteAction.Digit || action == RemoteAction.NextChannel ||
@@ -898,6 +941,10 @@ class PlayerActivity : ComponentActivity() {
             RemoteAction.PreviousChannel -> zap(-1)
             RemoteAction.LastChannel -> backToLastChannel()
             RemoteAction.ShowControls -> showControls()
+            RemoteAction.ShowEpisodes -> {
+                player?.let(controls::refresh)
+                controls.showEpisodes()
+            }
             RemoteAction.HideControls -> hideControls()
             RemoteAction.Subtitles -> showControls(PlayerPanel.SUBTITLES)
             RemoteAction.Audio -> showControls(PlayerPanel.AUDIO)

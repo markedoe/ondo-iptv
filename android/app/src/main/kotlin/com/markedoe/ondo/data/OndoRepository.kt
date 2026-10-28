@@ -801,15 +801,35 @@ class OndoRepository(
      * (its page, once opened) or its playlist's list; null after the last one, or for a movie or a channel.
      */
     fun nextEpisode(request: PlayRequest): Pair<Series, Episode>? {
+        val playing = playingSeries(request) ?: return null
+        val episodes = playing.seasons.flatMap { it.episodes }
+        val index = episodes.indexOfFirst { it.id == playing.episodeId }
+        return episodes.getOrNull(index + 1)?.takeIf { index >= 0 }?.let { playing.series to it }
+    }
+
+    /**
+     * The series [request] plays an episode of, with its seasons in order (its page's, once opened, else its
+     * playlist's list), each episode once: for the player's Up next and its Episodes row. Null for a movie or a channel.
+     */
+    fun playingSeries(request: PlayRequest): PlayingSeries? {
         val parts = request.progressKey?.split('|') ?: return null
         if (parts.size != 4 || parts[1] != ItemKind.SERIES.name || parts[3].isEmpty()) return null
         val state = _state.value
         if (parts[0] != state.activePlaylistId) return null
         val series = state.content.series.firstOrNull { it.id == parts[2] } ?: return null
-        val episodes = state.seriesDetails[series.id]?.seasons?.sortedBy { it.number }?.flatMap { season -> season.episodes.sortedBy { it.number } }
-            ?: series.episodes.sortedWith(compareBy({ it.season }, { it.number }))
-        val index = episodes.indexOfFirst { it.id == parts[3] }
-        return episodes.getOrNull(index + 1)?.takeIf { index >= 0 }?.let { series to it }
+        val seasons = state.seriesDetails[series.id]?.seasons
+            ?.map { season -> season.copy(episodes = season.episodes.sortedBy { it.number }.distinctBy { it.id }) }
+            ?: series.episodes.groupBy { it.season }.map { (number, episodes) ->
+                Season(number, name = "", episodes = episodes.sortedBy { it.number }.distinctBy { it.id })
+            }
+        return PlayingSeries(series, parts[3], seasons.sortedBy { it.number }.filter { it.episodes.isNotEmpty() })
+    }
+
+    /** Where the viewer left the episode [episodeId] of [series]: null before it was played. */
+    fun episodeProgress(series: Series, episodeId: String): WatchEntry? {
+        val state = _state.value
+        val playlistId = state.activePlaylistId ?: return null
+        return state.library.progress(WatchEntry(playlistId, ItemKind.SERIES, series.id, episodeId, title = "", lastWatchedAt = 0).key)
     }
 
     fun playRequest(channel: Channel): PlayRequest? {
@@ -1063,3 +1083,6 @@ class OndoRepository(
         fun hostName(url: String): String = runCatching { java.net.URI(url.trim()).host }.getOrNull()?.removePrefix("www.") ?: "Playlist"
     }
 }
+
+/** The series of the episode playing ([episodeId]), with its seasons in order ([OndoRepository.playingSeries]). */
+data class PlayingSeries(val series: Series, val episodeId: String, val seasons: List<Season>)

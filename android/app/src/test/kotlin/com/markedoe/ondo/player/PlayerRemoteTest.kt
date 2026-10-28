@@ -55,6 +55,7 @@ class PlayerRemoteTest {
         val content = Fixtures.content.copy(
             channels = Fixtures.content.channels.map { it.copy(streamUrl = "http://127.0.0.1:9/${it.id}.m3u8") },
             movies = Fixtures.content.movies.map { it.copy(streamUrl = "http://127.0.0.1:9/${it.id}.mp4") },
+            series = Fixtures.content.series.map { series -> series.copy(episodes = series.episodes.map { it.copy(streamUrl = "http://127.0.0.1:9/${it.id}.mp4") }) },
             fetchedAt = System.currentTimeMillis(),
         )
         store.savePlaylists(listOf(Fixtures.playlist))
@@ -174,6 +175,41 @@ class PlayerRemoteTest {
         compose.onNodeWithContentDescription("Close").assertDoesNotExist()
         press(KeyEvent.KEYCODE_DPAD_CENTER)
         compose.onNodeWithTag("streamStatistics").assertExists()
+    }
+
+    /**
+     * An episode: Down while it plays opens the controls on its Episodes row, the remote on the episode playing; Right
+     * and OK play the next one. The episodes' server answers nothing: the player waits, without an error.
+     */
+    @Test
+    fun onAnEpisodeDownShowsTheEpisodesAndOkPlaysTheNextOne() {
+        SilentServer().use { server ->
+            val repository = app.repository
+            val series = repository.state.value.content.series.first { it.id == Fixtures.harborLights.id }
+            val playing = series.episodes.first { it.season == 1 && it.number == 2 }
+            val next = series.episodes.first { it.season == 1 && it.number == 3 }
+            launch(repository.playRequest(series, playing.copy(streamUrl = "http://127.0.0.1:${server.port}/${playing.id}.mp4")))
+            press(KeyEvent.KEYCODE_DPAD_DOWN)
+            compose.onNodeWithTag("tvPlayerControls").assertExists()
+            compose.onNodeWithTag("tvEpisodeRow").assertExists()
+            compose.onNodeWithTag("episode-${playing.id}").assertIsFocused()
+            press(KeyEvent.KEYCODE_DPAD_RIGHT)
+            compose.onNodeWithTag("episode-${next.id}").assertIsFocused()
+            press(KeyEvent.KEYCODE_DPAD_CENTER)
+            val key = com.markedoe.ondo.data.WatchEntry(Fixtures.PLAYLIST_ID, com.markedoe.ondo.data.ItemKind.SERIES, series.id, next.id, title = "", lastWatchedAt = 0).key
+            assertTrue("the next episode plays", repository.state.value.library.progress(key) != null)
+            compose.onNodeWithTag("tvEpisodeRow").assertDoesNotExist()
+        }
+    }
+
+    /** A live channel keeps Down for the channel before, controls shown or not: no Episodes row. */
+    @Test
+    fun onAChannelDownHasNoEpisodes() {
+        launchChannel()
+        press(KeyEvent.KEYCODE_INFO)
+        press(KeyEvent.KEYCODE_DPAD_DOWN)
+        compose.onNodeWithTag("tvEpisodeRow").assertDoesNotExist()
+        compose.onNodeWithTag("tvEpisodes").assertDoesNotExist()
     }
 
     @Test

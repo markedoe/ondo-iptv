@@ -69,7 +69,7 @@ class TvPlayerControlsTest {
 
     private var subtitleSize by mutableStateOf(com.markedoe.ondo.data.SubtitleSize.NORMAL)
 
-    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false, channels: ChannelList? = null, sizes: Boolean = false) {
+    private fun start(player: FakeTracksPlayer = movie, info: PlayerInfo = PlayerInfo("Northern Lights", "2025", live = false), rtl: Boolean = false, channels: ChannelList? = null, sizes: Boolean = false, episodes: EpisodeList? = null) {
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
@@ -83,6 +83,7 @@ class TvPlayerControlsTest {
                         scale = scale, onScale = { scale = it }, sleep = sleep, channels = channels,
                         onRestart = { restarted++ }, onWatchLive = { wentLive++ },
                         subtitles = if (sizes) SubtitleSizing(subtitleSize) { subtitleSize = it } else null,
+                        episodes = episodes,
                     )
                 }
             }
@@ -198,6 +199,89 @@ class TvPlayerControlsTest {
         // Playing, OK on the bar does not pause.
         press(Key.DirectionCenter)
         assertTrue("still playing", movie.playWhenReady)
+    }
+
+    private var chosenEpisode: String? = null
+
+    /** Harbor Lights: two seasons, the second episode of the first playing. */
+    private val harbor = EpisodeList(
+        listOf(
+            EpisodeSeason(1, (1..3).map { EpisodeChoice("s1e$it", "S01E0$it", it, "Episode $it", watched = it == 1) }),
+            EpisodeSeason(2, (1..2).map { EpisodeChoice("s2e$it", "S02E0$it", it, "Episode $it") }),
+        ),
+        playingId = "s1e2",
+        onChoose = { chosenEpisode = it },
+    )
+
+    /** A series: Down from the buttons opens its episodes on the one playing, the next one is a press away, OK plays it. */
+    @Test
+    fun downOpensTheEpisodesOnTheOnePlayingAndOkPlaysAnother() {
+        start(info = PlayerInfo("Harbor Lights", "S01E02 · Episode 2", live = false), episodes = harbor)
+        compose.onNodeWithTag("tvPlayPause").assertIsFocused()
+        compose.onNodeWithTag("tvEpisodeRow").assertDoesNotExist()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tvEpisodeRow").assertExists()
+        row("episode-s1e2").assertIsFocused().assertIsSelected()
+        press(Key.DirectionRight)
+        row("episode-s1e3").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertEquals("s1e3", chosenEpisode)
+        // Back closes the row: the remote is on Episodes, which opens it again.
+        compose.runOnIdle { assertTrue(controls.back()) }
+        compose.waitForIdle()
+        compose.onNodeWithTag("tvEpisodeRow").assertDoesNotExist()
+        compose.onNodeWithTag("tvEpisodes").assertIsFocused()
+        assertTrue("the controls stay", controls.shown)
+        press(Key.DirectionCenter)
+        row("episode-s1e2").assertIsFocused()
+        // Up to the seasons: the second one shows its episodes.
+        press(Key.DirectionUp)
+        row("episodeSeason-1").assertIsFocused()
+        press(Key.DirectionRight)
+        press(Key.DirectionCenter)
+        press(Key.DirectionDown)
+        row("episode-s2e1").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertEquals("s2e1", chosenEpisode)
+        // Up out of the row closes it: the remote is back on the buttons, on Episodes.
+        press(Key.DirectionUp, 2)
+        compose.onNodeWithTag("tvEpisodeRow").assertDoesNotExist()
+        compose.onNodeWithTag("tvEpisodes").assertIsFocused()
+    }
+
+    /** The episode playing chosen again: the row closes and the video goes on, paused or not. */
+    @Test
+    fun okOnTheEpisodePlayingGoesOnWithIt() {
+        start(info = PlayerInfo("Harbor Lights", "S01E02 · Episode 2", live = false), episodes = harbor)
+        press(Key.DirectionCenter)
+        assertFalse("paused", movie.playWhenReady)
+        press(Key.DirectionDown)
+        row("episode-s1e2").assertIsFocused()
+        press(Key.DirectionCenter)
+        assertEquals(null, chosenEpisode)
+        assertTrue("it plays", movie.playWhenReady)
+        compose.onNodeWithTag("tvEpisodeRow").assertDoesNotExist()
+        compose.onNodeWithTag("tvEpisodes").assertIsFocused()
+    }
+
+    /** A movie and a live channel have no episodes: Down from the buttons opens nothing. */
+    @Test
+    fun aMovieHasNoEpisodes() {
+        start()
+        compose.onNodeWithTag("tvEpisodes").assertDoesNotExist()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tvEpisodeRow").assertDoesNotExist()
+        assertFalse(controls.episodesShown)
+    }
+
+    @Test
+    fun aChannelHasNoEpisodes() {
+        val channel = FakeTracksPlayer(listOf(FakeTracksPlayer.audio("de", MimeTypes.AUDIO_MPEG_L2, channels = 2)), initiallySelected = setOf(0), seekable = false)
+        start(channel, PlayerInfo("4  Cycling TV", "Tour stage 12", live = true), channels = ChannelList(load = { emptyList() }, onChoose = {}))
+        compose.onNodeWithTag("tvPlayPause").assertIsFocused()
+        press(Key.DirectionDown)
+        compose.onNodeWithTag("tvEpisodeRow").assertDoesNotExist()
+        compose.onNodeWithTag("tvEpisodes").assertDoesNotExist()
     }
 
     @Test

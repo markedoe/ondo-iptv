@@ -50,6 +50,7 @@ import androidx.compose.material.icons.rounded.Replay10
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.VideoLibrary
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -120,7 +121,8 @@ import kotlinx.coroutines.delay
  * The player's controls on a TV, drawn for the remote over Media3's video view (which still draws the picture, the
  * subtitles and the buffering spinner): the title at the top; at the bottom the progress bar (or LIVE) and a row of large
  * round buttons that turn white with the focus, each named beneath when the remote is on it; side panels for the
- * subtitles, the audio, the speed and More (the aspect ratio, the sleep timer, the statistics). Everything keeps clear of the 5 % the screen may crop (TV-OV). Playback
+ * subtitles, the audio, the speed and More (the aspect ratio, the sleep timer, the statistics); for an episode, its
+ * series' [episodes] in a row under the buttons (Down, or Episodes). Everything keeps clear of the 5 % the screen may crop (TV-OV). Playback
  * controls are not mirrored in a right-to-left language: they follow the video's time, left to right.
  */
 @Composable
@@ -139,6 +141,7 @@ fun TvPlayerOverlay(
     onRestart: () -> Unit = {},
     onWatchLive: () -> Unit = {},
     subtitles: SubtitleSizing? = null,
+    episodes: EpisodeList? = null,
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -150,9 +153,18 @@ fun TvPlayerOverlay(
     }
     val playPause = remember { FocusRequester() }
     val buttons = remember { PlayerPanel.entries.associateWith { FocusRequester() } }
-    // Play/Pause takes the focus each time the controls come; a closed panel gives it back to its button.
+    val episodesButton = remember { FocusRequester() }
+    // Play/Pause takes the focus each time the controls come (the episode playing when they come with the Episodes
+    // row); a closed panel gives it back to its button.
     LaunchedEffect(controls.shows) {
-        if (controls.shown && controls.panel == null) takeFocus(playPause)
+        if (controls.shown && controls.panel == null && !controls.episodesShown) takeFocus(playPause)
+    }
+    // The Episodes row closed (Up, Back): the remote goes back to its button.
+    var episodesWereShown by remember { mutableStateOf(false) }
+    LaunchedEffect(controls.episodesShown) {
+        val closed = episodesWereShown && !controls.episodesShown
+        episodesWereShown = controls.episodesShown
+        if (closed && controls.shown && controls.panel == null) takeFocus(episodesButton)
     }
     var openPanel by remember { mutableStateOf<PlayerPanel?>(null) }
     LaunchedEffect(controls.panel) {
@@ -186,8 +198,20 @@ fun TvPlayerOverlay(
                         }
                         if (controls.shown) {
                             Spacer(Modifier.height(18.dp))
-                            ButtonRow(player, controls, info, playPause, buttons, channels, onRestart, onWatchLive)
+                            ButtonRow(player, controls, info, playPause, buttons, channels, onRestart, onWatchLive, episodes, episodesButton)
                         }
+                    }
+                    // Titles in the viewer's language, right to left in Arabic.
+                    if (controls.shown && controls.episodesShown && episodes != null && episodes.seasons.isNotEmpty()) {
+                        TvEpisodeRow(
+                            episodes,
+                            controls,
+                            onPlaying = {
+                                controls.hideEpisodes()
+                                if (!player.playWhenReady || player.playbackState == Player.STATE_ENDED) player.play()
+                            },
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
                     }
                 }
                 // Back on the left, forward on the right, as the bar, in every language.
@@ -231,7 +255,7 @@ fun TvPlayerOverlay(
 }
 
 /** Requests the focus a few frames in a row: the item may still be coming on screen. */
-private suspend fun takeFocus(requester: FocusRequester) {
+internal suspend fun takeFocus(requester: FocusRequester) {
     repeat(20) {
         if (runCatching { requester.requestFocus() }.getOrDefault(false)) return
         delay(16)
@@ -436,11 +460,26 @@ private fun ButtonRow(
     channels: ChannelList?,
     onRestart: () -> Unit,
     onWatchLive: () -> Unit,
+    episodes: EpisodeList?,
+    episodesButton: FocusRequester,
 ) {
     // Where the player cannot seek (a live channel, a film without an index), a skip would start the video over.
     val transport = controls.seekable
     val playing = controls.playWhenReady
-    Row(Modifier.fillMaxWidth().focusGroup(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    val hasEpisodes = episodes != null && episodes.seasons.isNotEmpty()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            // A series: Down from the buttons opens the Episodes row.
+            .onKeyEvent { event ->
+                if (!hasEpisodes || event.type != KeyEventType.KeyDown || event.key != Key.DirectionDown) return@onKeyEvent false
+                controls.showEpisodes()
+                true
+            }
+            .focusGroup(),
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
         if (transport) {
             RoundButton(Icons.Rounded.Replay10, stringResource(R.string.skip_back_10), tag = "tvSkipBack", labelAlignment = Alignment.TopStart) {
                 controls.skip(player, -PlayerControls.SKIP_MS)
@@ -470,6 +509,12 @@ private fun ButtonRow(
             RoundButton(Icons.Rounded.LiveTv, stringResource(R.string.back_to_live), tag = "tvWatchLive", onClick = onWatchLive)
         }
         Spacer(Modifier.weight(1f))
+        // A series: its episodes, the next one a press away.
+        if (hasEpisodes) {
+            RoundButton(Icons.Rounded.VideoLibrary, stringResource(R.string.episodes), tag = "tvEpisodes", modifier = Modifier.focusRequester(episodesButton)) {
+                controls.showEpisodes()
+            }
+        }
         // A live channel: the others, with what is on now (a mini-guide).
         if (channels != null) {
             RoundButton(Icons.AutoMirrored.Rounded.List, stringResource(R.string.channels), tag = "tvChannels", modifier = Modifier.focusRequester(buttons.getValue(PlayerPanel.CHANNELS))) {
