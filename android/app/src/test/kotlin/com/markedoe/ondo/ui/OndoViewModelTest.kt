@@ -94,6 +94,15 @@ class OndoViewModelTest {
     /** Runs what is due now, the repository's work in [TestScope.backgroundScope] too (which advanceUntilIdle leaves). */
     private fun TestScope.settle() = repeat(20) { testScheduler.runCurrent() }
 
+    /** Settles until [done], for work that also crosses real threads (the store's files): a few seconds at most. */
+    private fun TestScope.settleUntil(done: () -> Boolean) {
+        repeat(300) {
+            if (done()) return
+            settle()
+            Thread.sleep(10)
+        }
+    }
+
     private fun TestScope.viewModel(): OndoViewModel {
         // The demo address answers with the same fictional catalogue: no network in tests.
         val http = FakeHttp(mapOf(list to catalogue, OndoViewModel.DEMO_PLAYLIST_URL to catalogue))
@@ -153,7 +162,10 @@ class OndoViewModelTest {
 
         assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
         viewModel.loadMovie(movie.id)
-        settle()
+        settleUntil {
+            val detail = UiMappers.movieDetail(viewModel.state.value, movie)
+            detail.backdropUrl != null && detail.trailer != null
+        }
         val tmdb = "https://image.tmdb.org/t/p/w1280/road.jpg"
         assertEquals(tmdb, UiMappers.movieDetail(viewModel.state.value, movie).backdropUrl)
         // The provider gave no trailer: TMDb's.
@@ -211,7 +223,7 @@ class OndoViewModelTest {
 
         assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
         viewModel.loadSeries(series.id)
-        settle()
+        settleUntil { faces().isNotEmpty() }
         assertEquals(mapOf("jose silva" to "https://image.tmdb.org/t/p/w185/jose.jpg", "ruth ames" to "https://image.tmdb.org/t/p/w185/ruth.jpg"), faces())
         viewModel.loadSeries(series.id)
         settle()
