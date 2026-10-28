@@ -111,7 +111,11 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
         }
         item {
             TvRow {
-                LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.testTag("liveChips"),
+                ) {
                     // On a TV the top bar holds Search; the guide and the categories come first here.
                     if (television) {
                         item {
