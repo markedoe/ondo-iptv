@@ -12,7 +12,6 @@ struct HomeView: View {
     @State private var showingAddPlaylist = false
     /// The categories screen opened from the "show only your languages?" card, which may go away meanwhile.
     @State private var choosingLanguages = false
-    @State private var heroUnderBar = true
 
     private var compact: Bool {
         #if os(iOS)
@@ -24,18 +23,12 @@ struct HomeView: View {
 
     var body: some View {
         let hero = model.heroItems()
-        // The reader extends under the bars so it reports their height; the carousel is drawn beneath them.
+        // The reader gives the carousel's frame its width, inside the page's margins.
         GeometryReader { proxy in
             ScrollView {
-                content(hero: hero, width: proxy.size.width, topInset: hero.isEmpty ? 0 : topInset(proxy))
+                content(hero: hero, width: proxy.size.width)
             }
-            #if os(iOS)
-            .ignoresSafeArea(edges: hero.isEmpty ? [] : .top)
-            #endif
         }
-        #if os(iOS)
-        .ignoresSafeArea(edges: hero.isEmpty ? [] : .top)
-        #endif
         .background(Color.appBackground)
         .refreshable { await model.refreshActivePlaylist() }
         .task(id: "\(model.content.fetchedAt.timeIntervalSince1970)-\(model.hasTMDbKey)") {
@@ -46,9 +39,6 @@ struct HomeView: View {
         }
         .navigationTitle("Home")
         .inlineNavigationTitle()
-        #if os(iOS)
-        .toolbarColorScheme(!hero.isEmpty && heroUnderBar ? .dark : nil, for: .navigationBar)
-        #endif
         .toolbar { toolbar }
         .sheet(isPresented: $showingSettings) {
             NavigationStack { SettingsView() }
@@ -64,21 +54,10 @@ struct HomeView: View {
         }
     }
 
-    /// Height of the bars above the carousel. Under the iOS 26 navigation bar the reader only reports the
-    /// status bar, so the bar itself is added on iPhone (on iPad the carousel text sits at the bottom).
-    private func topInset(_ proxy: GeometryProxy) -> CGFloat {
-        #if os(iOS)
-        let inset = proxy.safeAreaInsets.top
-        return compact && inset < 80 ? inset + 44 : inset
-        #else
-        0
-        #endif
-    }
-
     // MARK: - Content
 
     @ViewBuilder
-    private func content(hero: [ShowcaseItem], width: CGFloat, topInset: CGFloat) -> some View {
+    private func content(hero: [ShowcaseItem], width: CGFloat) -> some View {
         let metrics = ShelfMetrics(compact: compact)
         let resumeMovies = model.continueWatching(.movie)
         let resumeSeries = model.continueWatching(.series)
@@ -90,12 +69,8 @@ struct HomeView: View {
 
         VStack(alignment: .leading, spacing: compact ? 26 : 34) {
             if !hero.isEmpty {
-                HeroCarousel(items: hero, compact: compact, topInset: topInset, width: width)
-                    .onGeometryChange(for: Bool.self) { geometry in
-                        geometry.frame(in: .global).maxY > topInset + 24
-                    } action: { visible in
-                        heroUnderBar = visible
-                    }
+                HeroCarousel(items: hero, compact: compact, width: max(width - 2 * metrics.gutter, 0))
+                    .padding(.horizontal, metrics.gutter)
             }
 
             accountNotice
@@ -170,7 +145,7 @@ struct HomeView: View {
             if compact, AppSection.showsDownloads { libraryLinks.padding(.horizontal, metrics.gutter) }
             #endif
         }
-        .padding(.top, hero.isEmpty ? 12 : 0)
+        .padding(.top, hero.isEmpty ? 12 : 8)
         .padding(.bottom, 32)
     }
 
@@ -233,7 +208,7 @@ struct HomeView: View {
                         }
                         .padding(14)
                         .frame(width: 150, height: 120, alignment: .leading)
-                        .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .background(OndoColor.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
                     .buttonStyle(.plain)
                 }
@@ -255,7 +230,7 @@ struct HomeView: View {
                     }
                 }
                 .padding(.horizontal, 12)
-                .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(OndoColor.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
     }
@@ -266,7 +241,7 @@ struct HomeView: View {
         VStack(spacing: 0) {
             libraryLink(.downloads, title: "Downloads")
         }
-        .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(OndoColor.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func libraryLink(_ section: AppSection, title: LocalizedStringKey) -> some View {

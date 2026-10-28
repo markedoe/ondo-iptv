@@ -1,14 +1,14 @@
 import SwiftUI
 import IPTVCore
 
-/// Full-width carousel of featured movies and series at the top of the home screen.
-/// iPhone: blurred artwork with the poster centred; iPad / Mac: wide backdrop with the poster and text.
+/// Carousel of featured movies and series at the top of the home screen: the title's picture in a large rounded
+/// frame inset from the edges of the page, its title, facts and buttons inside the frame at the bottom left, over a
+/// dark shade, and the page dots at the bottom right.
 struct HeroCarousel: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let items: [ShowcaseItem]
     let compact: Bool
-    /// Height of the bars the hero extends under (status + navigation bar on iOS).
-    let topInset: CGFloat
+    /// Width of the frame: the page's width less its margins.
     let width: CGFloat
     @State private var current: String?
 
@@ -20,10 +20,11 @@ struct HeroCarousel: View {
     #endif
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: compact ? 16 : 20, style: .continuous)
         ScrollView(.horizontal, showsIndicators: false) {
             LazyHStack(spacing: 0) {
                 ForEach(items) { item in
-                    HeroPage(item: item, compact: compact, topInset: topInset, isCurrent: item.id == (current ?? items.first?.id))
+                    HeroPage(item: item, compact: compact, isCurrent: item.id == (current ?? items.first?.id))
                         .frame(width: width, height: height)
                         .clipped()
                         .id(item.id)
@@ -34,8 +35,15 @@ struct HeroCarousel: View {
         .scrollTargetBehavior(.paging)
         .scrollPosition(id: $current)
         .frame(width: width, height: height)
-        .overlay(alignment: .bottom) {
-            if items.count > 1 { pageDots.padding(.bottom, 10) }
+        .clipShape(shape)
+        .overlay { shape.strokeBorder(.white.opacity(0.08), lineWidth: 1) }
+        .overlay(alignment: .bottomTrailing) {
+            if items.count > 1 {
+                // In line with the buttons on a wide frame; below them on iPhone, where the row has no room for both.
+                pageDots
+                    .padding(.trailing, compact ? 16 : 26)
+                    .padding(.bottom, compact ? 12 : 47)
+            }
         }
         #if os(macOS)
         // A mouse cannot swipe: previous and next buttons on the sides.
@@ -60,8 +68,9 @@ struct HeroCarousel: View {
         }
     }
 
+    /// A tall frame on iPhone, a wide one on iPad and Mac.
     private var height: CGFloat {
-        compact ? topInset + 520 : topInset + min(max(width * 0.42, 380), 500)
+        compact ? min(max(width * 1.2, 380), 520) : min(max(width * 0.48, 360), 540)
     }
 
     #if os(macOS)
@@ -101,124 +110,92 @@ private struct HeroPage: View {
     @Environment(AppModel.self) private var model
     let item: ShowcaseItem
     let compact: Bool
-    let topInset: CGFloat
     let isCurrent: Bool
 
     var body: some View {
         let details = model.cachedDetails(for: item)
-        ZStack(alignment: compact ? .bottom : .bottomLeading) {
-            background(backdrop: compact ? nil : model.backdropURL(for: item))
-            if compact {
-                compactContent(details: details)
-            } else {
-                regularContent(details: details)
+        ZStack(alignment: .bottomLeading) {
+            // The picture opens the title's page, as its title does (the one VoiceOver reads).
+            detailLink {
+                picture(backdrop: model.backdropURL(for: item))
             }
+            .accessibilityHidden(true)
+            content(details: details)
         }
         .foregroundStyle(.white)
         .task(id: isCurrent) {
-            if isCurrent && !compact { await model.loadTMDbBackdropIfNeeded(for: item) }
+            if isCurrent { await model.loadTMDbBackdropIfNeeded(for: item) }
         }
     }
 
-    // MARK: Background
+    // MARK: Picture
 
-    private func background(backdrop: URL?) -> some View {
+    private func picture(backdrop: URL?) -> some View {
         Color.black
             .overlay {
-                BackdropImage(backdropURL: backdrop, posterURL: item.posterURL, dimming: 0.3) { model.backdropFailed($0, for: item) }
+                if compact && backdrop == nil {
+                    // A tall frame without a wide picture: the poster itself, rather than its blur.
+                    RemoteImage(url: item.posterURL, placeholderText: item.title, contentMode: .fill, maxPixelSize: 900)
+                } else {
+                    BackdropImage(backdropURL: backdrop, posterURL: item.posterURL, dimming: 0.3) { model.backdropFailed($0, for: item) }
+                }
             }
             .overlay {
-                // Keeps the toolbar legible and the text readable.
+                // The text's side: a dark shade from the left on a wide frame, from the bottom on every frame.
+                if !compact {
+                    LinearGradient(
+                        stops: [.init(color: .black.opacity(0.85), location: 0), .init(color: .black.opacity(0.45), location: 0.42),
+                                .init(color: .clear, location: 0.72)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                }
+            }
+            .overlay {
                 LinearGradient(
-                    stops: [.init(color: .black.opacity(0.55), location: 0), .init(color: .clear, location: 0.3),
-                            .init(color: .clear, location: 0.5), .init(color: .black.opacity(0.85), location: 1)],
+                    stops: [.init(color: .clear, location: compact ? 0.38 : 0.5), .init(color: .black.opacity(compact ? 0.9 : 0.6), location: 1)],
                     startPoint: .top, endPoint: .bottom
                 )
             }
-            .overlay {
-                if !compact {
-                    LinearGradient(colors: [.black.opacity(0.8), .black.opacity(0.35), .clear], startPoint: .leading, endPoint: .trailing)
-                }
-            }
             .clipped()
-            .accessibilityHidden(true)
+            .contentShape(Rectangle())
     }
 
-    // MARK: iPhone
+    // MARK: Title, facts and buttons
 
-    private func compactContent(details: MediaDetails?) -> some View {
-        VStack(spacing: 14) {
+    private func content(details: MediaDetails?) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 8 : 10) {
             detailLink {
-                PosterArtwork(url: item.posterURL, title: item.title)
-                    .frame(width: 196)
-                    .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
-            }
-            VStack(spacing: 4) {
                 Text(item.title)
-                    .font(.title2.bold())
-                    .multilineTextAlignment(.center)
+                    .font(compact ? .title.bold() : .system(.largeTitle, weight: .bold))
+                    .tracking(compact ? -0.4 : -0.6)
                     .lineLimit(2)
-                Text(metaLine(details: details))
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.75))
-                    .lineLimit(1)
+                    .multilineTextAlignment(.leading)
             }
-            .padding(.horizontal, 24)
-            HStack(spacing: 12) {
+            FactsLine(facts: facts(details: details), badges: badges, color: .white.opacity(0.75))
+                .font(.subheadline)
+            if !compact, let plot = details?.plot ?? item.plot, !plot.isEmpty {
+                Text(plot)
+                    .font(.callout)
+                    .foregroundStyle(.white.opacity(0.85))
+                    .lineLimit(3)
+                    .frame(maxWidth: 520, alignment: .leading)
+            }
+            HStack(spacing: compact ? 10 : 12) {
                 playButton
                 myListButton
-            }
-        }
-        .padding(.top, topInset + 12)
-        .padding(.bottom, 34)
-    }
-
-    // MARK: iPad / Mac
-
-    private func regularContent(details: MediaDetails?) -> some View {
-        HStack(alignment: .bottom, spacing: 28) {
-            detailLink {
-                PosterArtwork(url: item.posterURL, title: item.title)
-                    .frame(width: 190)
-                    .shadow(color: .black.opacity(0.5), radius: 18, y: 10)
-            }
-            VStack(alignment: .leading, spacing: 10) {
-                Text(item.kindLabel)
-                    .font(.caption.weight(.bold))
-                    .tracking(1.2)
-                    .foregroundStyle(.white.opacity(0.7))
-                Text(item.title)
-                    .font(.system(.largeTitle, weight: .bold))
-                    .lineLimit(2)
-                Text(metaLine(details: details))
-                    .font(.subheadline)
-                    .foregroundStyle(.white.opacity(0.75))
-                if let plot = details?.plot ?? item.plot, !plot.isEmpty {
-                    Text(plot)
-                        .font(.callout)
-                        .foregroundStyle(.white.opacity(0.85))
-                        .lineLimit(3)
-                        .frame(maxWidth: 560, alignment: .leading)
-                }
-                HStack(spacing: 12) {
-                    playButton
-                    myListButton
+                if !compact {
                     detailLink {
                         Label("Info", systemImage: "info.circle")
-                            .font(.headline)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(.ultraThinMaterial, in: Capsule())
+                            .modifier(HeroSecondaryButton())
                     }
                     .accessibilityIdentifier(isCurrent ? "heroInfo" : "")
                 }
-                .padding(.top, 6)
             }
-            Spacer(minLength: 0)
+            .padding(.top, compact ? 6 : 8)
         }
-        .padding(.horizontal, 32)
-        .padding(.top, topInset + 16)
-        .padding(.bottom, 36)
+        .padding(.horizontal, compact ? 18 : 28)
+        .padding(.bottom, compact ? 30 : 28)
+        .frame(maxWidth: compact ? CGFloat.infinity : 640, alignment: .leading)
     }
 
     // MARK: Actions
@@ -230,9 +207,10 @@ private struct HeroPage: View {
             Label(playTitle, systemImage: "play.fill")
                 .font(.headline)
                 .foregroundStyle(.black)
-                .padding(.horizontal, 26)
+                .padding(.horizontal, compact ? 22 : 26)
                 .padding(.vertical, 12)
                 .background(.white, in: Capsule())
+                .contentShape(Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(isCurrent ? "heroPlay" : "")
@@ -247,10 +225,7 @@ private struct HeroPage: View {
             }
         } label: {
             Label("My List", systemImage: inList ? "checkmark" : "plus")
-                .font(.headline)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(.ultraThinMaterial, in: Capsule())
+                .modifier(HeroSecondaryButton())
                 .contentTransition(.symbolEffect(.replace))
         }
         .buttonStyle(.plain)
@@ -273,17 +248,39 @@ private struct HeroPage: View {
         }
     }
 
-    /// "Movie · 2024 · Drama · ★ 7.8"
-    private func metaLine(details: MediaDetails?) -> String {
+    /// "Movie · 2024 · Drama · 1 h 52 · ★ 7.8"
+    private func facts(details: MediaDetails?) -> [String] {
         var parts = [String(localized: item.kindName)]
         if let year = item.year { parts.append(String(year)) }
         if let genre = (details?.genre ?? item.genre)?.split(separator: ",").first {
             parts.append(genre.trimmingCharacters(in: .whitespaces))
         }
+        if case .movie = item, let seconds = details?.durationSeconds, seconds > 0 {
+            parts.append(Formatting.duration(seconds))
+        }
         if let rating = details?.rating ?? item.rating, rating > 0 {
             parts.append("★ " + Formatting.rating(rating))
         }
-        return parts.joined(separator: " · ")
+        return parts
+    }
+
+    /// The format of a movie's stream (MKV, MP4…), as on its page.
+    private var badges: [String] {
+        if case .movie(let movie) = item, let format = MediaFormat.label(for: movie.streamURL) { return [format] }
+        return []
+    }
+}
+
+/// A secondary button of the carousel: translucent white, white text.
+private struct HeroSecondaryButton: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.headline)
+            .foregroundStyle(.white)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+            .background(.white.opacity(0.2), in: Capsule())
+            .contentShape(Capsule())
     }
 }
 
@@ -313,6 +310,4 @@ private extension ShowcaseItem {
         case .series: return "Series"
         }
     }
-
-    var kindLabel: String { String(localized: kindName).uppercased() }
 }
