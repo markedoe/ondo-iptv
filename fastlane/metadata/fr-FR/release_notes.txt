@@ -16,5 +16,5 @@
 • Masquez d’un coup une langue ou un pays (catégories qui commencent par |PT|, FR:…), un style (manga et anime, enfants, documentaires…) ou n’importe quel mot des noms de catégories ; les catégories ajoutées plus tard suivent.
 • Prix et sélections (Cannes, Oscars, Berlin, Venise, César…) sur les fiches des films, une rangée Films primés, et un filtre de recherche par festival ou cérémonie.
 • L’accueil indique la date de dernière mise à jour de la playlist, au-dessus de son nom.
-• Les fiches sans image de fond affichent celle de TMDb si vous avez saisi votre jeton, sinon l’affiche floutée.
+• Avec votre jeton TMDb : les fiches sans image de fond affichent celle de TMDb (sinon l’affiche floutée), et la bande-annonce de TMDb quand le fournisseur n’en donne pas ; les notes indiquent leur nombre de votes, les acteurs et réalisateurs leur photo. Les réponses de TMDb restent sur l’appareil : les fiches les affichent tout de suite, même hors connexion.
 • Les Réglages prennent votre « Jeton d’accès en lecture à l’API » TMDb (ou la « Clé d’API »), nommé comme sur TMDb, et le vérifient auprès de TMDb avant de l’enregistrer ; « Langue de l’app » ouvre la page du système où choisir la langue d’Ondo.

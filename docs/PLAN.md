@@ -32,7 +32,7 @@ ondo-iptv/
 │   ├── EPG/           XMLTVParser (SAX + gzip), EPGIndex (now/next, channel matching)
 │   ├── Catchup/       CatchupURLBuilder (default/append/shift/flussonic/xtream)
 │   ├── Library/       PlaylistLoader, SearchEngine, UserLibrary (favorites, history, resume), FileStore, DetailsArchive
-│   ├── Metadata/      TMDbClient, People, AwardsCatalogue
+│   ├── Metadata/      TMDbClient, People, AwardsCatalogue, MetadataStore (SQLite)
 │   ├── Playback/      PlaybackHealth, PlaybackLog, ProblemReport, BufferPolicy
 │   ├── Remux/         MatroskaRemux (MKV → HLS of fragmented MP4), EBML, Matroska, FragmentWriter
 │   ├── Subtitles/     OnlineSubtitles, OpenSubtitles, SubDL, SubSource, Addic7ed
