@@ -27,6 +27,8 @@ import kotlinx.coroutines.yield
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -78,8 +80,16 @@ class OndoViewModelTest {
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
+    /** The view models of a test: their work is stopped before the test's main dispatcher goes. */
+    private val models = mutableListOf<OndoViewModel>()
+
+    private fun track(model: OndoViewModel) = model.also { models += it }
+
     @After
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() {
+        models.forEach { it.viewModelScope.cancel() }
+        Dispatchers.resetMain()
+    }
 
     /** Runs what is due now, the repository's work in [TestScope.backgroundScope] too (which advanceUntilIdle leaves). */
     private fun TestScope.settle() = repeat(20) { testScheduler.runCurrent() }
@@ -130,7 +140,7 @@ class OndoViewModelTest {
             }.encodeToByteArray()
         }
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         repository.addPlaylist("Home", list)
         val movie = viewModel.state.first { it.content.movies.isNotEmpty() }.content.movies.single()
         val item = ShowcaseItem.MovieItem(movie)
@@ -190,7 +200,7 @@ class OndoViewModelTest {
         val harbor = Series(id = "1", name = "Harbor", categoryId = shows.id, year = 2025, cast = "José Silva, Ana Lima", xtreamSeriesId = 1)
         store.saveContent("x1", PlaylistContent(series = listOf(harbor), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
         val repository = OndoRepository(store, http, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series.single()
         fun faces() = UiMappers.seriesDetail(viewModel.state.value, series, null, null).faces
 
@@ -225,7 +235,7 @@ class OndoViewModelTest {
             }.encodeToByteArray()
         }
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         repository.addPlaylist("Home", list)
         viewModel.state.first { it.content.movies.isNotEmpty() }
         backgroundScope.launch { viewModel.search.collect {} }
@@ -282,7 +292,7 @@ class OndoViewModelTest {
         store.saveSettings(AppSettings(activePlaylistId = "x1"))
         store.saveContent("x1", PlaylistContent(series = listOf(Series(id = "1", name = "Show", categoryId = shows.id, year = 2025, xtreamSeriesId = 1)), seriesCategories = listOf(shows), fetchedAt = System.currentTimeMillis()))
         val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         val series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series
         val home = HomeUiState("Panel", hero = series.map { HeroPage(ShowcaseItem.SeriesItem(it), "", inMyList = false, resumable = false) })
         viewModel.prefetchSeries(home)
@@ -361,7 +371,7 @@ class OndoViewModelTest {
         val otherList = "#EXTM3U\n#EXTINF:-1 group-title=\"News\",Other News\nhttp://other.example.com/news.m3u8\n" +
             "#EXTINF:-1 group-title=\"Sport\",Other Sport\nhttp://other.example.com/sport.m3u8\n"
         val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue, other to otherList)), backgroundScope, io = StandardTestDispatcher(testScheduler))
-        val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         repository.bootstrap()
         viewModel.state.first { it.isReady }
         assertTrue(repository.addPlaylist("Home", list).isSuccess)
