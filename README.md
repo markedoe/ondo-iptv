@@ -111,9 +111,10 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   episode, seasons, the provider's trailer on YouTube, More Like This); a director's or an actor's name opens their other movies and series
   (series always, movies among the pages already opened), and a genre, the year or an award the titles that share it.
 - **Live TV**: categories, My List, current and next programme.
-- **Search** (the magnifying glass of Home, Movies, Series, Live TV and My List): channels, movies, series and
-  **actors and directors by name**, filtered by release years or by festival / ceremony (winners only, if you
-  like); no programme search.
+- **Search** (the magnifying glass of Home, Movies, Series, Live TV and My List; on a TV, first in the drawer, a
+  page of its own that Back closes): channels, movies, series and **actors and directors by name**, filtered by
+  release years or by festival / ceremony (winners only, if you like); no programme search. It opens empty each
+  time, and a tab chosen afterwards opens on its own page.
 - **TV guide** (the calendar button of Live TV): a grid of the channels chosen there, and **reminders**, a
   notification a few minutes before a programme starts.
 - **My List** tab: the movies, series and channels kept, and your **collections** (Collection on a movie or series
