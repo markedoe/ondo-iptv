@@ -316,6 +316,10 @@ struct HomeView: View {
         #if os(iOS)
         if compact {
             ToolbarItem(placement: .principal) { playlistMenu(compactLabel: true) }
+            // iPhone has no sidebar: the mark and the name lead Home's bar.
+            if !Platform.isPad {
+                ToolbarItem(placement: .topBarLeading) { OndoWordmark(size: 22) }
+            }
         } else {
             ToolbarItem(placement: .primaryAction) { playlistMenu(compactLabel: false) }
         }

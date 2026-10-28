@@ -293,9 +293,19 @@ struct SidebarRootView: View {
             #endif
             .navigationTitle("Ondo")
             #if os(macOS)
+            // The mark and the name above the sections (not a row of the list).
+            .safeAreaInset(edge: .top, spacing: 0) {
+                OndoWordmark()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 8)
+            }
             .navigationSplitViewColumnWidth(min: 190, ideal: 220)
             #else
+            // The mark and the name in place of the title.
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) { OndoWordmark() }
                 ToolbarItem(placement: .primaryAction) {
                     Button { showingSettings = true } label: { Label("Settings", systemImage: "gearshape") }
                 }

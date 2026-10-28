@@ -26,6 +26,23 @@ struct OndoLogo: View {
     }
 }
 
+/// The mark and the name, where the app shows its name (the sidebar on iPad and Mac, Home on iPhone).
+struct OndoWordmark: View {
+    var size: CGFloat = 24
+
+    var body: some View {
+        HStack(spacing: size * 0.3) {
+            OndoLogo(size: size, showsBackground: false)
+            Text(verbatim: "Ondo")
+                .font(.system(size: size * 0.82, weight: .bold))
+                .tracking(-0.3)
+                .foregroundStyle(.white)
+        }
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+    }
+}
+
 /// One and a half sine periods across the rect.
 struct WaveShape: Shape {
     var periods: Double = 1.5
