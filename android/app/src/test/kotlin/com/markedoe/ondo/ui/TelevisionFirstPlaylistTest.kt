@@ -159,9 +159,9 @@ class TelevisionFirstPlaylistTest {
 
     /** From the page to the drawer, onto the tab at [index] (Home is 0), opened; the focus enters the page. */
     private fun openTab(index: Int, page: String) {
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        press(Key.DirectionUp, times = 6)
-        press(Key.DirectionDown, times = index + 1)
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        press(Key.DirectionLeft, times = 7)
+        press(Key.DirectionRight, times = index)
         press(Key.DirectionCenter)
         waitFor { exists(page) && !focusedTag().startsWith("tab") }
     }

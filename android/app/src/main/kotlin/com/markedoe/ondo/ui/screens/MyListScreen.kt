@@ -1,5 +1,7 @@
 package com.markedoe.ondo.ui.screens
 
+import com.markedoe.ondo.ui.tv.tvTopBarSpace
+import com.markedoe.ondo.ui.tv.rememberTabGridState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -80,8 +82,9 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
     val metrics = rememberShelfMetrics()
     var naming by rememberSaveable { mutableStateOf(false) }
     LazyVerticalGrid(
+        state = rememberTabGridState(),
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
-        contentPadding = PaddingValues(start = metrics.gutter, end = metrics.gutter, bottom = 32.dp),
+        contentPadding = PaddingValues(start = metrics.gutter, top = tvTopBarSpace(), end = metrics.gutter, bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).testTag("myList"),

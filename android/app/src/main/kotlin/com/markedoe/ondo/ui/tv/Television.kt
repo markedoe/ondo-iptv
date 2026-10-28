@@ -183,14 +183,14 @@ private val KeyEvent.isOk: Boolean
     get() = key == Key.DirectionCenter || key == Key.Enter || key == Key.NumPadEnter
 
 /**
- * On a TV, keeps a page clear of the 5 % the screen may crop (TV-OV), and of the closed drawer when [besideDrawer].
- * Elsewhere, nothing.
+ * On a TV, keeps a page clear of the 5 % the screen may crop (TV-OV). A [tab] page runs up to the screen's top, under
+ * the top bar, and keeps clear of it with its list's padding ([tvTopBarSpace]). Elsewhere, nothing.
  */
-fun Modifier.tvSafeArea(besideDrawer: Boolean = false): Modifier = composed {
+fun Modifier.tvSafeArea(tab: Boolean = false): Modifier = composed {
     if (!isTelevision()) return@composed this
     padding(
-        start = if (besideDrawer) TvTokens.ContentStart else TvTokens.EdgeEnd,
-        top = TvTokens.EdgeTop,
+        start = TvTokens.EdgeEnd,
+        top = if (tab) 0.dp else TvTokens.EdgeTop,
         end = TvTokens.EdgeEnd,
         bottom = TvTokens.EdgeTop,
     )
@@ -391,6 +391,20 @@ class FocusMemory(key: String? = null) {
         restore = null
     }
 
+    /** The items on screen that keep a key, to give the focus back to [last] at once (down from the top bar). */
+    private val requesters = HashMap<String, FocusRequester>()
+
+    internal fun attach(key: String, requester: FocusRequester) {
+        requesters[key] = requester
+    }
+
+    internal fun detach(key: String, requester: FocusRequester) {
+        if (requesters[key] === requester) requesters.remove(key)
+    }
+
+    /** The item the viewer was last on, while it is on screen; null when the page should start from its first item. */
+    fun lastOnScreen(): FocusRequester? = last?.takeIf { chosen }?.let { requesters[it] }
+
     /**
      * Gives the focus to the item [key] now, as when the page comes back to it: the item with the focus is about to
      * leave (a card taken away), and the remote goes on from beside it.
@@ -434,6 +448,10 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
     val scope = rememberCoroutineScope()
     // Gone with the focus, unless it was handed on just before ([FocusMemory.handTo]): it then went elsewhere already.
     DisposableEffect(memory) { onDispose { if (focus.held && memory?.last == focus.key) memory?.dropped() } }
+    DisposableEffect(memory, key) {
+        memory?.attach(key, requester)
+        onDispose { memory?.detach(key, requester) }
+    }
     this
         .focusRequester(requester)
         .onFocusChanged {

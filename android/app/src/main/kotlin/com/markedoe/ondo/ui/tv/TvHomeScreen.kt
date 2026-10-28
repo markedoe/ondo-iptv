@@ -45,6 +45,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -73,15 +74,16 @@ import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.myListState
 import kotlinx.coroutines.delay
 
-private val HeroHeight = 380.dp
+/** Below the featured titles, the top of the first row shows: there is more down the page. */
+private val RowPeek = 96.dp
 private const val HERO_ADVANCE_MS = 8_000L
 
 /**
  * Home on a TV: the featured titles full screen behind their title, facts, plot and buttons, then rows of cards.
- * The focus starts on Play; past the last button, away from the drawer (Right, Left in a right-to-left language),
- * turns the page. The titles turn by themselves every 8 s while the focus is elsewhere. While Home has nothing to
- * focus (its catalogue replaced and coming again), the remote can only be in the drawer: Play takes it back once it
- * shows.
+ * The featured titles fill the screen, under the top bar, with the first row peeking below. The focus starts on Play;
+ * past the last button (Right, Left in a right-to-left language) turns the page. The titles turn by themselves every
+ * 8 s while the focus is elsewhere. While Home has nothing to focus (its catalogue replaced and coming again), the
+ * remote can only be on the top bar: Play takes it back once it shows.
  */
 @Composable
 fun TvHomeScreen(
@@ -118,7 +120,8 @@ fun TvHomeScreen(
         actions.onRemoveResume(item)
     }
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(TvTokens.Ink).testTag("home"),
+        state = rememberTabListState(),
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("home"),
         contentPadding = PaddingValues(bottom = 40.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
@@ -200,12 +203,13 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
         index = (current + 1) % pages.size
     }
     val ink = TvTokens.Ink
+    val heroHeight = (LocalConfiguration.current.screenHeightDp.dp - RowPeek).coerceAtLeast(380.dp)
     // Past the last button: Right, or Left where the buttons run from the right.
     val onward = if (LocalLayoutDirection.current == LayoutDirection.Rtl) Key.DirectionLeft else Key.DirectionRight
     Box(
         Modifier
             .fillMaxWidth()
-            .height(HeroHeight)
+            .height(heroHeight)
             // The whole carousel comes into view with its buttons, never cut at the top.
             .bringIntoViewAsAWhole()
             .onFocusChanged { hasFocus = it.hasFocus }
@@ -216,9 +220,10 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
             TvArtwork(shown.backdropUrl, shown.item.posterUrl, shown.item.title, Modifier.fillMaxSize()) { url -> actions.onBackdropFailed(shown.item, url) }
         }
         Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink, 0.32f to ink.copy(alpha = 0.88f), 0.62f to ink.copy(alpha = 0.25f), 1f to Color.Transparent)))
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to ink)))
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to ink)))
+        // The words at the bottom left, the picture above them free, as in a cinema's poster.
         Column(
-            Modifier.padding(start = TvTokens.ContentStart, top = 56.dp).widthIn(max = 500.dp),
+            Modifier.align(Alignment.BottomStart).padding(start = TvTokens.ContentStart, bottom = 20.dp).widthIn(max = 520.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
@@ -231,7 +236,7 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
             )
             Text(
                 page.item.title,
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
@@ -253,7 +258,7 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
                 val listState = myListState(page.inMyList)
                 TvActionButton(
                     onClick = { actions.onToggleMyList(page.item) },
-                    modifier = Modifier.semantics { stateDescription = listState }.testTag("heroMyList"),
+                    modifier = Modifier.semantics { stateDescription = listState }.focusMemory("hero-mylist").testTag("heroMyList"),
                 ) {
                     Icon(if (page.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
@@ -268,6 +273,7 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
                             if (next && event.type == KeyEventType.KeyDown) index = (current + 1) % pages.size
                             next
                         }
+                        .focusMemory("hero-info")
                         .testTag("heroInfo"),
                 ) {
                     Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(20.dp))

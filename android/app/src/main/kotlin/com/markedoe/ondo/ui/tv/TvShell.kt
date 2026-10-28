@@ -1,72 +1,134 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.DrawerValue
+import androidx.compose.ui.unit.sp
+import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
-import androidx.tv.material3.ModalNavigationDrawer
-import androidx.tv.material3.NavigationDrawerItem
-import androidx.tv.material3.NavigationDrawerItemDefaults
-import androidx.tv.material3.NavigationDrawerScope
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
-import androidx.tv.material3.rememberDrawerState
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TopLevel
+import kotlinx.coroutines.launch
 
 /**
- * The TV's navigation: a drawer on the left, closed to its icons over the page and opened with its labels when the
- * remote moves onto it (Google's TV navigation). Search sits first, the tabs follow, Settings last; [selected] is the
- * tab shown. Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen ([showDrawer] false).
+ * What the top bar knows of the tab page shown: whether it is scrolled to its top (the bar shows only there, as it
+ * scrolls away with the page) and how to bring it back up (Back). Each tab page registers its list
+ * ([rememberTabListState], [rememberTabGridState]).
+ */
+@Stable
+class TvTopBar {
+    internal class Page(val atTop: () -> Boolean, val toTop: suspend () -> Unit, val memory: FocusMemory?)
+
+    internal var page: Page? by mutableStateOf(null)
+}
+
+val LocalTvTopBar = staticCompositionLocalOf<TvTopBar?> { null }
+
+/** How far a tab page's content starts below the screen's top on a TV, clear of the bar; 0 elsewhere. */
+@Composable
+fun tvTopBarSpace(): Dp = if (LocalTvTopBar.current != null) TvTokens.TopBarSpace else 0.dp
+
+@Composable
+private fun RegisterTabPage(atTop: () -> Boolean, toTop: suspend () -> Unit, key: Any) {
+    val bar = LocalTvTopBar.current ?: return
+    val memory = LocalFocusMemory.current
+    DisposableEffect(bar, key, memory) {
+        val page = TvTopBar.Page(atTop, toTop, memory)
+        bar.page = page
+        onDispose { if (bar.page === page) bar.page = null }
+    }
+}
+
+/** A tab page's list: the top bar shows while it is at its top, and Back brings it there. */
+@Composable
+fun rememberTabListState(): LazyListState {
+    val state = rememberLazyListState()
+    val slack = with(LocalDensity.current) { TOP_SLACK.roundToPx() }
+    RegisterTabPage({ state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset <= slack }, { state.scrollToItem(0) }, state)
+    return state
+}
+
+/** The same, for a tab page that is a grid. */
+@Composable
+fun rememberTabGridState(): LazyGridState {
+    val state = rememberLazyGridState()
+    val slack = with(LocalDensity.current) { TOP_SLACK.roundToPx() }
+    RegisterTabPage({ state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset <= slack }, { state.scrollToItem(0) }, state)
+    return state
+}
+
+/** A page scrolled by less than this still counts as at its top: the bar stays. */
+private val TOP_SLACK = 24.dp
+
+/**
+ * The TV's navigation: a bar at the top of the tab pages, over them (Home's pictures go up to the screen's edge),
+ * that goes with the page as it scrolls down and comes back at its top. The tabs first, then Search and Settings.
+ * [selected] is the tab shown. Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen
+ * ([showBar] false).
  *
- * Back follows Google's rule (Navigation on TV): from a tab's page, the focus goes to the drawer, on the tab shown;
- * from the drawer, back to Home; from Home's drawer, out of the app.
+ * Up from a page's top reaches the bar, on the tab shown; Down from the bar goes back where the remote was. Back
+ * follows Google's rule (Navigation on TV): from a tab's page, back to its top with the focus on the bar; from the
+ * bar, to Home; from Home's bar, out of the app.
  */
 @Composable
 fun TvNavigationFrame(
     selected: TopLevel,
-    showDrawer: Boolean,
+    showBar: Boolean,
     onSelect: (TopLevel) -> Unit,
     onSearch: () -> Unit,
     onSettings: () -> Unit,
@@ -75,44 +137,84 @@ fun TvNavigationFrame(
     val requesters = remember { HashMap<String, FocusRequester>() }
     fun requester(tag: String) = requesters.getOrPut(tag) { FocusRequester() }
     val selectedTag = selected.tag
-    var drawerHasFocus by remember { mutableStateOf(false) }
+    val bar = remember { TvTopBar() }
+    var barHasFocus by remember { mutableStateOf(false) }
+    // While Back brings the page up, the bar takes the focus before it has shown.
+    var calling by remember { mutableStateOf(false) }
+    val atTop by remember { derivedStateOf { bar.page?.atTop() != false } }
+    val shown = showBar && (barHasFocus || calling || atTop)
+    val scope = rememberCoroutineScope()
+    val pages = remember { FocusRequester() }
+    // Down from the bar: back on the item the remote left, else the page's first one.
+    fun below(): FocusRequester = bar.page?.memory?.lastOnScreen() ?: pages
     val atHome = selected == TopLevel.HOME
-    // The content stays in the same place whether the drawer shows or not: its pages keep their state.
-    ModalNavigationDrawer(
-        drawerState = rememberDrawerState(DrawerValue.Closed),
-        // Open, the drawer's labels sit on a solid dark ground: nothing of the page shows through them.
-        scrimBrush = startToEndGradient(0f to TvTokens.Ink, 0.34f to TvTokens.Ink, 0.6f to Color.Black.copy(alpha = 0.8f), 1f to Color.Black.copy(alpha = 0.55f)),
-        drawerContent = {
-            if (showDrawer) {
-                Column(
-                    Modifier
-                        .fillMaxHeight()
-                        .padding(start = TvTokens.DrawerStart, end = 16.dp, top = TvTokens.EdgeTop, bottom = TvTokens.EdgeTop)
-                        .onFocusChanged { drawerHasFocus = it.hasFocus }
-                        // Coming from the page, the focus lands on the tab shown, not on the item beside it.
-                        .focusProperties {
-                            onEnter = { if (requestedFocusDirection != FocusDirection.Enter) runCatching { requester(selectedTag).requestFocus() } }
-                        }
-                        .focusGroup()
-                        .selectableGroup()
-                        .testTag("drawer"),
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    OndoMark(Modifier.padding(start = 8.dp, bottom = 28.dp))
-                    DrawerItem(stringResource(R.string.search), Icons.Rounded.Search, false, SEARCH_TAG, requester(SEARCH_TAG), onSearch)
-                    TopLevel.entries.forEach { tab ->
-                        DrawerItem(stringResource(tab.label), tab.icon, tab == selected, tab.tag, requester(tab.tag)) { onSelect(tab) }
+    Box(Modifier.fillMaxSize()) {
+        // The pages start at the screen's top, under the bar: Down from the bar goes to them by name ([below]), as
+        // nothing of theirs lies wholly below it.
+        Box(Modifier.fillMaxSize().focusRequester(pages).focusGroup()) {
+            androidx.compose.runtime.CompositionLocalProvider(LocalTvTopBar provides if (showBar) bar else null, content = content)
+        }
+        if (showBar) {
+            val visibility by animateFloatAsState(if (shown) 1f else 0f, tween(if (shown) 160 else 120), label = "topBar")
+            val ground = MaterialTheme.colorScheme.background
+            // Over a picture, a shade under the bar keeps its words readable.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(TvTokens.TopBarSpace + 24.dp)
+                    .graphicsLayer { alpha = visibility }
+                    .background(Brush.verticalGradient(0f to ground.copy(alpha = 0.72f), 1f to Color.Transparent)),
+            )
+            Row(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = TvTokens.EdgeTop)
+                    .graphicsLayer {
+                        alpha = visibility
+                        translationY = -(1f - visibility) * 24.dp.toPx()
                     }
-                    Spacer(Modifier.weight(1f))
-                    DrawerItem(stringResource(R.string.settings), Icons.Rounded.Settings, false, SETTINGS_TAG, requester(SETTINGS_TAG), onSettings)
+                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.10f), CircleShape)
+                    .padding(4.dp)
+                    .onFocusChanged { barHasFocus = it.hasFocus }
+                    // Gone with the page's top, it is gone for TalkBack too.
+                    .semantics { if (!shown) hideFromAccessibility() }
+                    // Coming from the page, the focus lands on the tab shown, not on the item above where it was.
+                    .focusProperties {
+                        onEnter = { if (requestedFocusDirection != FocusDirection.Enter) runCatching { requester(selectedTag).requestFocus() } }
+                    }
+                    .focusGroup()
+                    .selectableGroup()
+                    .testTag("topBar"),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TopLevel.entries.forEach { tab ->
+                    BarTab(stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below) { onSelect(tab) }
+                }
+                BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)
+                BarIcon(stringResource(R.string.settings), Icons.Rounded.Settings, shown, SETTINGS_TAG, requester(SETTINGS_TAG), ::below, onSettings)
+            }
+        }
+        // After the pages: Back reaches this before the pages' own back stack.
+        BackHandler(enabled = showBar && !(barHasFocus && atHome)) {
+            if (barHasFocus) {
+                onSelect(TopLevel.HOME)
+            } else {
+                calling = true
+                scope.launch {
+                    try {
+                        // The bar takes the focus first (once it can, the next frame), then the page goes up: the item
+                        // that had the focus leaves the screen without it, and nothing takes it back to the page.
+                        withFrameNanos { }
+                        runCatching { requester(selectedTag).requestFocus() }
+                        withFrameNanos { }
+                        withFrameNanos { }
+                        bar.page?.toTop()
+                    } finally {
+                        calling = false
+                    }
                 }
             }
-        },
-    ) {
-        content()
-        // After the pages: Back reaches this before the pages' own back stack.
-        BackHandler(enabled = showDrawer && !(drawerHasFocus && atHome)) {
-            if (!drawerHasFocus) runCatching { requester(selectedTag).requestFocus() } else onSelect(TopLevel.HOME)
         }
     }
 }
@@ -121,56 +223,68 @@ const val SEARCH_TAG = "tabSearch"
 const val SETTINGS_TAG = "tabSettings"
 
 @Composable
-private fun NavigationDrawerScope.DrawerItem(
-    label: String,
-    icon: ImageVector,
-    selected: Boolean,
-    tag: String,
-    requester: FocusRequester,
-    onClick: () -> Unit,
-) {
-    val lime = TvTokens.Lime
-    NavigationDrawerItem(
-        selected = selected,
+private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String, requester: FocusRequester, below: () -> FocusRequester, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
         onClick = onClick,
-        leadingContent = { Icon(icon, contentDescription = null) },
         modifier = Modifier
             .focusRequester(requester)
-            .semantics { contentDescription = label }
-            .testTag(tag)
-            // The tab shown keeps a lime mark beside its icon, on the screen's edge side, the drawer open or closed.
-            .drawBehind {
-                if (selected) {
-                    val x = if (layoutDirection == LayoutDirection.Rtl) size.width + 8.dp.toPx() else -12.dp.toPx()
-                    drawRoundRect(lime, topLeft = Offset(x, size.height / 2 - 9.dp.toPx()), size = Size(4.dp.toPx(), 18.dp.toPx()), cornerRadius = CornerRadius(2.dp.toPx()))
-                }
-            },
-        colors = NavigationDrawerItemDefaults.colors(
-            contentColor = Color.White.copy(alpha = 0.8f),
-            inactiveContentColor = Color.White.copy(alpha = 0.65f),
-            selectedContainerColor = Color.White.copy(alpha = 0.14f),
-            selectedContentColor = Color.White,
-            focusedContainerColor = Color.White,
-            focusedContentColor = TvTokens.Ink,
-            focusedSelectedContainerColor = Color.White,
-            focusedSelectedContentColor = TvTokens.Ink,
+            .focusProperties {
+                canFocus = shown
+                down = below()
+            }
+            .semantics {
+                contentDescription = label
+                this.selected = selected
+            }
+            .testTag(tag),
+        shape = ClickableSurfaceDefaults.shape(CircleShape),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) colors.onBackground.copy(alpha = 0.18f) else Color.Transparent,
+            contentColor = if (selected) colors.onBackground else colors.onBackground.copy(alpha = 0.72f),
+            focusedContainerColor = colors.onBackground,
+            focusedContentColor = colors.background,
+            pressedContainerColor = colors.onBackground,
+            pressedContentColor = colors.background,
         ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
     ) {
-        Text(label)
+        Text(
+            label,
+            fontSize = 15.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+            modifier = Modifier.padding(PaddingValues(horizontal = 16.dp, vertical = 8.dp)),
+        )
     }
 }
 
-/** Ondo's mark: a wave on a lime square. */
 @Composable
-private fun OndoMark(modifier: Modifier = Modifier) {
-    Box(modifier.size(40.dp).background(TvTokens.Lime, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(24.dp)) {
-            val path = Path().apply {
-                moveTo(size.width * 0.12f, size.height * 0.6f)
-                cubicTo(size.width * 0.3f, size.height * 0.3f, size.width * 0.42f, size.height * 0.3f, size.width * 0.5f, size.height * 0.5f)
-                cubicTo(size.width * 0.58f, size.height * 0.7f, size.width * 0.7f, size.height * 0.7f, size.width * 0.88f, size.height * 0.4f)
+private fun BarIcon(label: String, icon: ImageVector, shown: Boolean, tag: String, requester: FocusRequester, below: () -> FocusRequester, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .focusRequester(requester)
+            .focusProperties {
+                canFocus = shown
+                down = below()
             }
-            drawPath(path, TvTokens.Ink, style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round))
+            .semantics { contentDescription = label }
+            .testTag(tag),
+        shape = ClickableSurfaceDefaults.shape(CircleShape),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.Transparent,
+            contentColor = colors.onBackground.copy(alpha = 0.72f),
+            focusedContainerColor = colors.onBackground,
+            focusedContentColor = colors.background,
+            pressedContainerColor = colors.onBackground,
+            pressedContentColor = colors.background,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
+    ) {
+        Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
         }
     }
 }

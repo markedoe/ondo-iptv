@@ -165,8 +165,8 @@ class TelevisionLibraryTest {
 
     /** From Home: the drawer, down to Settings, OK; the remote then moves into the playlists. */
     private fun openSettings() {
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
         press(Key.DirectionRight)
@@ -200,8 +200,8 @@ class TelevisionLibraryTest {
     @Test
     fun syncIsTurnedOnAndItsDevicesShowWithTheRemote() {
         start()
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
         pressUntil(Key.DirectionDown) { focusedTag() == "settingsSync" }
@@ -232,8 +232,8 @@ class TelevisionLibraryTest {
         repository.setSyncOnLocalNetwork(true)
         repository.reportSyncDevices(listOf(SyncDevice("1f0e6c1a-2b3c-4d5e-8f90-123456789abc", "iPhone", syncedAt = System.currentTimeMillis(), unreachable = false)))
         settle()
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
         pressUntil(Key.DirectionDown) { focusedTag() == "settingsSync" }
@@ -251,8 +251,8 @@ class TelevisionLibraryTest {
         val error = IllegalStateException("Guide http://panel.example.com/xmltv.php?username=demo&password=secret")
         CrashLog.record(File(folder.root, CrashLog.FILE_NAME), "Ondo 1.1.0 (1007) · Android 12 (API 31) · Test TV", "main", error, Fixtures.NOW)
         start()
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
         pressUntil(Key.DirectionDown) { focusedTag() == "settingsAbout" }
@@ -279,8 +279,8 @@ class TelevisionLibraryTest {
 
     /** Settings, down the menu to [section], then right onto its first row, [row]. */
     private fun openSettingsRow(section: String, row: String) {
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
         pressUntil(Key.DirectionDown) { focusedTag() == section }
@@ -500,8 +500,8 @@ class TelevisionLibraryTest {
         val library = LibraryState(favorites = listOf(first, second).map { Favorite(Fixtures.PLAYLIST_ID, ItemKind.CHANNEL, it.id, it.name, addedAt = Fixtures.NOW) })
         start(library = library, manualClock = true)
         viewModel.setLiveFilter(LiveFilter(favoritesOnly = true))
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == "tabLive" }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == "tabLive" }
         press(Key.DirectionCenter)
         waitFor { exists("live") && focusedText().contains(first.name) }
         press(Key.DirectionDown)
@@ -526,8 +526,8 @@ class TelevisionLibraryTest {
     @Test
     fun holdingOkOnAChannelAddsItToMyListAndHoldingItAgainTakesItOut() {
         start()
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == "tabLive" }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == "tabLive" }
         press(Key.DirectionCenter)
         waitFor { exists("live") && !focusedTag().startsWith("tab") }
         val channel = focused()

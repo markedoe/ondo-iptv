@@ -202,11 +202,11 @@ class SearchNavigationTest {
         check(done()) { "never reached with $key; the focus is on ${focused()} (${focusedTag()})" }
     }
 
-    /** From the page to the drawer, onto [tag] (a tab, or the magnifying glass), OK. */
+    /** From the page up to the top bar, onto [tag] (a tab, or the magnifying glass), OK. */
     private fun fromDrawer(tag: String) {
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionUp, max = 8) { focusedTag() == tag || focusedTag() == "tabSearch" }
-        pressUntil(Key.DirectionDown, max = 8) { focusedTag() == tag }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionLeft, max = 8) { focusedTag() == tag || focusedTag() == "tabHome" }
+        pressUntil(Key.DirectionRight, max = 8) { focusedTag() == tag }
         press(Key.DirectionCenter)
         settle(500)
     }
@@ -227,13 +227,13 @@ class SearchNavigationTest {
         waitFor { exists("vod") }
         fromDrawer("tabSearch")
         waitFor { exists("searchField") }
-        assertFalse("no drawer beside Search", exists("drawer"))
+        assertFalse("no top bar over Search", exists("topBar"))
         typeOnTv("Glass")
         // The keyboard closes first, then Search.
         back()
         if (exists("searchField")) back()
         waitFor { exists("vod") && !exists("searchField") }
-        assertTrue("back on Movies, with its drawer", exists("drawer"))
+        assertTrue("back on Movies, with its top bar", exists("topBar"))
         // Movies again from the drawer: Movies, not Search.
         fromDrawer("tabHome")
         waitFor { exists("home") }

@@ -237,15 +237,26 @@ class TelevisionCatalogueTest {
         return moved
     }
 
-    /** From the page, to the drawer, onto [tag], and opens it. */
-    /** Towards the drawer: left, or right in a right-to-left language. */
-    private val towardsDrawer: Key
+    /** Along the top bar, towards its start: left, or right in a right-to-left language; and towards its end. */
+    private val towardsStart: Key
         get() = if (compose.activity.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL) Key.DirectionRight else Key.DirectionLeft
+    private val towardsEnd: Key
+        get() = if (towardsStart == Key.DirectionLeft) Key.DirectionRight else Key.DirectionLeft
 
+    /** Up to the top bar: a few presses near a page's top, else Back (far down a long list, it is one press). */
+    private fun toBar() {
+        repeat(6) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
+        if (!focusedTag().startsWith("tab")) {
+            compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+            waitFor { focusedTag().startsWith("tab") }
+        }
+    }
+
+    /** From the page, up to the top bar, onto [tag], and opens it. */
     private fun openFromDrawer(tag: String) {
-        pressUntil(towardsDrawer, max = 40) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionUp) { focusedTag() == "tabSearch" }
-        pressUntil(Key.DirectionDown) { focusedTag() == tag }
+        toBar()
+        pressUntil(towardsStart) { focusedTag() == "tabHome" }
+        pressUntil(towardsEnd) { focusedTag() == tag }
         press(Key.DirectionCenter)
         waitFor { !focusedTag().startsWith("tab") && focusedNode() != null }
     }
@@ -293,8 +304,8 @@ class TelevisionCatalogueTest {
         // On a demo channel: Home will come back to a card the new playlist does not have.
         pressUntil(Key.DirectionDown) { focused().startsWith("Demo") }
         press(Key.DirectionRight, times = 3)
-        pressUntil(Key.DirectionLeft, max = 8) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        toBar()
+        pressUntil(towardsEnd) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
         press(Key.DirectionRight)
@@ -397,8 +408,8 @@ class TelevisionCatalogueTest {
         repeat(3) { if (exists("search")) compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }; settle(300) }
         waitFor { !exists("search") }
         // Settings, Languages and categories.
-        pressUntil(Key.DirectionLeft, max = 40) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        toBar()
+        pressUntil(towardsEnd) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
         pressUntil(Key.DirectionDown) { focusedTag() == "settingsCatalogue" }
@@ -418,8 +429,8 @@ class TelevisionCatalogueTest {
         compose.runOnIdle { repository.mergeSync(phoneSnapshot(), "Living room TV") }
         waitFor { repository.state.value.playlists.size == 2 }
         press(Key.DirectionDown, times = 3)
-        pressUntil(Key.DirectionLeft, max = 8) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        toBar()
+        pressUntil(towardsEnd) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
         press(Key.DirectionRight)

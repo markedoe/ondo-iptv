@@ -189,13 +189,13 @@ private fun MainTabs(viewModel: OndoViewModel) {
         TopLevel.entries.firstOrNull { destination.hasRoute(it.route::class) }?.let { selected = it }
     }
     val destination = entry?.destination
-    // On a TV, Search is a page of its own, beside no drawer: Back closes it.
+    // On a TV, Search is a page of its own, without the top bar: Back closes it.
     val tabPage = TopLevel.entries.any { destination?.hasRoute(it.route::class) == true }
     val frame: @Composable (@Composable () -> Unit) -> Unit = if (isTelevision()) {
         { pages ->
             TvNavigationFrame(
                 selected = selected,
-                showDrawer = tabPage,
+                showBar = tabPage,
                 onSelect = navController::openTab,
                 onSearch = { navController.openSearch(viewModel) },
                 onSettings = { navController.navigate(Routes.Settings) },
@@ -217,11 +217,11 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 popExitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
             ) {
                 page<Routes.Home>(TvMargins.NONE) { HomeDestination(viewModel, navController) }
-                page<Routes.Movies>(TvMargins.BESIDE_DRAWER) { VodDestination(viewModel, navController, series = false) }
-                page<Routes.Series>(TvMargins.BESIDE_DRAWER) { VodDestination(viewModel, navController, series = true) }
-                page<Routes.Live>(TvMargins.BESIDE_DRAWER) { LiveDestination(viewModel, navController) }
+                page<Routes.Movies>(TvMargins.TAB) { VodDestination(viewModel, navController, series = false) }
+                page<Routes.Series>(TvMargins.TAB) { VodDestination(viewModel, navController, series = true) }
+                page<Routes.Live>(TvMargins.TAB) { LiveDestination(viewModel, navController) }
                 page<Routes.Search> { SearchDestination(viewModel, navController) }
-                page<Routes.MyList>(TvMargins.BESIDE_DRAWER) { MyListDestination(viewModel, navController) }
+                page<Routes.MyList>(TvMargins.TAB) { MyListDestination(viewModel, navController) }
                 page<Routes.MovieDetail>(TvMargins.NONE) { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                 page<Routes.SeriesDetail>(TvMargins.NONE) { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
                 page<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
@@ -300,8 +300,8 @@ private fun ErrorSnackbar(viewModel: OndoViewModel, modifier: Modifier, onRetry:
     SnackbarHost(host, modifier.testTag("errorSnackbar"))
 }
 
-/** How a page keeps clear of a TV's edges: by itself (pictures to the edges), beside the drawer, or within the margins. */
-private enum class TvMargins { NONE, BESIDE_DRAWER, SAFE_AREA }
+/** How a page keeps clear of a TV's edges: by itself (pictures to the edges), as a tab under the top bar, or within the margins. */
+private enum class TvMargins { NONE, TAB, SAFE_AREA }
 
 /** A page of the app, which keeps where the remote's focus was while another page is open (see [FocusMemory]). */
 private inline fun <reified T : Any> NavGraphBuilder.page(
@@ -309,7 +309,7 @@ private inline fun <reified T : Any> NavGraphBuilder.page(
     noinline content: @Composable (NavBackStackEntry) -> Unit,
 ) {
     composable<T> { entry ->
-        val modifier = if (margins == TvMargins.NONE) Modifier else Modifier.tvSafeArea(besideDrawer = margins == TvMargins.BESIDE_DRAWER)
+        val modifier = if (margins == TvMargins.NONE) Modifier else Modifier.tvSafeArea(tab = margins == TvMargins.TAB)
         CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) { FocusEntry(modifier) { content(entry) } }
     }
 }

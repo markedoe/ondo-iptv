@@ -1,5 +1,7 @@
 package com.markedoe.ondo.ui.screens
 
+import com.markedoe.ondo.ui.tv.tvTopBarSpace
+import com.markedoe.ondo.ui.tv.rememberTabListState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -91,9 +93,10 @@ class VodActions(
 fun VodScreen(state: VodUiState, actions: VodActions) {
     val metrics = rememberShelfMetrics()
     LazyColumn(
+        state = rememberTabListState(),
         modifier = Modifier.fillMaxSize().testTag("vod"),
         verticalArrangement = Arrangement.spacedBy(if (metrics.compact) 24.dp else 32.dp),
-        contentPadding = PaddingValues(bottom = 32.dp),
+        contentPadding = PaddingValues(top = tvTopBarSpace(), bottom = 32.dp),
     ) {
         item {
             TopAppBar(

@@ -146,8 +146,8 @@ class TelevisionTextFieldsTest {
     private fun keyboardShown(): Boolean = shadowOf(compose.activity.getSystemService(InputMethodManager::class.java)).isSoftInputVisible
 
     private fun openSettings() {
-        pressUntil(Key.DirectionLeft, max = 10) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focusedTag() == SETTINGS_TAG }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == SETTINGS_TAG }
         press(Key.DirectionCenter)
         waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
     }
@@ -220,8 +220,8 @@ class TelevisionTextFieldsTest {
     fun searchOpensTheKeyboardWithOk() {
         start()
         waitFor { focusedNode() != null }
-        pressUntil(Key.DirectionLeft, max = 10) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionUp) { focusedTag() == "tabSearch" }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == "tabSearch" }
         press(Key.DirectionCenter)
         waitFor { exists("searchField") }
         pressUntil(Key.DirectionDown, max = 4) { focusedTag() == "searchField" }

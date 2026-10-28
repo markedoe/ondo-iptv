@@ -221,8 +221,8 @@ class ContinueWatchingRemovalTest {
     fun okHeldOnTheMoviesTabTakesTheCardAway() {
         start(television = true)
         waitFor { focusedNode() != null }
-        repeat(10) { if (!focusedTag().startsWith("tab")) press(Key.DirectionLeft) }
-        repeat(8) { if (focusedTag() != "tabMovies") press(Key.DirectionDown) }
+        repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
+        repeat(8) { if (focusedTag() != "tabMovies") press(Key.DirectionRight) }
         assertEquals("tabMovies", focusedTag())
         press(Key.DirectionCenter)
         val card = hasText(movie.name) and SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick)

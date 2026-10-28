@@ -97,7 +97,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
                     TelevisionFrame {
                         if (tv) {
-                            TvNavigationFrame(tab, showDrawer = drawer, onSelect = {}, onSearch = {}, onSettings = {}) { content() }
+                            TvNavigationFrame(tab, showBar = drawer, onSelect = {}, onSearch = {}, onSettings = {}) { content() }
                         } else {
                             OndoNavigationFrame(tab, onSelect = {}) { content() }
                         }
@@ -127,7 +127,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
 
     @Test
     fun movies() = capture("04-movies", TopLevel.MOVIES) {
-        Box(Modifier.tvSafeArea(besideDrawer = true)) {
+        Box(Modifier.tvSafeArea(tab = true)) {
             VodScreen(UiMappers.vod(state, series = false, title = if (french) "Films" else "Movies"), VodActions())
         }
     }
@@ -140,7 +140,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
             listOf("Evening News" to "Weather", "World in Focus" to "The Debate", "Cup Final" to "Highlights", "Alpine Tour" to "Stage Finish")
         }
         val live = UiMappers.live(state, null, false, Fixtures.NOW)
-        Box(Modifier.tvSafeArea(besideDrawer = true)) {
+        Box(Modifier.tvSafeArea(tab = true)) {
             LiveScreen(
                 live.copy(channels = live.channels.mapIndexed { index, row ->
                     row.copy(nowTitle = programmes[index].first, nowProgress = 0.2f + 0.18f * index, nextTitle = programmes[index].second)

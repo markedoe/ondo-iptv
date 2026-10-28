@@ -229,36 +229,39 @@ class Tv:
         self.check_alive("home after a restart")
 
     @staticmethod
-    def left_edge(node):
-        """The node's left edge in pixels (bounds="[x1,y1][x2,y2]")."""
-        found = re.match(r"\[(-?\d+),", node.get("bounds", "")) if node is not None else None
+    def top_edge(node):
+        """The node's top edge in pixels."""
+        found = re.match(r"\[-?\d+,(-?\d+)\]", node.get("bounds", "")) if node is not None else None
         return int(found.group(1)) if found else 10_000
 
-    def in_drawer(self):
-        """The focus on one of the drawer's places: its words, at the screen's left edge (a page's chips have the same words)."""
-        node, texts = self.focused()
-        return node is not None and any(t in DRAWER for t in texts) and self.left_edge(node) < 260
+    def in_bar(self, node=None, texts=None):
+        """The focus on one of the top bar's places: its words, at the screen's top (a page's chips and tabs have the
+        same words, below it)."""
+        if node is None:
+            node, texts = self.focused()
+        return node is not None and any(t in TOP_BAR for t in texts) and self.top_edge(node) < BAR_BOTTOM
 
-    def to_drawer(self):
-        """The focus on the drawer: Back from a page lands on its tab (never Back from the drawer: on Home it leaves)."""
+    def to_bar(self):
+        """The focus on the top bar: Back from a tab's page lands on its tab (never Back from the bar: on Home it
+        leaves)."""
         for attempt in range(10):
-            if self.in_drawer():
+            if self.in_bar():
                 return
-            # Back up through the pages opened from a tab (a movie, a genre, a grid…), then Left.
-            self.key("BACK" if attempt < 6 else "LEFT")
+            # Back up through the pages opened from a tab (a movie, a genre, a grid…) to the tab's page, then to its bar.
+            self.key("BACK" if attempt < 6 else "UP")
             time.sleep(1)
-        raise TimeoutError("the drawer never took the focus")
+        raise TimeoutError("the top bar never took the focus")
 
-    def drawer(self, item):
-        """Opens a place of the drawer (a tab, Search or Settings)."""
-        self.to_drawer()
+    def bar(self, item):
+        """Opens a place of the top bar (a tab, Search or Settings)."""
+        self.to_bar()
         for i in range(18):
             node, texts = self.focused()
-            if node is not None and item in texts and self.left_edge(node) < 260:
+            if item in texts and self.in_bar(node, texts):
                 break
-            self.key("UP" if i < 8 else "DOWN")
+            self.key("LEFT" if i < 8 else "RIGHT")
         else:
-            raise TimeoutError(f"the drawer's {item} never had the focus")
+            raise TimeoutError(f"the top bar's {item} never had the focus")
         self.key("DPAD_CENTER")
         time.sleep(4)
         self.check_alive(f"{item} opened")
@@ -294,7 +297,9 @@ class Tv:
             raise TimeoutError("Back never closed the player")
 
 
-DRAWER = ("Search", "Home", "Movies", "Series", "Live TV", "My List", "Settings")
+TOP_BAR = ("Search", "Home", "Movies", "Series", "Live TV", "My List", "Settings")
+# Below this, in pixels from the top of a 1080-pixel screen, nothing is on the top bar.
+BAR_BOTTOM = 140
 
 
 SETTINGS_SECTIONS = ("Playlists", "Sync", "Player", "Catalog", "About")
@@ -340,7 +345,7 @@ def back_to_settings_row(tv, page):
 
 def path_settings(tv, args):
     """Every part of Settings and what opens from it; Refresh last (the whole catalogue loaded again beside the one shown)."""
-    tv.drawer("Settings")
+    tv.bar("Settings")
     tv.note_screen("settings")
     settings_section(tv, "Sync")
     tv.key("RIGHT")
@@ -450,7 +455,7 @@ def path_settings(tv, args):
 
 def path_search(tv, args):
     """Search typed with the remote's keys: a movie opened, then a person (actor, director) and one of their titles."""
-    tv.drawer("Search")
+    tv.bar("Search")
     tv.note_screen("search")
     tv.focus_on_field(0)
     tv.shell("input text 'Movie%s12'")
@@ -471,7 +476,7 @@ def path_search(tv, args):
         tv.key("BACK")
         time.sleep(2)
     tv.check_alive("back to the search")
-    tv.drawer("Search")
+    tv.bar("Search")
     tv.focus_on_field(0, towards="UP")
     tv.key("MOVE_END")
     tv.key("DEL", times=10, pause=0.1)
@@ -485,7 +490,7 @@ def path_search(tv, args):
 
 def path_details(tv, args):
     """A movie's page (get_vod_info) and a series' page (get_series_info): seasons, an episode played."""
-    tv.drawer("Series")
+    tv.bar("Series")
     tv.key("DOWN", 2)
     tv.key("RIGHT", 2)
     tv.key("DPAD_CENTER")
@@ -514,7 +519,7 @@ def path_details(tv, args):
     tv.note_screen("series-bottom")
     tv.key("BACK")
     time.sleep(2)
-    tv.drawer("Movies")
+    tv.bar("Movies")
     tv.key("DOWN", 2)
     tv.key("RIGHT", 1)
     tv.key("DPAD_CENTER")
@@ -539,7 +544,7 @@ def path_details(tv, args):
 
 def path_player(tv, args):
     """A live channel and a movie in the player, the remote's keys pressed: OK, arrows, channels, figures, Info, the Subtitles, Audio and More panels."""
-    tv.drawer("Live TV")
+    tv.bar("Live TV")
     tv.key("DOWN")
     tv.key("DPAD_CENTER")
     time.sleep(8)
@@ -575,7 +580,7 @@ def path_player(tv, args):
     time.sleep(2)
     tv.leave_player()
     tv.check_alive("back from the live player")
-    tv.drawer("Movies")
+    tv.bar("Movies")
     tv.key("DOWN", 2)
     tv.key("DPAD_CENTER")
     tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
@@ -627,7 +632,7 @@ def player_panel(tv, button, name, expect=None, close=True):
 
 def path_guide(tv, args):
     """The TV guide: scrolled, a programme opened, a reminder set; its WorkManager job run at once."""
-    tv.drawer("Live TV")
+    tv.bar("Live TV")
     tv.key("UP", 3)
     tv.open("TV guide", keys=("RIGHT",), max_presses=8, wait=8)
     tv.wait_for("the guide", lambda: tv.visible("All channels") or tv.visible("Reminders"), 60)
@@ -666,7 +671,7 @@ def path_guide(tv, args):
 
 def path_mylist(tv, args):
     """A movie and a channel added to My List and taken out again; the long press on a channel."""
-    tv.drawer("Movies")
+    tv.bar("Movies")
     tv.key("DOWN", 2)
     tv.key("RIGHT", 3)
     tv.key("DPAD_CENTER")
@@ -675,13 +680,13 @@ def path_mylist(tv, args):
     tv.note_screen("mylist-added")
     tv.key("BACK")
     time.sleep(2)
-    tv.drawer("Live TV")
+    tv.bar("Live TV")
     tv.key("DOWN")
     tv.shell("input keyevent --longpress KEYCODE_DPAD_CENTER")
     time.sleep(3)
     tv.check_alive("a long press on a channel")
     tv.note_screen("mylist-channel-longpress")
-    tv.drawer("My List")
+    tv.bar("My List")
     tv.note_screen("mylist")
     for segment in ("Movies", "Channels"):
         tv.open(segment, keys=("UP", "RIGHT", "RIGHT", "RIGHT", "LEFT", "LEFT", "LEFT"), max_presses=14, exact=True, wait=2)
@@ -697,12 +702,12 @@ def path_mylist(tv, args):
             tv.note_screen("mylist-removed")
         tv.key("BACK")
         time.sleep(2)
-        tv.drawer("My List")
+        tv.bar("My List")
 
 
 def path_playlists(tv, args):
     """A second Xtream playlist added from the Settings, the first used again, the second deleted."""
-    tv.drawer("Settings")
+    tv.bar("Settings")
     settings_section(tv, "Playlists")
     tv.key("RIGHT")
     tv.open("Add a Playlist", keys=("DOWN",), max_presses=6, wait=3)
@@ -745,7 +750,7 @@ def path_playlists(tv, args):
 def path_browse(tv, args):
     """Pages opened with arguments: a category's grid (and every movie's), a genre and a year (Browse: its kind read
     back by name), a new collection and its page, the filters of Search, Live TV and the guide."""
-    tv.drawer("Movies")
+    tv.bar("Movies")
     tv.open("FR | Films 2", keys=("UP", "RIGHT", "RIGHT", "RIGHT"), max_presses=8, exact=True, wait=5)
     tv.note_screen("browse-category-grid")
     tv.open("Movie ", keys=("DOWN", "DOWN", "RIGHT"), max_presses=8, wait=4)
@@ -773,7 +778,7 @@ def path_browse(tv, args):
     # The picker stays open with the new collection ticked: Back closes it.
     tv.key("BACK")
     time.sleep(2)
-    tv.drawer("My List")
+    tv.bar("My List")
     my_list_tab(tv, "Collections")
     tv.open("Collection ", keys=("DOWN",), max_presses=4, wait=4)
     tv.note_screen("browse-collection-page")
@@ -785,7 +790,7 @@ def path_browse(tv, args):
     time.sleep(2)
     tv.key("BACK")
     time.sleep(2)
-    tv.drawer("Search")
+    tv.bar("Search")
     tv.focus_on_field(0)
     tv.shell("input text 'Series%s1'")
     tv.stay(3, "search typed")
@@ -798,7 +803,7 @@ def path_browse(tv, args):
     tv.note_screen("browse-search-filter-chosen")
     tv.key("BACK")
     time.sleep(2)
-    tv.drawer("Live TV")
+    tv.bar("Live TV")
     tv.key("UP", 3)
     tv.open("Categories", keys=("RIGHT",), max_presses=8, exact=True, wait=3)
     tv.note_screen("browse-live-categories")
@@ -813,17 +818,17 @@ MY_LIST_TABS = ("Movies", "Series", "Channels", "Collections")
 
 
 def my_list_tab(tv, tab):
-    """My List's tab [tab] opened: from the content Up reaches the tabs, from Search (above them, on the right) Down
-    does; along the tabs, Right (Collections is the last one) then Left."""
+    """My List's tab [tab] opened: from the content Up reaches the tabs, from the top bar or from Search (above them, on
+    the right) Down does; along the tabs, Right (Collections is the last one) then Left."""
     for i in range(14):
         node, texts = tv.focused()
         if tab in texts:
             tv.key("DPAD_CENTER")
             time.sleep(2)
             return
-        if node is not None and tv.left_edge(node) < 260:
-            # Still in the drawer: into the page.
-            tv.key("RIGHT")
+        if tv.in_bar(node, texts):
+            # Still on the top bar: into the page.
+            tv.key("DOWN")
         elif any(name in texts for name in MY_LIST_TABS):
             tv.key("RIGHT" if i < 8 else "LEFT")
         elif "Search" in texts:
@@ -875,7 +880,7 @@ def path_sync(tv, args):
     port redirection: it arrives from the host's own address on the emulator's network, as from another device;
     adb forward would arrive from the device itself, which the app refuses):
     its snapshot read by the release build, merged (a playlist, My List, progress, a list), and the answer written."""
-    tv.drawer("Settings")
+    tv.bar("Settings")
     settings_section(tv, "Sync")
     tv.key("RIGHT")
     tv.open("Sync on this network", keys=("UP",), max_presses=3, wait=6)
@@ -920,7 +925,7 @@ def path_sync(tv, args):
     tv.adb("emu", "redir", "del", "tcp:18765")
     tv.key("BACK")
     time.sleep(3)
-    tv.drawer("My List")
+    tv.bar("My List")
     tv.note_screen("sync-mylist")
 
 
@@ -954,7 +959,7 @@ def killed_in_background(tv, where, expect):
 def path_restore(tv, args):
     """Saved state: pages recreated by Android (configuration change), and restored in a new process after Android
     ended the app in the background (navigation's routes, the player's request, the remembered values)."""
-    tv.drawer("Movies")
+    tv.bar("Movies")
     tv.open("Movie ", keys=("DOWN", "DOWN", "RIGHT"), max_presses=10, wait=1)
     tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
     recreated(tv, "movie")
@@ -963,7 +968,7 @@ def path_restore(tv, args):
     time.sleep(3)
     tv.check_alive("Back after the restore")
     tv.note_screen("restored-movie-back")
-    tv.drawer("Settings")
+    tv.bar("Settings")
     settings_section(tv, "Catalog")
     tv.key("RIGHT")
     tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
@@ -975,7 +980,7 @@ def path_restore(tv, args):
     tv.note_screen("restored-settings")
     tv.key("BACK")
     time.sleep(3)
-    tv.drawer("Live TV")
+    tv.bar("Live TV")
     tv.key("UP", 3)
     tv.open("TV guide", keys=("RIGHT",), max_presses=8, wait=8)
     tv.key("DOWN", 3)
@@ -983,7 +988,7 @@ def path_restore(tv, args):
     killed_in_background(tv, "guide", "Reminders")
     tv.key("BACK")
     time.sleep(3)
-    tv.drawer("Movies")
+    tv.bar("Movies")
     tv.open("Movie ", keys=("DOWN", "DOWN", "RIGHT"), max_presses=10, wait=1)
     tv.wait_for("a movie page", lambda: tv.visible("Play") and tv.visible("Collection"), 30)
     tv.open("Play", keys=("UP", "LEFT"), max_presses=4, wait=8)
@@ -1005,7 +1010,7 @@ def path_crash(tv, args):
     time.sleep(5)
     tv.adb("logcat", "-b", "crash", "-c")
     tv.restart()
-    tv.drawer("Settings")
+    tv.bar("Settings")
     settings_section(tv, "About")
     tv.key("RIGHT")
     tv.focus_on("Last crash", keys=("DOWN",), max_presses=10)
@@ -1053,7 +1058,7 @@ def path_keyboard(tv, args):
         return field
 
     try:
-        tv.drawer("Settings")
+        tv.bar("Settings")
         settings_section(tv, "Catalog")
         tv.key("RIGHT")
         tv.open("Languages and categories", keys=("UP",), max_presses=3, wait=5)
@@ -1128,7 +1133,7 @@ def path_bitrate(tv, args):
     player keeps ahead of the picture must fit in the app's memory with it. The Java heap is noted every 10 s. The app
     running out of memory fails, even when the player only shows an error, and so does the error itself."""
     # Movie 1 found by its name: the Movies tab's rows move as the earlier paths change the library.
-    tv.drawer("Search")
+    tv.bar("Search")
     tv.focus_on_field(0)
     tv.shell("input text 'Movie%s1'")
     tv.stay(4, "Movie 1 searched")
@@ -1187,7 +1192,7 @@ def path_bitrate(tv, args):
 def path_rows(tv, args):
     """The remote along the Movies tab's rows of posters, filmed (rows.mp4 with the screenshots): how a row moves when a
     card takes the focus, and the page when the next row does."""
-    tv.drawer("Movies")
+    tv.bar("Movies")
     time.sleep(3)
     tv.key("RIGHT", pause=1.0)
     tv.note_screen("rows-start")
@@ -1285,7 +1290,7 @@ def main():
             tv.focus_on("Add", keys=("TAB",), editable=False)
             tv.key("DPAD_CENTER")
         start = time.time()
-        # The catalogue arrives: the welcome and the form are replaced by the tabs (Live TV in the drawer).
+        # The catalogue arrives: the welcome and the form are replaced by the tabs (Live TV on the top bar).
         tv.wait_for("catalogue", lambda: not tv.visible("Server", "Username") and tv.visible("Live TV"), args.wait_load, every=3)
         tv.say(f"catalogue on screen after {time.time() - start:.0f} s")
         tv.screenshot("home")
@@ -1303,19 +1308,9 @@ def main():
         tv.screenshot("opened")
         tv.key("BACK")
         time.sleep(2)
-        tabs = ("Home", "Movies", "Series", "Live TV", "My List")
         for tab in ("Movies", "Series", "Live TV", "My List", "Home"):
-            # To the drawer: Back from a page lands on its tab (never Back from the drawer: on Home it leaves the app).
-            for attempt in range(6):
-                _, texts = tv.focused()
-                if any(t in tabs for t in texts):
-                    break
-                tv.key("BACK" if attempt < 2 else "LEFT")
-                time.sleep(1)
-            tv.focus_on(tab, keys=("UP", "UP", "UP", "UP", "UP", "UP", "DOWN", "DOWN", "DOWN", "DOWN", "DOWN", "DOWN", "DOWN", "DOWN"), max_presses=16)
-            tv.key("DPAD_CENTER")
-            time.sleep(4)
-            tv.check_alive(f"{tab} opened")
+            # Up to the top bar (Back from a page lands on its tab), onto the tab, opened.
+            tv.bar(tab)
             tv.screenshot(f"tab-{tab.replace(' ', '')}")
             tv.key("DOWN", 3)
             tv.key("RIGHT", 4)

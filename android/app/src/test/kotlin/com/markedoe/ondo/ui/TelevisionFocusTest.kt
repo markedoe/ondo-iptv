@@ -396,11 +396,11 @@ class TelevisionFocusTest {
 
     private val movieTitles = Fixtures.content.movies.map { it.name }.toSet()
 
-    /** From the page, to the drawer, onto [tag], and opens it; the remote then moves into the page. */
+    /** From the page, up to the top bar, onto [tag], and opens it; the remote then moves into the page. */
     private fun openFromDrawer(tag: String) {
-        pressUntil(Key.DirectionLeft) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionUp) { focusedTag() == SEARCH_TAG }
-        pressUntil(Key.DirectionDown) { focusedTag() == tag }
+        pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionLeft) { focusedTag() == "tabHome" }
+        pressUntil(Key.DirectionRight) { focusedTag() == tag }
         press(Key.DirectionCenter)
         waitFor { focusedNode() != null && !focusedTag().startsWith("tab") }
         settle(500)

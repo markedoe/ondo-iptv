@@ -1,5 +1,7 @@
 package com.markedoe.ondo.ui.screens
 
+import com.markedoe.ondo.ui.tv.tvTopBarSpace
+import com.markedoe.ondo.ui.tv.rememberTabListState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -75,7 +77,7 @@ class LiveActions(
 @Composable
 fun LiveScreen(state: LiveUiState, actions: LiveActions) {
     val heldOk = LocalHeldOk.current
-    LazyColumn(modifier = Modifier.fillMaxSize().testTag("live"), contentPadding = PaddingValues(bottom = 24.dp)) {
+    LazyColumn(state = rememberTabListState(), modifier = Modifier.fillMaxSize().testTag("live"), contentPadding = PaddingValues(top = tvTopBarSpace(), bottom = 24.dp)) {
         item {
             TopAppBar(
                 title = { Text(stringResource(R.string.live_tv), style = MaterialTheme.typography.headlineSmall) },

@@ -103,11 +103,19 @@ class TelevisionTest {
     private fun focusedTag(): String =
         compose.onNode(isFocused()).fetchSemanticsNode().config.getOrNull(SemanticsProperties.TestTag).orEmpty()
 
-    /** From the page, to the drawer, onto the tab at [index] (Home is 0, below Search), and opens it. */
+    private fun waitForTag(tag: String) {
+        compose.waitUntil(5_000) { compose.onAllNodes(isFocused()).fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.TestTag) == tag } }
+    }
+
+    /** Whether the top bar shows (hidden, it is hidden from TalkBack too). */
+    private fun barShown(): Boolean =
+        compose.onAllNodesWithTag("topBar").fetchSemanticsNodes().any { SemanticsProperties.HideFromAccessibility !in it.config }
+
+    /** From the page, up to the top bar, onto the tab at [index] (Home is 0), and opens it. */
     private fun openTab(index: Int) {
-        repeat(6) { if (!focusedTag().startsWith("tab")) press(Key.DirectionLeft) }
-        press(Key.DirectionUp, times = 6)
-        press(Key.DirectionDown, times = index + 1)
+        repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
+        press(Key.DirectionLeft, times = 7)
+        press(Key.DirectionRight, times = index)
         press(Key.DirectionCenter)
         // The page's content (computed in the background), then the focus entering it: the test's clocks (the main
         // thread's and Compose's) keep pace with real time, as on a device.
@@ -297,35 +305,65 @@ class TelevisionTest {
     }
 
     @Test
-    fun leftFromPlayReachesTheDrawerOnHome() {
+    fun upFromPlayReachesTheTopBarOnHome() {
         start()
-        press(Key.DirectionLeft)
+        press(Key.DirectionUp)
         assertEquals("tabHome", focusedTag())
     }
 
     @Test
-    fun leftFromATabsPageLandsOnThatTab() {
+    fun upFromATabsPageLandsOnThatTab() {
         start()
         openTab(1)
         press(Key.DirectionDown)
-        repeat(6) { if (!focusedTag().startsWith("tab")) press(Key.DirectionLeft) }
+        repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
         assertEquals("tabMovies", focusedTag())
     }
 
     @Test
-    fun backGoesToTheDrawerThenHomeThenOut() {
+    fun backGoesToTheTopBarThenHomeThenOut() {
         start()
         openTab(2)
-        // From the page: the drawer, on the tab shown.
+        // From the page: the top bar, on the tab shown.
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        compose.waitForIdle()
-        assertEquals("tabSeries", focusedTag())
-        // From the drawer: Home.
+        waitForTag("tabSeries")
+        // From the bar: Home.
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("home").fetchSemanticsNodes().isNotEmpty() }
-        // From Home's drawer, Back is the system's (out of the app).
-        repeat(6) { if (!focusedTag().startsWith("tab")) press(Key.DirectionLeft) }
+        // From Home's bar, Back is the system's (out of the app).
+        repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
         compose.runOnIdle { assertTrue(!compose.activity.onBackPressedDispatcher.hasEnabledCallbacks()) }
+    }
+
+    /** Down from the bar, the remote is back on what it left, not on whatever lies below the tab. */
+    @Test
+    fun downFromTheTopBarGoesBackWhereTheRemoteWas() {
+        start()
+        press(Key.DirectionRight)
+        val left = focusedTag()
+        assertTrue("on a button of the featured title: $left", left.startsWith("hero") && left != "heroPlay")
+        press(Key.DirectionUp)
+        assertEquals("tabHome", focusedTag())
+        press(Key.DirectionDown)
+        assertEquals(left, focusedTag())
+    }
+
+    /** Far down a tab's page the bar has gone with the page's top; Back brings both back, at once. */
+    @Test
+    fun farDownAPageTheBarGoesAndBackBringsTheTopBack() {
+        start()
+        press(Key.DirectionDown, times = 4)
+        assertTrue("the bar went with the page's top", compose.onAllNodesWithTag("tabHome").fetchSemanticsNodes().none { it.config.getOrNull(SemanticsProperties.Focused) == true } && !barShown())
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        waitForTag("tabHome")
+        compose.mainClock.advanceTimeBy(1_000)
+        compose.waitForIdle()
+        assertEquals("the bar keeps the focus", "tabHome", focusedTag())
+        assertTrue("the bar is back", barShown())
+        compose.onNodeWithTag("hero").assertIsDisplayed()
+        // The page is at its top: Down starts from its first item.
+        press(Key.DirectionDown)
+        assertEquals("heroPlay", focusedTag())
     }
 
     @Test
@@ -337,8 +375,8 @@ class TelevisionTest {
         compose.waitForIdle()
         compose.onNodeWithTag("detailPlay").assertIsFocused()
         assertTrue(compose.onAllNodesWithContentDescription("Back").fetchSemanticsNodes().isEmpty())
-        // No drawer beside a movie: Left from Play stays on the page.
-        press(Key.DirectionLeft)
+        // No top bar over a movie: Up from Play stays on the page.
+        press(Key.DirectionUp)
         compose.onNodeWithTag("detailPlay").assertIsFocused()
     }
 }

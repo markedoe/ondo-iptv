@@ -118,8 +118,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   films et séries (les séries toujours, les films parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
   partagent.
 - **TV en direct** : catégories, Ma liste, programme en cours et suivant.
-- **Recherche** (la loupe d'Accueil, Films, Séries, TV en direct et Ma liste ; sur une TV, en tête du menu, une
-  page à part que Retour ferme) : chaînes, films, séries et **acteurs et réalisateurs par leur nom**, filtrables
+- **Recherche** (la loupe d'Accueil, Films, Séries, TV en direct et Ma liste ; sur une TV, dans la barre du haut après
+  les onglets, une page à part que Retour ferme) : chaînes, films, séries et **acteurs et réalisateurs par leur nom**, filtrables
   par années de sortie ou par festival / cérémonie (lauréats seulement, au choix) ; pas de recherche dans les
   programmes. Elle s'ouvre vide à chaque fois, et un onglet choisi ensuite s'ouvre sur sa propre page.
 - **Guide TV** (le bouton calendrier de TV en direct) : une grille des chaînes choisies à cet endroit, et des

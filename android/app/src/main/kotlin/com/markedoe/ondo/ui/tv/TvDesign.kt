@@ -78,11 +78,11 @@ import kotlinx.coroutines.delay
  * 20 dp apart with the next one peeking.
  */
 object TvTokens {
-    /** Where the drawer's icons start: clear of the 5 % a TV may crop. */
-    val DrawerStart = 32.dp
+    /** Where the pages' text and rows start: clear of the 5 % a TV may crop, with room for a card that grows. */
+    val ContentStart = 56.dp
 
-    /** Where the pages' text and rows start, beside the closed drawer. */
-    val ContentStart = 112.dp
+    /** Where a tab page's content starts, below the top bar ([TvNavigationFrame]). */
+    val TopBarSpace = 84.dp
 
     /** The right and bottom margins a TV may crop (TV-OV). */
     val EdgeEnd = 48.dp

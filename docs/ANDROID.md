@@ -69,8 +69,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   (`res/values-*`), also offered in Android 13's per-app language setting (`res/xml/locales_config.xml`).
 - **Android TV / Google TV** (`ui/tv/`): a Leanback launcher entry and banner (320 × 180 at xhdpi,
   drawn by `fastlane/creative/render.mjs --tv`), touch screen not required. Compose for TV (`androidx.tv:tv-material`)
-  in Ondo's colours (`TvDesign.kt`): a navigation drawer with Search, the tabs and Settings (`TvShell.kt`; Back goes
-  from a page to the drawer, then to Home, then out), a full-screen Home (`TvHomeScreen.kt`) and movie and series
+  in Ondo's colours (`TvDesign.kt`): a top bar with the tabs, Search and Settings, which goes away with the page's top as you
+  scroll down (`TvShell.kt`; Back goes to the page's top and the bar, then to Home, then out), a full-screen Home (`TvHomeScreen.kt`) and movie and series
   pages (`TvDetailScreens.kt`) with backdrops behind the text, Settings in two panes with each playlist's buttons in
   reach of the remote (`TvSettingsScreen.kt`; Delete asks first, starting on Cancel), cards that grow with a white border on focus and
   rows peeking past the right edge; the other pages are the Compose screens within the TV's safe area
