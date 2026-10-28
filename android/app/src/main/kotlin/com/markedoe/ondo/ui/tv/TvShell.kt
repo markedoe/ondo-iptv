@@ -53,6 +53,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
@@ -73,6 +75,19 @@ class TvTopBar {
     internal class Page(val toTop: suspend () -> Unit, val memory: FocusMemory?)
 
     internal var page: Page? by mutableStateOf(null)
+
+    /** A short line at the bar's end, before Search (Home: the playlist and when it was updated). */
+    internal var note: String? by mutableStateOf(null)
+}
+
+/** Shows [text] at the top bar's end while the calling page is on screen (on a TV; nothing elsewhere). */
+@Composable
+fun TvTopBarNote(text: String?) {
+    val bar = LocalTvTopBar.current ?: return
+    DisposableEffect(bar, text) {
+        bar.note = text
+        onDispose { if (bar.note == text) bar.note = null }
+    }
 }
 
 val LocalTvTopBar = staticCompositionLocalOf<TvTopBar?> { null }
@@ -178,6 +193,16 @@ fun TvNavigationFrame(
                     BarTab(stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below) { onSelect(tab) }
                 }
                 Spacer(Modifier.weight(1f))
+                bar.note?.let { note ->
+                    Text(
+                        note,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.widthIn(max = 360.dp).padding(end = 12.dp).testTag("lastUpdate"),
+                    )
+                }
                 BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)
                 BarIcon(stringResource(R.string.settings), Icons.Rounded.Settings, shown, SETTINGS_TAG, requester(SETTINGS_TAG), ::below, onSettings)
             }

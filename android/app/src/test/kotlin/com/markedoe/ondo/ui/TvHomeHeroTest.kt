@@ -25,7 +25,7 @@ import org.robolectric.annotation.Config
 
 /**
  * Home's featured titles on a TV, in Portuguese (long button words): a long title and a long plot give up their
- * lines, never the buttons, which keep one height and one line each; the playlist line stays off the picture.
+ * lines, never the buttons, which keep one height and one line each.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "pt-rBR-w960dp-h540dp-land-television-xhdpi")
@@ -73,7 +73,5 @@ class TvHomeHeroTest {
             assertEquals("$label on one line", 1, results.single().lineCount)
             assertTrue("$label not cut", !results.single().hasVisualOverflow)
         }
-        // The playlist and its update under the frame, not on the picture.
-        assertTrue("the playlist line under the frame", bounds("lastUpdate").top >= frame.bottom)
     }
 }

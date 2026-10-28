@@ -85,13 +85,10 @@ private const val HERO_SHARE = 0.52f
 private val HeroShape = RoundedCornerShape(16.dp)
 private const val HERO_ADVANCE_MS = 8_000L
 
-/** The line under the frame (the playlist and when it was updated), with the gap above it. */
-private val SOURCE_LINE = 24.dp
-private val SOURCE_GAP = 8.dp
 
 /**
- * Home on a TV: the featured titles in a rounded frame under the top bar, their words and buttons inside it, the
- * playlist and its last update under it, then rows of cards. The focus starts on Play; past the last button (Right,
+ * Home on a TV: the featured titles in a rounded frame under the top bar, their words and buttons inside it, then
+ * rows of cards; the playlist and its last update at the bar's end, before Search. The focus starts on Play; past the last button (Right,
  * Left in a right-to-left language) turns to the next title, before the first one to the title before, both wrapping
  * around. The titles turn by themselves every
  * 8 s while the focus is elsewhere. While Home has nothing to focus (its catalogue replaced and coming again), the
@@ -118,6 +115,8 @@ fun TvHomeScreen(
         state.channels.isEmpty() && state.newMovies.isEmpty() && state.newSeries.isEmpty() && state.trending.isEmpty()
     val memory = LocalFocusMemory.current
     LaunchedEffect(empty) { if (empty) memory?.given() }
+    // A playlist with featured titles names itself in the top bar; one without has its name above the channels.
+    TvTopBarNote(if (state.hero.isNotEmpty()) playlistLine(state) else null)
     val focusManager = LocalFocusManager.current
     // A card taken away hands the remote on before it goes: to the next card of its row, or the one before; the last
     // one, its row going with it, to the row below (or above). Not back to the carousel at the top.
@@ -138,7 +137,7 @@ fun TvHomeScreen(
         verticalArrangement = Arrangement.spacedBy(22.dp),
     ) {
         item(key = "hero") {
-            if (state.hero.isNotEmpty()) TvHero(state.hero, actions, autoAdvance, preparingKey, source = playlistLine(state)) else TvHomeHeader(state)
+            if (state.hero.isNotEmpty()) TvHero(state.hero, actions, autoAdvance, preparingKey) else TvHomeHeader(state)
         }
         state.tagSuggestion?.let { suggestion -> item(key = "suggestion") { TvTagSuggestion(suggestion, actions) } }
         if (resumeMovies.isNotEmpty()) {
@@ -204,7 +203,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.channelShelf(state: H
 }
 
 @Composable
-private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boolean, preparingKey: String?, source: String) {
+private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boolean, preparingKey: String?) {
     var index by rememberSaveable { mutableIntStateOf(0) }
     val current = index.coerceIn(0, pages.lastIndex)
     val page = pages[current]
@@ -215,8 +214,7 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
         index = (current + 1) % pages.size
     }
     val ink = TvTokens.Ink
-    // The frame and the line under it take the room the frame alone took: the first row stays where it was.
-    val heroHeight = (LocalConfiguration.current.screenHeightDp.dp * HERO_SHARE).coerceAtLeast(260.dp) - SOURCE_LINE
+    val heroHeight = (LocalConfiguration.current.screenHeightDp.dp * HERO_SHARE).coerceAtLeast(260.dp)
     // Past the last button (Right, Left where the buttons run from the right): the next title. Before the first
     // one: the title before. Both wrap around, and the focus stays on the button.
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
@@ -312,15 +310,6 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
             }
             if (pages.size > 1) PageDots(pages.size, current, Modifier.align(Alignment.BottomEnd).padding(end = 24.dp, bottom = 40.dp))
         }
-        // Under the frame, clear of the picture: the playlist Home shows and when it was updated.
-        Text(
-            source,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.align(Alignment.End).padding(top = SOURCE_GAP, end = 4.dp).testTag("lastUpdate"),
-        )
     }
 }
 
@@ -380,7 +369,7 @@ private fun updatedAgo(state: HomeUiState): String? = state.updatedAt?.let { upd
     stringResource(R.string.updated_ago, ago)
 }
 
-/** Under the featured titles: the playlist Home shows, and when it was updated. */
+/** In the top bar, before Search: the playlist Home shows, and when it was updated. */
 @Composable
 private fun playlistLine(state: HomeUiState): String = listOfNotNull(state.playlistName, updatedAgo(state)).joinToString(" · ")
 

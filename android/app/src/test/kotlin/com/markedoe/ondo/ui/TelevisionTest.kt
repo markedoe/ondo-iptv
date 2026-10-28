@@ -42,6 +42,7 @@ import com.markedoe.ondo.ui.screens.HelpScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
+import com.markedoe.ondo.ui.tv.SEARCH_TAG
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
@@ -135,12 +136,18 @@ class TelevisionTest {
         compose.onNodeWithTag("heroPlay").assertIsFocused()
     }
 
-    /** Under the featured titles, off the picture: which playlist Home shows, and when it was last updated from the provider. */
+    /** In the top bar, just before Search, off the picture: which playlist Home shows, and when it was last updated. */
     @Test
-    fun homeShowsThePlaylistAndItsLastUpdateUnderTheCarousel() {
+    fun homeShowsThePlaylistAndItsLastUpdateInTheTopBar() {
         start()
-        compose.onNodeWithTag("lastUpdate", useUnmergedTree = true).assertIsDisplayed().assert(hasText("Updated", substring = true))
-        compose.onNodeWithTag("lastUpdate", useUnmergedTree = true).assert(hasText(Fixtures.playlist.name, substring = true))
+        val line = compose.onNodeWithTag("lastUpdate", useUnmergedTree = true)
+        line.assertIsDisplayed().assert(hasText("Updated", substring = true)).assert(hasText(Fixtures.playlist.name, substring = true))
+        val bounds = line.fetchSemanticsNode().boundsInRoot
+        val search = compose.onNodeWithTag(SEARCH_TAG, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val frame = compose.onNodeWithTag("heroFrame", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("before Search", bounds.right <= search.left)
+        assertTrue("level with Search", bounds.center.y in search.top..search.bottom)
+        assertTrue("above the picture", bounds.bottom <= frame.top)
     }
 
     @Test
