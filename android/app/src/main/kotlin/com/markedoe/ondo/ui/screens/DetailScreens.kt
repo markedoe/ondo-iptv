@@ -1,7 +1,12 @@
 package com.markedoe.ondo.ui.screens
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -72,10 +78,13 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
@@ -85,16 +94,20 @@ import com.markedoe.ondo.ui.AwardRow
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.Backdrop
+import com.markedoe.ondo.ui.components.CardShape
 import com.markedoe.ondo.ui.components.Poster
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.ProgressBar
 import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.ShelfMetrics
+import com.markedoe.ondo.ui.components.pressScale
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
+import com.markedoe.ondo.ui.tv.startToEndGradient
 
 /** Progress of something being watched. */
 data class WatchProgress(val fraction: Float, val minutesLeft: Int, val finished: Boolean)
@@ -166,9 +179,9 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         state.details?.durationSeconds?.takeIf { it > 0 }?.let { durationText(it, LocalConfiguration.current.locales[0]) },
         (state.details?.rating ?: movie.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
         state.details?.genre,
-        // MKV, MP4…: the format the provider sends.
-        MediaFormat.label(movie.streamUrl),
     )
+    // MKV, MP4…: the format the provider sends, as a badge.
+    val badges = listOfNotNull(MediaFormat.label(movie.streamUrl))
     val resumable = state.progress?.let { !it.finished && it.fraction > 0f } == true
     var picking by rememberSaveable { mutableStateOf(false) }
     DetailScaffold(
@@ -176,6 +189,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         posterUrl = state.details?.posterUrl ?: movie.posterUrl,
         backdropUrl = state.backdropUrl,
         facts = facts,
+        badges = badges,
         onBack = actions.onBack,
         onBackdropFailed = actions.onBackdropFailed,
         actions = { metrics ->
@@ -189,6 +203,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         },
         content = { metrics ->
             item { TextBlock(state.details?.plot ?: movie.plot, state.details, metrics, actions, year = movie.year, genre = state.details?.genre) }
+            peopleRow(state.details?.director, state.details?.cast, state.faces, metrics, actions)
             if (state.awards.isNotEmpty()) item { AwardsBlock(state.awards, metrics) { actions.onBrowse(BrowseKind.AWARD, it) } }
             similarRow(state.similar, metrics, actions)
         },
@@ -242,9 +257,9 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         seasonCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.seasons, it, it) },
         (state.details?.rating ?: series.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
         state.details?.genre ?: series.genre,
-        // The format of the episodes, when they all share one.
-        MediaFormat.label(state.seasons.flatMap { season -> season.episodes.map { it.streamUrl } }),
     )
+    // The format of the episodes, when they all share one.
+    val badges = listOfNotNull(MediaFormat.label(state.seasons.flatMap { season -> season.episodes.map { it.streamUrl } }))
     val season = state.seasons.firstOrNull { it.number == state.selectedSeason } ?: state.seasons.firstOrNull()
     var picking by rememberSaveable { mutableStateOf(false) }
     DetailScaffold(
@@ -252,6 +267,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         posterUrl = state.details?.posterUrl ?: series.coverUrl,
         backdropUrl = state.backdropUrl,
         facts = facts,
+        badges = badges,
         onBack = actions.onBack,
         onBackdropFailed = actions.onBackdropFailed,
         actions = {
@@ -271,6 +287,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         },
         content = { metrics ->
             item { TextBlock(state.details?.plot ?: series.plot, state.details, metrics, actions, year = series.year, genre = state.details?.genre ?: series.genre) }
+            peopleRow(state.details?.director ?: series.director, state.details?.cast ?: series.cast, state.faces, metrics, actions)
             state.error?.let { error -> item { Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = metrics.gutter)) } }
             if (state.seasons.size > 1) {
                 item {
@@ -305,6 +322,99 @@ private fun LazyListScope.similarRow(similar: List<ShowcaseItem>, metrics: Shelf
     }
 }
 
+/**
+ * The directors and the cast as round photos (TMDb's, with the viewer's token) over their initials, the names
+ * beneath; each opens the titles of the playlist they took part in.
+ */
+private fun LazyListScope.peopleRow(director: String?, cast: String?, faces: Map<String, String>, metrics: ShelfMetrics, actions: DetailActions) {
+    val directors = People.names(director)
+    val actors = People.names(cast).filterNot { it in directors }
+    if (directors.isEmpty() && actors.isEmpty()) return
+    item {
+        val directorLabel = stringResource(R.string.director)
+        Column(Modifier.testTag("people")) {
+            Text(
+                stringResource(R.string.cast),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = metrics.gutter, end = metrics.gutter, bottom = 12.dp),
+            )
+            TvRow {
+                LazyRow(contentPadding = PaddingValues(horizontal = metrics.gutter), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    items(directors, key = { "director:$it" }) { name ->
+                        PersonCard(name, faces[TextNormalizer.normalize(name)], role = directorLabel) { actions.onPerson(name) }
+                    }
+                    items(actors, key = { "actor:$it" }) { name ->
+                        PersonCard(name, faces[TextNormalizer.normalize(name)]) { actions.onPerson(name) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A person of the credits: a round photo over their initials, the name and the [role] beneath. */
+@Composable
+private fun PersonCard(name: String, photoUrl: String?, role: String? = null, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    Column(
+        Modifier
+            .width(80.dp)
+            .pressScale(interaction)
+            .focusFrame(RoundedCornerShape(12.dp))
+            .focusMemory("person:$name")
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(Modifier.size(72.dp).clip(CircleShape).background(OndoColors.SurfaceHigh), contentAlignment = Alignment.Center) {
+            Text(initials(name), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.85f))
+            if (photoUrl != null) {
+                AsyncImage(model = photoUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+        }
+        Text(
+            name,
+            style = MaterialTheme.typography.labelMedium,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+        role?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
+    }
+}
+
+private fun initials(name: String): String =
+    name.split(' ', '-').filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
+
+/** A small outlined tag for the format or the quality (MKV, 4K, 5.1…). */
+@Composable
+private fun Badge(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        modifier = Modifier
+            .border(1.dp, OndoColors.Secondary.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+            .padding(horizontal = 6.dp, vertical = 1.dp),
+    )
+}
+
+/** Facts of a title ("2024 · 1 h 52 · ★ 7.1") in grey, the format after them as a badge. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Facts(facts: List<String>, badges: List<String>, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.onSurfaceVariant) {
+    if (facts.isEmpty() && badges.isEmpty()) return
+    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+        if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = color, maxLines = 2)
+        badges.forEach { Badge(it) }
+    }
+}
+
 /** Artwork header (backdrop, else or while it loads the blurred poster), poster and title over its faded edge, then the page. */
 @Composable
 private fun DetailScaffold(
@@ -312,6 +422,7 @@ private fun DetailScaffold(
     posterUrl: String?,
     backdropUrl: String?,
     facts: List<String>,
+    badges: List<String>,
     onBack: () -> Unit,
     onBackdropFailed: (String) -> Unit,
     actions: @Composable (ShelfMetrics) -> Unit,
@@ -325,7 +436,7 @@ private fun DetailScaffold(
     Box(Modifier.fillMaxSize().testTag("detail")) {
         LazyColumn(contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             if (wide) {
-                item { WideHeader(title, posterUrl, backdropUrl, facts, metrics, onBackdropFailed) { actions(metrics) } }
+                item { WideHeader(title, posterUrl, backdropUrl, facts, badges, metrics, onBackdropFailed) { actions(metrics) } }
                 content(metrics)
                 return@LazyColumn
             }
@@ -336,9 +447,10 @@ private fun DetailScaffold(
                         Box(
                             Modifier.fillMaxSize().background(
                                 Brush.verticalGradient(
-                                    0f to Color.Black.copy(alpha = 0.55f),
-                                    0.35f to Color.Transparent,
-                                    1f to MaterialTheme.colorScheme.background,
+                                    0f to Color.Black.copy(alpha = 0.5f),
+                                    0.3f to Color.Transparent,
+                                    0.6f to Color.Black.copy(alpha = 0.45f),
+                                    1f to OndoColors.Ink,
                                 ),
                             ),
                         )
@@ -353,10 +465,8 @@ private fun DetailScaffold(
                         Poster(url = posterUrl, title = title, modifier = Modifier.width(if (metrics.compact) 112.dp else 168.dp))
                         Spacer(Modifier.width(16.dp))
                         Column(Modifier.padding(bottom = 4.dp)) {
-                            Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                            if (facts.isNotEmpty()) {
-                                Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
-                            }
+                            Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            Facts(facts, badges, Modifier.padding(top = 6.dp))
                         }
                     }
                 }
@@ -385,6 +495,7 @@ private fun WideHeader(
     posterUrl: String?,
     backdropUrl: String?,
     facts: List<String>,
+    badges: List<String>,
     metrics: ShelfMetrics,
     onBackdropFailed: (String) -> Unit,
     actions: @Composable () -> Unit,
@@ -394,8 +505,8 @@ private fun WideHeader(
         Box(
             Modifier
                 .matchParentSize()
-                .background(Brush.horizontalGradient(0f to Color.Black.copy(alpha = 0.7f), 1f to Color.Black.copy(alpha = 0.25f)))
-                .background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to MaterialTheme.colorScheme.background)),
+                .background(startToEndGradient(0f to Color.Black.copy(alpha = 0.75f), 0.6f to Color.Black.copy(alpha = 0.35f), 1f to Color.Black.copy(alpha = 0.2f)))
+                .background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to OndoColors.Ink)),
         )
         Row(
             modifier = Modifier
@@ -405,10 +516,8 @@ private fun WideHeader(
             Poster(url = posterUrl, title = title, modifier = Modifier.width(150.dp))
             Spacer(Modifier.width(24.dp))
             Column {
-                Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (facts.isNotEmpty()) {
-                    Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.75f), maxLines = 2, modifier = Modifier.padding(top = 4.dp))
-                }
+                Text(title, style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Facts(facts, badges, Modifier.padding(top = 6.dp), color = Color.White.copy(alpha = 0.75f))
                 Spacer(Modifier.height(16.dp))
                 actions()
             }
@@ -421,7 +530,8 @@ private fun PlayButton(title: String, progress: WatchProgress?, onClick: () -> U
     Column {
         Button(
             onClick = onClick,
-            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary, contentColor = MaterialTheme.colorScheme.onPrimary),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color.Black),
+            shape = RoundedCornerShape(8.dp),
             contentPadding = PaddingValues(vertical = 14.dp, horizontal = 24.dp),
             modifier = Modifier.widthIn(max = 420.dp).fillMaxWidth().focusMemory("detail-play", initial = true).testTag("detailPlay"),
         ) {
@@ -462,8 +572,8 @@ private fun CircleAction(title: String, icon: ImageVector, onClick: () -> Unit, 
             .semantics(mergeDescendants = true) { if (state != null) stateDescription = state }
             .padding(4.dp),
     ) {
-        Box(Modifier.size(50.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null)
+        Box(Modifier.size(50.dp).clip(CircleShape).background(OndoColors.SurfaceHigh), contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null, tint = Color.White)
         }
         Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
     }
@@ -530,7 +640,7 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
             .padding(horizontal = metrics.gutter, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Box(Modifier.width(if (metrics.compact) 150.dp else 220.dp).aspectRatio(16f / 9f).clip(RoundedCornerShape(10.dp))) {
+        Box(Modifier.width(if (metrics.compact) 150.dp else 220.dp).aspectRatio(16f / 9f).clip(CardShape)) {
             Artwork(url = episode.posterUrl, title = episode.code, modifier = Modifier.fillMaxSize())
             Icon(
                 Icons.Rounded.PlayArrow,
@@ -547,7 +657,7 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
             Row(verticalAlignment = Alignment.CenterVertically) {
                 episode.durationSeconds?.takeIf { it > 0 }?.let { Text(durationText(it, LocalConfiguration.current.locales[0]), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 if (progress?.finished == true) {
-                    Icon(Icons.Rounded.CheckCircle, contentDescription = stringResource(R.string.watched), tint = Color(0xFF4CAF50), modifier = Modifier.padding(start = 6.dp).size(14.dp))
+                    Icon(Icons.Rounded.CheckCircle, contentDescription = stringResource(R.string.watched), tint = Color.White, modifier = Modifier.padding(start = 6.dp).size(14.dp))
                 }
             }
             episode.plot?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = if (metrics.compact) 2 else 3, overflow = TextOverflow.Ellipsis) }
