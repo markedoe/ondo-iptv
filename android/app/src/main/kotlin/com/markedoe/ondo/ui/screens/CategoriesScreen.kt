@@ -49,6 +49,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.CategoryStyles
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.ui.CategoriesUiState
+import com.markedoe.ondo.ui.theme.ondoSwitchColors
 import com.markedoe.ondo.ui.tv.rememberLeaveField
 
 class CategoriesActions(
@@ -107,6 +108,7 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                             Switch(
                                 checked = !tag.hidden,
                                 onCheckedChange = { actions.onTag(tag.tag, !it) },
+                                colors = ondoSwitchColors(),
                                 // TalkBack reaches the switch on its own: it says what it shows.
                                 modifier = Modifier.testTag("tag-" + tag.tag).semantics { contentDescription = tag.label },
                             )
@@ -134,6 +136,7 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                             Switch(
                                 checked = !style.hidden,
                                 onCheckedChange = { actions.onWord(style.style, !it) },
+                                colors = ondoSwitchColors(),
                                 modifier = Modifier.testTag("style-" + style.style).semantics { contentDescription = name },
                             )
                         },
@@ -210,6 +213,7 @@ fun CategoriesScreen(state: CategoriesUiState, type: ContentType, filter: String
                         Switch(
                             checked = !category.hidden,
                             onCheckedChange = { actions.onCategory(category.id, !it) },
+                            colors = ondoSwitchColors(),
                             enabled = category.hiddenWith == null,
                             modifier = Modifier.semantics { contentDescription = category.name },
                         )

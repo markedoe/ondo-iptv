@@ -65,6 +65,7 @@ import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.ui.components.TmdbTokenSettings
+import com.markedoe.ondo.ui.theme.ondoSwitchColors
 import com.markedoe.ondo.ui.tv.focusFrame
 
 data class PlaylistSummary(val id: String, val name: String, val detail: String, val active: Boolean, val xtream: Boolean = false)
@@ -155,6 +156,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                         Switch(
                             checked = state.syncOnLocalNetwork,
                             onCheckedChange = actions.onSyncOnLocalNetwork,
+                            colors = ondoSwitchColors(),
                             modifier = Modifier.testTag("syncSwitch").semantics { contentDescription = label },
                         )
                     },
@@ -183,6 +185,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                         Switch(
                             checked = state.showAdultCategories,
                             onCheckedChange = actions.onShowAdultCategories,
+                            colors = ondoSwitchColors(),
                             // TalkBack reaches the switch on its own: it says what it turns on.
                             modifier = Modifier.testTag("adultSwitch").semantics { contentDescription = label },
                         )
@@ -198,6 +201,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                         Switch(
                             checked = state.hideWatchedMovies,
                             onCheckedChange = actions.onHideWatchedMovies,
+                            colors = ondoSwitchColors(),
                             modifier = Modifier.testTag("hideWatchedSwitch").semantics { contentDescription = label },
                         )
                     },
@@ -212,6 +216,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                         Switch(
                             checked = state.updateAwards,
                             onCheckedChange = actions.onUpdateAwards,
+                            colors = ondoSwitchColors(),
                             modifier = Modifier.testTag("awardsSwitch").semantics { contentDescription = label },
                         )
                     },

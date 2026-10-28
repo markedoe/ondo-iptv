@@ -2,6 +2,8 @@ package com.markedoe.ondo.ui.theme
 
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SwitchColors
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -63,6 +65,17 @@ private val Dark: ColorScheme = darkColorScheme(
     onPrimaryContainer = Color.White,
     secondaryContainer = OndoColors.SurfaceHigh,
     onSecondaryContainer = Color.White,
+)
+
+/**
+ * Material's switch in Ondo's colours: on, a white track with a black thumb; off, a grey thumb and outline on a dark
+ * track (Material's own off thumb, the outline grey, is lost on black).
+ */
+@Composable
+fun ondoSwitchColors(): SwitchColors = SwitchDefaults.colors(
+    uncheckedThumbColor = OndoColors.Secondary,
+    uncheckedTrackColor = OndoColors.SurfaceHigh,
+    uncheckedBorderColor = OndoColors.Secondary,
 )
 
 /** Every style of [base] in Inter; large titles drawn a little tighter, as large type reads best. */

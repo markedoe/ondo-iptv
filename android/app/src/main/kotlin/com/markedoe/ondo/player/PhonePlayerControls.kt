@@ -121,6 +121,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.data.SubtitleSize
 import com.markedoe.ondo.data.VideoScale
 import com.markedoe.ondo.ui.theme.OndoColors
+import com.markedoe.ondo.ui.theme.ondoSwitchColors
 import java.text.NumberFormat
 import java.util.Date
 import kotlinx.coroutines.Job
@@ -792,7 +793,7 @@ private fun LazyListScope.moreRows(
         ListItem(
             headlineContent = { Text(stringResource(R.string.stream_statistics)) },
             leadingContent = { Icon(Icons.Rounded.QueryStats, contentDescription = null) },
-            trailingContent = { Switch(checked = statisticsShown, onCheckedChange = null) },
+            trailingContent = { Switch(checked = statisticsShown, onCheckedChange = null, colors = ondoSwitchColors()) },
             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
             modifier = Modifier
                 .testTag("statisticsToggle")
