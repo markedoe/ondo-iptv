@@ -169,7 +169,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande
   (une sélection bien visible, qui revient sur la carte que vous avez quittée, des mises en page qui restent à
   l'écart des bords de l'écran) ; un lecteur dessiné pour la télécommande : de grands boutons, une barre de
-  progression pour se déplacer dans la vidéo, des panneaux Sous-titres et Audio qui listent les pistes par langue,
+  progression pour se déplacer dans la vidéo, des panneaux Sous-titres et Audio qui listent les pistes par langue (Audio indique si le son multicanal part tel quel vers l'ampli ou est décodé par la TV),
   Vitesse et Plus ; OK met en pause, Gauche et Droite reculent et avancent de 10 secondes quand le flux le permet
   (sinon elles affichent les commandes), Haut et Bas, CH+ / CH−, les chiffres et la chaîne précédente changent de
   chaîne ; un panneau Chaînes avec ce qui passe, Depuis le début, À suivre à la fin d'un épisode ; un film à sa

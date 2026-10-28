@@ -157,7 +157,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible
   focus that comes back to the card you left, layouts that keep clear of the screen's edges); a player drawn for
   the remote: large buttons, a progress bar to move through the video, Subtitles and Audio panels that list the
-  tracks by language, Speed and More; OK pauses, Left and Right go back and forward 10 seconds where the stream
+  tracks by language (Audio says whether surround sound goes to the amplifier as it is or is decoded by the TV), Speed and More; OK pauses, Left and Right go back and forward 10 seconds where the stream
   allows it (otherwise they show the controls), Up and Down, CH+ / CH−, the number keys and Last Channel change
   channel; a Channels panel with what is on now, Restart, Up next at the end of an episode; a film at its own frame
   rate when the TV is set to match the content (Android 12 and later); hold OK on a channel

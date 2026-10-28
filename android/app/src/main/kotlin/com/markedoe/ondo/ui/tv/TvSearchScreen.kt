@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -109,6 +110,15 @@ fun TvSearchScreen(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
                     readOnly = field.readOnly,
+                    // A filled grey field, ringed in white when the remote is on it: the look of the rest of the TV.
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = OndoColors.SurfaceHigh,
+                        unfocusedContainerColor = OndoColors.Surface,
+                        focusedBorderColor = androidx.compose.ui.graphics.Color.White,
+                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                        cursorColor = androidx.compose.ui.graphics.Color.White,
+                    ),
                     modifier = Modifier.weight(1f).then(field.modifier).focusMemory("search-field", initial = true).testTag("searchField"),
                 )
                 TvActionButton(
