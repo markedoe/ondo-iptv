@@ -6,11 +6,14 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -48,6 +51,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
@@ -81,10 +85,15 @@ private const val HERO_SHARE = 0.52f
 private val HeroShape = RoundedCornerShape(16.dp)
 private const val HERO_ADVANCE_MS = 8_000L
 
+/** The line under the frame (the playlist and when it was updated), with the gap above it. */
+private val SOURCE_LINE = 24.dp
+private val SOURCE_GAP = 8.dp
+
 /**
- * Home on a TV: the featured titles full screen behind their title, facts, plot and buttons, then rows of cards.
- * The featured titles in a rounded frame under the top bar, their words and buttons inside it, the first row below. The focus starts on Play;
- * past the last button (Right, Left in a right-to-left language) turns the page. The titles turn by themselves every
+ * Home on a TV: the featured titles in a rounded frame under the top bar, their words and buttons inside it, the
+ * playlist and its last update under it, then rows of cards. The focus starts on Play; past the last button (Right,
+ * Left in a right-to-left language) turns to the next title, before the first one to the title before, both wrapping
+ * around. The titles turn by themselves every
  * 8 s while the focus is elsewhere. While Home has nothing to focus (its catalogue replaced and coming again), the
  * remote can only be on the top bar: Play takes it back once it shows.
  */
@@ -206,12 +215,21 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
         index = (current + 1) % pages.size
     }
     val ink = TvTokens.Ink
-    val heroHeight = (LocalConfiguration.current.screenHeightDp.dp * HERO_SHARE).coerceAtLeast(260.dp)
-    // Past the last button: Right, or Left where the buttons run from the right.
-    val onward = if (LocalLayoutDirection.current == LayoutDirection.Rtl) Key.DirectionLeft else Key.DirectionRight
+    // The frame and the line under it take the room the frame alone took: the first row stays where it was.
+    val heroHeight = (LocalConfiguration.current.screenHeightDp.dp * HERO_SHARE).coerceAtLeast(260.dp) - SOURCE_LINE
+    // Past the last button (Right, Left where the buttons run from the right): the next title. Before the first
+    // one: the title before. Both wrap around, and the focus stays on the button.
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val onward = if (rtl) Key.DirectionLeft else Key.DirectionRight
+    val backward = if (rtl) Key.DirectionRight else Key.DirectionLeft
+    fun Modifier.turnsPage(key: Key, step: Int) = onPreviewKeyEvent { event ->
+        val turn = event.key == key && pages.size > 1
+        if (turn && event.type == KeyEventType.KeyDown) index = (current + step + pages.size) % pages.size
+        turn
+    }
     // The whole block, with the room above it for the top bar, comes into view with its buttons: back on it, the
     // page is at its top.
-    Box(
+    Column(
         Modifier
             .fillMaxWidth()
             .bringIntoViewAsAWhole()
@@ -219,84 +237,123 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
             .testTag("hero")
             .padding(start = TvTokens.ContentStart, top = tvTopBarSpace(), end = TvTokens.EdgeEnd),
     ) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .height(heroHeight)
-            .clip(HeroShape)
-            .background(OndoColors.Surface),
-    ) {
-        LaunchedEffect(page.item.key) { actions.onShowBackdrop(page.item) }
-        Crossfade(page, label = "heroArt") { shown ->
-            TvArtwork(shown.backdropUrl, shown.item.posterUrl, shown.item.title, Modifier.fillMaxSize()) { url -> actions.onBackdropFailed(shown.item, url) }
-        }
-        // A shade on the side of the words, the rest of the picture left as it is.
-        Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink.copy(alpha = 0.72f), 0.45f to ink.copy(alpha = 0.35f), 0.75f to Color.Transparent)))
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to ink.copy(alpha = 0.55f))))
-        // The words at the bottom left of the frame.
-        Column(
-            Modifier.align(Alignment.BottomStart).padding(start = 28.dp, bottom = 22.dp, end = 28.dp).widthIn(max = 480.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(heroHeight)
+                .clip(HeroShape)
+                .background(OndoColors.Surface)
+                .testTag("heroFrame"),
         ) {
-            Text(
-                source,
-                style = MaterialTheme.typography.labelLarge,
-                color = Color.White.copy(alpha = 0.7f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag("lastUpdate"),
-            )
-            Text(
-                page.item.title,
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.ExtraBold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.testTag("heroTitle"),
-            )
-            Text(page.meta, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.8f), maxLines = 1)
-            page.plot?.takeIf { it.isNotBlank() }?.let {
-                Text(it, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.72f), maxLines = 3, overflow = TextOverflow.Ellipsis)
+            LaunchedEffect(page.item.key) { actions.onShowBackdrop(page.item) }
+            Crossfade(page, label = "heroArt") { shown ->
+                TvArtwork(shown.backdropUrl, shown.item.posterUrl, shown.item.title, Modifier.fillMaxSize()) { url -> actions.onBackdropFailed(shown.item, url) }
             }
-            Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                TvActionButton(
-                    onClick = { actions.onPlay(page.item) },
-                    prominent = true,
-                    modifier = Modifier.focusMemory("hero-play", initial = true).testTag("heroPlay"),
-                ) {
-                    PlayIcon(page.item.key == preparingKey, Modifier.size(20.dp), tint = LocalContentColor.current)
-                    Spacer(Modifier.width(8.dp))
-                    Text(playLabel(page.resumable))
+            // A shade on the side of the words, the rest of the picture left as it is.
+            Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink.copy(alpha = 0.72f), 0.45f to ink.copy(alpha = 0.35f), 0.75f to Color.Transparent)))
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to ink.copy(alpha = 0.55f))))
+            // The words at the bottom left of the frame, the buttons under them. The buttons are measured first: a
+            // long title or plot gives up its lines (the plot first), never the buttons' room.
+            Column(
+                Modifier
+                    .fillMaxHeight()
+                    .padding(start = 28.dp, top = 24.dp, bottom = 22.dp, end = if (pages.size > 1) 120.dp else 28.dp),
+                verticalArrangement = Arrangement.Bottom,
+            ) {
+                Column(Modifier.weight(1f, fill = false).widthIn(max = 480.dp)) {
+                    Text(
+                        page.item.title,
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.testTag("heroTitle"),
+                    )
+                    Text(
+                        page.meta,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.8f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    page.plot?.takeIf { it.isNotBlank() }?.let { HeroPlot(it, Modifier.weight(1f, fill = false)) }
                 }
-                val listState = myListState(page.inMyList)
-                TvActionButton(
-                    onClick = { actions.onToggleMyList(page.item) },
-                    modifier = Modifier.semantics { stateDescription = listState }.focusMemory("hero-mylist").testTag("heroMyList"),
+                Row(
+                    Modifier.padding(top = 18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(if (page.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.my_list))
-                }
-                TvActionButton(
-                    onClick = { actions.onOpen(page.item) },
-                    // Past the last button: the next title.
-                    modifier = Modifier
-                        .onPreviewKeyEvent { event ->
-                            val next = event.key == onward && pages.size > 1
-                            if (next && event.type == KeyEventType.KeyDown) index = (current + 1) % pages.size
-                            next
+                    TvActionButton(
+                        onClick = { actions.onPlay(page.item) },
+                        prominent = true,
+                        // Before the first button: the title before.
+                        modifier = Modifier.turnsPage(backward, -1).focusMemory("hero-play", initial = true).testTag("heroPlay"),
+                    ) {
+                        HeroButtonLabel(playLabel(page.resumable)) { PlayIcon(page.item.key == preparingKey, Modifier.size(20.dp), tint = LocalContentColor.current) }
+                    }
+                    val listState = myListState(page.inMyList)
+                    TvActionButton(
+                        onClick = { actions.onToggleMyList(page.item) },
+                        modifier = Modifier.semantics { stateDescription = listState }.focusMemory("hero-mylist").testTag("heroMyList"),
+                    ) {
+                        HeroButtonLabel(stringResource(R.string.my_list)) {
+                            Icon(if (page.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                         }
-                        .focusMemory("hero-info")
-                        .testTag("heroInfo"),
-                ) {
-                    Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(stringResource(R.string.more_info))
+                    }
+                    TvActionButton(
+                        onClick = { actions.onOpen(page.item) },
+                        // Past the last button: the next title.
+                        modifier = Modifier.turnsPage(onward, 1).focusMemory("hero-info").testTag("heroInfo"),
+                    ) {
+                        HeroButtonLabel(stringResource(R.string.more_info)) { Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(20.dp)) }
+                    }
                 }
             }
+            if (pages.size > 1) PageDots(pages.size, current, Modifier.align(Alignment.BottomEnd).padding(end = 24.dp, bottom = 40.dp))
         }
-        if (pages.size > 1) PageDots(pages.size, current, Modifier.align(Alignment.BottomEnd).padding(end = 24.dp, bottom = 26.dp))
+        // Under the frame, clear of the picture: the playlist Home shows and when it was updated.
+        Text(
+            source,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.End).padding(top = SOURCE_GAP, end = 4.dp).testTag("lastUpdate"),
+        )
     }
+}
+
+/** A hero button's icon and its word on one line, the icon centred on it: the three buttons are the same height. */
+@Composable
+private fun RowScope.HeroButtonLabel(text: String, icon: @Composable () -> Unit) {
+    Box(Modifier.size(20.dp).align(Alignment.CenterVertically), contentAlignment = Alignment.Center) { icon() }
+    Spacer(Modifier.width(8.dp))
+    Text(text, maxLines = 1, softWrap = false, modifier = Modifier.align(Alignment.CenterVertically))
+}
+
+/**
+ * The plot in the room the title and the buttons leave: up to three whole lines (the last one ellipsed), none when
+ * not even one fits, rather than a line cut through.
+ */
+@Composable
+private fun HeroPlot(plot: String, modifier: Modifier = Modifier) {
+    val style = MaterialTheme.typography.bodyMedium
+    val density = LocalDensity.current
+    val gap = 8.dp
+    BoxWithConstraints(modifier) {
+        val line = with(density) { (if (style.lineHeight.isSp) style.lineHeight else style.fontSize * 1.4f).toDp() }
+        val lines = if (constraints.hasBoundedHeight) ((maxHeight - gap) / line).toInt().coerceAtMost(3) else 3
+        if (lines >= 1) {
+            Text(
+                plot,
+                style = style,
+                color = Color.White.copy(alpha = 0.72f),
+                maxLines = lines,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = gap),
+            )
+        }
     }
 }
 
@@ -323,7 +380,7 @@ private fun updatedAgo(state: HomeUiState): String? = state.updatedAt?.let { upd
     stringResource(R.string.updated_ago, ago)
 }
 
-/** Above the featured titles: the playlist Home shows, and when it was updated. */
+/** Under the featured titles: the playlist Home shows, and when it was updated. */
 @Composable
 private fun playlistLine(state: HomeUiState): String = listOfNotNull(state.playlistName, updatedAgo(state)).joinToString(" · ")
 

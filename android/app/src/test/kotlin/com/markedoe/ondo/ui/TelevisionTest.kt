@@ -180,6 +180,46 @@ class TelevisionTest {
     private fun heroTitle(): String =
         compose.onNodeWithTag("heroTitle", useUnmergedTree = true).fetchSemanticsNode().config.getOrNull(SemanticsProperties.Text)?.joinToString(" ").orEmpty()
 
+    /** Left before Play goes back a title, Right past More Info forward: both wrap around, the focus never leaves. */
+    @Test
+    fun theRemoteTurnsTheCarouselBackAndForth() {
+        start()
+        val first = heroTitle()
+        // Before the first title: the last one, the focus staying on Play.
+        press(Key.DirectionLeft)
+        compose.onNodeWithTag("heroPlay").assertIsFocused()
+        val last = heroTitle()
+        assertTrue("the carousel turned back from $first", last != first)
+        // Play → My List → More Info → past the last title: the first one again.
+        press(Key.DirectionRight, times = 3)
+        compose.onNodeWithTag("heroInfo").assertIsFocused()
+        assertEquals(first, heroTitle())
+        press(Key.DirectionRight)
+        val second = heroTitle()
+        assertTrue("the carousel turned on from $first", second != first)
+        // Back along the buttons, still on the second title, then back to the first.
+        press(Key.DirectionLeft, times = 2)
+        compose.onNodeWithTag("heroPlay").assertIsFocused()
+        assertEquals(second, heroTitle())
+        press(Key.DirectionLeft)
+        compose.onNodeWithTag("heroPlay").assertIsFocused()
+        assertEquals(first, heroTitle())
+    }
+
+    /** In Arabic, Right before Play (the buttons run from the right) goes back a title. */
+    @Test
+    @Config(qualifiers = "ar-rSA-w960dp-h540dp-land-television-xhdpi")
+    fun inArabicRightBeforeTheFirstButtonTurnsTheCarouselBack() {
+        start()
+        val first = heroTitle()
+        press(Key.DirectionRight)
+        compose.onNodeWithTag("heroPlay").assertIsFocused()
+        assertTrue("the carousel turned back from $first", heroTitle() != first)
+        press(Key.DirectionLeft, times = 3)
+        compose.onNodeWithTag("heroInfo").assertIsFocused()
+        assertEquals(first, heroTitle())
+    }
+
     /** In Arabic the buttons run from the right: Left past the last one turns the page, Right goes back along them. */
     @Test
     @Config(qualifiers = "ar-rSA-w960dp-h540dp-land-television-xhdpi")
