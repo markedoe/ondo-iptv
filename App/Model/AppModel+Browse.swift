@@ -154,6 +154,7 @@ extension AppModel {
         movieDetailsFetchedAt[movie.id] = .now
         detailsRevision += 1
         scheduleStoredDetailsSave()
+        indexProviderPeople([(.movie(movie), details)])
         return details
     }
 
@@ -198,6 +199,7 @@ extension AppModel {
         seriesDetailsFetchedAt[series.id] = .now
         detailsRevision += 1
         scheduleStoredDetailsSave()
+        indexProviderPeople([(.series(series), details.info)])
         return details
     }
 }

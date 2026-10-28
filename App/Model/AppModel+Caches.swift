@@ -5,14 +5,17 @@ import IPTVCore
 extension AppModel {
     // MARK: - Size and Clear Cache
 
-    /// The playlist and guide caches and the artwork, as Settings shows them. Walks folders: off the main thread.
+    /// The playlist and guide caches, the artwork and TMDb's answers, as Settings shows them. Walks folders: off the
+    /// main thread.
     func cacheSize() async -> Int64 {
         let store = cacheStore
-        return await Task.detached(priority: .utility) { store.diskUsage() + Artwork.diskUsage() }.value
+        let metadata = metadataStore
+        return await Task.detached(priority: .utility) { store.diskUsage() + Artwork.diskUsage() + metadata.diskUsage() }.value
     }
 
     func clearCaches() async {
         await forgetStoredDetails()
+        await forgetTMDbMetadata()
         for playlist in playlists {
             cacheStore.remove(name: "epg-\(playlist.id.uuidString)")
             cacheStore.remove(name: DetailsArchive.documentName(for: playlist.id))
@@ -63,6 +66,15 @@ extension AppModel {
                 seriesDetailsFetchedAt[id] = entry.fetchedAt
             }
             detailsRevision += 1
+            // Their cast and directors join the local people index (those of the catalogue already on screen).
+            var named: [(item: ShowcaseItem, details: MediaDetails)] = []
+            for (id, entry) in archive.movies {
+                if let movie = index.moviesByID[id] { named.append((.movie(movie), entry.value)) }
+            }
+            for (id, entry) in archive.series {
+                if let show = index.seriesByID[id] { named.append((.series(show), entry.value.info)) }
+            }
+            indexProviderPeople(named)
         }
     }
 

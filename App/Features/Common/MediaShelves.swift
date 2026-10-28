@@ -129,6 +129,8 @@ struct ShowcasePoster: View {
         }
         .frame(width: width)
         .accessibilityLabel(Text(item.title))
+        // What TMDb knows of it is fetched in the background as its row appears (with a TMDb token).
+        .onAppear { model.prefetchMetadata([item]) }
     }
 }
 

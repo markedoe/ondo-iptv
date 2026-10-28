@@ -340,8 +340,8 @@ public final class InMemoryMetadataStore: MetadataStoring, @unchecked Sendable {
     public func people(matching query: String, limit: Int) -> [IndexedPerson] {
         let candidates = lock.withLock {
             personRows.values.compactMap { person -> IndexedPerson? in
-                guard let count = links[person.personKey]?.count, count > 0 else { return nil }
-                return IndexedPerson(person: person, titleCount: count)
+                guard let titles = links[person.personKey], !titles.isEmpty else { return nil }
+                return IndexedPerson(person: person, titleCount: titles.count)
             }
         }
         return PeopleSearch.ranked(candidates, query: query, limit: limit)

@@ -35,13 +35,33 @@ extension AppModel {
         return Self.sorted(PersonWorks(movies: movies, series: series))
     }
 
-    /// The actors and directors of `content`'s series (`peopleIndex`), built off the main thread.
+    /// The actors and directors of `content`'s series (`peopleIndex`), and the catalogue's titles by their key
+    /// (`catalogueByMetadataKey`), built off the main thread. The series' cast and directors join the local people index.
     func buildPeopleIndex(from content: PlaylistContent, for playlist: Playlist) {
         peopleTask?.cancel()
+        let store = metadataStore
         peopleTask = Task {
-            let people = await Task.detached(priority: .utility) { PeopleIndex(fields: content.series.flatMap { [$0.cast, $0.director] }) }.value
+            let (people, titles) = await Task.detached(priority: .utility) { () -> (PeopleIndex, [String: [ShowcaseItem]]) in
+                let people = PeopleIndex(fields: content.series.flatMap { [$0.cast, $0.director] })
+                var titles: [String: [ShowcaseItem]] = [:]
+                var links: [PersonLink] = []
+                for movie in content.movies {
+                    if let key = MetadataKey.title(.movie, name: movie.name, year: movie.year) { titles[key, default: []].append(.movie(movie)) }
+                }
+                for show in content.series {
+                    guard let key = MetadataKey.title(.series, name: show.name, year: show.year) else { continue }
+                    titles[key, default: []].append(.series(show))
+                    links += PersonLink.links(fields: [show.cast, show.director], titleKeys: [key])
+                }
+                // A few thousand at a time: a page opened meanwhile reads the store between them.
+                for start in stride(from: 0, to: links.count, by: 2_000) {
+                    store.index(Array(links[start..<min(start + 2_000, links.count)]))
+                }
+                return (people, titles)
+            }.value
             guard !Task.isCancelled, activePlaylist?.id == playlist.id else { return }
             peopleIndex = people
+            catalogueByMetadataKey = titles
         }
     }
 
@@ -56,27 +76,75 @@ extension AppModel {
             .map { $0 }
     }
 
-    /// With the viewer's TMDb token, the people TMDb finds for a search (only the words typed are sent).
+    /// Actors and directors of the local people index whose name matches a search, among those with a title in this
+    /// playlist (outside hidden and locked categories). Works offline; their photos come with them.
+    func indexedPeople(matching query: String) async -> [String] {
+        guard PeopleSearch.tokens(query) != nil else { return [] }
+        let store = metadataStore
+        let catalogue = catalogueByMetadataKey
+        let excluded = excludedCategoryIDs
+        let found = await Task.detached(priority: .userInitiated) { () -> [PersonRecord] in
+            store.people(matching: query, limit: 60).compactMap { entry in
+                let shown = store.titleKeys(ofPerson: entry.person.personKey).contains { key in
+                    (catalogue[key] ?? []).contains { !excluded.contains($0.categoryID) }
+                }
+                return shown ? entry.person : nil
+            }
+        }.value
+        for person in found {
+            if let photo = person.photoURL { tmdbMetadata.photos[person.personKey] = photo }
+        }
+        return found.prefix(20).map(\.displayName)
+    }
+
+    /// With the viewer's TMDb token, the people TMDb finds for a search (only the words typed are sent); their photos
+    /// are kept.
     func tmdbPeople(matching query: String) async -> [String] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard hasTMDbKey, trimmed.count >= 3, let credential = secrets.get(Keychain.tmdbKey) else { return [] }
         let client = TMDbClient(credential: credential, http: http, language: Locale.preferredLanguages.first ?? "en-US")
         do {
-            return try await client.people(matching: trimmed).prefix(8).map(\.name)
+            let people = Array(try await client.people(matching: trimmed).prefix(8))
+            rememberTMDbPeople(people)
+            return people.map(\.name)
         } catch {
             noteTMDbFailure(error, credential: credential)
             return []
         }
     }
 
-    /// The pages already opened, then the person's credits on TMDb (when a key is set) that the playlist has.
-    func works(of name: String) async -> PersonWorks {
+    /// The pages already opened and the local people index: at once, without the network.
+    func localWorks(of name: String) async -> PersonWorks {
         var works = knownWorks(of: name)
+        let store = metadataStore
+        let key = MetadataKey.person(name)
+        let titleKeys = await Task.detached(priority: .userInitiated) { store.titleKeys(ofPerson: key) }.value
+        let excluded = excludedCategoryIDs
+        let watched = hiddenWatchedMovieIDs()
+        for item in titleKeys.flatMap({ catalogueByMetadataKey[$0] ?? [] }) {
+            switch item {
+            case .movie(let movie) where !excluded.contains(movie.categoryID) && !watched.contains(movie.id)
+                && !works.movies.contains(where: { $0.id == movie.id }):
+                works.movies.append(movie)
+            case .series(let show) where !excluded.contains(show.categoryID) && !works.series.contains(where: { $0.id == show.id }):
+                works.series.append(show)
+            default:
+                break
+            }
+        }
+        return Self.sorted(works)
+    }
+
+    /// The pages already opened and the local people index, then the person's credits on TMDb (when a key is set) that
+    /// the playlist has. What TMDb gives joins the index (and the person's photo is kept), for the next time.
+    func works(of name: String) async -> PersonWorks {
+        var works = await localWorks(of: name)
         guard let credential = secrets.get(Keychain.tmdbKey) else { return works }
         let client = TMDbClient(credential: credential, http: http, language: Locale.preferredLanguages.first ?? "en-US")
         let credits: [TMDbItem]
         do {
             guard let person = try await client.person(named: name) else { return works }
+            rememberTMDbPeople([person], as: [name])
             credits = try await client.credits(ofPerson: person.id)
         } catch {
             noteTMDbFailure(error, credential: credential)
@@ -86,6 +154,19 @@ extension AppModel {
         let movies = content.movies
         let series = content.series
         let matches = await Task.detached { CatalogueMatcher.match(credits, movies: movies, series: series) }.value
+        let personKey = MetadataKey.person(name)
+        let links = matches.compactMap { match -> PersonLink? in
+            let key: String?
+            switch match {
+            case .movie(let movie, _): key = MetadataKey.title(.movie, name: movie.name, year: movie.year)
+            case .series(let show, _): key = MetadataKey.title(.series, name: show.name, year: show.year)
+            }
+            return key.map { PersonLink(personKey: personKey, displayName: name, titleKey: $0) }
+        }
+        if !personKey.isEmpty, !links.isEmpty {
+            let store = metadataStore
+            Task.detached(priority: .utility) { store.index(links) }
+        }
         let excluded = excludedCategoryIDs
         let watched = hiddenWatchedMovieIDs()
         for match in matches {

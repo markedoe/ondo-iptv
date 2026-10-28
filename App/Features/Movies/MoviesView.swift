@@ -105,7 +105,7 @@ struct MovieDetailView: View {
             facts: facts,
             // MKV, MP4…: the format the provider sends (MKV plays differently on each device).
             badges: MediaFormat.label(for: movie.streamURL).map { [$0] } ?? [],
-            onBackdropFailure: { model.backdropFailed($0, for: .movie(movie)) }
+            onBackdropFailure: { model.backdropFailed($0, for: .movie(movie), permanently: $1) }
         ) { metrics in
             metrics.actionsLayout {
                 PrimaryPlayButton(
@@ -126,7 +126,7 @@ struct MovieDetailView: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    TrailerAction(youTubeID: details?.trailerYouTubeID)
+                    TrailerAction(youTubeID: model.trailerYouTubeID(for: .movie(movie), provider: details?.trailerYouTubeID))
                     #if TESTFLIGHT_DOWNLOADS || DEBUG
                     DownloadAction(item: model.downloadItem(for: movie))
                     #endif
@@ -161,9 +161,11 @@ struct MovieDetailView: View {
                 details = stored
                 isLoading = false
             }
+            // What TMDb said at an earlier visit (backdrop, trailer, votes), from the device.
+            await model.showStoredMetadata(for: .movie(movie))
             details = await model.details(for: movie)
             isLoading = false
-            await model.loadTMDbBackdropIfNeeded(for: .movie(movie))
+            await model.loadTMDbMetadata(for: .movie(movie))
         }
     }
 
@@ -171,7 +173,7 @@ struct MovieDetailView: View {
         var items: [String] = []
         if let year = movie.year { items.append(String(year)) } else if let date = details?.releaseDate { items.append(String(date.prefix(4))) }
         if let seconds = details?.durationSeconds, seconds > 0 { items.append(Formatting.duration(seconds)) }
-        if let rating = details?.rating ?? movie.rating, rating > 0 { items.append("★ " + Formatting.rating(rating)) }
+        if let rating = model.ratingFact(for: .movie(movie), provider: details?.rating ?? movie.rating) { items.append(rating) }
         if let genre = details?.genre { items.append(genre) }
         return items
     }
