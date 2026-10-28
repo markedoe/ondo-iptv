@@ -391,15 +391,15 @@ private fun initials(name: String): String =
 
 /** A small outlined tag for the format or the quality (MKV, 4K, 5.1…). */
 @Composable
-private fun Badge(text: String) {
+private fun Badge(text: String, color: Color) {
     Text(
         text,
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        color = color,
         maxLines = 1,
         modifier = Modifier
-            .border(1.dp, OndoColors.Secondary.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+            .border(1.dp, color.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
             .padding(horizontal = 6.dp, vertical = 1.dp),
     )
 }
@@ -411,7 +411,7 @@ private fun Facts(facts: List<String>, badges: List<String>, modifier: Modifier 
     if (facts.isEmpty() && badges.isEmpty()) return
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp), itemVerticalAlignment = Alignment.CenterVertically) {
         if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = color, maxLines = 2)
-        badges.forEach { Badge(it) }
+        badges.forEach { Badge(it, color) }
     }
 }
 
