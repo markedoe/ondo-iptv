@@ -156,18 +156,21 @@ class UiMappersTest {
         assertEquals("Film · 2025 · ★ 7,8", hero.first { it.item.title == "Northern Lights" }.meta)
     }
 
-    /** A number of votes only with the average it comes from: TMDb's when it gave them, else the provider's alone. */
+    /** Both ratings side by side: the provider's, then TMDb's with its number of votes when TMDb gave them. */
     @Test
     fun aRatingShowsItsVotesWhenTmdbGaveThem() {
         val key = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.item.key
         val state = Fixtures.state().copy(tmdbRatings = mapOf(key to TmdbRating(7.346, 12345)))
-        assertEquals("Movie · 2025 · ★ 7.3 (12,345)", UiMappers.home(state, labels, Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.meta)
+        assertEquals("Movie · 2025 · ★ 7.8 · TMDb 7.3 (12,345)", UiMappers.home(state, labels, Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.meta)
         assertEquals("Series · 2025 · Drama · ★ 8.2", UiMappers.home(state, labels, Fixtures.NOW).hero.first { it.item.title == "Harbor Lights" }.meta)
         val french = UiMappers.home(state, Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.meta
-        assertTrue(french, french.matches(Regex("Film · 2025 · ★ 7,3 \\(12[\\s\\u00A0\\u202F]345\\)")))
+        assertTrue(french, french.matches(Regex("Film · 2025 · ★ 7,8 · TMDb 7,3 \\(12[\\s\\u00A0\\u202F]345\\)")))
         assertNull(UiMappers.ratingFact(null, null, Locale.US))
         assertNull(UiMappers.ratingFact(0.0, null, Locale.US))
         assertEquals("★ 6.0", UiMappers.ratingFact(6.0, null, Locale.US))
+        // TMDb's alone when the provider gives none, or the same.
+        assertEquals("TMDb 6.0 (42)", UiMappers.ratingFact(null, TmdbRating(6.04, 42), Locale.US))
+        assertEquals("TMDb 6.0 (42)", UiMappers.ratingFact(6.0, TmdbRating(6.04, 42), Locale.US))
         // A trending title carries TMDb's votes from the trending answer.
         val movie = Fixtures.longRoad
         val trending = TrendingMatch.MovieMatch(movie, TmdbItem(1, TmdbItem.MediaType.MOVIE, movie.name, voteAverage = 6.84, voteCount = 980))

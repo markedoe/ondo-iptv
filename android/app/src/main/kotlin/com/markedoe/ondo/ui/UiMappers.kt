@@ -155,14 +155,19 @@ object UiMappers {
     }?.trending?.rating
 
     /**
-     * "★ 7.1", or "★ 7.3 (12,345)" with the number of votes: a count is shown only with the average it comes from, so
-     * TMDb's rating when its votes are known ([votes]), else the provider's alone.
+     * The ratings side by side: the provider's ("★ 7.1") and TMDb's with its number of votes ("TMDb 7.3 (12,345)"), as
+     * "★ 7.1 · TMDb 7.3 (12,345)". The provider's alone without TMDb's votes; TMDb's alone when the provider gives none
+     * or the same.
      */
     fun ratingFact(provider: Double?, votes: TmdbRating?, locale: Locale): String? {
-        if (votes != null) {
-            return "★ " + String.format(locale, "%.1f", votes.average) + " (" + java.text.NumberFormat.getIntegerInstance(locale).format(votes.votes) + ")"
+        fun one(value: Double) = String.format(locale, "%.1f", value)
+        val own = provider?.takeIf { it > 0 }?.let { "★ " + one(it) }
+        val tmdb = votes?.let { "TMDb " + one(it.average) + " (" + java.text.NumberFormat.getIntegerInstance(locale).format(it.votes) + ")" }
+        return when {
+            tmdb == null -> own
+            own == null || one(provider!!) == one(votes.average) -> tmdb
+            else -> "$own · $tmdb"
         }
-        return provider?.takeIf { it > 0 }?.let { "★ " + String.format(locale, "%.1f", it) }
     }
 
     fun progress(entry: WatchEntry?): WatchProgress? =
