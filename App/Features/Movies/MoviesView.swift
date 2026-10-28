@@ -145,6 +145,8 @@ struct MovieDetailView: View {
             }
             .frame(maxWidth: metrics.textWidth, alignment: .leading)
             .padding(.horizontal, metrics.gutter)
+            CastShelf(item: .movie(movie), details: details, metrics: metrics)
+                .padding(.top, 8)
             let similar = model.similarMovies(to: movie)
             if !similar.isEmpty {
                 Shelf(title: "More Like This", metrics: metrics) {

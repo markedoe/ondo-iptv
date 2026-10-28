@@ -106,7 +106,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel ; pour les titres de l'accueil et les
   fiches que vous ouvrez, l'image de fond de TMDb quand celle du fournisseur manque ou ne se charge pas, la
   bande-annonce de TMDb (d'abord dans la langue de l'app, puis en anglais) quand le fournisseur n'en donne pas, et le
-  nombre de votes à côté de la note ; les personnes que TMDb connaît dans la recherche, avec leur photo, et tous les
+  nombre de votes à côté de la note ; les photos du casting en rangée sur la fiche d'un titre ; les personnes que TMDb connaît dans la recherche, avec leur photo, et tous les
   titres de la playlist sur la page d'un acteur ou d'un réalisateur, sous sa photo. Les réponses de TMDb sont gardées
   sur l'appareil (30 jours, 7 pour un titre que TMDb ne connaît pas) : les fiches les affichent tout de suite, même
   hors connexion, et seul ce qui manque ou est ancien est redemandé, en arrière-plan, quelques requêtes par seconde.

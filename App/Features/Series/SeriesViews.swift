@@ -111,6 +111,8 @@ struct SeriesDetailView: View {
             if let details, !details.seasons.isEmpty {
                 episodes(details, metrics: metrics)
             }
+            CastShelf(item: .series(series), details: details?.info, metrics: metrics)
+                .padding(.top, 8)
             let similar = model.similarSeries(to: series)
             if !similar.isEmpty {
                 Shelf(title: "More Like This", metrics: metrics) {
