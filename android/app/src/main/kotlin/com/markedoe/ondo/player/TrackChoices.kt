@@ -1,12 +1,15 @@
 package com.markedoe.ondo.player
 
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.audio.AudioCapabilities
 import java.util.Locale
 
 /** A track of the stream as the Subtitles and Audio panels list it: its language, then what tells it apart. */
@@ -110,6 +113,21 @@ object TrackChoices {
         else -> null
     }
 
+    /**
+     * How a surround track (Dolby, DTS) reaches the sound: as it is, for the TV or amplifier to decode (what the TV
+     * says it takes over HDMI or its own speakers), or decoded on this device. Null for a track decoded here anyway
+     * (AAC, MP3…), for which there is nothing to tell.
+     */
+    fun route(format: Format, capabilities: AudioCapabilities, attributes: AudioAttributes): AudioRoute? {
+        if (format.sampleMimeType !in SURROUND) return null
+        return if (capabilities.isPassthroughPlaybackSupported(format, attributes)) AudioRoute.AS_IS else AudioRoute.DECODED
+    }
+
+    private val SURROUND = setOf(
+        MimeTypes.AUDIO_AC3, MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC, MimeTypes.AUDIO_AC4, MimeTypes.AUDIO_TRUEHD,
+        MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD, MimeTypes.AUDIO_DTS_EXPRESS, MimeTypes.AUDIO_DTS_X,
+    )
+
     /** The codec's usual name: "AC-3", "E-AC-3", "AAC"… */
     fun codec(mimeType: String?): String? = when (mimeType) {
         MimeTypes.AUDIO_AC3 -> "AC-3"
@@ -129,3 +147,6 @@ object TrackChoices {
         else -> null
     }
 }
+
+/** Whether the sound of a surround track goes as it is to the TV or amplifier, or is decoded on this device. */
+enum class AudioRoute { AS_IS, DECODED }

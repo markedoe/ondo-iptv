@@ -27,6 +27,10 @@ import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AssistChip
+import androidx.compose.foundation.layout.size
+import com.markedoe.ondo.ui.tv.isTelevision
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -92,34 +96,49 @@ class VodActions(
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
     val metrics = rememberShelfMetrics()
+    val television = isTelevision()
     LazyColumn(
         state = rememberTabListState(),
         modifier = Modifier.fillMaxSize().testTag("vod"),
         verticalArrangement = Arrangement.spacedBy(if (metrics.compact) 24.dp else 32.dp),
         contentPadding = PaddingValues(top = tvTopBarSpace(), bottom = 32.dp),
     ) {
-        item {
-            TopAppBar(
-                title = { Text(state.title, style = MaterialTheme.typography.headlineSmall) },
-                actions = {
-                    IconButton(onClick = actions.onCategories, modifier = Modifier.testTag("categoryFilter")) {
-                        Icon(Icons.Rounded.FilterList, contentDescription = stringResource(R.string.categories))
-                    }
-                    IconButton(onClick = actions.onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search)) }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-            )
+        // On a TV the top bar names the tab and holds Search: the page starts with its categories, the button that
+        // chooses which ones show first.
+        if (!television) {
+            item {
+                TopAppBar(
+                    title = { Text(state.title, style = MaterialTheme.typography.headlineSmall) },
+                    actions = {
+                        IconButton(onClick = actions.onCategories, modifier = Modifier.testTag("categoryFilter")) {
+                            Icon(Icons.Rounded.FilterList, contentDescription = stringResource(R.string.categories))
+                        }
+                        IconButton(onClick = actions.onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search)) }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                )
+            }
         }
         item {
             TvRow {
                 LazyRow(contentPadding = PaddingValues(horizontal = metrics.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item { AssistChip(onClick = { actions.onCategory(null) }, label = { Text(stringResource(R.string.all)) }) }
+                    if (television) {
+                        item {
+                            CategoryPill(
+                                stringResource(R.string.categories),
+                                onClick = actions.onCategories,
+                                leadingIcon = { Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                modifier = Modifier.testTag("categoryFilter"),
+                            )
+                        }
+                    }
+                    item { CategoryPill(stringResource(R.string.all), onClick = { actions.onCategory(null) }) }
                     items(state.categories, key = { it.id }) { category ->
                         val locked = category.id in state.lockedCategoryIds
-                        AssistChip(
+                        CategoryPill(
+                            category.name,
                             onClick = { actions.onCategory(category) },
-                            label = { Text(category.name, maxLines = 1) },
-                            leadingIcon = if (locked) ({ Icon(Icons.Rounded.Lock, contentDescription = null) }) else null,
+                            leadingIcon = if (locked) ({ Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(18.dp)) }) else null,
                         )
                     }
                 }
@@ -281,3 +300,21 @@ private val PosterSort.label: Int
         PosterSort.RELEASE -> R.string.sort_release_date
         PosterSort.RATING -> R.string.sort_rating
     }
+
+/** A category as a grey pill: no outline, white words; a TV's focus turns it white. */
+@Composable
+internal fun CategoryPill(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, leadingIcon: (@Composable () -> Unit)? = null) {
+    AssistChip(
+        onClick = onClick,
+        label = { Text(text, maxLines = 1) },
+        leadingIcon = leadingIcon,
+        modifier = modifier,
+        shape = CircleShape,
+        border = null,
+        colors = AssistChipDefaults.assistChipColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            labelColor = MaterialTheme.colorScheme.onSurface,
+            leadingIconContentColor = MaterialTheme.colorScheme.onSurface,
+        ),
+    )
+}

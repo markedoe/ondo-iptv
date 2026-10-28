@@ -661,6 +661,9 @@ private fun LazyListScope.tracks(player: Player, controls: PlayerControls, type:
             ChoiceRow(choice.name, choice.detail, selected = choice.selected, tag = "track-$index", modifier = if (focusFirst) Modifier.focusRequester(first) else Modifier) { choose(choice) }
         }
     }
+    if (type == C.TRACK_TYPE_AUDIO) {
+        choices.firstOrNull { it.selected }?.let { selected -> item(key = "audioRoute") { AudioRouteLine(player, selected) } }
+    }
     if (choices.isEmpty()) {
         item(key = "none") {
             val hint = when {
@@ -681,6 +684,24 @@ private fun LazyListScope.tracks(player: Player, controls: PlayerControls, type:
             )
         }
     }
+}
+
+/** Under the audio tracks: whether the chosen one goes as it is to the TV or amplifier, or is decoded here. */
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+@Composable
+private fun AudioRouteLine(player: Player, selected: TrackChoice) {
+    val context = LocalContext.current
+    val format = selected.group.getTrackFormat(selected.index)
+    val attributes = player.audioAttributes
+    val route = remember(format, attributes) {
+        TrackChoices.route(format, androidx.media3.exoplayer.audio.AudioCapabilities.getCapabilities(context, attributes, null), attributes)
+    } ?: return
+    Text(
+        stringResource(if (route == AudioRoute.AS_IS) R.string.audio_as_is else R.string.audio_decoded),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp).testTag("audioRoute"),
+    )
 }
 
 internal val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 2f)

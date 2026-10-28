@@ -378,6 +378,8 @@
     <string name="track_audio_description">الوصف الصوتي</string>
     <string name="track_mono">أحادي</string>
     <string name="track_stereo">ستيريو</string>
+    <string name="audio_as_is">يُرسَل كما هو إلى التلفزيون أو المضخّم الذي يفك ترميزه: دون أي تحويل.</string>
+    <string name="audio_decoded">يفك هذا الجهاز ترميزه: لم يُشِر التلفزيون أو المضخّم إلى قبول هذا التنسيق كما هو.</string>
     <string name="tracks_pending">تظهر المسارات بمجرد بدء تشغيل البث.</string>
     <string name="no_subtitles">لا يحتوي هذا البث على ترجمة.</string>
     <string name="no_audio">لا يحتوي هذا البث على صوت.</string>

@@ -118,6 +118,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
     val details = state.details
     val facts = listOfNotNull(
         movie.year?.toString() ?: details?.releaseDate?.take(4),
+        firstGenre(details?.genre),
         details?.durationSeconds?.takeIf { it > 0 }?.let { durationText(it, LocalConfiguration.current.locales[0]) },
         (details?.rating ?: movie.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
     )
@@ -138,7 +139,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                 director = details?.director,
                 progress = state.progress.takeIf { resumable },
             ) {
-                TvActionButton(onClick = actions.onPlay, modifier = Modifier.focusMemory("detail-play", initial = true).testTag("detailPlay")) {
+                TvActionButton(onClick = actions.onPlay, prominent = true, modifier = Modifier.focusMemory("detail-play", initial = true).testTag("detailPlay")) {
                     ButtonLabel(Icons.Rounded.PlayArrow, playLabel(resumable))
                 }
                 if (resumable) {
@@ -171,6 +172,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
     val seasonCount = state.seasons.size
     val facts = listOfNotNull(
         series.year?.toString(),
+        firstGenre(details?.genre ?: series.genre),
         seasonCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.seasons, it, it) },
         (details?.rating ?: series.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
     )
@@ -194,7 +196,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                 progress = state.nextProgress.takeIf { resumable },
             ) {
                 state.next?.let { next ->
-                    TvActionButton(onClick = actions.onPlay, modifier = Modifier.focusMemory("detail-play", initial = true).testTag("detailPlay")) {
+                    TvActionButton(onClick = actions.onPlay, prominent = true, modifier = Modifier.focusMemory("detail-play", initial = true).testTag("detailPlay")) {
                         ButtonLabel(Icons.Rounded.PlayArrow, stringResource(if (resumable) R.string.resume_episode else R.string.play_episode, next.code))
                     }
                 }
@@ -280,11 +282,11 @@ private fun TvDetailHeader(
             award?.let { AwardLine(it) }
             Text(
                 title,
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.ExtraBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 620.dp).testTag("detailTitle"),
+                modifier = Modifier.widthIn(max = 640.dp).testTag("detailTitle"),
             )
             TvFacts(facts, badges)
             plot?.takeIf { it.isNotBlank() }?.let {
@@ -304,6 +306,7 @@ private fun TvDetailHeader(
             FlowRow(
                 Modifier.padding(top = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
+                itemVerticalAlignment = Alignment.Top,
                 verticalArrangement = Arrangement.spacedBy(14.dp),
                 content = buttons,
             )
@@ -367,6 +370,9 @@ private fun ProgressLine(progress: WatchProgress) {
     }
 }
 
+/** The first of a title's genres ("Drama, Mystery" → "Drama"), for its facts line; all of them are below. */
+private fun firstGenre(genre: String?): String? = genre?.split(',', '/', '|')?.map { it.trim() }?.firstOrNull { it.isNotEmpty() }
+
 @Composable
 private fun RowScope.ButtonLabel(icon: ImageVector, text: String) {
     Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -377,26 +383,30 @@ private fun RowScope.ButtonLabel(icon: ImageVector, text: String) {
 /** The provider's trailer, in the YouTube app. */
 @Composable
 private fun TrailerButton(youTubeId: String, actions: DetailActions) {
-    TvActionButton(onClick = { actions.onTrailer(youTubeId) }, modifier = Modifier.focusMemory("detail-trailer").testTag("detailTrailer")) {
-        ButtonLabel(Icons.Rounded.OndemandVideo, stringResource(R.string.trailer))
-    }
+    TvCircleAction(Icons.Rounded.OndemandVideo, stringResource(R.string.trailer), onClick = { actions.onTrailer(youTubeId) }, modifier = Modifier.focusMemory("detail-trailer").testTag("detailTrailer"))
 }
 
 @Composable
 private fun MyListButton(inMyList: Boolean, onClick: () -> Unit) {
     val state = myListState(inMyList)
-    TvActionButton(onClick = onClick, modifier = Modifier.focusMemory("detail-myList").semantics { stateDescription = state }.testTag("detailMyList")) {
-        ButtonLabel(if (inMyList) Icons.Rounded.Check else Icons.Rounded.Add, stringResource(R.string.my_list))
-    }
+    TvCircleAction(
+        if (inMyList) Icons.Rounded.Check else Icons.Rounded.Add,
+        stringResource(R.string.my_list),
+        onClick = onClick,
+        modifier = Modifier.focusMemory("detail-myList").semantics { stateDescription = state }.testTag("detailMyList"),
+    )
 }
 
 /** Opens the collections; marked when one of them holds the title. */
 @Composable
 private fun CollectionButton(collections: List<CollectionChoice>, requester: FocusRequester, onClick: () -> Unit) {
     val held = collections.any { it.contains }
-    TvActionButton(onClick = onClick, modifier = Modifier.focusRequester(requester).focusMemory("detail-collection").testTag("detailCollection")) {
-        ButtonLabel(if (held) Icons.Rounded.LibraryAddCheck else Icons.Rounded.LibraryAdd, stringResource(R.string.collection))
-    }
+    TvCircleAction(
+        if (held) Icons.Rounded.LibraryAddCheck else Icons.Rounded.LibraryAdd,
+        stringResource(R.string.collection),
+        onClick = onClick,
+        modifier = Modifier.focusRequester(requester).focusMemory("detail-collection").testTag("detailCollection"),
+    )
 }
 
 /**

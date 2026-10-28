@@ -34,6 +34,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.onFocusChanged
+import com.markedoe.ondo.ui.tv.isTelevision
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,8 +85,16 @@ class LiveActions(
 @Composable
 fun LiveScreen(state: LiveUiState, actions: LiveActions) {
     val heldOk = LocalHeldOk.current
-    LazyColumn(state = rememberTabListState(), modifier = Modifier.fillMaxSize().testTag("live"), contentPadding = PaddingValues(top = tvTopBarSpace(), bottom = 24.dp)) {
-        item {
+    val television = isTelevision()
+    // On a TV, the channel the remote is on is shown large beside the list: what is on, how far, what comes next.
+    var focusedId by remember { mutableStateOf<String?>(null) }
+    Box(Modifier.fillMaxSize()) {
+    LazyColumn(
+        state = rememberTabListState(),
+        modifier = Modifier.fillMaxHeight().fillMaxWidth(if (television) 0.56f else 1f).testTag("live"),
+        contentPadding = PaddingValues(top = tvTopBarSpace(), bottom = 24.dp),
+    ) {
+        if (!television) item {
             TopAppBar(
                 title = { Text(stringResource(R.string.live_tv), style = MaterialTheme.typography.headlineSmall) },
                 actions = {
@@ -96,6 +112,25 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
         item {
             TvRow {
                 LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // On a TV the top bar holds Search; the guide and the categories come first here.
+                    if (television) {
+                        item {
+                            CategoryPill(
+                                stringResource(R.string.tv_guide),
+                                onClick = actions.onGuide,
+                                leadingIcon = { Icon(Icons.Rounded.CalendarViewDay, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                modifier = Modifier.testTag("openGuide"),
+                            )
+                        }
+                        item {
+                            CategoryPill(
+                                stringResource(R.string.categories),
+                                onClick = actions.onCategories,
+                                leadingIcon = { Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(18.dp)) },
+                                modifier = Modifier.testTag("categoryFilter"),
+                            )
+                        }
+                    }
                     item {
                         FilterChip(selected = state.selectedCategoryId == null && !state.showingFavorites, onClick = { actions.onCategory(null) }, label = { Text(stringResource(R.string.all)) })
                     }
@@ -120,6 +155,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                     // A remote: the frame shows the channel; holding OK toggles My List, as a long press does.
                     .focusFrame(RoundedCornerShape(12.dp), grow = 1.02f)
                     .focusMemory("channel:${row.channel.id}", initial = index == 0)
+                    .onFocusChanged { if (it.isFocused) focusedId = row.channel.id }
                     .clip(RoundedCornerShape(12.dp))
                     // TalkBack offers the long press under this name ("double-tap and hold to …").
                     .combinedClickable(
@@ -161,6 +197,46 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
         }
         if (state.channels.isEmpty()) {
             item { Text(stringResource(if (state.showingFavorites) R.string.no_favorite_channels else R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp)) }
+        }
+    }
+    if (television) {
+        val shown = state.channels.firstOrNull { it.channel.id == focusedId } ?: state.channels.firstOrNull()
+        shown?.let {
+            FocusedChannel(
+                it,
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .fillMaxWidth(0.44f)
+                    .padding(start = 24.dp, top = tvTopBarSpace() + 64.dp, end = 8.dp),
+            )
+        }
+    }
+    }
+}
+
+/** The channel the remote is on, large: its logo, name, what is on now and how far it is, what comes next. */
+@Composable
+private fun FocusedChannel(row: ChannelRow, modifier: Modifier = Modifier) {
+    Column(modifier.testTag("focusedChannel"), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(RoundedCornerShape(16.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(36.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            ChannelLogo(url = row.channel.logoUrl, name = row.channel.name)
+        }
+        Text(
+            listOfNotNull(row.channel.number?.toString(), row.channel.name).joinToString(" · "),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        row.nowTitle?.let {
+            Text(it, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        row.nowProgress?.let { Box(Modifier.width(220.dp)) { ProgressBar(it) } }
+        row.nextTitle?.let {
+            Text(stringResource(R.string.next_program, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

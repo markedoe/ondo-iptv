@@ -52,4 +52,19 @@ class TrackChoicesTest {
         assertEquals(listOf("5.1 · AC-3", "Stéréo · AAC", "Mono · Opus", "Audiodescription · Stéréo · AAC"), choices.map { it.detail })
         assertEquals(listOf(false, true, false, false), choices.map { it.selected })
     }
+
+    /** A Dolby or DTS track goes as it is when the TV says it takes that format; else it is decoded; AAC is not told. */
+    @Test
+    fun aSurroundTrackGoesAsItIsOnlyWhenTheTvTakesItsFormat() {
+        val attributes = androidx.media3.common.AudioAttributes.DEFAULT
+        val eac3 = androidx.media3.common.Format.Builder().setSampleMimeType(MimeTypes.AUDIO_E_AC3).setChannelCount(6).setSampleRate(48_000).build()
+        val dts = androidx.media3.common.Format.Builder().setSampleMimeType(MimeTypes.AUDIO_DTS).setChannelCount(6).setSampleRate(48_000).build()
+        val aac = androidx.media3.common.Format.Builder().setSampleMimeType(MimeTypes.AUDIO_AAC).setChannelCount(2).setSampleRate(48_000).build()
+        val dolbyAmplifier = androidx.media3.exoplayer.audio.AudioCapabilities(intArrayOf(C.ENCODING_PCM_16BIT, C.ENCODING_AC3, C.ENCODING_E_AC3), 8)
+        val speakersOnly = androidx.media3.exoplayer.audio.AudioCapabilities(intArrayOf(C.ENCODING_PCM_16BIT), 2)
+        assertEquals(AudioRoute.AS_IS, TrackChoices.route(eac3, dolbyAmplifier, attributes))
+        assertEquals(AudioRoute.DECODED, TrackChoices.route(dts, dolbyAmplifier, attributes))
+        assertEquals(AudioRoute.DECODED, TrackChoices.route(eac3, speakersOnly, attributes))
+        assertNull(TrackChoices.route(aac, dolbyAmplifier, attributes))
+    }
 }

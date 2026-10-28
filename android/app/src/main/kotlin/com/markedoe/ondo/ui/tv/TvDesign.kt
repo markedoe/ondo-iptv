@@ -31,6 +31,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -58,6 +61,7 @@ import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Glow
+import androidx.tv.material3.Icon
 import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -433,6 +437,41 @@ fun TvActionButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: 
         contentPadding = PaddingValues(horizontal = 22.dp, vertical = 12.dp),
         content = content,
     )
+}
+
+/**
+ * A secondary action of a title's page: a round button with its icon, its name written beneath it (TalkBack reads
+ * the name once, from the button).
+ */
+@Composable
+fun TvCircleAction(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Column(Modifier.width(84.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Button(
+            onClick = onClick,
+            modifier = modifier.semantics { contentDescription = label },
+            shape = ButtonDefaults.shape(CircleShape),
+            scale = ButtonDefaults.scale(focusedScale = 1.1f),
+            glow = ButtonDefaults.glow(focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.8f), elevation = 14.dp)),
+            colors = ButtonDefaults.colors(
+                containerColor = Color.White.copy(alpha = 0.2f),
+                contentColor = Color.White,
+                focusedContainerColor = Color.White,
+                focusedContentColor = TvTokens.Ink,
+            ),
+            contentPadding = PaddingValues(12.dp),
+        ) {
+            Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
+        }
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.White.copy(alpha = 0.7f),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.clearAndSetSemantics { },
+        )
+    }
 }
 
 /**

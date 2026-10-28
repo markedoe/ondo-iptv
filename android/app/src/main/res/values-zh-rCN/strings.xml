@@ -338,6 +338,8 @@
     <string name="track_audio_description">口述影像</string>
     <string name="track_mono">单声道</string>
     <string name="track_stereo">立体声</string>
+    <string name="audio_as_is">原样发送到电视或功放，由其解码：不做任何转换。</string>
+    <string name="audio_decoded">由本设备解码：电视或功放未表明可以直接接收此格式。</string>
     <string name="tracks_pending">开始播放后会显示可选的轨道。</string>
     <string name="no_subtitles">此流没有字幕。</string>
     <string name="no_audio">此流没有声音。</string>

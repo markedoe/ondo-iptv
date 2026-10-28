@@ -346,6 +346,8 @@
     <string name="track_audio_description">ऑडियो विवरण</string>
     <string name="track_mono">मोनो</string>
     <string name="track_stereo">स्टीरियो</string>
+    <string name="audio_as_is">जैसा है वैसा ही आपके टीवी या एम्पलीफ़ायर को भेजा जाता है, जो इसे डिकोड करता है: कोई रूपांतरण नहीं।</string>
+    <string name="audio_decoded">यह डिवाइस इसे डिकोड करता है: आपके टीवी या एम्पलीफ़ायर ने नहीं बताया कि वह यह फ़ॉर्मैट वैसा ही ले सकता है।</string>
     <string name="tracks_pending">स्ट्रीम चलते ही ट्रैक दिखेंगे।</string>
     <string name="no_subtitles">इस स्ट्रीम में सबटाइटल नहीं हैं।</string>
     <string name="no_audio">इस स्ट्रीम में आवाज़ नहीं है।</string>

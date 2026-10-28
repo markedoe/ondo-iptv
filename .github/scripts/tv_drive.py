@@ -804,7 +804,8 @@ def path_browse(tv, args):
     tv.key("BACK")
     time.sleep(2)
     tv.bar("Live TV")
-    tv.key("UP", 3)
+    # Up from the first channel: the row of the guide, the categories and the channel groups.
+    tv.key("UP", 1)
     tv.open("Categories", keys=("RIGHT",), max_presses=8, exact=True, wait=3)
     tv.note_screen("browse-live-categories")
     tv.key("DOWN", 3)

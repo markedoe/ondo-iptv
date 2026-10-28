@@ -354,6 +354,8 @@
     <string name="track_audio_description">Audiodescrição</string>
     <string name="track_mono">Mono</string>
     <string name="track_stereo">Estéreo</string>
+    <string name="audio_as_is">Enviado como está para sua TV ou receiver, que o decodifica: sem conversão.</string>
+    <string name="audio_decoded">Decodificado por este aparelho: sua TV ou receiver não informou que aceita este formato como está.</string>
     <string name="tracks_pending">As faixas aparecem assim que o stream começa.</string>
     <string name="no_subtitles">Este stream não tem legendas.</string>
     <string name="no_audio">Este stream não tem som.</string>

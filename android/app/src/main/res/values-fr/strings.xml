@@ -354,6 +354,8 @@
     <string name="track_audio_description">Audiodescription</string>
     <string name="track_mono">Mono</string>
     <string name="track_stereo">Stéréo</string>
+    <string name="audio_as_is">Envoyé tel quel à votre TV ou à votre ampli, qui le décode : aucune conversion.</string>
+    <string name="audio_decoded">Décodé par cet appareil : votre TV ou votre ampli n’a pas indiqué accepter ce format tel quel.</string>
     <string name="tracks_pending">Les pistes s’affichent dès que le flux est lu.</string>
     <string name="no_subtitles">Ce flux n’a pas de sous-titres.</string>
     <string name="no_audio">Ce flux n’a pas de son.</string>
