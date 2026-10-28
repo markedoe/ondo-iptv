@@ -150,6 +150,94 @@ final class TMDbTests: XCTestCase {
         XCTAssertNil(person)
         XCTAssertTrue(http.sent.isEmpty)
     }
+
+    /// A title's backdrop, votes, trailer and credits on TMDb: by id or by title and year, never another title's.
+    func testATitlesInfoIsFoundByIDOrByTitle() async throws {
+        let http = MockHTTPClient()
+        http.routes["https://api.themoviedb.org/3/movie/910001?"] = Data((
+            #"{"id":910001,"title":"Lighthouse","backdrop_path":"/lighthouse-wide.jpg","vote_average":7.1,"vote_count":12345,"#
+                + #""credits":{"cast":[{"id":2,"name":"Tom Ellery","order":1},{"id":1,"name":"Ada Vance","profile_path":"/ada.jpg","order":0},"#
+                + #"{"id":1,"name":"Ada Vance","order":5}],"crew":[{"id":3,"name":"Mira Holt","job":"Director"},{"id":4,"name":"Sam Reed","job":"Writer"}]}}"#
+        ).utf8)
+        http.routes["https://api.themoviedb.org/3/movie/910001/videos?"] = Data((
+            #"{"id":910001,"results":["#
+                + #"{"key":"teaserFR001","site":"YouTube","type":"Teaser","official":true,"iso_639_1":"fr"},"#
+                + #"{"key":"trailerEN01","site":"YouTube","type":"Trailer","official":true,"iso_639_1":"en"},"#
+                + #"{"key":"trailerFR01","site":"YouTube","type":"Trailer","official":false,"iso_639_1":"fr"},"#
+                + #"{"key":"vimeo123456","site":"Vimeo","type":"Trailer","official":true,"iso_639_1":"fr"},"#
+                + #"{"key":"clipFR00001","site":"YouTube","type":"Clip","official":true,"iso_639_1":"fr"}]}"#
+        ).utf8)
+        http.routes["https://api.themoviedb.org/3/search/tv?"] =
+            Data(#"{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20","backdrop_path":"/copper.jpg"}]}"#.utf8)
+        http.routes["https://api.themoviedb.org/3/tv/7?"] =
+            Data(#"{"id":7,"name":"Copper Valley","vote_average":8.0,"created_by":[{"id":5,"name":"Lena Ward"}],"credits":{"cast":[],"crew":[]}}"#.utf8)
+        http.routes["https://api.themoviedb.org/3/tv/7/videos?"] =
+            Data(#"{"id":7,"results":[{"key":"teaserEN001","site":"YouTube","type":"Teaser","official":true,"iso_639_1":"en"}]}"#.utf8)
+        http.routes["https://api.themoviedb.org/3/search/movie?"] =
+            Data(#"{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}"#.utf8)
+        let client = TMDbClient(credential: "KEY", http: http, language: "fr-FR")
+
+        let foundByID = try await client.titleInfo(of: .movie, tmdbID: "910001", title: "Lighthouse", year: 2010)
+        let byID = try XCTUnwrap(foundByID)
+        XCTAssertEqual(byID.tmdbID, 910001)
+        XCTAssertEqual(byID.backdropURL?.absoluteString, "https://image.tmdb.org/t/p/w1280/lighthouse-wide.jpg")
+        XCTAssertEqual(byID.voteAverage, 7.1)
+        XCTAssertEqual(byID.voteCount, 12_345)
+        XCTAssertEqual(byID.trailerKey, "trailerFR01", "a trailer in the viewer's language first")
+        XCTAssertEqual(byID.directors.map(\.name), ["Mira Holt"])
+        XCTAssertEqual(byID.cast.map(\.name), ["Ada Vance", "Tom Ellery"], "in billing order, each once")
+        XCTAssertEqual(byID.cast.first?.profileURL?.absoluteString, "https://image.tmdb.org/t/p/w185/ada.jpg")
+        let videos = try XCTUnwrap(http.sent.first { $0.url.path.hasSuffix("/videos") })
+        let languages = URLComponents(url: videos.url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "include_video_language" }
+        XCTAssertEqual(languages?.value, "fr,en,null", "the viewer's language, English, or none")
+
+        let foundSeries = try await client.titleInfo(of: .series, tmdbID: nil, title: "FR - Copper Valley (US)", year: 2008)
+        let series = try XCTUnwrap(foundSeries)
+        XCTAssertEqual(series.tmdbID, 7)
+        XCTAssertEqual(series.trailerKey, "teaserEN001", "a teaser when there is no trailer")
+        XCTAssertEqual(series.directors.map(\.name), ["Lena Ward"], "a series' creators")
+        XCTAssertNil(series.voteCount)
+
+        let sent = http.sent.count
+        let other = try await client.titleInfo(of: .movie, tmdbID: nil, title: "Paper Trail", year: 1999)
+        XCTAssertNil(other, "another Paper Trail's details are not this one's")
+        XCTAssertEqual(http.sent.count, sent + 1, "only the search")
+        let nameless = try await client.titleInfo(of: .movie, tmdbID: nil, title: "", year: nil)
+        XCTAssertNil(nameless)
+
+        // An id TMDb does not know: by title.
+        http.routes["https://api.themoviedb.org/3/movie/9?"] = Data(#"{"id":9,"title":"Paper Trail","credits":{}}"#.utf8)
+        http.routes["https://api.themoviedb.org/3/movie/9/videos?"] = Data(#"{"id":9,"results":[]}"#.utf8)
+        let byTitle = try await client.titleInfo(of: .movie, tmdbID: "123456", title: "Paper Trail", year: 1961)
+        XCTAssertEqual(byTitle?.tmdbID, 9)
+        XCTAssertNil(byTitle?.trailerKey)
+
+        // TMDb out of reach: an error, not "no such title" (nothing is kept).
+        http.failures["https://api.themoviedb.org/3/movie/910001?append_to_response=credits&language=fr-FR&api_key=KEY"] =
+            [URLError(.notConnectedToInternet)]
+        do {
+            _ = try await client.titleInfo(of: .movie, tmdbID: "910001", title: "Lighthouse", year: 2010)
+            XCTFail("an unreachable TMDb is not a missing title")
+        } catch {
+            XCTAssertEqual((error as? URLError)?.code, .notConnectedToInternet)
+        }
+    }
+
+    func testTheTrailerIsOnYouTubeATrailerBeforeATeaserInTheViewersLanguage() {
+        let videos = [
+            TMDbVideo(key: "teaserDE001", site: "YouTube", type: "Teaser", official: true, language: "de"),
+            TMDbVideo(key: "trailerES01", site: "YouTube", type: "Trailer", official: false, language: "es"),
+            TMDbVideo(key: "trailerES02", site: "YouTube", type: "Trailer", official: true, language: "es"),
+            TMDbVideo(key: "trailerEN01", site: "YouTube", type: "Trailer", official: true, language: "en"),
+            TMDbVideo(key: "featurette1", site: "YouTube", type: "Featurette", official: true, language: "fr"),
+            TMDbVideo(key: "not-a-key", site: "YouTube", type: "Trailer", official: true, language: "fr"),
+        ]
+        XCTAssertEqual(TMDbVideo.best(videos, language: "es")?.key, "trailerES02", "the official one first")
+        XCTAssertEqual(TMDbVideo.best(videos, language: "FR")?.key, "trailerEN01", "English before the others")
+        XCTAssertEqual(TMDbVideo.best(Array(videos.prefix(1)), language: "fr")?.key, "teaserDE001", "a teaser rather than nothing")
+        XCTAssertNil(TMDbVideo.best([TMDbVideo(key: "vimeo123456", site: "Vimeo", type: "Trailer")], language: "en"))
+        XCTAssertNil(TMDbVideo.best([], language: "en"))
+    }
 }
 
 final class PeopleTests: XCTestCase {
