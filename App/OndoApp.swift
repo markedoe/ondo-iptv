@@ -24,7 +24,7 @@ struct OndoApp: App {
         WindowGroup {
             RootView()
                 .environment(model)
-                .preferredColorScheme(model.settings.appearance.colorScheme)
+                .preferredColorScheme(.dark)
                 #if os(macOS) && DEBUG
                 .background { if ScreenshotRoute.sizesWindow { ScreenshotWindowSizer() } }
                 #endif
@@ -63,7 +63,7 @@ struct OndoApp: App {
 
         Window("Ondo Help", id: "help") {
             NavigationStack { HelpView() }
-                .preferredColorScheme(model.settings.appearance.colorScheme)
+                .preferredColorScheme(.dark)
         }
         .defaultSize(width: 720, height: 560)
 
@@ -71,7 +71,7 @@ struct OndoApp: App {
             NavigationStack { SettingsView() }
                 .environment(model)
                 .frame(minWidth: 520, minHeight: 560)
-                .preferredColorScheme(model.settings.appearance.colorScheme)
+                .preferredColorScheme(.dark)
         }
         #endif
     }

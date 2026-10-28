@@ -223,6 +223,16 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(settings.posterSort, .name)
     }
 
+    /// The appearance choice is gone (the app is always dark): settings saved with it still decode, the rest kept.
+    func testSettingsSavedWithTheFormerAppearanceChoiceStillDecode() throws {
+        let saved = Data(#"{"appearance": "light", "showChannelNumbers": false, "posterSort": "name"}"#.utf8)
+        let settings = try JSONDecoder().decode(AppSettings.self, from: saved)
+        XCTAssertFalse(settings.showChannelNumbers)
+        XCTAssertEqual(settings.posterSort, .name)
+        let reencoded = try JSONEncoder().encode(settings)
+        XCTAssertFalse(String(decoding: reencoded, as: UTF8.self).contains("appearance"), "no longer written back")
+    }
+
     func testMyListShowsTheLatestAdditionFirst() async throws {
         let model = try await model()
         let bright = try movie("Bright Side", in: model)

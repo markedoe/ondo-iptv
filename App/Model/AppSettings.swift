@@ -1,28 +1,6 @@
 import SwiftUI
 import IPTVCore
 
-enum AppearancePreference: String, Codable, CaseIterable, Identifiable {
-    case system, light, dark
-
-    var id: String { rawValue }
-
-    var colorScheme: ColorScheme? {
-        switch self {
-        case .system: return nil
-        case .light: return .light
-        case .dark: return .dark
-        }
-    }
-
-    var label: LocalizedStringKey {
-        switch self {
-        case .system: return "System"
-        case .light: return "Light"
-        case .dark: return "Dark"
-        }
-    }
-}
-
 enum VideoAspect: String, Codable, CaseIterable, Identifiable {
     case fit, fill, stretch
 
@@ -69,7 +47,6 @@ enum PosterSort: String, Codable, CaseIterable, Identifiable {
 /// User preferences, persisted as JSON.
 struct AppSettings: Codable, Equatable {
     var activePlaylistID: UUID?
-    var appearance: AppearancePreference = .dark
     var showChannelNumbers = true
     var autoplayLastChannel = false
     var resumePlayback = true
@@ -109,12 +86,12 @@ struct AppSettings: Codable, Equatable {
 
     init() {}
 
-    // Tolerant decoding: new settings added in updates must not reset the others.
+    // Tolerant decoding: new settings added in updates must not reset the others, and settings removed in updates
+    // (the former "appearance" choice) are ignored when an older file still holds them.
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = AppSettings()
         activePlaylistID = try c.decodeIfPresent(UUID.self, forKey: .activePlaylistID)
-        appearance = (try? c.decodeIfPresent(AppearancePreference.self, forKey: .appearance)) ?? d.appearance
         showChannelNumbers = (try? c.decodeIfPresent(Bool.self, forKey: .showChannelNumbers)) ?? d.showChannelNumbers
         autoplayLastChannel = (try? c.decodeIfPresent(Bool.self, forKey: .autoplayLastChannel)) ?? d.autoplayLastChannel
         resumePlayback = (try? c.decodeIfPresent(Bool.self, forKey: .resumePlayback)) ?? d.resumePlayback

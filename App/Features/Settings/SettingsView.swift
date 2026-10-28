@@ -319,20 +319,13 @@ struct SettingsView: View {
             }
 
             Section {
-                Picker(selection: binding(\.appearance)) {
-                    ForEach(AppearancePreference.allCases) { appearance in
-                        Text(appearance.label).tag(appearance)
-                    }
-                } label: {
-                    Label("Theme", systemImage: "circle.lefthalf.filled")
-                }
                 LabeledContent {
                     Button(Self.appLanguageName, action: openAppLanguageSettings)
                 } label: {
                     Label("App Language", systemImage: "globe")
                 }
             } header: {
-                Text("Appearance")
+                Text("Language")
             } footer: {
                 #if os(macOS)
                 Text("Ondo's language is chosen in System Settings → General → Language & Region → Applications.")
