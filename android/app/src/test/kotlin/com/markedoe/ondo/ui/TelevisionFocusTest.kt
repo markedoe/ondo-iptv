@@ -426,7 +426,8 @@ class TelevisionFocusTest {
         openFromDrawer("tabMovies")
         // Up from the first poster: its category's chip, which opens the category's posters.
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() == "Drama" }
+        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
+        pressUntil(Key.DirectionRight) { focused() == "Drama" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") && focusedIn("grid") }
         // Onto the first poster, then up onto the filter: the key goes down, then up a moment later, as on a remote.
@@ -451,7 +452,9 @@ class TelevisionFocusTest {
     fun theCategoriesFieldsGoOnWithTheKeyboardsAction() {
         start(answers = emptyMap(), stored = Fixtures.content)
         openFromDrawer("tabMovies")
-        pressUntil(Key.DirectionUp) { focusedTag() == "categoryFilter" }
+        // The chips above the rows start with Categories.
+        pressUntil(Key.DirectionUp) { focused() == "All" || focusedTag() == "categoryFilter" }
+        pressUntil(Key.DirectionLeft) { focusedTag() == "categoryFilter" }
         press(Key.DirectionCenter)
         waitFor { exists("categories") && focusedIn("categories") }
         pressUntil(Key.DirectionDown) { editing() }

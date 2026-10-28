@@ -144,6 +144,8 @@ dependencies {
 
 // Failed tests are printed with their full message and stack trace (CI logs).
 tasks.withType<Test>().configureEach {
+    // Robolectric tests run one class after another in a JVM: two JVMs side by side use the runner's cores.
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
     testLogging {
         events("failed", "skipped")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL

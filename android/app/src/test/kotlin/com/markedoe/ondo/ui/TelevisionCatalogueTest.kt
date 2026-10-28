@@ -384,9 +384,10 @@ class TelevisionCatalogueTest {
         openFromDrawer("tabLive")
         walkRows("live", rows = 4, cards = 1)
         // The guide of every channel, from the top of Live TV.
-        compose.onNodeWithTag("live").performScrollToIndex(0)
-        settle()
-        compose.onNodeWithTag("openGuide").performClick()
+        // Up to the chips above the channels (walking the rows may have moved them along), left onto the guide.
+        pressUntil(Key.DirectionUp, max = 60) { focusedTag() == "openGuide" || focusedTag() == "categoryFilter" || focused() == "All" || focused() == "My List" }
+        pressUntil(Key.DirectionLeft, max = 60) { focusedTag() == "openGuide" }
+        press(Key.DirectionCenter)
         waitFor { exists("guide") }
         settle(1_000)
         scrollEverything("guide")

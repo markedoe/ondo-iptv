@@ -203,9 +203,9 @@ class TelevisionFirstPlaylistTest {
         }
         // Live TV → the guide.
         openTab(3, "live")
-        // Up to the page's buttons (Search, Guide, Categories), right onto the guide's.
-        pressUntil(Key.DirectionUp, max = 20) { focusedTag() == "openGuide" || focusedTag() == "categoryFilter" || focused() == "Search" }
-        pressUntil(if (focusedTag() == "categoryFilter") Key.DirectionLeft else Key.DirectionRight) { focusedTag() == "openGuide" }
+        // Up to the chips above the channels, which start with the guide and Categories; left onto the guide.
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag() == "openGuide" || focusedTag() == "categoryFilter" || focused() == "All" || focused() == "My List" }
+        pressUntil(Key.DirectionLeft) { focusedTag() == "openGuide" }
         press(Key.DirectionCenter)
         waitFor { exists("guide") }
         settle(1_000)

@@ -222,7 +222,7 @@ class TelevisionScrollTest {
         start()
         openTab(1, "vod")
         // The category chips above the rows: All opens every movie in a grid.
-        pressUntil(Key.DirectionUp) { focused() == "Drama" }
+        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
         pressUntil(Key.DirectionLeft) { focused() == "All" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") }
