@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,6 +21,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -32,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.PosterCard
@@ -79,8 +82,8 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
         if (state.searching && (state.movies.isNotEmpty() || state.series.isNotEmpty())) {
             fullWidth { LinearProgressIndicator(Modifier.fillMaxWidth().testTag("personSearching")) }
         }
-        works(R.string.movies, state.movies, onOpen)
-        works(R.string.series, state.series, onOpen)
+        works(R.string.movies, "personMovies", state.movies, onOpen, first = true)
+        works(R.string.series, "personSeries", state.series, onOpen, first = state.movies.isEmpty())
         if (state.searching && state.movies.isEmpty() && state.series.isEmpty()) {
             fullWidth { Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(Modifier.testTag("personSearching")) } }
         } else if (state.movies.isEmpty() && state.series.isEmpty()) {
@@ -107,8 +110,26 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
 
 private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
 
-private fun LazyGridScope.works(title: Int, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit) {
+/**
+ * A block of the page (the movies, then the series): its title in bold with how many titles it holds, and, after the
+ * first block, a line and some room above it, so the two read as two parts. Neither takes the focus: the remote goes
+ * from the last movies straight down to the first series.
+ */
+private fun LazyGridScope.works(title: Int, tag: String, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit, first: Boolean) {
     if (posters.isEmpty()) return
-    fullWidth { Text(stringResource(title), style = MaterialTheme.typography.titleLarge) }
+    fullWidth {
+        Column(Modifier.fillMaxWidth().padding(top = if (first) 4.dp else 20.dp).testTag(tag)) {
+            if (!first) HorizontalDivider(Modifier.padding(bottom = 28.dp).testTag("personDivider"), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(stringResource(title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text(
+                    posters.size.toString(),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 10.dp, bottom = 2.dp),
+                )
+            }
+        }
+    }
     items(posters, key = { it.key }) { item -> PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = true) }
 }

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -79,6 +80,7 @@ import com.markedoe.ondo.ui.screens.SettingsScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -184,6 +186,29 @@ class ScreensTest {
         compose.setContent { OndoTheme { PersonScreen(PersonUiState("Ada Vance"), onOpen = {}, onBack = {}) } }
         compose.onNodeWithText("Nothing in this playlist").assertExists()
         compose.onNodeWithText("Ada Vance.", substring = true).assertExists()
+    }
+
+    /** A person's movies, then a line, then their series: two blocks, each with its title and count. */
+    @Test
+    fun aPersonsMoviesAndSeriesAreTwoBlocks() {
+        val movies = listOf(Fixtures.northernLights, Fixtures.glassCity).map { ShowcaseItem.MovieItem(it) }
+        val series = listOf(ShowcaseItem.SeriesItem(Fixtures.theArchive))
+        var state by mutableStateOf(PersonUiState("Ann Example", movies = movies, series = series, searchedOnline = true))
+        compose.setContent { OndoTheme { PersonScreen(state, onOpen = {}, onBack = {}) } }
+        fun inBlock(tag: String, text: String) = compose.onNode(hasText(text) and hasAnyAncestor(hasTestTag(tag))).assertExists()
+        inBlock("personMovies", "Movies")
+        inBlock("personMovies", "2")
+        inBlock("personSeries", "Series")
+        inBlock("personSeries", "1")
+        compose.onAllNodesWithTag("personDivider", useUnmergedTree = true).assertCountEquals(1)
+        val moviesTop = compose.onNodeWithTag("personMovies").fetchSemanticsNode().boundsInRoot.top
+        val dividerTop = compose.onNodeWithTag("personDivider", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top
+        val lastMovieBottom = compose.onAllNodesWithContentDescription(Fixtures.glassCity.name).fetchSemanticsNodes().maxOf { it.boundsInRoot.bottom }
+        assertTrue("the line comes after the movies, with room above it", dividerTop > lastMovieBottom && dividerTop > moviesTop)
+        // Series only: no line above the first block.
+        state = state.copy(movies = emptyList())
+        compose.onNodeWithTag("personSeries").assertExists()
+        compose.onAllNodesWithTag("personDivider", useUnmergedTree = true).assertCountEquals(0)
     }
 
     // The collection name dialogs are not driven: Robolectric never gets idle with a text field in a dialog window.
