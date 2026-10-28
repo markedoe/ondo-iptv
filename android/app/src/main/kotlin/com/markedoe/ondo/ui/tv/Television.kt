@@ -444,6 +444,8 @@ class FocusMemory(key: String? = null) {
 @Composable
 fun rememberFocusMemory(lifecycle: Lifecycle = LocalLifecycleOwner.current.lifecycle): FocusMemory {
     val memory = rememberSaveable(saver = FocusMemory.Saver) { FocusMemory() }
+    // A remote's concern: a phone's page does not put the focus back on a card.
+    if (!isTelevision()) return memory
     DisposableEffect(lifecycle, memory) {
         var shown = false
         val observer = LifecycleEventObserver { _, event ->
