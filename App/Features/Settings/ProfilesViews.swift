@@ -209,7 +209,7 @@ struct ProfileEditView: View {
                     ForEach(ProfileStyle.symbols, id: \.self) { candidate in
                         Image(systemName: candidate)
                             .frame(width: 30, height: 30)
-                            .foregroundStyle(candidate == symbol ? Color.accentColor : .secondary)
+                            .foregroundStyle(candidate == symbol ? OndoColor.selected : .secondary)
                             .onTapGesture { symbol = candidate }
                     }
                 }

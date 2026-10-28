@@ -144,7 +144,7 @@ struct PrimaryPlayButton: View {
                     .padding(.vertical, 14)
                     .padding(.horizontal, 24)
                     .foregroundStyle(.black)
-                    .background(Color.accentColor, in: Capsule())
+                    .background(OndoColor.selected, in: Capsule())
                     .contentShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -276,7 +276,7 @@ struct ExpandablePlot: View {
                 }
                 .font(.callout.weight(.semibold))
                 .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(OndoColor.selected)
             }
         }
     }

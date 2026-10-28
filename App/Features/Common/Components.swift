@@ -28,7 +28,7 @@ struct ChannelRow: View {
                     if channel.hasCatchup {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.caption)
-                            .foregroundStyle(Color.accentColor)
+                            .foregroundStyle(OndoColor.selected)
                             .help("Replay available")
                     }
                 }
@@ -47,7 +47,7 @@ struct ChannelRow: View {
             if model.isFavorite(.live, id: channel.id) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.caption)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(OndoColor.selected)
                     .accessibilityLabel("In My List")
             }
         }
@@ -124,7 +124,7 @@ struct SectionHeader: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            if let systemImage { Image(systemName: systemImage).foregroundStyle(Color.accentColor) }
+            if let systemImage { Image(systemName: systemImage).foregroundStyle(OndoColor.selected) }
             Text(title).font(.title3.bold())
             Spacer()
         }
@@ -145,7 +145,7 @@ struct PINPromptView: View {
         VStack(spacing: 20) {
             Image(systemName: "lock.shield")
                 .font(.system(size: 44))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(OndoColor.selected)
             Text("Parental Control").font(.title2.bold())
             Text("Enter your PIN to open locked content.")
                 .foregroundStyle(.secondary)
@@ -169,7 +169,7 @@ struct PINPromptView: View {
             HStack {
                 Button("Cancel", role: .cancel) { dismiss() }
                 Button("Unlock", action: check)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.ondoProminent)
                     .disabled(pin.count < 4)
             }
         }
@@ -214,7 +214,7 @@ struct ParentalGate<Content: View>: View {
             } actions: {
                 if model.hasParentalPIN {
                     Button("Unlock") { askingPIN = true }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.ondoProminent)
                 }
             }
             .sheet(isPresented: $askingPIN) {
@@ -350,7 +350,7 @@ struct CategoryBrowser<Detail: View>: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .listRowBackground(sideBySide && selected?.id == category.id ? Color.accentColor.opacity(0.18) : nil)
+        .listRowBackground(sideBySide && selected?.id == category.id ? Color.white.opacity(0.12) : nil)
         .contextMenu { CategoryMenu(category: category) }
     }
 

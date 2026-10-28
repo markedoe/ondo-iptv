@@ -76,8 +76,9 @@ targets:
           - _CC1AD845._googlecast._tcp
           - _ondo._tcp
         UIBackgroundModes: [audio]
+        # Black, like every page (the accent is white).
         UILaunchScreen:
-          UIColorName: AccentColor
+          UIColorName: BrandBackground
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait

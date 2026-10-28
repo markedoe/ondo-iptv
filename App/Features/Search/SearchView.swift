@@ -255,9 +255,9 @@ struct ProgramSearchRow: View {
             if program.isLive(at: now) {
                 Text("LIVE").font(.caption2.bold()).foregroundStyle(.red)
             } else if program.start < now {
-                Image(systemName: "clock.arrow.circlepath").foregroundStyle(Color.accentColor)
+                Image(systemName: "clock.arrow.circlepath").foregroundStyle(OndoColor.selected)
             } else if model.hasReminder(for: program, on: result.channel) {
-                Image(systemName: "bell.fill").foregroundStyle(Color.accentColor)
+                Image(systemName: "bell.fill").foregroundStyle(OndoColor.selected)
             }
         }
         .contentShape(Rectangle())

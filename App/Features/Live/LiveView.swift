@@ -102,13 +102,13 @@ struct ChannelListView: View {
                         } label: {
                             MyListLabel(inList: model.isFavorite(.live, id: channel.id))
                         }
-                        .tint(.accentColor)
+                        .tint(OndoColor.tintFill)
                         Button {
                             router?.push(channel)
                         } label: {
                             Label("Guide", systemImage: "calendar")
                         }
-                        .tint(.indigo)
+                        .tint(OndoColor.outline)
                     }
                     #endif
                 }
@@ -231,7 +231,7 @@ struct ChannelGuideView: View {
                     } label: {
                         Label("Watch", systemImage: "play.fill")
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.ondoProminent)
                 }
             }
 
@@ -247,8 +247,8 @@ struct ChannelGuideView: View {
                                         .font(.subheadline.weight(.medium))
                                         .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
-                                        .background(day == selectedDay ? Color.accentColor : Color.secondary.opacity(0.15), in: Capsule())
-                                        .foregroundStyle(day == selectedDay ? Color.white : Color.primary)
+                                        .background(day == selectedDay ? OndoColor.selected : OndoColor.surfaceHigh, in: Capsule())
+                                        .foregroundStyle(day == selectedDay ? Color.black : Color.white)
                                 }
                                 .buttonStyle(.plain)
                             }
@@ -323,7 +323,7 @@ struct ProgramRow: View {
         HStack(alignment: .top, spacing: 12) {
             Text(Formatting.time(program.start))
                 .font(.subheadline.monospacedDigit())
-                .foregroundStyle(program.isLive(at: now) ? Color.accentColor : .secondary)
+                .foregroundStyle(program.isLive(at: now) ? OndoColor.selected : .secondary)
                 .frame(width: 56, alignment: .leading)
             VStack(alignment: .leading, spacing: 3) {
                 Text(program.title)
@@ -339,9 +339,9 @@ struct ProgramRow: View {
             if program.isLive(at: now) {
                 Text("LIVE").font(.caption2.bold()).foregroundStyle(.red)
             } else if model.canReplay(program, on: channel) {
-                Image(systemName: "play.circle").foregroundStyle(Color.accentColor)
+                Image(systemName: "play.circle").foregroundStyle(OndoColor.selected)
             } else if model.hasReminder(for: program, on: channel) {
-                Image(systemName: "bell.fill").foregroundStyle(Color.accentColor)
+                Image(systemName: "bell.fill").foregroundStyle(OndoColor.selected)
             }
         }
         .opacity(program.isPast(at: now) && !model.canReplay(program, on: channel) ? 0.6 : 1)
@@ -411,7 +411,7 @@ struct ProgramDetailView: View {
                 } label: {
                     Label("Watch Live", systemImage: "dot.radiowaves.left.and.right")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.ondoProminent)
                 if model.canReplay(program, on: channel) {
                     Button {
                         dismiss()
@@ -428,10 +428,10 @@ struct ProgramDetailView: View {
                 } label: {
                     Label("Play Replay", systemImage: "play.fill")
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.ondoProminent)
             } else if program.start > now {
                 ReminderButton(program: program, channel: channel)
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.ondoProminent)
                 Label("Starts \(Formatting.relative(program.start))", systemImage: "calendar.badge.clock")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)

@@ -233,7 +233,7 @@ struct EpisodeRow: View {
                             if progress?.isFinished == true {
                                 Label("Watched", systemImage: "checkmark.circle.fill")
                                     .labelStyle(.iconOnly)
-                                    .foregroundStyle(.green)
+                                    .foregroundStyle(.white)
                             }
                         }
                         .font(.caption)

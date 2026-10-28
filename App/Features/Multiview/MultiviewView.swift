@@ -48,7 +48,7 @@ struct MultiviewView: View {
                         Text("Watch up to 4 channels at once. Only the highlighted one plays sound.")
                     } actions: {
                         Button("Add Channel") { picker = PickerRequest(tile: nil) }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.ondoProminent)
                     }
                 }
             }
@@ -132,7 +132,7 @@ struct MultiviewTile: View {
         .overlay(alignment: .topTrailing) { menu }
         .overlay {
             RoundedRectangle(cornerRadius: 2)
-                .strokeBorder(hasSound ? Color.accentColor : Color.clear, lineWidth: 3)
+                .strokeBorder(hasSound ? OndoColor.selected : Color.clear, lineWidth: 3)
                 .allowsHitTesting(false)
         }
         .accessibilityElement(children: .contain)
@@ -161,7 +161,7 @@ struct MultiviewTile: View {
         let program = channel.flatMap { model.currentProgram(for: $0) }
         return HStack(spacing: 6) {
             Image(systemName: hasSound ? "speaker.wave.2.fill" : "speaker.slash.fill")
-                .foregroundStyle(hasSound ? Color.accentColor : .white.opacity(0.7))
+                .foregroundStyle(hasSound ? OndoColor.selected : .white.opacity(0.7))
             VStack(alignment: .leading, spacing: 1) {
                 Text(session.current?.title ?? "").font(.caption.weight(.semibold)).lineLimit(1)
                 if let program {

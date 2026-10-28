@@ -196,7 +196,7 @@ struct HomeView: View {
                     NavigationLink(value: AppSection.live) {
                         Label("Live TV", systemImage: AppSection.live.systemImage)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.ondoProminent)
                     NavigationLink(value: AppSection.guide) {
                         Label("TV Guide", systemImage: AppSection.guide.systemImage)
                     }
@@ -226,7 +226,7 @@ struct HomeView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Image(systemName: "rectangle.stack")
                                 .font(.title2)
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(OndoColor.selected)
                             Spacer(minLength: 8)
                             Text(list.name).font(.headline).lineLimit(2)
                             Text("\(model.items(in: list).count) items").font(.caption).foregroundStyle(.secondary)
@@ -273,7 +273,7 @@ struct HomeView: View {
         NavigationLink(value: section) {
             HStack(spacing: 12) {
                 Image(systemName: section.systemImage)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(OndoColor.selected)
                     .frame(width: 20)
                 Text(title)
                 Spacer()

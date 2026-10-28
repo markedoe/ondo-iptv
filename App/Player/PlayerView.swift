@@ -221,7 +221,7 @@ struct PlayerView: View {
                     .frame(maxWidth: 460)
                 HStack {
                     Button("Retry") { controller.retry() }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.ondoProminent)
                     if session.isTimeshifted {
                         Button("Back to Live") { session.returnToLive() }
                             .buttonStyle(.bordered)

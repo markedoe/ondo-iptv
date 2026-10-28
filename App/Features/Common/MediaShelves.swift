@@ -82,7 +82,7 @@ struct Shelf<Content: View>: View {
             }
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.accentColor)
+        .foregroundStyle(OndoColor.selected)
     }
 }
 
@@ -167,7 +167,7 @@ struct ProgressBar: View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.3))
-                Capsule().fill(Color.accentColor).frame(width: proxy.size.width * min(max(value, 0), 1))
+                Capsule().fill(OndoColor.selected).frame(width: proxy.size.width * min(max(value, 0), 1))
             }
         }
         .frame(height: 4)

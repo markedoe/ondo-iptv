@@ -251,7 +251,7 @@ struct TagSuggestionCard: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 10) {
                 Button("Keep Only These") { model.accept(suggestion) }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.ondoProminent)
                     .accessibilityIdentifier("keepMyLanguages")
                 Button("Choose…", action: onChoose)
                     .buttonStyle(.bordered)

@@ -117,7 +117,7 @@ struct GuideMatchView: View {
                 }
                 Spacer()
                 if isSelected {
-                    Image(systemName: "checkmark").foregroundStyle(Color.accentColor)
+                    Image(systemName: "checkmark").foregroundStyle(OndoColor.selected)
                 }
             }
             .contentShape(Rectangle())

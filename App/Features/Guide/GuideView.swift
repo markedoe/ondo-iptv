@@ -221,19 +221,19 @@ struct GuideView: View {
                     .frame(width: width, height: rowHeight - 4, alignment: .leading)
                     .clipped()
                     .background(
-                        program.isLive(at: now) ? Color.accentColor.opacity(0.28) : Color.secondary.opacity(program.isPast(at: now) ? 0.06 : 0.13),
+                        program.isLive(at: now) ? Color.white.opacity(0.2) : Color.secondary.opacity(program.isPast(at: now) ? 0.06 : 0.13),
                         in: RoundedRectangle(cornerRadius: 6)
                     )
                     .overlay(alignment: .topTrailing) {
                         if program.isPast(at: now) && model.canReplay(program, on: channel) {
                             Image(systemName: "clock.arrow.circlepath")
                                 .font(.caption2)
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(OndoColor.selected)
                                 .padding(4)
                         } else if program.start > now && model.hasReminder(for: program, on: channel) {
                             Image(systemName: "bell.fill")
                                 .font(.caption2)
-                                .foregroundStyle(Color.accentColor)
+                                .foregroundStyle(OndoColor.selected)
                                 .padding(4)
                         }
                     }

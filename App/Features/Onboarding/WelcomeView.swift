@@ -46,7 +46,7 @@ struct WelcomeView: View {
                         Label("Add a Playlist", systemImage: "plus")
                             .frame(maxWidth: 320)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.ondoProminent)
                     .controlSize(.large)
                     .accessibilityIdentifier("addPlaylistButton")
 
@@ -125,7 +125,7 @@ private struct FeatureRow: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(OndoColor.selected)
                 .frame(width: 34)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.headline)

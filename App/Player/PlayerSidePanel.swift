@@ -115,7 +115,7 @@ struct PlayerSidePanel: View {
                             row(entry.item, number: entry.number)
                         }
                         .buttonStyle(.plain)
-                        .listRowBackground(entry.position == session.index ? Color.accentColor.opacity(0.35) : Color.clear)
+                        .listRowBackground(entry.position == session.index ? Color.white.opacity(0.16) : Color.clear)
                         .id(entry.position)
                     }
                 }
@@ -145,7 +145,7 @@ struct PlayerSidePanel: View {
                 if let program {
                     Text(program.title).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     ProgressView(value: program.progress())
-                        .tint(.accentColor)
+                        .tint(.white)
                         .scaleEffect(x: 1, y: 0.6, anchor: .center)
                 }
             }
@@ -184,7 +184,7 @@ struct PlayerGuideList: View {
                 ScrollViewReader { proxy in
                     List(programs) { program in
                         row(program, now: now)
-                            .listRowBackground(isPlaying(program) ? Color.accentColor.opacity(0.35) : Color.clear)
+                            .listRowBackground(isPlaying(program) ? Color.white.opacity(0.16) : Color.clear)
                             .id(program.id)
                     }
                     .listStyle(.plain)
@@ -243,12 +243,12 @@ struct PlayerGuideList: View {
                 if upcoming {
                     Image(systemName: hasReminder ? "bell.fill" : "bell")
                         .font(.callout)
-                        .foregroundStyle(hasReminder ? Color.accentColor : .secondary)
+                        .foregroundStyle(hasReminder ? OndoColor.selected : .secondary)
                         .accessibilityLabel(hasReminder ? Text("Reminder Set") : Text("Remind Me"))
                 } else if replayable {
                     Image(systemName: airing ? "backward.end.circle" : "play.circle")
                         .font(.title3)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(OndoColor.selected)
                         .accessibilityLabel(airing ? Text("Restart") : Text("Replay"))
                 } else if airing {
                     Text("LIVE")

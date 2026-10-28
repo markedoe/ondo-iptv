@@ -247,7 +247,7 @@ struct InfoLines: View {
             }
         }
         .buttonStyle(.plain)
-        .foregroundStyle(Color.accentColor)
+        .foregroundStyle(OndoColor.selected)
         .accessibilityIdentifier("credit-\(text)")
     }
 
@@ -281,7 +281,7 @@ struct AwardsList: View {
                                 .foregroundStyle(award.won ? Color.yellow : Color.secondary)
                                 .accessibilityHidden(true)
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(verbatim: award.name).foregroundStyle(Color.accentColor)
+                                Text(verbatim: award.name).foregroundStyle(OndoColor.selected)
                                 Text(status(award)).font(.caption).foregroundStyle(.secondary)
                             }
                         }

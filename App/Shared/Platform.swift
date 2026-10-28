@@ -38,14 +38,8 @@ enum Platform {
 }
 
 extension Color {
-    /// Window / screen background, used where artwork fades into the page.
-    static var appBackground: Color {
-        #if os(iOS)
-        Color(uiColor: .systemBackground)
-        #else
-        Color(nsColor: .windowBackgroundColor)
-        #endif
-    }
+    /// Window / screen background, used where artwork fades into the page: pure black, on every device.
+    static var appBackground: Color { OndoColor.ground }
 }
 
 extension View {

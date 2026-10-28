@@ -107,7 +107,7 @@ struct PlaylistStateGate<Content: View>: View {
                 Button("Try Again") {
                     Task { await model.refreshActivePlaylist() }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.ondoProminent)
                 // This screen replaces every tab: the way out (another playlist, the login to fix) must be here.
                 if model.playlists.count > 1 {
                     Menu("Switch Playlist") {
@@ -286,6 +286,11 @@ struct SidebarRootView: View {
                     }
                 }
             }
+            // White icons; on iPad the selected row is filled with the tint, under white text: a grey, not the white accent.
+            .listItemTint(.white)
+            #if os(iOS)
+            .tint(OndoColor.tintFill)
+            #endif
             .navigationTitle("Ondo")
             #if os(macOS)
             .navigationSplitViewColumnWidth(min: 190, ideal: 220)

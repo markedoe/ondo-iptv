@@ -552,7 +552,7 @@ struct PlaylistsSettingsView: View {
             ForEach(model.playlists) { playlist in
                 HStack(spacing: 12) {
                     Image(systemName: playlist.id == model.activePlaylist?.id ? "checkmark.circle.fill" : "circle")
-                        .foregroundStyle(playlist.id == model.activePlaylist?.id ? Color.accentColor : .secondary)
+                        .foregroundStyle(playlist.id == model.activePlaylist?.id ? OndoColor.selected : .secondary)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(playlist.name).font(.body.weight(.medium))
                         Text(playlist.source.kindLabel + (playlist.lastRefreshedAt.map { " · " + Formatting.relative($0) } ?? ""))
