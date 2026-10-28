@@ -35,7 +35,7 @@ class RemoteKeysTest {
     }
 
     @Test
-    fun downOpensAnEpisodesEpisodesAndStillChangesChannelOnLiveTv() {
+    fun downOpensTheEpisodesOfAnEpisodeAndStillChangesChannelOnLiveTv() {
         fun down(live: Boolean, shown: Boolean = false) = RemoteKeys.action(KeyEvent.KEYCODE_DPAD_DOWN, controlsShown = shown, zapping = live, seekable = true, episodes = true)
         assertEquals(RemoteAction.ShowEpisodes, down(live = false))
         assertEquals(RemoteAction.PreviousChannel, down(live = true))
