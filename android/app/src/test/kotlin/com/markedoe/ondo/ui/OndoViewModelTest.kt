@@ -96,9 +96,9 @@ class OndoViewModelTest {
     /** Runs what is due now, the repository's work in [TestScope.backgroundScope] too (which advanceUntilIdle leaves). */
     private fun TestScope.settle() = repeat(20) { testScheduler.runCurrent() }
 
-    /** Settles until [done], for work that also crosses real threads (the store's files): a few seconds at most. */
+    /** Settles until [done], for work that also crosses real threads (the store's files): ten seconds at most. */
     private fun TestScope.settleUntil(done: () -> Boolean) {
-        repeat(300) {
+        repeat(1_000) {
             if (done()) return
             settle()
             Thread.sleep(10)
@@ -269,18 +269,21 @@ class OndoViewModelTest {
         val first = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), metadata = kept)
         val firstModel = track(OndoViewModel(first, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         first.addPlaylist("Home", list)
-        val movie = firstModel.state.first { it.content.movies.isNotEmpty() }.content.movies.single()
+        // The playlist fully read and saved (the next launch reads it from disk).
+        val movie = firstModel.state.first { it.content.movies.isNotEmpty() && !it.isLoading }.content.movies.single()
+        settle()
         assertEquals(TmdbCheck.ACCEPTED, first.checkAndSaveTmdbToken("GOOD"))
         firstModel.loadMovie(movie.id)
         settleUntil { UiMappers.movieDetail(firstModel.state.value, movie).trailer != null }
-        assertEquals(2, tmdbRequests.size)
+        assertEquals("by title, then the title's page (${tmdbRequests.size} asked)", 2, tmdbRequests.size)
 
         // The next launch: the same files, the same store.
         firstModel.viewModelScope.cancel()
         val next = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler), metadata = kept)
         val nextModel = track(OndoViewModel(next, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
         next.bootstrap()
-        nextModel.state.first { it.content.movies.isNotEmpty() && it.settings.tmdbToken != null }
+        nextModel.state.first { it.content.movies.isNotEmpty() && !it.isLoading && it.settings.tmdbToken != null }
+        settle()
         nextModel.loadMovie(movie.id)
         settleUntil { UiMappers.movieDetail(nextModel.state.value, movie).trailer != null }
         val detail = UiMappers.movieDetail(nextModel.state.value, movie)
