@@ -104,6 +104,32 @@ class TmdbTest {
         assertTrue(client.cast(series = false, tmdbId = null, title = "", year = null).isEmpty())
     }
 
+    /** A title's trailer on TMDb: by id or by title, in the viewer's language first, a trailer before a teaser. */
+    @Test
+    fun aTitlesTrailerIsFoundByIdOrByTitle() = runTest {
+        val http = MockHttpClient()
+        http.routes["https://api.themoviedb.org/3/movie/910001/videos?include_video_language=fr,en,null&language=fr-FR&api_key=KEY"] = (
+            """{"id":910001,"results":[""" +
+                """{"key":"teaserFR001","site":"YouTube","type":"Teaser","official":true,"iso_639_1":"fr"},""" +
+                """{"key":"trailerEN01","site":"YouTube","type":"Trailer","official":true,"iso_639_1":"en"},""" +
+                """{"key":"trailerFR01","site":"YouTube","type":"Trailer","official":false,"iso_639_1":"fr"},""" +
+                """{"key":"vimeo123456","site":"Vimeo","type":"Trailer","official":true,"iso_639_1":"fr"},""" +
+                """{"key":"clipFR00001","site":"YouTube","type":"Clip","official":true,"iso_639_1":"fr"}]}"""
+            ).encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=fr-FR&api_key=KEY"] =
+            """{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20"}]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/tv/7/videos?include_video_language=fr,en,null&language=fr-FR&api_key=KEY"] =
+            """{"id":7,"results":[{"key":"teaserEN001","site":"YouTube","type":"Teaser","official":true,"iso_639_1":"en"}]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/search/movie?query=paper%20trail&language=fr-FR&api_key=KEY"] =
+            """{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}""".encodeToByteArray()
+        val client = TmdbClient("KEY", http, language = "fr-FR")
+
+        assertEquals("trailerFR01", client.trailer(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010), "a French trailer first")
+        assertEquals("teaserEN001", client.trailer(series = true, tmdbId = null, title = "FR - Copper Valley (US)", year = 2008), "a teaser when there is no trailer")
+        assertNull(client.trailer(series = false, tmdbId = null, title = "Paper Trail", year = 1999), "another Paper Trail's trailer")
+        assertNull(client.trailer(series = false, tmdbId = null, title = "", year = null))
+    }
+
     /** A key is checked with TMDb before it is saved: accepted, refused, or TMDb out of reach. */
     @Test
     fun aKeyIsCheckedBeforeItIsSaved() = runTest {

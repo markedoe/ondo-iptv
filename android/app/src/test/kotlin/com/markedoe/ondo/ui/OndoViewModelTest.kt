@@ -124,6 +124,8 @@ class OndoViewModelTest {
                     searches += url
                     """{"results":[{"id":9,"title":"Long Road","release_date":"2025-03-01","backdrop_path":"/road.jpg"}]}"""
                 }
+                url.startsWith("https://api.themoviedb.org/3/movie/9/videos?") ->
+                    """{"id":9,"results":[{"key":"roadTrailer","site":"YouTube","type":"Trailer","official":true,"iso_639_1":"en"}]}"""
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
         }
@@ -144,18 +146,22 @@ class OndoViewModelTest {
         settle()
         val tmdb = "https://image.tmdb.org/t/p/w1280/road.jpg"
         assertEquals(tmdb, UiMappers.movieDetail(viewModel.state.value, movie).backdropUrl)
-        assertTrue("by title (${searches.single()})", Regex("query=long(%20|\\+)road", RegexOption.IGNORE_CASE).containsMatchIn(searches.single()))
+        // The provider gave no trailer: TMDb's.
+        assertEquals("roadTrailer", UiMappers.movieDetail(viewModel.state.value, movie).trailer)
+        // By title: once for the backdrop, once for the trailer.
+        assertEquals(2, searches.size)
+        assertTrue("by title (${searches.first()})", searches.all { Regex("query=long(%20|\\+)road", RegexOption.IGNORE_CASE).containsMatchIn(it) })
         // Once a session.
         viewModel.loadMovie(movie.id)
         settle()
-        assertEquals(1, searches.size)
+        assertEquals(2, searches.size)
 
         // TMDb's picture failing too leaves the blurred poster, and it is not asked for again.
         viewModel.backdropFailed(item, tmdb)
         settle()
         assertTrue(tmdb in viewModel.state.value.deadBackdrops)
         assertNull(UiMappers.movieDetail(viewModel.state.value, movie).backdropUrl)
-        assertEquals(1, searches.size)
+        assertEquals(2, searches.size)
     }
 
     /**

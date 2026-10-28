@@ -164,7 +164,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   uniquement, rien ne passe par internet ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **TMDb**, avec votre propre jeton (Réglages → TMDb, vérifié auprès de TMDb à l'enregistrement, transmis par la
   synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel, l'image de fond de TMDb quand celle du
-  fournisseur manque ou ne se charge pas, les photos du casting sur la fiche d'un titre, les personnes que TMDb
+  fournisseur manque ou ne se charge pas, la bande-annonce de TMDb (d'abord dans la langue de l'app) quand le
+  fournisseur n'en donne pas, les photos du casting sur la fiche d'un titre, les personnes que TMDb
   connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un réalisateur.
 - **Réglages** : playlists, catégories adultes masquées par défaut, langues et catégories, langue de
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur, jeton TMDb ; écran d'accueil avec démo.

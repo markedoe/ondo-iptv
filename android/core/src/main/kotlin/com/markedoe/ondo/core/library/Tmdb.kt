@@ -159,6 +159,29 @@ class TmdbClient(
         return (directors + part("cast")).mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }
     }
 
+    /**
+     * The YouTube key of the trailer TMDb lists for a movie or a series whose provider gave none: by the TMDb id the
+     * provider gave, else the first search result with the same title (and a year one apart at most, when known). In the
+     * viewer's language first, then English; trailers before teasers, official ones first. Null rather than another
+     * title's trailer.
+     */
+    suspend fun trailer(series: Boolean, tmdbId: String?, title: String, year: Int?): String? {
+        val kind = if (series) "tv" else "movie"
+        tmdbId?.trim()?.toIntOrNull()?.let { id ->
+            runCatching { trailerOf(kind, id) }.getOrNull()?.let { return it }
+        }
+        val id = sameTitle(kind, title, year).firstOrNull()?.id ?: return null
+        return trailerOf(kind, id)
+    }
+
+    private suspend fun trailerOf(kind: String, id: Int): String? {
+        val viewer = language.substringBefore('-').lowercase()
+        val answer = get("$kind/$id/videos", listOf("include_video_language" to "$viewer,en,null")) as? JsonObject
+            ?: throw SerializationException("Not a TMDb answer")
+        val videos = (answer["results"] as? JsonArray).orEmpty().mapNotNull { TmdbVideo.from(it) }
+        return TmdbVideo.best(videos, viewer)?.key
+    }
+
     /** The people TMDb finds for a search (actors, directors…), the most popular first. */
     suspend fun people(query: String): List<TmdbPerson> {
         val trimmed = query.trim()
@@ -289,5 +312,46 @@ object CatalogueMatcher {
             }
         }
         return result
+    }
+}
+
+/** A video TMDb lists for a movie or a series (trailers, teasers, clips…). */
+data class TmdbVideo(
+    val key: String,
+    val site: String,
+    val type: String,
+    val official: Boolean = false,
+    /** ISO 639-1 language of the video, when TMDb gives one. */
+    val language: String? = null,
+) {
+    companion object {
+        private val YOUTUBE_KEY = Regex("[A-Za-z0-9_-]{11}")
+
+        internal fun from(json: JsonElement): TmdbVideo? {
+            val o = json as? JsonObject ?: return null
+            fun string(name: String) = (o[name] as? JsonPrimitive)?.takeIf { it.isString }?.content
+            return TmdbVideo(
+                key = string("key") ?: return null,
+                site = string("site").orEmpty(),
+                type = string("type").orEmpty(),
+                official = (o["official"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false,
+                language = string("iso_639_1")?.lowercase(),
+            )
+        }
+
+        /**
+         * The trailer to show: YouTube only, a trailer before a teaser, in the viewer's [language] before English before
+         * the others, an official one first. Null when there is no trailer or teaser on YouTube.
+         */
+        fun best(videos: List<TmdbVideo>, language: String): TmdbVideo? = videos
+            .filter { it.site.equals("YouTube", ignoreCase = true) && it.type in TRAILER_TYPES && YOUTUBE_KEY.matches(it.key) }
+            .sortedWith(
+                compareBy<TmdbVideo> { if (it.type == "Trailer") 0 else 1 }
+                    .thenBy { when (it.language) { language -> 0; "en" -> 1; else -> 2 } }
+                    .thenBy { if (it.official) 0 else 1 },
+            )
+            .firstOrNull()
+
+        private val TRAILER_TYPES = setOf("Trailer", "Teaser")
     }
 }

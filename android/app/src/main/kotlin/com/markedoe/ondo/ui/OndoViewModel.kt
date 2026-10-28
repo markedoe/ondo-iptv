@@ -204,6 +204,7 @@ class OndoViewModel(
             repository.details(movie)
             wantBackdrop(ShowcaseItem.MovieItem(movie))
             wantFaces(ShowcaseItem.MovieItem(movie))
+            wantTrailer(ShowcaseItem.MovieItem(movie))
         }
     }
 
@@ -215,6 +216,7 @@ class OndoViewModel(
                 .onFailure { error -> _seriesErrors.value += (id to LoadError.of(error)) }
             wantBackdrop(ShowcaseItem.SeriesItem(series))
             wantFaces(ShowcaseItem.SeriesItem(series))
+            wantTrailer(ShowcaseItem.SeriesItem(series))
         }
     }
 
@@ -244,6 +246,20 @@ class OndoViewModel(
         val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
         val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
         repository.findTmdbFaces(item.key, series != null, details?.tmdbId, title, year)
+    }
+
+    /**
+     * With the viewer's TMDb token, looks once a session for TMDb's trailer of a title whose provider gave none: by the
+     * TMDb id its provider gave, else by its title and year.
+     */
+    fun wantTrailer(item: ShowcaseItem) {
+        val state = state.value
+        if (state.settings.tmdbToken == null) return
+        val details = details(state, item)
+        if (UiMappers.youTubeId(details?.trailerYouTubeId) != null) return
+        val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
+        val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
+        repository.findTmdbTrailer(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
     }
 
     private fun details(state: OndoState, item: ShowcaseItem): MediaDetails? = when (item) {

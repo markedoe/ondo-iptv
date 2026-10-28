@@ -86,6 +86,8 @@ data class OndoState(
     val deadBackdrops: Set<String> = emptySet(),
     /** TMDb's photos of a title's cast and directors, by the title's key, then by the person's name ([TextNormalizer]). */
     val tmdbFaces: Map<String, Map<String, String>> = emptyMap(),
+    /** TMDb's trailers (YouTube ids) of titles whose provider gave none, by the title's key. */
+    val tmdbTrailers: Map<String, String> = emptyMap(),
     /** TMDb refused the saved token when it was used (it was checked elsewhere, or revoked since): Settings says so. */
     val tmdbRefused: Boolean = false,
 ) {
@@ -912,6 +914,7 @@ class OndoRepository(
     private var trendingLoadedFor: Pair<String, Long>? = null
     private val backdropsSearched = HashSet<String>()
     private val facesSearched = HashSet<String>()
+    private val trailersSearched = HashSet<String>()
 
     private fun tmdbClient(): TmdbClient? =
         _state.value.settings.tmdbToken?.takeUnless { _state.value.tmdbRefused }?.let { TmdbClient(it, http, Locale.getDefault().toLanguageTag()) }
@@ -945,7 +948,8 @@ class OndoRepository(
         trendingLoadedFor = null
         backdropsSearched.clear()
         facesSearched.clear()
-        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap()) }
+        trailersSearched.clear()
+        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbTrailers = emptyMap()) }
         loadTrending()
     }
 
@@ -1011,6 +1015,18 @@ class OndoRepository(
                 .distinctBy { it.first }
                 .toMap()
             _state.update { it.copy(tmdbFaces = it.tmdbFaces + (key to faces)) }
+        }
+    }
+
+    /**
+     * With the viewer's token, looks once a session for TMDb's trailer of a title whose provider gave none: by the TMDb
+     * id the provider gave, else by title and year. Only those are sent.
+     */
+    fun findTmdbTrailer(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
+        if (_state.value.settings.tmdbToken == null || key in _state.value.tmdbTrailers || !trailersSearched.add(key)) return
+        scope.launch {
+            val found = tmdb { trailer(series, tmdbId, title, year) } ?: return@launch
+            _state.update { it.copy(tmdbTrailers = it.tmdbTrailers + (key to found)) }
         }
     }
 
