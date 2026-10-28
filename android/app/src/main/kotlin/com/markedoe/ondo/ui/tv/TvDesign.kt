@@ -29,6 +29,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -69,11 +71,12 @@ import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.theme.OndoColors
+import com.markedoe.ondo.ui.theme.inter
 import kotlinx.coroutines.delay
 
 /**
- * The look of Ondo on Android TV and Google TV: Google's Compose for TV components (cards that grow with a white
- * border on focus, buttons that turn white), on Ondo's dark ground with its lime for progress and the selected tab.
+ * The look of Ondo on Android TV and Google TV: Google's Compose for TV components on pure black, neutral greys and
+ * Inter; a card that has the focus rises, with a shadow and a sheen, and a button turns white.
  * Sizes follow Google's TV guidelines for a 960 × 540 dp screen: 48 × 27 dp kept clear at the edges, rows of cards
  * 20 dp apart with the next one peeking.
  */
@@ -94,17 +97,17 @@ object TvTokens {
     val CardShape = RoundedCornerShape(10.dp)
 
     val Ink = OndoColors.Ink
-    val Lime = OndoColors.Lime
+    val Accent = OndoColors.Accent
 }
 
-/** Compose for TV's theme in Ondo's colours: dark, white focus, lime accent. */
+/** Compose for TV's theme in Ondo's colours: pure black, neutral greys, white focus; Inter throughout. */
 @Composable
 fun OndoTvTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = OndoColors.Lime,
+            primary = OndoColors.Accent,
             onPrimary = Color.Black,
-            secondary = OndoColors.Cream,
+            secondary = Color.White,
             onSecondary = Color.Black,
             secondaryContainer = Color.White.copy(alpha = 0.22f),
             onSecondaryContainer = Color.White,
@@ -113,17 +116,38 @@ fun OndoTvTheme(content: @Composable () -> Unit) {
             surface = OndoColors.Ink,
             onSurface = Color.White,
             surfaceVariant = OndoColors.SurfaceHigh,
-            onSurfaceVariant = Color(0xFFB8C2BD),
+            onSurfaceVariant = OndoColors.Secondary,
             inverseSurface = Color.White,
             inverseOnSurface = OndoColors.Ink,
             border = Color.White,
             borderVariant = Color.White.copy(alpha = 0.4f),
             scrim = Color.Black,
         ),
+        typography = TvTypography,
     ) {
         // Text outside a Compose for TV surface takes this colour (black otherwise).
         CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface, content = content)
     }
+}
+
+private val TvTypography: androidx.tv.material3.Typography = androidx.tv.material3.Typography().let { t ->
+    androidx.tv.material3.Typography(
+        displayLarge = t.displayLarge.inter(tight = true),
+        displayMedium = t.displayMedium.inter(tight = true).copy(fontWeight = FontWeight.ExtraBold),
+        displaySmall = t.displaySmall.inter(tight = true).copy(fontWeight = FontWeight.ExtraBold),
+        headlineLarge = t.headlineLarge.inter(tight = true),
+        headlineMedium = t.headlineMedium.inter(tight = true),
+        headlineSmall = t.headlineSmall.inter(tight = true),
+        titleLarge = t.titleLarge.inter(),
+        titleMedium = t.titleMedium.inter(),
+        titleSmall = t.titleSmall.inter(),
+        bodyLarge = t.bodyLarge.inter(),
+        bodyMedium = t.bodyMedium.inter(),
+        bodySmall = t.bodySmall.inter(),
+        labelLarge = t.labelLarge.inter(),
+        labelMedium = t.labelMedium.inter(),
+        labelSmall = t.labelSmall.inter(),
+    )
 }
 
 /**
@@ -171,13 +195,24 @@ fun FocusOnOpen(requester: FocusRequester) {
     }
 }
 
-/** The scale, white border and soft glow every card takes with the remote's focus. */
+/**
+ * What every card does with the remote's focus: it rises (grows, with a deep shadow beneath) and catches the light
+ * ([CardSheen]); no border.
+ */
 @Composable
-private fun cardFocus(shape: RoundedCornerShape = TvTokens.CardShape) = Triple(
+private fun cardFocus() = Triple(
     CardDefaults.scale(focusedScale = 1.08f),
-    CardDefaults.border(focusedBorder = Border(BorderStroke(3.dp, Color.White), shape = shape)),
-    CardDefaults.glow(focusedGlow = Glow(elevationColor = Color.White.copy(alpha = 0.18f), elevation = 12.dp)),
+    CardDefaults.border(),
+    CardDefaults.glow(focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.9f), elevation = 18.dp)),
 )
+
+/** The light a focused card catches: a soft white sheen from its top-left corner. Drawn over the card's picture. */
+@Composable
+fun BoxScope.CardSheen(focused: Boolean) {
+    if (focused) {
+        Box(Modifier.matchParentSize().background(Brush.linearGradient(0f to Color.White.copy(alpha = 0.26f), 0.4f to Color.Transparent)))
+    }
+}
 
 /** A titled row of cards, starting at [start] and peeking past the right edge. */
 fun LazyListScope.tvShelf(title: String, tag: String, start: Dp = TvTokens.ContentStart, content: LazyListScope.() -> Unit) {
@@ -186,7 +221,7 @@ fun LazyListScope.tvShelf(title: String, tag: String, start: Dp = TvTokens.Conte
             Text(
                 title,
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = start, bottom = 12.dp),
             )
             TvRow {
@@ -204,15 +239,19 @@ fun LazyListScope.tvShelf(title: String, tag: String, start: Dp = TvTokens.Conte
 @Composable
 fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = Modifier, width: Dp = TvTokens.PosterWidth) {
     val (scale, border, glow) = cardFocus()
+    var focused by remember { mutableStateOf(false) }
     Card(
         onClick = onClick,
-        modifier = modifier.width(width).aspectRatio(2f / 3f).semantics { contentDescription = item.title },
+        modifier = modifier.width(width).aspectRatio(2f / 3f).onFocusChanged { focused = it.isFocused }.semantics { contentDescription = item.title },
         shape = CardDefaults.shape(TvTokens.CardShape),
         scale = scale,
         border = border,
         glow = glow,
     ) {
-        Artwork(url = item.posterUrl, title = item.title, modifier = Modifier.fillMaxSize())
+        Box(Modifier.fillMaxSize()) {
+            Artwork(url = item.posterUrl, title = item.title, modifier = Modifier.fillMaxSize())
+            CardSheen(focused)
+        }
     }
 }
 
@@ -236,11 +275,12 @@ fun TvResumeCard(item: ResumeItem, onClick: () -> Unit, modifier: Modifier = Mod
             onDismiss = { asking = false },
         )
     }
+    var focused by remember { mutableStateOf(false) }
     Column(modifier.width(TvTokens.WideCardWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
             onLongClick = onRemove?.let { { asking = true } },
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).semantics { contentDescription = item.title },
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.semantics { contentDescription = item.title },
             shape = CardDefaults.shape(TvTokens.CardShape),
             scale = scale,
             border = border,
@@ -251,6 +291,7 @@ fun TvResumeCard(item: ResumeItem, onClick: () -> Unit, modifier: Modifier = Mod
                 Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.7f))))
                 PlayIcon(preparing, Modifier.align(Alignment.BottomStart).padding(start = 10.dp, bottom = 12.dp).size(22.dp), tint = Color.White)
                 TvProgress(item.progress, Modifier.align(Alignment.BottomCenter).fillMaxWidth())
+                CardSheen(focused)
             }
         }
         Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -271,10 +312,11 @@ fun TvResumeCard(item: ResumeItem, onClick: () -> Unit, modifier: Modifier = Mod
 @Composable
 fun TvChannelCard(row: ChannelRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val (scale, border, glow) = cardFocus()
+    var focused by remember { mutableStateOf(false) }
     Column(modifier.width(156.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).semantics { contentDescription = row.channel.name },
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.semantics { contentDescription = row.channel.name },
             shape = CardDefaults.shape(TvTokens.CardShape),
             colors = CardDefaults.colors(containerColor = OndoColors.SurfaceHigh),
             scale = scale,
@@ -285,6 +327,7 @@ fun TvChannelCard(row: ChannelRow, onClick: () -> Unit, modifier: Modifier = Mod
                 ChannelLogo(url = row.channel.logoUrl, name = row.channel.name)
             }
             row.nowProgress?.let { TvProgress(it, Modifier.fillMaxWidth()) }
+            Box(Modifier.fillMaxSize()) { CardSheen(focused) }
         }
         Text(row.channel.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         row.nowTitle?.let {
@@ -293,11 +336,11 @@ fun TvChannelCard(row: ChannelRow, onClick: () -> Unit, modifier: Modifier = Mod
     }
 }
 
-/** A thin progress bar: lime over a light track. */
+/** A thin progress bar: white over a dim track. */
 @Composable
 fun TvProgress(value: Float, modifier: Modifier = Modifier, height: Dp = 4.dp) {
     Box(modifier.height(height).background(Color.White.copy(alpha = 0.25f))) {
-        Box(Modifier.fillMaxWidth(value.coerceIn(0f, 1f)).height(height).background(TvTokens.Lime))
+        Box(Modifier.fillMaxWidth(value.coerceIn(0f, 1f)).height(height).background(TvTokens.Accent))
     }
 }
 
@@ -372,15 +415,18 @@ fun playLabel(resumable: Boolean): String = stringResource(if (resumable) R.stri
  * focus), slightly larger.
  */
 @Composable
-fun TvActionButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, content: @Composable RowScope.() -> Unit) {
+fun TvActionButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, prominent: Boolean = false, content: @Composable RowScope.() -> Unit) {
     Button(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
         scale = ButtonDefaults.scale(focusedScale = 1.06f),
+        shape = ButtonDefaults.shape(RoundedCornerShape(8.dp)),
+        // The main action (Play) is white even without the focus, which then makes it grow, with a shadow.
+        glow = ButtonDefaults.glow(focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.8f), elevation = 14.dp)),
         colors = ButtonDefaults.colors(
-            containerColor = Color.White.copy(alpha = 0.16f),
-            contentColor = Color.White,
+            containerColor = if (prominent) Color.White else Color.White.copy(alpha = 0.2f),
+            contentColor = if (prominent) TvTokens.Ink else Color.White,
             focusedContainerColor = Color.White,
             focusedContentColor = TvTokens.Ink,
         ),

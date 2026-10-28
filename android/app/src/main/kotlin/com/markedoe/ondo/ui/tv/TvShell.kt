@@ -34,6 +34,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.em
+import com.markedoe.ondo.ui.screens.OndoLogo
+import com.markedoe.ondo.ui.theme.OndoColors
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -116,8 +121,8 @@ fun rememberTabGridState(): LazyGridState {
 private val TOP_SLACK = 24.dp
 
 /**
- * The TV's navigation: a bar at the top of the tab pages, over them (Home's pictures go up to the screen's edge),
- * that goes with the page as it scrolls down and comes back at its top. The tabs first, then Search and Settings.
+ * The TV's navigation: a bar at the top of the tab pages, over them, that goes with the page as it scrolls down and
+ * comes back at its top. Ondo's mark, the tabs, then Search and Settings at the far end.
  * [selected] is the tab shown. Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen
  * ([showBar] false).
  *
@@ -167,14 +172,12 @@ fun TvNavigationFrame(
             )
             Row(
                 Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = TvTokens.EdgeTop)
+                    .fillMaxWidth()
+                    .padding(start = TvTokens.ContentStart, top = TvTokens.EdgeTop, end = TvTokens.EdgeEnd)
                     .graphicsLayer {
                         alpha = visibility
                         translationY = -(1f - visibility) * 24.dp.toPx()
                     }
-                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.10f), CircleShape)
-                    .padding(4.dp)
                     .onFocusChanged { barHasFocus = it.hasFocus }
                     // Gone with the page's top, it is gone for TalkBack too.
                     .semantics { if (!shown) hideFromAccessibility() }
@@ -185,12 +188,18 @@ fun TvNavigationFrame(
                     .focusGroup()
                     .selectableGroup()
                     .testTag("topBar"),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Ondo's mark and name, then the tabs; Search and Settings at the far end.
+                Row(Modifier.padding(end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OndoLogo(36.dp)
+                    Text("Ondo", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.03).em, modifier = Modifier.padding(start = 2.dp))
+                }
                 TopLevel.entries.forEach { tab ->
                     BarTab(stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below) { onSelect(tab) }
                 }
+                Spacer(Modifier.weight(1f))
                 BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)
                 BarIcon(stringResource(R.string.settings), Icons.Rounded.Settings, shown, SETTINGS_TAG, requester(SETTINGS_TAG), ::below, onSettings)
             }
@@ -238,9 +247,9 @@ private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String
                 this.selected = selected
             }
             .testTag(tag),
-        shape = ClickableSurfaceDefaults.shape(CircleShape),
+        shape = ClickableSurfaceDefaults.shape(RoundedCornerShape(8.dp)),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = if (selected) colors.onBackground.copy(alpha = 0.18f) else Color.Transparent,
+            containerColor = if (selected) OndoColors.SurfaceHigh else Color.Transparent,
             contentColor = if (selected) colors.onBackground else colors.onBackground.copy(alpha = 0.72f),
             focusedContainerColor = colors.onBackground,
             focusedContentColor = colors.background,
@@ -274,8 +283,8 @@ private fun BarIcon(label: String, icon: ImageVector, shown: Boolean, tag: Strin
             .testTag(tag),
         shape = ClickableSurfaceDefaults.shape(CircleShape),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = Color.Transparent,
-            contentColor = colors.onBackground.copy(alpha = 0.72f),
+            containerColor = OndoColors.SurfaceHigh,
+            contentColor = colors.onBackground.copy(alpha = 0.86f),
             focusedContainerColor = colors.onBackground,
             focusedContentColor = colors.background,
             pressedContainerColor = colors.onBackground,
@@ -284,7 +293,7 @@ private fun BarIcon(label: String, icon: ImageVector, shown: Boolean, tag: Strin
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
     ) {
         Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp))
+            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
         }
     }
 }

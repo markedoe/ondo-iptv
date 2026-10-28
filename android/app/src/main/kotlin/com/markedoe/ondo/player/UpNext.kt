@@ -61,7 +61,7 @@ fun UpNextCard(upNext: UpNext, television: Boolean, onPlay: () -> Unit, onDeclin
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.up_next), style = MaterialTheme.typography.labelLarge, color = OndoColors.Lime, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.up_next), style = MaterialTheme.typography.labelLarge, color = OndoColors.Accent, modifier = Modifier.weight(1f))
             if (!television) {
                 IconButton(onClick = onDecline, modifier = Modifier.testTag("upNextDecline")) {
                     Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.cancel), tint = Color.White)

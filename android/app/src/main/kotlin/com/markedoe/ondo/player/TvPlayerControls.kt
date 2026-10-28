@@ -286,7 +286,7 @@ private fun LiveLine(info: PlayerInfo, now: Long) {
             val format = DateFormat.getTimeFormat(LocalContext.current)
             Text("${format.format(Date(start))} – ${format.format(Date(end))}", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.85f))
             Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.25f))) {
-                Box(Modifier.fillMaxWidth(((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)).height(4.dp).background(TvTokens.Lime))
+                Box(Modifier.fillMaxWidth(((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)).height(4.dp).background(TvTokens.Accent))
             }
         }
     }
@@ -365,7 +365,7 @@ private fun SeekBar(player: Player, controls: PlayerControls, focusable: Boolean
             val barHeight = if (focused) 8.dp else 5.dp
             Box(Modifier.fillMaxWidth().height(barHeight).clip(CircleShape).background(Color.White.copy(alpha = if (focused) 0.32f else 0.22f))) {
                 Box(Modifier.fillMaxWidth(buffered).height(barHeight).background(Color.White.copy(alpha = 0.35f)))
-                Box(Modifier.fillMaxWidth(fraction).height(barHeight).background(TvTokens.Lime))
+                Box(Modifier.fillMaxWidth(fraction).height(barHeight).background(TvTokens.Accent))
             }
             val thumb = if (focused) 22.dp else 12.dp
             val x = (maxWidth - thumb) * fraction
@@ -373,8 +373,8 @@ private fun SeekBar(player: Player, controls: PlayerControls, focusable: Boolean
                 Modifier
                     .offset(x = x)
                     .size(thumb)
-                    .background(if (focused) Color.White else TvTokens.Lime, CircleShape)
-                    .then(if (focused) Modifier.border(4.dp, TvTokens.Lime.copy(alpha = 0.5f), CircleShape) else Modifier),
+                    .background(if (focused) Color.White else TvTokens.Accent, CircleShape)
+                    .then(if (focused) Modifier.border(4.dp, TvTokens.Accent.copy(alpha = 0.5f), CircleShape) else Modifier),
             )
             if (target != null) {
                 // Where the player will go: the time above the thumb.
@@ -489,7 +489,7 @@ private fun ButtonRow(
 
 /**
  * A large round button of the player: translucent, white with a dark icon when the remote is on it, its name beneath
- * then. [on] puts a lime dot under it (subtitles on, another speed). The name may be wider than the button:
+ * then. [on] puts a white dot under it (subtitles on, another speed). The name may be wider than the button:
  * [labelAlignment] keeps the first and last ones inside the screen.
  */
 @Composable
@@ -525,7 +525,7 @@ private fun RoundButton(
         ) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(size * 0.5f))
         }
-        if (on) Box(Modifier.align(Alignment.TopCenter).padding(top = LargeButton + 3.dp).size(5.dp).background(TvTokens.Lime, CircleShape))
+        if (on) Box(Modifier.align(Alignment.TopCenter).padding(top = LargeButton + 3.dp).size(5.dp).background(TvTokens.Accent, CircleShape))
         if (focused) {
             Text(
                 label,

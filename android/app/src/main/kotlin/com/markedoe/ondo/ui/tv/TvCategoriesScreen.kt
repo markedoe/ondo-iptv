@@ -226,7 +226,7 @@ private fun LazyListScope.sectionTitle(key: String, text: Int) = item(key = key)
         stringResource(text),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
-        color = TvTokens.Lime,
+        color = TvTokens.Accent,
         modifier = Modifier.padding(start = 12.dp, top = 20.dp, bottom = 4.dp),
     )
 }

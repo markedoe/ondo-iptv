@@ -292,7 +292,7 @@ private fun PlaylistCard(playlist: PlaylistSummary, refreshing: Boolean, actions
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.ExtraBold,
                             color = TvTokens.Ink,
-                            modifier = Modifier.background(TvTokens.Lime, RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.background(TvTokens.Accent, RoundedCornerShape(6.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
                         )
                     }
                 }

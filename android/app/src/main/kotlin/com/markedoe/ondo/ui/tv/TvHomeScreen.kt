@@ -36,6 +36,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import com.markedoe.ondo.ui.theme.OndoColors
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
@@ -74,13 +76,14 @@ import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.myListState
 import kotlinx.coroutines.delay
 
-/** Below the featured titles, the top of the first row shows: there is more down the page. */
-private val RowPeek = 96.dp
+/** The featured titles' frame takes about half the screen's height, under the top bar: the first row shows below. */
+private const val HERO_SHARE = 0.52f
+private val HeroShape = RoundedCornerShape(16.dp)
 private const val HERO_ADVANCE_MS = 8_000L
 
 /**
  * Home on a TV: the featured titles full screen behind their title, facts, plot and buttons, then rows of cards.
- * The featured titles fill the screen, under the top bar, with the first row peeking below. The focus starts on Play;
+ * The featured titles in a rounded frame under the top bar, their words and buttons inside it, the first row below. The focus starts on Play;
  * past the last button (Right, Left in a right-to-left language) turns the page. The titles turn by themselves every
  * 8 s while the focus is elsewhere. While Home has nothing to focus (its catalogue replaced and coming again), the
  * remote can only be on the top bar: Play takes it back once it shows.
@@ -203,27 +206,36 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
         index = (current + 1) % pages.size
     }
     val ink = TvTokens.Ink
-    val heroHeight = (LocalConfiguration.current.screenHeightDp.dp - RowPeek).coerceAtLeast(380.dp)
+    val heroHeight = (LocalConfiguration.current.screenHeightDp.dp * HERO_SHARE).coerceAtLeast(260.dp)
     // Past the last button: Right, or Left where the buttons run from the right.
     val onward = if (LocalLayoutDirection.current == LayoutDirection.Rtl) Key.DirectionLeft else Key.DirectionRight
+    // The whole block, with the room above it for the top bar, comes into view with its buttons: back on it, the
+    // page is at its top.
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .bringIntoViewAsAWhole()
+            .onFocusChanged { hasFocus = it.hasFocus }
+            .testTag("hero")
+            .padding(start = TvTokens.ContentStart, top = tvTopBarSpace(), end = TvTokens.EdgeEnd),
+    ) {
     Box(
         Modifier
             .fillMaxWidth()
             .height(heroHeight)
-            // The whole carousel comes into view with its buttons, never cut at the top.
-            .bringIntoViewAsAWhole()
-            .onFocusChanged { hasFocus = it.hasFocus }
-            .testTag("hero"),
+            .clip(HeroShape)
+            .background(OndoColors.Surface),
     ) {
         LaunchedEffect(page.item.key) { actions.onShowBackdrop(page.item) }
         Crossfade(page, label = "heroArt") { shown ->
             TvArtwork(shown.backdropUrl, shown.item.posterUrl, shown.item.title, Modifier.fillMaxSize()) { url -> actions.onBackdropFailed(shown.item, url) }
         }
-        Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink, 0.32f to ink.copy(alpha = 0.88f), 0.62f to ink.copy(alpha = 0.25f), 1f to Color.Transparent)))
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to ink)))
-        // The words at the bottom left, the picture above them free, as in a cinema's poster.
+        // A shade on the side of the words, the rest of the picture left as it is.
+        Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink.copy(alpha = 0.72f), 0.45f to ink.copy(alpha = 0.35f), 0.75f to Color.Transparent)))
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to ink.copy(alpha = 0.55f))))
+        // The words at the bottom left of the frame.
         Column(
-            Modifier.align(Alignment.BottomStart).padding(start = TvTokens.ContentStart, bottom = 20.dp).widthIn(max = 520.dp),
+            Modifier.align(Alignment.BottomStart).padding(start = 28.dp, bottom = 22.dp, end = 28.dp).widthIn(max = 480.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(
@@ -249,6 +261,7 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
             Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 TvActionButton(
                     onClick = { actions.onPlay(page.item) },
+                    prominent = true,
                     modifier = Modifier.focusMemory("hero-play", initial = true).testTag("heroPlay"),
                 ) {
                     PlayIcon(page.item.key == preparingKey, Modifier.size(20.dp), tint = LocalContentColor.current)
@@ -281,8 +294,9 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
                     Text(stringResource(R.string.more_info))
                 }
             }
-            if (pages.size > 1) PageDots(pages.size, current, Modifier.padding(top = 14.dp))
         }
+        if (pages.size > 1) PageDots(pages.size, current, Modifier.align(Alignment.BottomEnd).padding(end = 24.dp, bottom = 26.dp))
+    }
     }
 }
 

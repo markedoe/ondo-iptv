@@ -579,8 +579,8 @@ private fun SeekTrack(player: Player, controls: PlayerControls, duration: Long, 
             val radius = CornerRadius(track / 2, track / 2)
             drawRoundRect(Color.White.copy(alpha = 0.25f), topLeft = Offset(0f, y - track / 2), size = Size(size.width, track), cornerRadius = radius)
             drawRoundRect(Color.White.copy(alpha = 0.45f), topLeft = Offset(0f, y - track / 2), size = Size(size.width * buffered, track), cornerRadius = radius)
-            drawRoundRect(OndoColors.Lime, topLeft = Offset(0f, y - track / 2), size = Size(size.width * fraction, track), cornerRadius = radius)
-            drawCircle(OndoColors.Lime, radius = if (dragging) 10.dp.toPx() else 7.dp.toPx(), center = Offset(size.width * fraction, y))
+            drawRoundRect(OndoColors.Accent, topLeft = Offset(0f, y - track / 2), size = Size(size.width * fraction, track), cornerRadius = radius)
+            drawCircle(OndoColors.Accent, radius = if (dragging) 10.dp.toPx() else 7.dp.toPx(), center = Offset(size.width * fraction, y))
         }
     }
 }
@@ -603,7 +603,7 @@ private fun PhoneLiveLine(info: PlayerInfo, now: Long) {
             val format = DateFormat.getTimeFormat(LocalContext.current)
             Text("${format.format(Date(start))} – ${format.format(Date(end))}", style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.85f))
             Box(Modifier.weight(1f).height(4.dp).background(Color.White.copy(alpha = 0.25f), CircleShape)) {
-                Box(Modifier.fillMaxWidth(((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)).height(4.dp).background(OndoColors.Lime, CircleShape))
+                Box(Modifier.fillMaxWidth(((now - start).toFloat() / (end - start)).coerceIn(0f, 1f)).height(4.dp).background(OndoColors.Accent, CircleShape))
             }
         }
     }
@@ -668,7 +668,7 @@ private fun SeekFeedback(direction: Int, seconds: Int, modifier: Modifier) {
 private fun LevelIndicator(kind: LevelKind, level: Float, modifier: Modifier) {
     Pill(modifier.testTag(if (kind == LevelKind.BRIGHTNESS) "brightnessLevel" else "volumeLevel")) {
         Icon(if (kind == LevelKind.BRIGHTNESS) Icons.Rounded.BrightnessMedium else Icons.AutoMirrored.Rounded.VolumeUp, contentDescription = stringResource(if (kind == LevelKind.BRIGHTNESS) R.string.brightness else R.string.volume))
-        LinearProgressIndicator(progress = { level }, modifier = Modifier.width(120.dp), color = OndoColors.Lime, trackColor = Color.White.copy(alpha = 0.25f))
+        LinearProgressIndicator(progress = { level }, modifier = Modifier.width(120.dp), color = OndoColors.Accent, trackColor = Color.White.copy(alpha = 0.25f))
     }
 }
 
@@ -863,7 +863,7 @@ private fun SheetChoice(name: String, detail: String?, selected: Boolean, tag: S
     ListItem(
         headlineContent = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = detail?.let { { Text(it, maxLines = 2, overflow = TextOverflow.Ellipsis) } },
-        trailingContent = { if (selected) Icon(Icons.Rounded.Check, contentDescription = null, tint = OndoColors.Lime) },
+        trailingContent = { if (selected) Icon(Icons.Rounded.Check, contentDescription = null, tint = OndoColors.Accent) },
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         modifier = Modifier.testTag(tag).semantics { this.selected = selected }.clickableRow(onClick),
     )

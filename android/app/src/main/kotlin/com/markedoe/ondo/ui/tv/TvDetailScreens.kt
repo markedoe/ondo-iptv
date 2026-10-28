@@ -354,7 +354,7 @@ private fun AwardLine(award: AwardRow) {
     }
 }
 
-/** How far the viewer is: a lime bar and the minutes left. */
+/** How far the viewer is: a white bar and the minutes left. */
 @Composable
 private fun ProgressLine(progress: WatchProgress) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(top = 6.dp)) {
@@ -470,7 +470,7 @@ private fun TvCollectionDialog(choices: List<CollectionChoice>, onToggle: (Strin
     }
 }
 
-/** A small pill: a season, a genre, an award. The selected one is lime. */
+/** A small pill: a season, a genre, an award. The selected one is white. */
 @Composable
 fun TvChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, selected: Boolean = false, icon: ImageVector? = null, iconTint: Color? = null) {
     Button(
@@ -478,7 +478,7 @@ fun TvChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, sel
         modifier = if (selected) modifier.semantics { this.selected = true } else modifier,
         scale = ButtonDefaults.scale(focusedScale = 1.08f),
         colors = ButtonDefaults.colors(
-            containerColor = if (selected) TvTokens.Lime else Color.White.copy(alpha = 0.1f),
+            containerColor = if (selected) TvTokens.Accent else Color.White.copy(alpha = 0.1f),
             contentColor = if (selected) TvTokens.Ink else Color.White,
             focusedContainerColor = Color.White,
             focusedContentColor = TvTokens.Ink,
@@ -514,7 +514,7 @@ private fun TvEpisodeCard(episode: Episode, progress: WatchProgress?, onClick: (
                     Icon(
                         Icons.Rounded.CheckCircle,
                         contentDescription = null,
-                        tint = TvTokens.Lime,
+                        tint = TvTokens.Accent,
                         modifier = Modifier.align(Alignment.TopEnd).padding(8.dp).size(22.dp),
                     )
                 }
