@@ -2,7 +2,9 @@ package com.markedoe.ondo.ui.screens
 
 import android.icu.text.ListFormatter
 import android.text.format.DateUtils
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +15,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -48,7 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TagSuggestion
-import com.markedoe.ondo.ui.components.Artwork
+import com.markedoe.ondo.ui.components.CardShape
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.ContinueCard
 import com.markedoe.ondo.ui.components.HeroCarousel
@@ -57,10 +61,12 @@ import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.ShelfMetrics
+import com.markedoe.ondo.ui.components.pressScale
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
 
@@ -138,10 +144,10 @@ fun HomeScreen(
                     onToggleMyList = actions.onToggleMyList,
                     autoAdvance = autoAdvance,
                     preparingKey = preparingKey,
-                    topBar = { HomeTopBar(state, actions, onArtwork = true) },
+                    topBar = { HomeTopBar(state, actions) },
                 )
             } else {
-                Box(Modifier.windowInsetsPadding(WindowInsets.statusBars)) { HomeTopBar(state, actions, onArtwork = false) }
+                Box(Modifier.windowInsetsPadding(WindowInsets.statusBars)) { HomeTopBar(state, actions) }
             }
         }
         state.tagSuggestion?.let { suggestion ->
@@ -218,27 +224,41 @@ private fun ChannelShelf(state: HomeUiState, metrics: ShelfMetrics, actions: Hom
 
 @Composable
 fun ChannelTile(row: ChannelRow, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
-    Column(Modifier.width(124.dp).focusFrame(shape).focusMemory("channel:${row.channel.id}").clip(shape).clickable(onClick = onClick).padding(bottom = 4.dp)) {
+    val interaction = remember { MutableInteractionSource() }
+    Column(
+        Modifier
+            .width(140.dp)
+            .pressScale(interaction)
+            .focusFrame(CardShape)
+            .focusMemory("channel:${row.channel.id}")
+            .clip(CardShape)
+            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
+            .padding(bottom = 4.dp),
+    ) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(76.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-                .padding(12.dp),
-            contentAlignment = Alignment.Center,
+                .aspectRatio(16f / 9f)
+                .clip(CardShape)
+                .background(OndoColors.SurfaceHigh),
         ) {
-            ChannelLogo(url = row.channel.logoUrl, name = row.channel.name)
+            Box(Modifier.fillMaxSize().padding(14.dp), contentAlignment = Alignment.Center) {
+                ChannelLogo(url = row.channel.logoUrl, name = row.channel.name)
+            }
+            row.nowProgress?.let { progress ->
+                Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
+                    Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(3.dp).background(Color.White))
+                }
+            }
         }
-        Text(row.channel.name, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp, start = 4.dp, end = 4.dp))
-        row.nowTitle?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 4.dp)) }
+        Text(row.channel.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        row.nowTitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
 }
 
 @Composable
-private fun HomeTopBar(state: HomeUiState, actions: HomeActions, onArtwork: Boolean) {
-    val tint = if (onArtwork) Color.White else MaterialTheme.colorScheme.onBackground
+private fun HomeTopBar(state: HomeUiState, actions: HomeActions) {
+    val tint = MaterialTheme.colorScheme.onBackground
     Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp)) {
         Column(
             modifier = Modifier.align(Alignment.Center).focusFrame(RoundedCornerShape(20.dp), grow = 1.02f).clip(RoundedCornerShape(20.dp)).clickable(onClick = actions.onPlaylists).padding(horizontal = 12.dp, vertical = 2.dp),
@@ -298,7 +318,7 @@ private fun TagSuggestionCard(suggestion: TagSuggestion, actions: HomeActions, m
         modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
             .padding(16.dp)
             .testTag("tagSuggestion"),
         verticalArrangement = Arrangement.spacedBy(10.dp),
