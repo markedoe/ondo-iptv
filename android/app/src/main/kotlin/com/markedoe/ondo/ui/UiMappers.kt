@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
+import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.MediaCategory
@@ -142,6 +143,28 @@ object UiMappers {
         return trending?.trending?.backdropUrl?.takeIf { it !in state.deadBackdrops }
     }
 
+    /**
+     * TMDb's rating of a title with its number of votes, when a TMDb answer gave it (trending, backdrop, cast); null
+     * otherwise: no count is guessed.
+     */
+    fun tmdbRating(state: OndoState, item: ShowcaseItem): TmdbRating? = state.tmdbRatings[item.key] ?: state.trending.firstOrNull { match ->
+        when (match) {
+            is TrendingMatch.MovieMatch -> item is ShowcaseItem.MovieItem && match.movie.id == item.movie.id
+            is TrendingMatch.SeriesMatch -> item is ShowcaseItem.SeriesItem && match.series.id == item.series.id
+        }
+    }?.trending?.rating
+
+    /**
+     * "★ 7.1", or "★ 7.3 (12,345)" with the number of votes: a count is shown only with the average it comes from, so
+     * TMDb's rating when its votes are known ([votes]), else the provider's alone.
+     */
+    fun ratingFact(provider: Double?, votes: TmdbRating?, locale: Locale): String? {
+        if (votes != null) {
+            return "★ " + String.format(locale, "%.1f", votes.average) + " (" + java.text.NumberFormat.getIntegerInstance(locale).format(votes.votes) + ")"
+        }
+        return provider?.takeIf { it > 0 }?.let { "★ " + String.format(locale, "%.1f", it) }
+    }
+
     fun progress(entry: WatchEntry?): WatchProgress? =
         entry?.takeIf { it.duration > 0 }?.let { WatchProgress(it.progress.toFloat(), it.minutesLeft, it.isFinished) }
 
@@ -152,12 +175,11 @@ object UiMappers {
         }
         val genre = (details?.genre ?: (item as? ShowcaseItem.SeriesItem)?.series?.genre)
             ?.split(",", "/")?.firstOrNull()?.trim()?.takeIf { it.isNotEmpty() }
-        val rating = (details?.rating ?: item.rating)?.takeIf { it > 0 }
         return listOfNotNull(
             if (item is ShowcaseItem.MovieItem) labels.movie else labels.series,
             item.year?.toString(),
             genre,
-            rating?.let { "★ " + String.format(labels.locale, "%.1f", it) },
+            ratingFact(details?.rating ?: item.rating, tmdbRating(state, item), labels.locale),
         ).joinToString(" · ")
     }
 
@@ -435,6 +457,7 @@ object UiMappers {
             backdropUrl = backdrop(state, item),
             trailer = youTubeId(state.movieDetails[movie.id]?.trailerYouTubeId) ?: state.tmdbTrailers[item.key],
             faces = state.tmdbFaces[item.key].orEmpty(),
+            votes = tmdbRating(state, item),
             progress = progress(showcase.progress(movie)),
             inMyList = isFavorite(state, item),
             similar = showcase.similarMovies(movie).map { ShowcaseItem.MovieItem(it) },
@@ -460,6 +483,7 @@ object UiMappers {
             backdropUrl = backdrop(state, item),
             trailer = youTubeId(details?.info?.trailerYouTubeId) ?: state.tmdbTrailers[item.key],
             faces = state.tmdbFaces[item.key].orEmpty(),
+            votes = tmdbRating(state, item),
             seasons = seasons,
             selectedSeason = selectedSeason ?: next?.second?.number,
             next = next?.first,

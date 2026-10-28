@@ -53,7 +53,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -86,6 +85,7 @@ import coil3.compose.AsyncImage
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.People
+import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Season
@@ -122,6 +122,8 @@ data class MovieDetailUiState(
     val trailer: String? = null,
     /** TMDb's photos of the cast and directors, by name (`TextNormalizer.normalize`), with the viewer's token. */
     val faces: Map<String, String> = emptyMap(),
+    /** TMDb's rating with its number of votes, when TMDb gave it (see `UiMappers.tmdbRating`). */
+    val votes: TmdbRating? = null,
     val progress: WatchProgress? = null,
     val inMyList: Boolean = false,
     val similar: List<ShowcaseItem> = emptyList(),
@@ -139,6 +141,8 @@ data class SeriesDetailUiState(
     val trailer: String? = null,
     /** TMDb's photos of the cast and directors, by name (`TextNormalizer.normalize`), with the viewer's token. */
     val faces: Map<String, String> = emptyMap(),
+    /** TMDb's rating with its number of votes, when TMDb gave it (see `UiMappers.tmdbRating`). */
+    val votes: TmdbRating? = null,
     val seasons: List<Season> = emptyList(),
     val selectedSeason: Int? = null,
     /** Episode to play next and its progress. */
@@ -178,7 +182,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
     val facts = listOfNotNull(
         movie.year?.toString() ?: state.details?.releaseDate?.take(4),
         state.details?.durationSeconds?.takeIf { it > 0 }?.let { durationText(it, LocalConfiguration.current.locales[0]) },
-        (state.details?.rating ?: movie.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
+        UiMappers.ratingFact(state.details?.rating ?: movie.rating, state.votes, LocalConfiguration.current.locales[0]),
         state.details?.genre,
     )
     // MKV, MP4…: the format the provider sends, as a badge.
@@ -256,7 +260,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
     val facts = listOfNotNull(
         series.year?.toString(),
         seasonCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.seasons, it, it) },
-        (state.details?.rating ?: series.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
+        UiMappers.ratingFact(state.details?.rating ?: series.rating, state.votes, LocalConfiguration.current.locales[0]),
         state.details?.genre ?: series.genre,
     )
     // The format of the episodes, when they all share one.
@@ -665,11 +669,6 @@ private fun EpisodeRow(episode: Episode, progress: WatchProgress?, metrics: Shel
         }
     }
 }
-
-/** "7.8" / "7,8", in the language of the interface. */
-@Composable
-@ReadOnlyComposable
-private fun ratingText(value: Double): String = String.format(LocalConfiguration.current.locales[0], "%.1f", value)
 
 /** "2 hr, 8 min" / "2 h et 8 min" / "45 min": hours and minutes in the language of the interface. */
 fun durationText(seconds: Int, locale: java.util.Locale = java.util.Locale.getDefault()): String {

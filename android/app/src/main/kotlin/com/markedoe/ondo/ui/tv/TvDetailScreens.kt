@@ -40,7 +40,6 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -121,7 +120,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         movie.year?.toString() ?: details?.releaseDate?.take(4),
         firstGenre(details?.genre),
         details?.durationSeconds?.takeIf { it > 0 }?.let { durationText(it, LocalConfiguration.current.locales[0]) },
-        (details?.rating ?: movie.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
+        UiMappers.ratingFact(details?.rating ?: movie.rating, state.votes, LocalConfiguration.current.locales[0]),
     )
     val resumable = state.progress?.let { !it.finished && it.fraction > 0f } == true
     var picking by rememberSaveable { mutableStateOf(false) }
@@ -175,7 +174,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         series.year?.toString(),
         firstGenre(details?.genre ?: series.genre),
         seasonCount.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.seasons, it, it) },
-        (details?.rating ?: series.rating)?.takeIf { it > 0 }?.let { "★ " + ratingText(it) },
+        UiMappers.ratingFact(details?.rating ?: series.rating, state.votes, LocalConfiguration.current.locales[0]),
     )
     val season = state.seasons.firstOrNull { it.number == state.selectedSeason } ?: state.seasons.firstOrNull()
     val resumable = state.nextProgress?.let { !it.finished && it.fraction > 0f } == true
@@ -674,8 +673,3 @@ private fun LazyListScope.similarShelf(similar: List<ShowcaseItem>, actions: Det
         }
     }
 }
-
-/** "7.8" / "7,8", in the language of the interface. */
-@Composable
-@ReadOnlyComposable
-private fun ratingText(value: Double): String = String.format(LocalConfiguration.current.locales[0], "%.1f", value)

@@ -16,6 +16,9 @@ import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 
+/** TMDb's rating of a title: its viewers' average vote out of 10, and how many voted. */
+data class TmdbRating(val average: Double, val votes: Int)
+
 /** One entry of TMDb's trending list. */
 data class TmdbItem(
     val id: Int,
@@ -27,8 +30,17 @@ data class TmdbItem(
     val overview: String? = null,
     val year: Int? = null,
     val voteAverage: Double? = null,
+    val voteCount: Int? = null,
 ) {
     enum class MediaType { MOVIE, TV, PERSON, UNKNOWN }
+
+    /** The average with the number of votes it comes from; null when nobody voted. */
+    val rating: TmdbRating?
+        get() {
+            val average = voteAverage?.takeIf { it > 0 } ?: return null
+            val votes = voteCount?.takeIf { it > 0 } ?: return null
+            return TmdbRating(average, votes)
+        }
 
     val posterUrl: String?
         get() = posterPath?.let { "https://image.tmdb.org/t/p/w342$it" }?.takeIf(Urls::isValidAbsolute)
@@ -58,6 +70,7 @@ data class TmdbItem(
                 overview = string(o["overview"]),
                 year = date?.take(4)?.toIntOrNull(),
                 voteAverage = (o["vote_average"] as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }?.content?.toDoubleOrNull(),
+                voteCount = (o["vote_count"] as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }?.content?.toIntOrNull(),
             )
         }
 
@@ -118,12 +131,16 @@ class TmdbClient(
      * gave one, otherwise the search result with the same title (and a year one apart at most, when known). Null rather
      * than another title's picture.
      */
-    suspend fun backdropUrl(series: Boolean, tmdbId: String?, title: String, year: Int?): String? {
+    suspend fun backdropUrl(series: Boolean, tmdbId: String?, title: String, year: Int?): String? =
+        withBackdrop(series, tmdbId, title, year)?.backdropUrl
+
+    /** The title [backdropUrl] takes its picture from, with its rating ([TmdbItem.rating]). */
+    suspend fun withBackdrop(series: Boolean, tmdbId: String?, title: String, year: Int?): TmdbItem? {
         val kind = if (series) "tv" else "movie"
         tmdbId?.trim()?.toIntOrNull()?.let { id ->
-            runCatching { TmdbItem.from(get("$kind/$id"))?.backdropUrl }.getOrNull()?.let { return it }
+            runCatching { TmdbItem.from(get("$kind/$id")) }.getOrNull()?.takeIf { it.backdropUrl != null }?.let { return it }
         }
-        return sameTitle(kind, title, year).firstNotNullOfOrNull { it.backdropUrl }
+        return sameTitle(kind, title, year).firstOrNull { it.backdropUrl != null }
     }
 
     /** TMDb's search results with this title (and a year one apart at most, when known), in TMDb's order. */
@@ -143,20 +160,26 @@ class TmdbClient(
      * gave, else the first search result with the same title (and a year one apart at most, when known). Empty rather
      * than another title's people.
      */
-    suspend fun cast(series: Boolean, tmdbId: String?, title: String, year: Int?): List<TmdbPerson> {
+    suspend fun cast(series: Boolean, tmdbId: String?, title: String, year: Int?): List<TmdbPerson> = castAndRating(series, tmdbId, title, year).people
+
+    /** [cast], with the title's rating on TMDb from the same answer ([TmdbItem.rating]): no call more. */
+    suspend fun castAndRating(series: Boolean, tmdbId: String?, title: String, year: Int?): TmdbCast {
         val kind = if (series) "tv" else "movie"
         tmdbId?.trim()?.toIntOrNull()?.let { id ->
-            runCatching { castOf(kind, id) }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { return it }
+            runCatching { castOf(kind, id) }.getOrNull()?.takeIf { it.people.isNotEmpty() }?.let { return it }
         }
-        val id = sameTitle(kind, title, year).firstOrNull()?.id ?: return emptyList()
-        return castOf(kind, id)
+        val match = sameTitle(kind, title, year).firstOrNull() ?: return TmdbCast(emptyList(), null)
+        return castOf(kind, match.id).let { it.copy(rating = it.rating ?: match.rating) }
     }
 
-    private suspend fun castOf(kind: String, id: Int): List<TmdbPerson> {
-        val credits = get("$kind/$id/credits") as? JsonObject ?: throw SerializationException("Not a TMDb answer")
+    /** A title's details with its credits, in one call. */
+    private suspend fun castOf(kind: String, id: Int): TmdbCast {
+        val details = get("$kind/$id", listOf("append_to_response" to "credits")) as? JsonObject ?: throw SerializationException("Not a TMDb answer")
+        val credits = details["credits"] as? JsonObject ?: throw SerializationException("Not a TMDb answer")
         fun part(name: String) = (credits[name] as? JsonArray).orEmpty()
         val directors = part("crew").filter { ((it as? JsonObject)?.get("job") as? JsonPrimitive)?.content == "Director" }
-        return (directors + part("cast")).mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }
+        val people = (directors + part("cast")).mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }
+        return TmdbCast(people, TmdbItem.from(details)?.rating)
     }
 
     /**
@@ -216,6 +239,9 @@ class TmdbClient(
         return results.map { TmdbPerson.from(it) ?: throw SerializationException("TMDb person without id") }
     }
 }
+
+/** A title's cast and directors on TMDb ([TmdbClient.cast]), and its rating there when anyone voted. */
+data class TmdbCast(val people: List<TmdbPerson>, val rating: TmdbRating?)
 
 /** A person on TMDb (actor, director…). */
 data class TmdbPerson(

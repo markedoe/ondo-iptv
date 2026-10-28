@@ -10,6 +10,7 @@ import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.library.PlaybackFactory
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.library.TmdbClient
+import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.EpgData
@@ -88,6 +89,11 @@ data class OndoState(
     val tmdbFaces: Map<String, Map<String, String>> = emptyMap(),
     /** TMDb's trailers (YouTube ids) of titles whose provider gave none, by the title's key. */
     val tmdbTrailers: Map<String, String> = emptyMap(),
+    /**
+     * TMDb's rating of a title with its number of votes, by the title's key, from the answers TMDb gave for its
+     * backdrop or its cast (the trending titles carry theirs).
+     */
+    val tmdbRatings: Map<String, TmdbRating> = emptyMap(),
     /** TMDb refused the saved token when it was used (it was checked elsewhere, or revoked since): Settings says so. */
     val tmdbRefused: Boolean = false,
 ) {
@@ -969,7 +975,7 @@ class OndoRepository(
         backdropsSearched.clear()
         facesSearched.clear()
         trailersSearched.clear()
-        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbTrailers = emptyMap()) }
+        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbTrailers = emptyMap(), tmdbRatings = emptyMap()) }
         loadTrending()
     }
 
@@ -1017,8 +1023,9 @@ class OndoRepository(
     fun findTmdbBackdrop(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
         if (_state.value.settings.tmdbToken == null || key in _state.value.tmdbBackdrops || !backdropsSearched.add(key)) return
         scope.launch {
-            val found = tmdb { backdropUrl(series, tmdbId, title, year) } ?: return@launch
-            _state.update { it.copy(tmdbBackdrops = it.tmdbBackdrops + (key to found)) }
+            val found = tmdb { withBackdrop(series, tmdbId, title, year) } ?: return@launch
+            val url = found.backdropUrl ?: return@launch
+            _state.update { it.copy(tmdbBackdrops = it.tmdbBackdrops + (key to url), tmdbRatings = it.tmdbRatings.with(key, found.rating)) }
         }
     }
 
@@ -1029,12 +1036,12 @@ class OndoRepository(
     fun findTmdbFaces(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
         if (_state.value.settings.tmdbToken == null || key in _state.value.tmdbFaces || !facesSearched.add(key)) return
         scope.launch {
-            val people = tmdb { cast(series, tmdbId, title, year) } ?: return@launch
-            val faces = people.mapNotNull { person -> person.profileUrl?.let { TextNormalizer.normalize(person.name) to it } }
+            val found = tmdb { castAndRating(series, tmdbId, title, year) } ?: return@launch
+            val faces = found.people.mapNotNull { person -> person.profileUrl?.let { TextNormalizer.normalize(person.name) to it } }
                 .filter { it.first.isNotEmpty() }
                 .distinctBy { it.first }
                 .toMap()
-            _state.update { it.copy(tmdbFaces = it.tmdbFaces + (key to faces)) }
+            _state.update { it.copy(tmdbFaces = it.tmdbFaces + (key to faces), tmdbRatings = it.tmdbRatings.with(key, found.rating)) }
         }
     }
 
@@ -1049,6 +1056,9 @@ class OndoRepository(
             _state.update { it.copy(tmdbTrailers = it.tmdbTrailers + (key to found)) }
         }
     }
+
+    private fun Map<String, TmdbRating>.with(key: String, rating: TmdbRating?): Map<String, TmdbRating> =
+        if (rating == null) this else this + (key to rating)
 
     /** A backdrop that did not load: not asked for again this session, and the title gets TMDb's instead when it can. */
     fun backdropFailed(url: String) {

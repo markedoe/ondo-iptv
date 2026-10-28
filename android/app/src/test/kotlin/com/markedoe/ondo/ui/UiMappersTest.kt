@@ -4,6 +4,7 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.TmdbItem
+import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.MediaDetails
@@ -153,6 +154,20 @@ class UiMappersTest {
     fun ratingsUseTheUsersDecimalSeparator() {
         val hero = UiMappers.home(Fixtures.state(), Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW).hero
         assertEquals("Film · 2025 · ★ 7,8", hero.first { it.item.title == "Northern Lights" }.meta)
+    }
+
+    /** A number of votes only with the average it comes from: TMDb's when it gave them, else the provider's alone. */
+    @Test
+    fun aRatingShowsItsVotesWhenTmdbGaveThem() {
+        val key = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.item.key
+        val state = Fixtures.state().copy(tmdbRatings = mapOf(key to TmdbRating(7.346, 12345)))
+        assertEquals("Movie · 2025 · ★ 7.3 (12,345)", UiMappers.home(state, labels, Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.meta)
+        assertEquals("Series · 2025 · Drama · ★ 8.2", UiMappers.home(state, labels, Fixtures.NOW).hero.first { it.item.title == "Harbor Lights" }.meta)
+        val french = UiMappers.home(state, Labels("Film", "Série", Locale.FRANCE), Fixtures.NOW).hero.first { it.item.title == "Northern Lights" }.meta
+        assertTrue(french, french.matches(Regex("Film · 2025 · ★ 7,3 \\(12[\\s\\u00A0\\u202F]345\\)")))
+        assertNull(UiMappers.ratingFact(null, null, Locale.US))
+        assertNull(UiMappers.ratingFact(0.0, null, Locale.US))
+        assertEquals("★ 6.0", UiMappers.ratingFact(6.0, null, Locale.US))
     }
 
     @Test

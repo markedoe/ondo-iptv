@@ -83,15 +83,16 @@ class TmdbTest {
     @Test
     fun aTitlesCastIsFoundByIdOrByTitle() = runTest {
         val http = MockHttpClient()
-        http.routes["https://api.themoviedb.org/3/movie/910001/credits?language=en-US&api_key=KEY"] = (
-            """{"id":910001,"cast":[{"id":11,"name":"Ana Lima","profile_path":"/ana.jpg","known_for_department":"Acting"},""" +
+        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits&language=en-US&api_key=KEY"] = (
+            """{"id":910001,"title":"Lighthouse","vote_average":7.346,"vote_count":12345,"credits":{""" +
+                """"cast":[{"id":11,"name":"Ana Lima","profile_path":"/ana.jpg","known_for_department":"Acting"},""" +
                 """{"id":12,"name":"José Silva","profile_path":null}],""" +
-                """"crew":[{"id":13,"name":"Kim Park","job":"Director","profile_path":"/kim.jpg"},{"id":14,"name":"Lee Moss","job":"Editor","profile_path":"/lee.jpg"}]}"""
+                """"crew":[{"id":13,"name":"Kim Park","job":"Director","profile_path":"/kim.jpg"},{"id":14,"name":"Lee Moss","job":"Editor","profile_path":"/lee.jpg"}]}}"""
             ).encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
-            """{"results":[{"id":5,"name":"Copper Valley Nights","first_air_date":"2020-01-01"},{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20"}]}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/tv/7/credits?language=en-US&api_key=KEY"] =
-            """{"id":7,"cast":[{"id":21,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}""".encodeToByteArray()
+            """{"results":[{"id":5,"name":"Copper Valley Nights","first_air_date":"2020-01-01"},{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20","vote_average":8.9,"vote_count":210}]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits&language=en-US&api_key=KEY"] =
+            """{"id":7,"name":"Copper Valley","vote_average":0,"vote_count":0,"credits":{"cast":[{"id":21,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/movie?query=paper%20trail&language=en-US&api_key=KEY"] =
             """{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}""".encodeToByteArray()
         val client = TmdbClient("KEY", http)
@@ -128,6 +129,27 @@ class TmdbTest {
         assertEquals("teaserEN001", client.trailer(series = true, tmdbId = null, title = "FR - Copper Valley (US)", year = 2008), "a teaser when there is no trailer")
         assertNull(client.trailer(series = false, tmdbId = null, title = "Paper Trail", year = 1999), "another Paper Trail's trailer")
         assertNull(client.trailer(series = false, tmdbId = null, title = "", year = null))
+    }
+
+    /** The same answer gives the title's rating with its number of votes; none when nobody voted. */
+    @Test
+    fun aTitlesRatingComesWithItsVotes() = runTest {
+        val http = MockHttpClient()
+        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits&language=en-US&api_key=KEY"] =
+            """{"id":910001,"vote_average":7.346,"vote_count":12345,"credits":{"cast":[{"id":11,"name":"Ana Lima"}],"crew":[]}}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/movie/910002?append_to_response=credits&language=en-US&api_key=KEY"] =
+            """{"id":910002,"vote_average":0,"vote_count":0,"credits":{"cast":[{"id":12,"name":"José Silva"}],"crew":[]}}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
+            """{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20","vote_average":8.9,"vote_count":210}]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits&language=en-US&api_key=KEY"] =
+            """{"id":7,"credits":{"cast":[{"id":21,"name":"Ruth Ames"}],"crew":[]}}""".encodeToByteArray()
+        val client = TmdbClient("KEY", http)
+
+        assertEquals(TmdbRating(7.346, 12345), client.castAndRating(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010).rating)
+        assertNull(client.castAndRating(series = false, tmdbId = "910002", title = "Nobody", year = 2010).rating, "no votes, no rating")
+        // Found by title: the search result's rating, when the details have none.
+        assertEquals(TmdbRating(8.9, 210), client.castAndRating(series = true, tmdbId = null, title = "Copper Valley", year = 2008).rating)
+        assertEquals(1, http.requested.count { "910001" in it }, "one call for the cast and the rating")
     }
 
     /** A key is checked with TMDb before it is saved: accepted, refused, or TMDb out of reach. */

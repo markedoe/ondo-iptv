@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import app.cash.turbine.test
+import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.PlaylistContent
@@ -198,9 +199,10 @@ class OndoViewModelTest {
             override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
                 "get_series_info" in url -> """{"info":{"name":"Harbor","cast":"José Silva, Ana Lima","tmdb_id":"77"},"episodes":{"1":[{"id":"101","episode_num":1,"title":"Pilot","container_extension":"mp4"}]}}"""
                 url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
-                url.startsWith("https://api.themoviedb.org/3/tv/77/credits?") -> {
+                url.startsWith("https://api.themoviedb.org/3/tv/77?append_to_response=credits&") -> {
                     credits += url
-                    """{"cast":[{"id":1,"name":"Jose Silva","profile_path":"/jose.jpg"},{"id":2,"name":"Ana Lima","profile_path":null},{"id":3,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}"""
+                    """{"id":77,"vote_average":8.1,"vote_count":4321,"credits":{"cast":[{"id":1,"name":"Jose Silva","profile_path":"/jose.jpg"},""" +
+                        """{"id":2,"name":"Ana Lima","profile_path":null},{"id":3,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}"""
                 }
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
@@ -225,6 +227,8 @@ class OndoViewModelTest {
         viewModel.loadSeries(series.id)
         settleUntil { faces().isNotEmpty() }
         assertEquals(mapOf("jose silva" to "https://image.tmdb.org/t/p/w185/jose.jpg", "ruth ames" to "https://image.tmdb.org/t/p/w185/ruth.jpg"), faces())
+        // The same answer gives TMDb's rating with its votes.
+        assertEquals(TmdbRating(8.1, 4321), UiMappers.seriesDetail(viewModel.state.value, series, null, null).votes)
         viewModel.loadSeries(series.id)
         settle()
         assertEquals("once a session", 1, credits.size)
@@ -232,6 +236,7 @@ class OndoViewModelTest {
         repository.removeTmdbToken()
         settle()
         assertTrue(faces().isEmpty())
+        assertNull(UiMappers.seriesDetail(viewModel.state.value, series, null, null).votes)
     }
 
     /** Search with the viewer's TMDb token: the people TMDb knows by the words typed join the playlist's own. */
