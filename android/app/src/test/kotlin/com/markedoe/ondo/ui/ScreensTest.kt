@@ -375,7 +375,7 @@ class ScreensTest {
         }
         compose.onNodeWithText("Resume").performClick()
         compose.onNodeWithText("From Start").performClick()
-        compose.onNodeWithText("70 min left", substring = true).assertExists()
+        compose.onNodeWithText("1 h 10 min left", substring = true).assertExists()
         assertEquals(1, play)
         assertEquals(1, fromStart)
         // TalkBack hears whether the title is in My List, not only "My List".
