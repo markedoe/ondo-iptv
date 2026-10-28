@@ -476,7 +476,6 @@ object UiMappers {
             val host = runCatching { java.net.URI(playlist.url.trim()).host }.getOrNull()
             PlaylistSummary(playlist.id, playlist.name, listOfNotNull(kindLabel(playlist.isXtream), host).joinToString(" · "), playlist.id == state.activePlaylistId, playlist.isXtream)
         },
-        appearance = state.settings.appearance,
         showAdultCategories = state.settings.showAdultCategories,
         updateAwards = state.settings.updateAwards,
         liveBuffer = state.settings.liveBuffer,

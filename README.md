@@ -152,7 +152,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   Trending row on Home and in the carousel, TMDb's background image when the provider's is missing or broken, photos
   of the cast on a title's page, the people TMDb knows in Search, and all the titles of the playlist on an actor's
   or a director's page.
-- **Settings**: playlists, appearance, adult categories hidden by default, languages and categories, app language,
+- **Settings**: playlists, adult categories hidden by default, languages and categories, app language,
   automatic awards updates, player buffers, TMDb token; welcome screen with a demo.
 - **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible
   focus that comes back to the card you left, layouts that keep clear of the screen's edges); a player drawn for

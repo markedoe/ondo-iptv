@@ -1,7 +1,6 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.sync.SyncKey
-import com.markedoe.ondo.ui.theme.Appearance
 import kotlinx.serialization.Serializable
 
 /** A playlist as the user configured it (credentials stay in the app's private storage). */
@@ -35,7 +34,6 @@ enum class SubtitleSize(val scale: Float) { SMALL(0.75f), NORMAL(1f), LARGE(1.3f
 
 @Serializable
 data class AppSettings(
-    val appearance: Appearance = Appearance.DARK,
     val activePlaylistId: String? = null,
     /** Categories that look adult (see `AdultContentDetector`) are hidden unless this is on. */
     val showAdultCategories: Boolean = false,

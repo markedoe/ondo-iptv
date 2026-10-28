@@ -18,7 +18,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   et suivant), grille du guide TV avec rappels de programmes (notifications WorkManager), onglet Ma liste avec
   collections, recherche (chaînes, films, séries, acteurs et réalisateurs ; filtres par années de sortie et
   par festival ou cérémonie), catégories masquées par code de langue ou de pays, par style ou par mot, ou une
-  à une, aide, réglages (playlists, apparence, catégories adultes masquées par défaut, Mettre à jour les prix
+  à une, aide, réglages (playlists, catégories adultes masquées par défaut, Mettre à jour les prix
   automatiquement, Langues et catégories, Langue de l'app, mémoires tampons du lecteur, jeton TMDb), accueil avec
   démonstration et avertissement « lecteur sans contenu ».
 - **TMDb** avec le jeton de l'utilisateur (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`) :

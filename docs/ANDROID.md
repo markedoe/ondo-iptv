@@ -16,7 +16,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   seasons, More Like This, awards, tappable cast and director), live TV (categories, My List, current and next programme), TV guide grid with programme
   reminders (WorkManager notifications), My List tab with collections, search (channels, movies, series, actors
   and directors; filters by release years and by festival or ceremony), categories hidden by language or
-  country code, by style or word, or one by one, help, settings (playlists, appearance, adult categories hidden
+  country code, by style or word, or one by one, help, settings (playlists, adult categories hidden
   by default, Update awards automatically, Languages and categories, App language, player buffers, TMDb token),
   welcome screen with a demo and a "player without content" disclaimer.
 - **TMDb** with the viewer's own token (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`): checked

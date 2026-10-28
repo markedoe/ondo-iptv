@@ -1,21 +1,17 @@
 package com.markedoe.ondo.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.markedoe.ondo.ui.tv.ProvideFocusRipple
-import com.markedoe.ondo.ui.tv.isTelevision
 
-/** Ondo palette: lime accent on deep green-black (dark, the default) or teal on white (light). */
+/** Ondo palette: lime accent on deep green-black (always dark). */
 object OndoColors {
     val Lime = Color(0xFFCEF941)
     val Teal = Color(0xFF127A61)
@@ -46,20 +42,6 @@ private val Dark: ColorScheme = darkColorScheme(
     onSecondaryContainer = Color(0xFFE6F7B8),
 )
 
-private val Light: ColorScheme = lightColorScheme(
-    primary = OndoColors.Teal,
-    onPrimary = Color.White,
-    secondary = Color(0xFF0B1F1A),
-    background = Color.White,
-    surface = Color.White,
-    surfaceVariant = Color(0xFFEFF3F1),
-    onSurfaceVariant = Color(0xFF4A5652),
-    primaryContainer = Color(0xFFCDEBE2),
-    onPrimaryContainer = Color(0xFF0B1F1A),
-    secondaryContainer = Color(0xFFDDEBE6),
-    onSecondaryContainer = Color(0xFF0B1F1A),
-)
-
 private val OndoTypography = Typography(
     displaySmall = TextStyle(fontWeight = FontWeight.Bold, fontSize = 34.sp, lineHeight = 40.sp),
     headlineSmall = TextStyle(fontWeight = FontWeight.Bold, fontSize = 24.sp, lineHeight = 30.sp),
@@ -69,17 +51,10 @@ private val OndoTypography = Typography(
     labelLarge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
 )
 
-enum class Appearance { SYSTEM, LIGHT, DARK }
-
 @Composable
-fun OndoTheme(appearance: Appearance = Appearance.DARK, content: @Composable () -> Unit) {
-    // A TV is always dark (Google's TV guidelines; Compose for TV's pages are dark only).
-    val dark = LocalConfiguration.current.isTelevision || when (appearance) {
-        Appearance.SYSTEM -> isSystemInDarkTheme()
-        Appearance.LIGHT -> false
-        Appearance.DARK -> true
-    }
-    MaterialTheme(colorScheme = if (dark) Dark else Light, typography = OndoTypography) {
+fun OndoTheme(content: @Composable () -> Unit) {
+    // Ondo is always dark, on a phone as on a TV.
+    MaterialTheme(colorScheme = Dark, typography = OndoTypography) {
         // A focus that shows from the sofa (remote, keyboard).
         ProvideFocusRipple(content)
     }

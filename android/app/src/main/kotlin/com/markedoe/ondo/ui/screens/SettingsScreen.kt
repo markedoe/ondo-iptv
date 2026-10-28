@@ -38,9 +38,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,14 +65,12 @@ import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.ui.components.TmdbTokenSettings
-import com.markedoe.ondo.ui.theme.Appearance
 import com.markedoe.ondo.ui.tv.focusFrame
 
 data class PlaylistSummary(val id: String, val name: String, val detail: String, val active: Boolean, val xtream: Boolean = false)
 
 data class SettingsUiState(
     val playlists: List<PlaylistSummary> = emptyList(),
-    val appearance: Appearance = Appearance.DARK,
     val showAdultCategories: Boolean = false,
     val updateAwards: Boolean = true,
     /** Buffer settings in seconds, 0 for automatic. */
@@ -101,7 +96,6 @@ class SettingsActions(
     val onActivate: (String) -> Unit = {},
     val onRefresh: () -> Unit = {},
     val onDelete: (String) -> Unit = {},
-    val onAppearance: (Appearance) -> Unit = {},
     val onShowAdultCategories: (Boolean) -> Unit = {},
     val onHideWatchedMovies: (Boolean) -> Unit = {},
     val onSyncOnLocalNetwork: (Boolean) -> Unit = {},
@@ -119,7 +113,7 @@ class SettingsActions(
     val onOpenTmdbApiPage: () -> Unit = {},
 )
 
-/** Playlists, appearance, player and about (player-only disclaimer, privacy policy). */
+/** Playlists, player and about (player-only disclaimer, privacy policy). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
@@ -180,17 +174,6 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                 }
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-            item { SectionTitle(stringResource(R.string.appearance)) }
-            item {
-                val options = listOf(Appearance.SYSTEM to R.string.appearance_system, Appearance.DARK to R.string.appearance_dark, Appearance.LIGHT to R.string.appearance_light)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
-                    options.forEachIndexed { index, (value, label) ->
-                        SegmentedButton(selected = state.appearance == value, onClick = { actions.onAppearance(value) }, shape = SegmentedButtonDefaults.itemShape(index, options.size)) {
-                            Text(stringResource(label))
-                        }
-                    }
-                }
-            }
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.adult_categories)) },

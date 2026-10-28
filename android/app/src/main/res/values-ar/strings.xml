@@ -80,10 +80,6 @@
     <string name="playlist_url">عنوان URL لقائمة التشغيل</string>
     <string name="guide_url_optional">عنوان URL لدليل البرامج (XMLTV، اختياري)</string>
     <string name="playlists">قوائم التشغيل</string>
-    <string name="appearance">المظهر</string>
-    <string name="appearance_system">النظام</string>
-    <string name="appearance_dark">داكن</string>
-    <string name="appearance_light">فاتح</string>
     <string name="about">حول</string>
     <string name="privacy_policy">سياسة الخصوصية</string>
     <string name="support">الدعم</string>

@@ -27,7 +27,6 @@ import com.markedoe.ondo.ui.screens.PlaylistForm
 import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.VodUiState
-import com.markedoe.ondo.ui.theme.Appearance
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -77,11 +76,6 @@ class OndoViewModel(
     val state: StateFlow<OndoState> = repository.state
 
     private val sharing = SharingStarted.WhileSubscribed(5_000)
-
-    /** The look chosen in Settings, alone: the activity's root does not recompose at every other change of the state. */
-    val appearance: StateFlow<Appearance> = state.map { it.settings.appearance }
-        .distinctUntilChanged()
-        .stateIn(viewModelScope, SharingStarted.Eagerly, state.value.settings.appearance)
 
     private val labels = MutableStateFlow(labels)
 
@@ -421,7 +415,6 @@ class OndoViewModel(
     fun activate(id: String) = repository.activate(id)
     fun refresh() = repository.refresh()
     fun delete(id: String) = repository.delete(id)
-    fun setAppearance(appearance: Appearance) = repository.setAppearance(appearance)
     fun setShowAdultCategories(show: Boolean) = repository.setShowAdultCategories(show)
     fun setHideWatchedMovies(hide: Boolean) = repository.setHideWatchedMovies(hide)
 

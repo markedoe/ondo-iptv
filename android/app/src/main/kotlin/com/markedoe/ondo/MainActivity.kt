@@ -7,7 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -16,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalConfiguration
@@ -26,7 +24,6 @@ import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.OndoApp
 import com.markedoe.ondo.ui.OndoViewModel
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
-import com.markedoe.ondo.ui.theme.Appearance
 import com.markedoe.ondo.ui.theme.OndoTheme
 
 class MainActivity : ComponentActivity() {
@@ -51,15 +48,9 @@ class MainActivity : ComponentActivity() {
             val series = stringResource(R.string.kind_series)
             val locale = LocalConfiguration.current.locales[0]
             LaunchedEffect(movie, series, locale) { viewModel.setLabels(Labels(movie, series, locale)) }
-            val appearance by viewModel.appearance.collectAsStateWithLifecycle()
-            val dark = when (appearance) {
-                Appearance.SYSTEM -> isSystemInDarkTheme()
-                Appearance.DARK -> true
-                Appearance.LIGHT -> false
-            }
-            DisposableEffect(dark) {
-                val style = if (dark) SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
-                else SystemBarStyle.light(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT)
+            // Always dark: light icons on the transparent system bars.
+            DisposableEffect(Unit) {
+                val style = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT)
                 enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
                 onDispose {}
             }
@@ -69,7 +60,7 @@ class MainActivity : ComponentActivity() {
                 animations = animationsOn()
                 onPauseOrDispose {}
             }
-            OndoTheme(appearance) {
+            OndoTheme {
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides animations) {
                     OndoApp(viewModel)
                 }

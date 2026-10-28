@@ -58,12 +58,12 @@ class AppStoreTest {
         assertTrue("only files Ondo imported are deleted", elsewhere.exists())
     }
 
-    /** Settings written by an older version, before the buffer settings: they load, buffers on automatic. */
+    /** Settings written by an older version (an "appearance" no longer known, no buffer settings): they load, buffers on automatic. */
     @Test
     fun settingsFromAnOlderVersionLoadWithTheNewDefaults() {
         folder.root.resolve("settings.json").writeText("""{"appearance":"LIGHT","activePlaylistId":"p1","updateAwards":false}""")
         val settings = AppStore(folder.root).loadSettings()
-        assertEquals(AppSettings(appearance = com.markedoe.ondo.ui.theme.Appearance.LIGHT, activePlaylistId = "p1", updateAwards = false), settings)
+        assertEquals(AppSettings(activePlaylistId = "p1", updateAwards = false), settings)
         assertEquals(0, settings.liveBuffer)
         assertEquals(0, settings.vodBuffer)
 

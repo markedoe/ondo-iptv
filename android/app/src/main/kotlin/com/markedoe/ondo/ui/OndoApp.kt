@@ -656,7 +656,6 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onActivate = viewModel::activate,
             onRefresh = viewModel::refresh,
             onDelete = viewModel::delete,
-            onAppearance = viewModel::setAppearance,
             onShowAdultCategories = viewModel::setShowAdultCategories,
             onHideWatchedMovies = viewModel::setHideWatchedMovies,
             onSyncOnLocalNetwork = viewModel::setSyncOnLocalNetwork,

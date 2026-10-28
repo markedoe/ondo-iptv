@@ -80,10 +80,6 @@
     <string name="playlist_url">प्लेलिस्ट URL</string>
     <string name="guide_url_optional">टीवी गाइड URL (XMLTV, वैकल्पिक)</string>
     <string name="playlists">प्लेलिस्ट</string>
-    <string name="appearance">दिखावट</string>
-    <string name="appearance_system">सिस्टम</string>
-    <string name="appearance_dark">गहरा</string>
-    <string name="appearance_light">हल्का</string>
     <string name="about">परिचय</string>
     <string name="privacy_policy">निजता नीति</string>
     <string name="support">सहायता</string>

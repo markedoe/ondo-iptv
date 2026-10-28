@@ -9,7 +9,6 @@ import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.ui.CategoryFilter
 import com.markedoe.ondo.ui.MovieAwards
 import com.markedoe.ondo.ui.UiMappers
-import com.markedoe.ondo.ui.theme.Appearance
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
@@ -771,9 +770,7 @@ class OndoRepositoryTest {
         repository.bootstrap()
         repository.awaitState { it.isReady }
         repository.setShowAdultCategories(true)
-        repository.setAppearance(Appearance.LIGHT)
         val saved = disk().loadSettings()
-        assertEquals(Appearance.LIGHT, saved.appearance)
         assertTrue(saved.showAdultCategories)
     }
 

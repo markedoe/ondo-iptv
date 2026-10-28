@@ -164,7 +164,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel, l'image de fond de TMDb quand celle du
   fournisseur manque ou ne se charge pas, les photos du casting sur la fiche d'un titre, les personnes que TMDb
   connaît dans la recherche, et tous les titres de la playlist sur la page d'un acteur ou d'un réalisateur.
-- **Réglages** : playlists, apparence, catégories adultes masquées par défaut, langues et catégories, langue de
+- **Réglages** : playlists, catégories adultes masquées par défaut, langues et catégories, langue de
   l'app, mise à jour automatique des prix, mémoire tampon du lecteur, jeton TMDb ; écran d'accueil avec démo.
 - **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande
   (une sélection bien visible, qui revient sur la carte que vous avez quittée, des mises en page qui restent à

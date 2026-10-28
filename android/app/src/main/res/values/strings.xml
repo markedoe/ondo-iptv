@@ -82,10 +82,6 @@
     <string name="playlist_url">Playlist URL</string>
     <string name="guide_url_optional">TV guide URL (XMLTV, optional)</string>
     <string name="playlists">Playlists</string>
-    <string name="appearance">Appearance</string>
-    <string name="appearance_system">System</string>
-    <string name="appearance_dark">Dark</string>
-    <string name="appearance_light">Light</string>
     <string name="about">About</string>
     <string name="privacy_policy">Privacy policy</string>
     <string name="support">Support</string>

@@ -341,7 +341,6 @@ class OndoRepository(
         }
     }
 
-    fun setAppearance(appearance: com.markedoe.ondo.ui.theme.Appearance) = updateSettings { it.copy(appearance = appearance) }
 
     fun setShowAdultCategories(show: Boolean) = updateSettings { it.copy(showAdultCategories = show) }
 

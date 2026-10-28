@@ -80,10 +80,6 @@
     <string name="playlist_url">URL de la playlist</string>
     <string name="guide_url_optional">Adresse du guide TV (XMLTV, facultatif)</string>
     <string name="playlists">Playlists</string>
-    <string name="appearance">Apparence</string>
-    <string name="appearance_system">Système</string>
-    <string name="appearance_dark">Sombre</string>
-    <string name="appearance_light">Clair</string>
     <string name="about">À propos</string>
     <string name="privacy_policy">Politique de confidentialité</string>
     <string name="support">Assistance</string>

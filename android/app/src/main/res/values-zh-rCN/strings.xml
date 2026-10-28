@@ -80,10 +80,6 @@
     <string name="playlist_url">播放列表 URL</string>
     <string name="guide_url_optional">节目指南 URL（XMLTV，可选）</string>
     <string name="playlists">播放列表</string>
-    <string name="appearance">外观</string>
-    <string name="appearance_system">跟随系统</string>
-    <string name="appearance_dark">深色</string>
-    <string name="appearance_light">浅色</string>
     <string name="about">关于</string>
     <string name="privacy_policy">隐私政策</string>
     <string name="support">支持</string>
