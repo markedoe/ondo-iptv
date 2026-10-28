@@ -52,7 +52,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
   see their other movies and series in the playlist (series from the provider's list, movies from the pages
-  already opened, or all of them with a TMDb token); a genre, the release year or an award (then its festival) opens the titles that share it; when the
+  already opened and the people index kept on the device, or all of them with a TMDb token); a genre, the release year or an award (then its festival) opens the titles that share it; when the
   provider's background image is missing or broken, the page shows TMDb's (with a token) or the blurred poster.
 - **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
   **actors and directors by name**, **filtered by release years** and **by festival or ceremony** (winners only if you like).
@@ -97,6 +97,16 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   provider refuses, limits connections or sends nothing, and their details to share.
 - **Data**: JSON backup / restore, clearable cache. Posters, thumbnails and the movie and series pages stay on the
   device: they show at once at the next launch, and the pages still open when the provider cannot be reached.
+- **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a Trending
+  row on Home and in the carousel; for the titles of Home and the pages you open, TMDb's background image when the
+  provider's is missing or broken, TMDb's trailer (in the app's language first, then English) when the provider
+  gives none, and the number of votes next to the rating; the people TMDb knows in Search, with their photo, and all
+  the titles of the playlist on an actor's or a director's page, under their photo. What TMDb answers is kept on the
+  device (30 days, 7 for a title TMDb does not know): pages show it at once, offline too, and only what is missing or
+  old is asked again, in the background, a few requests a second. A local index of actors and directors, filled
+  from the provider's pages and series lists and from TMDb, finds people in Search and their titles at once, without
+  the network. A provider picture that is broken is not tried again for 7 days; one that fails on a network error is
+  tried once more. Clear Cache removes all of it.
 - **Sync on this network** (Settings, off until turned on): iPhone, iPad and Mac connect to the Android devices
   with Ondo open on the same network and keep the same playlists, My List, collections, progress and TMDb token
   (main profile only; two Apple devices sync through an Android one). Local addresses only

@@ -51,7 +51,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   ou note, films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
   acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (les séries d'après la liste
-  du fournisseur, les films parmi les fiches déjà ouvertes, ou tous avec un jeton TMDb) ; un genre, l'année de sortie ou un prix (puis son festival) ouvre les
+  du fournisseur, les films parmi les fiches déjà ouvertes et l'index des personnes gardé sur l'appareil, ou tous
+  avec un jeton TMDb) ; un genre, l'année de sortie ou un prix (puis son festival) ouvre les
   titres qui le partagent ; quand l'image de fond du fournisseur manque ou ne se charge pas, la fiche affiche
   celle de TMDb (avec un jeton) ou l'affiche floutée.
 - **Recherche** (la loupe en haut de chaque onglet sur iPhone) : chaînes, programmes, films et séries,
@@ -101,6 +102,18 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Données** : sauvegarde / restauration JSON, cache vidable. Les affiches, les vignettes et les pages des films et
   séries restent sur l'appareil : elles s'affichent tout de suite au lancement suivant, et les pages s'ouvrent même
   quand le fournisseur ne répond pas.
+- **TMDb**, avec votre propre jeton (Réglages → TMDb, vérifié auprès de TMDb à l'enregistrement, transmis par la
+  synchronisation) : une rangée Tendances sur l'accueil et dans le carrousel ; pour les titres de l'accueil et les
+  fiches que vous ouvrez, l'image de fond de TMDb quand celle du fournisseur manque ou ne se charge pas, la
+  bande-annonce de TMDb (d'abord dans la langue de l'app, puis en anglais) quand le fournisseur n'en donne pas, et le
+  nombre de votes à côté de la note ; les personnes que TMDb connaît dans la recherche, avec leur photo, et tous les
+  titres de la playlist sur la page d'un acteur ou d'un réalisateur, sous sa photo. Les réponses de TMDb sont gardées
+  sur l'appareil (30 jours, 7 pour un titre que TMDb ne connaît pas) : les fiches les affichent tout de suite, même
+  hors connexion, et seul ce qui manque ou est ancien est redemandé, en arrière-plan, quelques requêtes par seconde.
+  Un index local des acteurs et réalisateurs, rempli à partir des fiches et des listes de séries du fournisseur et de
+  TMDb, trouve les personnes dans la recherche et leurs titres tout de suite, sans réseau. Une image du fournisseur
+  cassée n'est plus essayée pendant 7 jours ; une image qui échoue sur une erreur réseau est réessayée une fois. Vider
+  le cache efface le tout.
 - **Synchroniser sur ce réseau** (Réglages, désactivé tant qu'on ne l'active pas) : iPhone, iPad et Mac se
   connectent aux appareils Android du même réseau où Ondo est ouvert et gardent les mêmes playlists, Ma liste,
   collections, progression et jeton TMDb (profil principal uniquement ; deux appareils Apple se synchronisent via un

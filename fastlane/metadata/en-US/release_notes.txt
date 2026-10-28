@@ -16,5 +16,5 @@
 • Hide a whole language or country in one go (category names that start with |PT|, FR:…), a style (manga & anime, children, documentaries…) or any word of category names; the categories added later follow.
 • Awards and festival selections (Cannes, Oscars, Berlin, Venice, Césars…) on movie pages, an Award Winners row, and a search filter by festival or ceremony.
 • Home shows when the playlist was last updated, above its name.
-• Pages whose background image is missing show the one from TMDb when you have set your token, otherwise the blurred poster.
+• With your TMDb token: pages whose background image is missing show TMDb's (otherwise the blurred poster), and TMDb's trailer when the provider gives none; ratings show their number of votes, actors and directors their photo. What TMDb answers stays on the device: pages show it at once, offline too.
 • Settings take your TMDb “API Read Access Token” (or API Key), named as on TMDb, and check it with TMDb before saving it; “App Language” opens the system page where Ondo's language is chosen.
