@@ -85,6 +85,8 @@ class VodActions(
     val onOpen: (ShowcaseItem) -> Unit = {},
     val onResume: (ResumeItem) -> Unit = {},
     val onRemoveResume: (ResumeItem) -> Unit = {},
+    /** Long press on a "Continue watching" card, Go to: the movie's page, or the series' of the episode. */
+    val onOpenResume: (ResumeItem) -> Unit = {},
     val onCategory: (MediaCategory?) -> Unit = {},
     val onSeeAllMyList: () -> Unit = {},
     val onSearch: () -> Unit = {},
@@ -155,7 +157,7 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
             item {
                 Shelf(stringResource(R.string.continue_watching), metrics) {
                     itemsIndexed(state.continueWatching, key = { _, it -> it.key }) { index, item ->
-                        ContinueCard(item, metrics.wideCardWidth, onClick = { actions.onResume(item) }, initialFocus = first == "resume" && index == 0, onRemove = { actions.onRemoveResume(item) })
+                        ContinueCard(item, metrics.wideCardWidth, onClick = { actions.onResume(item) }, initialFocus = first == "resume" && index == 0, onRemove = { actions.onRemoveResume(item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
                     }
                 }
             }

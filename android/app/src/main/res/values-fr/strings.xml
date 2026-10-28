@@ -18,6 +18,8 @@
     <string name="resume_episode">Reprendre %1$s</string>
     <string name="continue_watching">Continuer à regarder</string>
     <string name="remove_from_history">Retirer de l’historique</string>
+    <string name="go_to_movie">Aller au film</string>
+    <string name="go_to_series">Aller à la série</string>
     <string name="remove_from_history_text">L’endroit où vous vous étiez arrêté sera oublié.</string>
     <string name="beta">Bêta</string>
     <string name="movies_in_progress">Films en cours</string>

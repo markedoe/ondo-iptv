@@ -18,6 +18,8 @@
     <string name="resume_episode">استئناف %1$s</string>
     <string name="continue_watching">متابعة المشاهدة</string>
     <string name="remove_from_history">إزالة من السجل</string>
+    <string name="go_to_movie">الانتقال إلى الفيلم</string>
+    <string name="go_to_series">الانتقال إلى المسلسل</string>
     <string name="remove_from_history_text">سيُنسى الموضع الذي توقفت عنده.</string>
     <string name="beta">تجريبي</string>
     <string name="movies_in_progress">أفلام قيد المشاهدة</string>

@@ -102,6 +102,8 @@ class HomeActions(
     val onResume: (ResumeItem) -> Unit = {},
     /** Long press on a "Continue watching" card, confirmed: the card goes. */
     val onRemoveResume: (ResumeItem) -> Unit = {},
+    /** Long press on a "Continue watching" card, Go to: the movie's page, or the series' of the episode. */
+    val onOpenResume: (ResumeItem) -> Unit = {},
     val onSeeAllMyList: () -> Unit = {},
     val onSeeAllLive: () -> Unit = {},
     val onPlayChannel: (ChannelRow) -> Unit = {},
@@ -196,7 +198,7 @@ fun HomeScreen(
 private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMetrics, actions: HomeActions, preparingKey: String?) {
     Shelf(title, metrics) {
         items(items, key = { it.key }) {
-            ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey, onRemove = { actions.onRemoveResume(it) })
+            ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey, onRemove = { actions.onRemoveResume(it) }, onOpen = if (it.hasPage) ({ actions.onOpenResume(it) }) else null)
         }
     }
 }

@@ -116,6 +116,7 @@ object UiMappers {
             progress = entry.progress.toFloat(),
             minutesLeft = entry.minutesLeft,
             isSeries = entry.kind == ItemKind.SERIES,
+            hasPage = entry.kind != ItemKind.CHANNEL,
         )
     }
 

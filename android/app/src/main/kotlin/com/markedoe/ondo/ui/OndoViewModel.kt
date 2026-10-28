@@ -356,6 +356,17 @@ class OndoViewModel(
         }
     }
 
+    /** The page of a "Continue watching" card: the movie, or the series of the episode; none for a channel. */
+    fun resumedTitle(key: String): ShowcaseItem? {
+        val current = state.value
+        val entry = current.library.progress(key) ?: return null
+        return when (entry.kind) {
+            ItemKind.MOVIE -> current.content.movies.firstOrNull { it.id == entry.itemId }?.let { ShowcaseItem.MovieItem(it) }
+            ItemKind.SERIES -> current.content.series.firstOrNull { it.id == entry.itemId }?.let { ShowcaseItem.SeriesItem(it) }
+            ItemKind.CHANNEL -> null
+        }
+    }
+
     /**
      * Gets a Play ready with [preparing] set to [key] meanwhile. Another tap on the same Play waits for this one (one
      * player, not two); a tap on another one replaces it.

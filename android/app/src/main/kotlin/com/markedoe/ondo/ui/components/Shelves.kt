@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -62,6 +63,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.TvConfirmDialog
+import com.markedoe.ondo.ui.tv.TvResumeMenu
 import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
@@ -172,22 +174,24 @@ fun ContinueCard(
     initialFocus: Boolean = false,
     /** A long press (OK held on a remote) offers to take the card away; [onRemove] once the viewer says so. */
     onRemove: (() -> Unit)? = null,
+    /** The long press offers the movie's page, or the series' of the episode, too. */
+    onOpen: (() -> Unit)? = null,
 ) {
     var asking by remember { mutableStateOf(false) }
     val interaction = remember { MutableInteractionSource() }
-    val click = if (onRemove == null) {
+    val click = if (onRemove == null && onOpen == null) {
         Modifier.clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
     } else {
         Modifier.combinedClickable(
             interactionSource = interaction,
             indication = LocalIndication.current,
             onClick = onClick,
-            onLongClickLabel = stringResource(R.string.remove_from_history),
+            onLongClickLabel = stringResource(if (onRemove != null) R.string.remove_from_history else goToLabel(item)),
             onLongClick = { asking = true },
         )
     }
     Column(modifier.width(width).pressScale(interaction).focusFrame(CardShape).focusMemory("resume:${item.key}", initialFocus).clip(CardShape).then(click).padding(bottom = 4.dp)) {
-        if (asking && onRemove != null) RemoveFromHistory(item, onRemove, onDismiss = { asking = false })
+        if (asking) ResumeCardMenu(item, onOpen, onRemove, onDismiss = { asking = false })
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(CardShape)) {
             Artwork(url = item.imageUrl, title = item.title, modifier = Modifier.fillMaxSize(), showsTitleFallback = false)
             Box(
@@ -225,21 +229,51 @@ fun Modifier.pressScale(interaction: InteractionSource): Modifier = composed {
     }
 }
 
-/** What a long press on a "Continue watching" card offers: a menu on a phone, a question on a TV. */
+/** "Go to Series" for an episode, "Go to Movie" for a movie. */
+private fun goToLabel(item: ResumeItem): Int = if (item.isSeries) R.string.go_to_series else R.string.go_to_movie
+
+/**
+ * What a long press on a "Continue watching" card offers: the title's page ([onOpen]: the movie's, or the series' with
+ * its seasons and episodes) and Remove from History ([onRemove]). A menu on a phone; on a TV a list, the remote on Go
+ * to, whose Remove asks first, as the question alone does on a card without a page (a channel).
+ */
 @Composable
-private fun RemoveFromHistory(item: ResumeItem, onRemove: () -> Unit, onDismiss: () -> Unit) {
-    val label = stringResource(R.string.remove_from_history)
+fun ResumeCardMenu(item: ResumeItem, onOpen: (() -> Unit)?, onRemove: (() -> Unit)?, onDismiss: () -> Unit) {
+    val remove = stringResource(R.string.remove_from_history)
+    val open = stringResource(goToLabel(item))
     if (isTelevision()) {
-        TvConfirmDialog(item.title, stringResource(R.string.remove_from_history_text), label, onConfirm = { onDismiss(); onRemove() }, onDismiss = onDismiss)
+        var confirming by remember { mutableStateOf(onOpen == null) }
+        if (confirming && onRemove != null) {
+            TvConfirmDialog(item.title, stringResource(R.string.remove_from_history_text), remove, onConfirm = { onDismiss(); onRemove() }, onDismiss = onDismiss)
+        } else if (onOpen != null) {
+            TvResumeMenu(
+                title = item.title,
+                openLabel = open,
+                onOpen = { onDismiss(); onOpen() },
+                removeLabel = remove.takeIf { onRemove != null },
+                onRemove = { confirming = true },
+                onDismiss = onDismiss,
+            )
+        }
         return
     }
     DropdownMenu(expanded = true, onDismissRequest = onDismiss) {
-        DropdownMenuItem(
-            text = { Text(label) },
-            leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
-            onClick = { onDismiss(); onRemove() },
-            modifier = Modifier.testTag("removeFromHistory"),
-        )
+        if (onOpen != null) {
+            DropdownMenuItem(
+                text = { Text(open) },
+                leadingIcon = { Icon(Icons.Rounded.Info, contentDescription = null) },
+                onClick = { onDismiss(); onOpen() },
+                modifier = Modifier.testTag("openFromHistory"),
+            )
+        }
+        if (onRemove != null) {
+            DropdownMenuItem(
+                text = { Text(remove) },
+                leadingIcon = { Icon(Icons.Rounded.Delete, contentDescription = null) },
+                onClick = { onDismiss(); onRemove() },
+                modifier = Modifier.testTag("removeFromHistory"),
+            )
+        }
     }
 }
 

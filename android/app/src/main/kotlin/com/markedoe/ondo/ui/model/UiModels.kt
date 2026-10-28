@@ -44,6 +44,8 @@ data class ResumeItem(
     val minutesLeft: Int,
     /** An episode: Home shows it in the series in progress, apart from the movies. */
     val isSeries: Boolean = false,
+    /** A movie or an episode: its page (the series' for an episode) opens from the card's long press. */
+    val hasPage: Boolean = false,
 )
 
 /** A channel with what is on now. */

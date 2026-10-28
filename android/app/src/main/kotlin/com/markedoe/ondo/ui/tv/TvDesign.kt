@@ -17,6 +17,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.window.Dialog
+import androidx.tv.material3.ListItem
+import androidx.tv.material3.ListItemDefaults
+import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.relocation.bringIntoViewResponder
@@ -71,6 +81,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.PlayIcon
+import com.markedoe.ondo.ui.components.ResumeCardMenu
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -186,6 +197,48 @@ fun FocusBackAfter(open: Boolean, requester: FocusRequester) {
 }
 
 /**
+ * The choices of OK held on a "Continue watching" card ([com.markedoe.ondo.ui.components.ResumeCardMenu]): Go to its
+ * page, where the remote starts, then Remove from History ([removeLabel], null for none). The OK that opened it, still
+ * held, chooses nothing.
+ */
+@Composable
+fun TvResumeMenu(title: String, openLabel: String, onOpen: () -> Unit, removeLabel: String?, onRemove: () -> Unit, onDismiss: () -> Unit) {
+    val first = remember { FocusRequester() }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            colors = SurfaceDefaults.colors(containerColor = OndoColors.SurfaceHigh, contentColor = Color.White),
+            modifier = Modifier.widthIn(min = 360.dp, max = 480.dp).newOkPressesOnly().testTag("resumeMenu"),
+        ) {
+            Column(Modifier.padding(vertical = 24.dp, horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp, bottom = 12.dp))
+                FocusOnOpen(first)
+                ListItem(
+                    selected = false,
+                    onClick = onOpen,
+                    headlineContent = { Text(openLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    leadingContent = { Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(24.dp)) },
+                    modifier = Modifier.focusRequester(first).testTag("resumeOpen"),
+                    colors = tvRowColors(),
+                    shape = ListItemDefaults.shape(RoundedCornerShape(12.dp)),
+                )
+                removeLabel?.let { label ->
+                    ListItem(
+                        selected = false,
+                        onClick = onRemove,
+                        headlineContent = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        leadingContent = { Icon(Icons.Rounded.Delete, contentDescription = null, modifier = Modifier.size(24.dp)) },
+                        modifier = Modifier.testTag("resumeRemove"),
+                        colors = tvRowColors(),
+                        shape = ListItemDefaults.shape(RoundedCornerShape(12.dp)),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
  * Puts the focus on [requester] when a dialog opens: called inside the dialog, it waits for the dialog's window to
  * lay the item out (a few frames), so the remote starts on it.
  */
@@ -264,26 +317,23 @@ fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = M
  * asks whether to take the card away ([onRemove]).
  */
 @Composable
-fun TvResumeCard(item: ResumeItem, onClick: () -> Unit, modifier: Modifier = Modifier, preparing: Boolean = false, onRemove: (() -> Unit)? = null) {
+fun TvResumeCard(
+    item: ResumeItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    preparing: Boolean = false,
+    onRemove: (() -> Unit)? = null,
+    /** OK held offers the movie's page, or the series' of the episode, too ([ResumeCardMenu]). */
+    onOpen: (() -> Unit)? = null,
+) {
     val (scale, border, glow) = cardFocus()
     var asking by remember { mutableStateOf(false) }
-    if (asking && onRemove != null) {
-        TvConfirmDialog(
-            item.title,
-            stringResource(R.string.remove_from_history_text),
-            stringResource(R.string.remove_from_history),
-            onConfirm = {
-                asking = false
-                onRemove()
-            },
-            onDismiss = { asking = false },
-        )
-    }
+    if (asking) ResumeCardMenu(item, onOpen, onRemove, onDismiss = { asking = false })
     var focused by remember { mutableStateOf(false) }
     Column(modifier.width(TvTokens.WideCardWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
-            onLongClick = onRemove?.let { { asking = true } },
+            onLongClick = if (onRemove != null || onOpen != null) ({ asking = true }) else null,
             modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.semantics { contentDescription = item.title },
             shape = CardDefaults.shape(TvTokens.CardShape),
             scale = scale,

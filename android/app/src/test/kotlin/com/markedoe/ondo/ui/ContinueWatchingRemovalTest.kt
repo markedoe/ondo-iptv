@@ -15,6 +15,8 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
@@ -153,13 +155,29 @@ class ContinueWatchingRemovalTest {
         settle(500)
         for (repeat in 1..6) {
             // Once the question is open, the held key goes to it.
-            if (exists("confirmDialog")) compose.onAllNodes(isFocused()).onLast().performKeyPress(KeyEvent(AndroidKeyEvent(down, SystemClock.uptimeMillis(), AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_CENTER, repeat)))
+            if (dialogOpen()) compose.onAllNodes(isFocused()).onLast().performKeyPress(KeyEvent(AndroidKeyEvent(down, SystemClock.uptimeMillis(), AndroidKeyEvent.ACTION_DOWN, AndroidKeyEvent.KEYCODE_DPAD_CENTER, repeat)))
             else send(AndroidKeyEvent.ACTION_DOWN, repeat)
             settle(60)
         }
-        if (exists("confirmDialog")) compose.onAllNodes(isFocused()).onLast().performKeyPress(KeyEvent(AndroidKeyEvent(down, SystemClock.uptimeMillis(), AndroidKeyEvent.ACTION_UP, AndroidKeyEvent.KEYCODE_DPAD_CENTER, 0)))
+        if (dialogOpen()) compose.onAllNodes(isFocused()).onLast().performKeyPress(KeyEvent(AndroidKeyEvent(down, SystemClock.uptimeMillis(), AndroidKeyEvent.ACTION_UP, AndroidKeyEvent.KEYCODE_DPAD_CENTER, 0)))
         else send(AndroidKeyEvent.ACTION_UP, 0)
         settle(200)
+    }
+
+    private fun dialogOpen() = exists("confirmDialog") || exists("resumeMenu")
+
+    /**
+     * OK held on a card: its choices open on Go to (the page); Remove from History, below, asks first. The held OK
+     * chose nothing.
+     */
+    private fun askToRemove() {
+        holdOk()
+        waitFor { exists("resumeMenu") }
+        assertEquals("Go to has the focus first", "resumeOpen", focusedTag())
+        press(Key.DirectionDown)
+        assertEquals("resumeRemove", focusedTag())
+        press(Key.DirectionCenter)
+        waitFor { exists("confirmDialog") }
     }
 
     private fun toTheCard() {
@@ -173,8 +191,7 @@ class ContinueWatchingRemovalTest {
     fun okHeldOnATvCardAsksThenTakesItAway() {
         start(television = true)
         toTheCard()
-        holdOk()
-        waitFor { exists("confirmDialog") }
+        askToRemove()
         assertEquals("Cancel has the focus first", "confirmCancel", focusedTag())
         // Cancel: the card stays.
         press(Key.DirectionCenter)
@@ -183,8 +200,7 @@ class ContinueWatchingRemovalTest {
         assertTrue(exists("shelfResumeMovies"))
 
         waitFor { onTheCard() }
-        holdOk()
-        waitFor { exists("confirmDialog") }
+        askToRemove()
         press(Key.DirectionRight)
         assertEquals("confirmOk", focusedTag())
         press(Key.DirectionCenter)
@@ -205,8 +221,7 @@ class ContinueWatchingRemovalTest {
         toTheCard()
         val removed = focusedDescription()
         val kept = if (removed == movie.name) other.name else movie.name
-        holdOk()
-        waitFor { exists("confirmDialog") }
+        askToRemove()
         press(Key.DirectionRight)
         assertEquals("confirmOk", focusedTag())
         press(Key.DirectionCenter)
@@ -227,8 +242,7 @@ class ContinueWatchingRemovalTest {
         press(Key.DirectionCenter)
         val card = hasText(movie.name) and SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick)
         waitFor { compose.onAllNodes(card and isFocused()).fetchSemanticsNodes().isNotEmpty() || run { press(Key.DirectionRight); false } }
-        holdOk()
-        waitFor { exists("confirmDialog") }
+        askToRemove()
         press(Key.DirectionRight)
         press(Key.DirectionCenter)
         waitFor { repository.state.value.library.progress(entry.key) == null }
@@ -236,6 +250,33 @@ class ContinueWatchingRemovalTest {
         settle(1_000)
         // The first row of the page takes the remote, not the drawer.
         assertTrue("the remote is on the Movies page (${focused()})", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("vod"))).fetchSemanticsNodes().isNotEmpty())
+    }
+
+    /**
+     * A series resumed from Home: OK plays the episode, OK held goes to the series' page, on the season of that episode,
+     * where the viewer chooses another season or episode.
+     */
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun okHeldOnASeriesCardGoesToTheSeriesPage() {
+        val series = Fixtures.harborLights
+        val episode = series.episodes.first { it.season == 2 && it.number == 1 }
+        val resumed = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, series.id, episode.id, title = series.name, subtitle = "${episode.code} · ${episode.title}", lastWatchedAt = 1)
+        start(television = true, entries = listOf(resumed))
+        waitFor { focusedNode() != null }
+        val onSeriesCard = { compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfResumeSeries"))).fetchSemanticsNodes().isNotEmpty() }
+        repeat(6) { if (!onSeriesCard()) press(Key.DirectionDown) }
+        assertTrue("the remote reached the card (${focused()})", onSeriesCard())
+        holdOk()
+        waitFor { exists("resumeMenu") }
+        assertEquals("resumeOpen", focusedTag())
+        compose.onNodeWithTag("resumeOpen").assertTextContains("Go to Series")
+        press(Key.DirectionCenter)
+        waitFor { exists("seasons") && exists("episodes") }
+        assertFalse(exists("resumeMenu"))
+        // The season of the episode resumed is the one shown, its card kept.
+        compose.onNode(hasText("Season 2") and hasAnyAncestor(hasTestTag("seasons"))).assertIsSelected()
+        assertNotNull(repository.state.value.library.progress(resumed.key))
     }
 
     @Test
