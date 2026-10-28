@@ -40,6 +40,20 @@ class TmdbTest {
     }
 
     @Test
+    fun copiesOfOneFilmShareItsKey() {
+        val sandstorm = listOf("Sandstorm", "FR - Sandstorm (2021) 4K", "Sandstorm VOSTFR", "Sandstorm [MULTI]", "|EN| Sandstorm HD", "Sandstorm (VF)", "Sandstorm VF")
+        assertEquals(setOf("sandstorm"), sandstorm.map(CatalogueMatcher::filmKey).toSet())
+        assertEquals("it", CatalogueMatcher.filmKey("It"), "a title is never a version word only")
+        assertEquals("", CatalogueMatcher.filmKey("[4K]"))
+        assertTrue(CatalogueMatcher.isSameFilm("Sandstorm VOSTFR", null, "FR - Sandstorm (2021)", null))
+        assertTrue(CatalogueMatcher.isSameFilm("Sandstorm", 2021, "Sandstorm EN", 2022), "release dates differ between countries")
+        assertFalse(CatalogueMatcher.isSameFilm("Dune (1984)", null, "Dune (2021)", null), "a remake is another film")
+        assertFalse(CatalogueMatcher.isSameFilm("Dune", 1984, "Dune", 2021))
+        assertFalse(CatalogueMatcher.isSameFilm("Sandstorm", null, "Sandstorm 2", null), "a sequel is another film")
+        assertFalse(CatalogueMatcher.isSameFilm("[4K]", null, "[HD]", null), "nothing left to compare")
+    }
+
+    @Test
     fun bearerTokenUsesHeader() = runTest {
         val http = MockHttpClient()
         val token = "a".repeat(120)

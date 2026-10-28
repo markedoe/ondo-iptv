@@ -1,7 +1,9 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Episode
+import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Season
@@ -13,7 +15,8 @@ import java.time.ZoneId
 
 /**
  * What the home screen and detail pages feature, as pure functions of the catalogue and the library
- * (the same rules as the iPhone app, see `AppModel+Showcase.swift`).
+ * (the same rules as the iPhone app, see `AppModel+Showcase.swift`, except that More like this puts the closest
+ * titles first and leaves out copies of the title: see [similarMovies]).
  */
 class Showcase(
     private val content: PlaylistContent,
@@ -113,14 +116,42 @@ class Showcase(
         return result.values.toList()
     }
 
-    /** Other titles of the same category (none when that category is excluded, such as a hidden adult one). */
-    fun similarMovies(movie: Movie, limit: Int = 15): List<Movie> =
-        if (movie.categoryId in excludedCategoryIds) emptyList()
-        else browsableMovies.asSequence().filter { it.categoryId == movie.categoryId && it.id != movie.id }.take(limit).toList()
+    /**
+     * "More like this" for a movie: other movies of its category (the provider's grouping, often one language or one
+     * genre; none when that category is excluded, such as a hidden adult one), never the movie itself or another copy
+     * of it (another language or quality, see [CatalogueMatcher.isSameFilm]), each film once, finished ones left out
+     * when Settings hides them. Best first: the most genres, director and actors shared with it (known from the pages
+     * opened, [details]), then released in the same years, then the best rated, then in the playlist's order.
+     */
+    fun similarMovies(movie: Movie, limit: Int = 15, details: (String) -> MediaDetails? = { null }): List<Movie> {
+        if (movie.categoryId in excludedCategoryIds) return emptyList()
+        val candidates = browsableMovies.filter { it.categoryId == movie.categoryId && it.id != movie.id }
+        return Similarity.rank(
+            Similarity.Title(movie.name, movie.year, details(movie.id)),
+            candidates.map { Similarity.Title(it.name, it.year, details(it.id), it.rating) to it },
+            limit,
+        ) { it.id }
+    }
 
-    fun similarSeries(item: Series, limit: Int = 15): List<Series> =
-        if (item.categoryId in excludedCategoryIds) emptyList()
-        else series.asSequence().filter { it.categoryId == item.categoryId && it.id != item.id }.take(limit).toList()
+    /** "More like this" for a series, by the rules of [similarMovies]; a series list names its genre and cast itself. */
+    fun similarSeries(item: Series, limit: Int = 15, details: (String) -> MediaDetails? = { null }): List<Series> {
+        if (item.categoryId in excludedCategoryIds) return emptyList()
+        fun title(series: Series): Similarity.Title {
+            val info = details(series.id)
+            return Similarity.Title(
+                series.name, series.year,
+                MediaDetails(
+                    title = series.name,
+                    genre = info?.genre ?: series.genre,
+                    cast = info?.cast ?: series.cast,
+                    director = info?.director ?: series.director,
+                ),
+                series.rating ?: info?.rating,
+            )
+        }
+        val candidates = series.filter { it.categoryId == item.categoryId && it.id != item.id }
+        return Similarity.rank(title(item), candidates.map { title(it) to it }, limit) { it.id }
+    }
 
     fun progress(series: Series, episode: Episode): WatchEntry? =
         library.progress(WatchEntry(playlistId, ItemKind.SERIES, series.id, episode.id, title = "", lastWatchedAt = 0).key)

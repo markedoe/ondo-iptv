@@ -300,6 +300,39 @@ object CatalogueMatcher {
     /** Release years one apart at most (release dates differ between countries), however absurd the one a panel sent. */
     internal fun closeYears(a: Int, b: Int): Boolean = abs(a.toLong() - b.toLong()) <= 1
 
+    /**
+     * Words after a title that name a copy's language or version, not the film ("Sandstorm VF", "Sandstorm VOSTFR",
+     * "Sandstorm EN", "EN - Sandstorm"). Only at either end, and never the whole title ("Vost" stays "Vost").
+     */
+    private val versionWords = setOf(
+        "vf", "vff", "vfq", "vfi", "vo", "vost", "vostfr", "vosta", "truefrench", "french", "english", "subbed", "dubbed", "dub",
+        "sub", "dual", "en", "eng", "fr", "es", "esp", "de", "ger", "ita", "pt", "br", "ar", "tr", "nl", "pl",
+    )
+
+    /**
+     * The film a catalogue title stands for, whatever its copy: `"FR - Sandstorm (2021) 4K"`, `"Sandstorm VOSTFR"` and
+     * `"Sandstorm [MULTI]"` -> `"sandstorm"`. Empty when nothing is left of the title.
+     */
+    fun filmKey(title: String): String {
+        val words = words(title).toMutableList()
+        while (words.size > 1 && words.last() in versionWords) words.removeAt(words.size - 1)
+        while (words.size > 1 && words.first() in versionWords) words.removeAt(0)
+        return words.joinToString("")
+    }
+
+    /**
+     * Whether two catalogue titles are copies of one film (another language, another quality): the same [filmKey] and
+     * release years one apart at most, when both are known (from the field, else from the title). A remake of another
+     * year is another film.
+     */
+    fun isSameFilm(a: String, aYear: Int?, b: String, bYear: Int?): Boolean {
+        val key = filmKey(a)
+        if (key.isEmpty() || key != filmKey(b)) return false
+        val first = aYear ?: TitleParser.splitYear(a).year
+        val second = bYear ?: TitleParser.splitYear(b).year
+        return first == null || second == null || closeYears(first, second)
+    }
+
     private fun words(title: String): List<String> {
         // Remove bracketed tags: [MULTI], (VOSTFR)…
         var name = title.replace(bracketed, " ")

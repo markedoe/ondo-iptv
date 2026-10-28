@@ -465,7 +465,7 @@ object UiMappers {
             votes = tmdbRating(state, item),
             progress = progress(showcase.progress(movie)),
             inMyList = isFavorite(state, item),
-            similar = showcase.similarMovies(movie).map { ShowcaseItem.MovieItem(it) },
+            similar = showcase.similarMovies(movie) { state.movieDetails[it] }.map { ShowcaseItem.MovieItem(it) },
             awards = MovieAwards.rows(state, movie, locale),
             collections = collectionChoices(state, ItemKind.MOVIE, movie.id),
         )
@@ -495,7 +495,7 @@ object UiMappers {
             nextProgress = next?.first?.let { episodeProgress[it.id] },
             episodeProgress = episodeProgress,
             inMyList = isFavorite(state, item),
-            similar = showcase.similarSeries(series).map { ShowcaseItem.SeriesItem(it) },
+            similar = showcase.similarSeries(series) { state.seriesDetails[it]?.info }.map { ShowcaseItem.SeriesItem(it) },
             error = error,
             collections = collectionChoices(state, ItemKind.SERIES, series.id),
         )
