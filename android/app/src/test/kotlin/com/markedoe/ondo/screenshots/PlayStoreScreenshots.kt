@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.OndoNavigationFrame
 import com.markedoe.ondo.ui.TopLevel
@@ -124,7 +125,9 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
     @Test
     fun movies() = capture("04-movies", TopLevel.MOVIES) {
         Box(Modifier.tvSafeArea(tab = true)) {
-            VodScreen(UiMappers.vod(state, series = false, title = if (french) "Films" else "Movies"), VodActions())
+            // Without the movies in progress, so that My List shows above the fold of a TV.
+            val listed = if (tv) state.copy(library = state.library.copy(history = state.library.history.filter { it.kind != ItemKind.MOVIE })) else state
+            VodScreen(UiMappers.vod(listed, series = false, title = if (french) "Films" else "Movies"), VodActions())
         }
     }
 

@@ -18,6 +18,8 @@ The App Store and Google Play screenshots show a demo catalogue (`fixtures/showc
 | Sita Sings the Blues | backdrop | Nina Paley | CC BY-SA 3.0 | [RavanaSitaPainting.jpg](https://commons.wikimedia.org/wiki/File:RavanaSitaPainting.jpg) |
 | Sita Sings the Blues | poster | Nina Paley | CC BY-SA 3.0 | [Sita_STB_Poster_Agni_A2.png](https://commons.wikimedia.org/wiki/File:Sita_STB_Poster_Agni_A2.png) |
 | Valkaama | poster | valkaama.com | CC BY-SA 3.0 | [Valkaama_poster.png](https://commons.wikimedia.org/wiki/File:Valkaama_poster.png) |
+| Seder-Masochism | backdrop | Nina Paley | CC0 | [Moses-Splits-Sea_by_Nina_Paley.jpg](https://commons.wikimedia.org/wiki/File:Moses-Splits-Sea_by_Nina_Paley.jpg) |
+| Seder-Masochism | poster | Nina Paley | CC0 | [SederMasochismPoster.jpg](https://commons.wikimedia.org/wiki/File:SederMasochismPoster.jpg) |
 | Pepper & Carrot | backdrop | David Revoy | CC BY 4.0 | [2015-12-29_landscape-cover-for-the-website_by-David-Revoy.jpg](https://commons.wikimedia.org/wiki/File:2015-12-29_landscape-cover-for-the-website_by-David-Revoy.jpg) |
 | Pepper & Carrot | poster | David Revoy | CC BY 4.0 | [2016-02-24_vertical-cover_remake_by-David-Revoy.jpg](https://commons.wikimedia.org/wiki/File:2016-02-24_vertical-cover_remake_by-David-Revoy.jpg) |
 | Pepper & Carrot – The Potion of Flight | episode still | David Revoy | CC BY 4.0 | [2015-01-20_first_cover-_by-David-Revoy.jpg](https://commons.wikimedia.org/wiki/File:2015-01-20_first_cover-_by-David-Revoy.jpg) |

@@ -224,6 +224,23 @@
    "director": "Tim Baumann",
    "cast": "Matylda Baczyńska, Rafał Fudalej, Maciej Maciejewski",
    "poster": "m-valkaama-poster.jpg"
+  },
+  {
+   "id": "m-seder",
+   "title": "Seder-Masochism",
+   "year": 2018,
+   "category": "v-en-anim",
+   "genre": "Animation, Musical",
+   "rating": 7.1,
+   "minutes": 78,
+   "director": "Nina Paley",
+   "plot": {
+    "en": "The story of the Exodus retold in song and animation, through the eyes of the goddesses it left behind.",
+    "fr": "Le récit de l'Exode raconté en chansons et en animation, du point de vue des déesses qu'il a laissées de côté."
+   },
+   "added_days_ago": 5,
+   "backdrop": "m-seder-backdrop.jpg",
+   "poster": "m-seder-poster.jpg"
   }
  ],
  "series": [
@@ -1191,9 +1208,9 @@
   "movie": "m-sintel",
   "series": "s-pepper",
   "search": {
-   "en": "spring",
-   "fr": "spring"
+   "en": "s",
+   "fr": "s"
   },
-  "person": "Colin Levy"
+  "person": "Nina Paley"
  }
 }
