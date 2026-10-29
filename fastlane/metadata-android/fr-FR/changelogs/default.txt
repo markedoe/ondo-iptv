@@ -1,1 +1,6 @@
-Nouveau style en noir et blanc : onglets en haut, image d’accueil encadrée, cartes qui se soulèvent sous la télécommande. Fiches avec boutons ronds ; le Direct montre la chaîne choisie à côté de la liste. Le lecteur indique si le son multicanal part tel quel vers votre ampli. Sous-titres et Audio par langue, sauts de 10 s, minuterie, bandes-annonces. Synchro sur ce réseau : playlists, Ma liste, reprises, jeton TMDb. Avec TMDb : tendances, photos du casting, filmographies. Masquer les films vus.
+• Laisser un pourboire (Réglages) : facultatif, via Google Play ; il ne débloque rien
+• Nouveau look noir et gris ; sur TV, les onglets en barre du haut
+• Jeton TMDb : tendances, photos du casting, bandes-annonces, personnes
+• Lecteur : replay, liste des chaînes, taille des sous-titres, À suivre, fréquence d’image du film sur TV
+• Le guide TV est gardé 6 heures ; la Recherche a sa propre page
+• Nombreuses corrections

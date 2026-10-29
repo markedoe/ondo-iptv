@@ -1,20 +1,7 @@
-• Sync on this network (Settings, off until you turn it on): playlists, My List, collections and progress stay the same on the Ondo devices of your home network, directly between them, never through the internet.
-• Hide watched movies (Settings, and the menu of the movie grids): the movies you finished leave Movies, Home and More Like This.
-• On iPhone and iPad, MKV movies and episodes play with the system player when it can decode them: HDR10, HLG and Dolby Vision show, Dolby Atmos plays and Picture in Picture works. VLC plays the others.
-• Player, More, Report a Problem…: a report of the playback (start and seek times, freezes and their cause, statistics; no stream address, login or title) to copy, share or send in a GitHub issue.
-• Movies and series start faster and come back sooner after a skip or a jump; the picture follows your finger while you drag the time bar.
-• Settings, Player: choose the buffer for live TV and for movies & series (Automatic, or 1 to 10 seconds). A longer buffer hides longer interruptions from the provider.
-• With VLC, live channels freeze less: the buffer grows by itself after the provider's stream stops for a moment, and Stream Statistics say whether a freeze comes from the network or the player.
-• Faster and smoother everywhere: large playlists open sooner, search works in the background, long lists scroll without stutter, and the TV guide opens at once with thousands of channels.
-• Mac: full screen, from the button, the F key or a double-click; AirPlay sends the video to your TV, not only the sound.
-• Resume starts exactly where you stopped, and a pause made while a movie opens stays paused.
-• Find subtitles online from the player: OpenSubtitles, SubDL and SubSource with your own key, Addic7ed for series without a key.
-• Ondo now speaks Spanish, Portuguese, Chinese (Simplified), Arabic and Hindi, as well as English and French.
-• My List is now a tab on iPhone, with your movies, series and channels in one place; your own lists are now called collections.
-• Tap an actor, a director, a genre, the year or an award on a movie or series page to see the titles of your playlist that share it; search finds actors and directors by name.
-• Search can be filtered by release years, and the grids sort by release date.
-• Hide a whole language or country in one go (category names that start with |PT|, FR:…), a style (manga & anime, children, documentaries…) or any word of category names; the categories added later follow.
-• Awards and festival selections (Cannes, Oscars, Berlin, Venice, Césars…) on movie pages, an Award Winners row, and a search filter by festival or ceremony.
-• Home shows when the playlist was last updated, above its name.
-• With your TMDb token: pages whose background image is missing show TMDb's (otherwise the blurred poster), and TMDb's trailer when the provider gives none; ratings show their number of votes, actors and directors their photo. What TMDb answers stays on the device: pages show it at once, offline too.
-• Settings take your TMDb “API Read Access Token” (or API Key), named as on TMDb, and check it with TMDb before saving it; “App Language” opens the system page where Ondo's language is chosen.
+• Leave a tip (Settings): three optional tips through the App Store. They unlock nothing: everything in Ondo stays available to everyone.
+• A new look in black and grey, always dark: the featured titles in a rounded frame on Home, cards that rise under the pointer, the focus or a press, the format as an outlined badge.
+• With your TMDb token: a title's page shows the cast's photos in a row and the trailer when your provider gives none, the provider's rating and TMDb's side by side with the number of votes, and what TMDb answers is kept on your device, so pages open at once the next time.
+• Sync on this network also carries your TMDb token to your other devices.
+• Categories tagged QC are named Quebec, in the seven languages of the app.
+• Playlists saved in Windows-1252 or UTF-16 read as written; TV guides with common faults no longer stop loading, and large guides take less memory.
+• Many fixes and speed-ups throughout.

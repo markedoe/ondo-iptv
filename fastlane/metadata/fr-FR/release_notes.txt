@@ -1,20 +1,7 @@
-• Synchroniser sur ce réseau (Réglages, désactivé tant que vous ne l’activez pas) : playlists, Ma liste, collections et reprises de lecture restent les mêmes sur les appareils Ondo de votre réseau, directement entre eux, jamais par internet.
-• Masquer les films déjà vus (Réglages, et le menu des grilles de films) : les films terminés quittent Films, l’Accueil et Titres similaires.
-• Sur iPhone et iPad, les films et épisodes MKV se lisent avec le lecteur du système quand il sait les décoder : HDR10, HLG et Dolby Vision s’affichent, le Dolby Atmos est restitué et l’image dans l’image fonctionne. VLC lit les autres.
-• Lecteur, Plus, Signaler un problème… : un rapport de la lecture (temps de démarrage et de saut, gels et leur cause, statistiques ; ni adresse du flux, ni identifiant, ni titre) à copier, partager ou envoyer dans un ticket GitHub.
-• Les films et séries démarrent plus vite et reviennent plus tôt après un saut ; l’image suit votre doigt quand vous faites glisser la barre de temps.
-• Réglages, Lecteur : choisissez la mémoire tampon du direct et celle des films et séries (Automatique, ou de 1 à 10 secondes). Une mémoire tampon plus longue masque les coupures plus longues du fournisseur.
-• Avec VLC, les chaînes en direct gèlent moins : la mémoire tampon s’allonge d’elle-même après une coupure du fournisseur, et les Statistiques du flux indiquent si un gel vient du réseau ou du lecteur.
-• Plus rapide et plus fluide partout : les grosses playlists s’ouvrent plus tôt, la recherche travaille en arrière-plan, les longues listes défilent sans à-coups et le guide TV s’ouvre aussitôt avec des milliers de chaînes.
-• Mac : plein écran, avec le bouton, la touche F ou un double-clic ; AirPlay envoie la vidéo vers la TV, pas seulement le son.
-• La reprise démarre exactement là où vous vous êtes arrêté, et une pause faite pendant l’ouverture d’un film est respectée.
-• Cherchez des sous-titres en ligne depuis le lecteur : OpenSubtitles, SubDL et SubSource avec votre propre clé, Addic7ed pour les séries sans clé.
-• Ondo parle désormais espagnol, portugais, chinois (simplifié), arabe et hindi, en plus du français et de l’anglais.
-• Ma liste a son onglet sur iPhone, avec vos films, séries et chaînes au même endroit ; vos propres listes s’appellent désormais des collections.
-• Touchez un acteur, un réalisateur, un genre, l’année ou un prix sur une fiche pour voir les titres de votre playlist qui le partagent ; la recherche trouve les acteurs et réalisateurs par leur nom.
-• La recherche se filtre par années de sortie, et les grilles se trient par date de sortie.
-• Masquez d’un coup une langue ou un pays (catégories qui commencent par |PT|, FR:…), un style (manga et anime, enfants, documentaires…) ou n’importe quel mot des noms de catégories ; les catégories ajoutées plus tard suivent.
-• Prix et sélections (Cannes, Oscars, Berlin, Venise, César…) sur les fiches des films, une rangée Films primés, et un filtre de recherche par festival ou cérémonie.
-• L’accueil indique la date de dernière mise à jour de la playlist, au-dessus de son nom.
-• Avec votre jeton TMDb : les fiches sans image de fond affichent celle de TMDb (sinon l’affiche floutée), et la bande-annonce de TMDb quand le fournisseur n’en donne pas ; les notes indiquent leur nombre de votes, les acteurs et réalisateurs leur photo. Les réponses de TMDb restent sur l’appareil : les fiches les affichent tout de suite, même hors connexion.
-• Les Réglages prennent votre « Jeton d’accès en lecture à l’API » TMDb (ou la « Clé d’API »), nommé comme sur TMDb, et le vérifient auprès de TMDb avant de l’enregistrer ; « Langue de l’app » ouvre la page du système où choisir la langue d’Ondo.
+• Laisser un pourboire (Réglages) : trois pourboires facultatifs via l’App Store. Ils ne débloquent rien : tout Ondo reste disponible pour tout le monde.
+• Un nouveau look en noir et gris, toujours sombre : les titres à la une dans un cadre arrondi sur l’Accueil, des cartes qui se soulèvent sous le pointeur, le focus ou un appui, le format en badge détouré.
+• Avec votre jeton TMDb : la page d’un titre montre les photos du casting en rangée et la bande-annonce quand votre fournisseur n’en donne pas, la note du fournisseur et celle de TMDb côte à côte avec le nombre de votes, et les réponses de TMDb sont gardées sur votre appareil : les pages s’ouvrent aussitôt la fois suivante.
+• Synchroniser sur ce réseau transmet aussi votre jeton TMDb à vos autres appareils.
+• Les catégories marquées QC s’appellent Québec, dans les sept langues de l’app.
+• Les playlists enregistrées en Windows-1252 ou UTF-16 se lisent telles qu’écrites ; les guides TV avec des erreurs courantes ne bloquent plus le chargement, et les gros guides prennent moins de mémoire.
+• De nombreuses corrections et accélérations.
