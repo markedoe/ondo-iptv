@@ -383,17 +383,31 @@ class TelevisionTest {
         compose.runOnIdle { assertTrue(!compose.activity.onBackPressedDispatcher.hasEnabledCallbacks()) }
     }
 
-    /** Down from the bar, the remote is back on what it left, not on whatever lies below the tab. */
+    /** Down from the bar goes to the page's top, the item Up from it comes back to the bar from. */
     @Test
-    fun downFromTheTopBarGoesBackWhereTheRemoteWas() {
+    fun downFromTheTopBarGoesToThePagesTop() {
         start()
         press(Key.DirectionRight)
-        val left = focusedTag()
-        assertTrue("on a button of the featured title: $left", left.startsWith("hero") && left != "heroPlay")
+        assertTrue("on a button of the featured title: ${focusedTag()}", focusedTag().startsWith("hero"))
         press(Key.DirectionUp)
         assertEquals("tabHome", focusedTag())
         press(Key.DirectionDown)
-        assertEquals(left, focusedTag())
+        assertTrue("on the featured title: ${focusedTag()}", focusedTag().startsWith("hero"))
+        press(Key.DirectionUp)
+        assertEquals("tabHome", focusedTag())
+    }
+
+    /** Along the bar each tab opens as the remote reaches it, the remote staying on the bar; OK goes into the page. */
+    @Test
+    fun aTabOpensAsTheRemoteReachesItAndOkGoesIntoIt() {
+        start()
+        repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
+        press(Key.DirectionRight)
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("vod").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals("tabMovies", focusedTag())
+        press(Key.DirectionCenter)
+        compose.waitUntil(5_000) { !focusedTag().startsWith("tab") }
+        compose.onNodeWithTag("vod").assertExists()
     }
 
     /**

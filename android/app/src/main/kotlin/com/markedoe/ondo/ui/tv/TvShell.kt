@@ -46,6 +46,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -79,8 +84,11 @@ class TvTopBar {
     /** A short line at the bar's end, before Search (Home: the playlist and when it was updated). */
     internal var note: String? by mutableStateOf(null)
 
-    /** The remote is on the bar: a page that opens as the remote moves along the tabs leaves the focus there. */
-    var hasFocus: Boolean by mutableStateOf(false)
+    /**
+     * The remote is moving along the bar (Left, Right): each tab it reaches opens, and the page that opens leaves the
+     * focus on the bar. OK, Down or leaving the bar ends it.
+     */
+    var browsing: Boolean = false
         internal set
 }
 
@@ -133,7 +141,7 @@ fun rememberTabGridState(): LazyGridState {
  * [selected] is the tab shown. Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen
  * ([showBar] false).
  *
- * The tab the remote moves to opens at once. Up from a page's top reaches the bar, on the tab shown; Down from the
+ * The tab the remote moves to along the bar opens at once; OK goes into its page. Up from a page's top reaches the bar, on the tab shown; Down from the
  * bar goes to the page's first item. Back
  * follows Google's rule (Navigation on TV): from a tab's page, back to its top with the focus on the bar; from the
  * bar, to Home; from Home's bar, out of the app.
@@ -180,7 +188,17 @@ fun TvNavigationFrame(
                     .padding(start = TvTokens.ContentStart, top = TvTokens.EdgeTop, end = TvTokens.EdgeEnd)
                     .onFocusChanged {
                         barHasFocus = it.hasFocus
-                        bar.hasFocus = it.hasFocus
+                        if (!it.hasFocus) bar.browsing = false
+                    }
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown) {
+                            when (event.key) {
+                                Key.DirectionLeft, Key.DirectionRight -> bar.browsing = true
+                                Key.DirectionDown -> bar.browsing = false
+                                else -> Unit
+                            }
+                        }
+                        false
                     }
                     // Coming from the page, the focus lands on the tab shown, not on the item above where it was.
                     .focusProperties {
@@ -198,7 +216,18 @@ fun TvNavigationFrame(
                     Text("Ondo", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.03).em, modifier = Modifier.padding(start = 2.dp))
                 }
                 TopLevel.entries.forEach { tab ->
-                    BarTab(stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below) { onSelect(tab) }
+                    BarTab(stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below, browsing = { bar.browsing }, onReach = { onSelect(tab) }) {
+                        val browsed = bar.browsing
+                        bar.browsing = false
+                        onSelect(tab)
+                        // The tab opened as the remote reached it: OK goes into its page, where the page would put the focus.
+                        if (browsed && tab == selected) {
+                            scope.launch {
+                                withFrameNanos { }
+                                runCatching { (bar.page?.memory?.entry() ?: pages).requestFocus() }
+                            }
+                        }
+                    }
                 }
                 Spacer(Modifier.weight(1f))
                 bar.note?.let { note ->
@@ -240,7 +269,7 @@ const val SEARCH_TAG = "tabSearch"
 const val SETTINGS_TAG = "tabSettings"
 
 @Composable
-private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String, requester: FocusRequester, below: () -> FocusRequester, onClick: () -> Unit) {
+private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String, requester: FocusRequester, below: () -> FocusRequester, browsing: () -> Boolean, onReach: () -> Unit, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Surface(
         onClick = onClick,
@@ -250,8 +279,9 @@ private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String
                 canFocus = shown
                 down = below()
             }
-            // The tab the remote moves to is shown at once, without OK (as on the TV's own home screen).
-            .onFocusChanged { if (it.isFocused && !selected) onClick() }
+            // The tab the remote moves to along the bar is shown at once, without OK (as on the TV's own home screen);
+            // the focus only passing through the bar (Up from a page) opens nothing.
+            .onFocusChanged { if (it.isFocused && !selected && browsing()) onReach() }
             .semantics {
                 contentDescription = label
                 this.selected = selected

@@ -410,6 +410,12 @@ class FocusMemory(key: String? = null) {
         restore = null
     }
 
+    /** The page's first item ([focusMemory]'s initial), where the focus goes on a page entered from the top bar. */
+    internal var first: String? = null
+
+    /** Where the focus goes into the page from the top bar (OK on its tab): [last] while on screen, else [first]. */
+    fun entry(): FocusRequester? = lastOnScreen() ?: first?.let { requesters[it] }
+
     /** The items on screen that keep a key, to give the focus back to [last] at once (down from the top bar). */
     private val requesters = HashMap<String, FocusRequester>()
 
@@ -484,7 +490,7 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
     LaunchedEffect(restoring, television, mode, memory?.drops) {
         val wanted = when {
             // The remote moving along the tabs stays on the bar while each page opens.
-            bar?.hasFocus == true -> false
+            bar?.browsing == true -> false
             restoring != null -> restoring == key
             else -> television && initial && (memory?.last == null || !memory.chosen)
         }
@@ -495,7 +501,8 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
     val scope = rememberCoroutineScope()
     // Gone with the focus, unless it was handed on just before ([FocusMemory.handTo]): it then went elsewhere already.
     DisposableEffect(memory) { onDispose { if (focus.held && memory?.last == focus.key) memory?.dropped() } }
-    DisposableEffect(memory, key) {
+    DisposableEffect(memory, key, initial) {
+        if (initial) memory?.first = key
         memory?.attach(key, requester)
         onDispose { memory?.detach(key, requester) }
     }

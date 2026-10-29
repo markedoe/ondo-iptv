@@ -372,10 +372,10 @@ private fun PlaylistCard(playlist: PlaylistSummary, refreshing: Boolean, actions
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            // One button, Use then Refresh once the playlist is in use: the remote stays on it.
+            // One button, Use then Refresh once the playlist is in use: the remote stays on it. It stays enabled while
+            // the playlist refreshes (a press then does nothing): a disabled button would lose the remote's focus.
             TvActionButton(
-                onClick = { if (playlist.active) actions.onRefresh() else actions.onActivate(playlist.id) },
-                enabled = !(playlist.active && refreshing),
+                onClick = { if (!playlist.active) actions.onActivate(playlist.id) else if (!refreshing) actions.onRefresh() },
                 modifier = first.focusMemory("use:${playlist.id}").testTag(if (playlist.active) "refresh-${playlist.name}" else "use-${playlist.name}"),
             ) {
                 Icon(if (playlist.active) Icons.Rounded.Refresh else Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
