@@ -1,10 +1,16 @@
 package com.markedoe.ondo.data
 
 import android.app.Activity
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -48,11 +54,22 @@ class TipJarTest {
     }
 
     private val activity: Activity = Robolectric.buildActivity(Activity::class.java).get()
+    private val scopes = mutableListOf<CoroutineScope>()
+
+    /** A jar on the test's scheduler: its work runs with advanceUntilIdle (background work would not), cancelled after. */
+    private fun TestScope.jar(billing: TipBilling): TipJar {
+        val scope = CoroutineScope(StandardTestDispatcher(testScheduler) + SupervisorJob())
+        scopes += scope
+        return TipJar(billing, scope)
+    }
+
+    @After
+    fun stop() = scopes.forEach { it.cancel() }
 
     @Test
     fun theThreeTipsShowGooglePlaysPricesInOrder() = runTest {
         val billing = FakeBilling()
-        val jar = TipJar(billing, backgroundScope)
+        val jar = jar(billing)
         assertTrue(jar.state.value.loading)
         jar.start()
         advanceUntilIdle()
@@ -63,7 +80,7 @@ class TipJarTest {
     @Test
     fun withoutGooglePlayTheTipsSaySoAndTryAgainNextTime() = runTest {
         val billing = FakeBilling(connects = false)
-        val jar = TipJar(billing, backgroundScope)
+        val jar = jar(billing)
         jar.start()
         advanceUntilIdle()
         assertTrue(jar.state.value.unavailable)
@@ -76,7 +93,7 @@ class TipJarTest {
 
     @Test
     fun productsGooglePlayDoesNotSellLeaveTheTipsUnavailable() = runTest {
-        val jar = TipJar(FakeBilling(prices = emptyMap()), backgroundScope)
+        val jar = jar(FakeBilling(prices = emptyMap()))
         jar.start()
         advanceUntilIdle()
         assertTrue(jar.state.value.unavailable)
@@ -85,7 +102,7 @@ class TipJarTest {
     @Test
     fun aPaidTipIsConsumedAndThanked() = runTest {
         val billing = FakeBilling()
-        val jar = TipJar(billing, backgroundScope)
+        val jar = jar(billing)
         jar.start()
         advanceUntilIdle()
         jar.purchase(activity, Tip.MEDIUM)
@@ -101,7 +118,7 @@ class TipJarTest {
     @Test
     fun aPendingTipIsNotConsumedYet() = runTest {
         val billing = FakeBilling()
-        val jar = TipJar(billing, backgroundScope)
+        val jar = jar(billing)
         jar.start()
         advanceUntilIdle()
         billing.updates.emit(TipUpdate.Purchased(listOf(TipPurchase("t2", listOf("tip_small"), TipPurchase.State.PENDING))))
@@ -117,7 +134,7 @@ class TipJarTest {
             TipPurchase("waiting", listOf("tip_small"), TipPurchase.State.PENDING),
             TipPurchase("other", listOf("something_else"), TipPurchase.State.PURCHASED),
         ))
-        val jar = TipJar(billing, backgroundScope)
+        val jar = jar(billing)
         jar.start()
         advanceUntilIdle()
         assertEquals(listOf("old"), billing.consumed)
@@ -127,7 +144,7 @@ class TipJarTest {
     @Test
     fun aCancelledTipSaysNothingAndAFailedOneSaysSo() = runTest {
         val billing = FakeBilling()
-        val jar = TipJar(billing, backgroundScope)
+        val jar = jar(billing)
         jar.start()
         advanceUntilIdle()
         billing.updates.emit(TipUpdate.Cancelled)
@@ -141,7 +158,7 @@ class TipJarTest {
     @Test
     fun aTipThatCannotBeConsumedIsNotThanked() = runTest {
         val billing = FakeBilling(consumes = false)
-        val jar = TipJar(billing, backgroundScope)
+        val jar = jar(billing)
         jar.start()
         advanceUntilIdle()
         billing.updates.emit(TipUpdate.Purchased(listOf(TipPurchase("t3", listOf("tip_small"), TipPurchase.State.PURCHASED))))
@@ -152,7 +169,7 @@ class TipJarTest {
     @Test
     fun aTipThatCannotOpenGooglePlaySaysSo() = runTest {
         val billing = FakeBilling()
-        val jar = TipJar(billing, backgroundScope)
+        val jar = jar(billing)
         jar.start()
         advanceUntilIdle()
         billing.prices = emptyMap()
