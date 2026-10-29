@@ -2,6 +2,7 @@ package com.markedoe.ondo.ui.screens
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -53,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -61,6 +63,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
@@ -184,6 +187,12 @@ fun SearchScreen(
                     ListItem(
                         headlineContent = { Text(row.channel.name) },
                         supportingContent = row.nowTitle?.let { { Text(it) } },
+                        leadingContent = {
+                            Box(
+                                Modifier.size(width = 72.dp, height = 48.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(6.dp),
+                                contentAlignment = Alignment.Center,
+                            ) { ChannelLogo(url = row.channel.logoUrl, name = row.channel.name) }
+                        },
                         modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onPlayChannel(row) }.padding(horizontal = metrics.gutter - 16.dp),
                     )
                 }

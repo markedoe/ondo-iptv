@@ -142,6 +142,10 @@ def draw_logo(channel: dict) -> str:
     lines = textwrap.wrap(channel["name"].upper(), width=12)
     font_size = 64 if len(lines) == 1 else 52
     font = ImageFont.truetype(FONT, font_size)
+    # Smaller letters until the longest line fits, with a margin on each side.
+    while max(draw.textlength(line, font=font) for line in lines) > size[0] - 56:
+        font_size -= 2
+        font = ImageFont.truetype(FONT, font_size)
     heights = [draw.textbbox((0, 0), line, font=font)[3] for line in lines]
     total = sum(heights) + 10 * (len(lines) - 1)
     y = (size[1] - total) / 2
