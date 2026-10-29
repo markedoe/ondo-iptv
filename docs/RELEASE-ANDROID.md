@@ -79,11 +79,12 @@ and rejected by the leak guard (`.claude/hooks/leak_guard.py`).
 ## D. Store listing and declarations (Play Console → *Monitor and improve* / *Policy and programs*)
 
 The store listing (title, descriptions, icon, feature graphic, phone, tablet and TV screenshots, TV banner, in
-English and French; the app itself is in seven languages, see the README) is uploaded by fastlane from
+in the app's seven languages: English, French, Spanish, Portuguese, Chinese, Arabic and Hindi) is uploaded by fastlane from
 `fastlane/metadata-android/`; the screenshots are produced by the
-Roborazzi tests on every release. The release notes, `fastlane/metadata-android/en-US/changelogs/default.txt`
-and `fr-FR/changelogs/default.txt` (500 characters at most, checked by the *Android* workflow), are sent with
-every release: update both before tagging. The rest is declared once in the console, in the *Set up your app*
+Roborazzi tests on every release. The release notes, `fastlane/metadata-android/<language>/changelogs/default.txt`
+(500 characters at most, checked by the *Android* workflow and `check_app_store.py`), are sent with every release
+that carries the listing (a tag): update every language before tagging. The internal builds of a push send the
+build alone, without notes: a language the listing does not have yet would make Google Play refuse the release. The rest is declared once in the console, in the *Set up your app*
 section of the dashboard:
 
 ### D1. Privacy policy

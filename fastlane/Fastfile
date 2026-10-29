@@ -482,7 +482,9 @@ platform :android do
       skip_upload_metadata: skip_listing,
       skip_upload_images: skip_listing,
       skip_upload_screenshots: skip_listing || !File.directory?(File.expand_path("metadata-android/en-US/images/phoneScreenshots", __dir__)),
-      skip_upload_changelogs: false,
+      # Release notes only with the listing: a language the listing does not have yet (a new translation, uploaded by
+      # the next tag) would make Google Play refuse the release.
+      skip_upload_changelogs: skip_listing,
       # A tag's release must reach review, or the run fails saying why (fastlane would otherwise commit it unsent).
       rescue_changes_not_sent_for_review: ENV.fetch("TRACK", "internal") == "internal"
     )

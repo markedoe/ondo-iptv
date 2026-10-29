@@ -80,12 +80,13 @@ par git et refusés par le garde anti-fuite (`.claude/hooks/leak_guard.py`).
 ## D. Fiche et déclarations (Play Console → *Surveiller et améliorer* / *Règles et programmes*)
 
 La fiche (titre, descriptions, icône, image de présentation, captures téléphone, tablettes et TV, bannière TV,
-en anglais et en français ; l'app elle-même est en sept langues, voir le README) est envoyée par fastlane depuis
+dans les sept langues de l'app : anglais, français, espagnol, portugais, chinois, arabe et hindi) est envoyée par fastlane depuis
 `fastlane/metadata-android/` ; les captures sont produites
 par les tests Roborazzi à chaque release. Les notes de version,
-`fastlane/metadata-android/en-US/changelogs/default.txt` et `fr-FR/changelogs/default.txt` (500 caractères au
-plus, vérifiés par le workflow *Android*), partent avec chaque release : mettez les deux à jour avant de poser
-le tag. Le reste se déclare une fois dans la console, section *Configurer votre application* du tableau de
+`fastlane/metadata-android/<langue>/changelogs/default.txt` (500 caractères au plus, vérifiés par le workflow
+*Android* et `check_app_store.py`), partent avec chaque release qui porte la fiche (un tag) : mettez toutes les
+langues à jour avant de poser le tag. Les builds internes d'un push partent seuls, sans notes : une langue que la
+fiche n'a pas encore ferait refuser la release par Google Play. Le reste se déclare une fois dans la console, section *Configurer votre application* du tableau de
 bord :
 
 ### D1. Règles de confidentialité
