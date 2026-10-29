@@ -1,0 +1,405 @@
+{
+ "playlist_name": {
+  "en": "My playlist",
+  "fr": "Ma playlist"
+ },
+ "updated_minutes_ago": 12,
+ "categories": [
+  {
+   "id": "v-en-anim",
+   "type": "movie",
+   "name": "EN | Animation"
+  },
+  {
+   "id": "v-4k",
+   "type": "movie",
+   "name": "4K | Films"
+  },
+  {
+   "id": "v-fr-films",
+   "type": "movie",
+   "name": "FR | Films"
+  },
+  {
+   "id": "s-en-anim",
+   "type": "series",
+   "name": "EN | Animation"
+  }
+ ],
+ "movies": [
+  {
+   "id": "m-bbb",
+   "title": "Big Buck Bunny",
+   "year": 2008,
+   "category": "v-en-anim",
+   "genre": "Animation, Comedy",
+   "rating": 7.2,
+   "minutes": 10,
+   "director": "Sacha Goedegebure",
+   "plot": {
+    "en": "A giant, gentle rabbit takes his revenge on three rodents who spoil his quiet day in the forest.",
+    "fr": "Un lapin géant et paisible se venge de trois rongeurs qui gâchent sa journée tranquille dans la forêt."
+   },
+   "poster": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg",
+    "license": "CC BY 3.0",
+    "author": "Blender Foundation",
+    "file": "Big_buck_bunny_poster_big.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Big_buck_bunny_poster_big.jpg"
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/e/e6/Big.Buck.Bunny.-.Landscape.png",
+    "license": "CC BY 3.0",
+    "author": "Blender Foundation",
+    "file": "Big.Buck.Bunny.-.Landscape.png",
+    "page": "https://commons.wikimedia.org/wiki/File:Big.Buck.Bunny.-.Landscape.png"
+   },
+   "added_days_ago": 2
+  },
+  {
+   "id": "m-sintel",
+   "title": "Sintel",
+   "year": 2010,
+   "category": "v-en-anim",
+   "genre": "Animation, Fantasy",
+   "rating": 7.5,
+   "minutes": 15,
+   "director": "Colin Levy",
+   "cast": "Halina Reijn, Thom Hoffman",
+   "plot": {
+    "en": "A lonely young woman searches the wild lands for the baby dragon she raised and lost.",
+    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu."
+   },
+   "poster": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Sintel_poster.jpg",
+    "license": "CC BY 3.0",
+    "author": "Blender Foundation",
+    "file": "Sintel_poster.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Sintel_poster.jpg"
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Sintel_Poster_Paintover_clean.jpg",
+    "license": "CC BY 3.0",
+    "author": "Durian Team, Blender Foundation",
+    "file": "Sintel_Poster_Paintover_clean.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Sintel_Poster_Paintover_clean.jpg",
+    "focus_y": 0.35
+   },
+   "added_days_ago": 1
+  },
+  {
+   "id": "m-tos",
+   "title": "Tears of Steel",
+   "year": 2012,
+   "category": "v-4k",
+   "genre": "Science Fiction",
+   "rating": 6.4,
+   "minutes": 12,
+   "director": "Ian Hubert",
+   "cast": "Derek de Lint, Sergio Hasselbaink, Vanja Rukavina, Denise Rebergen",
+   "plot": {
+    "en": "In a future Amsterdam, a group of scientists tries to save the world from destructive robots.",
+    "fr": "Dans un Amsterdam futuriste, un groupe de scientifiques tente de sauver le monde de robots destructeurs."
+   },
+   "poster": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/7/70/Tos-poster.png",
+    "license": "CC BY 3.0",
+    "author": "Blender Foundation",
+    "file": "Tos-poster.png",
+    "page": "https://commons.wikimedia.org/wiki/File:Tos-poster.png"
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/9/92/Blendertof3.jpg",
+    "license": "CC BY 3.0",
+    "author": "Blender Foundation, Michael Williamson",
+    "file": "Blendertof3.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Blendertof3.jpg"
+   },
+   "added_days_ago": 4,
+   "container": "mkv"
+  },
+  {
+   "id": "m-cosmos",
+   "title": "Cosmos Laundromat",
+   "year": 2015,
+   "category": "v-en-anim",
+   "genre": "Animation, Drama",
+   "rating": 7.0,
+   "minutes": 12,
+   "director": "Mathieu Auvray",
+   "cast": "Pierre Bokma, Reinout Scholten van Aschat",
+   "plot": {
+    "en": "On a desolate island, a depressed sheep named Franck meets a salesman who offers him the gift of a lifetime.",
+    "fr": "Sur une île désolée, Franck, un mouton déprimé, rencontre un vendeur qui lui offre le cadeau d'une vie."
+   },
+   "poster": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/c/c5/CosmosLaundromatPoster.jpg",
+    "license": "CC BY 4.0",
+    "author": "Andy Goralczyk and the Blender Foundation",
+    "file": "CosmosLaundromatPoster.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:CosmosLaundromatPoster.jpg"
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/2/22/CosmosLaundromat-final-scene.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Blender Foundation",
+    "file": "CosmosLaundromat-final-scene.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:CosmosLaundromat-final-scene.jpg"
+   },
+   "added_days_ago": 6
+  },
+  {
+   "id": "m-spring",
+   "title": "Spring",
+   "year": 2019,
+   "category": "v-4k",
+   "genre": "Animation, Fantasy",
+   "rating": 7.3,
+   "minutes": 8,
+   "director": "Andy Goralczyk",
+   "plot": {
+    "en": "A shepherd girl and her dog face ancient spirits to continue the cycle of life.",
+    "fr": "Une jeune bergère et son chien affrontent des esprits anciens pour que le cycle de la vie continue."
+   },
+   "poster": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/2/25/Spring2019AlphaPosterBlender.jpg",
+    "license": "CC BY 4.0",
+    "author": "Blender Foundation",
+    "file": "Spring2019AlphaPosterBlender.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Spring2019AlphaPosterBlender.jpg"
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/e/e5/SpringOpenMovie-final_scene.jpg",
+    "license": "CC BY-SA 4.0",
+    "author": "Blender Institute",
+    "file": "SpringOpenMovie-final_scene.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:SpringOpenMovie-final_scene.jpg"
+   },
+   "added_days_ago": 3
+  },
+  {
+   "id": "m-ed",
+   "title": "Elephants Dream",
+   "year": 2006,
+   "category": "v-en-anim",
+   "genre": "Animation, Science Fiction",
+   "rating": 6.4,
+   "minutes": 11,
+   "director": "Bassam Kurdali",
+   "cast": "Tygo Gernandt, Cas Jansen",
+   "plot": {
+    "en": "Two men explore the strange machine world of an endless building, each seeing it in his own way.",
+    "fr": "Deux hommes explorent l'étrange monde mécanique d'un bâtiment sans fin, chacun le voyant à sa manière."
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/f/fd/Elephants_Dream_Emo_Proog_s6.jpg",
+    "license": "CC BY 2.5",
+    "author": "Ton Roosendaal et al., Blender Foundation",
+    "file": "Elephants_Dream_Emo_Proog_s6.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Elephants_Dream_Emo_Proog_s6.jpg"
+   },
+   "added_days_ago": 9
+  },
+  {
+   "id": "m-sita",
+   "title": "Sita Sings the Blues",
+   "year": 2008,
+   "category": "v-en-anim",
+   "genre": "Animation, Musical",
+   "rating": 7.6,
+   "minutes": 82,
+   "director": "Nina Paley",
+   "cast": "Annette Hanshaw, Reena Shah, Aseem Chhabra",
+   "plot": {
+    "en": "The epic of the Ramayana told through the songs of Annette Hanshaw, alongside a modern break-up.",
+    "fr": "L'épopée du Ramayana racontée sur les chansons d'Annette Hanshaw, en parallèle d'une rupture d'aujourd'hui."
+   },
+   "poster": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/2/24/Sita_STB_Poster_Agni_A2.png",
+    "license": "CC BY-SA 3.0",
+    "author": "Nina Paley",
+    "file": "Sita_STB_Poster_Agni_A2.png",
+    "page": "https://commons.wikimedia.org/wiki/File:Sita_STB_Poster_Agni_A2.png"
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/f/f7/RavanaSitaPainting.jpg",
+    "license": "CC BY-SA 3.0",
+    "author": "Nina Paley",
+    "file": "RavanaSitaPainting.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:RavanaSitaPainting.jpg"
+   },
+   "added_days_ago": 12
+  },
+  {
+   "id": "m-valkaama",
+   "title": "Valkaama",
+   "year": 2010,
+   "category": "v-fr-films",
+   "genre": "Adventure",
+   "rating": 5.9,
+   "minutes": 90,
+   "plot": {
+    "en": "Two friends set out on a journey to find a mysterious lake that nobody seems to know.",
+    "fr": "Deux amis partent à la recherche d'un lac mystérieux que personne ne semble connaître."
+   },
+   "poster": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/d/dc/Valkaama_poster.png",
+    "license": "CC BY-SA 3.0",
+    "author": "valkaama.com",
+    "file": "Valkaama_poster.png",
+    "page": "https://commons.wikimedia.org/wiki/File:Valkaama_poster.png"
+   },
+   "added_days_ago": 20
+  }
+ ],
+ "series": [
+  {
+   "id": "s-pepper",
+   "title": "Pepper & Carrot",
+   "year": 2014,
+   "category": "s-en-anim",
+   "genre": "Animation, Fantasy",
+   "rating": 8.1,
+   "director": "David Revoy",
+   "plot": {
+    "en": "A young witch and her cat learn the magic of Chaosah, between failed potions and contests.",
+    "fr": "Une jeune sorcière et son chat apprennent la magie de Chaosah, entre potions ratées et concours."
+   },
+   "poster": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/2/29/2016-02-24_vertical-cover_remake_by-David-Revoy.jpg",
+    "license": "CC BY 4.0",
+    "author": "David Revoy",
+    "file": "2016-02-24_vertical-cover_remake_by-David-Revoy.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:2016-02-24_vertical-cover_remake_by-David-Revoy.jpg",
+    "focus_y": 0.2
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/68/2015-12-29_landscape-cover-for-the-website_by-David-Revoy.jpg",
+    "license": "CC BY 4.0",
+    "author": "David Revoy",
+    "file": "2015-12-29_landscape-cover-for-the-website_by-David-Revoy.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:2015-12-29_landscape-cover-for-the-website_by-David-Revoy.jpg"
+   },
+   "added_days_ago": 1,
+   "seasons": [
+    {
+     "number": 1,
+     "episodes": [
+      {
+       "title": "The Potion of Flight",
+       "minutes": 22,
+       "still": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/a/a6/2015-01-20_first_cover-_by-David-Revoy.jpg",
+        "license": "CC BY 4.0",
+        "author": "David Revoy",
+        "file": "2015-01-20_first_cover-_by-David-Revoy.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:2015-01-20_first_cover-_by-David-Revoy.jpg"
+       },
+       "plot": {
+        "en": "Pepper needs one last ingredient for her potion.",
+        "fr": "Il manque un dernier ingrédient à la potion de Pepper."
+       }
+      },
+      {
+       "title": "Rainbow Potions",
+       "minutes": 22,
+       "still": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/d/db/2017-03-14_rainy-days_by-David-Revoy.jpg",
+        "license": "CC BY 4.0",
+        "author": "David Revoy",
+        "file": "2017-03-14_rainy-days_by-David-Revoy.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:2017-03-14_rainy-days_by-David-Revoy.jpg"
+       },
+       "plot": {
+        "en": "Carrot gets curious about the colourful potions.",
+        "fr": "Carrot s'intéresse de trop près aux potions colorées."
+       }
+      },
+      {
+       "title": "The Secret Ingredients",
+       "minutes": 23,
+       "still": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/5/5c/2018-07-01_Adventure_by-David-Revoy.jpg",
+        "license": "CC BY 4.0",
+        "author": "David Revoy",
+        "file": "2018-07-01_Adventure_by-David-Revoy.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:2018-07-01_Adventure_by-David-Revoy.jpg"
+       },
+       "plot": {
+        "en": "A trip to the market of Komona.",
+        "fr": "Une virée au marché de Komona."
+       }
+      },
+      {
+       "title": "Stroke of Genius",
+       "minutes": 21,
+       "still": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/d/d8/2017-10-11_run_by-David-Revoy.jpg",
+        "license": "CC BY 4.0",
+        "author": "David Revoy",
+        "file": "2017-10-11_run_by-David-Revoy.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:2017-10-11_run_by-David-Revoy.jpg"
+       },
+       "plot": {
+        "en": "The night before the contest, Pepper has an idea.",
+        "fr": "La veille du concours, Pepper a une idée."
+       }
+      },
+      {
+       "title": "The Rendezvous",
+       "minutes": 22,
+       "still": {
+        "url": "https://upload.wikimedia.org/wikipedia/commons/1/11/2018-03-28_The-rendezvous_by-David-Revoy.jpg",
+        "license": "CC BY 4.0",
+        "author": "David Revoy",
+        "file": "2018-03-28_The-rendezvous_by-David-Revoy.jpg",
+        "page": "https://commons.wikimedia.org/wiki/File:2018-03-28_The-rendezvous_by-David-Revoy.jpg"
+       },
+       "plot": {
+        "en": "Old friends, new rivals.",
+        "fr": "De vieilles amies, de nouvelles rivales."
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "library": {
+  "watching": [
+   {
+    "id": "s-pepper",
+    "progress": 0.4,
+    "season": 1,
+    "episode": 3
+   },
+   {
+    "id": "m-sita",
+    "progress": 0.55
+   },
+   {
+    "id": "m-tos",
+    "progress": 0.25
+   }
+  ],
+  "my_list": [
+   "m-sintel",
+   "m-spring",
+   "s-pepper"
+  ],
+  "favorite_channels": [
+   "c01",
+   "c04",
+   "c07"
+  ]
+ },
+ "screens": {
+  "movie": "m-sintel",
+  "series": "s-pepper",
+  "search": {
+   "en": "spring",
+   "fr": "spring"
+  },
+  "person": "Colin Levy"
+ }
+}

@@ -22,6 +22,8 @@ import io
 import json
 import pathlib
 import textwrap
+import time
+import urllib.error
 import urllib.request
 
 from PIL import Image, ImageDraw, ImageFont
@@ -36,13 +38,39 @@ POSTER = (400, 600)
 WIDE = (1280, 720)
 
 
-def fetch(url: str, cache: pathlib.Path) -> bytes:
+def thumbnails(url: str) -> list[str]:
+    """Wikimedia Commons asks for its standard thumbnail sizes rather than originals: 1280 px, then 960 px wide."""
+    prefix = "https://upload.wikimedia.org/wikipedia/commons/"
+    if not url.startswith(prefix):
+        return [url]
+    path = url[len(prefix):]
+    name = path.rsplit("/", 1)[1]
+    return [f"{prefix}thumb/{path}/{width}px-{name}" for width in (1280, 960)] + [url]
+
+
+def fetch(url: str, cache: pathlib.Path, attempts: int = 0) -> bytes:
     cache.mkdir(parents=True, exist_ok=True)
     target = cache / hashlib.sha256(url.encode()).hexdigest()
     if not target.exists():
-        request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(request, timeout=60) as response:
-            target.write_bytes(response.read())
+        error = None
+        for candidate in thumbnails(url):
+            request = urllib.request.Request(candidate, headers={"User-Agent": USER_AGENT})
+            try:
+                with urllib.request.urlopen(request, timeout=60) as response:
+                    target.write_bytes(response.read())
+                print(f"  downloaded {candidate}", flush=True)
+                time.sleep(3)
+                break
+            except urllib.error.HTTPError as failure:
+                error = failure
+                if failure.code == 429 and attempts < 6:
+                    # Rate limited: wait and ask again for the same size.
+                    attempts += 1
+                    time.sleep(30)
+                    return fetch(url, cache, attempts)
+                time.sleep(2)
+        else:
+            raise RuntimeError(f"{url}: {error}")
     return target.read_bytes()
 
 
