@@ -1,1 +1,6 @@
-Novo visual em preto e branco: abas no topo, imagem do Início emoldurada, cartões que sobem sob o controle. Páginas de títulos com botões redondos; TV ao vivo mostra o canal escolhido junto à lista. O player indica se o som surround chega ao seu amplificador direto. Legendas e Áudio por idioma, saltos de 10 s, timer de desligamento, trailers. Sincronizar nesta rede: listas, Minha lista, progresso e token do TMDb. Com o TMDb: Em alta, fotos do elenco, filmografias. Ocultar filmes assistidos.
+• Deixar uma gorjeta (Configurações): opcional, pelo Google Play; não libera nada
+• Novo visual preto e cinza; na TV, abas na barra superior
+• Token do TMDb: em alta, fotos do elenco, trailers, pessoas
+• Player: replay, lista de Canais, tamanho das legendas, A seguir, a taxa de quadros própria do filme na TV
+• O Guia de TV é mantido por 6 horas; Pesquisar tem uma página própria
+• Muitas correções

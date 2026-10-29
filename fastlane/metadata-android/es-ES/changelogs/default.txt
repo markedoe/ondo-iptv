@@ -1,1 +1,6 @@
-Nuevo aspecto en blanco y negro: pestañas arriba, imagen de Inicio enmarcada, tarjetas que suben bajo el mando. Fichas con botones redondos; TV en directo muestra el canal junto a la lista. El reproductor indica si el sonido envolvente llega al amplificador. Subtítulos y Audio por idioma, saltos de 10 segundos, temporizador de apagado, tráilers. Sincronizar en esta red: listas, Mi lista, progreso y token de TMDb. Con TMDb: Tendencias, fotos del reparto, filmografías. Ocultar películas vistas.
+• Dejar una propina (Ajustes): opcional, a través de Google Play; no desbloquea nada
+• Nuevo aspecto negro y gris; en TV, pestañas en la barra superior
+• Token de TMDb: tendencias, fotos del reparto, tráilers, personas
+• Reproductor: diferido, lista de Canales, tamaño de los subtítulos, A continuación, la frecuencia de imagen propia de la película en TV
+• La Guía de TV se conserva 6 horas; Buscar tiene su propia página
+• Numerosas correcciones

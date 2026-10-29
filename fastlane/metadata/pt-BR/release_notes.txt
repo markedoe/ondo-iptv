@@ -1,20 +1,7 @@
-• Sincronizar nesta rede (Configurações, desativado até você ativar): listas, Minha lista, coleções e progresso ficam iguais nos dispositivos Ondo da sua rede doméstica, diretamente entre eles, nunca pela internet.
-• Ocultar filmes assistidos (Configurações e menu das grades de filmes): os filmes que você terminou saem de Filmes, Início e Títulos semelhantes.
-• No iPhone e no iPad, filmes e episódios MKV são reproduzidos com o player do sistema quando ele consegue decodificá-los: HDR10, HLG e Dolby Vision aparecem, o Dolby Atmos toca e o Picture in Picture funciona. O VLC reproduz os demais.
-• Player, Mais, Relatar um problema…: um relatório da reprodução (tempos de início e de salto, travamentos e sua causa, estatísticas; sem endereço de transmissão, login nem título) para copiar, compartilhar ou enviar em uma issue do GitHub.
-• Filmes e séries começam mais rápido e voltam mais cedo depois de um salto; a imagem acompanha o seu dedo enquanto você arrasta a barra de tempo.
-• Configurações, Player: escolha o buffer para a TV ao vivo e para filmes e séries (Automático, ou de 1 a 10 segundos). Um buffer maior esconde interrupções mais longas do provedor.
-• Com o VLC, os canais ao vivo travam menos: o buffer cresce sozinho depois que a transmissão do provedor para por um instante, e as Estatísticas da transmissão dizem se um travamento vem da rede ou do player.
-• Mais rápido e fluido em todo lugar: listas grandes abrem mais cedo, a busca funciona em segundo plano, listas longas rolam sem engasgos e o guia de TV abre na hora com milhares de canais.
-• Mac: tela cheia, pelo botão, pela tecla F ou com um clique duplo; o AirPlay envia o vídeo para a TV, não só o som.
-• Retomar começa exatamente de onde você parou, e uma pausa feita enquanto um filme abre continua pausada.
-• Encontre legendas online no player: OpenSubtitles, SubDL e SubSource com sua própria chave, Addic7ed para séries sem chave.
-• O Ondo agora fala espanhol, português, chinês (simplificado), árabe e hindi, além de inglês e francês.
-• Minha lista agora é uma aba no iPhone, com seus filmes, séries e canais em um só lugar; suas próprias listas agora se chamam coleções.
-• Toque em um ator, diretor, gênero, ano ou prêmio na página de um filme ou série para ver os títulos da sua lista que têm isso em comum; a busca encontra atores e diretores pelo nome.
-• A busca pode ser filtrada por ano de lançamento, e as grades são ordenadas por data de lançamento.
-• Oculte de uma vez um idioma ou país inteiro (nomes de categoria que começam com |PT|, FR:…), um estilo (mangá e anime, infantil, documentários…) ou qualquer palavra dos nomes de categoria; as categorias adicionadas depois seguem a regra.
-• Prêmios e seleções de festivais (Cannes, Oscar, Berlim, Veneza, César…) nas páginas de filmes, uma linha de Filmes premiados e um filtro de busca por festival ou cerimônia.
-• O Início mostra quando a lista foi atualizada pela última vez, acima do nome dela.
-• Com seu token do TMDb: páginas sem imagem de fundo mostram a do TMDb (ou, se não houver, o pôster desfocado), e o trailer do TMDb quando o provedor não fornece nenhum; as notas mostram o número de votos, e atores e diretores, a foto. O que o TMDb responde fica no dispositivo: as páginas o mostram na hora, inclusive offline.
-• Configurações aceita seu “API Read Access Token” (ou API Key) do TMDb, com o nome que ele tem no TMDb, e o verifica com o TMDb antes de salvar; “Idioma do app” abre a página do sistema onde se escolhe o idioma do Ondo.
+• Deixar uma gorjeta (Configurações): três gorjetas opcionais pela App Store. Elas não liberam nada: tudo no Ondo continua disponível para todos.
+• Um novo visual em preto e cinza, sempre escuro: os títulos em destaque em uma moldura arredondada no Início, cartões que se elevam sob o ponteiro, o foco ou um toque, o formato em um selo com contorno.
+• Com o seu token do TMDb: a página de um título mostra as fotos do elenco em uma fileira e o trailer quando o seu provedor não fornece nenhum, a nota do provedor e a do TMDb lado a lado com o número de votos, e as respostas do TMDb ficam guardadas no seu dispositivo, então as páginas abrem na hora da próxima vez.
+• Sincronizar nesta rede também envia o seu token do TMDb para os seus outros dispositivos.
+• As categorias marcadas com QC passam a se chamar Quebec, nos sete idiomas do app.
+• As playlists salvas em Windows-1252 ou UTF-16 são lidas como foram escritas; os guias de TV com falhas comuns não interrompem mais o carregamento, e os guias grandes usam menos memória.
+• Muitas correções e melhorias de velocidade.
