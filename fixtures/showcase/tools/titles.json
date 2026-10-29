@@ -24,6 +24,11 @@
    "id": "s-en-anim",
    "type": "series",
    "name": "EN | Animation"
+  },
+  {
+   "id": "v-classics",
+   "type": "movie",
+   "name": "FR | Classiques"
   }
  ],
  "movies": [
@@ -252,6 +257,50 @@
    "added_days_ago": 20,
    "director": "Tim Baumann",
    "cast": "Matylda Baczyńska, Rafał Fudalej, Maciej Maciejewski"
+  },
+  {
+   "id": "m-impossible",
+   "title": "Le Voyage à travers l'impossible",
+   "year": 1904,
+   "category": "v-classics",
+   "genre": "Fantasy, Adventure",
+   "rating": 7.3,
+   "minutes": 20,
+   "director": "Georges Méliès",
+   "plot": {
+    "en": "Members of a geographical society set off on a fantastic journey by train, car and submarine, all the way to the sun.",
+    "fr": "Les membres d'une société de géographie partent pour un voyage fantastique en train, en automobile et en sous-marin, jusqu'au soleil."
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/0/02/Set_from_Voyage_a_Travers_L%27Impossible.jpg",
+    "license": "Public domain",
+    "author": "Georges Méliès",
+    "file": "Set_from_Voyage_a_Travers_L'Impossible.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Set_from_Voyage_a_Travers_L'Impossible.jpg"
+   },
+   "added_days_ago": 8
+  },
+  {
+   "id": "m-fairies",
+   "title": "Le Royaume des fées",
+   "year": 1903,
+   "category": "v-classics",
+   "genre": "Fantasy",
+   "rating": 7.0,
+   "minutes": 17,
+   "director": "Georges Méliès",
+   "plot": {
+    "en": "A prince sets out to rescue his bride from a wicked witch, through storms, the depths of the sea and an enchanted kingdom.",
+    "fr": "Un prince part délivrer sa fiancée d'une méchante sorcière, à travers les tempêtes, le fond des mers et un royaume enchanté."
+   },
+   "backdrop": {
+    "url": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Royaume_des_fees.jpg",
+    "license": "Public domain",
+    "author": "Georges Méliès",
+    "file": "Royaume_des_fees.jpg",
+    "page": "https://commons.wikimedia.org/wiki/File:Royaume_des_fees.jpg"
+   },
+   "added_days_ago": 10
   }
  ],
  "series": [
@@ -402,6 +451,6 @@
    "en": "s",
    "fr": "s"
   },
-  "person": "Colin Levy"
+  "person": "Georges Méliès"
  }
 }

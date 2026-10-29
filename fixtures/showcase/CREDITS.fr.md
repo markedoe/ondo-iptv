@@ -18,6 +18,8 @@ Les captures des fiches App Store et Google Play montrent un catalogue de démon
 | Sita Sings the Blues | image de fond | Nina Paley | CC BY-SA 3.0 | [RavanaSitaPainting.jpg](https://commons.wikimedia.org/wiki/File:RavanaSitaPainting.jpg) |
 | Sita Sings the Blues | affiche | Nina Paley | CC BY-SA 3.0 | [Sita_STB_Poster_Agni_A2.png](https://commons.wikimedia.org/wiki/File:Sita_STB_Poster_Agni_A2.png) |
 | Valkaama | affiche | valkaama.com | CC BY-SA 3.0 | [Valkaama_poster.png](https://commons.wikimedia.org/wiki/File:Valkaama_poster.png) |
+| Le Voyage à travers l'impossible | image de fond | Georges Méliès | Public domain | [Set_from_Voyage_a_Travers_L'Impossible.jpg](https://commons.wikimedia.org/wiki/File:Set_from_Voyage_a_Travers_L'Impossible.jpg) |
+| Le Royaume des fées | image de fond | Georges Méliès | Public domain | [Royaume_des_fees.jpg](https://commons.wikimedia.org/wiki/File:Royaume_des_fees.jpg) |
 | Pepper & Carrot | image de fond | David Revoy | CC BY 4.0 | [2015-12-29_landscape-cover-for-the-website_by-David-Revoy.jpg](https://commons.wikimedia.org/wiki/File:2015-12-29_landscape-cover-for-the-website_by-David-Revoy.jpg) |
 | Pepper & Carrot | affiche | David Revoy | CC BY 4.0 | [2016-02-24_vertical-cover_remake_by-David-Revoy.jpg](https://commons.wikimedia.org/wiki/File:2016-02-24_vertical-cover_remake_by-David-Revoy.jpg) |
 | Pepper & Carrot – The Potion of Flight | image d'épisode | David Revoy | CC BY 4.0 | [2015-01-20_first_cover-_by-David-Revoy.jpg](https://commons.wikimedia.org/wiki/File:2015-01-20_first_cover-_by-David-Revoy.jpg) |
