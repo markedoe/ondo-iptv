@@ -1,0 +1,1199 @@
+{
+ "playlist_name": {
+  "en": "My playlist",
+  "fr": "Ma playlist"
+ },
+ "updated_minutes_ago": 12,
+ "programme_minutes": 60,
+ "categories": [
+  {
+   "id": "v-en-anim",
+   "type": "movie",
+   "name": "EN | Animation"
+  },
+  {
+   "id": "v-4k",
+   "type": "movie",
+   "name": "4K | Films"
+  },
+  {
+   "id": "v-eu-films",
+   "type": "movie",
+   "name": "EU | Films"
+  },
+  {
+   "id": "s-en-anim",
+   "type": "series",
+   "name": "EN | Animation"
+  },
+  {
+   "id": "l-fr-info",
+   "type": "live",
+   "name": "FR | Infos"
+  },
+  {
+   "id": "l-fr-general",
+   "type": "live",
+   "name": "FR | Généralistes"
+  },
+  {
+   "id": "l-fr-sport",
+   "type": "live",
+   "name": "FR | Sport"
+  },
+  {
+   "id": "l-fr-cinema",
+   "type": "live",
+   "name": "FR | Cinéma"
+  },
+  {
+   "id": "l-fr-kids",
+   "type": "live",
+   "name": "FR | Jeunesse"
+  },
+  {
+   "id": "l-fr-docs",
+   "type": "live",
+   "name": "FR | Découverte"
+  },
+  {
+   "id": "l-qc",
+   "type": "live",
+   "name": "QC | Québec"
+  },
+  {
+   "id": "l-uk",
+   "type": "live",
+   "name": "UK | News & Entertainment"
+  },
+  {
+   "id": "l-de",
+   "type": "live",
+   "name": "DE | Deutschland"
+  },
+  {
+   "id": "l-es",
+   "type": "live",
+   "name": "ES | España"
+  },
+  {
+   "id": "l-4k",
+   "type": "live",
+   "name": "4K | UHD"
+  }
+ ],
+ "movies": [
+  {
+   "id": "m-bbb",
+   "title": "Big Buck Bunny",
+   "year": 2008,
+   "category": "v-en-anim",
+   "genre": "Animation, Comedy",
+   "rating": 7.2,
+   "minutes": 10,
+   "director": "Sacha Goedegebure",
+   "plot": {
+    "en": "A giant, gentle rabbit takes his revenge on three rodents who spoil his quiet day in the forest.",
+    "fr": "Un lapin géant et paisible se venge de trois rongeurs qui gâchent sa journée tranquille dans la forêt."
+   },
+   "added_days_ago": 2,
+   "backdrop": "m-bbb-backdrop.jpg",
+   "poster": "m-bbb-poster.jpg"
+  },
+  {
+   "id": "m-sintel",
+   "title": "Sintel",
+   "year": 2010,
+   "category": "v-en-anim",
+   "genre": "Animation, Fantasy",
+   "rating": 7.5,
+   "minutes": 15,
+   "director": "Colin Levy",
+   "cast": "Halina Reijn, Thom Hoffman",
+   "plot": {
+    "en": "A lonely young woman searches the wild lands for the baby dragon she raised and lost.",
+    "fr": "Une jeune femme solitaire parcourt des terres sauvages à la recherche du bébé dragon qu'elle a élevé puis perdu."
+   },
+   "added_days_ago": 1,
+   "backdrop": "m-sintel-backdrop.jpg",
+   "poster": "m-sintel-poster.jpg"
+  },
+  {
+   "id": "m-tos",
+   "title": "Tears of Steel",
+   "year": 2012,
+   "category": "v-4k",
+   "genre": "Science Fiction",
+   "rating": 6.4,
+   "minutes": 12,
+   "director": "Ian Hubert",
+   "cast": "Derek de Lint, Sergio Hasselbaink, Vanja Rukavina, Denise Rebergen",
+   "plot": {
+    "en": "In a future Amsterdam, a group of scientists tries to save the world from destructive robots.",
+    "fr": "Dans un Amsterdam futuriste, un groupe de scientifiques tente de sauver le monde de robots destructeurs."
+   },
+   "added_days_ago": 4,
+   "container": "mkv",
+   "backdrop": "m-tos-backdrop.jpg",
+   "poster": "m-tos-poster.jpg"
+  },
+  {
+   "id": "m-cosmos",
+   "title": "Cosmos Laundromat",
+   "year": 2015,
+   "category": "v-en-anim",
+   "genre": "Animation, Drama",
+   "rating": 7.0,
+   "minutes": 12,
+   "director": "Mathieu Auvray",
+   "cast": "Pierre Bokma, Reinout Scholten van Aschat",
+   "plot": {
+    "en": "On a desolate island, a depressed sheep named Franck meets a salesman who offers him the gift of a lifetime.",
+    "fr": "Sur une île désolée, Franck, un mouton déprimé, rencontre un vendeur qui lui offre le cadeau d'une vie."
+   },
+   "added_days_ago": 6,
+   "backdrop": "m-cosmos-backdrop.jpg",
+   "poster": "m-cosmos-poster.jpg"
+  },
+  {
+   "id": "m-spring",
+   "title": "Spring",
+   "year": 2019,
+   "category": "v-4k",
+   "genre": "Animation, Fantasy",
+   "rating": 7.3,
+   "minutes": 8,
+   "director": "Andy Goralczyk",
+   "plot": {
+    "en": "A shepherd girl and her dog face ancient spirits to continue the cycle of life.",
+    "fr": "Une jeune bergère et son chien affrontent des esprits anciens pour que le cycle de la vie continue."
+   },
+   "added_days_ago": 3,
+   "backdrop": "m-spring-backdrop.jpg",
+   "poster": "m-spring-poster.jpg"
+  },
+  {
+   "id": "m-ed",
+   "title": "Elephants Dream",
+   "year": 2006,
+   "category": "v-en-anim",
+   "genre": "Animation, Science Fiction",
+   "rating": 6.4,
+   "minutes": 11,
+   "director": "Bassam Kurdali",
+   "cast": "Tygo Gernandt, Cas Jansen",
+   "plot": {
+    "en": "Two men explore the strange machine world of an endless building, each seeing it in his own way.",
+    "fr": "Deux hommes explorent l'étrange monde mécanique d'un bâtiment sans fin, chacun le voyant à sa manière."
+   },
+   "added_days_ago": 9,
+   "backdrop": "m-ed-backdrop.jpg",
+   "poster": "m-ed-poster.jpg"
+  },
+  {
+   "id": "m-sita",
+   "title": "Sita Sings the Blues",
+   "year": 2008,
+   "category": "v-en-anim",
+   "genre": "Animation, Musical",
+   "rating": 7.6,
+   "minutes": 82,
+   "director": "Nina Paley",
+   "cast": "Annette Hanshaw, Reena Shah, Aseem Chhabra",
+   "plot": {
+    "en": "The epic of the Ramayana told through the songs of Annette Hanshaw, alongside a modern break-up.",
+    "fr": "L'épopée du Ramayana racontée sur les chansons d'Annette Hanshaw, en parallèle d'une rupture d'aujourd'hui."
+   },
+   "added_days_ago": 12,
+   "backdrop": "m-sita-backdrop.jpg",
+   "poster": "m-sita-poster.jpg"
+  },
+  {
+   "id": "m-valkaama",
+   "title": "Valkaama",
+   "year": 2010,
+   "category": "v-eu-films",
+   "genre": "Adventure",
+   "rating": 5.9,
+   "minutes": 90,
+   "plot": {
+    "en": "Two friends set out on a journey to find a mysterious lake that nobody seems to know.",
+    "fr": "Deux amis partent à la recherche d'un lac mystérieux que personne ne semble connaître."
+   },
+   "added_days_ago": 20,
+   "director": "Tim Baumann",
+   "cast": "Matylda Baczyńska, Rafał Fudalej, Maciej Maciejewski",
+   "poster": "m-valkaama-poster.jpg"
+  }
+ ],
+ "series": [
+  {
+   "id": "s-pepper",
+   "title": "Pepper & Carrot",
+   "year": 2014,
+   "category": "s-en-anim",
+   "genre": "Animation, Fantasy",
+   "rating": 8.1,
+   "director": "David Revoy",
+   "plot": {
+    "en": "A young witch and her cat learn the magic of Chaosah, between failed potions and contests.",
+    "fr": "Une jeune sorcière et son chat apprennent la magie de Chaosah, entre potions ratées et concours."
+   },
+   "added_days_ago": 1,
+   "backdrop": "s-pepper-backdrop.jpg",
+   "poster": "s-pepper-poster.jpg",
+   "seasons": [
+    {
+     "number": 1,
+     "episodes": [
+      {
+       "title": "The Potion of Flight",
+       "minutes": 22,
+       "plot": {
+        "en": "Pepper needs one last ingredient for her potion.",
+        "fr": "Il manque un dernier ingrédient à la potion de Pepper."
+       },
+       "still": "s-pepper-s1e1.jpg"
+      },
+      {
+       "title": "Rainbow Potions",
+       "minutes": 22,
+       "plot": {
+        "en": "Carrot gets curious about the colourful potions.",
+        "fr": "Carrot s'intéresse de trop près aux potions colorées."
+       },
+       "still": "s-pepper-s1e2.jpg"
+      },
+      {
+       "title": "The Secret Ingredients",
+       "minutes": 23,
+       "plot": {
+        "en": "A trip to the market of Komona.",
+        "fr": "Une virée au marché de Komona."
+       },
+       "still": "s-pepper-s1e3.jpg"
+      },
+      {
+       "title": "Stroke of Genius",
+       "minutes": 21,
+       "plot": {
+        "en": "The night before the contest, Pepper has an idea.",
+        "fr": "La veille du concours, Pepper a une idée."
+       },
+       "still": "s-pepper-s1e4.jpg"
+      },
+      {
+       "title": "The Rendezvous",
+       "minutes": 22,
+       "plot": {
+        "en": "Old friends, new rivals.",
+        "fr": "De vieilles amies, de nouvelles rivales."
+       },
+       "still": "s-pepper-s1e5.jpg"
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "channels": [
+  {
+   "id": "c01",
+   "number": 1,
+   "name": "Le Fil Info",
+   "category": "l-fr-info",
+   "logo": "logo-c01.png",
+   "programmes": [
+    {
+     "fr": "Météo",
+     "en": "Weather"
+    },
+    {
+     "fr": "L'invité",
+     "en": "The Interview"
+    },
+    {
+     "fr": "Le débat",
+     "en": "The Debate"
+    },
+    {
+     "fr": "Économie",
+     "en": "Business"
+    },
+    {
+     "fr": "Le 18 h",
+     "en": "Evening News"
+    },
+    {
+     "fr": "Grand reportage",
+     "en": "Special Report"
+    },
+    {
+     "fr": "Le journal de la nuit",
+     "en": "Late News"
+    },
+    {
+     "fr": "Le journal",
+     "en": "The News"
+    }
+   ]
+  },
+  {
+   "id": "c02",
+   "number": 2,
+   "name": "Info 24",
+   "category": "l-fr-info",
+   "logo": "logo-c02.png",
+   "programmes": [
+    {
+     "fr": "L'invité",
+     "en": "The Interview"
+    },
+    {
+     "fr": "Le débat",
+     "en": "The Debate"
+    },
+    {
+     "fr": "Économie",
+     "en": "Business"
+    },
+    {
+     "fr": "Le 18 h",
+     "en": "Evening News"
+    },
+    {
+     "fr": "Grand reportage",
+     "en": "Special Report"
+    },
+    {
+     "fr": "Le journal de la nuit",
+     "en": "Late News"
+    },
+    {
+     "fr": "Le journal",
+     "en": "The News"
+    },
+    {
+     "fr": "Météo",
+     "en": "Weather"
+    }
+   ]
+  },
+  {
+   "id": "c03",
+   "number": 3,
+   "name": "Météo Plus",
+   "category": "l-fr-info",
+   "logo": "logo-c03.png",
+   "programmes": [
+    {
+     "fr": "Le débat",
+     "en": "The Debate"
+    },
+    {
+     "fr": "Économie",
+     "en": "Business"
+    },
+    {
+     "fr": "Le 18 h",
+     "en": "Evening News"
+    },
+    {
+     "fr": "Grand reportage",
+     "en": "Special Report"
+    },
+    {
+     "fr": "Le journal de la nuit",
+     "en": "Late News"
+    },
+    {
+     "fr": "Le journal",
+     "en": "The News"
+    },
+    {
+     "fr": "Météo",
+     "en": "Weather"
+    },
+    {
+     "fr": "L'invité",
+     "en": "The Interview"
+    }
+   ]
+  },
+  {
+   "id": "c04",
+   "number": 4,
+   "name": "Canal Azur",
+   "category": "l-fr-general",
+   "logo": "logo-c04.png",
+   "programmes": [
+    {
+     "fr": "Variétés",
+     "en": "Variety Show"
+    },
+    {
+     "fr": "Téléfilm : L'Été des orages",
+     "en": "TV Movie: Summer Storms"
+    },
+    {
+     "fr": "Talk-show",
+     "en": "Talk Show"
+    },
+    {
+     "fr": "Rediffusion",
+     "en": "Replay"
+    },
+    {
+     "fr": "Le jeu des mots",
+     "en": "Word Game"
+    },
+    {
+     "fr": "Cuisine du marché",
+     "en": "Market Kitchen"
+    },
+    {
+     "fr": "Feuilleton : La Maison du port",
+     "en": "Drama: Harbour House"
+    },
+    {
+     "fr": "Magazine santé",
+     "en": "Health Magazine"
+    }
+   ]
+  },
+  {
+   "id": "c05",
+   "number": 5,
+   "name": "Horizon TV",
+   "category": "l-fr-general",
+   "logo": "logo-c05.png",
+   "programmes": [
+    {
+     "fr": "Téléfilm : L'Été des orages",
+     "en": "TV Movie: Summer Storms"
+    },
+    {
+     "fr": "Talk-show",
+     "en": "Talk Show"
+    },
+    {
+     "fr": "Rediffusion",
+     "en": "Replay"
+    },
+    {
+     "fr": "Le jeu des mots",
+     "en": "Word Game"
+    },
+    {
+     "fr": "Cuisine du marché",
+     "en": "Market Kitchen"
+    },
+    {
+     "fr": "Feuilleton : La Maison du port",
+     "en": "Drama: Harbour House"
+    },
+    {
+     "fr": "Magazine santé",
+     "en": "Health Magazine"
+    },
+    {
+     "fr": "Variétés",
+     "en": "Variety Show"
+    }
+   ]
+  },
+  {
+   "id": "c06",
+   "number": 6,
+   "name": "Rive Gauche",
+   "category": "l-fr-general",
+   "logo": "logo-c06.png",
+   "programmes": [
+    {
+     "fr": "Talk-show",
+     "en": "Talk Show"
+    },
+    {
+     "fr": "Rediffusion",
+     "en": "Replay"
+    },
+    {
+     "fr": "Le jeu des mots",
+     "en": "Word Game"
+    },
+    {
+     "fr": "Cuisine du marché",
+     "en": "Market Kitchen"
+    },
+    {
+     "fr": "Feuilleton : La Maison du port",
+     "en": "Drama: Harbour House"
+    },
+    {
+     "fr": "Magazine santé",
+     "en": "Health Magazine"
+    },
+    {
+     "fr": "Variétés",
+     "en": "Variety Show"
+    },
+    {
+     "fr": "Téléfilm : L'Été des orages",
+     "en": "TV Movie: Summer Storms"
+    }
+   ]
+  },
+  {
+   "id": "c07",
+   "number": 7,
+   "name": "Stade 1",
+   "category": "l-fr-sport",
+   "logo": "logo-c07.png",
+   "programmes": [
+    {
+     "fr": "Sport soir",
+     "en": "Sport Tonight"
+    },
+    {
+     "fr": "Football : le multiplex",
+     "en": "Football: Live Round-up"
+    },
+    {
+     "fr": "Rugby : avant-match",
+     "en": "Rugby: Pre-match"
+    },
+    {
+     "fr": "Tennis : quart de finale",
+     "en": "Tennis: Quarter-final"
+    },
+    {
+     "fr": "Le résumé",
+     "en": "Highlights"
+    },
+    {
+     "fr": "Basket : direct",
+     "en": "Basketball: Live"
+    },
+    {
+     "fr": "Le club du dimanche",
+     "en": "Sunday Club"
+    },
+    {
+     "fr": "Cyclisme : l'étape",
+     "en": "Cycling: The Stage"
+    }
+   ]
+  },
+  {
+   "id": "c08",
+   "number": 8,
+   "name": "Arena Sport",
+   "category": "l-fr-sport",
+   "logo": "logo-c08.png",
+   "programmes": [
+    {
+     "fr": "Football : le multiplex",
+     "en": "Football: Live Round-up"
+    },
+    {
+     "fr": "Rugby : avant-match",
+     "en": "Rugby: Pre-match"
+    },
+    {
+     "fr": "Tennis : quart de finale",
+     "en": "Tennis: Quarter-final"
+    },
+    {
+     "fr": "Le résumé",
+     "en": "Highlights"
+    },
+    {
+     "fr": "Basket : direct",
+     "en": "Basketball: Live"
+    },
+    {
+     "fr": "Le club du dimanche",
+     "en": "Sunday Club"
+    },
+    {
+     "fr": "Cyclisme : l'étape",
+     "en": "Cycling: The Stage"
+    },
+    {
+     "fr": "Sport soir",
+     "en": "Sport Tonight"
+    }
+   ]
+  },
+  {
+   "id": "c09",
+   "number": 9,
+   "name": "Ciné Classique",
+   "category": "l-fr-cinema",
+   "logo": "logo-c09.png",
+   "programmes": [
+    {
+     "fr": "Court métrage",
+     "en": "Short Film"
+    },
+    {
+     "fr": "Les coulisses",
+     "en": "Behind the Scenes"
+    },
+    {
+     "fr": "Western du soir",
+     "en": "Evening Western"
+    },
+    {
+     "fr": "Cinéma muet",
+     "en": "Silent Cinema"
+    },
+    {
+     "fr": "Bande-annonce",
+     "en": "Trailers"
+    },
+    {
+     "fr": "Film noir",
+     "en": "Film Noir"
+    },
+    {
+     "fr": "Nuit du cinéma",
+     "en": "Movie Night"
+    },
+    {
+     "fr": "Ciné-club : Le Voyage dans la Lune",
+     "en": "Film Club: A Trip to the Moon"
+    }
+   ]
+  },
+  {
+   "id": "c10",
+   "number": 10,
+   "name": "Ciné Frissons",
+   "category": "l-fr-cinema",
+   "logo": "logo-c10.png",
+   "programmes": [
+    {
+     "fr": "Les coulisses",
+     "en": "Behind the Scenes"
+    },
+    {
+     "fr": "Western du soir",
+     "en": "Evening Western"
+    },
+    {
+     "fr": "Cinéma muet",
+     "en": "Silent Cinema"
+    },
+    {
+     "fr": "Bande-annonce",
+     "en": "Trailers"
+    },
+    {
+     "fr": "Film noir",
+     "en": "Film Noir"
+    },
+    {
+     "fr": "Nuit du cinéma",
+     "en": "Movie Night"
+    },
+    {
+     "fr": "Ciné-club : Le Voyage dans la Lune",
+     "en": "Film Club: A Trip to the Moon"
+    },
+    {
+     "fr": "Court métrage",
+     "en": "Short Film"
+    }
+   ]
+  },
+  {
+   "id": "c11",
+   "number": 11,
+   "name": "Petits Loups",
+   "category": "l-fr-kids",
+   "logo": "logo-c11.png",
+   "programmes": [
+    {
+     "fr": "Atelier bricolage",
+     "en": "Craft Corner"
+    },
+    {
+     "fr": "Les Lamas de Patagonie",
+     "en": "Llamas of Patagonia"
+    },
+    {
+     "fr": "Jeu : Qui sait ?",
+     "en": "Quiz: Who Knows?"
+    },
+    {
+     "fr": "Musique pour enfants",
+     "en": "Kids' Music"
+    },
+    {
+     "fr": "Dessins animés",
+     "en": "Cartoons"
+    },
+    {
+     "fr": "Dessins animés",
+     "en": "Cartoons"
+    },
+    {
+     "fr": "Les petits explorateurs",
+     "en": "Little Explorers"
+    },
+    {
+     "fr": "Contes du soir",
+     "en": "Bedtime Stories"
+    }
+   ]
+  },
+  {
+   "id": "c12",
+   "number": 12,
+   "name": "Récré TV",
+   "category": "l-fr-kids",
+   "logo": "logo-c12.png",
+   "programmes": [
+    {
+     "fr": "Les Lamas de Patagonie",
+     "en": "Llamas of Patagonia"
+    },
+    {
+     "fr": "Jeu : Qui sait ?",
+     "en": "Quiz: Who Knows?"
+    },
+    {
+     "fr": "Musique pour enfants",
+     "en": "Kids' Music"
+    },
+    {
+     "fr": "Dessins animés",
+     "en": "Cartoons"
+    },
+    {
+     "fr": "Dessins animés",
+     "en": "Cartoons"
+    },
+    {
+     "fr": "Les petits explorateurs",
+     "en": "Little Explorers"
+    },
+    {
+     "fr": "Contes du soir",
+     "en": "Bedtime Stories"
+    },
+    {
+     "fr": "Atelier bricolage",
+     "en": "Craft Corner"
+    }
+   ]
+  },
+  {
+   "id": "c13",
+   "number": 13,
+   "name": "Terre & Mer",
+   "category": "l-fr-docs",
+   "logo": "logo-c13.png",
+   "programmes": [
+    {
+     "fr": "Espace : la Lune",
+     "en": "Space: The Moon"
+    },
+    {
+     "fr": "Artisans du monde",
+     "en": "Makers of the World"
+    },
+    {
+     "fr": "Les forêts",
+     "en": "Forests"
+    },
+    {
+     "fr": "Les océans",
+     "en": "Oceans"
+    },
+    {
+     "fr": "Volcans actifs",
+     "en": "Active Volcanoes"
+    },
+    {
+     "fr": "Histoire des trains",
+     "en": "History of Railways"
+    },
+    {
+     "fr": "Le monde sauvage",
+     "en": "Wild World"
+    },
+    {
+     "fr": "Les grandes villes",
+     "en": "Great Cities"
+    }
+   ]
+  },
+  {
+   "id": "c14",
+   "number": 14,
+   "name": "Savoirs",
+   "category": "l-fr-docs",
+   "logo": "logo-c14.png",
+   "programmes": [
+    {
+     "fr": "Artisans du monde",
+     "en": "Makers of the World"
+    },
+    {
+     "fr": "Les forêts",
+     "en": "Forests"
+    },
+    {
+     "fr": "Les océans",
+     "en": "Oceans"
+    },
+    {
+     "fr": "Volcans actifs",
+     "en": "Active Volcanoes"
+    },
+    {
+     "fr": "Histoire des trains",
+     "en": "History of Railways"
+    },
+    {
+     "fr": "Le monde sauvage",
+     "en": "Wild World"
+    },
+    {
+     "fr": "Les grandes villes",
+     "en": "Great Cities"
+    },
+    {
+     "fr": "Espace : la Lune",
+     "en": "Space: The Moon"
+    }
+   ]
+  },
+  {
+   "id": "c15",
+   "number": 15,
+   "name": "Fleuve Info",
+   "category": "l-qc",
+   "logo": "logo-c15.png",
+   "programmes": [
+    {
+     "fr": "Reprise",
+     "en": "Replay"
+    },
+    {
+     "fr": "Le téléjournal",
+     "en": "The Evening News"
+    },
+    {
+     "fr": "Météo du Québec",
+     "en": "Quebec Weather"
+    },
+    {
+     "fr": "Hockey : avant-match",
+     "en": "Hockey: Pre-game"
+    },
+    {
+     "fr": "Tout le monde jase",
+     "en": "Everybody's Talking"
+    },
+    {
+     "fr": "Cuisine en région",
+     "en": "Regional Kitchen"
+    },
+    {
+     "fr": "Les nouvelles de 22 h",
+     "en": "10 pm News"
+    },
+    {
+     "fr": "Le grand rendez-vous",
+     "en": "The Big Show"
+    }
+   ]
+  },
+  {
+   "id": "c16",
+   "number": 16,
+   "name": "Laurentides TV",
+   "category": "l-qc",
+   "logo": "logo-c16.png",
+   "programmes": [
+    {
+     "fr": "Le téléjournal",
+     "en": "The Evening News"
+    },
+    {
+     "fr": "Météo du Québec",
+     "en": "Quebec Weather"
+    },
+    {
+     "fr": "Hockey : avant-match",
+     "en": "Hockey: Pre-game"
+    },
+    {
+     "fr": "Tout le monde jase",
+     "en": "Everybody's Talking"
+    },
+    {
+     "fr": "Cuisine en région",
+     "en": "Regional Kitchen"
+    },
+    {
+     "fr": "Les nouvelles de 22 h",
+     "en": "10 pm News"
+    },
+    {
+     "fr": "Le grand rendez-vous",
+     "en": "The Big Show"
+    },
+    {
+     "fr": "Reprise",
+     "en": "Replay"
+    }
+   ]
+  },
+  {
+   "id": "c17",
+   "number": 17,
+   "name": "Harbour News",
+   "category": "l-uk",
+   "logo": "logo-c17.png",
+   "programmes": [
+    {
+     "fr": "Garden Rescue",
+     "en": "Garden Rescue"
+    },
+    {
+     "fr": "Quiz Night",
+     "en": "Quiz Night"
+    },
+    {
+     "fr": "The Six O'Clock News",
+     "en": "The Six O'Clock News"
+    },
+    {
+     "fr": "Comedy Hour",
+     "en": "Comedy Hour"
+    },
+    {
+     "fr": "Drama: The Lighthouse",
+     "en": "Drama: The Lighthouse"
+    },
+    {
+     "fr": "Late Debate",
+     "en": "Late Debate"
+    },
+    {
+     "fr": "Weather",
+     "en": "Weather"
+    },
+    {
+     "fr": "Breakfast News",
+     "en": "Breakfast News"
+    }
+   ]
+  },
+  {
+   "id": "c18",
+   "number": 18,
+   "name": "Comedy Lane",
+   "category": "l-uk",
+   "logo": "logo-c18.png",
+   "programmes": [
+    {
+     "fr": "Quiz Night",
+     "en": "Quiz Night"
+    },
+    {
+     "fr": "The Six O'Clock News",
+     "en": "The Six O'Clock News"
+    },
+    {
+     "fr": "Comedy Hour",
+     "en": "Comedy Hour"
+    },
+    {
+     "fr": "Drama: The Lighthouse",
+     "en": "Drama: The Lighthouse"
+    },
+    {
+     "fr": "Late Debate",
+     "en": "Late Debate"
+    },
+    {
+     "fr": "Weather",
+     "en": "Weather"
+    },
+    {
+     "fr": "Breakfast News",
+     "en": "Breakfast News"
+    },
+    {
+     "fr": "Garden Rescue",
+     "en": "Garden Rescue"
+    }
+   ]
+  },
+  {
+   "id": "c19",
+   "number": 19,
+   "name": "Rhein Aktuell",
+   "category": "l-de",
+   "logo": "logo-c19.png",
+   "programmes": [
+    {
+     "fr": "Reisereportage",
+     "en": "Travel Report"
+    },
+    {
+     "fr": "Sport am Abend",
+     "en": "Evening Sport"
+    },
+    {
+     "fr": "Kochstudio",
+     "en": "Cooking Studio"
+    },
+    {
+     "fr": "Talkrunde",
+     "en": "Talk Round"
+    },
+    {
+     "fr": "Spätnachrichten",
+     "en": "Late News"
+    },
+    {
+     "fr": "Nachrichten",
+     "en": "News"
+    },
+    {
+     "fr": "Wetter",
+     "en": "Weather"
+    },
+    {
+     "fr": "Tatort-Nacht",
+     "en": "Crime Night"
+    }
+   ]
+  },
+  {
+   "id": "c20",
+   "number": 20,
+   "name": "Sol Noticias",
+   "category": "l-es",
+   "logo": "logo-c20.png",
+   "programmes": [
+    {
+     "fr": "Cocina de casa",
+     "en": "Home Cooking"
+    },
+    {
+     "fr": "Concurso",
+     "en": "Game Show"
+    },
+    {
+     "fr": "Documental",
+     "en": "Documentary"
+    },
+    {
+     "fr": "Noticias de la noche",
+     "en": "Late News"
+    },
+    {
+     "fr": "Noticias",
+     "en": "News"
+    },
+    {
+     "fr": "El tiempo",
+     "en": "Weather"
+    },
+    {
+     "fr": "Telenovela",
+     "en": "Telenovela"
+    },
+    {
+     "fr": "Fútbol: la previa",
+     "en": "Football: Pre-match"
+    }
+   ]
+  },
+  {
+   "id": "c21",
+   "number": 21,
+   "name": "Nature 4K",
+   "category": "l-4k",
+   "logo": "logo-c21.png",
+   "programmes": [
+    {
+     "fr": "Forêt tropicale",
+     "en": "Rainforest"
+    },
+    {
+     "fr": "Glaciers",
+     "en": "Glaciers"
+    },
+    {
+     "fr": "Côtes sauvages",
+     "en": "Wild Coasts"
+    },
+    {
+     "fr": "Montagnes en 4K",
+     "en": "Mountains in 4K"
+    },
+    {
+     "fr": "Récifs coralliens",
+     "en": "Coral Reefs"
+    },
+    {
+     "fr": "Aurores boréales",
+     "en": "Northern Lights"
+    },
+    {
+     "fr": "Déserts",
+     "en": "Deserts"
+    },
+    {
+     "fr": "Villes la nuit",
+     "en": "Cities at Night"
+    }
+   ]
+  }
+ ],
+ "library": {
+  "watching": [
+   {
+    "id": "s-pepper",
+    "progress": 0.4,
+    "season": 1,
+    "episode": 3
+   },
+   {
+    "id": "m-sita",
+    "progress": 0.55
+   },
+   {
+    "id": "m-tos",
+    "progress": 0.25
+   }
+  ],
+  "my_list": [
+   "m-sintel",
+   "m-spring",
+   "s-pepper"
+  ],
+  "favorite_channels": [
+   "c01",
+   "c04",
+   "c07"
+  ]
+ },
+ "screens": {
+  "movie": "m-sintel",
+  "series": "s-pepper",
+  "search": {
+   "en": "spring",
+   "fr": "spring"
+  },
+  "person": "Colin Levy"
+ }
+}

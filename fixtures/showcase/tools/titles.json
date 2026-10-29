@@ -16,9 +16,9 @@
    "name": "4K | Films"
   },
   {
-   "id": "v-fr-films",
+   "id": "v-eu-films",
    "type": "movie",
-   "name": "FR | Films"
+   "name": "EU | Films"
   },
   {
    "id": "s-en-anim",
@@ -234,7 +234,7 @@
    "id": "m-valkaama",
    "title": "Valkaama",
    "year": 2010,
-   "category": "v-fr-films",
+   "category": "v-eu-films",
    "genre": "Adventure",
    "rating": 5.9,
    "minutes": 90,
@@ -249,7 +249,9 @@
     "file": "Valkaama_poster.png",
     "page": "https://commons.wikimedia.org/wiki/File:Valkaama_poster.png"
    },
-   "added_days_ago": 20
+   "added_days_ago": 20,
+   "director": "Tim Baumann",
+   "cast": "Matylda Baczyńska, Rafał Fudalej, Maciej Maciejewski"
   }
  ],
  "series": [
