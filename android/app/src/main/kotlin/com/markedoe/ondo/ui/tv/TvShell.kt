@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
@@ -168,6 +169,7 @@ fun TvNavigationFrame(
     // Down from the bar: the page's first item, the one just below the bar (Up from it comes back to the bar).
     fun below(): FocusRequester = pages
     val atHome = selected == TopLevel.HOME
+    val shownTab = rememberUpdatedState(selected)
     Box(Modifier.fillMaxSize()) {
         // The pages start at the screen's top, under the bar: Down from the bar goes to them by name ([below]), as
         // nothing of theirs lies wholly below it.
@@ -219,15 +221,16 @@ fun TvNavigationFrame(
                 }
                 TopLevel.entries.forEach { tab ->
                     BarTab(stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below, browsing = { bar.browsing }, onReach = { onSelect(tab) }) {
-                        val browsed = bar.browsing
                         bar.browsing = false
                         onSelect(tab)
-                        // The tab opened as the remote reached it: OK goes into its page, where the page would put the focus.
-                        if (browsed && tab == selected) {
-                            scope.launch {
+                        // OK goes into the tab's page, where the page puts the focus, once that page is the one shown.
+                        scope.launch {
+                            repeat(ENTER_PAGE_FRAMES) {
                                 withFrameNanos { }
-                                runCatching { (bar.page?.memory?.entry() ?: pages).requestFocus() }
+                                if (!barHasFocus) return@launch
+                                if (shownTab.value == tab && runCatching { bar.page?.memory?.entry()?.requestFocus() == true }.getOrDefault(false)) return@launch
                             }
+                            if (barHasFocus) runCatching { pages.requestFocus() }
                         }
                     }
                 }
@@ -266,6 +269,9 @@ fun TvNavigationFrame(
 
 /** How far below the bar the black band behind it fades into the page. */
 private val BAND_FADE = 20.dp
+
+/** How many frames OK on a tab waits for its page to take the focus before giving it to the page's first item. */
+private const val ENTER_PAGE_FRAMES = 30
 
 /** How long the remote rests on a tab before it opens. */
 private const val TAB_REST_MS = 300L
