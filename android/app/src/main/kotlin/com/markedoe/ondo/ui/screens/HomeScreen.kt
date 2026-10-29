@@ -1,7 +1,6 @@
 package com.markedoe.ondo.ui.screens
 
 import android.icu.text.ListFormatter
-import android.text.format.DateUtils
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -69,6 +68,7 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
+import com.markedoe.ondo.ui.updatedAgoText
 
 data class HomeUiState(
     val playlistName: String,
@@ -267,10 +267,8 @@ private fun HomeTopBar(state: HomeUiState, actions: HomeActions) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             state.updatedAt?.let { updatedAt ->
-                // At least a minute ago: "0 minutes ago" reads oddly right after a refresh.
-                val ago = DateUtils.getRelativeTimeSpanString(minOf(updatedAt, state.now - DateUtils.MINUTE_IN_MILLIS), state.now, DateUtils.MINUTE_IN_MILLIS)
                 Text(
-                    stringResource(R.string.updated_ago, ago),
+                    updatedAgoText(updatedAt, state.now),
                     color = tint.copy(alpha = 0.7f),
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,

@@ -192,7 +192,8 @@ private val KeyEvent.isOk: Boolean
 fun Modifier.tvSafeArea(tab: Boolean = false): Modifier = composed {
     if (!isTelevision()) return@composed this
     padding(
-        start = TvTokens.EdgeEnd,
+        // A tab's rows keep a gutter of their own (24 dp): their text then starts where Home's and the top bar's do.
+        start = if (tab) TvTokens.ContentStart - 24.dp else TvTokens.EdgeEnd,
         top = if (tab) 0.dp else TvTokens.EdgeTop,
         end = TvTokens.EdgeEnd,
         bottom = TvTokens.EdgeTop,

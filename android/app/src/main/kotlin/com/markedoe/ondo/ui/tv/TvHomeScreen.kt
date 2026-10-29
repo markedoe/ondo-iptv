@@ -1,7 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
 import android.icu.text.ListFormatter
-import android.text.format.DateUtils
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -78,6 +77,7 @@ import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.myListState
+import com.markedoe.ondo.ui.updatedAgoText
 import kotlinx.coroutines.delay
 
 /** The featured titles' frame takes about half the screen's height, under the top bar: the first row shows below. */
@@ -363,11 +363,7 @@ private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
 
 /** "Updated 5 minutes ago": when the playlist was last fetched from the provider. */
 @Composable
-private fun updatedAgo(state: HomeUiState): String? = state.updatedAt?.let { updatedAt ->
-    // At least a minute ago: "0 minutes ago" reads oddly right after a refresh.
-    val ago = DateUtils.getRelativeTimeSpanString(minOf(updatedAt, state.now - DateUtils.MINUTE_IN_MILLIS), state.now, DateUtils.MINUTE_IN_MILLIS)
-    stringResource(R.string.updated_ago, ago)
-}
+private fun updatedAgo(state: HomeUiState): String? = state.updatedAt?.let { updatedAgoText(it, state.now) }
 
 /** In the top bar, before Search: the playlist Home shows, and when it was updated. */
 @Composable

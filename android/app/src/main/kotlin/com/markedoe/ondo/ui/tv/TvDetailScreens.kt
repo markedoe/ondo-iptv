@@ -106,7 +106,7 @@ import com.markedoe.ondo.ui.screens.myListState
 import com.markedoe.ondo.ui.theme.OndoColors
 
 /** Where the text and rows of a page without the drawer start. */
-private val PageStart: Dp = TvTokens.EdgeEnd
+private val PageStart: Dp = TvTokens.ContentStart
 
 /**
  * A movie on a TV: its backdrop across the screen, the title, facts, plot and buttons over it with Play focused,
@@ -271,7 +271,7 @@ private fun TvDetailHeader(
     buttons: @Composable FlowRowScope.() -> Unit,
 ) {
     val ink = TvTokens.Ink
-    Box(Modifier.fillMaxWidth().heightIn(min = 420.dp).bringIntoViewAsAWhole().testTag("detailHeader")) {
+    Box(Modifier.fillMaxWidth().heightIn(min = 380.dp).bringIntoViewAsAWhole().testTag("detailHeader")) {
         TvArtwork(backdropUrl, posterUrl, title, Modifier.matchParentSize(), onBackdropFailed)
         Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink, 0.35f to ink.copy(alpha = 0.9f), 0.7f to ink.copy(alpha = 0.3f), 1f to Color.Transparent)))
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to ink)))

@@ -289,6 +289,30 @@
         <item quantity="other">يُعرض أول %1$d من %2$d قناة. اختر فئة لرؤية البقية.</item>
     </plurals>
     <string name="updated_ago">حُدّثت %1$s</string>
+    <plurals name="minutes_ago">
+        <item quantity="zero">منذ %d دقيقة</item>
+        <item quantity="one">منذ دقيقة</item>
+        <item quantity="two">منذ دقيقتين</item>
+        <item quantity="few">منذ %d دقائق</item>
+        <item quantity="many">منذ %d دقيقة</item>
+        <item quantity="other">منذ %d دقيقة</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="zero">منذ %d ساعة</item>
+        <item quantity="one">منذ ساعة</item>
+        <item quantity="two">منذ ساعتين</item>
+        <item quantity="few">منذ %d ساعات</item>
+        <item quantity="many">منذ %d ساعة</item>
+        <item quantity="other">منذ %d ساعة</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="zero">منذ %d يوم</item>
+        <item quantity="one">منذ يوم</item>
+        <item quantity="two">منذ يومين</item>
+        <item quantity="few">منذ %d أيام</item>
+        <item quantity="many">منذ %d يومًا</item>
+        <item quantity="other">منذ %d يوم</item>
+    </plurals>
     <string name="styles">الأنماط</string>
     <string name="style_manga">مانغا وأنمي</string>
     <string name="style_kids">الأطفال</string>

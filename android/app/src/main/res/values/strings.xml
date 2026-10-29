@@ -258,6 +258,19 @@
         <item quantity="other">Showing the first %1$d of %2$d channels. Choose a category to see the others.</item>
     </plurals>
     <string name="updated_ago">Updated %1$s</string>
+    <!-- How long ago the playlist was updated, inside "updated_ago" ("Updated 12 minutes ago"). -->
+    <plurals name="minutes_ago">
+        <item quantity="one">%d minute ago</item>
+        <item quantity="other">%d minutes ago</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="one">%d hour ago</item>
+        <item quantity="other">%d hours ago</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="one">%d day ago</item>
+        <item quantity="other">%d days ago</item>
+    </plurals>
     <string name="styles">Styles</string>
     <string name="style_manga">Manga &amp; anime</string>
     <string name="style_kids">Children</string>

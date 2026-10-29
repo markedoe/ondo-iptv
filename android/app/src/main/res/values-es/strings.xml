@@ -262,6 +262,21 @@
         <item quantity="other">Se muestran los primeros %1$d de %2$d canales. Elige una categoría para ver los demás.</item>
     </plurals>
     <string name="updated_ago">Actualizado %1$s</string>
+    <plurals name="minutes_ago">
+        <item quantity="one">hace %d minuto</item>
+        <item quantity="many">hace %d minutos</item>
+        <item quantity="other">hace %d minutos</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="one">hace %d hora</item>
+        <item quantity="many">hace %d horas</item>
+        <item quantity="other">hace %d horas</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="one">hace %d día</item>
+        <item quantity="many">hace %d días</item>
+        <item quantity="other">hace %d días</item>
+    </plurals>
     <string name="styles">Estilos</string>
     <string name="style_manga">Manga y anime</string>
     <string name="style_kids">Infantil</string>

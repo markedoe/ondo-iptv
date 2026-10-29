@@ -244,6 +244,15 @@
         <item quantity="other">显示 %2$d 个频道中的前 %1$d 个。选择一个分类以查看其他频道。</item>
     </plurals>
     <string name="updated_ago">%1$s更新</string>
+    <plurals name="minutes_ago">
+        <item quantity="other">%d 分钟前</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="other">%d 小时前</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="other">%d 天前</item>
+    </plurals>
     <string name="styles">风格</string>
     <string name="style_manga">动漫</string>
     <string name="style_kids">儿童</string>

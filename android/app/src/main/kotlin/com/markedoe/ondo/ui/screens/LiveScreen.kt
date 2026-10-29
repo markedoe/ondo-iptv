@@ -34,7 +34,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,10 +88,13 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
     // On a TV, the channel the remote is on is shown large beside the list: what is on, how far, what comes next.
     var focusedId by remember { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize()) {
+    // On a TV the list takes the left of the screen, the channel the remote is on the right; the chips above both.
+    val listWidth = if (television) 0.56f else 1f
     LazyColumn(
         state = rememberTabListState(),
-        modifier = Modifier.fillMaxHeight().fillMaxWidth(if (television) 0.56f else 1f).testTag("live"),
-        contentPadding = PaddingValues(top = tvTopBarSpace(), bottom = 24.dp),
+        modifier = Modifier.fillMaxSize().testTag("live"),
+        // A TV page's rows keep a 24 dp gutter (tvSafeArea): the channels' frame starts 8 dp further, its text at 24.
+        contentPadding = PaddingValues(start = if (television) 8.dp else 0.dp, top = tvTopBarSpace(), bottom = 24.dp),
     ) {
         if (!television) item {
             TopAppBar(
@@ -155,7 +157,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
         itemsIndexed(state.channels, key = { _, it -> it.channel.id }) { index, row ->
             Row(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxWidth(listWidth)
                     // A remote: the frame shows the channel; holding OK toggles My List, as a long press does.
                     .focusFrame(RoundedCornerShape(12.dp), grow = 1.02f)
                     .focusMemory("channel:${row.channel.id}", initial = index == 0)
@@ -200,7 +202,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
             }
         }
         if (state.channels.isEmpty()) {
-            item { Text(stringResource(if (state.showingFavorites) R.string.no_favorite_channels else R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(16.dp)) }
+            item { Text(stringResource(if (state.showingFavorites) R.string.no_favorite_channels else R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth(listWidth).padding(16.dp)) }
         }
     }
     if (television) {

@@ -253,6 +253,18 @@
         <item quantity="other">%2$d में से पहले %1$d चैनल दिख रहे हैं। बाकी देखने के लिए कोई श्रेणी चुनें।</item>
     </plurals>
     <string name="updated_ago">%1$s अपडेट किया गया</string>
+    <plurals name="minutes_ago">
+        <item quantity="one">%d मिनट पहले</item>
+        <item quantity="other">%d मिनट पहले</item>
+    </plurals>
+    <plurals name="hours_ago">
+        <item quantity="one">%d घंटा पहले</item>
+        <item quantity="other">%d घंटे पहले</item>
+    </plurals>
+    <plurals name="days_ago">
+        <item quantity="one">%d दिन पहले</item>
+        <item quantity="other">%d दिन पहले</item>
+    </plurals>
     <string name="styles">शैलियाँ</string>
     <string name="style_manga">मंगा और एनीमे</string>
     <string name="style_kids">बच्चे</string>

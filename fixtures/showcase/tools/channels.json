@@ -1,0 +1,52 @@
+{
+  "programme_minutes": 60,
+  "categories": [
+    {"id": "l-fr-info", "name": "FR | Infos"},
+    {"id": "l-fr-general", "name": "FR | Généralistes"},
+    {"id": "l-fr-sport", "name": "FR | Sport"},
+    {"id": "l-fr-cinema", "name": "FR | Cinéma"},
+    {"id": "l-fr-kids", "name": "FR | Jeunesse"},
+    {"id": "l-fr-docs", "name": "FR | Découverte"},
+    {"id": "l-qc", "name": "QC | Québec"},
+    {"id": "l-uk", "name": "UK | News & Entertainment"},
+    {"id": "l-de", "name": "DE | Deutschland"},
+    {"id": "l-es", "name": "ES | España"},
+    {"id": "l-4k", "name": "4K | UHD"}
+  ],
+  "kinds": {
+    "news": [["Le journal", "The News"], ["Météo", "Weather"], ["L'invité", "The Interview"], ["Le débat", "The Debate"], ["Économie", "Business"], ["Le 18 h", "Evening News"], ["Grand reportage", "Special Report"], ["Le journal de la nuit", "Late News"]],
+    "general": [["Le jeu des mots", "Word Game"], ["Cuisine du marché", "Market Kitchen"], ["Feuilleton : La Maison du port", "Drama: Harbour House"], ["Magazine santé", "Health Magazine"], ["Variétés", "Variety Show"], ["Téléfilm : L'Été des orages", "TV Movie: Summer Storms"], ["Talk-show", "Talk Show"], ["Rediffusion", "Replay"]],
+    "sport": [["Football : le multiplex", "Football: Live Round-up"], ["Rugby : avant-match", "Rugby: Pre-match"], ["Tennis : quart de finale", "Tennis: Quarter-final"], ["Le résumé", "Highlights"], ["Basket : direct", "Basketball: Live"], ["Le club du dimanche", "Sunday Club"], ["Cyclisme : l'étape", "Cycling: The Stage"], ["Sport soir", "Sport Tonight"]],
+    "cinema": [["Ciné-club : Le Voyage dans la Lune", "Film Club: A Trip to the Moon"], ["Court métrage", "Short Film"], ["Les coulisses", "Behind the Scenes"], ["Western du soir", "Evening Western"], ["Cinéma muet", "Silent Cinema"], ["Bande-annonce", "Trailers"], ["Film noir", "Film Noir"], ["Nuit du cinéma", "Movie Night"]],
+    "kids": [["Dessins animés", "Cartoons"], ["Les petits explorateurs", "Little Explorers"], ["Contes du soir", "Bedtime Stories"], ["Atelier bricolage", "Craft Corner"], ["Les Lamas de Patagonie", "Llamas of Patagonia"], ["Jeu : Qui sait ?", "Quiz: Who Knows?"], ["Musique pour enfants", "Kids' Music"], ["Dessins animés", "Cartoons"]],
+    "docs": [["Les océans", "Oceans"], ["Volcans actifs", "Active Volcanoes"], ["Histoire des trains", "History of Railways"], ["Le monde sauvage", "Wild World"], ["Les grandes villes", "Great Cities"], ["Espace : la Lune", "Space: The Moon"], ["Artisans du monde", "Makers of the World"], ["Les forêts", "Forests"]],
+    "qc": [["Le téléjournal", "The Evening News"], ["Météo du Québec", "Quebec Weather"], ["Hockey : avant-match", "Hockey: Pre-game"], ["Tout le monde jase", "Everybody's Talking"], ["Cuisine en région", "Regional Kitchen"], ["Les nouvelles de 22 h", "10 pm News"], ["Le grand rendez-vous", "The Big Show"], ["Reprise", "Replay"]],
+    "uk": [["Breakfast News", "Breakfast News"], ["Garden Rescue", "Garden Rescue"], ["Quiz Night", "Quiz Night"], ["The Six O'Clock News", "The Six O'Clock News"], ["Comedy Hour", "Comedy Hour"], ["Drama: The Lighthouse", "Drama: The Lighthouse"], ["Late Debate", "Late Debate"], ["Weather", "Weather"]],
+    "de": [["Nachrichten", "News"], ["Wetter", "Weather"], ["Tatort-Nacht", "Crime Night"], ["Reisereportage", "Travel Report"], ["Sport am Abend", "Evening Sport"], ["Kochstudio", "Cooking Studio"], ["Talkrunde", "Talk Round"], ["Spätnachrichten", "Late News"]],
+    "es": [["Noticias", "News"], ["El tiempo", "Weather"], ["Telenovela", "Telenovela"], ["Fútbol: la previa", "Football: Pre-match"], ["Cocina de casa", "Home Cooking"], ["Concurso", "Game Show"], ["Documental", "Documentary"], ["Noticias de la noche", "Late News"]],
+    "4k": [["Montagnes en 4K", "Mountains in 4K"], ["Récifs coralliens", "Coral Reefs"], ["Aurores boréales", "Northern Lights"], ["Déserts", "Deserts"], ["Villes la nuit", "Cities at Night"], ["Forêt tropicale", "Rainforest"], ["Glaciers", "Glaciers"], ["Côtes sauvages", "Wild Coasts"]]
+  },
+  "channels": [
+    {"id": "c01", "name": "Le Fil Info", "category": "l-fr-info", "kind": "news", "color": "#C62828"},
+    {"id": "c02", "name": "Info 24", "category": "l-fr-info", "kind": "news", "color": "#1565C0"},
+    {"id": "c03", "name": "Météo Plus", "category": "l-fr-info", "kind": "news", "color": "#0288D1"},
+    {"id": "c04", "name": "Canal Azur", "category": "l-fr-general", "kind": "general", "color": "#00897B"},
+    {"id": "c05", "name": "Horizon TV", "category": "l-fr-general", "kind": "general", "color": "#6A1B9A"},
+    {"id": "c06", "name": "Rive Gauche", "category": "l-fr-general", "kind": "general", "color": "#AD1457"},
+    {"id": "c07", "name": "Stade 1", "category": "l-fr-sport", "kind": "sport", "color": "#2E7D32"},
+    {"id": "c08", "name": "Arena Sport", "category": "l-fr-sport", "kind": "sport", "color": "#EF6C00"},
+    {"id": "c09", "name": "Ciné Classique", "category": "l-fr-cinema", "kind": "cinema", "color": "#4E342E"},
+    {"id": "c10", "name": "Ciné Frissons", "category": "l-fr-cinema", "kind": "cinema", "color": "#212121"},
+    {"id": "c11", "name": "Petits Loups", "category": "l-fr-kids", "kind": "kids", "color": "#F9A825"},
+    {"id": "c12", "name": "Récré TV", "category": "l-fr-kids", "kind": "kids", "color": "#7CB342"},
+    {"id": "c13", "name": "Terre & Mer", "category": "l-fr-docs", "kind": "docs", "color": "#00695C"},
+    {"id": "c14", "name": "Savoirs", "category": "l-fr-docs", "kind": "docs", "color": "#5D4037"},
+    {"id": "c15", "name": "Fleuve Info", "category": "l-qc", "kind": "qc", "color": "#283593"},
+    {"id": "c16", "name": "Laurentides TV", "category": "l-qc", "kind": "qc", "color": "#00838F"},
+    {"id": "c17", "name": "Harbour News", "category": "l-uk", "kind": "uk", "color": "#B71C1C"},
+    {"id": "c18", "name": "Comedy Lane", "category": "l-uk", "kind": "uk", "color": "#FF8F00"},
+    {"id": "c19", "name": "Rhein Aktuell", "category": "l-de", "kind": "de", "color": "#37474F"},
+    {"id": "c20", "name": "Sol Noticias", "category": "l-es", "kind": "es", "color": "#D84315"},
+    {"id": "c21", "name": "Nature 4K", "category": "l-4k", "kind": "4k", "color": "#1B5E20"}
+  ]
+}
