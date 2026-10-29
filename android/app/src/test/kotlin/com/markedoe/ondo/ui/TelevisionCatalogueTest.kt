@@ -323,8 +323,10 @@ class TelevisionCatalogueTest {
         press(Key.DirectionCenter)
         waitFor { repository.state.value.playlists.size == 1 }
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        // Back on the tab the remote last rested on along the bar; then Home.
+        waitFor { !exists("settings") && focusedNode() != null }
+        openFromDrawer("tabHome")
         waitFor { exists("home") && exists("hero") }
-        waitFor { focusedNode() != null }
         walkRows("home")
         openFromDrawer("tabSeries")
         walkRows("vod")
@@ -443,6 +445,8 @@ class TelevisionCatalogueTest {
         settle(1_000)
         // Back to Live TV, now the panel's channels; then Home.
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        waitFor { !exists("settings") && focusedNode() != null }
+        openFromDrawer("tabLive")
         waitFor { exists("live") && focusedNode() != null }
         walkRows("live", rows = 3, cards = 1)
         openFromDrawer("tabHome")

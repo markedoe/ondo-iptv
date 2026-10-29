@@ -23,6 +23,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +70,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TopLevel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -265,12 +267,23 @@ fun TvNavigationFrame(
 /** How far below the bar the black band behind it fades into the page. */
 private val BAND_FADE = 20.dp
 
+/** How long the remote rests on a tab before it opens. */
+private const val TAB_REST_MS = 300L
+
 const val SEARCH_TAG = "tabSearch"
 const val SETTINGS_TAG = "tabSettings"
 
 @Composable
 private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String, requester: FocusRequester, below: () -> FocusRequester, browsing: () -> Boolean, onReach: () -> Unit, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    var focused by remember { mutableStateOf(false) }
+    // The tab the remote rests on along the bar opens without OK (as on the TV's own home screen); passing quickly
+    // (towards Settings) opens nothing, nor does the focus only passing through the bar (Up from a page).
+    LaunchedEffect(focused, selected) {
+        if (!focused || selected) return@LaunchedEffect
+        delay(TAB_REST_MS)
+        if (browsing()) onReach()
+    }
     Surface(
         onClick = onClick,
         modifier = Modifier
@@ -279,9 +292,7 @@ private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String
                 canFocus = shown
                 down = below()
             }
-            // The tab the remote moves to along the bar is shown at once, without OK (as on the TV's own home screen);
-            // the focus only passing through the bar (Up from a page) opens nothing.
-            .onFocusChanged { if (it.isFocused && !selected && browsing()) onReach() }
+            .onFocusChanged { focused = it.isFocused }
             .semantics {
                 contentDescription = label
                 this.selected = selected
