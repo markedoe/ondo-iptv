@@ -337,12 +337,14 @@ fun FocusEntry(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     var hasFocus by remember { mutableStateOf(false) }
     val mode = LocalInputModeManager.current.inputMode
     val memory = LocalFocusMemory.current
+    val bar = LocalTvTopBar.current
     // Again when the item with the focus leaves the page with it ([FocusMemory.dropped]).
     LaunchedEffect(mode, memory?.drops) {
         // The page's own first item (or the one to come back to) takes it first; the content may still be loading.
         repeat(50) {
             delay(100)
-            if (hasFocus) return@LaunchedEffect
+            // A page opened as the remote moves along the top bar leaves the focus there (OK on its tab goes in).
+            if (hasFocus || bar?.browsing == true) return@LaunchedEffect
             if (runCatching { requester.requestFocus() }.getOrDefault(false)) memory?.given()
         }
     }

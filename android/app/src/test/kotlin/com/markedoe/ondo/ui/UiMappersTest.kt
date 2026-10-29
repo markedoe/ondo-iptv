@@ -75,9 +75,13 @@ class UiMappersTest {
         val library = LibraryState().recordStart(finished).updateProgress(finished.key, 5_900.0, 6_000.0, now = 2)
         val home = UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, Fixtures.NOW)
         assertEquals(listOf("The Long Road", "Blue Horizon", "Summer in Lisbon"), home.trending.map { it.title })
-        // Older titles than the new releases: in the carousel only as trending, right after what is being watched.
-        assertEquals(listOf("The Long Road", "Blue Horizon", "Summer in Lisbon"), home.hero.map { it.item.title }.filter { it in home.trending.map { item -> item.title } })
-        assertEquals("The Long Road", home.hero.first().item.title)
+        // The best rated additions of the week come first; trending titles fill the carousel after them.
+        assertEquals(
+            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "The Archive", "Summer in Lisbon", "Blue Horizon"),
+            home.hero.map { it.item.title },
+        )
+        val week = Fixtures.NOW + 14 * 86_400_000L
+        assertEquals("The Long Road", UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, week).hero.first().item.title)
 
         val hidingWatched = Fixtures.state(library, settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, hideWatchedMovies = true)).copy(trending = trending)
         assertEquals(listOf("The Long Road", "Blue Horizon"), UiMappers.home(hidingWatched, labels, Fixtures.NOW).trending.map { it.title })
@@ -141,7 +145,7 @@ class UiMappersTest {
     fun homeShowsTheCarouselShelvesAndChannels() {
         val home = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
         assertEquals("Home", home.playlistName)
-        assertEquals(5, home.hero.size)
+        assertEquals(6, home.hero.size)
         assertEquals("Movie · 2025 · ★ 7.8", home.hero.first { it.item.title == "Northern Lights" }.meta)
         assertEquals("Series · 2025 · Drama · ★ 8.2", home.hero.first { it.item.title == "Harbor Lights" }.meta)
         assertTrue(home.hasVod)
@@ -240,7 +244,8 @@ class UiMappersTest {
             )
         }
         val shown = titles(Fixtures.state(library))
-        shown.forEach { (list, items) -> assertTrue("$list shows it by default", "Glass City" in items) }
+        // The carousel holds the six best rated of the week, Glass City not among them.
+        shown.filterKeys { it != "hero" }.forEach { (list, items) -> assertTrue("$list shows it by default", "Glass City" in items) }
         val hidden = titles(Fixtures.state(library, settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, hideWatchedMovies = true)))
         listOf("grid", "rows", "new", "hero", "similar", "year").forEach { assertFalse("$it leaves it out", "Glass City" in hidden.getValue(it)) }
         listOf("search", "myList").forEach { assertTrue("$it keeps it", "Glass City" in hidden.getValue(it)) }

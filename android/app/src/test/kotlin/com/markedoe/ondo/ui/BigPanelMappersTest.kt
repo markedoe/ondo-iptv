@@ -88,7 +88,7 @@ class BigPanelMappersTest {
     fun homeAndItsShelvesHoldEachKeyOnce() {
         for (library in listOf(true, false)) {
             val home = UiMappers.home(state(library), Labels("Movie", "Series", Locale.US), now)
-            assertEquals(5, home.hero.size)
+            assertEquals(6, home.hero.size)
             assertTrue("the suggestion shows", home.tagSuggestion != null)
             assertUnique("hero", home.hero.map { it.item.key })
             assertUnique("resume", home.continueWatching.map { it.key })

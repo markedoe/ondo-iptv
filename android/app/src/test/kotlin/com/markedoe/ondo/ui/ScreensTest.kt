@@ -359,11 +359,11 @@ class ScreensTest {
         }
         compose.onNodeWithTag("hero").assertIsDisplayed()
         compose.onNodeWithTag("lastUpdate", useUnmergedTree = true).assert(hasText("Updated", substring = true))
-        compose.onAllNodesWithText("Northern Lights").onFirst().assertExists()
+        compose.onAllNodesWithText("Harbor Lights").onFirst().assertExists()
         compose.onAllNodesWithText("Play").onFirst().performClick()
         compose.onAllNodesWithText("My List").onFirst().performClick()
-        assertEquals(ShowcaseItem.MovieItem(Fixtures.northernLights), played.single())
-        assertEquals(ShowcaseItem.MovieItem(Fixtures.northernLights), listed.single())
+        assertEquals(ShowcaseItem.SeriesItem(Fixtures.harborLights), played.single())
+        assertEquals(ShowcaseItem.SeriesItem(Fixtures.harborLights), listed.single())
         // The channels come last, under "Live TV" (no favourite channel yet).
         compose.onNodeWithTag("home").performScrollToNode(hasText("Live TV"))
         compose.onNodeWithText("Live TV").assertIsDisplayed()

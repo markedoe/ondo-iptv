@@ -174,14 +174,13 @@ class TelevisionTest {
     @Test
     fun rightPastTheLastButtonTurnsTheCarouselPage() {
         start()
-        assertTrue(heroShows("Northern Lights"))
+        val first = heroTitle()
         // Play → My List → More Info → the next title, the focus staying on More Info.
         press(Key.DirectionRight, times = 2)
         compose.onNodeWithTag("heroInfo").assertIsFocused()
         press(Key.DirectionRight)
         compose.onNodeWithTag("heroInfo").assertIsFocused()
-        assertTrue(heroShows("Harbor Lights"))
-        assertTrue(!heroShows("Northern Lights"))
+        assertTrue("the carousel turned from $first", heroTitle() != first && heroTitle().isNotEmpty())
     }
 
     private fun heroTitle(): String =
