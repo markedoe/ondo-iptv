@@ -108,6 +108,8 @@ final class AppModel {
     @ObservationIgnored let metadataStore: any MetadataStoring
     /// What the screens show of it: titles read from the store or fetched, people's photos, the prefetch queue.
     let tmdbMetadata = TMDbMetadata()
+    /// The optional tips of Settings, through the App Store (they unlock nothing).
+    let tips = TipJar()
     private(set) var epg = EPGIndex.empty
     private(set) var phase: LoadPhase = .idle
     private(set) var epgPhase: LoadPhase = .idle

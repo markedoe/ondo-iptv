@@ -17277,6 +17277,406 @@
         }
       }
     },
+    "Leave a tip": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laisser un pourboire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dejar una propina"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deixar uma gorjeta"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打赏"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اترك إكرامية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टिप दें"
+          }
+        }
+      }
+    },
+    "Ondo is made by an independent developer. A tip helps keep it going. It unlocks nothing: everything in Ondo is there for everyone.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo est fait par un développeur indépendant. Un pourboire l’aide à continuer. Il ne débloque rien : tout Ondo est là pour tout le monde."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo lo hace un desarrollador independiente. Una propina ayuda a que siga adelante. No desbloquea nada: todo Ondo está disponible para todos."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ondo é feito por um desenvolvedor independente. Uma gorjeta ajuda a mantê-lo. Ela não desbloqueia nada: todo o Ondo está disponível para todos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 由一位独立开发者制作。打赏可以支持它继续发展。打赏不会解锁任何功能：Ondo 的一切对每个人都开放。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يطوّر Ondo مطوّر مستقل. تساعد الإكرامية على استمراره. لا تفتح أي ميزة: كل ما في Ondo متاح للجميع."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo एक स्वतंत्र डेवलपर बनाता है। टिप इसे आगे बढ़ाने में मदद करती है। इससे कुछ भी अनलॉक नहीं होता: Ondo में सब कुछ सभी के लिए उपलब्ध है।"
+          }
+        }
+      }
+    },
+    "Small tip": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Petit pourboire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Propina pequeña"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gorjeta pequena"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "小额打赏"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إكرامية صغيرة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "छोटी टिप"
+          }
+        }
+      }
+    },
+    "Medium tip": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pourboire moyen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Propina mediana"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gorjeta média"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中额打赏"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إكرامية متوسطة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "मध्यम टिप"
+          }
+        }
+      }
+    },
+    "Large tip": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grand pourboire"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Propina grande"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gorjeta grande"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大额打赏"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إكرامية كبيرة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "बड़ी टिप"
+          }
+        }
+      }
+    },
+    "Loading the tips…": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chargement des pourboires…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cargando las propinas…"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carregando as gorjetas…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在加载打赏选项…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ تحميل الإكراميات…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टिप लोड हो रही हैं…"
+          }
+        }
+      }
+    },
+    "Tips can’t be loaded right now. Check the connection to the App Store.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les pourboires ne peuvent pas être chargés pour l’instant. Vérifiez la connexion à l’App Store."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las propinas no se pueden cargar ahora. Comprueba la conexión con el App Store."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Não foi possível carregar as gorjetas agora. Verifique a conexão com a App Store."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂时无法加载打赏选项。请检查与 App Store 的连接。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعذّر تحميل الإكراميات الآن. تحقّق من الاتصال بـ App Store."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अभी टिप लोड नहीं हो सकीं। App Store से कनेक्शन जाँचें।"
+          }
+        }
+      }
+    },
+    "Thank you for your tip!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merci pour votre pourboire !"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¡Gracias por tu propina!"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obrigado pela sua gorjeta!"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "感谢您的打赏！"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "شكرًا على إكراميتك!"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी टिप के लिए धन्यवाद!"
+          }
+        }
+      }
+    },
+    "Your tip is waiting for approval. Thank you!": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre pourboire attend une approbation. Merci !"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu propina está pendiente de aprobación. ¡Gracias!"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sua gorjeta está aguardando aprovação. Obrigado!"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您的打赏正在等待批准。谢谢！"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إكراميتك بانتظار الموافقة. شكرًا!"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपकी टिप स्वीकृति की प्रतीक्षा में है। धन्यवाद!"
+          }
+        }
+      }
+    },
+    "The tip didn’t go through.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le pourboire n’est pas passé."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La propina no se completó."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A gorjeta não foi concluída."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打赏未能完成。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم تكتمل الإكرامية."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "टिप पूरी नहीं हुई।"
+          }
+        }
+      }
+    },
     "Quebec": {
       "localizations": {
         "fr": {

@@ -496,6 +496,15 @@ class AppStoreTests(CheckTestCase):
                         self.write(f"fastlane/metadata/es-ES/{name}", other + "\n")
                 self.assertFails("app_store", f"es-ES/description.txt:1 {reason}")
 
+    def test_in_app_purchases_must_be_explained_in_the_review_notes(self):
+        self.write("App/Model/Tips.swift", "import StoreKit\n\nenum Tip: String, CaseIterable {\n    case small, large\n\n"
+                   "    var productID: String { \"com.markedoe.ondo.tip.\\(rawValue)\" }\n}\n")
+        self.assertFails("app_store", "the review notes do not explain In-App Purchase",
+                         "the review notes do not explain com.markedoe.ondo.tip.large", "do not explain unlocks nothing")
+        self.write("fastlane/metadata/review_information/notes.txt", self.NOTES + "Tips: In-App Purchase "
+                   "com.markedoe.ondo.tip.small and com.markedoe.ondo.tip.large; a tip unlocks nothing.\n")
+        self.assertPasses("app_store")
+
     def test_todo_in_a_sentence_is_not_a_placeholder(self):
         self.write("fastlane/metadata/fr-FR/description.txt", "Rápido em todo lugar: todo el catálogo.\n")
         self.assertPasses("app_store")

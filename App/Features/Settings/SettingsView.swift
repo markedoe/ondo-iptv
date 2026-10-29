@@ -392,6 +392,8 @@ struct SettingsView: View {
                 Text("Backups contain your playlists (including logins), My List, collections and history. Keep them private.")
             }
 
+            TipsSection(tips: model.tips)
+
             Section("About") {
                 NavigationLink {
                     HelpView()
@@ -792,5 +794,60 @@ struct SetPINView: View {
         #if os(macOS)
         .frame(minWidth: 360, minHeight: 220)
         #endif
+    }
+}
+
+/// Settings, Leave a tip: the App Store's prices on three buttons, or why they are not there. A tip unlocks nothing.
+struct TipsSection: View {
+    let tips: TipJar
+
+    var body: some View {
+        Section {
+            Text("Ondo is made by an independent developer. A tip helps keep it going. It unlocks nothing: everything in Ondo is there for everyone.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            if tips.isLoading {
+                HStack(spacing: 8) {
+                    ProgressView().controlSize(.small)
+                    Text("Loading the tips…")
+                }
+                .accessibilityIdentifier("tipsLoading")
+            } else if tips.isUnavailable {
+                Text("Tips can’t be loaded right now. Check the connection to the App Store.")
+                    .accessibilityIdentifier("tipsUnavailable")
+            } else {
+                ForEach(tips.offers ?? []) { offer in
+                    Button {
+                        Task { await tips.buy(offer.tip) }
+                    } label: {
+                        LabeledContent {
+                            Text(offer.price).monospacedDigit()
+                        } label: {
+                            Label { Text(offer.tip.title) } icon: { Image(systemName: "heart") }
+                        }
+                    }
+                    .disabled(tips.isPurchasing)
+                    .accessibilityIdentifier("tip-\(offer.tip.rawValue)")
+                }
+            }
+            if let outcome = tips.outcome {
+                Text(outcome.message)
+                    .foregroundStyle(.tint)
+                    .accessibilityIdentifier("tipOutcome")
+            }
+        } header: {
+            Text("Leave a tip")
+        }
+        .task { await tips.load() }
+    }
+}
+
+extension TipOutcome {
+    var message: LocalizedStringResource {
+        switch self {
+        case .thanks: "Thank you for your tip!"
+        case .pending: "Your tip is waiting for approval. Thank you!"
+        case .failed: "The tip didn’t go through."
+        }
     }
 }

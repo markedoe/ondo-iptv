@@ -16,7 +16,8 @@ submitted, its listing and its review notes are checked here, before any upload:
    nothing to come, has no test or placeholder words, says nothing of downloads (not in this edition), never calls
    the app or what it plays free, and its copyright is this year's, the same as the app's (2.3). The Google Play
    listing (fastlane/metadata-android, every language) is held to the same words and to Google Play's limits.
-4. The review notes explain every permission, background mode and Mac entitlement the app asks for (2.1, 5.1.1).
+4. The review notes explain every permission, background mode and Mac entitlement the app asks for (2.1, 5.1.1), and
+   each In-App Purchase (the optional tips) and that it unlocks nothing (3.1.1).
 5. The pages of the website the listing opens (its support, privacy and marketing addresses, which App Review visits)
    have no test words either: the App Store app must not read as a beta (2.2).
 6. No way to pay or donate other than In-App Purchase is reachable from the apps (3.1.1, and Google Play's payments
@@ -374,6 +375,15 @@ def yaml_list(project: str, key: str) -> list:
     return [mode for mode in modes if mode]
 
 
+def tip_cases(app_code: str) -> list:
+    """The cases of `enum Tip` (App/Model/Tips.swift): each is the product com.markedoe.ondo.tip.<case>."""
+    body = re.search(r"enum Tip\b[^{]*\{(.*?)\n\}", app_code, re.DOTALL)
+    if not body:
+        return []
+    cases = re.findall(r"^\s*case\s+([^\n]+)", body.group(1), re.MULTILINE)
+    return [name.strip() for line in cases for name in line.split(",") if re.fullmatch(r"\s*\w+\s*", name)]
+
+
 def check_review_notes(problems: list) -> None:
     if not NOTES.is_file():
         problems.append("fastlane/metadata/review_information/notes.txt is missing")
@@ -396,6 +406,10 @@ def check_review_notes(problems: list) -> None:
     app_code = "\n".join(without_comments(edition_source(path.read_text(encoding="utf-8"))) for path in swift_files("App"))
     if "UNUserNotificationCenter" in app_code:
         asked.add("Notifications")
+    # In-App Purchases (the tips): the notes name each product and say what it unlocks (nothing), 3.1.1.
+    if re.search(r"^\s*import StoreKit\b", app_code, re.MULTILINE):
+        asked |= {"In-App Purchase", "unlocks nothing"}
+        asked |= {f"com.markedoe.ondo.tip.{case}" for case in tip_cases(app_code)}
     for item in sorted(asked):
         if item not in notes:
             problems.append(f"the review notes do not explain {item} (fastlane/metadata/review_information/notes.txt)")
