@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -62,11 +63,13 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.markedoe.ondo.BuildConfig
+import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.data.LoadError
+import com.markedoe.ondo.data.TipsState
 import com.markedoe.ondo.player.PlayerActivity
 import com.markedoe.ondo.ui.components.TMDB_API_PAGE
 import com.markedoe.ondo.ui.model.ShowcaseItem
@@ -123,6 +126,7 @@ import com.markedoe.ondo.ui.tv.rememberFocusMemory
 import com.markedoe.ondo.ui.tv.tvSafeArea
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 
 const val PRIVACY_URL = "https://markedoe.github.io/ondo-iptv/privacy.html"
@@ -696,7 +700,12 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
     val xtream = stringResource(R.string.kind_xtream)
     val browse = rememberPageOpener(navController)
     val syncDevices by viewModel.syncDevices.collectAsStateWithLifecycle()
-    val ui = UiMappers.settings(state, appVersion(), syncDevices) { isXtream -> if (isXtream) xtream else m3u }
+    // The tips come from Google Play, loaded when Settings opens (again after a failure).
+    val tipJar = remember(context) { (context.applicationContext as? OndoApplication)?.tips }
+    LaunchedEffect(tipJar) { tipJar?.start() }
+    val tips by (tipJar?.state ?: remember { MutableStateFlow(TipsState(offers = emptyList())) }).collectAsStateWithLifecycle()
+    val activity = LocalActivity.current
+    val ui = UiMappers.settings(state, appVersion(), syncDevices) { isXtream -> if (isXtream) xtream else m3u }.copy(tips = tips)
     val actions = SettingsActions(
             onBack = { navController.popBackStack() },
             onAddPlaylist = { navController.navigate(Routes.AddPlaylist) },
@@ -717,6 +726,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onCheckTmdbToken = viewModel::checkAndSaveTmdbToken,
             onRemoveTmdbToken = viewModel::removeTmdbToken,
             onOpenTmdbApiPage = { context.browse(TMDB_API_PAGE) },
+            onTip = { tip -> activity?.let { tipJar?.purchase(it, tip) } },
         )
     if (isTelevision()) {
         val canChooseLanguage = remember(context) { context.appLanguageSettings() != null }

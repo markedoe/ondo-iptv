@@ -401,4 +401,14 @@
     <string name="person_opened_pages_tmdb">Las películas solo se encuentran entre las fichas que ya abriste. Añade tu «API Read Access Token» de TMDb en Ajustes para encontrarlas todas.</string>
     <string name="help_tmdb_title">TMDb: tendencias y filmografías</string>
     <string name="help_tmdb_body">Con tu propio token de TMDb, Ondo añade a Inicio una fila Tendencias con los títulos del momento que tiene tu playlist, muestra la imagen de fondo de TMDb cuando la de tu proveedor falta o no carga y las fotos del reparto en la ficha de un título, encuentra en la búsqueda a las personas que TMDb conoce y muestra todas las películas de un actor o de un director que tiene tu playlist.\n\nEn themoviedb.org: tu cuenta → Settings → API. Copia el «API Read Access Token» (el largo; la «API Key» también sirve) y pégalo en Ajustes, en TMDb: Ondo lo comprueba con TMDb antes de guardarlo. Con Sincronizar en esta red llega a tus otros dispositivos, así que no hace falta escribirlo con un mando. Solo se envían a TMDb títulos, años y nombres. Este producto usa la API de TMDB, pero TMDB no lo respalda ni lo certifica.</string>
+    <string name="tips_title">Dejar una propina</string>
+    <string name="tips_text">Ondo lo hace un desarrollador independiente. Una propina ayuda a que siga adelante. No desbloquea nada: todo Ondo está disponible para todos.</string>
+    <string name="tip_small">Propina pequeña</string>
+    <string name="tip_medium">Propina mediana</string>
+    <string name="tip_large">Propina grande</string>
+    <string name="tips_loading">Cargando las propinas…</string>
+    <string name="tips_unavailable">Las propinas no se pueden cargar ahora. Google Play debe estar disponible en este dispositivo.</string>
+    <string name="tips_thanks">¡Gracias por tu propina!</string>
+    <string name="tips_pending">Tu propina está pendiente de pago. ¡Gracias!</string>
+    <string name="tips_failed">La propina no se completó.</string>
 </resources>

@@ -395,4 +395,14 @@
     <string name="person_opened_pages_tmdb">Movies are only found among the pages you have opened. Add your TMDb API Read Access Token in Settings to find all of them.</string>
     <string name="help_tmdb_title">TMDb: trending and filmographies</string>
     <string name="help_tmdb_body">With your own TMDb token, Ondo adds a Trending row to Home with the titles of the moment that your playlist has, shows TMDb’s background image when your provider’s is missing or broken and photos of the cast on a title’s page, finds the people TMDb knows in Search, and lists all the movies of an actor or a director that your playlist has.\n\nOn themoviedb.org: your account → Settings → API. Copy the API Read Access Token (the long one; the API Key works too) and paste it in Settings, under TMDb: Ondo checks it with TMDb before saving it. With Sync on this network it reaches your other devices, so there is no need to type it with a remote. Only titles, years and names are sent to TMDb. This product uses the TMDB API but is not endorsed or certified by TMDB.</string>
+    <string name="tips_title">Leave a tip</string>
+    <string name="tips_text">Ondo is made by an independent developer. A tip helps keep it going. It unlocks nothing: everything in Ondo is there for everyone.</string>
+    <string name="tip_small">Small tip</string>
+    <string name="tip_medium">Medium tip</string>
+    <string name="tip_large">Large tip</string>
+    <string name="tips_loading">Loading the tips…</string>
+    <string name="tips_unavailable">Tips can’t be loaded right now. Google Play must be available on this device.</string>
+    <string name="tips_thanks">Thank you for your tip!</string>
+    <string name="tips_pending">Your tip is waiting for payment. Thank you!</string>
+    <string name="tips_failed">The tip didn’t go through.</string>
 </resources>

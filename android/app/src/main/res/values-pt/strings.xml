@@ -401,4 +401,14 @@
     <string name="person_opened_pages_tmdb">Os filmes só são encontrados entre as páginas que você já abriu. Adicione seu “API Read Access Token” do TMDb em Ajustes para encontrar todos.</string>
     <string name="help_tmdb_title">TMDb: em alta e filmografias</string>
     <string name="help_tmdb_body">Com o seu próprio token do TMDb, o Ondo adiciona ao Início uma fileira Em alta com os títulos do momento que a sua playlist tem, mostra a imagem de fundo do TMDb quando a do seu provedor está faltando ou não carrega e as fotos do elenco na página de um título, encontra na pesquisa as pessoas que o TMDb conhece e lista todos os filmes de um ator ou de um diretor que a sua playlist tem.\n\nNo themoviedb.org: sua conta → Settings → API. Copie o “API Read Access Token” (o longo; a “API Key” também funciona) e cole em Configurações, em TMDb: o Ondo confere com o TMDb antes de salvar. Com Sincronizar nesta rede, ele chega aos seus outros dispositivos, sem precisar digitá-lo com o controle remoto. Só títulos, anos e nomes são enviados ao TMDb. Este produto usa a API do TMDB, mas não é endossado nem certificado pelo TMDB.</string>
+    <string name="tips_title">Deixar uma gorjeta</string>
+    <string name="tips_text">O Ondo é feito por um desenvolvedor independente. Uma gorjeta ajuda a mantê-lo. Ela não desbloqueia nada: todo o Ondo está disponível para todos.</string>
+    <string name="tip_small">Gorjeta pequena</string>
+    <string name="tip_medium">Gorjeta média</string>
+    <string name="tip_large">Gorjeta grande</string>
+    <string name="tips_loading">Carregando as gorjetas…</string>
+    <string name="tips_unavailable">Não foi possível carregar as gorjetas agora. O Google Play precisa estar disponível neste dispositivo.</string>
+    <string name="tips_thanks">Obrigado pela sua gorjeta!</string>
+    <string name="tips_pending">Sua gorjeta está aguardando pagamento. Obrigado!</string>
+    <string name="tips_failed">A gorjeta não foi concluída.</string>
 </resources>

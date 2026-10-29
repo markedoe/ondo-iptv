@@ -38,6 +38,10 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
+import com.markedoe.ondo.data.TipsState
+import com.markedoe.ondo.data.TipOutcome
+import com.markedoe.ondo.data.TipOffer
+import com.markedoe.ondo.data.Tip
 import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.player.ProblemReportDialog
@@ -445,6 +449,30 @@ class ScreensTest {
         compose.onAllNodesWithTag("syncDevice").assertCountEquals(0)
         compose.onNodeWithTag("syncSwitch").performClick()
         assertEquals(listOf(true), turned)
+    }
+
+    /** Settings, Leave a tip: Google Play's prices on three rows that start a purchase; it unlocks nothing. */
+    @Test
+    fun settingsOfferTheThreeTipsAtGooglePlaysPrices() {
+        val tipped = mutableListOf<Tip>()
+        val offers = listOf(TipOffer(Tip.SMALL, "1,99 €"), TipOffer(Tip.MEDIUM, "4,99 €"), TipOffer(Tip.LARGE, "9,99 €"))
+        val state = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }.copy(tips = TipsState(offers, TipOutcome.THANKS))
+        compose.setContent { OndoTheme { SettingsScreen(state, SettingsActions(onTip = { tipped += it })) } }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("tipOutcome"))
+        compose.onNodeWithText("It unlocks nothing", substring = true).assertExists()
+        compose.onNodeWithText("4,99 €").assertExists()
+        compose.onNodeWithText("Thank you for your tip!").assertExists()
+        compose.onNodeWithTag("tip-MEDIUM").performClick()
+        assertEquals(listOf(Tip.MEDIUM), tipped)
+    }
+
+    /** Without Google Play the tips are not hidden: a line says why they are not there. */
+    @Test
+    fun settingsSayWhenTheTipsCannotBeLoaded() {
+        val state = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }.copy(tips = TipsState(offers = emptyList()))
+        compose.setContent { OndoTheme { SettingsScreen(state, SettingsActions()) } }
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("tipsUnavailable"))
+        compose.onAllNodesWithTag("tip-SMALL").assertCountEquals(0)
     }
 
     @Test

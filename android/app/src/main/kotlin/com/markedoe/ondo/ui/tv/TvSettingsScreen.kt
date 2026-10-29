@@ -45,6 +45,7 @@ import androidx.compose.material.icons.rounded.SupportAgent
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.VideoLibrary
+import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -99,7 +100,9 @@ import com.markedoe.ondo.ui.screens.PlaylistSummary
 import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsUiState
 import com.markedoe.ondo.ui.screens.bufferLabel
+import com.markedoe.ondo.ui.screens.label
 import com.markedoe.ondo.ui.screens.lastCrashTitle
+import com.markedoe.ondo.ui.screens.message
 import com.markedoe.ondo.ui.screens.syncDetail
 import com.markedoe.ondo.ui.theme.OndoColors
 import kotlinx.coroutines.launch
@@ -110,6 +113,7 @@ enum class TvSettingsSection(val label: Int, val icon: ImageVector, val tag: Str
     SYNC(R.string.sync_section, Icons.Rounded.Sync, "settingsSync"),
     PLAYER(R.string.player, Icons.Rounded.Speed, "settingsPlayer"),
     CATALOGUE(R.string.settings_catalogue, Icons.Rounded.VideoLibrary, "settingsCatalogue"),
+    TIPS(R.string.tips_title, Icons.Rounded.VolunteerActivism, "settingsTips"),
     ABOUT(R.string.about, Icons.Rounded.Info, "settingsAbout"),
 }
 
@@ -180,6 +184,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
                 TvSettingsSection.SYNC -> sync(state, actions, paneFirst)
                 TvSettingsSection.PLAYER -> player(state, actions, paneFirst, ::returnTo, onChoose = { choosingBuffer = it; focusBack = it.key })
                 TvSettingsSection.CATALOGUE -> catalogue(state, actions, paneFirst, canChooseAppLanguage)
+                TvSettingsSection.TIPS -> tips(state, actions, paneFirst)
                 TvSettingsSection.ABOUT -> about(state, actions, paneFirst)
             }
         }
@@ -530,6 +535,39 @@ private fun DeviceRow(name: String, detail: String?) {
             Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             detail?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+    }
+}
+
+/**
+ * The optional tips, through Google Play: each one a row the remote reaches, with its price. When Google Play cannot
+ * sell them here, a line says so, and the remote rests on it.
+ */
+private fun LazyListScope.tips(state: SettingsUiState, actions: SettingsActions, first: FocusRequester) {
+    title(R.string.tips_title, R.string.tips_text)
+    val offers = state.tips.offers
+    when {
+        offers == null || offers.isEmpty() -> item(key = "tipsStatus") {
+            val text = stringResource(if (offers == null) R.string.tips_loading else R.string.tips_unavailable)
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                colors = SurfaceDefaults.colors(containerColor = Color.White.copy(alpha = 0.06f), contentColor = Color.White),
+                modifier = Modifier.widthIn(max = 640.dp).focusRequester(first).focusMemory("settings-tipsStatus").focusable().testTag(if (offers == null) "tipsLoading" else "tipsUnavailable"),
+            ) { Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp)) }
+        }
+        else -> offers.forEachIndexed { index, offer ->
+            item(key = "tip:${offer.tip}") {
+                SettingRow(
+                    stringResource(offer.tip.label),
+                    Icons.Rounded.VolunteerActivism,
+                    subtitle = offer.price,
+                    onClick = { actions.onTip(offer.tip) },
+                    modifier = Modifier.then(if (index == 0) Modifier.focusRequester(first) else Modifier).focusMemory("settings-tip-${offer.tip}").testTag("tip-${offer.tip}"),
+                )
+            }
+        }
+    }
+    state.tips.outcome?.let { outcome ->
+        item(key = "tipOutcome") { Text(stringResource(outcome.message), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.testTag("tipOutcome")) }
     }
 }
 

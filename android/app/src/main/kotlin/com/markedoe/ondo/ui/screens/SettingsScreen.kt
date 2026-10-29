@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -63,6 +64,9 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
+import com.markedoe.ondo.data.Tip
+import com.markedoe.ondo.data.TipOutcome
+import com.markedoe.ondo.data.TipsState
 import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.ui.components.TmdbTokenSettings
 import com.markedoe.ondo.ui.theme.ondoSwitchColors
@@ -89,6 +93,8 @@ data class SettingsUiState(
     val hasTmdbToken: Boolean = false,
     /** TMDb refused the saved token when it was used. */
     val tmdbRefused: Boolean = false,
+    /** The optional tips: Google Play's prices, or why they are not there. */
+    val tips: TipsState = TipsState(offers = emptyList()),
 )
 
 class SettingsActions(
@@ -112,6 +118,7 @@ class SettingsActions(
     val onCheckTmdbToken: suspend (String) -> TmdbCheck = { TmdbCheck.UNREACHABLE },
     val onRemoveTmdbToken: () -> Unit = {},
     val onOpenTmdbApiPage: () -> Unit = {},
+    val onTip: (Tip) -> Unit = {},
 )
 
 /** Playlists, player and about (player-only disclaimer, privacy policy). */
@@ -256,6 +263,26 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                 )
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+            item(key = "tipsTitle") { SectionTitle(stringResource(R.string.tips_title)) }
+            item(key = "tipsText") { Text(stringResource(R.string.tips_text), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
+            when {
+                state.tips.loading -> item(key = "tipsLoading") { Text(stringResource(R.string.tips_loading), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp).testTag("tipsLoading")) }
+                state.tips.unavailable -> item(key = "tipsUnavailable") { Text(stringResource(R.string.tips_unavailable), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(16.dp).testTag("tipsUnavailable")) }
+                else -> state.tips.offers.orEmpty().forEach { offer ->
+                    item(key = "tip:${offer.tip}") {
+                        ListItem(
+                            headlineContent = { Text(stringResource(offer.tip.label)) },
+                            leadingContent = { Icon(Icons.Rounded.VolunteerActivism, contentDescription = null) },
+                            trailingContent = { Text(offer.price, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary) },
+                            modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { actions.onTip(offer.tip) }.testTag("tip-${offer.tip}"),
+                        )
+                    }
+                }
+            }
+            state.tips.outcome?.let { outcome ->
+                item(key = "tipOutcome") { Text(stringResource(outcome.message), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(16.dp).testTag("tipOutcome")) }
+            }
+            item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
             item { SectionTitle(stringResource(R.string.about)) }
             item {
                 ListItem(
@@ -346,3 +373,19 @@ fun syncDetail(device: SyncDevice): String = when {
     device.syncedAt != null -> stringResource(R.string.sync_synced_at, android.text.format.DateFormat.getTimeFormat(LocalContext.current).format(java.util.Date(device.syncedAt)))
     else -> stringResource(R.string.sync_found)
 }
+
+/** A tip's name in Settings. */
+internal val Tip.label: Int
+    get() = when (this) {
+        Tip.SMALL -> R.string.tip_small
+        Tip.MEDIUM -> R.string.tip_medium
+        Tip.LARGE -> R.string.tip_large
+    }
+
+/** What happened to the last tip, said under the tips. */
+internal val TipOutcome.message: Int
+    get() = when (this) {
+        TipOutcome.THANKS -> R.string.tips_thanks
+        TipOutcome.PENDING -> R.string.tips_pending
+        TipOutcome.FAILED -> R.string.tips_failed
+    }

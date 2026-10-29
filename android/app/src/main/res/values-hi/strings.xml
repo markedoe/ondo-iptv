@@ -388,4 +388,14 @@
     <string name="person_opened_pages_tmdb">फ़िल्में केवल उन्हीं पेजों में मिलती हैं जिन्हें आपने खोला है। सभी ढूँढने के लिए सेटिंग्स में अपना TMDb “API Read Access Token” जोड़ें।</string>
     <string name="help_tmdb_title">TMDb: ट्रेंडिंग और फ़िल्मोग्राफ़ी</string>
     <string name="help_tmdb_body">अपने TMDb टोकन के साथ, Ondo होम में एक ट्रेंडिंग पंक्ति जोड़ता है, जिसमें इस समय के वे टाइटल होते हैं जो आपकी प्लेलिस्ट में हैं; जब आपके प्रोवाइडर की बैकग्राउंड इमेज न हो या न दिखे, तो TMDb की इमेज दिखाता है; किसी टाइटल के पेज पर कलाकारों की फ़ोटो दिखाता है; खोज में वे लोग ढूँढता है जिन्हें TMDb जानता है; और किसी अभिनेता या निर्देशक की वे सभी फ़िल्में दिखाता है जो आपकी प्लेलिस्ट में हैं।\n\nthemoviedb.org पर: आपका खाता → Settings → API। “API Read Access Token” (लंबा वाला; “API Key” भी काम करती है) कॉपी करें और सेटिंग्स में TMDb के नीचे पेस्ट करें: Ondo सेव करने से पहले TMDb से इसकी जाँच करता है। इस नेटवर्क पर सिंक करें चालू होने पर यह आपके दूसरे डिवाइस तक पहुँच जाता है, इसलिए रिमोट से टाइप करने की ज़रूरत नहीं। TMDb को सिर्फ़ टाइटल, साल और नाम भेजे जाते हैं। यह प्रोडक्ट TMDB API का इस्तेमाल करता है, लेकिन TMDB इसका समर्थन या प्रमाणन नहीं करता।</string>
+    <string name="tips_title">टिप दें</string>
+    <string name="tips_text">Ondo एक स्वतंत्र डेवलपर बनाता है। टिप इसे आगे बढ़ाने में मदद करती है। इससे कुछ भी अनलॉक नहीं होता: Ondo में सब कुछ सभी के लिए उपलब्ध है।</string>
+    <string name="tip_small">छोटी टिप</string>
+    <string name="tip_medium">मध्यम टिप</string>
+    <string name="tip_large">बड़ी टिप</string>
+    <string name="tips_loading">टिप लोड हो रही हैं…</string>
+    <string name="tips_unavailable">अभी टिप लोड नहीं हो सकीं। इस डिवाइस पर Google Play उपलब्ध होना चाहिए।</string>
+    <string name="tips_thanks">आपकी टिप के लिए धन्यवाद!</string>
+    <string name="tips_pending">आपकी टिप भुगतान की प्रतीक्षा में है। धन्यवाद!</string>
+    <string name="tips_failed">टिप पूरी नहीं हुई।</string>
 </resources>

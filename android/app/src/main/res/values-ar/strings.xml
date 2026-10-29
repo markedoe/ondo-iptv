@@ -440,4 +440,14 @@
     <string name="person_opened_pages_tmdb">لا يُعثر على الأفلام إلا بين الصفحات التي فتحتها. أضف «API Read Access Token» الخاص بك من TMDb في الإعدادات للعثور عليها كلها.</string>
     <string name="help_tmdb_title">TMDb: الرائج وأعمال الفنانين</string>
     <string name="help_tmdb_body">باستخدام رمز TMDb الخاص بك، يضيف Ondo إلى الرئيسية صف «الرائج» بالعناوين الرائجة حاليًا الموجودة في قائمة التشغيل لديك، ويعرض صورة الخلفية من TMDb عندما تكون صورة مزودك مفقودة أو لا تُعرض، وصور طاقم التمثيل في صفحة العنوان، ويجد في البحث الأشخاص الذين يعرفهم TMDb، ويعرض كل أفلام الممثل أو المخرج الموجودة في قائمة التشغيل لديك.\n\nعلى themoviedb.org: حسابك ← Settings‏ ← API. انسخ «API Read Access Token» (الأطول؛ ويعمل «API Key» أيضًا) والصقه في الإعدادات، تحت TMDb: يتحقق Ondo منه لدى TMDb قبل حفظه. مع «المزامنة على هذه الشبكة» يصل إلى أجهزتك الأخرى، فلا حاجة إلى كتابته بجهاز التحكم عن بُعد. لا يُرسل إلى TMDb سوى العناوين والسنوات والأسماء. يستخدم هذا المنتج TMDB API لكنه غير معتمد أو مصدَّق من TMDB.</string>
+    <string name="tips_title">اترك إكرامية</string>
+    <string name="tips_text">يطوّر Ondo مطوّر مستقل. تساعد الإكرامية على استمراره. لا تفتح أي ميزة: كل ما في Ondo متاح للجميع.</string>
+    <string name="tip_small">إكرامية صغيرة</string>
+    <string name="tip_medium">إكرامية متوسطة</string>
+    <string name="tip_large">إكرامية كبيرة</string>
+    <string name="tips_loading">جارٍ تحميل الإكراميات…</string>
+    <string name="tips_unavailable">تعذّر تحميل الإكراميات الآن. يجب أن يكون Google Play متاحًا على هذا الجهاز.</string>
+    <string name="tips_thanks">شكرًا على إكراميتك!</string>
+    <string name="tips_pending">إكراميتك بانتظار الدفع. شكرًا!</string>
+    <string name="tips_failed">لم تكتمل الإكرامية.</string>
 </resources>

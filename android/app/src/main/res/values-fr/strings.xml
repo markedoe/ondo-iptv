@@ -401,4 +401,14 @@
     <string name="person_opened_pages_tmdb">Les films ne sont trouvés que parmi les fiches déjà ouvertes. Ajoutez votre « Jeton d\'accès en lecture à l\'API » TMDb dans les Réglages pour les trouver tous.</string>
     <string name="help_tmdb_title">TMDb : tendances et filmographies</string>
     <string name="help_tmdb_body">Avec votre propre jeton TMDb, Ondo ajoute une rangée Tendances à l’Accueil avec les titres du moment que votre playlist propose, affiche l’image de fond de TMDb quand celle de votre fournisseur manque ou ne s’affiche pas et les photos du casting sur la fiche d’un titre, trouve dans la recherche les personnes que TMDb connaît, et liste tous les films d’un acteur ou d’un réalisateur que votre playlist propose.\n\nSur themoviedb.org : votre compte → Paramètres → API. Copiez le « Jeton d’accès en lecture à l’API » (le long ; la « Clé d’API » fonctionne aussi) et collez-le dans les Réglages, sous TMDb : Ondo le vérifie auprès de TMDb avant de l’enregistrer. Avec Synchroniser sur ce réseau, il arrive sur vos autres appareils : inutile de le saisir avec une télécommande. Seuls des titres, des années et des noms sont envoyés à TMDb. Ce produit utilise l’API TMDB mais n’est ni approuvé ni certifié par TMDB.</string>
+    <string name="tips_title">Laisser un pourboire</string>
+    <string name="tips_text">Ondo est fait par un développeur indépendant. Un pourboire l’aide à continuer. Il ne débloque rien : tout Ondo est là pour tout le monde.</string>
+    <string name="tip_small">Petit pourboire</string>
+    <string name="tip_medium">Pourboire moyen</string>
+    <string name="tip_large">Grand pourboire</string>
+    <string name="tips_loading">Chargement des pourboires…</string>
+    <string name="tips_unavailable">Les pourboires ne peuvent pas être chargés pour l’instant. Google Play doit être disponible sur cet appareil.</string>
+    <string name="tips_thanks">Merci pour votre pourboire !</string>
+    <string name="tips_pending">Votre pourboire attend le paiement. Merci !</string>
+    <string name="tips_failed">Le pourboire n’est pas passé.</string>
 </resources>

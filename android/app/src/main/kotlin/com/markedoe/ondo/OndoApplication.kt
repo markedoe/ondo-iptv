@@ -25,7 +25,9 @@ import com.markedoe.ondo.data.AwardsDownload
 import com.markedoe.ondo.data.CrashLog
 import com.markedoe.ondo.data.LocalSync
 import com.markedoe.ondo.data.OndoRepository
+import com.markedoe.ondo.data.PlayTipBilling
 import com.markedoe.ondo.data.SqliteMetadataStore
+import com.markedoe.ondo.data.TipJar
 import com.markedoe.ondo.data.WorkManagerReminderScheduler
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -95,6 +97,9 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             .readTimeout(15, TimeUnit.SECONDS)
             .build()
     }
+
+    /** The optional tips of Settings, through Google Play (they unlock nothing). */
+    val tips: TipJar by lazy { TipJar(PlayTipBilling(this), CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)) }
 
     val repository: OndoRepository by lazy {
         OndoRepository(

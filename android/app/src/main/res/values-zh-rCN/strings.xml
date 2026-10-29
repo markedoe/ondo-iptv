@@ -375,4 +375,14 @@
     <string name="person_opened_pages_tmdb">只能在你打开过的页面中找到电影。在“设置”中添加你的 TMDb“API Read Access Token”即可全部找到。</string>
     <string name="help_tmdb_title">TMDb：热门与作品年表</string>
     <string name="help_tmdb_body">使用你自己的 TMDb 令牌后，Ondo 会在首页添加“热门”一行，显示你的播放列表中有的当下热门作品；当提供商的背景图缺失或无法显示时，改用 TMDb 的背景图；在作品详情页显示演职人员照片；在搜索中找到 TMDb 收录的人物；并列出你的播放列表中某位演员或导演的全部电影。\n\n在 themoviedb.org 上：你的账户 → Settings → API。复制“API Read Access Token”（较长的那个；“API Key”也可以），粘贴到设置中的 TMDb 下：Ondo 会先向 TMDb 核对，再保存。开启“在此网络上同步”后，它会到达你的其他设备，无需用遥控器输入。发送给 TMDb 的只有标题、年份和人名。本产品使用 TMDB API，但未经 TMDB 认可或认证。</string>
+    <string name="tips_title">打赏</string>
+    <string name="tips_text">Ondo 由一位独立开发者制作。打赏可以支持它继续发展。打赏不会解锁任何功能：Ondo 的一切对每个人都开放。</string>
+    <string name="tip_small">小额打赏</string>
+    <string name="tip_medium">中额打赏</string>
+    <string name="tip_large">大额打赏</string>
+    <string name="tips_loading">正在加载打赏选项…</string>
+    <string name="tips_unavailable">暂时无法加载打赏选项。此设备上需要有 Google Play。</string>
+    <string name="tips_thanks">感谢您的打赏！</string>
+    <string name="tips_pending">您的打赏正在等待付款。谢谢！</string>
+    <string name="tips_failed">打赏未能完成。</string>
 </resources>
