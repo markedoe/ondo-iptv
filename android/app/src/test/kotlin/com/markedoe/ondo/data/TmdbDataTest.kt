@@ -144,6 +144,28 @@ class TmdbDataTest {
         assertTrue(tv.state.value.trending.isEmpty())
     }
 
+    /** A person's page asks TMDb for their credits once a day: back on the page, they show without a new request. */
+    @Test
+    fun aPersonsCreditsAreAskedOnceADay() = runTest {
+        val search = "https://api.themoviedb.org/3/search/person?query=Aster&language=en-US&api_key=GOOD"
+        val credits = "https://api.themoviedb.org/3/person/7/combined_credits?language=en-US&api_key=GOOD"
+        val http = Http(answers.apply {
+            put(search, """{"results":[{"id":7,"name":"Aster","popularity":3.0}]}""")
+            put(credits, """{"cast":[{"id":5,"media_type":"movie","title":"Quiet Water","release_date":"2021-04-01"}],"crew":[]}""")
+        })
+        val tv = device("tv", http).ready()
+        tv.addPlaylist("Home", list)
+        tv.state.first { it.content.movies.isNotEmpty() }
+        assertEquals(TmdbCheck.ACCEPTED, tv.checkAndSaveTmdbToken("GOOD"))
+        val first = tv.tmdbWorks("Aster")
+        assertEquals(listOf("Quiet Water"), first?.map { (it as TrendingMatch.MovieMatch).movie.name })
+        assertEquals(first, tv.tmdbWorks("aster"))
+        assertEquals(1, http.requested.count { it == credits })
+        time += OndoRepository.PERSON_CREDITS_FRESH_MS
+        tv.tmdbWorks("Aster")
+        assertEquals(2, http.requested.count { it == credits })
+    }
+
     /** A token that arrived by sync was checked elsewhere: when TMDb refuses it here, Settings says so. */
     @Test
     fun aTokenTmdbRefusesLaterIsShownAsRefused() = runTest {

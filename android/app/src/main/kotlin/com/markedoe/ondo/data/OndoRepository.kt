@@ -12,6 +12,7 @@ import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.MetadataStore
 import com.markedoe.ondo.core.library.MetadataTitles
 import com.markedoe.ondo.core.library.TitleMetadata
+import com.markedoe.ondo.core.library.TmdbItem
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.library.PlaybackFactory
@@ -1155,11 +1156,21 @@ class OndoRepository(
 
     /** With the viewer's token, the person's movies and series on TMDb that the playlist has; null without a token. */
     suspend fun tmdbWorks(name: String): List<TrendingMatch>? {
-        if (_state.value.settings.tmdbToken == null) return null
-        val credits = tmdb { person(name)?.let { credits(it.id) } } ?: return null
+        val token = _state.value.settings.tmdbToken ?: return null
+        // A person's credits, asked of TMDb once a day per name: back on their page, it shows at once.
+        val key = "$token\u0000${TextNormalizer.normalize(name)}"
+        val askedAt = now()
+        val credits = personCredits[key]?.takeIf { askedAt - it.first < PERSON_CREDITS_FRESH_MS }?.second
+            ?: (tmdb { person(name)?.let { credits(it.id) } ?: emptyList() } ?: return null).also { found ->
+                if (personCredits.size >= PERSON_CREDITS_KEPT) personCredits.keys.firstOrNull()?.let(personCredits::remove)
+                personCredits[key] = askedAt to found
+            }
         val content = _state.value.content
         return withContext(Dispatchers.Default) { CatalogueMatcher.match(credits, content.movies, content.series) }
     }
+
+    /** TMDb's credits of the people whose page was opened, by token and name, with when they were asked. */
+    private val personCredits = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<TmdbItem>>>()
 
     companion object {
         const val REFRESH_AFTER_MS = 24 * 60 * 60 * 1000L
@@ -1175,6 +1186,10 @@ class OndoRepository(
         private const val MAX_PREFETCHING = 2
         private const val PACE_MS = 250L
         private const val LOCAL_PEOPLE_LIMIT = 8
+
+        /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
+        const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L
+        private const val PERSON_CREDITS_KEPT = 64
 
         fun hostName(url: String): String = runCatching { java.net.URI(url.trim()).host }.getOrNull()?.removePrefix("www.") ?: "Playlist"
     }

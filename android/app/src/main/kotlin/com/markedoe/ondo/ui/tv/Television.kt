@@ -480,8 +480,11 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
     val restoring = memory?.restore
     // Items take the focus in keyboard mode only (a remote, a keyboard): tried again when the mode changes.
     val mode = LocalInputModeManager.current.inputMode
+    val bar = LocalTvTopBar.current
     LaunchedEffect(restoring, television, mode, memory?.drops) {
         val wanted = when {
+            // The remote moving along the tabs stays on the bar while each page opens.
+            bar?.hasFocus == true -> false
             restoring != null -> restoring == key
             else -> television && initial && (memory?.last == null || !memory.chosen)
         }

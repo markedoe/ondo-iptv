@@ -65,6 +65,8 @@ import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.TvRow
+import com.markedoe.ondo.ui.tv.focusMemory
+import com.markedoe.ondo.ui.tv.TvSeeAllCard
 import com.markedoe.ondo.ui.tv.rememberLeaveField
 import com.markedoe.ondo.ui.tv.rememberTvTextField
 
@@ -93,12 +95,17 @@ class VodActions(
     val onCategories: () -> Unit = {},
 )
 
+/** How many titles a row of the Movies or Series tab shows on a TV before its See all card. */
+const val TV_ROW_LENGTH = 10
+
 /** Movies or Series tab: category chips, continue watching, My List, award winners, one row per category. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
     val metrics = rememberShelfMetrics()
     val television = isTelevision()
+    // On a TV a row shows its first titles, then a See all card: the remote reaches it by going on along the row.
+    val rowLength = if (television) TV_ROW_LENGTH else Int.MAX_VALUE
     LazyColumn(
         state = rememberTabListState(),
         modifier = Modifier.fillMaxSize().testTag("vod"),
@@ -165,9 +172,10 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
         if (state.myList.isNotEmpty()) {
             item {
                 Shelf(stringResource(R.string.my_list), metrics, onSeeAll = actions.onSeeAllMyList) {
-                    itemsIndexed(state.myList, key = { _, it -> it.key }) { index, item ->
+                    itemsIndexed(state.myList.take(rowLength), key = { _, it -> it.key }) { index, item ->
                         PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == "myList" && index == 0)
                     }
+                    if (television) item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true, width = metrics.posterWidth, modifier = Modifier.focusMemory("myList:seeAll")) }
                 }
             }
         }
@@ -182,7 +190,7 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
         }
         items(state.rows, key = { it.category.id }) { row ->
             Shelf(row.category.name, metrics, onSeeAll = { actions.onCategory(row.category) }) {
-                itemsIndexed(row.items, key = { _, it -> it.key }) { index, item ->
+                itemsIndexed(row.items.take(rowLength), key = { _, it -> it.key }) { index, item ->
                     PosterCard(
                         item,
                         metrics.posterWidth,
@@ -191,6 +199,7 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
                         initialFocus = first == row.category.id && index == 0,
                     )
                 }
+                if (television) item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onCategory(row.category) }, tall = true, width = metrics.posterWidth, modifier = Modifier.focusMemory("${row.category.id}:seeAll")) }
             }
         }
         if (state.rows.isEmpty()) {

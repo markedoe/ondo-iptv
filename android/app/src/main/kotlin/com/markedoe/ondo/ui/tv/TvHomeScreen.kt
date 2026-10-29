@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
@@ -405,12 +406,12 @@ private fun TvTagSuggestion(suggestion: TagSuggestion, actions: HomeActions) {
     }
 }
 
-/** The end of a row: everything in it, on a page of its own. */
+/** The end of a row: everything in it, on a page of its own ([width]: the row's poster width, if not the TV's). */
 @Composable
-private fun TvSeeAllCard(onClick: () -> Unit, tall: Boolean) {
+fun TvSeeAllCard(onClick: () -> Unit, tall: Boolean, modifier: Modifier = Modifier, width: Dp? = null) {
     Card(
         onClick = onClick,
-        modifier = Modifier.width(if (tall) TvTokens.PosterWidth else 156.dp).aspectRatio(if (tall) 2f / 3f else 16f / 9f).testTag("seeAll"),
+        modifier = modifier.width(width ?: if (tall) TvTokens.PosterWidth else 156.dp).aspectRatio(if (tall) 2f / 3f else 16f / 9f).testTag("seeAll"),
         shape = CardDefaults.shape(TvTokens.CardShape),
         colors = CardDefaults.colors(containerColor = Color.White.copy(alpha = 0.08f), focusedContainerColor = Color.White),
         scale = CardDefaults.scale(focusedScale = 1.08f),

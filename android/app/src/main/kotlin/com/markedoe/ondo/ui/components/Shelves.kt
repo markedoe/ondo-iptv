@@ -3,11 +3,13 @@ package com.markedoe.ondo.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
-import androidx.compose.foundation.interaction.InteractionSource
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.InteractionSource
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,9 +48,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -60,8 +62,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.model.ResumeItem
-import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.tv.TvConfirmDialog
 import com.markedoe.ondo.ui.tv.TvResumeMenu
 import com.markedoe.ondo.ui.tv.TvRow
@@ -103,7 +105,8 @@ fun Shelf(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            if (onSeeAll != null) {
+            // On a TV, "See all" is the row's last card instead (hard to reach above the row with a remote).
+            if (onSeeAll != null && !isTelevision()) {
                 TextButton(onClick = onSeeAll) {
                     Text(stringResource(R.string.see_all))
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -139,27 +142,51 @@ fun PosterCard(
     initialFocus: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    if (!showsTitle) {
+        Column(
+            modifier = modifier
+                .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
+                .pressScale(interaction)
+                .focusFrame(PosterShape)
+                .focusMemory(focusKey, initialFocus)
+                .clip(PosterShape)
+                .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
+                .semantics { contentDescription = item.title },
+        ) {
+            Poster(url = item.posterUrl, title = item.title, progress = progress)
+        }
+        return
+    }
+    // With its title and year below: the focus frame and the rounded corners are the poster's, the texts stay clear.
+    val focused by interaction.collectIsFocusedAsState()
+    val grow by animateFloatAsState(if (focused) 1.06f else 1f, label = "posterScale")
     Column(
         modifier = modifier
             .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
             .pressScale(interaction)
-            .focusFrame(PosterShape)
             .focusMemory(focusKey, initialFocus)
-            .clip(PosterShape)
-            .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .semantics { contentDescription = item.title },
     ) {
-        Poster(url = item.posterUrl, title = item.title, progress = progress)
-        if (showsTitle) {
-            Text(
-                text = item.title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-            item.year?.let { Text(it.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        }
+        Poster(
+            url = item.posterUrl,
+            title = item.title,
+            progress = progress,
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = grow
+                    scaleY = grow
+                }
+                .border(3.dp, if (focused) MaterialTheme.colorScheme.onBackground else Color.Transparent, PosterShape),
+        )
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+        item.year?.let { Text(it.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
 }
 
