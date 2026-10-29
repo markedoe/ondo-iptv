@@ -135,6 +135,7 @@
     <string name="choose_file">Elegir un archivo</string>
     <string name="categories">Categorías</string>
     <string name="categories_hint">Elige las categorías que se muestran, por idioma o país, o una por una.</string>
+    <string name="region_quebec">Quebec</string>
     <string name="filter_categories">Filtrar categorías</string>
     <string name="languages_and_countries">Idiomas y países</string>
     <string name="tags_explanation">Muchos proveedores empiezan el nombre de las categorías con un código como |PT| o FR:. Ocultar un código oculta todas sus categorías, en todas las playlists, incluidas las que se añadan más adelante.</string>

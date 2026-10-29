@@ -127,6 +127,7 @@
     <string name="choose_file">选择文件</string>
     <string name="categories">分类</string>
     <string name="categories_hint">按语言或国家/地区，或逐个选择要显示的分类。</string>
+    <string name="region_quebec">魁北克</string>
     <string name="filter_categories">筛选分类</string>
     <string name="languages_and_countries">语言和国家/地区</string>
     <string name="tags_explanation">许多服务商会在分类名称前加上代码，例如 |PT| 或 FR:。隐藏某个代码会隐藏它在所有播放列表中的全部分类，包括以后新增的分类。</string>

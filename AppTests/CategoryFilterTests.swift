@@ -114,6 +114,9 @@ final class CategoryFilterTests: XCTestCase {
         XCTAssertEqual(CategoryTagName.name(of: "UK", locale: english), "United Kingdom")
         XCTAssertEqual(CategoryTagName.name(of: "BR", locale: english), "Brazil")
         XCTAssertNil(CategoryTagName.name(of: "EX-YU", locale: english))
+        // "QC" is Quebec: no country code, so the app names it; the suggestion leaves it alone.
+        XCTAssertNotNil(CategoryTagName.name(of: "QC", locale: english))
+        XCTAssertNil(CategoryTagName.name(of: "QC", locale: english, includingRegions: false))
         XCTAssertEqual(CategoryTagName.viewerCodes(preferredLanguages: ["fr-FR", "en-GB"], current: Locale(identifier: "fr_FR")),
                        ["FR", "EN", "GB", "UK"])
     }

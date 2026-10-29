@@ -147,6 +147,7 @@
     <string name="choose_file">اختيار ملف</string>
     <string name="categories">الفئات</string>
     <string name="categories_hint">اختر الفئات المعروضة حسب اللغة أو البلد أو واحدة تلو الأخرى.</string>
+    <string name="region_quebec">كيبيك</string>
     <string name="filter_categories">تصفية الفئات</string>
     <string name="languages_and_countries">اللغات والبلدان</string>
     <string name="tags_explanation">يبدأ كثير من المزوّدين أسماء الفئات برمز مثل |PT| أو FR:\u200E. إخفاء رمز يُخفي كل فئاته في جميع قوائم التشغيل، بما فيها الفئات التي تُضاف لاحقًا.</string>

@@ -732,9 +732,10 @@ private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHo
     var type by rememberSaveable { mutableStateOf(ContentType.fromRawValue(route.type) ?: ContentType.MOVIE) }
     var filter by rememberSaveable { mutableStateOf("") }
     val locale = LocalConfiguration.current.locales[0]
+    val regions = mapOf("QC" to stringResource(R.string.region_quebec))
     // Off the main thread: each key typed in the filter counts the whole catalogue's titles by category.
-    val categories by produceKept<CategoriesUiState?>("categories", null, state, type, filter, locale) {
-        withContext(Dispatchers.Default) { CategoryFilter.categories(state, type, filter, locale) }
+    val categories by produceKept<CategoriesUiState?>("categories", null, state, type, filter, locale, regions) {
+        withContext(Dispatchers.Default) { CategoryFilter.categories(state, type, filter, locale, regions) }
     }
     val ui = categories ?: return Loading()
     val actions = CategoriesActions(

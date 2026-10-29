@@ -134,6 +134,8 @@
     <string name="choose_file">Choose a file</string>
     <string name="categories">Categories</string>
     <string name="categories_hint">Choose the categories shown, by language or country or one by one.</string>
+    <!-- The region providers tag "QC": named in the categories screen ("QC · Quebec"). -->
+    <string name="region_quebec">Quebec</string>
     <string name="filter_categories">Filter categories</string>
     <string name="languages_and_countries">Languages and countries</string>
     <string name="tags_explanation">Many providers start category names with a code such as |PT| or FR:. Hiding a code hides all its categories, in every playlist, including those added later.</string>

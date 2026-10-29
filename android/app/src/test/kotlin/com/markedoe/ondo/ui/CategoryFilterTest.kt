@@ -97,6 +97,9 @@ class CategoryFilterTest {
         assertEquals("United Kingdom", CategoryFilter.name("UK", english))
         assertEquals("Brazil", CategoryFilter.name("BR", english))
         assertNull(CategoryFilter.name("EX-YU", english))
+        // "QC" is Quebec: no country code, so the app names it.
+        assertNull(CategoryFilter.name("QC", english))
+        assertEquals("Québec", CategoryFilter.name("QC", english, mapOf("QC" to "Québec")))
         assertEquals(setOf("FR", "EN", "GB", "UK"), CategoryFilter.viewerCodes(listOf(Locale.FRANCE, Locale.UK)))
     }
 }

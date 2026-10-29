@@ -74,8 +74,12 @@ object CategoryFilter {
         cached = null
     }
 
-    /** The language or country a tag stands for, in [locale]; null for other tags ("EX-YU", "VIP"). */
-    fun name(tag: String, locale: Locale): String? {
+    /**
+     * The language or country a tag stands for, in [locale]; null for other tags ("EX-YU", "VIP"). [regions]: the app's
+     * names of the regions providers tag that are no country ("QC", Quebec), shown but left out of the suggestion.
+     */
+    fun name(tag: String, locale: Locale, regions: Map<String, String> = emptyMap()): String? {
+        regions[tag]?.let { return it }
         val name = when {
             tag in languageCodes -> Locale.forLanguageTag(tag.lowercase()).getDisplayLanguage(locale)
             tag.length == 2 -> Locale.forLanguageTag("und-" + (countryAliases[tag] ?: tag)).getDisplayCountry(locale)
@@ -109,10 +113,10 @@ object CategoryFilter {
     }
 
     /** Languages and countries first (by name), other tags after. */
-    fun sortedTags(index: TagIndex, locale: Locale): List<String> =
-        index.categories.keys.sortedWith(compareBy<String>({ name(it, locale) == null }, { name(it, locale) ?: it }))
+    fun sortedTags(index: TagIndex, locale: Locale, regions: Map<String, String> = emptyMap()): List<String> =
+        index.categories.keys.sortedWith(compareBy<String>({ name(it, locale, regions) == null }, { name(it, locale, regions) ?: it }))
 
-    fun categories(state: OndoState, type: ContentType, filter: String, locale: Locale): CategoriesUiState {
+    fun categories(state: OndoState, type: ContentType, filter: String, locale: Locale, regions: Map<String, String> = emptyMap()): CategoriesUiState {
         val index = tags(state.content)
         val counts = when (type) {
             ContentType.LIVE -> state.content.channels.groupingBy { it.categoryId }.eachCount()
@@ -131,8 +135,8 @@ object CategoryFilter {
         }
         val hiddenWords = state.library.hiddenWords
         return CategoriesUiState(
-            tags = if (tokens.isNotEmpty()) emptyList() else sortedTags(index, locale).map { tag ->
-                TagRow(tag, name(tag, locale)?.let { "$tag · $it" } ?: tag, index.categories[tag]?.size ?: 0, tag in state.library.hiddenTags)
+            tags = if (tokens.isNotEmpty()) emptyList() else sortedTags(index, locale, regions).map { tag ->
+                TagRow(tag, name(tag, locale, regions)?.let { "$tag · $it" } ?: tag, index.categories[tag]?.size ?: 0, tag in state.library.hiddenTags)
             },
             styles = CategoryStyles.order.filter { it in index.styles || it in hiddenWords }.map { style ->
                 StyleRow(style, index.styles[style]?.size ?: 0, style in hiddenWords)

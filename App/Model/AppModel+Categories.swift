@@ -51,7 +51,14 @@ enum CategoryTagName {
     /// Codes providers use for a country that is not its ISO code.
     static let countryAliases: [String: String] = ["UK": "GB"]
 
-    static func name(of tag: String, locale: Locale = .current) -> String? {
+    /// Regions providers tag that are no country ("QC", Quebec): the app names them.
+    static func regionName(of tag: String) -> String? {
+        tag == "QC" ? String(localized: "Quebec", comment: "The region providers tag \"QC\", in the categories screen (\"QC · Quebec\").") : nil
+    }
+
+    /// `includingRegions` false: languages and countries only (the suggestion leaves the other regions alone).
+    static func name(of tag: String, locale: Locale = .current, includingRegions: Bool = true) -> String? {
+        if includingRegions, let region = regionName(of: tag) { return region }
         let name: String?
         if languageCodes.contains(tag) {
             name = locale.localizedString(forLanguageCode: tag.lowercased())
@@ -60,7 +67,8 @@ enum CategoryTagName {
         } else {
             name = nil
         }
-        guard let name, !name.isEmpty else { return nil }
+        // Foundation can answer with the code itself when it does not know it.
+        guard let name, !name.isEmpty, name.uppercased() != tag else { return nil }
         return name.prefix(1).uppercased(with: locale) + name.dropFirst()
     }
 
@@ -162,7 +170,8 @@ extension AppModel {
         let tags = categoryTags.sortedTags()
         // A choice was already made about one of these tags, here or on another playlist.
         guard !tags.contains(where: { library.hiddenCategoryTags[$0] != nil || library.shownCategoryTags[$0] != nil }) else { return nil }
-        let known = tags.filter { CategoryTagName.name(of: $0) != nil }
+        // Languages and countries only: a region such as Quebec is not hidden for a viewer of its country's language.
+        let known = tags.filter { CategoryTagName.name(of: $0, includingRegions: false) != nil }
         let kept = known.filter { viewerCodes.contains($0) }
         let hidden = known.filter { !viewerCodes.contains($0) }
         guard known.count >= 3, !kept.isEmpty, !hidden.isEmpty else { return nil }
