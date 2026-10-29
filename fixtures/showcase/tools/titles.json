@@ -252,35 +252,6 @@
    "added_days_ago": 20,
    "director": "Tim Baumann",
    "cast": "Matylda Baczyńska, Rafał Fudalej, Maciej Maciejewski"
-  },
-  {
-   "id": "m-seder",
-   "title": "Seder-Masochism",
-   "year": 2018,
-   "category": "v-en-anim",
-   "genre": "Animation, Musical",
-   "rating": 7.1,
-   "minutes": 78,
-   "director": "Nina Paley",
-   "plot": {
-    "en": "The story of the Exodus retold in song and animation, through the eyes of the goddesses it left behind.",
-    "fr": "Le récit de l'Exode raconté en chansons et en animation, du point de vue des déesses qu'il a laissées de côté."
-   },
-   "poster": {
-    "url": "https://upload.wikimedia.org/wikipedia/commons/0/0b/SederMasochismPoster.jpg",
-    "license": "CC0",
-    "author": "Nina Paley",
-    "file": "SederMasochismPoster.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:SederMasochismPoster.jpg"
-   },
-   "backdrop": {
-    "url": "https://upload.wikimedia.org/wikipedia/commons/7/73/Moses-Splits-Sea_by_Nina_Paley.jpg",
-    "license": "CC0",
-    "author": "Nina Paley",
-    "file": "Moses-Splits-Sea_by_Nina_Paley.jpg",
-    "page": "https://commons.wikimedia.org/wiki/File:Moses-Splits-Sea_by_Nina_Paley.jpg"
-   },
-   "added_days_ago": 5
   }
  ],
  "series": [
@@ -431,6 +402,6 @@
    "en": "s",
    "fr": "s"
   },
-  "person": "Nina Paley"
+  "person": "Colin Levy"
  }
 }
