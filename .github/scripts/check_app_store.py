@@ -13,8 +13,9 @@ submitted, its listing and its review notes are checked here, before any upload:
    downloads ("Downloads", "Downloaded files…"): App Review would look for a feature the build does not have (2.3.1).
 2. No private API: no class, selector or symbol looked up by name, no method swapped, no script run (2.5.1, 2.5.2).
 3. The listing (fastlane/metadata, every language) fits App Store Connect's limits, names no other platform, promises
-   nothing to come, has no test or placeholder words, says nothing of downloads (not in this edition), and its
-   copyright is this year's, the same as the app's (2.3).
+   nothing to come, has no test or placeholder words, says nothing of downloads (not in this edition), never calls
+   the app or what it plays free, and its copyright is this year's, the same as the app's (2.3). The Google Play
+   listing (fastlane/metadata-android, every language) is held to the same words and to Google Play's limits.
 4. The review notes explain every permission, background mode and Mac entitlement the app asks for (2.1, 5.1.1).
 5. The pages of the website the listing opens (its support, privacy and marketing addresses, which App Review visits)
    have no test words either: the App Store app must not read as a beta (2.2).
@@ -96,15 +97,20 @@ URL_FILES = ("support_url.txt", "privacy_url.txt", "marketing_url.txt")
 LISTING_RULES = [
     ("names another platform (2.3.10)", re.compile(
         r"(?i)\b(?:android|google play|play store|windows phone|blackberry|tizen|symbian|sailfish|palm os|"
-        r"fire tv|roku|appgallery)\b")),
+        r"fire tv|roku|appgallery)\b|安卓|أندرويد|एंड्रॉइड|एंड्रॉयड")),
     ("promises a feature to come (2.3.1)", re.compile(
         r"(?i)coming soon|available soon|in a (?:future|next) (?:version|update)|bientôt|prochainement|"
-        r"prochaine (?:version|mise à jour)|\bà venir\b")),
-    ("has test words (2.3)", re.compile(r"(?i)\bbeta\b|\bbêta\b|testflight|\btesting\b|test version|version de test")),
-    ("has placeholder text (2.3)", re.compile(r"(?i)lorem ipsum|placeholder|\bTODO\b|\bTBD\b|\bxxx\b")),
+        r"prochaine (?:version|mise à jour)|\bà venir\b|próximamente|em breve|即将推出|敬请期待|قريبًا|قريبا|जल्द ही")),
+    ("has test words (2.3)", re.compile(
+        r"(?i)\bbeta\b|\bbêta\b|testflight|\btesting\b|test version|version de test|versión de prueba|"
+        r"versão de teste|测试版|بيتا|बीटा")),
+    ("has placeholder text (2.3)", re.compile(r"(?i)lorem ipsum|placeholder|(?-i:\bTODO\b)|\bTBD\b|\bxxx\b")),  # TODO in capitals only: "todo" is Spanish and Portuguese
     ("mentions downloads, which the App Store edition does not have (2.3.1)", re.compile(
         r"(?i)download|télécharg|\b(?:watch|watching|view|play)\s+offline|\boffline\s+(?:viewing|playback|mode)|"
-        r"\b(?:regarder|voir|lecture)\s+hors[ -]ligne")),
+        r"\b(?:regarder|voir|lecture)\s+hors[ -]ligne|descarga|\bbaixa[rd]|下载|تنزيل|تحميل|डाउनलोड")),
+    # Ondo is a player and provides no content: never "free" IPTV, channels or app (CLAUDE.md, Neutrality).
+    ("calls the app or what it plays free (CLAUDE.md)", re.compile(
+        r"(?i)\bfree\b|gratuit|\bgratis\b|grátis|免费|免費|مجان|मुफ़्त|मुफ्त|फ्री")),
 ]
 # The review notes are written for the reviewer ("how to test"), but must not describe what the build lacks.
 NOTES_RULES = [rule for rule in LISTING_RULES if not rule[0].startswith("has test words")]
@@ -295,6 +301,36 @@ def check_listing(problems: list) -> None:
         problems.append("project.yml: NSHumanReadableCopyright must be the listing's copyright (copyright.txt)")
 
 
+PLAY_METADATA = ROOT / "fastlane/metadata-android"
+PLAY_LIMITS = {"title.txt": 30, "short_description.txt": 80, "full_description.txt": 4000}
+# The Google Play listing follows the same neutrality and test-word rules; it names Google's devices, not Apple's.
+PLAY_RULES = [rule for rule in LISTING_RULES if not rule[0].startswith(("names another platform", "mentions downloads"))]
+PLAY_RULES.append(("names another platform", re.compile(
+    r"(?i)\b(?:iphone|ipad|ipados|macos|tvos|apple|app store|airplay|testflight)\b|\bmac\b")))
+
+
+def check_play_listing(problems: list) -> None:
+    """Every language of the Google Play listing: its files, Google Play's limits and the same neutral words."""
+    if not PLAY_METADATA.is_dir():
+        return
+    for locale in sorted(path for path in PLAY_METADATA.iterdir() if path.is_dir()):
+        files = [(locale / name, limit) for name, limit in PLAY_LIMITS.items()]
+        files += [(locale / "changelogs/default.txt", 500)]
+        for path, limit in files:
+            if not path.is_file():
+                problems.append(f"{path.relative_to(ROOT)} is missing")
+                continue
+            text = path.read_text(encoding="utf-8").strip()
+            if not text:
+                problems.append(f"{path.relative_to(ROOT)} is empty")
+            if len(text) > limit:
+                problems.append(f"{path.relative_to(ROOT)} has {len(text)} characters, Google Play takes {limit}")
+            for number, line in enumerate(text.splitlines(), start=1):
+                for reason, pattern in PLAY_RULES:
+                    if pattern.search(line):
+                        problems.append(f"{path.relative_to(ROOT)}:{number} {reason}: {line.strip()[:120]}")
+
+
 def check_site(problems: list) -> None:
     """The pages of site/ that the listing's addresses open: App Review visits them."""
     test_words = [pattern for reason, pattern in LISTING_RULES if reason.startswith("has test words")]
@@ -432,6 +468,7 @@ def main() -> int:
     check_code(problems)
     check_build_settings(problems)
     check_listing(problems)
+    check_play_listing(problems)
     check_site(problems)
     check_review_notes(problems)
     check_payments(problems)

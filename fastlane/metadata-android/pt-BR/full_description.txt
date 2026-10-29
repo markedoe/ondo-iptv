@@ -1,0 +1,36 @@
+O Ondo é apenas um player: ele não hospeda, não fornece nem vende nenhum conteúdo ou assinatura de IPTV. Use-o somente com fontes que você tem autorização para assistir.
+
+O Ondo é um player IPTV elegante para celulares e tablets Android e para Android TV. Adicione a lista M3U ou o login Xtream Codes fornecido pelo seu provedor: os filmes, séries e canais dele viram uma biblioteca limpa e rápida, sem anúncios.
+
+FILMES E SÉRIES
+• Carrossel de destaques, linhas por categoria, pôsteres e busca instantânea
+• Detalhes completos: sinopse, elenco, nota, temporadas e episódios
+• Continuar assistindo, retomar de onde você parou, próximo episódio
+• Minha lista para os títulos que você quer assistir
+
+UM PLAYER QUE SIMPLESMENTE FUNCIONA
+• Baseado no player de mídia do Android (HLS, MPEG-TS, MP4, MKV)
+• Faixas de áudio e legendas, Picture-in-Picture
+• Mensagens de erro claras: provedor, rede ou app
+• Estatísticas da transmissão: veja se um travamento vem da rede ou do player
+
+TV AO VIVO
+• Canais por categoria com o que está passando agora e o que vem depois
+• Canais em Minha lista, guia de TV e lembretes de programas
+
+NO ANDROID TV E NO GOOGLE TV
+• Todas as telas com o controle remoto
+• OK para pausar, as setas para voltar e avançar, CH+ / CH− e as teclas numéricas para trocar de canal
+
+FONTES
+• Listas M3U / M3U8, XSPF e JSON (link ou arquivo) e contas Xtream Codes
+• Várias listas, atualização automática
+• As categorias adultas ficam ocultas até você escolher exibi-las
+
+NO SEU IDIOMA
+• Inglês, francês, espanhol, português, chinês (simplificado), árabe e hindi
+
+PRIVADO POR DESIGN
+• Sem conta, sem rastreamento, sem anúncios: suas listas ficam no seu dispositivo. Se você ativar Sincronizar nesta rede, elas também vão para seus outros dispositivos Ondo da mesma rede, nunca pela internet.
+
+O Ondo não inclui nenhum canal, lista ou assinatura e não é afiliado a nenhum provedor de IPTV.

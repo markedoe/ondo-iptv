@@ -1,0 +1,1 @@
+m3u,m3u8,xtream,codes,लाइव,epg,गाइड,रीप्ले,catchup,vod,प्लेलिस्ट,airplay,सबटाइटल,multiview,xspf

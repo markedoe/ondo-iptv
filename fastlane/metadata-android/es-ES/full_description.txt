@@ -1,0 +1,36 @@
+Ondo es solo un reproductor: no aloja, no ofrece ni vende ningún contenido ni suscripción IPTV. Úsalo únicamente con fuentes que estés autorizado a ver.
+
+Ondo es un elegante reproductor IPTV para teléfonos y tablets Android y para Android TV. Añade la lista M3U o los datos de acceso Xtream Codes que te dé tu proveedor: sus películas, series y canales se convierten en una biblioteca limpia y rápida, sin anuncios.
+
+PELÍCULAS Y SERIES
+• Carrusel destacado, filas por categoría, carátulas y búsqueda instantánea
+• Fichas completas: sinopsis, reparto, valoración, temporadas y episodios
+• Seguir viendo, reanudar donde lo dejaste, siguiente episodio
+• Mi lista para los títulos que quieres ver
+
+UN REPRODUCTOR QUE FUNCIONA
+• Basado en el reproductor multimedia de Android (HLS, MPEG-TS, MP4, MKV)
+• Pistas de audio y subtítulos, imagen en imagen
+• Mensajes de error claros: proveedor, red o app
+• Estadísticas de emisión: comprueba si una congelación viene de la red o del reproductor
+
+TV EN DIRECTO
+• Canales por categoría con lo que se emite ahora y a continuación
+• Canales en Mi lista, guía de TV y recordatorios de programas
+
+EN ANDROID TV Y GOOGLE TV
+• Todas las pantallas con el mando a distancia
+• OK para pausar, las flechas para retroceder y avanzar, CH+ / CH− y las teclas numéricas para cambiar de canal
+
+FUENTES
+• Listas M3U / M3U8, XSPF y JSON (enlace o archivo) y cuentas Xtream Codes
+• Varias listas, actualización automática
+• Las categorías para adultos permanecen ocultas hasta que decidas mostrarlas
+
+EN TU IDIOMA
+• Inglés, francés, español, portugués, chino (simplificado), árabe e hindi
+
+PRIVADO POR DISEÑO
+• Sin cuenta, sin rastreo, sin anuncios: tus listas se quedan en tu dispositivo. Si activas Sincronizar en esta red, también pasan a tus otros dispositivos Ondo de la misma red, nunca por internet.
+
+Ondo no incluye ningún canal, lista ni suscripción y no está afiliado a ningún proveedor IPTV.

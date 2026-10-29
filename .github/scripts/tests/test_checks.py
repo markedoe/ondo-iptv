@@ -481,6 +481,37 @@ class AppStoreTests(CheckTestCase):
         self.assertFails("app_store", "names another platform", "mentions downloads", "promises a feature to come",
                          "has test words", "fr-FR/name.txt has 40 characters")
 
+    def test_the_listing_follows_the_rules_in_every_language(self):
+        for text, reason in (("Lector IPTV gratis.", "calls the app or what it plays free"),
+                             ("免费 IPTV 播放器", "calls the app or what it plays free"),
+                             ("मुफ़्त IPTV प्लेयर", "calls the app or what it plays free"),
+                             ("مشغل IPTV مجاني", "calls the app or what it plays free"),
+                             ("Versão de teste do player.", "has test words"),
+                             ("Próximamente en tu televisor.", "promises a feature to come"),
+                             ("下载电影离线观看", "mentions downloads")):
+            with self.subTest(text):
+                self.write("fastlane/metadata/es-ES/description.txt", text + "\n")
+                for name, other in self.LISTING.items():
+                    if name != "description.txt":
+                        self.write(f"fastlane/metadata/es-ES/{name}", other + "\n")
+                self.assertFails("app_store", f"es-ES/description.txt:1 {reason}")
+
+    def test_todo_in_a_sentence_is_not_a_placeholder(self):
+        self.write("fastlane/metadata/fr-FR/description.txt", "Rápido em todo lugar: todo el catálogo.\n")
+        self.assertPasses("app_store")
+
+    def test_the_google_play_listing_is_checked_in_every_language(self):
+        for name, text in {"title.txt": "Ondo – IPTV Player", "short_description.txt": "Your provider's TV.",
+                           "full_description.txt": "Ondo is a player only.", "changelogs/default.txt": "Faster."}.items():
+            self.write(f"fastlane/metadata-android/en-US/{name}", text + "\n")
+        self.assertPasses("app_store")
+        self.write("fastlane/metadata-android/pt-BR/title.txt", "Ondo – Player IPTV grátis para iPhone\n")
+        self.write("fastlane/metadata-android/pt-BR/short_description.txt", "x" * 81 + "\n")
+        self.write("fastlane/metadata-android/pt-BR/full_description.txt", "Ondo.\n")
+        self.assertFails("app_store", "pt-BR/title.txt:1 calls the app or what it plays free", "pt-BR/title.txt:1 names another platform",
+                         "pt-BR/short_description.txt has 81 characters, Google Play takes 80",
+                         "pt-BR/changelogs/default.txt is missing")
+
     def test_the_app_store_edition_never_says_beta(self):
         self.write("App/Features/Badge.swift", "#if TESTFLIGHT_DOWNLOADS\nlet badge = Text(\"Beta\")\n#endif\n"
                    "let version = \"1.1 (beta)\"\n")

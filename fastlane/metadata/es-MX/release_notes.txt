@@ -1,0 +1,20 @@
+• Sincronizar en esta red (Ajustes, desactivado hasta que lo actives): listas, Mi lista, colecciones y progreso se mantienen iguales en los dispositivos Ondo de tu red doméstica, directamente entre ellos, nunca por internet.
+• Ocultar películas vistas (Ajustes y menú de las cuadrículas de películas): las películas que terminaste salen de Películas, Inicio y Títulos similares.
+• En iPhone y iPad, las películas y episodios MKV se reproducen con el reproductor del sistema cuando puede decodificarlos: se ven HDR10, HLG y Dolby Vision, suena Dolby Atmos y funciona la imagen en imagen. VLC reproduce los demás.
+• Reproductor, Más, Informar de un problema…: un informe de la reproducción (tiempos de inicio y de salto, congelaciones y su causa, estadísticas; sin dirección de emisión, acceso ni título) para copiar, compartir o enviar en una incidencia de GitHub.
+• Las películas y series arrancan más rápido y vuelven antes tras un salto; la imagen sigue tu dedo mientras arrastras la barra de tiempo.
+• Ajustes, Reproductor: elige el búfer para la TV en directo y para películas y series (Automático, o de 1 a 10 segundos). Un búfer más largo oculta interrupciones más largas del proveedor.
+• Con VLC, los canales en directo se congelan menos: el búfer crece solo cuando la emisión del proveedor se detiene un momento, y las Estadísticas de emisión indican si una congelación viene de la red o del reproductor.
+• Más rápido y fluido en todas partes: las listas grandes se abren antes, la búsqueda funciona en segundo plano, las listas largas se desplazan sin tirones y la guía de TV se abre al instante con miles de canales.
+• Mac: pantalla completa, desde el botón, la tecla F o con doble clic; AirPlay envía el vídeo a tu televisor, no solo el sonido.
+• Reanudar empieza justo donde lo dejaste, y una pausa hecha mientras se abre una película sigue en pausa.
+• Busca subtítulos en línea desde el reproductor: OpenSubtitles, SubDL y SubSource con tu propia clave, Addic7ed para series sin clave.
+• Ondo ahora habla español, portugués, chino (simplificado), árabe e hindi, además de inglés y francés.
+• Mi lista ahora es una pestaña en iPhone, con tus películas, series y canales en un solo lugar; tus propias listas ahora se llaman colecciones.
+• Toca un actor, un director, un género, el año o un premio en la ficha de una película o serie para ver los títulos de tu lista que lo comparten; la búsqueda encuentra actores y directores por su nombre.
+• La búsqueda se puede filtrar por años de estreno y las cuadrículas se ordenan por fecha de estreno.
+• Oculta de golpe un idioma o un país entero (nombres de categoría que empiezan por |PT|, FR:…), un estilo (manga y anime, infantil, documentales…) o cualquier palabra de los nombres de categoría; las categorías añadidas después lo respetan.
+• Premios y selecciones de festivales (Cannes, Óscar, Berlín, Venecia, César…) en las fichas de películas, una fila de Títulos premiados y un filtro de búsqueda por festival o ceremonia.
+• Inicio muestra cuándo se actualizó la lista por última vez, encima de su nombre.
+• Con tu token de TMDb: las fichas sin imagen de fondo muestran la de TMDb (si no, la carátula desenfocada), y el tráiler de TMDb cuando el proveedor no da ninguno; las valoraciones muestran su número de votos, y los actores y directores su foto. Lo que responde TMDb se guarda en el dispositivo: las fichas lo muestran al instante, también sin conexión.
+• Ajustes admite tu “API Read Access Token” (o API Key) de TMDb, con el nombre que tiene en TMDb, y lo comprueba con TMDb antes de guardarlo; “Idioma de la app” abre la página del sistema donde se elige el idioma de Ondo.

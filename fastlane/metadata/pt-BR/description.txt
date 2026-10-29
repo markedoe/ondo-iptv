@@ -1,0 +1,43 @@
+O Ondo é apenas um player: ele não hospeda, não fornece nem vende nenhum conteúdo ou assinatura de IPTV. Use-o somente com fontes que você tem autorização para assistir.
+
+O Ondo é um player IPTV elegante para iPhone, iPad e Mac. Adicione a lista M3U ou o login Xtream Codes fornecido pelo seu provedor: os filmes, séries e canais dele viram uma biblioteca limpa e rápida, sem anúncios.
+
+FILMES E SÉRIES
+• Biblioteca de pôsteres, categorias, ordenação (data de lançamento, nota, nome…) e busca instantânea filtrada por ano de lançamento
+• Detalhes completos: sinopse, elenco, nota, trailer, temporadas e episódios
+• Toque em um ator ou diretor para ver os outros filmes e séries dele na sua lista
+• Prêmios e seleções de festivais nas páginas de filmes (Cannes, Oscar, Berlim, Veneza, César…) e os premiados da sua lista
+• Continuar assistindo: a reprodução retoma exatamente de onde você parou, e o próximo episódio começa sozinho
+• Minha lista reúne seus filmes, séries e canais em um só lugar, e as coleções os agrupam do seu jeito
+
+UM PLAYER QUE SIMPLESMENTE FUNCIONA
+• Dois mecanismos: o player da Apple (HDR10, Dolby Vision, Dolby Atmos, Picture in Picture, AirPlay), com filmes MKV incluídos no iPhone e no iPad quando ele consegue decodificá-los, e um mecanismo baseado no VLC para o resto (MKV, AVI, TS)
+• Faixas de áudio e legendas, arquivos de legenda SRT/VTT, proporção da tela, velocidade, timer de desligamento, bloqueio dos controles
+• Busca de legendas online no player: OpenSubtitles, SubDL e SubSource com sua própria chave, Addic7ed para séries sem chave
+• Mensagens de erro claras que dizem se a falha é do provedor, da rede ou do app
+
+NA SUA TV
+• AirPlay do iPhone, iPad e Mac: o vídeo vai para a TV, não só o som
+• Chromecast do iPhone e do iPad
+
+NO MAC
+• Uma janela por transmissão, tela cheia (botão, tecla F ou clique duplo), atalhos de teclado e um menu Reprodução
+
+TV AO VIVO
+• Canais, guia de TV e replay quando o seu provedor oferece: reinicie o programa atual, assista a um programa passado, pause a TV ao vivo
+• Canais em Minha lista e lembretes de programas
+• Multiview de até 4 canais no iPad e no Mac
+
+PARA TODA A FAMÍLIA
+• Perfis com Minha lista e histórico próprios, PIN opcional e perfis infantis
+• Controle parental: bloqueie as categorias adultas com um PIN
+
+FONTES
+• Listas M3U / M3U8 (link ou arquivo), Xtream Codes, listas XSPF e JSON
+• Várias listas, atualização automática, backups
+
+IDIOMAS
+• Inglês, francês, espanhol, português, chinês (simplificado), árabe e hindi
+
+PRIVACIDADE
+• Sem conta, sem anúncios e sem análises próprias: suas listas e seu histórico ficam no seu dispositivo. Se você ativar Sincronizar nesta rede, eles também vão para seus outros dispositivos Ondo da mesma rede, nunca pela internet.

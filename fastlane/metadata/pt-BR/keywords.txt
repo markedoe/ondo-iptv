@@ -1,0 +1,1 @@
+m3u,m3u8,xtream,codes,aovivo,epg,guia,replay,catchup,vod,lista,airplay,legendas,multiview,xspf

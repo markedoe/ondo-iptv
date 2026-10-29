@@ -15,7 +15,7 @@ settings:
     SWIFT_VERSION: "5.0"
     # Defaults for local builds: the release lanes (fastlane/Fastfile) set the version from the tag and the
     # build number from App Store Connect.
-    MARKETING_VERSION: "1.1.0"
+    MARKETING_VERSION: "1.2.0"
     CURRENT_PROJECT_VERSION: "1"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES

@@ -1,0 +1,43 @@
+Ondo es solo un reproductor: no aloja, no ofrece ni vende ningún contenido ni suscripción IPTV. Úsalo únicamente con fuentes que estés autorizado a ver.
+
+Ondo es un elegante reproductor IPTV para iPhone, iPad y Mac. Añade la lista M3U o los datos de acceso Xtream Codes que te dé tu proveedor: sus películas, series y canales se convierten en una biblioteca limpia y rápida, sin anuncios.
+
+PELÍCULAS Y SERIES
+• Biblioteca de carátulas, categorías, ordenación (fecha de estreno, valoración, nombre…) y búsqueda instantánea filtrada por años de estreno
+• Fichas completas: sinopsis, reparto, valoración, tráiler, temporadas y episodios
+• Toca un actor o un director para ver sus otras películas y series de tu lista
+• Premios y selecciones de festivales en las fichas de películas (Cannes, Óscar, Berlín, Venecia, César…) y los títulos premiados de tu lista
+• Seguir viendo: la reproducción se reanuda justo donde la dejaste y el siguiente episodio empieza solo
+• Mi lista reúne tus películas, series y canales en un solo lugar, y las colecciones los agrupan a tu manera
+
+UN REPRODUCTOR QUE FUNCIONA
+• Dos motores: el reproductor de Apple (HDR10, Dolby Vision, Dolby Atmos, imagen en imagen, AirPlay), con películas MKV incluidas en iPhone y iPad cuando puede decodificarlas, y un motor basado en VLC para el resto (MKV, AVI, TS)
+• Pistas de audio y subtítulos, archivos de subtítulos SRT/VTT, relación de aspecto, velocidad, temporizador de apagado, bloqueo de controles
+• Búsqueda de subtítulos en línea desde el reproductor: OpenSubtitles, SubDL y SubSource con tu propia clave, Addic7ed para series sin clave
+• Mensajes de error claros que indican si el fallo es del proveedor, de la red o de la app
+
+EN TU TELEVISOR
+• AirPlay desde iPhone, iPad y Mac: el vídeo llega a tu televisor, no solo el sonido
+• Chromecast desde iPhone y iPad
+
+EN EL MAC
+• Una ventana por emisión, pantalla completa (botón, tecla F o doble clic), atajos de teclado y un menú Reproducción
+
+TV EN DIRECTO
+• Canales, guía de TV y reemisión cuando tu proveedor la ofrece: reinicia el programa actual, mira uno pasado, pausa la TV en directo
+• Canales en Mi lista y recordatorios de programas
+• Multiview de hasta 4 canales en iPad y Mac
+
+PARA TODA LA FAMILIA
+• Perfiles con su propia Mi lista e historial, PIN opcional y perfiles infantiles
+• Control parental: bloquea las categorías para adultos con un PIN
+
+FUENTES
+• Listas M3U / M3U8 (enlace o archivo), Xtream Codes, listas XSPF y JSON
+• Varias listas, actualización automática, copias de seguridad
+
+IDIOMAS
+• Inglés, francés, español, portugués, chino (simplificado), árabe e hindi
+
+PRIVACIDAD
+• Sin cuenta, sin anuncios y sin analíticas propias: tus listas y tu historial se quedan en tu dispositivo. Si activas Sincronizar en esta red, también pasan a tus otros dispositivos Ondo de la misma red, nunca por internet.
