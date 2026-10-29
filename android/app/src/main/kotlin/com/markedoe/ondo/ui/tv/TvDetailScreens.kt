@@ -250,7 +250,7 @@ private fun TvDetailPage(content: LazyListScope.() -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(TvTokens.Ink).testTag("detail"),
         contentPadding = PaddingValues(bottom = 40.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         content = content,
     )
 }
@@ -271,12 +271,12 @@ private fun TvDetailHeader(
     buttons: @Composable FlowRowScope.() -> Unit,
 ) {
     val ink = TvTokens.Ink
-    Box(Modifier.fillMaxWidth().heightIn(min = 320.dp).bringIntoViewAsAWhole().testTag("detailHeader")) {
+    Box(Modifier.fillMaxWidth().heightIn(min = 280.dp).bringIntoViewAsAWhole().testTag("detailHeader")) {
         TvArtwork(backdropUrl, posterUrl, title, Modifier.matchParentSize(), onBackdropFailed)
         Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink, 0.35f to ink.copy(alpha = 0.9f), 0.7f to ink.copy(alpha = 0.3f), 1f to Color.Transparent)))
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to ink)))
         Column(
-            Modifier.padding(start = PageStart, top = 32.dp, end = TvTokens.EdgeEnd, bottom = 16.dp),
+            Modifier.padding(start = PageStart, top = 32.dp, end = TvTokens.EdgeEnd, bottom = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             award?.let { AwardLine(it) }
@@ -558,11 +558,11 @@ private fun LazyListScope.peopleShelf(director: String?, cast: String?, faces: M
                 stringResource(R.string.cast),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = PageStart, bottom = 12.dp),
+                modifier = Modifier.padding(start = PageStart, bottom = 6.dp),
             )
             TvRow {
                 LazyRow(
-                    contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
+                    contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 4.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
                 ) {
                     items(directors, key = { "director:$it" }) { name ->

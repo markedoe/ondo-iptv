@@ -435,10 +435,10 @@ fun TvFacts(facts: List<String>, badges: List<String>, modifier: Modifier = Modi
 @Composable
 fun TvPersonCard(name: String, onClick: () -> Unit, modifier: Modifier = Modifier, role: String? = null, photoUrl: String? = null) {
     val (scale, _, glow) = cardFocus()
-    Column(modifier.width(88.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.width(112.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
-            modifier = Modifier.size(88.dp).semantics { contentDescription = name },
+            modifier = Modifier.size(72.dp).semantics { contentDescription = name },
             shape = CardDefaults.shape(CircleShape),
             colors = CardDefaults.colors(containerColor = OndoColors.SurfaceHigh),
             scale = scale,
@@ -452,7 +452,7 @@ fun TvPersonCard(name: String, onClick: () -> Unit, modifier: Modifier = Modifie
                 }
             }
         }
-        Text(name, style = MaterialTheme.typography.labelLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Text(name, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
         role?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1) }
     }
 }
