@@ -146,6 +146,10 @@ dependencies {
 tasks.withType<Test>().configureEach {
     // Robolectric tests run one class after another in a JVM: two JVMs side by side use the runner's cores.
     maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+    // The store screenshots read the demo catalogue: a change there runs them again.
+    inputs.dir(rootProject.file("../fixtures/showcase"))
+        .withPropertyName("showcase")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
     testLogging {
         events("failed", "skipped")
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
