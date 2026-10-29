@@ -56,17 +56,30 @@ class ShowcaseTest {
     }
 
     @Test
-    fun heroPutsContinueWatchingFirstWithoutDuplicates() {
-        val road = Fixtures.longRoad
-        val library = LibraryState().watched(ItemKind.MOVIE, road.id, fraction = 0.2, duration = 6_000.0, at = 1)
+    fun theCarouselShowsTheBestRatedAdditionsOfTheWeek() {
         val adultHidden = setOf(Fixtures.adultMovies.id)
-        val hero = showcase(library, hidden = adultHidden).heroItems(Fixtures.NOW, limit = 5)
+        val hero = showcase(hidden = adultHidden).heroItems(Fixtures.NOW)
         assertEquals(
-            "what is being watched comes first, then new releases (movies and series), never twice",
-            listOf("The Long Road", "Northern Lights", "Harbor Lights", "The Last Signal", "The Archive"),
+            "the six best rated titles added in the last seven days, movies and series, hidden categories left out",
+            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "The Archive", "Summer in Lisbon", "Blue Horizon"),
             hero.map { it.title },
         )
-        assertEquals(2, showcase(library, hidden = adultHidden).heroItems(Fixtures.NOW, limit = 2).size)
+        assertEquals(2, showcase(hidden = adultHidden).heroItems(Fixtures.NOW, limit = 2).size)
+        // Two weeks on, nothing was added in the last seven days: trending titles then new releases fill it.
+        val later = Fixtures.NOW + 14 * 86_400_000L
+        assertTrue(showcase(hidden = adultHidden).bestRecent(later).isEmpty())
+        assertEquals(
+            listOf("Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
+            showcase(hidden = adultHidden).heroItems(later).map { it.title },
+        )
+    }
+
+    @Test
+    fun theSameFilmTwiceIsInTheCarouselOnce() {
+        val copy = Fixtures.lastSignal.copy(id = "4-fr", streamUrl = "http://example.com/movie/4-fr.mp4")
+        val content = Fixtures.content.copy(movies = Fixtures.content.movies + copy)
+        val titles = showcase(content = content, hidden = setOf(Fixtures.adultMovies.id)).bestRecent(Fixtures.NOW).map { it.title }
+        assertEquals(1, titles.count { it == "The Last Signal" })
     }
 
     @Test

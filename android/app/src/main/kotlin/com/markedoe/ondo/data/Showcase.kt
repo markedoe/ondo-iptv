@@ -104,13 +104,27 @@ class Showcase(
         ItemKind.CHANNEL -> null
     }
 
-    /** Up to [limit] titles for the carousel: what is being watched first, then trending titles, then new releases, no duplicates. */
-    fun heroItems(now: Long, limit: Int = 5): List<ShowcaseItem> {
+    /**
+     * The best rated movies and series the provider added in the last [RECENT_DAYS] days (its own date, which an M3U
+     * list does not give), each film once whatever its copies (language, quality).
+     */
+    fun bestRecent(now: Long, limit: Int = 6): List<ShowcaseItem> {
+        val since = now / 1_000 - RECENT_DAYS * 86_400L
+        val recent = browsableMovies.map { ShowcaseItem.MovieItem(it) } + series.map { ShowcaseItem.SeriesItem(it) }
+        return recent
+            .filter { (it.addedAt ?: Long.MIN_VALUE) >= since && (it.rating ?: 0.0) > 0.0 }
+            .sortedWith(compareByDescending<ShowcaseItem> { it.rating ?: 0.0 }.thenByDescending { it.addedAt ?: 0L }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+            .distinctBy { "${it.title.trim().lowercase()}|${it.year}" }
+            .take(limit)
+    }
+
+    /** Up to [limit] titles for the carousel: the best rated of the week ([bestRecent]), then trending titles, then new releases, no duplicates. */
+    fun heroItems(now: Long, limit: Int = 6): List<ShowcaseItem> {
         val result = LinkedHashMap<String, ShowcaseItem>()
         fun add(item: ShowcaseItem?) {
             if (item != null && result.size < limit) result.putIfAbsent(item.key, item)
         }
-        continueWatching().take(2).forEach { add(item(it.kind, it.itemId)) }
+        bestRecent(now, limit).forEach { add(it) }
         trending().forEach { add(it) }
         newReleases(now, limit * 2).forEach { add(it) }
         return result.values.toList()
@@ -183,3 +197,6 @@ class Showcase(
         return episode to season
     }
 }
+
+/** How far back the carousel looks for the best rated additions. */
+const val RECENT_DAYS = 7L
