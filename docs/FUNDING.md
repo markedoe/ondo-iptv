@@ -7,7 +7,8 @@ at a fixed amount, by card, Apple Pay or Google Pay, without creating an account
 apps: the pages of each app carry its name and icon, and each repository manages only its own.
 
 The links go on the website's home page and in the README only, never in the apps or on a page they open (support,
-privacy): inside the apps, money goes only through the App Store and Google Play. `check_app_store.py` fails if a
+privacy): inside the apps, money goes only through the App Store and Google Play. The apps' own tips, In-App Purchases that unlock
+nothing, are set up in the stores: see [TIPS.md](TIPS.md). `check_app_store.py` fails if a
 payment link appears there.
 
 ## 1. Stripe account (once, for every app)

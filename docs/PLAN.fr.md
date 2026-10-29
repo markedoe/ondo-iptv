@@ -113,7 +113,7 @@ raccourcis, lecteur dans sa propre fenêtre (plusieurs fenêtres = multi-écran)
 - [x] Chromecast (Google Cast SDK officiel, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
 - [x] ~~Source Real-Debrid~~ : supprimée (octobre 2026) : du code qu'aucun build ne peut utiliser est une fonction dormante pour la review d'Apple
 - [x] Pages de soutien sur le site et dans le README (Stripe, `funding/stripe.json`), jamais depuis les apps
-- [ ] Pourboires facultatifs dans les apps (StoreKit 2 / Play Billing), qui ne débloquent rien : prévus en 1.2.0
+- [x] Pourboires facultatifs dans les apps (StoreKit 2 / Play Billing), qui ne débloquent rien : en 1.2.0 ([TIPS.fr.md](TIPS.fr.md))
 - [ ] Cibles tvOS / visionOS (le cœur est déjà compatible)
 
 ### Phase 6 — Fonctions avancées ✅ en partie

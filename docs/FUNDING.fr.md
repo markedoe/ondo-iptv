@@ -8,7 +8,8 @@ Stripe sert plusieurs apps : les pages de chaque app portent son nom et son icô
 siennes.
 
 Les liens vont sur la page d'accueil du site et dans le README seulement, jamais dans les apps ni sur une page qu'elles
-ouvrent (aide, confidentialité) : dans les apps, l'argent ne passe que par l'App Store et Google Play.
+ouvrent (aide, confidentialité) : dans les apps, l'argent ne passe que par l'App Store et Google Play. Les pourboires des apps elles-mêmes, des achats intégrés qui ne
+débloquent rien, se configurent dans les stores : voir [TIPS.fr.md](TIPS.fr.md).
 `check_app_store.py` échoue si un lien de paiement y apparaît.
 
 ## 1. Compte Stripe (une fois, pour toutes les apps)

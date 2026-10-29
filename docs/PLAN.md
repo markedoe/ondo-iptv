@@ -113,7 +113,7 @@ windows = multi-screen).
 - [x] Chromecast (official Google Cast SDK, iPhone/iPad) + AirPlay (iPhone, iPad, Mac)
 - [x] ~~Real-Debrid source~~: removed (October 2026): code no build could use is a dormant feature for App Review
 - [x] Support pages on the website and in the README (Stripe, `funding/stripe.json`), never from inside the apps
-- [ ] Optional tips inside the apps (StoreKit 2 / Play Billing), unlocking nothing: planned for 1.2.0
+- [x] Optional tips inside the apps (StoreKit 2 / Play Billing), unlocking nothing: in 1.2.0 ([TIPS.md](TIPS.md))
 - [ ] tvOS / visionOS targets (the core is already compatible)
 
 ### Phase 6 — Advanced features ✅ in part
