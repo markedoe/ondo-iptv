@@ -1,6 +1,7 @@
-• Dejar una propina (Ajustes): opcional, a través de Google Play; no desbloquea nada
+• Dejar una propina (Ajustes): opcional, vía Google Play; no desbloquea nada
 • Nuevo aspecto negro y gris; en TV, pestañas en la barra superior
-• Token de TMDb: tendencias, fotos del reparto, tráilers, personas
-• Reproductor: diferido, lista de Canales, tamaño de los subtítulos, A continuación, la frecuencia de imagen propia de la película en TV
+• Token de TMDb: tendencias, reparto con fotos, tráilers, géneros, títulos similares
+• Actores y directores en Mi lista y colecciones
+• Reproductor: diferido, lista de Canales, tamaño de los subtítulos, A continuación, frecuencia de imagen de la película en TV
 • La Guía de TV se conserva 6 horas; Buscar tiene su propia página
 • Numerosas correcciones

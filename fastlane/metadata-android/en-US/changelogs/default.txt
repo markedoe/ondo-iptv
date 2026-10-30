@@ -1,6 +1,7 @@
 • Leave a tip (Settings): optional, through Google Play; it unlocks nothing
 • New black and grey look; on TV, tabs in a top bar
-• TMDb token: trending, cast photos, trailers, people
+• TMDb token: trending, cast photos, trailers, genres, similar titles
+• My List and collections keep actors and directors too
 • Player: replay, Channels list, subtitle size, Up next, the film's own frame rate on TV
 • The TV guide is kept for 6 hours; Search is a place of its own
 • Many fixes

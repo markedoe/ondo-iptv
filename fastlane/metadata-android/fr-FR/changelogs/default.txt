@@ -1,6 +1,7 @@
 • Laisser un pourboire (Réglages) : facultatif, via Google Play ; il ne débloque rien
 • Nouveau look noir et gris ; sur TV, les onglets en barre du haut
-• Jeton TMDb : tendances, photos du casting, bandes-annonces, personnes
+• Jeton TMDb : tendances, photos du casting, bandes-annonces, genres, titres proches
+• Acteurs et réalisateurs dans Ma liste et les collections
 • Lecteur : replay, liste des chaînes, taille des sous-titres, À suivre, fréquence d’image du film sur TV
 • Le guide TV est gardé 6 heures ; la Recherche a sa propre page
 • Nombreuses corrections

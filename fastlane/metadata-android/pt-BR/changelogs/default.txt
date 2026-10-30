@@ -1,6 +1,7 @@
 • Deixar uma gorjeta (Configurações): opcional, pelo Google Play; não libera nada
 • Novo visual preto e cinza; na TV, abas na barra superior
-• Token do TMDb: em alta, fotos do elenco, trailers, pessoas
+• Token do TMDb: em alta, fotos do elenco, trailers, gêneros, títulos parecidos
+• Minha lista e as coleções guardam atores e diretores
 • Player: replay, lista de Canais, tamanho das legendas, A seguir, a taxa de quadros própria do filme na TV
 • O Guia de TV é mantido por 6 horas; Pesquisar tem uma página própria
 • Muitas correções
