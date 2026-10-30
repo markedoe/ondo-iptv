@@ -107,6 +107,14 @@ final class CategoryFilterTests: XCTestCase {
         XCTAssertNil(other.tagSuggestion(viewerCodes: ["FR"]), "dismissed")
     }
 
+    func testTheAnswerFollowsAPlaylistThatSyncReplaced() async throws {
+        let (model, playlist, _) = try await model(groups: Self.groups)
+        model.dismissTagSuggestion()
+        let replacement = UUID()
+        model.carryDeviceSettings(from: playlist.id, to: replacement)
+        XCTAssertTrue(model.settings.dismissedTagSuggestions.contains(replacement))
+    }
+
     func testTagNamesAndViewerCodes() {
         let english = Locale(identifier: "en")
         XCTAssertEqual(CategoryTagName.name(of: "PT", locale: english), "Portuguese")

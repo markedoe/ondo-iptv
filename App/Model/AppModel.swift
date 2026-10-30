@@ -948,6 +948,10 @@ extension AppModel {
             lockedCategoryKeys = locks
             saveLocks()
         }
+        // The answer to "show only your languages?" goes with the playlist: the card is not offered again.
+        if settings.dismissedTagSuggestions.contains(old) {
+            updateSettings { $0.dismissedTagSuggestions.insert(new) }
+        }
         updateLibrary { library in
             library.hiddenCategoryKeys.formUnion(library.hiddenCategoryKeys.compactMap(moved))
             for (key, date) in library.hiddenChannels {
