@@ -186,9 +186,13 @@ class OndoRepository(
     private var loadedContent = PlaylistContent.EMPTY
     private var shownContent = PlaylistContent.EMPTY
 
-    /** [content] as the screens show it, in the words of [OndoState.placeholderNames]. Main thread. */
-    private fun shown(content: PlaylistContent): PlaylistContent {
-        val shown = _state.value.placeholderNames.rename(content)
+    /**
+     * [content] as the screens show it, in the words of [OndoState.placeholderNames]. Called on the main thread; the
+     * renaming walks the whole catalogue, so it runs off it (the remote keeps answering during a refresh).
+     */
+    private suspend fun shown(content: PlaylistContent): PlaylistContent {
+        val names = _state.value.placeholderNames
+        val shown = withContext(parsing) { names.rename(content) }
         loadedContent = content
         shownContent = shown
         return shown
