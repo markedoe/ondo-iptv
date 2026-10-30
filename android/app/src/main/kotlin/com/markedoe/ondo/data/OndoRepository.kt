@@ -638,45 +638,50 @@ class OndoRepository(
         val wanted = TextNormalizer.normalize(genre)
         if (wanted.isEmpty()) return emptyList()
         val titles = metadataTitles() ?: return emptyList()
+        // Found once per catalogue and session: back on the genre, it shows at once.
+        val content = _state.value.content
+        genreMatches[wanted]?.takeIf { it.first === content }?.let { return it.second }
         val kept = withContext(io) { metadata.titlesOfGenre(wanted, series = false) + metadata.titlesOfGenre(wanted, series = true) }
         val local = withContext(Dispatchers.Default) { titles.match(kept.map { it.key }) }
         val online = tmdbGenreItems(wanted, kept)
-        val found = if (online.isEmpty()) emptyList() else withContext(Dispatchers.Default) {
-            online.flatMap { item ->
-                val series = item.mediaType == TmdbItem.MediaType.TV
-                titles.match((listOf(item.title) + listOfNotNull(item.originalTitle)).flatMap { MetadataKey.all(series, item.id.toString(), it, item.year) }.distinct())
-            }
-        }
-        return (local + found).distinctBy { it.id }
+        val found = if (online.isEmpty()) emptyList() else withContext(Dispatchers.Default) { online.flatMap { titles.match(it.keys) } }
+        return (local + found).distinctBy { it.id }.also { genreMatches[wanted] = content to it }
     }
 
+    /** The catalogue's titles of each genre opened, for the catalogue they were found in. */
+    private val genreMatches = java.util.concurrent.ConcurrentHashMap<String, Pair<PlaylistContent, List<TrendingMatch>>>()
+
     /** TMDb's most popular movies and series of the genre (named in the viewer's language), a few pages of each. */
-    private suspend fun tmdbGenreItems(genre: String, kept: List<TitleMetadata>): List<TmdbItem> {
+    private suspend fun tmdbGenreItems(genre: String, kept: List<TitleMetadata>): List<RelatedTitle> {
         val token = _state.value.settings.tmdbToken ?: return emptyList()
-        val result = ArrayList<TmdbItem>()
+        val result = ArrayList<RelatedTitle>()
         for (series in listOf(false, true)) {
             // The genre's id: from a title kept, else TMDb's list of genres (kept for the session).
             val id = kept.firstNotNullOfOrNull { title -> title.genres?.firstOrNull { TextNormalizer.normalize(it.name) == genre && title.kind == MetadataKey.kind(series) }?.id }
                 ?: (genreLists["$token\u0000$series"] ?: tmdb { genres(series) }?.also { genreLists["$token\u0000$series"] = it }).orEmpty()
                     .firstOrNull { TextNormalizer.normalize(it.name) == genre }?.id
                 ?: continue
-            val key = "$token\u0000$series\u0000$id"
+            // Kept on the device a week (in the store, beside the people's titles): the genre shows at once next time.
+            val key = "genre:${MetadataKey.kind(series)}:$id"
             val askedAt = now()
-            val items = genrePages[key]?.takeIf { askedAt - it.first < PERSON_CREDITS_FRESH_MS }?.second ?: buildList {
+            val stored = withContext(io) { metadata.personWorks(key) }
+            val items = stored?.takeIf { MetadataFreshness.isFresh(it.first, PERSON_WORKS_FRESH_MS, askedAt) }?.second ?: buildList {
                 for (page in 1..GENRE_PAGES) {
                     val found = tmdbSlots.withPermit { tmdb { discover(series, id, page) } } ?: break
-                    addAll(found)
+                    for (item in found) {
+                        for (title in listOfNotNull(item.title, item.originalTitle).distinct().filter { it.isNotBlank() }) add(RelatedTitle(series, item.id, title, item.year))
+                    }
                     if (found.size < GENRE_PAGE_SIZE) break
                 }
-            }.also { if (it.isNotEmpty()) genrePages[key] = askedAt to it }
+            }.also { if (it.isNotEmpty()) withContext(io) { metadata.savePersonWorks(key, askedAt, it) } }
+                .ifEmpty { stored?.second.orEmpty() }
             result += items
         }
         return result
     }
 
-    /** TMDb's genres by token and kind, and the titles of the genres opened, by token, kind and genre. */
+    /** TMDb's genres by token and kind. */
     private val genreLists = java.util.concurrent.ConcurrentHashMap<String, List<TmdbGenre>>()
-    private val genrePages = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<TmdbItem>>>()
 
     /** TMDb's photo of the person, from the titles kept on the device that credit them; null when none has one. */
     suspend fun personPhoto(name: String): String? {
@@ -1068,6 +1073,8 @@ class OndoRepository(
         trendingLoadedFor = null
         metadataAsked.clear()
         metadataPrepared.clear()
+        genreMatches.clear()
+        personMatches.clear()
         _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbRelated = emptyMap(), tmdbTrailers = emptyMap(), tmdbRatings = emptyMap()) }
         loadTrending()
     }
