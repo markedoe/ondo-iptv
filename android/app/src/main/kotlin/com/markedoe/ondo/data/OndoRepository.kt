@@ -582,6 +582,11 @@ class OndoRepository(
                     return@launch
                 }
             }
+            // With little memory (a guide budget under 48 MB), the guide shown leaves before the new one is read: two
+            // large guides at once, with the catalogue just refreshed, leave a TV's app no room (Android stops it).
+            if (download && (guideBudgetBytes ?: Long.MAX_VALUE) < SMALL_GUIDE_BUDGET && _state.value.activePlaylistId == playlist.id) {
+                _state.update { it.copy(guide = null) }
+            }
             // Downloading, matching to the catalogue's channels, merging and indexing: all of it off the main thread.
             val data = loadCatching { withContext(Dispatchers.Default) { loader().loadEpg(core, content).data } }.getOrNull()
             if (data != null && data.programs.isNotEmpty()) {
@@ -1304,6 +1309,7 @@ class OndoRepository(
         /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
         const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L
         private const val PEOPLE_SEARCHES_KEPT = 100
+        private const val SMALL_GUIDE_BUDGET = 48L * 1024 * 1024
 
         /** Pages of a genre's most popular titles asked of TMDb (20 a page), for movies and for series. */
         private const val GENRE_PAGES = 10
