@@ -127,17 +127,20 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
      * strategy): one seen once comes back from the disk at the next launch, without a download. In memory, a fifth
      * of the app's share, a tenth on a low-memory device (an entry-level TV stick: Google's limits, TV-ME).
      */
-    override fun newImageLoader(context: PlatformContext): ImageLoader = ImageLoader.Builder(context)
-        .components { add(OkHttpNetworkFetcherFactory(callFactory = { imageHttp })) }
-        .memoryCache {
-            val lowMemory = getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
-            MemoryCache.Builder().maxSizePercent(context, if (lowMemory) 0.1 else 0.2).build()
-        }
-        .diskCache { artworkCache() }
-        .crossfade(true)
-        .build()
+    override fun newImageLoader(context: PlatformContext): ImageLoader = context.artworkLoader(imageHttp)
 
 }
+
+/** The app's image loader (posters, thumbnails, logos, cast photos), on [http]: see [OndoApplication.newImageLoader]. */
+internal fun Context.artworkLoader(http: OkHttpClient): ImageLoader = ImageLoader.Builder(this)
+    .components { add(OkHttpNetworkFetcherFactory(callFactory = { http })) }
+    .memoryCache {
+        val lowMemory = getSystemService(ActivityManager::class.java)?.isLowRamDevice == true
+        MemoryCache.Builder().maxSizePercent(this, if (lowMemory) 0.1 else 0.2).build()
+    }
+    .diskCache { artworkCache() }
+    .crossfade(true)
+    .build()
 
 /**
  * The images seen, kept until the app is uninstalled: in the app's own storage, not its cache folder, which Android (a
