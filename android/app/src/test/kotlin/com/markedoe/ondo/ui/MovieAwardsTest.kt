@@ -2,6 +2,8 @@ package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.TmdbItem
+import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.ui.screens.BrowseKind
 import java.util.Locale
@@ -55,6 +57,9 @@ class MovieAwardsTest {
         assertEquals(listOf("Blue Horizon", "The Archive"), UiMappers.browse(state, BrowseKind.GENRE, "mystery").series.map { it.title })
         val opened = state.copy(movieDetails = mapOf(Fixtures.glassCity.id to MediaDetails(title = "Glass City", genre = "Science Fiction, Mystery")))
         assertEquals(listOf("Glass City"), UiMappers.browse(opened, BrowseKind.GENRE, "Mystery").movies.map { it.title })
+        // Beyond the pages opened: the titles whose genre TMDb gave (kept on the device, or its most popular).
+        val found = listOf(TrendingMatch.MovieMatch(Fixtures.lastSignal, TmdbItem(4, TmdbItem.MediaType.MOVIE, "The Last Signal")))
+        assertEquals(listOf("Glass City", "The Last Signal"), UiMappers.browse(opened, BrowseKind.GENRE, "Mystery", found = found).movies.map { it.title })
         assertEquals(listOf("Action", "Adventure", "Sci-Fi"), UiMappers.genres("Action / Adventure, Sci-Fi"))
     }
 }

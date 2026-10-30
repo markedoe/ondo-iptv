@@ -5,7 +5,10 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.markedoe.ondo.core.library.CreditRecord
 import com.markedoe.ondo.core.library.IndexedPerson
+import com.markedoe.ondo.core.library.MetadataFreshness
+import com.markedoe.ondo.core.library.RelatedTitle
 import com.markedoe.ondo.core.library.TitleMetadata
+import com.markedoe.ondo.core.library.TmdbGenre
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -15,6 +18,42 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SqliteMetadataStoreTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
+
+    /** Genres and the titles TMDb recommends are kept with a title; a genre's titles are found by its name. */
+    @Test
+    fun genresAndRecommendationsAreKept() {
+        val now = System.currentTimeMillis()
+        val related = listOf(RelatedTitle(false, 6, "Dock Street", 2015), RelatedTitle(true, 7, "Port\tWatch", null))
+        val harbor = TitleMetadata("movie:5", "movie", 5, fetchedAt = now, genres = listOf(TmdbGenre(80, "Comédie"), TmdbGenre(18, "Drama")), related = related)
+        val store = SqliteMetadataStore(context, "genres.sqlite")
+        store.save(listOf(harbor, TitleMetadata("movie:6", "movie", 6, fetchedAt = now, genres = emptyList())))
+        val read = store.titles(listOf("movie:5")).getValue("movie:5")
+        assertEquals(harbor.genres, read.genres)
+        assertEquals(listOf(RelatedTitle(false, 6, "Dock Street", 2015), RelatedTitle(true, 7, "Port Watch", null)), read.related)
+        assertEquals(listOf("movie:5"), store.titlesOfGenre("comedie", series = false).map { it.key })
+        assertTrue(store.titlesOfGenre("comedie", series = true).isEmpty())
+    }
+
+    /** A file of the first layout keeps its titles; they lack genres, so they are asked again as they show. */
+    @Test
+    fun aFileOfTheFirstLayoutIsKept() {
+        val file = context.getDatabasePath("old.sqlite").apply { parentFile?.mkdirs() }
+        android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(file, null).use { db ->
+            db.execSQL(
+                "CREATE TABLE title (key TEXT PRIMARY KEY, kind TEXT NOT NULL, tmdb_id INTEGER, backdrop TEXT, trailer TEXT, " +
+                    "vote_average REAL, vote_count INTEGER, fetched_at INTEGER NOT NULL, found INTEGER NOT NULL)",
+            )
+            db.execSQL("CREATE TABLE credit (title_key TEXT NOT NULL, person_key TEXT NOT NULL, name TEXT NOT NULL, role TEXT NOT NULL, position INTEGER NOT NULL, photo TEXT, PRIMARY KEY (title_key, role, person_key))")
+            db.execSQL("CREATE TABLE dead_image (url TEXT PRIMARY KEY, at INTEGER NOT NULL)")
+            val now = System.currentTimeMillis()
+            db.execSQL("INSERT INTO title VALUES ('movie:9', 'movie', 9, 'https://image.tmdb.org/t/p/w1280/road.jpg', NULL, NULL, NULL, $now, 1)")
+            db.version = 1
+        }
+        val kept = SqliteMetadataStore(context, "old.sqlite").titles(listOf("movie:9")).getValue("movie:9")
+        assertEquals("https://image.tmdb.org/t/p/w1280/road.jpg", kept.backdropUrl)
+        assertEquals(null, kept.genres)
+        assertTrue("asked again", !MetadataFreshness.isFresh(kept, System.currentTimeMillis()))
+    }
 
     @Test
     fun whatIsSavedIsReadAgainAfterTheFileIsReopened() {

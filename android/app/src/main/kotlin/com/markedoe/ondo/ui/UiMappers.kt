@@ -479,7 +479,8 @@ object UiMappers {
             votes = tmdbRating(state, item),
             progress = progress(showcase.progress(movie)),
             inMyList = isFavorite(state, item),
-            similar = showcase.similarMovies(movie) { state.movieDetails[it] }.map { ShowcaseItem.MovieItem(it) },
+            similar = showcase.similarMovies(movie, related = state.tmdbRelated[item.key].orEmpty().mapNotNull { (it as? TrendingMatch.MovieMatch)?.movie }) { state.movieDetails[it] }
+                .map { ShowcaseItem.MovieItem(it) },
             awards = MovieAwards.rows(state, movie, locale),
             collections = collectionChoices(state, ItemKind.MOVIE, movie.id),
         )
@@ -509,7 +510,8 @@ object UiMappers {
             nextProgress = next?.first?.let { episodeProgress[it.id] },
             episodeProgress = episodeProgress,
             inMyList = isFavorite(state, item),
-            similar = showcase.similarSeries(series) { state.seriesDetails[it]?.info }.map { ShowcaseItem.SeriesItem(it) },
+            similar = showcase.similarSeries(series, related = state.tmdbRelated[item.key].orEmpty().mapNotNull { (it as? TrendingMatch.SeriesMatch)?.series }) { state.seriesDetails[it]?.info }
+                .map { ShowcaseItem.SeriesItem(it) },
             error = error,
             collections = collectionChoices(state, ItemKind.SERIES, series.id),
         )
@@ -546,7 +548,8 @@ object UiMappers {
         field.orEmpty().split(',', '/', '|', '&').map { it.trim() }.filter { it.length in 1..MAX_GENRE_LENGTH }.distinct()
 
     /** The titles of the playlist sharing a value of a movie's or a series' page, hidden categories left out. */
-    fun browse(state: OndoState, kind: BrowseKind, value: String, locale: Locale = Locale.getDefault()): BrowseUiState {
+    /** [found]: the genre's titles found beyond the pages opened ([com.markedoe.ondo.data.OndoRepository.genreTitles]). */
+    fun browse(state: OndoState, kind: BrowseKind, value: String, locale: Locale = Locale.getDefault(), found: List<TrendingMatch> = emptyList()): BrowseUiState {
         val hidden = hiddenCategoryIds(state)
         val watched = hiddenMovieIds(state)
         val movies = state.content.movies.filter { it.categoryId !in hidden && it.id !in watched }
@@ -577,11 +580,17 @@ object UiMappers {
             BrowseKind.GENRE -> {
                 val wanted = TextNormalizer.normalize(value)
                 fun has(field: String?) = genres(field).any { TextNormalizer.normalize(it) == wanted }
-                // A movie's genre is known once its page was opened; a series' comes with the catalogue.
+                // A movie's genre is known once its page was opened; a series' comes with the catalogue. TMDb's genres
+                // (kept on the device, or its most popular titles of the genre) add those of the pages never opened.
+                val foundMovies = found.mapNotNullTo(HashSet()) { (it as? TrendingMatch.MovieMatch)?.movie?.id }
+                val foundSeries = found.mapNotNullTo(HashSet()) { (it as? TrendingMatch.SeriesMatch)?.series?.id }
                 BrowseUiState(
                     kind, value,
-                    movies = sorted(items(movies.filter { has(state.movieDetails[it.id]?.genre) }), PosterSort.NAME),
-                    series = sorted(series.filter { has(it.genre) || has(state.seriesDetails[it.id]?.info?.genre) }.map { ShowcaseItem.SeriesItem(it) }, PosterSort.NAME),
+                    movies = sorted(items(movies.filter { it.id in foundMovies || has(state.movieDetails[it.id]?.genre) }), PosterSort.NAME),
+                    series = sorted(
+                        series.filter { it.id in foundSeries || has(it.genre) || has(state.seriesDetails[it.id]?.info?.genre) }.map { ShowcaseItem.SeriesItem(it) },
+                        PosterSort.NAME,
+                    ),
                 )
             }
         }

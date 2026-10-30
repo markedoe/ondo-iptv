@@ -130,6 +130,16 @@ class ShowcaseTest {
         assertEquals(listOf("Blue Horizon"), showcase().similarSeries(Fixtures.theArchive).map { it.name })
     }
 
+    /** TMDb's recommendations the playlist has come first, in TMDb's order, from any category; never the title itself. */
+    @Test
+    fun tmdbsRecommendationsComeFirst() {
+        val northern = Fixtures.northernLights
+        val similar = showcase().similarMovies(northern, related = listOf(Fixtures.lastSignal, northern, Fixtures.glassCity)).map { it.name }
+        assertEquals(listOf("The Last Signal", "Glass City", "Summer in Lisbon", "The Long Road"), similar)
+        assertEquals("a hidden category stays out", listOf("Summer in Lisbon", "The Long Road"),
+            showcase(hidden = setOf(Fixtures.sciFi.id)).similarMovies(northern, related = listOf(Fixtures.lastSignal)).map { it.name })
+    }
+
     @Test
     fun myListShowsTheLatestAdditionFirst() {
         val library = LibraryState()

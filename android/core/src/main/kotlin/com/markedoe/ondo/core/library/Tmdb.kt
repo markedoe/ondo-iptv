@@ -163,7 +163,8 @@ class TmdbClient(
         val viewer = language.substringBefore('-').lowercase()
         // Videos in the viewer's language, in English, and without a language.
         val languages = listOf(viewer, "en", "null").distinct().joinToString(",")
-        val details = get("$kind/$id", listOf("append_to_response" to "credits,videos", "include_video_language" to languages)) as? JsonObject
+        // Credits, videos and the titles TMDb recommends with it: one request.
+        val details = get("$kind/$id", listOf("append_to_response" to "credits,videos,recommendations", "include_video_language" to languages)) as? JsonObject
             ?: throw SerializationException("Not a TMDb answer")
         val item = TmdbItem.from(details) ?: throw SerializationException("TMDb title without id")
         val credits = details["credits"] as? JsonObject
@@ -172,7 +173,27 @@ class TmdbClient(
             .mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }.distinctBy { it.id }
         val cast = part("cast").mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }.distinctBy { it.id }.take(TmdbTitleInfo.CAST_LIMIT)
         val videos = ((details["videos"] as? JsonObject)?.get("results") as? JsonArray).orEmpty().mapNotNull { TmdbVideo.from(it) }
-        return TmdbTitleInfo(item.id, item.backdropUrl, TmdbVideo.best(videos, viewer)?.key, item.rating, directors, cast)
+        val genres = (details["genres"] as? JsonArray).orEmpty().mapNotNull { TmdbGenre.from(it) }
+        val ownType = if (kind == "tv") TmdbItem.MediaType.TV else TmdbItem.MediaType.MOVIE
+        // A recommendation without its type is of the title's own.
+        val related = (((details["recommendations"] as? JsonObject)?.get("results")) as? JsonArray).orEmpty()
+            .mapNotNull { TmdbItem.from(it)?.let { found -> if (found.mediaType == TmdbItem.MediaType.UNKNOWN) found.copy(mediaType = ownType) else found } }
+            .filter { (it.mediaType == TmdbItem.MediaType.MOVIE || it.mediaType == TmdbItem.MediaType.TV) && it.title.isNotBlank() }
+            .take(TmdbTitleInfo.RELATED_LIMIT)
+        return TmdbTitleInfo(item.id, item.backdropUrl, TmdbVideo.best(videos, viewer)?.key, item.rating, directors, cast, genres, related)
+    }
+
+    /** TMDb's genres of movies or series, in the viewer's language. */
+    suspend fun genres(series: Boolean): List<TmdbGenre> {
+        val page = get(if (series) "genre/tv/list" else "genre/movie/list") as? JsonObject ?: throw SerializationException("Not a TMDb answer")
+        return (page["genres"] as? JsonArray).orEmpty().mapNotNull { TmdbGenre.from(it) }
+    }
+
+    /** The most popular movies or series of a genre, a page (20) at a time. */
+    suspend fun discover(series: Boolean, genreId: Int, page: Int): List<TmdbItem> {
+        val type = if (series) TmdbItem.MediaType.TV else TmdbItem.MediaType.MOVIE
+        return results(get(if (series) "discover/tv" else "discover/movie", listOf("with_genres" to genreId.toString(), "sort_by" to "popularity.desc", "page" to page.toString())))
+            .map { if (it.mediaType == TmdbItem.MediaType.UNKNOWN) it.copy(mediaType = type) else it }
     }
 
     /** The people TMDb finds for a search (actors, directors…), the most popular first. */
@@ -220,9 +241,26 @@ data class TmdbTitleInfo(
     val directors: List<TmdbPerson>,
     /** The first billed, [CAST_LIMIT] at most. */
     val cast: List<TmdbPerson>,
+    /** Its genres, named in the viewer's language. */
+    val genres: List<TmdbGenre> = emptyList(),
+    /** The titles TMDb recommends with it, [RELATED_LIMIT] at most. */
+    val related: List<TmdbItem> = emptyList(),
 ) {
     companion object {
         const val CAST_LIMIT = 20
+        const val RELATED_LIMIT = 20
+    }
+}
+
+/** A genre on TMDb: its id, and its name in the viewer's language. */
+data class TmdbGenre(val id: Int, val name: String) {
+    companion object {
+        internal fun from(json: JsonElement): TmdbGenre? {
+            val o = json as? JsonObject ?: return null
+            val id = (o["id"] as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }?.content?.toIntOrNull() ?: return null
+            val name = (o["name"] as? JsonPrimitive)?.takeIf { it.isString }?.content?.trim().orEmpty()
+            return if (name.isEmpty()) null else TmdbGenre(id, name)
+        }
     }
 }
 

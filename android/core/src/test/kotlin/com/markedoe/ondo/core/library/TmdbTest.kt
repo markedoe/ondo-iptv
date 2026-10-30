@@ -78,7 +78,7 @@ class TmdbTest {
     @Test
     fun aTitlesInfoComesInOneCallByItsId() = runTest {
         val http = MockHttpClient()
-        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos&include_video_language=fr,en,null&language=fr-FR&api_key=KEY"] = (
+        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos,recommendations&include_video_language=fr,en,null&language=fr-FR&api_key=KEY"] = (
             """{"id":910001,"title":"Lighthouse","backdrop_path":"/lighthouse-wide.jpg","vote_average":7.346,"vote_count":12345,"credits":{""" +
                 """"cast":[{"id":11,"name":"Ana Lima","profile_path":"/ana.jpg","known_for_department":"Acting"},""" +
                 """{"id":12,"name":"José Silva","profile_path":null}],""" +
@@ -100,6 +100,27 @@ class TmdbTest {
         assertEquals(1, http.requested.size, "one call")
     }
 
+    /** The same call brings the title's genres and the titles TMDb recommends with it; a genre's titles come by page. */
+    @Test
+    fun genresAndRecommendationsComeWithTheTitle() = runTest {
+        val http = MockHttpClient()
+        http.routes["https://api.themoviedb.org/3/movie/5?append_to_response=credits,videos,recommendations&include_video_language=en,null&language=en-US&api_key=KEY"] = (
+            """{"id":5,"title":"Harbor","genres":[{"id":80,"name":"Crime"},{"id":18,"name":"Drama"}],""" +
+                """"recommendations":{"results":[{"id":6,"title":"Dock Street","release_date":"2015-03-01"},""" +
+                """{"id":7,"name":"Port Watch","media_type":"tv","first_air_date":"2019-01-01"},{"id":8,"name":"Somebody","media_type":"person"}]}}"""
+            ).encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/genre/movie/list?language=en-US&api_key=KEY"] =
+            """{"genres":[{"id":80,"name":"Crime"}]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/discover/movie?with_genres=80&sort_by=popularity.desc&page=2&language=en-US&api_key=KEY"] =
+            """{"results":[{"id":6,"title":"Dock Street","release_date":"2015-03-01"}]}""".encodeToByteArray()
+        val client = TmdbClient("KEY", http)
+        val info = client.titleInfo(series = false, tmdbId = "5", title = "Harbor", year = null)!!
+        assertEquals(listOf(TmdbGenre(80, "Crime"), TmdbGenre(18, "Drama")), info.genres)
+        assertEquals(listOf("Dock Street" to TmdbItem.MediaType.MOVIE, "Port Watch" to TmdbItem.MediaType.TV), info.related.map { it.title to it.mediaType })
+        assertEquals(listOf(TmdbGenre(80, "Crime")), client.genres(series = false))
+        assertEquals(listOf(6 to TmdbItem.MediaType.MOVIE), client.discover(series = false, genreId = 80, page = 2).map { it.id to it.mediaType })
+    }
+
     /**
      * Without an id (or with one TMDb does not know), the first search result with the same title, a year apart at most;
      * the search result's backdrop and rating when the details have none. Another title of that name is not taken.
@@ -111,11 +132,11 @@ class TmdbTest {
             ("""{"results":[{"id":1,"title":"Sandstorm Rising","backdrop_path":"/rising.jpg","release_date":"2021-01-01"},""" +
                 """{"id":2,"title":"Sandstorm","backdrop_path":"/old.jpg","release_date":"1988-05-01"},""" +
                 """{"id":3,"title":"Sandstorm","backdrop_path":"/sandstorm.jpg","release_date":"2021-03-01","vote_average":6.5,"vote_count":80}]}""").encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/movie/3?append_to_response=credits,videos&include_video_language=en,null&language=en-US&api_key=KEY"] =
+        http.routes["https://api.themoviedb.org/3/movie/3?append_to_response=credits,videos,recommendations&include_video_language=en,null&language=en-US&api_key=KEY"] =
             """{"id":3,"title":"Sandstorm","credits":{"cast":[{"id":21,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
             """{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20"}]}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits,videos&include_video_language=en,null&language=en-US&api_key=KEY"] =
+        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits,videos,recommendations&include_video_language=en,null&language=en-US&api_key=KEY"] =
             """{"id":7,"name":"Copper Valley","videos":{"results":[{"key":"teaserEN001","site":"YouTube","type":"Teaser","iso_639_1":"en"}]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/movie?query=paper%20trail&language=en-US&api_key=KEY"] =
             """{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}""".encodeToByteArray()
@@ -143,7 +164,7 @@ class TmdbTest {
     @Test
     fun aRefusedTokenIsNotANotFound() = runTest {
         val http = MockHttpClient()
-        http.failures["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos&include_video_language=en,null&language=en-US&api_key=KEY"] =
+        http.failures["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos,recommendations&include_video_language=en,null&language=en-US&api_key=KEY"] =
             mutableListOf(HttpException.BadStatus(401))
         val error = assertFailsWith<HttpException.BadStatus> {
             TmdbClient("KEY", http).titleInfo(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010)

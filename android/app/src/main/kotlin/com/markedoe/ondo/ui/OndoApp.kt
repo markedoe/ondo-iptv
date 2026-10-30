@@ -631,8 +631,12 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
     val kind = BrowseKind.valueOf(route.kind)
     val locale = LocalConfiguration.current.locales[0]
     // Off the main thread: it looks through the whole catalogue.
-    val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale) {
-        withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale) }
+    // A genre's titles beyond the pages opened: those whose genres the device kept, and TMDb's most popular.
+    val found by produceKept<List<TrendingMatch>>("genre", emptyList(), route, state.content, state.settings.tmdbToken) {
+        if (kind == BrowseKind.GENRE) viewModel.genreTitles(route.value) else emptyList()
+    }
+    val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found) {
+        withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found) }
     }
     BrowseScreen(
         browse,

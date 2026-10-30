@@ -13,6 +13,7 @@ import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.MetadataStore
 import com.markedoe.ondo.core.library.MetadataTitles
 import com.markedoe.ondo.core.library.TitleMetadata
+import com.markedoe.ondo.core.library.TmdbGenre
 import com.markedoe.ondo.core.library.TmdbItem
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.PlaceholderNames
@@ -98,6 +99,8 @@ data class OndoState(
     val deadBackdrops: Set<String> = emptySet(),
     /** TMDb's photos of a title's cast and directors, by the title's key, then by the person's name ([TextNormalizer]). */
     val tmdbFaces: Map<String, Map<String, String>> = emptyMap(),
+    /** The playlist's titles TMDb recommends with a title, by the title's key, in TMDb's order. */
+    val tmdbRelated: Map<String, List<TrendingMatch>> = emptyMap(),
     /** TMDb's trailers (YouTube ids) of titles whose provider gave none, by the title's key. */
     val tmdbTrailers: Map<String, String> = emptyMap(),
     /**
@@ -620,6 +623,55 @@ class OndoRepository(
         updateLibrary { it.toggleFavorite(Favorite(playlistId, kind, itemId, title, imageUrl, now())) }
     }
 
+    /**
+     * The playlist's movies and series of a genre beyond the pages opened: those whose genres the device kept (TMDb's,
+     * pages opened or prepared ahead), and with the viewer's token the genre's most popular titles on TMDb. TMDb's
+     * answer is kept a day.
+     */
+    suspend fun genreTitles(genre: String): List<TrendingMatch> {
+        val wanted = TextNormalizer.normalize(genre)
+        if (wanted.isEmpty()) return emptyList()
+        val titles = metadataTitles() ?: return emptyList()
+        val kept = withContext(io) { metadata.titlesOfGenre(wanted, series = false) + metadata.titlesOfGenre(wanted, series = true) }
+        val local = withContext(Dispatchers.Default) { titles.match(kept.map { it.key }) }
+        val online = tmdbGenreItems(wanted, kept)
+        val found = if (online.isEmpty()) emptyList() else withContext(Dispatchers.Default) {
+            online.flatMap { item ->
+                val series = item.mediaType == TmdbItem.MediaType.TV
+                titles.match((listOf(item.title) + listOfNotNull(item.originalTitle)).flatMap { MetadataKey.all(series, item.id.toString(), it, item.year) }.distinct())
+            }
+        }
+        return (local + found).distinctBy { it.id }
+    }
+
+    /** TMDb's most popular movies and series of the genre (named in the viewer's language), a few pages of each. */
+    private suspend fun tmdbGenreItems(genre: String, kept: List<TitleMetadata>): List<TmdbItem> {
+        val token = _state.value.settings.tmdbToken ?: return emptyList()
+        val result = ArrayList<TmdbItem>()
+        for (series in listOf(false, true)) {
+            // The genre's id: from a title kept, else TMDb's list of genres (kept for the session).
+            val id = kept.firstNotNullOfOrNull { title -> title.genres?.firstOrNull { TextNormalizer.normalize(it.name) == genre && title.kind == MetadataKey.kind(series) }?.id }
+                ?: (genreLists["$token\u0000$series"] ?: tmdb { genres(series) }?.also { genreLists["$token\u0000$series"] = it }).orEmpty()
+                    .firstOrNull { TextNormalizer.normalize(it.name) == genre }?.id
+                ?: continue
+            val key = "$token\u0000$series\u0000$id"
+            val askedAt = now()
+            val items = genrePages[key]?.takeIf { askedAt - it.first < PERSON_CREDITS_FRESH_MS }?.second ?: buildList {
+                for (page in 1..GENRE_PAGES) {
+                    val found = tmdbSlots.withPermit { tmdb { discover(series, id, page) } } ?: break
+                    addAll(found)
+                    if (found.size < GENRE_PAGE_SIZE) break
+                }
+            }.also { if (it.isNotEmpty()) genrePages[key] = askedAt to it }
+            result += items
+        }
+        return result
+    }
+
+    /** TMDb's genres by token and kind, and the titles of the genres opened, by token, kind and genre. */
+    private val genreLists = java.util.concurrent.ConcurrentHashMap<String, List<TmdbGenre>>()
+    private val genrePages = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<TmdbItem>>>()
+
     /** TMDb's photo of the person, from the titles kept on the device that credit them; null when none has one. */
     suspend fun personPhoto(name: String): String? {
         val key = TextNormalizer.normalize(name)
@@ -1010,7 +1062,7 @@ class OndoRepository(
         trendingLoadedFor = null
         metadataAsked.clear()
         metadataPrepared.clear()
-        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbTrailers = emptyMap(), tmdbRatings = emptyMap()) }
+        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbRelated = emptyMap(), tmdbTrailers = emptyMap(), tmdbRatings = emptyMap()) }
         loadTrending()
     }
 
@@ -1124,10 +1176,16 @@ class OndoRepository(
         return title to if (title.found) metadata.credits(title.key) else emptyList()
     }
 
-    private fun showMetadata(key: String, title: TitleMetadata, credits: List<CreditRecord>) {
+    private suspend fun showMetadata(key: String, title: TitleMetadata, credits: List<CreditRecord>) {
         val faces = credits.mapNotNull { credit -> credit.photoUrl?.let { credit.personKey to it } }.distinctBy { it.first }.toMap()
+        // The titles TMDb recommends with it that the playlist has, in TMDb's order.
+        val recommended = title.related.orEmpty()
+        val related = if (recommended.isEmpty()) emptyList() else metadataTitles()?.let { titles ->
+            withContext(Dispatchers.Default) { recommended.flatMap { titles.match(it.keys) }.distinctBy { it.id } }
+        }.orEmpty()
         _state.update { state ->
             state.copy(
+                tmdbRelated = if (related.isEmpty()) state.tmdbRelated else state.tmdbRelated + (key to related),
                 tmdbBackdrops = title.backdropUrl?.let { state.tmdbBackdrops + (key to it) } ?: state.tmdbBackdrops,
                 tmdbTrailers = title.trailerKey?.let { state.tmdbTrailers + (key to it) } ?: state.tmdbTrailers,
                 tmdbRatings = state.tmdbRatings.with(key, title.rating),
@@ -1246,6 +1304,10 @@ class OndoRepository(
         /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
         const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L
         private const val PEOPLE_SEARCHES_KEPT = 100
+
+        /** Pages of a genre's most popular titles asked of TMDb (20 a page), for movies and for series. */
+        private const val GENRE_PAGES = 10
+        private const val GENRE_PAGE_SIZE = 20
         private const val PERSON_CREDITS_KEPT = 64
 
         fun hostName(url: String): String = runCatching { java.net.URI(url.trim()).host }.getOrNull()?.removePrefix("www.") ?: "Playlist"

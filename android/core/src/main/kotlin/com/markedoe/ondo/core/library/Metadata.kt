@@ -52,7 +52,9 @@ object MetadataFreshness {
     /** An image address that led nowhere. */
     const val DEAD_IMAGE_MS = 7L * 24 * 60 * 60 * 1000
 
-    fun isFresh(title: TitleMetadata, now: Long): Boolean = isFresh(title.fetchedAt, if (title.found) FOUND_MS else NOT_FOUND_MS, now)
+    /** A title kept before genres and recommendations were kept with it is asked again. */
+    fun isFresh(title: TitleMetadata, now: Long): Boolean =
+        !(title.found && title.genres == null) && isFresh(title.fetchedAt, if (title.found) FOUND_MS else NOT_FOUND_MS, now)
 
     /** Fetched less than [maxAge] ago. A date in the future (the clock was changed) is not trusted. */
     fun isFresh(fetchedAt: Long, maxAge: Long, now: Long): Boolean = now - fetchedAt in 0 until maxAge
@@ -71,6 +73,10 @@ data class TitleMetadata(
     val voteCount: Int? = null,
     val fetchedAt: Long,
     val found: Boolean = true,
+    /** Its genres on TMDb, in the viewer's language; null when kept before genres were. */
+    val genres: List<TmdbGenre>? = null,
+    /** The titles TMDb recommends with it, in TMDb's order; null when kept before they were. */
+    val related: List<RelatedTitle>? = null,
 ) {
     /** "TMDb 7.3 (12,345)" needs both: a rating TMDb's users gave, and how many gave it. */
     val rating: TmdbRating?
@@ -93,7 +99,42 @@ data class TitleMetadata(
             voteCount = info?.rating?.votes,
             fetchedAt = fetchedAt,
             found = info != null,
+            genres = info?.genres,
+            related = info?.related?.map { RelatedTitle(it.mediaType == TmdbItem.MediaType.TV, it.id, it.title, it.year) },
         )
+    }
+}
+
+/** A title TMDb recommends with another: enough to find it in a playlist ([MetadataTitles.match] of [keys]). */
+data class RelatedTitle(val series: Boolean, val tmdbId: Int, val title: String, val year: Int?) {
+    val keys: List<String> get() = MetadataKey.all(series, tmdbId.toString(), title, year)
+
+    companion object {
+        /** One line per title: "series<TAB>id<TAB>year<TAB>title", as the store keeps them. */
+        fun encode(titles: List<RelatedTitle>): String =
+            titles.joinToString("\n") { listOf(if (it.series) "tv" else "movie", it.tmdbId, it.year ?: "", it.title.replace('\t', ' ').replace('\n', ' ')).joinToString("\t") }
+
+        fun decode(text: String?): List<RelatedTitle>? = text?.let {
+            it.lines().mapNotNull { line ->
+                val parts = line.split('\t', limit = 4)
+                if (parts.size != 4) return@mapNotNull null
+                val id = parts[1].toIntOrNull() ?: return@mapNotNull null
+                RelatedTitle(parts[0] == "tv", id, parts[3], parts[2].toIntOrNull())
+            }
+        }
+    }
+}
+
+/** Genres as the store keeps them: one "id<TAB>name" per line. */
+object GenreText {
+    fun encode(genres: List<TmdbGenre>): String = genres.joinToString("\n") { "${it.id}\t${it.name.replace('\t', ' ').replace('\n', ' ')}" }
+
+    fun decode(text: String?): List<TmdbGenre>? = text?.let {
+        it.lines().mapNotNull { line ->
+            val parts = line.split('\t', limit = 2)
+            val id = parts.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
+            parts.getOrNull(1)?.takeIf(String::isNotBlank)?.let { name -> TmdbGenre(id, name) }
+        }
     }
 }
 
@@ -137,6 +178,9 @@ interface MetadataStore {
 
     /** The keys of the titles that credit this person. */
     fun titleKeys(personKey: String): List<String>
+
+    /** The titles of a genre (its name, [TextNormalizer.normalize]d), movies or series. */
+    fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata>
 
     /** People whose name has every word of [query] starting one of its words, those credited most first. */
     fun people(query: String, limit: Int): List<IndexedPerson>
@@ -184,6 +228,9 @@ class InMemoryMetadataStore : MetadataStore {
 
     @Synchronized override fun titleKeys(personKey: String): List<String> =
         credits.filterValues { list -> list.any { it.personKey == personKey } }.keys.sorted()
+
+    @Synchronized override fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata> =
+        titles.values.filter { title -> title.kind == MetadataKey.kind(series) && title.genres.orEmpty().any { TextNormalizer.normalize(it.name) == genre } }
 
     @Synchronized override fun people(query: String, limit: Int): List<IndexedPerson> {
         val tokens = MetadataStore.tokens(query) ?: return emptyList()

@@ -145,7 +145,7 @@ class OndoViewModelTest {
                     searches += url
                     """{"results":[{"id":9,"title":"Long Road","release_date":"2025-03-01","backdrop_path":"/road.jpg"}]}"""
                 }
-                url.startsWith("https://api.themoviedb.org/3/movie/9?append_to_response=credits,videos&") ->
+                url.startsWith("https://api.themoviedb.org/3/movie/9?append_to_response=credits,videos,recommendations&") ->
                     """{"id":9,"title":"Long Road","videos":{"results":[{"key":"roadTrailer","site":"YouTube","type":"Trailer","official":true,"iso_639_1":"en"}]}}"""
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
@@ -200,7 +200,7 @@ class OndoViewModelTest {
             override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
                 "get_series_info" in url -> """{"info":{"name":"Harbor","cast":"José Silva, Ana Lima","tmdb_id":"77"},"episodes":{"1":[{"id":"101","episode_num":1,"title":"Pilot","container_extension":"mp4"}]}}"""
                 url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
-                url.startsWith("https://api.themoviedb.org/3/tv/77?append_to_response=credits,videos&") -> {
+                url.startsWith("https://api.themoviedb.org/3/tv/77?append_to_response=credits,videos,recommendations&") -> {
                     credits += url
                     """{"id":77,"vote_average":8.1,"vote_count":4321,"credits":{"cast":[{"id":1,"name":"Jose Silva","profile_path":"/jose.jpg"},""" +
                         """{"id":2,"name":"Ana Lima","profile_path":null},{"id":3,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}"""
@@ -256,7 +256,7 @@ class OndoViewModelTest {
                     tmdbRequests += url
                     """{"results":[{"id":9,"title":"Long Road","release_date":"2025-03-01","backdrop_path":"/road.jpg"}]}"""
                 }
-                url.startsWith("https://api.themoviedb.org/3/movie/9?append_to_response=credits,videos&") -> {
+                url.startsWith("https://api.themoviedb.org/3/movie/9?append_to_response=credits,videos,recommendations&") -> {
                     tmdbRequests += url
                     """{"id":9,"title":"Long Road","vote_average":7.4,"vote_count":321,""" +
                         """"credits":{"cast":[{"id":3,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[{"id":4,"name":"Kim Park","job":"Director"}]},""" +

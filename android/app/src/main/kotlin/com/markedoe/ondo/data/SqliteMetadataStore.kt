@@ -4,9 +4,13 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.CreditRecord
+import com.markedoe.ondo.core.library.GenreText
 import com.markedoe.ondo.core.library.IndexedPerson
+import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.MetadataStore
+import com.markedoe.ondo.core.library.RelatedTitle
 import com.markedoe.ondo.core.library.TitleMetadata
 
 /**
@@ -18,7 +22,7 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
                 "CREATE TABLE title (key TEXT PRIMARY KEY, kind TEXT NOT NULL, tmdb_id INTEGER, backdrop TEXT, trailer TEXT, " +
-                    "vote_average REAL, vote_count INTEGER, fetched_at INTEGER NOT NULL, found INTEGER NOT NULL)",
+                    "vote_average REAL, vote_count INTEGER, fetched_at INTEGER NOT NULL, found INTEGER NOT NULL, genres TEXT, related TEXT)",
             )
             db.execSQL(
                 "CREATE TABLE credit (title_key TEXT NOT NULL, person_key TEXT NOT NULL, name TEXT NOT NULL, role TEXT NOT NULL, " +
@@ -39,7 +43,16 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
             }
         }
 
-        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = restart(db)
+        /** Version 2 keeps genres and recommendations: added to the titles kept (asked again as they show). */
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+            if (oldVersion != 1) return restart(db)
+            try {
+                db.execSQL("ALTER TABLE title ADD COLUMN genres TEXT")
+                db.execSQL("ALTER TABLE title ADD COLUMN related TEXT")
+            } catch (_: android.database.SQLException) {
+                restart(db)
+            }
+        }
 
         override fun onDowngrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = restart(db)
 
@@ -75,26 +88,46 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
         for (chunk in keys.distinct().chunked(MAX_ARGUMENTS)) {
             val marks = chunk.joinToString(",") { "?" }
             db.rawQuery(
-                "SELECT key, kind, tmdb_id, backdrop, trailer, vote_average, vote_count, fetched_at, found FROM title WHERE key IN ($marks)",
+                "SELECT $COLUMNS FROM title WHERE key IN ($marks)",
                 chunk.toTypedArray(),
             ).use { c ->
                 while (c.moveToNext()) {
-                    val key = c.getString(0)
-                    result[key] = TitleMetadata(
-                        key = key,
-                        kind = c.getString(1),
-                        tmdbId = if (c.isNull(2)) null else c.getInt(2),
-                        backdropUrl = c.getString(3),
-                        trailerKey = c.getString(4),
-                        voteAverage = if (c.isNull(5)) null else c.getDouble(5),
-                        voteCount = if (c.isNull(6)) null else c.getInt(6),
-                        fetchedAt = c.getLong(7),
-                        found = c.getInt(8) != 0,
-                    )
+                    val title = title(c)
+                    result[title.key] = title
                 }
             }
         }
         result
+    }
+
+    private fun title(c: android.database.Cursor) = TitleMetadata(
+        key = c.getString(0),
+        kind = c.getString(1),
+        tmdbId = if (c.isNull(2)) null else c.getInt(2),
+        backdropUrl = c.getString(3),
+        trailerKey = c.getString(4),
+        voteAverage = if (c.isNull(5)) null else c.getDouble(5),
+        voteCount = if (c.isNull(6)) null else c.getInt(6),
+        fetchedAt = c.getLong(7),
+        found = c.getInt(8) != 0,
+        genres = GenreText.decode(c.getString(9)),
+        related = RelatedTitle.decode(c.getString(10)),
+    )
+
+    override fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata> = read(emptyList()) { db ->
+        if (genre.isBlank()) return@read emptyList()
+        // Checked here (names keep their accents and case in the file): a few thousand titles at most.
+        db.rawQuery(
+            "SELECT $COLUMNS FROM title WHERE kind = ? AND found = 1 AND genres IS NOT NULL AND genres != ''",
+            arrayOf(MetadataKey.kind(series)),
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    val title = title(c)
+                    if (title.genres.orEmpty().any { TextNormalizer.normalize(it.name) == genre }) add(title)
+                }
+            }
+        }
     }
 
     override fun save(titles: List<TitleMetadata>) = write { db ->
@@ -109,6 +142,8 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
                 put("vote_count", title.voteCount)
                 put("fetched_at", title.fetchedAt)
                 put("found", if (title.found) 1 else 0)
+                put("genres", title.genres?.let(GenreText::encode))
+                put("related", title.related?.let(RelatedTitle::encode))
             }
             db.insertWithOnConflict("title", null, values, SQLiteDatabase.CONFLICT_REPLACE)
         }
@@ -189,7 +224,8 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
 
     companion object {
         const val FILE_NAME = "metadata.sqlite"
-        private const val VERSION = 1
+        private const val VERSION = 2
+        private const val COLUMNS = "key, kind, tmdb_id, backdrop, trailer, vote_average, vote_count, fetched_at, found, genres, related"
         private const val KEPT_FOR_MS = 180L * 24 * 60 * 60 * 1000
 
         /** SQLite's limit on the `?` of one statement is 999 on older Android versions. */

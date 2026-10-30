@@ -306,6 +306,9 @@ class OndoViewModel(
         if (item != null) toggleInCollection(id, item)
     }
 
+    /** A genre's titles of the playlist beyond the pages opened (kept on the device, and TMDb's most popular). */
+    suspend fun genreTitles(genre: String): List<TrendingMatch> = repository.genreTitles(genre)
+
     /** TMDb's photo of the person kept on the device, if any. */
     suspend fun personPhoto(name: String): String? = repository.personPhoto(name)
 
