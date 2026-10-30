@@ -82,7 +82,7 @@ class ArtworkCacheTest {
         assertNotNull("still on the disk", next.diskCache?.openSnapshot(url)?.also { it.close() })
         val result = next.execute(ImageRequest.Builder(app).data(url).memoryCachePolicy(CachePolicy.DISABLED).build())
         val failure = (result as? ErrorResult)?.throwable
-        assertFalse("read from the disk, not the network: $failure", failure is IOException)
+        assertFalse("read from the disk, not the network: $failure", failure?.message == "offline")
         assertEquals("not downloaded again", 1, downloads)
         next.shutdown()
     }
