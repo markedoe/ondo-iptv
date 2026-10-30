@@ -182,6 +182,11 @@ interface MetadataStore {
     /** The titles of a genre (its name, [TextNormalizer.normalize]d), movies or series. */
     fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata>
 
+    /** A person's movies and series on TMDb (by [MetadataKey.person]), with when they were asked; null if never. */
+    fun personWorks(personKey: String): Pair<Long, List<RelatedTitle>>?
+
+    fun savePersonWorks(personKey: String, fetchedAt: Long, works: List<RelatedTitle>)
+
     /** People whose name has every word of [query] starting one of its words, those credited most first. */
     fun people(query: String, limit: Int): List<IndexedPerson>
 
@@ -229,6 +234,14 @@ class InMemoryMetadataStore : MetadataStore {
     @Synchronized override fun titleKeys(personKey: String): List<String> =
         credits.filterValues { list -> list.any { it.personKey == personKey } }.keys.sorted()
 
+    private val works = HashMap<String, Pair<Long, List<RelatedTitle>>>()
+
+    @Synchronized override fun personWorks(personKey: String): Pair<Long, List<RelatedTitle>>? = works[personKey]
+
+    @Synchronized override fun savePersonWorks(personKey: String, fetchedAt: Long, works: List<RelatedTitle>) {
+        this.works[personKey] = fetchedAt to works
+    }
+
     @Synchronized override fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata> =
         titles.values.filter { title -> title.kind == MetadataKey.kind(series) && title.genres.orEmpty().any { TextNormalizer.normalize(it.name) == genre } }
 
@@ -255,6 +268,7 @@ class InMemoryMetadataStore : MetadataStore {
         titles.clear()
         credits.clear()
         dead.clear()
+        works.clear()
     }
 }
 

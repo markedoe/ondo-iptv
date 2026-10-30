@@ -34,6 +34,18 @@ class SqliteMetadataStoreTest {
         assertTrue(store.titlesOfGenre("comedie", series = true).isEmpty())
     }
 
+    /** A person's movies and series on TMDb stay on the device: their page shows at once the next time. */
+    @Test
+    fun aPersonsWorksAreKept() {
+        val works = listOf(RelatedTitle(false, 5, "Quiet Water", 2021), RelatedTitle(true, 7, "Port Watch", null))
+        SqliteMetadataStore(context, "works.sqlite").apply {
+            savePersonWorks("ana lima", 42L, works)
+            close()
+        }
+        assertEquals(42L to works, SqliteMetadataStore(context, "works.sqlite").personWorks("ana lima"))
+        assertEquals(null, SqliteMetadataStore(context, "works.sqlite").personWorks("nobody"))
+    }
+
     /** A file of the first layout keeps its titles; they lack genres, so they are asked again as they show. */
     @Test
     fun aFileOfTheFirstLayoutIsKept() {

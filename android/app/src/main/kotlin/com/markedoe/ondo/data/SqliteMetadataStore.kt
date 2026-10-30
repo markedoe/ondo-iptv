@@ -30,7 +30,12 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
             )
             db.execSQL("CREATE INDEX credit_person ON credit (person_key)")
             db.execSQL("CREATE TABLE dead_image (url TEXT PRIMARY KEY, at INTEGER NOT NULL)")
+            createPersonWorks(db)
         }
+
+        /** A person's movies and series on TMDb, one line per title ([RelatedTitle.encode]). */
+        private fun createPersonWorks(db: SQLiteDatabase) =
+            db.execSQL("CREATE TABLE IF NOT EXISTS person_works (person_key TEXT PRIMARY KEY, fetched_at INTEGER NOT NULL, titles TEXT NOT NULL)")
 
         /** Entries older than [KEPT_FOR_MS] leave the file: a title nobody opens for months is not kept for ever. */
         override fun onOpen(db: SQLiteDatabase) {
@@ -40,15 +45,22 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
                 db.delete("credit", "title_key IN (SELECT key FROM title WHERE fetched_at < ?)", arrayOf(before))
                 db.delete("title", "fetched_at < ?", arrayOf(before))
                 db.delete("dead_image", "at < ?", arrayOf(before))
+                db.delete("person_works", "fetched_at < ?", arrayOf(before))
             }
         }
 
-        /** Version 2 keeps genres and recommendations: added to the titles kept (asked again as they show). */
+        /**
+         * Version 2 keeps genres and recommendations (added to the titles kept, asked again as they show); version 3,
+         * the people's movies and series.
+         */
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            if (oldVersion != 1) return restart(db)
+            if (oldVersion !in 1..2) return restart(db)
             try {
-                db.execSQL("ALTER TABLE title ADD COLUMN genres TEXT")
-                db.execSQL("ALTER TABLE title ADD COLUMN related TEXT")
+                if (oldVersion < 2) {
+                    db.execSQL("ALTER TABLE title ADD COLUMN genres TEXT")
+                    db.execSQL("ALTER TABLE title ADD COLUMN related TEXT")
+                }
+                createPersonWorks(db)
             } catch (_: android.database.SQLException) {
                 restart(db)
             }
@@ -58,7 +70,7 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
 
         /** A cache: another layout starts empty. */
         private fun restart(db: SQLiteDatabase) {
-            for (table in listOf("title", "credit", "dead_image")) db.execSQL("DROP TABLE IF EXISTS $table")
+            for (table in listOf("title", "credit", "dead_image", "person_works")) db.execSQL("DROP TABLE IF EXISTS $table")
             onCreate(db)
         }
     }
@@ -128,6 +140,20 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
                 }
             }
         }
+    }
+
+    override fun personWorks(personKey: String): Pair<Long, List<RelatedTitle>>? = read(null) { db ->
+        db.rawQuery("SELECT fetched_at, titles FROM person_works WHERE person_key = ?", arrayOf(personKey)).use { c ->
+            if (c.moveToFirst()) c.getLong(0) to RelatedTitle.decode(c.getString(1)).orEmpty() else null
+        }
+    }
+
+    override fun savePersonWorks(personKey: String, fetchedAt: Long, works: List<RelatedTitle>) = write { db ->
+        db.insertWithOnConflict("person_works", null, ContentValues().apply {
+            put("person_key", personKey)
+            put("fetched_at", fetchedAt)
+            put("titles", RelatedTitle.encode(works))
+        }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
     override fun save(titles: List<TitleMetadata>) = write { db ->
@@ -224,7 +250,7 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
 
     companion object {
         const val FILE_NAME = "metadata.sqlite"
-        private const val VERSION = 2
+        private const val VERSION = 3
         private const val COLUMNS = "key, kind, tmdb_id, backdrop, trailer, vote_average, vote_count, fetched_at, found, genres, related"
         private const val KEPT_FOR_MS = 180L * 24 * 60 * 60 * 1000
 

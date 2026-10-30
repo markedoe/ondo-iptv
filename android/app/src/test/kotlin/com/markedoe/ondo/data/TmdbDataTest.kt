@@ -144,9 +144,9 @@ class TmdbDataTest {
         assertTrue(tv.state.value.trending.isEmpty())
     }
 
-    /** A person's page asks TMDb for their credits once a day: back on the page, they show without a new request. */
+    /** A person's page asks TMDb for their credits once a week (kept on the device): back on the page, they show at once. */
     @Test
-    fun aPersonsCreditsAreAskedOnceADay() = runTest {
+    fun aPersonsCreditsAreAskedOnceAWeek() = runTest {
         val search = "https://api.themoviedb.org/3/search/person?query=Aster&language=en-US&api_key=GOOD"
         val credits = "https://api.themoviedb.org/3/person/7/combined_credits?language=en-US&api_key=GOOD"
         val http = Http(answers.apply {
@@ -162,6 +162,9 @@ class TmdbDataTest {
         assertEquals(first, tv.tmdbWorks("aster"))
         assertEquals(1, http.requested.count { it == credits })
         time += OndoRepository.PERSON_CREDITS_FRESH_MS
+        tv.tmdbWorks("Aster")
+        assertEquals("a day later, still kept", 1, http.requested.count { it == credits })
+        time += OndoRepository.PERSON_WORKS_FRESH_MS
         tv.tmdbWorks("Aster")
         assertEquals(2, http.requested.count { it == credits })
     }

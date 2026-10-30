@@ -12,6 +12,7 @@ import com.markedoe.ondo.core.library.MetadataFreshness
 import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.MetadataStore
 import com.markedoe.ondo.core.library.MetadataTitles
+import com.markedoe.ondo.core.library.RelatedTitle
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbGenre
 import com.markedoe.ondo.core.library.TmdbItem
@@ -1274,21 +1275,36 @@ class OndoRepository(
 
     /** With the viewer's token, the person's movies and series on TMDb that the playlist has; null without a token. */
     suspend fun tmdbWorks(name: String): List<TrendingMatch>? {
-        val token = _state.value.settings.tmdbToken ?: return null
-        // A person's credits, asked of TMDb once a day per name: back on their page, it shows at once.
-        val key = "$token\u0000${TextNormalizer.normalize(name)}"
-        val askedAt = now()
-        val credits = personCredits[key]?.takeIf { askedAt - it.first < PERSON_CREDITS_FRESH_MS }?.second
-            ?: (tmdb { person(name)?.let { credits(it.id) } ?: emptyList() } ?: return null).also { found ->
-                if (personCredits.size >= PERSON_CREDITS_KEPT) personCredits.keys.firstOrNull()?.let(personCredits::remove)
-                personCredits[key] = askedAt to found
-            }
+        _state.value.settings.tmdbToken ?: return null
+        val personKey = MetadataKey.person(name)
+        if (personKey.isEmpty()) return emptyList()
+        val titles = metadataTitles() ?: return emptyList()
+        // Matched once per catalogue: back on the page, it shows at once.
         val content = _state.value.content
-        return withContext(Dispatchers.Default) { CatalogueMatcher.match(credits, content.movies, content.series) }
+        // A person's credits are kept on the device and asked of TMDb again after a week.
+        val askedAt = now()
+        personMatches[personKey]?.takeIf { it.first === content && MetadataFreshness.isFresh(it.second, PERSON_WORKS_FRESH_MS, askedAt) }?.let { return it.third }
+        val kept = withContext(io) { metadata.personWorks(personKey) }
+        val fresh = kept?.takeIf { MetadataFreshness.isFresh(it.first, PERSON_WORKS_FRESH_MS, askedAt) }
+        var fetchedAt = fresh?.first ?: askedAt
+        val works = fresh?.second
+            ?: tmdb { person(name)?.let { credits(it.id) } ?: emptyList() }
+                ?.flatMap { item ->
+                    val series = item.mediaType == TmdbItem.MediaType.TV
+                    listOfNotNull(item.title, item.originalTitle).distinct().filter { it.isNotBlank() }.map { RelatedTitle(series, item.id, it, item.year) }
+                }
+                ?.also { found -> withContext(io) { metadata.savePersonWorks(personKey, askedAt, found) } }
+            ?: kept?.also { fetchedAt = it.first }?.second
+            ?: return null
+        // Through the catalogue's index (built once): not the whole catalogue walked for each person.
+        val matches = withContext(Dispatchers.Default) { works.flatMap { titles.match(it.keys) }.distinctBy { it.id } }
+        if (personMatches.size >= PERSON_CREDITS_KEPT) personMatches.keys.firstOrNull()?.let(personMatches::remove)
+        personMatches[personKey] = Triple(content, fetchedAt, matches)
+        return matches
     }
 
-    /** TMDb's credits of the people whose page was opened, by token and name, with when they were asked. */
-    private val personCredits = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<TmdbItem>>>()
+    /** The catalogue's titles each person opened has, for the catalogue they were matched in. */
+    private val personMatches = java.util.concurrent.ConcurrentHashMap<String, Triple<PlaylistContent, Long, List<TrendingMatch>>>()
 
     companion object {
         const val REFRESH_AFTER_MS = 24 * 60 * 60 * 1000L
@@ -1308,6 +1324,9 @@ class OndoRepository(
 
         /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
         const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L
+
+        /** A person's movies and series on TMDb, kept on the device, are asked again after a week. */
+        const val PERSON_WORKS_FRESH_MS = 7 * 24 * 60 * 60 * 1000L
         private const val PEOPLE_SEARCHES_KEPT = 100
         private const val SMALL_GUIDE_BUDGET = 48L * 1024 * 1024
 
