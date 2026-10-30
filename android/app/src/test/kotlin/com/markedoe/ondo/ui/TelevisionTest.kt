@@ -43,6 +43,7 @@ import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
 import com.markedoe.ondo.ui.tv.SEARCH_TAG
+import com.markedoe.ondo.ui.tv.SETTINGS_TAG
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
@@ -70,9 +71,9 @@ class TelevisionTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
 
-    private fun start() {
+    private fun start(playlistName: String = Fixtures.playlist.name) {
         val store = AppStore(folder.root)
-        store.savePlaylists(listOf(Fixtures.playlist))
+        store.savePlaylists(listOf(Fixtures.playlist.copy(name = playlistName)))
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
         store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content.copy(fetchedAt = System.currentTimeMillis()))
         val repository = OndoRepository(store, FakeHttp(emptyMap()), CoroutineScope(SupervisorJob() + Dispatchers.Main))
@@ -148,6 +149,19 @@ class TelevisionTest {
         assertTrue("before Search", bounds.right <= search.left)
         assertTrue("level with Search", bounds.center.y in search.top..search.bottom)
         assertTrue("above the picture", bounds.bottom <= frame.top)
+    }
+
+    /** A long playlist name is cut short: Search and Settings keep their whole round buttons. */
+    @Test
+    fun aLongPlaylistNameLeavesSearchAndSettingsWhole() {
+        start(playlistName = "a-very-long-playlist-name.example.com · " + "x".repeat(80))
+        fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val search = bounds(SEARCH_TAG)
+        val settings = bounds(SETTINGS_TAG)
+        val line = bounds("lastUpdate")
+        assertEquals("Settings as wide as Search", search.width, settings.width, 1f)
+        assertEquals("round", settings.width, settings.height, 1f)
+        assertTrue("the line ends before Search", line.right <= search.left)
     }
 
     @Test

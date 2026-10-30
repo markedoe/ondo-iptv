@@ -33,7 +33,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.em
 import com.markedoe.ondo.ui.screens.OndoLogo
@@ -234,16 +233,18 @@ fun TvNavigationFrame(
                         }
                     }
                 }
-                Spacer(Modifier.weight(1f))
-                bar.note?.let { note ->
-                    Text(
-                        note,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.widthIn(max = 360.dp).padding(end = 12.dp).testTag("lastUpdate"),
-                    )
+                // The note takes only the room left once Search and Settings have theirs (it is cut short, never them).
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                    bar.note?.let { note ->
+                        Text(
+                            note,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 360.dp).padding(start = 12.dp, end = 12.dp).testTag("lastUpdate"),
+                        )
+                    }
                 }
                 BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)
                 BarIcon(stringResource(R.string.settings), Icons.Rounded.Settings, shown, SETTINGS_TAG, requester(SETTINGS_TAG), ::below, onSettings)
