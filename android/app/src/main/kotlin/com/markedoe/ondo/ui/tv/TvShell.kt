@@ -177,12 +177,13 @@ fun TvNavigationFrame(
         }
         if (showBar) {
             val ground = MaterialTheme.colorScheme.background
-            // The page scrolls under a black band, which fades into it just below the bar.
-            val band = TvTokens.TopBarSpace / (TvTokens.TopBarSpace + BAND_FADE)
+            // The page scrolls under a black band, which fades out at the bar's lower edge: never over the page's top
+            // (its filters, the picture), which starts right below.
+            val band = (TvTokens.TopBarSpace - BAND_FADE) / TvTokens.TopBarSpace
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(TvTokens.TopBarSpace + BAND_FADE)
+                    .height(TvTokens.TopBarSpace)
                     .background(Brush.verticalGradient(0f to ground, band to ground, 1f to Color.Transparent)),
             )
             Row(
@@ -268,8 +269,8 @@ fun TvNavigationFrame(
     }
 }
 
-/** How far below the bar the black band behind it fades into the page. */
-private val BAND_FADE = 20.dp
+/** How much of the bar's lower edge the black band behind it takes to fade out. */
+private val BAND_FADE = 12.dp
 
 /** How many frames OK on a tab waits for its page to take the focus before giving it to the page's first item. */
 private const val ENTER_PAGE_FRAMES = 30
