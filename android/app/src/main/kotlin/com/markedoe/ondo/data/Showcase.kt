@@ -118,6 +118,15 @@ class Showcase(
             .take(limit)
     }
 
+    /**
+     * The titles worth preparing ahead (Settings, "Prepare new titles"): the carousel's, the best rated of the week,
+     * the new movies and series and the trending ones, each once, up to [limit].
+     */
+    fun aheadTitles(now: Long, limit: Int): List<ShowcaseItem> =
+        (heroItems(now) + bestRecent(now, limit) + newReleases(now, limit) + trending())
+            .distinctBy { it.key }
+            .take(limit)
+
     /** Up to [limit] titles for the carousel: the best rated of the week ([bestRecent]), then trending titles, then new releases, no duplicates. */
     fun heroItems(now: Long, limit: Int = HERO_TITLES): List<ShowcaseItem> {
         val result = LinkedHashMap<String, ShowcaseItem>()

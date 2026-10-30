@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -452,6 +453,35 @@ class OndoViewModel(
     fun setTagsHidden(tags: Collection<String>, hidden: Boolean) = repository.setTagsHidden(tags, hidden)
     fun setWordHidden(word: String, hidden: Boolean) = repository.setWordHidden(word, hidden)
     fun setUpdateAwards(update: Boolean) = repository.setUpdateAwards(update)
+
+    fun setPrepareAhead(on: Boolean) = repository.setPrepareAhead(on)
+
+    /**
+     * Settings' "Prepare new titles", while Ondo is on screen (the caller stops it otherwise): what TMDb says about
+     * the carousel's, the best rated, the new and the trending titles (cast and directors with their photos, backdrop,
+     * rating) is fetched ahead at TMDb's pace and kept on the device, so their pages open at once. Needs the viewer's
+     * TMDb token; titles already kept and recent are not asked again. Starts over with a new catalogue.
+     */
+    suspend fun prepareAhead() {
+        state
+            .map { PrepareInput(it.settings.prepareAhead && it.settings.tmdbToken != null && !it.tmdbRefused, it.content) }
+            .distinctUntilChanged { old, new -> old.on == new.on && old.content === new.content }
+            .collectLatest { input ->
+                if (!input.on) return@collectLatest
+                // Not while the app is still starting or the catalogue is being shown.
+                delay(PREPARE_START_DELAY_MS)
+                val now = clock()
+                val titles = withContext(computation) { UiMappers.showcase(state.value).aheadTitles(now, PREPARE_LIMIT) }
+                for (item in titles) {
+                    val details = details(state.value, item)
+                    val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
+                    val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
+                    repository.prepareTmdbMetadata(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
+                }
+            }
+    }
+
+    private class PrepareInput(val on: Boolean, val content: com.markedoe.ondo.core.model.PlaylistContent)
     suspend fun checkAndSaveTmdbToken(token: String) = repository.checkAndSaveTmdbToken(token)
     fun removeTmdbToken() = repository.removeTmdbToken()
     fun acceptSuggestion(suggestion: TagSuggestion) = repository.setTagsHidden(suggestion.hidden, hidden = true)
@@ -468,6 +498,10 @@ class OndoViewModel(
 
         /** Series whose details Home fetches ahead, at most. */
         const val PREFETCH_LIMIT = 4
+
+        /** Titles prepared ahead at most, and the wait before starting (see [prepareAhead]). */
+        const val PREPARE_LIMIT = 300
+        const val PREPARE_START_DELAY_MS = 10_000L
 
         /** TMDb is asked for people once typing pauses this long. */
         const val TMDB_PEOPLE_DEBOUNCE_MS = 400L

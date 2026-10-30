@@ -323,6 +323,37 @@ class OndoViewModelTest {
         assertEquals(listOf("Anna Sample"), done.people)
     }
 
+    /** Settings' "Prepare new titles": while Ondo is open, TMDb is asked ahead about the new titles; nothing when off. */
+    @Test
+    fun prepareNewTitlesAsksTmdbAheadOnlyWhenOn() = runTest {
+        val asked = mutableListOf<String>()
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
+                url == list -> catalogue
+                url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
+                url.startsWith("https://api.themoviedb.org/3/trending") -> """{"results":[]}"""
+                url.startsWith("https://api.themoviedb.org/3/") -> {
+                    asked += url
+                    """{"results":[]}"""
+                }
+                else -> throw HttpException.BadStatus(404)
+            }.encodeToByteArray()
+        }
+        val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
+        val viewModel = track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
+        repository.addPlaylist("Home", list)
+        viewModel.state.first { it.content.movies.isNotEmpty() }
+        assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
+        backgroundScope.launch { viewModel.prepareAhead() }
+        testScheduler.advanceTimeBy(OndoViewModel.PREPARE_START_DELAY_MS * 2)
+        testScheduler.runCurrent()
+        assertTrue("off: nothing asked ahead, $asked", asked.isEmpty())
+        repository.setPrepareAhead(true)
+        testScheduler.advanceTimeBy(OndoViewModel.PREPARE_START_DELAY_MS * 2)
+        testScheduler.runCurrent()
+        assertTrue("on: the new titles asked ahead", asked.isNotEmpty())
+    }
+
     @Test
     fun playOnASeriesShowsProgressAndASecondTapDoesNotPlayTwice() = runTest {
         val gate = CompletableDeferred<Unit>()

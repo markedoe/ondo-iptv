@@ -279,6 +279,8 @@
     <string name="styles_explanation">उन श्रेणियों को छिपाता है जिनके नाम में कोई शैली या शब्द (Manga, Bollywood…) हो, सभी प्लेलिस्ट में, बाद में जोड़ी गई श्रेणियों सहित। केवल श्रेणियों के नाम गिने जाते हैं, हर फ़िल्म की शैली नहीं।</string>
     <string name="update_awards">पुरस्कार अपने-आप अपडेट करें</string>
     <string name="update_awards_hint">हफ़्ते में एक बार, Ondo नवीनतम पुरस्कार और फ़ेस्टिवल चयन (Wikidata से बने) GitHub से डाउनलोड करता है, जहाँ यह प्रोजेक्ट होस्ट है। आपके बारे में कुछ नहीं भेजा जाता।</string>
+    <string name="prepare_ahead">नई रिलीज़ पहले से तैयार करें</string>
+    <string name="prepare_ahead_hint">Ondo खुला रहने पर नई और सबसे ऊँची रेटिंग वाली फ़िल्मों-सीरीज़ के बारे में TMDb की जानकारी (कलाकार, निर्देशन, रेटिंग, ट्रेलर) पहले ही ले आई जाती है, ताकि उनके पेज जल्दी खुलें। आपके TMDb टोकन और थोड़े डेटा का इस्तेमाल होता है।</string>
     <string name="genre_label">शैली</string>
     <string name="year_label">साल</string>
     <string name="genre_hint">फ़िल्में उनका पेज खोलने के बाद दिखती हैं; सीरीज़ हमेशा।</string>

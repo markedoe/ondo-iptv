@@ -291,6 +291,8 @@
     <string name="styles_explanation">Oculta las categorías cuyo nombre contiene un estilo o una palabra (Manga, Bollywood…), en todas las playlists, incluidas las que se añadan después. Solo cuentan los nombres de las categorías, no el género de cada película.</string>
     <string name="update_awards">Actualizar los premios automáticamente</string>
     <string name="update_awards_hint">Una vez por semana, Ondo descarga los últimos premios y selecciones en festivales (obtenidos de Wikidata) desde GitHub, donde se aloja el proyecto. No se envía nada sobre ti.</string>
+    <string name="prepare_ahead">Preparar las novedades</string>
+    <string name="prepare_ahead_hint">Mientras Ondo está abierto, lo que TMDb dice de las novedades y de los títulos mejor valorados (reparto, dirección, nota, tráiler) se carga por adelantado, así sus fichas se abren más rápido. Usa tu token de TMDb y algunos datos.</string>
     <string name="genre_label">Género</string>
     <string name="year_label">Año</string>
     <string name="genre_hint">Las películas aparecen una vez abierta su ficha; las series, siempre.</string>

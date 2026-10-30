@@ -33,6 +33,7 @@ import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.FilterList
@@ -444,6 +445,9 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
         Text("TMDb", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
     }
     item(key = "tmdb") { TvTmdbToken(state, actions) }
+    item(key = "prepareAhead") {
+        SwitchRow(stringResource(R.string.prepare_ahead), stringResource(R.string.prepare_ahead_hint), Icons.Rounded.CloudDownload, state.prepareAhead, actions.onPrepareAhead, Modifier.focusMemory("settings-prepareAhead").testTag("prepareAheadSwitch"))
+    }
 }
 
 /**

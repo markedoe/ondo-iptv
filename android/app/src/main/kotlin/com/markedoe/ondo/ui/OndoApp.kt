@@ -148,6 +148,10 @@ fun OndoApp(viewModel: OndoViewModel) {
             viewModel.playRequests.collect { request -> context.startActivity(PlayerActivity.intent(context, request)) }
         }
     }
+    // Settings' "Prepare new titles": only while Ondo is on screen.
+    LaunchedEffect(viewModel, lifecycle) {
+        lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) { viewModel.prepareAhead() }
+    }
     TelevisionFrame {
         when {
             !state.isReady -> Box(Modifier.fillMaxSize())
@@ -724,6 +728,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onHideWatchedMovies = viewModel::setHideWatchedMovies,
             onSyncOnLocalNetwork = viewModel::setSyncOnLocalNetwork,
             onUpdateAwards = viewModel::setUpdateAwards,
+            onPrepareAhead = viewModel::setPrepareAhead,
             onLiveBuffer = viewModel::setLiveBuffer,
             onVodBuffer = viewModel::setVodBuffer,
             onCategories = { navController.navigate(Routes.Categories()) },

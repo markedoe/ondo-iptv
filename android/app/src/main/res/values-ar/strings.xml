@@ -327,6 +327,8 @@
     <string name="styles_explanation">يُخفي الفئات التي يتضمن اسمها نمطًا أو كلمة (Manga وBollywood…) في كل قوائم التشغيل، بما فيها الفئات المضافة لاحقًا. تُحتسب أسماء الفئات فقط، لا نوع كل فيلم.</string>
     <string name="update_awards">تحديث الجوائز تلقائيًا</string>
     <string name="update_awards_hint">مرة كل أسبوع، يُنزّل Ondo أحدث الجوائز واختيارات المهرجانات (المأخوذة من Wikidata) من GitHub حيث يُستضاف المشروع. لا يُرسَل أي شيء عنك.</string>
+    <string name="prepare_ahead">تجهيز الجديد مسبقًا</string>
+    <string name="prepare_ahead_hint">أثناء فتح Ondo، تُجلب مسبقًا من TMDb معلومات العناوين الجديدة والأعلى تقييمًا (الممثلون، الإخراج، التقييم، الإعلان)، فتُفتح صفحاتها أسرع. يستخدم رمز TMDb الخاص بك وقليلًا من البيانات.</string>
     <string name="genre_label">النوع</string>
     <string name="year_label">السنة</string>
     <string name="genre_hint">تظهر الأفلام بعد فتح صفحتها؛ أما المسلسلات فتظهر دائمًا.</string>

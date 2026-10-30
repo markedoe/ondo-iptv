@@ -514,6 +514,7 @@ object UiMappers {
         },
         showAdultCategories = state.settings.showAdultCategories,
         updateAwards = state.settings.updateAwards,
+        prepareAhead = state.settings.prepareAhead,
         liveBuffer = state.settings.liveBuffer,
         vodBuffer = state.settings.vodBuffer,
         version = version,

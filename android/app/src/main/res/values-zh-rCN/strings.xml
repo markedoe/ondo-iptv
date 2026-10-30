@@ -267,6 +267,8 @@
     <string name="styles_explanation">隐藏名称中包含某种风格或某个词（如 Manga、Bollywood…）的分类，适用于所有播放列表，包括以后添加的分类。只看分类名称，不看每部电影的类型。</string>
     <string name="update_awards">自动更新获奖信息</string>
     <string name="update_awards_hint">Ondo 每周从托管本项目的 GitHub 下载一次最新的获奖和电影节入选信息（来自 Wikidata）。不会发送任何关于你的信息。</string>
+    <string name="prepare_ahead">预先准备新片</string>
+    <string name="prepare_ahead_hint">Ondo 打开时，会预先从 TMDb 获取新片和评分最高作品的信息（演员、导演、评分、预告片），让它们的页面打开得更快。使用你的 TMDb 令牌和少量流量。</string>
     <string name="genre_label">类型</string>
     <string name="year_label">年份</string>
     <string name="genre_hint">电影在打开过其页面后才会列出；剧集则始终列出。</string>

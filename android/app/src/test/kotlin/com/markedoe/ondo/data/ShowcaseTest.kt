@@ -4,6 +4,7 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -72,6 +73,15 @@ class ShowcaseTest {
             listOf("Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
             showcase(hidden = adultHidden).heroItems(later).map { it.title },
         )
+    }
+
+    @Test
+    fun theTitlesPreparedAheadAreTheNewAndBestRatedOnes() {
+        val titles = showcase(hidden = setOf(Fixtures.adultMovies.id)).aheadTitles(Fixtures.NOW, limit = 50)
+        assertEquals("each once", titles.size, titles.distinctBy { it.key }.size)
+        assertTrue("the best rated of the week first", titles.first().title == "Harbor Lights")
+        assertFalse("hidden categories left out", titles.any { it.title == "Late Show" })
+        assertEquals(3, showcase().aheadTitles(Fixtures.NOW, limit = 3).size)
     }
 
     @Test

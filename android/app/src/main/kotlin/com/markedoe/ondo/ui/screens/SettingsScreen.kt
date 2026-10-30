@@ -78,6 +78,7 @@ data class SettingsUiState(
     val playlists: List<PlaylistSummary> = emptyList(),
     val showAdultCategories: Boolean = false,
     val updateAwards: Boolean = true,
+    val prepareAhead: Boolean = false,
     /** Buffer settings in seconds, 0 for automatic. */
     val liveBuffer: Int = 0,
     val vodBuffer: Int = 0,
@@ -107,6 +108,7 @@ class SettingsActions(
     val onHideWatchedMovies: (Boolean) -> Unit = {},
     val onSyncOnLocalNetwork: (Boolean) -> Unit = {},
     val onUpdateAwards: (Boolean) -> Unit = {},
+    val onPrepareAhead: (Boolean) -> Unit = {},
     val onLiveBuffer: (Int) -> Unit = {},
     val onVodBuffer: (Int) -> Unit = {},
     val onCategories: () -> Unit = {},
@@ -225,6 +227,21 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                             onCheckedChange = actions.onUpdateAwards,
                             colors = ondoSwitchColors(),
                             modifier = Modifier.testTag("awardsSwitch").semantics { contentDescription = label },
+                        )
+                    },
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.prepare_ahead)) },
+                    supportingContent = { Text(stringResource(R.string.prepare_ahead_hint)) },
+                    trailingContent = {
+                        val label = stringResource(R.string.prepare_ahead)
+                        Switch(
+                            checked = state.prepareAhead,
+                            onCheckedChange = actions.onPrepareAhead,
+                            colors = ondoSwitchColors(),
+                            modifier = Modifier.testTag("prepareAheadSwitch").semantics { contentDescription = label },
                         )
                     },
                 )

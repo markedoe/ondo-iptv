@@ -267,6 +267,8 @@ class OndoRepository(
 
     fun setUpdateAwards(update: Boolean) = updateSettings { it.copy(updateAwards = update) }
 
+    fun setPrepareAhead(on: Boolean) = updateSettings { it.copy(prepareAhead = on) }
+
     /** Saves in order, off the main thread. A failed save (disk full) keeps the app running. */
     private fun persist(save: AppStore.() -> Unit) {
         scope.launch(writer) { runCatching { store.save() } }
@@ -992,6 +994,7 @@ class OndoRepository(
     private fun tmdbTokenChanged() {
         trendingLoadedFor = null
         metadataAsked.clear()
+        metadataPrepared.clear()
         _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbTrailers = emptyMap(), tmdbRatings = emptyMap()) }
         loadTrending()
     }
@@ -1033,6 +1036,9 @@ class OndoRepository(
         }
     }
 
+    /** Titles prepared ahead this session (see [prepareTmdbMetadata]). */
+    private val metadataPrepared: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     /**
      * What TMDb says about a title (backdrop, trailer, rating, cast and directors with their photos), once a session:
      * what the store kept is shown at once, token or not; with the viewer's token, TMDb is asked when the store has
@@ -1044,11 +1050,28 @@ class OndoRepository(
         if (keys.isEmpty() || !metadataAsked.add(key)) return
         // The token as the page opens: one saved meanwhile asks again (the titles asked are forgotten then).
         val client = tmdbClient()
-        scope.launch {
+        scope.launch { tmdbMetadata(key, keys, series, tmdbId, title, year, ahead, client, show = true) }
+    }
+
+    /**
+     * The same, waited for, and not shown on screen: a title prepared while Ondo is open (Settings, "Prepare new
+     * titles"). Kept on the device like the others; false when it was already asked this session.
+     */
+    suspend fun prepareTmdbMetadata(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?): Boolean {
+        val keys = MetadataKey.all(series, tmdbId, title, year)
+        // Not marked as asked for the screen: the title's page, opened later, shows what was kept.
+        if (keys.isEmpty() || key in metadataAsked || !metadataPrepared.add(key)) return false
+        tmdbMetadata(key, keys, series, tmdbId, title, year, ahead = true, client = tmdbClient() ?: return false, show = false)
+        return true
+    }
+
+    /** [show]: put what was found on screen (a title shown); a title prepared ahead is only kept on the device. */
+    private suspend fun tmdbMetadata(key: String, keys: List<String>, series: Boolean, tmdbId: String?, title: String, year: Int?, ahead: Boolean, client: TmdbClient?, show: Boolean) {
+        run {
             val stored = withContext(io) { storedMetadata(keys) }
-            if (stored != null) showMetadata(key, stored.first, stored.second)
-            if (stored != null && MetadataFreshness.isFresh(stored.first, now())) return@launch
-            if (client == null) return@launch
+            if (stored != null && show) showMetadata(key, stored.first, stored.second)
+            if (stored != null && MetadataFreshness.isFresh(stored.first, now())) return@run
+            if (client == null) return@run
             val info = try {
                 if (ahead) {
                     tmdbSlots.withPermit {
@@ -1064,7 +1087,7 @@ class OndoRepository(
                 // Out of reach: asked again the next time the title shows. TMDb refused or failed: not this session.
                 if (e is java.io.IOException && e !is HttpException) metadataAsked.remove(key)
                 noteTmdbFailure(e)
-                return@launch
+                return@run
             }
             // Also under the id TMDb gave: found at once when the provider's details name it later.
             val saved = (keys + listOfNotNull(info?.let { MetadataKey.tmdb(series, it.tmdbId) })).distinct()
@@ -1075,7 +1098,7 @@ class OndoRepository(
                 metadata.save(rows)
                 if (info != null) metadata.saveCredits(credits, saved)
             }
-            showMetadata(key, rows.first(), credits)
+            if (show) showMetadata(key, rows.first(), credits)
         }
     }
 

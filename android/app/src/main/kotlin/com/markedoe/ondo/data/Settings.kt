@@ -43,6 +43,8 @@ data class AppSettings(
     /** Newer awards and festival selections downloaded once a week (see [AwardsDownload]). */
     val updateAwards: Boolean = true,
     val awardsCheckedAt: Long = 0,
+    /** While Ondo is open, what TMDb says about the new and best rated titles is fetched ahead (see `OndoViewModel.prepareAhead`). */
+    val prepareAhead: Boolean = false,
     /** Seconds the player gathers before it shows a live channel, and a movie or an episode; 0 is automatic (see `PlaybackBuffer`). */
     val liveBuffer: Int = 0,
     val vodBuffer: Int = 0,
