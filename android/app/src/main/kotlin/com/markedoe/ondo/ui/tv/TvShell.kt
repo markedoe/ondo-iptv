@@ -1,6 +1,9 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -70,7 +73,6 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TopLevel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -276,7 +278,7 @@ private val BAND_FADE = 12.dp
 private const val ENTER_PAGE_FRAMES = 30
 
 /** How long the remote rests on a tab before it opens. */
-private const val TAB_REST_MS = 300L
+private const val TAB_REST_MS = 200L
 
 const val SEARCH_TAG = "tabSearch"
 const val SETTINGS_TAG = "tabSettings"
@@ -287,10 +289,14 @@ private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String
     var focused by remember { mutableStateOf(false) }
     // The tab the remote rests on along the bar opens without OK (as on the TV's own home screen); passing quickly
     // (towards Settings) opens nothing, nor does the focus only passing through the bar (Up from a page).
+    // A line fills under the tab while it gets ready to open: the remote need not press OK.
+    val opening = remember { Animatable(0f) }
     LaunchedEffect(focused, selected) {
-        if (!focused || selected) return@LaunchedEffect
-        delay(TAB_REST_MS)
+        opening.snapTo(0f)
+        if (!focused || selected || !browsing()) return@LaunchedEffect
+        opening.animateTo(1f, tween(TAB_REST_MS.toInt(), easing = LinearEasing))
         if (browsing()) onReach()
+        opening.snapTo(0f)
     }
     Surface(
         onClick = onClick,
@@ -317,14 +323,27 @@ private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
     ) {
-        Text(
-            label,
-            fontSize = 15.sp,
-            letterSpacing = 0.sp,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            maxLines = 1,
-            modifier = Modifier.padding(PaddingValues(horizontal = 16.dp, vertical = 8.dp)),
-        )
+        Box {
+            Text(
+                label,
+                fontSize = 15.sp,
+                letterSpacing = 0.sp,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                maxLines = 1,
+                modifier = Modifier.padding(PaddingValues(horizontal = 16.dp, vertical = 8.dp)),
+            )
+            if (opening.value > 0f) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .fillMaxWidth(opening.value)
+                        .height(3.dp)
+                        .background(colors.background, RoundedCornerShape(2.dp))
+                        .testTag("$tag-opening"),
+                )
+            }
+        }
     }
 }
 

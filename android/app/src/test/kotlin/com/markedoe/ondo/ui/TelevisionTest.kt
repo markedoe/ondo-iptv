@@ -415,7 +415,11 @@ class TelevisionTest {
     fun aTabOpensAsTheRemoteReachesItAndOkGoesIntoIt() {
         start()
         repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
+        compose.mainClock.autoAdvance = false
         press(Key.DirectionRight)
+        compose.mainClock.advanceTimeBy(100)
+        assertTrue("a line fills under the tab about to open", compose.onAllNodesWithTag("tabMovies-opening", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+        compose.mainClock.autoAdvance = true
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("vod").fetchSemanticsNodes().isNotEmpty() }
         assertEquals("tabMovies", focusedTag())
         press(Key.DirectionCenter)
