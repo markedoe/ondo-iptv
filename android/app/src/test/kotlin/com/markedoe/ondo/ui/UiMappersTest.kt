@@ -77,7 +77,7 @@ class UiMappersTest {
         assertEquals(listOf("The Long Road", "Blue Horizon", "Summer in Lisbon"), home.trending.map { it.title })
         // The best rated additions of the week come first; trending titles fill the carousel after them.
         assertEquals(
-            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "The Archive", "Summer in Lisbon", "Blue Horizon"),
+            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "The Archive", "Summer in Lisbon", "Blue Horizon", "Glass City", "The Long Road", "Silent Harbor", "Midnight Orchard"),
             home.hero.map { it.item.title },
         )
         val week = Fixtures.NOW + 14 * 86_400_000L
@@ -145,7 +145,7 @@ class UiMappersTest {
     fun homeShowsTheCarouselShelvesAndChannels() {
         val home = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
         assertEquals("Home", home.playlistName)
-        assertEquals(6, home.hero.size)
+        assertEquals(10, home.hero.size)
         assertEquals("Movie · 2025 · ★ 7.8", home.hero.first { it.item.title == "Northern Lights" }.meta)
         assertEquals("Series · 2025 · Drama · ★ 8.2", home.hero.first { it.item.title == "Harbor Lights" }.meta)
         assertTrue(home.hasVod)
@@ -244,8 +244,7 @@ class UiMappersTest {
             )
         }
         val shown = titles(Fixtures.state(library))
-        // The carousel holds the six best rated of the week, Glass City not among them.
-        shown.filterKeys { it != "hero" }.forEach { (list, items) -> assertTrue("$list shows it by default", "Glass City" in items) }
+        shown.forEach { (list, items) -> assertTrue("$list shows it by default", "Glass City" in items) }
         val hidden = titles(Fixtures.state(library, settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, hideWatchedMovies = true)))
         listOf("grid", "rows", "new", "hero", "similar", "year").forEach { assertFalse("$it leaves it out", "Glass City" in hidden.getValue(it)) }
         listOf("search", "myList").forEach { assertTrue("$it keeps it", "Glass City" in hidden.getValue(it)) }

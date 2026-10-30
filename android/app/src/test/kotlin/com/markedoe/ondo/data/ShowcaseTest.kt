@@ -60,8 +60,8 @@ class ShowcaseTest {
         val adultHidden = setOf(Fixtures.adultMovies.id)
         val hero = showcase(hidden = adultHidden).heroItems(Fixtures.NOW)
         assertEquals(
-            "the six best rated titles added in the last seven days, movies and series, hidden categories left out",
-            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "The Archive", "Summer in Lisbon", "Blue Horizon"),
+            "the best rated titles added in the last seven days, movies and series, hidden categories left out",
+            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "The Archive", "Summer in Lisbon", "Blue Horizon", "Glass City", "The Long Road", "Silent Harbor", "Midnight Orchard"),
             hero.map { it.title },
         )
         assertEquals(2, showcase(hidden = adultHidden).heroItems(Fixtures.NOW, limit = 2).size)

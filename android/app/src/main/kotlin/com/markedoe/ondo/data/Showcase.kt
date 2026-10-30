@@ -108,7 +108,7 @@ class Showcase(
      * The best rated movies and series the provider added in the last [RECENT_DAYS] days (its own date, which an M3U
      * list does not give), each film once whatever its copies (language, quality).
      */
-    fun bestRecent(now: Long, limit: Int = 6): List<ShowcaseItem> {
+    fun bestRecent(now: Long, limit: Int = HERO_TITLES): List<ShowcaseItem> {
         val since = now / 1_000 - RECENT_DAYS * 86_400L
         val recent = browsableMovies.map { ShowcaseItem.MovieItem(it) } + series.map { ShowcaseItem.SeriesItem(it) }
         return recent
@@ -119,7 +119,7 @@ class Showcase(
     }
 
     /** Up to [limit] titles for the carousel: the best rated of the week ([bestRecent]), then trending titles, then new releases, no duplicates. */
-    fun heroItems(now: Long, limit: Int = 6): List<ShowcaseItem> {
+    fun heroItems(now: Long, limit: Int = HERO_TITLES): List<ShowcaseItem> {
         val result = LinkedHashMap<String, ShowcaseItem>()
         fun add(item: ShowcaseItem?) {
             if (item != null && result.size < limit) result.putIfAbsent(item.key, item)
@@ -197,6 +197,9 @@ class Showcase(
         return episode to season
     }
 }
+
+/** How many titles the carousel shows at most. */
+const val HERO_TITLES = 15
 
 /** How far back the carousel looks for the best rated additions. */
 const val RECENT_DAYS = 7L
