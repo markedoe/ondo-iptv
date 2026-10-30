@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
@@ -34,10 +37,6 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.unit.em
-import com.markedoe.ondo.ui.screens.OndoLogo
-import com.markedoe.ondo.ui.theme.OndoColors
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -53,16 +52,17 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
@@ -71,6 +71,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TopLevel
+import com.markedoe.ondo.ui.screens.OndoLogo
+import com.markedoe.ondo.ui.theme.OndoColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -292,6 +294,19 @@ fun TvNavigationFrame(
                 }
             }
         }
+        // On Home's bar, a first Back only warns: Ondo closes on a second one within a moment.
+        var leaving by remember { mutableStateOf(false) }
+        val context = LocalContext.current
+        LaunchedEffect(leaving) {
+            if (leaving) {
+                delay(LEAVE_WINDOW_MS)
+                leaving = false
+            }
+        }
+        BackHandler(enabled = showBar && barHasFocus && atHome && !leaving) {
+            leaving = true
+            Toast.makeText(context, R.string.back_again_to_leave, Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
@@ -300,6 +315,9 @@ private val BAND_FADE = 12.dp
 
 /** How many frames OK on a tab waits for its page to take the focus before giving it to the page's first item. */
 private const val ENTER_PAGE_FRAMES = 30
+
+/** How long a second Back on Home's bar has to close Ondo. */
+private const val LEAVE_WINDOW_MS = 2_500L
 
 /** How long the remote rests on a tab before it opens. */
 private const val TAB_REST_MS = 200L

@@ -53,6 +53,7 @@
     <string name="add">إضافة</string>
     <string name="refresh">تحديث</string>
     <string name="refreshing_playlist">جارٍ تحديث قائمة التشغيل…</string>
+    <string name="back_again_to_leave">اضغط على رجوع مرة أخرى للخروج من Ondo</string>
     <string name="use_playlist">استخدام</string>
     <string name="settings_catalogue">الكتالوج</string>
     <string name="active">نشطة</string>

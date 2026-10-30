@@ -53,6 +53,7 @@
     <string name="add">Añadir</string>
     <string name="refresh">Actualizar</string>
     <string name="refreshing_playlist">Actualizando la playlist…</string>
+    <string name="back_again_to_leave">Pulsa Atrás otra vez para salir de Ondo</string>
     <string name="use_playlist">Usar</string>
     <string name="settings_catalogue">Catálogo</string>
     <string name="active">Activa</string>

@@ -53,6 +53,7 @@
     <string name="add">जोड़ें</string>
     <string name="refresh">रीफ़्रेश करें</string>
     <string name="refreshing_playlist">प्लेलिस्ट अपडेट हो रही है…</string>
+    <string name="back_again_to_leave">Ondo से बाहर निकलने के लिए फिर से वापस दबाएँ</string>
     <string name="use_playlist">इस्तेमाल करें</string>
     <string name="settings_catalogue">कैटलॉग</string>
     <string name="active">सक्रिय</string>
