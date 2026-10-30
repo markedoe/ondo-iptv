@@ -156,7 +156,7 @@ enum UITestFixture {
         }
         if hasLanguages {
             for (index, group) in ["|EN| Movies", "|FR| Films", "|DE| Filme", "|PT| Filmes"].enumerated() {
-                lines.append("#EXTINF:5400 group-title=\"\(group)\",Language Sample \(index + 1) (2020)")
+                lines.append("#EXTINF:5400 tvg-type=\"movie\" group-title=\"\(group)\",Language Sample \(index + 1) (2020)")
                 lines.append(hlsAdvanced)
             }
         }
