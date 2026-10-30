@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -254,14 +255,22 @@ fun TvNavigationFrame(
                 // The note takes only the room left once Search and Settings have theirs (it is cut short, never them).
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     bar.note?.let { note ->
-                        Text(
-                            note,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.widthIn(max = 360.dp).padding(start = 12.dp, end = 12.dp).testTag("lastUpdate"),
-                        )
+                        // One line each (the playlist, then when it was updated): a long name is cut short, never
+                        // the update, which stays whole and readable.
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            modifier = Modifier.widthIn(max = 360.dp).padding(start = 12.dp, end = 12.dp).semantics(mergeDescendants = true) {}.testTag("lastUpdate"),
+                        ) {
+                            note.lines().forEach { line ->
+                                Text(
+                                    line,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                     }
                 }
                 BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)

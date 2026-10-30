@@ -141,7 +141,7 @@ class TelevisionTest {
     @Test
     fun homeShowsThePlaylistAndItsLastUpdateInTheTopBar() {
         start()
-        val line = compose.onNodeWithTag("lastUpdate", useUnmergedTree = true)
+        val line = compose.onNodeWithTag("lastUpdate")
         line.assertIsDisplayed().assert(hasText("Updated", substring = true)).assert(hasText(Fixtures.playlist.name, substring = true))
         val bounds = line.fetchSemanticsNode().boundsInRoot
         val search = compose.onNodeWithTag(SEARCH_TAG, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
@@ -162,6 +162,8 @@ class TelevisionTest {
         assertEquals("Settings as wide as Search", search.width, settings.width, 1f)
         assertEquals("round", settings.width, settings.height, 1f)
         assertTrue("the line ends before Search", line.right <= search.left)
+        // The update has its own line: whole, under the name cut short.
+        compose.onNodeWithText("Updated", substring = true, useUnmergedTree = true).assertIsDisplayed()
     }
 
     @Test

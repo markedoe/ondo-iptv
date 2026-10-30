@@ -366,9 +366,9 @@ private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
 @Composable
 private fun updatedAgo(state: HomeUiState): String? = state.updatedAt?.let { updatedAgoText(it, state.now) }
 
-/** In the top bar, before Search: the playlist Home shows, and when it was updated. */
+/** In the top bar, before Search: the playlist Home shows, and beneath it when it was updated (one line each). */
 @Composable
-private fun playlistLine(state: HomeUiState): String = listOfNotNull(state.playlistName, updatedAgo(state)).joinToString(" · ")
+private fun playlistLine(state: HomeUiState): String = listOfNotNull(state.playlistName.takeIf { it.isNotBlank() }, updatedAgo(state)).joinToString("\n")
 
 /** A playlist without movies or series: its name and when it was updated, above the channels. */
 @Composable
