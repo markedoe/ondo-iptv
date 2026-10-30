@@ -415,7 +415,14 @@ private fun CollectionButton(collections: List<CollectionChoice>, requester: Foc
  * on the first line.
  */
 @Composable
-internal fun TvCollectionDialog(choices: List<CollectionChoice>, onToggle: (String) -> Unit, onNew: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun TvCollectionDialog(
+    choices: List<CollectionChoice>,
+    onToggle: (String) -> Unit,
+    onNew: (String) -> Unit,
+    onDismiss: () -> Unit,
+    /** The name a new collection is offered (the person's, on a person's page); else "Collection N". */
+    suggestedName: String? = null,
+) {
     var naming by rememberSaveable { mutableStateOf(false) }
     val first = remember { FocusRequester() }
     val colors = ListItemDefaults.colors(
@@ -470,7 +477,7 @@ internal fun TvCollectionDialog(choices: List<CollectionChoice>, onToggle: (Stri
     if (naming) {
         CollectionNameDialog(
             title = stringResource(R.string.new_collection),
-            initial = stringResource(R.string.collection_default_name, choices.size + 1),
+            initial = suggestedName ?: stringResource(R.string.collection_default_name, choices.size + 1),
             confirm = stringResource(R.string.create),
             onConfirm = {
                 naming = false

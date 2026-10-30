@@ -143,9 +143,9 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
     }
     if (picking) {
         if (television) {
-            TvCollectionDialog(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
+            TvCollectionDialog(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false }, suggestedName = state.name)
         } else {
-            CollectionPicker(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
+            CollectionPicker(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false }, suggestedName = state.name)
         }
     }
 }

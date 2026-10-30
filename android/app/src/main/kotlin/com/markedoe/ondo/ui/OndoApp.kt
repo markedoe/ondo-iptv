@@ -68,6 +68,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.ContentType
+import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.TipsState
 import com.markedoe.ondo.player.PlayerActivity
@@ -664,7 +665,13 @@ private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostCo
     }
     // The photo kept on the device for the person (from a title that credits them), when the pages opened gave none.
     val photo by produceKept<String?>("photo", null, name) { viewModel.personPhoto(name) }
-    val shown = works.copy(photoUrl = works.photoUrl ?: photo)
+    // My List and the collections follow the library at once (the titles above take a moment to be looked up).
+    val keptPerson = state.library.favorites.firstOrNull { it.kind == ItemKind.PERSON && it.itemId == name.trim() }
+    val shown = works.copy(
+        photoUrl = keptPerson?.imageUrl ?: works.photoUrl ?: photo,
+        inMyList = keptPerson != null,
+        collections = UiMappers.collectionChoices(state, ItemKind.PERSON, name.trim()),
+    )
     PersonScreen(
         shown,
         onOpen = navController::open,

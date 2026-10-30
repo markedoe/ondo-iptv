@@ -211,7 +211,14 @@ fun LazyGridScope.collectionRows(rows: List<CollectionRow>, onOpen: (String) -> 
 /** On a movie or series page: tick the collections that hold it, or make a new one with it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CollectionPicker(choices: List<CollectionChoice>, onToggle: (String) -> Unit, onNew: (String) -> Unit, onDismiss: () -> Unit) {
+fun CollectionPicker(
+    choices: List<CollectionChoice>,
+    onToggle: (String) -> Unit,
+    onNew: (String) -> Unit,
+    onDismiss: () -> Unit,
+    /** The name a new collection is offered (the person's, on a person's page); else "Collection N". */
+    suggestedName: String? = null,
+) {
     var naming by rememberSaveable { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 16.dp).testTag("collectionPicker")) {
@@ -239,7 +246,7 @@ fun CollectionPicker(choices: List<CollectionChoice>, onToggle: (String) -> Unit
     if (naming) {
         CollectionNameDialog(
             title = stringResource(R.string.new_collection),
-            initial = stringResource(R.string.collection_default_name, choices.size + 1),
+            initial = suggestedName ?: stringResource(R.string.collection_default_name, choices.size + 1),
             confirm = stringResource(R.string.create),
             onConfirm = { naming = false; onNew(it) },
             onDismiss = { naming = false },
