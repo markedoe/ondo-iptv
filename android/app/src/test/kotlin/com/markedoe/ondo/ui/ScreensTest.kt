@@ -445,7 +445,7 @@ class ScreensTest {
         var shown: Boolean? = null
         val state = UiMappers.settings(Fixtures.state(), "1.0.0") { if (it) "Xtream Codes" else "M3U playlist" }
         compose.setContent { OndoTheme { SettingsScreen(state, SettingsActions(onShowAdultCategories = { shown = it })) } }
-        compose.onNodeWithText("M3U playlist · example.com").assertExists()
+        compose.onNodeWithText("M3U playlist · example.com", substring = true).assertExists()
         compose.onNodeWithTag("adultSwitch").performClick()
         assertEquals(true, shown)
     }
