@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
@@ -112,7 +113,11 @@ internal fun TvEpisodeRow(episodes: EpisodeList, controls: PlayerControls, onPla
     ) {
         Text(stringResource(R.string.episodes), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
         if (seasons) {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(vertical = 4.dp), modifier = Modifier.testTag("tvEpisodeSeasons")) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = FocusRoom, vertical = 4.dp),
+                modifier = Modifier.roomToGrow().testTag("tvEpisodeSeasons"),
+            ) {
                 items(episodes.seasons, key = { it.number }) { item ->
                     TvChip(
                         text = stringResource(R.string.season_number, item.number),
@@ -130,7 +135,12 @@ internal fun TvEpisodeRow(episodes: EpisodeList, controls: PlayerControls, onPla
         val playingIndex = shown.episodes.indexOfFirst { it.id == episodes.playingId }
         // The row opens on the episode playing: one far along is not drawn until the row scrolls to it.
         val list = remember(shown.number) { LazyListState(firstVisibleItemIndex = playingIndex.coerceAtLeast(0)) }
-        LazyRow(state = list, horizontalArrangement = Arrangement.spacedBy(16.dp), contentPadding = PaddingValues(vertical = 8.dp)) {
+        LazyRow(
+            state = list,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(horizontal = FocusRoom, vertical = 8.dp),
+            modifier = Modifier.roomToGrow(),
+        ) {
             itemsIndexed(shown.episodes, key = { _, episode -> episode.id }) { index, episode ->
                 val playing = episode.id == episodes.playingId
                 val focusFirst = playing || (playingIndex < 0 && index == 0)
@@ -145,6 +155,21 @@ internal fun TvEpisodeRow(episodes: EpisodeList, controls: PlayerControls, onPla
 }
 
 private val EpisodeWidth = 208.dp
+
+/** Room on each side of a row for the card or chip the remote is on, which grows and gets a frame. */
+private val FocusRoom = 16.dp
+
+/**
+ * The row reaches [FocusRoom] past both edges of the panel, its content padded by as much: the cards stay in line with
+ * the title, and the first one, grown under the remote, is not cut on its left.
+ */
+private fun Modifier.roomToGrow(): Modifier = layout { measurable, constraints ->
+    val room = FocusRoom.roundToPx()
+    val wider = if (constraints.hasBoundedWidth) constraints.maxWidth + 2 * room else constraints.maxWidth
+    val placeable = measurable.measure(constraints.copy(minWidth = 0, maxWidth = wider))
+    val width = if (constraints.hasBoundedWidth) constraints.maxWidth else (placeable.width - 2 * room).coerceAtLeast(0)
+    layout(width, placeable.height) { placeable.place(-room, 0) }
+}
 
 @Composable
 private fun EpisodeCard(episode: EpisodeChoice, playing: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
