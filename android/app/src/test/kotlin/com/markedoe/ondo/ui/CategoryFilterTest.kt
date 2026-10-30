@@ -47,8 +47,8 @@ class CategoryFilterTest {
             channel("h1", "-----▼|BR| VOD BRAZIL |BR|▼-----"),
             channel("h2", "---●★| ZULETZT HINZUGEFÜGT |★●---"),
             channel("h3", "▼--- |DE| VOD 4K UHD / 3D |DE| ---▼"),
-            channel("de", "|DE| Das Erste HD"),
-            channel("fr", "|FR| France 2 HD"),
+            channel("de", "|DE| Kanal Eins HD"),
+            channel("fr", "|FR| Riviera Info HD"),
             channel("plain", "News 24 - HD"),
         )
         val live = Fixtures.content.copy(channels = listed)
@@ -57,8 +57,8 @@ class CategoryFilterTest {
         val withoutGerman = Fixtures.state(library = LibraryState().settingTagsHidden(listOf("DE"), hidden = true), content = live)
         assertEquals("a channel of a hidden tag is left out", listOf("fr", "plain"), UiMappers.visibleChannels(withoutGerman).map { it.id })
         assertEquals("BR", CategoryFilter.channelTag("-----▼|BR| VOD BRAZIL |BR|▼-----"))
-        assertFalse(CategoryFilter.isHeader("|FR| TF1 HD"))
-        assertFalse(CategoryFilter.isHeader("Canal+ Sport --- 4K"))
+        assertFalse(CategoryFilter.isHeader("|FR| Riviera Une HD"))
+        assertFalse(CategoryFilter.isHeader("Stade Sport --- 4K"))
     }
 
     @Test
