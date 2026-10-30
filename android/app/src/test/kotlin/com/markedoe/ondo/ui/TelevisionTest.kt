@@ -28,7 +28,6 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
-import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
@@ -56,7 +55,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import org.robolectric.shadows.ShadowToast
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -386,7 +384,7 @@ class TelevisionTest {
     }
 
     @Test
-    fun backGoesToTheTopBarThenHomeThenOutOnASecondPress() {
+    fun backGoesToTheTopBarThenHomeAndStaysThere() {
         start()
         openTab(2)
         // From the page: the top bar, on the tab shown.
@@ -395,18 +393,12 @@ class TelevisionTest {
         // From the bar: Home.
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("home").fetchSemanticsNodes().isNotEmpty() }
-        // From Home's bar, a first Back only warns; the next one, right after, is the system's (out of the app).
+        // From Home's bar, Back does nothing: Home stays, its bar keeps the remote.
         repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
-        compose.runOnIdle { assertTrue(compose.activity.onBackPressedDispatcher.hasEnabledCallbacks()) }
-        compose.mainClock.autoAdvance = false
-        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        compose.mainClock.advanceTimeByFrame()
-        compose.runOnIdle { assertTrue(!compose.activity.onBackPressedDispatcher.hasEnabledCallbacks()) }
-        assertEquals(compose.activity.getString(R.string.back_again_to_leave), ShadowToast.getTextOfLatestToast())
-        // A moment later, Back warns again.
-        compose.mainClock.advanceTimeBy(3_000)
-        compose.runOnIdle { assertTrue(compose.activity.onBackPressedDispatcher.hasEnabledCallbacks()) }
-        compose.mainClock.autoAdvance = true
+        repeat(3) { compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() } }
+        compose.runOnIdle { assertFalse(compose.activity.isFinishing) }
+        assertTrue(compose.onAllNodesWithTag("home").fetchSemanticsNodes().isNotEmpty())
+        assertEquals("tabHome", focusedTag())
     }
 
     /** Down from the bar goes to the page's top, the item Up from it comes back to the bar from. */

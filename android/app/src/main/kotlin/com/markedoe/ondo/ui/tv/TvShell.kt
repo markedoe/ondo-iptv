@@ -1,6 +1,5 @@
 package com.markedoe.ondo.ui.tv
 
-import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
@@ -52,7 +51,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -280,8 +278,11 @@ fun TvNavigationFrame(
             }
         }
         // After the pages: Back reaches this before the pages' own back stack.
-        BackHandler(enabled = showBar && !(barHasFocus && atHome)) {
-            if (barHasFocus) {
+        // On Home's bar, Back does nothing: Ondo stays open (the remote's Home button leaves it).
+        BackHandler(enabled = showBar) {
+            if (barHasFocus && atHome) {
+                return@BackHandler
+            } else if (barHasFocus) {
                 onSelect(TopLevel.HOME)
             } else {
                 scope.launch {
@@ -294,19 +295,6 @@ fun TvNavigationFrame(
                 }
             }
         }
-        // On Home's bar, a first Back only warns: Ondo closes on a second one within a moment.
-        var leaving by remember { mutableStateOf(false) }
-        val context = LocalContext.current
-        LaunchedEffect(leaving) {
-            if (leaving) {
-                delay(LEAVE_WINDOW_MS)
-                leaving = false
-            }
-        }
-        BackHandler(enabled = showBar && barHasFocus && atHome && !leaving) {
-            leaving = true
-            Toast.makeText(context, R.string.back_again_to_leave, Toast.LENGTH_SHORT).show()
-        }
     }
 }
 
@@ -315,9 +303,6 @@ private val BAND_FADE = 12.dp
 
 /** How many frames OK on a tab waits for its page to take the focus before giving it to the page's first item. */
 private const val ENTER_PAGE_FRAMES = 30
-
-/** How long a second Back on Home's bar has to close Ondo. */
-private const val LEAVE_WINDOW_MS = 2_500L
 
 /** How long the remote rests on a tab before it opens. */
 private const val TAB_REST_MS = 200L
