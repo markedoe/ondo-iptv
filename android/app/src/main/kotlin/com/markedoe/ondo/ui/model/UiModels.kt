@@ -48,6 +48,9 @@ data class ResumeItem(
     val hasPage: Boolean = false,
 )
 
+/** An actor or a director kept in My List or a collection: their name, and their photo (TMDb's) when known. */
+data class PersonRow(val name: String, val photoUrl: String? = null)
+
 /** A channel with what is on now. */
 data class ChannelRow(
     val channel: Channel,

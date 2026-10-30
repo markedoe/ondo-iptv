@@ -619,6 +619,20 @@ class OndoRepository(
         updateLibrary { it.toggleFavorite(Favorite(playlistId, kind, itemId, title, imageUrl, now())) }
     }
 
+    /** TMDb's photo of the person, from the titles kept on the device that credit them; null when none has one. */
+    suspend fun personPhoto(name: String): String? {
+        val key = TextNormalizer.normalize(name)
+        return withContext(io) { runCatching { metadata.people(name, PHOTO_CANDIDATES) }.getOrDefault(emptyList()) }
+            .firstOrNull { TextNormalizer.normalize(it.name) == key && it.photoUrl != null }?.photoUrl
+    }
+
+    /** Keeps an actor or a director in My List (whatever the playlist), or takes them out. */
+    fun togglePerson(name: String, photoUrl: String?) = updateLibrary { it.toggleFavorite(Favorite.person(name, photoUrl, now())) }
+
+    /** Adds an actor or a director to a collection, or takes them out. */
+    fun togglePersonInCollection(id: String, name: String, photoUrl: String?) =
+        updateLibrary { it.togglingInCollection(id, Favorite.person(name, photoUrl, now()), now()) }
+
     fun recordProgress(key: String, position: Double, duration: Double) {
         updateLibrary { it.updateProgress(key, position, duration, now()) }
     }
@@ -1209,6 +1223,7 @@ class OndoRepository(
         private const val MAX_PREFETCHING = 2
         private const val PACE_MS = 250L
         private const val LOCAL_PEOPLE_LIMIT = 8
+        private const val PHOTO_CANDIDATES = 5
 
         /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
         const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L

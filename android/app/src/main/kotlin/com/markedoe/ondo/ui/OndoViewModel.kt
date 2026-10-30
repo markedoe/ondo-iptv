@@ -301,6 +301,18 @@ class OndoViewModel(
         if (item != null) toggleInCollection(id, item)
     }
 
+    /** TMDb's photo of the person kept on the device, if any. */
+    suspend fun personPhoto(name: String): String? = repository.personPhoto(name)
+
+    /** An actor or a director in My List, or out of it. */
+    fun togglePerson(name: String, photoUrl: String?) = repository.togglePerson(name, photoUrl)
+
+    fun togglePersonInCollection(id: String, name: String, photoUrl: String?) = repository.togglePersonInCollection(id, name, photoUrl)
+
+    /** Makes a collection holding the person. */
+    fun newCollectionWithPerson(collection: String, name: String, photoUrl: String?) =
+        repository.togglePersonInCollection(repository.createCollection(collection), name, photoUrl)
+
     fun renameCollection(id: String, name: String) = repository.renameCollection(id, name)
 
     fun deleteCollection(id: String) = repository.deleteCollection(id)
@@ -349,6 +361,7 @@ class OndoViewModel(
                         ?.let { emit(repository.playRequest(series, it)) }
                 }
             }
+            ItemKind.PERSON -> Unit
         }
     }
 
@@ -359,7 +372,7 @@ class OndoViewModel(
         return when (entry.kind) {
             ItemKind.MOVIE -> current.content.movies.firstOrNull { it.id == entry.itemId }?.let { ShowcaseItem.MovieItem(it) }
             ItemKind.SERIES -> current.content.series.firstOrNull { it.id == entry.itemId }?.let { ShowcaseItem.SeriesItem(it) }
-            ItemKind.CHANNEL -> null
+            ItemKind.CHANNEL, ItemKind.PERSON -> null
         }
     }
 

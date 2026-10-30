@@ -2,9 +2,9 @@ package com.markedoe.ondo.data
 
 import kotlinx.serialization.Serializable
 
-/** Kind of item in the library. */
+/** Kind of item in the library; a person (actor or director) is kept by name, on this device only (it does not sync). */
 @Serializable
-enum class ItemKind { CHANNEL, MOVIE, SERIES }
+enum class ItemKind { CHANNEL, MOVIE, SERIES, PERSON }
 
 /** A favourite (channel, movie or series) of one playlist; movies and series form "My List". */
 @Serializable
@@ -17,6 +17,14 @@ data class Favorite(
     val addedAt: Long,
 ) {
     val key: String get() = "$playlistId|$kind|$itemId"
+
+    companion object {
+        /** The playlist of the people kept: none, a person is kept whatever the playlist. */
+        const val ANY_PLAYLIST = ""
+
+        /** An actor or a director kept by [name] (with their photo, TMDb's, when known). */
+        fun person(name: String, photoUrl: String?, now: Long) = Favorite(ANY_PLAYLIST, ItemKind.PERSON, name.trim(), name.trim(), photoUrl, now)
+    }
 }
 
 /** Something watched: position and duration in seconds (episodes are keyed per episode). */
@@ -115,7 +123,8 @@ data class LibraryState(
     /** Adds [favorite], or takes it away (remembered for sync at its [Favorite.addedAt], the time of the toggle). */
     fun toggleFavorite(favorite: Favorite): LibraryState =
         if (favorites.any { it.key == favorite.key }) {
-            copy(favorites = favorites.filterNot { it.key == favorite.key }).deleting(SyncKeys.favorite(favorite), favorite.addedAt)
+            copy(favorites = favorites.filterNot { it.key == favorite.key })
+                .let { if (SyncKeys.syncs(favorite)) it.deleting(SyncKeys.favorite(favorite), favorite.addedAt) else it }
         } else {
             copy(favorites = favorites + favorite)
         }

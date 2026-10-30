@@ -36,6 +36,24 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.LibraryAdd
+import androidx.compose.material.icons.rounded.LibraryAddCheck
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import com.markedoe.ondo.ui.components.PersonPhoto
+import com.markedoe.ondo.ui.tv.TvCircleAction
+import com.markedoe.ondo.ui.tv.TvCollectionDialog
+import com.markedoe.ondo.ui.tv.focusMemory
+import com.markedoe.ondo.ui.tv.isTelevision
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
@@ -51,6 +69,19 @@ data class PersonUiState(
     /** TMDb is being asked. */
     val searching: Boolean = false,
     val hasTmdbToken: Boolean = false,
+    /** TMDb's photo of the person, when known. */
+    val photoUrl: String? = null,
+    /** The person is kept in My List. */
+    val inMyList: Boolean = false,
+    /** The collections, ticked when they hold the person. */
+    val collections: List<CollectionChoice> = emptyList(),
+)
+
+class PersonActions(
+    val onToggleMyList: () -> Unit = {},
+    val onToggleCollection: (String) -> Unit = {},
+    /** Makes a collection with this name, holding the person. */
+    val onNewCollection: (String) -> Unit = {},
 )
 
 /**
@@ -59,8 +90,10 @@ data class PersonUiState(
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: () -> Unit) {
+fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: () -> Unit, actions: PersonActions = PersonActions()) {
     val metrics = rememberShelfMetrics()
+    val television = isTelevision()
+    var picking by rememberSaveable { mutableStateOf(false) }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
         contentPadding = PaddingValues(start = metrics.gutter, end = metrics.gutter, bottom = 32.dp),
@@ -78,6 +111,8 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
                 windowInsets = WindowInsets(0),
             )
         }
+        // The person's photo, and My List and Collection: actors and directors are kept as titles are.
+        fullWidth { PersonHeader(state, television, actions) { picking = true } }
         // While TMDb is asked, a bar under the name says the list is still growing (the titles already found show).
         if (state.searching && (state.movies.isNotEmpty() || state.series.isNotEmpty())) {
             fullWidth { LinearProgressIndicator(Modifier.fillMaxWidth().testTag("personSearching")) }
@@ -103,6 +138,39 @@ fun PersonScreen(state: PersonUiState, onOpen: (ShowcaseItem) -> Unit, onBack: (
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag("personHint"),
                 )
+            }
+        }
+    }
+    if (picking) {
+        if (television) {
+            TvCollectionDialog(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
+        } else {
+            CollectionPicker(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
+        }
+    }
+}
+
+@Composable
+private fun PersonHeader(state: PersonUiState, television: Boolean, actions: PersonActions, onCollections: () -> Unit) {
+    val held = state.collections.any { it.contains }
+    val myListIcon = if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add
+    val collectionIcon = if (held) Icons.Rounded.LibraryAddCheck else Icons.Rounded.LibraryAdd
+    val myListState = myListState(state.inMyList)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.padding(bottom = 8.dp)) {
+        PersonPhoto(state.name, state.photoUrl, if (television) 96.dp else 72.dp, Modifier.testTag("personHeaderPhoto"))
+        if (television) {
+            TvCircleAction(myListIcon, stringResource(R.string.my_list), onClick = actions.onToggleMyList, modifier = Modifier.focusMemory("person-myList").semantics { stateDescription = myListState }.testTag("personMyList"))
+            TvCircleAction(collectionIcon, stringResource(R.string.collection), onClick = onCollections, modifier = Modifier.focusMemory("person-collection").testTag("personCollection"))
+        } else {
+            FilledTonalButton(onClick = actions.onToggleMyList, modifier = Modifier.semantics { stateDescription = myListState }.testTag("personMyList")) {
+                Icon(myListIcon, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.my_list))
+            }
+            FilledTonalButton(onClick = onCollections, modifier = Modifier.testTag("personCollection")) {
+                Icon(collectionIcon, contentDescription = null)
+                Spacer(Modifier.width(6.dp))
+                Text(stringResource(R.string.collection))
             }
         }
     }

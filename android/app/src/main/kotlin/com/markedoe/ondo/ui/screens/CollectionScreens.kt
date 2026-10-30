@@ -63,9 +63,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.ChannelLogo
+import com.markedoe.ondo.ui.components.PersonTile
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
+import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.rememberTvTextField
@@ -82,14 +84,17 @@ data class CollectionUiState(
     val movies: List<ShowcaseItem> = emptyList(),
     val series: List<ShowcaseItem> = emptyList(),
     val channels: List<ChannelRow> = emptyList(),
+    /** The actors and directors in it, whatever the playlist. */
+    val people: List<PersonRow> = emptyList(),
 ) {
-    val isEmpty: Boolean get() = movies.isEmpty() && series.isEmpty() && channels.isEmpty()
+    val isEmpty: Boolean get() = movies.isEmpty() && series.isEmpty() && channels.isEmpty() && people.isEmpty()
 }
 
 class CollectionActions(
     val onBack: () -> Unit = {},
     val onOpen: (ShowcaseItem) -> Unit = {},
     val onPlayChannel: (ChannelRow) -> Unit = {},
+    val onPerson: (String) -> Unit = {},
     val onRename: (String) -> Unit = {},
     val onDelete: () -> Unit = {},
 )
@@ -138,6 +143,10 @@ fun CollectionScreen(state: CollectionUiState, actions: CollectionActions) {
         if (state.channels.isNotEmpty()) {
             fullWidth { Text(stringResource(R.string.channels), style = MaterialTheme.typography.titleLarge) }
             items(state.channels, key = { it.channel.id }, span = { GridItemSpan(maxLineSpan) }) { row -> ChannelLine(row, actions.onPlayChannel) }
+        }
+        if (state.people.isNotEmpty()) {
+            fullWidth { Text(stringResource(R.string.people), style = MaterialTheme.typography.titleLarge) }
+            items(state.people, key = { "person:${it.name}" }) { person -> PersonTile(person, onClick = { actions.onPerson(person.name) }) }
         }
         if (state.isEmpty) {
             fullWidth {

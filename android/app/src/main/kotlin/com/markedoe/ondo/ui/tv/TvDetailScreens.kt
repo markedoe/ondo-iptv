@@ -414,7 +414,7 @@ private fun CollectionButton(collections: List<CollectionChoice>, requester: Foc
  * on the first line.
  */
 @Composable
-private fun TvCollectionDialog(choices: List<CollectionChoice>, onToggle: (String) -> Unit, onNew: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun TvCollectionDialog(choices: List<CollectionChoice>, onToggle: (String) -> Unit, onNew: (String) -> Unit, onDismiss: () -> Unit) {
     var naming by rememberSaveable { mutableStateOf(false) }
     val first = remember { FocusRequester() }
     val colors = ListItemDefaults.colors(

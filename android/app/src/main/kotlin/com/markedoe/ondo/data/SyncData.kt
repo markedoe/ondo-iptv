@@ -14,6 +14,7 @@ object SyncKeys {
         ItemKind.CHANNEL -> "live"
         ItemKind.MOVIE -> "movie"
         ItemKind.SERIES -> "series"
+        ItemKind.PERSON -> "person"
     }
 
     fun itemKind(kind: String): ItemKind? = when (kind) {
@@ -27,6 +28,9 @@ object SyncKeys {
     fun list(id: String) = "list:${id.lowercase()}"
     fun favorite(favorite: Favorite) = "favorite:${favorite.playlistId.lowercase()}|${kind(favorite.kind)}|${favorite.itemId}"
     fun progress(entry: WatchEntry) = "progress:${entry.playlistId.lowercase()}|${kind(entry.kind)}|${entry.itemId}|${entry.episodeId.orEmpty()}"
+
+    /** The people kept stay on the device: Apple devices do not keep any. */
+    fun syncs(favorite: Favorite) = favorite.kind != ItemKind.PERSON
 
     /** Where a movie or an episode was left syncs; the channels watched stay on the device. */
     fun syncs(entry: WatchEntry) = entry.kind != ItemKind.CHANNEL
@@ -82,7 +86,7 @@ object SyncData {
                     updatedAt = playlist.updatedAt.takeIf { it > 0 } ?: playlist.addedAt,
                 )
             },
-            favorites = library.favorites.filter { travels(it.playlistId) }.map { favorite ->
+            favorites = library.favorites.filter { SyncKeys.syncs(it) && travels(it.playlistId) }.map { favorite ->
                 SyncFavorite(favorite.playlistId.lowercase(), SyncKeys.kind(favorite.kind), favorite.itemId, favorite.title, favorite.imageUrl, favorite.addedAt)
             },
             progress = library.history.filter { SyncKeys.syncs(it) && travels(it.playlistId) }.map { entry ->
@@ -103,7 +107,7 @@ object SyncData {
                 SyncList(
                     id = list.id.lowercase(),
                     name = list.name,
-                    items = list.items.map { SyncListItem(it.playlistId.lowercase(), SyncKeys.kind(it.kind), it.itemId, it.title, it.imageUrl) },
+                    items = list.items.filter(SyncKeys::syncs).map { SyncListItem(it.playlistId.lowercase(), SyncKeys.kind(it.kind), it.itemId, it.title, it.imageUrl) },
                     updatedAt = list.updatedAt,
                 )
             },
@@ -180,7 +184,7 @@ object SyncData {
         val removedIds = removed.mapTo(HashSet()) { it.id }
         // What does not sync stays: the channels watched, and everything of a file playlist.
         val filePlaylists = state.playlists.filterNot(SyncKeys::syncs).mapTo(HashSet()) { it.id }
-        val favorites = library.favorites.filter { it.playlistId in filePlaylists } + merged.favorites.mapNotNull { synced ->
+        val favorites = library.favorites.filter { it.playlistId in filePlaylists || !SyncKeys.syncs(it) } + merged.favorites.mapNotNull { synced ->
             val kind = SyncKeys.itemKind(synced.kind) ?: return@mapNotNull null
             Favorite(local(synced.playlist), kind, synced.item, synced.title, synced.image, synced.addedAt)
         }.filter { it.playlistId !in filePlaylists }
@@ -203,6 +207,8 @@ object SyncData {
         // The device's own list IDs, whatever their case (the first of each, as a search in order would find).
         val localLists = HashMap<String, String>()
         library.collections.forEach { localLists.putIfAbsent(it.id.lowercase(), it.id) }
+        // The people of a collection stay in it (they do not sync).
+        val localPeople = library.collections.associate { list -> list.id.lowercase() to list.items.filterNot(SyncKeys::syncs) }
         val collections = merged.lists.map { synced ->
             UserCollection(
                 id = localLists[synced.id.lowercase()] ?: synced.id,
@@ -210,7 +216,7 @@ object SyncData {
                 items = synced.items.mapNotNull { item ->
                     val kind = SyncKeys.itemKind(item.kind) ?: return@mapNotNull null
                     Favorite(local(item.playlist), kind, item.item, item.title, item.image, localItems[item.key]?.addedAt ?: synced.updatedAt)
-                },
+                } + localPeople[synced.id.lowercase()].orEmpty(),
                 updatedAt = synced.updatedAt,
             )
         }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })

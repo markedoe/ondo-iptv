@@ -95,6 +95,7 @@ import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.MyListActions
 import com.markedoe.ondo.ui.screens.MyListKind
 import com.markedoe.ondo.ui.screens.MyListScreen
+import com.markedoe.ondo.ui.screens.PersonActions
 import com.markedoe.ondo.ui.screens.PersonScreen
 import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PickedFile
@@ -617,6 +618,7 @@ private fun CollectionDestination(viewModel: OndoViewModel, navController: NavHo
             onBack = { navController.popBackStack() },
             onOpen = navController::open,
             onPlayChannel = viewModel::playChannel,
+            onPerson = { navController.navigate(Routes.Person(it)) },
             onRename = { viewModel.renameCollection(id, it) },
             onDelete = { viewModel.deleteCollection(id) },
         ),
@@ -656,7 +658,19 @@ private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostCo
         val (asked, matches) = online
         withContext(Dispatchers.Default) { UiMappers.person(state, name, matches, kept).copy(searching = token != null && !asked) }
     }
-    PersonScreen(works, onOpen = navController::open, onBack = { navController.popBackStack() })
+    // The photo kept on the device for the person (from a title that credits them), when the pages opened gave none.
+    val photo by produceKept<String?>("photo", null, name) { viewModel.personPhoto(name) }
+    val shown = works.copy(photoUrl = works.photoUrl ?: photo)
+    PersonScreen(
+        shown,
+        onOpen = navController::open,
+        onBack = { navController.popBackStack() },
+        actions = PersonActions(
+            onToggleMyList = { viewModel.togglePerson(name, shown.photoUrl) },
+            onToggleCollection = { viewModel.togglePersonInCollection(it, name, shown.photoUrl) },
+            onNewCollection = { viewModel.newCollectionWithPerson(it, name, shown.photoUrl) },
+        ),
+    )
 }
 
 @Composable
@@ -838,6 +852,7 @@ private fun MyListDestination(viewModel: OndoViewModel, navController: NavHostCo
                 state.movies.isNotEmpty() -> MyListKind.MOVIES
                 state.series.isNotEmpty() -> MyListKind.SERIES
                 state.channels.isNotEmpty() -> MyListKind.CHANNELS
+                state.people.isNotEmpty() -> MyListKind.PEOPLE
                 else -> MyListKind.MOVIES
             },
         )
@@ -851,6 +866,7 @@ private fun MyListDestination(viewModel: OndoViewModel, navController: NavHostCo
             onPlayChannel = viewModel::playChannel,
             onSearch = { navController.openSearch(viewModel) },
             onOpenCollection = { navController.navigate(Routes.Collection(it)) },
+            onPerson = { navController.navigate(Routes.Person(it)) },
             onNewCollection = { viewModel.newCollection(it) },
         ),
     )

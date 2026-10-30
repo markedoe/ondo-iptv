@@ -14,12 +14,14 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.UncaughtErrors
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.screens.PersonActions
 import com.markedoe.ondo.ui.screens.PersonScreen
 import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
@@ -93,5 +95,39 @@ class TelevisionPersonTest {
         }
         val expected = listOf("Film 1") + (1 + columns..movies.size step columns).map { "Film $it" } + Fixtures.harborLights.name
         assertEquals("down the first column of movies, then the first series ($columns columns)", expected, visited.take(expected.size))
+    }
+
+    @Test
+    fun myListAndCollectionAreAboveTheTitlesAndOkKeepsThePerson() {
+        val state = PersonUiState(
+            "Ann Example",
+            movies = listOf(ShowcaseItem.MovieItem(Movie("m1", "Film 1", categoryId = Fixtures.drama.id, streamUrl = "http://example.com/movie/m1.mp4"))),
+            searchedOnline = true,
+        )
+        var kept = 0
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            OndoTheme {
+                TelevisionFrame {
+                    CompositionLocalProvider(LocalFocusMemory provides FocusMemory()) {
+                        PersonScreen(state, onOpen = {}, onBack = {}, actions = PersonActions(onToggleMyList = { kept++ }))
+                    }
+                }
+            }
+        }
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        compose.mainClock.autoAdvance = false
+        settle()
+        repeat(4) { if (focused() != "Film 1") press(Key.DirectionDown) }
+        assertEquals("Film 1", focused())
+        press(Key.DirectionUp)
+        assertEquals("My List", focused())
+        press(Key.DirectionCenter)
+        assertEquals(1, kept)
+        press(Key.DirectionRight)
+        assertEquals("Collection", focused())
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("collectionPicker").assertExists()
     }
 }

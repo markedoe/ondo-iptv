@@ -12,6 +12,7 @@ import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Series
+import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
@@ -20,6 +21,7 @@ import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ChannelRow
+import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.BrowseKind
@@ -113,7 +115,7 @@ object UiMappers {
         val backdrop = when (entry.kind) {
             ItemKind.MOVIE -> backdrop(state, ItemKind.MOVIE, entry.itemId)
             ItemKind.SERIES -> backdrop(state, ItemKind.SERIES, entry.itemId)
-            ItemKind.CHANNEL -> null
+            ItemKind.CHANNEL, ItemKind.PERSON -> null
         }
         return ResumeItem(
             key = entry.key,
@@ -385,8 +387,13 @@ object UiMappers {
             series = grid(state, series = true, categoryId = null, myList = true, filter = ""),
             channels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }.map { channelRow(it, state, now) },
             collections = collectionRows(state, hidden),
+            people = people(state.library.favorites),
         )
     }
+
+    /** The people kept (actors and directors), latest addition first. */
+    private fun people(items: List<Favorite>): List<PersonRow> =
+        items.filter { it.kind == ItemKind.PERSON }.sortedByDescending { it.addedAt }.map { PersonRow(it.title, it.imageUrl) }
 
     /** The collections, each with the number of its items the collection page shows. */
     private fun collectionRows(state: OndoState, hidden: Set<String>): List<CollectionRow> {
@@ -399,7 +406,7 @@ object UiMappers {
             )
         }
         return state.library.collections.map { list ->
-            CollectionRow(list.id, list.name, list.items.count { it.playlistId == playlistId && it.itemId in shown.getValue(it.kind) })
+            CollectionRow(list.id, list.name, list.items.count { it.kind == ItemKind.PERSON || (it.playlistId == playlistId && it.itemId in shown.getValue(it.kind)) })
         }
     }
 
@@ -419,12 +426,13 @@ object UiMappers {
             movies = state.content.movies.filter { it.id in movies && it.categoryId !in hidden }.sortedBy { movies[it.id] }.map { ShowcaseItem.MovieItem(it) },
             series = state.content.series.filter { it.id in series && it.categoryId !in hidden }.sortedBy { series[it.id] }.map { ShowcaseItem.SeriesItem(it) },
             channels = visibleChannels(state, hidden).filter { it.id in channels }.sortedBy { channels[it.id] }.map { channelRow(it, state, now) },
+            people = list.items.filter { it.kind == ItemKind.PERSON }.map { PersonRow(it.title, it.imageUrl) },
         )
     }
 
     /** The collections, ticked when they hold this item of the current playlist. */
     fun collectionChoices(state: OndoState, kind: ItemKind, itemId: String): List<CollectionChoice> {
-        val playlistId = state.activePlaylistId.orEmpty()
+        val playlistId = if (kind == ItemKind.PERSON) Favorite.ANY_PLAYLIST else state.activePlaylistId.orEmpty()
         return state.library.collections.map { CollectionChoice(it.id, it.name, it.contains(playlistId, kind, itemId)) }
     }
 
@@ -602,12 +610,17 @@ object UiMappers {
             show.categoryId !in hidden &&
                 (show.id in seriesIds || show.id in onlineSeries || People.mentions(show.cast, name) || People.mentions(show.director, name))
         }.distinctBy { it.id }.map { ShowcaseItem.SeriesItem(it) }
+        val keptPerson = state.library.favorites.firstOrNull { it.kind == ItemKind.PERSON && it.itemId == name.trim() }
+        val face = TextNormalizer.normalize(name)
         return PersonUiState(
             name,
             sorted(movies, PosterSort.RELEASE),
             sorted(series, PosterSort.RELEASE),
             searchedOnline = online != null,
             hasTmdbToken = state.settings.tmdbToken != null,
+            photoUrl = keptPerson?.imageUrl ?: state.tmdbFaces.values.firstNotNullOfOrNull { it[face] },
+            inMyList = keptPerson != null,
+            collections = collectionChoices(state, ItemKind.PERSON, name.trim()),
         )
     }
 

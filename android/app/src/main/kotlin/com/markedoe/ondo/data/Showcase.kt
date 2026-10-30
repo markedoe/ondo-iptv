@@ -101,7 +101,7 @@ class Showcase(
     fun item(kind: ItemKind, itemId: String): ShowcaseItem? = when (kind) {
         ItemKind.MOVIE -> moviesById[itemId]?.let { ShowcaseItem.MovieItem(it) }
         ItemKind.SERIES -> seriesById[itemId]?.let { ShowcaseItem.SeriesItem(it) }
-        ItemKind.CHANNEL -> null
+        ItemKind.CHANNEL, ItemKind.PERSON -> null
     }
 
     /**

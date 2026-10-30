@@ -55,6 +55,36 @@ class SyncDataTest {
     private fun OndoState.favorite(itemId: String) = library.isFavorite(activePlaylistId.orEmpty(), ItemKind.MOVIE, itemId)
 
     @Test
+    fun thePeopleKeptStayOnTheDevice() = runTest {
+        val tv = device("tv").ready()
+        val phone = device("phone").ready()
+        tv.addPlaylist("Home", list)
+        val movie = tv.state.value.content.movies.single()
+        time += 1_000
+        tv.togglePerson("Ada Example", "https://image.example.com/ada.jpg")
+        val weekend = tv.createCollection("Weekend")
+        tv.toggleInCollection(weekend, ItemKind.MOVIE, movie.id, movie.name, null)
+        tv.togglePersonInCollection(weekend, "Ada Example", null)
+
+        // Nothing of the person travels (Apple devices keep no people)…
+        val sent = requireNotNull(tv.syncSnapshot("tv"))
+        assertTrue(sent.favorites.none { it.kind == "person" })
+        assertTrue(sent.lists.single().items.none { it.kind == "person" })
+
+        // …and a session leaves them where they were.
+        session(tv, phone)
+        val kept = tv.state.value.library
+        assertEquals(listOf("Ada Example"), kept.favorites.filter { it.kind == ItemKind.PERSON }.map { it.title })
+        assertEquals(setOf(ItemKind.MOVIE, ItemKind.PERSON), kept.collections.single().items.mapTo(HashSet()) { it.kind })
+        assertTrue(phone.state.value.library.favorites.none { it.kind == ItemKind.PERSON })
+
+        // Taken out again: nothing is recorded as deleted for sync.
+        tv.togglePerson("Ada Example", null)
+        assertTrue(tv.state.value.library.favorites.none { it.kind == ItemKind.PERSON })
+        assertTrue(tv.state.value.library.syncDeleted.keys.none { "person" in it })
+    }
+
+    @Test
     fun aPlaylistAndItsLibraryReachTheOtherDeviceAndDeletionsFollow() = runTest {
         val tv = device("tv").ready()
         val phone = device("phone").ready()

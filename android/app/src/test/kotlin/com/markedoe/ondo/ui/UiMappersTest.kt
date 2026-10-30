@@ -23,6 +23,7 @@ import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Reminder
 import com.markedoe.ondo.data.WatchEntry
+import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.CollectionChoice
@@ -116,6 +117,32 @@ class UiMappersTest {
         assertEquals(local, UiMappers.withTmdbPeople(local, "an", listOf("Anna Sample")))
         val filtered = local.copy(filters = SearchFilters(fromYear = 2020))
         assertEquals(filtered, UiMappers.withTmdbPeople(filtered, "ann", listOf("Anna Sample")))
+    }
+
+    @Test
+    fun actorsAndDirectorsAreKeptInMyListAndCollectionsWhateverThePlaylist() {
+        val ann = Favorite.person("Ann Example", "https://image.example.com/ann.jpg", now = 1)
+        val bo = Favorite.person("Bo Sample", null, now = 2)
+        val library = LibraryState().toggleFavorite(ann).toggleFavorite(bo)
+            .creatingCollection("c1", "Weekend", now = 1)
+            .togglingInCollection("c1", Favorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, "Glass City", addedAt = 1), now = 2)
+            .togglingInCollection("c1", bo, now = 3)
+        val state = Fixtures.state().copy(library = library)
+        val myList = UiMappers.myList(state, Fixtures.NOW)
+        assertEquals("latest first", listOf(PersonRow("Bo Sample"), PersonRow("Ann Example", "https://image.example.com/ann.jpg")), myList.people)
+        assertEquals(listOf(CollectionRow("c1", "Weekend", 2)), myList.collections)
+        assertEquals(listOf(PersonRow("Bo Sample")), UiMappers.collection(state, "c1", Fixtures.NOW)!!.people)
+
+        val page = UiMappers.person(state, "Ann Example")
+        assertTrue(page.inMyList)
+        assertEquals("https://image.example.com/ann.jpg", page.photoUrl)
+        assertEquals(listOf(CollectionChoice("c1", "Weekend", contains = false)), page.collections)
+        assertTrue(UiMappers.person(state, "Bo Sample").collections.single().contains)
+        assertFalse(UiMappers.person(state, "Cy Nobody").inMyList)
+
+        // Another playlist: the same people.
+        val other = state.copy(activePlaylistId = "another")
+        assertEquals(2, UiMappers.myList(other, Fixtures.NOW).people.size)
     }
 
     /**

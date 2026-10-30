@@ -49,20 +49,24 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.ChannelLogo
+import com.markedoe.ondo.ui.components.PersonTile
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ChannelRow
+import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 
-/** What My List shows: its movies, its series or its channels. */
-enum class MyListKind { MOVIES, SERIES, CHANNELS, COLLECTIONS }
+/** What My List shows: its movies, its series, its channels, its people or its collections. */
+enum class MyListKind { MOVIES, SERIES, CHANNELS, PEOPLE, COLLECTIONS }
 
 data class MyListUiState(
     val movies: List<ShowcaseItem> = emptyList(),
     val series: List<ShowcaseItem> = emptyList(),
     val channels: List<ChannelRow> = emptyList(),
     val collections: List<CollectionRow> = emptyList(),
+    /** The actors and directors kept, whatever the playlist. */
+    val people: List<PersonRow> = emptyList(),
 )
 
 class MyListActions(
@@ -71,6 +75,8 @@ class MyListActions(
     val onPlayChannel: (ChannelRow) -> Unit = {},
     val onSearch: () -> Unit = {},
     val onOpenCollection: (String) -> Unit = {},
+    /** Opens an actor's or a director's page. */
+    val onPerson: (String) -> Unit = {},
     /** Makes an empty collection with this name. */
     val onNewCollection: (String) -> Unit = {},
 )
@@ -104,6 +110,7 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
                 MyListKind.MOVIES to R.string.movies,
                 MyListKind.SERIES to R.string.series,
                 MyListKind.CHANNELS to R.string.channels,
+                MyListKind.PEOPLE to R.string.people,
                 MyListKind.COLLECTIONS to R.string.collections,
             )
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -134,12 +141,14 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
                     }
                 }
             }
+            MyListKind.PEOPLE -> items(state.people, key = { "person:${it.name}" }) { person -> PersonTile(person, onClick = { actions.onPerson(person.name) }) }
             MyListKind.COLLECTIONS -> collectionRows(state.collections, onOpen = actions.onOpenCollection, onNew = { naming = true })
         }
         val empty = when (kind) {
             MyListKind.MOVIES -> state.movies.isEmpty()
             MyListKind.SERIES -> state.series.isEmpty()
             MyListKind.CHANNELS -> state.channels.isEmpty()
+            MyListKind.PEOPLE -> state.people.isEmpty()
             MyListKind.COLLECTIONS -> false
         }
         if (empty) {
@@ -147,7 +156,13 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
                 Column(Modifier.padding(vertical = 24.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.my_list_empty), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        stringResource(if (kind == MyListKind.CHANNELS) R.string.no_favorite_channels else R.string.my_list_empty_hint),
+                        stringResource(
+                            when (kind) {
+                                MyListKind.CHANNELS -> R.string.no_favorite_channels
+                                MyListKind.PEOPLE -> R.string.my_list_people_hint
+                                else -> R.string.my_list_empty_hint
+                            },
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
