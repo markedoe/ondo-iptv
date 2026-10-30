@@ -148,11 +148,11 @@ class Showcase(
      */
     fun similarMovies(movie: Movie, limit: Int = 15, related: List<Movie> = emptyList(), details: (String) -> MediaDetails? = { null }): List<Movie> {
         if (movie.categoryId in excludedCategoryIds) return emptyList()
-        // TMDb's recommendations the playlist has come first, then the closest of the category and of the pages
-        // opened elsewhere (a movie whose page names genres and people can be compared from any category).
+        // TMDb's recommendations the playlist has come first (from any category: TMDb chose them), then the closest of
+        // the category (another one is often another language).
         val shown = browsableIds
         val pinned = related.filter { it.id in shown && it.id != movie.id }
-        val candidates = browsableMovies.filter { it.id != movie.id && (it.categoryId == movie.categoryId || details(it.id) != null) }
+        val candidates = browsableMovies.filter { it.id != movie.id && it.categoryId == movie.categoryId }
         val pinnedIds = pinned.mapTo(HashSet()) { it.id }
         val ranked = Similarity.rank(
             Similarity.Title(movie.name, movie.year, details(movie.id)),
@@ -204,7 +204,7 @@ class Showcase(
         }
         val pinned = related.filter { it.id in seriesById && it.id != item.id }
         val pinnedIds = pinned.mapTo(HashSet()) { it.id }
-        val candidates = series.filter { it.id != item.id && it.id !in pinnedIds && (it.categoryId == item.categoryId || details(it.id) != null) }
+        val candidates = series.filter { it.id != item.id && it.id !in pinnedIds && it.categoryId == item.categoryId }
         val ranked = Similarity.rank(title(item), candidates.map { title(it) to it }, limit) { it.id }
         return pinnedFirst(item.name, item.year, pinned, ranked, limit, { it.id }) { it.name to it.year }
     }
