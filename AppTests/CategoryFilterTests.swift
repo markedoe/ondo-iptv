@@ -107,6 +107,21 @@ final class CategoryFilterTests: XCTestCase {
         XCTAssertNil(other.tagSuggestion(viewerCodes: ["FR"]), "dismissed")
     }
 
+    func testChoicesMadeFromTheSuggestionAreThereAfterARelaunch() async throws {
+        let (model, _, _) = try await model(groups: Self.groups)
+        XCTAssertNotNil(model.tagSuggestion(viewerCodes: ["FR", "EN"]))
+        // "Choose…": a language hidden in the categories screen, then the screen closed.
+        model.setHidden(true, tag: "DE")
+        model.dismissTagSuggestion()
+        model.flush()
+
+        let relaunched = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        await relaunched.bootstrap()
+        XCTAssertTrue(relaunched.isHidden(tag: "DE"))
+        XCTAssertFalse(relaunched.isHidden(tag: "FR"))
+        XCTAssertNil(relaunched.tagSuggestion(viewerCodes: ["FR", "EN"]), "answered before the relaunch")
+    }
+
     func testTheAnswerFollowsAPlaylistThatSyncReplaced() async throws {
         let (model, playlist, _) = try await model(groups: Self.groups)
         model.dismissTagSuggestion()
