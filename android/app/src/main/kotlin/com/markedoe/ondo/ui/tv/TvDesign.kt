@@ -29,6 +29,8 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.layout.LazyLayoutCacheWindow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.relocation.bringIntoViewResponder
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -272,6 +274,7 @@ fun BoxScope.CardSheen(focused: Boolean) {
 }
 
 /** A titled row of cards, starting at [start] and peeking past the right edge. */
+@OptIn(ExperimentalFoundationApi::class)
 fun LazyListScope.tvShelf(title: String, tag: String, start: Dp = TvTokens.ContentStart, content: LazyListScope.() -> Unit) {
     item(key = "shelf:$tag") {
         Column(Modifier.testTag(tag)) {
@@ -281,8 +284,11 @@ fun LazyListScope.tvShelf(title: String, tag: String, start: Dp = TvTokens.Conte
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = start, bottom = 12.dp),
             )
+            // A screen of cards ahead is composed (and its pictures asked for) before it scrolls in.
+            val row = rememberLazyListState(cacheWindow = LazyLayoutCacheWindow(aheadFraction = 1f, behindFraction = 0.5f))
             TvRow {
                 LazyRow(
+                    state = row,
                     contentPadding = PaddingValues(start = start, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
                     content = content,
