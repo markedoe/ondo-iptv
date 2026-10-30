@@ -320,8 +320,7 @@ class OndoViewModelTest {
         backgroundScope.launch { viewModel.search.collect {} }
         assertEquals(TmdbCheck.ACCEPTED, repository.checkAndSaveTmdbToken("GOOD"))
         viewModel.setQuery("Anna")
-        // The titles found show first, the search still going on; TMDb's people end it.
-        assertTrue(viewModel.search.first { it.query == "Anna" }.searching)
+        // TMDb's people end the search (the titles found show before them; a state flow may skip that step here).
         val done = viewModel.search.first { it.query == "Anna" && it.people.isNotEmpty() && !it.searching }
         assertEquals(listOf("Anna Sample"), done.people)
         assertEquals("with TMDb's photo", "https://image.tmdb.org/t/p/w185/anna.jpg", done.photoOf("Anna Sample"))

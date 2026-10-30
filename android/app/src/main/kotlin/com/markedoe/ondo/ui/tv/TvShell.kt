@@ -73,6 +73,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TopLevel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -294,7 +295,10 @@ private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String
     LaunchedEffect(focused, selected) {
         opening.snapTo(0f)
         if (!focused || selected || !browsing()) return@LaunchedEffect
-        opening.animateTo(1f, tween(TAB_REST_MS.toInt(), easing = LinearEasing))
+        // The rest is timed apart from the line: an animation that ends early (none drawn) opens nothing sooner.
+        val line = launch { opening.animateTo(1f, tween(TAB_REST_MS.toInt(), easing = LinearEasing)) }
+        delay(TAB_REST_MS)
+        line.cancel()
         if (browsing()) onReach()
         opening.snapTo(0f)
     }
