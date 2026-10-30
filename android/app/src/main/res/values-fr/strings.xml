@@ -59,6 +59,7 @@
     <string name="nothing_here">Rien pour le moment.</string>
     <string name="home_empty">Votre playlist se charge ou est vide. Actualisez-la depuis les Réglages si elle n\'apparaît pas.</string>
     <string name="no_results">Aucun résultat pour « %1$s ».</string>
+    <string name="searching">Recherche de « %1$s »…</string>
     <string name="welcome_title">Bienvenue dans Ondo</string>
     <string name="welcome_subtitle">Les films, séries et chaînes de votre fournisseur IPTV, dans une bibliothèque claire.</string>
     <string name="feature_vod_title">Films et séries</string>

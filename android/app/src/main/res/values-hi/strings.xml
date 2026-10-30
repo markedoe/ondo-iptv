@@ -59,6 +59,7 @@
     <string name="nothing_here">अभी यहाँ कुछ नहीं है।</string>
     <string name="home_empty">आपकी प्लेलिस्ट लोड हो रही है या खाली है। अगर वह न दिखे, तो सेटिंग्स से उसे रीफ़्रेश करें।</string>
     <string name="no_results">“%1$s” के लिए कोई नतीजा नहीं।</string>
+    <string name="searching">“%1$s” खोजा जा रहा है…</string>
     <string name="welcome_title">Ondo में आपका स्वागत है</string>
     <string name="welcome_subtitle">आपके IPTV प्रदाता की फ़िल्में, सीरीज़ और चैनल, एक साफ़-सुथरी लाइब्रेरी में।</string>
     <string name="feature_vod_title">फ़िल्में और सीरीज़</string>

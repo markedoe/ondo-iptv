@@ -61,6 +61,7 @@
     <string name="nothing_here">Nothing here yet.</string>
     <string name="home_empty">Your playlist is loading or empty. Pull a refresh from Settings if it does not appear.</string>
     <string name="no_results">No results for “%1$s”.</string>
+    <string name="searching">Searching for “%1$s”…</string>
     <string name="welcome_title">Welcome to Ondo</string>
     <string name="welcome_subtitle">The movies, series and channels of your IPTV provider, in a clean library.</string>
     <string name="feature_vod_title">Movies &amp; series</string>

@@ -470,7 +470,9 @@ private fun SearchDestination(viewModel: OndoViewModel, navController: NavHostCo
     val results by viewModel.search.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val filters by viewModel.searchFilters.collectAsStateWithLifecycle()
-    val state = results.copy(query = query, filters = filters)
+    // Until the results are those of the words typed, Search says it is searching rather than "no results".
+    val searching = query.isNotBlank() && (results.query != query || results.filters != filters)
+    val state = results.copy(query = query, filters = filters, searching = searching)
     val onPerson: (String) -> Unit = { navController.navigate(Routes.Person(it)) }
     if (isTelevision()) {
         TvSearchScreen(state, viewModel::setQuery, navController::open, viewModel::playChannel, viewModel::setSearchFilters, onPerson)

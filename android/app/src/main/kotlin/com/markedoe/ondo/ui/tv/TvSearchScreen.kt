@@ -148,6 +148,7 @@ fun TvSearchScreen(
             TvPersonCard(name, onClick = { onPerson(name) }, modifier = entry.focusMemory("search-person:$name").testTag("person-$name"))
         }
         val message = when {
+            state.searching && nothing -> R.string.searching
             filters.isActive && nothing -> R.string.no_filtered_results
             state.query.isNotBlank() && nothing -> R.string.no_results
             state.query.isBlank() && !filters.isActive -> R.string.search_hint
@@ -156,7 +157,7 @@ fun TvSearchScreen(
         message?.let { text ->
             item(key = "message") {
                 Text(
-                    if (text == R.string.no_results) stringResource(text, state.query) else stringResource(text),
+                    if (text == R.string.no_results || text == R.string.searching) stringResource(text, state.query) else stringResource(text),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(start = SearchStart, end = TvTokens.EdgeEnd).widthIn(max = 900.dp),

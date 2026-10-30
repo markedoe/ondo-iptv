@@ -370,6 +370,18 @@ class ScreensTest {
         compose.onNodeWithText("Ondo News").assertIsDisplayed()
     }
 
+    /** While the results are not yet those of the words typed, Search says it is searching, not that nothing was found. */
+    @Test
+    fun searchSaysItIsSearchingBeforeItsResultsCome() {
+        var state by mutableStateOf(SearchUiState(query = "glass", searching = true))
+        compose.setContent { OndoTheme { SearchScreen(state, onQuery = {}, onOpen = {}, onPlayChannel = {}) } }
+        compose.onNodeWithTag("searching").assertIsDisplayed()
+        compose.onNodeWithText("No results", substring = true).assertDoesNotExist()
+        state = SearchUiState(query = "glass")
+        compose.onNodeWithTag("searching").assertDoesNotExist()
+        compose.onNodeWithText("No results", substring = true).assertExists()
+    }
+
     @Test
     fun homeDoesNotCallThePlaylistEmptyWhileItsCatalogueIsRead() {
         var restoring by mutableStateOf(true)

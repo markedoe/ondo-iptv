@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -103,6 +104,8 @@ data class SearchUiState(
     /** The filter's choices: release years of the playlist, newest first, and festivals or ceremonies present. */
     val years: List<Int> = emptyList(),
     val awardGroups: List<String> = emptyList(),
+    /** The results shown are not yet those of the words typed (or filters set): the search is under way. */
+    val searching: Boolean = false,
 )
 
 /** Search across movies, series and channels of the current playlist, optionally by release years and awards. */
@@ -200,6 +203,12 @@ fun SearchScreen(
         }
         val nothing = state.people.isEmpty() && state.movies.isEmpty() && state.series.isEmpty() && state.channels.isEmpty()
         when {
+            state.searching && nothing -> fullWidth {
+                Row(Modifier.padding(horizontal = metrics.gutter).testTag("searching"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.searching, state.query), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             filters.isActive && nothing -> fullWidth {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(stringResource(R.string.no_filtered_results_title), style = MaterialTheme.typography.titleMedium)

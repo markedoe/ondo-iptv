@@ -59,6 +59,7 @@
     <string name="nothing_here">لا يوجد شيء هنا بعد.</string>
     <string name="home_empty">قائمة التشغيل قيد التحميل أو فارغة. حدّثها من الإعدادات إذا لم تظهر.</string>
     <string name="no_results">لا توجد نتائج عن «%1$s».</string>
+    <string name="searching">جارٍ البحث عن «%1$s»…</string>
     <string name="welcome_title">مرحبًا بك في Ondo</string>
     <string name="welcome_subtitle">أفلام ومسلسلات وقنوات مزوّد IPTV الخاص بك، في مكتبة مرتّبة.</string>
     <string name="feature_vod_title">الأفلام والمسلسلات</string>

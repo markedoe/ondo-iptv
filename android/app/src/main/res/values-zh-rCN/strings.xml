@@ -59,6 +59,7 @@
     <string name="nothing_here">暂无内容。</string>
     <string name="home_empty">你的播放列表正在加载或为空。如果仍未显示，请在“设置”中刷新。</string>
     <string name="no_results">未找到与“%1$s”相关的结果。</string>
+    <string name="searching">正在搜索“%1$s”…</string>
     <string name="welcome_title">欢迎使用 Ondo</string>
     <string name="welcome_subtitle">你的 IPTV 服务商提供的电影、剧集和频道，尽在简洁的资料库中。</string>
     <string name="feature_vod_title">电影与剧集</string>
