@@ -45,6 +45,8 @@ class TmdbTest {
         assertEquals(setOf("sandstorm"), sandstorm.map(CatalogueMatcher::filmKey).toSet())
         assertEquals("it", CatalogueMatcher.filmKey("It"), "a title is never a version word only")
         assertEquals("", CatalogueMatcher.filmKey("[4K]"))
+        assertEquals("mobland", CatalogueMatcher.filmKey("|FR-4K DV| MobLand"), "a provider's tag between bars is not the title")
+        assertEquals("mobland", CatalogueMatcher.searchQuery("|FR-4K DV| MobLand (MULTi)"))
         assertTrue(CatalogueMatcher.isSameFilm("Sandstorm VOSTFR", null, "FR - Sandstorm (2021)", null))
         assertTrue(CatalogueMatcher.isSameFilm("Sandstorm", 2021, "Sandstorm EN", 2022), "release dates differ between countries")
         assertFalse(CatalogueMatcher.isSameFilm("Dune (1984)", null, "Dune (2021)", null), "a remake is another film")

@@ -311,6 +311,9 @@ sealed interface TrendingMatch {
 /** Finds which trending titles exist in the user's catalogue (`"FR - Sandstorm (2021) 4K"` <-> `"Sandstorm"`). */
 object CatalogueMatcher {
     private val bracketed = Regex("""\[[^\]]*]""")
+
+    /** A provider's tag between bars, before or after the name: "|FR-4K DV| MobLand", "MobLand |MULTI|". */
+    private val barred = Regex("""\|[^|]{1,24}\|""")
     private val parenthesized = Regex("""\([^)]*\)""")
 
     internal fun key(title: String): String = words(title).joinToString("")
@@ -356,7 +359,7 @@ object CatalogueMatcher {
 
     private fun words(title: String): List<String> {
         // Remove bracketed tags: [MULTI], (VOSTFR)…
-        var name = title.replace(bracketed, " ")
+        var name = title.replace(bracketed, " ").replace(barred, " ")
         name = TitleParser.splitYear(name).name
         name = name.replace(parenthesized, " ")
         return TextNormalizer.channelMatchWords(name)

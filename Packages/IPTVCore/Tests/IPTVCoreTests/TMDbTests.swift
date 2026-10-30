@@ -24,6 +24,9 @@ final class TMDbTests: XCTestCase {
         let absurd = [Int.min, Int.max].map { (year: Int) in Movie(id: String(year), name: "Lighthouse", categoryID: "c", streamURL: url, year: year) }
         XCTAssertEqual(CatalogueMatcher.match(items, movies: absurd, series: []).map(\.id), [])
         XCTAssertTrue(CatalogueMatcher.closeYears(2008, 2009))
+        // A provider's tag between bars is not the title.
+        XCTAssertEqual(CatalogueMatcher.searchQuery("|FR-4K DV| MobLand (MULTi)"), "mobland")
+        XCTAssertEqual(CatalogueMatcher.key("|FR-4K DV| MobLand"), CatalogueMatcher.key("MobLand"))
         XCTAssertFalse(CatalogueMatcher.closeYears(Int.min, 2008))
         XCTAssertFalse(CatalogueMatcher.closeYears(Int.max, Int.min))
     }
