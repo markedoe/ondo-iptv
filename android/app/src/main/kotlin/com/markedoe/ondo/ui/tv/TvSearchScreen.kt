@@ -139,6 +139,17 @@ fun TvSearchScreen(
         if (filters.isActive) {
             item(key = "activeFilters") { ActiveFilters(filters, onClear = { onFilters(SearchFilters()) }) }
         }
+        // Results show as they come; meanwhile a line says the search goes on.
+        if (state.searching && !nothing) {
+            item(key = "stillSearching") {
+                Text(
+                    stringResource(R.string.searching, state.query),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = SearchStart, end = TvTokens.EdgeEnd).testTag("searching"),
+                )
+            }
+        }
         posterRow(titles[0], "searchMovies", state.movies, onOpen)
         posterRow(titles[1], "searchSeries", state.series, onOpen)
         resultRow(countedTitle(titles[2], state.channels.size), "searchChannels", state.channels, key = { it.channel.id }) { row, entry ->

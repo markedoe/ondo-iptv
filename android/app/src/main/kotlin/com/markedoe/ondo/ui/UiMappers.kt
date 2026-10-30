@@ -669,6 +669,8 @@ object UiMappers {
         filters: SearchFilters = SearchFilters(),
         limit: Int = 60,
         checkCancelled: () -> Unit = {},
+        /** False: titles and channels only, the people left for a second pass (they take longer to find). */
+        withPeople: Boolean = true,
     ): SearchUiState {
         val words = TextNormalizer.normalize(query).split(' ').filter { it.isNotEmpty() }
         val empty = SearchUiState(query = query, filters = filters, years = index.years, awardGroups = awardGroups(index, state))
@@ -681,7 +683,7 @@ object UiMappers {
             .map { it.second }
         if (!filters.isActive) {
             return empty.copy(
-                people = people(index, state, query),
+                people = if (withPeople) people(index, state, query) else emptyList(),
                 movies = index.movies.find().take(limit).map { ShowcaseItem.MovieItem(it) }.toList(),
                 series = index.series.find().take(limit).map { ShowcaseItem.SeriesItem(it) }.toList(),
                 channels = index.channels.find().take(limit).map { channelRow(it, state, now) }.toList(),

@@ -48,10 +48,10 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -143,22 +143,45 @@ class OndoViewModel(
     private val _searchFilters = MutableStateFlow(SearchFilters())
     val searchFilters: StateFlow<SearchFilters> = _searchFilters.asStateFlow()
 
-    /** A newer query stops the search under way (it is not finished for nothing). */
+    /**
+     * A newer query stops the search under way (it is not finished for nothing). The titles and channels found come
+     * first, the playlist's people (slower to find) after them: the results show as they come.
+     */
     private val playlistSearch: Flow<SearchUiState> = combine(searchIndex, _query.debounce(200), _searchFilters, searchState) { index, query, filters, state ->
         SearchInput(index, query, filters, state)
     }
-        .mapLatest { input ->
+        .transformLatest { input ->
             val job = currentCoroutineContext().job
-            UiMappers.search(input.index, input.query, input.state, clock(), input.filters, checkCancelled = { job.ensureActive() })
+            val titles = UiMappers.search(input.index, input.query, input.state, clock(), input.filters, checkCancelled = { job.ensureActive() }, withPeople = false)
+            if (input.filters.isActive || input.query.isBlank()) {
+                emit(titles)
+            } else {
+                emit(titles.copy(searching = true))
+                emit(titles.copy(people = UiMappers.people(input.index, input.state, input.query)))
+            }
         }
         .flowOn(computation)
 
-    /** With the viewer's TMDb token, the people TMDb knows by the words typed, once typing pauses (not for a filtered search). */
-    private val tmdbPeople: Flow<Pair<String, List<String>>> = combine(_query.debounce(TMDB_PEOPLE_DEBOUNCE_MS), _searchFilters) { query, filters -> query to filters }
-        .mapLatest { (query, filters) -> query to if (filters.isActive) emptyList() else repository.tmdbPeople(query) }
+    /**
+     * With the viewer's TMDb token, the people TMDb knows by the words typed, once typing pauses (not for a filtered
+     * search); null while TMDb is asked.
+     */
+    private val tmdbPeople: Flow<Pair<String, List<String>?>> = combine(_query.debounce(TMDB_PEOPLE_DEBOUNCE_MS), _searchFilters) { query, filters -> query to filters }
+        .transformLatest { (query, filters) ->
+            if (filters.isActive || query.trim().length < TMDB_PEOPLE_MIN_LENGTH) {
+                emit(query to emptyList())
+            } else {
+                emit(query to null)
+                emit(query to repository.tmdbPeople(query))
+            }
+        }
         .onStart { emit("" to emptyList()) }
 
-    val search: StateFlow<SearchUiState> = combine(playlistSearch, tmdbPeople) { search, (query, online) -> UiMappers.withTmdbPeople(search, query, online) }
+    /** The results as they come: Search says it is still searching until TMDb's people are in too. */
+    val search: StateFlow<SearchUiState> = combine(playlistSearch, tmdbPeople) { search, (query, online) ->
+        val asking = !search.filters.isActive && search.query.trim().length >= TMDB_PEOPLE_MIN_LENGTH && (query != search.query || online == null)
+        UiMappers.withTmdbPeople(search, query, online.orEmpty()).copy(searching = search.searching || asking)
+    }
         .stateIn(viewModelScope, sharing, SearchUiState())
 
     private val _preparing = MutableStateFlow<String?>(null)
@@ -448,6 +471,9 @@ class OndoViewModel(
 
         /** TMDb is asked for people once typing pauses this long. */
         const val TMDB_PEOPLE_DEBOUNCE_MS = 400L
+
+        /** TMDb is asked for people from three letters on ([OndoRepository.tmdbPeople]). */
+        const val TMDB_PEOPLE_MIN_LENGTH = 3
 
         /** Public channels listed by the iptv-org project, the same demo as on iPhone. */
         const val DEMO_PLAYLIST_URL = "https://iptv-org.github.io/iptv/countries/fr.m3u"

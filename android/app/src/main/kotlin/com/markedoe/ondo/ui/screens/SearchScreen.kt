@@ -155,6 +155,16 @@ fun SearchScreen(
                 ) { Icon(Icons.Rounded.FilterList, contentDescription = stringResource(R.string.search_filters)) }
             }
         }
+        val nothingYet = state.people.isEmpty() && state.movies.isEmpty() && state.series.isEmpty() && state.channels.isEmpty()
+        // Results show as they come; meanwhile a line says the search goes on.
+        if (state.searching && !nothingYet) {
+            fullWidth {
+                Row(Modifier.padding(horizontal = metrics.gutter).testTag("searching"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                    Text(stringResource(R.string.searching, state.query), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         if (filters.isActive) {
             fullWidth { ActiveFilters(filters, onClear = { onFilters(SearchFilters()) }) }
             posterGrid(R.string.movies, state.movies, onOpen)
