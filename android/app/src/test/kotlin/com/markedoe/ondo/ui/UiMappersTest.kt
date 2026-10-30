@@ -513,6 +513,9 @@ class UiMappersTest {
         assertEquals("M3U · example.com", settings.playlists.single().detail)
         assertTrue(settings.playlists.single().active)
         assertEquals("1.0.0", settings.version)
+        // The playlist in use says when it was last updated (Settings shows "Updated … ago" under it).
+        val fetched = Fixtures.state().let { it.copy(content = it.content.copy(fetchedAt = Fixtures.NOW - 60_000)) }
+        assertEquals(Fixtures.NOW - 60_000, UiMappers.settings(fetched, "1.0.0") { "M3U" }.playlists.single().updatedAt)
     }
 
     @Test

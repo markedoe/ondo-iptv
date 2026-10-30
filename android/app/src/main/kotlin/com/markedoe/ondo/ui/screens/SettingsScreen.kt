@@ -61,6 +61,8 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.updatedAgoText
+import androidx.compose.runtime.produceState
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.SyncDevice
@@ -72,7 +74,15 @@ import com.markedoe.ondo.ui.components.TmdbTokenSettings
 import com.markedoe.ondo.ui.theme.ondoSwitchColors
 import com.markedoe.ondo.ui.tv.focusFrame
 
-data class PlaylistSummary(val id: String, val name: String, val detail: String, val active: Boolean, val xtream: Boolean = false)
+data class PlaylistSummary(
+    val id: String,
+    val name: String,
+    val detail: String,
+    val active: Boolean,
+    val xtream: Boolean = false,
+    /** When the playlist in use was last fetched (null: another playlist, or not loaded yet). */
+    val updatedAt: Long? = null,
+)
 
 data class SettingsUiState(
     val playlists: List<PlaylistSummary> = emptyList(),
@@ -140,7 +150,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
             items(state.playlists, key = { it.id }) { playlist ->
                 ListItem(
                     headlineContent = { Text(playlist.name) },
-                    supportingContent = { Text(playlist.detail) },
+                    supportingContent = { Text(playlistDetail(playlist)) },
                     leadingContent = { if (playlist.active) Icon(Icons.Rounded.CheckCircle, contentDescription = stringResource(R.string.active), tint = MaterialTheme.colorScheme.primary) },
                     trailingContent = {
                         IconButton(onClick = { deleting = playlist }) { Icon(Icons.Rounded.Delete, contentDescription = stringResource(R.string.delete)) }
@@ -406,3 +416,17 @@ internal val TipOutcome.message: Int
         TipOutcome.PENDING -> R.string.tips_pending
         TipOutcome.FAILED -> R.string.tips_failed
     }
+
+/** The playlist's kind and server, and for the one in use when it was last updated ("Updated 3 minutes ago"). */
+@Composable
+internal fun playlistDetail(playlist: PlaylistSummary): String {
+    val updatedAt = playlist.updatedAt ?: return playlist.detail
+    // Ticks every half minute: "Updated 1 minute ago" right after Refresh, then grows.
+    val now by produceState(System.currentTimeMillis(), updatedAt) {
+        while (true) {
+            value = System.currentTimeMillis()
+            kotlinx.coroutines.delay(30_000)
+        }
+    }
+    return listOf(playlist.detail, updatedAgoText(updatedAt, now)).filter { it.isNotBlank() }.joinToString(" · ")
+}

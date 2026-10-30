@@ -520,7 +520,11 @@ object UiMappers {
     fun settings(state: OndoState, version: String, syncDevices: List<SyncDevice> = emptyList(), kindLabel: (Boolean) -> String): SettingsUiState = SettingsUiState(
         playlists = state.playlists.map { playlist ->
             val host = runCatching { java.net.URI(playlist.url.trim()).host }.getOrNull()
-            PlaylistSummary(playlist.id, playlist.name, listOfNotNull(kindLabel(playlist.isXtream), host).joinToString(" · "), playlist.id == state.activePlaylistId, playlist.isXtream)
+            val active = playlist.id == state.activePlaylistId
+            PlaylistSummary(
+                playlist.id, playlist.name, listOfNotNull(kindLabel(playlist.isXtream), host).joinToString(" · "), active, playlist.isXtream,
+                updatedAt = state.content.fetchedAt.takeIf { active && it > 0 && !state.content.isEmpty },
+            )
         },
         showAdultCategories = state.settings.showAdultCategories,
         updateAwards = state.settings.updateAwards,

@@ -98,6 +98,7 @@ import com.markedoe.ondo.data.TmdbCheck
 import com.markedoe.ondo.ui.components.tmdbStatus
 import com.markedoe.ondo.ui.components.tmdbStatusColor
 import com.markedoe.ondo.ui.screens.PlaylistSummary
+import com.markedoe.ondo.ui.screens.playlistDetail
 import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsUiState
 import com.markedoe.ondo.ui.screens.bufferLabel
@@ -369,7 +370,7 @@ private fun PlaylistCard(playlist: PlaylistSummary, refreshing: Boolean, actions
                         )
                     }
                 }
-                Text(playlist.detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(playlistDetail(playlist), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
