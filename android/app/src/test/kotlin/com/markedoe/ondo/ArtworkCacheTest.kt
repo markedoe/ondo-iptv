@@ -2,12 +2,9 @@ package com.markedoe.ondo
 
 import android.graphics.Bitmap
 import androidx.test.core.app.ApplicationProvider
-import coil3.decode.DataSource
 import coil3.request.CachePolicy
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
-import coil3.request.SuccessResult
-import coil3.request.allowHardware
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -19,6 +16,7 @@ import java.io.IOException
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -71,19 +69,20 @@ class ArtworkCacheTest {
         }.build()
         val url = "https://image.example.com/t/p/w185/ruth.jpg"
 
+        // The test machine cannot decode images (no ImageDecoder): what counts is the file kept, read again offline.
         val first = app.artworkLoader(http)
-        // Software bitmaps: the test machine has no GPU for hardware ones.
-        val seen = first.execute(ImageRequest.Builder(app).data(url).allowHardware(false).build())
-        assertTrue("shown online: $seen ${(seen as? ErrorResult)?.throwable}", seen is SuccessResult)
+        first.execute(ImageRequest.Builder(app).data(url).build())
         assertEquals(1, downloads)
+        assertNotNull("kept on the disk", first.diskCache?.openSnapshot(url)?.also { it.close() })
         first.shutdown()
 
         // The next launch, offline: a new loader on the same files.
         online = false
         val next = app.artworkLoader(http)
-        val result = next.execute(ImageRequest.Builder(app).data(url).allowHardware(false).memoryCachePolicy(CachePolicy.DISABLED).build())
-        assertTrue("shown offline: $result ${(result as? ErrorResult)?.throwable}", result is SuccessResult)
-        assertEquals(DataSource.DISK, (result as SuccessResult).dataSource)
+        assertNotNull("still on the disk", next.diskCache?.openSnapshot(url)?.also { it.close() })
+        val result = next.execute(ImageRequest.Builder(app).data(url).memoryCachePolicy(CachePolicy.DISABLED).build())
+        val failure = (result as? ErrorResult)?.throwable
+        assertFalse("read from the disk, not the network: $failure", failure is IOException)
         assertEquals("not downloaded again", 1, downloads)
         next.shutdown()
     }

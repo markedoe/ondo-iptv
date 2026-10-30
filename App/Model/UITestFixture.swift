@@ -11,7 +11,7 @@ enum UITestFixture {
     static let isShowcase = ProcessInfo.processInfo.arguments.contains("-uitest-showcase")
     /// `-uitest-multiview`: opens the multiview with four channels (iPad / Mac).
     static let opensMultiview = ProcessInfo.processInfo.arguments.contains("-uitest-multiview")
-    /// `-uitest-languages`: a few movie categories tagged by language (|EN|, |FR|, |DE|, |PT|), so Home suggests
+    /// `-uitest-languages`: two movie categories per language tag (|EN|, |FR|, |DE|, |PT|: a tag counts from two), so Home suggests
     /// keeping only the viewer's.
     static let hasLanguages = ProcessInfo.processInfo.arguments.contains("-uitest-languages")
 
@@ -155,7 +155,7 @@ enum UITestFixture {
             lines.append(hlsAdvanced)
         }
         if hasLanguages {
-            for (index, group) in ["|EN| Movies", "|FR| Films", "|DE| Filme", "|PT| Filmes"].enumerated() {
+            for (index, group) in ["|EN| Movies", "|EN| Drama", "|FR| Films", "|FR| Action", "|DE| Filme", "|DE| Action", "|PT| Filmes", "|PT| Ação"].enumerated() {
                 lines.append("#EXTINF:5400 tvg-type=\"movie\" group-title=\"\(group)\",Language Sample \(index + 1) (2020)")
                 lines.append(hlsAdvanced)
             }
