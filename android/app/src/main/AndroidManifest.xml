@@ -33,6 +33,7 @@
         <intent>
             <action android:name="android.settings.LOCALE_SETTINGS" />
         </intent>
+        <package android:name="com.google.android.youtube.tv" />
     </queries>
 
     <application

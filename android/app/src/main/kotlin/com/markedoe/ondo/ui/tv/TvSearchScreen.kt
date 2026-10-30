@@ -156,7 +156,7 @@ fun TvSearchScreen(
             TvChannelCard(row, onClick = { onPlayChannel(row) }, modifier = entry.focusMemory("search-channel:${row.channel.id}"))
         }
         resultRow(countedTitle(titles[3], state.people.size), "searchPeople", state.people, key = { "person-$it" }) { name, entry ->
-            TvPersonCard(name, onClick = { onPerson(name) }, modifier = entry.focusMemory("search-person:$name").testTag("person-$name"))
+            TvPersonCard(name, onClick = { onPerson(name) }, photoUrl = state.photoOf(name), modifier = entry.focusMemory("search-person:$name").testTag("person-$name"))
         }
         val message = when {
             state.searching && nothing -> R.string.searching

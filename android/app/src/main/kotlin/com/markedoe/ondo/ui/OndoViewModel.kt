@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.BuildConfig
+import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
@@ -16,6 +17,7 @@ import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Reminder
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.player.PlayRequest
+import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.GuideUiState
@@ -158,7 +160,8 @@ class OndoViewModel(
                 emit(titles)
             } else {
                 emit(titles.copy(searching = true))
-                emit(titles.copy(people = UiMappers.people(input.index, input.state, input.query)))
+                val people = UiMappers.people(input.index, input.state, input.query)
+                emit(titles.copy(people = people, photos = UiMappers.faces(input.state, people)))
             }
         }
         .flowOn(computation)
@@ -167,13 +170,13 @@ class OndoViewModel(
      * With the viewer's TMDb token, the people TMDb knows by the words typed, once typing pauses (not for a filtered
      * search); null while TMDb is asked.
      */
-    private val tmdbPeople: Flow<Pair<String, List<String>?>> = combine(_query.debounce(TMDB_PEOPLE_DEBOUNCE_MS), _searchFilters) { query, filters -> query to filters }
+    private val tmdbPeople: Flow<Pair<String, List<PersonRow>?>> = combine(_query.debounce(TMDB_PEOPLE_DEBOUNCE_MS), _searchFilters) { query, filters -> query to filters }
         .transformLatest { (query, filters) ->
             if (filters.isActive || query.trim().length < TMDB_PEOPLE_MIN_LENGTH) {
                 emit(query to emptyList())
             } else {
                 emit(query to null)
-                emit(query to repository.tmdbPeople(query))
+                emit(query to repository.tmdbPeopleWithPhotos(query))
             }
         }
         .onStart { emit("" to emptyList()) }
@@ -181,7 +184,9 @@ class OndoViewModel(
     /** The results as they come: Search says it is still searching until TMDb's people are in too. */
     val search: StateFlow<SearchUiState> = combine(playlistSearch, tmdbPeople) { search, (query, online) ->
         val asking = !search.filters.isActive && search.query.trim().length >= TMDB_PEOPLE_MIN_LENGTH && (query != search.query || online == null)
-        UiMappers.withTmdbPeople(search, query, online.orEmpty()).copy(searching = search.searching || asking)
+        val found = online.orEmpty()
+        val photos = found.mapNotNull { person -> person.photoUrl?.let { TextNormalizer.normalize(person.name) to it } }.toMap()
+        UiMappers.withTmdbPeople(search, query, found.map { it.name }, photos).copy(searching = search.searching || asking)
     }
         .stateIn(viewModelScope, sharing, SearchUiState())
 

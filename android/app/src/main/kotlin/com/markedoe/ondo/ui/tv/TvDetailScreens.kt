@@ -83,6 +83,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.trailerLabel
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.model.Episode
@@ -383,7 +384,7 @@ private fun RowScope.ButtonLabel(icon: ImageVector, text: String) {
 /** The provider's trailer, in the YouTube app. */
 @Composable
 private fun TrailerButton(youTubeId: String, actions: DetailActions) {
-    TvCircleAction(Icons.Rounded.OndemandVideo, stringResource(R.string.trailer), onClick = { actions.onTrailer(youTubeId) }, modifier = Modifier.focusMemory("detail-trailer").testTag("detailTrailer"))
+    TvCircleAction(Icons.Rounded.OndemandVideo, trailerLabel(), onClick = { actions.onTrailer(youTubeId) }, modifier = Modifier.focusMemory("detail-trailer").testTag("detailTrailer"))
 }
 
 @Composable

@@ -116,7 +116,7 @@ class TelevisionDetailTest {
     fun onAPhoneTheTrailerIsOneOfTheRoundButtons() {
         val opened = mutableListOf<String>()
         compose.setContent { OndoTheme { MovieDetailScreen(movieState(), DetailActions(onTrailer = { opened += it })) } }
-        compose.onNodeWithText("Trailer").performClick()
+        compose.onNodeWithText("Trailer\nYouTube").performClick()
         assertEquals(listOf("dQw4w9WgXcQ"), opened)
     }
 
@@ -124,17 +124,30 @@ class TelevisionDetailTest {
     @Config(qualifiers = "w411dp-h891dp")
     fun onAPhoneASeriesWithoutTrailerHasNoTrailerButton() {
         compose.setContent { OndoTheme { SeriesDetailScreen(seriesState(details.copy(trailerYouTubeId = null)), DetailActions()) } }
-        compose.onAllNodesWithText("Trailer").assertCountEquals(0)
+        compose.onAllNodesWithText("Trailer", substring = true).assertCountEquals(0)
     }
 
-    /** The YouTube app first (a TV opens no browser), else youtube.com. */
+    /** On a TV, the video's watch address (YouTube's own link opens the TV app on its home, not on the video). */
     @Test
-    fun aTrailerOpensInTheYouTubeApp() {
+    fun onATvATrailerOpensAtItsWatchAddress() {
         val app = ApplicationProvider.getApplicationContext<Application>()
         assertTrue(app.openTrailer("dQw4w9WgXcQ"))
         val intent = shadowOf(app).nextStartedActivity
         assertEquals(Intent.ACTION_VIEW, intent.action)
-        assertEquals("vnd.youtube:dQw4w9WgXcQ", intent.dataString)
+        assertEquals("https://www.youtube.com/watch?v=dQw4w9WgXcQ", intent.dataString)
+    }
+
+    /** The TV's YouTube app by name when it is there; on a phone the YouTube app's link first, then youtube.com. */
+    @Test
+    fun theWaysATrailerOpensInOrder() {
+        val tv = trailerIntents("dQw4w9WgXcQ", television = true, hasTvApp = true)
+        assertEquals(YOUTUBE_TV_PACKAGE, tv.first().`package`)
+        assertEquals("https://www.youtube.com/watch?v=dQw4w9WgXcQ", tv.first().dataString)
+        assertEquals(2, trailerIntents("dQw4w9WgXcQ", television = true, hasTvApp = false).size)
+        assertEquals(
+            listOf("vnd.youtube:dQw4w9WgXcQ", "https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+            trailerIntents("dQw4w9WgXcQ", television = false, hasTvApp = false).map { it.dataString },
+        )
     }
 
     @Test

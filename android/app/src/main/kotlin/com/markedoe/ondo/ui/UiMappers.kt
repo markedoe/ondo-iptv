@@ -722,11 +722,22 @@ object UiMappers {
      * The people of a search: the playlist's, then those TMDb knows by the words typed (with the viewer's token), each
      * name once. [online] is TMDb's answer for [query]; one for an older query, or a filtered search, adds nobody.
      */
-    fun withTmdbPeople(search: SearchUiState, query: String, online: List<String>): SearchUiState {
+    fun withTmdbPeople(search: SearchUiState, query: String, online: List<String>, photos: Map<String, String> = emptyMap()): SearchUiState {
         if (online.isEmpty() || search.query != query || search.filters.isActive) return search
         val seen = search.people.mapTo(HashSet()) { TextNormalizer.normalize(it) }
         val added = online.filter { it.isNotBlank() && seen.add(TextNormalizer.normalize(it)) }
-        return if (added.isEmpty()) search else search.copy(people = search.people + added)
+        // TMDb's photos for the playlist's people too, when the pages opened gave none.
+        val known = search.photos + photos.filterKeys { it !in search.photos }
+        return if (added.isEmpty() && known == search.photos) search else search.copy(people = search.people + added, photos = known)
+    }
+
+    /** The photos of these people that the pages opened this session gave (TMDb's), by normalised name. */
+    fun faces(state: OndoState, names: List<String>): Map<String, String> {
+        if (names.isEmpty() || state.tmdbFaces.isEmpty()) return emptyMap()
+        val wanted = names.mapTo(HashSet()) { TextNormalizer.normalize(it) }
+        val found = HashMap<String, String>()
+        for (faces in state.tmdbFaces.values) for ((name, url) in faces) if (name in wanted) found.putIfAbsent(name, url)
+        return found
     }
 
     /** The festivals and ceremonies some visible movie took part in, in the order of the awards file. */

@@ -32,7 +32,6 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.FilterList
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -64,6 +63,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.TextNormalizer
+import com.markedoe.ondo.ui.components.PersonPhoto
 import com.markedoe.ondo.ui.components.ChannelLogo
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
@@ -97,6 +98,8 @@ data class SearchUiState(
     val query: String = "",
     /** Actors and directors whose name matches (see [com.markedoe.ondo.ui.UiMappers.people]). */
     val people: List<String> = emptyList(),
+    /** Their photos (TMDb's), by name ([com.markedoe.ondo.core.TextNormalizer]), when known. */
+    val photos: Map<String, String> = emptyMap(),
     val movies: List<ShowcaseItem> = emptyList(),
     val series: List<ShowcaseItem> = emptyList(),
     val channels: List<ChannelRow> = emptyList(),
@@ -106,7 +109,9 @@ data class SearchUiState(
     val awardGroups: List<String> = emptyList(),
     /** The results shown are not yet those of the words typed (or filters set): the search is under way. */
     val searching: Boolean = false,
-)
+) {
+    fun photoOf(name: String): String? = photos[TextNormalizer.normalize(name)]
+}
 
 /** Search across movies, series and channels of the current playlist, optionally by release years and awards. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -175,7 +180,7 @@ fun SearchScreen(
                 items(state.people, key = { "person-$it" }, span = { GridItemSpan(maxLineSpan) }) { name ->
                     ListItem(
                         headlineContent = { Text(name) },
-                        leadingContent = { Icon(Icons.Rounded.Person, contentDescription = null) },
+                        leadingContent = { PersonPhoto(name, state.photoOf(name), 40.dp) },
                         modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onPerson(name) }.padding(horizontal = metrics.gutter - 16.dp).testTag("person-$name"),
                     )
                 }

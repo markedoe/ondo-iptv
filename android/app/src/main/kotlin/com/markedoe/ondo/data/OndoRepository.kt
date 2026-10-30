@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.TextNormalizer
+import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.core.catchup.CatchupUrlBuilder
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
@@ -1156,22 +1157,39 @@ class OndoRepository(
      * The people whose name matches a search: those the titles kept on the device credit (token or not), then, with
      * the viewer's token, those TMDb finds (only the words typed are sent).
      */
-    suspend fun tmdbPeople(query: String): List<String> {
+    suspend fun tmdbPeople(query: String): List<String> = tmdbPeopleWithPhotos(query).map { it.name }
+
+    /** [tmdbPeople] with their photos (TMDb's) when known. TMDb's answer is kept a day: the same search is instant. */
+    suspend fun tmdbPeopleWithPhotos(query: String): List<PersonRow> {
         val trimmed = query.trim()
         if (trimmed.length < 3) return emptyList()
         val local = localPeople(trimmed)
-        val online = tmdb { people(trimmed) }?.map { it.name }?.filter { it.isNotBlank() }?.take(8).orEmpty()
+        val token = _state.value.settings.tmdbToken
+        val online = if (token == null) {
+            emptyList()
+        } else {
+            val key = "$token\u0000${TextNormalizer.normalize(trimmed)}"
+            val askedAt = now()
+            peopleSearches[key]?.takeIf { askedAt - it.first < PERSON_CREDITS_FRESH_MS }?.second
+                ?: tmdb { people(trimmed) }?.filter { it.name.isNotBlank() }?.take(8)?.map { PersonRow(it.name, it.profileUrl) }?.also { found ->
+                    if (peopleSearches.size >= PEOPLE_SEARCHES_KEPT) peopleSearches.keys.firstOrNull()?.let(peopleSearches::remove)
+                    peopleSearches[key] = askedAt to found
+                }.orEmpty()
+        }
         val seen = HashSet<String>()
-        return (local + online).filter { seen.add(MetadataKey.person(it)) }
+        return (local + online).filter { seen.add(MetadataKey.person(it.name)) }
     }
 
+    /** TMDb's people searches of this session, by token and words. */
+    private val peopleSearches = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<PersonRow>>>()
+
     /** The people the store knows by these words who have titles in this catalogue. */
-    private suspend fun localPeople(query: String): List<String> {
+    private suspend fun localPeople(query: String): List<PersonRow> {
         val people = withContext(io) { metadata.people(query, LOCAL_PEOPLE_LIMIT) }
         if (people.isEmpty()) return emptyList()
         val titles = metadataTitles() ?: return emptyList()
         return withContext(io) {
-            people.filter { person -> titles.match(metadata.titleKeys(MetadataKey.person(person.name))).isNotEmpty() }.map { it.name }
+            people.filter { person -> titles.match(metadata.titleKeys(MetadataKey.person(person.name))).isNotEmpty() }.map { PersonRow(it.name, it.photoUrl) }
         }
     }
 
@@ -1227,6 +1245,7 @@ class OndoRepository(
 
         /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
         const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L
+        private const val PEOPLE_SEARCHES_KEPT = 100
         private const val PERSON_CREDITS_KEPT = 64
 
         fun hostName(url: String): String = runCatching { java.net.URI(url.trim()).host }.getOrNull()?.removePrefix("www.") ?: "Playlist"

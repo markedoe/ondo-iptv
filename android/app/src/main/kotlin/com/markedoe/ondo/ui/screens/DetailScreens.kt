@@ -83,6 +83,7 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.trailerLabel
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.TmdbRating
@@ -203,7 +204,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
                 if (resumable) CircleAction(stringResource(R.string.from_start), Icons.Rounded.Replay, actions.onPlayFromStart)
-                state.trailer?.let { id -> CircleAction(stringResource(R.string.trailer), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
+                state.trailer?.let { id -> CircleAction(trailerLabel(), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
             }
         },
         content = { metrics ->
@@ -287,7 +288,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
             Row(horizontalArrangement = Arrangement.spacedBy(18.dp), modifier = Modifier.padding(top = 16.dp)) {
                 CircleAction(stringResource(R.string.my_list), if (state.inMyList) Icons.Rounded.Check else Icons.Rounded.Add, actions.onToggleMyList, state = myListState(state.inMyList))
                 CollectionAction(state.collections) { picking = true }
-                state.trailer?.let { id -> CircleAction(stringResource(R.string.trailer), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
+                state.trailer?.let { id -> CircleAction(trailerLabel(), Icons.Rounded.OndemandVideo, { actions.onTrailer(id) }) }
             }
         },
         content = { metrics ->

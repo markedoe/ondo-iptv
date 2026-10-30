@@ -301,12 +301,15 @@ class OndoViewModelTest {
     /** Search with the viewer's TMDb token: the people TMDb knows by the words typed join the playlist's own. */
     @Test
     fun searchAddsThePeopleTmdbKnows() = runTest {
+        var peopleAsked = 0
         val http = object : HttpClient {
             override suspend fun get(url: String, headers: Map<String, String>): ByteArray = when {
                 url == list -> catalogue
                 url.startsWith("https://api.themoviedb.org/3/authentication?") -> """{"success":true}"""
-                url.startsWith("https://api.themoviedb.org/3/search/person?") ->
-                    """{"results":[{"id":3,"name":"Anna Sample","known_for_department":"Acting","popularity":5.0}]}"""
+                url.startsWith("https://api.themoviedb.org/3/search/person?") -> {
+                    peopleAsked++
+                    """{"results":[{"id":3,"name":"Anna Sample","known_for_department":"Acting","profile_path":"/anna.jpg","popularity":5.0}]}"""
+                }
                 else -> throw HttpException.BadStatus(404)
             }.encodeToByteArray()
         }
@@ -321,6 +324,10 @@ class OndoViewModelTest {
         assertTrue(viewModel.search.first { it.query == "Anna" }.searching)
         val done = viewModel.search.first { it.query == "Anna" && it.people.isNotEmpty() && !it.searching }
         assertEquals(listOf("Anna Sample"), done.people)
+        assertEquals("with TMDb's photo", "https://image.tmdb.org/t/p/w185/anna.jpg", done.photoOf("Anna Sample"))
+        // The same search again: TMDb's answer is kept, it is not asked twice.
+        assertEquals(listOf("Anna Sample"), repository.tmdbPeople("anna"))
+        assertEquals(1, peopleAsked)
     }
 
     /** Settings' "Prepare new titles": while Ondo is open, TMDb is asked ahead about the new titles; nothing when off. */
