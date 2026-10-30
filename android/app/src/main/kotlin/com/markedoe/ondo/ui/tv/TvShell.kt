@@ -1,9 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
@@ -165,6 +162,8 @@ fun TvNavigationFrame(
     val selectedTag = selected.tag
     val bar = remember { TvTopBar() }
     var barHasFocus by remember { mutableStateOf(false) }
+    // The tab the remote rests on, about to open (a spinner shows it).
+    var openingTab by remember { mutableStateOf<String?>(null) }
     val shown = showBar
     val scope = rememberCoroutineScope()
     val pages = remember { FocusRequester() }
@@ -223,7 +222,12 @@ fun TvNavigationFrame(
                     Text("Ondo", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.03).em, modifier = Modifier.padding(start = 2.dp))
                 }
                 TopLevel.entries.forEach { tab ->
-                    BarTab(stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below, browsing = { bar.browsing }, onReach = { onSelect(tab) }) {
+                    BarTab(
+                        stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below,
+                        browsing = { bar.browsing },
+                        onOpening = { on -> openingTab = if (on) tab.tag else openingTab.takeIf { it != tab.tag } },
+                        onReach = { onSelect(tab) },
+                    ) {
                         bar.browsing = false
                         onSelect(tab)
                         // OK goes into the tab's page, where the page puts the focus, once that page is the one shown.
@@ -235,6 +239,16 @@ fun TvNavigationFrame(
                             }
                             if (barHasFocus) runCatching { pages.requestFocus() }
                         }
+                    }
+                }
+                // A tab about to open: a small spinner after the tabs.
+                Box(Modifier.padding(start = 10.dp).size(18.dp), contentAlignment = Alignment.Center) {
+                    if (openingTab != null) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp).testTag("tabOpening"),
+                        )
                     }
                 }
                 // The note takes only the room left once Search and Settings have theirs (it is cut short, never them).
@@ -285,22 +299,32 @@ const val SEARCH_TAG = "tabSearch"
 const val SETTINGS_TAG = "tabSettings"
 
 @Composable
-private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String, requester: FocusRequester, below: () -> FocusRequester, browsing: () -> Boolean, onReach: () -> Unit, onClick: () -> Unit) {
+private fun BarTab(
+    label: String,
+    selected: Boolean,
+    shown: Boolean,
+    tag: String,
+    requester: FocusRequester,
+    below: () -> FocusRequester,
+    browsing: () -> Boolean,
+    onOpening: (Boolean) -> Unit,
+    onReach: () -> Unit,
+    onClick: () -> Unit,
+) {
     val colors = MaterialTheme.colorScheme
     var focused by remember { mutableStateOf(false) }
     // The tab the remote rests on along the bar opens without OK (as on the TV's own home screen); passing quickly
-    // (towards Settings) opens nothing, nor does the focus only passing through the bar (Up from a page).
-    // A line fills under the tab while it gets ready to open: the remote need not press OK.
-    val opening = remember { Animatable(0f) }
+    // (towards Settings) opens nothing, nor does the focus only passing through the bar (Up from a page). Meanwhile
+    // the bar shows it is opening (a small spinner after the tabs): the remote need not press OK.
     LaunchedEffect(focused, selected) {
-        opening.snapTo(0f)
         if (!focused || selected || !browsing()) return@LaunchedEffect
-        // The rest is timed apart from the line: an animation that ends early (none drawn) opens nothing sooner.
-        val line = launch { opening.animateTo(1f, tween(TAB_REST_MS.toInt(), easing = LinearEasing)) }
-        delay(TAB_REST_MS)
-        line.cancel()
-        if (browsing()) onReach()
-        opening.snapTo(0f)
+        onOpening(true)
+        try {
+            delay(TAB_REST_MS)
+            if (browsing()) onReach()
+        } finally {
+            onOpening(false)
+        }
     }
     Surface(
         onClick = onClick,
@@ -327,27 +351,14 @@ private fun BarTab(label: String, selected: Boolean, shown: Boolean, tag: String
         ),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
     ) {
-        Box {
-            Text(
-                label,
-                fontSize = 15.sp,
-                letterSpacing = 0.sp,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                maxLines = 1,
-                modifier = Modifier.padding(PaddingValues(horizontal = 16.dp, vertical = 8.dp)),
-            )
-            if (opening.value > 0f) {
-                Box(
-                    Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(horizontal = 12.dp, vertical = 4.dp)
-                        .fillMaxWidth(opening.value)
-                        .height(3.dp)
-                        .background(colors.background, RoundedCornerShape(2.dp))
-                        .testTag("$tag-opening"),
-                )
-            }
-        }
+        Text(
+            label,
+            fontSize = 15.sp,
+            letterSpacing = 0.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            maxLines = 1,
+            modifier = Modifier.padding(PaddingValues(horizontal = 16.dp, vertical = 8.dp)),
+        )
     }
 }
 
