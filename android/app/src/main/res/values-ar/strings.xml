@@ -52,6 +52,7 @@
     <string name="delete">حذف</string>
     <string name="add">إضافة</string>
     <string name="refresh">تحديث</string>
+    <string name="refreshing_playlist">جارٍ تحديث قائمة التشغيل…</string>
     <string name="use_playlist">استخدام</string>
     <string name="settings_catalogue">الكتالوج</string>
     <string name="active">نشطة</string>

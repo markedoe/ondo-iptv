@@ -52,6 +52,7 @@
     <string name="delete">删除</string>
     <string name="add">添加</string>
     <string name="refresh">刷新</string>
+    <string name="refreshing_playlist">正在更新播放列表…</string>
     <string name="use_playlist">使用</string>
     <string name="settings_catalogue">片库</string>
     <string name="active">使用中</string>

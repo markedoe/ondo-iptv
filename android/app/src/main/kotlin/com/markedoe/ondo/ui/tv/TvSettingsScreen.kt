@@ -380,9 +380,27 @@ private fun PlaylistCard(playlist: PlaylistSummary, refreshing: Boolean, actions
                 onClick = { if (!playlist.active) actions.onActivate(playlist.id) else if (!refreshing) actions.onRefresh() },
                 modifier = first.focusMemory("use:${playlist.id}").testTag(if (playlist.active) "refresh-${playlist.name}" else "use-${playlist.name}"),
             ) {
-                Icon(if (playlist.active) Icons.Rounded.Refresh else Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                // While it refreshes: a spinner and "Updating the playlist…", so the remote knows to wait.
+                if (playlist.active && refreshing) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        color = androidx.tv.material3.LocalContentColor.current,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(18.dp).testTag("refreshing"),
+                    )
+                } else {
+                    Icon(if (playlist.active) Icons.Rounded.Refresh else Icons.Rounded.CheckCircle, contentDescription = null, modifier = Modifier.size(20.dp))
+                }
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(if (playlist.active) R.string.refresh else R.string.use_playlist), maxLines = 1)
+                Text(
+                    stringResource(
+                        when {
+                            !playlist.active -> R.string.use_playlist
+                            refreshing -> R.string.refreshing_playlist
+                            else -> R.string.refresh
+                        },
+                    ),
+                    maxLines = 1,
+                )
             }
             val deleteLabel = stringResource(R.string.delete)
             Button(

@@ -52,6 +52,7 @@
     <string name="delete">Supprimer</string>
     <string name="add">Ajouter</string>
     <string name="refresh">Actualiser</string>
+    <string name="refreshing_playlist">Mise à jour de la playlist…</string>
     <string name="use_playlist">Utiliser</string>
     <string name="settings_catalogue">Catalogue</string>
     <string name="active">Active</string>

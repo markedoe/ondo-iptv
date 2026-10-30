@@ -56,6 +56,7 @@ import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.isTelevision
 
 /** What My List shows: its movies, its series, its channels, its people or its collections. */
 enum class MyListKind { MOVIES, SERIES, CHANNELS, PEOPLE, COLLECTIONS }
@@ -98,8 +99,11 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
         item(span = { GridItemSpan(maxLineSpan) }) {
             TopAppBar(
                 title = { Text(stringResource(R.string.my_list), style = MaterialTheme.typography.headlineSmall) },
+                // On a TV, Search is in the top bar for every page: no second one here.
                 actions = {
-                    IconButton(onClick = actions.onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search)) }
+                    if (!isTelevision()) {
+                        IconButton(onClick = actions.onSearch) { Icon(Icons.Rounded.Search, contentDescription = stringResource(R.string.search)) }
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 windowInsets = WindowInsets(0),
