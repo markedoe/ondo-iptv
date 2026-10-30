@@ -296,4 +296,52 @@ final class OndoUITests: XCTestCase {
         sleep(1)
         snapshot("13-settings")
     }
+
+    // MARK: - Languages chosen from Home's suggestion
+
+    /// Home's "Show only your languages?": a language turned off from "Choose…", then Ondo left and opened again.
+    private func chooseALanguageThenRelaunch(closingTheSheet: Bool) {
+        launch(["-uitest-reset", "-uitest-fixture", "-uitest-languages"])
+        let card = app.staticTexts["Show only your languages?"]
+        XCTAssertTrue(card.waitForExistence(timeout: 20), "the suggestion shows")
+        let choose = app.buttons["Choose…"]
+        for _ in 0..<5 where !choose.isHittable { app.swipeUp() }
+        choose.tap()
+        let german = app.switches.matching(NSPredicate(format: "label BEGINSWITH 'DE'")).firstMatch
+        XCTAssertTrue(german.waitForExistence(timeout: 5), "German in the categories screen")
+        german.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        XCTAssertEqual(german.value as? String, "0", "German turned off")
+        snapshot("languages-chosen")
+        if closingTheSheet {
+            app.buttons["Done"].tap()
+            XCTAssertTrue(card.waitForNonExistence(timeout: 5), "answered: the suggestion goes")
+        }
+        // Left as a viewer leaves it: to the Home Screen, then closed.
+        XCUIDevice.shared.press(.home)
+        sleep(2)
+        app.terminate()
+
+        launch(["-uitest-fixture", "-uitest-languages"])
+        XCTAssertTrue(app.tabBars.buttons["Movies"].waitForExistence(timeout: 20))
+        sleep(3)
+        snapshot("languages-relaunched")
+        XCTAssertFalse(card.exists, "the suggestion does not come back")
+        app.tabBars.buttons["Movies"].tap()
+        let filter = app.buttons["categoryFilter"].firstMatch
+        XCTAssertTrue(filter.waitForExistence(timeout: 5))
+        filter.tap()
+        let germanAgain = app.switches.matching(NSPredicate(format: "label BEGINSWITH 'DE'")).firstMatch
+        XCTAssertTrue(germanAgain.waitForExistence(timeout: 5))
+        XCTAssertEqual(germanAgain.value as? String, "0", "German still off after the relaunch")
+        let english = app.switches.matching(NSPredicate(format: "label BEGINSWITH 'EN'")).firstMatch
+        XCTAssertEqual(english.value as? String, "1", "English still on")
+    }
+
+    func testLanguagesChosenFromTheSuggestionStayAfterARelaunch() {
+        chooseALanguageThenRelaunch(closingTheSheet: true)
+    }
+
+    func testLanguagesChosenStayWhenOndoIsLeftWithTheScreenOpen() {
+        chooseALanguageThenRelaunch(closingTheSheet: false)
+    }
 }

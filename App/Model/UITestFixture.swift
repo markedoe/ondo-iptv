@@ -11,6 +11,9 @@ enum UITestFixture {
     static let isShowcase = ProcessInfo.processInfo.arguments.contains("-uitest-showcase")
     /// `-uitest-multiview`: opens the multiview with four channels (iPad / Mac).
     static let opensMultiview = ProcessInfo.processInfo.arguments.contains("-uitest-multiview")
+    /// `-uitest-languages`: a few movie categories tagged by language (|EN|, |FR|, |DE|, |PT|), so Home suggests
+    /// keeping only the viewer's.
+    static let hasLanguages = ProcessInfo.processInfo.arguments.contains("-uitest-languages")
 
     private static let hls = "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8"
     private static let hlsAdvanced = "https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_fmp4/master.m3u8"
@@ -150,6 +153,12 @@ enum UITestFixture {
         for movie in movies {
             lines.append("#EXTINF:\(movie.minutes * 60)\(logo("poster-\(movie.slug).png")) group-title=\"Movies | \(movie.category)\",\(movie.title) (\(movie.year))")
             lines.append(hlsAdvanced)
+        }
+        if hasLanguages {
+            for (index, group) in ["|EN| Movies", "|FR| Films", "|DE| Filme", "|PT| Filmes"].enumerated() {
+                lines.append("#EXTINF:5400 group-title=\"\(group)\",Language Sample \(index + 1) (2020)")
+                lines.append(hlsAdvanced)
+            }
         }
         for show in series {
             for (seasonIndex, season) in show.seasons.enumerated() {
