@@ -374,10 +374,16 @@ private fun NavHostController.openTab(tab: TopLevel) {
     }
 }
 
-/** Search opened anew from a page (its magnifying glass, the TV's drawer): empty, without the last search's filters. */
+/**
+ * Search opened anew from a page (its magnifying glass, the TV's bar): empty, without the last search's filters. It
+ * sits right above Home: Back from it goes to Home, never to a search made before (the tab's pages are kept for later).
+ */
 private fun NavHostController.openSearch(viewModel: OndoViewModel) {
     viewModel.newSearch()
-    navigate(Routes.Search) { launchSingleTop = true }
+    navigate(Routes.Search) {
+        popUpTo(graph.findStartDestination().id) { saveState = true }
+        launchSingleTop = true
+    }
 }
 
 private fun NavHostController.open(item: ShowcaseItem) = when (item) {

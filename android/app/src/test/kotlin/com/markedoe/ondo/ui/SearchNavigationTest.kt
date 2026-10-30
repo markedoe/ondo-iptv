@@ -232,8 +232,8 @@ class SearchNavigationTest {
         // The keyboard closes first, then Search.
         back()
         if (exists("searchField")) back()
-        // Back on the tab the remote last rested on along the bar, with its top bar.
-        waitFor { exists("topBar") && !exists("searchField") }
+        // Back from Search: Home, with its top bar.
+        waitFor { exists("topBar") && exists("home") && !exists("searchField") }
         // Movies again from the drawer: Movies, not Search.
         fromDrawer("tabHome")
         waitFor { exists("home") }
