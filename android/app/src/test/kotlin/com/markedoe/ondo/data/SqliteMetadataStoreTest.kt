@@ -38,11 +38,13 @@ class SqliteMetadataStoreTest {
     @Test
     fun aPersonsWorksAreKept() {
         val works = listOf(RelatedTitle(false, 5, "Quiet Water", 2021), RelatedTitle(true, 7, "Port Watch", null))
+        // Asked now: entries months old leave the file when it opens.
+        val askedAt = System.currentTimeMillis()
         SqliteMetadataStore(context, "works.sqlite").apply {
-            savePersonWorks("ana lima", 42L, works)
+            savePersonWorks("ana lima", askedAt, works)
             close()
         }
-        assertEquals(42L to works, SqliteMetadataStore(context, "works.sqlite").personWorks("ana lima"))
+        assertEquals(askedAt to works, SqliteMetadataStore(context, "works.sqlite").personWorks("ana lima"))
         assertEquals(null, SqliteMetadataStore(context, "works.sqlite").personWorks("nobody"))
     }
 
