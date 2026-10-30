@@ -141,7 +141,7 @@ class UiMappersTest {
         assertFalse(UiMappers.person(state, "Cy Nobody").inMyList)
 
         // Another playlist: the same people.
-        val other = state.copy(activePlaylistId = "another")
+        val other = state.copy(settings = state.settings.copy(activePlaylistId = "another"))
         assertEquals(2, UiMappers.myList(other, Fixtures.NOW).people.size)
     }
 
