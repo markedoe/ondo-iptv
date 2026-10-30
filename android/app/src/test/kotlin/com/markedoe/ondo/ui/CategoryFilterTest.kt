@@ -38,6 +38,29 @@ class CategoryFilterTest {
         assertTrue("m-new" in UiMappers.hiddenCategoryIds(refreshed))
     }
 
+    /** Live TV leaves out the provider's headers listed as channels, and the channels whose own name has a hidden tag. */
+    @Test
+    fun liveTvLeavesOutHeadersAndChannelsOfAHiddenTag() {
+        fun channel(id: String, name: String) =
+            com.markedoe.ondo.core.model.Channel(id = id, name = name, categoryId = Fixtures.news.id, streamUrl = "http://example.com/live/$id.m3u8")
+        val listed = listOf(
+            channel("h1", "-----▼|BR| VOD BRAZIL |BR|▼-----"),
+            channel("h2", "---●★| ZULETZT HINZUGEFÜGT |★●---"),
+            channel("h3", "▼--- |DE| VOD 4K UHD / 3D |DE| ---▼"),
+            channel("de", "|DE| Das Erste HD"),
+            channel("fr", "|FR| France 2 HD"),
+            channel("plain", "News 24 - HD"),
+        )
+        val live = Fixtures.content.copy(channels = listed)
+        val shown = UiMappers.visibleChannels(Fixtures.state(content = live)).map { it.id }
+        assertEquals("headers are no channels", listOf("de", "fr", "plain"), shown)
+        val withoutGerman = Fixtures.state(library = LibraryState().settingTagsHidden(listOf("DE"), hidden = true), content = live)
+        assertEquals("a channel of a hidden tag is left out", listOf("fr", "plain"), UiMappers.visibleChannels(withoutGerman).map { it.id })
+        assertEquals("BR", CategoryFilter.channelTag("-----▼|BR| VOD BRAZIL |BR|▼-----"))
+        assertFalse(CategoryFilter.isHeader("|FR| TF1 HD"))
+        assertFalse(CategoryFilter.isHeader("Canal+ Sport --- 4K"))
+    }
+
     @Test
     fun hidingAStyleOrAWordHidesTheCategoriesNamedAfterIt() {
         val named = listOf("|FR| Manga", "Animes VOSTFR", "Dessins Animés", "Bollywood Hits", "Drama")

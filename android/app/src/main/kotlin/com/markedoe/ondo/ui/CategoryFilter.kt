@@ -72,6 +72,40 @@ object CategoryFilter {
 
     internal fun forget() {
         cached = null
+        hiddenChannels = null
+    }
+
+    /** What providers put around a header's name ("-----▼", "---●★|"). */
+    private const val DECORATION = "-=_~*#•●○◆★☆▼▲►◄▶◀| "
+
+    /**
+     * A provider's header listed among the channels ("-----▼|BR| VOD BRAZIL|BR|▼-----", "---●★| ANDERE |★●---"): its
+     * name starts and ends with decorations. It plays nothing; Live TV leaves it out.
+     */
+    fun isHeader(name: String): Boolean {
+        val trimmed = name.trim()
+        fun decorations(chars: Sequence<Char>) = chars.takeWhile { it in DECORATION }.count { it != ' ' && it != '|' }
+        return decorations(trimmed.asSequence()) >= 3 && decorations(trimmed.reversed().asSequence()) >= 3
+    }
+
+    /** The language or country tag a channel's own name starts with ("|DE| ARD", "▼--- |DE| VOD"), or null. */
+    fun channelTag(name: String): String? = CategoryTags.tagOf(name.trimStart { it != '|' && it in DECORATION })
+
+    @Volatile private var hiddenChannels: Triple<PlaylistContent, Set<String>, Set<String>>? = null
+
+    /**
+     * Channels left out of Live TV whatever their category: the provider's headers, and the channels whose own name
+     * carries a hidden tag (a "|DE|" channel filed under "All"). Built once per catalogue and hidden tags.
+     */
+    fun hiddenChannelIds(state: OndoState): Set<String> {
+        val content = state.content
+        val tags = state.library.hiddenTags
+        hiddenChannels?.let { (known, knownTags, ids) -> if (known === content && knownTags == tags) return ids }
+        val ids = content.channels
+            .filter { isHeader(it.name) || (tags.isNotEmpty() && channelTag(it.name) in tags) }
+            .mapTo(HashSet()) { it.id }
+        hiddenChannels = Triple(content, tags, ids)
+        return ids
     }
 
     /**

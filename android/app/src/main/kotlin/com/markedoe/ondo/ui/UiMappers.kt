@@ -67,6 +67,12 @@ object UiMappers {
             .mapTo(HashSet()) { it.id }
     }
 
+    /** Live TV's channels: hidden categories, the provider's headers and channels of a hidden tag left out. */
+    fun visibleChannels(state: OndoState, hidden: Set<String> = hiddenCategoryIds(state)): List<Channel> {
+        val left = CategoryFilter.hiddenChannelIds(state)
+        return state.content.channels.filter { it.categoryId !in hidden && it.id !in left }
+    }
+
     fun showcase(state: OndoState): Showcase =
         Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending)
 
@@ -204,7 +210,7 @@ object UiMappers {
             }
             HeroPage(item, meta(item, state, labels), isFavorite(state, item), resumable, backdrop(state, item), details?.plot ?: plot)
         }
-        val channelsById = state.content.channels.filter { it.categoryId !in hidden }.associateBy { it.id }
+        val channelsById = visibleChannels(state, hidden).associateBy { it.id }
         val favoriteChannels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }
         val recentChannels = state.library.recentChannels(playlistId).mapNotNull { channelsById[it.itemId] }
         val channels = favoriteChannels.ifEmpty { recentChannels }.ifEmpty { channelsById.values.take(ROW_LENGTH) }
@@ -310,7 +316,7 @@ object UiMappers {
     /** The channels the player's channel keys go through: all of Live TV, hidden categories left out. */
     fun zappingChannels(state: OndoState): List<Channel> {
         val hidden = hiddenCategoryIds(state)
-        return state.content.channels.filter { it.categoryId !in hidden }
+        return visibleChannels(state, hidden)
     }
 
     /**
@@ -323,7 +329,7 @@ object UiMappers {
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val favoriteIds = state.library.favorites(playlistId, ItemKind.CHANNEL).mapTo(HashSet()) { it.itemId }
-        val visible = state.content.channels.filter { it.categoryId !in hidden }
+        val visible = visibleChannels(state, hidden)
         val used = visible.mapTo(HashSet()) { it.categoryId }
         val categories = state.content.liveCategories.filter { it.id in used }.distinctBy { it.id }
         // A category hidden since, or gone with a refresh: all channels again, rather than an empty list with no chip on.
@@ -373,7 +379,7 @@ object UiMappers {
     fun myList(state: OndoState, now: Long): MyListUiState {
         val hidden = hiddenCategoryIds(state)
         val playlistId = state.activePlaylistId.orEmpty()
-        val channelsById = state.content.channels.filter { it.categoryId !in hidden }.associateBy { it.id }
+        val channelsById = visibleChannels(state, hidden).associateBy { it.id }
         return MyListUiState(
             movies = grid(state, series = false, categoryId = null, myList = true, filter = ""),
             series = grid(state, series = true, categoryId = null, myList = true, filter = ""),
@@ -389,7 +395,7 @@ object UiMappers {
             mapOf(
                 ItemKind.MOVIE to state.content.movies.filter { it.categoryId !in hidden }.mapTo(HashSet()) { it.id },
                 ItemKind.SERIES to state.content.series.filter { it.categoryId !in hidden }.mapTo(HashSet()) { it.id },
-                ItemKind.CHANNEL to state.content.channels.filter { it.categoryId !in hidden }.mapTo(HashSet()) { it.id },
+                ItemKind.CHANNEL to visibleChannels(state, hidden).mapTo(HashSet()) { it.id },
             )
         }
         return state.library.collections.map { list ->
@@ -412,7 +418,7 @@ object UiMappers {
             name = list.name,
             movies = state.content.movies.filter { it.id in movies && it.categoryId !in hidden }.sortedBy { movies[it.id] }.map { ShowcaseItem.MovieItem(it) },
             series = state.content.series.filter { it.id in series && it.categoryId !in hidden }.sortedBy { series[it.id] }.map { ShowcaseItem.SeriesItem(it) },
-            channels = state.content.channels.filter { it.id in channels && it.categoryId !in hidden }.sortedBy { channels[it.id] }.map { channelRow(it, state, now) },
+            channels = visibleChannels(state, hidden).filter { it.id in channels }.sortedBy { channels[it.id] }.map { channelRow(it, state, now) },
         )
     }
 
@@ -608,7 +614,7 @@ object UiMappers {
     class SearchIndex(content: PlaylistContent, hidden: Set<String>) {
         val movies = content.movies.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
         val series = content.series.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
-        val channels = content.channels.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
+        val channels = content.channels.filter { it.categoryId !in hidden && !CategoryFilter.isHeader(it.name) }.map { TextNormalizer.normalize(it.name).split(' ') to it }
 
         /** Release years of the movies and series, newest first (the filter's choices). */
         val years: List<Int> = (movies.mapNotNull { it.second.year } + series.mapNotNull { it.second.year }).distinct().sortedDescending()
