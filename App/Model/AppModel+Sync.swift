@@ -22,10 +22,12 @@ struct SyncState: Codable, Equatable {
     /// Deleted records (`playlist:…`, `list:…`, `progress:…`, and those other devices sent) and when, in milliseconds.
     var deleted: [String: Int64] = [:]
     var replaced: [String: String] = [:]
+    /// Milliseconds since 1970: when a snapshot from another device was last applied here (the diagnostic report).
+    var lastSyncedAt: Int64?
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, deleted, replaced }
+    enum CodingKeys: String, CodingKey { case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, deleted, replaced, lastSyncedAt }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -35,6 +37,7 @@ struct SyncState: Codable, Equatable {
         otherKeys = (try? c.decodeIfPresent([SyncKey].self, forKey: .otherKeys)) ?? []
         deleted = (try? c.decodeIfPresent([String: Int64].self, forKey: .deleted)) ?? [:]
         replaced = (try? c.decodeIfPresent([String: String].self, forKey: .replaced)) ?? [:]
+        lastSyncedAt = try? c.decodeIfPresent(Int64.self, forKey: .lastSyncedAt)
     }
 
     /// Without deletions older than the spec keeps them (180 days), nor the replacements they ended.
@@ -485,6 +488,7 @@ extension AppModel {
         applySyncedKeys(latest)
         syncState.deleted = latest.deleted
         syncState.replaced = latest.replaced
+        syncState.lastSyncedAt = now.syncMilliseconds
         saveSyncState()
     }
 

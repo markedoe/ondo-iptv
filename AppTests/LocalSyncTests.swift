@@ -229,6 +229,101 @@ final class LocalSyncTests: XCTestCase {
         second.setSyncOnLocalNetwork(false)
     }
 
+    // MARK: The viewer's choices across sync and a relaunch
+
+    /// A catalogue with language tags: "show only your languages?" is offered for it.
+    private static let taggedCatalogue: String = {
+        let groups = ["|PT| Filmes", "|PT| Ação", "|FR| Films", "|FR| Action", "|EN| Movies", "|EN| Drama", "|DE| Filme", "|DE| Action"]
+        var lines = ["#EXTM3U"]
+        for (index, group) in groups.enumerated() {
+            lines.append(#"#EXTINF:5400 group-title="\#(group)",Title \#(index) (2020)"#)
+            lines.append("http://127.0.0.1:9/movie/\(index).mp4")
+        }
+        return lines.joined(separator: "\n")
+    }()
+
+    /// An iPhone whose viewer answered the suggestion with "Choose…" (one language hidden) and changed a setting.
+    private func iPhoneWithChoices() async throws -> (model: AppModel, playlist: Playlist, address: String) {
+        let catalogue = Self.taggedCatalogue
+        let server = try LocalHTTPServer { request in
+            request.path == "/list.m3u" ? LocalHTTPServer.Response.text(catalogue, type: "audio/x-mpegurl") : LocalHTTPServer.Response.notFound
+        }
+        self.server = server
+        let address = try await server.start().appending(path: "list.m3u")
+        let model = try await device("iphone")
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(address), autoRefreshHours: 0))
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        XCTAssertNotNil(model.tagSuggestion(viewerCodes: ["FR", "EN"]))
+        model.setHidden(true, tag: "DE")
+        model.dismissTagSuggestion()
+        model.updateSettings { $0.hideWatchedMovies = true }
+        model.flush()
+        return (model, playlist, address.absoluteString)
+    }
+
+    private func relaunchedIPhone() async -> AppModel {
+        let model = AppModel(storageRoot: root.appendingPathComponent("iphone", isDirectory: true), secrets: InMemorySecretStore(),
+                             reminderScheduler: InMemoryReminderScheduler())
+        await model.bootstrap()
+        return model
+    }
+
+    private func assertChoicesKept(_ model: AppModel, playlist id: UUID, _ moment: String, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(model.playlists.map(\.id), [id], moment, file: file, line: line)
+        XCTAssertEqual(model.activePlaylist?.id, id, moment, file: file, line: line)
+        XCTAssertTrue(model.isHidden(tag: "DE"), moment, file: file, line: line)
+        XCTAssertFalse(model.isHidden(tag: "FR"), moment, file: file, line: line)
+        XCTAssertTrue(model.settings.hideWatchedMovies, moment, file: file, line: line)
+        XCTAssertTrue(model.settings.dismissedTagSuggestions.contains(id), moment, file: file, line: line)
+        XCTAssertFalse(model.categoryTags.isEmpty, "the catalogue is open (\(moment))", file: file, line: line)
+        XCTAssertNil(model.tagSuggestion(viewerCodes: ["FR", "EN"]), "answered (\(moment))", file: file, line: line)
+    }
+
+    /// The TV had the same account, added earlier under another ID: the iPhone's playlist becomes the TV's, and the
+    /// viewer's choices go with it, through the next sessions and a relaunch.
+    func testChoicesSurviveTheTVsOlderCopyOfThePlaylistAndARelaunch() async throws {
+        let (iphone, playlist, address) = try await iPhoneWithChoices()
+        let tvID = UUID()
+        let older = playlist.createdAt.addingTimeInterval(-86_400).syncMilliseconds
+        let tv = SyncSnapshot(device: "tv", deviceName: "TV", playlists: [
+            SyncPlaylist(id: tvID.uuidString.lowercased(), name: "Living room", kind: SyncPlaylist.m3u, url: address,
+                         addedAt: older, updatedAt: older),
+        ])
+        await iphone.applySync(tv)
+        assertChoicesKept(iphone, playlist: tvID, "after the first session")
+        XCTAssertNotNil(iphone.syncState.lastSyncedAt, "the report can say when sync last ran")
+
+        // The next session: the TV answers with what both now hold.
+        await iphone.applySync(SyncMerge.merge(tv, iphone.syncSnapshot()))
+        assertChoicesKept(iphone, playlist: tvID, "after the next session")
+        let answer = SyncMerge.merge(tv, iphone.syncSnapshot())
+        iphone.flush()
+
+        let relaunched = await relaunchedIPhone()
+        assertChoicesKept(relaunched, playlist: tvID, "after a relaunch")
+        await relaunched.applySync(answer)
+        assertChoicesKept(relaunched, playlist: tvID, "after the session at launch")
+    }
+
+    /// The TV added the same account after the iPhone: the iPhone's playlist stays as it is.
+    func testChoicesSurviveTheTVsNewerCopyOfThePlaylistAndARelaunch() async throws {
+        let (iphone, playlist, address) = try await iPhoneWithChoices()
+        let newer = playlist.createdAt.addingTimeInterval(3_600).syncMilliseconds
+        let tv = SyncSnapshot(device: "tv", deviceName: "TV", playlists: [
+            SyncPlaylist(id: UUID().uuidString.lowercased(), name: "Living room", kind: SyncPlaylist.m3u, url: address,
+                         addedAt: newer, updatedAt: newer),
+        ])
+        await iphone.applySync(tv)
+        assertChoicesKept(iphone, playlist: playlist.id, "after the first session")
+        let answer = SyncMerge.merge(tv, iphone.syncSnapshot())
+        iphone.flush()
+
+        let relaunched = await relaunchedIPhone()
+        assertChoicesKept(relaunched, playlist: playlist.id, "after a relaunch")
+        await relaunched.applySync(answer)
+        assertChoicesKept(relaunched, playlist: playlist.id, "after the session at launch")
+    }
+
     func testSyncIsOffUntilTurnedOn() async throws {
         let model = try await device("first")
         XCTAssertFalse(model.settings.syncOnLocalNetwork)

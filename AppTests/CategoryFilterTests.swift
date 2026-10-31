@@ -122,6 +122,31 @@ final class CategoryFilterTests: XCTestCase {
         XCTAssertNil(relaunched.tagSuggestion(viewerCodes: ["FR", "EN"]), "answered before the relaunch")
     }
 
+    /// The scene can leave `.active` (or start `.inactive`) before the root view's task has run `bootstrap()`: the
+    /// flush that follows must not write the defaults in memory over the settings and library on disk.
+    func testAFlushBeforeTheAppStartedLeavesTheSavedChoicesAlone() async throws {
+        let (model, _, _) = try await model(groups: Self.groups)
+        model.setHidden(true, tag: "DE")
+        model.dismissTagSuggestion()
+        model.updateSettings { $0.hideWatchedMovies = true }
+        model.flush()
+
+        let relaunched = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        relaunched.flush()
+        await relaunched.bootstrap()
+        XCTAssertTrue(relaunched.isHidden(tag: "DE"))
+        XCTAssertTrue(relaunched.settings.hideWatchedMovies)
+        XCTAssertNil(relaunched.tagSuggestion(viewerCodes: ["FR", "EN"]), "answered before the relaunch")
+        XCTAssertEqual(relaunched.loadedAtLaunch, LaunchCounts(hiddenCategoryTags: 1, dismissedTagSuggestions: 1, playlists: 1))
+
+        // And the report says what was read, by file name only.
+        let report = relaunched.dataReport()
+        XCTAssertTrue(report.contains("Read at launch: 1 playlists, 1 hidden tags, 1 answered tag suggestions"), report)
+        XCTAssertTrue(report.contains("  settings.json  "), report)
+        XCTAssertTrue(report.contains("0 set aside as unreadable"), report)
+        XCTAssertFalse(report.contains(root.path), "no path")
+    }
+
     func testTheAnswerFollowsAPlaylistThatSyncReplaced() async throws {
         let (model, playlist, _) = try await model(groups: Self.groups)
         model.dismissTagSuggestion()

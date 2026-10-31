@@ -140,6 +140,8 @@ final class AppModel {
     @ObservationIgnored var sessions: [UUID: PlaybackSession] = [:]
 
     @ObservationIgnored private let libraryWriter: LibraryWriter
+    /// What `bootstrap()` read from disk, before sync or the viewer changed anything (the diagnostic report).
+    @ObservationIgnored private(set) var loadedAtLaunch: LaunchCounts?
     @ObservationIgnored private var epgTask: Task<Void, Never>?
     @ObservationIgnored var movieDetailsCache: [String: MediaDetails] = [:]
     @ObservationIgnored var movieDetailsInFlight: [String: Task<MediaDetails?, Never>] = [:]
@@ -231,6 +233,8 @@ final class AppModel {
         }
         needsProfileSelection = profiles.count > 1
         playlists = (userStore.load([Playlist].self, name: "playlists") ?? []).map(withStoredPassword)
+        loadedAtLaunch = LaunchCounts(hiddenCategoryTags: library.hiddenCategoryTags.count,
+                                      dismissedTagSuggestions: settings.dismissedTagSuggestions.count, playlists: playlists.count)
         hasParentalPIN = secrets.get(Keychain.parentalPINKey) != nil
         hasTMDbKey = secrets.get(Keychain.tmdbKey) != nil
         await loadDeadImages()
@@ -300,8 +304,11 @@ final class AppModel {
         libraryWriter.schedule(library, name: activeProfile.libraryDocumentName)
     }
 
-    /// Flushes pending writes (app going to background, profile switch).
+    /// Flushes pending writes (app going to background, profile switch). Nothing before `bootstrap()` has read the
+    /// documents: the scene can leave `.active` (or start `.inactive`) before the root view's task runs, and the
+    /// settings and library in memory are then the defaults, which would be written over the user's.
     func flush() {
+        guard isReady else { return }
         saveStoredDetailsNow()
         libraryWriter.schedule(library, name: activeProfile.libraryDocumentName)
         libraryWriter.flush()

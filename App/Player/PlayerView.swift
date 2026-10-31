@@ -347,7 +347,7 @@ struct PlayerView: View {
             .accessibilityIdentifier("playerFullScreen")
             #endif
             PlayerMoreMenu(controller: controller, item: session.playingItem) {
-                problemReport = controller.problemReport().text
+                problemReport = controller.problemReport().text + "\n\n" + model.dataReport()
             }
         }
         .font(.title3)
