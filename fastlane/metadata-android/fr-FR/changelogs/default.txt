@@ -1,7 +1,6 @@
-• Laisser un pourboire (Réglages) : facultatif, via Google Play ; il ne débloque rien
-• Nouveau look noir et gris ; sur TV, les onglets en barre du haut
-• Jeton TMDb : tendances, photos du casting, bandes-annonces, genres, titres proches
-• Acteurs et réalisateurs dans Ma liste et les collections
-• Lecteur : replay, liste des chaînes, taille des sous-titres, À suivre, fréquence d’image du film sur TV
-• Le guide TV est gardé 6 heures ; la Recherche a sa propre page
+• La recherche trouve un mot n'importe où dans un titre ; titres exacts d'abord
+• Actualisation automatique de la playlist (Réglages → Playlists), chaque jour par défaut
+• TV : les affiches montrent la note et les genres ; maintenez OK sur une affiche pour l'ajouter à Ma liste ou l'en retirer
+• TV : la barre du haut reste sur les titres d'une catégorie ; Retour revient d'une page
+• Ma liste : les personnes gardées ont leur photo
 • Nombreuses corrections

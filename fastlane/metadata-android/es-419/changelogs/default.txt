@@ -1,7 +1,6 @@
-• Dejar una propina (Ajustes): opcional, vía Google Play; no desbloquea nada
-• Nuevo aspecto negro y gris; en TV, pestañas en la barra superior
-• Token de TMDb: tendencias, reparto con fotos, tráilers, géneros, títulos similares
-• Actores y directores en Mi lista y colecciones
-• Reproductor: diferido, lista de Canales, tamaño de los subtítulos, A continuación, frecuencia de imagen de la película en TV
-• La Guía de TV se conserva 6 horas; Buscar tiene su propia página
-• Numerosas correcciones
+• La búsqueda encuentra una palabra en cualquier parte de un título; primero los títulos exactos
+• Actualización automática de la playlist (Ajustes → Playlists), cada día por defecto
+• TV: los pósteres muestran la puntuación y los géneros; mantén pulsado OK sobre un póster para añadirlo a Mi lista o quitarlo
+• TV: la barra superior se queda sobre los títulos de una categoría; Atrás vuelve una página
+• Mi lista: las personas guardadas muestran su foto
+• Muchas correcciones

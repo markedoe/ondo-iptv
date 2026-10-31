@@ -21,6 +21,19 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   à une, aide, réglages (playlists, catégories adultes masquées par défaut, Mettre à jour les prix
   automatiquement, Langues et catégories, Langue de l'app, mémoires tampons du lecteur, jeton TMDb), accueil avec
   démonstration et avertissement « lecteur sans contenu ».
+- **Recherche** : un mot est trouvé n'importe où dans un titre (« dust » trouve « Stardust ») : le titre exact
+  d'abord, puis les titres qui commencent par le mot, puis ceux dont un mot commence par lui, puis les autres. Les
+  titres et chaînes dont le nom porte lui-même une étiquette de langue masquée (comme « |DE| … ») sont écartés
+  comme les catégories masquées. Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
+- **Actualisation automatique** (Réglages → Playlists → Actualisation automatique : Seulement sur demande, Toutes
+  les 6 heures, Toutes les 12 heures, Chaque jour (par défaut), Chaque semaine), vérifiée à l'ouverture d'Ondo et
+  quand il revient au premier plan (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). Un seul réglage pour
+  toutes les playlists sur Android (Apple en a un par playlist). Actualiser dans les Réglages affiche un indicateur
+  et « Mise à jour de la playlist… ».
+- **Affiches sur TV** : dans une catégorie, une affiche montre la note de TMDb avec des étoiles (sinon celle du
+  fournisseur) et jusqu'à deux genres ; maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
+  court message dit lequel), et une coche marque les titres de Ma liste. Dans Ma liste, les personnes gardées ont
+  leur photo (complétée depuis leur page ou les titres gardés sur l'appareil).
 - **TMDb** avec le jeton de l'utilisateur (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`) :
   vérifié par `/authentication` de TMDb avant d'être enregistré (accepté, refusé, injoignable), gardé dans le
   stockage privé de l'app et transmis par la synchronisation (`key:tmdb`, docs/SYNC.fr.md) ; une rangée Tendances et
@@ -87,7 +100,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Android TV / Google TV** (`ui/tv/`) : une entrée et une bannière dans le lanceur Leanback
   (320 × 180 en xhdpi, dessinée par `fastlane/creative/render.mjs --tv`), écran tactile non requis. Compose for TV
   (`androidx.tv:tv-material`) en noir et blanc avec la police Inter (`TvDesign.kt`, `ui/theme/Theme.kt`) : une barre en haut avec les onglets, Recherche et
-  Réglages, qui reste à l'écran quand la page défile dessous (`TvShell.kt` ; Retour mène en haut de la page et à la barre, puis à l'Accueil, puis hors de l'app), un Accueil ouvert
+  Réglages, qui reste à l'écran quand la page défile dessous (`TvShell.kt` ; elle reste sur les titres d'une catégorie et sur les pages de genre, d'année et de prix ; Retour mène en haut de la page et à la barre, revient d'une page sur ces pages, puis mène à l'Accueil ; sur l'Accueil il ne fait rien, c'est le bouton Accueil de la télécommande qui quitte Ondo), un Accueil ouvert
   par une image encadrée (`TvHomeScreen.kt`) et des fiches film et série (`TvDetailScreens.kt`) avec l'image de fond derrière le
   texte et des boutons ronds à côté de Lecture, des Réglages en deux volets où chaque playlist a ses boutons à portée de télécommande (`TvSettingsScreen.kt` ;
   Supprimer demande d'abord, en commençant sur Annuler), des cartes qui se soulèvent avec une ombre douce et un reflet à la sélection et des rangées qui dépassent du bord droit ;

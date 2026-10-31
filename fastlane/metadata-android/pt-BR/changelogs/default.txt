@@ -1,7 +1,6 @@
-• Deixar uma gorjeta (Configurações): opcional, pelo Google Play; não libera nada
-• Novo visual preto e cinza; na TV, abas na barra superior
-• Token do TMDb: em alta, fotos do elenco, trailers, gêneros, títulos parecidos
-• Minha lista e as coleções guardam atores e diretores
-• Player: replay, lista de Canais, tamanho das legendas, A seguir, a taxa de quadros própria do filme na TV
-• O Guia de TV é mantido por 6 horas; Pesquisar tem uma página própria
-• Muitas correções
+• A busca encontra uma palavra em qualquer parte de um título; títulos exatos primeiro
+• Atualização automática da playlist (Configurações → Playlists), todo dia por padrão
+• TV: os pôsteres mostram a nota e os gêneros; mantenha OK pressionado em um pôster para adicioná-lo à Minha lista ou tirá-lo
+• TV: a barra superior fica sobre os títulos de uma categoria; Voltar volta uma página
+• Minha lista: as pessoas guardadas mostram a foto
+• Várias correções

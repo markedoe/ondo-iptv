@@ -19,6 +19,18 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   country code, by style or word, or one by one, help, settings (playlists, adult categories hidden
   by default, Update awards automatically, Languages and categories, App language, player buffers, TMDb token),
   welcome screen with a demo and a "player without content" disclaimer.
+- **Search** finds a word anywhere in a title ("dust" finds "Stardust"): the exact title first, then titles starting
+  with it, then a word starting with it, then the others. Titles and channels whose own name carries a hidden
+  language tag (such as "|DE| …") are left out like hidden categories. On a TV, Search opens on its field with the
+  keyboard up.
+- **Automatic refresh** (Settings → Playlists → Automatic refresh: Only when I ask, Every 6 hours, Every 12 hours,
+  Every day (default), Every week), checked when Ondo opens and when it comes back to the front
+  (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). One setting for all the playlists on Android (Apple has
+  one per playlist). Refresh in Settings shows a spinner and "Updating the playlist…".
+- **TV posters**: in a category, a poster shows TMDb's rating with stars (else the provider's) and up to two genres;
+  holding OK on a poster adds the title to My List or takes it out (a short message says which), and a check mark
+  marks the titles in My List. In My List, the people kept get their photo (filled from their page or from the titles
+  kept on the device).
 - **TMDb** with the viewer's own token (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`): checked
   with TMDb's `/authentication` before it is saved (accepted, refused, unreachable), kept in the app's private
   storage and carried by sync (`key:tmdb`, docs/SYNC.md); a Trending row and carousel titles, TMDb's backdrop when
@@ -75,7 +87,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **Android TV / Google TV** (`ui/tv/`): a Leanback launcher entry and banner (320 × 180 at xhdpi,
   drawn by `fastlane/creative/render.mjs --tv`), touch screen not required. Compose for TV (`androidx.tv:tv-material`)
   in black and white with the Inter typeface (`TvDesign.kt`, `ui/theme/Theme.kt`): a top bar with the tabs, Search and Settings, which stays on screen as the page
-  scrolls under it (`TvShell.kt`; Back goes to the page's top and the bar, then to Home, then out), a Home led by a framed picture (`TvHomeScreen.kt`) and movie and series
+  scrolls under it (`TvShell.kt`; it stays over a category's titles and the genre, year and award pages; Back goes to the page's top and the bar, back one page on those pages, then to Home; on Home it does nothing, the remote's Home button leaves Ondo), a Home led by a framed picture (`TvHomeScreen.kt`) and movie and series
   pages (`TvDetailScreens.kt`) with backdrops behind the text and round buttons beside Play, Settings in two panes with each playlist's buttons in
   reach of the remote (`TvSettingsScreen.kt`; Delete asks first, starting on Cancel), cards that rise with a soft shadow and a sheen on focus and
   rows peeking past the right edge; the other pages are the Compose screens within the TV's safe area
