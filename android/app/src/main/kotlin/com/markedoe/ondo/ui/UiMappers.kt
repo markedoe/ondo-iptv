@@ -646,9 +646,9 @@ object UiMappers {
         private fun shown(categoryId: String, name: String) =
             categoryId !in hidden && (hiddenTags.isEmpty() || CategoryFilter.channelTag(name) !in hiddenTags)
 
-        val movies = content.movies.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name).split(' ') to it }
-        val series = content.series.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name).split(' ') to it }
-        val channels = content.channels.filter { shown(it.categoryId, it.name) && !CategoryFilter.isHeader(it.name) }.map { TextNormalizer.normalize(it.name).split(' ') to it }
+        val movies = content.movies.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }
+        val series = content.series.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }
+        val channels = content.channels.filter { shown(it.categoryId, it.name) && !CategoryFilter.isHeader(it.name) }.map { TextNormalizer.normalize(it.name) to it }
 
         /** Release years of the movies and series, newest first (the filter's choices). */
         val years: List<Int> = (movies.mapNotNull { it.second.year } + series.mapNotNull { it.second.year }).distinct().sortedDescending()
@@ -709,11 +709,22 @@ object UiMappers {
         val words = TextNormalizer.normalize(query).split(' ').filter { it.isNotEmpty() }
         val empty = SearchUiState(query = query, filters = filters, years = index.years, awardGroups = awardGroups(index, state))
         if (words.isEmpty() && !filters.isActive) return empty
-        fun <T> List<Pair<List<String>, T>>.find(): Sequence<T> = asSequence()
-            .filter { (titleWords, _) ->
+        val phrase = words.joinToString(" ")
+        // Every word found anywhere in the title ("dust" finds "Stardust"); the title itself first, then the titles that
+        // start with the words typed, then those with a word that does, then the others: catalogue order within each.
+        fun rank(title: String): Int = when {
+            title == phrase -> 0
+            title.startsWith(phrase) -> 1
+            words.all { word -> title.startsWith(word) || title.contains(" $word") } -> 2
+            else -> 3
+        }
+        fun <T> List<Pair<String, T>>.find(): Sequence<T> = asSequence()
+            .filter { (title, _) ->
                 checkCancelled()
-                words.all { word -> titleWords.any { it.startsWith(word) } }
+                words.all { title.contains(it) }
             }
+            .map { (title, item) -> rank(title) to item }
+            .sortedBy { it.first }
             .map { it.second }
         if (!filters.isActive) {
             return empty.copy(

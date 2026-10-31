@@ -568,6 +568,17 @@ class UiMappersTest {
         assertNotSame("a new catalogue", index, UiMappers.SearchIndex.of(state.content.copy(fetchedAt = 1), hidden))
     }
 
+    /** A word is found inside the titles too ("dust" finds "Stardust"); those that start with it come first. */
+    @Test
+    fun searchFindsAWordInsideTitlesAndPutsThoseStartingWithItFirst() {
+        val state = Fixtures.state()
+        val titles = listOf("Stardust", "Into the Dust", "Dust Devil", "Dust")
+        val dusty = titles.mapIndexed { index, title -> Fixtures.glassCity.copy(id = "dust-$index", name = title) }
+        val content = state.content.copy(movies = state.content.movies + dusty)
+        val found = UiMappers.search(UiMappers.SearchIndex(content, UiMappers.hiddenCategoryIds(state)), "dust", state.copy(content = content), Fixtures.NOW)
+        assertEquals(listOf("Dust", "Dust Devil", "Into the Dust", "Stardust"), found.movies.map { it.title })
+    }
+
     /** A title or a channel named after a hidden language is not found, even in a category of no language. */
     @Test
     fun searchLeavesOutTheTitlesAndChannelsOfAHiddenLanguage() {
