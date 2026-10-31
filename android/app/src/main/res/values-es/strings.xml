@@ -53,6 +53,11 @@
     <string name="add">Añadir</string>
     <string name="refresh">Actualizar</string>
     <string name="refreshing_playlist">Actualizando la playlist…</string>
+    <string name="auto_refresh">Actualización automática</string>
+    <string name="auto_refresh_manual">Solo cuando lo pida</string>
+    <string name="auto_refresh_hours">Cada %d horas</string>
+    <string name="auto_refresh_daily">Cada día</string>
+    <string name="auto_refresh_weekly">Cada semana</string>
     <string name="use_playlist">Usar</string>
     <string name="settings_catalogue">Catálogo</string>
     <string name="active">Activa</string>

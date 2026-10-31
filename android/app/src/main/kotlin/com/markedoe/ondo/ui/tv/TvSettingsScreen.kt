@@ -92,6 +92,8 @@ import androidx.tv.material3.SwitchColors
 import androidx.tv.material3.SwitchDefaults
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.screens.autoRefreshLabel
+import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.data.LastCrash
 import com.markedoe.ondo.data.TmdbCheck
@@ -130,6 +132,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
     var section by rememberSaveable { mutableStateOf(TvSettingsSection.PLAYLISTS) }
     var deleting by remember { mutableStateOf<PlaylistSummary?>(null) }
     var choosingBuffer by remember { mutableStateOf<BufferChoice?>(null) }
+    var choosingRefresh by remember { mutableStateOf(false) }
     val requesters = remember { TvSettingsSection.entries.associateWith { FocusRequester() } }
     // Where the focus goes back once a dialog closes: the button that opened it, or Add a Playlist after a deletion.
     val returns = remember { HashMap<String, FocusRequester>() }
@@ -139,7 +142,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
     // gives the focus back to the row that opened another page ([FocusMemory.restore]): that row takes it.
     val paneFirst = remember(section) { FocusRequester() }
     val restoring = LocalFocusMemory.current?.restore != null
-    FocusBackAfter(open = deleting != null || choosingBuffer != null, requester = returnTo(focusBack))
+    FocusBackAfter(open = deleting != null || choosingBuffer != null || choosingRefresh, requester = returnTo(focusBack))
     Row(
         Modifier
             .fillMaxSize()
@@ -182,7 +185,7 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             when (section) {
-                TvSettingsSection.PLAYLISTS -> playlists(state, actions, paneFirst, ::returnTo, onDelete = { deleting = it; focusBack = "delete:${it.id}" })
+                TvSettingsSection.PLAYLISTS -> playlists(state, actions, paneFirst, ::returnTo, onDelete = { deleting = it; focusBack = "delete:${it.id}" }, onAutoRefresh = { choosingRefresh = true; focusBack = "autoRefresh" })
                 TvSettingsSection.SYNC -> sync(state, actions, paneFirst)
                 TvSettingsSection.PLAYER -> player(state, actions, paneFirst, ::returnTo, onChoose = { choosingBuffer = it; focusBack = it.key })
                 TvSettingsSection.CATALOGUE -> catalogue(state, actions, paneFirst, canChooseAppLanguage)
@@ -202,6 +205,19 @@ fun TvSettingsScreen(state: SettingsUiState, actions: SettingsActions, canChoose
                 deleting = null
             },
             onDismiss = { deleting = null },
+        )
+    }
+    if (choosingRefresh) {
+        TvChoiceDialog(
+            title = stringResource(R.string.auto_refresh),
+            options = OndoRepository.AUTO_REFRESH_CHOICES,
+            selected = state.autoRefreshHours,
+            label = { autoRefreshLabel(it) },
+            onPick = {
+                actions.onAutoRefresh(it)
+                choosingRefresh = false
+            },
+            onDismiss = { choosingRefresh = false },
         )
     }
     choosingBuffer?.let { choice ->
@@ -318,7 +334,7 @@ private fun LazyListScope.title(text: Int, hint: Int? = null) {
     }
 }
 
-private fun LazyListScope.playlists(state: SettingsUiState, actions: SettingsActions, first: FocusRequester, returnTo: (String) -> FocusRequester, onDelete: (PlaylistSummary) -> Unit) {
+private fun LazyListScope.playlists(state: SettingsUiState, actions: SettingsActions, first: FocusRequester, returnTo: (String) -> FocusRequester, onDelete: (PlaylistSummary) -> Unit, onAutoRefresh: () -> Unit) {
     title(R.string.playlists)
     items(state.playlists, key = { "playlist:${it.id}" }) { playlist ->
         val firstButton = if (playlist == state.playlists.first()) first else null
@@ -335,6 +351,17 @@ private fun LazyListScope.playlists(state: SettingsUiState, actions: SettingsAct
                 .focusMemory("settings-add")
                 .testTag("addPlaylistRow"),
         )
+    }
+    if (state.playlists.isNotEmpty()) {
+        item(key = "autoRefresh") {
+            SettingRow(
+                title = stringResource(R.string.auto_refresh),
+                icon = Icons.Rounded.Refresh,
+                subtitle = autoRefreshLabel(state.autoRefreshHours),
+                onClick = onAutoRefresh,
+                modifier = Modifier.focusRequester(returnTo("autoRefresh")).focusMemory("settings-autoRefresh").testTag("autoRefreshRow"),
+            )
+        }
     }
 }
 

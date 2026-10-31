@@ -464,6 +464,26 @@ class OndoRepository(
 
     fun setVodBuffer(seconds: Int) = updateSettings { it.copy(vodBuffer = seconds) }
 
+    fun setAutoRefreshHours(hours: Int) = updateSettings { it.copy(autoRefreshHours = hours) }
+
+    /** Older than the viewer's choice of automatic refresh (never, with "only when asked"). */
+    private fun isStale(fetchedAt: Long): Boolean {
+        val hours = _state.value.settings.autoRefreshHours
+        return hours > 0 && now() - fetchedAt > hours * HOUR_MS
+    }
+
+    /**
+     * Ondo is back in front (a TV keeps it open for days): the playlist in use is downloaded again once it is older
+     * than the viewer's choice. Nothing while it is being read or downloaded.
+     */
+    fun refreshIfStale() {
+        val state = _state.value
+        val playlist = state.activePlaylist ?: return
+        if (state.isLoading || state.isRestoring || openJob?.isActive == true || refreshJob?.isActive == true) return
+        if (state.content.isEmpty || !isStale(state.content.fetchedAt)) return
+        load(playlist)
+    }
+
     /** The languages the viewer chose in the player, for the next streams. Nothing written when nothing changed. */
     fun setTrackLanguages(audio: String?, subtitles: String?, subtitlesOn: Boolean) {
         val settings = _state.value.settings
@@ -535,7 +555,7 @@ class OndoRepository(
                 loadGuide(playlist, cached)
                 loadTrending()
             }
-            if (cached == null || now() - cached.fetchedAt > REFRESH_AFTER_MS) load(playlist)
+            if (cached == null || isStale(cached.fetchedAt)) load(playlist)
         }
     }
 
@@ -1319,6 +1339,10 @@ class OndoRepository(
 
     companion object {
         const val REFRESH_AFTER_MS = 24 * 60 * 60 * 1000L
+        const val HOUR_MS = 60 * 60 * 1000L
+
+        /** The choices of automatic refresh, in hours (0: only when asked), as on Apple devices. */
+        val AUTO_REFRESH_CHOICES = listOf(0, 6, 12, 24, 168)
 
         /** A guide kept on the device is used for this long before it is downloaded again (as on Apple devices). */
         const val GUIDE_FRESH_MS = 6 * 60 * 60 * 1000L

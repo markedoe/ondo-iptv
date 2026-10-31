@@ -531,6 +531,7 @@ object UiMappers {
         prepareAhead = state.settings.prepareAhead,
         liveBuffer = state.settings.liveBuffer,
         vodBuffer = state.settings.vodBuffer,
+        autoRefreshHours = state.settings.autoRefreshHours,
         version = version,
         isRefreshing = state.isLoading,
         hideWatchedMovies = state.settings.hideWatchedMovies,

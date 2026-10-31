@@ -53,6 +53,11 @@
     <string name="add">إضافة</string>
     <string name="refresh">تحديث</string>
     <string name="refreshing_playlist">جارٍ تحديث قائمة التشغيل…</string>
+    <string name="auto_refresh">التحديث التلقائي</string>
+    <string name="auto_refresh_manual">عند الطلب فقط</string>
+    <string name="auto_refresh_hours">كل %d ساعة</string>
+    <string name="auto_refresh_daily">كل يوم</string>
+    <string name="auto_refresh_weekly">كل أسبوع</string>
     <string name="use_playlist">استخدام</string>
     <string name="settings_catalogue">الكتالوج</string>
     <string name="active">نشطة</string>

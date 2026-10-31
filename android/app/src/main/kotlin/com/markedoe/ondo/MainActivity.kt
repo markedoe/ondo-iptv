@@ -27,6 +27,12 @@ import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
 
 class MainActivity : ComponentActivity() {
+    override fun onStart() {
+        super.onStart()
+        // Back in front: a playlist older than the viewer's choice is downloaded again.
+        (application as OndoApplication).repository.refreshIfStale()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)

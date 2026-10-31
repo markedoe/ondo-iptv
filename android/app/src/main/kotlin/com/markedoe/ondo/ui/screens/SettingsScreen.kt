@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.contentDescription
 import com.markedoe.ondo.R
+import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.updatedAgoText
 import androidx.compose.runtime.produceState
 import com.markedoe.ondo.core.playback.PlaybackBuffer
@@ -92,6 +93,8 @@ data class SettingsUiState(
     /** Buffer settings in seconds, 0 for automatic. */
     val liveBuffer: Int = 0,
     val vodBuffer: Int = 0,
+    /** Hours after which the playlist in use is downloaded again; 0: only when asked. */
+    val autoRefreshHours: Int = 24,
     val version: String = "",
     val isRefreshing: Boolean = false,
     val hideWatchedMovies: Boolean = false,
@@ -120,6 +123,7 @@ class SettingsActions(
     val onUpdateAwards: (Boolean) -> Unit = {},
     val onPrepareAhead: (Boolean) -> Unit = {},
     val onLiveBuffer: (Int) -> Unit = {},
+    val onAutoRefresh: (Int) -> Unit = {},
     val onVodBuffer: (Int) -> Unit = {},
     val onCategories: () -> Unit = {},
     val onAppLanguage: () -> Unit = {},
@@ -165,6 +169,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onAddPlaylist),
                 )
             }
+            item { AutoRefreshRow(state.autoRefreshHours, actions.onAutoRefresh, Modifier.testTag("autoRefreshRow")) }
             item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.sync_title)) },
@@ -371,6 +376,41 @@ private fun BufferRow(label: String, seconds: Int, onChange: (Int) -> Unit, modi
             }
         }
     }
+}
+
+/** How often the playlist in use is downloaded again on its own. */
+@Composable
+private fun AutoRefreshRow(hours: Int, onChange: (Int) -> Unit, modifier: Modifier = Modifier) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        ListItem(
+            headlineContent = { Text(stringResource(R.string.auto_refresh)) },
+            supportingContent = { Text(autoRefreshLabel(hours)) },
+            leadingContent = { Icon(Icons.Rounded.Refresh, contentDescription = null) },
+            modifier = modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { open = true },
+        )
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }, offset = DpOffset(16.dp, 0.dp)) {
+            OndoRepository.AUTO_REFRESH_CHOICES.forEach { choice ->
+                DropdownMenuItem(
+                    text = { Text(autoRefreshLabel(choice)) },
+                    onClick = {
+                        open = false
+                        onChange(choice)
+                    },
+                    trailingIcon = { if (choice == hours) Icon(Icons.Rounded.Check, contentDescription = null) },
+                    modifier = Modifier.semantics { selected = choice == hours }.testTag("autoRefreshChoice-$choice"),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+internal fun autoRefreshLabel(hours: Int): String = when (hours) {
+    0 -> stringResource(R.string.auto_refresh_manual)
+    24 -> stringResource(R.string.auto_refresh_daily)
+    168 -> stringResource(R.string.auto_refresh_weekly)
+    else -> stringResource(R.string.auto_refresh_hours, hours)
 }
 
 @Composable

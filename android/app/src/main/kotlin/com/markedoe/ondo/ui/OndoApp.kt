@@ -755,6 +755,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onUpdateAwards = viewModel::setUpdateAwards,
             onPrepareAhead = viewModel::setPrepareAhead,
             onLiveBuffer = viewModel::setLiveBuffer,
+            onAutoRefresh = viewModel::setAutoRefreshHours,
             onVodBuffer = viewModel::setVodBuffer,
             onCategories = { navController.navigate(Routes.Categories()) },
             onAppLanguage = { context.openAppLanguageSettings() },

@@ -48,6 +48,8 @@ data class AppSettings(
     /** Seconds the player gathers before it shows a live channel, and a movie or an episode; 0 is automatic (see `PlaybackBuffer`). */
     val liveBuffer: Int = 0,
     val vodBuffer: Int = 0,
+    /** Hours after which the playlist in use is downloaded again when Ondo opens or comes back; 0: only when asked. */
+    val autoRefreshHours: Int = 24,
     /** Movies finished (see [WatchEntry.isFinished]) left out where the viewer browses movies; search and My List keep them. */
     val hideWatchedMovies: Boolean = false,
     /** Sync with Ondo on other devices of the local network (docs/SYNC.md); off until the viewer turns it on. */
