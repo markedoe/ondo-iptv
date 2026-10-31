@@ -33,7 +33,8 @@ import org.junit.rules.TemporaryFolder
 
 /** Serves fixed answers by URL; anything else is a 404. */
 class FakeHttp(private val answers: Map<String, String>) : HttpClient {
-    val requests = mutableListOf<Pair<String, Map<String, String>>>()
+    /** Guides are asked for on threads of their own: the list is read from the test's. */
+    val requests: MutableList<Pair<String, Map<String, String>>> = java.util.Collections.synchronizedList(mutableListOf())
 
     override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
         requests += url to headers
@@ -725,6 +726,35 @@ class OndoRepositoryTest {
         listOf(UiMappers::class.java, UiMappers.SearchIndex::class.java, CategoryFilter::class.java, MovieAwards::class.java).forEach { type ->
             assertNull("the deleted playlist's catalogue is still held by ${type.simpleName}", pathFromStatics(deleted, type))
         }
+    }
+
+    /**
+     * What was found in a catalogue (a genre's titles, its posters' facts, its titles' index) goes with it: a TV kept
+     * open for days, refreshed every few hours, must not hold each catalogue it replaced.
+     */
+    @Test
+    fun whatWasFoundInACatalogueDoesNotKeepItOnceReplaced() = runTest {
+        var time = clock
+        val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue)), backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
+        repository.bootstrap()
+        repository.awaitState { it.isReady }
+        assertTrue(repository.addPlaylist("Home", list).isSuccess)
+        val refreshed = repository.state.value.content
+        repository.genreTitles("Drama")
+        repository.keptPosterFacts()
+
+        time += 60_000
+        repository.refresh()
+        repository.awaitState { it.content.fetchedAt == time && !it.isLoading }
+        assertNull("the catalogue before the refresh is still held", pathTo(refreshed, from = repository))
+        assertNull("its titles are still held", pathTo(refreshed.movies, from = repository))
+
+        val deleted = repository.state.value.content
+        repository.genreTitles("Drama")
+        repository.keptPosterFacts()
+        repository.delete(repository.state.value.activePlaylistId!!)
+        testScheduler.advanceUntilIdle()
+        assertNull("the deleted playlist's catalogue is still held", pathTo(deleted, from = repository))
     }
 
     /** As [pathTo], from the static fields of [type] (an object's properties). */

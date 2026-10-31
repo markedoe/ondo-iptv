@@ -195,6 +195,7 @@ class OndoRepository(
         val shown = withContext(parsing) { names.rename(content) }
         loadedContent = content
         shownContent = shown
+        forgetCatalogueFindings()
         return shown
     }
 
@@ -202,7 +203,19 @@ class OndoRepository(
     private fun forgetContent() {
         loadedContent = PlaylistContent.EMPTY
         shownContent = PlaylistContent.EMPTY
+        forgetCatalogueFindings()
         UiMappers.forgetCatalogue()
+    }
+
+    /**
+     * What was found in a catalogue and kept for it (its titles' index, a genre's or a person's titles, its posters'
+     * facts) goes with it: kept, each catalogue replaced (a refresh, another playlist) stayed in memory. Main thread.
+     */
+    private fun forgetCatalogueFindings() {
+        metadataTitles = null
+        posterFacts = null
+        genreMatches.clear()
+        personMatches.clear()
     }
 
     /**
@@ -214,6 +227,7 @@ class OndoRepository(
         val before = shownContent
         val renamed = names.rename(loadedContent)
         shownContent = renamed
+        forgetCatalogueFindings()
         // The episodes of a playlist's own series came with its catalogue, in the former words: they are made again.
         val provided = seriesFetchedAt.keys.toSet()
         _state.update { state ->
@@ -669,7 +683,8 @@ class OndoRepository(
         val local = withContext(Dispatchers.Default) { titles.match(kept.map { it.key }) }
         val online = tmdbGenreItems(wanted, kept)
         val found = if (online.isEmpty()) emptyList() else withContext(Dispatchers.Default) { online.flatMap { titles.match(it.keys) } }
-        return (local + found).distinctBy { it.id }.also { genreMatches[wanted] = content to it }
+        // Kept only for the catalogue still shown: one replaced meanwhile is not held in memory.
+        return (local + found).distinctBy { it.id }.also { if (_state.value.content === content) genreMatches[wanted] = content to it }
     }
 
     /** The catalogue's titles of each genre opened, for the catalogue they were found in. */
@@ -693,7 +708,7 @@ class OndoRepository(
             }
             result
         }
-        posterFacts = Triple(content, saved, facts)
+        if (_state.value.content === content) posterFacts = Triple(content, saved, facts)
         return facts
     }
 
@@ -1340,7 +1355,8 @@ class OndoRepository(
         val content = _state.value.content
         if (content.movies.isEmpty() && content.series.isEmpty()) return null
         metadataTitles?.let { (known, titles) -> if (known === content) return titles }
-        return withContext(Dispatchers.Default) { MetadataTitles(content.movies, content.series) }.also { metadataTitles = content to it }
+        return withContext(Dispatchers.Default) { MetadataTitles(content.movies, content.series) }
+            .also { if (_state.value.content === content) metadataTitles = content to it }
     }
 
     /** With the viewer's token, the person's movies and series on TMDb that the playlist has; null without a token. */
@@ -1368,8 +1384,10 @@ class OndoRepository(
             ?: return null
         // Through the catalogue's index (built once): not the whole catalogue walked for each person.
         val matches = withContext(Dispatchers.Default) { works.flatMap { titles.match(it.keys) }.distinctBy { it.id } }
-        if (personMatches.size >= PERSON_CREDITS_KEPT) personMatches.keys.firstOrNull()?.let(personMatches::remove)
-        personMatches[personKey] = Triple(content, fetchedAt, matches)
+        if (_state.value.content === content) {
+            if (personMatches.size >= PERSON_CREDITS_KEPT) personMatches.keys.firstOrNull()?.let(personMatches::remove)
+            personMatches[personKey] = Triple(content, fetchedAt, matches)
+        }
         return matches
     }
 
