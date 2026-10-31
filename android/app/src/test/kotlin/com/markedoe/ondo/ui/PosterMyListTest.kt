@@ -4,6 +4,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.KeyEvent as AndroidKeyEvent
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
@@ -14,6 +15,7 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
@@ -30,6 +32,11 @@ import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
+import com.markedoe.ondo.ui.components.LocalPosterMyList
+import com.markedoe.ondo.ui.components.PosterCard
+import com.markedoe.ondo.ui.components.PosterMyList
+import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.TvPosterCard
 import com.markedoe.ondo.ui.theme.OndoTheme
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
@@ -196,5 +203,27 @@ class PosterMyListTest {
         assertEquals("Added to My List", ShadowToast.getTextOfLatestToast())
         assertFalse("the title's page did not open", exists("detail"))
         assertTrue(compose.onAllNodes(hasTestTag("inMyList") and hasAnyAncestor(hasContentDescription(title)), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty())
+    }
+
+    /** TalkBack says a poster is in My List, as its check mark shows. */
+    @Test
+    fun aPosterInMyListSaysSoToTalkBack() {
+        val kept = ShowcaseItem.MovieItem(movie("Northern Lights"))
+        val other = ShowcaseItem.MovieItem(Fixtures.content.movies.first { it.id != kept.movie.id })
+        compose.setContent {
+            OndoTheme {
+                CompositionLocalProvider(LocalPosterMyList provides PosterMyList(setOf(kept.key)) {}) {
+                    Column {
+                        PosterCard(kept, width = null, onClick = {}, showsTitle = true)
+                        TvPosterCard(kept, onClick = {})
+                        PosterCard(other, width = null, onClick = {}, showsTitle = true)
+                    }
+                }
+            }
+        }
+        fun states(title: String) = compose.onAllNodes(hasContentDescription(title) and hasClickAction()).fetchSemanticsNodes()
+            .map { it.config.getOrNull(SemanticsProperties.StateDescription) }
+        assertEquals(listOf("In My List", "In My List"), states(kept.title))
+        assertEquals(listOf<String?>(null), states(other.title))
     }
 }

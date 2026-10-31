@@ -66,6 +66,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -176,6 +177,16 @@ internal fun Modifier.posterClick(item: ShowcaseItem, interaction: MutableIntera
     )
 }
 
+/** TalkBack's words for a poster: its title, and that it is in My List where its check mark shows it. */
+@Composable
+internal fun Modifier.posterSemantics(item: ShowcaseItem, kept: Boolean): Modifier {
+    val state = if (kept) stringResource(R.string.in_my_list) else null
+    return semantics {
+        contentDescription = item.title
+        if (state != null) stateDescription = state
+    }
+}
+
 /** Whether the poster is in My List, where [LocalPosterMyList] says so. */
 @Composable
 fun inMyList(item: ShowcaseItem): Boolean = LocalPosterMyList.current?.keys?.contains(item.key) == true
@@ -228,7 +239,7 @@ fun PosterCard(
                 .focusMemory(focusKey, initialFocus)
                 .clip(PosterShape)
                 .posterClick(item, interaction, LocalIndication.current, onClick)
-                .semantics { contentDescription = item.title },
+                .posterSemantics(item, kept),
         ) {
             Box {
                 Poster(url = item.posterUrl, title = item.title, progress = progress)
@@ -246,7 +257,7 @@ fun PosterCard(
             .pressScale(interaction)
             .focusMemory(focusKey, initialFocus)
             .posterClick(item, interaction, null, onClick)
-            .semantics { contentDescription = item.title },
+            .posterSemantics(item, kept),
     ) {
         Box(
             Modifier.graphicsLayer {
