@@ -237,10 +237,12 @@ final class AppModel {
                                       dismissedTagSuggestions: settings.dismissedTagSuggestions.count, playlists: playlists.count)
         hasParentalPIN = secrets.get(Keychain.parentalPINKey) != nil
         hasTMDbKey = secrets.get(Keychain.tmdbKey) != nil
-        await loadDeadImages()
         loadSyncState()
+        // Every document is read before the first suspension: nothing can write over one in between (a second window
+        // calling `bootstrap()` too returns here).
         isReady = true
         refreshLocalSync()
+        await loadDeadImages()
         #if DEBUG
         if UITestFixture.isEnabled, playlists.isEmpty, let fixture = try? UITestFixture.makePlaylist() {
             try? await addPlaylist(fixture)
@@ -275,8 +277,11 @@ final class AppModel {
         return copy
     }
 
+    /// Nothing is written before `bootstrap()` has read the documents (as `flush()`), here or in the other saves: the
+    /// empty or default values in memory would replace the user's.
     /// - Parameter keepingPrevious: false once a playlist was deleted: no previous version keeps its login.
     private func savePlaylists(keepingPrevious: Bool = true) {
+        guard isReady else { return }
         // Passwords live in the keychain, not in the JSON file (unless the keychain is unavailable,
         // in which case dropping them would lose the login).
         let sanitized = playlists.map { playlist -> Playlist in
@@ -295,11 +300,13 @@ final class AppModel {
         change(&updated)
         guard updated != settings else { return }
         settings = updated
+        guard isReady else { return }
         try? userStore.save(settings, name: "settings")
     }
 
     func updateLibrary(_ change: (inout UserLibrary) -> Void) {
         change(&library)
+        guard isReady else { return }
         // Written a moment later, off the main thread, a burst of changes at once.
         libraryWriter.schedule(library, name: activeProfile.libraryDocumentName)
     }
@@ -322,6 +329,7 @@ final class AppModel {
     }
 
     private func saveProfiles() {
+        guard isReady else { return }
         try? userStore.save(profiles, name: "profiles")
     }
 
@@ -763,6 +771,7 @@ final class AppModel {
     }
 
     private func saveLocks() {
+        guard isReady else { return }
         try? userStore.save(lockedCategoryKeys, name: "parental-locks")
     }
 

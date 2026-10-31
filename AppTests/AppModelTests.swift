@@ -643,6 +643,59 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(model.playlists.filter { $0.id == newID }.count, 1, "the playlist is added a second time")
         XCTAssertEqual(model.playlists.map(\.id), [playlist.id, newID])
     }
+
+    // MARK: Before launch has read the documents
+
+    /// A window that opens before the main one has run `bootstrap()` (the Mac's Settings window, alone after a
+    /// relaunch): what it changes in the defaults in memory is never written over the documents on disk.
+    func testChangesBeforeLaunchReadTheDocumentsLeaveThemAlone() async throws {
+        let model = try await modelWithPlaylist()
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        model.updateSettings { $0.hideWatchedMovies = true }
+        model.setHidden(true, tag: "DE")
+        model.flush()
+        let deviceID = model.syncState.deviceID
+
+        let early = makeModel()
+        early.updateSettings { $0.autoplayLastChannel.toggle() }
+        early.setHidden(true, tag: "FR")
+        early.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
+        early.noteListDeletedForSync(UUID())
+        try await Task.sleep(for: .seconds(1))  // the library is written 600 ms after a change
+
+        let relaunched = makeModel()
+        await relaunched.bootstrap()
+        XCTAssertEqual(relaunched.playlists.map(\.id), [playlist.id])
+        XCTAssertTrue(relaunched.settings.hideWatchedMovies)
+        XCTAssertEqual(relaunched.settings.autoplayLastChannel, model.settings.autoplayLastChannel)
+        XCTAssertTrue(relaunched.isHidden(tag: "DE"))
+        XCTAssertFalse(relaunched.isHidden(tag: "FR"))
+        XCTAssertEqual(relaunched.profiles.map(\.id), [Profile.defaultID], "no kids profile in place of the viewer's")
+        XCTAssertEqual(relaunched.syncState.deviceID, deviceID, "this device keeps its sync identity")
+    }
+
+    /// Two windows start at once (the Mac restores two main windows): the playlist is read and opened once.
+    func testTwoWindowsStartingTogetherOpenThePlaylistOnce() async throws {
+        let text = Self.playlistText
+        let server = try LocalHTTPServer { _ in LocalHTTPServer.Response.text(text) }
+        let address = try await server.start().appending(path: "list.m3u")
+        let first = makeModel()
+        await first.bootstrap()
+        try await first.addPlaylist(Playlist(name: "Test", source: .remote(address), autoRefreshHours: 0))
+        let playlist = try XCTUnwrap(first.activePlaylist)
+        first.flush()
+        first.cacheStore.remove(name: "content-\(playlist.id.uuidString)")
+        func downloads() -> Int { server.requests.filter { $0.path == "/list.m3u" }.count }
+        let before = downloads()
+
+        let model = makeModel()
+        let one = Task { await model.bootstrap() }
+        let two = Task { await model.bootstrap() }
+        await one.value
+        await two.value
+        XCTAssertEqual(model.content.channels.count, 3)
+        XCTAssertEqual(downloads() - before, 1, "one download of the playlist")
+    }
 }
 
 final class CastabilityTests: XCTestCase {

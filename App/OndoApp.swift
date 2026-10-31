@@ -68,7 +68,7 @@ struct OndoApp: App {
         .defaultSize(width: 720, height: 560)
 
         Settings {
-            NavigationStack { SettingsView() }
+            SettingsWindow()
                 .environment(model)
                 .frame(minWidth: 520, minHeight: 560)
                 .preferredColorScheme(.dark)
@@ -78,6 +78,23 @@ struct OndoApp: App {
 }
 
 #if os(macOS)
+/// The Settings window can open without the main window (the app relaunched with only Help or a player window): it
+/// reads the documents itself, and shows none of the defaults in memory until then.
+struct SettingsWindow: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Group {
+            if model.isReady {
+                NavigationStack { SettingsView() }
+            } else {
+                ProgressView()
+            }
+        }
+        .task { await model.bootstrap() }
+    }
+}
+
 struct AppCommands: Commands {
     let model: AppModel
 

@@ -369,10 +369,16 @@ extension AppModel {
             syncState.tmdbKeyUpdatedAt = now.syncMilliseconds
             changed = true
         }
-        if changed { saveSyncState(now: now) }
+        if changed { writeSyncState(now: now) }
     }
 
+    /// Not before `bootstrap()` has read `sync.json`: a new device ID and no deletions would replace this device's.
     func saveSyncState(now: Date = Date()) {
+        guard isReady else { return }
+        writeSyncState(now: now)
+    }
+
+    private func writeSyncState(now: Date) {
         syncState = syncState.pruned(now: now)
         try? userStore.save(syncState, name: "sync")
     }
