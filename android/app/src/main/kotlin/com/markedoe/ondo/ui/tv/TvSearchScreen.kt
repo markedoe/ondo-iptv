@@ -41,6 +41,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -90,6 +92,15 @@ fun TvSearchScreen(
     val filters = state.filters
     var editingFilters by rememberSaveable { mutableStateOf(false) }
     val filtersButton = remember { FocusRequester() }
+    // Search opens on its field (ready to type), not on the results of an earlier search.
+    val fieldFocus = remember { FocusRequester() }
+    var focused by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!focused) {
+            withFrameNanos { }
+            focused = runCatching { fieldFocus.requestFocus() }.isSuccess
+        }
+    }
     val leaveField = rememberLeaveField()
     val nothing = state.people.isEmpty() && state.movies.isEmpty() && state.series.isEmpty() && state.channels.isEmpty()
     val titles = listOf(R.string.movies, R.string.series, R.string.channels, R.string.people).map { stringResource(it) }
@@ -104,7 +115,8 @@ fun TvSearchScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                val field = rememberTvTextField()
+                // Search opens ready to type: the keyboard is up at once.
+                val field = rememberTvTextField(openOnFirstFocus = true)
                 OutlinedTextField(
                     value = state.query,
                     onValueChange = onQuery,
@@ -124,7 +136,7 @@ fun TvSearchScreen(
                         unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
                         cursorColor = androidx.compose.ui.graphics.Color.White,
                     ),
-                    modifier = Modifier.weight(1f).then(field.modifier).focusMemory("search-field", initial = true).testTag("searchField"),
+                    modifier = Modifier.weight(1f).focusRequester(fieldFocus).then(field.modifier).focusMemory("search-field", initial = true).testTag("searchField"),
                 )
                 TvActionButton(
                     onClick = { editingFilters = true },

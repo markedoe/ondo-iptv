@@ -217,17 +217,16 @@ class TelevisionTextFieldsTest {
     }
 
     @Test
-    fun searchOpensTheKeyboardWithOk() {
+    fun searchOpensWithTheKeyboardUp() {
         start()
         waitFor { focusedNode() != null }
         pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionRight) { focusedTag() == "tabSearch" }
         press(Key.DirectionCenter)
         waitFor { exists("searchField") }
-        pressUntil(Key.DirectionDown, max = 4) { focusedTag() == "searchField" }
-        assertFalse("the keyboard opened as the remote reached the search field", keyboardShown())
-        press(Key.DirectionCenter)
-        assertTrue("OK opens the keyboard", keyboardShown())
+        waitFor { focusedTag() == "searchField" }
+        settle(300)
+        assertTrue("the field has the remote, its keyboard open", keyboardShown())
     }
 
     /** The TMDb token typed with the remote: OK opens the keyboard, Done checks it with TMDb, Remove takes it away. */

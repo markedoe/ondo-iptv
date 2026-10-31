@@ -245,18 +245,36 @@ class TvTextField(val readOnly: Boolean, val modifier: Modifier)
  * Compose keeps in a text field). Elsewhere, nothing changes.
  */
 @Composable
-fun rememberTvTextField(): TvTextField {
+fun rememberTvTextField(openOnFirstFocus: Boolean = false): TvTextField {
     val television = isTelevision()
     var editing by remember { mutableStateOf(false) }
     if (!television) return TvTextField(readOnly = false, modifier = Modifier)
     val focusManager = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val handoff = LocalKeyboardHandoff.current
+    // [openOnFirstFocus]: the first time the field has the remote on this page, it is ready to type, keyboard open
+    // (Search). Not again when the viewer comes back to it from the results.
+    var opened by rememberSaveable { mutableStateOf(false) }
+    var showKeyboard by remember { mutableStateOf(false) }
+    LaunchedEffect(showKeyboard) {
+        if (showKeyboard) {
+            // Once the field is writable (the next frame).
+            withFrameNanos { }
+            keyboard?.show()
+            showKeyboard = false
+        }
+    }
     val modifier = Modifier
         .onFocusChanged {
             // On from the field before with its keyboard open ([rememberNextField]): typing goes on here.
             if (it.isFocused) {
-                if (handoff.take()) editing = true
+                if (handoff.take()) {
+                    editing = true
+                } else if (openOnFirstFocus && !opened) {
+                    opened = true
+                    editing = true
+                    showKeyboard = true
+                }
             } else {
                 editing = false
             }
