@@ -142,6 +142,29 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
         }
     }
 
+    override fun namedTitles(): List<TitleMetadata> = read(emptyList()) { db ->
+        // A name's key has three parts ("movie:quiet water:2021"); a TMDb id's two ("movie:603").
+        db.rawQuery(
+            "SELECT key, kind, vote_average, vote_count, fetched_at, genres FROM title WHERE found = 1 AND key LIKE '%:%:%'",
+            null,
+        ).use { c ->
+            buildList {
+                while (c.moveToNext()) {
+                    add(
+                        TitleMetadata(
+                            key = c.getString(0),
+                            kind = c.getString(1),
+                            voteAverage = if (c.isNull(2)) null else c.getDouble(2),
+                            voteCount = if (c.isNull(3)) null else c.getInt(3),
+                            fetchedAt = c.getLong(4),
+                            genres = GenreText.decode(c.getString(5)),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
     override fun personWorks(personKey: String): Pair<Long, List<RelatedTitle>>? = read(null) { db ->
         db.rawQuery("SELECT fetched_at, titles FROM person_works WHERE person_key = ?", arrayOf(personKey)).use { c ->
             if (c.moveToFirst()) c.getLong(0) to RelatedTitle.decode(c.getString(1)).orEmpty() else null

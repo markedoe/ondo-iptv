@@ -67,16 +67,19 @@ import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
+import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LoadError
+import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.TipsState
 import com.markedoe.ondo.player.PlayerActivity
 import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.components.PosterMyList
 import com.markedoe.ondo.ui.components.TMDB_API_PAGE
+import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.BrowseKind
@@ -676,11 +679,14 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
     val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found) {
         withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found) }
     }
+    val titles = remember(browse) { browse.movies + browse.series }
+    val facts = posterFacts(viewModel, state, titles, locale)
     BrowseScreen(
         browse,
         onOpen = navController::open,
         onFestival = { navController.navigate(Routes.Browse(BrowseKind.FESTIVAL.name, it)) },
         onBack = { navController.popBackStack() },
+        facts = facts,
     )
 }
 
@@ -750,6 +756,7 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
         }
     }
+    val facts = posterFacts(viewModel, state, items, LocalConfiguration.current.locales[0])
     CompositionLocalProvider(LocalShowsMyList provides route.myList) {
         PosterGridScreen(
             title = title,
@@ -762,8 +769,24 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             onSort = viewModel::setPosterSort,
             hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
             onHideWatched = viewModel::setHideWatchedMovies,
+            facts = facts,
         )
     }
+}
+
+/**
+ * On a TV, the rating and the genres of a category's posters ([UiMappers.posterFacts]), worked out off the main
+ * thread, with what the device kept of TMDb; null elsewhere: the posters show their title and year only.
+ */
+@Composable
+private fun posterFacts(viewModel: OndoViewModel, state: OndoState, items: List<ShowcaseItem>, locale: java.util.Locale): Map<String, PosterFacts>? {
+    if (!isTelevision()) return null
+    // Read again when TMDb said more of a title (a page opened meanwhile).
+    val kept by produceKept("keptFacts", emptyMap<String, TitleMetadata>(), state.content, state.tmdbRatings) { viewModel.keptPosterFacts() }
+    val facts by produceKept("posterFacts", emptyMap<String, PosterFacts>(), items, kept, state.tmdbRatings, state.trending, state.movieDetails, state.seriesDetails, locale) {
+        withContext(Dispatchers.Default) { UiMappers.posterFacts(state, items, kept, locale) }
+    }
+    return facts
 }
 
 /** The app's version and its build (the version code); a build for a Google Play test track says it is a beta. */

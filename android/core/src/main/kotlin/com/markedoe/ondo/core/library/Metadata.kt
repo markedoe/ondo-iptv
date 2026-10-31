@@ -182,6 +182,12 @@ interface MetadataStore {
     /** The titles of a genre (its name, [TextNormalizer.normalize]d), movies or series. */
     fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata>
 
+    /**
+     * The titles TMDb found, kept under their name and year ([MetadataKey.title]) with what a poster shows of them: the
+     * rating and the genres ([TitleMetadata.related] left out).
+     */
+    fun namedTitles(): List<TitleMetadata>
+
     /** A person's movies and series on TMDb (by [MetadataKey.person]), with when they were asked; null if never. */
     fun personWorks(personKey: String): Pair<Long, List<RelatedTitle>>?
 
@@ -244,6 +250,9 @@ class InMemoryMetadataStore : MetadataStore {
 
     @Synchronized override fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata> =
         titles.values.filter { title -> title.kind == MetadataKey.kind(series) && title.genres.orEmpty().any { TextNormalizer.normalize(it.name) == genre } }
+
+    @Synchronized override fun namedTitles(): List<TitleMetadata> =
+        titles.values.filter { it.found && it.key.count { c -> c == ':' } == 2 }.map { it.copy(related = null) }
 
     @Synchronized override fun people(query: String, limit: Int): List<IndexedPerson> {
         val tokens = MetadataStore.tokens(query) ?: return emptyList()

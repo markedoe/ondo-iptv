@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
+import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Channel
@@ -22,6 +23,7 @@ import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.PersonRow
+import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.BrowseKind
@@ -177,6 +179,36 @@ object UiMappers {
             else -> "$own · $tmdb"
         }
     }
+
+    /**
+     * What each poster of a category's page shows ([PosterFacts]): TMDb's rating (from the pages opened, its trending
+     * titles, or [kept] on the device), else the provider's; TMDb's genres, else the provider's; two at most.
+     */
+    fun posterFacts(state: OndoState, items: List<ShowcaseItem>, kept: Map<String, TitleMetadata>, locale: Locale): Map<String, PosterFacts> {
+        val trending = HashMap<String, TmdbRating>()
+        for (match in state.trending) match.trending.rating?.let { trending.putIfAbsent(match.id, it) }
+        val result = HashMap<String, PosterFacts>(items.size * 2)
+        for (item in items) {
+            val details = when (item) {
+                is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
+                is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
+            }
+            val stored = kept[item.key]
+            val rating = (state.tmdbRatings[item.key] ?: trending[item.key] ?: stored?.rating)?.average
+                ?: (details?.rating ?: item.rating)?.takeIf { it > 0 }
+            val genres = stored?.genres?.map { it.name }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
+                ?: genres(details?.genre ?: (item as? ShowcaseItem.SeriesItem)?.series?.genre)
+            result[item.key] = PosterFacts(
+                rating = rating?.let { String.format(locale, "%.1f", it.coerceIn(0.0, 10.0)) },
+                halfStars = rating?.let { halfStars(it) } ?: 0,
+                genres = genres.distinct().take(2),
+            )
+        }
+        return result
+    }
+
+    /** A rating out of 10 as half stars out of five stars: 7.4 is three and a half stars. */
+    fun halfStars(rating: Double): Int = kotlin.math.floor(rating.coerceIn(0.0, 10.0) + 0.5).toInt()
 
     fun progress(entry: WatchEntry?): WatchProgress? =
         entry?.takeIf { it.duration > 0 }?.let { WatchProgress(it.progress.toFloat(), it.minutesLeft, it.isFinished) }

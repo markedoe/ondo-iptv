@@ -65,6 +65,7 @@ import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ResumeItem
+import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusMemory
@@ -233,6 +234,8 @@ fun PosterGridScreen(
     /** Whether finished movies are left out; null where it does not apply (series, My List). */
     hideWatched: Boolean? = null,
     onHideWatched: (Boolean) -> Unit = {},
+    /** Each poster's rating and genres, by its key (on a TV); null: the posters show their title and year only. */
+    facts: Map<String, PosterFacts>? = null,
 ) {
     var sorting by remember { mutableStateOf(false) }
     val metrics = rememberShelfMetrics()
@@ -298,7 +301,9 @@ fun PosterGridScreen(
                 modifier = Modifier.fillMaxWidth().then(field.modifier),
             )
         }
-        items(items, key = { it.key }) { item -> PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = true) }
+        items(items, key = { it.key }) { item ->
+            PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = true, facts = facts?.get(item.key), showsFacts = facts != null)
+        }
         if (items.isEmpty()) {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 Text(stringResource(R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -675,6 +675,33 @@ class OndoRepository(
     /** The catalogue's titles of each genre opened, for the catalogue they were found in. */
     private val genreMatches = java.util.concurrent.ConcurrentHashMap<String, Pair<PlaylistContent, List<TrendingMatch>>>()
 
+    /**
+     * What TMDb said of the catalogue's titles and the device kept (their rating, their genres), by the poster's key
+     * ("m-1", "s-2"): a poster shows it without asking TMDb. Read once per catalogue, again once more was kept.
+     */
+    suspend fun keptPosterFacts(): Map<String, TitleMetadata> {
+        val titles = metadataTitles() ?: return emptyMap()
+        val content = _state.value.content
+        val saved = metadataSaves.get()
+        posterFacts?.let { (known, at, facts) -> if (known === content && at == saved) return facts }
+        val named = withContext(io) { runCatching { metadata.namedTitles() }.getOrDefault(emptyList()) }
+        val facts = withContext(Dispatchers.Default) {
+            val result = HashMap<String, TitleMetadata>()
+            for (title in named) {
+                if (title.genres.isNullOrEmpty() && title.rating == null) continue
+                for (match in titles.match(listOf(title.key))) result.putIfAbsent(match.id, title)
+            }
+            result
+        }
+        posterFacts = Triple(content, saved, facts)
+        return facts
+    }
+
+    @Volatile private var posterFacts: Triple<PlaylistContent, Int, Map<String, TitleMetadata>>? = null
+
+    /** How many times titles were kept this session: what [keptPosterFacts] read may be out of date. */
+    private val metadataSaves = java.util.concurrent.atomic.AtomicInteger()
+
     /** TMDb's most popular movies and series of the genre (named in the viewer's language), a few pages of each. */
     private suspend fun tmdbGenreItems(genre: String, kept: List<TitleMetadata>): List<RelatedTitle> {
         val token = _state.value.settings.tmdbToken ?: return emptyList()
@@ -1213,6 +1240,7 @@ class OndoRepository(
                 metadata.save(rows)
                 if (info != null) metadata.saveCredits(credits, saved)
             }
+            metadataSaves.incrementAndGet()
             if (show) showMetadata(key, rows.first(), credits)
         }
     }

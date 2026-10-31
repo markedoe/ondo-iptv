@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.core.TextNormalizer
+import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
@@ -267,6 +268,9 @@ class OndoViewModel(
 
     /** With the viewer's TMDb token, the person's titles on TMDb that the playlist has; null without one, or if TMDb fails. */
     suspend fun tmdbWorks(name: String): List<TrendingMatch>? = repository.tmdbWorks(name)
+
+    /** What the device kept of TMDb's ratings and genres, by poster key, for the posters of a category's page. */
+    suspend fun keptPosterFacts(): Map<String, TitleMetadata> = repository.keptPosterFacts()
 
     /** The playlist's titles that the titles kept on the device credit the person with, token or not. */
     suspend fun localWorks(name: String): List<TrendingMatch> = repository.localWorks(name)

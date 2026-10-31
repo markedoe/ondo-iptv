@@ -30,10 +30,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.rounded.StarHalf
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -54,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -67,8 +71,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.timeLeftText
 import com.markedoe.ondo.ui.tv.LocalHeldOk
 import com.markedoe.ondo.ui.tv.TvConfirmDialog
@@ -204,6 +210,12 @@ fun PosterCard(
     focusKey: String = item.key,
     /** The page's first item: it takes the focus on a TV when the page opens. */
     initialFocus: Boolean = false,
+    /**
+     * With [showsTitle], the rating and the genres below the year (a category's page on a TV); their room is kept
+     * while they are not known yet, or when there are none. Null: none.
+     */
+    facts: PosterFacts? = null,
+    showsFacts: Boolean = facts != null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val kept = inMyList(item)
@@ -258,6 +270,58 @@ fun PosterCard(
             modifier = Modifier.padding(top = 12.dp),
         )
         item.year?.let { Text(it.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        if (showsFacts) PosterFactsLines(facts ?: PosterFacts())
+    }
+}
+
+/**
+ * A poster's rating ("7.4" and its five stars) and two genres as small pills: two lines of a fixed height, kept even
+ * when empty, so that the posters of a grid stay in line while their facts arrive.
+ */
+@Composable
+fun PosterFactsLines(facts: PosterFacts, modifier: Modifier = Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Column(modifier.padding(top = 6.dp).testTag("posterFacts")) {
+        Row(Modifier.height(18.dp), verticalAlignment = Alignment.CenterVertically) {
+            facts.rating?.let { rating ->
+                Text(rating, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.testTag("posterRating"))
+                Row(Modifier.padding(start = 6.dp).testTag("posterStars")) {
+                    for (star in 0 until 5) {
+                        val filled = facts.halfStars - 2 * star
+                        Icon(
+                            when {
+                                filled >= 2 -> Icons.Rounded.Star
+                                filled == 1 -> Icons.AutoMirrored.Rounded.StarHalf
+                                else -> Icons.Rounded.StarOutline
+                            },
+                            contentDescription = null,
+                            tint = if (filled > 0) colors.onBackground else colors.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
+            }
+        }
+        Row(
+            Modifier.padding(top = 6.dp).height(24.dp).fillMaxWidth().clipToBounds(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            facts.genres.forEach { genre ->
+                Text(
+                    genre,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .background(OndoColors.SurfaceHigh, CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                        .testTag("posterGenre"),
+                )
+            }
+        }
     }
 }
 

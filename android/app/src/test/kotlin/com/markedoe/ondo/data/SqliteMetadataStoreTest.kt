@@ -34,6 +34,26 @@ class SqliteMetadataStoreTest {
         assertTrue(store.titlesOfGenre("comedie", series = true).isEmpty())
     }
 
+    /** A poster's facts are read for the titles kept under their name: found ones only, without what TMDb recommends. */
+    @Test
+    fun namedTitlesAreTheFoundTitlesKeptUnderTheirName() {
+        val now = System.currentTimeMillis()
+        val store = SqliteMetadataStore(context, "named.sqlite")
+        val named = TitleMetadata("movie:quiet water:2021", "movie", 5, voteAverage = 7.2, voteCount = 40, fetchedAt = now, genres = listOf(TmdbGenre(18, "Drama")), related = listOf(RelatedTitle(false, 6, "Dock Street", 2015)))
+        store.save(
+            listOf(
+                named,
+                named.copy(key = "movie:5"),
+                TitleMetadata("movie:nowhere:", "movie", fetchedAt = now, found = false),
+            ),
+        )
+        val read = store.namedTitles()
+        assertEquals(listOf("movie:quiet water:2021"), read.map { it.key })
+        assertEquals(named.genres, read.single().genres)
+        assertEquals(com.markedoe.ondo.core.library.TmdbRating(7.2, 40), read.single().rating)
+        assertEquals(null, read.single().related)
+    }
+
     /** A person's movies and series on TMDb stay on the device: their page shows at once the next time. */
     @Test
     fun aPersonsWorksAreKept() {

@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
+import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.tvTopBarSpace
@@ -56,7 +57,14 @@ data class BrowseUiState(
 /** The titles of the playlist sharing a value tapped on a movie's or a series' page. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BrowseScreen(state: BrowseUiState, onOpen: (ShowcaseItem) -> Unit, onFestival: (String) -> Unit, onBack: () -> Unit) {
+fun BrowseScreen(
+    state: BrowseUiState,
+    onOpen: (ShowcaseItem) -> Unit,
+    onFestival: (String) -> Unit,
+    onBack: () -> Unit,
+    /** Each poster's rating and genres, by its key (on a TV); null: the posters show their title and year only. */
+    facts: Map<String, PosterFacts>? = null,
+) {
     val metrics = rememberShelfMetrics()
     val title = when (state.kind) {
         BrowseKind.AWARD, BrowseKind.GENRE -> state.name
@@ -89,8 +97,8 @@ fun BrowseScreen(state: BrowseUiState, onOpen: (ShowcaseItem) -> Unit, onFestiva
                 )
             }
         }
-        titles(R.string.movies, state.movies, onOpen)
-        titles(R.string.series, state.series, onOpen)
+        titles(R.string.movies, state.movies, onOpen, facts)
+        titles(R.string.series, state.series, onOpen, facts)
         if (state.movies.isEmpty() && state.series.isEmpty()) {
             fullWidth {
                 Text(stringResource(R.string.person_nothing_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 24.dp))
@@ -108,8 +116,10 @@ fun BrowseScreen(state: BrowseUiState, onOpen: (ShowcaseItem) -> Unit, onFestiva
 
 private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
 
-private fun LazyGridScope.titles(title: Int, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit) {
+private fun LazyGridScope.titles(title: Int, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit, facts: Map<String, PosterFacts>?) {
     if (posters.isEmpty()) return
     fullWidth { Text(stringResource(title), style = MaterialTheme.typography.titleLarge) }
-    items(posters, key = { it.key }) { item -> PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = true) }
+    items(posters, key = { it.key }) { item ->
+        PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = true, facts = facts?.get(item.key), showsFacts = facts != null)
+    }
 }

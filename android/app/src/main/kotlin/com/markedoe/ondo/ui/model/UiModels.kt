@@ -34,6 +34,15 @@ sealed interface ShowcaseItem {
     }
 }
 
+/** What a poster of a category's page shows below its title on a TV: a rating out of 10 with its stars, a genre or two. */
+data class PosterFacts(
+    /** "7.4" in the viewer's language: TMDb's, else the provider's; null when neither is known. */
+    val rating: String? = null,
+    /** The rating in half stars, out of five stars (0 to 10). */
+    val halfStars: Int = 0,
+    val genres: List<String> = emptyList(),
+)
+
 /** A "continue watching" card. */
 data class ResumeItem(
     val key: String,

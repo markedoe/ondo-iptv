@@ -3,6 +3,8 @@ package com.markedoe.ondo.ui
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.TitleMetadata
+import com.markedoe.ondo.core.library.TmdbGenre
 import com.markedoe.ondo.core.library.TmdbItem
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
@@ -24,6 +26,7 @@ import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Reminder
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.PersonRow
+import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.CollectionChoice
@@ -610,5 +613,42 @@ class UiMappersTest {
         val state = Fixtures.state(content = PlaylistContent.EMPTY).copy(isRestoring = true)
         assertTrue(UiMappers.home(state, labels, Fixtures.NOW).isRestoring)
         assertFalse(UiMappers.home(Fixtures.state(), labels, Fixtures.NOW).isRestoring)
+    }
+
+    /** A category's posters on a TV: TMDb's rating first, else the provider's; TMDb's genres first; two at most. */
+    @Test
+    fun postersShowARatingWithStarsAndTwoGenres() {
+        val northern = ShowcaseItem.MovieItem(Fixtures.northernLights)
+        val glass = ShowcaseItem.MovieItem(Fixtures.glassCity)
+        val silent = ShowcaseItem.MovieItem(Fixtures.silentHarbor)
+        val blue = ShowcaseItem.SeriesItem(Fixtures.blueHorizon)
+        val unrated = ShowcaseItem.MovieItem(Fixtures.northernLights.copy(id = "u", rating = null))
+        val state = Fixtures.state().copy(tmdbRatings = mapOf(northern.key to TmdbRating(7.4, 1_200)))
+        val kept = mapOf(
+            glass.key to TitleMetadata(
+                "movie:glass city:2024", "movie", voteAverage = 6.2, voteCount = 80, fetchedAt = 1,
+                genres = listOf(TmdbGenre(878, "Science Fiction"), TmdbGenre(18, "Drama"), TmdbGenre(53, "Thriller")),
+            ),
+            // Kept without votes: the provider's rating shows.
+            silent.key to TitleMetadata("movie:silent harbor:2023", "movie", voteAverage = 8.0, fetchedAt = 1, genres = listOf(TmdbGenre(53, "Thriller"))),
+        )
+        val facts = UiMappers.posterFacts(state, listOf(northern, glass, silent, blue, unrated), kept, Locale.US)
+        assertEquals(PosterFacts("7.4", 7, emptyList()), facts[northern.key])
+        assertEquals(PosterFacts("6.2", 6, listOf("Science Fiction", "Drama")), facts[glass.key])
+        assertEquals(PosterFacts("6.9", 7, listOf("Thriller")), facts[silent.key])
+        // A series' genres come with the catalogue.
+        assertEquals(PosterFacts("7.2", 7, listOf("Mystery", "Science Fiction")), facts[blue.key])
+        assertEquals(PosterFacts(null, 0, emptyList()), facts[unrated.key])
+        // The viewer's way of writing numbers.
+        assertEquals("7,4", UiMappers.posterFacts(state, listOf(northern), emptyMap(), Locale.FRANCE)[northern.key]?.rating)
+    }
+
+    @Test
+    fun aRatingOutOfTenIsHalfStarsOutOfFive() {
+        assertEquals(0, UiMappers.halfStars(0.0))
+        assertEquals(7, UiMappers.halfStars(7.4))
+        assertEquals(8, UiMappers.halfStars(7.5))
+        assertEquals(9, UiMappers.halfStars(8.6))
+        assertEquals(10, UiMappers.halfStars(12.0))
     }
 }
