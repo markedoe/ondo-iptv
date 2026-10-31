@@ -185,6 +185,19 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(data.programs["a"]?.map(\.episode), ["9223372036854775807.0.", "1.9223372036854775807."])
     }
 
+    /// A guide listing a programme ID (`dd_progid`) before its episode number shows the episode number, not the ID.
+    func testAProgrammeIDIsNotAnEpisodeNumber() throws {
+        let xml = """
+        <?xml version="1.0"?><tv><programme channel="a" start="20251009200000 +0000" stop="20251009210000 +0000">\
+        <title>T</title><episode-num system="dd_progid">EP01234567.0003</episode-num>\
+        <episode-num system="xmltv_ns">1.4.</episode-num></programme>\
+        <programme channel="a" start="20251009210000 +0000" stop="20251009220000 +0000">\
+        <title>U</title><episode-num system="dd_progid">MV00012345.0000</episode-num></programme></tv>
+        """
+        let data = try XMLTVParser.parse(Data(xml.utf8))
+        XCTAssertEqual(data.programs["a"]?.map(\.episode), ["S02E05", nil])
+    }
+
     /// `%02d` prints 32 bits: a season or episode whose 1-based number needs more keeps the guide's text too, as on
     /// Android, instead of "S-2147483648E01" or "S00E01".
     func testEpisodeNumbersPast32BitsAreKeptAsText() throws {

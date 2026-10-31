@@ -249,6 +249,8 @@ private final class XMLTVDelegate: NSObject, XMLParserDelegate {
                 channelIcon = channelIcon ?? url
             }
         case "title", "sub-title", "desc", "category", "episode-num", "display-name", "value":
+            // A programme ID ("EP01234567.0003"), often listed before the episode number, is not one.
+            if elementName == "episode-num", attributes["system"]?.lowercased() == "dd_progid" { return }
             if (programme != nil && keepProgramme) || (channelID != nil && elementName == "display-name") {
                 capturing = true
                 text = ""
