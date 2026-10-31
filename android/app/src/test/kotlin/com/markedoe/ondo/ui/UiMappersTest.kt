@@ -291,7 +291,7 @@ class UiMappersTest {
     }
 
     @Test
-    fun searchMatchesTheStartOfEachWord() {
+    fun searchMatchesWordsAnywhereInTheTitles() {
         val state = Fixtures.state()
         val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state))
         fun titles(query: String) = UiMappers.search(index, query, state, Fixtures.NOW).let { result ->
@@ -300,7 +300,8 @@ class UiMappersTest {
         assertEquals(listOf("The Last Signal"), titles("last sig"))
         assertEquals(listOf("Northern Lights", "Harbor Lights"), titles("lights"))
         assertEquals(listOf("Stadium One"), titles("stad"))
-        assertTrue("words must start a word", titles("ights").isEmpty())
+        assertEquals("inside a word too (as on Apple devices)", listOf("Northern Lights", "Harbor Lights"), titles("ights"))
+        assertTrue("every word typed must be found", titles("lights zzz").isEmpty())
         assertTrue("hidden categories are not searched", titles("late show").isEmpty())
         assertTrue(titles("  ").isEmpty())
     }
