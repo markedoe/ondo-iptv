@@ -80,7 +80,8 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   stream and **full screen** (button, F key, double-click) on the Mac; **exact resume**, **last channel**,
   **zapping by number**, channels / guide panel in the player; **buffer length** for live TV and for movies &
   series, **stream statistics** that tell a network freeze from a player one and show the format (MKV, MP4…),
-  and **Report a Problem…**: a playback report with no address, login or title, to share or send in a GitHub
+  and **Report a Problem…**: a playback report with no address, login or title (on Apple, also a block on the
+  app's data: file names, sizes and dates, never their content), to share or send in a GitHub
   issue. Movie and series pages show the format their provider sends.
 - **Casting**: **AirPlay** (iPhone, iPad, Mac: the video goes to the TV, not only the sound) and
   **Chromecast** (iPhone, iPad).
@@ -126,7 +127,12 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Search** (the magnifying glass of Home, Movies, Series, Live TV and My List; on a TV, in the top bar after the
   tabs, a page of its own that Back closes): channels, movies, series and **actors and directors by name**, filtered by
   release years or by festival / ceremony (winners only, if you like); no programme search. It opens empty each
-  time, and a tab chosen afterwards opens on its own page.
+  time, and a tab chosen afterwards opens on its own page. A word is found anywhere in a title ("dust" finds
+  "Stardust"), exact titles first.
+- **TV posters**: in a category, a poster shows its rating with stars and up to two genres; hold OK on it to add
+  it to My List or take it out. In My List, people keep their photo.
+- **Automatic refresh** of the playlists (Settings → Playlists): only when asked, every 6 or 12 hours, every day
+  (default) or every week.
 - **TV guide** (the calendar button of Live TV): a grid of the channels chosen there, and **reminders**, a
   notification a few minutes before a programme starts.
 - **My List** tab: the movies, series and channels kept, and your **collections** (Collection on a movie or series

@@ -82,7 +82,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   **reprise** au point exact, **dernière chaîne**, **zapping par numéro**,
   panneau chaînes / guide dans le lecteur ; **mémoire tampon** réglable pour le direct et pour les films et
   séries, **statistiques du flux** qui distinguent un gel dû au réseau d'un gel dû au lecteur et montrent le
-  format (MKV, MP4…), et **Signaler un problème…** : un rapport de lecture sans adresse, identifiant ni titre, à
+  format (MKV, MP4…), et **Signaler un problème…** : un rapport de lecture sans adresse, identifiant ni titre (sur Apple, aussi un bloc sur les données de l'app :
+  noms, tailles et dates des fichiers, jamais leur contenu), à
   partager ou envoyer dans un ticket GitHub. Les fiches des films et séries indiquent le format qu'envoie le
   fournisseur.
 - **Diffusion** : **AirPlay** (iPhone, iPad, Mac : la vidéo part vers la TV, pas seulement le son) et
@@ -136,7 +137,12 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Recherche** (la loupe d'Accueil, Films, Séries, TV en direct et Ma liste ; sur une TV, dans la barre du haut après
   les onglets, une page à part que Retour ferme) : chaînes, films, séries et **acteurs et réalisateurs par leur nom**, filtrables
   par années de sortie ou par festival / cérémonie (lauréats seulement, au choix) ; pas de recherche dans les
-  programmes. Elle s'ouvre vide à chaque fois, et un onglet choisi ensuite s'ouvre sur sa propre page.
+  programmes. Elle s'ouvre vide à chaque fois, et un onglet choisi ensuite s'ouvre sur sa propre page. Un mot est trouvé n'importe où dans un titre (« dust »
+  trouve « Stardust »), les titres exacts d'abord.
+- **Affiches sur TV** : dans une catégorie, une affiche montre sa note avec des étoiles et jusqu'à deux genres ;
+  maintenez OK dessus pour l'ajouter à Ma liste ou l'en retirer. Dans Ma liste, les personnes gardent leur photo.
+- **Actualisation automatique** des playlists (Réglages → Playlists) : seulement sur demande, toutes les 6 ou
+  12 heures, chaque jour (par défaut) ou chaque semaine.
 - **Guide TV** (le bouton calendrier de TV en direct) : une grille des chaînes choisies à cet endroit, et des
   **rappels**, une notification quelques minutes avant le début d'un programme.
 - Onglet **Ma liste** : les films, séries et chaînes gardés, et vos **collections** (Collection sur la fiche d'un film
