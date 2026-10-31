@@ -568,6 +568,21 @@ class UiMappersTest {
         assertNotSame("a new catalogue", index, UiMappers.SearchIndex.of(state.content.copy(fetchedAt = 1), hidden))
     }
 
+    /** A title or a channel named after a hidden language is not found, even in a category of no language. */
+    @Test
+    fun searchLeavesOutTheTitlesAndChannelsOfAHiddenLanguage() {
+        val state = Fixtures.state()
+        val german = Fixtures.glassCity.copy(id = "de-1", name = "|DE| Glass City")
+        val content = state.content.copy(movies = state.content.movies + german)
+        val hidden = UiMappers.hiddenCategoryIds(state)
+        val shown = UiMappers.SearchIndex(content, hidden).movies.map { it.second.id }
+        assertTrue("no language hidden: found", "de-1" in shown)
+        val withoutGerman = UiMappers.SearchIndex(content, hidden, setOf("DE")).movies.map { it.second.id }
+        assertFalse("German hidden: not found", "de-1" in withoutGerman)
+        assertTrue("the others stay", Fixtures.glassCity.id in withoutGerman)
+        assertNotSame("a language hidden", UiMappers.SearchIndex.of(content, hidden), UiMappers.SearchIndex.of(content, hidden, setOf("DE")))
+    }
+
     @Test
     fun aSearchReplacedByANewerOneStops() {
         val state = Fixtures.state()

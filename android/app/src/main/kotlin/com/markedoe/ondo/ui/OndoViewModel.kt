@@ -131,9 +131,9 @@ class OndoViewModel(
     val query: StateFlow<String> = _query.asStateFlow()
 
     private val searchIndex = state
-        .map { it.content to UiMappers.hiddenCategoryIds(it) }
+        .map { Triple(it.content, UiMappers.hiddenCategoryIds(it), it.library.hiddenTags) }
         .distinctUntilChanged()
-        .map { (content, hidden) -> UiMappers.SearchIndex.of(content, hidden) }
+        .map { (content, hidden, tags) -> UiMappers.SearchIndex.of(content, hidden, tags) }
 
     /** What a search reads besides its index: a change of the library or the settings does not run it again. */
     private val searchState = state.distinctUntilChanged { old, new ->

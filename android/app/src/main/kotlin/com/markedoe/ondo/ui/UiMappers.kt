@@ -638,10 +638,17 @@ object UiMappers {
     }
 
     /** Normalised titles, built once per catalogue (see [of]). */
-    class SearchIndex(content: PlaylistContent, hidden: Set<String>) {
-        val movies = content.movies.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
-        val series = content.series.filter { it.categoryId !in hidden }.map { TextNormalizer.normalize(it.name).split(' ') to it }
-        val channels = content.channels.filter { it.categoryId !in hidden && !CategoryFilter.isHeader(it.name) }.map { TextNormalizer.normalize(it.name).split(' ') to it }
+    /**
+     * What Search looks through: not the hidden categories, nor a title or channel whose own name carries a hidden
+     * language tag ("|DE| …" in a category of no language).
+     */
+    class SearchIndex(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet()) {
+        private fun shown(categoryId: String, name: String) =
+            categoryId !in hidden && (hiddenTags.isEmpty() || CategoryFilter.channelTag(name) !in hiddenTags)
+
+        val movies = content.movies.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name).split(' ') to it }
+        val series = content.series.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name).split(' ') to it }
+        val channels = content.channels.filter { shown(it.categoryId, it.name) && !CategoryFilter.isHeader(it.name) }.map { TextNormalizer.normalize(it.name).split(' ') to it }
 
         /** Release years of the movies and series, newest first (the filter's choices). */
         val years: List<Int> = (movies.mapNotNull { it.second.year } + series.mapNotNull { it.second.year }).distinct().sortedDescending()
@@ -652,12 +659,12 @@ object UiMappers {
         val people = PeopleIndex(content.series.filter { it.categoryId !in hidden }.flatMap { listOf(it.cast, it.director) })
 
         companion object {
-            @Volatile private var cached: Triple<PlaylistContent, Set<String>, SearchIndex>? = null
+            @Volatile private var cached: Pair<Triple<PlaylistContent, Set<String>, Set<String>>, SearchIndex>? = null
 
-            /** The index of this catalogue and these hidden categories: coming back to Search does not build it again. */
-            fun of(content: PlaylistContent, hidden: Set<String>): SearchIndex {
-                cached?.let { (known, knownHidden, index) -> if (known === content && knownHidden == hidden) return index }
-                return SearchIndex(content, hidden).also { cached = Triple(content, hidden, it) }
+            /** The index of this catalogue and these hidden categories and tags: coming back to Search does not build it again. */
+            fun of(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet()): SearchIndex {
+                cached?.let { (key, index) -> if (key.first === content && key.second == hidden && key.third == hiddenTags) return index }
+                return SearchIndex(content, hidden, hiddenTags).also { cached = Triple(content, hidden, hiddenTags) to it }
             }
 
             internal fun forget() {
