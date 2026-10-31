@@ -258,7 +258,10 @@ class PlayerActivity : ComponentActivity() {
 
     /** On a TV, Back while Up next shows declines it (the remote's Back no longer reaches the keys). */
     private val declineUpNextOnBack: OnBackPressedCallback = object : OnBackPressedCallback(false) {
-        override fun handleOnBackPressed() = declineUpNext()
+        override fun handleOnBackPressed() {
+            // The Episodes row hides the card: Back closes the row, it does not decline what is not on screen.
+            if (controls.episodesShown) controls.back() else declineUpNext()
+        }
     }
 
     /** The aspect ratio last chosen (the player's More), kept in the settings for the next videos. */
@@ -573,7 +576,8 @@ class PlayerActivity : ComponentActivity() {
         frameRateWait = lifecycleScope.launch {
             withTimeoutOrNull(FrameRateMatching.WAIT_MS) { screenFits(displays, display.displayId, frameRate) }
             delay(FrameRateMatching.SETTLE_MS)
-            if (resume && player === exoPlayer) exoPlayer.play()
+            // Left meanwhile (Home): onStop paused the video, it stays paused in the background.
+            if (resume && player === exoPlayer && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) exoPlayer.play()
         }
     }
 
@@ -643,7 +647,8 @@ class PlayerActivity : ComponentActivity() {
             finish()
             return
         }
-        switchTo(next)
+        // Watched: the switch must not save the position over it (Play now leaves a few seconds unplayed).
+        switchTo(next, ended = true)
     }
 
     /** The Episodes row of the series [request] plays (a TV): its seasons, the episode playing marked. */
@@ -855,8 +860,8 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** Plays [next] instead of what plays now (the progress of the current one is saved first). */
-    private fun switchTo(next: PlayRequest) {
-        saveProgress()
+    private fun switchTo(next: PlayRequest, ended: Boolean = false) {
+        saveProgress(ended)
         request = next
         // The channel zapped to is the one to open again from the recent apps.
         setIntent(PlayerActivity.intent(this, next))
@@ -1014,7 +1019,8 @@ class PlayerActivity : ComponentActivity() {
 
     private fun backToLastChannel() {
         val previous = lastChannel ?: return
-        lastChannel = request
+        // A replay is left where it was, as playChannel keeps it.
+        lastChannel = if (request.isReplay) request.copy(startPositionMs = player?.currentPosition ?: 0) else request
         switchTo(previous)
         showBanner(ChannelBanner(previous.title, null))
     }
