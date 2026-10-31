@@ -79,15 +79,17 @@ public enum M3UContentBuilder {
                     normalizedSeriesNames[seriesName] = normalizedName
                 }
                 let key = category.id + "|" + normalizedName
-                var series = seriesByKey[key] ?? {
+                if seriesByKey[key] == nil {
                     let (cleanName, year) = TitleParser.splitYear(seriesName)
-                    return Series(id: "s" + StableHash.hex(key), name: cleanName, coverURL: entry.logo, categoryID: category.id, year: year)
-                }()
-                if seriesByKey[key] == nil { seriesOrder.append(key) }
+                    seriesByKey[key] = Series(id: "s" + StableHash.hex(key), name: cleanName, coverURL: entry.logo, categoryID: category.id, year: year)
+                    seriesOrder.append(key)
+                }
                 let season = parsed?.season ?? 1
-                let number = parsed?.episode ?? (series.episodes.filter { $0.season == season }.count + 1)
-                series.episodes.append(Episode(
-                    id: uniqueID("e" + StableHash.hex(entry.url.absoluteString)),
+                // Changed in place in the dictionary: a copy taken out of it copied every episode at each new one.
+                let number = parsed?.episode ?? ((seriesByKey[key]?.episodes.lazy.filter { $0.season == season }.count ?? 0) + 1)
+                let episodeID = uniqueID("e" + StableHash.hex(entry.url.absoluteString))
+                seriesByKey[key]?.episodes.append(Episode(
+                    id: episodeID,
                     title: parsed?.episodeTitle ?? entry.title,
                     season: season,
                     number: number,
@@ -95,8 +97,7 @@ public enum M3UContentBuilder {
                     posterURL: entry.logo,
                     headers: headers
                 ))
-                if series.coverURL == nil { series.coverURL = entry.logo }
-                seriesByKey[key] = series
+                if seriesByKey[key]?.coverURL == nil { seriesByKey[key]?.coverURL = entry.logo }
             }
         }
 

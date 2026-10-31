@@ -28,6 +28,22 @@ final class PerformanceTests: XCTestCase {
         XCTAssertLessThan(searchElapsed, 10)
     }
 
+    /// A long-running series lists thousands of episodes: adding each one must not copy the ones before it.
+    func testASeriesWithManyEpisodesBuildsQuickly() {
+        let url = URL(string: "http://example.com/s/1.mkv")!
+        let entries = (0..<30_000).map { i in
+            M3UEntry(duration: -1, title: "Daily Soap S\(i / 1000 + 1)E\(i % 1000 + 1)", attributes: ["group-title": "Series"],
+                     url: url.deletingLastPathComponent().appendingPathComponent("\(i).mkv"), extGroup: nil, headers: .none)
+        }
+        let start = Date()
+        let content = M3UContentBuilder.build(from: M3UPlaylist(headerAttributes: [:], entries: entries))
+        let elapsed = Date().timeIntervalSince(start)
+        XCTAssertEqual(content.series.count, 1)
+        XCTAssertEqual(content.series.first?.episodes.count, 30_000)
+        print("one series of 30k episodes built in \(elapsed)s")
+        XCTAssertLessThan(elapsed, 15)
+    }
+
     func testLargeGuideParsesQuickly() throws {
         var xml = "<tv>"
         let base = Date.utc(2025, 10, 9, 0)
