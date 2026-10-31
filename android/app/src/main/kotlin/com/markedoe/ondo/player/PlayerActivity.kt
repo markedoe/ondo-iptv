@@ -325,9 +325,19 @@ class PlayerActivity : ComponentActivity() {
         val exoPlayer = buildPlayer()
         player = exoPlayer
         // Opened again alone, before the settings were read: the viewer's languages as soon as they are.
-        if (!repository.state.value.isReady) lifecycleScope.launch {
-            repository.state.first { it.isReady }
-            player?.let { it.trackSelectionParameters = TrackPreferences.parameters(it.trackSelectionParameters, trackLanguages(), deviceLanguages()) }
+        if (!repository.state.value.isReady) {
+            lifecycleScope.launch {
+                repository.state.first { it.isReady }
+                player?.let { it.trackSelectionParameters = TrackPreferences.parameters(it.trackSelectionParameters, trackLanguages(), deviceLanguages()) }
+            }
+            // An episode's series, Up next and Episodes row, once the catalogue is read (unless another title plays by then).
+            val opened = request
+            lifecycleScope.launch {
+                repository.state.first { it.isReady && !it.isRestoring }
+                if (request !== opened) return@launch
+                nextEpisode = repository.nextEpisode(opened)
+                episodes = episodeList(opened)
+            }
         }
         // Prepared first: the media session starts from a player that is already loading.
         play(urlIndex, request.startPositionMs)
