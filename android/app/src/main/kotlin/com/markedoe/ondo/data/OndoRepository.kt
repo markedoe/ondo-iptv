@@ -714,6 +714,17 @@ class OndoRepository(
             .firstOrNull { TextNormalizer.normalize(it.name) == key && it.photoUrl != null }?.photoUrl
     }
 
+    /** The photo found for a person kept without one: My List and the collections show it from now on. */
+    fun keepPersonPhoto(name: String, photoUrl: String) {
+        val library = _state.value.library
+        if (library.withPersonPhoto(name.trim(), photoUrl) !== library) updateLibrary { it.withPersonPhoto(name.trim(), photoUrl) }
+    }
+
+    /** The people kept without a photo: the one found on the device (a title that credits them), when there is one. */
+    suspend fun fillPersonPhotos(names: List<String>) {
+        for (name in names) personPhoto(name)?.let { keepPersonPhoto(name, it) }
+    }
+
     /** Keeps an actor or a director in My List (whatever the playlist), or takes them out. */
     fun togglePerson(name: String, photoUrl: String?) = updateLibrary { it.toggleFavorite(Favorite.person(name, photoUrl, now())) }
 

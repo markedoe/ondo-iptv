@@ -179,6 +179,17 @@ data class LibraryState(
     fun recentChannels(playlistId: String, limit: Int = 20): List<WatchEntry> =
         history.filter { it.playlistId == playlistId && it.kind == ItemKind.CHANNEL }.sortedByDescending { it.lastWatchedAt }.take(limit)
 
+    /**
+     * A person kept without a photo (none was known yet) gets [photoUrl], in My List and the collections; the same
+     * state when nothing changes.
+     */
+    fun withPersonPhoto(name: String, photoUrl: String): LibraryState {
+        fun Favorite.filled() = if (kind == ItemKind.PERSON && itemId == name && imageUrl == null) copy(imageUrl = photoUrl) else this
+        val favorites = favorites.map { it.filled() }
+        val collections = collections.map { list -> list.items.map { it.filled() }.let { items -> if (items == list.items) list else list.copy(items = items) } }
+        return if (favorites == this.favorites && collections == this.collections) this else copy(favorites = favorites, collections = collections)
+    }
+
     /** Everything of a playlist taken away; for sync, the playlist is remembered as deleted at [now]. */
     fun removingPlaylist(playlistId: String, now: Long = 0): LibraryState = deleting(SyncKeys.playlist(playlistId), now).copy(
         favorites = favorites.filterNot { it.playlistId == playlistId },

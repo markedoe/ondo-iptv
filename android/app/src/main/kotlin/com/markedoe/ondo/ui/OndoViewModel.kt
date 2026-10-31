@@ -315,6 +315,10 @@ class OndoViewModel(
     /** An actor or a director in My List, or out of it. */
     fun togglePerson(name: String, photoUrl: String?) = repository.togglePerson(name, photoUrl)
 
+    fun keepPersonPhoto(name: String, photoUrl: String) = repository.keepPersonPhoto(name, photoUrl)
+
+    suspend fun fillPersonPhotos(names: List<String>) = repository.fillPersonPhotos(names)
+
     fun togglePersonInCollection(id: String, name: String, photoUrl: String?) = repository.togglePersonInCollection(id, name, photoUrl)
 
     /** Makes a collection holding the person. */
