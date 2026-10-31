@@ -45,12 +45,15 @@ class SearchEngine(content: PlaylistContent) {
             val other = ArrayList<T>()
             for (entry in list) {
                 if (entry.categoryId in excludedCategoryIds || !TextNormalizer.matches(entry.key, tokens)) continue
+                // Only exact names fill the limit for good: a later exact name ranks before any prefix match.
                 when {
-                    entry.key == normalized -> exact.add(entry.item)
-                    entry.key.startsWith(normalized) -> prefix.add(entry.item)
-                    else -> other.add(entry.item)
+                    entry.key == normalized -> {
+                        exact.add(entry.item)
+                        if (exact.size >= limitPerType) break
+                    }
+                    entry.key.startsWith(normalized) -> if (prefix.size < limitPerType) prefix.add(entry.item)
+                    else -> if (other.size < limitPerType) other.add(entry.item)
                 }
-                if (exact.size + prefix.size >= limitPerType) break
             }
             return (exact + prefix + other).take(limitPerType)
         }

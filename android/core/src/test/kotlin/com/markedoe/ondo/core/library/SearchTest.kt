@@ -86,6 +86,16 @@ class SearchTest {
         assertEquals(listOf("1", "2"), engine.search("news", limitPerType = 2).channels.map { it.id })
     }
 
+    /** Prefix matches filling the limit before the exact name is reached do not push the exact name out. */
+    @Test
+    fun anExactNameIsFoundPastALimitOfPrefixMatches() {
+        val channels = listOf("News One", "News Two", "News Three", "News").mapIndexed { index, name ->
+            Channel(id = "$index", name = name, categoryId = "a", streamUrl = "http://example.com/1")
+        }
+        val engine = SearchEngine(PlaylistContent(channels = channels))
+        assertEquals(listOf("3", "0"), engine.search("news", limitPerType = 2).channels.map { it.id })
+    }
+
     @Test
     fun stableHash() {
         assertEquals(0xcbf29ce484222325uL, StableHash.fnv1a(""))
