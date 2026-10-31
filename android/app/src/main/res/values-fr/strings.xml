@@ -421,4 +421,6 @@
     <string name="tips_thanks">Merci pour votre pourboire !</string>
     <string name="tips_pending">Votre pourboire attend le paiement. Merci !</string>
     <string name="tips_failed">Le pourboire n’est pas passé.</string>
+    <string name="my_list_added">Ajouté à Ma liste</string>
+    <string name="my_list_removed">Retiré de Ma liste</string>
 </resources>

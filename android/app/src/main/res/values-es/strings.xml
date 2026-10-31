@@ -421,4 +421,6 @@
     <string name="tips_thanks">¡Gracias por tu propina!</string>
     <string name="tips_pending">Tu propina está pendiente de pago. ¡Gracias!</string>
     <string name="tips_failed">La propina no se completó.</string>
+    <string name="my_list_added">Añadido a Mi lista</string>
+    <string name="my_list_removed">Quitado de Mi lista</string>
 </resources>

@@ -39,6 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.runtime.CompositionLocalProvider
+import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.theme.OndoColors
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
@@ -157,7 +159,9 @@ fun TvHomeScreen(
         }
         if (state.myList.isNotEmpty()) {
             tvShelf(titles.myList, "shelfMyList") {
-                items(state.myList, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("myList:${item.key}")) }
+                items(state.myList, key = { it.key }) { item ->
+                    CompositionLocalProvider(LocalShowsMyList provides true) { TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("myList:${item.key}")) }
+                }
                 item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true) }
             }
         }

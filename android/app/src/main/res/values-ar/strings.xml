@@ -460,4 +460,6 @@
     <string name="tips_thanks">شكرًا على إكراميتك!</string>
     <string name="tips_pending">إكراميتك بانتظار الدفع. شكرًا!</string>
     <string name="tips_failed">لم تكتمل الإكرامية.</string>
+    <string name="my_list_added">أُضيف إلى قائمتي</string>
+    <string name="my_list_removed">أُزيل من قائمتي</string>
 </resources>

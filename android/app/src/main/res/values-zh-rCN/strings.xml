@@ -395,4 +395,6 @@
     <string name="tips_thanks">感谢您的打赏！</string>
     <string name="tips_pending">您的打赏正在等待付款。谢谢！</string>
     <string name="tips_failed">打赏未能完成。</string>
+    <string name="my_list_added">已添加到我的片单</string>
+    <string name="my_list_removed">已从我的片单中移除</string>
 </resources>

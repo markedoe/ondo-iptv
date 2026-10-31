@@ -81,8 +81,11 @@ import coil3.compose.AsyncImage
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.components.Artwork
 import com.markedoe.ondo.ui.components.ChannelLogo
+import com.markedoe.ondo.ui.components.LocalPosterMyList
+import com.markedoe.ondo.ui.components.MyListBadge
 import com.markedoe.ondo.ui.components.PlayIcon
 import com.markedoe.ondo.ui.components.ResumeCardMenu
+import com.markedoe.ondo.ui.components.posterLongClick
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.timeLeftText
@@ -303,9 +306,16 @@ fun LazyListScope.tvShelf(title: String, tag: String, start: Dp = TvTokens.Conte
 fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = Modifier, width: Dp = TvTokens.PosterWidth) {
     val (scale, border, glow) = cardFocus()
     var focused by remember { mutableStateOf(false) }
+    // OK held adds the title to My List or takes it away.
+    val myList = LocalPosterMyList.current
     Card(
         onClick = onClick,
-        modifier = modifier.width(width).aspectRatio(2f / 3f).onFocusChanged { focused = it.isFocused }.semantics { contentDescription = item.title },
+        onLongClick = posterLongClick(item),
+        modifier = modifier
+            .width(width)
+            .aspectRatio(2f / 3f)
+            .onFocusChanged { focused = it.isFocused }
+            .semantics { contentDescription = item.title },
         shape = CardDefaults.shape(TvTokens.CardShape),
         scale = scale,
         border = border,
@@ -314,6 +324,7 @@ fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = M
         Box(Modifier.fillMaxSize()) {
             Artwork(url = item.posterUrl, title = item.title, modifier = Modifier.fillMaxSize())
             CardSheen(focused)
+            if (myList != null && item.key in myList.keys) MyListBadge(Modifier.align(Alignment.TopEnd))
         }
     }
 }

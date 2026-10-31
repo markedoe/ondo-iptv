@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Indication
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,9 +26,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -40,10 +43,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -64,6 +70,7 @@ import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.timeLeftText
+import com.markedoe.ondo.ui.tv.LocalHeldOk
 import com.markedoe.ondo.ui.tv.TvConfirmDialog
 import com.markedoe.ondo.ui.tv.TvResumeMenu
 import com.markedoe.ondo.ui.tv.TvRow
@@ -126,6 +133,63 @@ fun Shelf(
 }
 
 /**
+ * My List on a TV's posters: those kept ([keys], as [ShowcaseItem.key]) show a check mark, and OK held on a poster
+ * adds it or takes it away ([toggle]). Null elsewhere: a phone's posters stay as they are.
+ */
+@Stable
+class PosterMyList(val keys: Set<String>, val toggle: (ShowcaseItem) -> Unit)
+
+val LocalPosterMyList = compositionLocalOf<PosterMyList?> { null }
+
+/** The posters shown are My List's: one taken out of it leaves the page (see [HeldOk]). */
+val LocalShowsMyList = staticCompositionLocalOf { false }
+
+/** OK held on a poster (its long press): in My List, or out of it; null where posters have no long press. */
+@Composable
+fun posterLongClick(item: ShowcaseItem): (() -> Unit)? {
+    val myList = LocalPosterMyList.current ?: return null
+    val held = LocalHeldOk.current
+    val leaves = LocalShowsMyList.current
+    return {
+        // Taken out of My List while My List is shown, the poster leaves: the rest of OK held is for no other poster.
+        if (leaves && item.key in myList.keys) held?.arm()
+        myList.toggle(item)
+    }
+}
+
+/** The click of a poster, with OK held (a long press) adding it to My List or taking it away where [LocalPosterMyList] says so. */
+@Composable
+internal fun Modifier.posterClick(item: ShowcaseItem, interaction: MutableInteractionSource, indication: Indication?, onClick: () -> Unit): Modifier {
+    val longClick = posterLongClick(item) ?: return clickable(interactionSource = interaction, indication = indication, onClick = onClick)
+    return combinedClickable(
+        interactionSource = interaction,
+        indication = indication,
+        onLongClickLabel = stringResource(R.string.toggle_favorite_action),
+        onLongClick = longClick,
+        onClick = onClick,
+    )
+}
+
+/** Whether the poster is in My List, where [LocalPosterMyList] says so. */
+@Composable
+fun inMyList(item: ShowcaseItem): Boolean = LocalPosterMyList.current?.keys?.contains(item.key) == true
+
+/** A small white check in a poster's corner: the title is in My List. */
+@Composable
+fun MyListBadge(modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .padding(6.dp)
+            .size(22.dp)
+            .background(Color.White, CircleShape)
+            .testTag("inMyList"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Rounded.Check, contentDescription = null, tint = Color.Black, modifier = Modifier.size(16.dp))
+    }
+}
+
+/**
  * Poster opening the detail page. [focusKey] tells it apart from the same title elsewhere on the page (another
  * shelf), for the focus to come back to the right one.
  */
@@ -142,6 +206,7 @@ fun PosterCard(
     initialFocus: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val kept = inMyList(item)
     if (!showsTitle) {
         Column(
             modifier = modifier
@@ -150,10 +215,13 @@ fun PosterCard(
                 .focusFrame(PosterShape)
                 .focusMemory(focusKey, initialFocus)
                 .clip(PosterShape)
-                .clickable(interactionSource = interaction, indication = LocalIndication.current, onClick = onClick)
+                .posterClick(item, interaction, LocalIndication.current, onClick)
                 .semantics { contentDescription = item.title },
         ) {
-            Poster(url = item.posterUrl, title = item.title, progress = progress)
+            Box {
+                Poster(url = item.posterUrl, title = item.title, progress = progress)
+                if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
+            }
         }
         return
     }
@@ -165,20 +233,23 @@ fun PosterCard(
             .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
             .pressScale(interaction)
             .focusMemory(focusKey, initialFocus)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .posterClick(item, interaction, null, onClick)
             .semantics { contentDescription = item.title },
     ) {
-        Poster(
-            url = item.posterUrl,
-            title = item.title,
-            progress = progress,
-            modifier = Modifier
-                .graphicsLayer {
-                    scaleX = grow
-                    scaleY = grow
-                }
-                .border(3.dp, if (focused) MaterialTheme.colorScheme.onBackground else Color.Transparent, PosterShape),
-        )
+        Box(
+            Modifier.graphicsLayer {
+                scaleX = grow
+                scaleY = grow
+            },
+        ) {
+            Poster(
+                url = item.posterUrl,
+                title = item.title,
+                progress = progress,
+                modifier = Modifier.border(3.dp, if (focused) MaterialTheme.colorScheme.onBackground else Color.Transparent, PosterShape),
+            )
+            if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
+        }
         Text(
             text = item.title,
             style = MaterialTheme.typography.titleSmall,

@@ -6,6 +6,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.tween
@@ -72,6 +73,9 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.TipsState
 import com.markedoe.ondo.player.PlayerActivity
+import com.markedoe.ondo.ui.components.LocalPosterMyList
+import com.markedoe.ondo.ui.components.LocalShowsMyList
+import com.markedoe.ondo.ui.components.PosterMyList
 import com.markedoe.ondo.ui.components.TMDB_API_PAGE
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
@@ -129,6 +133,8 @@ import com.markedoe.ondo.ui.tv.tvSafeArea
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 const val PRIVACY_URL = "https://markedoe.github.io/ondo-iptv/privacy.html"
@@ -225,62 +231,81 @@ private fun MainTabs(viewModel: OndoViewModel) {
     } else {
         { pages -> OndoNavigationFrame(selected, onSelect = navController::openTab, content = pages) }
     }
+    // On a TV, OK held on a poster adds it to My List or takes it away; those kept show a check mark.
+    val myList = if (isTelevision()) rememberPosterMyList(viewModel) else null
     frame {
-        Box(Modifier.fillMaxSize()) {
-            // A short fade between pages (the default crossfade lasts 700 ms).
-            NavHost(
-                navController,
-                startDestination = Routes.Home,
-                enterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
-                exitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
-                popEnterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
-                popExitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
-            ) {
-                page<Routes.Home>(TvMargins.NONE) { HomeDestination(viewModel, navController) }
-                page<Routes.Movies>(TvMargins.TAB) { VodDestination(viewModel, navController, series = false) }
-                page<Routes.Series>(TvMargins.TAB) { VodDestination(viewModel, navController, series = true) }
-                page<Routes.Live>(TvMargins.TAB) { LiveDestination(viewModel, navController) }
-                page<Routes.Search> { SearchDestination(viewModel, navController) }
-                page<Routes.MyList>(TvMargins.TAB) { MyListDestination(viewModel, navController) }
-                page<Routes.MovieDetail>(TvMargins.NONE) { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
-                page<Routes.SeriesDetail>(TvMargins.NONE) { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
-                page<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
-                page<Routes.Browse>(TvMargins.TAB) { BrowseDestination(viewModel, navController, it.toRoute()) }
-                page<Routes.Guide> { GuideDestination(viewModel, navController) }
-                page<Routes.Reminders> { RemindersDestination(viewModel, navController) }
-                page<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
-                page<Routes.Grid>(TvMargins.TAB) { GridDestination(viewModel, navController, it.toRoute()) }
-                page<Routes.Settings>(TvMargins.NONE) { SettingsDestination(viewModel, navController) }
-                page<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
-                page<Routes.Help> {
-                    val open = rememberPageOpener(navController)
-                    HelpScreen(onBack = { navController.popBackStack() }, onSupport = { open(SUPPORT_URL) })
-                }
-                page<Routes.Web> {
-                    WebPageScreen(it.toRoute<Routes.Web>().url, allowed = setOf(PRIVACY_URL, SUPPORT_URL), onBack = { navController.popBackStack() })
-                }
-                page<Routes.AddPlaylist> {
-                    val state by viewModel.state.collectAsStateWithLifecycle()
-                    var picked by remember { mutableStateOf<PickedFile?>(null) }
-                    // A refresh error still on screen when the form opens is not the form's.
-                    var opened by rememberSaveable { mutableStateOf(false) }
-                    LaunchedEffect(Unit) {
-                        if (!opened) viewModel.clearError()
-                        opened = true
+        CompositionLocalProvider(LocalPosterMyList provides myList) {
+            Box(Modifier.fillMaxSize()) {
+                // A short fade between pages (the default crossfade lasts 700 ms).
+                NavHost(
+                    navController,
+                    startDestination = Routes.Home,
+                    enterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
+                    exitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
+                    popEnterTransition = { fadeIn(tween(PAGE_FADE_MS)) },
+                    popExitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
+                ) {
+                    page<Routes.Home>(TvMargins.NONE) { HomeDestination(viewModel, navController) }
+                    page<Routes.Movies>(TvMargins.TAB) { VodDestination(viewModel, navController, series = false) }
+                    page<Routes.Series>(TvMargins.TAB) { VodDestination(viewModel, navController, series = true) }
+                    page<Routes.Live>(TvMargins.TAB) { LiveDestination(viewModel, navController) }
+                    page<Routes.Search> { SearchDestination(viewModel, navController) }
+                    page<Routes.MyList>(TvMargins.TAB) { MyListDestination(viewModel, navController) }
+                    page<Routes.MovieDetail>(TvMargins.NONE) { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
+                    page<Routes.SeriesDetail>(TvMargins.NONE) { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
+                    page<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
+                    page<Routes.Browse>(TvMargins.TAB) { BrowseDestination(viewModel, navController, it.toRoute()) }
+                    page<Routes.Guide> { GuideDestination(viewModel, navController) }
+                    page<Routes.Reminders> { RemindersDestination(viewModel, navController) }
+                    page<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
+                    page<Routes.Grid>(TvMargins.TAB) { GridDestination(viewModel, navController, it.toRoute()) }
+                    page<Routes.Settings>(TvMargins.NONE) { SettingsDestination(viewModel, navController) }
+                    page<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
+                    page<Routes.Help> {
+                        val open = rememberPageOpener(navController)
+                        HelpScreen(onBack = { navController.popBackStack() }, onSupport = { open(SUPPORT_URL) })
                     }
-                    AddPlaylistScreen(
-                        onSave = { form -> viewModel.addPlaylist(form) { navController.popBackStack() } },
-                        onBack = { viewModel.clearError(); navController.popBackStack() },
-                        isLoading = state.isLoading,
-                        error = state.error?.let { loadErrorText(it) },
-                        onPickFile = rememberPlaylistFilePicker { picked = it },
-                        pickedFile = picked,
-                    )
+                    page<Routes.Web> {
+                        WebPageScreen(it.toRoute<Routes.Web>().url, allowed = setOf(PRIVACY_URL, SUPPORT_URL), onBack = { navController.popBackStack() })
+                    }
+                    page<Routes.AddPlaylist> {
+                        val state by viewModel.state.collectAsStateWithLifecycle()
+                        var picked by remember { mutableStateOf<PickedFile?>(null) }
+                        // A refresh error still on screen when the form opens is not the form's.
+                        var opened by rememberSaveable { mutableStateOf(false) }
+                        LaunchedEffect(Unit) {
+                            if (!opened) viewModel.clearError()
+                            opened = true
+                        }
+                        AddPlaylistScreen(
+                            onSave = { form -> viewModel.addPlaylist(form) { navController.popBackStack() } },
+                            onBack = { viewModel.clearError(); navController.popBackStack() },
+                            isLoading = state.isLoading,
+                            error = state.error?.let { loadErrorText(it) },
+                            onPickFile = rememberPlaylistFilePicker { picked = it },
+                            pickedFile = picked,
+                        )
+                    }
+                }
+                if (entry?.destination?.hasRoute(Routes.AddPlaylist::class) != true) {
+                    ErrorSnackbar(viewModel, Modifier.align(Alignment.BottomCenter), onRetry = viewModel::refresh)
                 }
             }
-            if (entry?.destination?.hasRoute(Routes.AddPlaylist::class) != true) {
-                ErrorSnackbar(viewModel, Modifier.align(Alignment.BottomCenter), onRetry = viewModel::refresh)
-            }
+        }
+    }
+}
+
+/** My List on the posters: the titles kept, and OK held adding one or taking it away, said in a short message. */
+@Composable
+private fun rememberPosterMyList(viewModel: OndoViewModel): PosterMyList {
+    val context = LocalContext.current
+    val kept = remember(viewModel) { viewModel.state.map(UiMappers::myListKeys).distinctUntilChanged() }
+    val keys by kept.collectAsStateWithLifecycle(remember(viewModel) { UiMappers.myListKeys(viewModel.state.value) })
+    return remember(viewModel, keys, context) {
+        PosterMyList(keys) { item ->
+            val removed = UiMappers.isFavorite(viewModel.state.value, item)
+            viewModel.toggleMyList(item)
+            Toast.makeText(context, if (removed) R.string.my_list_removed else R.string.my_list_added, Toast.LENGTH_SHORT).show()
         }
     }
 }
@@ -725,18 +750,20 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
         }
     }
-    PosterGridScreen(
-        title = title,
-        items = items,
-        filter = filter,
-        onFilter = { filter = it },
-        onOpen = navController::open,
-        onBack = { navController.popBackStack() },
-        sort = sort,
-        onSort = viewModel::setPosterSort,
-        hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
-        onHideWatched = viewModel::setHideWatchedMovies,
-    )
+    CompositionLocalProvider(LocalShowsMyList provides route.myList) {
+        PosterGridScreen(
+            title = title,
+            items = items,
+            filter = filter,
+            onFilter = { filter = it },
+            onOpen = navController::open,
+            onBack = { navController.popBackStack() },
+            sort = sort,
+            onSort = viewModel::setPosterSort,
+            hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
+            onHideWatched = viewModel::setHideWatchedMovies,
+        )
+    }
 }
 
 /** The app's version and its build (the version code); a build for a Google Play test track says it is a beta. */

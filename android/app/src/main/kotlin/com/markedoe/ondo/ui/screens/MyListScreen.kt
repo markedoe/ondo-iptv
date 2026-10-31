@@ -1,5 +1,7 @@
 package com.markedoe.ondo.ui.screens
 
+import androidx.compose.runtime.CompositionLocalProvider
+import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.tv.tvTopBarSpace
 import com.markedoe.ondo.ui.tv.rememberTabGridState
 import androidx.compose.foundation.background
@@ -128,7 +130,9 @@ fun MyListScreen(state: MyListUiState, kind: MyListKind, actions: MyListActions)
         when (kind) {
             MyListKind.MOVIES, MyListKind.SERIES -> {
                 val items = if (kind == MyListKind.MOVIES) state.movies else state.series
-                items(items, key = { it.key }) { item -> PosterCard(item, width = null, onClick = { actions.onOpen(item) }, showsTitle = true) }
+                items(items, key = { it.key }) { item ->
+                    CompositionLocalProvider(LocalShowsMyList provides true) { PosterCard(item, width = null, onClick = { actions.onOpen(item) }, showsTitle = true) }
+                }
             }
             MyListKind.CHANNELS -> items(state.channels, key = { it.channel.id }, span = { GridItemSpan(maxLineSpan) }) { row ->
                 Row(

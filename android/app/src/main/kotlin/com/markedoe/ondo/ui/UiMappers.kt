@@ -444,6 +444,19 @@ object UiMappers {
         return ChannelRow(channel, current?.title, current?.progress(now)?.toFloat(), next?.title)
     }
 
+    /** The keys ([ShowcaseItem.key]) of the movies and series in My List, for the current playlist. */
+    fun myListKeys(state: OndoState): Set<String> {
+        val playlistId = state.activePlaylistId.orEmpty()
+        return state.library.favorites.mapNotNullTo(HashSet()) { favorite ->
+            when {
+                favorite.playlistId != playlistId -> null
+                favorite.kind == ItemKind.MOVIE -> "m-" + favorite.itemId
+                favorite.kind == ItemKind.SERIES -> "s-" + favorite.itemId
+                else -> null
+            }
+        }
+    }
+
     fun isFavorite(state: OndoState, item: ShowcaseItem): Boolean {
         val playlistId = state.activePlaylistId.orEmpty()
         return when (item) {

@@ -1,5 +1,7 @@
 package com.markedoe.ondo.ui.screens
 
+import androidx.compose.runtime.CompositionLocalProvider
+import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.tv.tvTopBarSpace
 import com.markedoe.ondo.ui.tv.rememberTabListState
 import androidx.compose.foundation.layout.Arrangement
@@ -173,7 +175,9 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
             item {
                 Shelf(stringResource(R.string.my_list), metrics, onSeeAll = actions.onSeeAllMyList) {
                     itemsIndexed(state.myList.take(rowLength), key = { _, it -> it.key }) { index, item ->
-                        PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == "myList" && index == 0)
+                        CompositionLocalProvider(LocalShowsMyList provides true) {
+                            PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == "myList" && index == 0)
+                        }
                     }
                     if (television) item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true, width = metrics.posterWidth, modifier = Modifier.focusMemory("myList:seeAll")) }
                 }

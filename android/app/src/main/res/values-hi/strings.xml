@@ -408,4 +408,6 @@
     <string name="tips_thanks">आपकी टिप के लिए धन्यवाद!</string>
     <string name="tips_pending">आपकी टिप भुगतान की प्रतीक्षा में है। धन्यवाद!</string>
     <string name="tips_failed">टिप पूरी नहीं हुई।</string>
+    <string name="my_list_added">मेरी सूची में जोड़ा गया</string>
+    <string name="my_list_removed">मेरी सूची से हटाया गया</string>
 </resources>
