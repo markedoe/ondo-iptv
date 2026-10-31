@@ -701,8 +701,8 @@ object UiMappers {
         val movieIds: Set<String> = movies.mapTo(HashSet()) { it.second.id }
         val seriesIds: Set<String> = series.mapTo(HashSet()) { it.second.id }
 
-        /** Actors and directors of the series lists (movie lists give no cast). */
-        val people = PeopleIndex(content.series.filter { it.categoryId !in hidden }.flatMap { listOf(it.cast, it.director) })
+        /** Actors and directors of the series shown (movie lists give no cast). */
+        val people = PeopleIndex(series.flatMap { (_, it) -> listOf(it.cast, it.director) })
 
         companion object {
             @Volatile private var cached: Pair<Triple<PlaylistContent, Set<String>, Set<String>>, SearchIndex>? = null

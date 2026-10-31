@@ -598,6 +598,18 @@ class UiMappersTest {
         assertNotSame("a language hidden", UiMappers.SearchIndex.of(content, hidden), UiMappers.SearchIndex.of(content, hidden, setOf("DE")))
     }
 
+    /** The cast of a series named after a hidden language is not found either: the series itself is not. */
+    @Test
+    fun searchLeavesOutThePeopleOfASeriesOfAHiddenLanguage() {
+        val state = Fixtures.state()
+        val german = Fixtures.harborLights.copy(id = "de-s", name = "|DE| Hafenlichter", cast = "Hannelore Quist")
+        val content = state.content.copy(series = state.content.series + german)
+        val shown = state.copy(content = content)
+        val hidden = UiMappers.hiddenCategoryIds(state)
+        assertEquals(listOf("Hannelore Quist"), UiMappers.people(UiMappers.SearchIndex(content, hidden), shown, "quist"))
+        assertEquals(emptyList<String>(), UiMappers.people(UiMappers.SearchIndex(content, hidden, setOf("DE")), shown, "quist"))
+    }
+
     @Test
     fun aSearchReplacedByANewerOneStops() {
         val state = Fixtures.state()
