@@ -47,6 +47,9 @@ class TmdbTest {
         assertEquals("", CatalogueMatcher.filmKey("[4K]"))
         assertEquals("mobland", CatalogueMatcher.filmKey("|FR-4K DV| MobLand"), "a provider's tag between bars is not the title")
         assertEquals("mobland", CatalogueMatcher.searchQuery("|FR-4K DV| MobLand (MULTi)"))
+        // Bars set apart by spaces separate the parts of a name: the title between them stays.
+        assertEquals("sandstorm", CatalogueMatcher.key("FR | Sandstorm | 4K"))
+        assertEquals("sandstorm", CatalogueMatcher.searchQuery("| FR | Sandstorm |MULTI|"))
         assertTrue(CatalogueMatcher.isSameFilm("Sandstorm VOSTFR", null, "FR - Sandstorm (2021)", null))
         assertTrue(CatalogueMatcher.isSameFilm("Sandstorm", 2021, "Sandstorm EN", 2022), "release dates differ between countries")
         assertFalse(CatalogueMatcher.isSameFilm("Dune (1984)", null, "Dune (2021)", null), "a remake is another film")

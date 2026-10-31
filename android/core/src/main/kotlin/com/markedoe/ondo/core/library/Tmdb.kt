@@ -312,8 +312,11 @@ sealed interface TrendingMatch {
 object CatalogueMatcher {
     private val bracketed = Regex("""\[[^\]]*]""")
 
-    /** A provider's tag between bars, before or after the name: "|FR-4K DV| MobLand", "MobLand |MULTI|". */
-    private val barred = Regex("""\|[^|]{1,24}\|""")
+    /**
+     * A provider's tag between bars, before or after the name: "|FR-4K DV| MobLand", "MobLand |MULTI|". A bar followed
+     * by a space only separates parts of the name: "FR | Sandstorm | 4K" keeps "Sandstorm".
+     */
+    private val barred = Regex("""\|[^|\s][^|]{0,23}\|""")
     private val parenthesized = Regex("""\([^)]*\)""")
 
     internal fun key(title: String): String = words(title).joinToString("")
