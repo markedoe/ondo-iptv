@@ -27,6 +27,9 @@ final class TMDbTests: XCTestCase {
         // A provider's tag between bars is not the title.
         XCTAssertEqual(CatalogueMatcher.searchQuery("|FR-4K DV| MobLand (MULTi)"), "mobland")
         XCTAssertEqual(CatalogueMatcher.key("|FR-4K DV| MobLand"), CatalogueMatcher.key("MobLand"))
+        // Bars set apart by spaces separate the parts of a name: the title between them stays.
+        XCTAssertEqual(CatalogueMatcher.key("FR | Sandstorm | 4K"), "sandstorm")
+        XCTAssertEqual(CatalogueMatcher.searchQuery("| FR | Sandstorm |MULTI|"), "sandstorm")
         XCTAssertFalse(CatalogueMatcher.closeYears(Int.min, 2008))
         XCTAssertFalse(CatalogueMatcher.closeYears(Int.max, Int.min))
     }

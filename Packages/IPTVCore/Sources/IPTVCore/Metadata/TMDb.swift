@@ -447,8 +447,9 @@ public enum CatalogueMatcher {
         var name = title
         // Remove bracketed tags: [MULTI], (VOSTFR)…
         name = name.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
-        // A provider's tag between bars, before or after the name: "|FR-4K DV| MobLand", "MobLand |MULTI|".
-        name = name.replacingOccurrences(of: #"\|[^|]{1,24}\|"#, with: " ", options: .regularExpression)
+        // A provider's tag between bars, before or after the name: "|FR-4K DV| MobLand", "MobLand |MULTI|". A bar
+        // followed by a space only separates parts of the name: "FR | Sandstorm | 4K" keeps "Sandstorm".
+        name = name.replacingOccurrences(of: #"\|[^|\s][^|]{0,23}\|"#, with: " ", options: .regularExpression)
         name = TitleParser.splitYear(name).0
         name = name.replacingOccurrences(of: #"\([^)]*\)"#, with: " ", options: .regularExpression)
         return TextNormalizer.channelMatchWords(name)
