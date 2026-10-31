@@ -242,6 +242,8 @@ final class AppModel {
         // calling `bootstrap()` too returns here).
         isReady = true
         refreshLocalSync()
+        // The screens wait for the catalogue that opens below, not show an empty one meanwhile.
+        if activePlaylist != nil { phase = .loading(String(localized: "Opening playlist…")) }
         await loadDeadImages()
         #if DEBUG
         if UITestFixture.isEnabled, playlists.isEmpty, let fixture = try? UITestFixture.makePlaylist() {
