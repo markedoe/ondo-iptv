@@ -1,0 +1,32 @@
+Ondo playback report, 2026-10-31T08:17:41Z
+App: Ondo 1.2.0 (1)
+System: iOS 26.5, arm64
+Engine: VLC (setting: automatic)
+Buffer: 1.0 s in use; live automatic, films and series automatic
+Playing: film, .mkv, 480×270
+Duration: 40.0 s
+Position: 25.7 s
+State: playing
+
+Verdict: measuring
+Freezes: 0, 0.0 s
+Lost pictures: 6
+Smoothness: -
+Video bitrate: -; received (10 s): 0.00 Mb/s
+
+Events (seconds since opening):
+  0.0 open film
+  0.0 address 1 of 1 (.mkv) with the system player (MKV remuxed)
+  0.0 remux not possible (the server does not send parts of the file (HTTP 200)): VLC plays the film
+  0.0 address 1 of 1 (.mkv) with VLC, buffer 1 s
+  0.5 state: playing
+  1.5 picture moving after 1.5 s
+  1.5 seek from 0.5 to 25.0 s
+  2.5 seek done after 1.0 s
+
+Samples (s, position, received kB, used kB (tracks played), pictures shown, lost):
+  0.5 0.0 3022 3 0 0
+  1.0 0.0 3022 34 0 0
+  1.5 0.5 3022 55 5 6
+  2.0 25.2 3022 264 14 6
+  2.5 25.7 3022 284 27 6
