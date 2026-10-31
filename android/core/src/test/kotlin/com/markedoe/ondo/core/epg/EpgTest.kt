@@ -166,6 +166,19 @@ class EpgTest {
         assertEquals("E12", programs[2].episode)
     }
 
+    /** A guide listing a programme ID (`dd_progid`) before its episode number shows the episode number, not the ID. */
+    @Test
+    fun aProgrammeIdIsNotAnEpisodeNumber() {
+        val xml = """
+            <tv>
+              <programme channel="a" start="20251009200000 +0000" stop="20251009210000 +0000"><title>T</title><episode-num system="dd_progid">EP01234567.0003</episode-num><episode-num system="xmltv_ns">1.4.</episode-num></programme>
+              <programme channel="a" start="20251009210000 +0000" stop="20251009220000 +0000"><title>U</title><episode-num system="dd_progid">MV00012345.0000</episode-num></programme>
+            </tv>
+        """.trimIndent()
+        val programs = assertNotNull(parser.parseGuide(xml.encodeToByteArray()).programs["a"])
+        assertEquals(listOf("S02E05", null), programs.map { it.episode })
+    }
+
     /** A season or episode whose 1-based number does not fit a 32-bit integer keeps the guide's text. */
     @Test
     fun episodeNumbersPastIntRangeAreKeptAsText() {

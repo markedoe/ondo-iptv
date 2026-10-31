@@ -736,7 +736,7 @@ object UiMappers {
     const val FILTERED_LIMIT = 1_000
 
     /**
-     * Every word of the query must start a word of the title ("dark kni" finds "The Dark Knight"). With filters,
+     * Every word of the query is found in the title ("dark kni" finds "The Dark Knight", "dust" finds "Stardust"). With filters,
      * only movies and series released in those years, or movies of that festival or ceremony, are listed, newest
      * first; an empty query then lists all of them. [checkCancelled] is called while going through the titles: it
      * throws to stop a search that a newer query replaced.
@@ -764,20 +764,25 @@ object UiMappers {
             words.all { word -> title.startsWith(word) || title.contains(" $word") } -> 2
             else -> 3
         }
-        fun <T> List<Pair<String, T>>.find(): Sequence<T> = asSequence()
-            .filter { (title, _) ->
+        // One pass, each rank kept up to [cap]: a short query on a big catalogue stops once enough titles named
+        // exactly that are found, and a newer query stops it between titles.
+        fun <T> List<Pair<String, T>>.find(cap: Int = Int.MAX_VALUE): Sequence<T> {
+            val ranked = List(4) { ArrayList<T>() }
+            for ((title, item) in this) {
                 checkCancelled()
-                words.all { title.contains(it) }
+                if (!words.all { title.contains(it) }) continue
+                val bucket = ranked[rank(title)]
+                if (bucket.size < cap) bucket += item
+                if (ranked[0].size >= cap) break
             }
-            .map { (title, item) -> rank(title) to item }
-            .sortedBy { it.first }
-            .map { it.second }
+            return ranked.asSequence().flatten()
+        }
         if (!filters.isActive) {
             return empty.copy(
                 people = if (withPeople) people(index, state, query) else emptyList(),
-                movies = index.movies.find().take(limit).map { ShowcaseItem.MovieItem(it) }.toList(),
-                series = index.series.find().take(limit).map { ShowcaseItem.SeriesItem(it) }.toList(),
-                channels = index.channels.find().take(limit).map { channelRow(it, state, now) }.toList(),
+                movies = index.movies.find(limit).take(limit).map { ShowcaseItem.MovieItem(it) }.toList(),
+                series = index.series.find(limit).take(limit).map { ShowcaseItem.SeriesItem(it) }.toList(),
+                channels = index.channels.find(limit).take(limit).map { channelRow(it, state, now) }.toList(),
             )
         }
         val years = filters.years

@@ -315,6 +315,8 @@ private class XmltvHandler(
             }
 
             "title", "sub-title", "desc", "category", "episode-num", "display-name", "value" -> {
+                // A programme ID ("EP01234567.0003"), often listed before the episode number, is not one.
+                if (qName == "episode-num" && attributes.getValue("system")?.lowercase() == "dd_progid") return
                 if ((programme != null && keepProgramme) || (channelId != null && qName == "display-name")) {
                     capturing = true
                     text.setLength(0)
