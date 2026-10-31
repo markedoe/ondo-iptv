@@ -40,14 +40,15 @@ public struct SearchEngine: Sendable {
             for entry in list {
                 guard !excludedCategoryIDs.contains(categoryID(entry.item)),
                       TextNormalizer.matches(normalizedText: entry.key, queryTokens: tokens) else { continue }
+                // Only exact names fill the limit for good: a later exact name ranks before any prefix match.
                 if entry.key == normalized {
                     exact.append(entry.item)
+                    if exact.count >= limitPerType { break }
                 } else if entry.key.hasPrefix(normalized) {
-                    prefix.append(entry.item)
-                } else {
+                    if prefix.count < limitPerType { prefix.append(entry.item) }
+                } else if other.count < limitPerType {
                     other.append(entry.item)
                 }
-                if exact.count + prefix.count >= limitPerType { break }
             }
             return Array((exact + prefix + other).prefix(limitPerType))
         }

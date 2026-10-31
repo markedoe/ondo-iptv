@@ -65,6 +65,16 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(engine.search("zzz").totalCount, 0)
     }
 
+    /// Prefix matches filling the limit before the exact name is reached do not push the exact name out.
+    func testAnExactNameIsFoundPastALimitOfPrefixMatches() {
+        let url = URL(string: "http://example.com/1")!
+        let channels = ["News One", "News Two", "News Three", "News"].enumerated().map { index, name in
+            Channel(id: String(index), name: name, categoryID: "a", streamURL: url)
+        }
+        let engine = SearchEngine(content: PlaylistContent(channels: channels))
+        XCTAssertEqual(engine.search("news", limitPerType: 2).channels.map(\.id), ["3", "0"])
+    }
+
     func testStableHash() {
         XCTAssertEqual(StableHash.fnv1a(""), 0xcbf2_9ce4_8422_2325)
         XCTAssertEqual(StableHash.hex("http://x/1"), StableHash.hex("http://x/1"))
