@@ -351,7 +351,8 @@ class OndoRepositoryTest {
         var time = clock
         val answers = mutableMapOf(list to m3u, guideUrl to guide(EpgProgram("news.test", clock - 30 * 60_000, clock + 12 * 3_600_000, "Evening News")))
         val http = object : HttpClient {
-            val guides = mutableListOf<Long>()
+            // Asked from the guide's own thread, read from the test's.
+            val guides: MutableList<Long> = java.util.Collections.synchronizedList(mutableListOf())
             override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
                 if (url == guideUrl) guides += time
                 return answers[url]?.encodeToByteArray() ?: throw HttpException.BadStatus(404)
@@ -407,6 +408,13 @@ class OndoRepositoryTest {
         val fourth = launch()
         fourth.bootstrap()
         assertEquals(listOf("Evening News"), fourth.programme())
+        // The download tried runs on a thread of its own: waited for in real time, as for Refresh above.
+        val tried = System.currentTimeMillis() + 30_000
+        while (http.guides.size < 4) {
+            check(System.currentTimeMillis() < tried) { "the old guide was not asked for again" }
+            testScheduler.runCurrent()
+            Thread.sleep(10)
+        }
         assertEquals(4, http.guides.size)
     }
 
