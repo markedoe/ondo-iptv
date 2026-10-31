@@ -688,7 +688,7 @@ object UiMappers {
      * What Search looks through: not the hidden categories, nor a title or channel whose own name carries a hidden
      * language tag ("|DE| …" in a category of no language).
      */
-    class SearchIndex(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet()) {
+    class SearchIndex(content: PlaylistContent, private val hidden: Set<String>, private val hiddenTags: Set<String> = emptySet()) {
         private fun shown(categoryId: String, name: String) =
             categoryId !in hidden && (hiddenTags.isEmpty() || CategoryFilter.channelTag(name) !in hiddenTags)
 
