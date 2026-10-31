@@ -208,12 +208,15 @@ private fun MainTabs(viewModel: OndoViewModel) {
     val destination = entry?.destination
     // On a TV, Search is a page of its own, without the top bar: Back closes it.
     val tabPage = TopLevel.entries.any { destination?.hasRoute(it.route::class) == true }
+    // A category's or a genre's titles keep the bar, on the tab they were opened from.
+    val categoryPage = destination?.hasRoute(Routes.Grid::class) == true || destination?.hasRoute(Routes.Browse::class) == true
     val frame: @Composable (@Composable () -> Unit) -> Unit = if (isTelevision()) {
         { pages ->
             TvNavigationFrame(
                 selected = selected,
-                showBar = tabPage,
-                onSelect = navController::openTab,
+                showBar = tabPage || categoryPage,
+                tabPage = tabPage,
+                onSelect = { tab -> navController.openTabFromBar(tab, reselected = tab == selected && !tabPage) },
                 onSearch = { navController.openSearch(viewModel) },
                 onSettings = { navController.navigate(Routes.Settings) },
                 content = pages,
@@ -242,11 +245,11 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 page<Routes.MovieDetail>(TvMargins.NONE) { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                 page<Routes.SeriesDetail>(TvMargins.NONE) { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
                 page<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
-                page<Routes.Browse> { BrowseDestination(viewModel, navController, it.toRoute()) }
+                page<Routes.Browse>(TvMargins.TAB) { BrowseDestination(viewModel, navController, it.toRoute()) }
                 page<Routes.Guide> { GuideDestination(viewModel, navController) }
                 page<Routes.Reminders> { RemindersDestination(viewModel, navController) }
                 page<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
-                page<Routes.Grid> { GridDestination(viewModel, navController, it.toRoute()) }
+                page<Routes.Grid>(TvMargins.TAB) { GridDestination(viewModel, navController, it.toRoute()) }
                 page<Routes.Settings>(TvMargins.NONE) { SettingsDestination(viewModel, navController) }
                 page<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
                 page<Routes.Help> {
@@ -378,6 +381,15 @@ private fun NavHostController.openTab(tab: TopLevel) {
         launchSingleTop = true
         restoreState = true
     }
+}
+
+/**
+ * A tab chosen on a TV's bar. The tab shown, chosen from a page of its own (a category's titles), goes back to the
+ * tab's page: [openTab] would bring back the same page, kept with the tab.
+ */
+private fun NavHostController.openTabFromBar(tab: TopLevel, reselected: Boolean) {
+    if (reselected && popBackStack(tab.route, inclusive = false)) return
+    openTab(tab)
 }
 
 /**
@@ -672,6 +684,11 @@ private fun PersonDestination(viewModel: OndoViewModel, navController: NavHostCo
         inMyList = keptPerson != null,
         collections = UiMappers.collectionChoices(state, ItemKind.PERSON, name.trim()),
     )
+    // Kept before their photo was known: it goes with them to My List once found.
+    LaunchedEffect(keptPerson?.imageUrl, shown.photoUrl) {
+        val found = shown.photoUrl
+        if (keptPerson != null && keptPerson.imageUrl == null && found != null) viewModel.keepPersonPhoto(name, found)
+    }
     PersonScreen(
         shown,
         onOpen = navController::open,
@@ -869,6 +886,9 @@ private fun MyListDestination(viewModel: OndoViewModel, navController: NavHostCo
             },
         )
     }
+    // The people kept without a photo get the one known on the device, as their page shows it.
+    val missing = state.people.filter { it.photoUrl == null }.map { it.name }
+    LaunchedEffect(missing) { if (missing.isNotEmpty()) viewModel.fillPersonPhotos(missing) }
     MyListScreen(
         state = state,
         kind = kind,

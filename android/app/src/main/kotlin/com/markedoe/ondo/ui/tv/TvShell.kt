@@ -141,8 +141,9 @@ fun rememberTabGridState(): LazyGridState {
 /**
  * The TV's navigation: a bar always at the top of the tab pages, which scroll under it. Ondo's mark, the tabs, then
  * Search and Settings at the far end.
- * [selected] is the tab shown. Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen
- * ([showBar] false).
+ * [selected] is the tab shown. A category's or a genre's titles keep the bar ([showBar]) on the tab they belong to,
+ * though no tab page ([tabPage] false: Back goes back to the page before). Pages beyond a tab (Search, a movie, the
+ * guide, Settings) take the whole screen ([showBar] false).
  *
  * The tab the remote moves to along the bar opens at once; OK goes into its page. Up from a page's top reaches the bar, on the tab shown; Down from the
  * bar goes to the page's first item. Back
@@ -153,6 +154,7 @@ fun rememberTabGridState(): LazyGridState {
 fun TvNavigationFrame(
     selected: TopLevel,
     showBar: Boolean,
+    tabPage: Boolean = showBar,
     onSelect: (TopLevel) -> Unit,
     onSearch: () -> Unit,
     onSettings: () -> Unit,
@@ -278,8 +280,9 @@ fun TvNavigationFrame(
             }
         }
         // After the pages: Back reaches this before the pages' own back stack.
-        // On Home's bar, Back does nothing: Ondo stays open (the remote's Home button leaves it).
-        BackHandler(enabled = showBar) {
+        // On Home's bar, Back does nothing: Ondo stays open (the remote's Home button leaves it). On a category's page,
+        // Back is the page's own: back to the page before.
+        BackHandler(enabled = showBar && tabPage) {
             if (barHasFocus && atHome) {
                 return@BackHandler
             } else if (barHasFocus) {

@@ -235,7 +235,7 @@ fun PosterGridScreen(
     val leaveField = rememberLeaveField()
     LazyVerticalGrid(
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
-        contentPadding = PaddingValues(start = metrics.gutter, end = metrics.gutter, bottom = 32.dp),
+        contentPadding = PaddingValues(start = metrics.gutter, top = tvTopBarSpace(), end = metrics.gutter, bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).testTag("grid"),

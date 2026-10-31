@@ -444,6 +444,87 @@ class TelevisionFocusTest {
         assertEquals("the focus is on ${if (editing()) "the filter" else focused()}", "Northern Lights", focused())
     }
 
+    /** Whether the top bar's tab [tag] is the one shown. */
+    private fun tabSelected(tag: String): Boolean =
+        compose.onAllNodesWithTag(tag).fetchSemanticsNodes().any { it.config.getOrNull(SemanticsProperties.Selected) == true }
+
+    private fun back() {
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        settle(500)
+    }
+
+    /** A category's posters on Movies, opened from its chip. */
+    private fun openDramaGrid() {
+        openFromDrawer("tabMovies")
+        pressUntil(Key.DirectionDown) { focused() in movieTitles }
+        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
+        pressUntil(Key.DirectionRight) { focused() == "Drama" }
+        press(Key.DirectionCenter)
+        waitFor { exists("grid") && focusedIn("grid") }
+    }
+
+    /**
+     * A category's posters keep the top bar, on the tab they belong to: Up from the page's top reaches it on that tab,
+     * Down comes back to the page, Back goes back to the tab's page (not to Home), OK on the tab too.
+     */
+    @Test
+    fun aCategorysPostersKeepTheTopBar() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openDramaGrid()
+        assertTrue("the bar stays over the category", exists("topBar"))
+        assertTrue("on the tab it belongs to", tabSelected("tabMovies"))
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        assertEquals("Up lands on the tab shown", "tabMovies", focusedTag())
+        press(Key.DirectionDown)
+        settle(300)
+        assertTrue("Down goes back into the page (${focused()})", focusedIn("grid"))
+        // Back from the page: the tab's page, the bar still on Movies.
+        back()
+        waitFor { exists("vod") && !exists("grid") }
+        assertTrue(tabSelected("tabMovies"))
+        // Again, and back to the tab's page with OK on its tab.
+        pressUntil(Key.DirectionDown) { focused() in movieTitles }
+        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
+        pressUntil(Key.DirectionRight) { focused() == "Drama" }
+        press(Key.DirectionCenter)
+        waitFor { exists("grid") && focusedIn("grid") }
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        press(Key.DirectionCenter)
+        waitFor { exists("vod") && !exists("grid") }
+        // The bar's Back, from the tab's page, still goes Home.
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        back()
+        waitFor { exists("home") }
+    }
+
+    /** Back on the bar over a category's posters goes back to the page before, not Home. */
+    @Test
+    fun backOnTheBarOverACategoryGoesBackAPage() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openDramaGrid()
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        back()
+        waitFor { exists("vod") && !exists("grid") }
+        assertFalse(exists("home"))
+    }
+
+    /** A genre's titles keep the bar too, the tab shown unchanged. */
+    @Test
+    fun aGenresTitlesKeepTheTopBar() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openFromHome(rows = 2)
+        pressUntil(Key.DirectionDown, max = 20) { focusedIn("explore") }
+        press(Key.DirectionCenter)
+        waitFor { exists("browse") }
+        settle(500)
+        assertTrue("the bar shows over the genre", exists("topBar"))
+        assertTrue(tabSelected("tabHome"))
+        pressUntil(Key.DirectionUp, max = 30) { focusedTag().startsWith("tab") }
+        assertEquals("tabHome", focusedTag())
+        back()
+        waitFor { exists("detail") && !exists("browse") }
+    }
+
     /**
      * Which categories are shown, the same: the filter's keyboard action goes on to the row below it; the word to hide's
      * adds the word and goes on below.

@@ -37,6 +37,7 @@ import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
+import com.markedoe.ondo.ui.tv.tvTopBarSpace
 
 /** What a value of a movie's or a series' page stands for: an award, a festival, a year, a genre. */
 enum class BrowseKind { AWARD, FESTIVAL, YEAR, GENRE }
@@ -64,7 +65,7 @@ fun BrowseScreen(state: BrowseUiState, onOpen: (ShowcaseItem) -> Unit, onFestiva
     }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
-        contentPadding = PaddingValues(start = metrics.gutter, end = metrics.gutter, bottom = 32.dp),
+        contentPadding = PaddingValues(start = metrics.gutter, top = tvTopBarSpace(), end = metrics.gutter, bottom = 32.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).testTag("browse"),
