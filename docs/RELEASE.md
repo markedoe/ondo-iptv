@@ -170,7 +170,9 @@ user-selected files).
    `android/app/build.gradle.kts` to the next version in the same commit: once a version is on the App Store,
    App Store Connect refuses new builds of it, so the TestFlight uploads of the next pushes need the next version.
 
-   Each run of *Release* (macOS 26, Xcode 26.6 as in CI: `DEVELOPER_DIR` of each macOS job; Xcode 26 is required by Apple since April 2026) runs the core tests, then three
+   Each run of *Release* (macOS 26, Xcode 26.6 as in CI: `DEVELOPER_DIR` of each macOS job; Xcode 26 is
+   required by Apple since April 2026) runs the core tests (a TestFlight edition run skips them when CI already
+   passed on the same commit, as it has for a push to main; the App Store edition always runs them), then three
    checks, any of which stops the run before any build or submission: *Demo playlist answers* (App Review
    tests the app with the demo playlist; every target but `status`), *App Store edition checks*
    (`check_app_store.py` and the listing's addresses, see E; for the App Store edition, and for the targets

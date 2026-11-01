@@ -46,6 +46,10 @@ jobs:
     runs-on: macos-26
     # A release waits for App Store Connect's processing of both builds.
     timeout-minutes: 240
+    # actions: read: the step "CI passed on this commit" reads this repository's CI runs.
+    permissions:
+      actions: read
+      contents: read
     # The signing secrets are given only to the steps that sign or upload, not to the tools installed or run
     # before them (gems, Homebrew, XcodeGen, which generates the project in a step of its own).
     env:
@@ -96,8 +100,24 @@ jobs:
         with:
           ruby-version: "3.3"
           bundler-cache: true
+      - name: CI passed on this commit
+        id: ci
+        # A TestFlight edition build (a push to main through deliver.yml) of a commit CI passed: CI already ran the core
+        # tests on it, on Linux and macOS. The App Store edition, the one submitted for review, always runs them here.
+        if: env.TARGET != 'status' && env.EDITION == 'testflight'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          passed=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --status success \
+            --limit 1 --json databaseId --jq length) || passed=0
+          if [ "$passed" -gt 0 ]; then
+            echo "CI passed on $GITHUB_SHA: the core tests are not run again."
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No successful CI run on $GITHUB_SHA: the core tests run here."
+          fi
       - name: Core tests
-        if: env.TARGET != 'status'
+        if: env.TARGET != 'status' && steps.ci.outputs.passed != 'true'
         working-directory: Packages/IPTVCore
         run: swift test --parallel
       - name: Demo playlist answers

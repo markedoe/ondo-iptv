@@ -40,11 +40,16 @@ if args[:2] == ["run", "list"]:
         runs = [run for run in runs if run.get("event", "push") == option("--event")]
     if option("--branch"):
         runs = [run for run in runs if run.get("branch", "main") == option("--branch")]
+    if option("--commit"):
+        runs = [run for run in runs if run["headSha"] == option("--commit")]
     runs = runs[:int(option("--limit") or 20)]
     jq = option("--jq")
     previous = re.fullmatch(r'\[\.\[\] \| \.headSha \| select\(\. != "(\w+)"\)\]\[0\] // empty', jq)
     if previous:
         print(next((run["headSha"] for run in runs if run["headSha"] != previous.group(1)), ""))
+        sys.exit(0)
+    if jq == "length":
+        print(len(runs))
         sys.exit(0)
     waiting = ("queued", "pending", "waiting", "requested")
     if jq == "[.[] | select(" + " or ".join(f'.status == "{s}"' for s in waiting) + ")] | length":
@@ -247,6 +252,25 @@ class TestFlightEditionAgainTests(WorkflowScriptTestCase):
         output, dispatched = self.start({"release.yml": [run_in("pending", event="push"), run_in("in_progress", event="push")]})
         self.assertEqual(dispatched, [], output)
         self.assertIn("already waiting", output)
+
+
+class CorePassedTests(WorkflowScriptTestCase):
+    """release.yml: a TestFlight edition run skips the core tests only when CI passed on the very commit it builds."""
+
+    def test_only_a_successful_run_on_this_very_commit_counts(self):
+        sha = self.commit("change", "App/OndoApp.swift")
+        output_file = self.root / "output.txt"
+        script = step_script("release.yml", "CI passed on this commit")
+        cases = {"green here": ([green(sha)], "passed=true\n"),
+                 "green on the parent only": ([green("1" * 40)], ""),
+                 "failed here": ([{**green(sha), "conclusion": "failure"}], ""),
+                 "running here": ([run_in("in_progress", sha=sha, event="push")], ""),
+                 "no run": ([], "")}
+        for name, (runs, expected) in cases.items():
+            with self.subTest(name):
+                output_file.write_text("", encoding="utf-8")
+                self.run_script(script, {"ci.yml": runs}, GITHUB_SHA=sha, GITHUB_OUTPUT=str(output_file))
+                self.assertEqual(output_file.read_text(encoding="utf-8"), expected)
 
 
 if __name__ == "__main__":
