@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui.screens
 import androidx.compose.runtime.CompositionLocalProvider
 import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.tv.rememberTabListState
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -279,6 +280,9 @@ fun PosterGridScreen(
                     actions = { SortButton(sort, onSort, hideWatched, onHideWatched) },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                     windowInsets = WindowInsets(0),
+                    // One stop as wide as the filter for Up from the posters: the filter, right above them, comes
+                    // first, rather than the small Back button standing over the first column.
+                    modifier = Modifier.focusGroup(),
                 )
             }
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
