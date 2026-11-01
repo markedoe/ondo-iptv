@@ -32,6 +32,7 @@ screenshots.
     `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go: pushing a
     version tag `vX.Y.Z` is that go (it submits iOS and macOS for App Review and sends Android to closed testing for
     review); a push to `main` only reaches TestFlight and Google Play internal testing (`.github/workflows/deliver.yml`).
+    The user has given a standing go for that: once CI is green, push to `main` without asking first.
   - No private API (no class, selector or symbol looked up by name, no method swapping), no code downloaded and run.
   - The Mac sandbox has only the entitlements a feature needs; never `com.apple.security.network.server` (App Review
     refused 1.1.0 for it: a player listens to no one), so the MKV remux and its 127.0.0.1 server are iPhone and iPad only.
