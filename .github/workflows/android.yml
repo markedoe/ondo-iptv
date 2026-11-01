@@ -36,6 +36,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - name: Tests
         run: ./gradlew -p core test memoryTest --stacktrace
+      - name: Test counts
+        if: success() || failure()
+        run: python3 ../.github/scripts/test_summary.py "Kotlin core tests" core/build/test-results
       - name: Test report
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -61,7 +64,12 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - name: Unit and Compose UI tests, screenshots
-        run: ./gradlew :app:recordRoborazziDebug --stacktrace
+        # --warning-mode all once in CI, in this job (it configures the app and the included core build): every
+        # Gradle deprecation is named in the log, with the Gradle version that will remove it.
+        run: ./gradlew :app:recordRoborazziDebug --stacktrace --warning-mode all
+      - name: Test counts
+        if: success() || failure()
+        run: python3 ../.github/scripts/test_summary.py "Android app tests (unit, Compose, screenshots)" app/build/test-results
       - name: Lint
         run: ./gradlew :app:lintRelease --stacktrace
       - name: Debug APK and release bundle
@@ -73,6 +81,14 @@ jobs:
         with:
           name: app-reports
           path: android/app/build/reports
+          if-no-files-found: ignore
+      - name: Gradle problems report
+        # The deprecations and configuration problems Gradle found in the build, as Gradle writes them (HTML).
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gradle-problems-report
+          path: android/build/reports/problems
           if-no-files-found: ignore
       - name: Screenshots
         if: always()
