@@ -1,7 +1,9 @@
 package com.markedoe.ondo.data
 
 import java.io.File
+import java.io.FileOutputStream
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * What plays, kept on the device while it plays, so that a restart of the whole device in the middle of a film (the
@@ -21,16 +23,27 @@ object PlayingNow {
     /** One thread for every write and deletion, in order: a write queued before a deletion cannot bring the record back. */
     private val writer = Executors.newSingleThreadExecutor { task -> Thread(task, "ondo-playing-now").apply { isDaemon = true } }
 
-    /** Runs [task] off the main thread, after the writes asked for before it. */
-    fun later(task: () -> Unit) {
-        runCatching { writer.execute { runCatching(task) } }
-    }
+    /** Only the last of the writes and deletions asked for meanwhile runs: a burst (formats, decoders) writes once. */
+    private val latest = LatestTask(writer::execute)
 
+    /**
+     * Runs [task] off the main thread, after the one running now. A task still waiting is replaced by [task]: only the
+     * latest state of the record matters (a deletion asked after a write wins over it, a write after a deletion too).
+     */
+    fun later(task: () -> Unit) = latest.submit(task)
+
+    /**
+     * Writes [record] to a temporary file, synced to the disk, then renamed over [file]: a restart of the device right
+     * then leaves the previous record or this one, never an empty or half-written file.
+     */
     fun save(file: File, record: Record) {
         try {
             file.parentFile?.mkdirs()
             val temporary = File(file.path + ".new")
-            temporary.writeText("${record.at}\n${record.bootCount ?: NO_COUNT}\n${CrashLog.redact(record.details)}")
+            FileOutputStream(temporary).use { stream ->
+                stream.write("${record.at}\n${record.bootCount ?: NO_COUNT}\n${CrashLog.redact(record.details)}".encodeToByteArray())
+                stream.fd.sync()
+            }
             if (!temporary.renameTo(file)) {
                 file.delete()
                 temporary.renameTo(file)
@@ -77,4 +90,23 @@ object PlayingNow {
     }
 
     private const val NO_COUNT = "-"
+}
+
+/**
+ * Runs the tasks [submit]ted through [execute] one at a time, keeping only the latest of those not started yet: at most
+ * one waits, and a newer one takes its place.
+ */
+internal class LatestTask(private val execute: (Runnable) -> Unit) {
+    private val waiting = AtomicReference<(() -> Unit)?>(null)
+
+    fun submit(task: () -> Unit) {
+        // One run is queued for whatever waits; a task arriving while one waits only takes its place.
+        if (waiting.getAndSet(task) != null) return
+        try {
+            execute(Runnable { waiting.getAndSet(null)?.let { runCatching(it) } })
+        } catch (_: Exception) {
+            // Refused (never with the app's thread): nothing waits for a run that will not come.
+            waiting.set(null)
+        }
+    }
 }

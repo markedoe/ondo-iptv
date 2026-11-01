@@ -87,4 +87,47 @@ class PlayingNowTest {
         record.writeText("not a date\n-\nsomething")
         assertNull(PlayingNow.read(record))
     }
+
+    /** A record written over another: the new one replaces it whole, and no temporary file stays behind. */
+    @Test
+    fun aRecordReplacesThePreviousOneWhole() {
+        PlayingNow.save(record, PlayingNow.Record(at = 1L, bootCount = 3, details = "Playing: film"))
+        PlayingNow.save(record, PlayingNow.Record(at = 2L, bootCount = 3, details = "Playing: live channel"))
+        val read = requireNotNull(PlayingNow.read(record))
+        assertEquals(2L, read.at)
+        assertEquals("Playing: live channel", read.details)
+        assertEquals(listOf(PlayingNow.FILE_NAME), folder.root.list()?.toList())
+    }
+
+    /** A burst of writes (formats, decoders) while one waits: only the latest runs, then the next one asked for. */
+    @Test
+    fun onlyTheLatestOfTheWritesWaitingRuns() {
+        val queued = mutableListOf<Runnable>()
+        val ran = mutableListOf<String>()
+        val latest = LatestTask { queued += it }
+        latest.submit { ran += "format" }
+        latest.submit { ran += "decoder" }
+        latest.submit { ran += "cleared" }
+        assertEquals("one run is queued for the burst", 1, queued.size)
+        queued.removeAt(0).run()
+        assertEquals(listOf("cleared"), ran)
+
+        latest.submit { ran += "again" }
+        assertEquals(1, queued.size)
+        queued.removeAt(0).run()
+        assertEquals(listOf("cleared", "again"), ran)
+    }
+
+    /** A task that fails does not stop the next ones. */
+    @Test
+    fun aFailedWriteDoesNotStopTheNextOnes() {
+        val queued = mutableListOf<Runnable>()
+        val ran = mutableListOf<String>()
+        val latest = LatestTask { queued += it }
+        latest.submit { error("disk full") }
+        queued.removeAt(0).run()
+        latest.submit { ran += "next" }
+        queued.removeAt(0).run()
+        assertEquals(listOf("next"), ran)
+    }
 }
