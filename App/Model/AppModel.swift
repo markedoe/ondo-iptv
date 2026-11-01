@@ -757,8 +757,10 @@ final class AppModel {
         return index.channelsByID[channel.id] == nil ? epg.iconURL(for: channel) : nil
     }
 
-    // MARK: - Categories & parental control
+}
 
+/// Categories and parental control.
+extension AppModel {
     var isParentalControlActive: Bool {
         if activeProfile.isKids { return !isParentalUnlocked }
         return settings.parentalControlEnabled && hasParentalPIN && !isParentalUnlocked

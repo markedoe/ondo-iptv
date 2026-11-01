@@ -380,11 +380,9 @@ final class MatroskaRemuxTests: XCTestCase {
         XCTAssertNoThrow(try MatroskaRemux.chooseVideo([video]))
     }
 
-    /// A segment is read and held whole: an index with too few key frames (one for the whole film) is left to VLC
-    /// rather than read into memory.
-    /// Mastering metadata is the file's floats: not a number, infinite or past Int's range, it is written as 0, never a
-    /// crash when the header is made.
-    func testMasteringMetadataThatIsNotANumberIsWrittenAsZero() {
+    /// The colour volume (SMPTE ST 2086) is the file's floats: not a number, infinite or past Int's range, it is written
+    /// as 0, never a crash when the header is made.
+    func testColourVolumeThatIsNotANumberIsWrittenAsZero() {
         for bad in [Double.nan, .infinity, -.infinity, 1e300] {
             var colour = MatroskaTrack.Colour()
             colour.colourVolume = MatroskaTrack.ColourVolume(
@@ -396,6 +394,8 @@ final class MatroskaRemuxTests: XCTestCase {
         }
     }
 
+    /// A segment is read and held whole: an index with too few key frames (one for the whole film) is left to VLC
+    /// rather than read into memory.
     func testSegmentsPastTheLimitAreLeftToVLC() async throws {
         let base = try await MatroskaReader.open(DataByteSource(MatroskaBytes.film()))
         let video = base.tracks[0]
