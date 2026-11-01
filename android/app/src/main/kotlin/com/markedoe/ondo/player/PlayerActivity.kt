@@ -228,6 +228,12 @@ class PlayerActivity : ComponentActivity() {
     private var frameRateAsked = false
     private var frameRateWait: Job? = null
 
+    /**
+     * The player paused while the screen switches to the film's frame rate ([matchFrameRate]): not a stop of playback,
+     * so the record of what plays ([PlayingNow]) stays. A restart of the device then is one to catch.
+     */
+    private var frameRateSwitch: ExoPlayer? = null
+
     /** Keys the player handled when pressed: their release is consumed too. */
     private val handledKeys = HashSet<Int>()
 
@@ -586,13 +592,22 @@ class PlayerActivity : ComponentActivity() {
         }
         reporter.note("frame rate: the screen switches for ${"%.3f".format(java.util.Locale.ROOT, frameRate)} fps")
         val resume = exoPlayer.playWhenReady
+        // Written before the pause, kept through it: the switch is when the record matters most.
+        savePlayingNow()
+        frameRateSwitch = exoPlayer
         exoPlayer.pause()
         surface.setFrameRate(frameRate, Surface.FRAME_RATE_COMPATIBILITY_FIXED_SOURCE, Surface.CHANGE_FRAME_RATE_ALWAYS)
         frameRateWait = lifecycleScope.launch {
-            withTimeoutOrNull(FrameRateMatching.WAIT_MS) { screenFits(displays, display.displayId, frameRate) }
-            delay(FrameRateMatching.SETTLE_MS)
-            // Left meanwhile (Home): onStop paused the video, it stays paused in the background.
-            if (resume && player === exoPlayer && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) exoPlayer.play()
+            try {
+                withTimeoutOrNull(FrameRateMatching.WAIT_MS) { screenFits(displays, display.displayId, frameRate) }
+                delay(FrameRateMatching.SETTLE_MS)
+                // Left meanwhile (Home): onStop paused the video, it stays paused in the background.
+                if (resume && player === exoPlayer && lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) exoPlayer.play()
+            } finally {
+                if (frameRateSwitch === exoPlayer) frameRateSwitch = null
+                // Still paused once the switch is over (left meanwhile, paused by the viewer): playback stopped.
+                if (player === exoPlayer && !exoPlayer.playWhenReady) clearPlayingNow()
+            }
         }
     }
 
@@ -774,8 +789,9 @@ class PlayerActivity : ComponentActivity() {
 
                     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                         reporter.playWhenReady(playWhenReady)
-                        // Paused (by the viewer, the system, or onStop): playback stopped as it should.
-                        if (!playWhenReady) clearPlayingNow()
+                        // Paused (by the viewer, the system, or onStop): playback stopped as it should. Not the
+                        // player's own pause while the screen switches its frame rate.
+                        if (!playWhenReady && frameRateSwitch !== exoPlayer) clearPlayingNow()
                         // The viewer's own pause, not the system's (a call, the audio focus lost, the end of the video).
                         if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) livePause(playWhenReady)
                     }
@@ -1306,7 +1322,8 @@ class PlayerActivity : ComponentActivity() {
     private fun savePlayingNow() {
         val exoPlayer = player ?: return
         val state = exoPlayer.playbackState
-        if (!exoPlayer.playWhenReady || (state != Player.STATE_BUFFERING && state != Player.STATE_READY)) return
+        val meantToPlay = exoPlayer.playWhenReady || frameRateSwitch === exoPlayer
+        if (!meantToPlay || (state != Player.STATE_BUFFERING && state != Player.STATE_READY)) return
         val (targetBytes, _) = bufferBudget
         val lines = listOfNotNull(
             "Playing: " + (request.kind ?: if (request.isLive) "live channel" else "film"),
