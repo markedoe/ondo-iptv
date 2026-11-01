@@ -64,10 +64,12 @@ final class TipJar {
 
     init(store: TipStore = AppStoreTipStore()) {
         self.store = store
-        settling = Task { [weak self] in
-            await store.settleTransactions { result in
-                await self?.settled(result)
-            }
+        // The handler holds the jar weakly in its own capture list; the task holds only the store and the handler.
+        let onSettled: @Sendable (TipResult) async -> Void = { [weak self] result in
+            await self?.settled(result)
+        }
+        settling = Task {
+            await store.settleTransactions(onSettled)
         }
     }
 

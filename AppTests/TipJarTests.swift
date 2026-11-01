@@ -75,6 +75,19 @@ final class TipJarTests: XCTestCase {
         XCTAssertEqual(jar.outcome, .thanks)
     }
 
+    /// Listening for transactions does not keep the jar alive: the store holds it weakly.
+    func testListeningForTransactionsDoesNotKeepTheJarAlive() async {
+        let store = FakeStore()
+        weak var released: TipJar?
+        do {
+            let jar = TipJar(store: store)
+            released = jar
+            await jar.load()
+        }
+        XCTAssertNil(released)
+        await store.approveLater()
+    }
+
     func testTheProductsAreTheConsumablesOfAppStoreConnect() {
         XCTAssertEqual(Tip.allCases.map(\.productID), ["com.markedoe.ondo.tip.small", "com.markedoe.ondo.tip.medium", "com.markedoe.ondo.tip.large"])
         XCTAssertEqual(Tip.with(productID: "com.markedoe.ondo.tip.large"), .large)
