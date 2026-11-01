@@ -125,7 +125,7 @@ object TrackChoices {
 
     private val SURROUND = setOf(
         MimeTypes.AUDIO_AC3, MimeTypes.AUDIO_E_AC3, MimeTypes.AUDIO_E_AC3_JOC, MimeTypes.AUDIO_AC4, MimeTypes.AUDIO_TRUEHD,
-        MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD, MimeTypes.AUDIO_DTS_EXPRESS, MimeTypes.AUDIO_DTS_X,
+        MimeTypes.AUDIO_DTS, MimeTypes.AUDIO_DTS_HD, MimeTypes.AUDIO_DTS_EXPRESS, MimeTypes.AUDIO_DTS_UHD_P2,
     )
 
     /** The codec's usual name: "AC-3", "E-AC-3", "AAC"… */
@@ -137,7 +137,7 @@ object TrackChoices {
         MimeTypes.AUDIO_TRUEHD -> "TrueHD"
         MimeTypes.AUDIO_DTS -> "DTS"
         MimeTypes.AUDIO_DTS_HD, MimeTypes.AUDIO_DTS_EXPRESS -> "DTS-HD"
-        MimeTypes.AUDIO_DTS_X -> "DTS:X"
+        MimeTypes.AUDIO_DTS_UHD_P2 -> "DTS:X"
         MimeTypes.AUDIO_AAC -> "AAC"
         MimeTypes.AUDIO_MPEG -> "MP3"
         MimeTypes.AUDIO_MPEG_L2 -> "MP2"

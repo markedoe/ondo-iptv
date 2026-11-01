@@ -746,7 +746,7 @@ private fun AudioRouteLine(player: Player, selected: TrackChoice) {
     val format = selected.group.getTrackFormat(selected.index)
     val attributes = player.audioAttributes
     val route = remember(format, attributes) {
-        TrackChoices.route(format, androidx.media3.exoplayer.audio.AudioCapabilities.getCapabilities(context, attributes, null), attributes)
+        TrackChoices.route(format, androidx.media3.exoplayer.audio.AudioCapabilities.getCapabilities(context, attributes, null, emptyList()), attributes)
     } ?: return
     Text(
         stringResource(if (route == AudioRoute.AS_IS) R.string.audio_as_is else R.string.audio_decoded),
