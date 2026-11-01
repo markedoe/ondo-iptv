@@ -176,7 +176,7 @@ object UiMappers {
         val tmdb = votes?.let { "TMDb " + one(it.average) + " (" + java.text.NumberFormat.getIntegerInstance(locale).format(it.votes) + ")" }
         return when {
             tmdb == null -> own
-            own == null || one(provider!!) == one(votes.average) -> tmdb
+            own == null || one(provider) == one(votes.average) -> tmdb
             else -> "$own · $tmdb"
         }
     }
