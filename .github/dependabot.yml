@@ -1,6 +1,9 @@
-# Update proposals, one grouped pull request per ecosystem: GitHub Actions and Gradle weekly, the fastlane
-# bundle monthly. Swift packages are not listed: IPTVCore has no dependency, and the Apple app's packages
-# (VLCKit, Nuke, Google Cast) are pinned in project.yml, which Dependabot cannot read: bump them by hand.
+# Update proposals: GitHub Actions and Gradle weekly, the fastlane bundle monthly. The minor and patch updates of an
+# ecosystem come in one grouped pull request; a major update comes in a pull request of its own, to be read on its own.
+# Gradle: /android holds the version catalog (gradle/libs.versions.toml) that the included build android/core reads
+# too (its settings.gradle.kts), and core's build file names no version of its own: this one entry covers both.
+# Swift packages are not listed: IPTVCore has no dependency, and the Apple app's packages (VLCKit, Nuke, Google
+# Cast) are pinned in project.yml, which Dependabot cannot read: bump them by hand.
 version: 2
 updates:
   - package-ecosystem: github-actions
@@ -10,6 +13,7 @@ updates:
     groups:
       actions:
         patterns: ["*"]
+        update-types: [minor, patch]
   - package-ecosystem: gradle
     directory: /android
     schedule:
@@ -17,6 +21,7 @@ updates:
     groups:
       android:
         patterns: ["*"]
+        update-types: [minor, patch]
   - package-ecosystem: bundler
     directory: /
     schedule:
@@ -24,3 +29,4 @@ updates:
     groups:
       fastlane:
         patterns: ["*"]
+        update-types: [minor, patch]
