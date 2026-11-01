@@ -1,7 +1,10 @@
 package com.markedoe.ondo.data
 
+import java.io.File
+import java.io.InputStream
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -36,6 +39,48 @@ class AppStoreTest {
         assertEquals("not json", folder.root.resolve("library.json.corrupt-7").readText())
     }
 
+    /** Opens documents as the app does, except [large] ones: too large for the memory left. */
+    private class Memory(var large: Set<String>) : (File) -> InputStream {
+        override fun invoke(file: File): InputStream = if (file.name in large) throw OutOfMemoryError("made-up") else file.inputStream()
+    }
+
+    /**
+     * A document too large for the memory left: its previous version is read, and the next save keeps that readable
+     * version as the previous one (not the large one). The large one is kept aside, never deleted.
+     */
+    @Test
+    fun aDocumentTooLargeForTheMemoryLeftFallsBackToItsPreviousVersion() {
+        val memory = Memory(large = emptySet())
+        val store = AppStore(folder.root, now = { 5L }, open = memory)
+        store.savePlaylists(listOf(playlist("first")))
+        store.savePlaylists(listOf(playlist("first"), playlist("second")))
+        val large = folder.root.resolve("playlists.json").readText()
+        memory.large = setOf("playlists.json")
+
+        assertEquals(listOf(playlist("first")), store.loadPlaylists())
+        assertEquals("the large one is kept aside", large, folder.root.resolve("playlists.json.too-large-5").readText())
+
+        memory.large = emptySet()
+        store.savePlaylists(listOf(playlist("first"), playlist("third")))
+        folder.root.resolve("playlists.json").writeText("{ half-written")
+        assertEquals("the version read is still the previous one", listOf(playlist("first")), store.loadPlaylists())
+    }
+
+    /** With no other version to read, a document too large for the memory left is not moved or deleted. */
+    @Test
+    fun aDocumentTooLargeWithoutAnyOtherVersionStays() {
+        val memory = Memory(large = setOf("library.json", "settings.json", "settings.json.bak"))
+        folder.root.resolve("library.json").writeText("{}")
+        folder.root.resolve("settings.json").writeText("{}")
+        folder.root.resolve("settings.json.bak").writeText("{}")
+        val store = AppStore(folder.root, now = { 6L }, open = memory)
+
+        assertEquals(LibraryState(), store.loadLibrary())
+        assertEquals(AppSettings(), store.loadSettings())
+        assertEquals(listOf("library.json", "settings.json", "settings.json.bak"), folder.root.list()?.sorted())
+        assertNull(store.loadContent("p"))
+    }
+
     /** A deleted playlist leaves nothing behind: no previous version or damaged copy with its login, no imported file. */
     @Test
     fun aDeletedPlaylistLeavesNothingBehind() {
@@ -47,6 +92,7 @@ class AppStoreTest {
         store.savePlaylists(listOf(local, outside, playlist("kept")))
         store.savePlaylists(listOf(local, outside, playlist("kept")))
         folder.root.resolve("ondo/playlists.json.corrupt-1").writeText("[{\"password\":\"made-up\"}]")
+        folder.root.resolve("ondo/playlists.json.too-large-2").writeText("[{\"password\":\"made-up\"}]")
 
         store.savePlaylists(listOf(outside, playlist("kept")), removed = local)
         store.savePlaylists(listOf(playlist("kept")), removed = outside)
@@ -54,6 +100,7 @@ class AppStoreTest {
         assertEquals(listOf(playlist("kept")), store.loadPlaylists())
         assertFalse(folder.root.resolve("ondo/playlists.json.bak").exists())
         assertFalse(folder.root.resolve("ondo/playlists.json.corrupt-1").exists())
+        assertFalse(folder.root.resolve("ondo/playlists.json.too-large-2").exists())
         assertFalse(imported.exists())
         assertTrue("only files Ondo imported are deleted", elsewhere.exists())
     }

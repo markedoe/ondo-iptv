@@ -3,6 +3,7 @@ package com.markedoe.ondo.data
 import com.markedoe.ondo.core.model.PlaylistContent
 import java.io.File
 import java.io.FileOutputStream
+import java.io.InputStream
 import java.net.URI
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.builtins.ListSerializer
@@ -18,7 +19,12 @@ import kotlinx.serialization.json.encodeToStream
  * would otherwise write over the user's favourites and playlists.
  */
 @OptIn(ExperimentalSerializationApi::class)
-class AppStore(private val directory: File, private val now: () -> Long = System::currentTimeMillis) {
+class AppStore(
+    private val directory: File,
+    private val now: () -> Long = System::currentTimeMillis,
+    /** How a document is opened for reading (tests make one too large for the memory left). */
+    private val open: (File) -> InputStream = File::inputStream,
+) {
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = true
@@ -43,7 +49,8 @@ class AppStore(private val directory: File, private val now: () -> Long = System
     fun savePlaylists(playlists: List<SavedPlaylist>, removed: SavedPlaylist) {
         write("playlists.json", ListSerializer(SavedPlaylist.serializer()), playlists, keepPrevious = false)
         File(directory, "playlists.json.bak").delete()
-        directory.listFiles { file -> file.name.startsWith("playlists.json.corrupt-") }?.forEach(File::delete)
+        directory.listFiles { file -> file.name.startsWith("playlists.json.corrupt-") || file.name.startsWith("playlists.json.too-large-") }
+            ?.forEach(File::delete)
         importedFile(removed.url)?.delete()
     }
 
@@ -96,20 +103,29 @@ class AppStore(private val directory: File, private val now: () -> Long = System
 
     /**
      * The document, else its previous version. One that cannot be read is renamed `name.corrupt-<time>`, or deleted
-     * when [disposable] (it can be downloaded again). One too large for the memory left is not damaged: it stays.
+     * when [disposable] (it can be downloaded again). One too large for the memory left is not damaged: the previous
+     * version is read instead, and the large one is then moved aside as `name.too-large-<time>`, so that the next save
+     * keeps the version read as the previous one. With no other version to read, it stays where it is.
      */
     @Synchronized
     private fun <T> read(name: String, serializer: KSerializer<T>, disposable: Boolean = false): T? {
-        for (file in listOf(File(directory, name), File(directory, "$name.bak"))) {
+        val document = File(directory, name)
+        var tooLarge = false
+        for (file in listOf(document, File(directory, "$name.bak"))) {
             if (!file.exists()) continue
             val value = try {
-                file.inputStream().buffered().use { json.decodeFromStream(serializer, it) }
+                open(file).buffered().use { json.decodeFromStream(serializer, it) }
             } catch (_: OutOfMemoryError) {
-                return null
+                if (file != document) return null
+                tooLarge = true
+                continue
             } catch (_: Exception) {
                 null
             }
-            if (value != null) return value
+            if (value != null) {
+                if (tooLarge) document.renameTo(File(directory, "$name.too-large-${now()}"))
+                return value
+            }
             if (disposable) file.delete() else file.renameTo(File(directory, "${file.name}.corrupt-${now()}"))
         }
         return null
