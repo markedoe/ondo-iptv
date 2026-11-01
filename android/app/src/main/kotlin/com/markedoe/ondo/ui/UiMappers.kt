@@ -26,6 +26,7 @@ import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.model.TitleHeader
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.BrowseUiState
 import com.markedoe.ondo.ui.screens.CategoryRow
@@ -205,6 +206,36 @@ object UiMappers {
             )
         }
         return result
+    }
+
+    /**
+     * What the TV's header shows of [item], the poster with the focus, from what the device has: TMDb's rating (from
+     * the pages opened, its trending titles, or [kept] on the device), else the provider's; TMDb's genres, else the
+     * provider's; the plot and the backdrop of the details kept, else the playlist's own.
+     */
+    fun titleHeader(state: OndoState, item: ShowcaseItem, kept: TitleMetadata?, locale: Locale): TitleHeader {
+        val details = when (item) {
+            is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
+            is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
+        }
+        val format = { value: Double -> String.format(locale, "%.1f", value.coerceIn(0.0, 10.0)) }
+        val tmdb = (tmdbRating(state, item) ?: kept?.rating)?.average
+        val provider = (details?.rating ?: item.rating)?.takeIf { it > 0 }
+        val genres = kept?.genres?.map { it.name }?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
+            ?: genres(details?.genre ?: (item as? ShowcaseItem.SeriesItem)?.series?.genre)
+        val (plot, category) = when (item) {
+            is ShowcaseItem.MovieItem -> item.movie.plot to categoryName(state, false, item.movie.categoryId)
+            is ShowcaseItem.SeriesItem -> item.series.plot to categoryName(state, true, item.series.categoryId)
+        }
+        return TitleHeader(
+            item = item,
+            genres = genres.distinct().take(3),
+            tmdbRating = tmdb?.let(format),
+            providerRating = if (tmdb == null) provider?.let(format) else null,
+            plot = (details?.plot?.takeIf { it.isNotBlank() } ?: plot)?.trim()?.takeIf { it.isNotEmpty() },
+            backdropUrl = backdrop(state, item),
+            category = category?.takeIf { it.isNotBlank() },
+        )
     }
 
     /** A rating out of 10 as half stars out of five stars: 7.4 is three and a half stars. */

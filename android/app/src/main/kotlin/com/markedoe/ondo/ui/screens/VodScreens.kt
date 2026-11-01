@@ -2,12 +2,10 @@ package com.markedoe.ondo.ui.screens
 
 import androidx.compose.runtime.CompositionLocalProvider
 import com.markedoe.ondo.ui.components.LocalShowsMyList
-import com.markedoe.ondo.ui.tv.tvTopBarSpace
 import com.markedoe.ondo.ui.tv.rememberTabListState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
@@ -72,6 +70,9 @@ import com.markedoe.ondo.ui.tv.focusMemory
 import com.markedoe.ondo.ui.tv.TvSeeAllCard
 import com.markedoe.ondo.ui.tv.rememberLeaveField
 import com.markedoe.ondo.ui.tv.rememberTvTextField
+import com.markedoe.ondo.ui.tv.TvHeaderPosterWidth
+import com.markedoe.ondo.ui.tv.TvHeaderAbove
+import androidx.compose.ui.unit.Dp
 
 data class CategoryRow(val category: MediaCategory, val items: List<ShowcaseItem>)
 
@@ -101,19 +102,35 @@ class VodActions(
 /** How many titles a row of the Movies or Series tab shows on a TV before its See all card. */
 const val TV_ROW_LENGTH = 10
 
-/** Movies or Series tab: category chips, continue watching, My List, award winners, one row per category. */
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Movies or Series tab: category chips, continue watching, My List, award winners, one row per category. On a TV, a
+ * header pinned above the rows shows the poster with the focus ([TvFocusHeader]), the posters a little smaller.
+ */
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
+    val fallback = state.myList.firstOrNull() ?: state.awardWinners.firstOrNull() ?: state.rows.firstOrNull()?.items?.firstOrNull()
+    // The focused poster below its row's name, at the same place at every press.
+    TvHeaderAbove(fallback, lead = SHELF_TITLE_ROOM) { modifier, top, underHeader ->
+        VodRows(state, actions, modifier, top, posterWidth = if (underHeader) TvHeaderPosterWidth else null)
+    }
+}
+
+/** The room a row's name takes above its posters ([Shelf]'s title line on a TV). */
+private val SHELF_TITLE_ROOM = 52.dp
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, top: Dp, posterWidth: Dp?) {
     val metrics = rememberShelfMetrics()
     val television = isTelevision()
+    val width = posterWidth ?: metrics.posterWidth
     // On a TV a row shows its first titles, then a See all card: the remote reaches it by going on along the row.
     val rowLength = if (television) TV_ROW_LENGTH else Int.MAX_VALUE
     LazyColumn(
         state = rememberTabListState(),
-        modifier = Modifier.fillMaxSize().testTag("vod"),
+        modifier = modifier.testTag("vod"),
         verticalArrangement = Arrangement.spacedBy(if (metrics.compact) 24.dp else 32.dp),
-        contentPadding = PaddingValues(top = tvTopBarSpace(), bottom = 32.dp),
+        contentPadding = PaddingValues(top = top, bottom = 32.dp),
     ) {
         // On a TV the top bar names the tab and holds Search: the page starts with its categories, the button that
         // chooses which ones show first.
@@ -177,10 +194,10 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
                 Shelf(stringResource(R.string.my_list), metrics, onSeeAll = actions.onSeeAllMyList) {
                     itemsIndexed(state.myList.take(rowLength), key = { _, it -> it.key }) { index, item ->
                         CompositionLocalProvider(LocalShowsMyList provides true) {
-                            PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == "myList" && index == 0)
+                            PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == "myList" && index == 0)
                         }
                     }
-                    if (television) item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true, width = metrics.posterWidth, modifier = Modifier.focusMemory("myList:seeAll")) }
+                    if (television) item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true, width = width, modifier = Modifier.focusMemory("myList:seeAll")) }
                 }
             }
         }
@@ -188,7 +205,7 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
             item {
                 Shelf(stringResource(R.string.award_winners), metrics) {
                     itemsIndexed(state.awardWinners, key = { _, it -> it.key }) { index, item ->
-                        PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "awards:${item.key}", initialFocus = first == "awards" && index == 0)
+                        PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "awards:${item.key}", initialFocus = first == "awards" && index == 0)
                     }
                 }
             }
@@ -198,13 +215,13 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
                 itemsIndexed(row.items.take(rowLength), key = { _, it -> it.key }) { index, item ->
                     PosterCard(
                         item,
-                        metrics.posterWidth,
+                        width,
                         onClick = { actions.onOpen(item) },
                         focusKey = "${row.category.id}:${item.key}",
                         initialFocus = first == row.category.id && index == 0,
                     )
                 }
-                if (television) item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onCategory(row.category) }, tall = true, width = metrics.posterWidth, modifier = Modifier.focusMemory("${row.category.id}:seeAll")) }
+                if (television) item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onCategory(row.category) }, tall = true, width = width, modifier = Modifier.focusMemory("${row.category.id}:seeAll")) }
             }
         }
         if (state.rows.isEmpty()) {
@@ -234,79 +251,82 @@ fun PosterGridScreen(
     /** Whether finished movies are left out; null where it does not apply (series, My List). */
     hideWatched: Boolean? = null,
     onHideWatched: (Boolean) -> Unit = {},
-    /** Each poster's rating and genres, by its key (on a TV); null: the posters show their title and year only. */
+    /** Each poster's rating and genres, by its key; null: the posters show their title and year only. */
     facts: Map<String, PosterFacts>? = null,
 ) {
-    var sorting by remember { mutableStateOf(false) }
-    val metrics = rememberShelfMetrics()
-    val leaveField = rememberLeaveField()
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
-        contentPadding = PaddingValues(start = metrics.gutter, top = tvTopBarSpace(), end = metrics.gutter, bottom = 32.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).testTag("grid"),
-    ) {
-        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-            TopAppBar(
-                title = { Text(title, maxLines = 1) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
-                },
-                actions = {
-                    IconButton(onClick = { sorting = true }, modifier = Modifier.testTag("sort")) {
-                        Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = stringResource(R.string.sort))
-                    }
-                    DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }) {
-                        PosterSort.entries.forEach { option ->
-                            DropdownMenuItem(
-                                text = { Text(stringResource(option.label)) },
-                                leadingIcon = { if (option == sort) Icon(Icons.Rounded.Check, contentDescription = null) },
-                                onClick = {
-                                    sorting = false
-                                    onSort(option)
-                                },
-                            )
-                        }
-                        hideWatched?.let { hidden ->
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text(stringResource(R.string.hide_watched)) },
-                                leadingIcon = { if (hidden) Icon(Icons.Rounded.Check, contentDescription = null) },
-                                onClick = {
-                                    sorting = false
-                                    onHideWatched(!hidden)
-                                },
-                                modifier = Modifier.semantics { selected = hidden }.testTag("hideWatched"),
-                            )
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                windowInsets = WindowInsets(0),
-            )
-        }
-        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-            val field = rememberTvTextField()
-            OutlinedTextField(
-                value = filter,
-                onValueChange = onFilter,
-                singleLine = true,
-                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                placeholder = { Text(stringResource(R.string.filter)) },
-                // Done, as before; on a TV, on to the posters.
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
-                readOnly = field.readOnly,
-                modifier = Modifier.fillMaxWidth().then(field.modifier),
-            )
-        }
-        items(items, key = { it.key }) { item ->
-            PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = true, facts = facts?.get(item.key), showsFacts = facts != null)
-        }
-        if (items.isEmpty()) {
+    // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more.
+    TvHeaderAbove(fallback = items.firstOrNull()) { modifier, top, posterOnly ->
+        var sorting by remember { mutableStateOf(false) }
+        val metrics = rememberShelfMetrics()
+        val leaveField = rememberLeaveField()
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(if (metrics.compact || posterOnly) 108.dp else 150.dp),
+            contentPadding = PaddingValues(start = metrics.gutter, top = top, end = metrics.gutter, bottom = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = modifier.windowInsetsPadding(WindowInsets.statusBars).testTag("grid"),
+        ) {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                Text(stringResource(R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TopAppBar(
+                    title = { Text(title, maxLines = 1) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                    },
+                    actions = {
+                        IconButton(onClick = { sorting = true }, modifier = Modifier.testTag("sort")) {
+                            Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = stringResource(R.string.sort))
+                        }
+                        DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }) {
+                            PosterSort.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(option.label)) },
+                                    leadingIcon = { if (option == sort) Icon(Icons.Rounded.Check, contentDescription = null) },
+                                    onClick = {
+                                        sorting = false
+                                        onSort(option)
+                                    },
+                                )
+                            }
+                            hideWatched?.let { hidden ->
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.hide_watched)) },
+                                    leadingIcon = { if (hidden) Icon(Icons.Rounded.Check, contentDescription = null) },
+                                    onClick = {
+                                        sorting = false
+                                        onHideWatched(!hidden)
+                                    },
+                                    modifier = Modifier.semantics { selected = hidden }.testTag("hideWatched"),
+                                )
+                            }
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                    windowInsets = WindowInsets(0),
+                )
+            }
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                val field = rememberTvTextField()
+                OutlinedTextField(
+                    value = filter,
+                    onValueChange = onFilter,
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                    placeholder = { Text(stringResource(R.string.filter)) },
+                    // Done, as before; on a TV, on to the posters.
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
+                    readOnly = field.readOnly,
+                    modifier = Modifier.fillMaxWidth().then(field.modifier),
+                )
+            }
+            items(items, key = { it.key }) { item ->
+                PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = !posterOnly, facts = facts?.get(item.key), showsFacts = facts != null && !posterOnly)
+            }
+            if (items.isEmpty()) {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    Text(stringResource(R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
     }

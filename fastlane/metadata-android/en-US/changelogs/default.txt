@@ -1,6 +1,6 @@
 • Search finds a word anywhere in a title; exact matches first
 • Automatic refresh of the playlist (Settings → Playlists), every day by default
-• TV: posters show the rating and genres; hold OK on a poster to add it to My List or take it out
+• TV: the top of the screen shows the poster you are on: TMDb rating, synopsis; hold OK on a poster to add it to My List or take it out
 • TV: the top bar stays over a category's titles; Back goes back one page
 • My List: people keep their photo
 • Many fixes

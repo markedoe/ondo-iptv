@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -38,7 +37,7 @@ import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
-import com.markedoe.ondo.ui.tv.tvTopBarSpace
+import com.markedoe.ondo.ui.tv.TvHeaderAbove
 
 /** What a value of a movie's or a series' page stands for: an award, a festival, a year, a genre. */
 enum class BrowseKind { AWARD, FESTIVAL, YEAR, GENRE }
@@ -62,7 +61,7 @@ fun BrowseScreen(
     onOpen: (ShowcaseItem) -> Unit,
     onFestival: (String) -> Unit,
     onBack: () -> Unit,
-    /** Each poster's rating and genres, by its key (on a TV); null: the posters show their title and year only. */
+    /** Each poster's rating and genres, by its key; null: the posters show their title and year only. */
     facts: Map<String, PosterFacts>? = null,
 ) {
     val metrics = rememberShelfMetrics()
@@ -71,43 +70,46 @@ fun BrowseScreen(
         BrowseKind.FESTIVAL -> awardGroupName(state.value)
         BrowseKind.YEAR -> stringResource(R.string.released_in_year, state.value)
     }
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
-        contentPadding = PaddingValues(start = metrics.gutter, top = tvTopBarSpace(), end = metrics.gutter, bottom = 32.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).testTag("browse"),
-    ) {
-        fullWidth {
-            TopAppBar(
-                title = { Text(title, maxLines = 1) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                windowInsets = WindowInsets(0),
-            )
-        }
-        state.festival?.let { festival ->
+    // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more.
+    TvHeaderAbove(fallback = state.movies.firstOrNull() ?: state.series.firstOrNull()) { modifier, top, posterOnly ->
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(if (metrics.compact || posterOnly) 108.dp else 150.dp),
+            contentPadding = PaddingValues(start = metrics.gutter, top = top, end = metrics.gutter, bottom = 32.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = modifier.windowInsetsPadding(WindowInsets.statusBars).testTag("browse"),
+        ) {
             fullWidth {
-                ListItem(
-                    headlineContent = { Text(awardGroupName(festival), color = MaterialTheme.colorScheme.primary) },
-                    leadingContent = { Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                    modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onFestival(festival) }.testTag("festival"),
+                TopAppBar(
+                    title = { Text(title, maxLines = 1) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                    windowInsets = WindowInsets(0),
                 )
             }
-        }
-        titles(R.string.movies, state.movies, onOpen, facts)
-        titles(R.string.series, state.series, onOpen, facts)
-        if (state.movies.isEmpty() && state.series.isEmpty()) {
-            fullWidth {
-                Text(stringResource(R.string.person_nothing_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 24.dp))
+            state.festival?.let { festival ->
+                fullWidth {
+                    ListItem(
+                        headlineContent = { Text(awardGroupName(festival), color = MaterialTheme.colorScheme.primary) },
+                        leadingContent = { Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                        modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onFestival(festival) }.testTag("festival"),
+                    )
+                }
             }
-        }
-        if (state.kind == BrowseKind.GENRE) {
-            fullWidth {
-                Column {
-                    Text(stringResource(R.string.genre_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            titles(R.string.movies, state.movies, onOpen, facts.takeUnless { posterOnly }, posterOnly)
+            titles(R.string.series, state.series, onOpen, facts.takeUnless { posterOnly }, posterOnly)
+            if (state.movies.isEmpty() && state.series.isEmpty()) {
+                fullWidth {
+                    Text(stringResource(R.string.person_nothing_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 24.dp))
+                }
+            }
+            if (state.kind == BrowseKind.GENRE) {
+                fullWidth {
+                    Column {
+                        Text(stringResource(R.string.genre_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
@@ -116,10 +118,10 @@ fun BrowseScreen(
 
 private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
 
-private fun LazyGridScope.titles(title: Int, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit, facts: Map<String, PosterFacts>?) {
+private fun LazyGridScope.titles(title: Int, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit, facts: Map<String, PosterFacts>?, posterOnly: Boolean) {
     if (posters.isEmpty()) return
     fullWidth { Text(stringResource(title), style = MaterialTheme.typography.titleLarge) }
     items(posters, key = { it.key }) { item ->
-        PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = true, facts = facts?.get(item.key), showsFacts = facts != null)
+        PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = !posterOnly, facts = facts?.get(item.key), showsFacts = facts != null)
     }
 }

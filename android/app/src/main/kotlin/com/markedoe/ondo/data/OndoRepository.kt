@@ -1211,6 +1211,22 @@ class OndoRepository(
     }
 
     /**
+     * The same, waited for in the caller's coroutine (the title a TV's header shows while the remote stays on it):
+     * cancelled with it when the remote moves on, and then asked again the next time. Not paced behind the titles
+     * asked ahead: the header asks for one title at a time. Main thread, as [metadataAsked].
+     */
+    suspend fun awaitTmdbMetadata(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
+        val keys = MetadataKey.all(series, tmdbId, title, year)
+        if (keys.isEmpty() || !metadataAsked.add(key)) return
+        try {
+            tmdbMetadata(key, keys, series, tmdbId, title, year, ahead = false, client = tmdbClient(), show = true)
+        } catch (e: CancellationException) {
+            metadataAsked.remove(key)
+            throw e
+        }
+    }
+
+    /**
      * The same, waited for, and not shown on screen: a title prepared while Ondo is open (Settings, "Prepare new
      * titles"). Kept on the device like the others; false when it was already asked this session.
      */

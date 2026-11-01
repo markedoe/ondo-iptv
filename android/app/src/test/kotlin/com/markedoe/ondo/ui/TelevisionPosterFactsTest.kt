@@ -11,7 +11,6 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasAnyAncestor
-import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -45,7 +44,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/** A category's posters on a TV show a rating with its stars and two genres: TMDb's kept on the device, else the provider's. */
+/** Above a category's posters on a TV, the header shows the focused one's rating and genres: TMDb's kept on the device, else the provider's. */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionPosterFactsTest {
@@ -128,13 +127,24 @@ class TelevisionPosterFactsTest {
         check(done()) { "never reached with $key; the focus is on ${focused()}" }
     }
 
-    /** The texts of the nodes tagged [tag] on the poster of [title]. */
-    private fun texts(title: String, tag: String): List<String> =
-        compose.onAllNodes(hasTestTag(tag) and hasAnyAncestor(hasContentDescription(title)), useUnmergedTree = true).fetchSemanticsNodes()
+    /** The texts of the header's nodes tagged [tag]. */
+    private fun header(tag: String): List<String> =
+        compose.onAllNodes(hasTestTag(tag) and hasAnyAncestor(hasTestTag("titleHeader")), useUnmergedTree = true).fetchSemanticsNodes()
             .flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty().map { text -> text.text } }
 
+    /** Along the posters until [title] has the focus. */
+    private fun reach(title: String) {
+        for (key in listOf(Key.DirectionRight, Key.DirectionLeft, Key.DirectionDown)) {
+            repeat(10) {
+                if (focused() == title) return
+                press(key)
+            }
+        }
+        check(focused() == title) { "never reached $title; the focus is on ${focused()}" }
+    }
+
     @Test
-    fun aCategorysPostersShowTheirRatingAndGenres() {
+    fun theHeaderShowsTheFocusedPostersRatingAndGenres() {
         start()
         pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionRight) { focusedTag() == "tabMovies" }
@@ -145,18 +155,19 @@ class TelevisionPosterFactsTest {
         pressUntil(Key.DirectionLeft) { focused() == "All" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") && focusedIn("grid") }
-        // TMDb's, kept on the device: its rating and its first two genres.
-        waitFor { texts("Northern Lights", "posterRating").isNotEmpty() && texts("Northern Lights", "posterGenre").isNotEmpty() }
-        assertEquals(listOf("7.3"), texts("Northern Lights", "posterRating"))
-        assertEquals(listOf("Drama", "Romance"), texts("Northern Lights", "posterGenre"))
-        assertTrue(exists("posterStars"))
-        // No TMDb: the provider's rating, no genre (a movie's comes with its page).
-        assertEquals(listOf("7.1"), texts("Glass City", "posterRating"))
-        assertTrue(texts("Glass City", "posterGenre").isEmpty())
-        // Every poster keeps the same room for them, known or not.
-        val heights = compose.onAllNodes(hasTestTag("posterFacts"), useUnmergedTree = true).fetchSemanticsNodes().map { it.size.height }.distinct()
-        assertEquals("one height for all: $heights", 1, heights.size)
-        // The poster's name for TalkBack and the remote stays its title.
-        pressUntil(Key.DirectionDown) { focused() == "Northern Lights" || focused() == "Glass City" }
+        pressUntil(Key.DirectionDown, max = 20) { focused() in movieTitles }
+        // TMDb's, kept on the device: its rating with TMDb's badge, its genres.
+        reach("Northern Lights")
+        waitFor { header("headerTitle") == listOf("Northern Lights") && header("headerFacts").any { "Romance" in it } }
+        assertEquals(listOf("7.3"), header("headerRating"))
+        assertTrue(exists("headerTmdb"))
+        assertEquals(listOf("2025 · Drama, Romance, History"), header("headerFacts"))
+        assertEquals(listOf(Fixtures.northernLights.plot), header("headerPlot"))
+        // No TMDb: the provider's rating, and the category for want of a genre (a movie's comes with its page).
+        reach("Glass City")
+        waitFor { header("headerTitle") == listOf("Glass City") }
+        assertEquals(listOf("★ 7.1"), header("headerRating"))
+        assertTrue(!exists("headerTmdb"))
+        assertEquals(listOf("2024 · Science Fiction"), header("headerFacts"))
     }
 }

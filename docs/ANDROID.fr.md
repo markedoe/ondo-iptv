@@ -30,8 +30,17 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   quand il revient au premier plan (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). Un seul réglage pour
   toutes les playlists sur Android (Apple en a un par playlist). Actualiser dans les Réglages affiche un indicateur
   et « Mise à jour de la playlist… ».
-- **Affiches sur TV** : dans une catégorie, une affiche montre la note de TMDb avec des étoiles (sinon celle du
-  fournisseur) et jusqu'à deux genres ; maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
+- **En-tête sur TV** (`ui/tv/TvFocusHeader.kt`) : sur l'accueil, les onglets Films et Séries et les titres d'une
+  catégorie, d'un genre, d'une année ou d'une récompense, un en-tête de hauteur fixe au-dessus des affiches montre
+  celle qui a le focus : son image de fond (sinon son affiche floutée) fondue dans la page, titre, année et genres
+  (sinon sa catégorie), la note de TMDb avec son badge (sinon celle du fournisseur), la date d'ajout (de dernière
+  modification pour une série) dans la langue de l'app et trois lignes de résumé. Il suit le focus une fois posé
+  200 ms sur une affiche ; 450 ms plus tard, ce qui manque est demandé, un titre à la fois, annulé quand le focus
+  bouge : la réponse de TMDb gardée sur l'appareil, puis TMDb avec le jeton, puis `get_vod_info` du fournisseur pour
+  un film sans résumé (gardé avec les autres détails) ; rien sans réseau. Les rangées gardent l'affiche qui a le
+  focus au même endroit, les affiches un peu plus petites ; le cadre du carrousel de l'accueil rapetisse et montre
+  l'affiche qui a le focus tant que les rangées l'ont, ses boutons revenant avec Haut.
+- **Affiches sur TV** : maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
   court message dit lequel), et une coche marque les titres de Ma liste. Dans Ma liste, les personnes gardées ont
   leur photo (complétée depuis leur page ou les titres gardés sur l'appareil).
 - **TMDb** avec le jeton de l'utilisateur (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`) :

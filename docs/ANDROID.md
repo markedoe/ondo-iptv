@@ -27,8 +27,16 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   Every day (default), Every week), checked when Ondo opens and when it comes back to the front
   (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). One setting for all the playlists on Android (Apple has
   one per playlist). Refresh in Settings shows a spinner and "Updating the playlist…".
-- **TV posters**: in a category, a poster shows TMDb's rating with stars (else the provider's) and up to two genres;
-  holding OK on a poster adds the title to My List or takes it out (a short message says which), and a check mark
+- **TV header** (`ui/tv/TvFocusHeader.kt`): on Home, the Movies and Series tabs and a category's, genre's, year's or
+  award's titles, a header of fixed height pinned above the posters shows the one with the focus: its backdrop (else
+  its poster, blurred) fading into the page, title, year and genres (else its category), TMDb's rating with its badge
+  (else the provider's), the date added (last changed for a series) in the app's language and three lines of synopsis.
+  It follows the focus once it rests 200 ms on a poster; 450 ms later, what is missing is fetched, one title at a time
+  and cancelled when the focus moves on: TMDb's answer kept on the device, then TMDb with the token, then the
+  provider's `get_vod_info` for a movie without a plot (saved with the other details); nothing without a network.
+  The rows below keep the focused poster at the same place, posters a little smaller; Home's carousel frame becomes
+  smaller and shows the focused poster while the rows have the focus, its buttons coming back with Up.
+- **TV posters**: holding OK on a poster adds the title to My List or takes it out (a short message says which), and a check mark
   marks the titles in My List. In My List, the people kept get their photo (filled from their page or from the titles
   kept on the device).
 - **TMDb** with the viewer's own token (`core/library/Tmdb.kt`, `OndoRepository.checkAndSaveTmdbToken`): checked

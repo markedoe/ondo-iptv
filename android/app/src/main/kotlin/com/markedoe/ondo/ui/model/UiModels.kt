@@ -43,6 +43,24 @@ data class PosterFacts(
     val genres: List<String> = emptyList(),
 )
 
+/**
+ * What the header above a TV's posters shows of the one with the focus: what the device knows of it, the rest null
+ * until it is known (the header keeps its room meanwhile). The title, year, poster and date added are [item]'s own.
+ */
+data class TitleHeader(
+    val item: ShowcaseItem,
+    /** TMDb's genres, else the provider's; three at most. */
+    val genres: List<String> = emptyList(),
+    /** TMDb's rating, "7.3" in the viewer's language; null while TMDb's is not known. */
+    val tmdbRating: String? = null,
+    /** The provider's rating, shown when TMDb's is not known. */
+    val providerRating: String? = null,
+    val plot: String? = null,
+    val backdropUrl: String? = null,
+    /** The title's category in the playlist, shown when no genre is known. */
+    val category: String? = null,
+)
+
 /** A "continue watching" card. */
 data class ResumeItem(
     val key: String,

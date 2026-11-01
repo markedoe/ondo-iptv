@@ -1,6 +1,6 @@
 • A busca encontra uma palavra em qualquer parte de um título; títulos exatos primeiro
 • Atualização automática da playlist (Configurações → Playlists), todo dia por padrão
-• TV: os pôsteres mostram a nota e os gêneros; mantenha OK pressionado em um pôster para adicioná-lo à Minha lista ou tirá-lo
+• TV: no topo, o pôster escolhido: TMDb, sinopse; mantenha OK pressionado em um pôster para adicioná-lo à Minha lista ou tirá-lo
 • TV: a barra superior fica sobre os títulos de uma categoria; Voltar volta uma página
 • Minha lista: as pessoas guardadas mostram a foto
 • Várias correções

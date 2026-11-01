@@ -1,6 +1,6 @@
 • La recherche trouve un mot n'importe où dans un titre ; titres exacts d'abord
 • Actualisation automatique de la playlist (Réglages → Playlists), chaque jour par défaut
-• TV : les affiches montrent la note et les genres ; maintenez OK sur une affiche pour l'ajouter à Ma liste ou l'en retirer
+• TV : le haut montre l'affiche choisie : note TMDb, résumé ; maintenez OK sur une affiche pour l'ajouter à Ma liste ou l'en retirer
 • TV : la barre du haut reste sur les titres d'une catégorie ; Retour revient d'une page
 • Ma liste : les personnes gardées ont leur photo
 • Nombreuses corrections

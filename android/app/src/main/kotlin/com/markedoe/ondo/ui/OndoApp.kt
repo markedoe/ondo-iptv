@@ -3,6 +3,8 @@ package com.markedoe.ondo.ui
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -67,7 +69,6 @@ import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.library.ErrorAttribution
-import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.data.ItemKind
@@ -79,7 +80,6 @@ import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.components.PosterMyList
 import com.markedoe.ondo.ui.components.TMDB_API_PAGE
-import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.BrowseKind
@@ -122,7 +122,9 @@ import com.markedoe.ondo.ui.theme.OndoColors
 import com.markedoe.ondo.ui.tv.FocusEntry
 import com.markedoe.ondo.ui.tv.FocusMemory
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
+import com.markedoe.ondo.ui.tv.LocalTitleHeaders
 import com.markedoe.ondo.ui.tv.TelevisionFrame
+import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvCategoriesScreen
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
@@ -236,8 +238,10 @@ private fun MainTabs(viewModel: OndoViewModel) {
     }
     // On a TV, OK held on a poster adds it to My List or takes it away; those kept show a check mark.
     val myList = if (isTelevision()) rememberPosterMyList(viewModel) else null
+    // On a TV, the header above the posters of Home, the Movies and Series tabs and a category's titles.
+    val headers = if (isTelevision()) rememberTitleHeaders(viewModel) else null
     frame {
-        CompositionLocalProvider(LocalPosterMyList provides myList) {
+        CompositionLocalProvider(LocalPosterMyList provides myList, LocalTitleHeaders provides headers) {
             Box(Modifier.fillMaxSize()) {
                 // A short fade between pages (the default crossfade lasts 700 ms).
                 NavHost(
@@ -249,19 +253,19 @@ private fun MainTabs(viewModel: OndoViewModel) {
                     popExitTransition = { fadeOut(tween(PAGE_FADE_MS)) },
                 ) {
                     page<Routes.Home>(TvMargins.NONE) { HomeDestination(viewModel, navController) }
-                    page<Routes.Movies>(TvMargins.TAB) { VodDestination(viewModel, navController, series = false) }
-                    page<Routes.Series>(TvMargins.TAB) { VodDestination(viewModel, navController, series = true) }
+                    page<Routes.Movies>(TvMargins.HEADER) { VodDestination(viewModel, navController, series = false) }
+                    page<Routes.Series>(TvMargins.HEADER) { VodDestination(viewModel, navController, series = true) }
                     page<Routes.Live>(TvMargins.TAB) { LiveDestination(viewModel, navController) }
                     page<Routes.Search> { SearchDestination(viewModel, navController) }
                     page<Routes.MyList>(TvMargins.TAB) { MyListDestination(viewModel, navController) }
                     page<Routes.MovieDetail>(TvMargins.NONE) { MovieDestination(viewModel, navController, it.toRoute<Routes.MovieDetail>().id) }
                     page<Routes.SeriesDetail>(TvMargins.NONE) { SeriesDestination(viewModel, navController, it.toRoute<Routes.SeriesDetail>().id) }
                     page<Routes.Person> { PersonDestination(viewModel, navController, it.toRoute<Routes.Person>().name) }
-                    page<Routes.Browse>(TvMargins.TAB) { BrowseDestination(viewModel, navController, it.toRoute()) }
+                    page<Routes.Browse>(TvMargins.HEADER) { BrowseDestination(viewModel, navController, it.toRoute()) }
                     page<Routes.Guide> { GuideDestination(viewModel, navController) }
                     page<Routes.Reminders> { RemindersDestination(viewModel, navController) }
                     page<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
-                    page<Routes.Grid>(TvMargins.TAB) { GridDestination(viewModel, navController, it.toRoute()) }
+                    page<Routes.Grid>(TvMargins.HEADER) { GridDestination(viewModel, navController, it.toRoute()) }
                     page<Routes.Settings>(TvMargins.NONE) { SettingsDestination(viewModel, navController) }
                     page<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
                     page<Routes.Help> {
@@ -383,8 +387,11 @@ private fun ErrorSnackbar(viewModel: OndoViewModel, modifier: Modifier, onRetry:
     SnackbarHost(host, modifier.testTag("errorSnackbar"))
 }
 
-/** How a page keeps clear of a TV's edges: by itself (pictures to the edges), as a tab under the top bar, or within the margins. */
-private enum class TvMargins { NONE, TAB, SAFE_AREA }
+/**
+ * How a page keeps clear of a TV's edges: by itself (pictures to the edges), as a tab under the top bar, or within the
+ * margins. [HEADER]: a tab's margins kept by the page itself, its header running to the edges ([TvHeaderAbove]).
+ */
+private enum class TvMargins { NONE, TAB, SAFE_AREA, HEADER }
 
 /** A page of the app, which keeps where the remote's focus was while another page is open (see [FocusMemory]). */
 private inline fun <reified T : Any> NavGraphBuilder.page(
@@ -392,7 +399,7 @@ private inline fun <reified T : Any> NavGraphBuilder.page(
     noinline content: @Composable (NavBackStackEntry) -> Unit,
 ) {
     composable<T> { entry ->
-        val modifier = if (margins == TvMargins.NONE) Modifier else Modifier.tvSafeArea(tab = margins == TvMargins.TAB)
+        val modifier = if (margins == TvMargins.NONE || margins == TvMargins.HEADER) Modifier else Modifier.tvSafeArea(tab = margins == TvMargins.TAB)
         CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) { FocusEntry(modifier) { content(entry) } }
     }
 }
@@ -679,14 +686,11 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
     val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found) {
         withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found) }
     }
-    val titles = remember(browse) { browse.movies + browse.series }
-    val facts = posterFacts(viewModel, state, titles, locale)
     BrowseScreen(
         browse,
         onOpen = navController::open,
         onFestival = { navController.navigate(Routes.Browse(BrowseKind.FESTIVAL.name, it)) },
         onBack = { navController.popBackStack() },
-        facts = facts,
     )
 }
 
@@ -756,7 +760,6 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
         }
     }
-    val facts = posterFacts(viewModel, state, items, LocalConfiguration.current.locales[0])
     CompositionLocalProvider(LocalShowsMyList provides route.myList) {
         PosterGridScreen(
             title = title,
@@ -769,24 +772,34 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             onSort = viewModel::setPosterSort,
             hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
             onHideWatched = viewModel::setHideWatchedMovies,
-            facts = facts,
         )
     }
 }
 
 /**
- * On a TV, the rating and the genres of a category's posters ([UiMappers.posterFacts]), worked out off the main
- * thread, with what the device kept of TMDb; null elsewhere: the posters show their title and year only.
+ * On a TV, what the header above the posters shows ([TitleHeaders]): the view model's, in the app's language; nothing
+ * is fetched without a network.
  */
 @Composable
-private fun posterFacts(viewModel: OndoViewModel, state: OndoState, items: List<ShowcaseItem>, locale: java.util.Locale): Map<String, PosterFacts>? {
-    if (!isTelevision()) return null
-    // Read again when TMDb said more of a title (a page opened meanwhile).
-    val kept by produceKept("keptFacts", emptyMap<String, TitleMetadata>(), state.content, state.tmdbRatings) { viewModel.keptPosterFacts() }
-    val facts by produceKept("posterFacts", emptyMap<String, PosterFacts>(), items, kept, state.tmdbRatings, state.trending, state.movieDetails, state.seriesDetails, locale) {
-        withContext(Dispatchers.Default) { UiMappers.posterFacts(state, items, kept, locale) }
+private fun rememberTitleHeaders(viewModel: OndoViewModel): TitleHeaders {
+    val locale = LocalConfiguration.current.locales[0]
+    val context = LocalContext.current.applicationContext
+    return remember(viewModel, locale, context) {
+        object : TitleHeaders {
+            override fun header(item: ShowcaseItem) = viewModel.titleHeader(item, locale)
+
+            override suspend fun load(item: ShowcaseItem) = viewModel.loadHeader(item, online = context.isOnline())
+
+            override fun backdropFailed(item: ShowcaseItem, url: String) = viewModel.backdropFailed(item, url)
+        }
     }
-    return facts
+}
+
+/** Whether the device has a network that reaches the internet. */
+private fun Context.isOnline(): Boolean {
+    val connectivity = getSystemService(ConnectivityManager::class.java) ?: return true
+    val network = connectivity.activeNetwork ?: return false
+    return connectivity.getNetworkCapabilities(network)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 }
 
 /** The app's version and its build (the version code); a build for a Google Play test track says it is a beta. */

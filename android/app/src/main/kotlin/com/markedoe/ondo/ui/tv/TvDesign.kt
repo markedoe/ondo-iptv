@@ -317,6 +317,7 @@ fun TvPosterCard(item: ShowcaseItem, onClick: () -> Unit, modifier: Modifier = M
             .width(width)
             .aspectRatio(2f / 3f)
             .onFocusChanged { focused = it.isFocused }
+            .reportsFocus(item)
             .posterSemantics(item, kept),
         shape = CardDefaults.shape(TvTokens.CardShape),
         scale = scale,

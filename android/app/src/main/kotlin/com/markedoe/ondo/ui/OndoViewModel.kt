@@ -21,6 +21,7 @@ import com.markedoe.ondo.player.PlayRequest
 import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.model.TitleHeader
 import com.markedoe.ondo.ui.screens.GuideUiState
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.LiveUiState
@@ -52,6 +53,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -264,6 +266,38 @@ class OndoViewModel(
     private fun details(state: OndoState, item: ShowcaseItem): MediaDetails? = when (item) {
         is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
         is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
+    }
+
+    /**
+     * What a TV's header shows of [item], the poster with the focus, again as more of it is known (its details, TMDb's
+     * answer). Worked out off the main thread; what TMDb said and the device kept (rating, genres) joins it once read.
+     */
+    fun titleHeader(item: ShowcaseItem, locale: java.util.Locale): Flow<TitleHeader> {
+        val kept = state.distinctUntilChanged { old, new -> old.content === new.content && old.tmdbRatings === new.tmdbRatings }
+            .mapLatest<OndoState, TitleMetadata?> { repository.keptPosterFacts()[item.key] }
+            .onStart { emit(null) }
+        return combine(state, kept) { state, stored -> UiMappers.titleHeader(state, item, stored, locale) }
+            .distinctUntilChanged()
+            .flowOn(computation)
+    }
+
+    /**
+     * The remote stays on [item] (a TV's header shows it): what the header lacks is fetched, in the caller's coroutine,
+     * so one title at a time, cancelled when the remote moves on. What the device keeps comes first: TMDb's answer kept
+     * on the device, then TMDb with the viewer's token, then the provider's details of a movie that still has no plot
+     * (a series' list gives its plot; its details would bring every episode). Nothing is asked when [online] is false,
+     * and nothing kept is asked again.
+     */
+    suspend fun loadHeader(item: ShowcaseItem, online: Boolean) {
+        if (!online) return
+        val current = state.value
+        val details = details(current, item)
+        val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
+        val year = item.year ?: details?.releaseDate?.take(4)?.toIntOrNull()
+        repository.awaitTmdbMetadata(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year)
+        val movie = (item as? ShowcaseItem.MovieItem)?.movie ?: return
+        if (movie.id in state.value.movieDetails || !movie.plot.isNullOrBlank() || movie.xtreamStreamId == null) return
+        repository.details(movie)
     }
 
     /** With the viewer's TMDb token, the person's titles on TMDb that the playlist has; null without one, or if TMDb fails. */

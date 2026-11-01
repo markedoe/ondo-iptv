@@ -52,10 +52,12 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -112,11 +114,35 @@ val TvRowScrolling: BringIntoViewSpec = object : BringIntoViewSpec {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TvRow(content: @Composable () -> Unit) {
-    if (LocalBringIntoViewSpec.current === TvScrolling) {
+    val spec = LocalBringIntoViewSpec.current
+    if (spec === TvScrolling || spec is TvPinnedScrolling) {
         CompositionLocalProvider(LocalBringIntoViewSpec provides TvRowScrolling, content = content)
     } else {
         content()
     }
+}
+
+/**
+ * How a page's rows scroll under a header pinned above them ([TvFocusHeader]): the focused card always at the same
+ * place, [lead] pixels below the list's top (room for its row's name above it), rather than a third of the way.
+ */
+@ExperimentalFoundationApi
+class TvPinnedScrolling(private val lead: Float) : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
+        offset - lead.coerceAtMost((containerSize - size).coerceAtLeast(0f))
+}
+
+/** [content]'s list scrolls as [TvPinnedScrolling] says on a TV, the focused card [lead] below its top; elsewhere, as it is. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun TvPinnedHeaderList(lead: Dp, content: @Composable () -> Unit) {
+    if (LocalBringIntoViewSpec.current !== TvScrolling) {
+        content()
+        return
+    }
+    val pixels = with(LocalDensity.current) { lead.toPx() }
+    val spec = remember(pixels) { TvPinnedScrolling(pixels) }
+    CompositionLocalProvider(LocalBringIntoViewSpec provides spec, content = content)
 }
 
 /** The margins Google asks TV layouts to keep clear (5 % of a 960 × 540 dp screen). */

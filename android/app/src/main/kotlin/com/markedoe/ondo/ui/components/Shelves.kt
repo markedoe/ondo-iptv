@@ -83,6 +83,7 @@ import com.markedoe.ondo.ui.tv.TvResumeMenu
 import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.focusMemory
+import com.markedoe.ondo.ui.tv.reportsFocus
 import com.markedoe.ondo.ui.tv.isTelevision
 
 /** Sizes of posters, cards and margins for phones and wide screens. */
@@ -237,6 +238,7 @@ fun PosterCard(
                 .pressScale(interaction)
                 .focusFrame(PosterShape)
                 .focusMemory(focusKey, initialFocus)
+                .reportsFocus(item)
                 .clip(PosterShape)
                 .posterClick(item, interaction, LocalIndication.current, onClick)
                 .posterSemantics(item, kept),
@@ -256,6 +258,7 @@ fun PosterCard(
             .then(if (width != null) Modifier.width(width) else Modifier.fillMaxWidth())
             .pressScale(interaction)
             .focusMemory(focusKey, initialFocus)
+            .reportsFocus(item)
             .posterClick(item, interaction, null, onClick)
             .posterSemantics(item, kept),
     ) {

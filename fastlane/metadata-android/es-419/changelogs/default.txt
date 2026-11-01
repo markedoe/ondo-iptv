@@ -1,6 +1,6 @@
 • La búsqueda encuentra una palabra en cualquier parte de un título; primero los títulos exactos
 • Actualización automática de la playlist (Ajustes → Playlists), cada día por defecto
-• TV: los pósteres muestran la puntuación y los géneros; mantén pulsado OK sobre un póster para añadirlo a Mi lista o quitarlo
+• TV: arriba se ve el póster elegido: TMDb, sinopsis; mantén pulsado OK sobre un póster para añadirlo a Mi lista o quitarlo
 • TV: la barra superior se queda sobre los títulos de una categoría; Atrás vuelve una página
 • Mi lista: las personas guardadas muestran su foto
 • Muchas correcciones
