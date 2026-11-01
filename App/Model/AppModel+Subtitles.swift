@@ -157,7 +157,7 @@ extension AppModel {
     static func subtitleLanguages(saved: [String], preferred: String?, device: [String]) -> [String] {
         if !saved.isEmpty { return saved }
         var languages: [String] = []
-        for candidate in [preferred].compactMap { $0 } + device + ["en"] {
+        for candidate in [preferred].compactMap({ $0 }) + device + ["en"] {
             guard let code = SubtitleLanguages.code(for: candidate), !languages.contains(code) else { continue }
             languages.append(code)
         }

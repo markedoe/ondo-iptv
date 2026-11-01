@@ -8,9 +8,9 @@ final class ShowcaseTests: XCTestCase {
     private var root: URL!
 
     /// Release years are relative to today: "new releases" are this year's and last year's.
-    private static let thisYear = Calendar.current.component(.year, from: .now)
+    nonisolated private static let thisYear = Calendar.current.component(.year, from: .now)
 
-    private static let catalogue = """
+    nonisolated private static let catalogue = """
     #EXTM3U
     #EXTINF:-1 tvg-id="news.test" group-title="News",Test News
     http://127.0.0.1:9/news.m3u8

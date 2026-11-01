@@ -19,7 +19,11 @@ final class ArtworkCacheTests: XCTestCase {
 
         let first = try await pipeline.imageTask(with: request).response
         XCTAssertEqual(Self.pixelHeight(first.image), 300, "decoded at the size shown")
-        pipeline.configuration.imageEncodingQueue.waitUntilAllOperationsAreFinished()
+        // The copies being encoded for the disk: a barrier runs once every operation queued before it has finished.
+        let encoding = pipeline.configuration.imageEncodingQueue
+        await withCheckedContinuation { (encoded: CheckedContinuation<Void, Never>) in
+            encoding.addBarrierBlock { encoded.resume() }
+        }
         disk.flush()
         XCTAssertTrue(pipeline.cache.containsData(for: request), "the copy at the size shown is on disk")
         XCTAssertTrue(pipeline.cache.containsData(for: ImageRequest(url: url)), "and the file as downloaded")

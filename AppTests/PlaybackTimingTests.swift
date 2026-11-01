@@ -9,7 +9,7 @@ import IPTVCore
 /// they catch a start or a seek that hangs, and the reports are attached to the result.
 @MainActor
 final class PlaybackTimingTests: XCTestCase {
-    private static let stream = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!
+    nonisolated private static let stream = URL(string: "https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8")!
 
     private func film(at url: URL = PlaybackTimingTests.stream) -> PlaybackItem {
         PlaybackItem(
