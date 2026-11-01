@@ -61,7 +61,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -94,7 +94,7 @@ data class ShelfMetrics(val compact: Boolean) {
 }
 
 @Composable
-fun rememberShelfMetrics(): ShelfMetrics = ShelfMetrics(compact = LocalConfiguration.current.screenWidthDp < 600)
+fun rememberShelfMetrics(): ShelfMetrics = ShelfMetrics(compact = LocalWindowInfo.current.containerDpSize.width < 600.dp)
 
 /** A titled horizontal row with an optional "See All". */
 @Composable

@@ -66,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -435,10 +436,10 @@ private fun DetailScaffold(
     content: LazyListScope.(ShelfMetrics) -> Unit,
 ) {
     val metrics = rememberShelfMetrics()
-    val configuration = LocalConfiguration.current
+    val window = LocalWindowInfo.current.containerDpSize
     // A short landscape screen (a TV, a phone on its side): poster, title, facts and the buttons side by side in the
     // first screenful, Play in sight.
-    val wide = configuration.screenHeightDp < 600 && configuration.screenWidthDp > configuration.screenHeightDp
+    val wide = window.height < 600.dp && window.width > window.height
     Box(Modifier.fillMaxSize().testTag("detail")) {
         LazyColumn(contentPadding = PaddingValues(bottom = 32.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             if (wide) {

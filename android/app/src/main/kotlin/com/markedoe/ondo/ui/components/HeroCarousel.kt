@@ -56,8 +56,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -130,9 +130,9 @@ fun HeroCarousel(
             pager.animateScrollToPage((pager.currentPage + 1) % pages.size)
         }
     }
-    val configuration = LocalConfiguration.current
-    val screenHeight = configuration.screenHeightDp
-    val screenWidth = configuration.screenWidthDp
+    val window = LocalWindowInfo.current.containerDpSize
+    val screenHeight = window.height.value
+    val screenWidth = window.width.value
     val wide = screenWidth > screenHeight
     val gutter = rememberShelfMetrics().gutter
     // Upright: a little taller than wide, the next shelf's title in sight below. Landscape: about 60 % of the height.
