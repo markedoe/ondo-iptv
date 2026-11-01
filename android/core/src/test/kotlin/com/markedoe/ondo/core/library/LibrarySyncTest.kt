@@ -22,6 +22,27 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LibraryMergeTest {
+    /**
+     * Categories hidden on either device stay hidden after a merge, in either order: the two sets are united, the last
+     * copy merged does not replace the other's.
+     */
+    @Test
+    fun hiddenAndLockedCategoriesOfBothDevicesAreUnited() {
+        val playlist = UUID.randomUUID().toString()
+        val phone = UserLibrary()
+            .setCategoryHidden(true, playlist, "c1")
+            .setCategoryLocked(true, playlist, "l1")
+        val mac = UserLibrary()
+            .setCategoryHidden(true, playlist, "c2")
+            .setCategoryHidden(true, playlist, "c1")
+            .setCategoryLocked(true, playlist, "l2")
+        for (merged in listOf(phone.merged(mac), mac.merged(phone))) {
+            assertEquals(setOf(UserLibrary.categoryKey(playlist, "c1"), UserLibrary.categoryKey(playlist, "c2")), merged.hiddenCategoryKeys)
+            assertTrue(merged.isCategoryHidden(playlist, "c2"))
+            assertEquals(setOf(UserLibrary.categoryKey(playlist, "l1"), UserLibrary.categoryKey(playlist, "l2")), merged.lockedCategoryKeys)
+        }
+    }
+
     @Test
     fun mergeConverges() {
         val playlist = UUID.randomUUID().toString()

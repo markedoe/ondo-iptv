@@ -277,6 +277,30 @@ final class PlaylistDecodingTests: XCTestCase {
 }
 
 final class LibraryMergeTests: XCTestCase {
+    /// Categories hidden on either device stay hidden after a merge, in either order: the two sets are united, the
+    /// last copy merged does not replace the other's.
+    func testHiddenAndLockedCategoriesOfBothDevicesAreUnited() {
+        let playlist = UUID()
+        var phone = UserLibrary()
+        phone.setHidden(true, playlistID: playlist, categoryID: "c1")
+        phone.lockedCategoryKeys = [UserLibrary.categoryKey(playlistID: playlist, categoryID: "l1")]
+        var mac = UserLibrary()
+        mac.setHidden(true, playlistID: playlist, categoryID: "c2")
+        mac.setHidden(true, playlistID: playlist, categoryID: "c1")
+        mac.lockedCategoryKeys = [UserLibrary.categoryKey(playlistID: playlist, categoryID: "l2")]
+        for merged in [phone.merged(with: mac), mac.merged(with: phone)] {
+            XCTAssertEqual(merged.hiddenCategoryKeys, [
+                UserLibrary.categoryKey(playlistID: playlist, categoryID: "c1"),
+                UserLibrary.categoryKey(playlistID: playlist, categoryID: "c2"),
+            ])
+            XCTAssertTrue(merged.isHidden(playlistID: playlist, categoryID: "c2"))
+            XCTAssertEqual(merged.lockedCategoryKeys, [
+                UserLibrary.categoryKey(playlistID: playlist, categoryID: "l1"),
+                UserLibrary.categoryKey(playlistID: playlist, categoryID: "l2"),
+            ])
+        }
+    }
+
     func testMergeConverges() {
         let playlist = UUID()
         func ref(_ id: String) -> MediaReference { MediaReference(playlistID: playlist, type: .movie, itemID: id) }
