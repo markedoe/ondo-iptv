@@ -680,6 +680,7 @@ class OndoRepositoryTest {
         val repository = OndoRepository(
             AppStore(folder.root), FakeHttp(mapOf(list to untitled)), backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler),
             placeholderNames = words("Non classé", "Épisode %1\$d"),
+            parsing = StandardTestDispatcher(testScheduler),
         )
         repository.bootstrap()
         repository.awaitState { it.isReady }
@@ -690,14 +691,15 @@ class OndoRepositoryTest {
         val harbor = repository.state.value.content.series.single()
         assertEquals("Épisode 2", repository.details(harbor).seasons.single().episodes.single().title)
 
-        // Another app language: the catalogue on screen and a series' episodes follow.
+        // Another app language: the catalogue on screen and a series' episodes follow, renamed off the main thread.
         repository.setPlaceholderNames(words("Sin categoría", "Episodio %1\$d"))
-        assertEquals(listOf("Sin categoría"), repository.state.value.content.liveCategories.map { it.name })
-        val again = repository.state.value.content.series.single()
+        val renamed = repository.awaitState { state -> state.content.liveCategories.map { it.name } == listOf("Sin categoría") }
+        val again = renamed.content.series.single()
         assertEquals("Episodio 2", repository.details(again).seasons.single().episodes.single().title)
 
         repository.delete(id)
         repository.setPlaceholderNames(words("未分类", "第 %1\$d 集"))
+        testScheduler.runCurrent() // the renaming, on the test's dispatcher
         assertTrue("a catalogue taken off the screen does not come back", repository.state.value.content.isEmpty)
     }
 

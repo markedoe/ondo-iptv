@@ -191,8 +191,13 @@ class OndoRepository(
      * renaming walks the whole catalogue, so it runs off it (the remote keeps answering during a refresh).
      */
     private suspend fun shown(content: PlaylistContent): PlaylistContent {
-        val names = _state.value.placeholderNames
-        val shown = withContext(parsing) { names.rename(content) }
+        var names = _state.value.placeholderNames
+        var shown = withContext(parsing) { names.rename(content) }
+        // The app's language changed meanwhile ([setPlaceholderNames]): in its words.
+        while (names != _state.value.placeholderNames) {
+            names = _state.value.placeholderNames
+            shown = withContext(parsing) { names.rename(content) }
+        }
         loadedContent = content
         shownContent = shown
         forgetCatalogueFindings()
@@ -220,23 +225,37 @@ class OndoRepository(
 
     /**
      * The app's words for the names the core gives in English, again after the app's language changes (the activity is
-     * recreated, not the repository): the catalogue on screen is shown in them. Main thread.
+     * recreated, not the repository): the catalogue on screen is shown in them. Called on the main thread; the renaming
+     * walks the whole catalogue, so it runs off it, as in [shown].
      */
     fun setPlaceholderNames(names: PlaceholderNames) {
         if (names == _state.value.placeholderNames) return
+        // At once: a catalogue shown meanwhile ([shown]) is in these words.
+        _state.update { it.copy(placeholderNames = names) }
+        renameJob?.cancel()
+        val loaded = loadedContent
         val before = shownContent
-        val renamed = names.rename(loadedContent)
-        shownContent = renamed
-        forgetCatalogueFindings()
-        // The episodes of a playlist's own series came with its catalogue, in the former words: they are made again.
-        val provided = seriesFetchedAt.keys.toSet()
-        _state.update { state ->
-            val details = state.seriesDetails.filterKeys { it in provided }
-            // A catalogue replaced meanwhile (another playlist opened) is not brought back.
-            if (state.content === before) state.copy(placeholderNames = names, content = renamed, seriesDetails = details)
-            else state.copy(placeholderNames = names, seriesDetails = details)
+        renameJob = scope.launch {
+            val renamed = withContext(parsing) { names.rename(loaded) }
+            if (_state.value.placeholderNames != names) return@launch
+            // Another catalogue loaded meanwhile is already in these words ([shown]).
+            val current = loadedContent === loaded
+            if (current) {
+                shownContent = renamed
+                forgetCatalogueFindings()
+            }
+            // The episodes of a playlist's own series came with its catalogue, in the former words: they are made again.
+            val provided = seriesFetchedAt.keys.toSet()
+            _state.update { state ->
+                val details = state.seriesDetails.filterKeys { it in provided }
+                // A catalogue taken off the screen meanwhile (another playlist opened, one deleted) is not brought back.
+                if (current && state.content === before) state.copy(content = renamed, seriesDetails = details) else state.copy(seriesDetails = details)
+            }
         }
     }
+
+    /** The renaming of the catalogue in the app's new words ([setPlaceholderNames]). Main thread. */
+    private var renameJob: Job? = null
 
     fun bootstrap() {
         if (_state.value.isReady || bootstrapping) return

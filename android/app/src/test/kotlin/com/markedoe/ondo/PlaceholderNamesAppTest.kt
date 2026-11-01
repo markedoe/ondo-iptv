@@ -98,6 +98,8 @@ class PlaceholderNamesAppTest {
         // Another app language: the catalogue on screen follows.
         val spanish = app.createConfigurationContext(Configuration(app.resources.configuration).apply { setLocale(Locale.forLanguageTag("es")) })
         repository.setPlaceholderNames(spanish.resources.placeholderNames())
+        // Renamed off the main thread.
+        waitFor { repository.state.value.content.liveCategories.firstOrNull()?.name == "Sin categoría" }
         assertEquals(listOf("Sin categoría", "Otros"), repository.state.value.content.liveCategories.map { it.name })
         assertEquals("Canal 12", repository.state.value.content.channels.first().name)
     }
