@@ -77,6 +77,13 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   channel (channel keys, Channels list), goes in no history, and the Xtream archive is asked for in the panel's time
   zone (`content.account`). A live channel without a window to seek in, paused by the viewer for 10 s or more,
   resumes from the archive where it was paused (`player/LivePause.kt`, as on Apple).
+- **Last crash** (Settings → About, `data/CrashLog.kt`): kept on the device only, addresses and logins left out,
+  with the device's memory figures. An uncaught error, or how Android ended the last run while it was on screen
+  (out of memory, not responding with the main thread's stack, native crash: `ApplicationExitInfo`, Android 11 and
+  later), and a restart of the whole device during playback: the player keeps what plays (formats, HDR or Dolby
+  Vision, decoders, buffer, memory, thermal status; never an address, a provider or a title) in a small file
+  rewritten every 30 s and deleted when playback stops as it should (`data/PlayingNow.kt`); found at the next start
+  after the device started again, it becomes the last crash ("the device restarted during playback").
 - **Frame rate** on a TV with Android 12 or later: a film, an episode or a replay asks the screen for its own frame
   rate with `Surface.setFrameRate(…, CHANGE_FRAME_RATE_ALWAYS)`, as Google recommends for movies; Android switches
   only if the viewer set the TV to match the content's frame rate, and the player waits for the screen meanwhile

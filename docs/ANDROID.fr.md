@@ -87,6 +87,15 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   l'archive Xtream est demandée à l'heure du serveur (`content.account`). Une chaîne en direct sans fenêtre où
   reculer, mise en pause par le spectateur 10 s ou plus, reprend depuis l'archive là où elle a été arrêtée
   (`player/LivePause.kt`, comme sur Apple).
+- **Dernier plantage** (Réglages → À propos, `data/CrashLog.kt`) : gardé sur l'appareil seulement, sans adresses
+  ni identifiants, avec la mémoire dont dispose l'appareil. Une erreur non interceptée, ou la façon dont Android a
+  arrêté la dernière exécution quand elle était à l'écran (mémoire épuisée, app qui ne répond pas avec la pile du
+  fil principal, plantage en code natif : `ApplicationExitInfo`, Android 11 et plus), et un redémarrage de tout
+  l'appareil pendant la lecture : le lecteur garde ce qui est lu (formats, HDR ou Dolby Vision, décodeurs, mémoire
+  tampon, mémoire, état thermique ; jamais une adresse, un fournisseur ni un titre) dans un petit fichier réécrit
+  toutes les 30 s et supprimé quand la lecture s'arrête normalement (`data/PlayingNow.kt`) ; trouvé au démarrage
+  suivant, après un redémarrage de l'appareil, il devient le dernier plantage (« the device restarted during
+  playback »).
 - **Fréquence d'image** sur une TV Android 12 ou plus : un film, un épisode ou un replay demande à l'écran sa propre
   fréquence avec `Surface.setFrameRate(…, CHANGE_FRAME_RATE_ALWAYS)`, comme Google le recommande pour les films ;
   Android ne change que si le spectateur a réglé la TV pour adapter sa fréquence au contenu, et le lecteur attend
