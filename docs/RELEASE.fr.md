@@ -170,7 +170,7 @@ réseau, fichiers choisis par l'utilisateur).
    Store, App Store Connect refuse ses nouveaux builds, donc les envois TestFlight des pushs suivants ont besoin de
    la version suivante.
 
-   Chaque lancement de *Release* (macOS 26, Xcode 26 — exigé par Apple depuis avril 2026) lance les tests du cœur,
+   Chaque lancement de *Release* (macOS 26, Xcode 26.6 comme la CI : `DEVELOPER_DIR` de chaque job macOS ; Xcode 26 est exigé par Apple depuis avril 2026) lance les tests du cœur,
    puis trois vérifications dont chacune arrête le lancement avant toute compilation ou soumission : *Demo
    playlist answers* (la review d'Apple teste l'app avec la playlist de démo ; toutes les cibles sauf `status`),
    *App Store edition checks* (`check_app_store.py` et les adresses de la fiche, voir E ; pour l'édition App

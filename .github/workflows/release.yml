@@ -49,6 +49,10 @@ jobs:
     # The signing secrets are given only to the steps that sign or upload, not to the tools installed or run
     # before them (gems, Homebrew, XcodeGen, which generates the project in a step of its own).
     env:
+      # The Xcode the apps are built with, not the image's default (which moves with each image). When an image no
+      # longer has it, the Xcode step below says so: raise it in every macOS job (ci.yml, appstore-screenshots.yml,
+      # release.yml) and in docs/RELEASE.md.
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       TARGET: ${{ github.event.inputs.target || 'release' }}
       # A tag (and a release by hand) builds the App Store edition: the one that can be submitted.
       EDITION: ${{ github.event.inputs.target == 'release' && 'app-store' || github.event.inputs.edition || 'app-store' }}
@@ -58,6 +62,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Xcode
+        run: |
+          [ -d "$DEVELOPER_DIR" ] || { echo "::error::$DEVELOPER_DIR is not on this runner image, which has: $(ls -d /Applications/Xcode_*.app | xargs)"; exit 1; }
+          xcodebuild -version
       - name: The tag is the version of the apps
         # project.yml and Android give the version to the builds made between releases: a tag that disagrees would ship
         # a version the next TestFlight uploads do not follow.

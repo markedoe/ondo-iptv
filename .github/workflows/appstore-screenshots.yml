@@ -28,6 +28,11 @@ jobs:
   capture:
     name: ${{ matrix.device }} · ${{ matrix.locale }}
     runs-on: macos-26
+    # The Xcode the apps are built with, not the image's default (which moves with each image). When an image no
+    # longer has it, the Xcode step below says so: raise it in every macOS job (ci.yml, appstore-screenshots.yml,
+    # release.yml) and in docs/RELEASE.md.
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -38,6 +43,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Xcode
+        run: |
+          [ -d "$DEVELOPER_DIR" ] || { echo "::error::$DEVELOPER_DIR is not on this runner image, which has: $(ls -d /Applications/Xcode_*.app | xargs)"; exit 1; }
+          xcodebuild -version
       - name: Generate Xcode project
         run: |
           brew install xcodegen xcbeautify || true
@@ -86,6 +95,11 @@ jobs:
   mac:
     name: mac · ${{ matrix.locale }}
     runs-on: macos-26
+    # The Xcode the apps are built with, not the image's default (which moves with each image). When an image no
+    # longer has it, the Xcode step below says so: raise it in every macOS job (ci.yml, appstore-screenshots.yml,
+    # release.yml) and in docs/RELEASE.md.
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -95,6 +109,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Xcode
+        run: |
+          [ -d "$DEVELOPER_DIR" ] || { echo "::error::$DEVELOPER_DIR is not on this runner image, which has: $(ls -d /Applications/Xcode_*.app | xargs)"; exit 1; }
+          xcodebuild -version
       - name: Generate Xcode project
         run: |
           brew install xcodegen xcbeautify || true
