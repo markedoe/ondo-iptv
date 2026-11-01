@@ -55,7 +55,11 @@
     <string name="refreshing_playlist">Mise à jour de la playlist…</string>
     <string name="auto_refresh">Actualisation automatique</string>
     <string name="auto_refresh_manual">Seulement sur demande</string>
-    <string name="auto_refresh_hours">Toutes les %d heures</string>
+    <plurals name="auto_refresh_hours">
+        <item quantity="one">Toutes les %d h</item>
+        <item quantity="many">Toutes les %d heures</item>
+        <item quantity="other">Toutes les %d heures</item>
+    </plurals>
     <string name="auto_refresh_daily">Chaque jour</string>
     <string name="auto_refresh_weekly">Chaque semaine</string>
     <string name="use_playlist">Utiliser</string>

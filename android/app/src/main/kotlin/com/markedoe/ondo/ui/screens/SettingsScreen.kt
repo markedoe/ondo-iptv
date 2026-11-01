@@ -410,7 +410,7 @@ internal fun autoRefreshLabel(hours: Int): String = when (hours) {
     0 -> stringResource(R.string.auto_refresh_manual)
     24 -> stringResource(R.string.auto_refresh_daily)
     168 -> stringResource(R.string.auto_refresh_weekly)
-    else -> stringResource(R.string.auto_refresh_hours, hours)
+    else -> pluralStringResource(R.plurals.auto_refresh_hours, hours, hours)
 }
 
 @Composable

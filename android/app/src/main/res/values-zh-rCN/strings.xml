@@ -55,7 +55,9 @@
     <string name="refreshing_playlist">正在更新播放列表…</string>
     <string name="auto_refresh">自动更新</string>
     <string name="auto_refresh_manual">仅手动更新</string>
-    <string name="auto_refresh_hours">每 %d 小时</string>
+    <plurals name="auto_refresh_hours">
+        <item quantity="other">每 %d 小时</item>
+    </plurals>
     <string name="auto_refresh_daily">每天</string>
     <string name="auto_refresh_weekly">每周</string>
     <string name="use_playlist">使用</string>

@@ -57,7 +57,10 @@
     <string name="refreshing_playlist">Updating the playlist…</string>
     <string name="auto_refresh">Automatic refresh</string>
     <string name="auto_refresh_manual">Only when I ask</string>
-    <string name="auto_refresh_hours">Every %d hours</string>
+    <plurals name="auto_refresh_hours">
+        <item quantity="one">Every hour</item>
+        <item quantity="other">Every %d hours</item>
+    </plurals>
     <string name="auto_refresh_daily">Every day</string>
     <string name="auto_refresh_weekly">Every week</string>
     <string name="use_playlist">Use</string>
