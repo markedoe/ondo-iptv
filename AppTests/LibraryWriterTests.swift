@@ -30,7 +30,11 @@ final class LibraryWriterTests: XCTestCase {
             writer.schedule(library(favorites: count), name: "library", after: .milliseconds(50))
         }
         XCTAssertNil(store.load(UserLibrary.self, name: "library"), "nothing written yet")
-        try await Task.sleep(for: .milliseconds(400))
+        // Written in the background: waited for, not timed (a busy machine runs the write late).
+        let deadline = Date().addingTimeInterval(5)
+        while store.load(UserLibrary.self, name: "library") == nil, Date() < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
         XCTAssertEqual(store.load(UserLibrary.self, name: "library")?.favorites.count, 20)
     }
 
