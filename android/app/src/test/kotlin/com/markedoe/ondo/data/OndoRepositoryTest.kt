@@ -667,6 +667,7 @@ class OndoRepositoryTest {
      * The names the core gives in English show in the app's words, again when its language changes; the saved catalogue
      * keeps the core's, and a catalogue taken off the screen does not come back with another language.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun theCoresNamesShowInTheAppsWordsAndStayInEnglishOnDisk() = runTest {
         fun words(uncategorized: String, episode: String) = PlaceholderNames(uncategorized, "-", "- %1\$d", "- %1\$d", "- %1\$d", "- %1\$d", episode)
