@@ -32,6 +32,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -65,7 +66,7 @@ val TvHeaderHeight = 190.dp
 /** The posters' width under the header: a little smaller, for a whole row to show below it. */
 val TvHeaderPosterWidth = 112.dp
 
-/** The synopsis' lines, kept even when there is none. */
+/** The synopsis' lines, their room kept even when there is none. */
 private const val PLOT_LINES = 3
 
 /**
@@ -249,14 +250,17 @@ fun TitleHeaderText(header: TitleHeader, modifier: Modifier = Modifier, titleSty
             modifier = Modifier.testTag("headerTitle"),
         )
         TitleFacts(header, Modifier.padding(top = 8.dp))
+        // The synopsis' room is its three lines' height, set rather than measured: an empty one keeps it too.
+        val plotStyle = MaterialTheme.typography.bodyMedium
+        val lineHeight = if (plotStyle.lineHeight.isSp) plotStyle.lineHeight else plotStyle.fontSize * 1.4f
+        val plotHeight = with(LocalDensity.current) { lineHeight.toDp() } * PLOT_LINES
         Text(
             header.plot.orEmpty(),
-            style = MaterialTheme.typography.bodyMedium,
+            style = plotStyle,
             color = Color.White.copy(alpha = 0.72f),
-            minLines = PLOT_LINES,
             maxLines = PLOT_LINES,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 10.dp).testTag("headerPlot"),
+            modifier = Modifier.padding(top = 10.dp).height(plotHeight).testTag("headerPlot"),
         )
     }
 }

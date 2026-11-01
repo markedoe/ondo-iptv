@@ -54,6 +54,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionScrollTest {
+    /** The chips above the first row: Up from its smaller posters, under the header, lands on one of them. */
+    private val chipsAboveTheRows = setOf("Categories", "All", "Drama")
+
     @get:Rule val uncaught = UncaughtErrors()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
@@ -222,8 +225,8 @@ class TelevisionScrollTest {
         start()
         openTab(1, "vod")
         // The category chips above the rows: All opens every movie in a grid.
-        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
-        pressUntil(Key.DirectionLeft) { focused() == "All" }
+        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
+        pressUntil(if (focused() == "Categories") Key.DirectionRight else Key.DirectionLeft) { focused() == "All" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") }
         settle(1_000)

@@ -48,6 +48,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionPosterFactsTest {
+    /** The chips above the first row: Up from its smaller posters, under the header, lands on one of them. */
+    private val chipsAboveTheRows = setOf("Categories", "All", "Drama")
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
 
@@ -151,8 +154,8 @@ class TelevisionPosterFactsTest {
         press(Key.DirectionCenter)
         waitFor { exists("vod") && !focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
-        pressUntil(Key.DirectionLeft) { focused() == "All" }
+        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
+        pressUntil(if (focused() == "Categories") Key.DirectionRight else Key.DirectionLeft) { focused() == "All" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") && focusedIn("grid") }
         pressUntil(Key.DirectionDown, max = 20) { focused() in movieTitles }

@@ -72,6 +72,7 @@ import com.markedoe.ondo.ui.tv.rememberLeaveField
 import com.markedoe.ondo.ui.tv.rememberTvTextField
 import com.markedoe.ondo.ui.tv.TvHeaderPosterWidth
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
+import com.markedoe.ondo.ui.tv.KeptForTheRemote
 import androidx.compose.ui.unit.Dp
 
 data class CategoryRow(val category: MediaCategory, val items: List<ShowcaseItem>)
@@ -149,6 +150,8 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
             }
         }
         item {
+            // Above the first row's card, under the header: kept for the remote's Up.
+            if (television) KeptForTheRemote()
             TvRow {
                 LazyRow(contentPadding = PaddingValues(horizontal = metrics.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (television) {
@@ -266,6 +269,8 @@ fun PosterGridScreen(
             modifier = modifier.windowInsetsPadding(WindowInsets.statusBars).testTag("grid"),
         ) {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                // Back and Sort, then the filter, above the first posters: kept for the remote's Up under the header.
+                if (posterOnly) KeptForTheRemote()
                 TopAppBar(
                     title = { Text(title, maxLines = 1) },
                     navigationIcon = {
@@ -277,6 +282,7 @@ fun PosterGridScreen(
                 )
             }
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                if (posterOnly) KeptForTheRemote()
                 val field = rememberTvTextField()
                 OutlinedTextField(
                     value = filter,

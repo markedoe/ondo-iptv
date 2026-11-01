@@ -160,7 +160,13 @@ fun TvHomeScreen(
                 verticalArrangement = Arrangement.spacedBy(22.dp),
             ) {
                 if (!hasHero) item(key = "hero") { TvHomeHeader(state) }
-                state.tagSuggestion?.let { suggestion -> item(key = "suggestion") { TvTagSuggestion(suggestion, actions) } }
+                state.tagSuggestion?.let { suggestion ->
+                    item(key = "suggestion") {
+                        // Above the first row under the frame: kept for the remote's Up.
+                        if (hasHero) KeptForTheRemote()
+                        TvTagSuggestion(suggestion, actions)
+                    }
+                }
                 if (resumeMovies.isNotEmpty()) {
                     tvShelf(titles.movies, "shelfResumeMovies") {
                         items(resumeMovies, key = { it.key }) { item ->

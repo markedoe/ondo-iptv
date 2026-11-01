@@ -51,6 +51,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.LocalPinnableContainer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -143,6 +144,20 @@ fun TvPinnedHeaderList(lead: Dp, content: @Composable () -> Unit) {
     val pixels = with(LocalDensity.current) { lead.toPx() }
     val spec = remember(pixels) { TvPinnedScrolling(pixels) }
     CompositionLocalProvider(LocalBringIntoViewSpec provides spec, content = content)
+}
+
+/**
+ * Keeps the lazy list's item this is called in composed and placed while it is scrolled out above the top. Under a
+ * pinned header ([TvPinnedScrolling]) the first row's card lands where the items above it were (a page's chips, its
+ * Sort button and filter): kept, the remote's Up still reaches them instead of jumping to the top bar.
+ */
+@Composable
+fun KeptForTheRemote() {
+    val container = LocalPinnableContainer.current
+    DisposableEffect(container) {
+        val handle = container?.pin()
+        onDispose { handle?.release() }
+    }
 }
 
 /** The margins Google asks TV layouts to keep clear (5 % of a 960 × 540 dp screen). */

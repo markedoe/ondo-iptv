@@ -59,6 +59,9 @@ import org.robolectric.shadows.ShadowToast
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class PosterMyListTest {
+    /** The chips above the first row: Up from its smaller posters, under the header, lands on one of them. */
+    private val chipsAboveTheRows = setOf("Categories", "All", "Drama")
+
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
 
@@ -163,7 +166,7 @@ class PosterMyListTest {
         press(Key.DirectionCenter)
         waitFor { exists("vod") && !focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
+        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
         pressUntil(Key.DirectionRight) { focused() == "Drama" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") && focusedIn("grid") }

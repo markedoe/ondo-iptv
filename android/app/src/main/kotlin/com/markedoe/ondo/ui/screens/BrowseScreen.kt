@@ -39,6 +39,7 @@ import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
+import com.markedoe.ondo.ui.tv.KeptForTheRemote
 
 /** What a value of a movie's or a series' page stands for: an award, a festival, a year, a genre. */
 enum class BrowseKind { AWARD, FESTIVAL, YEAR, GENRE }
@@ -84,6 +85,8 @@ fun BrowseScreen(
             modifier = modifier.windowInsetsPadding(WindowInsets.statusBars).testTag("browse"),
         ) {
             fullWidth {
+                // Back and Sort above the first posters: kept for the remote's Up under the header.
+                if (posterOnly) KeptForTheRemote()
                 TopAppBar(
                     title = { Text(title, maxLines = 1) },
                     navigationIcon = {
@@ -96,6 +99,7 @@ fun BrowseScreen(
             }
             state.festival?.let { festival ->
                 fullWidth {
+                    if (posterOnly) KeptForTheRemote()
                     ListItem(
                         headlineContent = { Text(awardGroupName(festival), color = MaterialTheme.colorScheme.primary) },
                         leadingContent = { Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },

@@ -74,6 +74,9 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionFocusTest {
+    /** The chips above the first row: Up from its smaller posters, under the header, lands on one of them. */
+    private val chipsAboveTheRows = setOf("Categories", "All", "Drama")
+
     @get:Rule val uncaught = UncaughtErrors()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
@@ -426,7 +429,7 @@ class TelevisionFocusTest {
         openFromDrawer("tabMovies")
         // Up from the first poster: its category's chip, which opens the category's posters.
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
+        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
         pressUntil(Key.DirectionRight) { focused() == "Drama" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") && focusedIn("grid") }
@@ -457,7 +460,7 @@ class TelevisionFocusTest {
     private fun openDramaGrid() {
         openFromDrawer("tabMovies")
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
+        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
         pressUntil(Key.DirectionRight) { focused() == "Drama" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") && focusedIn("grid") }
@@ -484,7 +487,7 @@ class TelevisionFocusTest {
         assertTrue(tabSelected("tabMovies"))
         // Again, and back to the tab's page with OK on its tab.
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() == "All" || focused() == "Drama" }
+        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
         pressUntil(Key.DirectionRight) { focused() == "Drama" }
         press(Key.DirectionCenter)
         waitFor { exists("grid") && focusedIn("grid") }
