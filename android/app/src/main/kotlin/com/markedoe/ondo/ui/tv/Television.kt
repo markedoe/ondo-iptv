@@ -124,13 +124,17 @@ fun TvRow(content: @Composable () -> Unit) {
 }
 
 /**
- * How a page's rows scroll under a header pinned above them ([TvFocusHeader]): the focused card always at the same
- * place, [lead] pixels below the list's top (room for its row's name above it), rather than a third of the way.
+ * How a page's rows scroll under a header pinned above them ([TvFocusHeader]): the focused card [lead] pixels below the
+ * list's top (room for its row's name above it), rather than a third of the way. A card already wholly in view, at
+ * least [lead] below the top, stays where it is: moving along a row on screen moves only the focus, the rows never
+ * jump under it (the first row, below the page's chips, as any other).
  */
 @ExperimentalFoundationApi
 class TvPinnedScrolling(private val lead: Float) : BringIntoViewSpec {
-    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
-        offset - lead.coerceAtMost((containerSize - size).coerceAtLeast(0f))
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+        if (offset >= lead && offset + size <= containerSize) return 0f
+        return offset - lead.coerceAtMost((containerSize - size).coerceAtLeast(0f))
+    }
 }
 
 /** [content]'s list scrolls as [TvPinnedScrolling] says on a TV, the focused card [lead] below its top; elsewhere, as it is. */
