@@ -91,6 +91,51 @@ class SyncTest {
         assertEquals(snapshot, SyncSnapshot.decode(snapshot.encoded()))
     }
 
+    /**
+     * A device that writes its IDs in uppercase writes them so in its deletions too: they still remove the records,
+     * read in lowercase. The item of a favourite or a progress is the provider's ID and keeps its case.
+     */
+    @Test
+    fun deletionsAreReadWithTheirIdsInLowercase() {
+        val playlist = SyncPlaylist(
+            id = "a0000000-0000-4000-8000-00000000000a", name = "Home", kind = SyncPlaylist.M3U,
+            url = "http://example.com/a.m3u", addedAt = 1, updatedAt = 1,
+        )
+        val other = SyncPlaylist(
+            id = "c0000000-0000-4000-8000-00000000000c", name = "Office", kind = SyncPlaylist.M3U,
+            url = "http://example.com/c.m3u", addedAt = 1, updatedAt = 1,
+        )
+        val kept = SyncFavorite(playlist = other.id, kind = "movie", item = "M1", title = "Glass City", addedAt = 10)
+        val removed = SyncFavorite(playlist = other.id, kind = "movie", item = "M2", title = "Quiet Water", addedAt = 10)
+        val list = SyncList(id = "d0000000-0000-4000-8000-00000000000d", name = "Kids", updatedAt = 10)
+        val a = SyncSnapshot(device = "a", playlists = listOf(playlist, other), favorites = listOf(kept, removed), lists = listOf(list))
+        val json = """
+            {"type":"ondo-sync","version":1,"device":"b","deleted":{
+              "playlist:A0000000-0000-4000-8000-00000000000A":20,
+              "favorite:C0000000-0000-4000-8000-00000000000C|movie|M2":20,
+              "favorite:C0000000-0000-4000-8000-00000000000C|movie|m1":20,
+              "list:D0000000-0000-4000-8000-00000000000D":20,
+              "list:d0000000-0000-4000-8000-00000000000d":30,
+              "key:TMDB":20}}
+        """.trimIndent()
+        val b = requireNotNull(SyncSnapshot.decode(json.encodeToByteArray()))
+        assertEquals(
+            mapOf(
+                "playlist:a0000000-0000-4000-8000-00000000000a" to 20L,
+                "favorite:c0000000-0000-4000-8000-00000000000c|movie|M2" to 20L,
+                "favorite:c0000000-0000-4000-8000-00000000000c|movie|m1" to 20L,
+                "list:d0000000-0000-4000-8000-00000000000d" to 30L,
+                "key:TMDB" to 20L,
+            ),
+            b.deleted,
+        )
+        for (merged in listOf(SyncMerge.merge(a, b), SyncMerge.merge(b, a))) {
+            assertEquals(listOf(other.id), merged.playlists.map { it.id })
+            assertEquals("an item ID keeps its case", listOf("M1"), merged.favorites.map { it.item })
+            assertTrue(merged.lists.isEmpty())
+        }
+    }
+
     @Test
     fun oldDeletionsAreForgotten() {
         val day = 86_400_000L

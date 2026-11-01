@@ -55,14 +55,37 @@ data class SyncSnapshot(
         }
     }
 
-    /** Playlist and list IDs in lowercase, as every device writes them. */
+    /**
+     * Playlist and list IDs in lowercase, as every device writes them, in the records and in the keys of what was
+     * deleted (two keys that become one keep the later time).
+     */
     fun normalized(): SyncSnapshot = copy(
         playlists = playlists.map { it.copy(id = it.id.lowercase()) },
         favorites = favorites.map { it.copy(playlist = it.playlist.lowercase()) },
         progress = progress.map { it.copy(playlist = it.playlist.lowercase()) },
         lists = lists.map { list -> list.copy(id = list.id.lowercase(), items = list.items.map { it.copy(playlist = it.playlist.lowercase()) }) },
+        deleted = deleted.entries.fold(LinkedHashMap<String, Long>()) { times, (key, time) ->
+            val lowercased = lowercasingId(key)
+            times[lowercased] = maxOf(times[lowercased] ?: time, time)
+            times
+        },
         replaced = replaced.entries.associate { (old, new) -> old.lowercase() to new.lowercase() },
     )
+}
+
+/**
+ * The key of a deleted record with its playlist or list ID in lowercase: `playlist:<id>`, `list:<id>`, and the
+ * playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`. The rest (the provider's item IDs, the service of
+ * `key:`) keeps its case.
+ */
+internal fun lowercasingId(key: String): String {
+    for (prefix in listOf("playlist:", "list:", "favorite:", "progress:")) {
+        if (!key.startsWith(prefix)) continue
+        val bar = if (prefix == "favorite:" || prefix == "progress:") key.indexOf('|', prefix.length) else -1
+        if (bar < 0) return prefix + key.substring(prefix.length).lowercase()
+        return prefix + key.substring(prefix.length, bar).lowercase() + key.substring(bar)
+    }
+    return key
 }
 
 @Serializable

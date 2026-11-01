@@ -138,6 +138,41 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(a.lists.first?.id, "d0000000-0000-4000-8000-00000000000d")
     }
 
+    /// A device that writes its IDs in uppercase writes them so in its deletions too: they still remove the records,
+    /// read in lowercase. The item of a favourite or a progress is the provider's ID and keeps its case.
+    func testDeletionsAreReadWithTheirIDsInLowercase() throws {
+        let playlist = SyncPlaylist(id: "a0000000-0000-4000-8000-00000000000a", name: "Home", kind: SyncPlaylist.m3u,
+                                    url: "http://example.com/a.m3u", addedAt: 1, updatedAt: 1)
+        let other = SyncPlaylist(id: "c0000000-0000-4000-8000-00000000000c", name: "Office", kind: SyncPlaylist.m3u,
+                                 url: "http://example.com/c.m3u", addedAt: 1, updatedAt: 1)
+        let kept = SyncFavorite(playlist: other.id, kind: "movie", item: "M1", title: "Glass City", addedAt: 10)
+        let removed = SyncFavorite(playlist: other.id, kind: "movie", item: "M2", title: "Quiet Water", addedAt: 10)
+        let list = SyncList(id: "d0000000-0000-4000-8000-00000000000d", name: "Kids", updatedAt: 10)
+        let a = SyncSnapshot(device: "a", playlists: [playlist, other], favorites: [kept, removed], lists: [list])
+        let json = #"""
+        {"type":"ondo-sync","version":1,"device":"b","deleted":{
+          "playlist:A0000000-0000-4000-8000-00000000000A":20,
+          "favorite:C0000000-0000-4000-8000-00000000000C|movie|M2":20,
+          "favorite:C0000000-0000-4000-8000-00000000000C|movie|m1":20,
+          "list:D0000000-0000-4000-8000-00000000000D":20,
+          "list:d0000000-0000-4000-8000-00000000000d":30,
+          "key:TMDB":20}}
+        """#
+        let b = try XCTUnwrap(SyncSnapshot.decode(Data(json.utf8)))
+        XCTAssertEqual(b.deleted, [
+            "playlist:a0000000-0000-4000-8000-00000000000a": 20,
+            "favorite:c0000000-0000-4000-8000-00000000000c|movie|M2": 20,
+            "favorite:c0000000-0000-4000-8000-00000000000c|movie|m1": 20,
+            "list:d0000000-0000-4000-8000-00000000000d": 30,
+            "key:TMDB": 20,
+        ])
+        for merged in [SyncMerge.merge(a, b), SyncMerge.merge(b, a)] {
+            XCTAssertEqual(merged.playlists.map(\.id), [other.id])
+            XCTAssertEqual(merged.favorites.map(\.item), ["M1"], "an item ID keeps its case")
+            XCTAssertTrue(merged.lists.isEmpty)
+        }
+    }
+
     func testOldDeletionsAreForgotten() {
         let day: Int64 = 86_400_000
         let snapshot = SyncSnapshot(device: "a", deleted: ["list:old": 0, "list:recent": 170 * day, "playlist:old": 0, "playlist:new": 190 * day],

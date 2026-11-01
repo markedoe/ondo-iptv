@@ -93,7 +93,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         return copy
     }
 
-    /// Playlist and list IDs in lowercase, as every device writes them.
+    /// Playlist and list IDs in lowercase, as every device writes them, in the records and in the keys of what was
+    /// deleted (two keys that become one keep the later time).
     public func normalized() -> SyncSnapshot {
         var copy = self
         copy.playlists = playlists.map { playlist in
@@ -121,8 +122,24 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             }
             return list
         }
+        copy.deleted = Dictionary(deleted.map { (Self.lowercasingID(ofDeleted: $0.key), $0.value) }, uniquingKeysWith: max)
         copy.replaced = Dictionary(replaced.map { ($0.key.lowercased(), $0.value.lowercased()) }, uniquingKeysWith: { _, last in last })
         return copy
+    }
+
+    /// The key of a deleted record with its playlist or list ID in lowercase: `playlist:<id>`, `list:<id>`, and the
+    /// playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`. The rest (the provider's item IDs, the service
+    /// of `key:`) keeps its case.
+    static func lowercasingID(ofDeleted key: String) -> String {
+        let scalars = key.unicodeScalars
+        for prefix in ["playlist:", "list:", "favorite:", "progress:"] where scalars.starts(with: prefix.unicodeScalars) {
+            let rest = String(scalars.dropFirst(prefix.unicodeScalars.count))
+            guard prefix == "favorite:" || prefix == "progress:", let bar = rest.unicodeScalars.firstIndex(of: "|") else {
+                return prefix + rest.lowercased()
+            }
+            return prefix + String(rest.unicodeScalars[..<bar]).lowercased() + String(rest.unicodeScalars[bar...])
+        }
+        return key
     }
 }
 
