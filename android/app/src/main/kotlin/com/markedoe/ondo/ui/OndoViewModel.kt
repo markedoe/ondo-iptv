@@ -10,6 +10,7 @@ import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Series
+import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LoadError
 import com.markedoe.ondo.data.OndoRepository
@@ -240,7 +241,7 @@ class OndoViewModel(
     fun loadSeries(id: String) {
         viewModelScope.launch {
             val series = withContext(computation) { UiMappers.series(state.value, id) } ?: return@launch
-            runCatching { repository.details(series) }
+            seriesDetails(series)
                 .onSuccess { _seriesErrors.value -= id }
                 .onFailure { error -> _seriesErrors.value += (id to LoadError.of(error)) }
             wantTmdb(ShowcaseItem.SeriesItem(series))
@@ -406,7 +407,7 @@ class OndoViewModel(
             ItemKind.SERIES -> {
                 val series = current.content.series.firstOrNull { it.id == entry.itemId } ?: return
                 prepare(key) {
-                    val details = runCatching { repository.details(series) }.getOrNull() ?: return@prepare
+                    val details = seriesDetails(series).getOrNull() ?: return@prepare
                     details.seasons.flatMap { it.episodes }.firstOrNull { it.id == entry.episodeId }
                         ?.let { emit(repository.playRequest(series, it)) }
                 }
@@ -474,8 +475,23 @@ class OndoViewModel(
     }
 
     private suspend fun nextEpisode(series: Series): Episode? {
-        val details = runCatching { repository.details(series) }.getOrNull() ?: return null
+        val details = seriesDetails(series).getOrNull() ?: return null
         return UiMappers.showcase(state.value).nextEpisode(series, details)?.first
+    }
+
+    /**
+     * A series' episodes ([OndoRepository.details]), or why they could not be had. A cancellation stays one (`runCatching`
+     * would take it as a failure: an error shown for a page closed, the work after it done anyway).
+     */
+    private suspend fun seriesDetails(series: Series): Result<SeriesDetails> = try {
+        Result.success(repository.details(series))
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (error: Exception) {
+        Result.failure(error)
+    } catch (error: OutOfMemoryError) {
+        // A page too large for this device (the HTTP client hands the error over): not a stop of the app.
+        Result.failure(error)
     }
 
     private fun emit(request: PlayRequest?) {

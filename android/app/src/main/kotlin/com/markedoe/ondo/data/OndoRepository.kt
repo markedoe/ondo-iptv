@@ -862,7 +862,8 @@ class OndoRepository(
         val playlist = _state.value.activePlaylist ?: return kept
         val streamId = movie.xtreamStreamId ?: return kept
         val credentials = playlist.credentials() ?: return kept
-        val details = runCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }.getOrNull() ?: return kept
+        // A cancelled call stays one: the caller (a page closed, the remote moved on) does not go on as if it had failed.
+        val details = loadCatching { withContext(io) { XtreamClient(credentials, http).movieDetails(streamId) } }.getOrNull() ?: return kept
         // Another playlist opened meanwhile: these details are not its own.
         if (_state.value.activePlaylistId != playlist.id) return details
         movieFetchedAt[movie.id] = now()

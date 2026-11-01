@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -33,11 +34,15 @@ class StoredDetailsTest {
         var isDown = false
         var episodes = 1
 
+        /** The movie's details are asked, and the request is cancelled (the page closed). */
+        var cancelsDetails = false
+
         override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
             if ("xmltv.php" in url) throw HttpException.BadStatus(404)
             val action = Regex("[?&]action=([^&]+)").find(url)?.groupValues?.get(1).orEmpty()
             actions += action
             if (isDown) throw HttpException.BadStatus(503)
+            if (cancelsDetails && action == "get_vod_info") throw CancellationException("the page closed")
             val pilot = """{"id":"7001","episode_num":1,"title":"Pilot","container_extension":"mkv","info":{"movie_image":"http://img.example.com/still.jpg"}}"""
             val second = """{"id":"7002","episode_num":2,"title":"Second","container_extension":"mkv"}"""
             val body = when (action) {
@@ -109,6 +114,25 @@ class StoredDetailsTest {
         panel.isDown = true
         assertEquals("http://img.example.com/wide.jpg", second.details(movie)?.backdropUrl)
         assertEquals(2, second.details(series).seasons.single().episodes.size)
+    }
+
+    /** A movie's details cancelled on the way stay a cancellation: the caller does not go on as if the panel had failed. */
+    @Test
+    fun aCancelledRequestForAMoviesDetailsStaysCancelled() = runTest {
+        val panel = Panel()
+        val repository = repository(panel)
+        repository.bootstrap()
+        repository.state.first { it.isReady }
+        assertTrue(repository.addPlaylist("Panel", "http://panel.example.com", "viewer", "secret").isSuccess)
+        panel.cancelsDetails = true
+        val cancelled = try {
+            repository.details(repository.state.value.content.movies.single())
+            false
+        } catch (_: CancellationException) {
+            true
+        }
+        assertTrue(cancelled)
+        assertEquals(1, panel.calls("get_vod_info"))
     }
 
     @Test
