@@ -148,4 +148,67 @@ class LibraryStateTest {
         assertEquals(LibraryState.MAX_HISTORY, library.history.size)
         assertEquals("m${LibraryState.MAX_HISTORY + 19}", library.history.first().itemId)
     }
+
+    /** Live TV's Recent row: this playlist's channels only, the last watched first. */
+    @Test
+    fun recentChannelsAreThisPlaylistsNewestFirst() {
+        val library = listOf(
+            entry("c1", ItemKind.CHANNEL, at = 1),
+            entry("m1", at = 5),
+            entry("c2", ItemKind.CHANNEL, at = 3),
+            entry("c3", ItemKind.CHANNEL, at = 9, playlistId = "p2"),
+        ).fold(LibraryState()) { library, watched -> library.recordStart(watched) }
+        assertEquals(listOf("c2", "c1"), library.recentChannels("p1").map { it.itemId })
+        assertEquals(listOf("c2"), library.recentChannels("p1", limit = 1).map { it.itemId })
+        assertEquals(listOf("c3"), library.recentChannels("p2").map { it.itemId })
+    }
+
+    /** "Hide watched movies": a movie of this playlist watched to 95 %, never an episode or a channel. */
+    @Test
+    fun finishedMoviesAreThisPlaylistsMoviesWatchedToTheEnd() {
+        val library = listOf(
+            entry("done").copy(position = 5_800.0, duration = 6_000.0),
+            entry("almost").copy(position = 5_640.0, duration = 6_000.0),
+            entry("episode", ItemKind.SERIES, episodeId = "e1").copy(position = 2_700.0, duration = 2_700.0),
+            entry("elsewhere", playlistId = "p2").copy(position = 6_000.0, duration = 6_000.0),
+            entry("unknown length").copy(position = 6_000.0),
+        ).fold(LibraryState()) { library, watched -> library.recordStart(watched) }
+        assertEquals(setOf("done"), library.finishedMovies("p1"))
+        assertEquals(setOf("elsewhere"), library.finishedMovies("p2"))
+    }
+
+    /** Sync keeps the latest removal of a key: an older one arriving later does not move it back. */
+    @Test
+    fun aRemovalKeepsItsLatestTime() {
+        val library = LibraryState().deleting("list:a", 20).deleting("list:a", 10)
+        assertEquals(20L, library.syncDeleted["list:a"])
+        assertEquals(30L, library.deleting("list:a", 30).syncDeleted["list:a"])
+    }
+
+    /** A movie taken out of My List is remembered for sync at the time of the toggle; a person never syncs. */
+    @Test
+    fun aFavouriteTakenAwayIsRememberedForSyncButNotAPerson() {
+        val movie = Favorite("p1", ItemKind.MOVIE, "m1", "Movie", addedAt = 1)
+        val removed = LibraryState().toggleFavorite(movie).toggleFavorite(movie.copy(addedAt = 7))
+        assertEquals(7L, removed.syncDeleted[SyncKeys.favorite(movie)])
+        val person = Favorite.person("Alex Marsh", photoUrl = null, now = 1)
+        assertTrue(LibraryState().toggleFavorite(person).toggleFavorite(person).syncDeleted.isEmpty())
+    }
+
+    /** A photo found later fills a person kept without one, in My List and the collections; a known photo stays. */
+    @Test
+    fun aPersonsPhotoFillsOnlyWhatHadNone() {
+        val bare = Favorite.person("Alex Marsh", photoUrl = null, now = 1)
+        val pictured = Favorite.person("Robin Hale", photoUrl = "http://img.example.com/robin.jpg", now = 1)
+        val library = LibraryState().toggleFavorite(bare).toggleFavorite(pictured)
+            .creatingCollection("l1", "Actors", now = 1).togglingInCollection("l1", bare, now = 2)
+
+        val filled = library.withPersonPhoto("Alex Marsh", "http://img.example.com/alex.jpg")
+        assertEquals("http://img.example.com/alex.jpg", filled.favorites.single { it.itemId == "Alex Marsh" }.imageUrl)
+        assertEquals("http://img.example.com/alex.jpg", filled.collections.single().items.single().imageUrl)
+
+        val again = filled.withPersonPhoto("Robin Hale", "http://img.example.com/other.jpg")
+        assertEquals("http://img.example.com/robin.jpg", again.favorites.single { it.itemId == "Robin Hale" }.imageUrl)
+        assertTrue("nothing changed: the same state", again === filled)
+    }
 }
