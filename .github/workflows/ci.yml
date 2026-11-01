@@ -72,7 +72,7 @@ jobs:
       - name: Tests with coverage
         working-directory: Packages/IPTVCore
         run: |
-          swift test --parallel --enable-code-coverage -Xswiftc -warnings-as-errors
+          swift test --parallel --enable-code-coverage -Xswiftc -warnings-as-errors --xunit-output .build/xunit.xml
           BIN=$(swift build --show-bin-path)
           llvm-cov report "$BIN/IPTVCorePackageTests.xctest" \
             -instr-profile "$BIN/codecov/default.profdata" \
@@ -81,6 +81,11 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           tail -1 coverage.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Test counts
+        if: success() || failure()
+        # swift test writes the XCTest cases to xunit.xml and the Swift Testing ones next to it.
+        working-directory: Packages/IPTVCore
+        run: python3 ../../.github/scripts/test_summary.py "IPTVCore tests (Linux)" .build/xunit.xml .build/xunit-swift-testing.xml
 
   apple:
     name: Build iOS + macOS
@@ -103,7 +108,11 @@ jobs:
         run: swift --version
       - name: Core tests (macOS)
         working-directory: Packages/IPTVCore
-        run: swift test --parallel
+        run: swift test --parallel --xunit-output .build/xunit.xml
+      - name: Core test counts (macOS)
+        if: success() || failure()
+        working-directory: Packages/IPTVCore
+        run: python3 ../../.github/scripts/test_summary.py "IPTVCore tests (macOS)" .build/xunit.xml .build/xunit-swift-testing.xml
       - name: Generate Xcode project
         run: |
           brew install xcodegen xcbeautify || true
@@ -285,6 +294,23 @@ jobs:
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 600 \
             CODE_SIGNING_ALLOWED=NO | xcbeautify --renderer github-actions
+      - name: Test counts
+        if: success() || failure()
+        run: |
+          xcrun xcresulttool get test-results summary --path build/UITests.xcresult --compact > test-summary.json
+          python3 - <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
+          import json
+          summary = json.load(open("test-summary.json", encoding="utf-8"))
+          print("### App tests (unit + UI)\n")
+          print("| Passed | Failed | Skipped | Expected failures |\n|---:|---:|---:|---:|")
+          print(f"| {summary.get('passedTests', 0)} | {summary.get('failedTests', 0)} | {summary.get('skippedTests', 0)} "
+                f"| {summary.get('expectedFailures', 0)} |")
+          failures = summary.get("testFailures", [])
+          if failures:
+              print("\nFailed:")
+          for failure in failures[:30]:
+              print(f"- `{failure.get('targetName', '')}` {failure.get('testName', '')}")
+          PY
       - name: App coverage
         if: always()
         run: |
