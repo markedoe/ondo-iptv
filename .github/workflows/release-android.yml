@@ -35,7 +35,7 @@ permissions:
 jobs:
   deliver:
     name: Google Play
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     # Each secret is given only to the step that uses it, not to the tools installed before (gems, Gradle
     # plugins download their own code).

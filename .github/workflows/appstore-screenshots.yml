@@ -134,7 +134,7 @@ jobs:
     needs: [capture, mac]
     # The iPhone / iPad captures are published even if the Mac ones failed.
     if: ${{ !cancelled() && needs.capture.result == 'success' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write

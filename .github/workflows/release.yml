@@ -243,7 +243,7 @@ jobs:
     needs: deliver
     # The tag's own run only: the run it starts builds on the tag too and must not start another.
     if: github.event_name == 'push' && github.ref_type == 'tag'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       actions: write

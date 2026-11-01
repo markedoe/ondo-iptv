@@ -18,7 +18,7 @@ concurrency:
 jobs:
   refresh:
     name: Refresh and publish
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Wikidata may answer one query a minute: the script waits and retries.
     timeout-minutes: 150
     permissions:
