@@ -353,14 +353,19 @@ public enum TitleParser {
     // swiftlint:disable:next force_try
     private static let yearRegex = try! NSRegularExpression(pattern: #"^(.*?)[\s\-_.]*[\(\[]?((?:19|20)\d{2})[\)\]]?\s*$"#)
 
-    /// "Lighthouse (2010)" -> ("Lighthouse", 2010)
+    /// Next year, the latest a release year can be (a film announced for then), in the Gregorian calendar whatever the
+    /// device's. Read once: titles are split by the thousand while a catalogue loads.
+    private static let latestYear = Calendar(identifier: .gregorian).component(.year, from: Date()) + 1
+
+    /// "Lighthouse (2010)" -> ("Lighthouse", 2010). A number later than next year is part of the title
+    /// ("Star Runner 2049"), not its release year.
     public static func splitYear(_ title: String) -> (String, Int?) {
         guard title.utf8.count >= 4, title.utf8.contains(where: { $0 >= 0x30 && $0 <= 0x39 }) else { return (title, nil) }
         let range = NSRange(title.startIndex..., in: title)
         guard let match = yearRegex.firstMatch(in: title, range: range),
               let nameRange = Range(match.range(at: 1), in: title),
               let yearRange = Range(match.range(at: 2), in: title),
-              let year = Int(title[yearRange])
+              let year = Int(title[yearRange]), year <= latestYear
         else { return (title, nil) }
         let name = String(title[nameRange]).trimmingCharacters(in: .whitespaces)
         return name.isEmpty ? (title, year) : (name, year)

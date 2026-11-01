@@ -105,8 +105,33 @@ final class ContentBuilderTests: XCTestCase {
         XCTAssertNil(TitleParser.parseEpisode("TV1 HD"))
         XCTAssertEqual(TitleParser.splitYear("Sandstorm [2021]").0, "Sandstorm")
         XCTAssertEqual(TitleParser.splitYear("Sandstorm [2021]").1, 2021)
-        XCTAssertEqual(TitleParser.splitYear("Star Runner 2049").1, 2049)
         XCTAssertNil(TitleParser.splitYear("Lattice").1)
+    }
+
+    /// A number at the end of a title later than next year cannot be its release year: it is part of the title, as in
+    /// "Star Runner 2049". The year after it still is one, and so are this year and next (a film announced for then).
+    /// The same cases as the Kotlin `ContentBuilderTest`.
+    func testANumberLaterThanNextYearIsPartOfTheTitle() {
+        let thisYear = Calendar(identifier: .gregorian).component(.year, from: Date())
+        func split(_ title: String) -> SplitTitle { SplitTitle(TitleParser.splitYear(title)) }
+        XCTAssertEqual(split("Star Runner 2049"), SplitTitle(("Star Runner 2049", nil)))
+        XCTAssertEqual(split("Star Runner 2049 (2017)"), SplitTitle(("Star Runner 2049", 2017)))
+        XCTAssertEqual(split("Quiet Water (\(thisYear + 1))"), SplitTitle(("Quiet Water", thisYear + 1)))
+        XCTAssertEqual(split("Quiet Water \(thisYear)"), SplitTitle(("Quiet Water", thisYear)))
+        XCTAssertEqual(split("Quiet Water \(thisYear + 2)"), SplitTitle(("Quiet Water \(thisYear + 2)", nil)))
+        XCTAssertEqual(split("Lighthouse (2010)"), SplitTitle(("Lighthouse", 2010)))
+        XCTAssertEqual(split("Lighthouse 2019"), SplitTitle(("Lighthouse", 2019)))
+        XCTAssertEqual(split("2049"), SplitTitle(("2049", nil)))
+    }
+
+    /// `splitYear`'s pair, comparable.
+    private struct SplitTitle: Equatable {
+        let name: String
+        let year: Int?
+        init(_ pair: (String, Int?)) {
+            name = pair.0
+            year = pair.1
+        }
     }
 
     func testXSPFAndJSON() throws {
