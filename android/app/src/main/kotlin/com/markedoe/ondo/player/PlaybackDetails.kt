@@ -4,10 +4,12 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import android.os.PowerManager
+import androidx.annotation.OptIn
 import androidx.annotation.RequiresApi
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import java.util.Locale
 
 /**
@@ -15,6 +17,7 @@ import java.util.Locale
  * temperature), for the record kept while a video plays (`PlayingNow`) and the problem report. English, like the
  * rest of the report; never an address or a title.
  */
+@OptIn(UnstableApi::class)
 internal object PlaybackDetails {
     private const val MEGABYTE = 1024 * 1024
 
