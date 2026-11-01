@@ -64,11 +64,12 @@ class LocalSyncNetworkTest {
             serving.cancelAndJoin()
         }
         ServerSocket(0, 8, loopback).let { server ->
-            var merged = false
-            val serving = launch(Dispatchers.IO) { SyncSession.serve(server, isAllowed = LocalSync::isPeerAddress) { _, _ -> merged = true; answer } }
+            // Set on the server's thread, read on the test's.
+            val merged = java.util.concurrent.atomic.AtomicBoolean(false)
+            val serving = launch(Dispatchers.IO) { SyncSession.serve(server, isAllowed = LocalSync::isPeerAddress) { _, _ -> merged.set(true); answer } }
             assertNull(SyncSession.exchange(loopback, server.localPort, snapshot, isAllowed = { true }))
-            assertFalse(merged)
             serving.cancelAndJoin()
+            assertFalse(merged.get())
         }
     }
 

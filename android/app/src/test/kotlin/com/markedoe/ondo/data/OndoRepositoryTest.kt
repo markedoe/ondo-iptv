@@ -350,17 +350,19 @@ class OndoRepositoryTest {
             #EXTINF:-1 tvg-id="news.test" group-title="News",Test News
             http://provider.example.com/news.m3u8
         """.trimIndent()
-        var time = clock
-        val answers = mutableMapOf(list to m3u, guideUrl to guide(EpgProgram("news.test", clock - 30 * 60_000, clock + 12 * 3_600_000, "Evening News")))
+        // The clock, the answers and the requests are shared with the guide's own thread: thread-safe holders only.
+        val time = java.util.concurrent.atomic.AtomicLong(clock)
+        val answers = java.util.concurrent.ConcurrentHashMap<String, String>(
+            mapOf(list to m3u, guideUrl to guide(EpgProgram("news.test", clock - 30 * 60_000, clock + 12 * 3_600_000, "Evening News"))),
+        )
         val http = object : HttpClient {
-            // Asked from the guide's own thread, read from the test's.
             val guides: MutableList<Long> = java.util.Collections.synchronizedList(mutableListOf())
             override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
-                if (url == guideUrl) guides += time
+                if (url == guideUrl) guides += time.get()
                 return answers[url]?.encodeToByteArray() ?: throw HttpException.BadStatus(404)
             }
         }
-        fun TestScope.launch(): OndoRepository = OndoRepository(AppStore(folder.root), http, backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
+        fun TestScope.launch(): OndoRepository = OndoRepository(AppStore(folder.root), http, backgroundScope, now = { time.get() }, io = StandardTestDispatcher(testScheduler))
         fun TestScope.saved() {
             repeat(50) { testScheduler.runCurrent() }
             check(folder.root.listFiles().orEmpty().any { it.name.startsWith("guide-") && it.name.endsWith(".json") }) { "the guide was not saved" }
@@ -378,7 +380,7 @@ class OndoRepositoryTest {
         saved()
 
         // Launched again an hour later: the kept guide, nothing downloaded.
-        time += 3_600_000
+        time.addAndGet(3_600_000)
         val second = launch()
         second.bootstrap()
         assertEquals(listOf("Evening News"), second.programme())
@@ -386,7 +388,7 @@ class OndoRepositoryTest {
         assertEquals(1, http.guides.size)
 
         // Seven hours after the download: downloaded again.
-        time += 6 * 3_600_000
+        time.addAndGet(6 * 3_600_000L)
         val third = launch()
         third.bootstrap()
         third.programme()
@@ -406,7 +408,7 @@ class OndoRepositoryTest {
 
         // Old again and out of reach: the kept guide is shown rather than none.
         answers.remove(guideUrl)
-        time += 7 * 3_600_000
+        time.addAndGet(7 * 3_600_000L)
         val fourth = launch()
         fourth.bootstrap()
         assertEquals(listOf("Evening News"), fourth.programme())
