@@ -264,7 +264,7 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
     val compact = rowsHaveFocus
     val ink = TvTokens.Ink
     // A share of the window's height (the app's own, not the screen's).
-    val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
+    val windowHeight = LocalWindowInfo.current.containerDpSize.height
     val fullHeight = (windowHeight * HERO_SHARE).coerceAtLeast(260.dp)
     // Only the change between full and compact is animated: the window's size, known from the first layout, is not.
     val compactness by animateFloatAsState(if (compact) 1f else 0f, tween(HERO_RESIZE_MS), label = "heroHeight")
