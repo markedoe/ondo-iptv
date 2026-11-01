@@ -157,7 +157,8 @@ class TvFocusHeaderTest {
         focus(lighthouse)
         advance(HEADER_DEBOUNCE_MS + 50)
         val header = bounds("titleHeader")
-        val plot = bounds("headerPlot")
+        val plot = bounds("headerPlotRoom")
+        assertTrue("the synopsis has its room", plot.width > 0f && plot.height > 0f)
         val poster = posterBounds(orchard)
 
         focus(unknown)
@@ -167,7 +168,7 @@ class TvFocusHeaderTest {
         assertTrue("no facts line text", texts("headerFacts").isEmpty())
         assertTrue("no date", texts("headerAdded").isEmpty())
         assertEquals("the header keeps its height", header.height, bounds("titleHeader").height, 0.5f)
-        assertEquals("the synopsis keeps its room", plot.height, bounds("headerPlot").height, 0.5f)
+        assertEquals("the synopsis keeps its room", plot.height, bounds("headerPlotRoom").height, 0.5f)
         assertEquals("the rows stay where they were", poster.top, posterBounds(orchard).top, 0.5f)
     }
 

@@ -250,18 +250,21 @@ fun TitleHeaderText(header: TitleHeader, modifier: Modifier = Modifier, titleSty
             modifier = Modifier.testTag("headerTitle"),
         )
         TitleFacts(header, Modifier.padding(top = 8.dp))
-        // The synopsis' room is its three lines' height, set rather than measured: an empty one keeps it too.
+        // The synopsis' room is its three lines' height and the header's width, set rather than measured: an empty
+        // one keeps it too (an empty text alone would be as narrow as its words, nothing).
         val plotStyle = MaterialTheme.typography.bodyMedium
         val lineHeight = if (plotStyle.lineHeight.isSp) plotStyle.lineHeight else plotStyle.fontSize * 1.4f
         val plotHeight = with(LocalDensity.current) { lineHeight.toDp() } * PLOT_LINES
-        Text(
-            header.plot.orEmpty(),
-            style = plotStyle,
-            color = Color.White.copy(alpha = 0.72f),
-            maxLines = PLOT_LINES,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 10.dp).height(plotHeight).testTag("headerPlot"),
-        )
+        Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(plotHeight).testTag("headerPlotRoom")) {
+            Text(
+                header.plot.orEmpty(),
+                style = plotStyle,
+                color = Color.White.copy(alpha = 0.72f),
+                maxLines = PLOT_LINES,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testTag("headerPlot"),
+            )
+        }
     }
 }
 
