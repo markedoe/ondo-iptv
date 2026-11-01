@@ -683,14 +683,18 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
     val found by produceKept<List<TrendingMatch>>("genre", emptyList(), route, state.content, state.settings.tmdbToken) {
         if (kind == BrowseKind.GENRE) viewModel.genreTitles(route.value) else emptyList()
     }
-    val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found) {
-        withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found) }
+    // The category grids' order, chosen on either.
+    val sort = state.settings.posterSort
+    val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found, sort) {
+        withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found, sort) }
     }
     BrowseScreen(
         browse,
         onOpen = navController::open,
         onFestival = { navController.navigate(Routes.Browse(BrowseKind.FESTIVAL.name, it)) },
         onBack = { navController.popBackStack() },
+        sort = sort,
+        onSort = viewModel::setPosterSort,
     )
 }
 

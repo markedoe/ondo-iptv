@@ -50,6 +50,10 @@ import com.markedoe.ondo.player.StreamStatisticsPanel
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.BrowseKind
+import androidx.compose.ui.test.assertIsSelected
+import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.ui.screens.BrowseUiState
+import com.markedoe.ondo.ui.screens.BrowseScreen
 import com.markedoe.ondo.ui.screens.CategoriesActions
 import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.CollectionActions
@@ -183,6 +187,18 @@ class ScreensTest {
         compose.onNodeWithTag("credit-Year").performScrollTo().performFirstLinkClick()
         compose.onNodeWithTag("award-palme-dor").performScrollTo().performClick()
         assertEquals(listOf(BrowseKind.GENRE to "Science Fiction", BrowseKind.YEAR to "2024", BrowseKind.AWARD to "palme-dor"), browsed)
+    }
+
+    /** A genre's, year's or award's page has the category grids' Sort menu, the order shown ticked. */
+    @Test
+    fun aBrowsePageOffersTheSortMenu() {
+        val chosen = mutableListOf<PosterSort>()
+        val state = BrowseUiState(BrowseKind.YEAR, "2025", movies = listOf(ShowcaseItem.MovieItem(Fixtures.lastSignal), ShowcaseItem.MovieItem(Fixtures.northernLights)))
+        compose.setContent { OndoTheme { BrowseScreen(state, onOpen = {}, onFestival = {}, onBack = {}, sort = PosterSort.RELEASE, onSort = { chosen += it }) } }
+        compose.onNodeWithTag("sort").performClick()
+        compose.onNodeWithTag("sort-release").assertIsSelected()
+        compose.onNodeWithTag("sort-rating").performClick()
+        assertEquals(listOf(PosterSort.RATING), chosen)
     }
 
     @Test

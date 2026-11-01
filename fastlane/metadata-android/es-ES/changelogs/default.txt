@@ -1,6 +1,7 @@
 • La búsqueda encuentra una palabra en cualquier parte de un título; primero los títulos exactos
 • Actualización automática de la playlist (Ajustes → Playlists), cada día por defecto
-• TV: arriba se ve el póster elegido: TMDb, sinopsis; mantén pulsado OK sobre un póster para añadirlo a Mi lista o quitarlo
+• TV: arriba se ve el póster elegido: TMDb, sinopsis; OK mantenido lo añade a Mi lista o lo quita
 • TV: la barra superior se queda sobre los títulos de una categoría; Atrás vuelve una página
 • Mi lista: las personas guardadas muestran su foto
+• Orden en las páginas de género, año y premio
 • Muchas correcciones

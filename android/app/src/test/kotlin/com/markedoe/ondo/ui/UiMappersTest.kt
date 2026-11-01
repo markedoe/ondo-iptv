@@ -282,6 +282,31 @@ class UiMappersTest {
         assertTrue("Northern Lights" in hidden.getValue("grid"))
     }
 
+    /** A genre's page in each order, the titles found beyond the pages opened sorted with the others. */
+    @Test
+    fun aBrowsePageSortsByRatingAndByReleaseDate() {
+        val state = Fixtures.state().copy(
+            movieDetails = mapOf(
+                Fixtures.northernLights.id to MediaDetails(title = Fixtures.northernLights.name, genre = "Drama"),
+                Fixtures.summerInLisbon.id to MediaDetails(title = Fixtures.summerInLisbon.name, genre = "Drama, Romance"),
+            ),
+        )
+        fun found(movie: Movie) = TrendingMatch.MovieMatch(movie, TmdbItem(1, TmdbItem.MediaType.MOVIE, movie.name))
+        val elsewhere = listOf(Fixtures.glassCity, Fixtures.lastSignal, Fixtures.longRoad).map(::found)
+        fun titles(sort: PosterSort) = UiMappers.browse(state, BrowseKind.GENRE, "Drama", Locale.US, elsewhere, sort).movies.map { it.title }
+
+        // The page's own order: by name.
+        assertEquals(listOf("Glass City", "Northern Lights", "Summer in Lisbon", "The Last Signal", "The Long Road"), titles(PosterSort.PLAYLIST))
+        assertEquals(listOf("The Last Signal", "Northern Lights", "Summer in Lisbon", "Glass City", "The Long Road"), titles(PosterSort.RATING))
+        // Newest year first; within 2025, the latest added first.
+        assertEquals(listOf("Northern Lights", "The Last Signal", "Glass City", "Summer in Lisbon", "The Long Road"), titles(PosterSort.RELEASE))
+        // A year's page too.
+        assertEquals(
+            listOf("The Last Signal", "Northern Lights"),
+            UiMappers.browse(state, BrowseKind.YEAR, "2025", sort = PosterSort.RATING).movies.map { it.title },
+        )
+    }
+
     @Test
     fun gridFiltersIgnoreCaseAndAccents() {
         val state = Fixtures.state()

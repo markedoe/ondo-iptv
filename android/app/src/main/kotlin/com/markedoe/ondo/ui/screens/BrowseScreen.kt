@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.PosterFacts
@@ -63,6 +64,9 @@ fun BrowseScreen(
     onBack: () -> Unit,
     /** Each poster's rating and genres, by its key; null: the posters show their title and year only. */
     facts: Map<String, PosterFacts>? = null,
+    /** The posters' order, the category grids' own ([PosterSort.PLAYLIST]: the page's own order). */
+    sort: PosterSort = PosterSort.PLAYLIST,
+    onSort: (PosterSort) -> Unit = {},
 ) {
     val metrics = rememberShelfMetrics()
     val title = when (state.kind) {
@@ -85,6 +89,7 @@ fun BrowseScreen(
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
                     },
+                    actions = { SortButton(sort, onSort) },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                     windowInsets = WindowInsets(0),
                 )

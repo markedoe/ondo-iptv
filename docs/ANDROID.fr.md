@@ -40,6 +40,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   un film sans résumé (gardé avec les autres détails) ; rien sans réseau. Les rangées gardent l'affiche qui a le
   focus au même endroit, les affiches un peu plus petites ; le cadre du carrousel de l'accueil rapetisse et montre
   l'affiche qui a le focus tant que les rangées l'ont, ses boutons revenant avec Haut.
+- **Tri** : la grille d'une catégorie et les pages de genre, d'année, de prix et de festival partagent un même ordre
+  (`AppSettings.posterSort`, le bouton Trier au-dessus des affiches, atteint avec Haut sur TV) : ordre de la playlist
+  (sur ces pages, leur propre ordre), nom, date d'ajout, date de sortie ou note. Les titres d'un genre trouvés via
+  TMDb sont triés avec les autres (`UiMappers.browse`).
 - **Affiches sur TV** : maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
   court message dit lequel), et une coche marque les titres de Ma liste. Dans Ma liste, les personnes gardées ont
   leur photo (complétée depuis leur page ou les titres gardés sur l'appareil).

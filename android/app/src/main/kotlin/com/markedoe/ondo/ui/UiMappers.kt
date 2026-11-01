@@ -628,9 +628,26 @@ object UiMappers {
     fun genres(field: String?): List<String> =
         field.orEmpty().split(',', '/', '|', '&').map { it.trim() }.filter { it.length in 1..MAX_GENRE_LENGTH }.distinct()
 
-    /** The titles of the playlist sharing a value of a movie's or a series' page, hidden categories left out. */
-    /** [found]: the genre's titles found beyond the pages opened ([com.markedoe.ondo.data.OndoRepository.genreTitles]). */
-    fun browse(state: OndoState, kind: BrowseKind, value: String, locale: Locale = Locale.getDefault(), found: List<TrendingMatch> = emptyList()): BrowseUiState {
+    /**
+     * The titles of the playlist sharing a value of a movie's or a series' page, hidden categories left out, in
+     * [sort]'s order; [PosterSort.PLAYLIST] keeps the page's own (winners first for an award, the newest for a year or a
+     * festival, by name for a genre). [found]: the genre's titles found beyond the pages opened
+     * ([com.markedoe.ondo.data.OndoRepository.genreTitles]), sorted with the others.
+     */
+    fun browse(
+        state: OndoState,
+        kind: BrowseKind,
+        value: String,
+        locale: Locale = Locale.getDefault(),
+        found: List<TrendingMatch> = emptyList(),
+        sort: PosterSort = PosterSort.PLAYLIST,
+    ): BrowseUiState {
+        val page = browsePage(state, kind, value, locale, found)
+        if (sort == PosterSort.PLAYLIST) return page
+        return page.copy(movies = sorted(page.movies, sort), series = sorted(page.series, sort))
+    }
+
+    private fun browsePage(state: OndoState, kind: BrowseKind, value: String, locale: Locale, found: List<TrendingMatch>): BrowseUiState {
         val hidden = hiddenCategoryIds(state)
         val watched = hiddenMovieIds(state)
         val movies = state.content.movies.filter { it.categoryId !in hidden && it.id !in watched }

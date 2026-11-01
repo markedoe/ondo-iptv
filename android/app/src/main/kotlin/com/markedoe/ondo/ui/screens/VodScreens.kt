@@ -256,7 +256,6 @@ fun PosterGridScreen(
 ) {
     // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more.
     TvHeaderAbove(fallback = items.firstOrNull()) { modifier, top, posterOnly ->
-        var sorting by remember { mutableStateOf(false) }
         val metrics = rememberShelfMetrics()
         val leaveField = rememberLeaveField()
         LazyVerticalGrid(
@@ -272,35 +271,7 @@ fun PosterGridScreen(
                     navigationIcon = {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
                     },
-                    actions = {
-                        IconButton(onClick = { sorting = true }, modifier = Modifier.testTag("sort")) {
-                            Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = stringResource(R.string.sort))
-                        }
-                        DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }) {
-                            PosterSort.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(option.label)) },
-                                    leadingIcon = { if (option == sort) Icon(Icons.Rounded.Check, contentDescription = null) },
-                                    onClick = {
-                                        sorting = false
-                                        onSort(option)
-                                    },
-                                )
-                            }
-                            hideWatched?.let { hidden ->
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.hide_watched)) },
-                                    leadingIcon = { if (hidden) Icon(Icons.Rounded.Check, contentDescription = null) },
-                                    onClick = {
-                                        sorting = false
-                                        onHideWatched(!hidden)
-                                    },
-                                    modifier = Modifier.semantics { selected = hidden }.testTag("hideWatched"),
-                                )
-                            }
-                        }
-                    },
+                    actions = { SortButton(sort, onSort, hideWatched, onHideWatched) },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                     windowInsets = WindowInsets(0),
                 )
@@ -328,6 +299,43 @@ fun PosterGridScreen(
                     Text(stringResource(R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+    }
+}
+
+/**
+ * The Sort button of a page of posters and its menu: the orders of [PosterSort], the one shown ticked, then Hide
+ * watched where [hideWatched] applies (null: it does not). On a TV, the remote reaches it above the posters.
+ */
+@Composable
+internal fun SortButton(sort: PosterSort, onSort: (PosterSort) -> Unit, hideWatched: Boolean? = null, onHideWatched: (Boolean) -> Unit = {}) {
+    var sorting by remember { mutableStateOf(false) }
+    IconButton(onClick = { sorting = true }, modifier = Modifier.testTag("sort")) {
+        Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = stringResource(R.string.sort))
+    }
+    DropdownMenu(expanded = sorting, onDismissRequest = { sorting = false }) {
+        PosterSort.entries.forEach { option ->
+            DropdownMenuItem(
+                text = { Text(stringResource(option.label)) },
+                leadingIcon = { if (option == sort) Icon(Icons.Rounded.Check, contentDescription = null) },
+                onClick = {
+                    sorting = false
+                    onSort(option)
+                },
+                modifier = Modifier.semantics { selected = option == sort }.testTag("sort-" + option.name.lowercase()),
+            )
+        }
+        hideWatched?.let { hidden ->
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.hide_watched)) },
+                leadingIcon = { if (hidden) Icon(Icons.Rounded.Check, contentDescription = null) },
+                onClick = {
+                    sorting = false
+                    onHideWatched(!hidden)
+                },
+                modifier = Modifier.semantics { selected = hidden }.testTag("hideWatched"),
+            )
         }
     }
 }

@@ -36,6 +36,10 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   provider's `get_vod_info` for a movie without a plot (saved with the other details); nothing without a network.
   The rows below keep the focused poster at the same place, posters a little smaller; Home's carousel frame becomes
   smaller and shows the focused poster while the rows have the focus, its buttons coming back with Up.
+- **Sort**: a category's grid and the genre, year, award and festival pages share one order (`AppSettings.posterSort`,
+  the Sort button above the posters, reached with Up on a TV): playlist order (on those pages, their own order),
+  name, date added, release date or rating. A genre's titles found through TMDb are sorted with the others
+  (`UiMappers.browse`).
 - **TV posters**: holding OK on a poster adds the title to My List or takes it out (a short message says which), and a check mark
   marks the titles in My List. In My List, the people kept get their photo (filled from their page or from the titles
   kept on the device).
