@@ -139,8 +139,10 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   par années de sortie ou par festival / cérémonie (lauréats seulement, au choix) ; pas de recherche dans les
   programmes. Elle s'ouvre vide à chaque fois, et un onglet choisi ensuite s'ouvre sur sa propre page. Un mot est trouvé n'importe où dans un titre (« dust »
   trouve « Stardust »), les titres exacts d'abord.
-- **Affiches sur TV** : dans une catégorie, une affiche montre sa note avec des étoiles et jusqu'à deux genres ;
-  maintenez OK dessus pour l'ajouter à Ma liste ou l'en retirer. Dans Ma liste, les personnes gardent leur photo.
+- **En-tête sur TV** : sur l'Accueil, les onglets Films et Séries et les titres d'une catégorie, le haut de l'écran
+  montre l'affiche où se trouve la télécommande : son image, son année et ses genres, la note de TMDb, sa date d'ajout
+  et son résumé. Maintenez OK sur une affiche pour l'ajouter à Ma liste ou l'en retirer. Les pages de genre, d'année
+  et de prix ont le même bouton de tri qu'une catégorie. Dans Ma liste, les personnes gardent leur photo.
 - **Actualisation automatique** des playlists (Réglages → Playlists) : seulement sur demande, toutes les 6 ou
   12 heures, chaque jour (par défaut) ou chaque semaine.
 - **Guide TV** (le bouton calendrier de TV en direct) : une grille des chaînes choisies à cet endroit, et des
