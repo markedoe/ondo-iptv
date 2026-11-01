@@ -561,7 +561,7 @@ fun Modifier.focusMemory(key: String, initial: Boolean = false): Modifier = comp
     SideEffect { focus.key = key }
     val scope = rememberCoroutineScope()
     // Gone with the focus, unless it was handed on just before ([FocusMemory.handTo]): it then went elsewhere already.
-    DisposableEffect(memory) { onDispose { if (focus.held && memory?.last == focus.key) memory?.dropped() } }
+    DisposableEffect(memory) { onDispose { if (focus.held && memory?.last == focus.key) memory.dropped() } }
     DisposableEffect(memory, key, initial) {
         if (initial) memory?.first = key
         memory?.attach(key, requester)
