@@ -1263,7 +1263,10 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 
-    /** The formats played, the decoder's frame counts and what is buffered ahead. */
+    /**
+     * The formats played, the decoder's frame counts, what is buffered ahead, then the colours, the decoders, tunneling,
+     * the memory and the device's thermal status ([PlaybackDetails]).
+     */
     private fun statistics(exoPlayer: ExoPlayer): List<String> = listOfNotNull(
         exoPlayer.videoFormat?.let { format ->
             "Video: " + listOfNotNull(

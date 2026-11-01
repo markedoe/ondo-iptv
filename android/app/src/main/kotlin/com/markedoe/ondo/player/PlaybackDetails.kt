@@ -4,6 +4,7 @@ import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
 import android.os.PowerManager
+import androidx.annotation.RequiresApi
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
@@ -72,6 +73,11 @@ internal object PlaybackDetails {
 
     fun thermalStatus(status: Int): String = THERMAL_STATES.getOrNull(status) ?: "unknown ($status)"
 
+    /** The device's thermal status (`PowerManager.getCurrentThermalStatus`, 0 to 6), if it gives one. */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private fun thermalStatus(context: Context): Int? =
+        runCatching { context.getSystemService(PowerManager::class.java)?.currentThermalStatus }.getOrNull()
+
     /** The app's memory, the device's, and its temperature: safe off the main thread. */
     fun system(context: Context): List<String> {
         val runtime = Runtime.getRuntime()
@@ -81,11 +87,7 @@ internal object PlaybackDetails {
                 ActivityManager.MemoryInfo().also(activities::getMemoryInfo)
             }
         }.getOrNull()
-        val thermal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            runCatching { context.getSystemService(PowerManager::class.java)?.currentThermalStatus }.getOrNull()
-        } else {
-            null
-        }
+        val thermal = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) thermalStatus(context) else null
         return listOfNotNull(
             "App memory: ${used / MEGABYTE} of ${runtime.maxMemory() / MEGABYTE} MB used",
             memory?.let {
