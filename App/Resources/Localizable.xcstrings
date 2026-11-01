@@ -20683,7 +20683,7 @@
         }
       }
     },
-    "Settings → Sync on this network keeps the same playlists, My List, collections, progress and TMDb token on your devices at home. Turn it on on each device and keep Ondo open on them: the devices find each other by themselves; iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other.\n\nEverything goes directly from one device to another on your network, never through the internet. There is no pairing and logins and the TMDb token travel unencrypted on the network, so turn it on at home only. Other settings, hidden categories and playlists imported from a file stay on each device. Only the main profile syncs.": {
+    "Settings → Sync on this network keeps the same playlists, My List, collections, progress and TMDb token on your devices at home. Turn it on and keep Ondo open on each device: the devices find each other by themselves; iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other.\n\nEverything goes directly from one device to another on your network, never through the internet. There is no pairing and logins and the TMDb token travel unencrypted on the network, so turn it on at home only. Other settings, hidden categories and playlists imported from a file stay on each device. Only the main profile syncs.": {
       "localizations": {
         "fr": {
           "stringUnit": {

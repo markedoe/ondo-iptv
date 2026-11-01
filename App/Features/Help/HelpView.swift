@@ -182,7 +182,7 @@ extension HelpTopic {
             id: "sync", title: "Sync Your Devices", systemImage: "arrow.triangle.2.circlepath.circle",
             body: """
             Settings → Sync on this network keeps the same playlists, My List, collections, progress and TMDb token \
-            on your devices at home. Turn it on on each device and keep Ondo open on them: the devices find each other \
+            on your devices at home. Turn it on and keep Ondo open on each device: the devices find each other \
             by themselves; iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other.
 
             Everything goes directly from one device to another on your network, never through the internet. There is \
