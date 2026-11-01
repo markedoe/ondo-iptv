@@ -8,7 +8,13 @@ import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
@@ -186,6 +192,29 @@ class TvFocusHeaderTest {
         advance(HEADER_DEBOUNCE_MS + 500)
         assertEquals(listOf("Copper Orchard"), texts("heroTitle", within = "heroFrame"))
         assertTrue(texts("headerTitle", within = "heroFrame").isEmpty())
+        assertEquals(full, bounds("heroFrame").height, 0.5f)
+    }
+
+    /** The remote's Up from the first row of Home reaches the carousel's buttons, and the carousel is back at full height. */
+    @OptIn(ExperimentalTestApi::class)
+    @Test
+    fun upFromHomesRowsReachesTheCarouselButtons() {
+        val featured = HeroPage(orchard, meta = "Movie · 2024", inMyList = false, resumable = false, plot = orchard.movie.plot)
+        val state = HomeUiState(playlistName = "Example", hero = listOf(featured), newMovies = listOf(lighthouse, unknown), hasVod = true)
+        show { TvHomeScreen(state, HomeActions(), autoAdvance = false) }
+        val full = bounds("heroFrame").height
+
+        focus(lighthouse)
+        advance(HEADER_DEBOUNCE_MS + 500)
+        assertTrue("a smaller frame while the rows have the focus", bounds("heroFrame").height < full)
+
+        var tries = 0
+        while (compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("heroFrame"))).fetchSemanticsNodes().isEmpty()) {
+            check(tries++ < 3) { "Up never reached the carousel's buttons" }
+            compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(Key.DirectionUp) }
+            advance(HEADER_DEBOUNCE_MS + 500)
+        }
+        assertEquals(listOf("Copper Orchard"), texts("heroTitle", within = "heroFrame"))
         assertEquals(full, bounds("heroFrame").height, 0.5f)
     }
 }
