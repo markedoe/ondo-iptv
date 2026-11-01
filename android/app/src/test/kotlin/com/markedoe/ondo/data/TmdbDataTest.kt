@@ -7,8 +7,10 @@ import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import java.net.UnknownHostException
 import java.util.Locale
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -188,5 +190,72 @@ class TmdbDataTest {
         repeat(20) { testScheduler.runCurrent() }
         assertEquals(asked, http.requested.size)
         assertFalse(tv.state.value.trending.isNotEmpty())
+    }
+
+    /** TMDb answering a title's search only once [search] completes: the header's request is in flight meanwhile. */
+    private class SlowSearch(private val others: Http) : HttpClient {
+        val search = CompletableDeferred<Unit>()
+        val requested = mutableListOf<String>()
+
+        override suspend fun get(url: String, headers: Map<String, String>): ByteArray {
+            requested += url
+            return when {
+                url.startsWith("https://api.themoviedb.org/3/search/movie?") -> {
+                    search.await()
+                    """{"results":[{"id":5,"media_type":"movie","title":"Quiet Water","release_date":"2021-04-01"}]}""".encodeToByteArray()
+                }
+                url.startsWith("https://api.themoviedb.org/3/movie/5?") ->
+                    """{"id":5,"title":"Quiet Water","release_date":"2021-04-01","backdrop_path":"/quiet.jpg"}""".encodeToByteArray()
+                else -> others.get(url, headers)
+            }
+        }
+
+        fun details() = requested.count { it.startsWith("https://api.themoviedb.org/3/movie/5?") }
+    }
+
+    private fun TestScope.slowDevice(http: SlowSearch) =
+        OndoRepository(AppStore(folder.newFolder("slow")), http, backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
+
+    /** What is due now, the repository's work in backgroundScope too (advanceUntilIdle leaves it). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun TestScope.dueWork() = repeat(20) { testScheduler.runCurrent() }
+
+    /**
+     * The title's page opened from its poster while the header's request is in flight: the remote leaving the posters
+     * does not cancel it, and the page gets TMDb's answer (its backdrop).
+     */
+    @Test
+    fun aPageOpenedWhileTheHeaderAsksKeepsTheAnswer() = runTest {
+        val http = SlowSearch(Http(answers))
+        val tv = slowDevice(http).ready()
+        assertEquals(TmdbCheck.ACCEPTED, tv.checkAndSaveTmdbToken("GOOD"))
+        val header = launch { tv.awaitTmdbMetadata("m-quiet", series = false, tmdbId = null, title = "Quiet Water", year = 2021) }
+        dueWork()
+        tv.findTmdbMetadata("m-quiet", series = false, tmdbId = null, title = "Quiet Water", year = 2021)
+        header.cancel()
+        http.search.complete(Unit)
+        dueWork()
+
+        assertEquals(1, http.details())
+        assertEquals("https://image.tmdb.org/t/p/w1280/quiet.jpg", tv.state.value.tmdbBackdrops["m-quiet"])
+    }
+
+    /** The remote moves on and no page wants the title: the header's request stops, and is made again next time. */
+    @Test
+    fun theHeadersRequestStopsWhenTheRemoteMovesOn() = runTest {
+        val http = SlowSearch(Http(answers))
+        val tv = slowDevice(http).ready()
+        assertEquals(TmdbCheck.ACCEPTED, tv.checkAndSaveTmdbToken("GOOD"))
+        val header = launch { tv.awaitTmdbMetadata("m-quiet", series = false, tmdbId = null, title = "Quiet Water", year = 2021) }
+        dueWork()
+        header.cancel()
+        http.search.complete(Unit)
+        dueWork()
+        assertEquals("nothing more is asked", 0, http.details())
+        assertNull(tv.state.value.tmdbBackdrops["m-quiet"])
+
+        tv.awaitTmdbMetadata("m-quiet", series = false, tmdbId = null, title = "Quiet Water", year = 2021)
+        assertEquals(1, http.details())
+        assertEquals("https://image.tmdb.org/t/p/w1280/quiet.jpg", tv.state.value.tmdbBackdrops["m-quiet"])
     }
 }

@@ -1150,6 +1150,7 @@ class OndoRepository(
         trendingLoadedFor = null
         metadataAsked.clear()
         metadataPrepared.clear()
+        headerFetches.clear()
         genreMatches.clear()
         personMatches.clear()
         _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbRelated = emptyMap(), tmdbTrailers = emptyMap(), tmdbRatings = emptyMap()) }
@@ -1204,27 +1205,61 @@ class OndoRepository(
      */
     fun findTmdbMetadata(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?, ahead: Boolean = false) {
         val keys = MetadataKey.all(series, tmdbId, title, year)
-        if (keys.isEmpty() || !metadataAsked.add(key)) return
+        if (keys.isEmpty()) return
+        if (!metadataAsked.add(key)) {
+            // Asked by the header (the title's page opened from its poster): its answer is now the page's too, and the
+            // remote leaving the posters no longer cancels it.
+            headerFetches.remove(key)
+            return
+        }
         // The token as the page opens: one saved meanwhile asks again (the titles asked are forgotten then).
         val client = tmdbClient()
         scope.launch { tmdbMetadata(key, keys, series, tmdbId, title, year, ahead, client, show = true) }
     }
 
     /**
-     * The same, waited for in the caller's coroutine (the title a TV's header shows while the remote stays on it):
-     * cancelled with it when the remote moves on, and then asked again the next time. Not paced behind the titles
-     * asked ahead: the header asks for one title at a time. Main thread, as [metadataAsked].
+     * The same, waited for by the caller (the title a TV's header shows while the remote stays on it): cancelled with
+     * it when the remote moves on, and then asked again the next time, unless the title's page opened meanwhile (the
+     * page keeps the answer). Not paced behind the titles asked ahead: the header asks for one title at a time. Main
+     * thread, as [metadataAsked].
      */
     suspend fun awaitTmdbMetadata(key: String, series: Boolean, tmdbId: String?, title: String, year: Int?) {
         val keys = MetadataKey.all(series, tmdbId, title, year)
         if (keys.isEmpty() || !metadataAsked.add(key)) return
-        try {
-            tmdbMetadata(key, keys, series, tmdbId, title, year, ahead = false, client = tmdbClient(), show = true)
-        } catch (e: CancellationException) {
-            metadataAsked.remove(key)
-            throw e
+        val client = tmdbClient()
+        var failure: Exception? = null
+        // In the repository's scope, so that a page opened meanwhile can keep it ([findTmdbMetadata]); its errors stay
+        // in it (an error out of that scope would stop the app) and reach the caller.
+        val fetch = scope.launch {
+            try {
+                tmdbMetadata(key, keys, series, tmdbId, title, year, ahead = false, client = client, show = true)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                failure = e
+            }
         }
+        headerFetches[key] = fetch
+        try {
+            fetch.join()
+        } finally {
+            if (headerFetches[key] === fetch) {
+                headerFetches.remove(key)
+                if (!fetch.isCompleted) {
+                    // The remote moved on and no page wants it: asked again the next time the title shows.
+                    fetch.cancel()
+                    metadataAsked.remove(key)
+                }
+            }
+        }
+        failure?.let { throw it }
     }
+
+    /**
+     * The header's requests in flight ([awaitTmdbMetadata]), cancelled when the remote moves on unless a page opened
+     * meanwhile took them over. Main thread, as [metadataAsked].
+     */
+    private val headerFetches = HashMap<String, Job>()
 
     /**
      * The same, waited for, and not shown on screen: a title prepared while Ondo is open (Settings, "Prepare new
