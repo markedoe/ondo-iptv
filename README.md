@@ -128,10 +128,12 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   tabs, a page of its own that Back closes): channels, movies, series and **actors and directors by name**, filtered by
   release years or by festival / ceremony (winners only, if you like); no programme search. It opens empty each
   time, and a tab chosen afterwards opens on its own page. A word is found anywhere in a title ("dust" finds
-  "Stardust"), exact titles first.
-- **TV header**: on Home, the Movies and Series tabs and a category's titles, the top of the screen shows the poster
-  the remote is on: its picture, year and genres, TMDb's rating, the date added and its synopsis. Hold OK on a poster
-  to add it to My List or take it out. Genre, year and award pages have the same Sort button as a category. In My List, people keep their photo.
+  "Stardust"), exact titles first; hidden categories (by language, style or word) and titles of a hidden language
+  stay out of it.
+- **TV header**: on Home, the Movies and Series tabs and the titles of a category, a genre, a year or an award, the
+  top of the screen shows the poster the remote is on: its picture, year and genres, TMDb's rating, the date added
+  and its synopsis. Hold OK on a poster to add it to My List or take it out. Genre, year and award pages have the
+  same Sort button as a category. In My List, people keep their photo.
 - **Automatic refresh** of the playlists (Settings → Playlists): only when asked, every 6 or 12 hours, every day
   (default) or every week.
 - **TV guide** (the calendar button of Live TV): a grid of the channels chosen there, and **reminders**, a
