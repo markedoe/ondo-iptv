@@ -7,6 +7,7 @@ import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import java.net.UnknownHostException
 import java.util.Locale
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -88,6 +89,7 @@ class TmdbDataTest {
         client.mergeSync(answer, "client")
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun aTokenIsSavedOnlyOnceTmdbAcceptsIt() = runTest {
         val tv = device("tv").ready()

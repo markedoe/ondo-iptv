@@ -13,6 +13,7 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.first
@@ -773,7 +774,7 @@ class OndoRepositoryTest {
             if (seen.put(value, Unit) != null || value is String || value is Number || value is Class<*>) continue
             val type = value.javaClass
             when {
-                type.isArray -> if (!type.componentType.isPrimitive) (value as Array<*>).forEachIndexed { i, item -> item?.let { queue += it to "$path[$i]" } }
+                type.isArray -> if (type.componentType?.isPrimitive == false) (value as Array<*>).forEachIndexed { i, item -> item?.let { queue += it to "$path[$i]" } }
                 value is Map<*, *> && type.name.startsWith("java.") -> value.entries.forEach { (k, v) -> k?.let { queue += it to "$path{key}" }; v?.let { queue += it to "$path{$k}" } }
                 value is Iterable<*> && type.name.startsWith("java.") -> value.forEachIndexed { i, item -> item?.let { queue += it to "$path[$i]" } }
                 else -> generateSequence(type) { it.superclass }.flatMap { it.declaredFields.asSequence() }
@@ -819,6 +820,7 @@ class OndoRepositoryTest {
     }
 
     /** At start, Home waits for the saved catalogue rather than calling the playlist empty (and the splash screen stays). */
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun aRestartIsRestoringUntilTheSavedCatalogueIsRead() = runTest {
         val first = repository()

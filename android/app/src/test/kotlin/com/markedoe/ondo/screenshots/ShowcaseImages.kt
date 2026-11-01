@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import coil3.annotation.DelicateCoilApi
+import coil3.annotation.ExperimentalCoilApi
 import coil3.asImage
 import coil3.decode.DataSource
 import coil3.intercept.Interceptor
@@ -22,6 +24,7 @@ object ShowcaseImages {
     /** The pictures, in the repository (tests run from `android/app`). */
     val folder: File = File("../../fixtures/showcase/art").canonicalFile
 
+    @OptIn(ExperimentalCoilApi::class, DelicateCoilApi::class)
     fun install(context: Context) {
         val loader = ImageLoader.Builder(context)
             .components { add(LocalPictures(folder)) }
@@ -31,6 +34,7 @@ object ShowcaseImages {
         SingletonImageLoader.setUnsafe(loader)
     }
 
+    @OptIn(DelicateCoilApi::class)
     fun reset() = SingletonImageLoader.reset()
 
     private class LocalPictures(private val folder: File) : Interceptor {

@@ -13,7 +13,7 @@ class EdgeToEdgeTest {
 
     @Test
     fun themesSetNoDeprecatedWindowAttribute() {
-        val themes = File("src/main/res").walkTopDown().filter { it.isFile && it.extension == "xml" && it.parentFile.name.startsWith("values") }.toList()
+        val themes = File("src/main/res").walkTopDown().filter { it.isFile && it.extension == "xml" && it.parentFile?.name?.startsWith("values") == true }.toList()
         assertTrue(themes.isNotEmpty())
         themes.forEach { file ->
             val text = file.readText()

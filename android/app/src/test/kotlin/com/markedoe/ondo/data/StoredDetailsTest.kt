@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -64,6 +65,7 @@ class StoredDetailsTest {
      * Runs the save made a moment after the last fetch, and the writes. They run in the repository's background scope,
      * which `advanceUntilIdle` leaves alone.
      */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun TestScope.saved() {
         testScheduler.advanceTimeBy(3_000)
         testScheduler.runCurrent()
