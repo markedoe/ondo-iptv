@@ -5,7 +5,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -55,10 +55,10 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -69,6 +69,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.lerp
 import androidx.tv.material3.Card
 import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.Icon
@@ -262,8 +263,12 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
     val art = header?.let { HeroPage(it.item, meta = "", inMyList = false, resumable = false, backdropUrl = it.backdropUrl) } ?: page
     val compact = rowsHaveFocus
     val ink = TvTokens.Ink
-    val fullHeight = (LocalConfiguration.current.screenHeightDp.dp * HERO_SHARE).coerceAtLeast(260.dp)
-    val heroHeight by animateDpAsState(if (compact) HERO_COMPACT.coerceAtMost(fullHeight) else fullHeight, tween(HERO_RESIZE_MS), label = "heroHeight")
+    // A share of the window's height (the app's own, not the screen's).
+    val windowHeight = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
+    val fullHeight = (windowHeight * HERO_SHARE).coerceAtLeast(260.dp)
+    // Only the change between full and compact is animated: the window's size, known from the first layout, is not.
+    val compactness by animateFloatAsState(if (compact) 1f else 0f, tween(HERO_RESIZE_MS), label = "heroHeight")
+    val heroHeight = lerp(fullHeight, HERO_COMPACT.coerceAtMost(fullHeight), compactness)
     // Past the last button (Right, Left where the buttons run from the right): the next title. Before the first
     // one: the title before. Both wrap around, and the focus stays on the button.
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
