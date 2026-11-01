@@ -165,10 +165,10 @@ fun TvSearchScreen(
         posterRow(titles[0], "searchMovies", state.movies, onOpen)
         posterRow(titles[1], "searchSeries", state.series, onOpen)
         resultRow(countedTitle(titles[2], state.channels.size), "searchChannels", state.channels, key = { it.channel.id }) { row, entry ->
-            TvChannelCard(row, onClick = { onPlayChannel(row) }, modifier = entry.focusMemory("search-channel:${row.channel.id}"))
+            TvChannelCard(row, onClick = { onPlayChannel(row) }, modifier = Modifier.resultFocus(entry, "search-channel:${row.channel.id}"))
         }
         resultRow(countedTitle(titles[3], state.people.size), "searchPeople", state.people, key = { "person-$it" }) { name, entry ->
-            TvPersonCard(name, onClick = { onPerson(name) }, photoUrl = state.photoOf(name), modifier = entry.focusMemory("search-person:$name").testTag("person-$name"))
+            TvPersonCard(name, onClick = { onPerson(name) }, photoUrl = state.photoOf(name), modifier = Modifier.resultFocus(entry, "search-person:$name").testTag("person-$name"))
         }
         val message = when {
             state.searching && nothing -> R.string.searching
@@ -199,7 +199,7 @@ private fun countedTitle(title: String, count: Int) = "$title ($count)"
 private fun LazyListScope.posterRow(title: String, tag: String, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit) {
     resultRow(countedTitle(title, posters.size), tag, posters, key = { it.key }) { item, entry ->
         Column(Modifier.width(TvTokens.PosterWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TvPosterCard(item, onClick = { onOpen(item) }, modifier = entry.focusMemory("search:${item.key}"))
+            TvPosterCard(item, onClick = { onOpen(item) }, modifier = Modifier.resultFocus(entry, "search:${item.key}"))
             Text(
                 item.title,
                 style = MaterialTheme.typography.labelLarge,
@@ -212,16 +212,17 @@ private fun LazyListScope.posterRow(title: String, tag: String, posters: List<Sh
     }
 }
 
+/** One card of a row of results: its row and its place in it. */
+private class ResultCard(val row: ResultRowFocus, val index: Int)
+
 /**
- * One card of a row of results: [focusMemory] gives the card its place in the page's memory (Back from a title lands on
- * it) and in its row's (the remote enters the row on it again).
+ * Gives [card] its place in the page's memory (Back from a title lands on it) and in its row's (the remote enters the
+ * row on it again).
  */
-private class ResultCard(private val row: ResultRowFocus, private val index: Int) {
-    fun focusMemory(key: String): Modifier = Modifier
-        .focusRequester(row.requester(index))
-        .onFocusChanged { if (it.isFocused) row.last = index }
+private fun Modifier.resultFocus(card: ResultCard, key: String): Modifier =
+    focusRequester(card.row.requester(card.index))
+        .onFocusChanged { if (it.isFocused) card.row.last = card.index }
         .focusMemory(key)
-}
 
 /**
  * Where the remote enters a row of results from above or below: the card it was last on in the row, while that one
