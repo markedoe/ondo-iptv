@@ -111,6 +111,17 @@ final class XtreamTests: XCTestCase {
         }
     }
 
+    /// A panel that lists its catalogue: the loader keeps it, dated when it arrived.
+    func testAPanelCatalogueIsLoadedAndDated() async throws {
+        let before = Date()
+        let playlist = Playlist(name: "Panel", source: .xtream(credentials))
+        let content = try await PlaylistLoader(http: try mock(), localFileURL: { URL(fileURLWithPath: $0) }).load(playlist)
+        XCTAssertEqual(content.channels.count, 4)
+        XCTAssertFalse(content.movies.isEmpty)
+        XCTAssertFalse(content.series.isEmpty)
+        XCTAssertGreaterThanOrEqual(content.fetchedAt, before)
+    }
+
     func testAnAccountThatListsNothingIsAnError() async throws {
         let http = MockHTTPClient()
         http.routes["api:"] = try Fixture.data("xtream_auth.json")

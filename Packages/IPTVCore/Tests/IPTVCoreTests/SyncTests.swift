@@ -173,6 +173,38 @@ final class SyncTests: XCTestCase {
         }
     }
 
+    /// A list keeps its items of playlists still here or unknown to this device, and loses those of a deleted playlist;
+    /// two versions changed in the same millisecond end as the one with the smaller name and items, in either order.
+    func testListsLoseTheItemsOfADeletedPlaylistAndTiesEndTheSameWay() {
+        let home = SyncPlaylist(id: "p", name: "Home", kind: SyncPlaylist.m3u, url: "http://example.com/a.m3u", addedAt: 1, updatedAt: 1)
+        let items = [
+            SyncListItem(playlist: "p", kind: "movie", item: "m1", title: "Glass City"),
+            SyncListItem(playlist: "q", kind: "movie", item: "m2", title: "Quiet Water"),
+            SyncListItem(playlist: "r", kind: "series", item: "s1", title: "Harbor Lights"),
+        ]
+        let a = SyncSnapshot(device: "a", playlists: [home], lists: [SyncList(id: "l", name: "Weekend", items: items, updatedAt: 10)])
+        let b = SyncSnapshot(device: "b", lists: [SyncList(id: "l", name: "Kids", items: items, updatedAt: 10)], deleted: ["playlist:q": 5])
+        let merged = SyncMerge.merge(a, b)
+        XCTAssertEqual(merged.lists.map(\.name), ["Kids"])
+        XCTAssertEqual(merged.lists.first?.items.map(\.item), ["m1", "s1"], "q was deleted; r is a playlist this device does not know")
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(b, a)), withoutDevice(merged))
+    }
+
+    /// A playlist that became another, which became a third: its records follow to the last one. A loop of
+    /// replacements (written by no device, but possible in a snapshot) ends after a bounded number of steps.
+    func testRecordsFollowAChainOfReplacementsAndALoopEnds() {
+        let last = SyncPlaylist(id: "c", name: "Home", kind: SyncPlaylist.m3u, url: "http://example.com/a.m3u", addedAt: 1, updatedAt: 1)
+        let favorite = SyncFavorite(playlist: "a", kind: "movie", item: "m1", title: "Glass City", addedAt: 10)
+        let chain = SyncMerge.merge(SyncSnapshot(device: "a", playlists: [last], favorites: [favorite]),
+                                    SyncSnapshot(device: "b", replaced: ["a": "b", "b": "c"]))
+        XCTAssertEqual(chain.favorites.map(\.playlist), ["c"])
+
+        let loop = SyncMerge.merge(SyncSnapshot(device: "a", favorites: [favorite]),
+                                   SyncSnapshot(device: "b", replaced: ["a": "b", "b": "a"]))
+        XCTAssertEqual(loop.favorites.count, 1)
+        XCTAssertEqual(loop.replaced, ["a": "b", "b": "a"])
+    }
+
     func testOldDeletionsAreForgotten() {
         let day: Int64 = 86_400_000
         let snapshot = SyncSnapshot(device: "a", deleted: ["list:old": 0, "list:recent": 170 * day, "playlist:old": 0, "playlist:new": 190 * day],

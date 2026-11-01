@@ -329,6 +329,21 @@ final class EPGTests: XCTestCase {
         XCTAssertEqual(ErrorAttribution.classify(GzipError.inflateFailed(-3)), .provider, "a broken file is the provider's")
         XCTAssertEqual(ErrorAttribution.classify(XMLTVParser.ParseError.invalidXML("x")), .provider)
     }
+
+    /// Whom to contact: a server that cannot be found, refuses or answers badly is the provider's; a connection that
+    /// drops or times out is the network's; anything else is the app's.
+    func testLoadingErrorsNameWhomToContact() {
+        for code in [URLError.Code.cannotFindHost, .cannotConnectToHost, .badServerResponse, .badURL, .unsupportedURL,
+                     .resourceUnavailable, .zeroByteResource, .fileDoesNotExist] {
+            XCTAssertEqual(ErrorAttribution.classify(URLError(code)), .provider, "\(code)")
+        }
+        for code in [URLError.Code.timedOut, .notConnectedToInternet, .networkConnectionLost, .secureConnectionFailed] {
+            XCTAssertEqual(ErrorAttribution.classify(URLError(code)), .network, "\(code)")
+        }
+        XCTAssertEqual(ErrorAttribution.classify(HTTPClientError.badStatus(503)), .provider)
+        XCTAssertEqual(ErrorAttribution.classify(PlaylistLoaderError.emptyPlaylist), .provider)
+        XCTAssertEqual(ErrorAttribution.classify(CocoaError(.fileWriteOutOfSpace)), .app)
+    }
 }
 
 final class EPGMatchingTests: XCTestCase {

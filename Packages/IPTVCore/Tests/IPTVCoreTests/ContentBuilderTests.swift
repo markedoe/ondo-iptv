@@ -172,6 +172,25 @@ final class ContentBuilderTests: XCTestCase {
         XCTAssertEqual(try ext("http://stream.example.com/stream"), "")
     }
 
+    /// The type the provider declares (`tvg-type`, or `type`) comes before the address and the group.
+    func testTheDeclaredTypeComesFirst() {
+        let m3u = """
+        #EXTM3U
+        #EXTINF:-1 tvg-type="movie" group-title="News",Glass City
+        http://stream.example.com/live/a.m3u8
+        #EXTINF:-1 type="VOD" group-title="News",Quiet Water
+        http://stream.example.com/b.ts
+        #EXTINF:-1 tvg-type="series" group-title="Movies",Harbor Lights
+        http://stream.example.com/movie/c.mp4
+        #EXTINF:-1 tvg-type="live" group-title="Series",Test News
+        http://stream.example.com/series/d.mkv
+        #EXTINF:-1 group-title="News",Test Sport
+        http://stream.example.com/movie/e.mp4
+        """
+        let types = M3UParser.parse(m3u).entries.map { ContentClassifier.classify($0) }
+        XCTAssertEqual(types, [.movie, .movie, .series, .live, .movie])
+    }
+
     func testParseErrors() throws {
         let loader = PlaylistLoader(http: MockHTTPClient(), localFileURL: { URL(fileURLWithPath: $0) })
         XCTAssertThrowsError(try loader.parse(Data("<html>Forbidden</html>".utf8))) { error in
