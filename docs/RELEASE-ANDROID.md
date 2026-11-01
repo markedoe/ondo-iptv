@@ -233,7 +233,9 @@ and the description names Android TV, as Google asks.
   a playlist, opening a detail page, playback, going back and reopening the app (playlists and progress
   must be kept). This is the version testers and then the public will use.
 - If the app stops, *Settings → About* shows the last crash recorded on the device (addresses and logins left
-  out), with the device's memory figures: a photo of it is enough to report it.
+  out), with the device's memory figures: a photo of it is enough to report it. A restart of the whole device
+  during playback is recorded there too, with what was playing: video and audio format, HDR or Dolby Vision,
+  decoders, buffer, memory and the device's thermal status (never the address or the title).
 
 ## G. What CI does
 

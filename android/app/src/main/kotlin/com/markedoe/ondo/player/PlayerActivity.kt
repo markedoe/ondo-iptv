@@ -106,12 +106,14 @@ import androidx.media3.exoplayer.LoadControl
 import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.OndoApplication
 import com.markedoe.ondo.R
+import com.markedoe.ondo.bootCount
 import com.markedoe.ondo.core.library.ChannelZapping
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.Episode
@@ -122,8 +124,10 @@ import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.data.PlayingNow
 import com.markedoe.ondo.data.SubtitleSize
 import com.markedoe.ondo.data.VideoScale
+import com.markedoe.ondo.playingNowFile
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.OndoTvTheme
@@ -300,6 +304,10 @@ class PlayerActivity : ComponentActivity() {
     private var shownBefore = 0L
     private var lostBefore = 0L
     private val period = Timeline.Period()
+
+    /** The decoders Media3 started for this player (their names, for the record of what plays and the report). */
+    private var videoDecoderName: String? = null
+    private var audioDecoderName: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -505,6 +513,13 @@ class PlayerActivity : ComponentActivity() {
             while (isActive) {
                 delay(500)
                 sampleHealth()
+            }
+        }
+        // What plays, kept up to date while it plays: a restart of the whole device leaves it behind (PlayingNow).
+        lifecycleScope.launch {
+            while (isActive) {
+                delay(PLAYING_NOW_PERIOD_MS)
+                savePlayingNow()
             }
         }
         // The title and where the video starts, a moment, without taking the remote's keys.
@@ -746,17 +761,21 @@ class PlayerActivity : ComponentActivity() {
                     override fun onPlayerError(error: PlaybackException) {
                         val messages = generateSequence<Throwable>(error) { it.cause }.take(4).mapNotNull { it.message }.distinct().toList()
                         reporter.error(error.errorCodeName, messages)
+                        clearPlayingNow()
                         handleError(error)
                     }
 
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         reporter.isPlaying(isPlaying)
+                        if (isPlaying) savePlayingNow()
                         playerView?.keepScreenOn = isPlaying
                         updatePictureInPictureParams()
                     }
 
                     override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
                         reporter.playWhenReady(playWhenReady)
+                        // Paused (by the viewer, the system, or onStop): playback stopped as it should.
+                        if (!playWhenReady) clearPlayingNow()
                         // The viewer's own pause, not the system's (a call, the audio focus lost, the end of the video).
                         if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST) livePause(playWhenReady)
                     }
@@ -785,8 +804,23 @@ class PlayerActivity : ComponentActivity() {
                     }
                 })
                 addAnalyticsListener(object : AnalyticsListener {
-                    override fun onVideoInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) =
+                    override fun onVideoInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) {
                         matchFrameRate(exoPlayer, format.frameRate)
+                        savePlayingNow()
+                    }
+
+                    override fun onAudioInputFormatChanged(eventTime: AnalyticsListener.EventTime, format: Format, decoderReuseEvaluation: DecoderReuseEvaluation?) =
+                        savePlayingNow()
+
+                    override fun onVideoDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+                        videoDecoderName = decoderName
+                        savePlayingNow()
+                    }
+
+                    override fun onAudioDecoderInitialized(eventTime: AnalyticsListener.EventTime, decoderName: String, initializedTimestampMs: Long, initializationDurationMs: Long) {
+                        audioDecoderName = decoderName
+                        savePlayingNow()
+                    }
 
                     override fun onRenderedFirstFrame(eventTime: AnalyticsListener.EventTime, output: Any, renderTimeMs: Long) = reporter.firstFrame()
 
@@ -881,6 +915,8 @@ class PlayerActivity : ComponentActivity() {
         controls.hide()
         player?.release()
         session?.release()
+        videoDecoderName = null
+        audioDecoderName = null
         reporter = PlaybackReporter(request, SystemClock::elapsedRealtime)
         resetHealth()
         val exoPlayer = buildPlayer()
@@ -1250,7 +1286,47 @@ class PlayerActivity : ComponentActivity() {
             "Video decoder: ${counters.renderedOutputBufferCount} frames shown, ${counters.droppedBufferCount} dropped, ${counters.skippedOutputBufferCount} skipped"
         },
         "Buffered ahead: ${PlaybackReporter.seconds(exoPlayer.totalBufferedDuration)} s",
-    )
+    ) + listOfNotNull(
+        exoPlayer.videoFormat?.let(PlaybackDetails::colour),
+        PlaybackDetails.decoders(videoDecoderName, audioDecoderName),
+        "Tunneling: ${if (tunneling(exoPlayer)) "on" else "off"}",
+    ) + PlaybackDetails.system(this)
+
+    /** Whether the player asks the TV for tunneled playback (decoder and screen joined, the app out of the loop). */
+    private fun tunneling(exoPlayer: ExoPlayer): Boolean = (exoPlayer.trackSelector as? DefaultTrackSelector)?.parameters?.tunnelingEnabled == true
+
+    /**
+     * Rewrites the record of what plays ([PlayingNow]) while the player is meant to play: the formats, decoders and
+     * buffer from the player (main thread), then the memory and temperature and the write on the record's own thread.
+     * No address, provider or title goes in.
+     */
+    private fun savePlayingNow() {
+        val exoPlayer = player ?: return
+        val state = exoPlayer.playbackState
+        if (!exoPlayer.playWhenReady || (state != Player.STATE_BUFFERING && state != Player.STATE_READY)) return
+        val (targetBytes, _) = bufferBudget
+        val lines = listOfNotNull(
+            "Playing: " + (request.kind ?: if (request.isLive) "live channel" else "film"),
+            exoPlayer.videoFormat?.let(PlaybackDetails::video),
+            exoPlayer.videoFormat?.let(PlaybackDetails::colour),
+            exoPlayer.audioFormat?.let(PlaybackDetails::audio),
+            PlaybackDetails.decoders(videoDecoderName, audioDecoderName),
+            "Tunneling: ${if (tunneling(exoPlayer)) "on" else "off"}",
+            "Buffer: ${if (request.bufferSeconds > 0) "${request.bufferSeconds} s" else "automatic"}, up to ${targetBytes / MEGABYTE} MB",
+        )
+        val context = applicationContext
+        val file = applicationContext.playingNowFile
+        PlayingNow.later {
+            val details = (lines + PlaybackDetails.system(context)).joinToString("\n")
+            PlayingNow.save(file, PlayingNow.Record(System.currentTimeMillis(), context.bootCount(), details))
+        }
+    }
+
+    /** Playback stopped as it should: no record is left for the next start. */
+    private fun clearPlayingNow() {
+        val file = applicationContext.playingNowFile
+        PlayingNow.later { PlayingNow.clear(file) }
+    }
 
     private fun copyReport(report: String) {
         getSystemService(ClipboardManager::class.java)?.setPrimaryClip(ClipData.newPlainText(getString(R.string.problem_report), report))
@@ -1382,6 +1458,7 @@ class PlayerActivity : ComponentActivity() {
         player?.release()
         session = null
         player = null
+        clearPlayingNow()
         super.onDestroy()
     }
 
@@ -1405,6 +1482,9 @@ class PlayerActivity : ComponentActivity() {
         private var sessionCount = 0
 
         private const val MEGABYTE = 1024 * 1024
+
+        /** How often the record of what plays is rewritten while it plays. */
+        private const val PLAYING_NOW_PERIOD_MS = 30_000L
 
         /** Where the subtitles sit while the TV's controls show: above them (a fraction of the video's height). */
         private const val RAISED_SUBTITLES = 0.3f

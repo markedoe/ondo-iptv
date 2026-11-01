@@ -6,6 +6,8 @@ import android.app.ApplicationExitInfo
 import android.content.Context
 import android.content.res.Resources
 import android.os.Build
+import android.os.SystemClock
+import android.provider.Settings
 import androidx.annotation.RequiresApi
 import androidx.core.content.pm.PackageInfoCompat
 import androidx.lifecycle.Lifecycle
@@ -26,6 +28,7 @@ import com.markedoe.ondo.data.CrashLog
 import com.markedoe.ondo.data.LocalSync
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.PlayTipBilling
+import com.markedoe.ondo.data.PlayingNow
 import com.markedoe.ondo.data.SqliteMetadataStore
 import com.markedoe.ondo.data.TipJar
 import com.markedoe.ondo.data.WorkManagerReminderScheduler
@@ -51,16 +54,24 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             "max heap ${Runtime.getRuntime().maxMemory() / (1024 * 1024)} MB, low RAM ${activities?.isLowRamDevice}"
         val about = "Ondo $version · Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}) · ${Build.MANUFACTURER} ${Build.MODEL}\n$memory"
         val crashFile = filesDir.resolve("ondo").resolve(CrashLog.FILE_NAME)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) recordLastExit(crashFile, about)
+        // What played when the last run ended without the player stopping as it should (read once, then deleted).
+        val playing = PlayingNow.take(playingNowFile)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) recordLastExit(crashFile, about, playing)
+        // A restart of the whole device leaves no reason with Android: the record the player kept is the only trace.
+        playing?.let {
+            val now = System.currentTimeMillis()
+            PlayingNow.recordRestart(crashFile, about, it, bootAt = now - SystemClock.elapsedRealtime(), bootCount = bootCount())
+        }
         CrashLog.install(crashFile, about)
     }
 
     /**
      * Why Android ended the last run, when it was on screen and no Kotlin error was recorded: an app stopped for lack of
-     * memory or for not responding leaves no stack trace of its own.
+     * memory or for not responding leaves no stack trace of its own. With what played then, when the player was
+     * still playing ([playing] written before the exit).
      */
     @RequiresApi(Build.VERSION_CODES.R)
-    private fun recordLastExit(file: java.io.File, about: String) {
+    private fun recordLastExit(file: java.io.File, about: String, playing: PlayingNow.Record?) {
         val exit = runCatching {
             getSystemService(ActivityManager::class.java)?.getHistoricalProcessExitReasons(packageName, 0, 1)?.firstOrNull()
         }.getOrNull() ?: return
@@ -80,7 +91,8 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
         } else {
             null
         }
-        CrashLog.recordExit(file, about, CrashLog.SystemExit(exit.timestamp, reason, exit.description, exit.pss, exit.rss, trace))
+        val details = playing?.takeIf { it.at <= exit.timestamp }?.details
+        CrashLog.recordExit(file, about, CrashLog.SystemExit(exit.timestamp, reason, exit.description, exit.pss, exit.rss, trace, details))
     }
 
     /** Playlists, guides and artwork share connections and the cache. */
@@ -130,6 +142,13 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
     override fun newImageLoader(context: PlatformContext): ImageLoader = context.artworkLoader(imageHttp)
 
 }
+
+/** The player's record of what plays ([PlayingNow]): left out of backups, it belongs to this device's last run. */
+internal val Context.playingNowFile: java.io.File get() = noBackupFilesDir.resolve(PlayingNow.FILE_NAME)
+
+/** How many times the device has started, if the system counts them (`Settings.Global.BOOT_COUNT`). */
+internal fun Context.bootCount(): Int? =
+    runCatching { Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1) }.getOrNull()?.takeIf { it >= 0 }
 
 /** The app's image loader (posters, thumbnails, logos, cast photos), on [http]: see [OndoApplication.newImageLoader]. */
 internal fun Context.artworkLoader(http: OkHttpClient): ImageLoader = ImageLoader.Builder(this)

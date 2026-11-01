@@ -246,7 +246,9 @@ description nomme Android TV, comme Google le demande.
   de l'app (les playlists et la progression doivent être conservées). C'est la version qu'utiliseront les
   testeurs puis le public.
 - Si l'app s'arrête, *Réglages → À propos* montre le dernier plantage enregistré sur l'appareil (sans adresses
-  ni identifiants), avec la mémoire dont dispose l'appareil : une photo suffit pour le signaler.
+  ni identifiants), avec la mémoire dont dispose l'appareil : une photo suffit pour le signaler. Un redémarrage de
+  tout l'appareil pendant la lecture y est aussi enregistré, avec ce qui était lu : format vidéo et audio, HDR ou
+  Dolby Vision, décodeurs, mémoire tampon, mémoire et état thermique de l'appareil (jamais l'adresse ni le titre).
 
 ## G. Ce que fait la CI
 

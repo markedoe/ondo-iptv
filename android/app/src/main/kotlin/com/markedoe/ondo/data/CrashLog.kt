@@ -30,9 +30,18 @@ object CrashLog {
     /**
      * How Android ended the app's last run while it was on screen, when no Kotlin error did: out of memory for the
      * whole device, not responding, a crash in native code (`ApplicationExitInfo`, Android 11 and later). [trace] is
-     * the main thread's stack when the app did not respond.
+     * the main thread's stack when the app did not respond. A restart of the whole device during playback has no
+     * memory figures; [details] is what was playing then ([PlayingNow]), without address or title.
      */
-    class SystemExit(val at: Long, val reason: String, val description: String?, val pssKb: Long, val rssKb: Long, val trace: String? = null)
+    class SystemExit(
+        val at: Long,
+        val reason: String,
+        val description: String?,
+        val pssKb: Long?,
+        val rssKb: Long?,
+        val trace: String? = null,
+        val details: String? = null,
+    )
 
     /** Records [exit] unless the report on file is as recent (an error the app recorded itself, or this exit already). */
     fun recordExit(file: File, about: String, exit: SystemExit) {
@@ -43,7 +52,10 @@ object CrashLog {
             append("Stopped by Android: ").append(exit.reason)
             exit.description?.takeIf { it.isNotBlank() }?.let { append(" (").append(it).append(')') }
             append('\n')
-            append("Memory at that moment: PSS ${exit.pssKb / 1024} MB, RSS ${exit.rssKb / 1024} MB\n")
+            if (exit.pssKb != null && exit.rssKb != null) {
+                append("Memory at that moment: PSS ${exit.pssKb / 1024} MB, RSS ${exit.rssKb / 1024} MB\n")
+            }
+            exit.details?.takeIf { it.isNotBlank() }?.let { append("Playback (last record before it):\n").append(it).append('\n') }
             exit.trace?.let { append(it) }
         }
         write(file, exit.at, text)
