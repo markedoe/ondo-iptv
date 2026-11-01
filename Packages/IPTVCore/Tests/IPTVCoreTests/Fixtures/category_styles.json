@@ -8,7 +8,7 @@
     "Mangalore Movies": [],
     "Kids & Family": ["kids"],
     "|ES| Infantil": ["kids"],
-    "Cartoon Network": ["kids"],
+    "Cartoon Corner": ["kids"],
     "Animation": ["animation"],
     "Films d'animation": ["animation"],
     "Documentaires": ["documentary"],
@@ -28,6 +28,6 @@
     {"name": "Novelas", "word": "telenovela", "matches": false},
     {"name": "Turkish Series", "word": "turk", "matches": false},
     {"name": "|FR| Séries Turques", "word": "series turques", "matches": true},
-    {"name": "Netflix | Séries", "word": "Séries", "matches": true}
+    {"name": "Cinebox | Séries", "word": "Séries", "matches": true}
   ]
 }

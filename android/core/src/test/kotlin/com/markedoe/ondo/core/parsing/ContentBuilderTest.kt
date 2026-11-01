@@ -24,7 +24,7 @@ class ContentBuilderTest {
     fun classification() {
         val content = content()
         assertEquals(listOf("TV1 HD", "Nation 2", "Stadia Sports 1", "Aria", "Wave Radio", "Hot channel", "TV1 HD"), content.channels.map { it.name })
-        assertEquals(listOf("Lighthouse", "Mad Max Fury Road"), content.movies.map { it.name })
+        assertEquals(listOf("Lighthouse", "Dust Road Fury"), content.movies.map { it.name })
         assertEquals(2010, content.movies.first().year)
         assertEquals(1, content.series.size)
         assertEquals(2, content.providerEpgUrls.size)
@@ -45,10 +45,10 @@ class ContentBuilderTest {
     fun seriesGrouping() {
         val series = assertNotNull(content().series.firstOrNull())
         assertEquals("Copper Valley", series.name)
-        assertEquals("http://img.example.com/bb.jpg", series.coverUrl)
+        assertEquals("http://img.example.com/copper.jpg", series.coverUrl)
         assertEquals(listOf("S01E01", "S01E02", "S02E01"), series.episodes.map { it.code })
         assertEquals("Pilot", series.episodes[0].title)
-        assertEquals("Seven Thirty-Seven", series.episodes[2].title)
+        assertEquals("Seven Bridges", series.episodes[2].title)
     }
 
     @Test
