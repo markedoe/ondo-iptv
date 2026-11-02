@@ -37,7 +37,7 @@ object SyncKeys {
 
     fun syncPerson(favorite: Favorite) = SyncPerson(favorite.title, favorite.imageUrl, favorite.addedAt)
 
-    fun person(synced: SyncPerson) = Favorite(Favorite.ANY_PLAYLIST, ItemKind.PERSON, synced.name, synced.name, synced.image, synced.addedAt)
+    fun personFavorite(synced: SyncPerson) = Favorite(Favorite.ANY_PLAYLIST, ItemKind.PERSON, synced.name, synced.name, synced.image, synced.addedAt)
 
     /** Where a movie or an episode was left syncs; the channels watched stay on the device. */
     fun syncs(entry: WatchEntry) = entry.kind != ItemKind.CHANNEL
@@ -246,7 +246,7 @@ object SyncData {
 
     /** The people of a snapshot as this app keeps them: one per name (whatever its case), in the order they come. */
     private fun people(synced: List<SyncPerson>): List<Favorite> =
-        synced.filter { it.name.isNotBlank() }.distinctBy { it.key }.map(SyncKeys::person)
+        synced.filter { it.name.isNotBlank() }.distinctBy { it.key }.map(SyncKeys::personFavorite)
 
     /** Replacements followed at most, as the merge follows them (docs/SYNC.md, "Merge"). */
     private const val MAX_REPLACEMENTS = 10
