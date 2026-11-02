@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -74,8 +75,18 @@ class TvSortChoice(
     val onHideWatched: (Boolean) -> Unit = {},
 )
 
-/** The Sort chip of the page's label line ([TvSortChips]); none on a page without one. */
-internal val LocalSortChip = staticCompositionLocalOf<FocusRequester?> { null }
+/**
+ * The Sort chip of a page's label line ([TvSortChips]): its [requester], and whether a poster of the first row has the
+ * remote ([fromFirstRow]), the only place, with the chips themselves, from which the chips take it.
+ */
+@Stable
+internal class SortChip {
+    val requester = FocusRequester()
+    var fromFirstRow by mutableStateOf(false)
+}
+
+/** The page's [SortChip]; none on a page without one. */
+internal val LocalSortChip = staticCompositionLocalOf<SortChip?> { null }
 
 /**
  * On a page with sort chips on its label line, Up from a poster of the first row goes to the Sort chip, from any column
@@ -83,7 +94,8 @@ internal val LocalSortChip = staticCompositionLocalOf<FocusRequester?> { null }
  */
 fun Modifier.upToTheSortChip(): Modifier = composed {
     val chip = LocalSortChip.current ?: return@composed this
-    focusProperties { up = chip }
+    // Before the poster's own focus target: told of its focus, and its Up goes to the chip.
+    onFocusChanged { chip.fromFirstRow = it.hasFocus }.focusProperties { up = chip.requester }
 }
 
 /** The tag of the Sort chip. */

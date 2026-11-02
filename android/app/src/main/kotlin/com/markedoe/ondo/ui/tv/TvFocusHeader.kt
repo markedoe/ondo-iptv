@@ -1,7 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.animation.Crossfade
@@ -305,16 +304,15 @@ fun TvHeaderAbove(
     }
     val focus = remember { FocusedTitle() }
     val chips = sort?.takeIf { label != null }
-    val sortChip = remember { FocusRequester() }
-    // The chips take the remote only from the posters (Up from the first row), or while they or their menu have it.
-    var postersFocused by remember { mutableStateOf(false) }
+    val sortChip = remember { SortChip() }
+    // The chips take the remote only from the first row of posters (Up), or while they or their menu have it.
     var chipsFocused by remember { mutableStateOf(false) }
     var sorting by remember { mutableStateOf(false) }
     var page by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var chip by remember { mutableStateOf<LayoutCoordinates?>(null) }
     fun closeMenu() {
         // The chip takes the focus back before the menu leaves: the remote is never left nowhere.
-        runCatching { sortChip.requestFocus() }
+        runCatching { sortChip.requester.requestFocus() }
         sorting = false
     }
     CompositionLocalProvider(LocalFocusedTitle provides focus, LocalSortChip provides sortChip.takeIf { chips != null }) {
@@ -330,8 +328,8 @@ fun TvHeaderAbove(
                         {
                             TvSortChips(
                                 choice,
-                                sortChip,
-                                reachable = { postersFocused || chipsFocused || sorting },
+                                sortChip.requester,
+                                reachable = { sortChip.fromFirstRow || chipsFocused || sorting },
                                 onOpen = { sorting = true },
                                 modifier = Modifier.onFocusChanged { chipsFocused = it.hasFocus },
                                 sortModifier = Modifier.onGloballyPositioned { chip = it },
@@ -339,7 +337,7 @@ fun TvHeaderAbove(
                         }
                     },
                 )
-                val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true).onFocusChanged { postersFocused = it.hasFocus }
+                val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
                 // A grid sets its own scrolling once it knows its posters' height ([TvGridScrolling]).
                 if (byRows) content(rest, UNDER_HEADER_TOP, true) else TvPinnedHeaderList(lead) { content(rest, UNDER_HEADER_TOP, true) }
             }
