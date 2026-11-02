@@ -109,7 +109,7 @@ enum SyncMapping {
                              position: entry.position.isFinite ? entry.position : 0, duration: entry.duration.isFinite ? entry.duration : 0,
                              watchedAt: entry.lastWatchedAt.syncMilliseconds)
             },
-            lists: library.customLists.map { list in
+            lists: library.customLists.map { list -> SyncList in
                 let id = list.id.uuidString.lowercased()
                 return SyncList(id: id, name: list.name, items: list.items.map { item in
                     SyncListItem(playlist: item.reference.playlistID.uuidString.lowercased(), kind: item.reference.type.rawValue,
