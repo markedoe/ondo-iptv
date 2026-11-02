@@ -56,6 +56,35 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(library.history.first?.title, "M1")
     }
 
+    /// Watched with 10 minutes or less left once three quarters are seen, or at 95 %; never by time with no duration.
+    func testWatchedWithTenMinutesLeft() {
+        func movie(_ minutes: Double, of total: Double) -> HistoryEntry {
+            HistoryEntry(reference: ref(.movie, "m"), title: "M", position: minutes * 60, duration: total * 60)
+        }
+        XCTAssertTrue(movie(100, of: 110).isFinished, "10 minutes left")
+        XCTAssertFalse(movie(99, of: 110).isFinished, "11 minutes left")
+        XCTAssertTrue(movie(99, of: 110).isResumable)
+        XCTAssertTrue(movie(18, of: 20).isFinished, "a short film, 2 minutes left")
+        XCTAssertFalse(movie(10, of: 20).isFinished, "a short film needs more than its last 10 minutes")
+        XCTAssertFalse(movie(3, of: 12).isFinished, "a 12-minute film a quarter in")
+        XCTAssertTrue(movie(3, of: 12).isResumable)
+        XCTAssertTrue(movie(380, of: 400).isFinished, "95 % of a long film")
+        XCTAssertFalse(movie(379, of: 400).isFinished, "21 minutes left")
+        XCTAssertFalse(movie(100, of: 0).isFinished, "unknown duration: 95 % only, so never")
+        XCTAssertTrue(movie(100, of: 0).isResumable)
+        XCTAssertTrue(HistoryEntry(reference: ref(.series, "s", episode: "e1"), title: "S", position: 2_400, duration: 2_700).isFinished,
+                      "episodes alike")
+        XCTAssertFalse(HistoryEntry(reference: ref(.live, "c"), title: "C", position: 6_000, duration: 6_600).isFinished)
+
+        var library = UserLibrary()
+        library.recordPlayback(HistoryEntry(reference: ref(.movie, "m1"), title: "M1", lastWatchedAt: Date(timeIntervalSince1970: 1)))
+        library.updateProgress(ref(.movie, "m1"), position: 99 * 60, duration: 110 * 60, now: Date(timeIntervalSince1970: 2))
+        XCTAssertEqual(library.continueWatching(playlistID: playlistID).map(\.title), ["M1"])
+        library.updateProgress(ref(.movie, "m1"), position: 100 * 60, duration: 110 * 60, now: Date(timeIntervalSince1970: 3))
+        XCTAssertEqual(library.continueWatching(playlistID: playlistID).map(\.title), [], "watched: out of Continue watching")
+        XCTAssertEqual(library.progress(for: ref(.movie, "m1"))?.isFinished, true)
+    }
+
     /// A position the player cannot tell (NaN, infinite) keeps the one known: JSON has no such number, and one in the
     /// history would make every later save of the library fail.
     func testAnUnknownPositionKeepsTheLibrarySavable() throws {

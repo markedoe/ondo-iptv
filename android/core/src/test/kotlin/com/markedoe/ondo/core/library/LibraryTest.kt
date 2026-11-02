@@ -127,15 +127,42 @@ class LibraryTest {
 
     @Test
     fun historyEntryProgressFlags() {
-        val movie = HistoryEntry(ref(ContentType.MOVIE, "m"), "M", position = 31.0, duration = 100.0)
+        val movie = HistoryEntry(ref(ContentType.MOVIE, "m"), "M", position = 31.0, duration = 6_000.0)
         assertTrue(movie.isResumable)
         assertFalse(movie.isFinished)
-        assertEquals(0.31, movie.progress, 1e-9)
+        assertEquals(31.0 / 6_000.0, movie.progress, 1e-9)
         assertFalse(movie.copy(position = 30.0).isResumable, "barely started")
-        assertTrue(movie.copy(position = 95.0).isFinished)
-        assertEquals(1.0, movie.copy(position = 500.0).progress)
+        assertTrue(movie.copy(position = 5_700.0).isFinished)
+        assertEquals(1.0, movie.copy(position = 9_000.0).progress)
         assertEquals(0.0, movie.copy(duration = 0.0).progress)
         assertFalse(HistoryEntry(ref(ContentType.LIVE, "c"), "C", position = 50.0, duration = 100.0).isResumable)
+    }
+
+    /** Watched with 10 minutes or less left once three quarters are seen, or at 95 %; never by time with no duration. */
+    @Test
+    fun watchedWithTenMinutesLeft() {
+        fun movie(minutes: Double, of: Double) = HistoryEntry(ref(ContentType.MOVIE, "m"), "M", position = minutes * 60, duration = of * 60)
+        assertTrue(movie(100.0, of = 110.0).isFinished, "10 minutes left")
+        assertFalse(movie(99.0, of = 110.0).isFinished, "11 minutes left")
+        assertTrue(movie(99.0, of = 110.0).isResumable)
+        assertTrue(movie(18.0, of = 20.0).isFinished, "a short film, 2 minutes left")
+        assertFalse(movie(10.0, of = 20.0).isFinished, "a short film needs more than its last 10 minutes")
+        assertFalse(movie(3.0, of = 12.0).isFinished, "a 12-minute film a quarter in")
+        assertTrue(movie(3.0, of = 12.0).isResumable)
+        assertTrue(movie(380.0, of = 400.0).isFinished, "95 % of a long film")
+        assertFalse(movie(379.0, of = 400.0).isFinished, "21 minutes left")
+        assertFalse(movie(100.0, of = 0.0).isFinished, "unknown duration: 95 % only, so never")
+        assertTrue(movie(100.0, of = 0.0).isResumable)
+        assertTrue(HistoryEntry(ref(ContentType.SERIES, "s", "e1"), "S", position = 2_400.0, duration = 2_700.0).isFinished, "episodes alike")
+        assertFalse(HistoryEntry(ref(ContentType.LIVE, "c"), "C", position = 6_000.0, duration = 6_600.0).isFinished)
+
+        var library = UserLibrary()
+        library = library.recordPlayback(HistoryEntry(ref(ContentType.MOVIE, "m1"), "M1", lastWatchedAt = 1))
+        library = library.updateProgress(ref(ContentType.MOVIE, "m1"), 99.0 * 60, 110.0 * 60, now = 2)
+        assertEquals(listOf("M1"), library.continueWatching(playlistId).map { it.title })
+        library = library.updateProgress(ref(ContentType.MOVIE, "m1"), 100.0 * 60, 110.0 * 60, now = 3)
+        assertEquals(emptyList(), library.continueWatching(playlistId), "watched: out of Continue watching")
+        assertTrue(library.progress(ref(ContentType.MOVIE, "m1"))!!.isFinished)
     }
 
     @Test

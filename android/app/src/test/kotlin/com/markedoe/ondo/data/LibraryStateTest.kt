@@ -163,17 +163,38 @@ class LibraryStateTest {
         assertEquals(listOf("c3"), library.recentChannels("p2").map { it.itemId })
     }
 
-    /** "Hide watched movies": a movie of this playlist watched to 95 %, never an episode or a channel. */
+    /** Watched with 10 minutes or less left once three quarters are seen, or at 95 % (the rule of the Kotlin core). */
+    @Test
+    fun watchedWithTenMinutesLeft() {
+        fun movie(minutes: Double, of: Double) = entry("m1").copy(position = minutes * 60, duration = of * 60)
+        assertTrue("10 minutes left", movie(100.0, of = 110.0).isFinished)
+        assertFalse("11 minutes left", movie(99.0, of = 110.0).isFinished)
+        assertTrue("a short film, 2 minutes left", movie(18.0, of = 20.0).isFinished)
+        assertFalse("a short film needs more than its last 10 minutes", movie(10.0, of = 20.0).isFinished)
+        assertFalse("a 12-minute film a quarter in", movie(3.0, of = 12.0).isFinished)
+        assertFalse("unknown duration: 95 % only, so never", movie(100.0, of = 0.0).isFinished)
+
+        val watching = LibraryState().recordStart(movie(99.0, of = 110.0))
+        assertEquals(listOf("m1"), watching.continueWatching("p1").map { it.itemId })
+        assertEquals(emptySet<String>(), watching.finishedMovies("p1"))
+        val watched = watching.updateProgress(entry("m1").key, 100.0 * 60, 110.0 * 60, now = 1)
+        assertEquals("watched: out of Continue watching", emptyList<WatchEntry>(), watched.continueWatching("p1"))
+        assertEquals("watched: hidden with the watched movies", setOf("m1"), watched.finishedMovies("p1"))
+        assertTrue(watched.progress(entry("m1").key)!!.isFinished)
+    }
+
+    /** "Hide watched movies": a movie of this playlist watched (see [WatchEntry.isFinished]), never an episode or a channel. */
     @Test
     fun finishedMoviesAreThisPlaylistsMoviesWatchedToTheEnd() {
         val library = listOf(
             entry("done").copy(position = 5_800.0, duration = 6_000.0),
-            entry("almost").copy(position = 5_640.0, duration = 6_000.0),
+            entry("credits").copy(position = 5_400.0, duration = 6_000.0),
+            entry("almost").copy(position = 5_399.0, duration = 6_000.0),
             entry("episode", ItemKind.SERIES, episodeId = "e1").copy(position = 2_700.0, duration = 2_700.0),
             entry("elsewhere", playlistId = "p2").copy(position = 6_000.0, duration = 6_000.0),
             entry("unknown length").copy(position = 6_000.0),
         ).fold(LibraryState()) { library, watched -> library.recordStart(watched) }
-        assertEquals(setOf("done"), library.finishedMovies("p1"))
+        assertEquals(setOf("done", "credits"), library.finishedMovies("p1"))
         assertEquals(setOf("elsewhere"), library.finishedMovies("p2"))
     }
 

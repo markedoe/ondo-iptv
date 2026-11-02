@@ -128,7 +128,8 @@ the playlist address. Key: `playlist:<id>`; time: `updatedAt` (set when the play
 
 **Progress** — `{"playlist", "kind": "movie" | "series", "item", "episode"?, "title", "subtitle"?, "image"?,
 "position", "duration", "watchedAt"}`. `item` is the movie or the series, `episode` the episode of a series;
-`position` and `duration` are seconds (numbers). A title is finished at 95 % of its duration. Key:
+`position` and `duration` are seconds (numbers). A title is finished (watched) at 95 % of its duration, or with
+10 minutes or less left once three quarters are seen; with no known duration, never. Key:
 `progress:<playlist>|<kind>|<item>|<episode or empty>`; time: `watchedAt`.
 
 **List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],

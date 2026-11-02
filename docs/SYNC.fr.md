@@ -139,7 +139,8 @@ ajoutée ou modifiée).
 
 **Progression** — `{"playlist", "kind": "movie" | "series", "item", "episode"?, "title", "subtitle"?, "image"?,
 "position", "duration", "watchedAt"}`. `item` est le film ou la série, `episode` l’épisode d’une série ;
-`position` et `duration` sont des secondes (nombres). Un titre est terminé à 95 % de sa durée. Clé :
+`position` et `duration` sont des secondes (nombres). Un titre est terminé (vu) à 95 % de sa durée, ou quand il
+en reste 10 minutes ou moins une fois les trois quarts vus ; sans durée connue, jamais. Clé :
 `progress:<playlist>|<kind>|<item>|<épisode ou vide>` ; instant : `watchedAt`.
 
 **Liste** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],

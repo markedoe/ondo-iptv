@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.model.HistoryEntry
 import kotlinx.serialization.Serializable
 
 /** Kind of item in the library; a person (actor or director) is kept by name, whatever the playlist. */
@@ -44,13 +45,10 @@ data class WatchEntry(
     /** Identifies the exact playable thing (episode level for series). */
     val key: String get() = "$playlistId|$kind|$itemId|${episodeId.orEmpty()}"
     val progress: Double get() = if (duration > 0) (position / duration).coerceIn(0.0, 1.0) else 0.0
-    val isFinished: Boolean get() = kind != ItemKind.CHANNEL && progress >= FINISHED
-    val isResumable: Boolean get() = kind != ItemKind.CHANNEL && position > 30 && progress < FINISHED
+    /** Watched, by the shared rule of [HistoryEntry.isFinished]: movies and episodes alike. */
+    val isFinished: Boolean get() = kind != ItemKind.CHANNEL && HistoryEntry.isFinished(position, duration)
+    val isResumable: Boolean get() = kind != ItemKind.CHANNEL && position > 30 && !isFinished
     val minutesLeft: Int get() = (((duration - position).coerceAtLeast(0.0)) / 60).toInt()
-
-    companion object {
-        const val FINISHED = 0.95
-    }
 }
 
 /** A programme the viewer wants to be told about, a few minutes before it starts (times in milliseconds). */

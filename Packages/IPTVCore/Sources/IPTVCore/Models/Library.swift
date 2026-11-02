@@ -131,12 +131,28 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
         return min(max(position / duration, 0), 1)
     }
 
-    /// Worth offering "resume": started, not (almost) finished.
+    /// Worth offering "resume": started, not finished.
     public var isResumable: Bool {
-        reference.type != .live && position > 30 && progress < 0.95
+        reference.type != .live && position > 30 && !isFinished
     }
 
-    public var isFinished: Bool { reference.type != .live && progress >= 0.95 }
+    /// Watched: the "watched" badge, the hidden watched movies, out of "Continue watching". Movies and episodes alike.
+    public var isFinished: Bool { reference.type != .live && Self.isFinished(position: position, duration: duration) }
+
+    /// Watched at 95 % of the duration.
+    public static let finishedProgress = 0.95
+    /// Also watched with this many seconds or less left (a film's end credits)…
+    public static let finishedTimeLeft: Double = 600
+    /// …once this share is seen, so a short film still needs 95 %.
+    public static let finishedTimeLeftMinimumProgress = 0.75
+
+    /// The rule of `isFinished` (positions and durations in seconds); with no known duration, never finished.
+    public static func isFinished(position: Double, duration: Double) -> Bool {
+        guard duration > 0 else { return false }
+        let progress = min(max(position / duration, 0), 1)
+        return progress >= finishedProgress
+            || (duration - position <= finishedTimeLeft && progress >= finishedTimeLeftMinimumProgress)
+    }
 }
 
 /// Everything the player needs to start a stream. `Codable` so macOS can open it in its own window.
