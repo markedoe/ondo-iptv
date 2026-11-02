@@ -2,7 +2,7 @@ package com.markedoe.ondo.data
 
 import kotlinx.serialization.Serializable
 
-/** Kind of item in the library; a person (actor or director) is kept by name, on this device only (it does not sync). */
+/** Kind of item in the library; a person (actor or director) is kept by name, whatever the playlist. */
 @Serializable
 enum class ItemKind { CHANNEL, MOVIE, SERIES, PERSON }
 
@@ -124,7 +124,7 @@ data class LibraryState(
     fun toggleFavorite(favorite: Favorite): LibraryState =
         if (favorites.any { it.key == favorite.key }) {
             copy(favorites = favorites.filterNot { it.key == favorite.key })
-                .let { if (SyncKeys.syncs(favorite)) it.deleting(SyncKeys.favorite(favorite), favorite.addedAt) else it }
+                .deleting(SyncKeys.favorite(favorite), favorite.addedAt)
         } else {
             copy(favorites = favorites + favorite)
         }

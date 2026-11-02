@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
+import com.markedoe.ondo.core.sync.SyncPerson
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -26,11 +27,17 @@ object SyncKeys {
 
     fun playlist(id: String) = "playlist:${id.lowercase()}"
     fun list(id: String) = "list:${id.lowercase()}"
-    fun favorite(favorite: Favorite) = "favorite:${favorite.playlistId.lowercase()}|${kind(favorite.kind)}|${favorite.itemId}"
+    fun favorite(favorite: Favorite) =
+        if (favorite.kind == ItemKind.PERSON) person(favorite.itemId) else "favorite:${favorite.playlistId.lowercase()}|${kind(favorite.kind)}|${favorite.itemId}"
+    fun person(name: String) = SyncPerson.KEY_PREFIX + SyncPerson.folded(name)
     fun progress(entry: WatchEntry) = "progress:${entry.playlistId.lowercase()}|${kind(entry.kind)}|${entry.itemId}|${entry.episodeId.orEmpty()}"
 
-    /** The people kept stay on the device: Apple devices do not keep any. */
-    fun syncs(favorite: Favorite) = favorite.kind != ItemKind.PERSON
+    /** A person kept (in My List or a list) travels as a person, whatever the playlist; the rest as a favourite. */
+    fun isPerson(favorite: Favorite) = favorite.kind == ItemKind.PERSON
+
+    fun syncPerson(favorite: Favorite) = SyncPerson(favorite.title, favorite.imageUrl, favorite.addedAt)
+
+    fun person(synced: SyncPerson) = Favorite(Favorite.ANY_PLAYLIST, ItemKind.PERSON, synced.name, synced.name, synced.image, synced.addedAt)
 
     /** Where a movie or an episode was left syncs; the channels watched stay on the device. */
     fun syncs(entry: WatchEntry) = entry.kind != ItemKind.CHANNEL
@@ -86,7 +93,7 @@ object SyncData {
                     updatedAt = playlist.updatedAt.takeIf { it > 0 } ?: playlist.addedAt,
                 )
             },
-            favorites = library.favorites.filter { SyncKeys.syncs(it) && travels(it.playlistId) }.map { favorite ->
+            favorites = library.favorites.filter { !SyncKeys.isPerson(it) && travels(it.playlistId) }.map { favorite ->
                 SyncFavorite(favorite.playlistId.lowercase(), SyncKeys.kind(favorite.kind), favorite.itemId, favorite.title, favorite.imageUrl, favorite.addedAt)
             },
             progress = library.history.filter { SyncKeys.syncs(it) && travels(it.playlistId) }.map { entry ->
@@ -107,10 +114,12 @@ object SyncData {
                 SyncList(
                     id = list.id.lowercase(),
                     name = list.name,
-                    items = list.items.filter(SyncKeys::syncs).map { SyncListItem(it.playlistId.lowercase(), SyncKeys.kind(it.kind), it.itemId, it.title, it.imageUrl) },
+                    items = list.items.filterNot(SyncKeys::isPerson).map { SyncListItem(it.playlistId.lowercase(), SyncKeys.kind(it.kind), it.itemId, it.title, it.imageUrl) },
+                    people = list.items.filter(SyncKeys::isPerson).map(SyncKeys::syncPerson),
                     updatedAt = list.updatedAt,
                 )
             },
+            people = library.favorites.filter(SyncKeys::isPerson).map(SyncKeys::syncPerson),
             keys = state.settings.serviceKeys.filter { it.value.isNotBlank() },
             deleted = library.syncDeleted,
             replaced = library.syncReplaced,
@@ -184,10 +193,10 @@ object SyncData {
         val removedIds = removed.mapTo(HashSet()) { it.id }
         // What does not sync stays: the channels watched, and everything of a file playlist.
         val filePlaylists = state.playlists.filterNot(SyncKeys::syncs).mapTo(HashSet()) { it.id }
-        val favorites = library.favorites.filter { it.playlistId in filePlaylists || !SyncKeys.syncs(it) } + merged.favorites.mapNotNull { synced ->
+        val favorites = library.favorites.filter { it.playlistId in filePlaylists && !SyncKeys.isPerson(it) } + merged.favorites.mapNotNull { synced ->
             val kind = SyncKeys.itemKind(synced.kind) ?: return@mapNotNull null
             Favorite(local(synced.playlist), kind, synced.item, synced.title, synced.image, synced.addedAt)
-        }.filter { it.playlistId !in filePlaylists }
+        }.filter { it.playlistId !in filePlaylists } + people(merged.people)
         val history = library.history.filter { !SyncKeys.syncs(it) || it.playlistId in filePlaylists } + merged.progress.mapNotNull { synced ->
             val kind = SyncKeys.itemKind(synced.kind)?.takeIf { it != ItemKind.CHANNEL } ?: return@mapNotNull null
             WatchEntry(
@@ -207,8 +216,6 @@ object SyncData {
         // The device's own list IDs, whatever their case (the first of each, as a search in order would find).
         val localLists = HashMap<String, String>()
         library.collections.forEach { localLists.putIfAbsent(it.id.lowercase(), it.id) }
-        // The people of a collection stay in it (they do not sync).
-        val localPeople = library.collections.associate { list -> list.id.lowercase() to list.items.filterNot(SyncKeys::syncs) }
         val collections = merged.lists.map { synced ->
             UserCollection(
                 id = localLists[synced.id.lowercase()] ?: synced.id,
@@ -216,7 +223,7 @@ object SyncData {
                 items = synced.items.mapNotNull { item ->
                     val kind = SyncKeys.itemKind(item.kind) ?: return@mapNotNull null
                     Favorite(local(item.playlist), kind, item.item, item.title, item.image, localItems[item.key]?.addedAt ?: synced.updatedAt)
-                } + localPeople[synced.id.lowercase()].orEmpty(),
+                } + people(synced.people),
                 updatedAt = synced.updatedAt,
             )
         }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
@@ -236,6 +243,10 @@ object SyncData {
             }
         return Applied(playlists, removed, applied, replacements.toMap(), merged.keys)
     }
+
+    /** The people of a snapshot as this app keeps them: one per name (whatever its case), in the order they come. */
+    private fun people(synced: List<SyncPerson>): List<Favorite> =
+        synced.filter { it.name.isNotBlank() }.distinctBy { it.key }.map(SyncKeys::person)
 
     /** Replacements followed at most, as the merge follows them (docs/SYNC.md, "Merge"). */
     private const val MAX_REPLACEMENTS = 10

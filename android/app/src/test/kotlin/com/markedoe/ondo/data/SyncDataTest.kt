@@ -37,8 +37,17 @@ class SyncDataTest {
 
     private var time = 1_760_000_000_000L
 
-    private fun TestScope.device(name: String) =
-        OndoRepository(AppStore(folder.newFolder(name)), FakeHttp(mapOf(list to catalogue, sports to catalogue)), backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
+    private val films = "http://provider.example.com/films.m3u"
+    private val twoFilms = """
+        #EXTM3U
+        #EXTINF:5400 group-title="Movies",Quiet Water (2021)
+        http://provider.example.com/quiet.mp4
+        #EXTINF:6000 group-title="Movies",Glass City (2019)
+        http://provider.example.com/glass.mp4
+    """.trimIndent()
+
+    private fun TestScope.device(name: String, http: FakeHttp = FakeHttp(mapOf(list to catalogue, sports to catalogue, films to twoFilms))) =
+        OndoRepository(AppStore(folder.newFolder(name)), http, backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
 
     private suspend fun OndoRepository.ready(): OndoRepository {
         bootstrap()
@@ -54,34 +63,175 @@ class SyncDataTest {
 
     private fun OndoState.favorite(itemId: String) = library.isFavorite(activePlaylistId.orEmpty(), ItemKind.MOVIE, itemId)
 
+    private fun LibraryState.people() = favorites.filter { it.kind == ItemKind.PERSON }.map { it.title to it.imageUrl }
+
+    private fun UserCollection.people() = items.filter { it.kind == ItemKind.PERSON }.map { it.title to it.imageUrl }
+
+    private fun LibraryState.collection(name: String) = collections.single { it.name == name }
+
+    /** Two Android TV boxes, one the client of the other: people in My List and in collections go both ways. */
     @Test
-    fun thePeopleKeptStayOnTheDevice() = runTest {
+    fun thePeopleKeptAndTheCollectionsReachTheOtherBoxAndRemovalsFollow() = runTest {
+        val living = device("living").ready()
+        val bedroom = device("bedroom").ready()
+        living.addPlaylist("Home", list)
+        val movie = living.state.value.content.movies.single()
+        time += 1_000
+        living.togglePerson("Ada Example", "https://image.example.com/ada.jpg")
+        val directors = living.createCollection("Directors")
+        living.toggleInCollection(directors, ItemKind.MOVIE, movie.id, movie.name, null)
+        living.togglePersonInCollection(directors, "Ada Example", null)
+        val actors = living.createCollection("Actors")
+        living.togglePersonInCollection(actors, "Tom Example", "https://image.example.com/tom.jpg")
+
+        session(bedroom, living)
+        val arrived = bedroom.state.value.library
+        assertEquals(listOf("Ada Example" to "https://image.example.com/ada.jpg"), arrived.people())
+        assertEquals(setOf(ItemKind.MOVIE, ItemKind.PERSON), arrived.collection("Directors").items.mapTo(HashSet()) { it.kind })
+        assertEquals(listOf("Tom Example" to "https://image.example.com/tom.jpg"), arrived.collection("Actors").people())
+        // Nothing changes at the next session, on either box.
+        val before = living.state.value.library to bedroom.state.value.library
+        session(bedroom, living)
+        assertEquals(before, living.state.value.library to bedroom.state.value.library)
+
+        // Taken out on the bedroom box: gone from the living room box too.
+        time += 1_000
+        bedroom.togglePerson("Ada Example", null)
+        bedroom.togglePersonInCollection(actors, "Tom Example", null)
+        assertEquals(time, bedroom.state.value.library.syncDeleted["person:ada example"])
+        session(bedroom, living)
+        assertTrue(living.state.value.library.people().isEmpty())
+        assertTrue(living.state.value.library.collection("Actors").items.isEmpty())
+        assertEquals(1, living.state.value.library.collection("Directors").items.count { it.kind == ItemKind.PERSON })
+
+        // Kept again on the living room box later: back on both.
+        time += 1_000
+        living.togglePerson("ADA EXAMPLE", null)
+        session(bedroom, living)
+        assertEquals(listOf("ADA EXAMPLE" to null), bedroom.state.value.library.people())
+    }
+
+    /** A box on an older build sends no people: absence removes nothing, only a dated removal does. */
+    @Test
+    fun aDeviceThatDoesNotKnowPeopleRemovesNone() = runTest {
+        val tv = device("tv").ready()
+        tv.addPlaylist("Home", list)
+        val movie = tv.state.value.content.movies.single()
+        time += 1_000
+        tv.togglePerson("Ada Example", null)
+        val directors = tv.createCollection("Directors")
+        tv.toggleInCollection(directors, ItemKind.MOVIE, movie.id, movie.name, null)
+        tv.togglePersonInCollection(directors, "Ada Example", null)
+        val kept = tv.state.value.library
+
+        // What an older build answers: the same records without `people`, the list at the same time.
+        val sent = requireNotNull(tv.syncSnapshot("tv"))
+        val old = sent.copy(device = "old", people = emptyList(), lists = sent.lists.map { it.copy(people = emptyList()) })
+        tv.mergeSync(SyncSnapshot.decode(old.encoded().decodeToString().replace(",\"people\":[]", "").encodeToByteArray())!!, "tv")
+        assertEquals(kept.people(), tv.state.value.library.people())
+        assertEquals(kept.collections, tv.state.value.library.collections)
+    }
+
+    /** A change made between the answer arriving and its merge is kept: the merge reads the library as it is then. */
+    @Test
+    fun aChangeMadeWhileTheAnswerIsOnItsWayIsKept() = runTest {
         val tv = device("tv").ready()
         val phone = device("phone").ready()
         tv.addPlaylist("Home", list)
         val movie = tv.state.value.content.movies.single()
+        session(phone, tv)
+        phone.state.first { it.content.movies.isNotEmpty() }
+
         time += 1_000
-        tv.togglePerson("Ada Example", "https://image.example.com/ada.jpg")
-        val weekend = tv.createCollection("Weekend")
-        tv.toggleInCollection(weekend, ItemKind.MOVIE, movie.id, movie.name, null)
-        tv.togglePersonInCollection(weekend, "Ada Example", null)
+        val answer = requireNotNull(tv.mergeSync(requireNotNull(phone.syncSnapshot("phone")), "tv"))
+        time += 1_000
+        phone.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        phone.togglePerson("Ada Example", null)
+        phone.mergeSync(answer, "phone")
+        assertTrue(phone.state.value.favorite(movie.id))
+        assertEquals(listOf("Ada Example" to null), phone.state.value.library.people())
+    }
 
-        // Nothing of the person travels (Apple devices keep no people)…
-        val sent = requireNotNull(tv.syncSnapshot("tv"))
-        assertTrue(sent.favorites.none { it.kind == "person" })
-        assertTrue(sent.lists.single().items.none { it.kind == "person" })
+    /** Two boxes playing two films, with sessions both ways in between: each position moves only forward. */
+    @Test
+    fun twoBoxesPlayingTwoFilmsKeepBothPositions() = runTest {
+        val living = device("living").ready()
+        val bedroom = device("bedroom").ready()
+        living.addPlaylist("Films", films)
+        session(bedroom, living)
+        bedroom.state.first { it.content.movies.size == 2 }
+        val (quiet, glass) = living.state.value.content.movies.sortedBy { it.name }.let { it[1] to it[0] }
+        val quietKey = requireNotNull(living.playRequest(quiet)?.progressKey)
+        val glassKey = requireNotNull(bedroom.playRequest(bedroom.state.value.content.movies.single { it.name == glass.name })?.progressKey)
+        fun OndoRepository.position(key: String) = state.value.library.progress(key)?.position
 
-        // …and a session leaves them where they were.
-        session(tv, phone)
-        val kept = tv.state.value.library
-        assertEquals(listOf("Ada Example"), kept.favorites.filter { it.kind == ItemKind.PERSON }.map { it.title })
-        assertEquals(setOf(ItemKind.MOVIE, ItemKind.PERSON), kept.collections.single().items.mapTo(HashSet()) { it.kind })
-        assertTrue(phone.state.value.library.favorites.none { it.kind == ItemKind.PERSON })
+        for (minute in 1..4) {
+            time += 30_000
+            living.recordProgress(quietKey, minute * 60.0, 5_400.0)
+            if (minute % 2 == 0) session(bedroom, living) else session(living, bedroom)
+            time += 30_000
+            bedroom.recordProgress(glassKey, minute * 90.0, 6_000.0)
+            if (minute % 2 == 0) session(living, bedroom) else session(bedroom, living)
+            for (box in listOf(living, bedroom)) {
+                assertEquals(minute * 60.0, box.position(quietKey)!!, 0.0)
+                assertEquals(minute * 90.0, box.position(glassKey)!!, 0.0)
+            }
+        }
+    }
 
-        // Taken out again: nothing is recorded as deleted for sync.
-        tv.togglePerson("Ada Example", null)
-        assertTrue(tv.state.value.library.favorites.none { it.kind == ItemKind.PERSON })
-        assertTrue(tv.state.value.library.syncDeleted.keys.none { "person" in it })
+    /**
+     * A session while a film plays: the catalogue is not downloaded again, and the position the player writes next
+     * (later than the other box's) is the one kept.
+     */
+    @Test
+    fun aSessionDuringPlaybackReloadsNothingAndThePlayerKeepsItsPosition() = runTest {
+        val tvHttp = FakeHttp(mapOf(list to catalogue))
+        val tv = device("tv", tvHttp).ready()
+        val phone = device("phone").ready()
+        tv.addPlaylist("Home", list)
+        session(phone, tv)
+        phone.state.first { it.content.movies.isNotEmpty() }
+        val movie = tv.state.value.content.movies.single()
+        val key = requireNotNull(tv.playRequest(movie)?.progressKey)
+        time += 1_000
+        tv.recordProgress(key, 600.0, 5_400.0)
+
+        // The phone moved the same film elsewhere meanwhile.
+        time += 1_000
+        phone.recordProgress(requireNotNull(phone.playRequest(phone.state.value.content.movies.single())?.progressKey), 1_800.0, 5_400.0)
+        val downloads = tvHttp.requests.count { it.first == list }
+        val active = tv.state.value.activePlaylistId
+        session(phone, tv)
+        assertEquals(downloads, tvHttp.requests.count { it.first == list })
+        assertEquals(active, tv.state.value.activePlaylistId)
+
+        // The player's next report, later than the phone's, wins on both devices.
+        time += 1_000
+        tv.recordProgress(key, 610.0, 5_400.0)
+        session(phone, tv)
+        assertEquals(610.0, tv.state.value.library.progress(key)!!.position, 0.0)
+        assertEquals(610.0, phone.state.value.library.continueWatching(phone.state.value.activePlaylistId!!).single().position, 0.0)
+    }
+
+    /** A box whose clock runs a day ahead cannot date a removal in the future: it is left out until its time comes. */
+    @Test
+    fun aClockAheadDoesNotWinOverLaterChanges() = runTest {
+        val tv = device("tv").ready()
+        tv.addPlaylist("Home", list)
+        val movie = tv.state.value.content.movies.single()
+        time += 1_000
+        tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        val key = SyncKeys.favorite(tv.state.value.library.favorites.single())
+        val ahead = SyncSnapshot(device = "ahead", deleted = mapOf(key to time + 86_400_000L))
+
+        time += 1_000
+        tv.mergeSync(ahead, "tv")
+        assertTrue(tv.state.value.favorite(movie.id))
+        assertNull(tv.state.value.library.syncDeleted[key])
+        // Its time come, the removal applies like any other.
+        time += 86_400_000L
+        tv.mergeSync(ahead, "tv")
+        assertFalse(tv.state.value.favorite(movie.id))
     }
 
     @Test
