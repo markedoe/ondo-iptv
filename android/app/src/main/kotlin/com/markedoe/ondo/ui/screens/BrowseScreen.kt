@@ -12,7 +12,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -39,6 +39,8 @@ import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
+import com.markedoe.ondo.ui.tv.TvSortChoice
+import com.markedoe.ondo.ui.tv.upToTheSortChip
 import com.markedoe.ondo.ui.tv.TV_GRID_COLUMNS
 import com.markedoe.ondo.ui.tv.KeptForTheRemote
 import com.markedoe.ondo.ui.tv.LocalTvTopBar
@@ -67,8 +69,9 @@ fun browseTitle(state: BrowseUiState): String = when (state.kind) {
 
 /**
  * The titles of the playlist sharing a value tapped on a movie's or a series' page. On a TV under the top bar, no row
- * of its own above them: the bar's Categories pill names the page and holds its order ([TvTopBarCategories]), Back on
- * the remote goes back, and Down from the bar lands on the first poster (an award's festival comes after the titles).
+ * of its own above them: the page's name above the first row, its order as a chip at the end of that line (Up from the
+ * first row), Back on the remote goes back, and Down from the bar lands on the first poster (an award's festival comes
+ * after the titles).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -85,10 +88,14 @@ fun BrowseScreen(
 ) {
     val metrics = rememberShelfMetrics()
     val title = browseTitle(state)
-    // On a TV, the top bar names the page and holds its order.
+    // On a TV, the label's line names the page and holds its order.
     val inTheBar = LocalTvTopBar.current != null
     // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more.
-    TvHeaderAbove(fallback = state.movies.firstOrNull() ?: state.series.firstOrNull()) { modifier, top, posterOnly ->
+    TvHeaderAbove(
+        fallback = state.movies.firstOrNull() ?: state.series.firstOrNull(),
+        label = title.takeIf { inTheBar },
+        sort = TvSortChoice(sort, onSort).takeIf { inTheBar },
+    ) { modifier, top, posterOnly ->
         LazyVerticalGrid(
             // On a TV under the header, five across, as a category's grid.
             columns = if (posterOnly) GridCells.Fixed(TV_GRID_COLUMNS) else GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
@@ -120,8 +127,8 @@ fun BrowseScreen(
                     }
                 }
             }
-            titles(R.string.movies, state.movies, onOpen, facts.takeUnless { posterOnly }, posterOnly)
-            titles(R.string.series, state.series, onOpen, facts.takeUnless { posterOnly }, posterOnly)
+            titles(R.string.movies, state.movies, onOpen, facts.takeUnless { posterOnly }, posterOnly, first = true)
+            titles(R.string.series, state.series, onOpen, facts.takeUnless { posterOnly }, posterOnly, first = state.movies.isEmpty())
             // On a TV, the festival after the titles: Down from the bar goes straight to the first poster.
             if (inTheBar) state.festival?.let { festival -> fullWidth { FestivalLink(festival, onFestival) } }
             if (state.movies.isEmpty() && state.series.isEmpty()) {
@@ -152,10 +159,19 @@ private fun FestivalLink(festival: String, onFestival: (String) -> Unit) {
 
 private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }
 
-private fun LazyGridScope.titles(title: Int, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit, facts: Map<String, PosterFacts>?, posterOnly: Boolean) {
+/** [posters] under their [title]; Up from the first row of the [first] titles reaches the page's sort chips. */
+private fun LazyGridScope.titles(title: Int, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit, facts: Map<String, PosterFacts>?, posterOnly: Boolean, first: Boolean) {
     if (posters.isEmpty()) return
     fullWidth { Text(stringResource(title), style = MaterialTheme.typography.titleLarge) }
-    items(posters, key = { it.key }) { item ->
-        PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = !posterOnly, facts = facts?.get(item.key), showsFacts = facts != null)
+    itemsIndexed(posters, key = { _, it -> it.key }) { index, item ->
+        PosterCard(
+            item,
+            width = null,
+            onClick = { onOpen(item) },
+            modifier = if (first && index < TV_GRID_COLUMNS) Modifier.upToTheSortChip() else Modifier,
+            showsTitle = !posterOnly,
+            facts = facts?.get(item.key),
+            showsFacts = facts != null,
+        )
     }
 }

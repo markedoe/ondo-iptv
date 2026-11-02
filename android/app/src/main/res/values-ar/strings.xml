@@ -45,6 +45,7 @@
     <string name="sort_playlist_order">ترتيب قائمة التشغيل</string>
     <string name="sort_release_date">تاريخ الإصدار</string>
     <string name="sort_rating">التقييم</string>
+    <string name="sort_by">الترتيب: %1$s</string>
     <string name="back">رجوع</string>
     <string name="close">إغلاق</string>
     <string name="no_channel_number">لا توجد قناة رقم %1$d</string>

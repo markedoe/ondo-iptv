@@ -29,7 +29,6 @@ import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
-import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -145,19 +144,6 @@ class TelevisionPosterFactsTest {
         check(focused() == title) { "never reached $title; the focus is on ${focused()}" }
     }
 
-    /**
-     * A category of the tab shown ([name]; All: every title), chosen as the viewer does: Up to the top bar, Right along
-     * it to the Categories pill, OK, then down the picker (it opens on All) to it, OK.
-     */
-    private fun chooseCategory(name: String) {
-        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
-        press(Key.DirectionCenter)
-        waitFor { focusedTag() == "categoryAll" }
-        pressUntil(Key.DirectionDown) { focused() == name }
-        press(Key.DirectionCenter)
-    }
-
     @Test
     fun theHeaderShowsTheFocusedPostersRatingAndGenres() {
         start()
@@ -165,9 +151,7 @@ class TelevisionPosterFactsTest {
         pressUntil(Key.DirectionRight) { focusedTag() == "tabMovies" }
         press(Key.DirectionCenter)
         waitFor { exists("vod") && !focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        chooseCategory("All")
-        waitFor { exists("grid") && focusedIn("grid") }
+        // The Movies tab's rows: the header shows the poster the remote is on.
         pressUntil(Key.DirectionDown, max = 20) { focused() in movieTitles }
         // TMDb's, kept on the device: its rating with TMDb's badge, its genres.
         reach("Northern Lights")

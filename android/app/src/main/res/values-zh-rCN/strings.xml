@@ -45,6 +45,7 @@
     <string name="sort_playlist_order">播放列表顺序</string>
     <string name="sort_release_date">上映日期</string>
     <string name="sort_rating">评分</string>
+    <string name="sort_by">排序：%1$s</string>
     <string name="back">返回</string>
     <string name="close">关闭</string>
     <string name="no_channel_number">没有 %1$d 号频道</string>

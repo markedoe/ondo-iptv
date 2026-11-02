@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -31,7 +33,6 @@ import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
-import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -156,6 +157,8 @@ class TelevisionScrollTest {
 
     private fun focusedTag(): String = focusedNode()?.config?.getOrNull(SemanticsProperties.TestTag).orEmpty()
 
+    private fun focusedIn(tag: String) = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(tag))).fetchSemanticsNodes().isNotEmpty()
+
     private fun focused(): String = focusedNode()?.let { node ->
         node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
             ?: node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ")
@@ -190,16 +193,10 @@ class TelevisionScrollTest {
      * Along a row, the focus moves over the cards on screen and the row stays still; only near the right edge does
      * the row move, by the same step at every press, the focused card whole on screen with the next one beside it.
      */
-    /**
-     * A category of the tab shown ([name]; All: every title), chosen as the viewer does: Up to the top bar, Right along
-     * it to the Categories pill, OK, then down the picker (it opens on All) to it, OK.
-     */
-    private fun chooseCategory(name: String) {
-        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
-        press(Key.DirectionCenter)
-        waitFor { focusedTag() == "categoryAll" }
-        pressUntil(Key.DirectionDown) { focused() == name }
+    /** A category's titles, opened as the viewer does: down to its row ([id]), Right along it to See all, OK. */
+    private fun seeAll(id: String) {
+        pressUntil(Key.DirectionDown, max = 20) { focusedIn("shelf:$id") }
+        pressUntil(Key.DirectionRight, max = 15) { focusedTag() == "seeAll" || focusedIn("seeAll") }
         press(Key.DirectionCenter)
     }
 
@@ -233,15 +230,15 @@ class TelevisionScrollTest {
     }
 
     @Test
-    fun backLandsOnThePosterItLeftFarDownAllMovies() {
+    fun backLandsOnThePosterItLeftFarDownACategorysTitles() {
         start()
         openTab(1, "vod")
-        // The top bar's Categories pill: All opens every movie in a grid.
-        chooseCategory("All")
+        // A category's titles, from its row's See all card.
+        seeAll(categories[1].id)
         waitFor { exists("grid") }
         settle(1_000)
         pressUntil(Key.DirectionDown, max = 20) { focused().startsWith("Film") }
-        press(Key.DirectionDown, times = 12)
+        press(Key.DirectionDown, times = 2)
         press(Key.DirectionRight)
         openAndComeBack("grid")
     }

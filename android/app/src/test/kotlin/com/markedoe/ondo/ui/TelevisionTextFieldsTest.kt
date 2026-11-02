@@ -134,7 +134,7 @@ class TelevisionTextFieldsTest {
     }
 
     /** The tab page on screen, for a failure's trail. */
-    private fun pageShown(): String = listOf("home", "vod", "live", "myList", "grid", "settings", "categoryFilter").filter(::exists).joinToString("+")
+    private fun pageShown(): String = listOf("home", "vod", "live", "myList", "grid", "settings").filter(::exists).joinToString("+")
 
     private fun focusedNode(): SemanticsNode? = compose.onAllNodes(isFocused()).fetchSemanticsNodes().lastOrNull()
 

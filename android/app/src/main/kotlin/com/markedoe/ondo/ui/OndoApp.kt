@@ -85,7 +85,6 @@ import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.BrowseScreen
 import com.markedoe.ondo.ui.screens.BrowseUiState
-import com.markedoe.ondo.ui.screens.browseTitle
 import com.markedoe.ondo.ui.screens.CategoriesActions
 import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.CollectionActions
@@ -129,10 +128,7 @@ import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvCategoriesScreen
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
-import com.markedoe.ondo.ui.tv.TvCategoryChoice
-import com.markedoe.ondo.ui.tv.TvSortChoice
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
-import com.markedoe.ondo.ui.tv.TvTopBarCategories
 import com.markedoe.ondo.ui.tv.TvSearchScreen
 import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
 import com.markedoe.ondo.ui.tv.TvSettingsScreen
@@ -420,12 +416,15 @@ private fun NavHostController.openTab(tab: TopLevel) {
 }
 
 /**
- * A tab chosen on a TV's bar. The tab shown, chosen from a page of its own (a category's titles), goes back to the
- * tab's page: [openTab] would bring back the same page, kept with the tab.
+ * A tab chosen on a TV's bar opens on the tab's own page, always: its rows, never a category's titles opened from them.
+ * The tab shown, chosen from a page of its own (a category's titles), goes back to the tab's page; another tab brings
+ * back its page as it was left (its scroll, its focus), without the pages opened over it, which [openTab] would restore
+ * with it.
  */
 private fun NavHostController.openTabFromBar(tab: TopLevel, reselected: Boolean) {
     if (reselected && popBackStack(tab.route, inclusive = false)) return
     openTab(tab)
+    popBackStack(tab.route, inclusive = false)
 }
 
 /**
@@ -689,8 +688,6 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
     val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found, sort) {
         withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found, sort) }
     }
-    // On a TV, the top bar's pill names the page (the genre, the year, the award) and holds its order.
-    if (isTelevision()) TvTopBarCategories(TvCategoryChoice.page(browseTitle(browse), TvSortChoice(sort, viewModel::setPosterSort)))
     BrowseScreen(
         browse,
         onOpen = navController::open,
@@ -765,39 +762,6 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
     val items by produceKept("grid", emptyList<ShowcaseItem>(), state, route, query, sort) {
         withContext(Dispatchers.Default) {
             UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
-        }
-    }
-    // On a TV, the top bar's Categories pill names the category shown (another chosen there replaces this page), or the
-    // page (My List, every title of both types), and holds the posters' order.
-    if (isTelevision()) {
-        val order = TvSortChoice(
-            sort,
-            viewModel::setPosterSort,
-            hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
-            onHideWatched = viewModel::setHideWatchedMovies,
-        )
-        if (!route.myList && !route.anyType) {
-            val vod by (if (route.series) viewModel.series else viewModel.movies).collectAsStateWithLifecycle()
-            val categories = vod?.categories.orEmpty()
-            val shown = route.categoryId?.let { id -> (if (route.series) state.content.seriesCategories else state.content.movieCategories).firstOrNull { it.id == id } }
-            TvTopBarCategories(
-                TvCategoryChoice(
-                    categories = categories,
-                    locked = vod?.lockedCategoryIds.orEmpty(),
-                    selected = shown,
-                    onChoose = { category ->
-                        if (category?.id != route.categoryId) {
-                            navController.navigate(Routes.Grid(series = route.series, categoryId = category?.id)) {
-                                popUpTo<Routes.Grid> { inclusive = true }
-                            }
-                        }
-                    },
-                    onManage = { navController.navigate(Routes.Categories(if (route.series) "series" else "movie")) },
-                    sort = order,
-                ),
-            )
-        } else {
-            TvTopBarCategories(TvCategoryChoice.page(title, order))
         }
     }
     CompositionLocalProvider(LocalShowsMyList provides route.myList) {

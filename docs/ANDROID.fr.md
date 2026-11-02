@@ -50,18 +50,20 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   la première carte et la première rangée s'affiche entière juste dessous (pas de filtres entre les deux ; une rangée
   défile pour se montrer, jamais masquée) ; Bas mène à cette carte, son titre déjà dans l'en-tête (la première affiche
   atteinte s'affiche aussitôt, sans attente) ; Bas encore, la rangée suivante monte entière et l'en-tête suit. Les
-  catégories sont une pastille Catégories dans la barre du haut, avant Recherche (Haut depuis la première rangée
-  atteint la barre, Droite la parcourt) : OK ouvre un choix avec Tout, chaque catégorie et Langues et catégories ;
-  elle porte le nom de la catégorie montrée sur les titres d'une catégorie (`TvCategoryPicker.kt`). La barre du haut
-  n'affiche aucune ligne de playlist (Réglages → Playlists indique quand chacune a été mise à jour) : la pastille a la
-  place pour le nom d'une catégorie, raccourci seulement s'il est très long. Les titres d'une catégorie et les pages
-  de genre, d'année et de prix sur TV commencent par leurs affiches juste sous l'en-tête : pas de rangée Retour (le
-  Retour de la télécommande revient en arrière), pas de titre (la pastille nomme la catégorie, ou le genre, l'année ou
-  le prix), pas de bouton Trier ni de champ de filtre (la Recherche trouve un titre) ; Bas depuis l'onglet mène à la
-  première affiche, son titre aussitôt dans l'en-tête. Le festival d'un prix vient après ses titres.
+  rangées sont toujours la page de l'onglet : aucune catégorie n'est choisie au-dessus. Les titres d'une catégorie
+  s'ouvrent depuis la carte Tout voir au bout de sa rangée, comme une page par-dessus les rangées : Retour revient à
+  la même rangée et à la même carte, les rangées défilées comme avant, et l'onglet choisi dans la barre (OK dessus, ou
+  un autre onglet puis celui-ci) montre de nouveau ses rangées. La barre du haut ne porte que les onglets, Recherche et
+  Réglages, aucune ligne de playlist (Réglages → Playlists indique quand chacune a été mise à jour) ; les catégories
+  montrées se choisissent dans Réglages → Langues et catégories. Les titres d'une catégorie et les pages de genre,
+  d'année et de prix sur TV commencent par leurs affiches juste sous l'en-tête : pas de rangée Retour (le Retour de la
+  télécommande revient en arrière), le nom de la page sur une ligne au-dessus de la première rangée, pas de champ de
+  filtre (la Recherche trouve un titre) ; Bas depuis l'onglet mène à la première affiche, son titre aussitôt dans
+  l'en-tête. Le festival d'un prix vient après ses titres.
 - **Tri** : la grille d'une catégorie et les pages de genre, d'année, de prix et de festival partagent un même ordre
-  (`AppSettings.posterSort`, le bouton Trier au-dessus des affiches sur téléphone ; sur TV, dans le choix de la
-  pastille Catégories, à côté des catégories, avec Masquer les films déjà vus) : ordre de la playlist
+  (`AppSettings.posterSort`, le bouton Trier au-dessus des affiches sur téléphone ; sur TV, la puce « Tri : … » au
+  bout de la ligne du nom de la page, que Haut depuis la première rangée atteint, avec une puce Masquer les films déjà
+  vus pour les films (`TvSortMenu.kt`) ; Bas depuis l'onglet ne s'y arrête jamais) : ordre de la playlist
   (sur ces pages, leur propre ordre), nom, date d'ajout, date de sortie ou note. Les titres d'un genre trouvés via
   TMDb sont triés avec les autres (`UiMappers.browse`).
 - **Affiches sur TV** : maintenir OK sur une affiche ajoute le titre à Ma liste ou l'en retire (un
@@ -180,10 +182,10 @@ libres, chaînes inventées, adresses `example.com`) :
 - **Captures de référence**, en demi-taille, versionnées dans `android/app/src/test/snapshots/` : les écrans du store
   de la TV (anglais et français) et du téléphone (anglais), et les onglets de la TV tels que la télécommande les laisse
   (`TvScreenshots` : Films avec une rangée sélectionnée, le parcours onglet → Bas → Bas sur Films et sur Séries
-  (`movies-tab-focused`, `movies-down-1`, `movies-down-2`, `series-…`), le choix des catégories ouvert, les titres
-  d'une catégorie depuis l'onglet puis Bas (`grid-category`, `grid-down-1`) et loin dans une longue grille
-  (`grid-down-3`), le choix là avec l'ordre à côté des
-  catégories (`picker-with-sort`), les titres d'un genre (`browse-genre`), Accueil avec la télécommande dans ses
+  (`movies-tab-focused`, `movies-down-1`, `movies-down-2`, `series-…`), les titres d'une catégorie depuis l'onglet
+  puis Bas (`grid-category`, `grid-down-1`), leurs puces de tri atteintes avec Haut (`grid-sort-chips`) et loin dans
+  une longue grille (`grid-down-3`), les rangées après Retour depuis les titres d'une catégorie, le focus sur sa carte
+  Tout voir (`rows-after-back`), les titres d'un genre (`browse-genre`), Accueil avec la télécommande dans ses
   rangées).
 
 Le workflow *Android* compare chaque capture à sa référence (`./gradlew :app:verifyRoborazziDebug`) ; au plus 0,1 %
@@ -202,11 +204,14 @@ de la fusionner.
 Ce qu'une image ne prouve pas a ses propres tests : `TvLayoutRegressionTest` (l'image de l'en-tête depuis le haut de
 l'écran et cadrée vers son haut, aucune ligne de playlist dans la barre du haut (Accueil, Films, Séries, titres d'une
 catégorie et d'un genre), chaque type de rangée entier sous l'en-tête en 960 × 540 dp, le parcours onglet → Bas → Bas
-sur Films et Séries avec l'en-tête sur le titre sélectionné avant son attente, la pastille Catégories atteinte avec
-Haut puis Droite et son choix, le nom d'une catégorie entier sur la pastille, les titres d'une catégorie et d'un genre
-sans rangée à eux au-dessus des affiches, Bas depuis l'onglet sur la première affiche, l'ordre choisi dans le choix
-de la pastille, la grille d'une catégorie à cinq affiches par rangée qui défile par rangées entières vers le bas et
-vers le haut, et une rangée de Films d'environ cinq affiches de large).
+sur Films et Séries avec l'en-tête sur le titre sélectionné avant son attente, une barre du haut avec les seuls
+onglets, Recherche et Réglages, le nom d'une catégorie entier sur sa ligne, les titres d'une catégorie et d'un genre
+sans rangée à eux au-dessus des affiches, Bas depuis l'onglet sur la première affiche et jamais sur une puce de tri,
+l'ordre choisi avec la puce Tri atteinte par Haut depuis la première rangée, la grille d'une catégorie à cinq affiches
+par rangée qui défile par rangées entières vers le bas et vers le haut, et une rangée de Films d'environ cinq affiches
+de large) ; `TelevisionFocusTest` (Tout voir ouvre les titres d'une catégorie et Retour revient à la même rangée et à
+la même carte, défilées comme avant ; un autre onglet puis Films de nouveau montre les rangées ; Ondo relancé montre
+les rangées).
 
 ### Avant de modifier un écran TV (liste anti-régressions)
 
@@ -217,7 +222,7 @@ vers le haut, et une rangée de Films d'environ cinq affiches de large).
 4. Toutes les différences sont voulues : enregistrer de nouvelles références (*record_screenshots*) et vérifier les
    images versionnées. L'une ne l'est pas : corriger le changement, jamais la référence.
 5. Vérifier en 960 × 540 dp que chaque rangée (son nom, ses cartes et leurs lignes) tient sous l'en-tête, que la
-   barre du haut n'affiche aucune ligne de playlist, et que la pastille Catégories lit le nom d'une catégorie en entier.
+   barre du haut n'affiche aucune ligne de playlist, et que le nom d'une catégorie se lit en entier au-dessus de ses titres.
 6. Vérifier le parcours onglet → Bas → Bas avec les captures, sur Films et sur Séries (`movies-tab-focused`,
    `movies-down-1`, `movies-down-2` et de même pour `series`) : sur l'onglet, la première rangée entière sous
    l'en-tête et aucune zone vide ; à chaque Bas, le titre de la carte sélectionnée aussitôt dans l'en-tête. De même

@@ -46,6 +46,7 @@
     <string name="sort_playlist_order">Playlist order</string>
     <string name="sort_release_date">Release date</string>
     <string name="sort_rating">Rating</string>
+    <string name="sort_by">Sort: %1$s</string>
     <string name="back">Back</string>
     <string name="close">Close</string>
     <!-- The player, when the number typed on the remote matches no channel. -->

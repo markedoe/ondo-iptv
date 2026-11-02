@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,8 +49,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -83,12 +80,6 @@ class TvTopBar {
     internal class Page(val toTop: suspend () -> Unit, val memory: FocusMemory?)
 
     internal var page: Page? by mutableStateOf(null)
-
-    /**
-     * The page's Categories pill ([TvTopBarCategories]): next to Search on the Movies and Series tabs, a category's
-     * titles and a genre's, a year's or an award's (their name and their order); none on other pages.
-     */
-    internal var categories: TvCategoryHolder? by mutableStateOf(null)
 
     /** The page draws a picture under the bar ([TvTopBarOverArt]): the bar's band is a shade over it, not a wall. */
     internal var overArt: Any? by mutableStateOf(null)
@@ -151,8 +142,8 @@ fun rememberTabGridState(): LazyGridState {
 
 /**
  * The TV's navigation: a bar always at the top of the tab pages, which scroll under it. Ondo's mark, the tabs, then
- * the page's Categories pill (the Movies and Series tabs, a category's or a genre's titles: their name, their order),
- * Search and Settings at the far end. [selected] is the tab shown. A category's or a genre's titles keep the bar
+ * Search and Settings at the far end: nothing of the page's own (a category's titles name themselves and hold their
+ * order above their posters, [TvHeaderAbove]). [selected] is the tab shown. A category's or a genre's titles keep the bar
  * ([showBar]) on the tab they belong to, though no tab page ([tabPage] false: Back goes back to the page before).
  * Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen ([showBar] false).
  *
@@ -185,22 +176,7 @@ fun TvNavigationFrame(
     fun below(): FocusRequester = pages
     val atHome = selected == TopLevel.HOME
     val shownTab = rememberUpdatedState(selected)
-    // The Categories pill's picker is open ([TvCategoryPicker]), drawn over the page below the pill.
-    var picking by remember { mutableStateOf(false) }
-    var frameCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    var pillCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    // The categories of the tab shown, or of the page beyond it (a category's, a genre's titles): a tab page still
-    // fading out as another tab opens keeps none in the bar (the pill would leave under the remote, the focus with it).
-    val categories = bar.categories?.choice?.takeIf { selected == TopLevel.MOVIES || selected == TopLevel.SERIES || !tabPage }
-    val pickerChoice = categories?.takeIf { showBar }
-    // The page leaves with its categories: nothing left to pick.
-    if (picking && pickerChoice == null) SideEffect { picking = false }
-    fun closePicker() {
-        // The pill takes the focus back before the picker leaves: the remote is never left nowhere.
-        runCatching { requester(CATEGORIES_TAG).requestFocus() }
-        picking = false
-    }
-    Box(Modifier.fillMaxSize().onGloballyPositioned { frameCoordinates = it }) {
+    Box(Modifier.fillMaxSize()) {
         // The pages start at the screen's top, under the bar: Down from the bar goes to them by name ([below]), as
         // nothing of theirs lies wholly below it.
         Box(Modifier.fillMaxSize().focusRequester(pages).focusGroup()) {
@@ -283,8 +259,7 @@ fun TvNavigationFrame(
                         }
                     }
                 }
-                // The page's Categories pill (Up from the rows reaches the bar, Right along it), at the end of the room
-                // the tabs leave before Search and Settings: it shrinks to its icon before they do.
+                // The room the tabs leave before Search and Settings.
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     // A tab about to open: a small spinner after the tabs, in the gap (it takes no room of its own).
                     if (openingTab != null) {
@@ -293,19 +268,6 @@ fun TvNavigationFrame(
                                 color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
                                 strokeWidth = 2.dp,
                                 modifier = Modifier.size(16.dp).testTag("tabOpening"),
-                            )
-                        }
-                    }
-                    categories?.let { choice ->
-                        // Clear of the spinner's place: the pill gives way first (its name cut short, then its icon alone).
-                        Box(Modifier.padding(start = PILL_CLEARANCE)) {
-                            TvCategoriesPill(
-                                choice,
-                                shown,
-                                requester(CATEGORIES_TAG),
-                                ::below,
-                                onOpen = { picking = true },
-                                modifier = Modifier.onGloballyPositioned { pillCoordinates = it },
                             )
                         }
                     }
@@ -333,34 +295,11 @@ fun TvNavigationFrame(
                 }
             }
         }
-        // Last: over the page and the bar, and its Back before the bar's.
-        if (picking && pickerChoice != null) {
-            val anchor = frameCoordinates?.let { frame -> pillCoordinates?.takeIf { it.isAttached }?.let { frame.localBoundingBoxOf(it) } }
-            if (anchor != null) {
-                TvCategoryPicker(pickerChoice, anchor) { choose ->
-                    closePicker()
-                    bar.browsing = false
-                    choose()
-                    // The page chosen takes the focus ([FocusEntry]); the same page shown, its first item does.
-                    scope.launch {
-                        repeat(ENTER_PAGE_FRAMES) {
-                            withFrameNanos { }
-                            if (!barHasFocus) return@launch
-                        }
-                        runCatching { pages.requestFocus() }
-                    }
-                }
-            }
-            BackHandler { closePicker() }
-        }
     }
 }
 
 /** The space between the bar's items. */
 private val BAR_GAP = 4.dp
-
-/** The room the Categories pill leaves after the tabs, for the spinner of a tab about to open. */
-private val PILL_CLEARANCE = 36.dp
 
 /** How much of the bar's lower edge the black band behind it takes to fade out. */
 private val BAND_FADE = 12.dp
@@ -370,7 +309,7 @@ private const val ENTER_PAGE_FRAMES = 30
 
 /**
  * How long the remote rests on a tab before it opens: longer than the time between two presses of a remote moving on
- * along the bar, so that the tabs it passes (towards the Categories pill, Search or Settings) do not open.
+ * along the bar, so that the tabs it passes (towards Search or Settings) do not open.
  */
 private const val TAB_REST_MS = 500L
 

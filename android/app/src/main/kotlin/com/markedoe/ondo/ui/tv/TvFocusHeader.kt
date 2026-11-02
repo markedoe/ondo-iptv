@@ -1,5 +1,9 @@
 package com.markedoe.ondo.ui.tv
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -232,10 +236,10 @@ fun TvPageBackdrop(item: ShowcaseItem?, backdropUrl: String?, modifier: Modifier
  * The header of a TV's Movies and Series tabs and of a category's posters, pinned above them: the words of [header]
  * (its title, year and genres, TMDb's rating, else the provider's, when it was added, and two lines of its synopsis)
  * over the page's picture ([TvPageBackdrop]), from the screen's very top under the top bar's shade. Its height never
- * changes.
+ * changes. [label] at its foot names the posters, [labelEnd] at the far end of that line (the page's sort chips).
  */
 @Composable
-fun TvFocusHeader(header: TitleHeader?, modifier: Modifier = Modifier, label: String? = null) {
+fun TvFocusHeader(header: TitleHeader?, modifier: Modifier = Modifier, label: String? = null, labelEnd: (@Composable () -> Unit)? = null) {
     val top = tvTopBarSpace()
     // The bar's band turns into a shade over the picture, from the screen's top.
     TvTopBarOverArt()
@@ -250,17 +254,24 @@ fun TvFocusHeader(header: TitleHeader?, modifier: Modifier = Modifier, label: St
             )
         }
         if (label != null) {
-            Text(
-                label,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
+            Row(
+                Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = TvTokens.ContentStart, end = TvTokens.EdgeEnd, bottom = 2.dp)
-                    .testTag("headerLabel"),
-            )
+                    .fillMaxWidth()
+                    .padding(start = TvTokens.ContentStart, end = TvTokens.EdgeEnd, bottom = 2.dp),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).testTag("headerLabel"),
+                )
+                labelEnd?.invoke()
+            }
         }
     }
 }
@@ -272,8 +283,9 @@ private val LABEL_ROOM = 24.dp
  * A page of posters under the TV's header ([TvFocusHeader]), pinned above it: [content] is given the modifier that
  * fills the room left, its top padding, and whether it is under the header (its posters can then show nothing beneath
  * them), [label] at its foot. Its list keeps the focused poster [lead] below its top; with [byRows] (a grid), the focused row's start at
- * its top padding ([TvRowPivotScrolling]): whole rows, none cut above it. Without a header (a phone), [content] fills
- * the page as it did.
+ * its top padding ([TvRowPivotScrolling]): whole rows, none cut above it. With [sort], the posters' order and Hide
+ * watched are chips at the far end of the label's line ([TvSortChips]), which Up from the first row reaches
+ * ([upToTheSortChip]). Without a header (a phone), [content] fills the page as it did.
  */
 @Composable
 fun TvHeaderAbove(
@@ -282,6 +294,8 @@ fun TvHeaderAbove(
     byRows: Boolean = false,
     /** The name of the posters, at the header's foot right above the first row (a category's). */
     label: String? = null,
+    /** The posters' order, as chips at the end of the label's line; only with [label]. */
+    sort: TvSortChoice? = null,
     content: @Composable (modifier: Modifier, top: Dp, underHeader: Boolean) -> Unit,
 ) {
     val headers = if (isTelevision()) LocalTitleHeaders.current else null
@@ -290,16 +304,55 @@ fun TvHeaderAbove(
         return
     }
     val focus = remember { FocusedTitle() }
-    CompositionLocalProvider(LocalFocusedTitle provides focus) {
+    val chips = sort?.takeIf { label != null }
+    val sortChip = remember { FocusRequester() }
+    // The chips take the remote only from the posters (Up from the first row), or while they or their menu have it.
+    var postersFocused by remember { mutableStateOf(false) }
+    var chipsFocused by remember { mutableStateOf(false) }
+    var sorting by remember { mutableStateOf(false) }
+    var page by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var chip by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    fun closeMenu() {
+        // The chip takes the focus back before the menu leaves: the remote is never left nowhere.
+        runCatching { sortChip.requestFocus() }
+        sorting = false
+    }
+    CompositionLocalProvider(LocalFocusedTitle provides focus, LocalSortChip provides sortChip.takeIf { chips != null }) {
         val header = rememberFocusHeader(fallback)
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().onGloballyPositioned { page = it }) {
             // The picture behind the whole page, the header's words and the posters over it.
             TvPageBackdrop(header?.item, header?.backdropUrl, Modifier.matchParentSize()) { item, url -> headers.backdropFailed(item, url) }
             Column(Modifier.fillMaxSize()) {
-                TvFocusHeader(header, label = label)
-                val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
+                TvFocusHeader(
+                    header,
+                    label = label,
+                    labelEnd = chips?.let { choice ->
+                        {
+                            TvSortChips(
+                                choice,
+                                sortChip,
+                                reachable = { postersFocused || chipsFocused || sorting },
+                                onOpen = { sorting = true },
+                                modifier = Modifier.onFocusChanged { chipsFocused = it.hasFocus },
+                                sortModifier = Modifier.onGloballyPositioned { chip = it },
+                            )
+                        }
+                    },
+                )
+                val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true).onFocusChanged { postersFocused = it.hasFocus }
                 // A grid sets its own scrolling once it knows its posters' height ([TvGridScrolling]).
                 if (byRows) content(rest, UNDER_HEADER_TOP, true) else TvPinnedHeaderList(lead) { content(rest, UNDER_HEADER_TOP, true) }
+            }
+            // Last: over the posters, and its Back before the page's.
+            if (sorting && chips != null) {
+                val anchor = page?.let { frame -> chip?.takeIf { it.isAttached }?.let { frame.localBoundingBoxOf(it) } }
+                if (anchor != null) {
+                    TvSortMenu(chips, anchor) { choose ->
+                        closeMenu()
+                        choose()
+                    }
+                }
+                BackHandler { closeMenu() }
             }
         }
     }

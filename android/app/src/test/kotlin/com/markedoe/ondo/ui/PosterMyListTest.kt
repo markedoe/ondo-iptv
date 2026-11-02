@@ -36,7 +36,6 @@ import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.PosterMyList
 import com.markedoe.ondo.ui.model.ShowcaseItem
-import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import com.markedoe.ondo.ui.tv.TvPosterCard
 import com.markedoe.ondo.ui.theme.OndoTheme
 import java.time.Duration
@@ -156,29 +155,22 @@ class PosterMyListTest {
 
     private fun movie(title: String) = Fixtures.content.movies.first { it.name == title }
 
-    /**
-     * A category of the tab shown ([name]; All: every title), chosen as the viewer does: Up to the top bar, Right along
-     * it to the Categories pill, OK, then down the picker (it opens on All) to it, OK.
-     */
-    private fun chooseCategory(name: String) {
-        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
-        press(Key.DirectionCenter)
-        waitFor { focusedTag() == "categoryAll" }
-        pressUntil(Key.DirectionDown) { focused() == name }
+    /** A category's titles, opened as the viewer does: down to its row ([id]), Right along it to See all, OK. */
+    private fun seeAll(id: String) {
+        pressUntil(Key.DirectionDown, max = 20) { focusedIn("shelf:$id") }
+        pressUntil(Key.DirectionRight, max = 15) { focusedTag() == "seeAll" || focusedIn("seeAll") }
         press(Key.DirectionCenter)
     }
 
     @Test
     fun okHeldOnACategorysPosterAddsItToMyListThenTakesItAway() {
         start()
-        // Movies, then a category's posters from the top bar's Categories pill.
+        // Movies, then a category's posters from its row's See all card.
         pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionRight) { focusedTag() == "tabMovies" }
         press(Key.DirectionCenter)
         waitFor { exists("vod") && !focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        chooseCategory("Drama")
+        seeAll(Fixtures.drama.id)
         waitFor { exists("grid") && focusedIn("grid") }
         pressUntil(Key.DirectionDown) { focused() == "Northern Lights" }
         val id = movie("Northern Lights").id

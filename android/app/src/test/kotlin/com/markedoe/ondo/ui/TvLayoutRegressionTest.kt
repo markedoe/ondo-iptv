@@ -60,18 +60,16 @@ import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvArtworkAlignment
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.LocalTvTopBar
-import com.markedoe.ondo.ui.tv.TvCategoryChoice
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
 import com.markedoe.ondo.ui.tv.TvTopBar
-import com.markedoe.ondo.ui.tv.TvTopBarCategories
-import com.markedoe.ondo.ui.tv.TvSortChoice
-import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
+import com.markedoe.ondo.ui.tv.HIDE_WATCHED_CHIP_TAG
+import com.markedoe.ondo.ui.tv.SEARCH_TAG
+import com.markedoe.ondo.ui.tv.SORT_CHIP_TAG
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.BrowseScreen
 import com.markedoe.ondo.ui.screens.BrowseUiState
 import com.markedoe.ondo.ui.screens.PosterGridScreen
-import com.markedoe.ondo.ui.screens.browseTitle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -95,9 +93,10 @@ import org.robolectric.annotation.Config
  * towards its top (faces stay whole); no line of the playlist in the top bar, on Home, the Movies and Series tabs, a
  * category's and a genre's titles; every row type whole below the header (its name, its cards and their lines) once the remote is in it;
  * the viewer's path on the Movies and Series tabs (on the tab, the first row whole below the header showing its first
- * title; Down, that card and its title at once; Down again, the next row), the Categories pill in the bar and its
- * picker; a category's and a genre's titles with no row of their own above them (the pill names them and holds their
- * order: Down from the tab lands on the first poster); a category's grid five posters a row, scrolled by whole rows
+ * title; Down, that card and its title at once; Down again, the next row), a top bar of tabs, Search and Settings
+ * only; a category's and a genre's titles with no row of their own above them (their name above the first row, their
+ * order and Hide watched as chips at the end of that line, which Up from the first row reaches: Down from the tab lands
+ * on the first poster, never on a chip); a category's grid five posters a row, scrolled by whole rows
  * (the focused row at its top, none cut above it), and a Movies row about five posters across; a focused card, grown, whole within its row at either end in both directions; and a continue watching card's
  * lines clear of its focus frame.
  */
@@ -245,7 +244,7 @@ class TvLayoutRegressionTest {
     @Test
     fun theSeriesTabShowsNoPlaylistLine() {
         show(TopLevel.SERIES) { VodScreen(VodUiState(title = "Series", categories = listOf(drama), rows = listOf(CategoryRow(drama, movies))), VodActions()) }
-        assertTrue(compose.onAllNodesWithTag(CATEGORIES_TAG).fetchSemanticsNodes().isNotEmpty())
+        assertTrue("no Categories pill in the bar", compose.onAllNodesWithTag("categoryFilter").fetchSemanticsNodes().isEmpty())
         assertFalse("no playlist line in the bar", playlistLineInTheBar())
     }
 
@@ -376,48 +375,29 @@ class TvLayoutRegressionTest {
     }
 
     /**
-     * The categories in the top bar: Up from the first row reaches the tab, Right along the bar the Categories pill; OK
-     * opens the picker on All, and a category chosen there is the one the tab opens.
+     * The top bar holds the tabs, Search and Settings, nothing of the page's: Up from the first row reaches the tab,
+     * Right along the bar goes from the last tab straight to Search.
      */
     @Test
-    fun upThenRightReachesTheCategoriesPillAndItsPicker() {
-        var chosen: MediaCategory? = null
-        show(TopLevel.MOVIES, onTab = true) { VodScreen(moviesPath, VodActions(onCategory = { chosen = it })) }
+    fun theTopBarHoldsTabsSearchAndSettingsOnly() {
+        show(TopLevel.MOVIES, onTab = true) { VodScreen(moviesPath, VodActions()) }
         press(Key.DirectionDown)
         advance(500)
         assertTrue(focusedIn("shelfResume"))
         press(Key.DirectionUp)
         advance(300)
-        assertTrue("Up from the first row lands on the tab", compose.onNodeWithTag("tabMovies").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
+        assertEquals("Up from the first row lands on the tab", "tabMovies", focusedTag())
+        assertTrue("no Categories pill", compose.onAllNodesWithTag("categoryFilter").fetchSemanticsNodes().isEmpty())
+        val along = mutableListOf<String?>()
         var presses = 0
-        while (compose.onAllNodes(isFocused() and hasTestTag("categoryFilter")).fetchSemanticsNodes().isEmpty()) {
-            check(presses++ < 8) { "Right along the bar never reached the Categories pill" }
+        while (focusedTag() != SEARCH_TAG) {
+            check(presses++ < 8) { "Right along the bar never reached Search: $along" }
             press(Key.DirectionRight)
             advance(50)
+            along += focusedTag()
         }
-        assertEquals("the pill reads Categories", listOf("Categories"), compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
-        assertTrue("the pill sits before Search", bounds("categoryFilter").right <= bounds("tabSearch").left + 0.5.dp)
-
-        press(Key.DirectionCenter)
-        advance(500)
-        assertTrue("the picker opens on All", compose.onAllNodes(isFocused() and hasTestTag("categoryAll")).fetchSemanticsNodes().isNotEmpty())
-        presses = 0
-        while (compose.onAllNodes(isFocused() and hasTestTag("category:m-comedy")).fetchSemanticsNodes().isEmpty()) {
-            check(presses++ < 6) { "Down along the picker never reached Comedy" }
-            press(Key.DirectionDown)
-            advance(50)
-        }
-        press(Key.DirectionCenter)
-        advance(500)
-        assertEquals(comedy, chosen)
-        assertTrue("the picker closed", compose.onAllNodesWithTag("categoryPicker").fetchSemanticsNodes().isEmpty())
+        assertTrue("only tabs before Search: $along", along.dropLast(1).all { it?.startsWith("tab") == true })
     }
-
-    /** What the Categories pill reads, or, with its icon alone, what it is named for TalkBack. */
-    private fun pillName(): String? =
-        compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes()
-            .firstNotNullOfOrNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() }
-            ?: compose.onNodeWithTag("categoryFilter", useUnmergedTree = true).fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
 
     /** The texts under [matcher] (in the unmerged tree), as laid out. */
     private fun textLayouts(matcher: SemanticsMatcher): List<TextLayoutResult> =
@@ -435,63 +415,18 @@ class TvLayoutRegressionTest {
         assertTrue("\"$text\" is narrower than its words", line.size.width + 0.5f >= line.multiParagraph.intrinsics.maxIntrinsicWidth)
     }
 
-    /**
-     * On the Movies tab, the Categories pill, named [categories], sits before Search with no playlist line beside it,
-     * and reads its name whole when [labelShown] (otherwise it may give way to its icon alone).
-     */
-    private fun assertThePillReadsWhole(categories: String, labelShown: Boolean) {
-        show(TopLevel.MOVIES) { VodScreen(moviesPath, VodActions()) }
-        assertFalse("no playlist line in the bar", playlistLineInTheBar())
-        assertEquals(categories, pillName())
-        if (labelShown) {
-            val label = textLayouts(hasTestTag("categoryFilterLabel"))
-            assertEquals("the pill reads $categories", listOf(categories), label.map { it.layoutInput.text.text })
-            label.forEach(::assertWhole)
-        }
-        val pill = bounds("categoryFilter")
-        val search = bounds("tabSearch")
-        if (compose.activity.resources.configuration.layoutDirection == android.util.LayoutDirection.RTL) {
-            assertTrue("Search after the pill", search.right <= pill.left + 0.5.dp)
-        } else {
-            assertTrue("Search after the pill", pill.right <= search.left + 0.5.dp)
-        }
-    }
-
-    @Test
-    fun theCategoriesPillReadsWholeBeforeSearch() = assertThePillReadsWhole("Categories", labelShown = true)
-
+    /** A category's name as providers write it, above its posters in French: whole, beside the chips. */
     @Test
     @Config(qualifiers = "+fr")
-    fun theCategoriesPillReadsWholeBeforeSearchInFrench() = assertThePillReadsWhole("Catégories", labelShown = true)
-
-    @Test
-    @Config(qualifiers = "+ar-rSA")
-    fun theCategoriesPillReadsWholeBeforeSearchInArabic() = assertThePillReadsWhole("الفئات", labelShown = false)
-
-    /** A category's name as providers write it, on the pill in French: whole, now that the bar has no playlist line. */
-    @Test
-    @Config(qualifiers = "+fr")
-    fun aCategorysNameReadsWholeOnThePill() {
-        val news = MediaCategory("m-new", "|FR| NOUVEAUTÉS", ContentType.MOVIE)
+    fun aCategorysNameReadsWholeOnItsLabelLine() {
         show(TopLevel.MOVIES, tabPage = false) {
-            TvTopBarCategories(TvCategoryChoice(listOf(news, drama), locked = emptySet(), selected = news, onChoose = {}, onManage = {}, sort = TvSortChoice(PosterSort.PLAYLIST, {})))
+            PosterGridScreen("|FR| NOUVEAUTÉS", rated, filter = "", onFilter = {}, onOpen = {}, onBack = {}, hideWatched = false)
         }
-        val label = textLayouts(hasTestTag("categoryFilterLabel"))
+        val label = textLayouts(hasTestTag("headerLabel"))
         assertEquals(listOf("|FR| NOUVEAUTÉS"), label.map { it.layoutInput.text.text })
         label.forEach(::assertWhole)
-    }
-
-    /** A category's titles: the pill names it, and its picker opens on it. */
-    @Test
-    fun thePillNamesTheCategoryShown() {
-        show(TopLevel.MOVIES) {
-            TvTopBarCategories(TvCategoryChoice(listOf(drama, comedy), locked = emptySet(), selected = comedy, onChoose = {}, onManage = {}))
-        }
-        assertEquals(listOf("Comedy"), compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
-        compose.onNodeWithTag("categoryFilter").requestFocus()
-        press(Key.DirectionCenter)
-        advance(500)
-        assertTrue("the picker opens on the category shown", compose.onAllNodes(isFocused() and hasTestTag("category:m-comedy")).fetchSemanticsNodes().isNotEmpty())
+        textLayouts(hasAnyAncestor(hasTestTag(SORT_CHIP_TAG))).forEach(::assertWhole)
+        assertTrue("the chips after the name", bounds("headerLabel").right <= bounds(SORT_CHIP_TAG).left + 0.5.dp)
     }
 
     /** Movies of a category, in the playlist's order: the best rated last but one. */
@@ -503,26 +438,31 @@ class TvLayoutRegressionTest {
         movie("25", "Example Film E", rating = 5.9),
     )
 
-    /** The orders chosen in the pill's picker, as the shared setting receives them. */
+    /** The orders chosen with the Sort chip, as the shared setting receives them. */
     private val chosenOrders = mutableListOf<PosterSort>()
 
+    /** Hide watched, turned on or off with its chip. */
+    private val hiddenChoices = mutableListOf<Boolean>()
+
     /**
-     * A category's titles ([drama]) as the app shows them on a TV: the top bar's pill names the category and holds the
-     * order, the grid below sorts its posters by it. The focus is left on the Movies tab.
+     * A category's titles ([drama]) as the app shows them on a TV: the category's name above the first row, its order
+     * and Hide watched as chips at the end of that line, the grid sorted by the order. The focus is left on the Movies tab.
      */
     private fun categoryGrid() = show(TopLevel.MOVIES, onTab = true, tabPage = false) {
         var sort by remember { mutableStateOf(PosterSort.PLAYLIST) }
-        val order = TvSortChoice(sort, { sort = it; chosenOrders += it })
-        TvTopBarCategories(TvCategoryChoice(listOf(drama, comedy), locked = emptySet(), selected = drama, onChoose = {}, onManage = {}, sort = order))
-        PosterGridScreen("Drama", UiMappers.sorted(rated, sort), filter = "", onFilter = {}, onOpen = {}, onBack = {}, sort = sort, onSort = order.onSort)
+        var hidden by remember { mutableStateOf(false) }
+        PosterGridScreen(
+            "Drama", UiMappers.sorted(rated, sort), filter = "", onFilter = {}, onOpen = {}, onBack = {},
+            sort = sort, onSort = { sort = it; chosenOrders += it },
+            hideWatched = hidden, onHideWatched = { hidden = it; hiddenChoices += it },
+        )
     }
 
-    /** A genre's titles ([genre]) as the app shows them on a TV, opened from Home: the pill names the genre and holds the order. */
+    /** A genre's titles ([genre]) as the app shows them on a TV, opened from Home: its name above them, its order as a chip. */
     private fun genrePage(genre: String) = show(TopLevel.HOME, onTab = true, tabPage = false) {
         var sort by remember { mutableStateOf(PosterSort.PLAYLIST) }
         val state = BrowseUiState(BrowseKind.GENRE, genre, movies = UiMappers.sorted(rated, sort))
-        TvTopBarCategories(TvCategoryChoice.page(browseTitle(state), TvSortChoice(sort, { sort = it; chosenOrders += it })))
-        BrowseScreen(state, onOpen = {}, onFestival = {}, onBack = {}, sort = sort, onSort = { sort = it })
+        BrowseScreen(state, onOpen = {}, onFestival = {}, onBack = {}, sort = sort, onSort = { sort = it; chosenOrders += it })
     }
 
     /** The posters of the page tagged [page], in their order. */
@@ -531,29 +471,18 @@ class TvLayoutRegressionTest {
 
     private fun focusedTag(): String? = compose.onAllNodes(isFocused()).fetchSemanticsNodes().lastOrNull()?.config?.getOrNull(SemanticsProperties.TestTag)
 
-    /** Right along the bar to the Categories pill, then OK: its picker opens. */
-    private fun openThePicker() {
-        var presses = 0
-        while (focusedTag() != CATEGORIES_TAG) {
-            check(presses++ < 8) { "Right along the bar never reached the Categories pill" }
-            press(Key.DirectionRight)
-            advance(50)
-        }
+    /** From a poster of the first row, Up to the Sort chip, then OK: its orders open. */
+    private fun openTheSortMenu() {
+        press(Key.DirectionUp)
+        advance(300)
+        assertEquals("Up from the first row: the Sort chip", SORT_CHIP_TAG, focusedTag())
         press(Key.DirectionCenter)
         advance(500)
     }
 
-    /** In the open picker, Rating, chosen with the remote ([across]: from the categories to the orders first). */
-    private fun chooseRating(across: Boolean) {
+    /** In the open Sort menu, Rating, chosen with the remote. */
+    private fun chooseRating() {
         var presses = 0
-        if (across) {
-            while (focusedTag()?.startsWith("sort-") != true) {
-                check(presses++ < 4) { "Right never reached the orders" }
-                press(Key.DirectionRight)
-                advance(50)
-            }
-        }
-        presses = 0
         while (focusedTag() != "sort-rating") {
             check(presses++ < 8) { "Down along the orders never reached Rating" }
             press(Key.DirectionDown)
@@ -577,7 +506,6 @@ class TvLayoutRegressionTest {
         assertFalse("no title of its own", inGrid(hasText("Drama")))
         assertTrue("no Sort button", compose.onAllNodesWithTag("sort").fetchSemanticsNodes().isEmpty())
         assertFalse("no playlist line in the bar", playlistLineInTheBar())
-        assertEquals("the pill names the category", "Drama", pillName())
         assertHeaderShows("Example Film A", "on the tab")
         assertEquals("the category's name above the first row", listOf("Drama"), headerTexts("headerLabel"))
         assertTrue("the label right above the posters", bounds("headerLabel").bottom <= bounds("grid").top + 0.5.dp)
@@ -586,7 +514,7 @@ class TvLayoutRegressionTest {
         press(Key.DirectionDown)
         advance(16)
         val first = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("grid"))).onFirst().fetchSemanticsNode()
-        assertTrue("Down from the tab lands on the first poster", first.config.getOrNull(SemanticsProperties.Focused) == true)
+        assertTrue("Down from the tab lands on the first poster, not on a chip (${focusedTag()})", first.config.getOrNull(SemanticsProperties.Focused) == true)
         assertHeaderShows("Example Film A", "Down once")
         val grid = bounds("grid")
         assertEquals("the posters right below the header", bounds("titleHeader").bottom.value, grid.top.value, 0.5f)
@@ -594,48 +522,92 @@ class TvLayoutRegressionTest {
     }
 
     /**
-     * The pill's picker on a category's titles: the categories (the one shown ticked) and, beside them, the orders (the
-     * one shown ticked). Rating, chosen with the remote, puts the best rated first and goes to the shared setting.
+     * A category's titles: "Sort: Playlist order" and Hide watched at the end of the label's line, right above the
+     * posters. Up from any poster of the first row reaches the Sort chip; its orders open on the one shown; Rating,
+     * chosen with the remote, puts the best rated first and goes to the shared setting; the focus comes back to the
+     * chip. Right from it, Hide watched, which OK turns on.
      */
     @Test
-    fun thePickerHoldsTheCategoriesAndTheOrder() {
+    fun theSortChipsOnTheLabelLineSortThePosters() {
         categoryGrid()
         assertEquals("the playlist's order", "Example Film A", posters("grid").first())
-        openThePicker()
-        assertEquals("the picker opens on the category shown", "category:m-drama", focusedTag())
-        for (tag in listOf("categoryAll", "category:m-comedy", "categoryManage") + PosterSort.entries.map { "sort-" + it.name.lowercase() }) {
-            assertTrue("$tag in the picker", compose.onAllNodes(hasTestTag(tag) and hasAnyAncestor(hasTestTag("categoryPicker"))).fetchSemanticsNodes().isNotEmpty())
+        assertEquals(listOf("Sort: Playlist order"), chipTexts(SORT_CHIP_TAG))
+        val label = bounds("headerLabel")
+        val chip = bounds(SORT_CHIP_TAG)
+        assertTrue("the chip on the label's line", chip.bottom >= label.bottom - 4.dp && chip.top <= label.bottom)
+        assertTrue("the chip after the label", chip.left >= label.right - 0.5.dp)
+        assertTrue("the chips above the posters", bounds(HIDE_WATCHED_CHIP_TAG).bottom <= bounds("grid").top + 0.5.dp)
+        press(Key.DirectionDown)
+        advance(300)
+        assertEquals("Down from the tab: the first poster", "Example Film A", focusedTitle())
+        // From the middle of the first row, Up goes to the chip too.
+        press(Key.DirectionRight)
+        press(Key.DirectionRight)
+        advance(300)
+        assertEquals("Example Film C", focusedTitle())
+        openTheSortMenu()
+        assertEquals("the menu opens on the order shown", "sort-playlist", focusedTag())
+        for (tag in PosterSort.entries.map { "sort-" + it.name.lowercase() }) {
+            assertTrue("$tag in the menu", compose.onAllNodes(hasTestTag(tag) and hasAnyAncestor(hasTestTag("sortMenu"))).fetchSemanticsNodes().isNotEmpty())
         }
         compose.onNodeWithTag("sort-playlist").assertIsSelected()
-        assertTrue("the order beside the categories", bounds("pickerSort").left >= bounds("pickerCategories").right - 0.5.dp)
-        chooseRating(across = true)
+        chooseRating()
         assertEquals(listOf(PosterSort.RATING), chosenOrders)
-        assertTrue("the picker closed", compose.onAllNodesWithTag("categoryPicker").fetchSemanticsNodes().isEmpty())
+        assertTrue("the menu closed", compose.onAllNodesWithTag("sortMenu").fetchSemanticsNodes().isEmpty())
+        assertEquals("the focus back on the chip", SORT_CHIP_TAG, focusedTag())
         assertEquals("the best rated first", "Example Film D", posters("grid").first())
+        assertEquals(listOf("Sort: Rating"), chipTexts(SORT_CHIP_TAG))
+        press(Key.DirectionRight)
+        advance(300)
+        assertEquals(HIDE_WATCHED_CHIP_TAG, focusedTag())
+        press(Key.DirectionCenter)
+        advance(300)
+        assertEquals(listOf(true), hiddenChoices)
+        compose.onNodeWithTag(HIDE_WATCHED_CHIP_TAG).assertIsSelected()
+        // Down from the chips: back to the posters.
+        press(Key.DirectionDown)
+        advance(300)
+        assertTrue("Down from the chips: the posters", focusedIn("grid"))
     }
 
+    /** The words of the chip tagged [tag]. */
+    private fun chipTexts(tag: String): List<String> =
+        compose.onAllNodes(hasAnyAncestor(hasTestTag(tag)) and SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).fetchSemanticsNodes()
+            .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") }
+
+    /** The title of the poster with the focus. */
+    private fun focusedTitle(): String? = compose.onAllNodes(isFocused()).onLast().fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull()
+
     /**
-     * A genre's titles, opened from Home: the pill names the genre and its picker holds the order alone, the one shown
-     * ticked and focused; Rating puts the best rated first. No row of their own above the posters, no playlist line.
+     * A genre's titles, opened from Home: the genre's name above the first row and its order as a chip (no Hide
+     * watched there); Down from the tab lands on the first poster, Up from it on the chip, Up again on the tab shown.
+     * The chip's orders open on the one shown; Rating puts the best rated first. No row of their own above the
+     * posters, no playlist line.
      */
     @Test
-    fun aGenresPillNamesItAndSortsItsTitles() {
+    fun aGenresTitlesNameThemselvesAndSortWithTheirChip() {
         genrePage("Mystery")
-        assertEquals("the pill names the genre", "Mystery", pillName())
+        assertEquals("the genre's name above its titles", listOf("Mystery"), headerTexts("headerLabel"))
+        assertTrue("no Hide watched on a genre's page", compose.onAllNodesWithTag(HIDE_WATCHED_CHIP_TAG).fetchSemanticsNodes().isEmpty())
         assertFalse("no playlist line in the bar", playlistLineInTheBar())
         assertTrue("no Back button", compose.onAllNodes(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("browse")), useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
         assertTrue("no Sort button", compose.onAllNodesWithTag("sort").fetchSemanticsNodes().isEmpty())
         press(Key.DirectionDown)
         advance(16)
-        assertEquals("Down from the tab lands on the first poster", "Example Film A", compose.onAllNodes(isFocused()).onLast().fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull())
+        assertEquals("Down from the tab lands on the first poster", "Example Film A", focusedTitle())
         assertHeaderShows("Example Film A", "Down once")
         press(Key.DirectionUp)
         advance(300)
-        assertEquals("Up lands on the tab shown", "tabHome", focusedTag())
-        openThePicker()
-        assertEquals("the picker opens on the order shown", "sort-playlist", focusedTag())
-        assertTrue("no categories on a genre's page", compose.onAllNodesWithTag("categoryAll").fetchSemanticsNodes().isEmpty())
-        chooseRating(across = false)
+        assertEquals("Up from the first row: the Sort chip", SORT_CHIP_TAG, focusedTag())
+        press(Key.DirectionUp)
+        advance(300)
+        assertEquals("Up again lands on the tab shown", "tabHome", focusedTag())
+        press(Key.DirectionDown)
+        advance(300)
+        assertEquals("Down from the tab: the first poster again, not the chip", "Example Film A", focusedTitle())
+        openTheSortMenu()
+        assertEquals("the menu opens on the order shown", "sort-playlist", focusedTag())
+        chooseRating()
         assertEquals(listOf(PosterSort.RATING), chosenOrders)
         assertEquals("the best rated first", "Example Film D", posters("browse").first())
     }
@@ -682,7 +654,6 @@ class TvLayoutRegressionTest {
     @Test
     fun aCategorysGridShowsFivePostersARowAndScrollsByWholeRows() {
         show(TopLevel.MOVIES, onTab = true, tabPage = false) {
-            TvTopBarCategories(TvCategoryChoice(listOf(drama), locked = emptySet(), selected = drama, onChoose = {}, onManage = {}))
             PosterGridScreen("Drama", longGrid, filter = "", onFilter = {}, onOpen = {}, onBack = {})
         }
         press(Key.DirectionDown)

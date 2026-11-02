@@ -45,6 +45,7 @@
     <string name="sort_playlist_order">प्लेलिस्ट का क्रम</string>
     <string name="sort_release_date">रिलीज़ की तारीख</string>
     <string name="sort_rating">रेटिंग</string>
+    <string name="sort_by">क्रम: %1$s</string>
     <string name="back">वापस जाएँ</string>
     <string name="close">बंद करें</string>
     <string name="no_channel_number">चैनल %1$d मौजूद नहीं है</string>

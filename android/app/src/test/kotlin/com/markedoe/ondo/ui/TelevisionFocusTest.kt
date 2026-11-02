@@ -8,6 +8,8 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.input.InputMode
@@ -52,7 +54,7 @@ import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
-import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
+import com.markedoe.ondo.ui.tv.SORT_CHIP_TAG
 import com.markedoe.ondo.ui.tv.SEARCH_TAG
 import com.markedoe.ondo.ui.theme.OndoTheme
 import java.time.Duration
@@ -104,6 +106,24 @@ class TelevisionFocusTest {
 
     private lateinit var http: SlowHttp
 
+    /** The app's view model; another one is Ondo started anew on the same stored data ([restart]). */
+    private val app = mutableStateOf<OndoViewModel?>(null)
+
+    /** Ondo closed and started again: its stored data read anew, its screens built anew, from Home. */
+    private fun restart() {
+        val store = AppStore(folder.root.resolve("ondo"))
+        repository = OndoRepository(
+            store = store,
+            http = http,
+            scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
+            downloadFolder = folder.root.resolve("downloads"),
+            guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
+        )
+        compose.runOnIdle { app.value = OndoViewModel(repository, Labels()) }
+        waitFor { exists("hero") }
+        settle(500)
+    }
+
     /** The welcome page; with [stored], that playlist and its catalogue already saved, Home ([shown] on it). */
     private fun start(answers: Map<String, String> = smallPanel(), stored: PlaylistContent? = null, shown: String = "hero") {
         val store = AppStore(folder.root.resolve("ondo"))
@@ -120,12 +140,14 @@ class TelevisionFocusTest {
             downloadFolder = folder.root.resolve("downloads"),
             guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
         )
-        val viewModel = OndoViewModel(repository, Labels())
+        app.value = OndoViewModel(repository, Labels())
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
             focusManager = LocalFocusManager.current
-            OndoTheme { CompositionLocalProvider(LocalCarouselAutoAdvance provides false) { OndoApp(viewModel) } }
+            // A new view model is Ondo started anew ([restart]): nothing of the screens before is kept.
+            val viewModel = app.value
+            OndoTheme { CompositionLocalProvider(LocalCarouselAutoAdvance provides false) { key(viewModel) { if (viewModel != null) OndoApp(viewModel) } } }
         }
         compose.waitUntil(10_000) { exists(if (stored == null) "welcome" else shown) }
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
@@ -181,7 +203,7 @@ class TelevisionFocusTest {
     }
 
     /** The tab page on screen, for a failure's trail. */
-    private fun pageShown(): String = listOf("home", "vod", "live", "myList", "grid", "settings", "categoryFilter").filter(::exists).joinToString("+")
+    private fun pageShown(): String = listOf("home", "vod", "live", "myList", "grid", "settings").filter(::exists).joinToString("+")
 
     private fun focusedNode(): SemanticsNode? = compose.onAllNodes(isFocused()).fetchSemanticsNodes().lastOrNull()
 
@@ -411,17 +433,16 @@ class TelevisionFocusTest {
 
     private val movieTitles = Fixtures.content.movies.map { it.name }.toSet()
 
-    /** From the page, up to the top bar, onto [tag], and opens it; the remote then moves into the page. */
+    /** Whether the remote is on a row's See all card. */
+    private fun onSeeAll() = focusedTag() == "seeAll" || focusedIn("seeAll")
+
     /**
-     * A category of the tab shown, chosen as the viewer does: Up to the top bar, Right along it to the Categories pill,
-     * OK, then down the picker (it opens on All) to [name], OK.
+     * A category's titles, opened as the viewer does from the tab's rows: down to the category's row ([id]), Right
+     * along it to its See all card, OK.
      */
-    private fun chooseCategory(name: String) {
-        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
-        press(Key.DirectionCenter)
-        waitFor { focusedTag() == "categoryAll" }
-        pressUntil(Key.DirectionDown) { focused() == name }
+    private fun seeAll(id: String) {
+        pressUntil(Key.DirectionDown) { focusedIn("shelf:$id") }
+        pressUntil(Key.DirectionRight) { onSeeAll() }
         press(Key.DirectionCenter)
     }
 
@@ -453,8 +474,8 @@ class TelevisionFocusTest {
 
     /**
      * A category's posters on a TV have no row of their own above them: no Back (the remote's Back goes back), no title
-     * (the top bar's pill names the category), no Sort (the pill holds it), no filter (Search finds a title). Down from
-     * the tab lands on the first poster, its title in the header at once.
+     * in the grid (its name is above the first row, at the header's foot), no Sort button (a chip on that line), no
+     * filter (Search finds a title). Down from the tab lands on the first poster, its title in the header at once.
      */
     @Test
     fun aCategorysPostersHaveNoRowNorFilterAboveThem() {
@@ -476,38 +497,111 @@ class TelevisionFocusTest {
     }
 
     /**
-     * The top bar's Categories pill holds the posters' order too: its picker lists the categories and, beside them, the
-     * orders, the one shown ticked. Rating puts the best rated first, and stays chosen.
+     * A category's order is a chip on its name's line: Up from the first row reaches it, its orders open on the one
+     * shown, and Rating puts the best rated first, kept as the shared setting.
      */
     @Test
-    fun theCategoriesPickerSortsThePostersAndKeepsTheOrder() {
+    fun theSortChipSortsACategorysPostersAndKeepsTheOrder() {
         start(answers = emptyMap(), stored = Fixtures.content)
         openFromDrawer("tabMovies")
-        pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        chooseCategory("All")
+        seeAll(Fixtures.sciFi.id)
         waitFor { exists("grid") && focusedIn("grid") }
-        assertEquals("the playlist's order", "Northern Lights", gridPosters().first())
-        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
+        assertEquals("the playlist's order", "Glass City", gridPosters().first())
+        assertEquals("the grid opens on its first poster", "Glass City", focused())
+        press(Key.DirectionUp)
+        assertEquals("Up from the first row: the Sort chip", SORT_CHIP_TAG, focusedTag())
         press(Key.DirectionCenter)
-        waitFor { focusedTag() == "categoryAll" }
-        assertTrue("the categories", exists("category:${Fixtures.drama.id}"))
+        waitFor { focusedTag() == "sort-playlist" }
         compose.onNodeWithTag("sort-playlist").assertIsSelected()
         compose.onNodeWithTag("sort-rating").assertIsNotSelected()
-        // Right, to the orders; down to Rating.
-        pressUntil(Key.DirectionRight) { focusedTag().startsWith("sort-") }
         pressUntil(Key.DirectionDown) { focusedTag() == "sort-rating" }
         press(Key.DirectionCenter)
         waitFor { repository.state.value.settings.posterSort == PosterSort.RATING }
-        val best = Fixtures.content.movies.filter { it.categoryId != Fixtures.adultMovies.id }.maxBy { it.rating ?: 0.0 }.name
-        waitFor { gridPosters().firstOrNull() == best }
-        assertFalse("the picker closed", exists("categoryPicker"))
+        waitFor { gridPosters().firstOrNull() == "The Last Signal" }
+        assertFalse("the menu closed", exists("sortMenu"))
+        assertEquals("the focus back on the chip", SORT_CHIP_TAG, focusedTag())
         // Ticked the next time.
-        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
         press(Key.DirectionCenter)
-        waitFor { exists("categoryPicker") }
+        waitFor { exists("sortMenu") }
         compose.onNodeWithTag("sort-rating").assertIsSelected()
+    }
+
+    /**
+     * See all at the end of a row opens the category's titles, Down from the tab lands on their first poster, and Back
+     * comes back to the rows: the same row and card (See all), the rows scrolled as they were.
+     */
+    @Test
+    fun seeAllOpensTheCategoryAndBackComesBackToTheSameCard() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openFromDrawer("tabMovies")
+        pressUntil(Key.DirectionDown) { focused() in movieTitles }
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        press(Key.DirectionDown)
+        assertTrue("Down from the tab: the first card of the rows (${focused()})", focused() in movieTitles && !onSeeAll() && !exists(SORT_CHIP_TAG))
+        pressUntil(Key.DirectionDown) { focusedIn("shelf:${Fixtures.thriller.id}") }
+        pressUntil(Key.DirectionRight) { onSeeAll() }
+        settle(500)
+        val row = compose.onNodeWithTag("shelf:${Fixtures.thriller.id}").fetchSemanticsNode().boundsInRoot
+        press(Key.DirectionCenter)
+        waitFor { exists("grid") && focusedIn("grid") }
+        assertEquals("the category's name above its titles", listOf("Thriller"), labels())
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        press(Key.DirectionDown)
+        assertEquals("Down from the tab: the first poster, not a chip", gridPosters().first(), focused())
+        back()
+        waitFor { exists("vod") && !exists("grid") }
+        waitFor { onSeeAll() }
+        assertTrue("back on the Thriller row (${focused()})", focusedIn("shelf:${Fixtures.thriller.id}"))
+        val again = compose.onNodeWithTag("shelf:${Fixtures.thriller.id}").fetchSemanticsNode().boundsInRoot
+        assertEquals("the rows scrolled as they were", row.top, again.top, 2f)
+        assertTrue("the tab shows its rows, no category chosen", tabSelected("tabMovies"))
+    }
+
+    /** The texts at the header's foot (a category's name). */
+    private fun labels(): List<String> = compose.onAllNodesWithTag("headerLabel", useUnmergedTree = true).fetchSemanticsNodes()
+        .mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() }
+
+    /**
+     * A category is a page opened over the rows, never the tab's state: another tab, then Movies again along the bar,
+     * shows the rows, not the category's titles left open.
+     */
+    @Test
+    fun anotherTabThenMoviesAgainShowsTheRows() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openFromDrawer("tabMovies")
+        seeAll(Fixtures.drama.id)
+        waitFor { exists("grid") && focusedIn("grid") }
+        // Along the bar: Home opens as the remote rests on it, then Movies.
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionLeft) { focusedTag() == "tabHome" }
+        settle(1_000)
+        waitFor { exists("home") }
+        pressUntil(Key.DirectionRight) { focusedTag() == "tabMovies" }
+        settle(1_000)
+        waitFor { exists("vod") }
+        assertFalse("no category's titles left open", exists("grid"))
+        assertTrue(tabSelected("tabMovies"))
+        // And OK on the tab, from a category's titles, comes back to the rows too.
+        press(Key.DirectionDown)
+        seeAll(Fixtures.drama.id)
+        waitFor { exists("grid") && focusedIn("grid") }
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        press(Key.DirectionCenter)
+        waitFor { exists("vod") && !exists("grid") }
+    }
+
+    /** Ondo started anew after a category was opened: the Movies tab shows its rows. */
+    @Test
+    fun afterARestartTheMoviesTabShowsItsRows() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openFromDrawer("tabMovies")
+        seeAll(Fixtures.drama.id)
+        waitFor { exists("grid") && focusedIn("grid") }
+        restart()
+        openFromDrawer("tabMovies")
+        waitFor { exists("vod") }
+        assertFalse("no category's titles", exists("grid"))
+        assertTrue("the rows", exists("shelf:${Fixtures.drama.id}"))
     }
 
     /** Whether the top bar's tab [tag] is the one shown. */
@@ -519,11 +613,10 @@ class TelevisionFocusTest {
         settle(500)
     }
 
-    /** A category's posters on Movies, opened from the top bar's Categories pill. */
+    /** A category's posters on Movies, opened from its row's See all card. */
     private fun openDramaGrid() {
         openFromDrawer("tabMovies")
-        pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        chooseCategory("Drama")
+        seeAll(Fixtures.drama.id)
         waitFor { exists("grid") && focusedIn("grid") }
     }
 
@@ -537,8 +630,7 @@ class TelevisionFocusTest {
         openDramaGrid()
         assertTrue("the bar stays over the category", exists("topBar"))
         assertTrue("on the tab it belongs to", tabSelected("tabMovies"))
-        val pill = compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes()
-        assertEquals("the Categories pill names the category shown", listOf("Drama"), pill.mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
+        assertEquals("the category's name above its titles", listOf("Drama"), labels())
         pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
         assertEquals("Up lands on the tab shown", "tabMovies", focusedTag())
         press(Key.DirectionDown)
@@ -549,8 +641,7 @@ class TelevisionFocusTest {
         waitFor { exists("vod") && !exists("grid") }
         assertTrue(tabSelected("tabMovies"))
         // Again, and back to the tab's page with OK on its tab.
-        pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        chooseCategory("Drama")
+        seeAll(Fixtures.drama.id)
         waitFor { exists("grid") && focusedIn("grid") }
         pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
         press(Key.DirectionCenter)
@@ -596,14 +687,12 @@ class TelevisionFocusTest {
     @Test
     fun theCategoriesFieldsGoOnWithTheKeyboardsAction() {
         start(answers = emptyMap(), stored = Fixtures.content)
-        openFromDrawer("tabMovies")
-        // The top bar's Categories pill, its picker's last entry: which categories are shown.
-        pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
-        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
-        press(Key.DirectionCenter)
-        waitFor { focusedTag() == "categoryAll" }
-        pressUntil(Key.DirectionDown, max = 30) { focusedTag() == "categoryManage" }
+        // Settings, Languages and categories: which categories are shown.
+        openFromDrawer("tabSettings")
+        waitFor { exists("settings") && focusedTag() == "settingsPlaylists" }
+        pressUntil(Key.DirectionDown) { focusedTag() == "settingsCatalogue" }
+        press(Key.DirectionRight)
+        waitFor { focusedTag() == "categoriesRow" }
         press(Key.DirectionCenter)
         waitFor { exists("categories") && focusedIn("categories") }
         pressUntil(Key.DirectionDown) { editing() }

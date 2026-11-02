@@ -20,9 +20,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
-import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
-import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.TopLevel
 import com.markedoe.ondo.ui.UiMappers
@@ -38,18 +36,20 @@ import com.markedoe.ondo.ui.tv.LocalTitleHeaders
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvHomeScreen
-import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
+import com.markedoe.ondo.ui.tv.FocusEntry
+import com.markedoe.ondo.ui.tv.LocalFocusMemory
 import com.markedoe.ondo.ui.tv.LocalTvTopBar
+import com.markedoe.ondo.ui.tv.SORT_CHIP_TAG
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
 import com.markedoe.ondo.ui.tv.TvTopBar
-import com.markedoe.ondo.ui.tv.TvCategoryChoice
-import com.markedoe.ondo.ui.tv.TvSortChoice
-import com.markedoe.ondo.ui.tv.TvTopBarCategories
+import com.markedoe.ondo.ui.tv.rememberFocusMemory
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.BrowseScreen
 import com.markedoe.ondo.ui.screens.PosterGridScreen
-import com.markedoe.ondo.ui.screens.browseTitle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -71,9 +71,10 @@ import org.robolectric.annotation.GraphicsMode
  * Reference screenshots of a TV's tab pages as the remote leaves them, from the demo catalogue: the header above the
  * Movies tab (its backdrop from the screen's top, no playlist line in the bar), with a card of Continue watching
  * focused and with My List's; the viewer's path on the Movies and Series tabs (the focus on the tab, Down once, Down
- * again), the Categories picker open; a category's titles (the focus on the tab, then Down: no row of their own above
- * the posters, the pill naming the category) and the pill's picker there with the order beside the categories; a
- * genre's titles, the pill naming the genre; deep in a long grid, the focused row at the top, whole; and Home with the remote in its rows. Compared by `verifyRoborazziDebug` with
+ * again); a category's titles (the focus on the tab, then Down: no row of their own above the posters, the category's
+ * name above them) and its sort chips at the end of that line, reached with Up from the first row; the rows again after
+ * Back from a category's titles, the focus on the See all card it was opened from; a genre's titles, named above them;
+ * deep in a long grid, the focused row at the top, whole; and Home with the remote in its rows. Compared by `verifyRoborazziDebug` with
  * [BASELINES]`/tv/`; the store listing has none of them.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -145,10 +146,6 @@ class TvScreenshots {
 
     private fun capture(name: String) = compose.onRoot().captureRoboImage("$BASELINES/tv/en-US/$name.png", BaselineOptions)
 
-    /** The whole screen, the picker's window over the page included. */
-    @OptIn(ExperimentalRoborazziApi::class)
-    private fun captureScreen(name: String) = captureScreenRoboImage("$BASELINES/tv/en-US/$name.png", BaselineOptions)
-
     private fun moviesTab(onTab: Boolean = false) = show(TopLevel.MOVIES, onTab) { VodScreen(UiMappers.vod(state, series = false, title = "Movies"), VodActions()) }
 
     private fun press(key: Key) {
@@ -207,30 +204,17 @@ class TvScreenshots {
     @Test
     fun seriesDownFromTheTab() = downPath("series", series = true)
 
-    @Test
-    fun theCategoriesPickerOpen() {
-        moviesTab(onTab = true)
-        var presses = 0
-        while (compose.onAllNodes(isFocused() and hasTestTag(CATEGORIES_TAG)).fetchSemanticsNodes().isEmpty()) {
-            check(presses++ < 8) { "Right along the bar never reached the Categories pill" }
-            press(Key.DirectionRight)
-        }
-        press(Key.DirectionCenter)
-        assertTrue("the picker has the focus", compose.onAllNodes(isFocused() and hasTestTag("categoryAll")).fetchSemanticsNodes().isNotEmpty())
-        captureScreen("categories-picker-open")
-    }
-
     /** The demo's movie category with the most titles: the fullest grid. */
     private val category = state.content.movieCategories.maxBy { c -> state.content.movies.count { it.categoryId == c.id } }
 
-    /** A category's titles as the app shows them on a TV: the pill names the category and holds the order. */
+    /** A category's titles as the app shows them on a TV: its name above the posters, its order and Hide watched as chips. */
     private fun categoryGrid() = show(TopLevel.MOVIES, onTab = true, tabPage = false) {
         var sort by remember { mutableStateOf(PosterSort.PLAYLIST) }
-        val vod = remember { UiMappers.vod(state, series = false, title = "Movies") }
-        val order = TvSortChoice(sort, { sort = it }, hideWatched = state.settings.hideWatchedMovies, onHideWatched = {})
-        TvTopBarCategories(TvCategoryChoice(vod.categories, vod.lockedCategoryIds, selected = category, onChoose = {}, onManage = {}, sort = order))
         val items = remember(sort) { UiMappers.grid(state, series = false, categoryId = category.id, myList = false, filter = "", sort = sort) }
-        PosterGridScreen(category.name, items, filter = "", onFilter = {}, onOpen = {}, onBack = {}, sort = sort, onSort = { sort = it })
+        PosterGridScreen(
+            category.name, items, filter = "", onFilter = {}, onOpen = {}, onBack = {}, sort = sort, onSort = { sort = it },
+            hideWatched = state.settings.hideWatchedMovies, onHideWatched = {},
+        )
     }
 
     @Test
@@ -254,7 +238,6 @@ class TvScreenshots {
     fun deepInACategorysTitles() {
         val items = (0 until 4).flatMap { copy -> state.content.movies.map { copied(it, copy) } }
         show(TopLevel.MOVIES, onTab = true, tabPage = false) {
-            TvTopBarCategories(TvCategoryChoice(UiMappers.vod(state, series = false, title = "Movies").categories, emptySet(), selected = category, onChoose = {}, onManage = {}))
             PosterGridScreen(category.name, items, filter = "", onFilter = {}, onOpen = {}, onBack = {})
         }
         press(Key.DirectionDown)
@@ -263,18 +246,65 @@ class TvScreenshots {
         capture("grid-down-3")
     }
 
+    /** A category's titles, Down onto the first poster, then Up: the Sort chip at the end of the category's name line. */
     @Test
-    fun thePickerWithTheOrderBesideTheCategories() {
+    fun aCategorysSortChips() {
         categoryGrid()
+        press(Key.DirectionDown)
+        assertTrue("Down from the tab: the posters", focusedIn("grid"))
+        press(Key.DirectionUp)
+        assertTrue("Up from the first row: the Sort chip", compose.onAllNodes(isFocused() and hasTestTag(SORT_CHIP_TAG)).fetchSemanticsNodes().isNotEmpty())
+        capture("grid-sort-chips")
+    }
+
+    /**
+     * The Movies tab's rows, a category's titles opened from its row's See all card, then Back: the rows as they were
+     * left, the focus on that See all card.
+     */
+    @Test
+    fun theRowsAfterBackFromACategory() {
+        val vod = UiMappers.vod(state, series = false, title = "Movies")
+        val row = vod.rows[1]
+        show(TopLevel.MOVIES, tabPage = false) {
+            val nav = rememberNavController()
+            NavHost(nav, startDestination = "rows") {
+                composable("rows") {
+                    CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) {
+                        FocusEntry { VodScreen(vod, VodActions(onCategory = { nav.navigate("grid") })) }
+                    }
+                }
+                composable("grid") {
+                    CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) {
+                        FocusEntry {
+                            val items = remember { UiMappers.grid(state, series = false, categoryId = row.category.id, myList = false, filter = "") }
+                            PosterGridScreen(row.category.name, items, filter = "", onFilter = {}, onOpen = {}, onBack = {})
+                        }
+                    }
+                }
+            }
+        }
+        val shelf = "shelf:${row.category.id}"
         var presses = 0
-        while (compose.onAllNodes(isFocused() and hasTestTag(CATEGORIES_TAG)).fetchSemanticsNodes().isEmpty()) {
-            check(presses++ < 8) { "Right along the bar never reached the Categories pill" }
+        while (!focusedIn(shelf)) {
+            check(presses++ < 12) { "Down never reached $shelf" }
+            press(Key.DirectionDown)
+        }
+        presses = 0
+        while (!onSeeAll()) {
+            check(presses++ < 15) { "Right never reached See all" }
             press(Key.DirectionRight)
         }
         press(Key.DirectionCenter)
-        assertTrue("the picker has the order", compose.onAllNodes(hasTestTag("sort-rating")).fetchSemanticsNodes().isNotEmpty())
-        captureScreen("picker-with-sort")
+        assertTrue("the category's titles", compose.onAllNodes(hasTestTag("grid")).fetchSemanticsNodes().isNotEmpty())
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        advance()
+        advance()
+        assertTrue("back on the rows", compose.onAllNodes(hasTestTag("grid")).fetchSemanticsNodes().isEmpty())
+        assertTrue("back on See all of $shelf", onSeeAll() && focusedIn(shelf))
+        capture("rows-after-back")
     }
+
+    private fun onSeeAll() = compose.onAllNodes(isFocused() and hasTestTag("seeAll")).fetchSemanticsNodes().isNotEmpty() || focusedIn("seeAll")
 
     /** The demo's most common movie genre: a full page of titles. */
     private val genre = state.movieDetails.values.flatMap { details -> details.genre.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() } }
@@ -285,7 +315,6 @@ class TvScreenshots {
         show(TopLevel.HOME, tabPage = false) {
             var sort by remember { mutableStateOf(PosterSort.PLAYLIST) }
             val page = remember(sort) { UiMappers.browse(state, BrowseKind.GENRE, genre, Locale.US, sort = sort) }
-            TvTopBarCategories(TvCategoryChoice.page(browseTitle(page), TvSortChoice(sort, { sort = it })))
             BrowseScreen(page, onOpen = {}, onFestival = {}, onBack = {}, sort = sort, onSort = { sort = it })
         }
         focusFirstCard("browse")

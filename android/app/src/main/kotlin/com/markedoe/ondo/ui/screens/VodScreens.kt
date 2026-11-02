@@ -17,7 +17,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.KeyboardActions
@@ -78,8 +78,8 @@ import com.markedoe.ondo.ui.tv.rememberLeaveField
 import com.markedoe.ondo.ui.tv.rememberTvTextField
 import com.markedoe.ondo.ui.tv.TvHeaderPosterWidth
 import com.markedoe.ondo.ui.tv.TvHeaderWideCardWidth
-import com.markedoe.ondo.ui.tv.TvCategoryChoice
-import com.markedoe.ondo.ui.tv.TvTopBarCategories
+import com.markedoe.ondo.ui.tv.TvSortChoice
+import com.markedoe.ondo.ui.tv.upToTheSortChip
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
 import com.markedoe.ondo.ui.tv.TV_GRID_COLUMNS
 import com.markedoe.ondo.ui.tv.tvGridBottomRoom
@@ -121,9 +121,10 @@ const val TV_ROW_LENGTH = 10
 /**
  * Movies or Series tab: category chips (on a phone), continue watching, My List, award winners, one row per category.
  * On a TV, a header pinned above the rows shows the poster with the focus ([TvFocusHeader]), the posters about five
- * across: a row with its name and its cards' lines fits whole below it on a 960 × 540 dp screen. There, the categories are a pill in
- * the top bar ([TvTopBarCategories]) rather than chips above the rows: with the focus on the tab, the header shows the
- * first card's title and the first row shows whole below it; Down goes straight to that card.
+ * across: a row with its name and its cards' lines fits whole below it on a 960 × 540 dp screen. There, the rows are
+ * always the tab's page, with no category chosen above them: a category's titles open from the See all card at the end
+ * of its row, as a page of their own that Back closes. With the focus on the tab, the header shows the first card's
+ * title and the first row shows whole below it; Down goes straight to that card.
  */
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
@@ -134,16 +135,6 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
     TvHeaderAbove(fallback, lead = SHELF_TITLE_ROOM) { modifier, top, underHeader ->
         VodRows(state, actions, modifier, top, underHeader)
     }
-    // On a TV, the categories: All, then each one, in the top bar's pill.
-    TvTopBarCategories(
-        TvCategoryChoice(
-            categories = state.categories,
-            locked = state.lockedCategoryIds,
-            selected = null,
-            onChoose = actions.onCategory,
-            onManage = actions.onCategories,
-        ),
-    )
 }
 
 /** The room a row's name takes above its posters ([Shelf]'s title line on a TV). */
@@ -179,8 +170,8 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
         verticalArrangement = Arrangement.spacedBy(if (metrics.compact) 24.dp else 32.dp),
         contentPadding = PaddingValues(top = top, bottom = 32.dp),
     ) {
-        // On a TV the top bar names the tab and holds Search and the categories' pill: the page starts with its first
-        // row, right below the header, which Down from the tab reaches at once.
+        // On a TV the top bar names the tab and holds Search: the page starts with its first row, right below the
+        // header, which Down from the tab reaches at once.
         if (!television) {
             item {
                 TopAppBar(
@@ -277,8 +268,9 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
 
 /**
  * Poster grid of a category (or of everything), with a filter and a sort menu. On a TV under the top bar, the posters
- * alone below the header: the bar's Categories pill names the page and holds its order ([TvTopBarCategories]), Search
- * finds a title, Back on the remote goes back; Down from the bar lands on the first poster.
+ * alone below the header: the page's name above the first row, its order and Hide watched as chips at the end of that
+ * line (Up from the first row), Search finds a title, Back on the remote goes back to the rows; Down from the bar lands
+ * on the first poster.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -297,12 +289,13 @@ fun PosterGridScreen(
     /** Each poster's rating and genres, by its key; null: the posters show their title and year only. */
     facts: Map<String, PosterFacts>? = null,
 ) {
-    // On a TV, the top bar holds what the page's own top row and filter would.
+    // On a TV, the top bar and the label's line hold what the page's own top row and filter would.
     val inTheBar = LocalTvTopBar.current != null
+    val order = TvSortChoice(sort, onSort, hideWatched, onHideWatched).takeIf { inTheBar }
     // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more, five
     // across under the category's name, and the grid scrolls by whole rows (the focused one at the top, the one above
     // it gone).
-    TvHeaderAbove(fallback = items.firstOrNull(), byRows = true, label = title.takeIf { inTheBar }) { modifier, top, posterOnly ->
+    TvHeaderAbove(fallback = items.firstOrNull(), byRows = true, label = title.takeIf { inTheBar }, sort = order) { modifier, top, posterOnly ->
         val metrics = rememberShelfMetrics()
         val leaveField = rememberLeaveField()
         BoxWithConstraints(modifier) {
@@ -349,8 +342,17 @@ fun PosterGridScreen(
                             )
                         }
                     }
-                    items(items, key = { it.key }) { item ->
-                        PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = !posterOnly, facts = facts?.get(item.key), showsFacts = facts != null && !posterOnly)
+                    itemsIndexed(items, key = { _, it -> it.key }) { index, item ->
+                        PosterCard(
+                            item,
+                            width = null,
+                            onClick = { onOpen(item) },
+                            // Up from the first row: the sort chips above it, from any column.
+                            modifier = if (index < TV_GRID_COLUMNS) Modifier.upToTheSortChip() else Modifier,
+                            showsTitle = !posterOnly,
+                            facts = facts?.get(item.key),
+                            showsFacts = facts != null && !posterOnly,
+                        )
                     }
                     if (items.isEmpty()) {
                         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
@@ -405,7 +407,7 @@ internal fun SortButton(sort: PosterSort, onSort: (PosterSort) -> Unit, hideWatc
     }
 }
 
-/** The name of an order in the Sort menus (a phone's, the TV's Categories picker). */
+/** The name of an order in the Sort menus (a phone's, the TV's Sort chip). */
 internal val PosterSort.label: Int
     get() = when (this) {
         PosterSort.PLAYLIST -> R.string.sort_playlist_order
