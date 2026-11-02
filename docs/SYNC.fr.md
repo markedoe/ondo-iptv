@@ -205,7 +205,9 @@ change rien.
 Un appareil garde l’instantané fusionné comme le sien : il ajoute les playlists qu’il n’avait pas (et les
 télécharge), met à jour celles qui ont changé, supprime celles qui ont été supprimées, et remplace Ma liste, les
 chaînes favorites, les personnes, les listes et la progression par celles fusionnées, et enregistre les clés des services qu’il
-utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synchronisé. Si le spectateur a changé quelque chose pendant la session, l’appareil fusionne à nouveau avec son
+utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synchronisé. La progression d’un film ou d’un épisode en lecture sur
+l’appareil n’est pas remplacée pendant la lecture : celle reçue attend, et s’applique à la fin de la lecture si elle
+est la plus tardive. Si le spectateur a changé quelque chose pendant la session, l’appareil fusionne à nouveau avec son
 état actuel, donc aucun changement n’est perdu.
 
 ## Horloges

@@ -82,6 +82,27 @@ final class SyncMappingTests: XCTestCase {
         XCTAssertEqual(applied.orderedAt, Date(syncMilliseconds: 1_760_000_000_500))
     }
 
+    func testTheItemPlayingKeepsItsEntryAndTheReceivedOneIsParked() {
+        let (_, local, _) = model()
+        let playing = ref(xtreamID, .movie, "m1").playbackKey
+        var applied = local
+        applied.history = applied.history.map { entry in
+            var entry = entry
+            if entry.id == playing {
+                entry.position = 3_000
+                entry.lastWatchedAt = t0.addingTimeInterval(100)
+            }
+            return entry
+        }
+        let kept = SyncMapping.keepingPlayback(applied, local: local, playing: [playing])
+        XCTAssertEqual(kept.library.history.first { $0.id == playing }?.position, 600, "as the player left it")
+        XCTAssertEqual(kept.parked[playing]?.position, 3_000)
+        XCTAssertEqual(kept.library.history.map(\.id), local.history.map(\.id))
+        // Nothing playing, or the same entry: nothing parked.
+        XCTAssertTrue(SyncMapping.keepingPlayback(applied, local: local, playing: []).parked.isEmpty)
+        XCTAssertTrue(SyncMapping.keepingPlayback(local, local: local, playing: [playing]).parked.isEmpty)
+    }
+
     func testThePeopleOtherDevicesKeepAreSentOnWithTheirLists() throws {
         let (playlists, library, base) = model()
         var state = base

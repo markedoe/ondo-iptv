@@ -244,11 +244,11 @@ class SyncDataTest {
     }
 
     /**
-     * A session while a film plays: the catalogue is not downloaded again, and the position the player writes next
-     * (later than the other box's) is the one kept.
+     * A session while a film plays: the catalogue is not downloaded again, and the film's entry stays as the player
+     * left it until playback ends; then the later of the two positions applies.
      */
     @Test
-    fun aSessionDuringPlaybackReloadsNothingAndThePlayerKeepsItsPosition() = runTest {
+    fun aSessionDuringPlaybackReloadsNothingAndParksTheOtherPosition() = runTest {
         val tvHttp = FakeHttp(mapOf(list to catalogue))
         val tv = device("tv", tvHttp).ready()
         val phone = device("phone").ready()
@@ -257,24 +257,37 @@ class SyncDataTest {
         phone.state.first { it.content.movies.isNotEmpty() }
         val movie = tv.state.value.content.movies.single()
         val key = requireNotNull(tv.playRequest(movie)?.progressKey)
+        val phoneKey = requireNotNull(phone.playRequest(phone.state.value.content.movies.single())?.progressKey)
+        tv.playbackStarted(key)
         time += 1_000
         tv.recordProgress(key, 600.0, 5_400.0)
 
-        // The phone moved the same film elsewhere meanwhile.
+        // The phone moved the same film elsewhere meanwhile: the TV's entry does not move, nothing is downloaded.
         time += 1_000
-        phone.recordProgress(requireNotNull(phone.playRequest(phone.state.value.content.movies.single())?.progressKey), 1_800.0, 5_400.0)
+        phone.recordProgress(phoneKey, 1_800.0, 5_400.0)
         val downloads = tvHttp.requests.count { it.first == list }
         val active = tv.state.value.activePlaylistId
         session(phone, tv)
+        assertEquals(600.0, tv.state.value.library.progress(key)!!.position, 0.0)
         assertEquals(downloads, tvHttp.requests.count { it.first == list })
         assertEquals(active, tv.state.value.activePlaylistId)
 
-        // The player's next report, later than the phone's, wins on both devices.
+        // The player's next report, later than the phone's, is the one kept when playback ends, on both devices.
         time += 1_000
         tv.recordProgress(key, 610.0, 5_400.0)
+        tv.playbackEnded()
+        assertEquals(610.0, tv.state.value.library.progress(key)!!.position, 0.0)
+        session(phone, tv)
+        assertEquals(610.0, phone.state.value.library.progress(phoneKey)!!.position, 0.0)
+
+        // Played again, and moved later on the phone during playback: applied once playback ends.
+        tv.playbackStarted(key)
+        time += 1_000
+        phone.recordProgress(phoneKey, 2_400.0, 5_400.0)
         session(phone, tv)
         assertEquals(610.0, tv.state.value.library.progress(key)!!.position, 0.0)
-        assertEquals(610.0, phone.state.value.library.continueWatching(phone.state.value.activePlaylistId!!).single().position, 0.0)
+        tv.playbackEnded()
+        assertEquals(2_400.0, tv.state.value.library.progress(key)!!.position, 0.0)
     }
 
     /**

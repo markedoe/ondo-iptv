@@ -326,6 +326,23 @@ enum SyncMapping {
         return library
     }
 
+    /// `applied` with the entries of the items `playing` (by `playbackKey`) as they are in `local`; the entries received
+    /// for them are returned as `parked`.
+    static func keepingPlayback(_ applied: UserLibrary, local: UserLibrary, playing: Set<String>) -> (library: UserLibrary, parked: [String: HistoryEntry]) {
+        var library = applied
+        var parked: [String: HistoryEntry] = [:]
+        for key in playing {
+            let mine = local.history.first { $0.id == key }
+            let received = library.history.first { $0.id == key }
+            guard received != mine else { continue }
+            if let received { parked[key] = received }
+            library.history.removeAll { $0.id == key }
+            if let mine { library.history.append(mine) }
+            library.history.sort { ($0.lastWatchedAt, $0.id) > ($1.lastWatchedAt, $1.id) }
+        }
+        return (library, parked)
+    }
+
     /// The image address received; the device's own `URL` when it is the same one. Another device's is a web address:
     /// Nuke reads a `file:` or `data:` address inline and whole, a file of this device included.
     private static func image(_ text: String?, keeping current: URL?) -> URL? {
@@ -524,8 +541,12 @@ extension AppModel {
             return
         }
         let latest = SyncMerge.merge(syncSnapshot(), merged)
-        let applied = SyncMapping.library(library, applying: latest)
+        // The items playing here keep their entry as the player left it; what came for them waits for playback to end.
+        let kept = SyncMapping.keepingPlayback(SyncMapping.library(library, applying: latest), local: library, playing: playingKeys)
+        parkedProgress.merge(kept.parked) { _, received in received }
+        let applied = kept.library
         if applied != library { updateLibrary { $0 = applied } }
+        applyParkedProgress()
         applySyncedKeys(latest)
         syncState.people = latest.people
         syncState.listPeople = SyncMapping.listPeople(latest)
@@ -534,6 +555,30 @@ extension AppModel {
         syncState.lastSyncedAt = now.syncMilliseconds
         syncState.peers[received.device.lowercased()] = now.syncMilliseconds
         saveSyncState()
+    }
+
+    /// The movies and episodes playing now (`playbackKey`): sync leaves their entries alone until playback ends.
+    var playingKeys: Set<String> {
+        Set(sessions.values.compactMap { session in session.current.flatMap { $0.isLive ? nil : $0.reference.playbackKey } })
+    }
+
+    /// The positions received during playback for items no longer playing: each applies when it is later than the
+    /// entry here (and than its removal).
+    func applyParkedProgress() {
+        let playing = playingKeys
+        let done = parkedProgress.filter { !playing.contains($0.key) }
+        guard !done.isEmpty else { return }
+        for key in done.keys { parkedProgress[key] = nil }
+        updateLibrary { library in
+            for (key, received) in done {
+                if let mine = library.history.first(where: { $0.id == key }), mine.lastWatchedAt >= received.lastWatchedAt { continue }
+                if let removed = library.historyTombstones[key], removed >= received.lastWatchedAt { continue }
+                if let cleared = library.historyClearedAt, received.lastWatchedAt <= cleared { continue }
+                library.history.removeAll { $0.id == key }
+                library.history.append(received)
+            }
+            library.history.sort { ($0.lastWatchedAt, $0.id) > ($1.lastWatchedAt, $1.id) }
+        }
     }
 
     /// The keys of the merged snapshot: TMDb's saved when it changed (TMDb checked it on the device where it was typed),

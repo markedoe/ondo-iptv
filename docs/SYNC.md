@@ -185,7 +185,8 @@ nothing.
 A device keeps the merged snapshot as its own: it adds the playlists it did not have (and downloads them),
 updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists and
 progress with the merged ones, and saves the keys of the services it uses (removing those deleted). It keeps
-whatever it does not sync. If the viewer changed something during the
+whatever it does not sync. The progress of a movie or episode playing on the device is not replaced while it
+plays: the one received waits, and applies when playback ends if it is the later. If the viewer changed something during the
 session, the device merges again with its current state, so no change is lost.
 
 ## Clocks

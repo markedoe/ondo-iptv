@@ -876,6 +876,8 @@ class PlayerActivity : ComponentActivity() {
 
     private fun play(index: Int, startMs: Long) {
         val url = request.urls.getOrNull(index) ?: return
+        // Sync leaves this item's resume point alone while it plays (a live channel has none).
+        (application as OndoApplication).repository.playbackStarted(request.progressKey.takeUnless { request.isLive })
         reporter.attempt(index, url)
         health.restart()
         val item = MediaItem.Builder()
@@ -959,6 +961,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (player != null) (application as OndoApplication).repository.playbackStarted(request.progressKey.takeUnless { request.isLive })
         if (television && session == null) player?.let(::openSession)
     }
 
@@ -1463,7 +1466,10 @@ class PlayerActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         saveProgress()
-        if (!isInPictureInPictureMode) player?.pause()
+        if (!isInPictureInPictureMode) {
+            player?.pause()
+            (application as OndoApplication).repository.playbackEnded()
+        }
         if (television) {
             session?.release()
             session = null
@@ -1472,6 +1478,7 @@ class PlayerActivity : ComponentActivity() {
 
     override fun onDestroy() {
         saveProgress()
+        (application as OndoApplication).repository.playbackEnded()
         playerView?.player = null
         playerView = null
         session?.release()

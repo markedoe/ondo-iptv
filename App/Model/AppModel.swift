@@ -138,6 +138,9 @@ final class AppModel {
     /// "Play last channel at launch" waits for the profile to be chosen ("Who's watching?").
     @ObservationIgnored var autoplayPending = false
     @ObservationIgnored var sessions: [UUID: PlaybackSession] = [:]
+    /// Where other devices left an item playing here, received during its playback (by `playbackKey`): applied once
+    /// it no longer plays, when it is the later (`applyParkedProgress`).
+    @ObservationIgnored var parkedProgress: [String: HistoryEntry] = [:]
 
     @ObservationIgnored private let libraryWriter: LibraryWriter
     /// What `bootstrap()` read from disk, before sync or the viewer changed anything (the diagnostic report).

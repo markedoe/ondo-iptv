@@ -449,6 +449,47 @@ class OndoRepository(
         return merged
     }
 
+    /** What the player plays now ([WatchEntry.key]): sync leaves its entry alone until playback ends. Main thread. */
+    private var playingKey: String? = null
+
+    /** Where other devices left the item playing here, received during playback: applied once it ends. */
+    private val parkedProgress = HashMap<String, WatchEntry>()
+
+    /** The player started [key] (null: something not resumable, a channel). Main thread. */
+    fun playbackStarted(key: String?) {
+        if (key == playingKey) return
+        playbackEnded()
+        playingKey = key
+    }
+
+    /** The player stopped: what another device sent meanwhile for that item applies now, if it is the later. */
+    fun playbackEnded() {
+        val key = playingKey ?: return
+        playingKey = null
+        val parked = parkedProgress.remove(key) ?: return
+        val library = _state.value.library
+        val stored = library.progress(key)
+        val removedAt = library.syncDeleted[SyncKeys.progress(parked)]
+        if ((stored != null && stored.lastWatchedAt >= parked.lastWatchedAt) || (removedAt != null && removedAt >= parked.lastWatchedAt)) return
+        updateLibrary { current ->
+            current.copy(history = (current.history.filterNot { it.key == key } + parked).sortedByDescending { it.lastWatchedAt }.take(LibraryState.MAX_HISTORY))
+        }
+    }
+
+    /**
+     * [applied] with the entry of the item playing here as it is in [local]: the one received is parked until playback
+     * ends, so that sync never moves what the player shows.
+     */
+    private fun keepingPlayback(local: LibraryState, applied: LibraryState): LibraryState {
+        val key = playingKey ?: return applied
+        val mine = local.progress(key)
+        val received = applied.progress(key)
+        if (received == mine) return applied
+        if (received != null) parkedProgress[key] = received
+        val history = applied.history.filterNot { it.key == key } + listOfNotNull(mine)
+        return applied.copy(history = history.sortedByDescending { it.lastWatchedAt }.take(LibraryState.MAX_HISTORY))
+    }
+
     /**
      * Remembers a session with [device] (to the day: the library is not written at each session), and forgets the
      * devices not seen for a year: deletions are kept until each device remembered has had them.
@@ -464,8 +505,9 @@ class OndoRepository(
     private fun applySync(merged: SyncSnapshot) {
         val state = _state.value
         val applied = SyncData.apply(state, merged)
+        val library = keepingPlayback(state.library, applied.library)
         val keysChanged = applied.keys != state.settings.serviceKeys
-        if (applied.playlists == state.playlists && applied.library == state.library && !keysChanged) return
+        if (applied.playlists == state.playlists && library == state.library && !keysChanged) return
         val removedIds = applied.removed.mapTo(HashSet()) { it.id }
         state.library.reminders.filter { it.playlistId in removedIds }.forEach(reminderScheduler::cancel)
         // The playlist in use stays unless it was deleted, or becomes the same one from another device that replaced it;
@@ -477,7 +519,7 @@ class OndoRepository(
         val before = state.activePlaylist
         persist {
             if (applied.removed.isEmpty()) savePlaylists(applied.playlists) else applied.removed.forEach { savePlaylists(applied.playlists, it) }
-            saveLibrary(applied.library)
+            saveLibrary(library)
             saveSettings(settings)
             applied.removed.forEach {
                 deleteContent(it.id)
@@ -485,7 +527,7 @@ class OndoRepository(
                 deleteGuide(it.id)
             }
         }
-        _state.update { it.copy(playlists = applied.playlists, library = applied.library, settings = settings) }
+        _state.update { it.copy(playlists = applied.playlists, library = library, settings = settings) }
         val after = _state.value.activePlaylist
         when {
             after == null -> {
