@@ -1,6 +1,8 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +33,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -65,6 +68,15 @@ val TvHeaderHeight = 190.dp
 
 /** The posters' width under the header: a little smaller, for a whole row to show below it. */
 val TvHeaderPosterWidth = 112.dp
+
+/**
+ * The landscape cards' width under the header (continue watching): as Home's, 16:9 with their two lines below, for
+ * the row with its name to fit under the header on a 960 × 540 dp TV.
+ */
+val TvHeaderWideCardWidth = TvTokens.WideCardWidth
+
+/** How long the header takes to step aside for the page's chips, or to come back. */
+private const val HEADER_COLLAPSE_MS = 220
 
 /** The synopsis' lines, their room kept even when there is none. */
 private const val PLOT_LINES = 3
@@ -110,6 +122,24 @@ class FocusedTitle {
 
 /** The page's [FocusedTitle]; none on a page without a header (Search, a title's page, a phone). */
 val LocalFocusedTitle = staticCompositionLocalOf<FocusedTitle?> { null }
+
+/** Whether the page's chips above its rows have the focus ([collapsesTvHeader]): the header then steps aside. */
+@Stable
+class TvHeaderChips {
+    var focused: Boolean by mutableStateOf(false)
+        internal set
+}
+
+val LocalTvHeaderChips = staticCompositionLocalOf<TvHeaderChips?> { null }
+
+/**
+ * The chips above a page's rows, under a TV's header: while they have the focus, the header steps aside (only the top
+ * bar stays) and the first row shows whole below them, never cut by the screen's bottom. Nothing elsewhere.
+ */
+fun Modifier.collapsesTvHeader(): Modifier = composed {
+    val chips = LocalTvHeaderChips.current ?: return@composed this
+    onFocusChanged { chips.focused = it.hasFocus }
+}
 
 /** Tells the page's header that this poster of [item] has the focus, where the page has one; nothing elsewhere. */
 fun Modifier.reportsFocus(item: ShowcaseItem): Modifier = composed {
@@ -173,12 +203,14 @@ private data class HeaderArt(val item: ShowcaseItem, val backdropUrl: String?)
 
 /**
  * The header of a TV's Movies and Series tabs and of a category's posters, pinned above them: the poster with the
- * focus, its backdrop behind (or its poster, blurred) fading into the page at the start side and at the bottom, its
- * title, year and genres, TMDb's rating (else the provider's), when it was added, and three lines of its synopsis.
- * Its height never changes; without a poster focused yet, it shows [fallback] (the page's first title).
+ * focus, its backdrop behind (or its poster, blurred) from the screen's very top, under the top bar's shade, fading
+ * into the page at the start side and at the bottom; its title, year and genres, TMDb's rating (else the provider's),
+ * when it was added, and three lines of its synopsis. The backdrop keeps its upper part ([TvArtworkAlignment]): faces
+ * stay whole. Its height never changes while the rows have the focus; without a poster focused yet, it shows
+ * [fallback] (the page's first title). [collapsed]: the page's chips have the focus, and only the bar's room stays.
  */
 @Composable
-fun TvFocusHeader(fallback: ShowcaseItem?, modifier: Modifier = Modifier) {
+fun TvFocusHeader(fallback: ShowcaseItem?, modifier: Modifier = Modifier, collapsed: Boolean = false) {
     val focus = LocalFocusedTitle.current ?: return
     val headers = LocalTitleHeaders.current
     val item = rememberShownTitle(focus, keepLast = true) ?: fallback
@@ -186,20 +218,24 @@ fun TvFocusHeader(fallback: ShowcaseItem?, modifier: Modifier = Modifier) {
     val header = rememberTitleHeader(item, headers)
     val ground = MaterialTheme.colorScheme.background
     val top = tvTopBarSpace()
-    // Under the top bar too: the picture runs to the screen's edges, the bar's band over it.
-    Box(modifier.fillMaxWidth().height(top + TvHeaderHeight).clipToBounds().testTag("titleHeader")) {
+    val shown by animateFloatAsState(if (collapsed) 0f else 1f, tween(HEADER_COLLAPSE_MS), label = "headerShown")
+    // The bar's band turns into a shade over the picture, from the screen's top.
+    TvTopBarOverArt(on = !collapsed)
+    // From the screen's top, under the top bar too: the picture runs to the screen's edges, the bar's shade over it.
+    Box(modifier.fillMaxWidth().height(top + TvHeaderHeight * shown).clipToBounds().testTag("titleHeader")) {
         if (header != null) {
-            Crossfade(HeaderArt(header.item, header.backdropUrl), label = "headerArt") { art ->
+            Crossfade(HeaderArt(header.item, header.backdropUrl), label = "headerArt", modifier = Modifier.fillMaxSize().graphicsLayer { alpha = shown }) { art ->
                 TvArtwork(art.backdropUrl, art.item.posterUrl, art.item.title, Modifier.fillMaxSize()) { url -> headers?.backdropFailed(art.item, url) }
             }
         }
         Box(Modifier.matchParentSize().background(startToEndGradient(0f to ground, 0.3f to ground.copy(alpha = 0.88f), 0.72f to Color.Transparent)))
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to ground)))
-        if (header != null) {
+        if (header != null && shown > 0f) {
             TitleHeaderText(
                 header,
                 Modifier
                     .align(Alignment.TopStart)
+                    .graphicsLayer { alpha = shown }
                     .padding(start = TvTokens.ContentStart, top = top + 12.dp, end = TvTokens.EdgeEnd)
                     .widthIn(max = 560.dp),
             )
@@ -221,9 +257,10 @@ fun TvHeaderAbove(fallback: ShowcaseItem?, lead: Dp = GRID_LEAD, content: @Compo
         return
     }
     val focus = remember { FocusedTitle() }
-    CompositionLocalProvider(LocalFocusedTitle provides focus) {
+    val chips = remember { TvHeaderChips() }
+    CompositionLocalProvider(LocalFocusedTitle provides focus, LocalTvHeaderChips provides chips) {
         Column(Modifier.fillMaxSize()) {
-            TvFocusHeader(fallback)
+            TvFocusHeader(fallback, collapsed = chips.focused)
             val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
             TvPinnedHeaderList(lead) { content(rest, 8.dp, true) }
         }

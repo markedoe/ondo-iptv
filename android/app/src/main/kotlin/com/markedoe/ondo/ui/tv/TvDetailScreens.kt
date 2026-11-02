@@ -46,6 +46,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -59,6 +60,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
@@ -273,7 +275,7 @@ private fun TvDetailHeader(
 ) {
     val ink = TvTokens.Ink
     Box(Modifier.fillMaxWidth().heightIn(min = 280.dp).bringIntoViewAsAWhole().testTag("detailHeader")) {
-        TvArtwork(backdropUrl, posterUrl, title, Modifier.matchParentSize(), onBackdropFailed)
+        TvArtwork(backdropUrl, posterUrl, title, Modifier.matchParentSize(), onBackdropFailed = onBackdropFailed)
         Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink, 0.35f to ink.copy(alpha = 0.9f), 0.7f to ink.copy(alpha = 0.3f), 1f to Color.Transparent)))
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to ink)))
         Column(
@@ -317,14 +319,30 @@ private fun TvDetailHeader(
 }
 
 /**
- * The picture behind a title: its backdrop across the width, else its poster on the right over a blurred copy (an
- * enlarged poster would look blurry on a TV).
+ * Where a TV's backdrops are cropped: towards their top, where the faces are. A picture wider than its frame is high
+ * (a header, the carousel) loses its bottom rather than the eyes of the people in it.
+ */
+val TvArtworkAlignment: Alignment = BiasAlignment(horizontalBias = 0f, verticalBias = -0.6f)
+
+/** The part of its picture a TV's artwork keeps when cropped ([TvArtwork]), for the tests. */
+val ArtworkAlignment = SemanticsPropertyKey<Alignment>("ArtworkAlignment")
+
+/**
+ * The picture behind a title: its backdrop across the width, cropped as [alignment] says, else its poster on the
+ * right over a blurred copy (an enlarged poster would look blurry on a TV).
  */
 @Composable
-internal fun TvArtwork(backdropUrl: String?, posterUrl: String?, title: String, modifier: Modifier = Modifier, onBackdropFailed: (String) -> Unit = {}) {
-    Box(modifier) {
+internal fun TvArtwork(
+    backdropUrl: String?,
+    posterUrl: String?,
+    title: String,
+    modifier: Modifier = Modifier,
+    alignment: Alignment = TvArtworkAlignment,
+    onBackdropFailed: (String) -> Unit = {},
+) {
+    Box(modifier.semantics { this[ArtworkAlignment] = alignment }.testTag("tvArtwork")) {
         if (!backdropUrl.isNullOrBlank()) {
-            Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize(), onFailed = onBackdropFailed)
+            Backdrop(url = backdropUrl, posterUrl = posterUrl, title = title, modifier = Modifier.fillMaxSize(), alignment = alignment, onFailed = onBackdropFailed)
         } else {
             BlurredPoster(url = posterUrl, title = title, modifier = Modifier.fillMaxSize().alpha(0.55f))
             Artwork(

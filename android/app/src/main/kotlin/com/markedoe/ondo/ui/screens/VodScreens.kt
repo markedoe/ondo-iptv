@@ -44,10 +44,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -72,6 +75,10 @@ import com.markedoe.ondo.ui.tv.TvSeeAllCard
 import com.markedoe.ondo.ui.tv.rememberLeaveField
 import com.markedoe.ondo.ui.tv.rememberTvTextField
 import com.markedoe.ondo.ui.tv.TvHeaderPosterWidth
+import com.markedoe.ondo.ui.tv.TvHeaderWideCardWidth
+import com.markedoe.ondo.ui.tv.LocalTvHeaderChips
+import com.markedoe.ondo.ui.tv.collapsesTvHeader
+import com.markedoe.ondo.ui.tv.wholeRowsOnly
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
 import com.markedoe.ondo.ui.tv.KeptForTheRemote
 import androidx.compose.ui.unit.Dp
@@ -106,31 +113,53 @@ const val TV_ROW_LENGTH = 10
 
 /**
  * Movies or Series tab: category chips, continue watching, My List, award winners, one row per category. On a TV, a
- * header pinned above the rows shows the poster with the focus ([TvFocusHeader]), the posters a little smaller.
+ * header pinned above the rows shows the poster with the focus ([TvFocusHeader]), the cards a little smaller: a row
+ * with its name and its cards' lines fits whole below it on a 960 × 540 dp screen. The chips focused, the header steps
+ * aside and the first row shows whole below them; a row the screen's bottom would cut is not drawn.
  */
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
     val fallback = state.myList.firstOrNull() ?: state.awardWinners.firstOrNull() ?: state.rows.firstOrNull()?.items?.firstOrNull()
     // The focused poster below its row's name, at the same place at every press.
     TvHeaderAbove(fallback, lead = SHELF_TITLE_ROOM) { modifier, top, underHeader ->
-        VodRows(state, actions, modifier, top, posterWidth = if (underHeader) TvHeaderPosterWidth else null)
+        VodRows(state, actions, modifier, top, underHeader)
     }
 }
 
 /** The room a row's name takes above its posters ([Shelf]'s title line on a TV). */
 private val SHELF_TITLE_ROOM = 52.dp
 
+/** The chips' item in the tab's list. */
+private const val CHIPS_KEY = "vod:chips"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, top: Dp, posterWidth: Dp?) {
+private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, top: Dp, underHeader: Boolean) {
     val metrics = rememberShelfMetrics()
     val television = isTelevision()
-    val width = posterWidth ?: metrics.posterWidth
+    val width = if (underHeader) TvHeaderPosterWidth else metrics.posterWidth
+    val wideWidth = if (underHeader) TvHeaderWideCardWidth else metrics.wideCardWidth
     // On a TV a row shows its first titles, then a See all card: the remote reaches it by going on along the row.
     val rowLength = if (television) TV_ROW_LENGTH else Int.MAX_VALUE
+    val list = rememberTabListState()
+    // Under the header, the row with the focus is always drawn; one the screen's bottom would cut, not.
+    var focusedRow by remember { mutableStateOf<Any?>(null) }
+    fun Modifier.row(key: Any): Modifier = if (underHeader) onFocusChanged { if (it.hasFocus) focusedRow = key } else this
+    // Down from the chips, the header comes back: the row the remote went to goes to the top, whole below it.
+    val chipsFocused = LocalTvHeaderChips.current?.focused == true
+    var chipsWereFocused by remember { mutableStateOf(false) }
+    LaunchedEffect(chipsFocused) {
+        val leaving = chipsWereFocused && !chipsFocused
+        chipsWereFocused = chipsFocused
+        if (!leaving) return@LaunchedEffect
+        withFrameNanos { }
+        val key = focusedRow?.takeIf { it != CHIPS_KEY } ?: return@LaunchedEffect
+        val index = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.index ?: return@LaunchedEffect
+        list.animateScrollToItem(index)
+    }
     LazyColumn(
-        state = rememberTabListState(),
-        modifier = modifier.testTag("vod"),
+        state = list,
+        modifier = modifier.testTag("vod").then(if (underHeader) Modifier.wholeRowsOnly(list) { focusedRow } else Modifier),
         verticalArrangement = Arrangement.spacedBy(if (metrics.compact) 24.dp else 32.dp),
         contentPadding = PaddingValues(top = top, bottom = 32.dp),
     ) {
@@ -150,11 +179,16 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                 )
             }
         }
-        item {
+        item(key = CHIPS_KEY) {
             // Above the first row's card, under the header: kept for the remote's Up.
             if (television) KeptForTheRemote()
             TvRow {
-                LazyRow(contentPadding = PaddingValues(horizontal = metrics.gutter), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LazyRow(
+                    // Focused, the chips have the header step aside: the first row shows whole below them.
+                    modifier = Modifier.row(CHIPS_KEY).collapsesTvHeader(),
+                    contentPadding = PaddingValues(horizontal = metrics.gutter),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     if (television) {
                         item {
                             CategoryPill(
@@ -185,17 +219,17 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
             else -> state.rows.firstOrNull()?.category?.id
         }
         if (state.continueWatching.isNotEmpty()) {
-            item {
-                Shelf(stringResource(R.string.continue_watching), metrics) {
+            item(key = "vod:resume") {
+                Shelf(stringResource(R.string.continue_watching), metrics, Modifier.row("vod:resume").testTag("shelfResume")) {
                     itemsIndexed(state.continueWatching, key = { _, it -> it.key }) { index, item ->
-                        ContinueCard(item, metrics.wideCardWidth, onClick = { actions.onResume(item) }, initialFocus = first == "resume" && index == 0, onRemove = { actions.onRemoveResume(item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+                        ContinueCard(item, wideWidth, onClick = { actions.onResume(item) }, initialFocus = first == "resume" && index == 0, onRemove = { actions.onRemoveResume(item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
                     }
                 }
             }
         }
         if (state.myList.isNotEmpty()) {
-            item {
-                Shelf(stringResource(R.string.my_list), metrics, onSeeAll = actions.onSeeAllMyList) {
+            item(key = "vod:myList") {
+                Shelf(stringResource(R.string.my_list), metrics, Modifier.row("vod:myList").testTag("shelfMyList"), onSeeAll = actions.onSeeAllMyList) {
                     itemsIndexed(state.myList.take(rowLength), key = { _, it -> it.key }) { index, item ->
                         CompositionLocalProvider(LocalShowsMyList provides true) {
                             PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == "myList" && index == 0)
@@ -206,16 +240,17 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
             }
         }
         if (state.awardWinners.isNotEmpty()) {
-            item {
-                Shelf(stringResource(R.string.award_winners), metrics) {
+            item(key = "vod:awards") {
+                Shelf(stringResource(R.string.award_winners), metrics, Modifier.row("vod:awards").testTag("shelfAwards")) {
                     itemsIndexed(state.awardWinners, key = { _, it -> it.key }) { index, item ->
                         PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "awards:${item.key}", initialFocus = first == "awards" && index == 0)
                     }
                 }
             }
         }
-        items(state.rows, key = { it.category.id }) { row ->
-            Shelf(row.category.name, metrics, onSeeAll = { actions.onCategory(row.category) }) {
+        // Keyed apart from the items above: a category's id is the provider's, any word.
+        items(state.rows, key = { "row:" + it.category.id }) { row ->
+            Shelf(row.category.name, metrics, Modifier.row("row:" + row.category.id).testTag("shelf:${row.category.id}"), onSeeAll = { actions.onCategory(row.category) }) {
                 itemsIndexed(row.items.take(rowLength), key = { _, it -> it.key }) { index, item ->
                     PosterCard(
                         item,

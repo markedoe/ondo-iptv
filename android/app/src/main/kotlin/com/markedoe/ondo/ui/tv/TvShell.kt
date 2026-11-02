@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,6 +71,7 @@ import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TopLevel
 import com.markedoe.ondo.ui.screens.OndoLogo
+import com.markedoe.ondo.ui.updatedAgoText
 import com.markedoe.ondo.ui.theme.OndoColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -84,8 +86,19 @@ class TvTopBar {
 
     internal var page: Page? by mutableStateOf(null)
 
-    /** A short line at the bar's end, before Search (Home: the playlist and when it was updated). */
-    internal var note: String? by mutableStateOf(null)
+    /** A page's own line at the bar's end ([TvTopBarNote]); its text null: no line on that page. */
+    internal class PageNote(val text: String?)
+
+    internal var pageNote: PageNote? by mutableStateOf(null)
+
+    /** The line every tab page shows unless it has its own: the playlist and when it was updated. */
+    internal var defaultNote: String? by mutableStateOf(null)
+
+    /** A short line at the bar's end, before Search. */
+    internal val note: String? get() = pageNote.let { if (it != null) it.text else defaultNote }
+
+    /** The page draws a picture under the bar ([TvTopBarOverArt]): the bar's band is a shade over it, not a wall. */
+    internal var overArt: Any? by mutableStateOf(null)
 
     /**
      * The remote is moving along the bar (Left, Right): each tab it reaches opens, and the page that opens leaves the
@@ -95,14 +108,44 @@ class TvTopBar {
         internal set
 }
 
-/** Shows [text] at the top bar's end while the calling page is on screen (on a TV; nothing elsewhere). */
+/**
+ * Shows [text] at the top bar's end while the calling page is on screen, in place of the playlist's line the bar
+ * shows on every tab page; null: no line at all (on a TV; nothing elsewhere).
+ */
 @Composable
 fun TvTopBarNote(text: String?) {
     val bar = LocalTvTopBar.current ?: return
     DisposableEffect(bar, text) {
-        bar.note = text
-        onDispose { if (bar.note == text) bar.note = null }
+        val note = TvTopBar.PageNote(text)
+        bar.pageNote = note
+        onDispose { if (bar.pageNote === note) bar.pageNote = null }
     }
+}
+
+/**
+ * While the calling page is on screen and [on], it draws a picture from the screen's top, under the bar (a header's
+ * backdrop): the bar's band is then a shade that fades into the picture, not the ground colour cut across it.
+ */
+@Composable
+fun TvTopBarOverArt(on: Boolean = true) {
+    val bar = LocalTvTopBar.current ?: return
+    DisposableEffect(bar, on) {
+        if (!on) return@DisposableEffect onDispose { }
+        val owner = Any()
+        bar.overArt = owner
+        onDispose { if (bar.overArt === owner) bar.overArt = null }
+    }
+}
+
+/** The playlist Home shows and when it was last fetched ([updatedAt], null: not yet), at [now]. */
+data class PlaylistUpdate(val name: String, val updatedAt: Long?, val now: Long)
+
+/** The top bar's line for [update]: the playlist's name, then when it was updated, one line each; null: neither. */
+@Composable
+fun playlistNote(update: PlaylistUpdate?): String? {
+    update ?: return null
+    val lines = listOfNotNull(update.name.takeIf { it.isNotBlank() }, update.updatedAt?.let { updatedAgoText(it, update.now) })
+    return lines.takeIf { it.isNotEmpty() }?.joinToString("\n")
 }
 
 val LocalTvTopBar = staticCompositionLocalOf<TvTopBar?> { null }
@@ -158,12 +201,15 @@ fun TvNavigationFrame(
     onSelect: (TopLevel) -> Unit,
     onSearch: () -> Unit,
     onSettings: () -> Unit,
+    playlist: PlaylistUpdate? = null,
     content: @Composable () -> Unit,
 ) {
     val requesters = remember { HashMap<String, FocusRequester>() }
     fun requester(tag: String) = requesters.getOrPut(tag) { FocusRequester() }
     val selectedTag = selected.tag
     val bar = remember { TvTopBar() }
+    val defaultNote = playlistNote(playlist)
+    SideEffect { bar.defaultNote = defaultNote }
     var barHasFocus by remember { mutableStateOf(false) }
     // The tab the remote rests on, about to open (a spinner shows it).
     var openingTab by remember { mutableStateOf<String?>(null) }
@@ -183,13 +229,23 @@ fun TvNavigationFrame(
         if (showBar) {
             val ground = MaterialTheme.colorScheme.background
             // The page scrolls under a black band, which fades out at the bar's lower edge: never over the page's top
-            // (its filters, the picture), which starts right below.
+            // (its filters), which starts right below. Over a picture that runs from the screen's top (a header's
+            // backdrop), a shade instead, darkest at the top, for the tabs to read: the picture shows through, with no
+            // edge across it.
+            val overArt = bar.overArt != null
             val band = (TvTokens.TopBarSpace - BAND_FADE) / TvTokens.TopBarSpace
             Box(
                 Modifier
                     .fillMaxWidth()
                     .height(TvTokens.TopBarSpace)
-                    .background(Brush.verticalGradient(0f to ground, band to ground, 1f to Color.Transparent)),
+                    .background(
+                        if (overArt) {
+                            Brush.verticalGradient(0f to ground.copy(alpha = 0.78f), 0.55f to ground.copy(alpha = 0.42f), 1f to Color.Transparent)
+                        } else {
+                            Brush.verticalGradient(0f to ground, band to ground, 1f to Color.Transparent)
+                        },
+                    )
+                    .testTag(if (overArt) "topBarScrim" else "topBarBand"),
             )
             Row(
                 Modifier
