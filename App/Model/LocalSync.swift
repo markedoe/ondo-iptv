@@ -27,8 +27,7 @@ final class LocalSync {
         var syncedAt: Date?
         /// Failed sessions in a row.
         var failures = 0
-        /// The digest of the snapshot last sent to it, and the one it answered with (docs/SYNC.md, "Transport").
-        var sentDigest: String?
+        /// The digest it answered with last (docs/SYNC.md, "Transport").
         var answerDigest: String?
         /// When this device last sent it a full snapshot: probes go only in between (docs/SYNC.md, "Transport"). On a
         /// clock that never goes back (not the wall clock, which a time server may move).
@@ -59,6 +58,9 @@ final class LocalSync {
     @ObservationIgnored private var generation = 0
     /// Devices queued by the regular tick (not by a change here): put off during playback when the session is large.
     @ObservationIgnored private var regular: Set<String> = []
+    /// The snapshot last sent in full to each device, by ID: a probe goes when nothing changed since, the items playing
+    /// now left out on both sides (docs/SYNC.md, "Transport").
+    @ObservationIgnored private var sent: [String: SentSnapshot] = [:]
 
     /// A regular session during playback goes only with a snapshot this small (or a probe).
     static let lightSnapshotBytes = 64 * 1024
@@ -235,17 +237,17 @@ final class LocalSync {
         let isRegular = regular.remove(device.id) != nil
         guard let snapshot = model?.syncSnapshotForSending() else { return }
         do {
-            let (sentDigest, answerDigest) = (device.sentDigest, device.answerDigest)
+            let (sent, answerDigest) = (self.sent[device.id], device.answerDigest)
             // During playback, no full snapshot is built only to be put off: a probe goes (docs/SYNC.md).
             let playing = model?.playingKeys.isEmpty == false
             let full = !playing && (device.fullAt.map { $0.duration(to: .now) >= Self.fullEvery } ?? true)
             // The items playing are left out of the digest: their progress, saved every few seconds, would make every
             // session a full one.
             let leavingOut = Set((model?.playingKeys ?? []).map { "progress:" + SyncMapping.lowercasingPlaylistID($0) })
-            let (offer, frame) = try await Task.detached(priority: .utility) { () throws -> (SyncSnapshot, Data) in
-                let offer = try snapshot.offer(sentDigest: sentDigest, answerDigest: answerDigest, full: full, leavingOut: leavingOut,
+            let (offer, keep, frame) = try await Task.detached(priority: .utility) { () throws -> (SyncSnapshot, SentSnapshot?, Data) in
+                let offer = try snapshot.offer(sent: sent, answerDigest: answerDigest, full: full, leavingOut: leavingOut,
                                                hash: LocalSync.digest)
-                return (offer, try SyncNetwork.frame(offer.encoded()))
+                return (offer.snapshot, offer.sent, try SyncNetwork.frame(offer.snapshot.encoded()))
             }.value
             if isRegular, !offer.isProbe, frame.count > Self.lightSnapshotBytes, model?.playingKeys.isEmpty == false { return }
             // A new connection to the Bonjour service: its address is found again each time, after a failure too.
@@ -261,13 +263,15 @@ final class LocalSync {
                 if applied, let index = devices.firstIndex(where: { $0.id == device.id }) {
                     // The server has what was sent (a probe sent nothing new); its digest says what it has now.
                     if !offer.isProbe {
-                        devices[index].sentDigest = offer.digest
+                        self.sent[device.id] = keep
                         devices[index].fullAt = .now
                         model.noteSyncSession(with: merged.device)
                     }
                     devices[index].answerDigest = merged.digest
                 }
             }
+            // A probe kept the last snapshot sent, its digest worked out for what plays now: not again next time.
+            if offer.isProbe { self.sent[device.id] = keep }
             succeeded(device.id)
         } catch {
             guard self.generation == generation else { return }

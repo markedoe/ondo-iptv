@@ -63,11 +63,9 @@ final class SyncFuzzTests: XCTestCase {
     /// One session: what each side receives is left out when dated more than a day after its own clock, taken into
     /// its clock, and merged; no time is moved (docs/SYNC.md, "Clocks").
     static func session(client: inout Side, server: inout Side) {
-        let received = client.data.withoutRecordsAhead(wall: server.wall)
-        server.clock.observe(received, wall: server.wall)
+        let received = server.clock.receive(client.data, wall: server.wall)
         server.data = SyncMerge.merge(server.data, received)
-        let answer = server.data.withoutRecordsAhead(wall: client.wall)
-        client.clock.observe(answer, wall: client.wall)
+        let answer = client.clock.receive(server.data, wall: client.wall)
         client.data = SyncMerge.merge(client.data, answer)
     }
 

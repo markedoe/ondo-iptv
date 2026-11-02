@@ -17,8 +17,12 @@ class SyncClock(last: Long = Long.MIN_VALUE) {
     @Synchronized
     fun stamp(wall: Long): Long = maxOf(wall, saturated(last, 1)).also { last = it }
 
-    /** Now on this clock, without giving a time: the later of the wall clock and [last] (to compare with, prune by). */
-    fun now(wall: Long): Long = maxOf(wall, last)
+    /**
+     * Now on this clock, without giving a time: the later of the wall clock and [last], but never more than
+     * [MAX_AHEAD_MS] after a wall clock that is set, nor after [EARLIEST_WALL_MS] when it is not. What prunes deletions
+     * and dates sessions and learned deletions: one time far ahead cannot make every deletion look old at once.
+     */
+    fun now(wall: Long): Long = maxOf(wall, minOf(last, if (isSet(wall)) saturated(wall, MAX_AHEAD_MS) else EARLIEST_WALL_MS))
 
     /** Takes in a time stored here before (this device's own data, read at launch): no later than it from now on. */
     @Synchronized
@@ -27,29 +31,37 @@ class SyncClock(last: Long = Long.MIN_VALUE) {
     }
 
     /**
-     * Takes in a time received from another device, unless it is more than [MAX_AHEAD_MS] after [wall] (then the
-     * record is left out too, [SyncSnapshot.withoutRecordsAhead]): one device far ahead does not carry the others along.
+     * The latest time this device takes from another one (docs/SYNC.md, "Clocks"): [MAX_AHEAD_MS] after its wall clock
+     * when that is set; else [UNSET_LATEST_MS], or [UNSET_AHEAD_MS] after [last] when that is later.
      */
+    fun latestAccepted(wall: Long): Long =
+        if (isSet(wall)) saturated(wall, MAX_AHEAD_MS) else maxOf(UNSET_LATEST_MS, saturated(last, UNSET_AHEAD_MS))
+
+    /** Takes in a time received from another device, unless it is after [latestAccepted]. */
     fun observe(time: Long?, wall: Long) {
         if (time != null && time <= latestAccepted(wall)) advance(time)
     }
 
-    /** [observe] for each time of [snapshot]: call it with what is left of a received snapshot once filtered. */
-    fun observe(snapshot: SyncSnapshot, wall: Long) = observe(snapshot.times().filter { it <= latestAccepted(wall) }.maxOrNull(), wall)
+    /**
+     * What this device takes of a snapshot received: without the records and deletions dated after [latestAccepted]
+     * ([SyncSnapshot.withoutRecordsAfter]); the latest time left is taken in. No time is moved.
+     */
+    fun receive(snapshot: SyncSnapshot, wall: Long): SyncSnapshot =
+        snapshot.withoutRecordsAfter(latestAccepted(wall)).also { advance(it.latestTime()) }
 
     companion object {
         /** How far after the receiver's wall clock a time received may be (docs/SYNC.md, "Clocks"): one day. */
         const val MAX_AHEAD_MS = 86_400_000L
 
-        /**
-         * 2024-01-01 (UTC): a wall clock before this is not set (a box before it reaches a time server, at 1970). Such a
-         * device has no idea of the time, so it leaves nothing out of what it receives.
-         */
+        /** 2024-01-01 (UTC): a wall clock before this is not set (a box before it reaches a time server, at 1970). */
         const val EARLIEST_WALL_MS = 1_704_067_200_000L
 
-        fun isSet(wall: Long): Boolean = wall >= EARLIEST_WALL_MS
+        /** 2029-01-01 (UTC): the latest time a device whose clock is not set takes in, unless it holds later ones. */
+        const val UNSET_LATEST_MS = 1_861_920_000_000L
 
-        /** The latest time a device whose wall clock reads [wall] takes from another one; any time when its clock is not set. */
-        fun latestAccepted(wall: Long): Long = if (isSet(wall)) saturated(wall, MAX_AHEAD_MS) else Long.MAX_VALUE
+        /** Two years: how far after the latest time it holds a device whose clock is not set takes times in. */
+        const val UNSET_AHEAD_MS = 2 * 365 * MAX_AHEAD_MS
+
+        fun isSet(wall: Long): Boolean = wall >= EARLIEST_WALL_MS
     }
 }

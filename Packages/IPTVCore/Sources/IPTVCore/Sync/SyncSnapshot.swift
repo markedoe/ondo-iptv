@@ -142,6 +142,18 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         return copy
     }
 
+    /// `offer` against `sent`, the snapshot last sent in full to that server (nil: none yet): its digest is the one for
+    /// the same `leavingOut`, so that an item that started playing since (its progress saved every few seconds) does not
+    /// make every offer a full one. Returns the offer, and what to keep as sent once the server has it: for a full offer
+    /// the offer itself, for a probe `sent` with its digest for `leavingOut`.
+    public func offer(sent: SentSnapshot?, answerDigest: String?, full: Bool = false, leavingOut: Set<String> = [],
+                      hash: (Data) -> String) throws -> (snapshot: SyncSnapshot, sent: SentSnapshot?) {
+        let now = try sent?.leaving(leavingOut, hash: hash)
+        let offer = try offer(sentDigest: now?.digest, answerDigest: answerDigest, full: full, leavingOut: leavingOut, hash: hash)
+        guard !offer.isProbe, let digest = offer.digest else { return (offer, now) }
+        return (offer, SentSnapshot(snapshot: offer, leavingOut: leavingOut, digest: digest))
+    }
+
     /// A probe from this snapshot's device (docs/SYNC.md, "Transport"): its `digest`, and the server's `seen` one.
     public func probe(digest: String, seen: String) -> SyncSnapshot {
         SyncSnapshot(device: device, deviceName: deviceName, clock: clock, digest: digest, seen: seen, probe: true)
@@ -199,13 +211,11 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         return overflow ? (b < 0 ? .min : .max) : sum
     }
 
-    /// The same snapshot without the records and deletions dated more than `SyncClock.maxAheadMilliseconds` after
-    /// `wall`, the receiver's own clock (docs/SYNC.md, "Clocks"): one device whose clock is far ahead cannot date its
-    /// changes in the future and win over every later one, nor push the others' clocks there. They are left out, not
-    /// moved: the device that made them keeps them, and they travel once their time has come. A receiver whose clock is
-    /// not set (`SyncClock.isSet`) leaves nothing out. Applied by the device that receives a snapshot, before the merge.
-    public func withoutRecordsAhead(wall: Int64) -> SyncSnapshot {
-        let latest = SyncClock.latestAccepted(wall: wall)
+    /// The same snapshot without the records and deletions dated after `latest` (`SyncClock.receive`, docs/SYNC.md,
+    /// "Clocks"): one device whose clock is far ahead cannot date its changes in the future and win over every later
+    /// one, nor push the others' clocks there. They are left out, not moved: the device that made them keeps them, and
+    /// they travel once their time has come. Applied by the device that receives a snapshot, before the merge.
+    public func withoutRecordsAfter(_ latest: Int64) -> SyncSnapshot {
         guard latest != .max else { return self }
         func past(_ time: Int64) -> Bool { time <= latest }
         var copy = self
@@ -500,5 +510,25 @@ private extension KeyedDecodingContainer {
     func value<T: Decodable>(_ key: Key, default fallback: T) throws -> T {
         guard contains(key) else { return fallback }
         return try decode(T.self, forKey: key)
+    }
+}
+
+/// A snapshot a client sent a server in full, with its `digest` leaving out the progress of `leavingOut` (docs/SYNC.md,
+/// "Transport").
+public struct SentSnapshot: Sendable {
+    public let snapshot: SyncSnapshot
+    public let leavingOut: Set<String>
+    public let digest: String
+
+    public init(snapshot: SyncSnapshot, leavingOut: Set<String>, digest: String) {
+        self.snapshot = snapshot
+        self.leavingOut = leavingOut
+        self.digest = digest
+    }
+
+    /// The same snapshot with its digest leaving out `others` instead: worked out again only when they differ.
+    public func leaving(_ others: Set<String>, hash: (Data) -> String) throws -> SentSnapshot {
+        others == leavingOut ? self
+            : SentSnapshot(snapshot: snapshot, leavingOut: others, digest: hash(try snapshot.contentForDigest(leavingOut: others)))
     }
 }

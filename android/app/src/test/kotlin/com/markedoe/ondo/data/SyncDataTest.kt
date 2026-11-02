@@ -1,5 +1,6 @@
 package com.markedoe.ondo.data
 
+import com.markedoe.ondo.core.sync.SentSnapshot
 import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
@@ -471,20 +472,21 @@ class SyncDataTest {
         val raised = mutableListOf<Any>()
         backgroundScope.launch { onTime.localSyncChanges.collect { raised += it } }
         backgroundScope.launch { ahead.localSyncChanges.collect { raised += it } }
-        var sent: String? = null
+        var sent: SentSnapshot? = null
         var answered: String? = null
         val libraries = mutableListOf<Pair<LibraryState, LibraryState>>()
         repeat(20) { round ->
             time += 60_000
-            val (offer, _) = requireNotNull(onTime.syncOffer("on-time", sent, answered, full = round % 2 == 0))
+            val prepared = requireNotNull(onTime.syncOffer("on-time", sent, answered, full = round % 2 == 0))
+            val offer = prepared.snapshot
             time += 40
             val answer = requireNotNull(ahead.answerSync(offer, "ahead"))
             time += 40
             if (!answer.isUnchanged) {
                 requireNotNull(onTime.mergeSyncInBackground(answer, "on-time"))
-                if (!offer.isProbe) sent = offer.digest
                 answered = answer.digest
             }
+            sent = prepared.sent
             runCurrent()
             libraries += ahead.state.value.library to onTime.state.value.library
         }
@@ -495,6 +497,49 @@ class SyncDataTest {
             assertEquals("round $round", settled.second.copy(syncPeers = emptyMap()), pair.second.copy(syncPeers = emptyMap()))
         }
         assertTrue("no session asked for by a merge: $raised", raised.isEmpty())
+    }
+
+    /**
+     * A film resumed on the phone after its last full session with the TV: while it plays, the phone's regular sessions
+     * are probes, its position (saved every few seconds) being left out on both sides of the comparison.
+     */
+    @Test
+    fun aFilmResumedAfterTheLastFullSessionStillSendsProbes() = runTest {
+        val tv = device("tv").ready()
+        val phone = device("phone").ready()
+        tv.addPlaylist("Home", list)
+        session(phone, tv)
+        phone.state.first { it.content.movies.isNotEmpty() }
+        val movie = phone.state.value.content.movies.single()
+        val key = requireNotNull(phone.playRequest(movie)?.progressKey)
+        phone.recordProgress(key, 600.0, 5_400.0)
+        var sent: SentSnapshot? = null
+        var answered: String? = null
+        suspend fun round(): SyncSnapshot {
+            time += 60_000
+            val prepared = requireNotNull(phone.syncOffer("phone", sent, answered, full = false))
+            val answer = requireNotNull(tv.answerSync(prepared.snapshot, "tv"))
+            if (!answer.isUnchanged) {
+                requireNotNull(phone.mergeSyncInBackground(answer, "phone"))
+                answered = answer.digest
+            }
+            sent = prepared.sent
+            return prepared.snapshot
+        }
+        // A full session with nothing playing, then probes.
+        assertFalse(round().isProbe)
+        assertTrue(round().isProbe)
+        // The film is resumed: it starts again, and its position moves every few seconds.
+        phone.playRequest(movie)
+        phone.playbackStarted(key)
+        for (minute in 1..3) {
+            phone.recordProgress(key, 600.0 + minute * 60, 5_400.0)
+            assertTrue("minute $minute", round().isProbe)
+        }
+        // Playback ends: the position goes to the TV.
+        phone.playbackEnded()
+        assertFalse(round().isProbe)
+        assertEquals(780.0, tv.state.value.library.progress(key)!!.position, 0.0)
     }
 
     /**

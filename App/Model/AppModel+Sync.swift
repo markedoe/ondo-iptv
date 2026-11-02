@@ -542,9 +542,7 @@ extension AppModel {
         // Without what is dated more than a day after this device's clock; the rest goes into its sync clock, so that a
         // change made here next is dated after it (docs/SYNC.md, "Clocks"). No time is moved. Merged off the main actor:
         // the merge that is kept is the one with the data as it is at the end (below), on the main actor.
-        let wall = now.syncMilliseconds
-        let taken = received.withoutRecordsAhead(wall: wall)
-        syncClock.observe(taken, wall: wall)
+        let taken = syncClock.receive(received, wall: now.syncMilliseconds)
         let local = syncSnapshot(now: now)
         let merged = await Task.detached(priority: .utility) { SyncMerge.merge(local, taken) }.value
         let records = Dictionary(merged.playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })

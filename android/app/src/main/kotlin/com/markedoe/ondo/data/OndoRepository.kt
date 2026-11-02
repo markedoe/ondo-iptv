@@ -40,6 +40,7 @@ import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.core.sync.SentSnapshot
 import com.markedoe.ondo.core.sync.SyncClock
 import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncMerge
@@ -465,10 +466,7 @@ class OndoRepository(
      * What this device takes of [incoming] (docs/SYNC.md, "Clocks"): without what is dated more than a day after its
      * clock; the rest goes into its sync clock, so that a change made here next is dated after it. No time is moved.
      */
-    private fun received(incoming: SyncSnapshot): SyncSnapshot {
-        val wall = now()
-        return incoming.withoutRecordsAhead(wall).also { syncClock.observe(it, wall) }
-    }
+    private fun received(incoming: SyncSnapshot): SyncSnapshot = syncClock.receive(incoming, now())
 
     /**
      * Merges [incoming] with this device's data as it is now, keeps the result and returns it as the answer for its
@@ -503,16 +501,19 @@ class OndoRepository(
         return withContext(syncMerging) { SyncData.snapshot(state, id, deviceName, time).contentDigest(leavingOut) }
     }
 
+    /** What [syncOffer] gives: the snapshot to send, its size in bytes, and what to keep as sent once the server has it. */
+    class SyncOffer(val snapshot: SyncSnapshot, val size: Int, val sent: SentSnapshot?)
+
     /**
-     * What a client sends a server ([SyncSnapshot.offer]), and its size in bytes: everything is worked out on
-     * [syncMerging], off the main thread. Main thread.
+     * What a client sends a server ([SyncSnapshot.offer]) after it last sent it [sent] in full: everything is worked out
+     * on [syncMerging], off the main thread. Main thread.
      */
-    suspend fun syncOffer(deviceName: String?, sentDigest: String?, answerDigest: String?, full: Boolean): Pair<SyncSnapshot, Int>? {
+    suspend fun syncOffer(deviceName: String?, sent: SentSnapshot?, answerDigest: String?, full: Boolean): SyncOffer? {
         val (state, own) = syncSnapshotInBackground(deviceName) ?: return null
         val leavingOut = digestLeavingOut(state)
         return withContext(syncMerging) {
-            val offer = own.offer(sentDigest, answerDigest, full, leavingOut)
-            offer to offer.encoded().size
+            val offer = own.offer(sent, answerDigest, full, leavingOut)
+            SyncOffer(offer.snapshot, if (offer.snapshot.isProbe) 0 else offer.snapshot.encoded().size, offer.sent)
         }
     }
 

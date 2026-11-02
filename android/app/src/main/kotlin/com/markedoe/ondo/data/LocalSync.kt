@@ -11,6 +11,7 @@ import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.SystemClock
 import android.provider.Settings
+import com.markedoe.ondo.core.sync.SentSnapshot
 import com.markedoe.ondo.core.sync.SyncNetwork
 import com.markedoe.ondo.core.sync.SyncSession
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -133,8 +134,8 @@ class LocalSync(
         var busy = false
         /** Its address is to be resolved again before the next session (the last one failed). */
         var stale = false
-        /** The digest of the snapshot this device last sent it, and the one it answered with (docs/SYNC.md, "Transport"). */
-        var sentDigest: String? = null
+        /** The snapshot this device last sent it in full, and the digest it answered with (docs/SYNC.md, "Transport"). */
+        var sent: SentSnapshot? = null
         var answerDigest: String? = null
         /** When this device last sent it a full snapshot: probes go only in between (docs/SYNC.md, "Transport"). */
         var fullAt = Long.MIN_VALUE / 2
@@ -208,9 +209,9 @@ class LocalSync(
                 launch {
                     // During playback, no full snapshot is built only to be put off: a probe goes (docs/SYNC.md).
                     val full = time - peer.fullAt >= FULL_EVERY_MS && !repository.isPlaying
-                    val prepared = repository.syncOffer(name, peer.sentDigest, peer.answerDigest, full)
-                    val offer = prepared?.first
-                    val size = prepared?.second ?: 0
+                    val prepared = repository.syncOffer(name, peer.sent, peer.answerDigest, full)
+                    val offer = prepared?.snapshot
+                    val size = prepared?.size ?: 0
                     if (regular && offer != null && !offer.isProbe && repository.isPlaying && size > LIGHT_SNAPSHOT_BYTES) {
                         events.send(Event.Deferred(peer.id))
                         return@launch
@@ -227,12 +228,14 @@ class LocalSync(
                     if (worked && answer != null && !answer.isUnchanged) {
                         // The server has what was sent (a probe sent nothing new); its digest says what it has now.
                         if (offer != null && !offer.isProbe) {
-                            peer.sentDigest = offer.digest
+                            peer.sent = prepared?.sent
                             peer.fullAt = time
                             repository.noteSyncSession(answer.device)
                         }
                         peer.answerDigest = answer.digest
                     }
+                    // A probe kept the last snapshot sent, its digest worked out for what plays now: not again next time.
+                    if (worked && offer != null && offer.isProbe) peer.sent = prepared?.sent
                     if (worked && peer.stale) {
                         peer.address = address
                         peer.port = port

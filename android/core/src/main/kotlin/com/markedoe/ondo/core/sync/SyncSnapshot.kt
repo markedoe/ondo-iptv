@@ -68,6 +68,21 @@ data class SyncSnapshot(
         return if (!full && answerDigest != null && digest == sentDigest) probe(digest, answerDigest) else copy(digest = digest)
     }
 
+    /**
+     * [offer] against [sent], the snapshot last sent in full to that server (null: none yet): its digest is the one
+     * for the same [leavingOut], so that an item that started playing since (its progress saved every few seconds)
+     * does not make every offer a full one. Returns the offer, and what to keep as sent once the server has it: for a
+     * full offer the offer itself, for a probe [sent] with its digest for [leavingOut].
+     */
+    fun offer(sent: SentSnapshot?, answerDigest: String?, full: Boolean = false, leavingOut: Set<String> = emptySet()): Offer {
+        val now = sent?.leaving(leavingOut)
+        val offer = offer(now?.digest, answerDigest, full, leavingOut)
+        return Offer(offer, if (offer.isProbe) now else SentSnapshot(offer, leavingOut, requireNotNull(offer.digest)))
+    }
+
+    /** What [offer] gives: the snapshot to send, and what to keep as sent once the server has it. */
+    data class Offer(val snapshot: SyncSnapshot, val sent: SentSnapshot?)
+
     fun encoded(): ByteArray = json.encodeToString(serializer(), this).encodeToByteArray()
 
     /**
@@ -104,14 +119,12 @@ data class SyncSnapshot(
     fun latestTime(): Long? = times().maxOrNull()
 
     /**
-     * The same snapshot without the records and deletions dated more than [SyncClock.MAX_AHEAD_MS] after [wall], the
-     * receiver's own clock (docs/SYNC.md, "Clocks"): one device whose clock is far ahead cannot date its changes in the
-     * future and win over every later one, nor push the others' clocks there. They are left out, not moved: the device
-     * that made them keeps them, and they travel once their time has come. A receiver whose clock is not set
-     * ([SyncClock.isSet]) leaves nothing out. Applied by the device that receives a snapshot, before the merge.
+     * The same snapshot without the records and deletions dated after [latest] ([SyncClock.receive], docs/SYNC.md,
+     * "Clocks"): one device whose clock is far ahead cannot date its changes in the future and win over every later
+     * one, nor push the others' clocks there. They are left out, not moved: the device that made them keeps them, and
+     * they travel once their time has come. Applied by the device that receives a snapshot, before the merge.
      */
-    fun withoutRecordsAhead(wall: Long): SyncSnapshot {
-        val latest = SyncClock.latestAccepted(wall)
+    fun withoutRecordsAfter(latest: Long): SyncSnapshot {
         if (latest == Long.MAX_VALUE) return this
         fun past(time: Long) = time <= latest
         return copy(
@@ -173,6 +186,16 @@ data class SyncSnapshot(
         },
         replaced = replaced.entries.associate { (old, new) -> old.lowercase() to new.lowercase() },
     )
+}
+
+/**
+ * A snapshot a client sent a server in full, with its [digest] leaving out the progress of [leavingOut] (docs/SYNC.md,
+ * "Transport").
+ */
+class SentSnapshot(val snapshot: SyncSnapshot, val leavingOut: Set<String>, val digest: String) {
+    /** The same snapshot with its digest leaving out [others] instead: worked out again only when they differ. */
+    fun leaving(others: Set<String>): SentSnapshot =
+        if (others == leavingOut) this else SentSnapshot(snapshot, others, snapshot.contentDigest(others))
 }
 
 /** [a] + [b], held at the ends of Long's range instead of wrapping around. */

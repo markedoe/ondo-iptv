@@ -9,9 +9,12 @@ import Foundation
 public struct SyncClock: Hashable, Sendable {
     /// How far after the receiver's wall clock a time received may be (docs/SYNC.md, "Clocks"): one day.
     public static let maxAheadMilliseconds: Int64 = 86_400_000
-    /// 2024-01-01 (UTC): a wall clock before this is not set (a box before it reaches a time server, at 1970). Such a
-    /// device has no idea of the time, so it leaves nothing out of what it receives.
+    /// 2024-01-01 (UTC): a wall clock before this is not set (a box before it reaches a time server, at 1970).
     public static let earliestWallMilliseconds: Int64 = 1_704_067_200_000
+    /// 2029-01-01 (UTC): the latest time a device whose clock is not set takes in, unless it holds later ones.
+    public static let unsetLatestMilliseconds: Int64 = 1_861_920_000_000
+    /// Two years: how far after the latest time it holds a device whose clock is not set takes times in.
+    public static let unsetAheadMilliseconds: Int64 = 2 * 365 * maxAheadMilliseconds
 
     public private(set) var last: Int64
 
@@ -21,35 +24,43 @@ public struct SyncClock: Hashable, Sendable {
 
     public static func isSet(wall: Int64) -> Bool { wall >= earliestWallMilliseconds }
 
-    /// The latest time a device whose wall clock reads `wall` takes from another one; any time when its clock is not set.
-    public static func latestAccepted(wall: Int64) -> Int64 {
-        isSet(wall: wall) ? SyncSnapshot.saturated(wall, maxAheadMilliseconds) : .max
-    }
-
     /// The time of a change made now: the wall clock, or just after `last` when that is later.
     public mutating func stamp(wall: Int64) -> Int64 {
         last = max(wall, SyncSnapshot.saturated(last, 1))
         return last
     }
 
-    /// Now on this clock, without giving a time: the later of the wall clock and `last` (to compare with, prune by).
-    public func now(wall: Int64) -> Int64 { max(wall, last) }
+    /// Now on this clock, without giving a time: the later of the wall clock and `last`, but never more than
+    /// `maxAheadMilliseconds` after a wall clock that is set, nor after `earliestWallMilliseconds` when it is not. What
+    /// prunes deletions and dates sessions and learned deletions: one time far ahead cannot make every deletion look old
+    /// at once.
+    public func now(wall: Int64) -> Int64 {
+        max(wall, min(last, Self.isSet(wall: wall) ? SyncSnapshot.saturated(wall, Self.maxAheadMilliseconds) : Self.earliestWallMilliseconds))
+    }
 
     /// Takes in a time stored here before (this device's own data, read at launch): no later than it from now on.
     public mutating func advance(to time: Int64?) {
         if let time, time > last { last = time }
     }
 
-    /// Takes in a time received from another device, unless it is more than `maxAheadMilliseconds` after `wall` (then
-    /// the record is left out too, `SyncSnapshot.withoutRecordsAhead`): one device far ahead does not carry the others
-    /// along.
-    public mutating func observe(_ time: Int64?, wall: Int64) {
-        if let time, time <= Self.latestAccepted(wall: wall) { advance(to: time) }
+    /// The latest time this device takes from another one (docs/SYNC.md, "Clocks"): `maxAheadMilliseconds` after its
+    /// wall clock when that is set; else `unsetLatestMilliseconds`, or `unsetAheadMilliseconds` after `last` when that
+    /// is later.
+    public func latestAccepted(wall: Int64) -> Int64 {
+        Self.isSet(wall: wall) ? SyncSnapshot.saturated(wall, Self.maxAheadMilliseconds)
+            : max(Self.unsetLatestMilliseconds, SyncSnapshot.saturated(last, Self.unsetAheadMilliseconds))
     }
 
-    /// `observe` for each time of `snapshot`: call it with what is left of a received snapshot once filtered.
-    public mutating func observe(_ snapshot: SyncSnapshot, wall: Int64) {
-        let latest = Self.latestAccepted(wall: wall)
-        observe(snapshot.times.filter { $0 <= latest }.max(), wall: wall)
+    /// Takes in a time received from another device, unless it is after `latestAccepted`.
+    public mutating func observe(_ time: Int64?, wall: Int64) {
+        if let time, time <= latestAccepted(wall: wall) { advance(to: time) }
+    }
+
+    /// What this device takes of a snapshot received: without the records and deletions dated after `latestAccepted`
+    /// (`SyncSnapshot.withoutRecordsAfter`); the latest time left is taken in. No time is moved.
+    public mutating func receive(_ snapshot: SyncSnapshot, wall: Int64) -> SyncSnapshot {
+        let taken = snapshot.withoutRecordsAfter(latestAccepted(wall: wall))
+        advance(to: taken.latestTime)
+        return taken
     }
 }

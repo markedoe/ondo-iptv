@@ -33,14 +33,14 @@ final class SyncClockTests: XCTestCase {
         XCTAssertEqual(clock.last, Self.start)
         clock.observe(Self.start + Self.day, wall: Self.start)
         XCTAssertEqual(clock.last, Self.start + Self.day, "a day ahead at most")
-        // A clock that is not set (1970) has no idea of the time: it takes everything in.
+        // A clock that is not set (1970) has no idea of the time: it takes in what is not far ahead.
         var unset = SyncClock()
         unset.observe(Self.start + 365 * Self.day, wall: 1_000)
         XCTAssertEqual(unset.last, Self.start + 365 * Self.day)
         // At the ends of the range: no overflow.
         var end = SyncClock(last: .max)
         XCTAssertEqual(end.stamp(wall: .max), .max)
-        XCTAssertEqual(SyncClock.latestAccepted(wall: .max), .max)
+        XCTAssertEqual(SyncClock().latestAccepted(wall: .max), .max)
     }
 
     func testTheSendersClockFieldIsIgnoredAndTimesAreNeverMoved() {
@@ -53,7 +53,8 @@ final class SyncClockTests: XCTestCase {
                 deleted: ["favorite:p|movie|m2": now + skew - 5],
                 clock: now + skew
             )
-            XCTAssertEqual(sent.withoutRecordsAhead(wall: now), sent, "skew \(skew)")
+            var clock = SyncClock()
+            XCTAssertEqual(clock.receive(sent, wall: now), sent, "skew \(skew)")
         }
     }
 
@@ -73,7 +74,8 @@ final class SyncClockTests: XCTestCase {
             keys: [SyncKey(service: SyncKey.tmdb, value: "k", updatedAt: ahead)],
             deleted: ["favorite:p|movie|m2": ahead, "favorite:p|movie|m3": 5]
         )
-        let received = snapshot.withoutRecordsAhead(wall: now)
+        var clock = SyncClock()
+        let received = clock.receive(snapshot, wall: now)
         XCTAssertEqual(received.playlists.map(\.id), ["q"])
         XCTAssertEqual(received.progress.map(\.watchedAt), [near], "a day ahead at most: kept as it is")
         XCTAssertEqual(received.people.map(\.name), ["Ada"])
@@ -81,8 +83,68 @@ final class SyncClockTests: XCTestCase {
         XCTAssertEqual(received.lists.first?.items, [])
         XCTAssertTrue(received.favorites.isEmpty && received.keys.isEmpty)
         XCTAssertEqual(received.deleted, ["favorite:p|movie|m3": 5])
-        XCTAssertEqual(snapshot.withoutRecordsAhead(wall: 1_000), snapshot, "a clock not set leaves nothing out")
-        XCTAssertEqual(SyncSnapshot(device: "box", deleted: ["k": .max]).withoutRecordsAhead(wall: .max - 1).deleted, ["k": .max])
+        var unset = SyncClock()
+        XCTAssertEqual(unset.receive(snapshot, wall: 1_000), snapshot, "a clock not set takes in what is not far ahead")
+        var end = SyncClock()
+        XCTAssertEqual(end.receive(SyncSnapshot(device: "box", deleted: ["k": .max]), wall: .max - 1).deleted, ["k": .max])
+    }
+
+    /// A box whose clock is not set takes in no time far ahead (a clock reading 2100, a damaged time): its clock is
+    /// not carried there, and "now" never runs far ahead of a clock, so deletions are not all pruned at once.
+    func testAClockNotSetTakesNothingFarAheadAndPrunesNothingByIt() {
+        let year2100: Int64 = 4_102_444_800_000
+        var box = SyncClock()
+        let taken = box.receive(SyncSnapshot(device: "tv", people: [SyncPerson(name: "Ada", addedAt: year2100)],
+                                             deleted: ["k": .max, "favorite:p|movie|m1": Self.start]), wall: 1_000)
+        XCTAssertTrue(taken.people.isEmpty)
+        XCTAssertEqual(Array(taken.deleted.keys), ["favorite:p|movie|m1"])
+        XCTAssertEqual(box.last, Self.start)
+        XCTAssertEqual(box.stamp(wall: 1_000), Self.start + 1, "its own changes stay near the times it holds")
+        // Up to 2029, or two years after the latest time it holds.
+        box.observe(Self.start + 4 * 365 * Self.day, wall: 1_000)
+        XCTAssertEqual(box.last, Self.start + 1)
+        box.observe(SyncClock.unsetLatestMilliseconds, wall: 1_000)
+        XCTAssertEqual(box.last, SyncClock.unsetLatestMilliseconds)
+
+        // A clock carried far ahead all the same: "now" stays within a day of a clock that is set, and at 2024 for one
+        // that is not, so the deletions of the last 180 days stay.
+        let carried = SyncClock(last: year2100)
+        XCTAssertEqual(carried.now(wall: Self.start), Self.start + Self.day)
+        XCTAssertEqual(carried.now(wall: 1_000), SyncClock.earliestWallMilliseconds)
+        let deletions = SyncSnapshot(device: "a", deleted: ["favorite:p|movie|m1": Self.start - Self.day])
+        XCTAssertEqual(deletions.pruned(now: carried.now(wall: Self.start)).deleted.count, 1)
+        XCTAssertEqual(deletions.pruned(now: carried.now(wall: 1_000)).deleted.count, 1)
+        XCTAssertTrue(deletions.pruned(now: year2100).deleted.isEmpty, "what an uncapped now would have done")
+    }
+
+    /// A film resumed after the last full session: its position, saved every few seconds while it plays, is left out of
+    /// the digest on both sides of the comparison, so the regular sessions during playback are probes; a change of
+    /// anything else, or the end of playback, sends everything.
+    func testProbesGoOnWhileAnItemSentBeforePlaybackPlays() throws {
+        let hash: (Data) -> String = { $0.base64EncodedString() }
+        let film = SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "Glass City", position: 600, duration: 6_000, watchedAt: Self.start)
+        let data = SyncSnapshot(device: "phone", favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m2", title: "T", addedAt: 1)],
+                                progress: [film])
+        // The last full session, with nothing playing.
+        let first = try data.offer(sent: nil, answerDigest: nil, hash: hash)
+        XCTAssertFalse(first.snapshot.isProbe)
+        var sent = first.sent
+        XCTAssertNotNil(sent)
+        var playing = data
+        for minute in 1...5 {
+            playing.progress[0].position += 60
+            playing.progress[0].watchedAt += 60_000
+            let offer = try playing.offer(sent: sent, answerDigest: "server", leavingOut: [film.key], hash: hash)
+            XCTAssertTrue(offer.snapshot.isProbe, "minute \(minute)")
+            sent = offer.sent
+        }
+        // Compared with the digest sent before playback (review 3, R1), it would have been a full snapshot each time.
+        XCTAssertFalse(try playing.offer(sentDigest: first.snapshot.digest, answerDigest: "server", leavingOut: [film.key], hash: hash).isProbe)
+        var changed = playing
+        changed.favorites = []
+        XCTAssertFalse(try changed.offer(sent: sent, answerDigest: "server", leavingOut: [film.key], hash: hash).snapshot.isProbe)
+        XCTAssertFalse(try playing.offer(sent: sent, answerDigest: "server", hash: hash).snapshot.isProbe, "playback ended: the position goes")
+        XCTAssertTrue(try data.offer(sent: sent, answerDigest: "server", hash: hash).snapshot.isProbe, "nothing new since the last full one")
     }
 
     // MARK: Simulated devices
@@ -222,8 +284,7 @@ final class SyncClockTests: XCTestCase {
 
         mutating func receive(_ snapshot: SyncSnapshot, on index: Int) {
             let wall = devices[index].wall(now)
-            let received = snapshot.withoutRecordsAhead(wall: wall)
-            devices[index].clock.observe(received, wall: wall)
+            let received = devices[index].clock.receive(snapshot, wall: wall)
             devices[index].data = SyncMerge.merge(devices[index].data, received)
             check(index)
         }

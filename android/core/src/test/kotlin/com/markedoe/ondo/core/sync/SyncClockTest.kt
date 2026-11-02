@@ -35,13 +35,13 @@ class SyncClockTest {
         assertEquals(START, clock.last)
         clock.observe(START + DAY, START)
         assertEquals("a day ahead at most", START + DAY, clock.last)
-        // A clock that is not set (1970) has no idea of the time: it takes everything in.
+        // A clock that is not set (1970) has no idea of the time: it takes in what is not far ahead.
         val unset = SyncClock()
         unset.observe(START + 365 * DAY, 1_000)
         assertEquals(START + 365 * DAY, unset.last)
         // At the ends of the range: no overflow.
         assertEquals(Long.MAX_VALUE, SyncClock(Long.MAX_VALUE).stamp(Long.MAX_VALUE))
-        assertEquals(Long.MAX_VALUE, SyncClock.latestAccepted(Long.MAX_VALUE))
+        assertEquals(Long.MAX_VALUE, SyncClock().latestAccepted(Long.MAX_VALUE))
     }
 
     @Test
@@ -54,7 +54,7 @@ class SyncClockTest {
                 deleted = mapOf("favorite:p|movie|m2" to START + skew - 5),
                 clock = START + skew,
             )
-            assertEquals("skew $skew", sent, sent.withoutRecordsAhead(START))
+            assertEquals("skew $skew", sent, SyncClock().receive(sent, START))
         }
     }
 
@@ -78,7 +78,7 @@ class SyncClockTest {
             keys = listOf(SyncKey(SyncKey.TMDB, "k", updatedAt = ahead)),
             deleted = mapOf("favorite:p|movie|m2" to ahead, "favorite:p|movie|m3" to 5L),
         )
-        val received = snapshot.withoutRecordsAhead(START)
+        val received = SyncClock().receive(snapshot, START)
         assertEquals(listOf("q"), received.playlists.map { it.id })
         assertEquals("a day ahead at most: kept as it is", listOf(near), received.progress.map { it.watchedAt })
         assertEquals(listOf("Ada"), received.people.map { it.name })
@@ -86,8 +86,69 @@ class SyncClockTest {
         assertEquals(emptyList<SyncListItem>(), received.lists.single().items)
         assertTrue(received.favorites.isEmpty() && received.keys.isEmpty())
         assertEquals(mapOf("favorite:p|movie|m3" to 5L), received.deleted)
-        assertEquals("a clock not set leaves nothing out", snapshot, snapshot.withoutRecordsAhead(1_000))
-        assertEquals(mapOf("k" to Long.MAX_VALUE), SyncSnapshot(device = "box", deleted = mapOf("k" to Long.MAX_VALUE)).withoutRecordsAhead(Long.MAX_VALUE - 1).deleted)
+        assertEquals("a clock not set takes in what is not far ahead", snapshot, SyncClock().receive(snapshot, 1_000))
+        assertEquals(mapOf("k" to Long.MAX_VALUE), SyncClock().receive(SyncSnapshot(device = "box", deleted = mapOf("k" to Long.MAX_VALUE)), Long.MAX_VALUE - 1).deleted)
+    }
+
+    /**
+     * A box whose clock is not set takes in no time far ahead (a clock reading 2100, a damaged time): its clock is not
+     * carried there, and "now" never runs far ahead of a clock, so deletions are not all pruned at once.
+     */
+    @Test
+    fun aClockNotSetTakesNothingFarAheadAndPrunesNothingByIt() {
+        val year2100 = 4_102_444_800_000L
+        val box = SyncClock()
+        val taken = box.receive(
+            SyncSnapshot(device = "tv", people = listOf(SyncPerson("Ada", addedAt = year2100)), deleted = mapOf("k" to Long.MAX_VALUE, "favorite:p|movie|m1" to START)),
+            1_000,
+        )
+        assertTrue(taken.people.isEmpty())
+        assertEquals(setOf("favorite:p|movie|m1"), taken.deleted.keys)
+        assertEquals(START, box.last)
+        assertEquals("its own changes stay near the times it holds", START + 1, box.stamp(1_000))
+        // Up to 2029, or two years after the latest time it holds.
+        box.observe(START + 4 * 365 * DAY, 1_000)
+        assertEquals(START + 1, box.last)
+        box.observe(SyncClock.UNSET_LATEST_MS, 1_000)
+        assertEquals(SyncClock.UNSET_LATEST_MS, box.last)
+
+        // A clock carried far ahead all the same: "now" stays within a day of a clock that is set, and at 2024 for one
+        // that is not, so the deletions of the last 180 days stay.
+        val carried = SyncClock(year2100)
+        assertEquals(START + DAY, carried.now(START))
+        assertEquals(SyncClock.EARLIEST_WALL_MS, carried.now(1_000))
+        val deletions = SyncSnapshot(device = "a", deleted = mapOf("favorite:p|movie|m1" to START - DAY))
+        assertEquals(1, deletions.pruned(carried.now(START)).deleted.size)
+        assertEquals(1, deletions.pruned(carried.now(1_000)).deleted.size)
+        assertTrue("what an uncapped now would have done", deletions.pruned(year2100).deleted.isEmpty())
+    }
+
+    /**
+     * A film resumed after the last full session: its position, saved every few seconds while it plays, is left out of
+     * the digest on both sides of the comparison, so the regular sessions during playback are probes; a change of
+     * anything else, or the end of playback, sends everything.
+     */
+    @Test
+    fun probesGoOnWhileAnItemSentBeforePlaybackPlays() {
+        val film = SyncProgress("p", "movie", "m1", title = "Glass City", position = 600.0, duration = 6_000.0, watchedAt = START)
+        val data = SyncSnapshot(device = "phone", favorites = listOf(SyncFavorite("p", "movie", "m2", "T", addedAt = 1)), progress = listOf(film))
+        // The last full session, with nothing playing.
+        val first = data.offer(sent = null, answerDigest = null)
+        assertFalse(first.snapshot.isProbe)
+        var sent = requireNotNull(first.sent)
+        var playing = data
+        for (minute in 1..5) {
+            val moved = playing.progress.single()
+            playing = playing.copy(progress = listOf(moved.copy(position = moved.position + 60, watchedAt = moved.watchedAt + 60_000)))
+            val offer = playing.offer(sent, "server", leavingOut = setOf(film.key))
+            assertTrue("minute $minute", offer.snapshot.isProbe)
+            sent = requireNotNull(offer.sent)
+        }
+        // Compared with the digest sent before playback (review 3, R1), it would have been a full snapshot each time.
+        assertFalse(playing.offer(first.snapshot.digest, "server", leavingOut = setOf(film.key)).isProbe)
+        assertFalse(playing.copy(favorites = emptyList()).offer(sent, "server", leavingOut = setOf(film.key)).snapshot.isProbe)
+        assertFalse("playback ended: the position goes", playing.offer(sent, "server").snapshot.isProbe)
+        assertTrue("nothing new since the last full one", data.offer(sent, "server").snapshot.isProbe)
     }
 
     // Simulated devices
@@ -226,8 +287,7 @@ class SyncClockTest {
         private fun receive(snapshot: SyncSnapshot, index: Int) {
             val device = devices[index]
             val wall = device.wall(now)
-            val received = snapshot.withoutRecordsAhead(wall)
-            device.clock.observe(received, wall)
+            val received = device.clock.receive(snapshot, wall)
             device.data = SyncMerge.merge(device.data, received)
             check(index)
         }

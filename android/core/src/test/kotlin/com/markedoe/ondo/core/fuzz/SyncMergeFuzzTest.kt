@@ -201,11 +201,9 @@ class SyncMergeFuzzTest {
         client: SyncSnapshot, clientClock: SyncClock, clientWall: Long,
         server: SyncSnapshot, serverClock: SyncClock, serverWall: Long,
     ): Pair<SyncSnapshot, SyncSnapshot> {
-        val received = client.withoutRecordsAhead(serverWall)
-        serverClock.observe(received, serverWall)
+        val received = serverClock.receive(client, serverWall)
         val kept = SyncMerge.merge(server, received)
-        val answer = kept.withoutRecordsAhead(clientWall)
-        clientClock.observe(answer, clientWall)
+        val answer = clientClock.receive(kept, clientWall)
         return SyncMerge.merge(client, answer) to kept
     }
 
