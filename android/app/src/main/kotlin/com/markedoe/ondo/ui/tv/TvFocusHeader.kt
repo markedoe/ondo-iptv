@@ -298,7 +298,8 @@ fun TvHeaderAbove(
             Column(Modifier.fillMaxSize()) {
                 TvFocusHeader(header, label = label)
                 val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
-                TvPinnedHeaderList(if (byRows) UNDER_HEADER_TOP else lead, byRows) { content(rest, UNDER_HEADER_TOP, true) }
+                // A grid sets its own scrolling once it knows its posters' height ([TvGridScrolling]).
+                if (byRows) content(rest, UNDER_HEADER_TOP, true) else TvPinnedHeaderList(lead) { content(rest, UNDER_HEADER_TOP, true) }
             }
         }
     }
@@ -310,6 +311,17 @@ private val GRID_LEAD = 12.dp
 /** The room above the first row under the header: a focused poster grows into it, never cut by the header. */
 private val UNDER_HEADER_TOP = 8.dp
 
+/**
+ * A grid under a TV's header scrolls by whole rows ([TvRowPivotScrolling]): each focused row's poster at [top] below the
+ * grid's top, as the first row's is when the page opens. What the grid scrolls into view is the focused poster as it is
+ * drawn, grown ([FOCUS_GROW]) around its middle: its grown top goes that much higher, the rows below where [top] says.
+ */
+@Composable
+fun TvGridScrolling(top: Dp, posterHeight: Dp, content: @Composable () -> Unit) {
+    val grownBy = posterHeight * ((FOCUS_GROW - 1f) / 2f)
+    TvPinnedHeaderList(lead = top - grownBy, byRows = true, content = content)
+}
+
 /** The posters across a grid under a TV's header: five, bigger than a phone's, to read from the sofa. */
 const val TV_GRID_COLUMNS = 5
 
@@ -318,11 +330,12 @@ const val TV_GRID_COLUMNS = 5
  * [gutter] at either side, [gap] between its posters (2:3) and [top] above its first row: enough for the last row too
  * to come up to the top, the row above it gone, rather than stop lower with that row cut under the header.
  */
-fun tvGridBottomRoom(width: Dp, height: Dp, gutter: Dp, gap: Dp, top: Dp): Dp {
-    val poster = (width - gutter * 2 - gap * (TV_GRID_COLUMNS - 1)) / TV_GRID_COLUMNS
+fun tvGridBottomRoom(width: Dp, height: Dp, gutter: Dp, gap: Dp, top: Dp): Dp =
     // A pixel's rounding to spare.
-    return maxOf(height - top - poster * 1.5f + 2.dp, 32.dp)
-}
+    maxOf(height - top - tvGridPosterHeight(width, gutter, gap) + 2.dp, 32.dp)
+
+/** A poster's height (2:3) in a grid [width] wide with [gutter] at either side and [gap] between its posters. */
+fun tvGridPosterHeight(width: Dp, gutter: Dp, gap: Dp): Dp = (width - gutter * 2 - gap * (TV_GRID_COLUMNS - 1)) / TV_GRID_COLUMNS * 1.5f
 
 /**
  * The header's words: the title on one line, then its facts on one line, then the synopsis on two lines kept even

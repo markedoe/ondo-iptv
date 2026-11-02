@@ -178,6 +178,9 @@ fun KeptForTheRemote() {
     }
 }
 
+/** How much a focused poster or row grows ([focusFrame]): its frame drawn larger than its place. */
+const val FOCUS_GROW = 1.06f
+
 /** The margins Google asks TV layouts to keep clear (5 % of a 960 × 540 dp screen). */
 val TvSafeArea = PaddingValues(horizontal = 48.dp, vertical = 27.dp)
 
@@ -277,7 +280,7 @@ fun ProvideFocusRipple(content: @Composable () -> Unit) {
  * before the item's `clickable` (and before its `clip`): it follows the focus of what comes after it. Without
  * [frame], the item only grows (buttons that change colour with the focus).
  */
-fun Modifier.focusFrame(shape: Shape = RoundedCornerShape(12.dp), grow: Float = 1.06f, frame: Boolean = true): Modifier = composed {
+fun Modifier.focusFrame(shape: Shape = RoundedCornerShape(12.dp), grow: Float = FOCUS_GROW, frame: Boolean = true): Modifier = composed {
     var focused by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(if (focused) grow else 1f, label = "focusScale")
     val color = if (focused && frame) MaterialTheme.colorScheme.onBackground else Color.Transparent
