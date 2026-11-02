@@ -22,8 +22,9 @@ object CreditsChapter {
         "片尾", "片尾曲", "演职员表", "エンディング", "スタッフロール", "엔딩", "엔딩 크레딧",
     )
 
-    private val normalizedNames = names.map(::normalized)
+    // Before the names it normalizes: an object's properties are set in order.
     private val nonspacingMarks = Regex("\\p{Mn}+")
+    private val normalizedNames = names.map(::normalized)
 
     /** Where the end credits start (seconds): the first chapter named for them in the last quarter of [duration]. */
     fun start(chapters: List<MediaChapter>, duration: Double): Double? {
