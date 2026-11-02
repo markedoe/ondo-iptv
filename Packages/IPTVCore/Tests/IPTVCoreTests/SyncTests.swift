@@ -311,6 +311,34 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot(device: "box", deleted: ["k": .max]).withoutFutureRecords(now: .max - 1).deleted, ["k": .max])
     }
 
+    // MARK: Probes
+
+    func testAProbeGoesWhenNothingChangedSinceTheLastSnapshotSent() throws {
+        let hash: (Data) -> String = { $0.base64EncodedString() }
+        let snapshot = try fixture("people-a.json")
+        let full = try snapshot.offer(sentDigest: nil, answerDigest: "server-1", hash: hash)
+        XCTAssertFalse(full.isProbe)
+        let digest = try XCTUnwrap(full.digest)
+        // Who sends it, when, and the order of its deletions do not change the digest; a record does.
+        var same = snapshot
+        same.device = "other"
+        same.deviceName = nil
+        same.clock = 42
+        XCTAssertEqual(hash(try same.contentForDigest()), digest)
+        var changed = snapshot
+        changed.people.removeLast()
+        XCTAssertNotEqual(hash(try changed.contentForDigest()), digest)
+
+        let probe = try snapshot.offer(sentDigest: digest, answerDigest: "server-1", hash: hash)
+        XCTAssertTrue(probe.isProbe)
+        XCTAssertEqual(probe.seen, "server-1")
+        XCTAssertTrue(probe.people.isEmpty && probe.lists.isEmpty && probe.deleted.isEmpty)
+        // Without the server's digest (an older version answered), the whole snapshot goes.
+        XCTAssertFalse(try snapshot.offer(sentDigest: digest, answerDigest: nil, hash: hash).isProbe)
+        // Decoded by an older version, a probe is an empty snapshot: merging it removes nothing.
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(snapshot, try XCTUnwrap(SyncSnapshot.decode(try probe.encoded())))), withoutDevice(SyncMerge.merge(snapshot, snapshot)))
+    }
+
     // MARK: Lists, item by item
 
     func testListsMergeItemByItemInEitherOrder() throws {

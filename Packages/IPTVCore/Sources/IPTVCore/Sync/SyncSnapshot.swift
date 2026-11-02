@@ -31,6 +31,17 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public var replaced: [String: String]
     /// The sender's clock when it sent the snapshot (docs/SYNC.md, "Clocks"); none from an older version.
     public var clock: Int64?
+    /// The sender's digest of its own data (docs/SYNC.md, "Transport"); none from an older version.
+    public var digest: String?
+    /// In a probe: the server's `digest` the client got at their last session.
+    public var seen: String?
+    /// A probe: no records, only `digest` and `seen`; a server answers `unchanged` when it has not changed since.
+    public var probe: Bool?
+    /// An answer to a probe: nothing changed on the server since the client's last session; nothing to merge.
+    public var unchanged: Bool?
+
+    public var isProbe: Bool { probe == true }
+    public var isUnchanged: Bool { unchanged == true }
 
     public init(
         type: String = SyncSnapshot.typeName,
@@ -45,7 +56,11 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         keys: [SyncKey] = [],
         deleted: [String: Int64] = [:],
         replaced: [String: String] = [:],
-        clock: Int64? = nil
+        clock: Int64? = nil,
+        digest: String? = nil,
+        seen: String? = nil,
+        probe: Bool? = nil,
+        unchanged: Bool? = nil
     ) {
         self.type = type
         self.version = version
@@ -60,10 +75,15 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         self.deleted = deleted
         self.replaced = replaced
         self.clock = clock
+        self.digest = digest
+        self.seen = seen
+        self.probe = probe
+        self.unchanged = unchanged
     }
 
     enum CodingKeys: String, CodingKey {
         case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, deleted, replaced, clock
+        case digest, seen, probe, unchanged
     }
 
     /// A missing field takes its default; a field present with the wrong type, or `null` where a value is needed, makes
@@ -83,10 +103,47 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         deleted = try c.value(.deleted, default: [:])
         replaced = try c.value(.replaced, default: [:])
         clock = try c.decodeIfPresent(Int64.self, forKey: .clock)
+        digest = try c.decodeIfPresent(String.self, forKey: .digest)
+        seen = try c.decodeIfPresent(String.self, forKey: .seen)
+        probe = try c.decodeIfPresent(Bool.self, forKey: .probe)
+        unchanged = try c.decodeIfPresent(Bool.self, forKey: .unchanged)
     }
 
     public func encoded() throws -> Data {
         try JSONEncoder().encode(self)
+    }
+
+    /// The records and deletions alone, encoded the same way each time (keys sorted), without who sends them or when:
+    /// what a device hashes into its `digest` (the same data gives the same digest). A device compares a digest only
+    /// with its own earlier ones and those a peer sent it.
+    public func contentForDigest() throws -> Data {
+        var content = self
+        content.device = ""
+        content.deviceName = nil
+        content.clock = nil
+        content.digest = nil
+        content.seen = nil
+        content.probe = nil
+        content.unchanged = nil
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        return try encoder.encode(content)
+    }
+
+    /// What a client sends a server (docs/SYNC.md, "Transport"): a probe when its data is the same as in the snapshot it
+    /// last sent (`sentDigest`) and the server answered with a digest (`answerDigest`); else this snapshot, with its
+    /// `digest` (`hash` gives it from `contentForDigest()`).
+    public func offer(sentDigest: String?, answerDigest: String?, hash: (Data) -> String) throws -> SyncSnapshot {
+        let digest = hash(try contentForDigest())
+        if let answerDigest, digest == sentDigest { return probe(digest: digest, seen: answerDigest) }
+        var copy = self
+        copy.digest = digest
+        return copy
+    }
+
+    /// A probe from this snapshot's device (docs/SYNC.md, "Transport"): its `digest`, and the server's `seen` one.
+    public func probe(digest: String, seen: String) -> SyncSnapshot {
+        SyncSnapshot(device: device, deviceName: deviceName, clock: clock, digest: digest, seen: seen, probe: true)
     }
 
     /// Reads a snapshot, with its IDs in lowercase; nil when it is not one, or of another version (it is refused, not

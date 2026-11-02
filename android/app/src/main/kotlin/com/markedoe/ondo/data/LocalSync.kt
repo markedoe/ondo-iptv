@@ -85,6 +85,16 @@ class LocalSync(
         }
     }
 
+    /** The answer to a snapshot or a probe received; null (and nothing changed) when this device cannot use it. */
+    private suspend fun answer(incoming: SyncSnapshot, name: String): SyncSnapshot? =
+        try {
+            repository.answerSync(incoming, name)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: RuntimeException) {
+            null
+        }
+
     /** Merges a snapshot received, off the main thread; null (and nothing changed) when this device cannot use it. */
     private suspend fun merge(incoming: SyncSnapshot, name: String): SyncSnapshot? =
         try {
@@ -118,6 +128,9 @@ class LocalSync(
         var busy = false
         /** Its address is to be resolved again before the next session (the last one failed). */
         var stale = false
+        /** The digest of the snapshot this device last sent it, and the one it answered with (docs/SYNC.md, "Transport"). */
+        var sentDigest: String? = null
+        var answerDigest: String? = null
     }
 
     /** Runs until cancelled (Ondo goes to the background, or sync is turned off): then everything stops. */
@@ -136,7 +149,7 @@ class LocalSync(
             SyncSession.serve(server, isAllowed = ::isPeerAddress) { incoming, _ ->
                 withContext(Dispatchers.Main) {
                     if (incoming.device == me || incoming.device.isBlank()) return@withContext null
-                    merge(incoming, name)?.also { events.trySend(Event.Heard(incoming.device, incoming.deviceName)) }
+                    answer(incoming, name)?.also { events.trySend(Event.Heard(incoming.device, incoming.deviceName)) }
                 }
             }
         }
@@ -172,10 +185,17 @@ class LocalSync(
                 .map { SyncDevice(it.id, it.name, it.syncedAt, unreachable = it.failures > 0) },
         )
 
-        // A session with each peer that is due: the client sends this device's snapshot and keeps the merged answer.
-        fun startDue() {
+        // A session with each peer that is due: the client sends this device's snapshot and keeps the merged answer, or
+        // only a probe when nothing changed here since the last session (docs/SYNC.md, "Transport"). During playback, a
+        // regular session that would send a large snapshot waits for the next period.
+        fun startDue(regular: Boolean = false) {
             val time = now()
             peers.values.filter { !it.busy && it.address != null && it.dueAt <= time }.forEach { peer ->
+                val offer = repository.syncSnapshot(name)?.offer(peer.sentDigest, peer.answerDigest)
+                if (regular && offer != null && !offer.isProbe && repository.isPlaying && offer.encoded().size > LIGHT_SNAPSHOT_BYTES) {
+                    peer.dueAt = time + PERIOD_MS
+                    return@forEach
+                }
                 peer.busy = true
                 launch {
                     var address = peer.address
@@ -185,9 +205,13 @@ class LocalSync(
                         address = found?.first
                         port = found?.second ?: 0
                     }
-                    val snapshot = repository.syncSnapshot(name)
-                    val answer = if (address == null || snapshot == null) null else SyncSession.exchange(address, port, snapshot, isAllowed = ::isPeerAddress)
-                    val worked = answer != null && answer.device != me && merge(answer, name) != null
+                    val answer = if (address == null || offer == null) null else SyncSession.exchange(address, port, offer, isAllowed = ::isPeerAddress)
+                    val worked = answer != null && answer.device != me && (answer.isUnchanged || merge(answer, name) != null)
+                    if (worked && answer != null && !answer.isUnchanged) {
+                        // The server has what was sent (a probe sent nothing new); its digest says what it has now.
+                        if (offer != null && !offer.isProbe) peer.sentDigest = offer.digest
+                        peer.answerDigest = answer.digest
+                    }
                     if (worked && peer.stale) {
                         peer.address = address
                         peer.port = port
@@ -267,7 +291,7 @@ class LocalSync(
                         peers.values.filter { it.address != null }.forEach { it.dueAt = minOf(it.dueAt, now()) }
                         startDue()
                     }
-                    Event.Tick -> startDue()
+                    Event.Tick -> startDue(regular = true)
                 }
             }
         } finally {
@@ -326,6 +350,8 @@ class LocalSync(
     companion object {
         private const val TICK_MS = 5_000L
         private const val PERIOD_MS = 60_000L
+        /** A regular session during playback goes only with a snapshot this small (or a probe). */
+        private const val LIGHT_SNAPSHOT_BYTES = 64 * 1024
         private const val CHANGE_DELAY_MS = 3_000L
         private const val RESOLVE_TIMEOUT_MS = 10_000L
         private const val RESTART_MS = 60_000L

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.sync
 
+import java.security.MessageDigest
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
@@ -27,7 +28,44 @@ data class SyncSnapshot(
     val replaced: Map<String, String> = emptyMap(),
     /** The sender's clock when it sent the snapshot (docs/SYNC.md, "Clocks"); none from an older version. */
     val clock: Long? = null,
+    /** The sender's [contentDigest] of its own data (docs/SYNC.md, "Transport"); none from an older version. */
+    val digest: String? = null,
+    /** In a probe: the server's [digest] the client got at their last session. */
+    val seen: String? = null,
+    /** A probe: no records, only [digest] and [seen]; a server answers [unchanged] when it has not changed since. */
+    val probe: Boolean? = null,
+    /** An answer to a probe: nothing changed on the server since the client's last session; nothing to merge. */
+    val unchanged: Boolean? = null,
 ) {
+    val isProbe: Boolean get() = probe == true
+    val isUnchanged: Boolean get() = unchanged == true
+
+    /**
+     * A digest of the records and deletions (SHA-256, hexadecimal), without who sends them or when: the same data gives
+     * the same digest. A device compares it only with its own earlier digests and those a peer sent it.
+     */
+    fun contentDigest(): String {
+        val content = copy(
+            device = "", deviceName = null, clock = null, digest = null, seen = null, probe = null, unchanged = null,
+            deleted = deleted.toSortedMap(), replaced = replaced.toSortedMap(),
+        )
+        return MessageDigest.getInstance("SHA-256").digest(content.encoded()).joinToString("") { "%02x".format(it) }
+    }
+
+    /** A probe from this snapshot's device (docs/SYNC.md, "Transport"): its [digest], and the server's [seen] one. */
+    fun probe(digest: String, seen: String): SyncSnapshot =
+        SyncSnapshot(device = device, deviceName = deviceName, clock = clock, digest = digest, seen = seen, probe = true)
+
+    /**
+     * What a client sends a server (docs/SYNC.md, "Transport"): a probe when its data is the same as in the snapshot it
+     * last sent ([sentDigest]) and the server answered with a digest ([answerDigest]); else this snapshot, with its
+     * digest.
+     */
+    fun offer(sentDigest: String?, answerDigest: String?): SyncSnapshot {
+        val digest = contentDigest()
+        return if (answerDigest != null && digest == sentDigest) probe(digest, answerDigest) else copy(digest = digest)
+    }
+
     fun encoded(): ByteArray = json.encodeToString(serializer(), this).encodeToByteArray()
 
     /**

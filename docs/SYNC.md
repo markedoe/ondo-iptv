@@ -65,10 +65,22 @@ own, keeps the result, and answers with the merged snapshot (one frame); the cli
 Connecting gets 10 seconds and the whole session 30 seconds. A server handles at most 4 sessions at once and
 closes further connections.
 
+**Probes.** Each snapshot sent carries `digest`, a digest of its records and deletions (SHA-256 of the snapshot
+without `device`, `deviceName`, `clock`, `digest`, `seen`, `probe` and `unchanged`, deletions in key order); a
+server's answer carries its own. A device compares a digest only with its own earlier ones and those a peer sent it,
+so devices need not compute it byte for byte alike. When a client's data has the digest of the snapshot it last sent
+to a server, and that server answered with a digest, the client sends a **probe** instead: `{"type", "version",
+"device", "deviceName", "clock", "digest", "seen": <the server's digest>, "probe": true}`, without records. A server
+whose own digest is still `seen` answers `{"type", "version", "device", "deviceName", "clock", "digest",
+"unchanged": true}`, and nothing is merged; otherwise it answers with its own snapshot. An older server reads a
+probe as an empty snapshot, merges it (which removes nothing) and answers in full; an older client never sends one.
+A session where nothing changed on either side is thus a few hundred bytes each way.
+
 **When.** A client syncs when it finds a device, then every 60 seconds while the app is open, and a few seconds
 after a local change (a playlist, My List, a list, or the end of a playback). After a failed session it finds the
 device's address again and tries after 15 seconds, then 1 minute, then every 5 minutes while Bonjour still finds
-the device.
+the device. While a movie or an episode plays on the client, a session of the 60-second rhythm that would send a
+snapshot over 64 KiB (not a probe) waits for the next one; one after a change goes.
 
 Between two Android devices, the one with the smaller device ID (as a string) connects when it finds the other and
 every 60 seconds; either one connects a few seconds after a change of its own. An Android device that keeps what

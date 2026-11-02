@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import IPTVCore
 import Network
@@ -11,6 +12,8 @@ import Observation
 /// When: as soon as a device is found, every 60 seconds while the app is in the foreground, and a few seconds after
 /// a change here (`scheduleSoon`). After a failed session, the device is tried again after 15 seconds, 1 minute, then
 /// every 5 minutes while Bonjour still finds it. Turning sync off, or the app going to the background, stops everything.
+/// When nothing changed here since the last session with a device, only a probe goes (docs/SYNC.md, "Transport"); during
+/// playback, a regular session that would send a large snapshot waits for the next one.
 @MainActor
 @Observable
 final class LocalSync {
@@ -24,6 +27,9 @@ final class LocalSync {
         var syncedAt: Date?
         /// Failed sessions in a row.
         var failures = 0
+        /// The digest of the snapshot last sent to it, and the one it answered with (docs/SYNC.md, "Transport").
+        var sentDigest: String?
+        var answerDigest: String?
     }
 
     enum Problem: Equatable {
@@ -48,6 +54,16 @@ final class LocalSync {
     @ObservationIgnored private var worker: Task<Void, Never>?
     /// Bumped by each start and stop: work of an earlier run ends without touching the current one.
     @ObservationIgnored private var generation = 0
+    /// Devices queued by the regular tick (not by a change here): put off during playback when the session is large.
+    @ObservationIgnored private var regular: Set<String> = []
+
+    /// A regular session during playback goes only with a snapshot this small (or a probe).
+    static let lightSnapshotBytes = 64 * 1024
+
+    /// A digest of `contentForDigest()`: SHA-256, hexadecimal.
+    nonisolated static func digest(_ data: Data) -> String {
+        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
 
     static let interval: Duration = .seconds(60)
     static let changeDelay: Duration = .seconds(3)
@@ -65,7 +81,7 @@ final class LocalSync {
             while !Task.isCancelled {
                 try? await Task.sleep(for: Self.interval)
                 guard let self, !Task.isCancelled, self.generation == generation else { return }
-                self.syncAll()
+                self.syncAll(regular: true)
             }
         }
     }
@@ -184,8 +200,9 @@ final class LocalSync {
     // MARK: - Sessions
 
     /// Every device found, except those waiting for their next attempt after a failure.
-    private func syncAll() {
+    private func syncAll(regular: Bool = false) {
         for device in devices where retries[device.id] == nil {
+            if regular { self.regular.insert(device.id) } else { self.regular.remove(device.id) }
             enqueue(device.id)
         }
     }
@@ -210,17 +227,30 @@ final class LocalSync {
     }
 
     private func session(with device: Device, generation: Int) async {
+        let isRegular = regular.remove(device.id) != nil
         guard let snapshot = model?.syncSnapshotForSending() else { return }
         do {
-            let frame = try await Task.detached(priority: .utility) { try SyncNetwork.frame(snapshot.encoded()) }.value
+            let (sentDigest, answerDigest) = (device.sentDigest, device.answerDigest)
+            let (offer, frame) = try await Task.detached(priority: .utility) { () throws -> (SyncSnapshot, Data) in
+                let offer = try snapshot.offer(sentDigest: sentDigest, answerDigest: answerDigest, hash: LocalSync.digest)
+                return (offer, try SyncNetwork.frame(offer.encoded()))
+            }.value
+            if isRegular, !offer.isProbe, frame.count > Self.lightSnapshotBytes, model?.playingKeys.isEmpty == false { return }
             // A new connection to the Bonjour service: its address is found again each time, after a failure too.
             let answer = try await SyncExchange(endpoint: device.endpoint).run(sending: frame)
             guard let merged = await Task.detached(priority: .utility, operation: { SyncSnapshot.decode(answer) }).value else {
                 throw SyncExchange.Failure.unreadable
             }
             guard self.generation == generation, let model else { return }
-            await model.applySync(merged)
-            guard self.generation == generation else { return }
+            if !merged.isUnchanged {
+                await model.applySync(merged)
+                guard self.generation == generation else { return }
+                // The server has what was sent (a probe sent nothing new); its digest says what it has now.
+                if let index = devices.firstIndex(where: { $0.id == device.id }) {
+                    if !offer.isProbe { devices[index].sentDigest = offer.digest }
+                    devices[index].answerDigest = merged.digest
+                }
+            }
             succeeded(device.id)
         } catch {
             guard self.generation == generation else { return }

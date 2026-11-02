@@ -476,8 +476,31 @@ class OndoRepository(
         return mergeSync(incoming, deviceName)
     }
 
+    /**
+     * What a server answers [incoming] (docs/SYNC.md, "Transport"): to a probe, `unchanged` when this device's data has
+     * not changed since the client's last session ([SyncSnapshot.seen]), else its own snapshot; to a snapshot, the
+     * merge ([mergeSyncInBackground]). Answers carry this device's digest. Main thread.
+     */
+    suspend fun answerSync(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
+        if (incoming.isProbe) {
+            val own = syncSnapshot(deviceName) ?: return null
+            val digest = own.contentDigest()
+            noteSyncSession(incoming.device)
+            return if (incoming.seen == digest) {
+                SyncSnapshot(device = own.device, deviceName = own.deviceName, clock = own.clock, digest = digest, unchanged = true)
+            } else {
+                own.copy(digest = digest)
+            }
+        }
+        val merged = mergeSyncInBackground(incoming, deviceName) ?: return null
+        return merged.copy(digest = syncSnapshot(deviceName)?.contentDigest())
+    }
+
     /** What the player plays now ([WatchEntry.key]): sync leaves its entry alone until playback ends. Main thread. */
     private var playingKey: String? = null
+
+    /** Whether a movie or an episode plays: sync then puts off its regular sessions that would send everything. */
+    val isPlaying: Boolean get() = playingKey != null
 
     /** Where other devices left the item playing here, received during playback: applied once it ends. */
     private val parkedProgress = HashMap<String, WatchEntry>()

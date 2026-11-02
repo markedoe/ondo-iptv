@@ -145,6 +145,28 @@ class SyncTest {
         assertEquals(mapOf("k" to Long.MAX_VALUE), SyncSnapshot(device = "box", deleted = mapOf("k" to Long.MAX_VALUE)).withoutFutureRecords(Long.MAX_VALUE - 1).deleted)
     }
 
+    // Probes
+
+    @Test
+    fun aProbeGoesWhenNothingChangedSinceTheLastSnapshotSent() {
+        val snapshot = fixture("people-a.json")
+        val full = snapshot.offer(sentDigest = null, answerDigest = "server-1")
+        assertFalse(full.isProbe)
+        val digest = requireNotNull(full.digest)
+        // Who sends it, when, and the order of its deletions do not change the digest; a record does.
+        assertEquals(digest, snapshot.copy(device = "other", deviceName = null, clock = 42, deleted = snapshot.deleted.entries.reversed().associate { it.toPair() }).contentDigest())
+        assertTrue(digest != snapshot.copy(people = snapshot.people.dropLast(1)).contentDigest())
+
+        val probe = snapshot.offer(sentDigest = digest, answerDigest = "server-1")
+        assertTrue(probe.isProbe)
+        assertEquals("server-1", probe.seen)
+        assertTrue(probe.people.isEmpty() && probe.lists.isEmpty() && probe.deleted.isEmpty())
+        // Without the server's digest (an older version answered), the whole snapshot goes.
+        assertFalse(snapshot.offer(sentDigest = digest, answerDigest = null).isProbe)
+        // Decoded by an older version, a probe is an empty snapshot: merging it removes nothing.
+        assertEquals(SyncMerge.merge(snapshot, snapshot).withoutDevice(), SyncMerge.merge(snapshot, requireNotNull(SyncSnapshot.decode(probe.encoded()))).withoutDevice())
+    }
+
     // Lists, item by item
 
     @Test

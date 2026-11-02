@@ -70,10 +70,25 @@ avec le sien, garde le résultat et répond avec l’instantané fusionné (une 
 ferme. La connexion a 10 secondes et la session entière 30 secondes. Un serveur traite au plus 4 sessions à la
 fois et ferme les connexions en plus.
 
+**Sondes.** Chaque instantané envoyé porte `digest`, une empreinte de ses éléments et suppressions (SHA-256 de
+l’instantané sans `device`, `deviceName`, `clock`, `digest`, `seen`, `probe` ni `unchanged`, les suppressions dans
+l’ordre des clés) ; la réponse d’un serveur porte la sienne. Un appareil ne compare une empreinte qu’avec ses
+propres empreintes antérieures et celles qu’un pair lui a envoyées, donc les appareils n’ont pas à la calculer
+octet pour octet de la même façon. Quand les données d’un client ont l’empreinte de l’instantané qu’il a envoyé en
+dernier à un serveur, et que ce serveur a répondu avec une empreinte, le client envoie une **sonde** à la place :
+`{"type", "version", "device", "deviceName", "clock", "digest", "seen": <l’empreinte du serveur>, "probe": true}`,
+sans éléments. Un serveur dont l’empreinte est toujours `seen` répond `{"type", "version", "device", "deviceName",
+"clock", "digest", "unchanged": true}`, et rien n’est fusionné ; sinon il répond avec son propre instantané. Un
+serveur plus ancien lit une sonde comme un instantané vide, la fusionne (ce qui ne retire rien) et répond en entier ;
+un client plus ancien n’en envoie jamais. Une session où rien n’a changé d’un côté ni de l’autre fait ainsi quelques
+centaines d’octets dans chaque sens.
+
 **Quand.** Un client synchronise quand il trouve un appareil, puis toutes les 60 secondes tant que l’app est
 ouverte, et quelques secondes après un changement local (une playlist, Ma liste, une liste, ou la fin d’une
 lecture). Après une session ratée, il retrouve l’adresse de l’appareil et réessaie au bout de 15 secondes, puis
-1 minute, puis toutes les 5 minutes tant que Bonjour trouve encore l’appareil.
+1 minute, puis toutes les 5 minutes tant que Bonjour trouve encore l’appareil. Pendant la lecture d’un film ou
+d’un épisode sur le client, une session du rythme de 60 secondes qui enverrait un instantané de plus de 64 Kio
+(pas une sonde) attend la suivante ; celle qui suit un changement part.
 
 Entre deux appareils Android, celui dont l’identifiant est le plus petit (comme chaîne) se connecte quand il
 trouve l’autre et toutes les 60 secondes ; chacun se connecte quelques secondes après un changement qui lui est

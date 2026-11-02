@@ -219,6 +219,51 @@ class SyncDataTest {
         assertNull(living.syncSnapshot("living")!!.deleted[key])
     }
 
+    /**
+     * When nothing changed on the client since the snapshot it last sent, it sends a probe; the server answers
+     * "unchanged" while nothing changed there either, and its data as soon as something did.
+     */
+    @Test
+    fun aClientWithNothingNewSendsAProbeAndStillHearsOfChanges() = runTest {
+        val tv = device("tv").ready()
+        val phone = device("phone").ready()
+        tv.addPlaylist("Home", list)
+        var sent: String? = null
+        var answered: String? = null
+        suspend fun round(): Pair<SyncSnapshot, SyncSnapshot> {
+            val offer = requireNotNull(phone.syncSnapshot("phone")).offer(sent, answered)
+            val answer = requireNotNull(tv.answerSync(offer, "tv"))
+            if (!answer.isUnchanged) {
+                requireNotNull(phone.mergeSync(answer, "phone"))
+                if (!offer.isProbe) sent = offer.digest
+                answered = answer.digest
+            }
+            return offer to answer
+        }
+        // The first sessions send everything; once the phone has what the TV has, a probe is enough.
+        repeat(2) { round() }
+        phone.state.first { it.content.movies.isNotEmpty() }
+        val (probe, unchanged) = round()
+        assertTrue(probe.isProbe)
+        assertTrue(probe.encoded().size < 1_024)
+        assertTrue(unchanged.isUnchanged)
+        assertTrue(unchanged.favorites.isEmpty() && unchanged.playlists.isEmpty())
+
+        // A change on the TV: the next probe gets the TV's data.
+        val movie = tv.state.value.content.movies.single()
+        time += 1_000
+        tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        val (_, changed) = round()
+        assertFalse(changed.isUnchanged)
+        assertTrue(phone.state.value.favorite(movie.id))
+        // A change on the phone: the whole snapshot goes again.
+        time += 1_000
+        phone.togglePerson("Ada Example", null)
+        val (full, _) = round()
+        assertFalse(full.isProbe)
+        assertEquals(listOf("Ada Example" to null), tv.state.value.library.people())
+    }
+
     /** Two boxes change the same collection between two sessions: every addition and every removal is kept. */
     @Test
     fun twoBoxesChangingTheSameCollectionKeepEveryChange() = runTest {
