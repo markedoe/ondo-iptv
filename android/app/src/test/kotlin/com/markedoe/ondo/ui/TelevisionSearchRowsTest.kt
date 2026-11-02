@@ -163,6 +163,27 @@ class TelevisionSearchRowsTest {
         assertFalse(onScreen("Film 2"))
     }
 
+    /**
+     * The same words found anew while the remote is out of the row (a title's details loaded while its page was open,
+     * the catalogue refreshed): the row stays where it was left, rather than jumping back to its first title (Back
+     * from a title would then scroll it back across the whole row).
+     */
+    @Test
+    fun theSameSearchFoundAnewKeepsTheRowWhereItWas() {
+        val show = startScreen(results("film", films))
+        waitFor { focusedTag() == "searchField" }
+        press(Key.DirectionDown)
+        press(Key.DirectionRight, times = 12)
+        assertEquals("Film 13", focused())
+        // Out of the row, as when a title's page is open over Search.
+        compose.runOnIdle { focusManager?.clearFocus() }
+        settle()
+        show(results("film", films.dropLast(1)))
+        settle()
+        assertTrue(onScreen("Film 13"))
+        assertFalse("the row where it was", onScreen("Film 1"))
+    }
+
     /** Down from the field lands on the first card of the first row, not on the card below the middle of the field. */
     @Test
     fun downFromTheFieldLandsOnTheFirstCard() {

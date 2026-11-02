@@ -162,12 +162,14 @@ fun TvSearchScreen(
                 )
             }
         }
-        posterRow(titles[0], "searchMovies", state.movies, onOpen)
-        posterRow(titles[1], "searchSeries", state.series, onOpen)
-        resultRow(countedTitle(titles[2], state.channels.size), "searchChannels", state.channels, key = { it.channel.id }) { row, entry ->
+        // The search the rows show: other words or filters start each row again from its first result.
+        val search = state.query to filters
+        posterRow(titles[0], "searchMovies", state.movies, search, onOpen)
+        posterRow(titles[1], "searchSeries", state.series, search, onOpen)
+        resultRow(countedTitle(titles[2], state.channels.size), "searchChannels", state.channels, search, key = { it.channel.id }) { row, entry ->
             TvChannelCard(row, onClick = { onPlayChannel(row) }, modifier = Modifier.resultFocus(entry, "search-channel:${row.channel.id}"))
         }
-        resultRow(countedTitle(titles[3], state.people.size), "searchPeople", state.people, key = { "person-$it" }) { name, entry ->
+        resultRow(countedTitle(titles[3], state.people.size), "searchPeople", state.people, search, key = { "person-$it" }) { name, entry ->
             TvPersonCard(name, onClick = { onPerson(name) }, photoUrl = state.photoOf(name), modifier = Modifier.resultFocus(entry, "search-person:$name").testTag("person-$name"))
         }
         val message = when {
@@ -196,8 +198,8 @@ fun TvSearchScreen(
 private fun countedTitle(title: String, count: Int) = "$title ($count)"
 
 /** A row of posters found, each with its title (and year) beneath. */
-private fun LazyListScope.posterRow(title: String, tag: String, posters: List<ShowcaseItem>, onOpen: (ShowcaseItem) -> Unit) {
-    resultRow(countedTitle(title, posters.size), tag, posters, key = { it.key }) { item, entry ->
+private fun LazyListScope.posterRow(title: String, tag: String, posters: List<ShowcaseItem>, search: Any, onOpen: (ShowcaseItem) -> Unit) {
+    resultRow(countedTitle(title, posters.size), tag, posters, search, key = { it.key }) { item, entry ->
         Column(Modifier.width(TvTokens.PosterWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             TvPosterCard(item, onClick = { onOpen(item) }, modifier = Modifier.resultFocus(entry, "search:${item.key}"))
             Text(
@@ -228,7 +230,7 @@ private fun Modifier.resultFocus(card: ResultCard, key: String): Modifier =
  * Where the remote enters a row of results from above or below: the card it was last on in the row, while that one
  * is on screen, else the first card on screen; the first card of all once the row holds other results.
  */
-private class ResultRowFocus(var keys: List<Any>) {
+private class ResultRowFocus(var keys: List<Any>, var search: Any) {
     private val requesters = HashMap<Int, FocusRequester>()
     var last = 0
     var hasFocus = false
@@ -243,15 +245,17 @@ private class ResultRowFocus(var keys: List<Any>) {
 }
 
 /**
- * A row of results under its [title], none when there are no [results]. Whenever its results change (other words, other
- * filters), it starts again from its first one: a row kept where it was would stay scrolled to wherever one of the
- * titles before now is, often far along the row. Not while the remote is in it (the card it is on stays put), and
- * not back from a title (the row is where it was left, and so is the remote).
+ * A row of results under its [title], none when there are no [results]. Whenever its results change for another
+ * [search] (other words, other filters), it starts again from its first one: a row kept where it was would stay
+ * scrolled to wherever one of the titles before now is, often far along the row. Not while the remote is in it (the
+ * card it is on stays put), and not when the same search's results are found anew (a title's details loaded while
+ * it was open, the catalogue refreshed): back from a title, the row is where it was left, and so is the remote.
  */
 private fun <T> LazyListScope.resultRow(
     title: String,
     tag: String,
     results: List<T>,
+    search: Any,
     key: (T) -> Any,
     card: @Composable (T, ResultCard) -> Unit,
 ) {
@@ -259,10 +263,12 @@ private fun <T> LazyListScope.resultRow(
     item(key = "shelf:$tag") {
         val keys = results.map(key)
         val state = rememberSaveable(saver = LazyListState.Saver) { LazyListState() }
-        val focus = remember { ResultRowFocus(keys) }
+        val focus = remember { ResultRowFocus(keys, search) }
         if (focus.keys != keys) {
             focus.keys = keys
-            if (!focus.hasFocus) {
+            val another = focus.search != search
+            focus.search = search
+            if (another && !focus.hasFocus) {
                 focus.last = 0
                 // Before the new results are laid out: the row does not first follow one of the old ones.
                 state.requestScrollToItem(0)
