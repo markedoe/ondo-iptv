@@ -223,6 +223,8 @@ private fun MainTabs(viewModel: OndoViewModel) {
     val categoryPage = destination?.hasRoute(Routes.Grid::class) == true || destination?.hasRoute(Routes.Browse::class) == true
     val frame: @Composable (@Composable () -> Unit) -> Unit = if (isTelevision()) {
         { pages ->
+            // At the bar's end on every tab page: the playlist and when it was last updated.
+            val playlist by viewModel.playlistUpdate.collectAsStateWithLifecycle()
             TvNavigationFrame(
                 selected = selected,
                 showBar = tabPage || categoryPage,
@@ -230,6 +232,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 onSelect = { tab -> navController.openTabFromBar(tab, reselected = tab == selected && !tabPage) },
                 onSearch = { navController.openSearch(viewModel) },
                 onSettings = { navController.navigate(Routes.Settings) },
+                playlist = playlist,
                 content = pages,
             )
         }

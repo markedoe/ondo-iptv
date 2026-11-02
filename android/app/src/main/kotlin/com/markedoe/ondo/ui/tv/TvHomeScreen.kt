@@ -131,8 +131,9 @@ fun TvHomeScreen(
         state.channels.isEmpty() && state.newMovies.isEmpty() && state.newSeries.isEmpty() && state.trending.isEmpty()
     val memory = LocalFocusMemory.current
     LaunchedEffect(empty) { if (empty) memory?.given() }
-    // A playlist with featured titles names itself in the top bar; one without has its name above the channels.
-    TvTopBarNote(if (state.hero.isNotEmpty()) playlistLine(state) else null)
+    // A playlist with featured titles names itself in the top bar, as on the other tab pages; one without has its name
+    // above the channels instead.
+    TvTopBarNote(if (state.hero.isNotEmpty()) playlistNote(PlaylistUpdate(state.playlistName, state.updatedAt, state.now)) else null)
     val focusManager = LocalFocusManager.current
     // A card taken away hands the remote on before it goes: to the next card of its row, or the one before; the last
     // one, its row going with it, to the row below (or above). Not back to the carousel at the top.
@@ -432,10 +433,6 @@ private fun PageDots(count: Int, current: Int, modifier: Modifier = Modifier) {
 /** "Updated 5 minutes ago": when the playlist was last fetched from the provider. */
 @Composable
 private fun updatedAgo(state: HomeUiState): String? = state.updatedAt?.let { updatedAgoText(it, state.now) }
-
-/** In the top bar, before Search: the playlist Home shows, and beneath it when it was updated (one line each). */
-@Composable
-private fun playlistLine(state: HomeUiState): String = listOfNotNull(state.playlistName.takeIf { it.isNotBlank() }, updatedAgo(state)).joinToString("\n")
 
 /** A playlist without movies or series: its name and when it was updated, above the channels. */
 @Composable
