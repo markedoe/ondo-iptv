@@ -183,8 +183,9 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertEqual(model.syncSnapshot().people, [person])
     }
 
-    /// Times stamped while the clock ran ahead go out on the clock; a deletion learned late is kept from then.
-    func testOwnTimesAheadAreSentOnTheClockAndLateDeletionsAreKept() async throws {
+    /// Times go out as they were stored, even ahead of the clock (sync never moves a time); a deletion learned late is
+    /// kept from then.
+    func testOwnTimesAreSentAsStoredAndLateDeletionsAreKept() async throws {
         let model = try await device("first")
         let now = Date()
         let year: Int64 = 365 * 86_400_000
@@ -194,7 +195,28 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertTrue(applied)
         XCTAssertNotNil(model.syncSnapshot(now: now.addingTimeInterval(86_400)).deleted[learnedLate], "kept from when it was learned")
         model.syncState.people = [SyncPerson(name: "Bea", addedAt: now.syncMilliseconds + year)]
-        XCTAssertEqual(model.syncSnapshot(now: now).people.map(\.addedAt), [now.syncMilliseconds])
+        XCTAssertEqual(model.syncSnapshot(now: now).people.map(\.addedAt), [now.syncMilliseconds + year])
+    }
+
+    /// A change made here after one received from a device whose clock runs ahead is dated after it; what is dated more
+    /// than a day ahead is left out, and the clock does not follow it (docs/SYNC.md, "Clocks").
+    func testAChangeAfterOneFromAClockAheadIsDatedAfterIt() async throws {
+        let model = try await device("first")
+        let ahead = Date().syncMilliseconds + 2 * 3_600_000
+        let applied = await model.applySync(SyncSnapshot(device: "tv", people: [SyncPerson(name: "Ada", addedAt: ahead)]))
+        XCTAssertTrue(applied)
+        model.setTMDbCredential("example-tmdb-token-a")
+        XCTAssertGreaterThan(try XCTUnwrap(model.syncState.tmdbKeyUpdatedAt), ahead)
+
+        let far = Date().syncMilliseconds + 2 * 86_400_000
+        await model.applySync(SyncSnapshot(device: "tv", people: [SyncPerson(name: "Bea", addedAt: far)]))
+        XCTAssertEqual(model.syncSnapshot().people.map(\.name), ["Ada"])
+        XCTAssertLessThan(model.syncClock.last, far)
+        // Started again with its clock back at 1970: the stored times still come first.
+        let relaunched = AppModel(storageRoot: root.appendingPathComponent("first", isDirectory: true), secrets: model.secrets,
+                                  reminderScheduler: InMemoryReminderScheduler())
+        await relaunched.bootstrap()
+        XCTAssertGreaterThan(relaunched.syncStamp(Date(timeIntervalSince1970: 0)).syncMilliseconds, ahead)
     }
 
     func testTheTMDbKeyTravelsAndSoDoesItsRemoval() async throws {

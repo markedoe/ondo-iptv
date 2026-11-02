@@ -126,6 +126,8 @@ final class AppModel {
     let localSync = LocalSync()
     /// This device's sync ID, playlist edit times and deletions (`sync.json`).
     @ObservationIgnored var syncState = SyncState()
+    /// This device's clock for sync (docs/SYNC.md, "Clocks"): every change sync carries is dated by `syncStamp`.
+    @ObservationIgnored var syncClock = SyncClock()
     /// The app is on screen (not in the background): sync runs only then.
     @ObservationIgnored var isInForeground = true
     /// Shows the multiview screen (full-screen cover on iPad, a window on Mac).
@@ -345,6 +347,7 @@ final class AppModel {
         flush()
         updateSettings { $0.activeProfileID = profile.id }
         library = userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary()
+        if isReady { advanceSyncClockToStoredData() }
         isParentalUnlocked = false
         needsProfileSelection = false
         scheduleReminderSync()
@@ -385,6 +388,7 @@ final class AppModel {
         if wasActive, let first = profiles.first {
             library = userStore.load(UserLibrary.self, name: first.libraryDocumentName) ?? UserLibrary()
             updateSettings { $0.activeProfileID = first.id }
+            if isReady { advanceSyncClockToStoredData() }
             refreshLocalSync()
         }
     }
@@ -397,11 +401,12 @@ final class AppModel {
         let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines)
         let saved = trimmed?.isEmpty == false ? trimmed : nil
         guard storeTMDbCredential(saved) else { return }
+        let time = syncStamp(now).syncMilliseconds
         if saved == nil {
             syncState.tmdbKeyUpdatedAt = nil
-            syncState.deleted["key:" + SyncKey.tmdb] = now.syncMilliseconds
+            syncState.deleted["key:" + SyncKey.tmdb] = time
         } else {
-            syncState.tmdbKeyUpdatedAt = now.syncMilliseconds
+            syncState.tmdbKeyUpdatedAt = time
         }
         saveSyncState(now: now)
         syncSoon()

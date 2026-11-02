@@ -33,12 +33,14 @@ struct SyncState: Codable, Equatable {
     var peers: [String: Int64] = [:]
     /// Milliseconds since 1970, by deleted key: when this device learned a deletion made elsewhere (kept from then).
     var learned: [String: Int64] = [:]
+    /// Milliseconds since 1970: the latest time sync dated or received here (`SyncClock.last`, docs/SYNC.md "Clocks").
+    var clock: Int64 = 0
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, people, listPeople, deleted, replaced, lastSyncedAt, peers
-        case learned
+        case learned, clock
     }
 
     init(from decoder: Decoder) throws {
@@ -54,10 +56,12 @@ struct SyncState: Codable, Equatable {
         lastSyncedAt = try? c.decodeIfPresent(Int64.self, forKey: .lastSyncedAt)
         peers = (try? c.decodeIfPresent([String: Int64].self, forKey: .peers)) ?? [:]
         learned = (try? c.decodeIfPresent([String: Int64].self, forKey: .learned)) ?? [:]
+        clock = (try? c.decodeIfPresent(Int64.self, forKey: .clock)) ?? 0
     }
 
     /// Without deletions older than the spec keeps them (180 days, and until each device seen in the last year has had
-    /// a session after them), nor the replacements they ended, nor the devices not seen for a year.
+    /// a session after them), nor the replacements they ended, nor the devices not seen for a year. `now`: on the sync
+    /// clock (`AppModel.syncNow`).
     func pruned(now: Date) -> SyncState {
         let kept = SyncSnapshot(device: deviceID, deleted: deleted, replaced: replaced)
             .pruned(now: now.syncMilliseconds, sessions: Array(peers.values), learned: learned)
@@ -91,8 +95,21 @@ extension Date {
 enum SyncMapping {
     // MARK: Model → snapshot
 
+    /// This device's snapshot, without the deletions `SyncSnapshot.pruned` forgets at `now` (on the sync clock,
+    /// `AppModel.syncNow`). Its times are those stored: never moved.
     static func snapshot(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, deviceName: String?,
                          now: Date) -> SyncSnapshot {
+        records(playlists: playlists, library: library, state: state, tmdbKey: tmdbKey, deviceName: deviceName, now: now)
+            .pruned(now: now.syncMilliseconds, sessions: Array(state.peers.values), learned: state.learned)
+    }
+
+    /// The latest time of what this device holds for sync (its records and deletions); nil without any.
+    static func latestTime(playlists: [Playlist], library: UserLibrary, state: SyncState) -> Int64? {
+        records(playlists: playlists, library: library, state: state, deviceName: nil, now: Date(timeIntervalSince1970: 0)).latestTime
+    }
+
+    private static func records(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, deviceName: String?,
+                                now: Date) -> SyncSnapshot {
         var deleted = state.deleted
         func delete(_ key: String, at date: Date) {
             deleted[key] = max(deleted[key] ?? date.syncMilliseconds, date.syncMilliseconds)
@@ -108,7 +125,7 @@ enum SyncMapping {
             guard let bar = key.firstIndex(of: "|") else { continue }
             delete(SyncList.itemPrefix + key[..<bar].lowercased() + "|" + lowercasingPlaylistID(String(key[key.index(after: bar)...])), at: date)
         }
-        let snapshot = SyncSnapshot(
+        return SyncSnapshot(
             device: state.deviceID,
             deviceName: deviceName,
             playlists: playlists.compactMap { playlist in
@@ -142,8 +159,6 @@ enum SyncMapping {
             replaced: state.replaced,
             clock: now.syncMilliseconds
         )
-        return snapshot.clampingFuture(now: now.syncMilliseconds)
-            .pruned(now: now.syncMilliseconds, sessions: Array(state.peers.values), learned: state.learned)
     }
 
     /// The people of each list of `snapshot` that has any, by list ID: kept to be sent with the list again.
@@ -374,9 +389,30 @@ extension AppModel {
         #endif
     }
 
+    /// `now` (the wall clock) on the sync clock: the later of it and the latest time sync dated or received.
     func syncSnapshot(now: Date = Date()) -> SyncSnapshot {
         SyncMapping.snapshot(playlists: playlists, library: library, state: syncState, tmdbKey: secrets.get(Keychain.tmdbKey),
-                             deviceName: Self.syncDeviceName, now: now)
+                             deviceName: Self.syncDeviceName, now: syncNow(now))
+    }
+
+    /// The time of a change sync carries, made at `wall` (docs/SYNC.md, "Clocks"): later than everything this device
+    /// dated or received before, whatever its wall clock says.
+    func syncStamp(_ wall: Date = Date()) -> Date {
+        Date(syncMilliseconds: syncClock.stamp(wall: wall.syncMilliseconds))
+    }
+
+    /// `wall` as sync dates it (`SyncClock.now`): to prune by and to note sessions, never earlier than a time it gave.
+    func syncNow(_ wall: Date = Date()) -> Date {
+        Date(syncMilliseconds: syncClock.now(wall: wall.syncMilliseconds))
+    }
+
+    /// The sync clock starts after every time this device holds (`sync.json`, and the main profile's library): after a
+    /// restart with its clock back at 1970, a change is still dated after the ones it made or received before.
+    func advanceSyncClockToStoredData() {
+        syncClock.advance(to: syncState.clock)
+        syncClock.advance(to: syncState.tmdbKeyUpdatedAt)
+        guard syncsThisProfile else { return }
+        syncClock.advance(to: SyncMapping.latestTime(playlists: playlists, library: library, state: syncState))
     }
 
     /// The snapshot to send, or nil when this device does not sync now (not started, another profile).
@@ -422,8 +458,9 @@ extension AppModel {
         } else {
             changed = true
         }
+        advanceSyncClockToStoredData()
         if syncState.tmdbKeyUpdatedAt == nil, secrets.get(Keychain.tmdbKey) != nil {
-            syncState.tmdbKeyUpdatedAt = now.syncMilliseconds
+            syncState.tmdbKeyUpdatedAt = syncStamp(now).syncMilliseconds
             changed = true
         }
         if changed { writeSyncState(now: now) }
@@ -436,13 +473,14 @@ extension AppModel {
     }
 
     private func writeSyncState(now: Date) {
-        syncState = syncState.pruned(now: now)
+        syncState.clock = max(syncState.clock, syncClock.last)
+        syncState = syncState.pruned(now: syncNow(now))
         try? userStore.save(syncState, name: "sync")
     }
 
     /// A playlist was added or its name, address, login or guide edited.
     func notePlaylistChangedForSync(_ id: UUID, now: Date = Date()) {
-        syncState.playlistUpdatedAt[id.uuidString.lowercased()] = now.syncMilliseconds
+        syncState.playlistUpdatedAt[id.uuidString.lowercased()] = syncStamp(now).syncMilliseconds
         saveSyncState(now: now)
         syncSoon()
     }
@@ -455,8 +493,9 @@ extension AppModel {
 
     /// Playlists restored from a backup are dated now: they win over a deletion other devices still remember.
     func notePlaylistsRestoredForSync(_ restored: [Playlist], now: Date = Date()) {
+        let time = syncStamp(now).syncMilliseconds
         for playlist in restored {
-            syncState.playlistUpdatedAt[playlist.id.uuidString.lowercased()] = now.syncMilliseconds
+            syncState.playlistUpdatedAt[playlist.id.uuidString.lowercased()] = time
         }
         saveSyncState(now: now)
         syncSoon()
@@ -469,13 +508,13 @@ extension AppModel {
         syncState.playlistUpdatedAt[id] = nil
         guard recordsDeletion else { return }
         if case .local = playlist.source { return }
-        syncState.deleted["playlist:" + id] = now.syncMilliseconds
+        syncState.deleted["playlist:" + id] = syncStamp(now).syncMilliseconds
         saveSyncState(now: now)
         syncSoon()
     }
 
     func noteListDeletedForSync(_ id: UUID, now: Date = Date()) {
-        syncState.deleted["list:" + id.uuidString.lowercased()] = now.syncMilliseconds
+        syncState.deleted["list:" + id.uuidString.lowercased()] = syncStamp(now).syncMilliseconds
         saveSyncState(now: now)
         syncSoon()
     }
@@ -483,8 +522,9 @@ extension AppModel {
     /// "Clear Watch History" leaves no deletion marker in the library: the movies and episodes it cleared are marked
     /// here, so other devices clear them too.
     func noteHistoryClearedForSync(_ entries: [HistoryEntry], now: Date = Date()) {
+        let time = syncStamp(now).syncMilliseconds
         for entry in entries where entry.reference.type != .live {
-            syncState.deleted["progress:" + SyncMapping.lowercasingPlaylistID(entry.id)] = now.syncMilliseconds
+            syncState.deleted["progress:" + SyncMapping.lowercasingPlaylistID(entry.id)] = time
         }
         saveSyncState(now: now)
         syncSoon()
@@ -499,11 +539,14 @@ extension AppModel {
     @discardableResult
     func applySync(_ received: SyncSnapshot, now: Date = Date()) async -> Bool {
         guard isReady, syncsThisProfile else { return false }
-        // The times received put on this device's clock first (docs/SYNC.md, "Clocks"). Merged off the main actor: the
-        // merge that is kept is the one with the data as it is at the end (below), on the main actor.
+        // Without what is dated more than a day after this device's clock; the rest goes into its sync clock, so that a
+        // change made here next is dated after it (docs/SYNC.md, "Clocks"). No time is moved. Merged off the main actor:
+        // the merge that is kept is the one with the data as it is at the end (below), on the main actor.
+        let wall = now.syncMilliseconds
+        let taken = received.withoutRecordsAhead(wall: wall)
+        syncClock.observe(taken, wall: wall)
         let local = syncSnapshot(now: now)
-        let clock = now.syncMilliseconds
-        let merged = await Task.detached(priority: .utility) { SyncMerge.merge(local, received.onReceiverClock(now: clock)) }.value
+        let merged = await Task.detached(priority: .utility) { SyncMerge.merge(local, taken) }.value
         let records = Dictionary(merged.playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         // Playlists edited elsewhere, then the new ones. The device's own are found by ID (a snapshot can hold tens of
@@ -562,8 +605,9 @@ extension AppModel {
             guard syncsThisProfile else { break }
             let (base, bases, state, tmdbKey, playing) = (library, playlists, syncState, secrets.get(Keychain.tmdbKey), playingKeys)
             let name = Self.syncDeviceName
+            let syncTime = syncNow(now)
             let result = await Task.detached(priority: .utility) { () -> (SyncSnapshot, UserLibrary, [String: HistoryEntry]) in
-                let current = SyncMapping.snapshot(playlists: bases, library: base, state: state, tmdbKey: tmdbKey, deviceName: name, now: now)
+                let current = SyncMapping.snapshot(playlists: bases, library: base, state: state, tmdbKey: tmdbKey, deviceName: name, now: syncTime)
                 let latest = SyncMerge.merge(current, merged)
                 let kept = SyncMapping.keepingPlayback(SyncMapping.library(base, applying: latest), local: base, playing: playing)
                 return (latest, kept.library, kept.parked)
@@ -585,7 +629,7 @@ extension AppModel {
         applySyncedKeys(latest)
         syncState.people = latest.people
         syncState.listPeople = SyncMapping.listPeople(latest)
-        let time = now.syncMilliseconds
+        let time = syncNow(now).syncMilliseconds
         syncState.learned = latest.deleted.reduce(into: [:]) { learned, entry in
             if let known = syncState.learned[entry.key] {
                 learned[entry.key] = known
@@ -595,7 +639,7 @@ extension AppModel {
         }
         syncState.deleted = latest.deleted
         syncState.replaced = latest.replaced
-        syncState.lastSyncedAt = time
+        syncState.lastSyncedAt = now.syncMilliseconds
         saveSyncState()
         return true
     }
@@ -605,7 +649,7 @@ extension AppModel {
 
     /// A session with `device` worked: deletions are kept until each device has had a session after them.
     func noteSyncSession(with device: String, now: Date = Date()) {
-        syncState.peers[device.lowercased()] = now.syncMilliseconds
+        syncState.peers[device.lowercased()] = syncNow(now).syncMilliseconds
         saveSyncState()
     }
 

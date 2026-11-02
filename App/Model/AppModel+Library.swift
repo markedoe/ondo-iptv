@@ -16,19 +16,22 @@ extension AppModel {
 
     func toggleFavorite(_ channel: Channel) {
         guard let ref = reference(.live, channel.id) else { return }
-        updateLibrary { $0.toggleFavorite(ref, title: channel.name, imageURL: logoURL(for: channel)) }
+        let time = syncStamp()
+        updateLibrary { $0.toggleFavorite(ref, title: channel.name, imageURL: logoURL(for: channel), now: time) }
         syncSoon()
     }
 
     func toggleFavorite(_ movie: Movie) {
         guard let ref = reference(.movie, movie.id) else { return }
-        updateLibrary { $0.toggleFavorite(ref, title: movie.name, imageURL: movie.posterURL) }
+        let time = syncStamp()
+        updateLibrary { $0.toggleFavorite(ref, title: movie.name, imageURL: movie.posterURL, now: time) }
         syncSoon()
     }
 
     func toggleFavorite(_ series: Series) {
         guard let ref = reference(.series, series.id) else { return }
-        updateLibrary { $0.toggleFavorite(ref, title: series.name, imageURL: series.coverURL) }
+        let time = syncStamp()
+        updateLibrary { $0.toggleFavorite(ref, title: series.name, imageURL: series.coverURL, now: time) }
         syncSoon()
     }
 
@@ -49,13 +52,15 @@ extension AppModel {
     @discardableResult
     func createList(named name: String) -> UUID {
         var id = UUID()
-        updateLibrary { id = $0.createList(named: name) }
+        let time = syncStamp()
+        updateLibrary { id = $0.createList(named: name, now: time) }
         syncSoon()
         return id
     }
 
     func renameList(_ id: UUID, to name: String) {
-        updateLibrary { $0.renameList(id, to: name) }
+        let time = syncStamp()
+        updateLibrary { $0.renameList(id, to: name, now: time) }
         syncSoon()
     }
 
@@ -70,7 +75,8 @@ extension AppModel {
             if case .channel(let channel) = item { return self.logoURL(for: channel) }
             return item.imageURL
         }()
-        updateLibrary { $0.toggle(ref, title: item.title, imageURL: image, inList: id) }
+        let time = syncStamp()
+        updateLibrary { $0.toggle(ref, title: item.title, imageURL: image, inList: id, now: time) }
         syncSoon()
     }
 
@@ -96,7 +102,8 @@ extension AppModel {
     func moveListItems(_ id: UUID, fromOffsets source: IndexSet, toOffset destination: Int) {
         guard let list = library.customLists.first(where: { $0.id == id }) else { return }
         let move = Self.storedMove(visible: items(in: list), stored: list.items, fromOffsets: source, toOffset: destination)
-        updateLibrary { $0.moveItems(inList: id, fromOffsets: move.source, toOffset: move.destination) }
+        let time = syncStamp()
+        updateLibrary { $0.moveItems(inList: id, fromOffsets: move.source, toOffset: move.destination, now: time) }
         syncSoon()
     }
 
@@ -174,24 +181,28 @@ extension AppModel {
     }
 
     func removeFromHistory(_ entry: HistoryEntry) {
-        updateLibrary { $0.removeHistory(entry) }
+        let time = syncStamp()
+        updateLibrary { $0.removeHistory(entry, now: time) }
         syncSoon()
     }
 
     func clearHistory() {
         let cleared = library.history
-        updateLibrary { $0.clearHistory() }
+        let time = syncStamp()
+        updateLibrary { $0.clearHistory(now: time) }
         noteHistoryClearedForSync(cleared)
     }
 
     func recordStart(_ item: PlaybackItem) {
         let container = item.streamURL.pathExtension.lowercased()
+        let time = syncStamp()
         updateLibrary {
             $0.recordPlayback(HistoryEntry(
                 reference: item.reference,
                 title: item.title,
                 subtitle: item.subtitle,
                 imageURL: item.artworkURL,
+                lastWatchedAt: time,
                 position: item.isLive ? 0 : (item.startPosition ?? 0),
                 streamExtension: item.reference.episodeID == nil || container.isEmpty ? nil : container
             ))
@@ -201,7 +212,8 @@ extension AppModel {
     func recordProgress(_ item: PlaybackItem, position: Double, duration: Double) {
         // Replays belong to the channel's history entry, not to a resumable position.
         guard !item.isCatchup else { return }
-        updateLibrary { $0.updateProgress(item.reference, position: position, duration: duration) }
+        let time = syncStamp()
+        updateLibrary { $0.updateProgress(item.reference, position: position, duration: duration, now: time) }
     }
 
     func resumePosition(for item: PlaybackItem) -> Double? {
