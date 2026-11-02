@@ -666,7 +666,7 @@ class TvLayoutRegressionTest {
         (1..4).forEach { assertEquals("${gridTitle(it)} in the first row", first.top.value, gridPoster(it).top.value, 0.5f) }
         assertTrue("the sixth poster starts the second row", gridPoster(5).top >= first.bottom)
         assertTrue("five posters whole across the grid", gridPoster(4).right <= bounds("grid").right + 0.5.dp)
-        assertTrue("posters bigger than a phone's (${first.width})", first.width >= 150.dp)
+        assertTrue("posters bigger than a phone's (${first.right - first.left})", first.right - first.left >= 150.dp)
         assertRowAtTheTop(0, "Down from the tab")
 
         val rows = longGrid.size / 5
@@ -693,7 +693,7 @@ class TvLayoutRegressionTest {
         (2..5).forEach { assertTrue("poster $it whole in the row", poster(it).right <= row.right + 0.5.dp) }
         val sixth = poster(6)
         assertTrue("the sixth peeking at the row's end: $sixth in $row", sixth.left < row.right - 16.dp && sixth.right > row.right)
-        assertTrue("posters bigger than before (${sixth.width})", sixth.width >= 140.dp)
+        assertTrue("posters bigger than before (${sixth.right - sixth.left})", sixth.right - sixth.left >= 140.dp)
         assertWholeBelowTheHeader("shelf:m-drama", "a row of posters")
     }
 
