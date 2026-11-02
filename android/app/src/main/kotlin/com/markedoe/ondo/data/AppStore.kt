@@ -89,6 +89,19 @@ class AppStore(
         File(directory, "guide-$playlistId.json").delete()
     }
 
+    /**
+     * The catalogue, guide and details kept for playlist [from], kept for [to] instead (the same account under another
+     * ID): nothing is downloaded again. What [to] already has stays; [from]'s is then deleted.
+     */
+    fun movePlaylistData(from: String, to: String) {
+        for (prefix in listOf("content", "guide", "details")) {
+            val source = File(directory, "$prefix-$from.json")
+            val target = File(directory, "$prefix-$to.json")
+            if (!source.exists()) continue
+            if (target.exists() || !source.renameTo(target)) source.delete()
+        }
+    }
+
     /** The movie and series details kept for a playlist; they can be fetched again: no previous version is kept. */
     fun loadDetails(playlistId: String): DetailsArchive? = read("details-$playlistId.json", DetailsArchive.serializer(), disposable = true)
     fun saveDetails(playlistId: String, archive: DetailsArchive) =

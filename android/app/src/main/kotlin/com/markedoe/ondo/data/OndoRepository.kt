@@ -57,9 +57,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
@@ -439,83 +444,145 @@ class OndoRepository(
     }
 
     /**
-     * Merges [incoming] with this device's data as it is now, keeps the result and returns it (what a server answers,
-     * what a client keeps). Main thread: a change made during the session is part of the merge, so none is lost. The
-     * times of [incoming] are first put on this device's clock (docs/SYNC.md, "Clocks").
+     * Merges [incoming] with this device's data as it is now, keeps the result and returns the answer for its sender
+     * ([SyncSnapshot.forSender]: on the sender's clock, so that a session moves no time). Main thread, all of it: for
+     * tests and screens that merge at once; sync merges with [mergeSyncInBackground].
      */
     fun mergeSync(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
         val local = syncSnapshot(deviceName) ?: return null
-        val merged = SyncMerge.merge(local, incoming.onReceiverClock(now()))
-        applySync(merged)
-        noteSyncSession(incoming.device)
-        return merged
+        val time = now()
+        val merged = SyncMerge.merge(local, incoming.onReceiverClock(time))
+        commitSync(SyncData.apply(_state.value, merged, time))
+        return merged.forSender(incoming.skewAt(time))
+    }
+
+    /** This device's snapshot, built on [syncMerging] from the data as it is now (returned with it); null until loaded. */
+    private suspend fun syncSnapshotInBackground(deviceName: String?): Pair<OndoState, SyncSnapshot>? {
+        if (!_state.value.isReady) return null
+        val id = syncDeviceId()
+        val base = _state.value
+        val time = now()
+        return base to withContext(syncMerging) { SyncData.snapshot(base, id, deviceName, time) }
+    }
+
+    /** The progress left out of digests: the item playing, saved every few seconds (docs/SYNC.md, "Transport"). */
+    private fun digestLeavingOut(state: OndoState): Set<String> =
+        playingKey?.let { state.library.progress(it) }?.let { setOf(SyncKeys.progress(it)) }.orEmpty()
+
+    /** This device's digest for [state] ([SyncSnapshot.contentDigest]), worked out on [syncMerging]. */
+    private suspend fun syncDigest(state: OndoState, deviceName: String?): String {
+        val id = syncDeviceId()
+        val leavingOut = digestLeavingOut(state)
+        val time = now()
+        return withContext(syncMerging) { SyncData.snapshot(state, id, deviceName, time).contentDigest(leavingOut) }
     }
 
     /**
-     * [mergeSync] with the merge and its translation into this device's data done on [syncMerging], off the main
-     * thread; kept only if nothing it read changed meanwhile (the playlists, the library, the settings), else done
-     * again from the data as it is then: a change made during the merge is never lost. After [MERGE_TRIES] changes in a
-     * row, the last try runs on the main thread. Main thread.
+     * What a client sends a server ([SyncSnapshot.offer]), and its size in bytes: everything is worked out on
+     * [syncMerging], off the main thread. Main thread.
      */
-    suspend fun mergeSyncInBackground(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
+    suspend fun syncOffer(deviceName: String?, sentDigest: String?, answerDigest: String?, full: Boolean): Pair<SyncSnapshot, Int>? {
+        val (state, own) = syncSnapshotInBackground(deviceName) ?: return null
+        val leavingOut = digestLeavingOut(state)
+        return withContext(syncMerging) {
+            val offer = own.offer(sentDigest, answerDigest, full, leavingOut)
+            offer to offer.encoded().size
+        }
+    }
+
+    /**
+     * Merges [incoming] on [syncMerging], off the main thread, and keeps the result only if nothing it read changed
+     * meanwhile (the playlists, the library, the settings); else merges again from the data as it is then. After
+     * [MERGE_TRIES] changes in a row it gives up (null): the next session merges. Returns the answer for the sender
+     * and the data as kept. Main thread.
+     */
+    private suspend fun mergeInBackground(incoming: SyncSnapshot, deviceName: String?): Pair<SyncSnapshot, OndoState>? {
         repeat(MERGE_TRIES) {
-            val local = syncSnapshot(deviceName) ?: return null
-            val base = _state.value
+            val (base, local) = syncSnapshotInBackground(deviceName) ?: return null
             val time = now()
             val (merged, applied) = withContext(syncMerging) {
                 val result = SyncMerge.merge(local, incoming.onReceiverClock(time))
-                result to SyncData.apply(base, result)
+                result to SyncData.apply(base, result, time)
             }
             val current = _state.value
             if (current.playlists === base.playlists && current.library === base.library && current.settings === base.settings) {
                 commitSync(applied)
-                noteSyncSession(incoming.device)
-                return merged
+                return merged.forSender(incoming.skewAt(time)) to _state.value
             }
         }
-        return mergeSync(incoming, deviceName)
+        return null
     }
+
+    /** [mergeInBackground], for its answer: what a client keeps, what a server answers. Main thread. */
+    suspend fun mergeSyncInBackground(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? =
+        mergeInBackground(incoming, deviceName)?.first
 
     /**
      * What a server answers [incoming] (docs/SYNC.md, "Transport"): to a probe, `unchanged` when this device's data has
      * not changed since the client's last session ([SyncSnapshot.seen]), else its own snapshot; to a snapshot, the
-     * merge ([mergeSyncInBackground]). Answers carry this device's digest. Main thread.
+     * merge ([mergeSyncInBackground]). Answers carry this device's digest, of the data the answer comes from. Main
+     * thread; the work is done on [syncMerging].
      */
     suspend fun answerSync(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
         if (incoming.isProbe) {
-            val own = syncSnapshot(deviceName) ?: return null
-            val digest = own.contentDigest()
-            noteSyncSession(incoming.device)
+            val (state, own) = syncSnapshotInBackground(deviceName) ?: return null
+            val leavingOut = digestLeavingOut(state)
+            val digest = withContext(syncMerging) { own.contentDigest(leavingOut) }
             return if (incoming.seen == digest) {
-                SyncSnapshot(device = own.device, deviceName = own.deviceName, clock = own.clock, digest = digest, unchanged = true)
+                SyncSnapshot(device = own.device, deviceName = own.deviceName, digest = digest, unchanged = true)
             } else {
-                own.copy(digest = digest)
+                own.copy(digest = digest).forSender(incoming.skewAt(now()))
             }
         }
-        val merged = mergeSyncInBackground(incoming, deviceName) ?: return null
-        return merged.copy(digest = syncSnapshot(deviceName)?.contentDigest())
+        val (answer, kept) = mergeInBackground(incoming, deviceName) ?: return null
+        return answer.copy(digest = syncDigest(kept, deviceName))
     }
+
+    /** Whether the player plays something (a channel too): sync then reloads no catalogue until it stops. */
+    private var inPlayback = false
 
     /** What the player plays now ([WatchEntry.key]): sync leaves its entry alone until playback ends. Main thread. */
     private var playingKey: String? = null
 
-    /** Whether a movie or an episode plays: sync then puts off its regular sessions that would send everything. */
-    val isPlaying: Boolean get() = playingKey != null
+    /** Whether something plays: sync then puts off its regular sessions that would send everything. */
+    val isPlaying: Boolean get() = inPlayback
 
     /** Where other devices left the item playing here, received during playback: applied once it ends. */
     private val parkedProgress = HashMap<String, WatchEntry>()
 
+    /**
+     * The playlist whose catalogue is shown, when sync changed the playlist in use (or its address) during playback:
+     * the catalogue follows once playback ends ([playbackEnded]).
+     */
+    private var contentBeforeSync: SavedPlaylist? = null
+    private var contentFollowsSync = false
+
     /** The player started [key] (null: something not resumable, a channel). Main thread. */
     fun playbackStarted(key: String?) {
-        if (key == playingKey) return
-        playbackEnded()
+        if (inPlayback && key == playingKey) return
+        applyParked()
+        inPlayback = true
         playingKey = key
     }
 
-    /** The player stopped: what another device sent meanwhile for that item applies now, if it is the later. */
+    /**
+     * The player stopped: what another device sent meanwhile for its item applies now, if it is the later, and a
+     * catalogue sync changed meanwhile follows. Main thread.
+     */
     fun playbackEnded() {
-        val key = playingKey ?: return
+        if (!inPlayback) return
+        applyParked()
+        inPlayback = false
         playingKey = null
+        if (contentFollowsSync) {
+            contentFollowsSync = false
+            followSyncedPlaylist(contentBeforeSync)
+            contentBeforeSync = null
+        }
+    }
+
+    private fun applyParked() {
+        val key = playingKey ?: return
         val parked = parkedProgress.remove(key) ?: return
         val library = _state.value.library
         val stored = library.progress(key)
@@ -542,9 +609,10 @@ class OndoRepository(
 
     /**
      * Remembers a session with [device] (to the day: the library is not written at each session), and forgets the
-     * devices not seen for a year: deletions are kept until each device remembered has had them.
+     * devices not seen for a year: deletions are kept until each device remembered has had them. A client calls it
+     * once it has merged a server's full answer; a server once its answer to a full snapshot was delivered. Main thread.
      */
-    private fun noteSyncSession(device: String) {
+    fun noteSyncSession(device: String) {
         val time = now()
         val peers = _state.value.library.syncPeers
         if (time - (peers[device.lowercase()] ?: Long.MIN_VALUE / 2) < DAY_MS) return
@@ -552,7 +620,14 @@ class OndoRepository(
         updateLibrary { library -> library.copy(syncPeers = (library.syncPeers + (device.lowercase() to time)).filterValues { it >= forgotten }) }
     }
 
-    private fun applySync(merged: SyncSnapshot) = commitSync(SyncData.apply(_state.value, merged))
+    /** What [commitSync] last kept, as [SyncData.changes] sees it: not a change of this device's own. */
+    @Volatile private var committedBySync: Any? = null
+
+    /**
+     * The changes to what sync carries made on this device (not those a merge brought): each one is worth a session
+     * soon. A merge kept here travels on with the next regular session.
+     */
+    val localSyncChanges: Flow<Any> get() = state.map(SyncData::changes).distinctUntilChanged().drop(1).filter { it != committedBySync }
 
     /** Keeps what applying a merged snapshot gave ([SyncData.apply] on the data as it is now). Main thread. */
     private fun commitSync(applied: SyncData.Applied) {
@@ -574,15 +649,37 @@ class OndoRepository(
             saveLibrary(library)
             saveSettings(settings)
             applied.removed.forEach {
-                deleteContent(it.id)
-                deleteDetails(it.id)
-                deleteGuide(it.id)
+                // The same account under another ID keeps its catalogue, guide and details: nothing is downloaded again.
+                val into = applied.replacements[it.id]
+                if (into != null) {
+                    movePlaylistData(it.id, into)
+                } else {
+                    deleteContent(it.id)
+                    deleteDetails(it.id)
+                    deleteGuide(it.id)
+                }
             }
         }
-        _state.update { it.copy(playlists = applied.playlists, library = library, settings = settings) }
+        _state.update { current ->
+            current.copy(playlists = applied.playlists, library = library, settings = settings).also { committedBySync = SyncData.changes(it) }
+        }
+        if (inPlayback) {
+            // Nothing is reloaded under the player: the catalogue follows once playback ends.
+            if (!contentFollowsSync) contentBeforeSync = before
+            contentFollowsSync = true
+        } else {
+            followSyncedPlaylist(before)
+        }
+        // A TMDb token saved, changed or removed on another device: used from now on, as if typed here.
+        if (state.settings.tmdbToken != settings.tmdbToken) tmdbTokenChanged()
+    }
+
+    /** The catalogue shown follows the playlist in use after a sync, [before] being the one it shows. Main thread. */
+    private fun followSyncedPlaylist(before: SavedPlaylist?) {
         val after = _state.value.activePlaylist
         when {
             after == null -> {
+                if (before == null) return
                 openJob?.cancel()
                 refreshJob?.cancel()
                 guideJob?.cancel()
@@ -593,8 +690,6 @@ class OndoRepository(
             // Another address or login for the playlist in use: its catalogue comes again from there.
             before.url != after.url || before.username != after.username || before.password != after.password -> load(after)
         }
-        // A TMDb token saved, changed or removed on another device: used from now on, as if typed here.
-        if (state.settings.tmdbToken != settings.tmdbToken) tmdbTokenChanged()
     }
 
     fun setHideWatchedMovies(hide: Boolean) = updateSettings { it.copy(hideWatchedMovies = hide) }
@@ -1596,7 +1691,7 @@ class OndoRepository(
         /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
         const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L
         private const val DAY_MS = 24 * 60 * 60 * 1000L
-        /** Merges in the background before the one on the main thread, when the data keeps changing meanwhile. */
+        /** Merges in the background before giving up until the next session, when the data keeps changing meanwhile. */
         private const val MERGE_TRIES = 3
 
         /** A person's movies and series on TMDb, kept on the device, are asked again after a week. */

@@ -133,7 +133,7 @@ object SyncData {
             deleted = library.syncDeleted,
             replaced = library.syncReplaced,
             clock = now,
-        ).pruned(now, sessions = library.syncPeers.values)
+        ).clampingFuture(now).pruned(now, sessions = library.syncPeers.values, learned = library.syncDeletedLearned)
     }
 
     /**
@@ -155,7 +155,8 @@ object SyncData {
         else -> false
     }
 
-    fun apply(state: OndoState, merged: SyncSnapshot): Applied {
+    /** [now]: when this device learns the deletions of [merged] it did not have (kept from then, docs/SYNC.md). */
+    fun apply(state: OndoState, merged: SyncSnapshot, now: Long = 0): Applied {
         // The device's own IDs, whatever their case; IDs it does not know keep the merged (lowercase) form.
         val localIds = state.playlists.associateBy({ it.id.lowercase() }, { it.id })
         fun local(id: String) = localIds[id.lowercase()] ?: id
@@ -244,6 +245,9 @@ object SyncData {
             history = history.sortedByDescending { it.lastWatchedAt }.take(LibraryState.MAX_HISTORY),
             collections = collections,
             syncDeleted = merged.deleted,
+            syncDeletedLearned = merged.deleted.keys.mapNotNull { key ->
+                (library.syncDeletedLearned[key] ?: now.takeIf { key !in library.syncDeleted && it > 0 })?.let { key to it }
+            }.toMap(),
             syncReplaced = merged.replaced,
         ).let { kept -> removedIds.fold(kept) { result, id -> result.removingPlaylist(id, merged.deleted[SyncKeys.playlist(id)] ?: 0) } }
             .let { result ->

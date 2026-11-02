@@ -109,6 +109,8 @@ data class LibraryState(
      * the last year has had a session after them.
      */
     val syncPeers: Map<String, Long> = emptyMap(),
+    /** Sync: when this device learned a deletion made elsewhere, by key (its own are learned when made). */
+    val syncDeletedLearned: Map<String, Long> = emptyMap(),
 ) {
     fun isCategoryHidden(playlistId: String, categoryId: String): Boolean = "$playlistId|$categoryId" in hiddenCategories
 

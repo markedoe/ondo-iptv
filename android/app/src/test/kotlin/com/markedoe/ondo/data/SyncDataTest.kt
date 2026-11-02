@@ -4,14 +4,15 @@ import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
 import com.markedoe.ondo.core.sync.SyncMerge
+import com.markedoe.ondo.core.sync.SyncPerson
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncSnapshot
+import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -70,6 +71,21 @@ class SyncDataTest {
     private fun session(client: OndoRepository, server: OndoRepository) {
         val answer = requireNotNull(server.mergeSync(requireNotNull(client.syncSnapshot("client")), "server"))
         client.mergeSync(answer, "client")
+        // Delivered and merged: each side counts the session.
+        client.noteSyncSession(answer.device)
+        server.noteSyncSession(requireNotNull(client.syncSnapshot("client")).device)
+    }
+
+    /** A dispatcher that runs what it is given only when told to: a merge "in the background" waits until then. */
+    private class HeldDispatcher : CoroutineDispatcher() {
+        private val held = ArrayDeque<Runnable>()
+        val isHolding: Boolean get() = held.isNotEmpty()
+        override fun dispatch(context: CoroutineContext, block: Runnable) {
+            held.addLast(block)
+        }
+        fun release() {
+            while (held.isNotEmpty()) held.removeFirst().run()
+        }
     }
 
     private fun OndoState.favorite(itemId: String) = library.isFavorite(activePlaylistId.orEmpty(), ItemKind.MOVIE, itemId)
@@ -149,8 +165,8 @@ class SyncDataTest {
      */
     @Test
     fun aChangeMadeDuringABackgroundMergeIsKept() = runTest {
-        val merging = TestCoroutineScheduler()
-        val tv = device("tv", merging = StandardTestDispatcher(merging)).ready()
+        val merging = HeldDispatcher()
+        val tv = device("tv", merging = merging).ready()
         val phone = device("phone").ready()
         tv.addPlaylist("Home", list)
         session(phone, tv)
@@ -164,15 +180,36 @@ class SyncDataTest {
         val merge = launch { answer = tv.mergeSyncInBackground(sent, "tv") }
         runCurrent()
         // The merge waits on its own thread; the TV changes My List meanwhile.
-        assertTrue(merge.isActive)
+        assertTrue(merging.isHolding)
         tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
         while (merge.isActive) {
-            merging.advanceUntilIdle()
+            merging.release()
             runCurrent()
         }
         assertTrue(tv.state.value.favorite(movie.id))
         assertEquals(listOf("Ada Example" to null), tv.state.value.library.people())
         assertTrue(requireNotNull(answer).favorites.any { it.item == movie.id })
+    }
+
+    /** When the data keeps changing during every try, the merge gives up until the next session: never on the main thread. */
+    @Test
+    fun aMergeThatKeepsBeingOvertakenWaitsForTheNextSession() = runTest {
+        val merging = HeldDispatcher()
+        val tv = device("tv", merging = merging).ready()
+        tv.addPlaylist("Home", list)
+        val movie = tv.state.value.content.movies.single()
+        var answer: SyncSnapshot? = SyncSnapshot(device = "none")
+        val merge = launch { answer = tv.mergeSyncInBackground(SyncSnapshot(device = "phone", people = listOf(SyncPerson("Ada Example", addedAt = time))), "tv") }
+        runCurrent()
+        while (merge.isActive) {
+            // A change on the main thread each time the merge runs.
+            time += 1_000
+            tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+            merging.release()
+            runCurrent()
+        }
+        assertNull(answer)
+        assertTrue(tv.state.value.library.people().isEmpty())
     }
 
     /** A change made between the answer arriving and its merge is kept: the merge reads the library as it is then. */
@@ -416,6 +453,127 @@ class SyncDataTest {
             session(wrong, right)
             assertFalse(wrong.state.value.favorite(movie.id))
         }
+    }
+
+    /**
+     * Twenty sessions between a box two hours ahead and one on time, 40 ms each way: after the first round nothing
+     * changes any more on either box (no time creeps), the digests stay the same, and no merge asks for another session.
+     */
+    @Test
+    fun sessionsBetweenSkewedBoxesSettleAndRaiseNoMoreSessions() = runTest {
+        val ahead = device("ahead", offset = 2 * 3_600_000L).ready()
+        val onTime = device("on-time").ready()
+        ahead.addPlaylist("Home", list)
+        val movie = ahead.state.value.content.movies.single()
+        time += 1_000
+        ahead.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        ahead.togglePerson("Ada Example", null)
+        val raised = mutableListOf<Any>()
+        backgroundScope.launch { onTime.localSyncChanges.collect { raised += it } }
+        backgroundScope.launch { ahead.localSyncChanges.collect { raised += it } }
+        var sent: String? = null
+        var answered: String? = null
+        val libraries = mutableListOf<Pair<LibraryState, LibraryState>>()
+        repeat(20) { round ->
+            time += 60_000
+            val (offer, _) = requireNotNull(onTime.syncOffer("on-time", sent, answered, full = round % 2 == 0))
+            time += 40
+            val answer = requireNotNull(ahead.answerSync(offer, "ahead"))
+            time += 40
+            if (!answer.isUnchanged) {
+                requireNotNull(onTime.mergeSyncInBackground(answer, "on-time"))
+                if (!offer.isProbe) sent = offer.digest
+                answered = answer.digest
+            }
+            runCurrent()
+            libraries += ahead.state.value.library to onTime.state.value.library
+        }
+        assertTrue(onTime.state.value.favorite(movie.id))
+        val settled = libraries[1]
+        for ((round, pair) in libraries.withIndex().drop(1)) {
+            assertEquals("round $round", settled.first.copy(syncPeers = emptyMap()), pair.first.copy(syncPeers = emptyMap()))
+            assertEquals("round $round", settled.second.copy(syncPeers = emptyMap()), pair.second.copy(syncPeers = emptyMap()))
+        }
+        assertTrue("no session asked for by a merge: $raised", raised.isEmpty())
+    }
+
+    /** A change stamped while the clock ran ahead is brought back to the clock when sent: a later removal still wins. */
+    @Test
+    fun aChangeStampedAheadIsSentAtTheClockAndLosesToALaterRemoval() = runTest {
+        val tv = device("tv").ready()
+        val phone = device("phone").ready()
+        tv.addPlaylist("Home", list)
+        session(phone, tv)
+        val movie = tv.state.value.content.movies.single()
+        // The TV's clock ran a year ahead when the favourite was kept.
+        time += 365 * 86_400_000L
+        tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        time -= 365 * 86_400_000L
+        assertTrue(requireNotNull(tv.syncSnapshot("tv")).favorites.all { it.addedAt <= time })
+        session(phone, tv)
+        assertTrue(phone.state.value.favorite(movie.id))
+        // Taken out on the phone a minute later: gone from the TV too.
+        time += 60_000
+        phone.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        session(phone, tv)
+        assertFalse(tv.state.value.favorite(movie.id))
+    }
+
+    /** A deletion learned from a box back after months is kept from the day it was learned, not from its own date. */
+    @Test
+    fun aDeletionLearnedLateIsKeptFromWhenItWasLearned() = runTest {
+        val tv = device("tv").ready()
+        val phone = device("phone").ready()
+        val away = device("away").ready()
+        tv.addPlaylist("Home", list)
+        session(phone, tv)
+        session(away, tv)
+        val movie = tv.state.value.content.movies.single()
+        time += 1_000
+        tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        session(phone, tv)
+        session(away, tv)
+        val key = SyncKeys.favorite(tv.state.value.library.favorites.single())
+        // The away box takes it out, then is away 250 days; the others keep syncing meanwhile.
+        time += 1_000
+        away.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        repeat(25) {
+            time += 10 * 86_400_000L
+            session(phone, tv)
+        }
+        session(away, tv)
+        assertFalse(tv.state.value.favorite(movie.id))
+        // The next day the TV still sends the deletion to the phone, which has not had it.
+        time += 86_400_000L
+        assertNotNull(requireNotNull(tv.syncSnapshot("tv")).deleted[key])
+        session(phone, tv)
+        assertFalse(phone.state.value.favorite(movie.id))
+    }
+
+    /**
+     * The same account added on two boxes, one of them playing: its catalogue is not reloaded under the player; once
+     * playback ends it follows the playlist that replaced its own, from the cache moved to that ID (no download).
+     */
+    @Test
+    fun aReplacedPlaylistDuringPlaybackFollowsAfterItFromTheMovedCache() = runTest {
+        val tvHttp = FakeHttp(mapOf(list to catalogue))
+        val first = device("first").ready()
+        first.addPlaylist("Home", list)
+        time += 1_000
+        val tv = device("tv", tvHttp).ready()
+        tv.addPlaylist("Home", list)
+        val own = requireNotNull(tv.state.value.activePlaylistId)
+        tv.playbackStarted(requireNotNull(tv.playRequest(tv.state.value.content.movies.single())?.progressKey))
+        val downloads = tvHttp.requests.count { it.first == list }
+        session(tv, first)
+        val replacement = requireNotNull(first.state.value.activePlaylistId)
+        assertEquals(replacement, tv.state.value.activePlaylistId)
+        runCurrent()
+        assertTrue("the catalogue stays under the player", tv.state.value.content.movies.isNotEmpty())
+        tv.playbackEnded()
+        tv.state.first { !it.isLoading && it.content.movies.isNotEmpty() }
+        assertEquals(downloads, tvHttp.requests.count { it.first == list })
+        assertTrue(own != replacement)
     }
 
     /** A box whose clock runs a day ahead cannot date a removal in the future: it is left out until its time comes. */

@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -112,6 +111,8 @@ class LocalSync(
         data class Lost(val serviceName: String) : Event
         data class Heard(val id: String, val name: String?) : Event
         data class Done(val id: String, val worked: Boolean) : Event
+        /** A regular session put off during playback: tried again at the next period. */
+        data class Deferred(val id: String) : Event
         data object Changed : Event
         data object Tick : Event
     }
@@ -131,6 +132,8 @@ class LocalSync(
         /** The digest of the snapshot this device last sent it, and the one it answered with (docs/SYNC.md, "Transport"). */
         var sentDigest: String? = null
         var answerDigest: String? = null
+        /** When this device last sent it a full snapshot: probes go only in between (docs/SYNC.md, "Transport"). */
+        var fullAt = Long.MIN_VALUE / 2
     }
 
     /** Runs until cancelled (Ondo goes to the background, or sync is turned off): then everything stops. */
@@ -146,7 +149,12 @@ class LocalSync(
         }
         val events = Channel<Event>(Channel.UNLIMITED)
         launch {
-            SyncSession.serve(server, isAllowed = ::isPeerAddress) { incoming, _ ->
+            SyncSession.serve(
+                server,
+                isAllowed = ::isPeerAddress,
+                // A full session counts once its answer has reached the client (it closed after reading it).
+                delivered = { incoming -> if (!incoming.isProbe) withContext(Dispatchers.Main) { repository.noteSyncSession(incoming.device) } },
+            ) { incoming, _ ->
                 withContext(Dispatchers.Main) {
                     if (incoming.device == me || incoming.device.isBlank()) return@withContext null
                     answer(incoming, name)?.also { events.trySend(Event.Heard(incoming.device, incoming.deviceName)) }
@@ -186,18 +194,22 @@ class LocalSync(
         )
 
         // A session with each peer that is due: the client sends this device's snapshot and keeps the merged answer, or
-        // only a probe when nothing changed here since the last session (docs/SYNC.md, "Transport"). During playback, a
-        // regular session that would send a large snapshot waits for the next period.
+        // only a probe when nothing changed here since the last session, with a full snapshot at least every hour
+        // (docs/SYNC.md, "Transport"). Everything is worked out off the main thread. During playback, a regular session
+        // that would send a large snapshot waits for the next period.
         fun startDue(regular: Boolean = false) {
             val time = now()
             peers.values.filter { !it.busy && it.address != null && it.dueAt <= time }.forEach { peer ->
-                val offer = repository.syncSnapshot(name)?.offer(peer.sentDigest, peer.answerDigest)
-                if (regular && offer != null && !offer.isProbe && repository.isPlaying && offer.encoded().size > LIGHT_SNAPSHOT_BYTES) {
-                    peer.dueAt = time + PERIOD_MS
-                    return@forEach
-                }
                 peer.busy = true
                 launch {
+                    val full = time - peer.fullAt >= FULL_EVERY_MS
+                    val prepared = repository.syncOffer(name, peer.sentDigest, peer.answerDigest, full)
+                    val offer = prepared?.first
+                    val size = prepared?.second ?: 0
+                    if (regular && offer != null && !offer.isProbe && repository.isPlaying && size > LIGHT_SNAPSHOT_BYTES) {
+                        events.send(Event.Deferred(peer.id))
+                        return@launch
+                    }
                     var address = peer.address
                     var port = peer.port
                     if (peer.stale) {
@@ -209,7 +221,11 @@ class LocalSync(
                     val worked = answer != null && answer.device != me && (answer.isUnchanged || merge(answer, name) != null)
                     if (worked && answer != null && !answer.isUnchanged) {
                         // The server has what was sent (a probe sent nothing new); its digest says what it has now.
-                        if (offer != null && !offer.isProbe) peer.sentDigest = offer.digest
+                        if (offer != null && !offer.isProbe) {
+                            peer.sentDigest = offer.digest
+                            peer.fullAt = time
+                            repository.noteSyncSession(answer.device)
+                        }
                         peer.answerDigest = answer.digest
                     }
                     if (worked && peer.stale) {
@@ -225,7 +241,8 @@ class LocalSync(
             nsd.registerService(service, NsdManager.PROTOCOL_DNS_SD, registration)
             nsd.discoverServices(SyncNetwork.SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discovery)
             launch {
-                repository.state.map(SyncData::changes).distinctUntilChanged().drop(1).debounce(CHANGE_DELAY_MS).collect { events.send(Event.Changed) }
+                // Changes made here only: what a merge brought travels on with the next regular session (no session loop).
+                repository.localSyncChanges.debounce(CHANGE_DELAY_MS).collect { events.send(Event.Changed) }
             }
             launch {
                 while (true) {
@@ -285,6 +302,11 @@ class LocalSync(
                             peer.dueAt = now() + RETRIES_MS[(peer.failures - 1).coerceAtMost(RETRIES_MS.lastIndex)]
                         }
                         publish()
+                    }
+                    is Event.Deferred -> {
+                        val peer = peers[event.id] ?: continue
+                        peer.busy = false
+                        peer.dueAt = now() + PERIOD_MS
                     }
                     // Either side connects soon after a change of its own.
                     Event.Changed -> {
@@ -350,6 +372,8 @@ class LocalSync(
     companion object {
         private const val TICK_MS = 5_000L
         private const val PERIOD_MS = 60_000L
+        /** A full snapshot goes to each server at least this often, probes in between. */
+        private const val FULL_EVERY_MS = 60 * 60_000L
         /** A regular session during playback goes only with a snapshot this small (or a probe). */
         private const val LIGHT_SNAPSHOT_BYTES = 64 * 1024
         private const val CHANGE_DELAY_MS = 3_000L
