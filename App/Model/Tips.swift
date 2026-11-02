@@ -1,3 +1,6 @@
+// The tips are in the TestFlight edition only until their In-App Purchases are approved on App Store Connect: the
+// App Store edition leaves them out of its build (CLAUDE.md, App Store), never switched off at run time.
+#if TESTFLIGHT_DOWNLOADS || DEBUG
 import Foundation
 import Observation
 import StoreKit
@@ -155,3 +158,4 @@ struct AppStoreTipStore: TipStore {
         }
     }
 }
+#endif

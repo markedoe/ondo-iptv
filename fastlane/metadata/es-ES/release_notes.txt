@@ -1,4 +1,3 @@
-• Dejar una propina (Ajustes): tres propinas opcionales a través de App Store. No desbloquean nada: todo Ondo sigue disponible para todos.
 • Un nuevo aspecto en negro y gris, siempre oscuro: los títulos destacados en un marco redondeado en Inicio, tarjetas que se elevan bajo el puntero, el foco o una pulsación, el formato en una insignia con contorno.
 • Con tu token de TMDb: la página de un título muestra las fotos del reparto en una fila y el tráiler cuando tu proveedor no ofrece ninguno, la valoración del proveedor y la de TMDb lado a lado con el número de votos, y las respuestas de TMDb se guardan en tu dispositivo, así que las páginas se abren al instante la próxima vez.
 • Sincronizar en esta red también transmite tu token de TMDb a tus otros dispositivos.

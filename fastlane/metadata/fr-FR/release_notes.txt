@@ -1,4 +1,3 @@
-• Laisser un pourboire (Réglages) : trois pourboires facultatifs via l’App Store. Ils ne débloquent rien : tout Ondo reste disponible pour tout le monde.
 • Un nouveau look en noir et gris, toujours sombre : les titres à la une dans un cadre arrondi sur l’Accueil, des cartes qui se soulèvent sous le pointeur, le focus ou un appui, le format en badge détouré.
 • Avec votre jeton TMDb : la page d’un titre montre les photos du casting en rangée et la bande-annonce quand votre fournisseur n’en donne pas, la note du fournisseur et celle de TMDb côte à côte avec le nombre de votes, et les réponses de TMDb sont gardées sur votre appareil : les pages s’ouvrent aussitôt la fois suivante.
 • Synchroniser sur ce réseau transmet aussi votre jeton TMDb à vos autres appareils.

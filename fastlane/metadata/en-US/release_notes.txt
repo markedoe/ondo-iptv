@@ -1,4 +1,3 @@
-• Leave a tip (Settings): three optional tips through the App Store. They unlock nothing: everything in Ondo stays available to everyone.
 • A new look in black and grey, always dark: the featured titles in a rounded frame on Home, cards that rise under the pointer, the focus or a press, the format as an outlined badge.
 • With your TMDb token: a title's page shows the cast's photos in a row and the trailer when your provider gives none, the provider's rating and TMDb's side by side with the number of votes, and what TMDb answers is kept on your device, so pages open at once the next time.
 • Sync on this network also carries your TMDb token to your other devices.

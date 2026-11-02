@@ -17,7 +17,8 @@ submitted, its listing and its review notes are checked here, before any upload:
    the app or what it plays free, and its copyright is this year's, the same as the app's (2.3). The Google Play
    listing (fastlane/metadata-android, every language) is held to the same words and to Google Play's limits.
 4. The review notes explain every permission, background mode and Mac entitlement the app asks for (2.1, 5.1.1), and
-   each In-App Purchase (the optional tips) and that it unlocks nothing (3.1.1).
+   each In-App Purchase (the optional tips) and that it unlocks nothing (3.1.1). When the App Store edition leaves the
+   tips out (no StoreKit in its build), neither the listing nor the review notes speak of tips (2.3.1).
 5. The pages of the website the listing opens (its support, privacy and marketing addresses, which App Review visits)
    have no test words either: the App Store app must not read as a beta (2.2).
 6. No way to pay or donate other than In-App Purchase is reachable from the apps (3.1.1, and Google Play's payments
@@ -102,6 +103,9 @@ DORMANT_FLAG = re.compile(
     r"static\s+(?:let|var|func)\s+(\w+)\s*(?:\(\s*\)\s*->\s*Bool|:\s*Bool)?\s*"
     r"(?:=\s*false\b|=?\s*\{\s*(?:get\s*\{\s*)?(?:return\s+)?false\s*\})")
 
+# The tips in every language of the listing, and their products: only while the App Store edition sells them.
+TIP_WORDS = re.compile(
+    r"(?i)\btips?\b|pourboire|propina|gorjeta|打赏|小费|إكرامي|टिप(?![\u0900-\u097F])|com\.markedoe\.ondo\.tip\.")
 LIMITS = {"name.txt": 30, "subtitle.txt": 30, "keywords.txt": 100, "promotional_text.txt": 170,
           "description.txt": 4000, "release_notes.txt": 4000}
 URL_FILES = ("support_url.txt", "privacy_url.txt", "marketing_url.txt")
@@ -426,6 +430,19 @@ def check_review_notes(problems: list) -> None:
             problems.append(f"the review notes do not explain {item} (fastlane/metadata/review_information/notes.txt)")
 
 
+def check_tips_wording(problems: list) -> None:
+    """Without StoreKit in its build, the App Store edition has no tips: the listing and the notes must not offer them."""
+    app_code = "\n".join(without_comments(edition_source(path.read_text(encoding="utf-8"))) for path in swift_files("App"))
+    if re.search(r"^\s*import StoreKit\b", app_code, re.MULTILINE):
+        return
+    files = sorted(METADATA.glob("*/*.txt"))
+    for path in files:
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if TIP_WORDS.search(line):
+                problems.append(f"{path.relative_to(ROOT)}:{number} speaks of tips, which the App Store edition does "
+                                f"not have (2.3.1): {line.strip()[:120]}")
+
+
 def check_payments(problems: list) -> None:
     sources = list(swift_files("App"))
     android = ROOT / "android/app/src/main"
@@ -529,6 +546,7 @@ def main() -> int:
     check_play_listing(problems)
     check_site(problems)
     check_review_notes(problems)
+    check_tips_wording(problems)
     check_payments(problems)
     check_local_network(problems)
     check_playlists(problems)
