@@ -5,8 +5,8 @@ import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
- * What a device sends to sync on the local network: its playlists, My List and favourite channels, lists, playback
- * progress and the keys of outside services, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+ * What a device sends to sync on the local network: its playlists, My List and favourite channels, the people kept,
+ * lists, playback progress and the keys of outside services, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
  */
 @Serializable
 data class SyncSnapshot(
@@ -18,6 +18,8 @@ data class SyncSnapshot(
     val favorites: List<SyncFavorite> = emptyList(),
     val progress: List<SyncProgress> = emptyList(),
     val lists: List<SyncList> = emptyList(),
+    /** The actors and directors kept in My List (whatever the playlist); none from a device that does not keep any. */
+    val people: List<SyncPerson> = emptyList(),
     /** The keys typed in Settings for outside services (the TMDb token); none from a device that does not sync them. */
     val keys: List<SyncKey> = emptyList(),
     val deleted: Map<String, Long> = emptyMap(),
@@ -75,10 +77,11 @@ data class SyncSnapshot(
 
 /**
  * The key of a deleted record with its playlist or list ID in lowercase: `playlist:<id>`, `list:<id>`, and the
- * playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`. The rest (the provider's item IDs, the service of
- * `key:`) keeps its case.
+ * playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`; the name of `person:<name>` with A to Z in lowercase.
+ * The rest (the provider's item IDs, the service of `key:`) keeps its case.
  */
 internal fun lowercasingId(key: String): String {
+    if (key.startsWith(SyncPerson.KEY_PREFIX)) return SyncPerson.KEY_PREFIX + SyncPerson.folded(key.substring(SyncPerson.KEY_PREFIX.length))
     for (prefix in listOf("playlist:", "list:", "favorite:", "progress:")) {
         if (!key.startsWith(prefix)) continue
         val bar = if (prefix == "favorite:" || prefix == "progress:") key.indexOf('|', prefix.length) else -1
@@ -149,6 +152,8 @@ data class SyncList(
     val id: String,
     val name: String,
     val items: List<SyncListItem> = emptyList(),
+    /** The actors and directors in the list; none from a device that does not keep any. */
+    val people: List<SyncPerson> = emptyList(),
     val updatedAt: Long,
 ) {
     val key: String get() = "list:$id"
@@ -163,6 +168,24 @@ data class SyncListItem(
     val image: String? = null,
 ) {
     val key: String get() = "$playlist|$kind|$item"
+}
+
+/** An actor or a director kept in My List or in a list, by name, whatever the playlist. */
+@Serializable
+data class SyncPerson(
+    val name: String,
+    /** Their photo (a web address). */
+    val image: String? = null,
+    val addedAt: Long,
+) {
+    /** `person:<name>` with only A to Z in lowercase: the same on every platform, whatever its case rules. */
+    val key: String get() = KEY_PREFIX + folded(name)
+
+    companion object {
+        const val KEY_PREFIX = "person:"
+
+        fun folded(name: String): String = buildString(name.length) { name.forEach { append(if (it in 'A'..'Z') it + 32 else it) } }
+    }
 }
 
 /** The key or token of an outside service, typed in Settings: [service] `tmdb` for TMDb's token (or API Key). */

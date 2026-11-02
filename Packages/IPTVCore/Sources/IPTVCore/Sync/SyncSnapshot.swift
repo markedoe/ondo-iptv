@@ -1,7 +1,7 @@
 import Foundation
 
-/// What a device sends to sync on the local network: its playlists, My List and favourite channels, lists, playback
-/// progress and the keys of outside services, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+/// What a device sends to sync on the local network: its playlists, My List and favourite channels, the people kept,
+/// lists, playback progress and the keys of outside services, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
 ///
 /// The same document as the Kotlin `SyncSnapshot` (android/core): both read the examples of `fixtures/sync`.
 public struct SyncSnapshot: Codable, Hashable, Sendable {
@@ -18,6 +18,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public var favorites: [SyncFavorite]
     public var progress: [SyncProgress]
     public var lists: [SyncList]
+    /// The actors and directors kept in My List (whatever the playlist); none from a device that does not keep any.
+    public var people: [SyncPerson]
     /// The keys typed in Settings for outside services (the TMDb token); none from a device that does not sync them.
     public var keys: [SyncKey]
     public var deleted: [String: Int64]
@@ -33,6 +35,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         favorites: [SyncFavorite] = [],
         progress: [SyncProgress] = [],
         lists: [SyncList] = [],
+        people: [SyncPerson] = [],
         keys: [SyncKey] = [],
         deleted: [String: Int64] = [:],
         replaced: [String: String] = [:]
@@ -45,13 +48,14 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         self.favorites = favorites
         self.progress = progress
         self.lists = lists
+        self.people = people
         self.keys = keys
         self.deleted = deleted
         self.replaced = replaced
     }
 
     enum CodingKeys: String, CodingKey {
-        case type, version, device, deviceName, playlists, favorites, progress, lists, keys, deleted, replaced
+        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, deleted, replaced
     }
 
     /// A missing field takes its default; a field present with the wrong type, or `null` where a value is needed, makes
@@ -66,6 +70,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         favorites = try c.value(.favorites, default: [])
         progress = try c.value(.progress, default: [])
         lists = try c.value(.lists, default: [])
+        people = try c.value(.people, default: [])
         keys = try c.value(.keys, default: [])
         deleted = try c.value(.deleted, default: [:])
         replaced = try c.value(.replaced, default: [:])
@@ -128,10 +133,13 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     }
 
     /// The key of a deleted record with its playlist or list ID in lowercase: `playlist:<id>`, `list:<id>`, and the
-    /// playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`. The rest (the provider's item IDs, the service
-    /// of `key:`) keeps its case.
+    /// playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`; the name of `person:<name>` with A to Z in
+    /// lowercase. The rest (the provider's item IDs, the service of `key:`) keeps its case.
     static func lowercasingID(ofDeleted key: String) -> String {
         let scalars = key.unicodeScalars
+        if scalars.starts(with: SyncPerson.keyPrefix.unicodeScalars) {
+            return SyncPerson.keyPrefix + SyncPerson.folded(String(scalars.dropFirst(SyncPerson.keyPrefix.unicodeScalars.count)))
+        }
         for prefix in ["playlist:", "list:", "favorite:", "progress:"] where scalars.starts(with: prefix.unicodeScalars) {
             let rest = String(scalars.dropFirst(prefix.unicodeScalars.count))
             guard prefix == "favorite:" || prefix == "progress:", let bar = rest.unicodeScalars.firstIndex(of: "|") else {
@@ -234,22 +242,26 @@ public struct SyncList: Codable, Hashable, Sendable {
     public var id: String
     public var name: String
     public var items: [SyncListItem]
+    /// The actors and directors in the list; none from a device that does not keep any.
+    public var people: [SyncPerson]
     public var updatedAt: Int64
 
-    public init(id: String, name: String, items: [SyncListItem] = [], updatedAt: Int64) {
+    public init(id: String, name: String, items: [SyncListItem] = [], people: [SyncPerson] = [], updatedAt: Int64) {
         self.id = id
         self.name = name
         self.items = items
+        self.people = people
         self.updatedAt = updatedAt
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, items, updatedAt }
+    enum CodingKeys: String, CodingKey { case id, name, items, people, updatedAt }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
         name = try c.decode(String.self, forKey: .name)
         items = try c.value(.items, default: [])
+        people = try c.value(.people, default: [])
         updatedAt = try c.decode(Int64.self, forKey: .updatedAt)
     }
 
@@ -272,6 +284,31 @@ public struct SyncListItem: Codable, Hashable, Sendable {
     }
 
     public var key: String { "\(playlist)|\(kind)|\(item)" }
+}
+
+/// An actor or a director kept in My List or in a list, by name, whatever the playlist.
+public struct SyncPerson: Codable, Hashable, Sendable {
+    static let keyPrefix = "person:"
+
+    public var name: String
+    /// Their photo (a web address).
+    public var image: String?
+    public var addedAt: Int64
+
+    public init(name: String, image: String? = nil, addedAt: Int64) {
+        self.name = name
+        self.image = image
+        self.addedAt = addedAt
+    }
+
+    /// `person:<name>` with only A to Z in lowercase: the same on every platform, whatever its case rules.
+    public var key: String { Self.keyPrefix + Self.folded(name) }
+
+    static func folded(_ name: String) -> String {
+        String(String.UnicodeScalarView(name.unicodeScalars.map { scalar in
+            ("A"..."Z").contains(scalar) ? Unicode.Scalar(scalar.value + 32)! : scalar
+        }))
+    }
 }
 
 /// The key or token of an outside service, typed in Settings: `service` `tmdb` for TMDb's token (or API Key).

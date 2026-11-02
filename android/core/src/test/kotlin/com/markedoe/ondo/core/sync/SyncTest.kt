@@ -63,6 +63,61 @@ class SyncTest {
         assertTrue(SyncMerge.merge(a, SyncSnapshot(device = "b", deleted = mapOf(favorite.key to 10))).favorites.isEmpty())
     }
 
+    // People kept in My List and in lists
+
+    @Test
+    fun peopleMergeLikeTheOtherRecordsOfMyListInEitherOrder() {
+        val a = fixture("people-a.json")
+        val b = fixture("people-b.json")
+        val expected = fixture("people-merged.json")
+        assertEquals(expected, SyncMerge.merge(a, b))
+        assertEquals(expected.withoutDevice(), SyncMerge.merge(b, a).withoutDevice())
+        assertEquals(expected, SyncMerge.merge(expected, expected))
+        // The same name in another case is one person; the one with a photo wins at the same time.
+        assertEquals("https://example.com/tom.jpg", expected.people.first().image)
+    }
+
+    @Test
+    fun aPersonRemovedOnOneDeviceIsRemovedOnTheOther() {
+        val added = SyncSnapshot(device = "a", people = listOf(SyncPerson("Ada Example", addedAt = 10)))
+        val removed = SyncSnapshot(device = "b", deleted = mapOf("person:ADA EXAMPLE" to 20L))
+        assertTrue(SyncMerge.merge(added, removed).people.isEmpty())
+        assertEquals(mapOf("person:ada example" to 20L), SyncMerge.merge(added, removed).deleted)
+        // Added again after the removal: back.
+        val again = SyncSnapshot(device = "a", people = listOf(SyncPerson("Ada Example", addedAt = 30)))
+        assertEquals(listOf("Ada Example"), SyncMerge.merge(again, removed).people.map { it.name })
+    }
+
+    @Test
+    fun aDeviceThatDoesNotKnowPeopleRemovesNone() {
+        // `a.json` is written by a build without people: they and the people of a list stay.
+        val withPeople = fixture("people-a.json")
+        val old = withPeople.copy(people = emptyList(), lists = withPeople.lists.map { it.copy(people = emptyList()) })
+        for (merged in listOf(SyncMerge.merge(withPeople, old), SyncMerge.merge(old, withPeople), SyncMerge.merge(withPeople, fixture("a.json")))) {
+            assertEquals(listOf("Tom Example", "Ada Example"), merged.people.map { it.name })
+            assertEquals(listOf("Ada Example"), merged.lists.first { it.id == "d1000000-0000-4000-8000-00000000000d" }.people.map { it.name })
+        }
+    }
+
+    @Test
+    fun peopleFieldsAreReadAndWrittenUnderTheSharedNames() {
+        val snapshot = SyncSnapshot(
+            device = "a",
+            lists = listOf(SyncList("l", "L", people = listOf(SyncPerson("Ada", "https://example.com/a.jpg", 1)), updatedAt = 1)),
+            people = listOf(SyncPerson("Tom", addedAt = 2)),
+        )
+        val json = snapshot.encoded().decodeToString()
+        assertTrue(json, "\"people\":[{\"name\":\"Tom\",\"addedAt\":2}]" in json)
+        assertTrue(json, "\"people\":[{\"name\":\"Ada\",\"image\":\"https://example.com/a.jpg\",\"addedAt\":1}]" in json)
+        assertEquals(snapshot, SyncSnapshot.decode(snapshot.encoded()))
+    }
+
+    @Test
+    fun onlyAsciiLettersFoldInAPersonKey() {
+        assertEquals("person:Élodie example", SyncPerson("ÉLODIE Example", addedAt = 0).key)
+        assertEquals("person:ΣΟΦΙΑ ex", lowercasingId("person:ΣΟΦΙΑ Ex"))
+    }
+
     @Test
     fun keysOfOutsideServicesFollowTheLaterSaveAndTheirRemoval() {
         val merged = SyncMerge.merge(fixture("a.json"), fixture("b.json"))

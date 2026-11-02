@@ -222,6 +222,60 @@ final class SyncTests: XCTestCase {
         return SyncNetwork.isLocal(bytes)
     }
 
+    // MARK: People kept in My List and in lists
+
+    func testPeopleMergeLikeTheOtherRecordsOfMyListInEitherOrder() throws {
+        let a = try fixture("people-a.json")
+        let b = try fixture("people-b.json")
+        let expected = try fixture("people-merged.json")
+        XCTAssertEqual(SyncMerge.merge(a, b), expected)
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(b, a)), withoutDevice(expected))
+        XCTAssertEqual(SyncMerge.merge(expected, expected), expected)
+        // The same name in another case is one person; the one with a photo wins at the same time.
+        XCTAssertEqual(expected.people.first?.image, "https://example.com/tom.jpg")
+    }
+
+    func testAPersonRemovedOnOneDeviceIsRemovedOnTheOther() {
+        let added = SyncSnapshot(device: "a", people: [SyncPerson(name: "Ada Example", addedAt: 10)])
+        let removed = SyncSnapshot(device: "b", deleted: ["person:ADA EXAMPLE": 20])
+        XCTAssertTrue(SyncMerge.merge(added, removed).people.isEmpty)
+        XCTAssertEqual(SyncMerge.merge(added, removed).deleted, ["person:ada example": 20])
+        // Added again after the removal: back.
+        let again = SyncSnapshot(device: "a", people: [SyncPerson(name: "Ada Example", addedAt: 30)])
+        XCTAssertEqual(SyncMerge.merge(again, removed).people.map(\.name), ["Ada Example"])
+    }
+
+    func testADeviceThatDoesNotKnowPeopleRemovesNone() throws {
+        // `a.json` is written by a build without people: they and the people of a list stay.
+        let withPeople = try fixture("people-a.json")
+        var old = withPeople
+        old.people = []
+        old.lists = withPeople.lists.map { list in
+            var list = list
+            list.people = []
+            return list
+        }
+        for merged in [SyncMerge.merge(withPeople, old), SyncMerge.merge(old, withPeople), SyncMerge.merge(withPeople, try fixture("a.json"))] {
+            XCTAssertEqual(merged.people.map(\.name), ["Tom Example", "Ada Example"])
+            XCTAssertEqual(merged.lists.first { $0.id == "d1000000-0000-4000-8000-00000000000d" }?.people.map(\.name), ["Ada Example"])
+        }
+    }
+
+    func testPeopleFieldsAreReadAndWrittenUnderTheSharedNames() throws {
+        let snapshot = SyncSnapshot(device: "a", lists: [SyncList(id: "l", name: "L", people: [SyncPerson(name: "Ada", image: "https://example.com/a.jpg", addedAt: 1)], updatedAt: 1)],
+                                    people: [SyncPerson(name: "Tom", addedAt: 2)])
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: try snapshot.encoded()) as? [String: Any])
+        XCTAssertEqual((object["people"] as? [[String: Any]])?.first?.keys.sorted(), ["addedAt", "name"])
+        let list = try XCTUnwrap((object["lists"] as? [[String: Any]])?.first)
+        XCTAssertEqual((list["people"] as? [[String: Any]])?.first?.keys.sorted(), ["addedAt", "image", "name"])
+        XCTAssertEqual(SyncSnapshot.decode(try snapshot.encoded()), snapshot)
+    }
+
+    func testOnlyAsciiLettersFoldInAPersonKey() {
+        XCTAssertEqual(SyncPerson(name: "ÉLODIE Example", addedAt: 0).key, "person:Élodie example")
+        XCTAssertEqual(SyncSnapshot.lowercasingID(ofDeleted: "person:ΣΟΦΙΑ Ex"), "person:ΣΟΦΙΑ ex")
+    }
+
     func testOnlyLocalNetworkAddressesAreLocal() {
         // Private, link-local and loopback ranges, IPv4 and IPv6 (and IPv4 mapped in IPv6).
         let localAddresses = [

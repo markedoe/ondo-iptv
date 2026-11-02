@@ -1,0 +1,51 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "44444444-4444-4444-8444-444444444444",
+  "deviceName": "Living room TV",
+  "people": [
+    {
+      "name": "TOM EXAMPLE",
+      "addedAt": 1000
+    },
+    {
+      "name": "Old Example",
+      "addedAt": 1400
+    },
+    {
+      "name": "Bea Example",
+      "image": "https://example.com/bea.jpg",
+      "addedAt": 2500
+    }
+  ],
+  "lists": [
+    {
+      "id": "d1000000-0000-4000-8000-00000000000d",
+      "name": "Directors",
+      "items": [
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m1",
+          "title": "Glass City"
+        }
+      ],
+      "updatedAt": 2000
+    },
+    {
+      "id": "d2000000-0000-4000-8000-00000000000d",
+      "name": "Only people",
+      "people": [
+        {
+          "name": "Bea Example",
+          "image": "https://example.com/bea.jpg",
+          "addedAt": 2600
+        }
+      ],
+      "updatedAt": 2600
+    }
+  ],
+  "deleted": {
+    "person:ada example": 1300
+  }
+}

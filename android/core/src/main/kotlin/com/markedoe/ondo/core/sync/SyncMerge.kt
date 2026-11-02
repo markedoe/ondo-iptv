@@ -49,8 +49,10 @@ object SyncMerge {
         ).filter { alive(it.playlist) }
         val lists = pick(
             (left.lists + right.lists).map { list -> list.copy(items = list.items.map { it.copy(playlist = id(it.playlist)) }) },
-            { it.key }, { it.updatedAt }, compareBy { list -> (listOf(list.name) + list.items.map { it.key }).joinToString("\n") }, deleted,
+            { it.key }, { it.updatedAt }, listOrder, deleted,
         ).map { list -> list.copy(items = list.items.filter { alive(it.playlist) }) }
+        // A side without people (a device that does not keep them) removes none: only a deletion does.
+        val people = pick(left.people + right.people, { it.key }, { it.addedAt }, personOrder, deleted)
         // A side without keys (a device that does not sync them) removes none: only a deletion does.
         val keys = pick(left.keys + right.keys, { it.key }, { it.updatedAt }, compareBy { it.value }, deleted)
         return left.copy(
@@ -58,11 +60,23 @@ object SyncMerge {
             favorites = favorites.sortedWith(compareBy<SyncFavorite> { it.addedAt }.thenBy { it.key }),
             progress = progress.sortedWith(compareByDescending<SyncProgress> { it.watchedAt }.thenBy { it.key }),
             lists = lists.sortedBy { it.id },
+            people = people.sortedWith(compareBy<SyncPerson> { it.addedAt }.thenBy { it.key }),
             keys = keys.sortedBy { it.service },
             deleted = deleted.toSortedMap(),
             replaced = replaced.toSortedMap(),
         )
     }
+
+    /**
+     * The list with more people wins (a device that does not keep them sends the list without them), then the smaller
+     * tie string.
+     */
+    private val listOrder: Comparator<SyncList> = compareByDescending<SyncList> { it.people.size }.thenBy { list ->
+        (listOf(list.name) + list.items.map { it.key } + list.people.map { "${it.name}|${it.image.orEmpty()}|${it.addedAt}" }).joinToString("\n")
+    }
+
+    /** The person with a photo wins, then the smaller name, then the smaller photo address. */
+    private val personOrder: Comparator<SyncPerson> = compareBy<SyncPerson> { it.image == null }.thenBy { it.name }.thenBy { it.image.orEmpty() }
 
     private val playlistOrder: Comparator<SyncPlaylist> = compareBy { playlist ->
         listOf(playlist.name, playlist.url, playlist.username.orEmpty(), playlist.password.orEmpty(), playlist.epgUrl.orEmpty()).joinToString("\n")

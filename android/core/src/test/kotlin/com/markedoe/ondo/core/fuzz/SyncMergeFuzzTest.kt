@@ -4,6 +4,7 @@ import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
 import com.markedoe.ondo.core.sync.SyncMerge
+import com.markedoe.ondo.core.sync.SyncPerson
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -70,13 +71,19 @@ class SyncMergeFuzzTest {
                     id = id,
                     name = fuzz.pick("Kids", "Weekend"),
                     items = List(fuzz.int(3)) { SyncListItem(playlistOfRecords(), "movie", fuzz.pick("m1", "m2"), title = title()) },
+                    people = List(fuzz.int(2)) { SyncPerson(fuzz.pick("Ada", "ADA", "Bea"), image = fuzz.pick(null, "i1"), addedAt = time) },
                     updatedAt = time,
                 )
             }
         }
 
+        // The same person written in two cases is one person.
+        private val people = listOf("ada", "bea").associateWith { name ->
+            versions { time -> SyncPerson(fuzz.pick(name, name.uppercase()), image = fuzz.pick(null, "i1"), addedAt = time) }
+        }
+
         private val keys = playlistIds.map { "playlist:$it" } + favorites.values.map { it.first().key } +
-            progress.values.map { it.first().key } + listOf("list:l1", "list:l2")
+            progress.values.map { it.first().key } + listOf("list:l1", "list:l2", "person:ada", "person:BEA")
         private val deletions = keys.associateWith { versions { time -> time } }
 
         /** Of each record, nothing or one of its versions; the ID in the case the device writes it. */
@@ -88,6 +95,7 @@ class SyncMergeFuzzTest {
             playlists = held(playlists.values, 50).map { it.copy(id = id(it.id)) },
             favorites = held(favorites.values, 25).map { it.copy(playlist = id(it.playlist)) },
             progress = held(progress.values, 25).map { it.copy(playlist = id(it.playlist)) },
+            people = held(people.values, 25),
             lists = held(lists.values, 50).map { list -> list.copy(id = id(list.id), items = list.items.map { it.copy(playlist = id(it.playlist)) }) },
             deleted = keys.filter { fuzz.chance(10) }.associateWith { fuzz.pick(deletions.getValue(it)) },
         )

@@ -21,7 +21,7 @@ Ce document est la spécification. L’implémentation Kotlin est dans
 ## Ce qui est synchronisé et ce qui reste
 
 Synchronisés : les playlists (nom, type, adresse, identifiant et mot de passe, adresse du guide), Ma liste et les
-chaînes favorites, les listes (collections), la progression de lecture (où chaque film et épisode a été laissé, et
+chaînes favorites, les acteurs et réalisateurs gardés dans Ma liste, les listes (collections) avec leurs personnes, la progression de lecture (où chaque film et épisode a été laissé, et
 ce qui a été terminé), et les clés de services extérieurs saisies dans les Réglages (le jeton TMDb).
 
 Restent sur chaque appareil : les autres réglages, les catégories masquées, les modifications de chaînes, les rappels,
@@ -92,6 +92,7 @@ appareils Android.
   "favorites": [ … ],
   "progress": [ … ],
   "lists": [ … ],
+  "people": [ … ],
   "keys": [ … ],
   "deleted": { "<clé>": 1760000000000 },
   "replaced": { "<id de playlist>": "<id de playlist>" }
@@ -116,9 +117,17 @@ ajoutée ou modifiée).
 `position` et `duration` sont des secondes (nombres). Un titre est terminé à 95 % de sa durée. Clé :
 `progress:<playlist>|<kind>|<item>|<épisode ou vide>` ; instant : `watchedAt`.
 
-**Liste** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?}], "updatedAt"}`. Clé :
-`list:<id>` ; instant : `updatedAt` (fixé quand la liste est créée, renommée ou que ses éléments changent). `id`
-est mis en minuscules.
+**Liste** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?}], "people": [<personne>],
+"updatedAt"}`. Clé : `list:<id>` ; instant : `updatedAt` (fixé quand la liste est créée, renommée ou que ses
+éléments ou ses personnes changent). `id` est mis en minuscules. `people` (les acteurs et réalisateurs de la liste)
+peut manquer : un appareil qui ne garde pas de personnes n’en envoie aucune.
+
+**Personne** (un acteur ou un réalisateur gardé dans Ma liste, quelle que soit la playlist) — `{"name", "image"?,
+"addedAt"}`. `image` est sa photo (une adresse web). Clé : `person:<name>` avec seulement les lettres A à Z en
+minuscules (la même sur toutes les plateformes ; les autres lettres gardent leur casse) ; instant : `addedAt` (la
+retirer ajoute la clé à `deleted`). Aucune plateforme ne garde d’identifiant de personne TMDb : une personne est son
+nom. Un instantané sans `people` (d’un appareil qui n’en garde pas) n’en retire aucune : seul `deleted` le fait. Les
+lecteurs replient de la même façon les noms des clés `person:` de `deleted`.
 
 **Clé** (la clé ou le jeton d’un service extérieur, saisi dans les Réglages) — `{"service", "value", "updatedAt"}`.
 `service` nomme le service : `tmdb` pour TMDb (son « API Read Access Token », ou son « API Key ») ; `value` est la
@@ -151,8 +160,12 @@ change rien.
      vides) ;
    - favori : `title` ;
    - progression : pas de chaîne : la plus grande `position` gagne, puis le plus petit `title` ;
-   - liste : `name`, puis la clé de chaque élément (`<playlist>|<kind>|<item>`) dans l’ordre, joints par un saut de
-     ligne ;
+   - liste : pas une chaîne d’abord : la liste qui a le plus de `people` gagne (un appareil qui ne garde pas de
+     personnes envoie la liste sans elles au même instant) ; puis `name`, la clé de chaque élément
+     (`<playlist>|<kind>|<item>`) dans l’ordre, et chaque personne sous la forme `<name>|<image ou vide>|<addedAt>`
+     dans l’ordre, joints par un saut de ligne ;
+   - personne : pas une chaîne d’abord : celle qui a une `image` gagne ; puis le plus petit `name`, puis la plus
+     petite `image` ;
    - clé : `value`.
 3. Un élément dont l’instant n’est pas postérieur à l’instant de suppression de sa clé est écarté (à instants
    égaux, la suppression gagne).
@@ -167,11 +180,11 @@ change rien.
    `deleted` et aucune playlist gardée n’a cet identifiant) est écarté. Celui dont la playlist est simplement
    inconnue (une playlist fichier d’un autre appareil) est gardé.
 6. Le résultat range les playlists par `addedAt` puis `id`, les favoris par `addedAt` puis clé, les progressions
-   par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, et les clés par `service`.
+   par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, les personnes par `addedAt` puis clé, et les clés par `service`.
 
 Un appareil garde l’instantané fusionné comme le sien : il ajoute les playlists qu’il n’avait pas (et les
 télécharge), met à jour celles qui ont changé, supprime celles qui ont été supprimées, et remplace Ma liste, les
-chaînes favorites, les listes et la progression par celles fusionnées, et enregistre les clés des services qu’il
+chaînes favorites, les personnes, les listes et la progression par celles fusionnées, et enregistre les clés des services qu’il
 utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synchronisé. Si le spectateur a changé quelque chose pendant la session, l’appareil fusionne à nouveau avec son
 état actuel, donc aucun changement n’est perdu.
 

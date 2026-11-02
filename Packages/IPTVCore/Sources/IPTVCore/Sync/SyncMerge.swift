@@ -71,12 +71,14 @@ public enum SyncMerge {
                 }
                 return list
             },
-            key: \.key, time: \.updatedAt, tie: { listTieString($0).isBefore(listTieString($1)) }, deleted: deleted
+            key: \.key, time: \.updatedAt, tie: listOrder, deleted: deleted
         ).map { list in
             var list = list
             list.items = list.items.filter { alive($0.playlist) }
             return list
         }
+        // A side without people (a device that does not keep them) removes none: only a deletion does.
+        let people = pick(left.people + right.people, key: \.key, time: \.addedAt, tie: personOrder, deleted: deleted)
         // A side without keys (a device that does not sync them) removes none: only a deletion does.
         let keys = pick(left.keys + right.keys, key: \.key, time: \.updatedAt, tie: { $0.value.isBefore($1.value) }, deleted: deleted)
 
@@ -87,6 +89,7 @@ public enum SyncMerge {
             first.watchedAt != second.watchedAt ? first.watchedAt > second.watchedAt : first.key.isBefore(second.key)
         }
         result.lists = lists.sorted { $0.id.isBefore($1.id) }
+        result.people = people.sorted { before(($0.addedAt, $0.key), ($1.addedAt, $1.key)) }
         result.keys = keys.sorted { $0.service.isBefore($1.service) }
         result.deleted = deleted
         result.replaced = replaced
@@ -121,8 +124,22 @@ public enum SyncMerge {
         return first.title.isBefore(second.title)
     }
 
+    /// The list with more people wins (a device that does not keep them sends the list without them), then the smaller
+    /// tie string.
+    private static func listOrder(_ first: SyncList, _ second: SyncList) -> Bool {
+        if first.people.count != second.people.count { return first.people.count > second.people.count }
+        return listTieString(first).isBefore(listTieString(second))
+    }
+
     private static func listTieString(_ list: SyncList) -> String {
-        ([list.name] + list.items.map(\.key)).joined(separator: "\n")
+        ([list.name] + list.items.map(\.key) + list.people.map { "\($0.name)|\($0.image ?? "")|\($0.addedAt)" }).joined(separator: "\n")
+    }
+
+    /// The person with a photo wins, then the smaller name, then the smaller photo address.
+    private static func personOrder(_ first: SyncPerson, _ second: SyncPerson) -> Bool {
+        if (first.image == nil) != (second.image == nil) { return first.image != nil }
+        if !first.name.utf16.elementsEqual(second.name.utf16) { return first.name.isBefore(second.name) }
+        return (first.image ?? "").isBefore(second.image ?? "")
     }
 
     /// One record per key: the later time wins, then the one `tie` puts first (the first one met on a full tie, as

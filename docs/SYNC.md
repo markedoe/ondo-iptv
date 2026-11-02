@@ -21,7 +21,7 @@ This document is the specification. The Kotlin implementation is in
 ## What syncs and what stays
 
 Synced: the playlists (name, kind, address, login and password, guide address), My List and favourite channels,
-the lists (collections), playback progress (where each movie and episode was left, and what was finished), and the
+the actors and directors kept in My List, the lists (collections) with the people in them, playback progress (where each movie and episode was left, and what was finished), and the
 keys typed in Settings for outside services (the TMDb token).
 
 Stays on each device: the other settings, hidden categories, channel edits, reminders, profiles, downloads, the catalogues
@@ -86,6 +86,7 @@ an iPhone, iPad or Mac sent thus passes it on to the other Android devices.
   "favorites": [ … ],
   "progress": [ … ],
   "lists": [ … ],
+  "people": [ … ],
   "keys": [ … ],
   "deleted": { "<key>": 1760000000000 },
   "replaced": { "<playlist id>": "<playlist id>" }
@@ -108,8 +109,16 @@ the playlist address. Key: `playlist:<id>`; time: `updatedAt` (set when the play
 `position` and `duration` are seconds (numbers). A title is finished at 95 % of its duration. Key:
 `progress:<playlist>|<kind>|<item>|<episode or empty>`; time: `watchedAt`.
 
-**List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?}], "updatedAt"}`. Key:
-`list:<id>`; time: `updatedAt` (set when the list is created, renamed or its items change). `id` is lowercased.
+**List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?}], "people": [<person>],
+"updatedAt"}`. Key: `list:<id>`; time: `updatedAt` (set when the list is created, renamed or its items or people
+change). `id` is lowercased. `people` (the actors and directors in the list) may be missing: a device that does not
+keep people sends none.
+
+**Person** (an actor or a director kept in My List, whatever the playlist) — `{"name", "image"?, "addedAt"}`.
+`image` is their photo (a web address). Key: `person:<name>` with only the letters A to Z in lowercase (the same on
+every platform; other letters keep their case); time: `addedAt` (removing them adds the key to `deleted`). Neither
+platform keeps a TMDb person ID: a person is their name. A snapshot without `people` (from a device that does not
+keep them) removes none: only `deleted` does. Readers fold the names of `person:` keys in `deleted` the same way.
 
 **Key** (the key or token of an outside service, typed in Settings) — `{"service", "value", "updatedAt"}`.
 `service` names the service: `tmdb` for TMDb (its API Read Access Token, or its API Key); `value` is the key as
@@ -138,7 +147,10 @@ nothing.
    - playlist: `name`, `url`, `username`, `password`, `epgUrl` joined with a line feed (missing values as empty);
    - favorite: `title`;
    - progress: not a string: the larger `position` wins, then the smaller `title`;
-   - list: `name`, then each item's key (`<playlist>|<kind>|<item>`) in order, joined with a line feed;
+   - list: not a string first: the list with more `people` wins (a device that does not keep people sends the list
+     without them at the same time); then `name`, each item's key (`<playlist>|<kind>|<item>`) in order, and each
+     person as `<name>|<image or empty>|<addedAt>` in order, joined with a line feed;
+   - person: not a string first: the one with an `image` wins; then the smaller `name`, then the smaller `image`;
    - key: `value`.
 3. A record whose time is not later than its key's deletion time is dropped (on equal times, the deletion wins).
 4. **The same playlist added twice** (on two devices before they synced): playlists of the same `kind`, `url`
@@ -151,10 +163,10 @@ nothing.
    playlist has that ID) is dropped. One whose playlist is simply unknown (a file playlist of another device) is
    kept.
 6. The result lists playlists by `addedAt` then `id`, favorites by `addedAt` then key, progress by `watchedAt`
-   (latest first) then key, lists by `id`, and keys by `service`.
+   (latest first) then key, lists by `id`, people by `addedAt` then key, and keys by `service`.
 
 A device keeps the merged snapshot as its own: it adds the playlists it did not have (and downloads them),
-updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, lists and
+updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists and
 progress with the merged ones, and saves the keys of the services it uses (removing those deleted). It keeps
 whatever it does not sync. If the viewer changed something during the
 session, the device merges again with its current state, so no change is lost.
