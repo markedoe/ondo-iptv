@@ -1,8 +1,8 @@
 import XCTest
 @testable import IPTVCore
 
-/// Three devices whose clocks differ by hours, syncing in a random order (docs/SYNC.md): they end with the same data
-/// (read on each one's clock), and nothing is lost that no later deletion removed. The same cases as the Kotlin
+/// Three devices whose clocks differ by hours, syncing in a random order (docs/SYNC.md): they end with the same data,
+/// times as they were made, and nothing is lost that no later deletion removed. The same cases as the Kotlin
 /// `SyncMergeFuzzTest`.
 final class SyncFuzzTests: XCTestCase {
     /// SplitMix64: the same numbers for a seed on every platform.
@@ -23,7 +23,7 @@ final class SyncFuzzTests: XCTestCase {
     static let start: Int64 = 1_760_000_000_000
     static let hour: Int64 = 3_600_000
 
-    /// A device's data, its times on its own clock (`skew` ahead of the true time).
+    /// A device's data, dated by its own clock (`skew` ahead of the true time).
     static func device(_ name: String, skew: Int64, random: inout Random) -> SyncSnapshot {
         func time() -> Int64 { start + Int64(random.int(1_000)) + skew }
         let items = ["m1", "m2", "m3"]
@@ -53,19 +53,21 @@ final class SyncFuzzTests: XCTestCase {
         return snapshot
     }
 
-    /// One session: the client sends with its clock; the server merges on its clock and answers on the client's.
-    static func session(client: SyncSnapshot, clientSkew: Int64, server: SyncSnapshot, serverSkew: Int64, now: Int64) -> (SyncSnapshot, SyncSnapshot) {
-        var offer = client
-        offer.clock = now + clientSkew
-        let skew = offer.skewAt(now: now + serverSkew)
-        let kept = SyncMerge.merge(server, offer.onReceiverClock(now: now + serverSkew))
-        let answer = kept.forSender(skew: skew)
-        return (SyncMerge.merge(client, answer.onReceiverClock(now: now + clientSkew)), kept)
+    /// One session: what each side receives is left out when dated more than a day after its own clock, taken into
+    /// its clock, and merged; no time is moved (docs/SYNC.md, "Clocks").
+    static func session(client: SyncSnapshot, clientClock: inout SyncClock, clientWall: Int64,
+                        server: SyncSnapshot, serverClock: inout SyncClock, serverWall: Int64) -> (SyncSnapshot, SyncSnapshot) {
+        let received = client.withoutRecordsAhead(wall: serverWall)
+        serverClock.observe(received, wall: serverWall)
+        let kept = SyncMerge.merge(server, received)
+        let answer = kept.withoutRecordsAhead(wall: clientWall)
+        clientClock.observe(answer, wall: clientWall)
+        return (SyncMerge.merge(client, answer), kept)
     }
 
-    /// The snapshot on the true clock, without who holds it.
-    static func trueTime(_ snapshot: SyncSnapshot, skew: Int64) -> SyncSnapshot {
-        var copy = snapshot.mappingTimes { $0 - skew }
+    /// The snapshot without who holds it.
+    static func content(_ snapshot: SyncSnapshot) -> SyncSnapshot {
+        var copy = snapshot
         copy.device = ""
         copy.clock = nil
         return copy
@@ -77,19 +79,22 @@ final class SyncFuzzTests: XCTestCase {
             let skews = (0..<3).map { _ in random.pick([-2 * Self.hour, 0, 2 * Self.hour]) }
             let start = (0..<3).map { Self.device(["a", "b", "c"][$0], skew: skews[$0], random: &random) }
             var devices = start
+            var clocks = (0..<3).map { _ in SyncClock() }
             var now = Self.start + 10_000
             // Random sessions, then each pair once more both ways: everything has reached everyone.
             let pairs = (0..<random.int(6)).map { _ in (random.int(3), random.int(3)) }.filter { $0.0 != $0.1 }
                 + [(0, 1), (1, 2), (2, 0), (1, 0), (2, 1), (0, 2)]
             for (client, server) in pairs {
                 now += 1_000
-                (devices[client], devices[server]) = Self.session(client: devices[client], clientSkew: skews[client],
-                                                                  server: devices[server], serverSkew: skews[server], now: now)
+                var (clientClock, serverClock) = (clocks[client], clocks[server])
+                (devices[client], devices[server]) = Self.session(client: devices[client], clientClock: &clientClock, clientWall: now + skews[client],
+                                                                  server: devices[server], serverClock: &serverClock, serverWall: now + skews[server])
+                (clocks[client], clocks[server]) = (clientClock, serverClock)
             }
-            let seen = (0..<3).map { Self.trueTime(devices[$0], skew: skews[$0]) }
+            let seen = devices.map(Self.content)
             XCTAssertEqual(seen[0], seen[1], "seed \(seed)")
             XCTAssertEqual(seen[1], seen[2], "seed \(seed)")
-            Self.assertNothingLost(from: (0..<3).map { Self.trueTime(start[$0], skew: skews[$0]) }, in: seen[0], seed: seed)
+            Self.assertNothingLost(from: start.map(Self.content), in: seen[0], seed: seed)
         }
     }
 

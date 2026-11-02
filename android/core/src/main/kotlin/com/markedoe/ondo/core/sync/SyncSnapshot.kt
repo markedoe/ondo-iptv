@@ -26,7 +26,7 @@ data class SyncSnapshot(
     val deleted: Map<String, Long> = emptyMap(),
     /** Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID. */
     val replaced: Map<String, String> = emptyMap(),
-    /** The sender's clock when it sent the snapshot (docs/SYNC.md, "Clocks"); none from an older version. */
+    /** The sender's clock when it sent the snapshot; receivers ignore it (docs/SYNC.md, "Clocks"). */
     val clock: Long? = null,
     /** The sender's [contentDigest] of its own data (docs/SYNC.md, "Transport"); none from an older version. */
     val digest: String? = null,
@@ -83,81 +83,6 @@ data class SyncSnapshot(
         return copy(deleted = kept, replaced = replaced.filterKeys { "playlist:$it" in kept })
     }
 
-    /**
-     * The snapshot as the receiver's clock dates it (docs/SYNC.md, "Clocks"): when the sender's [clock] is more than
-     * [marginMs] away from [now], every time moves by the difference, unless that would put it after [now] plus
-     * [marginMs] while it was not (a time stamped before the sender's clock went wrong); then what is still dated
-     * ahead is left out ([withoutFutureRecords]).
-     */
-    fun onReceiverClock(now: Long, marginMs: Long = FUTURE_MARGIN_MS): SyncSnapshot {
-        val skew = skewAt(now, marginMs)
-        if (skew == 0L) return withoutFutureRecords(now, marginMs)
-        val latest = saturated(now, marginMs)
-        return mappingTimes { time -> saturated(time, if (skew == Long.MIN_VALUE) Long.MAX_VALUE else -skew).takeIf { it <= latest || time > latest } ?: time }.withoutFutureRecords(now, marginMs)
-    }
-
-    /** How far the sender's [clock] is ahead of [now] (behind when negative); 0 within [marginMs], or without a clock. */
-    fun skewAt(now: Long, marginMs: Long = FUTURE_MARGIN_MS): Long {
-        val skew = clock?.let { saturated(it, if (now == Long.MIN_VALUE) Long.MAX_VALUE else -now) } ?: return 0L
-        return if (skew in -marginMs..marginMs) 0L else skew
-    }
-
-    /**
-     * A server's answer put back on the client's clock, by the [skew] measured on its snapshot ([skewAt]), and without
-     * a clock: the client moves nothing, so a session moves no time (docs/SYNC.md, "Clocks").
-     */
-    fun forSender(skew: Long): SyncSnapshot = (if (skew == 0L) this else mappingTimes { saturated(it, skew) }).copy(clock = null)
-
-    /**
-     * This device's own snapshot with the times later than [now] plus [marginMs] brought back to [now]: a change
-     * stamped while the clock ran ahead neither waits for its time nor wins over every later change.
-     */
-    fun clampingFuture(now: Long, marginMs: Long = FUTURE_MARGIN_MS): SyncSnapshot {
-        val latest = saturated(now, marginMs)
-        return mappingTimes { if (it > latest) now else it }
-    }
-
-    /** Every time of the snapshot (records, list people, deletions) through [time]. */
-    fun mappingTimes(time: (Long) -> Long): SyncSnapshot = copy(
-        playlists = playlists.map { it.copy(addedAt = time(it.addedAt), updatedAt = time(it.updatedAt)) },
-        favorites = favorites.map { it.copy(addedAt = time(it.addedAt)) },
-        progress = progress.map { it.copy(watchedAt = time(it.watchedAt)) },
-        lists = lists.map { list ->
-            list.copy(
-                items = list.items.map { item -> item.copy(addedAt = item.addedAt?.let(time)) },
-                people = list.people.map { it.copy(addedAt = time(it.addedAt)) },
-                updatedAt = time(list.updatedAt),
-                renamedAt = list.renamedAt?.let(time),
-                orderedAt = list.orderedAt?.let(time),
-            )
-        },
-        people = people.map { it.copy(addedAt = time(it.addedAt)) },
-        keys = keys.map { it.copy(updatedAt = time(it.updatedAt)) },
-        deleted = deleted.mapValues { time(it.value) },
-    )
-
-    /**
-     * The same snapshot without the records and deletions dated later than [now] plus [marginMs]: a device whose clock
-     * is ahead (a box before it reaches a time server) cannot date a change in the future and win over every later
-     * one. They are left out, not moved: the device that made them keeps them, and they travel once their time has
-     * come. Applied by the device that receives a snapshot, to the snapshot it receives, before the merge.
-     */
-    fun withoutFutureRecords(now: Long, marginMs: Long = FUTURE_MARGIN_MS): SyncSnapshot {
-        val latest = if (now > Long.MAX_VALUE - marginMs) Long.MAX_VALUE else now + marginMs
-        fun past(time: Long) = time <= latest
-        return copy(
-            playlists = playlists.filter { past(it.addedAt) && past(it.updatedAt) },
-            favorites = favorites.filter { past(it.addedAt) },
-            progress = progress.filter { past(it.watchedAt) },
-            lists = lists.filter { past(it.updatedAt) }.map { list ->
-                list.copy(items = list.items.filter { past(it.addedAt ?: list.updatedAt) }, people = list.people.filter { past(it.addedAt) })
-            },
-            people = people.filter { past(it.addedAt) },
-            keys = keys.filter { past(it.updatedAt) },
-            deleted = deleted.filterValues(::past),
-        )
-    }
-
     /** Every time of the snapshot: of the records, of the items and people of the lists, and of the deletions. */
     fun times(): Sequence<Long> = sequence {
         playlists.forEach { yield(it.addedAt); yield(it.updatedAt) }
@@ -208,8 +133,6 @@ data class SyncSnapshot(
         const val DELETIONS_KEPT_DAYS = 180
         /** A device not synced with for this long no longer holds deletions back. */
         const val PEERS_KEPT_DAYS = 365
-        /** How far ahead of the receiving device's clock a time may be (docs/SYNC.md, "Clocks"). */
-        const val FUTURE_MARGIN_MS = 5 * 60_000L
         private const val DAY_MS = 86_400_000L
 
         private val json = Json {

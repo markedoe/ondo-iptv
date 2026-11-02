@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.fuzz
 
+import com.markedoe.ondo.core.sync.SyncClock
 import com.markedoe.ondo.core.sync.SyncFavorite
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
@@ -162,7 +163,7 @@ class SyncMergeFuzzTest {
 
     // Three devices with clocks hours apart, syncing in a random order (the Swift `SyncFuzzTests`).
 
-    /** A device's data, its times on its own clock ([skew] ahead of the true time). */
+    /** A device's data, dated by its own clock ([skew] ahead of the true time). */
     private fun device(name: String, skew: Long, fuzz: Fuzz): SyncSnapshot {
         fun time() = START + fuzz.int(1_000) + skew
         val items = listOf("m1", "m2", "m3")
@@ -192,16 +193,24 @@ class SyncMergeFuzzTest {
         return SyncSnapshot(device = name, favorites = favorites, progress = progress, lists = lists, people = people, deleted = deleted)
     }
 
-    /** One session: the client sends with its clock; the server merges on its clock and answers on the client's. */
-    private fun skewedSession(client: SyncSnapshot, clientSkew: Long, server: SyncSnapshot, serverSkew: Long, now: Long): Pair<SyncSnapshot, SyncSnapshot> {
-        val offer = client.copy(clock = now + clientSkew)
-        val skew = offer.skewAt(now + serverSkew)
-        val kept = SyncMerge.merge(server, offer.onReceiverClock(now + serverSkew))
-        val answer = kept.forSender(skew)
-        return SyncMerge.merge(client, answer.onReceiverClock(now + clientSkew)) to kept
+    /**
+     * One session: what each side receives is left out when dated more than a day after its own clock, taken into its
+     * clock, and merged; no time is moved (docs/SYNC.md, "Clocks").
+     */
+    private fun session(
+        client: SyncSnapshot, clientClock: SyncClock, clientWall: Long,
+        server: SyncSnapshot, serverClock: SyncClock, serverWall: Long,
+    ): Pair<SyncSnapshot, SyncSnapshot> {
+        val received = client.withoutRecordsAhead(serverWall)
+        serverClock.observe(received, serverWall)
+        val kept = SyncMerge.merge(server, received)
+        val answer = kept.withoutRecordsAhead(clientWall)
+        clientClock.observe(answer, clientWall)
+        return SyncMerge.merge(client, answer) to kept
     }
 
-    private fun SyncSnapshot.onTrueClock(skew: Long) = mappingTimes { it - skew }.copy(device = "", clock = null)
+    /** The snapshot without who holds it. */
+    private fun SyncSnapshot.content() = copy(device = "", clock = null)
 
     @Test
     fun threeDevicesWithSkewedClocksAgreeAndLoseNothing() {
@@ -210,20 +219,21 @@ class SyncMergeFuzzTest {
             val skews = List(3) { fuzz.pick(-2 * HOUR, 0L, 2 * HOUR) }
             val start = List(3) { device(listOf("a", "b", "c")[it], skews[it], fuzz) }
             val devices = start.toMutableList()
+            val clocks = List(3) { SyncClock() }
             var now = START + 10_000
             // Random sessions, then each pair once more both ways: everything has reached everyone.
             val pairs = List(fuzz.int(6)) { fuzz.int(3) to fuzz.int(3) }.filter { it.first != it.second } +
                 listOf(0 to 1, 1 to 2, 2 to 0, 1 to 0, 2 to 1, 0 to 2)
             for ((client, server) in pairs) {
                 now += 1_000
-                val (kept, answered) = skewedSession(devices[client], skews[client], devices[server], skews[server], now)
+                val (kept, answered) = session(devices[client], clocks[client], now + skews[client], devices[server], clocks[server], now + skews[server])
                 devices[client] = kept
                 devices[server] = answered
             }
-            val seen = List(3) { devices[it].onTrueClock(skews[it]) }
+            val seen = devices.map { it.content() }
             assertEquals(seen[0], seen[1], "seed $seed")
             assertEquals(seen[1], seen[2], "seed $seed")
-            assertNothingLost(List(3) { start[it].onTrueClock(skews[it]) }, seen[0], seed)
+            assertNothingLost(start.map { it.content() }, seen[0], seed)
         }
     }
 

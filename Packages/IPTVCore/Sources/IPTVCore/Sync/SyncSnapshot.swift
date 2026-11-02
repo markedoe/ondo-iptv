@@ -10,8 +10,6 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public static let deletionsKeptDays = 180
     /// A device not synced with for this long no longer holds deletions back.
     public static let peersKeptDays = 365
-    /// How far ahead of the receiving device's clock a time may be (docs/SYNC.md, "Clocks").
-    public static let futureMarginMilliseconds: Int64 = 5 * 60_000
     static let dayMilliseconds: Int64 = 86_400_000
 
     public var type: String
@@ -29,7 +27,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public var deleted: [String: Int64]
     /// Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID.
     public var replaced: [String: String]
-    /// The sender's clock when it sent the snapshot (docs/SYNC.md, "Clocks"); none from an older version.
+    /// The sender's clock when it sent the snapshot; receivers ignore it (docs/SYNC.md, "Clocks").
     public var clock: Int64?
     /// The sender's digest of its own data (docs/SYNC.md, "Transport"); none from an older version.
     public var digest: String?
@@ -173,121 +171,6 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         return copy
     }
 
-    /// The snapshot as the receiver's clock dates it (docs/SYNC.md, "Clocks"): when the sender's `clock` is more than
-    /// `margin` away from `now`, every time moves by the difference, unless that would put it after `now` plus `margin`
-    /// while it was not (a time stamped before the sender's clock went wrong); then what is still dated ahead is left
-    /// out (`withoutFutureRecords`).
-    public func onReceiverClock(now: Int64, margin: Int64 = SyncSnapshot.futureMarginMilliseconds) -> SyncSnapshot {
-        let skew = skewAt(now: now, margin: margin)
-        guard skew != 0 else { return withoutFutureRecords(now: now, margin: margin) }
-        let latest = Self.saturated(now, margin)
-        return mappingTimes { time in
-            let moved = Self.saturated(time, skew == .min ? .max : -skew)
-            return moved <= latest || time > latest ? moved : time
-        }.withoutFutureRecords(now: now, margin: margin)
-    }
-
-    /// How far the sender's `clock` is ahead of `now` (behind when negative); 0 within `margin`, or without a clock.
-    public func skewAt(now: Int64, margin: Int64 = SyncSnapshot.futureMarginMilliseconds) -> Int64 {
-        guard let clock else { return 0 }
-        let skew = Self.saturated(clock, now == .min ? .max : -now)
-        return skew < -margin || skew > margin ? skew : 0
-    }
-
-    /// A server's answer put back on the client's clock, by the `skew` measured on its snapshot (`skewAt`), and without a
-    /// clock: the client moves nothing, so a session moves no time (docs/SYNC.md, "Clocks").
-    public func forSender(skew: Int64) -> SyncSnapshot {
-        var copy = skew == 0 ? self : mappingTimes { Self.saturated($0, skew) }
-        copy.clock = nil
-        return copy
-    }
-
-    /// This device's own snapshot with the times later than `now` plus `margin` brought back to `now`: a change stamped
-    /// while the clock ran ahead neither waits for its time nor wins over every later change.
-    public func clampingFuture(now: Int64, margin: Int64 = SyncSnapshot.futureMarginMilliseconds) -> SyncSnapshot {
-        let latest = Self.saturated(now, margin)
-        return mappingTimes { $0 > latest ? now : $0 }
-    }
-
-    /// Every time of the snapshot (records, list people, deletions) through `time`.
-    public func mappingTimes(_ time: (Int64) -> Int64) -> SyncSnapshot {
-        var copy = self
-        copy.playlists = playlists.map { playlist in
-            var playlist = playlist
-            playlist.addedAt = time(playlist.addedAt)
-            playlist.updatedAt = time(playlist.updatedAt)
-            return playlist
-        }
-        copy.favorites = favorites.map { favorite in
-            var favorite = favorite
-            favorite.addedAt = time(favorite.addedAt)
-            return favorite
-        }
-        copy.progress = progress.map { progress in
-            var progress = progress
-            progress.watchedAt = time(progress.watchedAt)
-            return progress
-        }
-        copy.lists = lists.map { list in
-            var list = list
-            list.updatedAt = time(list.updatedAt)
-            list.renamedAt = list.renamedAt.map(time)
-            list.orderedAt = list.orderedAt.map(time)
-            list.items = list.items.map { item in
-                var item = item
-                item.addedAt = item.addedAt.map(time)
-                return item
-            }
-            list.people = list.people.map { person in
-                var person = person
-                person.addedAt = time(person.addedAt)
-                return person
-            }
-            return list
-        }
-        copy.people = people.map { person in
-            var person = person
-            person.addedAt = time(person.addedAt)
-            return person
-        }
-        copy.keys = keys.map { key in
-            var key = key
-            key.updatedAt = time(key.updatedAt)
-            return key
-        }
-        copy.deleted = deleted.mapValues(time)
-        return copy
-    }
-
-    /// `a + b`, held at the ends of Int64's range instead of trapping.
-    static func saturated(_ a: Int64, _ b: Int64) -> Int64 {
-        let (sum, overflow) = a.addingReportingOverflow(b)
-        return overflow ? (b < 0 ? .min : .max) : sum
-    }
-
-    /// The same snapshot without the records and deletions dated later than `now` plus `margin`: a device whose clock
-    /// is ahead (a box before it reaches a time server) cannot date a change in the future and win over every later
-    /// one. They are left out, not moved: the device that made them keeps them, and they travel once their time has
-    /// come. Applied by the device that receives a snapshot, to the snapshot it receives, before the merge.
-    public func withoutFutureRecords(now: Int64, margin: Int64 = SyncSnapshot.futureMarginMilliseconds) -> SyncSnapshot {
-        let latest = now.addingReportingOverflow(margin).overflow ? Int64.max : now + margin
-        func past(_ time: Int64) -> Bool { time <= latest }
-        var copy = self
-        copy.playlists = playlists.filter { past($0.addedAt) && past($0.updatedAt) }
-        copy.favorites = favorites.filter { past($0.addedAt) }
-        copy.progress = progress.filter { past($0.watchedAt) }
-        copy.lists = lists.filter { past($0.updatedAt) }.map { list in
-            var list = list
-            list.items = list.items.filter { past($0.addedAt ?? list.updatedAt) }
-            list.people = list.people.filter { past($0.addedAt) }
-            return list
-        }
-        copy.people = people.filter { past($0.addedAt) }
-        copy.keys = keys.filter { past($0.updatedAt) }
-        copy.deleted = deleted.filter { past($0.value) }
-        return copy
-    }
-
     /// Every time of the snapshot: of the records, of the items and people of the lists, and of the deletions.
     public var times: [Int64] {
         var times: [Int64] = []
@@ -309,6 +192,12 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
 
     /// The latest of `times`; nil for a snapshot without any.
     public var latestTime: Int64? { times.max() }
+
+    /// `a + b`, held at the ends of Int64's range instead of trapping.
+    static func saturated(_ a: Int64, _ b: Int64) -> Int64 {
+        let (sum, overflow) = a.addingReportingOverflow(b)
+        return overflow ? (b < 0 ? .min : .max) : sum
+    }
 
     /// The same snapshot without the records and deletions dated more than `SyncClock.maxAheadMilliseconds` after
     /// `wall`, the receiver's own clock (docs/SYNC.md, "Clocks"): one device whose clock is far ahead cannot date its

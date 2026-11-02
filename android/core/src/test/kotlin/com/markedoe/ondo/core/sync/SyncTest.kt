@@ -121,33 +121,6 @@ class SyncTest {
         assertEquals("person:ΣΟΦΙΑ ex", lowercasingId("person:ΣΟΦΙΑ Ex"))
     }
 
-    @Test
-    fun whatIsDatedAheadOfTheReceivingClockIsLeftOut() {
-        val now = 1_000_000L
-        val ahead = now + SyncSnapshot.FUTURE_MARGIN_MS + 1
-        val near = now + SyncSnapshot.FUTURE_MARGIN_MS
-        val snapshot = SyncSnapshot(
-            device = "box",
-            playlists = listOf(
-                SyncPlaylist("p", "Home", SyncPlaylist.M3U, "http://example.com/a.m3u", addedAt = 1, updatedAt = ahead),
-                SyncPlaylist("q", "News", SyncPlaylist.M3U, "http://example.com/b.m3u", addedAt = 1, updatedAt = near),
-            ),
-            favorites = listOf(SyncFavorite("p", "movie", "m1", "Glass City", addedAt = ahead)),
-            progress = listOf(SyncProgress("p", "movie", "m1", title = "Glass City", position = 1.0, duration = 2.0, watchedAt = near)),
-            lists = listOf(SyncList("l", "L", updatedAt = ahead)),
-            people = listOf(SyncPerson("Tom", addedAt = ahead), SyncPerson("Ada", addedAt = now)),
-            keys = listOf(SyncKey(SyncKey.TMDB, "k", updatedAt = ahead)),
-            deleted = mapOf("favorite:p|movie|m2" to ahead, "favorite:p|movie|m3" to 5L),
-        ).withoutFutureRecords(now)
-        // Within the margin: kept as it is.
-        assertEquals(listOf("q"), snapshot.playlists.map { it.id })
-        assertEquals(listOf(near), snapshot.progress.map { it.watchedAt })
-        assertEquals(listOf("Ada"), snapshot.people.map { it.name })
-        assertTrue(snapshot.favorites.isEmpty() && snapshot.lists.isEmpty() && snapshot.keys.isEmpty())
-        assertEquals(mapOf("favorite:p|movie|m3" to 5L), snapshot.deleted)
-        assertEquals(mapOf("k" to Long.MAX_VALUE), SyncSnapshot(device = "box", deleted = mapOf("k" to Long.MAX_VALUE)).withoutFutureRecords(Long.MAX_VALUE - 1).deleted)
-    }
-
     // Probes
 
     @Test
@@ -221,54 +194,6 @@ class SyncTest {
         assertEquals(setOf("list:recent"), snapshot.pruned(now, sessions = listOf(now - 400 * day)).deleted.keys)
     }
 
-    /**
-     * Twenty sessions between a device 10 minutes ahead (the client) and one on time, 40 ms each way: the server's
-     * answer goes back on the client's clock, so after the first one no time moves on either side.
-     */
-    @Test
-    fun sessionsBetweenSkewedDevicesMoveNoTime() {
-        var now = 1_760_000_000_000L
-        val ahead = 10 * 60_000L
-        var client = SyncSnapshot(
-            device = "a",
-            favorites = listOf(SyncFavorite("p", "movie", "m1", "Glass City", addedAt = now + ahead - 5_000)),
-            people = listOf(SyncPerson("Ada", addedAt = now + ahead - 4_000)),
-            deleted = mapOf("favorite:p|movie|m9" to now + ahead - 3_000),
-        )
-        var server = SyncSnapshot(device = "b", progress = listOf(SyncProgress("p", "movie", "m1", title = "Glass City", position = 60.0, duration = 6_000.0, watchedAt = now - 2_000)))
-        val rounds = mutableListOf<Pair<SyncSnapshot, SyncSnapshot>>()
-        repeat(20) {
-            now += 60_000
-            val offer = client.copy(clock = now + ahead)
-            now += 40
-            val skew = offer.skewAt(now)
-            server = SyncMerge.merge(server, offer.onReceiverClock(now))
-            val answer = server.forSender(skew)
-            assertNull(answer.clock)
-            now += 40
-            client = SyncMerge.merge(client, answer.onReceiverClock(now + ahead))
-            rounds += client.withoutDevice() to server.withoutDevice()
-        }
-        for ((index, round) in rounds.withIndex().drop(1)) assertEquals("round $index", rounds[0], round)
-        // The client's own times came back as they were.
-        assertEquals(listOf(1_760_000_000_000L + ahead - 5_000), client.favorites.map { it.addedAt })
-    }
-
-    @Test
-    fun ownTimesAheadOfTheClockAreBroughtBackWhenSent() {
-        val now = 1_760_000_000_000L
-        val year = 365 * 86_400_000L
-        val own = SyncSnapshot(
-            device = "a",
-            favorites = listOf(SyncFavorite("p", "movie", "m1", "T", addedAt = now + year)),
-            progress = listOf(SyncProgress("p", "movie", "m1", title = "T", position = 1.0, duration = 2.0, watchedAt = now + 60_000)),
-            deleted = mapOf("k" to now + year),
-        ).clampingFuture(now)
-        assertEquals(listOf(now), own.favorites.map { it.addedAt })
-        assertEquals("within the margin: as it is", listOf(now + 60_000), own.progress.map { it.watchedAt })
-        assertEquals(mapOf("k" to now), own.deleted)
-    }
-
     @Test
     fun aDeletionLearnedLateIsKeptFromWhenItWasLearned() {
         val day = 86_400_000L
@@ -312,36 +237,6 @@ class SyncTest {
         assertEquals(left.withoutDevice().lists, SyncMerge.merge(a, SyncMerge.merge(b, c)).withoutDevice().lists)
         assertEquals(left.withoutDevice().lists, SyncMerge.merge(SyncMerge.merge(c, a), b).withoutDevice().lists)
         assertEquals(listOf("w", "x", "y", "z"), left.lists.single().items.map { it.item }.sorted())
-    }
-
-    @Test
-    fun timesMoveByTheSendersClockDifference() {
-        val now = 1_760_000_000_000L
-        val hours = 2 * 3_600_000L
-        for (skew in listOf(hours, -hours)) {
-            val sent = SyncSnapshot(
-                device = "box",
-                favorites = listOf(SyncFavorite("p", "movie", "m1", "Glass City", addedAt = now + skew - 60_000)),
-                lists = listOf(SyncList("l", "L", people = listOf(SyncPerson("Ada", addedAt = now + skew - 1)), updatedAt = now + skew - 2)),
-                people = listOf(SyncPerson("Tom", addedAt = now + skew)),
-                deleted = mapOf("favorite:p|movie|m2" to now + skew - 5),
-                clock = now + skew,
-            ).onReceiverClock(now)
-            assertEquals("skew $skew", listOf(now - 60_000), sent.favorites.map { it.addedAt })
-            assertEquals(listOf(now - 2, now - 1), sent.lists.map { it.updatedAt } + sent.lists.flatMap { list -> list.people.map { it.addedAt } })
-            assertEquals(listOf(now), sent.people.map { it.addedAt })
-            assertEquals(mapOf("favorite:p|movie|m2" to now - 5), sent.deleted)
-        }
-        // Within the margin, or from a version without a clock: as sent.
-        val close = SyncSnapshot(device = "box", people = listOf(SyncPerson("Tom", addedAt = now + 60_000)), clock = now + 60_000)
-        assertEquals(listOf(now + 60_000), close.onReceiverClock(now).people.map { it.addedAt })
-        val old = SyncSnapshot(device = "box", people = listOf(SyncPerson("Tom", addedAt = now - 5)))
-        assertEquals(listOf(now - 5), old.onReceiverClock(now).people.map { it.addedAt })
-        // A clock gone back after a time stamped right: that time is kept rather than moved into the future.
-        val reset = SyncSnapshot(device = "box", people = listOf(SyncPerson("Tom", addedAt = now - 1_000), SyncPerson("Ada", addedAt = 10)), clock = 0)
-        assertEquals(listOf(now - 1_000, now + 10), reset.onReceiverClock(now).people.map { it.addedAt })
-        // At the ends of the range: no overflow, and still ahead, so left out.
-        assertEquals(emptyMap<String, Long>(), SyncSnapshot(device = "box", deleted = mapOf("k" to Long.MAX_VALUE), clock = Long.MIN_VALUE).onReceiverClock(now).deleted)
     }
 
     @Test

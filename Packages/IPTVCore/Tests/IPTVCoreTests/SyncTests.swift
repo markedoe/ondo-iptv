@@ -287,30 +287,6 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot.lowercasingID(ofDeleted: "person:ΣΟΦΙΑ Ex"), "person:ΣΟΦΙΑ ex")
     }
 
-    func testWhatIsDatedAheadOfTheReceivingClockIsLeftOut() {
-        let now: Int64 = 1_000_000
-        let ahead = now + SyncSnapshot.futureMarginMilliseconds + 1
-        let near = now + SyncSnapshot.futureMarginMilliseconds
-        let snapshot = SyncSnapshot(
-            device: "box",
-            playlists: [SyncPlaylist(id: "p", name: "Home", kind: SyncPlaylist.m3u, url: "http://example.com/a.m3u", addedAt: 1, updatedAt: ahead),
-                        SyncPlaylist(id: "q", name: "News", kind: SyncPlaylist.m3u, url: "http://example.com/b.m3u", addedAt: 1, updatedAt: near)],
-            favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: ahead)],
-            progress: [SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "Glass City", position: 1, duration: 2, watchedAt: near)],
-            lists: [SyncList(id: "l", name: "L", updatedAt: ahead)],
-            people: [SyncPerson(name: "Tom", addedAt: ahead), SyncPerson(name: "Ada", addedAt: now)],
-            keys: [SyncKey(service: SyncKey.tmdb, value: "k", updatedAt: ahead)],
-            deleted: ["favorite:p|movie|m2": ahead, "favorite:p|movie|m3": 5]
-        ).withoutFutureRecords(now: now)
-        // Within the margin: kept as it is.
-        XCTAssertEqual(snapshot.playlists.map(\.id), ["q"])
-        XCTAssertEqual(snapshot.progress.map(\.watchedAt), [near])
-        XCTAssertEqual(snapshot.people.map(\.name), ["Ada"])
-        XCTAssertTrue(snapshot.favorites.isEmpty && snapshot.lists.isEmpty && snapshot.keys.isEmpty)
-        XCTAssertEqual(snapshot.deleted, ["favorite:p|movie|m3": 5])
-        XCTAssertEqual(SyncSnapshot(device: "box", deleted: ["k": .max]).withoutFutureRecords(now: .max - 1).deleted, ["k": .max])
-    }
-
     // MARK: Probes
 
     func testAProbeGoesWhenNothingChangedSinceTheLastSnapshotSent() throws {
@@ -380,48 +356,6 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot.lowercasingID(ofDeleted: "listitem:L1|person:ADA Élodie"), "listitem:l1|person:ada Élodie")
     }
 
-    /// Twenty sessions between a device 10 minutes ahead (the client) and one on time, 40 ms each way: the server's
-    /// answer goes back on the client's clock, so after the first one no time moves on either side.
-    func testSessionsBetweenSkewedDevicesMoveNoTime() {
-        var now: Int64 = 1_760_000_000_000
-        let ahead: Int64 = 10 * 60_000
-        var client = SyncSnapshot(device: "a", favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: now + ahead - 5_000)],
-                                  people: [SyncPerson(name: "Ada", addedAt: now + ahead - 4_000)], deleted: ["favorite:p|movie|m9": now + ahead - 3_000])
-        var server = SyncSnapshot(device: "b", progress: [SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "Glass City", position: 60,
-                                                                          duration: 6_000, watchedAt: now - 2_000)])
-        var rounds: [(SyncSnapshot, SyncSnapshot)] = []
-        for _ in 0..<20 {
-            now += 60_000
-            var offer = client
-            offer.clock = now + ahead
-            now += 40
-            let skew = offer.skewAt(now: now)
-            server = SyncMerge.merge(server, offer.onReceiverClock(now: now))
-            let answer = server.forSender(skew: skew)
-            XCTAssertNil(answer.clock)
-            now += 40
-            client = SyncMerge.merge(client, answer.onReceiverClock(now: now + ahead))
-            rounds.append((withoutDevice(client), withoutDevice(server)))
-        }
-        for (index, round) in rounds.enumerated().dropFirst() {
-            XCTAssertEqual(round.0, rounds[0].0, "client, round \(index)")
-            XCTAssertEqual(round.1, rounds[0].1, "server, round \(index)")
-        }
-        // The client's own times came back as they were.
-        XCTAssertEqual(client.favorites.map(\.addedAt), [1_760_000_000_000 + ahead - 5_000])
-    }
-
-    func testOwnTimesAheadOfTheClockAreBroughtBackWhenSent() {
-        let now: Int64 = 1_760_000_000_000
-        let year: Int64 = 365 * 86_400_000
-        let own = SyncSnapshot(device: "a", favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "T", addedAt: now + year)],
-                               progress: [SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "T", position: 1, duration: 2, watchedAt: now + 60_000)],
-                               deleted: ["k": now + year]).clampingFuture(now: now)
-        XCTAssertEqual(own.favorites.map(\.addedAt), [now])
-        XCTAssertEqual(own.progress.map(\.watchedAt), [now + 60_000], "within the margin: as it is")
-        XCTAssertEqual(own.deleted, ["k": now])
-    }
-
     func testADeletionLearnedLateIsKeptFromWhenItWasLearned() {
         let day: Int64 = 86_400_000
         let now = 1_000 * day
@@ -462,35 +396,6 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(withoutDevice(left).lists, withoutDevice(right).lists)
         XCTAssertEqual(withoutDevice(left).lists, withoutDevice(other).lists)
         XCTAssertEqual(left.lists.first?.items.map(\.item).sorted(), ["w", "x", "y", "z"])
-    }
-
-    func testTimesMoveByTheSendersClockDifference() {
-        let now: Int64 = 1_760_000_000_000
-        let hours: Int64 = 2 * 3_600_000
-        for skew in [hours, -hours] {
-            let sent = SyncSnapshot(
-                device: "box",
-                favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: now + skew - 60_000)],
-                lists: [SyncList(id: "l", name: "L", people: [SyncPerson(name: "Ada", addedAt: now + skew - 1)], updatedAt: now + skew - 2)],
-                people: [SyncPerson(name: "Tom", addedAt: now + skew)],
-                deleted: ["favorite:p|movie|m2": now + skew - 5],
-                clock: now + skew
-            ).onReceiverClock(now: now)
-            XCTAssertEqual(sent.favorites.map(\.addedAt), [now - 60_000], "skew \(skew)")
-            XCTAssertEqual(sent.lists.map(\.updatedAt) + sent.lists.flatMap { $0.people.map(\.addedAt) }, [now - 2, now - 1])
-            XCTAssertEqual(sent.people.map(\.addedAt), [now])
-            XCTAssertEqual(sent.deleted, ["favorite:p|movie|m2": now - 5])
-        }
-        // Within the margin, or from a version without a clock: as sent.
-        let close = SyncSnapshot(device: "box", people: [SyncPerson(name: "Tom", addedAt: now + 60_000)], clock: now + 60_000)
-        XCTAssertEqual(close.onReceiverClock(now: now).people.map(\.addedAt), [now + 60_000])
-        let old = SyncSnapshot(device: "box", people: [SyncPerson(name: "Tom", addedAt: now - 5)])
-        XCTAssertEqual(old.onReceiverClock(now: now).people.map(\.addedAt), [now - 5])
-        // A clock gone back after a time stamped right: that time is kept rather than moved into the future.
-        let reset = SyncSnapshot(device: "box", people: [SyncPerson(name: "Tom", addedAt: now - 1_000), SyncPerson(name: "Ada", addedAt: 10)], clock: 0)
-        XCTAssertEqual(reset.onReceiverClock(now: now).people.map(\.addedAt), [now - 1_000, now + 10])
-        // At the ends of the range: no overflow, and still ahead, so left out.
-        XCTAssertEqual(SyncSnapshot(device: "box", deleted: ["k": .max], clock: .min).onReceiverClock(now: now).deleted, [:])
     }
 
     func testOnlyLocalNetworkAddressesAreLocal() {
