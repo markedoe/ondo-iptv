@@ -533,7 +533,7 @@ fun TvChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, sel
 @Composable
 private fun TvEpisodeCard(episode: Episode, progress: WatchProgress?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val watched = stringResource(R.string.watched)
-    Column(modifier.width(TvTokens.WideCardWidth), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier.width(TvTokens.EpisodeCardWidth), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Card(
             onClick = onClick,
             modifier = Modifier

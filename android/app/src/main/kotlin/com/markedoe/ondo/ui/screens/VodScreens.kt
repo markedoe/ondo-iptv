@@ -5,6 +5,8 @@ import com.markedoe.ondo.ui.components.LocalShowsMyList
 import com.markedoe.ondo.ui.tv.rememberTabListState
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -79,6 +81,8 @@ import com.markedoe.ondo.ui.tv.TvHeaderWideCardWidth
 import com.markedoe.ondo.ui.tv.TvCategoryChoice
 import com.markedoe.ondo.ui.tv.TvTopBarCategories
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
+import com.markedoe.ondo.ui.tv.TV_GRID_COLUMNS
+import com.markedoe.ondo.ui.tv.tvGridBottomRoom
 import com.markedoe.ondo.ui.tv.KeptForTheRemote
 import com.markedoe.ondo.ui.tv.LocalTvTopBar
 import androidx.compose.ui.unit.Dp
@@ -114,8 +118,8 @@ const val TV_ROW_LENGTH = 10
 
 /**
  * Movies or Series tab: category chips (on a phone), continue watching, My List, award winners, one row per category.
- * On a TV, a header pinned above the rows shows the poster with the focus ([TvFocusHeader]), the cards a little smaller: a row
- * with its name and its cards' lines fits whole below it on a 960 × 540 dp screen. There, the categories are a pill in
+ * On a TV, a header pinned above the rows shows the poster with the focus ([TvFocusHeader]), the posters about five
+ * across: a row with its name and its cards' lines fits whole below it on a 960 × 540 dp screen. There, the categories are a pill in
  * the top bar ([TvTopBarCategories]) rather than chips above the rows: with the focus on the tab, the header shows the
  * first card's title and the first row shows whole below it; Down goes straight to that card.
  */
@@ -293,62 +297,69 @@ fun PosterGridScreen(
 ) {
     // On a TV, the top bar holds what the page's own top row and filter would.
     val inTheBar = LocalTvTopBar.current != null
-    // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more.
-    TvHeaderAbove(fallback = items.firstOrNull()) { modifier, top, posterOnly ->
+    // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more, five
+    // across, and the grid scrolls by whole rows (the focused one at the top, the one above it gone).
+    TvHeaderAbove(fallback = items.firstOrNull(), byRows = true) { modifier, top, posterOnly ->
         val metrics = rememberShelfMetrics()
         val leaveField = rememberLeaveField()
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(if (metrics.compact || posterOnly) 108.dp else 150.dp),
-            contentPadding = PaddingValues(start = metrics.gutter, top = top, end = metrics.gutter, bottom = 32.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = modifier.windowInsetsPadding(WindowInsets.statusBars).testTag("grid"),
-        ) {
-            if (!inTheBar) {
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    // Back and Sort, then the filter, above the first posters: kept for the remote's Up under a header.
-                    if (posterOnly) KeptForTheRemote()
-                    TopAppBar(
-                        title = { Text(title, maxLines = 1) },
-                        navigationIcon = {
-                            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
-                        },
-                        actions = { SortButton(sort, onSort, hideWatched, onHideWatched) },
-                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                        windowInsets = WindowInsets(0),
-                        // One stop as wide as the filter for Up from the posters: the filter, right above them, comes
-                        // first, rather than the small Back button standing over the first column.
-                        modifier = Modifier.focusGroup(),
-                    )
+        BoxWithConstraints(modifier) {
+            val bottom = if (posterOnly) tvGridBottomRoom(maxWidth, maxHeight, metrics.gutter, GRID_GAP, top) else 32.dp
+            LazyVerticalGrid(
+                columns = if (posterOnly) GridCells.Fixed(TV_GRID_COLUMNS) else GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
+                contentPadding = PaddingValues(start = metrics.gutter, top = top, end = metrics.gutter, bottom = bottom),
+                horizontalArrangement = Arrangement.spacedBy(GRID_GAP),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).testTag("grid"),
+            ) {
+                if (!inTheBar) {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        // Back and Sort, then the filter, above the first posters: kept for the remote's Up under a header.
+                        if (posterOnly) KeptForTheRemote()
+                        TopAppBar(
+                            title = { Text(title, maxLines = 1) },
+                            navigationIcon = {
+                                IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                            },
+                            actions = { SortButton(sort, onSort, hideWatched, onHideWatched) },
+                            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                            windowInsets = WindowInsets(0),
+                            // One stop as wide as the filter for Up from the posters: the filter, right above them, comes
+                            // first, rather than the small Back button standing over the first column.
+                            modifier = Modifier.focusGroup(),
+                        )
+                    }
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        if (posterOnly) KeptForTheRemote()
+                        val field = rememberTvTextField()
+                        OutlinedTextField(
+                            value = filter,
+                            onValueChange = onFilter,
+                            singleLine = true,
+                            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+                            placeholder = { Text(stringResource(R.string.filter)) },
+                            // Done, as before; on a TV, on to the posters.
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
+                            readOnly = field.readOnly,
+                            modifier = Modifier.fillMaxWidth().then(field.modifier),
+                        )
+                    }
                 }
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    if (posterOnly) KeptForTheRemote()
-                    val field = rememberTvTextField()
-                    OutlinedTextField(
-                        value = filter,
-                        onValueChange = onFilter,
-                        singleLine = true,
-                        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                        placeholder = { Text(stringResource(R.string.filter)) },
-                        // Done, as before; on a TV, on to the posters.
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { if (!leaveField()) defaultKeyboardAction(ImeAction.Done) }),
-                        readOnly = field.readOnly,
-                        modifier = Modifier.fillMaxWidth().then(field.modifier),
-                    )
+                items(items, key = { it.key }) { item ->
+                    PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = !posterOnly, facts = facts?.get(item.key), showsFacts = facts != null && !posterOnly)
                 }
-            }
-            items(items, key = { it.key }) { item ->
-                PosterCard(item, width = null, onClick = { onOpen(item) }, showsTitle = !posterOnly, facts = facts?.get(item.key), showsFacts = facts != null && !posterOnly)
-            }
-            if (items.isEmpty()) {
-                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    Text(stringResource(R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (items.isEmpty()) {
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                        Text(stringResource(R.string.nothing_here), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }
     }
 }
+
+/** The room between two posters of a grid. */
+private val GRID_GAP = 12.dp
 
 /**
  * The Sort button of a page of posters and its menu: the orders of [PosterSort], the one shown ticked, then Hide

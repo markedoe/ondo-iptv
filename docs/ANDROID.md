@@ -31,12 +31,14 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **TV header** (`ui/tv/TvFocusHeader.kt`): on Home, the Movies and Series tabs and a category's, genre's, year's or
   award's titles, a header of fixed height pinned above the posters shows the one with the focus: its backdrop (else
   its poster, blurred) fading into the page, title, year and genres (else its category), TMDb's rating with its badge
-  (else the provider's), the date added (last changed for a series) in the app's language and three lines of synopsis.
+  (else the provider's), the date added (last changed for a series) in the app's language and two lines of synopsis.
   It follows the focus once it rests 200 ms on a poster; 450 ms later, what is missing is fetched, one title at a time
   and cancelled when the focus moves on: TMDb's answer kept on the device, then TMDb with the token, then the
   provider's `get_vod_info` for a movie without a plot (saved with the other details); nothing without a network.
-  The rows below keep the focused poster at the same place, posters a little smaller; Home's carousel frame becomes
-  smaller and shows the focused poster while the rows have the focus, its buttons coming back with Up.
+  The rows below keep the focused poster at the same place, about five posters across the screen (the sixth peeking);
+  Home's carousel frame becomes smaller and shows the focused poster while the rows have the focus, its buttons coming
+  back with Up. A category's titles and the genre, year and award pages show five posters a row; a category's grid
+  scrolls by whole rows, the focused row at its top, the row above it gone.
   The remote's path on the Movies and Series tabs: with the focus on the tab, the header shows the first card's title
   and the first row shows whole right below it (no chips between; a row is scrolled into view, never hidden); Down
   goes to that card, its title already in the header (the first poster reached shows at once, with no wait); Down
@@ -153,7 +155,7 @@ channels, `example.com` addresses):
   and the phone's (English) store screens, and the TV's tab pages as the remote leaves them (`TvScreenshots`: Movies
   with a row focused, the path tab → Down → Down on Movies and on Series (`movies-tab-focused`, `movies-down-1`,
   `movies-down-2`, `series-…`), the Categories picker open, a category's titles from the tab then Down
-  (`grid-category`, `grid-down-1`), the picker there with the order beside the categories (`picker-with-sort`), a
+  (`grid-category`, `grid-down-1`) and deep in a long grid (`grid-down-3`), the picker there with the order beside the categories (`picker-with-sort`), a
   genre's titles (`browse-genre`), Home with the remote in its rows).
 
 The *Android* workflow compares every screenshot with its reference (`./gradlew :app:verifyRoborazziDebug`); at most
@@ -173,7 +175,8 @@ screen's top and cropped towards its top, no playlist line in the top bar (Home,
 genre's titles), each row type whole under the header at 960 × 540 dp, the path tab → Down → Down on Movies and
 Series with the header on the focused title before its wait, the Categories pill reached with Up then Right and its
 picker, a category's name whole on the pill, a category's and a genre's titles with no row of their own above the
-posters, Down from the tab on the first poster, and the order chosen in the pill's picker).
+posters, Down from the tab on the first poster, the order chosen in the pill's picker, a category's grid five posters a
+row scrolled by whole rows down and up, and a Movies row about five posters across).
 
 ### Before changing a TV screen (regressions checklist)
 
@@ -188,7 +191,8 @@ posters, Down from the tab on the first poster, and the order chosen in the pill
 6. Check the path tab → Down → Down with screenshots, on Movies and on Series (`movies-tab-focused`,
    `movies-down-1`, `movies-down-2` and the same for `series`): on the tab, the first row whole under the header and
    no empty area; each Down, the focused card's title in the header at once. The same on a category's titles
-   (`grid-category`, `grid-down-1`): the posters right under the header, no row of their own above them.
+   (`grid-category`, `grid-down-1`, `grid-down-3`): the posters right under the header, no row of their own above
+   them, five a row, the focused row whole at the top and none cut above it.
 
 ## Initial plan
 

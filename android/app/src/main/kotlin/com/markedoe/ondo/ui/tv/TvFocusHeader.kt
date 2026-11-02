@@ -60,11 +60,15 @@ const val HEADER_DEBOUNCE_MS = 200L
 /** How much longer it rests there before what the header lacks is fetched (one title at a time). */
 const val HEADER_LOAD_DWELL_MS = 450L
 
-/** The header's height below the top bar, the same whatever it shows: the rows below never move with it. */
-val TvHeaderHeight = 190.dp
+/**
+ * The header's height below the top bar, the same whatever it shows: the rows below never move with it. Compact (the
+ * title, the facts and two lines of synopsis), for a row of posters about five across to show whole below it on a
+ * 960 × 540 dp TV.
+ */
+val TvHeaderHeight = 140.dp
 
-/** The posters' width under the header: a little smaller, for a whole row to show below it. */
-val TvHeaderPosterWidth = 112.dp
+/** The posters' width under the header: as Home's, about five across with the sixth peeking. */
+val TvHeaderPosterWidth = TvTokens.PosterWidth
 
 /**
  * The landscape cards' width under the header (continue watching): as Home's, 16:9 with their two lines below, for
@@ -73,7 +77,7 @@ val TvHeaderPosterWidth = 112.dp
 val TvHeaderWideCardWidth = TvTokens.WideCardWidth
 
 /** The synopsis' lines, their room kept even when there is none. */
-private const val PLOT_LINES = 3
+private const val PLOT_LINES = 2
 
 /**
  * Where the header gets what it shows ([header]) and what is missing ([load]); the app's comes from the view model,
@@ -187,7 +191,7 @@ private data class HeaderArt(val item: ShowcaseItem, val backdropUrl: String?)
  * The header of a TV's Movies and Series tabs and of a category's posters, pinned above them: the poster with the
  * focus, its backdrop behind (or its poster, blurred) from the screen's very top, under the top bar's shade, fading
  * into the page at the start side and at the bottom; its title, year and genres, TMDb's rating (else the provider's),
- * when it was added, and three lines of its synopsis. The backdrop keeps its upper part ([TvArtworkAlignment]): faces
+ * when it was added, and two lines of its synopsis. The backdrop keeps its upper part ([TvArtworkAlignment]): faces
  * stay whole. Its height never changes; without a poster focused yet (the focus on the top bar's tab), it shows
  * [fallback]: the page's first card's title, the one Down from the tab reaches.
  */
@@ -216,7 +220,7 @@ fun TvFocusHeader(fallback: ShowcaseItem?, modifier: Modifier = Modifier) {
                 header,
                 Modifier
                     .align(Alignment.TopStart)
-                    .padding(start = TvTokens.ContentStart, top = top + 12.dp, end = TvTokens.EdgeEnd)
+                    .padding(start = TvTokens.ContentStart, top = top + 8.dp, end = TvTokens.EdgeEnd)
                     .widthIn(max = 560.dp),
             )
         }
@@ -225,12 +229,18 @@ fun TvFocusHeader(fallback: ShowcaseItem?, modifier: Modifier = Modifier) {
 
 /**
  * A page of posters under the TV's header ([TvFocusHeader]), pinned above it: [content] is given the modifier that
- * fills the room left, its top padding, and whether it is under the header (its posters can then be smaller, with
- * nothing beneath them). Its list keeps the focused poster [lead] below its top. Without a header (a phone), [content]
- * fills the page as it did.
+ * fills the room left, its top padding, and whether it is under the header (its posters can then show nothing beneath
+ * them). Its list keeps the focused poster [lead] below its top; with [byRows] (a grid), the focused row's start at
+ * its top padding ([TvRowPivotScrolling]): whole rows, none cut above it. Without a header (a phone), [content] fills
+ * the page as it did.
  */
 @Composable
-fun TvHeaderAbove(fallback: ShowcaseItem?, lead: Dp = GRID_LEAD, content: @Composable (modifier: Modifier, top: Dp, underHeader: Boolean) -> Unit) {
+fun TvHeaderAbove(
+    fallback: ShowcaseItem?,
+    lead: Dp = GRID_LEAD,
+    byRows: Boolean = false,
+    content: @Composable (modifier: Modifier, top: Dp, underHeader: Boolean) -> Unit,
+) {
     val headers = if (isTelevision()) LocalTitleHeaders.current else null
     if (headers == null) {
         content(Modifier.fillMaxSize().tvSafeArea(tab = true), tvTopBarSpace(), false)
@@ -241,7 +251,7 @@ fun TvHeaderAbove(fallback: ShowcaseItem?, lead: Dp = GRID_LEAD, content: @Compo
         Column(Modifier.fillMaxSize()) {
             TvFocusHeader(fallback)
             val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
-            TvPinnedHeaderList(lead) { content(rest, 8.dp, true) }
+            TvPinnedHeaderList(if (byRows) UNDER_HEADER_TOP else lead, byRows) { content(rest, UNDER_HEADER_TOP, true) }
         }
     }
 }
@@ -249,8 +259,25 @@ fun TvHeaderAbove(fallback: ShowcaseItem?, lead: Dp = GRID_LEAD, content: @Compo
 /** A grid's focused poster lands this far below the grid's top. */
 private val GRID_LEAD = 12.dp
 
+/** The room above the first row under the header: a focused poster grows into it, never cut by the header. */
+private val UNDER_HEADER_TOP = 8.dp
+
+/** The posters across a grid under a TV's header: five, bigger than a phone's, to read from the sofa. */
+const val TV_GRID_COLUMNS = 5
+
 /**
- * The header's words: the title on one line, then its facts on one line, then the synopsis on three lines kept even
+ * The room below a grid's last row under a TV's header ([TvRowPivotScrolling]), in a grid [width] by [height] with
+ * [gutter] at either side, [gap] between its posters (2:3) and [top] above its first row: enough for the last row too
+ * to come up to the top, the row above it gone, rather than stop lower with that row cut under the header.
+ */
+fun tvGridBottomRoom(width: Dp, height: Dp, gutter: Dp, gap: Dp, top: Dp): Dp {
+    val poster = (width - gutter * 2 - gap * (TV_GRID_COLUMNS - 1)) / TV_GRID_COLUMNS
+    // A pixel's rounding to spare.
+    return maxOf(height - top - poster * 1.5f + 2.dp, 32.dp)
+}
+
+/**
+ * The header's words: the title on one line, then its facts on one line, then the synopsis on two lines kept even
  * when there is none, so the header keeps one height. Unknown facts leave no gap: a title without genres shows its
  * category.
  */
@@ -265,13 +292,13 @@ fun TitleHeaderText(header: TitleHeader, modifier: Modifier = Modifier, titleSty
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.testTag("headerTitle"),
         )
-        TitleFacts(header, Modifier.padding(top = 8.dp))
-        // The synopsis' room is its three lines' height and the header's width, set rather than measured: an empty
+        TitleFacts(header, Modifier.padding(top = 4.dp))
+        // The synopsis' room is its two lines' height and the header's width, set rather than measured: an empty
         // one keeps it too (an empty text alone would be as narrow as its words, nothing).
         val plotStyle = MaterialTheme.typography.bodyMedium
         val lineHeight = if (plotStyle.lineHeight.isSp) plotStyle.lineHeight else plotStyle.fontSize * 1.4f
         val plotHeight = with(LocalDensity.current) { lineHeight.toDp() } * PLOT_LINES
-        Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(plotHeight).testTag("headerPlotRoom")) {
+        Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(plotHeight).testTag("headerPlotRoom")) {
             Text(
                 header.plot.orEmpty(),
                 style = plotStyle,

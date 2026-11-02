@@ -96,7 +96,8 @@ import org.robolectric.annotation.Config
  * the viewer's path on the Movies and Series tabs (on the tab, the first row whole below the header showing its first
  * title; Down, that card and its title at once; Down again, the next row), the Categories pill in the bar and its
  * picker; a category's and a genre's titles with no row of their own above them (the pill names them and holds their
- * order: Down from the tab lands on the first poster); a focused card, grown, whole within its row at either end in both directions; and a continue watching card's
+ * order: Down from the tab lands on the first poster); a category's grid five posters a row, scrolled by whole rows
+ * (the focused row at its top, none cut above it), and a Movies row about five posters across; a focused card, grown, whole within its row at either end in both directions; and a continue watching card's
  * lines clear of its focus frame.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -612,6 +613,88 @@ class TvLayoutRegressionTest {
         chooseRating(across = false)
         assertEquals(listOf(PosterSort.RATING), chosenOrders)
         assertEquals("the best rated first", "Example Film D", posters("browse").first())
+    }
+
+    /** A long category's titles: 24 rows of five. */
+    private val longGrid = (0 until 120).map { movie("g$it", gridTitle(it)) }
+
+    private fun gridTitle(index: Int) = "Grid Film %03d".format(index)
+
+    /** The poster of [longGrid] at [index], with its bounds (unscaled: a poster without the focus). */
+    private fun gridPoster(index: Int): DpRect =
+        compose.onNode(hasClickAction() and hasContentDescription(gridTitle(index)) and hasAnyAncestor(hasTestTag("grid"))).getUnclippedBoundsInRoot()
+
+    /** The posters of the grid now laid out, by their index in [longGrid], with their bounds in the root, cut by the grid. */
+    private fun laidOutGridPosters(): Map<Int, Rect> =
+        compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("grid"))).fetchSemanticsNodes()
+            .mapNotNull { node ->
+                val title = node.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull() ?: return@mapNotNull null
+                title.removePrefix("Grid Film ").toIntOrNull()?.let { it to node.boundsInRoot }
+            }.toMap()
+
+    /**
+     * The focus on [row] of [longGrid] (its first poster): the row whole, its top at the grid's top padding (8 dp, the
+     * room a focused poster grows into, under the header), and no poster of a row above it showing at all.
+     */
+    private fun assertRowAtTheTop(row: Int, step: String) {
+        val focused = compose.onAllNodes(isFocused()).onLast().fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull()
+        assertEquals("$step: the focus on the row's first poster", gridTitle(row * 5), focused)
+        val grid = bounds("grid")
+        // Measured on the row's second poster: the focused one is drawn grown.
+        val poster = gridPoster(row * 5 + 1)
+        assertEquals("$step: row $row's top at the grid's top", (grid.top + 8.dp).value, poster.top.value, 1f)
+        assertWithin("$step: row $row", poster, grid.top, grid.bottom)
+        val gridTop = with(compose.density) { grid.top.toPx() }
+        laidOutGridPosters().filterKeys { it < row * 5 }.forEach { (index, drawn) ->
+            assertTrue("$step: ${gridTitle(index)}, above row $row, shows under the header ($drawn)", drawn.bottom <= gridTop + 1f)
+        }
+    }
+
+    /**
+     * A category's titles at 960 × 540 dp: five posters a row; the remote going down and up the grid moves it by whole
+     * rows, the focused row whole at its top, the row above it gone (never cut under the header).
+     */
+    @Test
+    fun aCategorysGridShowsFivePostersARowAndScrollsByWholeRows() {
+        show(TopLevel.MOVIES, onTab = true, tabPage = false) {
+            TvTopBarCategories(TvCategoryChoice(listOf(drama), locked = emptySet(), selected = drama, onChoose = {}, onManage = {}))
+            PosterGridScreen("Drama", longGrid, filter = "", onFilter = {}, onOpen = {}, onBack = {})
+        }
+        press(Key.DirectionDown)
+        advance(1_000)
+        val first = gridPoster(0)
+        (1..4).forEach { assertEquals("${gridTitle(it)} in the first row", first.top.value, gridPoster(it).top.value, 0.5f) }
+        assertTrue("the sixth poster starts the second row", gridPoster(5).top >= first.bottom)
+        assertTrue("five posters whole across the grid", gridPoster(4).right <= bounds("grid").right + 0.5.dp)
+        assertTrue("posters bigger than a phone's (${first.width})", first.width >= 150.dp)
+        assertRowAtTheTop(0, "Down from the tab")
+
+        val rows = longGrid.size / 5
+        for (row in 1 until rows) {
+            press(Key.DirectionDown)
+            advance(1_000)
+            assertRowAtTheTop(row, "Down to row $row")
+        }
+        for (row in rows - 2 downTo 0) {
+            press(Key.DirectionUp)
+            advance(1_000)
+            assertRowAtTheTop(row, "Up to row $row")
+        }
+    }
+
+    /** A row of posters on the Movies tab at 960 × 540 dp: five whole across it, the sixth peeking at its end. */
+    @Test
+    fun aMoviesTabRowShowsAboutFivePostersAcross() {
+        val ten = (1..10).map { movie("$it", "Example Film $it") }
+        moviesTab(VodUiState(title = "Movies", categories = listOf(drama), rows = listOf(CategoryRow(drama, ten))))
+        focusFirstCard("shelf:m-drama")
+        val row = compose.onNode(hasTestTag("shelfRow") and hasAnyAncestor(hasTestTag("shelf:m-drama")), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        fun poster(n: Int) = compose.onNode(hasClickAction() and hasContentDescription("Example Film $n") and hasAnyAncestor(hasTestTag("shelf:m-drama"))).getUnclippedBoundsInRoot()
+        (2..5).forEach { assertTrue("poster $it whole in the row", poster(it).right <= row.right + 0.5.dp) }
+        val sixth = poster(6)
+        assertTrue("the sixth peeking at the row's end: $sixth in $row", sixth.left < row.right - 16.dp && sixth.right > row.right)
+        assertTrue("posters bigger than before (${sixth.width})", sixth.width >= 140.dp)
+        assertWholeBelowTheHeader("shelf:m-drama", "a row of posters")
     }
 
     /** Home with one row of [shelf]'s type under its carousel, made smaller while the rows have the focus. */

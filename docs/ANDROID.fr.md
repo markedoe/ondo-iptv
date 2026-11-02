@@ -34,12 +34,14 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   catégorie, d'un genre, d'une année ou d'une récompense, un en-tête de hauteur fixe au-dessus des affiches montre
   celle qui a le focus : son image de fond (sinon son affiche floutée) fondue dans la page, titre, année et genres
   (sinon sa catégorie), la note de TMDb avec son badge (sinon celle du fournisseur), la date d'ajout (de dernière
-  modification pour une série) dans la langue de l'app et trois lignes de résumé. Il suit le focus une fois posé
+  modification pour une série) dans la langue de l'app et deux lignes de résumé. Il suit le focus une fois posé
   200 ms sur une affiche ; 450 ms plus tard, ce qui manque est demandé, un titre à la fois, annulé quand le focus
   bouge : la réponse de TMDb gardée sur l'appareil, puis TMDb avec le jeton, puis `get_vod_info` du fournisseur pour
   un film sans résumé (gardé avec les autres détails) ; rien sans réseau. Les rangées gardent l'affiche qui a le
-  focus au même endroit, les affiches un peu plus petites ; le cadre du carrousel de l'accueil rapetisse et montre
-  l'affiche qui a le focus tant que les rangées l'ont, ses boutons revenant avec Haut.
+  focus au même endroit, environ cinq affiches sur la largeur de l'écran (la sixième qui dépasse) ; le cadre du
+  carrousel de l'accueil rapetisse et montre l'affiche qui a le focus tant que les rangées l'ont, ses boutons revenant
+  avec Haut. Les titres d'une catégorie et les pages de genre, d'année et de prix montrent cinq affiches par rangée ;
+  la grille d'une catégorie défile par rangées entières, la rangée sélectionnée en haut, celle d'au-dessus disparue.
   Le parcours de la télécommande sur les onglets Films et Séries : le focus sur l'onglet, l'en-tête montre le titre de
   la première carte et la première rangée s'affiche entière juste dessous (pas de filtres entre les deux ; une rangée
   défile pour se montrer, jamais masquée) ; Bas mène à cette carte, son titre déjà dans l'en-tête (la première affiche
@@ -175,7 +177,8 @@ libres, chaînes inventées, adresses `example.com`) :
   de la TV (anglais et français) et du téléphone (anglais), et les onglets de la TV tels que la télécommande les laisse
   (`TvScreenshots` : Films avec une rangée sélectionnée, le parcours onglet → Bas → Bas sur Films et sur Séries
   (`movies-tab-focused`, `movies-down-1`, `movies-down-2`, `series-…`), le choix des catégories ouvert, les titres
-  d'une catégorie depuis l'onglet puis Bas (`grid-category`, `grid-down-1`), le choix là avec l'ordre à côté des
+  d'une catégorie depuis l'onglet puis Bas (`grid-category`, `grid-down-1`) et loin dans une longue grille
+  (`grid-down-3`), le choix là avec l'ordre à côté des
   catégories (`picker-with-sort`), les titres d'un genre (`browse-genre`), Accueil avec la télécommande dans ses
   rangées).
 
@@ -197,8 +200,9 @@ l'écran et cadrée vers son haut, aucune ligne de playlist dans la barre du hau
 catégorie et d'un genre), chaque type de rangée entier sous l'en-tête en 960 × 540 dp, le parcours onglet → Bas → Bas
 sur Films et Séries avec l'en-tête sur le titre sélectionné avant son attente, la pastille Catégories atteinte avec
 Haut puis Droite et son choix, le nom d'une catégorie entier sur la pastille, les titres d'une catégorie et d'un genre
-sans rangée à eux au-dessus des affiches, Bas depuis l'onglet sur la première affiche, et l'ordre choisi dans le choix
-de la pastille).
+sans rangée à eux au-dessus des affiches, Bas depuis l'onglet sur la première affiche, l'ordre choisi dans le choix
+de la pastille, la grille d'une catégorie à cinq affiches par rangée qui défile par rangées entières vers le bas et
+vers le haut, et une rangée de Films d'environ cinq affiches de large).
 
 ### Avant de modifier un écran TV (liste anti-régressions)
 
@@ -213,8 +217,9 @@ de la pastille).
 6. Vérifier le parcours onglet → Bas → Bas avec les captures, sur Films et sur Séries (`movies-tab-focused`,
    `movies-down-1`, `movies-down-2` et de même pour `series`) : sur l'onglet, la première rangée entière sous
    l'en-tête et aucune zone vide ; à chaque Bas, le titre de la carte sélectionnée aussitôt dans l'en-tête. De même
-   sur les titres d'une catégorie (`grid-category`, `grid-down-1`) : les affiches juste sous l'en-tête, sans rangée à
-   elles au-dessus.
+   sur les titres d'une catégorie (`grid-category`, `grid-down-1`, `grid-down-3`) : les affiches juste sous
+   l'en-tête, sans rangée à elles au-dessus, cinq par rangée, la rangée sélectionnée entière en haut et aucune coupée
+   au-dessus.
 
 ## Plan initial
 

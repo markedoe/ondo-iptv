@@ -137,16 +137,30 @@ class TvPinnedScrolling(private val lead: Float) : BringIntoViewSpec {
     }
 }
 
-/** [content]'s list scrolls as [TvPinnedScrolling] says on a TV, the focused card [lead] below its top; elsewhere, as it is. */
+/**
+ * How a grid of posters scrolls under a header pinned above it ([TvFocusHeader]): by whole rows. The focused poster's
+ * row always comes [lead] below the grid's top, its start the pivot, even when it already shows whole: the row above
+ * it is then wholly gone, never left cut under the header, and the focused row is never left cut at the bottom (a
+ * scroll stopped "just enough" leaves both).
+ */
+@ExperimentalFoundationApi
+class TvRowPivotScrolling(private val lead: Float) : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = offset - lead
+}
+
+/**
+ * [content]'s list scrolls as [TvPinnedScrolling] says on a TV, the focused card [lead] below its top, or with
+ * [byRows] as [TvRowPivotScrolling] says, the focused row's start at [lead]; elsewhere, as it is.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TvPinnedHeaderList(lead: Dp, content: @Composable () -> Unit) {
+fun TvPinnedHeaderList(lead: Dp, byRows: Boolean = false, content: @Composable () -> Unit) {
     if (LocalBringIntoViewSpec.current !== TvScrolling) {
         content()
         return
     }
     val pixels = with(LocalDensity.current) { lead.toPx() }
-    val spec = remember(pixels) { TvPinnedScrolling(pixels) }
+    val spec = remember(pixels, byRows) { if (byRows) TvRowPivotScrolling(pixels) else TvPinnedScrolling(pixels) }
     CompositionLocalProvider(LocalBringIntoViewSpec provides spec, content = content)
 }
 

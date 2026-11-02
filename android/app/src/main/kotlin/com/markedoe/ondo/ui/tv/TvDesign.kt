@@ -113,8 +113,18 @@ object TvTokens {
     val EdgeTop = 27.dp
 
     val CardGap = 20.dp
-    val PosterWidth = 124.dp
-    val WideCardWidth = 196.dp
+
+    /** A poster's width in a row: about five across a 960 dp wide screen, the sixth peeking at the end. */
+    val PosterWidth = 148.dp
+
+    /** A landscape card's width (continue watching), grown with the posters. */
+    val WideCardWidth = 240.dp
+
+    /** A channel's card's width, grown with the posters. */
+    val ChannelCardWidth = 190.dp
+
+    /** An episode's card's width on a series' page. */
+    val EpisodeCardWidth = 196.dp
     val CardShape = RoundedCornerShape(10.dp)
 
     val Ink = OndoColors.Ink
@@ -388,7 +398,7 @@ fun TvResumeCard(
 fun TvChannelCard(row: ChannelRow, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val (scale, border, glow) = cardFocus()
     var focused by remember { mutableStateOf(false) }
-    Column(modifier.width(156.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.width(TvTokens.ChannelCardWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
             modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.semantics { contentDescription = row.channel.name },

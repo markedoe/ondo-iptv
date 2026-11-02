@@ -73,7 +73,7 @@ import org.robolectric.annotation.GraphicsMode
  * focused and with My List's; the viewer's path on the Movies and Series tabs (the focus on the tab, Down once, Down
  * again), the Categories picker open; a category's titles (the focus on the tab, then Down: no row of their own above
  * the posters, the pill naming the category) and the pill's picker there with the order beside the categories; a
- * genre's titles, the pill naming the genre; and Home with the remote in its rows. Compared by `verifyRoborazziDebug` with
+ * genre's titles, the pill naming the genre; deep in a long grid, the focused row at the top, whole; and Home with the remote in its rows. Compared by `verifyRoborazziDebug` with
  * [BASELINES]`/tv/`; the store listing has none of them.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -87,9 +87,9 @@ class TvScreenshots {
     private val now = ShowcaseCatalogue.NOW
     private val labels = Labels("Movie", "Series", Locale.US)
 
-    /** What the app's view model would show of a title in the header: the demo's details. */
+    /** What the app's view model would show of a title in the header: the demo's details (a copy's, its own title's). */
     private val headers = object : TitleHeaders {
-        override fun header(item: ShowcaseItem): Flow<TitleHeader> = flowOf(UiMappers.titleHeader(state, item, null, Locale.US))
+        override fun header(item: ShowcaseItem): Flow<TitleHeader> = flowOf(UiMappers.titleHeader(state, original(item), null, Locale.US).copy(item = item))
 
         override suspend fun load(item: ShowcaseItem) = Unit
     }
@@ -242,6 +242,27 @@ class TvScreenshots {
         capture("grid-down-1")
     }
 
+    /** A copy of the demo's [movie] for a long grid ([copy]: which one), its own key, its title's pictures and details. */
+    private fun copied(movie: com.markedoe.ondo.core.model.Movie, copy: Int) = ShowcaseItem.MovieItem(movie.copy(id = "${movie.id}$COPY$copy"))
+
+    /** A copy's own title ([copied]); any other title as it is. */
+    private fun original(item: ShowcaseItem): ShowcaseItem =
+        if (item is ShowcaseItem.MovieItem && COPY in item.movie.id) ShowcaseItem.MovieItem(state.content.movies.first { it.id == item.movie.id.substringBefore(COPY) }) else item
+
+    /** Deep in a long grid (the demo's movies, four times over): Down three times from the first row. */
+    @Test
+    fun deepInACategorysTitles() {
+        val items = (0 until 4).flatMap { copy -> state.content.movies.map { copied(it, copy) } }
+        show(TopLevel.MOVIES, onTab = true, tabPage = false) {
+            TvTopBarCategories(TvCategoryChoice(UiMappers.vod(state, series = false, title = "Movies").categories, emptySet(), selected = category, onChoose = {}, onManage = {}))
+            PosterGridScreen(category.name, items, filter = "", onFilter = {}, onOpen = {}, onBack = {})
+        }
+        press(Key.DirectionDown)
+        repeat(3) { press(Key.DirectionDown) }
+        assertTrue("deep in the posters", focusedIn("grid"))
+        capture("grid-down-3")
+    }
+
     @Test
     fun thePickerWithTheOrderBesideTheCategories() {
         categoryGrid()
@@ -276,5 +297,10 @@ class TvScreenshots {
         show(TopLevel.HOME) { TvHomeScreen(UiMappers.home(state, labels, now).copy(channels = emptyList()), HomeActions(), autoAdvance = false) }
         focusFirstCard("shelfResumeMovies", "shelfResumeSeries", "shelfMyList", "shelfNewMovies")
         capture("home-rows")
+    }
+
+    private companion object {
+        /** Between a demo movie's id and its copy's number ([copied]). */
+        const val COPY = "~copy"
     }
 }

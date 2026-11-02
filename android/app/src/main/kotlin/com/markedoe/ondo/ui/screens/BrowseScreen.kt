@@ -39,6 +39,7 @@ import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
+import com.markedoe.ondo.ui.tv.TV_GRID_COLUMNS
 import com.markedoe.ondo.ui.tv.KeptForTheRemote
 import com.markedoe.ondo.ui.tv.LocalTvTopBar
 
@@ -89,7 +90,8 @@ fun BrowseScreen(
     // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more.
     TvHeaderAbove(fallback = state.movies.firstOrNull() ?: state.series.firstOrNull()) { modifier, top, posterOnly ->
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(if (metrics.compact || posterOnly) 108.dp else 150.dp),
+            // On a TV under the header, five across, as a category's grid.
+            columns = if (posterOnly) GridCells.Fixed(TV_GRID_COLUMNS) else GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
             contentPadding = PaddingValues(start = metrics.gutter, top = top, end = metrics.gutter, bottom = 32.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),

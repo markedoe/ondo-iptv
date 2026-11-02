@@ -91,8 +91,11 @@ import kotlinx.coroutines.delay
 /** The featured titles' frame takes about half the screen's height, under the top bar: the first row shows below. */
 private const val HERO_SHARE = 0.52f
 
-/** Its height while the remote is in the rows below, showing the poster with the focus: a whole row shows below it. */
-private val HERO_COMPACT = 200.dp
+/**
+ * Its height while the remote is in the rows below, showing the poster with the focus: a whole row of posters shows
+ * below it on a 960 × 540 dp TV, with the header's title, facts and two lines of synopsis inside it.
+ */
+private val HERO_COMPACT = 156.dp
 
 /** Where the focused card of a row lands below the frame: under its row's name. */
 private val HOME_ROW_LEAD = 50.dp
@@ -309,7 +312,8 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
             Column(
                 Modifier
                     .fillMaxHeight()
-                    .padding(start = 28.dp, top = 24.dp, bottom = 22.dp, end = if (pages.size > 1) 120.dp else 28.dp),
+                    // Smaller, the frame keeps less room around the header's words.
+                    .padding(start = 28.dp, top = if (compact) 18.dp else 24.dp, bottom = if (compact) 18.dp else 22.dp, end = if (pages.size > 1) 120.dp else 28.dp),
                 verticalArrangement = Arrangement.Bottom,
             ) {
                 if (header != null) {
@@ -474,7 +478,7 @@ private fun TvTagSuggestion(suggestion: TagSuggestion, actions: HomeActions) {
 fun TvSeeAllCard(onClick: () -> Unit, tall: Boolean, modifier: Modifier = Modifier, width: Dp? = null) {
     Card(
         onClick = onClick,
-        modifier = modifier.width(width ?: if (tall) TvTokens.PosterWidth else 156.dp).aspectRatio(if (tall) 2f / 3f else 16f / 9f).testTag("seeAll"),
+        modifier = modifier.width(width ?: if (tall) TvTokens.PosterWidth else TvTokens.ChannelCardWidth).aspectRatio(if (tall) 2f / 3f else 16f / 9f).testTag("seeAll"),
         shape = CardDefaults.shape(TvTokens.CardShape),
         colors = CardDefaults.colors(containerColor = Color.White.copy(alpha = 0.08f), focusedContainerColor = Color.White),
         scale = CardDefaults.scale(focusedScale = 1.08f),
