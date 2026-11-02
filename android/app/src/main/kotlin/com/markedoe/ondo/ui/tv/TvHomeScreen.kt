@@ -1,7 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
 import android.icu.text.ListFormatter
-import androidx.compose.animation.Crossfade
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.core.tween
@@ -45,10 +44,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.runtime.CompositionLocalProvider
 import com.markedoe.ondo.ui.components.LocalShowsMyList
-import com.markedoe.ondo.ui.theme.OndoColors
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -82,6 +79,8 @@ import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.components.PlayIcon
 import com.markedoe.ondo.ui.model.ResumeItem
+import com.markedoe.ondo.ui.model.TitleHeader
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.myListState
@@ -153,78 +152,89 @@ fun TvHomeScreen(
     // The poster with the focus in the rows, which the frame above shows while the rows have the focus.
     val focus = remember { FocusedTitle() }
     var rowsHaveFocus by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("home")) {
-        if (hasHero) TvHero(state.hero, actions, autoAdvance, preparingKey, rowsHaveFocus, focus)
-        val rowsModifier = Modifier.weight(1f).fillMaxWidth().onFocusChanged { rowsHaveFocus = it.hasFocus }
-        val rows: @Composable () -> Unit = {
-            LazyColumn(
-                state = rememberTabListState(),
-                modifier = rowsModifier,
-                contentPadding = PaddingValues(top = if (hasHero) 18.dp else 0.dp, bottom = 40.dp),
-                verticalArrangement = Arrangement.spacedBy(22.dp),
-            ) {
-                if (!hasHero) item(key = "hero") { TvHomeHeader(state) }
-                state.tagSuggestion?.let { suggestion ->
-                    item(key = "suggestion") {
-                        // Above the first row under the frame: kept for the remote's Up.
-                        if (hasHero) KeptForTheRemote()
-                        TvTagSuggestion(suggestion, actions)
-                    }
-                }
-                if (resumeMovies.isNotEmpty()) {
-                    tvShelf(titles.movies, "shelfResumeMovies") {
-                        items(resumeMovies, key = { it.key }) { item ->
-                            TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeMovies, item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+    var heroIndex by rememberSaveable { mutableIntStateOf(0) }
+    val hero = if (hasHero) rememberHeroShown(state.hero, heroIndex, rowsHaveFocus, focus) else null
+    // The picture runs under the top bar too: the bar's band is a shade over it.
+    TvTopBarOverArt(on = hero != null)
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).testTag("home")) {
+        // The carousel's picture, or the focused poster's, behind the whole screen, edge to edge: the frame's words and
+        // the rows over it.
+        if (hero != null) {
+            TvPageBackdrop(hero.art.item, hero.art.backdropUrl, Modifier.matchParentSize()) { item, url -> actions.onBackdropFailed(item, url) }
+        }
+        Column(Modifier.fillMaxSize()) {
+            if (hero != null) TvHero(state.hero, hero, heroIndex, { heroIndex = it }, actions, autoAdvance, preparingKey, rowsHaveFocus)
+            val rowsModifier = Modifier.weight(1f).fillMaxWidth().onFocusChanged { rowsHaveFocus = it.hasFocus }
+            val rows: @Composable () -> Unit = {
+                LazyColumn(
+                    state = rememberTabListState(),
+                    modifier = rowsModifier,
+                    contentPadding = PaddingValues(top = if (hasHero) 18.dp else 0.dp, bottom = 40.dp),
+                    verticalArrangement = Arrangement.spacedBy(22.dp),
+                ) {
+                    if (!hasHero) item(key = "hero") { TvHomeHeader(state) }
+                    state.tagSuggestion?.let { suggestion ->
+                        item(key = "suggestion") {
+                            // Above the first row under the frame: kept for the remote's Up.
+                            if (hasHero) KeptForTheRemote()
+                            TvTagSuggestion(suggestion, actions)
                         }
                     }
-                }
-                if (resumeSeries.isNotEmpty()) {
-                    tvShelf(titles.series, "shelfResumeSeries") {
-                        items(resumeSeries, key = { it.key }) { item ->
-                            TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeSeries, item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+                    if (resumeMovies.isNotEmpty()) {
+                        tvShelf(titles.movies, "shelfResumeMovies") {
+                            items(resumeMovies, key = { it.key }) { item ->
+                                TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeMovies, item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+                            }
                         }
                     }
-                }
-                if (state.myList.isNotEmpty()) {
-                    tvShelf(titles.myList, "shelfMyList") {
-                        items(state.myList, key = { it.key }) { item ->
-                            CompositionLocalProvider(LocalShowsMyList provides true) { TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("myList:${item.key}")) }
+                    if (resumeSeries.isNotEmpty()) {
+                        tvShelf(titles.series, "shelfResumeSeries") {
+                            items(resumeSeries, key = { it.key }) { item ->
+                                TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeSeries, item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+                            }
                         }
-                        item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true) }
                     }
-                }
-                if (!state.hasVod) channelShelf(state, titles.channels, actions)
-                if (state.newMovies.isNotEmpty()) {
-                    tvShelf(titles.newMovies, "shelfNewMovies") {
-                        items(state.newMovies, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newMovies:${item.key}")) }
+                    if (state.myList.isNotEmpty()) {
+                        tvShelf(titles.myList, "shelfMyList") {
+                            items(state.myList, key = { it.key }) { item ->
+                                CompositionLocalProvider(LocalShowsMyList provides true) { TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("myList:${item.key}")) }
+                            }
+                            item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true) }
+                        }
                     }
-                }
-                if (state.newSeries.isNotEmpty()) {
-                    tvShelf(titles.newSeries, "shelfNewSeries") {
-                        items(state.newSeries, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newSeries:${item.key}")) }
+                    if (!state.hasVod) channelShelf(state, titles.channels, actions)
+                    if (state.newMovies.isNotEmpty()) {
+                        tvShelf(titles.newMovies, "shelfNewMovies") {
+                            items(state.newMovies, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newMovies:${item.key}")) }
+                        }
                     }
-                }
-                if (state.trending.isNotEmpty()) {
-                    tvShelf(titles.trending, "shelfTrending") {
-                        items(state.trending, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("trending:${item.key}")) }
+                    if (state.newSeries.isNotEmpty()) {
+                        tvShelf(titles.newSeries, "shelfNewSeries") {
+                            items(state.newSeries, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newSeries:${item.key}")) }
+                        }
                     }
-                }
-                if (state.hasVod) channelShelf(state, titles.channels, actions)
-                if (!state.hasVod && state.channels.isEmpty() && !state.isLoading && !state.isRestoring) {
-                    item(key = "empty") {
-                        Text(
-                            stringResource(R.string.home_empty),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = TvTokens.ContentStart, end = TvTokens.EdgeEnd),
-                        )
+                    if (state.trending.isNotEmpty()) {
+                        tvShelf(titles.trending, "shelfTrending") {
+                            items(state.trending, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("trending:${item.key}")) }
+                        }
+                    }
+                    if (state.hasVod) channelShelf(state, titles.channels, actions)
+                    if (!state.hasVod && state.channels.isEmpty() && !state.isLoading && !state.isRestoring) {
+                        item(key = "empty") {
+                            Text(
+                                stringResource(R.string.home_empty),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = TvTokens.ContentStart, end = TvTokens.EdgeEnd),
+                            )
+                        }
                     }
                 }
             }
-        }
-        CompositionLocalProvider(LocalFocusedTitle provides focus) {
-            // Under the frame, the focused card lands at the same place at every press.
-            if (hasHero) TvPinnedHeaderList(lead = HOME_ROW_LEAD, content = rows) else rows()
+            CompositionLocalProvider(LocalFocusedTitle provides focus) {
+                // Under the frame, the focused card lands at the same place at every press.
+                if (hasHero) TvPinnedHeaderList(lead = HOME_ROW_LEAD, content = rows) else rows()
+            }
         }
     }
 }
@@ -246,26 +256,47 @@ private fun androidx.compose.foundation.lazy.LazyListScope.channelShelf(state: H
  * on it (a [HeroPage] of its own: its picture, then its title, facts and synopsis), the carousel standing still. Its
  * buttons stay where they are, unseen and taking no room, for Up to reach them: the carousel is back then.
  */
+/** What Home's frame shows: the carousel's [page], or the poster with the focus in the rows ([header]); [art], its picture's. */
+private class HeroShown(val page: HeroPage, val header: TitleHeader?, val art: HeroPage)
+
+/**
+ * What Home's frame shows of [pages] at [index]: while the rows have the focus ([rowsHaveFocus]), [focus]'s poster once
+ * the remote rests on it (a [HeroPage] of its own for its picture; what it lacks fetched once the remote stays).
+ */
 @Composable
-private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boolean, preparingKey: String?, rowsHaveFocus: Boolean = false, focus: FocusedTitle? = null) {
-    var index by rememberSaveable { mutableIntStateOf(0) }
-    val current = index.coerceIn(0, pages.lastIndex)
-    val page = pages[current]
-    var hasFocus by remember { mutableStateOf(false) }
-    LaunchedEffect(autoAdvance, hasFocus, rowsHaveFocus, pages.size, current) {
-        if (!autoAdvance || hasFocus || rowsHaveFocus || pages.size < 2) return@LaunchedEffect
-        delay(HERO_ADVANCE_MS)
-        index = (current + 1) % pages.size
-    }
+private fun rememberHeroShown(pages: List<HeroPage>, index: Int, rowsHaveFocus: Boolean, focus: FocusedTitle): HeroShown {
+    val page = pages[index.coerceIn(0, pages.lastIndex)]
     val headers = LocalTitleHeaders.current
-    val shownItem = focus?.let { rememberShownTitle(it, keepLast = false) }
+    val shownItem = rememberShownTitle(focus, keepLast = false)
     val focusedItem = shownItem?.takeIf { rowsHaveFocus }
     LoadWhenStill(focusedItem, headers)
     val header = rememberTitleHeader(focusedItem, headers)?.takeIf { focusedItem != null }
     // The poster with the focus as a page of the carousel's own, for its picture.
     val art = header?.let { HeroPage(it.item, meta = "", inMyList = false, resumable = false, backdropUrl = it.backdropUrl) } ?: page
+    return HeroShown(page, header, art)
+}
+
+@Composable
+private fun TvHero(
+    pages: List<HeroPage>,
+    shown: HeroShown,
+    index: Int,
+    onIndex: (Int) -> Unit,
+    actions: HomeActions,
+    autoAdvance: Boolean,
+    preparingKey: String?,
+    rowsHaveFocus: Boolean = false,
+) {
+    val current = index.coerceIn(0, pages.lastIndex)
+    val page = shown.page
+    val header = shown.header
+    var hasFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(autoAdvance, hasFocus, rowsHaveFocus, pages.size, current) {
+        if (!autoAdvance || hasFocus || rowsHaveFocus || pages.size < 2) return@LaunchedEffect
+        delay(HERO_ADVANCE_MS)
+        onIndex((current + 1) % pages.size)
+    }
     val compact = rowsHaveFocus
-    val ink = TvTokens.Ink
     // A share of the window's height (the app's own, not the screen's).
     val windowHeight = LocalWindowInfo.current.containerDpSize.height
     val fullHeight = (windowHeight * HERO_SHARE).coerceAtLeast(260.dp)
@@ -279,7 +310,7 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
     val backward = if (rtl) Key.DirectionRight else Key.DirectionLeft
     fun Modifier.turnsPage(key: Key, step: Int) = onPreviewKeyEvent { event ->
         val turn = event.key == key && pages.size > 1
-        if (turn && event.type == KeyEventType.KeyDown) index = (current + step + pages.size) % pages.size
+        if (turn && event.type == KeyEventType.KeyDown) onIndex((current + step + pages.size) % pages.size)
         turn
     }
     // The whole block, with the room above it for the top bar, comes into view with its buttons: back on it, the
@@ -297,30 +328,24 @@ private fun TvHero(pages: List<HeroPage>, actions: HomeActions, autoAdvance: Boo
                 .fillMaxWidth()
                 .height(heroHeight)
                 .clip(HeroShape)
-                .background(OndoColors.Surface)
                 .testTag("heroFrame"),
         ) {
+            // The picture is the page's, behind the whole screen ([TvPageBackdrop]): the frame holds the words only.
             LaunchedEffect(page.item.key) { actions.onShowBackdrop(page.item) }
-            Crossfade(art, label = "heroArt") { shown ->
-                TvArtwork(shown.backdropUrl, shown.item.posterUrl, shown.item.title, Modifier.fillMaxSize()) { url -> actions.onBackdropFailed(shown.item, url) }
-            }
-            // A shade on the side of the words, the rest of the picture left as it is.
-            Box(Modifier.matchParentSize().background(startToEndGradient(0f to ink.copy(alpha = 0.72f), 0.45f to ink.copy(alpha = 0.35f), 0.75f to Color.Transparent)))
-            Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to ink.copy(alpha = 0.55f))))
             // The words at the bottom left of the frame, the buttons under them. The buttons are measured first: a
             // long title or plot gives up its lines (the plot first), never the buttons' room.
             Column(
                 Modifier
                     .fillMaxHeight()
                     // Smaller, the frame keeps less room around the header's words.
-                    .padding(start = 28.dp, top = if (compact) 18.dp else 24.dp, bottom = if (compact) 18.dp else 22.dp, end = if (pages.size > 1) 120.dp else 28.dp),
+                    .padding(start = 28.dp, top = if (compact) 14.dp else 24.dp, bottom = if (compact) 14.dp else 22.dp, end = if (pages.size > 1) 120.dp else 28.dp),
                 verticalArrangement = Arrangement.Bottom,
             ) {
                 if (header != null) {
                     TitleHeaderText(header, Modifier.widthIn(max = 560.dp))
                 } else Column(Modifier.weight(1f, fill = false).widthIn(max = 480.dp)) {
                     Text(
-                        page.item.title,
+                        CatalogueMatcher.displayTitle(page.item.title),
                         style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.ExtraBold,
                         maxLines = 2,

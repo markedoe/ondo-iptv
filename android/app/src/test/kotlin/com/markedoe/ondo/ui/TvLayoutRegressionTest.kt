@@ -26,6 +26,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -178,8 +179,9 @@ class TvLayoutRegressionTest {
         moviesTab(VodUiState(title = "Movies", categories = listOf(drama), rows = listOf(CategoryRow(drama, movies))))
         focusFirstCard("shelf:m-drama")
         assertEquals("the header from the screen's top", 0f, bounds("titleHeader").top.value, 0.5f)
-        val art = compose.onNode(hasTestTag("tvArtwork") and hasAnyAncestor(hasTestTag("titleHeader")), useUnmergedTree = true)
+        val art = compose.onNode(hasTestTag("tvArtwork") and hasAnyAncestor(hasTestTag("pageBackdrop")), useUnmergedTree = true)
         assertEquals("the picture from the screen's top", 0f, art.getUnclippedBoundsInRoot().top.value, 0.5f)
+        assertBackdropToTheScreensBottom()
         val alignment = art.fetchSemanticsNode().config.getOrNull(ArtworkAlignment)
         assertEquals(TvArtworkAlignment, alignment)
         assertTrue("cropped towards its top", (alignment as BiasAlignment).verticalBias < 0f)
@@ -191,9 +193,29 @@ class TvLayoutRegressionTest {
     @Test
     fun homesCarouselKeepsTheUpperPartOfItsPictureToo() {
         val featured = HeroPage(movies[0], meta = "Movie · 2024", inMyList = false, resumable = false)
-        show(TopLevel.HOME) { TvHomeScreen(HomeUiState(playlistName = "Example Playlist", hero = listOf(featured), hasVod = true), HomeActions(), autoAdvance = false) }
-        val art = compose.onNode(hasTestTag("tvArtwork") and hasAnyAncestor(hasTestTag("heroFrame")), useUnmergedTree = true)
+        show(TopLevel.HOME) { TvHomeScreen(HomeUiState(playlistName = "Example Playlist", hero = listOf(featured), newMovies = movies, hasVod = true), HomeActions(), autoAdvance = false) }
+        val art = compose.onNode(hasTestTag("tvArtwork") and hasAnyAncestor(hasTestTag("pageBackdrop")), useUnmergedTree = true)
         assertEquals(TvArtworkAlignment, art.fetchSemanticsNode().config.getOrNull(ArtworkAlignment))
+        assertBackdropToTheScreensBottom()
+        // The rows have the focus: the focused poster's picture, still behind the whole screen.
+        compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("shelfNewMovies"))).onFirst().requestFocus()
+        advance(1_000)
+        assertBackdropToTheScreensBottom()
+    }
+
+    /**
+     * The page's picture runs edge to edge, from the screen's top to its bottom, the rows over it: no band, no ground
+     * coloured strip between the header and the posters.
+     */
+    private fun assertBackdropToTheScreensBottom() {
+        val screen = compose.onRoot().getUnclippedBoundsInRoot()
+        val backdrop = bounds("pageBackdrop")
+        assertEquals("the picture from the screen's top", screen.top.value, backdrop.top.value, 0.5f)
+        assertEquals("the picture to the screen's bottom", screen.bottom.value, backdrop.bottom.value, 0.5f)
+        assertEquals("the picture from the screen's left", screen.left.value, backdrop.left.value, 0.5f)
+        assertEquals("the picture to the screen's right", screen.right.value, backdrop.right.value, 0.5f)
+        val art = compose.onNode(hasTestTag("tvArtwork") and hasAnyAncestor(hasTestTag("pageBackdrop")), useUnmergedTree = true).getUnclippedBoundsInRoot()
+        assertTrue("the picture itself to the screen's bottom: $art", art.bottom >= screen.bottom - 0.5.dp)
     }
 
     /** Whether the top bar shows anything of the playlist: its name, when it was updated, a line of its own. */
@@ -557,6 +579,9 @@ class TvLayoutRegressionTest {
         assertFalse("no playlist line in the bar", playlistLineInTheBar())
         assertEquals("the pill names the category", "Drama", pillName())
         assertHeaderShows("Example Film A", "on the tab")
+        assertEquals("the category's name above the first row", listOf("Drama"), headerTexts("headerLabel"))
+        assertTrue("the label right above the posters", bounds("headerLabel").bottom <= bounds("grid").top + 0.5.dp)
+        assertBackdropToTheScreensBottom()
 
         press(Key.DirectionDown)
         advance(16)
@@ -662,8 +687,9 @@ class TvLayoutRegressionTest {
         }
         press(Key.DirectionDown)
         advance(1_000)
-        val first = gridPoster(0)
-        (1..4).forEach { assertEquals("${gridTitle(it)} in the first row", first.top.value, gridPoster(it).top.value, 0.5f) }
+        // Measured on the second poster: the first, focused, is drawn grown.
+        val first = gridPoster(1)
+        (2..4).forEach { assertEquals("${gridTitle(it)} in the first row", first.top.value, gridPoster(it).top.value, 0.5f) }
         assertTrue("the sixth poster starts the second row", gridPoster(5).top >= first.bottom)
         assertTrue("five posters whole across the grid", gridPoster(4).right <= bounds("grid").right + 0.5.dp)
         assertTrue("posters bigger than a phone's (${first.right - first.left})", first.right - first.left >= 150.dp)

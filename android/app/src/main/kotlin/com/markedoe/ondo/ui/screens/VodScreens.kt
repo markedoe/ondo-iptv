@@ -298,8 +298,9 @@ fun PosterGridScreen(
     // On a TV, the top bar holds what the page's own top row and filter would.
     val inTheBar = LocalTvTopBar.current != null
     // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more, five
-    // across, and the grid scrolls by whole rows (the focused one at the top, the one above it gone).
-    TvHeaderAbove(fallback = items.firstOrNull(), byRows = true) { modifier, top, posterOnly ->
+    // across under the category's name, and the grid scrolls by whole rows (the focused one at the top, the one above
+    // it gone).
+    TvHeaderAbove(fallback = items.firstOrNull(), byRows = true, label = title.takeIf { inTheBar }) { modifier, top, posterOnly ->
         val metrics = rememberShelfMetrics()
         val leaveField = rememberLeaveField()
         BoxWithConstraints(modifier) {

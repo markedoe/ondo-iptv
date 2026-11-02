@@ -32,7 +32,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   et « Mise à jour de la playlist… ».
 - **En-tête sur TV** (`ui/tv/TvFocusHeader.kt`) : sur l'accueil, les onglets Films et Séries et les titres d'une
   catégorie, d'un genre, d'une année ou d'une récompense, un en-tête de hauteur fixe au-dessus des affiches montre
-  celle qui a le focus : son image de fond (sinon son affiche floutée) fondue dans la page, titre, année et genres
+  celle qui a le focus : son image de fond (sinon son affiche floutée) derrière toute la page, bord à bord et jusqu'en
+  bas de l'écran, les rangées dessinées par-dessus avec des ombres douces seulement (sombre côté début, plus sombre vers
+  le bas), son titre (le logo du titre sur TMDb dans la langue de l'app, sinon en anglais, sinon sans texte, en fondu
+  depuis le nom ; le nom sans les étiquettes du fournisseur comme « |FR| » ou « VFF » d'ici là ou sans logo), année et genres
   (sinon sa catégorie), la note de TMDb avec son badge (sinon celle du fournisseur), la date d'ajout (de dernière
   modification pour une série) dans la langue de l'app et deux lignes de résumé. Il suit le focus une fois posé
   200 ms sur une affiche ; 450 ms plus tard, ce qui manque est demandé, un titre à la fois, annulé quand le focus
@@ -41,7 +44,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   focus au même endroit, environ cinq affiches sur la largeur de l'écran (la sixième qui dépasse) ; le cadre du
   carrousel de l'accueil rapetisse et montre l'affiche qui a le focus tant que les rangées l'ont, ses boutons revenant
   avec Haut. Les titres d'une catégorie et les pages de genre, d'année et de prix montrent cinq affiches par rangée ;
-  la grille d'une catégorie défile par rangées entières, la rangée sélectionnée en haut, celle d'au-dessus disparue.
+  la grille d'une catégorie défile par rangées entières, la rangée sélectionnée en haut, celle d'au-dessus disparue,
+  le nom de la catégorie au-dessus de la première rangée.
   Le parcours de la télécommande sur les onglets Films et Séries : le focus sur l'onglet, l'en-tête montre le titre de
   la première carte et la première rangée s'affiche entière juste dessous (pas de filtres entre les deux ; une rangée
   défile pour se montrer, jamais masquée) ; Bas mène à cette carte, son titre déjà dans l'en-tête (la première affiche

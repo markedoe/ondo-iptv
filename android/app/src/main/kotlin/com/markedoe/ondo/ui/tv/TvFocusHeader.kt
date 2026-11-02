@@ -1,6 +1,13 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalWindowInfo
+import coil3.compose.AsyncImage
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -188,33 +195,51 @@ fun rememberTitleHeader(item: ShowcaseItem?, headers: TitleHeaders?): TitleHeade
 private data class HeaderArt(val item: ShowcaseItem, val backdropUrl: String?)
 
 /**
- * The header of a TV's Movies and Series tabs and of a category's posters, pinned above them: the poster with the
- * focus, its backdrop behind (or its poster, blurred) from the screen's very top, under the top bar's shade, fading
- * into the page at the start side and at the bottom; its title, year and genres, TMDb's rating (else the provider's),
- * when it was added, and two lines of its synopsis. The backdrop keeps its upper part ([TvArtworkAlignment]): faces
- * stay whole. Its height never changes; without a poster focused yet (the focus on the top bar's tab), it shows
- * [fallback]: the page's first card's title, the one Down from the tab reaches.
+ * What the header of a page of posters shows: the poster with the focus once the remote rests on it, else [fallback]
+ * (the page's first card's title, the one Down from the tab reaches), and what is known of it; what it lacks is fetched
+ * once the remote stays. Null on a page without a header.
  */
 @Composable
-fun TvFocusHeader(fallback: ShowcaseItem?, modifier: Modifier = Modifier) {
-    val focus = LocalFocusedTitle.current ?: return
+private fun rememberFocusHeader(fallback: ShowcaseItem?): TitleHeader? {
+    val focus = LocalFocusedTitle.current ?: return null
     val headers = LocalTitleHeaders.current
     val item = rememberShownTitle(focus, keepLast = true) ?: fallback
     LoadWhenStill(item, headers)
-    val header = rememberTitleHeader(item, headers)
+    return rememberTitleHeader(item, headers)
+}
+
+/**
+ * The picture behind a whole TV page, edge to edge and from top to bottom, the rows drawn over it: [item]'s backdrop
+ * ([backdropUrl], else its poster, blurred), keeping its upper part ([TvArtworkAlignment]: faces stay whole), fading
+ * from one title to the next. Soft shades only, no edge anywhere: dark at the start side behind the words, clear at the
+ * end, and darker gradually towards the bottom behind the rows, the picture still showing between the cards.
+ */
+@Composable
+fun TvPageBackdrop(item: ShowcaseItem?, backdropUrl: String?, modifier: Modifier = Modifier, onFailed: (ShowcaseItem, String) -> Unit = { _, _ -> }) {
     val ground = MaterialTheme.colorScheme.background
+    Box(modifier.clipToBounds().testTag("pageBackdrop")) {
+        if (item != null) {
+            Crossfade(HeaderArt(item, backdropUrl), label = "pageBackdrop", modifier = Modifier.fillMaxSize()) { art ->
+                TvArtwork(art.backdropUrl, art.item.posterUrl, art.item.title, Modifier.fillMaxSize()) { url -> onFailed(art.item, url) }
+            }
+        }
+        Box(Modifier.matchParentSize().background(startToEndGradient(0f to ground.copy(alpha = 0.9f), 0.35f to ground.copy(alpha = 0.6f), 0.75f to Color.Transparent)))
+        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.3f to Color.Transparent, 0.65f to ground.copy(alpha = 0.45f), 1f to ground.copy(alpha = 0.85f))))
+    }
+}
+
+/**
+ * The header of a TV's Movies and Series tabs and of a category's posters, pinned above them: the words of [header]
+ * (its title, year and genres, TMDb's rating, else the provider's, when it was added, and two lines of its synopsis)
+ * over the page's picture ([TvPageBackdrop]), from the screen's very top under the top bar's shade. Its height never
+ * changes.
+ */
+@Composable
+fun TvFocusHeader(header: TitleHeader?, modifier: Modifier = Modifier, label: String? = null) {
     val top = tvTopBarSpace()
     // The bar's band turns into a shade over the picture, from the screen's top.
     TvTopBarOverArt()
-    // From the screen's top, under the top bar too: the picture runs to the screen's edges, the bar's shade over it.
-    Box(modifier.fillMaxWidth().height(top + TvHeaderHeight).clipToBounds().testTag("titleHeader")) {
-        if (header != null) {
-            Crossfade(HeaderArt(header.item, header.backdropUrl), label = "headerArt", modifier = Modifier.fillMaxSize()) { art ->
-                TvArtwork(art.backdropUrl, art.item.posterUrl, art.item.title, Modifier.fillMaxSize()) { url -> headers?.backdropFailed(art.item, url) }
-            }
-        }
-        Box(Modifier.matchParentSize().background(startToEndGradient(0f to ground, 0.3f to ground.copy(alpha = 0.88f), 0.72f to Color.Transparent)))
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.5f to Color.Transparent, 1f to ground)))
+    Box(modifier.fillMaxWidth().height(top + TvHeaderHeight + if (label != null) LABEL_ROOM else 0.dp).testTag("titleHeader")) {
         if (header != null) {
             TitleHeaderText(
                 header,
@@ -224,13 +249,29 @@ fun TvFocusHeader(fallback: ShowcaseItem?, modifier: Modifier = Modifier) {
                     .widthIn(max = 560.dp),
             )
         }
+        if (label != null) {
+            Text(
+                label,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = TvTokens.ContentStart, end = TvTokens.EdgeEnd, bottom = 2.dp)
+                    .testTag("headerLabel"),
+            )
+        }
     }
 }
+
+/** The room of a grid's label at the header's foot ([TvFocusHeader]): one small line. */
+private val LABEL_ROOM = 24.dp
 
 /**
  * A page of posters under the TV's header ([TvFocusHeader]), pinned above it: [content] is given the modifier that
  * fills the room left, its top padding, and whether it is under the header (its posters can then show nothing beneath
- * them). Its list keeps the focused poster [lead] below its top; with [byRows] (a grid), the focused row's start at
+ * them), [label] at its foot. Its list keeps the focused poster [lead] below its top; with [byRows] (a grid), the focused row's start at
  * its top padding ([TvRowPivotScrolling]): whole rows, none cut above it. Without a header (a phone), [content] fills
  * the page as it did.
  */
@@ -239,6 +280,8 @@ fun TvHeaderAbove(
     fallback: ShowcaseItem?,
     lead: Dp = GRID_LEAD,
     byRows: Boolean = false,
+    /** The name of the posters, at the header's foot right above the first row (a category's). */
+    label: String? = null,
     content: @Composable (modifier: Modifier, top: Dp, underHeader: Boolean) -> Unit,
 ) {
     val headers = if (isTelevision()) LocalTitleHeaders.current else null
@@ -248,10 +291,15 @@ fun TvHeaderAbove(
     }
     val focus = remember { FocusedTitle() }
     CompositionLocalProvider(LocalFocusedTitle provides focus) {
-        Column(Modifier.fillMaxSize()) {
-            TvFocusHeader(fallback)
-            val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
-            TvPinnedHeaderList(if (byRows) UNDER_HEADER_TOP else lead, byRows) { content(rest, UNDER_HEADER_TOP, true) }
+        val header = rememberFocusHeader(fallback)
+        Box(Modifier.fillMaxSize()) {
+            // The picture behind the whole page, the header's words and the posters over it.
+            TvPageBackdrop(header?.item, header?.backdropUrl, Modifier.matchParentSize()) { item, url -> headers.backdropFailed(item, url) }
+            Column(Modifier.fillMaxSize()) {
+                TvFocusHeader(header, label = label)
+                val rest = Modifier.weight(1f).fillMaxWidth().tvSafeArea(tab = true)
+                TvPinnedHeaderList(if (byRows) UNDER_HEADER_TOP else lead, byRows) { content(rest, UNDER_HEADER_TOP, true) }
+            }
         }
     }
 }
@@ -284,14 +332,7 @@ fun tvGridBottomRoom(width: Dp, height: Dp, gutter: Dp, gap: Dp, top: Dp): Dp {
 @Composable
 fun TitleHeaderText(header: TitleHeader, modifier: Modifier = Modifier, titleStyle: TextStyle = MaterialTheme.typography.headlineMedium) {
     Column(modifier.testTag("headerText")) {
-        Text(
-            header.item.title,
-            style = titleStyle,
-            fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.testTag("headerTitle"),
-        )
+        TitleSlot(header, titleStyle)
         TitleFacts(header, Modifier.padding(top = 4.dp))
         // The synopsis' room is its two lines' height and the header's width, set rather than measured: an empty
         // one keeps it too (an empty text alone would be as narrow as its words, nothing).
@@ -306,6 +347,47 @@ fun TitleHeaderText(header: TitleHeader, modifier: Modifier = Modifier, titleSty
                 maxLines = PLOT_LINES,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.testTag("headerPlot"),
+            )
+        }
+    }
+}
+
+/** The title's slot in the header: as high for its logo as for its name, so nothing moves when the logo arrives. */
+private val TITLE_SLOT = 48.dp
+
+/** A logo's widest, as a share of the screen's width. */
+private const val LOGO_WIDTH_SHARE = 0.4f
+
+/**
+ * The title's line of the header: its logo ([TitleHeader.logoUrl], TMDb's picture of the title) once it has loaded,
+ * crossfading from its name; its name, without the provider's tags ([CatalogueMatcher.displayTitle]), with no logo, while
+ * it loads or when it fails.
+ */
+@Composable
+private fun TitleSlot(header: TitleHeader, titleStyle: TextStyle) {
+    val logo = header.logoUrl
+    var logoLoaded by remember(logo) { mutableStateOf(false) }
+    val logoAlpha by animateFloatAsState(if (logo != null && logoLoaded) 1f else 0f, label = "headerLogo")
+    val name = remember(header.item.title) { CatalogueMatcher.displayTitle(header.item.title) }
+    val widest = LocalWindowInfo.current.containerDpSize.width * LOGO_WIDTH_SHARE
+    Box(Modifier.height(TITLE_SLOT), contentAlignment = Alignment.CenterStart) {
+        Text(
+            name,
+            style = titleStyle,
+            fontWeight = FontWeight.ExtraBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.graphicsLayer { alpha = 1f - logoAlpha }.testTag("headerTitle"),
+        )
+        if (logo != null) {
+            AsyncImage(
+                model = logo,
+                // The name above says it: TalkBack reads it once.
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                alignment = Alignment.CenterStart,
+                onSuccess = { logoLoaded = true },
+                modifier = Modifier.fillMaxHeight().widthIn(max = widest).graphicsLayer { alpha = logoAlpha }.testTag("headerLogo"),
             )
         }
     }
