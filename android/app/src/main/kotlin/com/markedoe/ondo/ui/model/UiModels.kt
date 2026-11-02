@@ -73,6 +73,8 @@ data class ResumeItem(
     val isSeries: Boolean = false,
     /** A movie or an episode: its page (the series' for an episode) opens from the card's long press. */
     val hasPage: Boolean = false,
+    /** The movie, or the series of the episode, as a poster: what a TV's header shows while the card has the focus. */
+    val showcase: ShowcaseItem? = null,
 )
 
 /** An actor or a director kept in My List or a collection: their name, and their photo (TMDb's) when known. */

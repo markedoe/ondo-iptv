@@ -121,7 +121,9 @@ const val TV_ROW_LENGTH = 10
  */
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
-    val fallback = state.myList.firstOrNull() ?: state.awardWinners.firstOrNull() ?: state.rows.firstOrNull()?.items?.firstOrNull()
+    // The first card's title: the one the focus starts on when the tab opens.
+    val fallback = state.continueWatching.firstOrNull()?.showcase
+        ?: state.myList.firstOrNull() ?: state.awardWinners.firstOrNull() ?: state.rows.firstOrNull()?.items?.firstOrNull()
     // The focused poster below its row's name, at the same place at every press.
     TvHeaderAbove(fallback, lead = SHELF_TITLE_ROOM) { modifier, top, underHeader ->
         VodRows(state, actions, modifier, top, underHeader)

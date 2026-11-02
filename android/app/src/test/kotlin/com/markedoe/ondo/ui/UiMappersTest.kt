@@ -236,6 +236,11 @@ class UiMappersTest {
             .recordStart(episode).updateProgress(episode.key, 300.0, 3_000.0, now = 4)
         val resume = UiMappers.home(Fixtures.state(library), labels, Fixtures.NOW).continueWatching
         assertEquals(setOf("Glass City" to false, "Harbor Lights" to true), resume.map { it.title to it.isSeries }.toSet())
+        // What a TV's header shows of each card: the movie, and the episode's series.
+        assertEquals(
+            setOf(ShowcaseItem.MovieItem(Fixtures.glassCity), ShowcaseItem.SeriesItem(Fixtures.harborLights)),
+            resume.map { it.showcase }.toSet(),
+        )
     }
 
     @Test

@@ -354,7 +354,7 @@ fun TvResumeCard(
         Card(
             onClick = onClick,
             onLongClick = if (onRemove != null || onOpen != null) ({ asking = true }) else null,
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.semantics { contentDescription = item.title },
+            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).onFocusChanged { focused = it.isFocused }.reportsFocus(item.showcase).semantics { contentDescription = item.title },
             shape = CardDefaults.shape(TvTokens.CardShape),
             scale = scale,
             border = border,

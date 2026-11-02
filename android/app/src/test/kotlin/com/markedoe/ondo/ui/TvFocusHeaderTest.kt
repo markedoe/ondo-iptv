@@ -12,6 +12,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.isFocused
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
@@ -25,7 +26,9 @@ import androidx.compose.ui.test.requestFocus
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.ui.components.HeroPage
+import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.model.TitleHeader
 import com.markedoe.ondo.ui.screens.CategoryRow
@@ -149,6 +152,34 @@ class TvFocusHeaderTest {
         assertTrue(headers.loaded.isEmpty() || headers.loaded.last() != orchard.key)
         advance(HEADER_LOAD_DWELL_MS + 50)
         assertEquals(orchard.key, headers.loaded.last())
+    }
+
+    /** A "Continue watching" card of the Movies or Series tab shows its movie, or the series of its episode, in the header. */
+    @Test
+    fun aContinueWatchingCardShowsItsTitleInTheHeader() {
+        val harbor = ShowcaseItem.SeriesItem(Series(id = "9", name = "Harbor Lights", categoryId = "s-drama", year = 2025))
+        val resume = listOf(
+            ResumeItem("movie:2", orchard.title, subtitle = "2024", imageUrl = null, progress = 0.4f, minutesLeft = 30, hasPage = true, showcase = orchard),
+            ResumeItem("series:9:e1", "Harbor Lights", subtitle = "S1 E1", imageUrl = null, progress = 0.2f, minutesLeft = 20, isSeries = true, hasPage = true, showcase = harbor),
+        )
+        // The rows hold other titles: the header can show these only from the cards.
+        show {
+            VodScreen(
+                VodUiState(title = "Movies", categories = listOf(drama), continueWatching = resume, rows = listOf(CategoryRow(drama, listOf(lighthouse, unknown)))),
+                VodActions(),
+            )
+        }
+        val cards = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("shelfResume")))
+        cards.onLast().requestFocus()
+        compose.waitForIdle()
+        advance(HEADER_DEBOUNCE_MS + 50)
+        assertEquals("an episode shows its series", listOf("Harbor Lights"), texts("headerTitle"))
+
+        cards.onFirst().requestFocus()
+        compose.waitForIdle()
+        advance(HEADER_DEBOUNCE_MS + 50)
+        assertEquals(listOf("Copper Orchard"), texts("headerTitle"))
+        assertEquals(listOf("Two sisters inherit a field of copper trees."), texts("headerPlot"))
     }
 
     @Test

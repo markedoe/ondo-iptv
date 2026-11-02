@@ -141,11 +141,15 @@ fun Modifier.collapsesTvHeader(): Modifier = composed {
     onFocusChanged { chips.focused = it.hasFocus }
 }
 
-/** Tells the page's header that this poster of [item] has the focus, where the page has one; nothing elsewhere. */
-fun Modifier.reportsFocus(item: ShowcaseItem): Modifier = composed {
+/**
+ * Tells the page's header that this poster of [item] has the focus, where the page has one; nothing elsewhere, nor for
+ * a card of no title (a channel's).
+ */
+fun Modifier.reportsFocus(item: ShowcaseItem?): Modifier = composed {
     val focus = LocalFocusedTitle.current ?: return@composed this
+    val title: ShowcaseItem = item ?: return@composed this
     val owner = remember { Any() }
-    val current by rememberUpdatedState(item)
+    val current by rememberUpdatedState(title)
     DisposableEffect(focus, owner) { onDispose { focus.release(owner) } }
     onFocusChanged { if (it.isFocused) focus.focus(owner, current) else focus.release(owner) }
 }

@@ -129,6 +129,11 @@ object UiMappers {
             minutesLeft = entry.minutesLeft,
             isSeries = entry.kind == ItemKind.SERIES,
             hasPage = entry.kind != ItemKind.CHANNEL,
+            showcase = when (entry.kind) {
+                ItemKind.MOVIE -> movie(state, entry.itemId)?.let { ShowcaseItem.MovieItem(it) }
+                ItemKind.SERIES -> series(state, entry.itemId)?.let { ShowcaseItem.SeriesItem(it) }
+                ItemKind.CHANNEL, ItemKind.PERSON -> null
+            },
         )
     }
 

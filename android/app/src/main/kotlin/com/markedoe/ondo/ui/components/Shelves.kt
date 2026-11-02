@@ -366,7 +366,17 @@ fun ContinueCard(
             onLongClick = { asking = true },
         )
     }
-    Column(modifier.width(width).pressScale(interaction).focusFrame(CardShape).focusMemory("resume:${item.key}", initialFocus).clip(CardShape).then(click).padding(bottom = 4.dp)) {
+    Column(
+        modifier
+            .width(width)
+            .pressScale(interaction)
+            .focusFrame(CardShape)
+            .focusMemory("resume:${item.key}", initialFocus)
+            .reportsFocus(item.showcase)
+            .clip(CardShape)
+            .then(click)
+            .padding(bottom = 4.dp),
+    ) {
         if (asking) ResumeCardMenu(item, onOpen, onRemove, onDismiss = { asking = false })
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(CardShape)) {
             Artwork(url = item.imageUrl, title = item.title, modifier = Modifier.fillMaxSize(), showsTitleFallback = false)
