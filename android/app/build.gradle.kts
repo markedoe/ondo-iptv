@@ -93,6 +93,8 @@ android {
     }
 }
 
+// The store listing's screenshots (not committed). The reference screenshots, committed, are in src/test/snapshots:
+// their paths, size and tolerance are the tests' own (screenshots/Baselines.kt).
 roborazzi {
     outputDir.set(file("src/test/screenshots"))
 }
@@ -150,6 +152,10 @@ tasks.withType<Test>().configureEach {
     // The store screenshots read the demo catalogue: a change there runs them again.
     inputs.dir(rootProject.file("../fixtures/showcase"))
         .withPropertyName("showcase")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    // The reference screenshots verifyRoborazziDebug compares with (docs/ANDROID.md): new ones compare again.
+    inputs.files(fileTree("src/test/snapshots"))
+        .withPropertyName("screenshotReferences")
         .withPathSensitivity(PathSensitivity.RELATIVE)
     testLogging {
         events("failed", "skipped")

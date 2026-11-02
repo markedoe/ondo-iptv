@@ -1,7 +1,9 @@
 name: Android
 
-# Core tests, lint, unit and Compose UI tests (Robolectric), screenshots (Roborazzi), a release bundle and
-# the Google Play listing's length limits.
+# Core tests, lint, unit and Compose UI tests (Robolectric), screenshots (Roborazzi) compared with the committed
+# reference screenshots, a release bundle and the Google Play listing's length limits. Run by hand on a working
+# branch with record_screenshots, it records the reference screenshots anew and commits them to that branch
+# (docs/ANDROID.md, "Screenshots").
 on:
   push:
     branches: [main]
@@ -9,6 +11,11 @@ on:
   pull_request:
     paths: [android/**, fastlane/metadata-android/**, .github/workflows/android.yml]
   workflow_dispatch:
+    inputs:
+      record_screenshots:
+        description: "Record the reference screenshots anew and commit them to this branch (a working branch, never main or a tag)"
+        type: boolean
+        default: false
 
 concurrency:
   group: android-${{ github.ref }}
@@ -63,10 +70,72 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Screenshots, compared or recorded
+        # Compared with the committed reference screenshots (app/src/test/snapshots); recorded instead when asked by
+        # hand on a working branch, or while there are none yet (then said in the summary, nothing is compared).
+        id: shots
+        env:
+          RECORD: ${{ github.event_name == 'workflow_dispatch' && inputs.record_screenshots }}
+        run: |
+          if [ "$RECORD" = "true" ]; then
+            if [ "$GITHUB_REF_TYPE" != "branch" ] || [ "$GITHUB_REF_NAME" = "main" ]; then
+              echo "::error::The reference screenshots are recorded on a working branch, never on main or a tag"
+              exit 1
+            fi
+            echo "task=record" >> "$GITHUB_OUTPUT"
+            # Recorded for real, never taken from the build cache (the screenshots are not its outputs).
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+            echo "### Screenshots: reference screenshots recorded, to be committed to \`$GITHUB_REF_NAME\`" >> "$GITHUB_STEP_SUMMARY"
+          elif find app/src/test/snapshots -name '*.png' 2>/dev/null | grep -q .; then
+            echo "task=verify" >> "$GITHUB_OUTPUT"
+          else
+            echo "task=record" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Screenshots: not compared"
+              echo
+              echo "No reference screenshot in \`android/app/src/test/snapshots\` yet: the screenshots were recorded, not compared."
+              echo "Run this workflow by hand on a working branch with *record_screenshots* to commit them (docs/ANDROID.md)."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Unit and Compose UI tests, screenshots
         # --warning-mode all once in CI, in this job (it configures the app and the included core build): every
         # Gradle deprecation is named in the log, with the Gradle version that will remove it.
-        run: ./gradlew :app:recordRoborazziDebug --stacktrace --warning-mode all
+        env:
+          TASK: ${{ steps.shots.outputs.task }}
+          FRESH: ${{ steps.shots.outputs.fresh }}
+        run: |
+          if [ "$FRESH" = "true" ]; then set -- --no-build-cache; fi
+          ./gradlew ":app:${TASK}RoborazziDebug" "$@" --stacktrace --warning-mode all
+      - name: Screenshot differences
+        # Each screenshot that no longer matches its reference: in the summary, and the images (reference,
+        # difference, new) in the android-screenshot-diffs artifact.
+        if: failure() && steps.shots.outputs.task == 'verify'
+        run: |
+          changed=$(find app/build/outputs/roborazzi \( -name '*_compare.png' -o -name '*_actual.png' \) 2>/dev/null | sort)
+          [ -n "$changed" ] || exit 0
+          {
+            echo "### Screenshots that changed"
+            echo
+            echo "The images are in the **android-screenshot-diffs** artifact. A change made on purpose: record the reference"
+            echo "screenshots anew (this workflow by hand on the branch, *record_screenshots*; docs/ANDROID.md)."
+            echo
+            echo "$changed" | sed 's|^app/build/outputs/roborazzi/|- |'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Screenshot differences artifact
+        if: failure() && steps.shots.outputs.task == 'verify'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-screenshot-diffs
+          path: android/app/build/outputs/roborazzi
+          if-no-files-found: ignore
+      - name: Reference screenshots artifact
+        # For the job that commits them (references), when recorded by hand.
+        if: steps.shots.outputs.task == 'record' && github.event_name == 'workflow_dispatch' && inputs.record_screenshots
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-screenshot-references
+          path: android/app/src/test/snapshots
+          if-no-files-found: error
       - name: Test counts
         if: success() || failure()
         run: python3 ../.github/scripts/test_summary.py "Android app tests (unit, Compose, screenshots)" app/build/test-results
@@ -133,6 +202,50 @@ jobs:
           git add .
           git commit -q -m "Android screenshots for ${GITHUB_SHA}"
           git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" android-screenshots
+
+  references:
+    # Its own job: the only one that writes the reference screenshots to the repository, on the working branch the
+    # workflow was run on by hand (never main, never a tag). It runs no Gradle and no app code; the token is given to
+    # the push step alone.
+    name: Commit the reference screenshots to the branch
+    needs: app
+    if: github.event_name == 'workflow_dispatch' && inputs.record_screenshots && github.ref_type == 'branch' && github.ref_name != 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: android-screenshot-references
+          path: references
+      - name: No metadata in the images
+        # Only the chunks that draw the image stay (the repository is public).
+        run: find references -name "*.png" -print0 | xargs -0 -r python3 -I .github/scripts/png_metadata.py
+      - name: Commit and push
+        # The commit goes on the commit tested: if the branch moved meanwhile, the push is refused (no force).
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          find references -name "*.png" | grep -q . || { echo "::error::No reference screenshot recorded"; exit 1; }
+          rm -rf android/app/src/test/snapshots
+          mv references android/app/src/test/snapshots
+          git add -A android/app/src/test/snapshots
+          if git diff --cached --quiet; then
+            echo "### Reference screenshots unchanged" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git -c user.name="ci" -c user.email="ci@users.noreply.github.com" commit -q \
+            -m "Android: reference screenshots recorded" -m "Recorded by the Android workflow, run ${GITHUB_RUN_ID}."
+          git push -q "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${GITHUB_REF_NAME}"
+          {
+            echo "### Reference screenshots committed to \`${GITHUB_REF_NAME}\`"
+            echo
+            git show --stat --format="%h %s" HEAD | sed 's/^/    /'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   listing:
     # Google Play rejects the whole upload when one text is too long; better to know before a release.

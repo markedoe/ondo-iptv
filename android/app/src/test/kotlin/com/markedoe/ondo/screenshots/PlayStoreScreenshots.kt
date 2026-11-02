@@ -5,7 +5,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
 import androidx.test.core.app.ApplicationProvider
-import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.ui.Labels
@@ -27,6 +26,7 @@ import com.markedoe.ondo.ui.screens.SeriesDetailScreen
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
+import com.markedoe.ondo.ui.tv.PlaylistUpdate
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
@@ -48,7 +48,8 @@ import org.robolectric.annotation.GraphicsMode
  * fictional channels and their guide, a library in use): phone (1080×1920), 7" (1920×1080) and 10" (2560×1440)
  * tablets and TV (1920×1080, with its top bar and its own pages), in English and French. Written to
  * `src/test/screenshots/play/<locale>/<device>/` by `./gradlew :app:recordRoborazziDebug`; the release workflow copies
- * them into the store listing.
+ * them into the store listing. The TV's (in both languages) and the phone's (in English) are also the reference
+ * screenshots of [BASELINES], at half size, which `./gradlew :app:verifyRoborazziDebug` compares with.
  */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -81,23 +82,36 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
     @After
     fun noPictures() = ShowcaseImages.reset()
 
+    /** Whether this screen is also a reference screenshot: the TV's in both languages, the phone's in English. */
+    private val baseline get() = device == Device.TV || (device == Device.PHONE && locale == "en-US")
+
     /** On a TV, the top bar above the tabs' pages ([bar]); the pages beyond them take the whole screen. */
     private fun capture(name: String, tab: TopLevel, bar: Boolean = true, content: @Composable () -> Unit) {
         val language = locale.substringBefore('-')
         val region = locale.substringAfter('-')
         RuntimeEnvironment.setQualifiers("$language-r$region-${device.qualifiers}")
-        captureRoboImage(
-            filePath = "src/test/screenshots/play/$locale/${device.folder}/$name.png",
-            roborazziOptions = RoborazziOptions(recordOptions = RoborazziOptions.RecordOptions(resizeScale = 1.0)),
-        ) {
-            OndoTheme {
-                CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
-                    TelevisionFrame {
-                        if (tv) {
-                            TvNavigationFrame(tab, showBar = bar, onSelect = {}, onSearch = {}, onSettings = {}) { content() }
-                        } else {
-                            OndoNavigationFrame(tab, onSelect = {}) { content() }
-                        }
+        // The bar's line on the tab pages, as in the app: the playlist and when it was updated.
+        val shown = state
+        val playlist = PlaylistUpdate(shown.activePlaylist?.name.orEmpty(), shown.content.fetchedAt, now)
+        captureRoboImage(filePath = "src/test/screenshots/play/$locale/${device.folder}/$name.png", roborazziOptions = StoreOptions) {
+            screen(tab, bar, playlist, content)
+        }
+        if (baseline) {
+            captureRoboImage(filePath = "$BASELINES/${device.folder}/$locale/$name.png", roborazziOptions = BaselineOptions) {
+                screen(tab, bar, playlist, content)
+            }
+        }
+    }
+
+    @Composable
+    private fun screen(tab: TopLevel, bar: Boolean, playlist: PlaylistUpdate, content: @Composable () -> Unit) {
+        OndoTheme {
+            CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
+                TelevisionFrame {
+                    if (tv) {
+                        TvNavigationFrame(tab, showBar = bar, onSelect = {}, onSearch = {}, onSettings = {}, playlist = playlist) { content() }
+                    } else {
+                        OndoNavigationFrame(tab, onSelect = {}) { content() }
                     }
                 }
             }
