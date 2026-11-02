@@ -58,6 +58,20 @@ final class SyncMappingTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot.decode(try snapshot.encoded()), snapshot)
     }
 
+    func testThePeopleOtherDevicesKeepAreSentOnWithTheirLists() throws {
+        let (playlists, library, base) = model()
+        var state = base
+        let listID = library.customLists[0].id.uuidString.lowercased()
+        state.people = [SyncPerson(name: "Ada Example", image: "https://example.com/ada.jpg", addedAt: 5)]
+        state.listPeople = [listID: [SyncPerson(name: "Tom Example", addedAt: 6)], "gone": [SyncPerson(name: "Bea Example", addedAt: 7)]]
+        let snapshot = SyncMapping.snapshot(playlists: playlists, library: library, state: state, deviceName: "iPhone", now: t0)
+        XCTAssertEqual(snapshot.people, state.people)
+        XCTAssertEqual(snapshot.lists.map(\.people), [[SyncPerson(name: "Tom Example", addedAt: 6)]], "only the lists this device has")
+        XCTAssertEqual(SyncMapping.listPeople(snapshot), [listID: [SyncPerson(name: "Tom Example", addedAt: 6)]])
+        // Kept in sync.json across a relaunch.
+        XCTAssertEqual(try JSONDecoder().decode(SyncState.self, from: try JSONEncoder().encode(state)), state)
+    }
+
     func testApplyingToAFreshDeviceGivesTheSameData() {
         let (playlists, library, state) = model()
         let snapshot = SyncMapping.snapshot(playlists: playlists, library: library, state: state, deviceName: nil, now: t0)

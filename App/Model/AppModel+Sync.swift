@@ -19,6 +19,10 @@ struct SyncState: Codable, Equatable {
     var tmdbKeyUpdatedAt: Int64?
     /// The keys of services this app does not use, as other devices sent them: kept only to pass them on.
     var otherKeys: [SyncKey] = []
+    /// The actors and directors other devices keep in My List, and in each list (by list ID, lowercase): this app does
+    /// not show them, it keeps them to pass them on, so that its own edits of a list never drop them.
+    var people: [SyncPerson] = []
+    var listPeople: [String: [SyncPerson]] = [:]
     /// Deleted records (`playlist:…`, `list:…`, `progress:…`, and those other devices sent) and when, in milliseconds.
     var deleted: [String: Int64] = [:]
     var replaced: [String: String] = [:]
@@ -27,7 +31,9 @@ struct SyncState: Codable, Equatable {
 
     init() {}
 
-    enum CodingKeys: String, CodingKey { case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, deleted, replaced, lastSyncedAt }
+    enum CodingKeys: String, CodingKey {
+        case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, people, listPeople, deleted, replaced, lastSyncedAt
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -35,6 +41,8 @@ struct SyncState: Codable, Equatable {
         playlistUpdatedAt = (try? c.decodeIfPresent([String: Int64].self, forKey: .playlistUpdatedAt)) ?? [:]
         tmdbKeyUpdatedAt = try? c.decodeIfPresent(Int64.self, forKey: .tmdbKeyUpdatedAt)
         otherKeys = (try? c.decodeIfPresent([SyncKey].self, forKey: .otherKeys)) ?? []
+        people = (try? c.decodeIfPresent([SyncPerson].self, forKey: .people)) ?? []
+        listPeople = (try? c.decodeIfPresent([String: [SyncPerson]].self, forKey: .listPeople)) ?? [:]
         deleted = (try? c.decodeIfPresent([String: Int64].self, forKey: .deleted)) ?? [:]
         replaced = (try? c.decodeIfPresent([String: String].self, forKey: .replaced)) ?? [:]
         lastSyncedAt = try? c.decodeIfPresent(Int64.self, forKey: .lastSyncedAt)
@@ -102,16 +110,23 @@ enum SyncMapping {
                              watchedAt: entry.lastWatchedAt.syncMilliseconds)
             },
             lists: library.customLists.map { list in
-                SyncList(id: list.id.uuidString.lowercased(), name: list.name, items: list.items.map { item in
+                let id = list.id.uuidString.lowercased()
+                return SyncList(id: id, name: list.name, items: list.items.map { item in
                     SyncListItem(playlist: item.reference.playlistID.uuidString.lowercased(), kind: item.reference.type.rawValue,
                                  item: item.reference.itemID, title: item.title, image: item.imageURL?.absoluteString)
-                }, updatedAt: list.updatedAt.syncMilliseconds)
+                }, people: state.listPeople[id] ?? [], updatedAt: list.updatedAt.syncMilliseconds)
             },
+            people: state.people,
             keys: keys(tmdbKey: tmdbKey, state: state),
             deleted: deleted,
             replaced: state.replaced
         )
         return snapshot.pruned(now: now.syncMilliseconds)
+    }
+
+    /// The people of each list of `snapshot` that has any, by list ID: kept to be sent with the list again.
+    static func listPeople(_ snapshot: SyncSnapshot) -> [String: [SyncPerson]] {
+        Dictionary(snapshot.lists.filter { !$0.people.isEmpty }.map { ($0.id, $0.people) }, uniquingKeysWith: { first, _ in first })
     }
 
     /// The keychain's TMDb key, dated when it was saved (0 only before `loadSyncState` dated it), and the keys passed on
@@ -493,6 +508,8 @@ extension AppModel {
         let applied = SyncMapping.library(library, applying: latest)
         if applied != library { updateLibrary { $0 = applied } }
         applySyncedKeys(latest)
+        syncState.people = latest.people
+        syncState.listPeople = SyncMapping.listPeople(latest)
         syncState.deleted = latest.deleted
         syncState.replaced = latest.replaced
         syncState.lastSyncedAt = now.syncMilliseconds

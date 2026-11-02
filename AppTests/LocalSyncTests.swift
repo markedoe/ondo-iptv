@@ -143,6 +143,31 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertNotNil(deleted["progress:\(id)|movie|\(movie.id)|"], "Clear Watch History reaches the other devices")
     }
 
+    /// An Android device keeps actors and directors in My List and in a list: this device passes them on, and its own
+    /// edit of the list keeps them.
+    func testThePeopleOfAndroidDevicesArePassedOnAndSurviveAnEditOfTheList() async throws {
+        let model = try await device("first")
+        let list = UUID()
+        let ada = SyncPerson(name: "Ada Example", image: "https://example.com/ada.jpg", addedAt: Date().syncMilliseconds - 1_000)
+        let tom = SyncPerson(name: "Tom Example", addedAt: Date().syncMilliseconds - 1_000)
+        let tv = SyncSnapshot(device: "tv", lists: [SyncList(id: list.uuidString.lowercased(), name: "Directors", people: [tom], updatedAt: Date().syncMilliseconds - 1_000)],
+                              people: [ada])
+        await model.applySync(tv)
+        XCTAssertEqual(model.syncSnapshot().people, [ada])
+        XCTAssertEqual(model.syncSnapshot().lists.map(\.people), [[tom]])
+
+        model.renameList(list, to: "Favourite directors")
+        let sent = model.syncSnapshot()
+        XCTAssertEqual(sent.lists.map(\.name), ["Favourite directors"])
+        XCTAssertEqual(sent.lists.map(\.people), [[tom]], "the edit keeps the list's people")
+        // Back on the TV, the renamed list wins and still holds its person.
+        XCTAssertEqual(SyncMerge.merge(tv, sent).lists.map(\.people), [[tom]])
+
+        // Removed on the TV: removed here too.
+        await model.applySync(SyncSnapshot(device: "tv", deleted: [ada.key: Date().syncMilliseconds]))
+        XCTAssertTrue(model.syncSnapshot().people.isEmpty)
+    }
+
     func testTheTMDbKeyTravelsAndSoDoesItsRemoval() async throws {
         let first = try await device("first")
         let second = try await device("second")
