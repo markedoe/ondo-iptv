@@ -150,6 +150,8 @@ class OndoRepository(
     private val parsing: CoroutineDispatcher = Dispatchers.Default,
     /** What TMDb said about titles, kept between launches (a SQLite file in the app). */
     private val metadata: MetadataStore = InMemoryMetadataStore(),
+    /** Where sync merges a snapshot received ([mergeSyncInBackground]), off the main thread. */
+    private val syncMerging: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val _state = MutableStateFlow(OndoState(placeholderNames = placeholderNames))
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -449,6 +451,31 @@ class OndoRepository(
         return merged
     }
 
+    /**
+     * [mergeSync] with the merge and its translation into this device's data done on [syncMerging], off the main
+     * thread; kept only if nothing it read changed meanwhile (the playlists, the library, the settings), else done
+     * again from the data as it is then: a change made during the merge is never lost. After [MERGE_TRIES] changes in a
+     * row, the last try runs on the main thread. Main thread.
+     */
+    suspend fun mergeSyncInBackground(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
+        repeat(MERGE_TRIES) {
+            val local = syncSnapshot(deviceName) ?: return null
+            val base = _state.value
+            val time = now()
+            val (merged, applied) = withContext(syncMerging) {
+                val merged = SyncMerge.merge(local, incoming.onReceiverClock(time))
+                merged to SyncData.apply(base, merged)
+            }
+            val current = _state.value
+            if (current.playlists === base.playlists && current.library === base.library && current.settings === base.settings) {
+                commitSync(applied)
+                noteSyncSession(incoming.device)
+                return merged
+            }
+        }
+        return mergeSync(incoming, deviceName)
+    }
+
     /** What the player plays now ([WatchEntry.key]): sync leaves its entry alone until playback ends. Main thread. */
     private var playingKey: String? = null
 
@@ -502,9 +529,11 @@ class OndoRepository(
         updateLibrary { library -> library.copy(syncPeers = (library.syncPeers + (device.lowercase() to time)).filterValues { it >= forgotten }) }
     }
 
-    private fun applySync(merged: SyncSnapshot) {
+    private fun applySync(merged: SyncSnapshot) = commitSync(SyncData.apply(_state.value, merged))
+
+    /** Keeps what applying a merged snapshot gave ([SyncData.apply] on the data as it is now). Main thread. */
+    private fun commitSync(applied: SyncData.Applied) {
         val state = _state.value
-        val applied = SyncData.apply(state, merged)
         val library = keepingPlayback(state.library, applied.library)
         val keysChanged = applied.keys != state.settings.serviceKeys
         if (applied.playlists == state.playlists && library == state.library && !keysChanged) return
@@ -1544,6 +1573,8 @@ class OndoRepository(
         /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
         const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L
         private const val DAY_MS = 24 * 60 * 60 * 1000L
+        /** Merges in the background before the one on the main thread, when the data keeps changing meanwhile. */
+        private const val MERGE_TRIES = 3
 
         /** A person's movies and series on TMDb, kept on the device, are asked again after a week. */
         const val PERSON_WORKS_FRESH_MS = 7 * 24 * 60 * 60 * 1000L

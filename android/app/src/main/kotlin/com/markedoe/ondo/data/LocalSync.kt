@@ -85,10 +85,12 @@ class LocalSync(
         }
     }
 
-    /** Merges a snapshot received; null (and nothing changed) when this device cannot use it. */
-    private fun merge(incoming: SyncSnapshot, name: String): SyncSnapshot? =
+    /** Merges a snapshot received, off the main thread; null (and nothing changed) when this device cannot use it. */
+    private suspend fun merge(incoming: SyncSnapshot, name: String): SyncSnapshot? =
         try {
-            repository.mergeSync(incoming, name)
+            repository.mergeSyncInBackground(incoming, name)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
         } catch (_: RuntimeException) {
             null
         }

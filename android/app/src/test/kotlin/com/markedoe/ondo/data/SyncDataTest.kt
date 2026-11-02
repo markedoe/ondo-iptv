@@ -7,9 +7,13 @@ import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncSnapshot
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -47,8 +51,14 @@ class SyncDataTest {
     """.trimIndent()
 
     /** A device whose clock is [offset] ahead of [time] (behind when negative). */
-    private fun TestScope.device(name: String, http: FakeHttp = FakeHttp(mapOf(list to catalogue, sports to catalogue, films to twoFilms)), offset: Long = 0) =
-        OndoRepository(AppStore(folder.newFolder(name)), http, backgroundScope, now = { time + offset }, io = StandardTestDispatcher(testScheduler))
+    private fun TestScope.device(
+        name: String,
+        http: FakeHttp = FakeHttp(mapOf(list to catalogue, sports to catalogue, films to twoFilms)),
+        offset: Long = 0,
+        merging: CoroutineDispatcher = StandardTestDispatcher(testScheduler),
+    ) = OndoRepository(
+        AppStore(folder.newFolder(name)), http, backgroundScope, now = { time + offset }, io = StandardTestDispatcher(testScheduler), syncMerging = merging,
+    )
 
     private suspend fun OndoRepository.ready(): OndoRepository {
         bootstrap()
@@ -131,6 +141,38 @@ class SyncDataTest {
         tv.mergeSync(SyncSnapshot.decode(old.encoded().decodeToString().replace(",\"people\":[]", "").encodeToByteArray())!!, "tv")
         assertEquals(kept.people(), tv.state.value.library.people())
         assertEquals(kept.collections, tv.state.value.library.collections)
+    }
+
+    /**
+     * The merge runs off the main thread; a change made on the main thread meanwhile is kept: the merge is done again
+     * from the data as it is then.
+     */
+    @Test
+    fun aChangeMadeDuringABackgroundMergeIsKept() = runTest {
+        val merging = TestCoroutineScheduler()
+        val tv = device("tv", merging = StandardTestDispatcher(merging)).ready()
+        val phone = device("phone").ready()
+        tv.addPlaylist("Home", list)
+        session(phone, tv)
+        phone.state.first { it.content.movies.isNotEmpty() }
+        val movie = tv.state.value.content.movies.single()
+        time += 1_000
+        phone.togglePerson("Ada Example", null)
+        val sent = requireNotNull(phone.syncSnapshot("phone"))
+
+        var answer: SyncSnapshot? = null
+        val merge = launch { answer = tv.mergeSyncInBackground(sent, "tv") }
+        runCurrent()
+        // The merge waits on its own thread; the TV changes My List meanwhile.
+        assertTrue(merge.isActive)
+        tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        while (merge.isActive) {
+            merging.advanceUntilIdle()
+            runCurrent()
+        }
+        assertTrue(tv.state.value.favorite(movie.id))
+        assertEquals(listOf("Ada Example" to null), tv.state.value.library.people())
+        assertTrue(requireNotNull(answer).favorites.any { it.item == movie.id })
     }
 
     /** A change made between the answer arriving and its merge is kept: the merge reads the library as it is then. */
