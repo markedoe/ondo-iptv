@@ -49,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.Modifier
@@ -82,6 +83,7 @@ import com.markedoe.ondo.ui.tv.wholeRowsOnly
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
 import com.markedoe.ondo.ui.tv.KeptForTheRemote
 import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.flow.first
 
 data class CategoryRow(val category: MediaCategory, val items: List<ShowcaseItem>)
 
@@ -156,6 +158,17 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
         val key = focusedRow?.takeIf { it != CHIPS_KEY } ?: return@LaunchedEffect
         val index = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.index ?: return@LaunchedEffect
         list.animateScrollToItem(index)
+    }
+    // A row that takes the focus while the page opens (its first card) is brought whole too: the focus then comes
+    // before the list is laid out, and nothing scrolls it. Once a scroll in progress ends, a row still cut is moved up.
+    LaunchedEffect(focusedRow, underHeader) {
+        val key = focusedRow?.takeIf { underHeader && it != CHIPS_KEY } ?: return@LaunchedEffect
+        withFrameNanos { }
+        if (list.isScrollInProgress) snapshotFlow { list.isScrollInProgress }.first { !it }
+        val info = list.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.key == key } ?: return@LaunchedEffect
+        val top = item.offset - info.viewportStartOffset
+        if (top < 0 || top + item.size > info.viewportSize.height) list.animateScrollToItem(item.index)
     }
     LazyColumn(
         state = list,
