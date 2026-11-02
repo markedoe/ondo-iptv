@@ -229,7 +229,10 @@ fun TvNavigationFrame(
     var picking by remember { mutableStateOf(false) }
     var frameCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var pillCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    val pickerChoice = bar.categories?.choice?.takeIf { showBar }
+    // The categories of the tab shown only: a page still fading out as another tab opens keeps none in the bar (the
+    // pill would leave under the remote, the focus with it).
+    val categories = bar.categories?.choice?.takeIf { selected == TopLevel.MOVIES || selected == TopLevel.SERIES }
+    val pickerChoice = categories?.takeIf { showBar }
     // The page leaves with its categories: nothing left to pick.
     if (picking && pickerChoice == null) SideEffect { picking = false }
     fun closePicker() {
@@ -349,7 +352,7 @@ fun TvNavigationFrame(
                     }
                 }
                 // The tab's categories, after the playlist's line: Up from the rows reaches the bar, Right along it.
-                bar.categories?.choice?.let { choice ->
+                categories?.let { choice ->
                     TvCategoriesPill(
                         choice,
                         shown,
@@ -411,8 +414,11 @@ private val BAND_FADE = 12.dp
 /** How many frames OK on a tab waits for its page to take the focus before giving it to the page's first item. */
 private const val ENTER_PAGE_FRAMES = 30
 
-/** How long the remote rests on a tab before it opens. */
-private const val TAB_REST_MS = 200L
+/**
+ * How long the remote rests on a tab before it opens: longer than the time between two presses of a remote moving on
+ * along the bar, so that the tabs it passes (towards the Categories pill, Search or Settings) do not open.
+ */
+private const val TAB_REST_MS = 500L
 
 const val SEARCH_TAG = "tabSearch"
 const val SETTINGS_TAG = "tabSettings"
