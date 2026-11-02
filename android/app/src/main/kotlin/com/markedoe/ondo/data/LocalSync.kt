@@ -9,6 +9,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.SystemClock
 import android.provider.Settings
 import com.markedoe.ondo.core.sync.SyncNetwork
 import com.markedoe.ondo.core.sync.SyncSession
@@ -53,7 +54,10 @@ class LocalSync(
     private val repository: OndoRepository,
     /** Whether Ondo is in front (the process has a started screen). */
     private val foreground: Flow<Boolean>,
+    /** The wall clock, for the time of the last session shown in Settings. */
     private val now: () -> Long = System::currentTimeMillis,
+    /** A clock that never goes back (not the wall clock, which a time server may move), for when sessions are due. */
+    private val ticks: () -> Long = SystemClock::elapsedRealtime,
     /** Whether a Wi-Fi or wired network is connected: not on mobile data alone. */
     private val localNetwork: Flow<Boolean> = onLocalNetwork(context),
 ) {
@@ -198,11 +202,12 @@ class LocalSync(
         // (docs/SYNC.md, "Transport"). Everything is worked out off the main thread. During playback, a regular session
         // that would send a large snapshot waits for the next period.
         fun startDue(regular: Boolean = false) {
-            val time = now()
+            val time = ticks()
             peers.values.filter { !it.busy && it.address != null && it.dueAt <= time }.forEach { peer ->
                 peer.busy = true
                 launch {
-                    val full = time - peer.fullAt >= FULL_EVERY_MS
+                    // During playback, no full snapshot is built only to be put off: a probe goes (docs/SYNC.md).
+                    val full = time - peer.fullAt >= FULL_EVERY_MS && !repository.isPlaying
                     val prepared = repository.syncOffer(name, peer.sentDigest, peer.answerDigest, full)
                     val offer = prepared?.first
                     val size = prepared?.second ?: 0
@@ -273,7 +278,7 @@ class LocalSync(
                         peer.stale = false
                         peer.failures = 0
                         // Between two Android devices, the smaller ID connects (docs/SYNC.md, "Transport").
-                        if (me < peer.id) peer.dueAt = now()
+                        if (me < peer.id) peer.dueAt = ticks()
                         publish()
                         startDue()
                     }
@@ -295,22 +300,22 @@ class LocalSync(
                             peer.syncedAt = now()
                             peer.failures = 0
                             peer.stale = false
-                            peer.dueAt = if (me < peer.id) now() + PERIOD_MS else Long.MAX_VALUE
+                            peer.dueAt = if (me < peer.id) ticks() + PERIOD_MS else Long.MAX_VALUE
                         } else {
                             peer.failures++
                             peer.stale = true
-                            peer.dueAt = now() + RETRIES_MS[(peer.failures - 1).coerceAtMost(RETRIES_MS.lastIndex)]
+                            peer.dueAt = ticks() + RETRIES_MS[(peer.failures - 1).coerceAtMost(RETRIES_MS.lastIndex)]
                         }
                         publish()
                     }
                     is Event.Deferred -> {
                         val peer = peers[event.id] ?: continue
                         peer.busy = false
-                        peer.dueAt = now() + PERIOD_MS
+                        peer.dueAt = ticks() + PERIOD_MS
                     }
                     // Either side connects soon after a change of its own.
                     Event.Changed -> {
-                        peers.values.filter { it.address != null }.forEach { it.dueAt = minOf(it.dueAt, now()) }
+                        peers.values.filter { it.address != null }.forEach { it.dueAt = minOf(it.dueAt, ticks()) }
                         startDue()
                     }
                     Event.Tick -> startDue(regular = true)

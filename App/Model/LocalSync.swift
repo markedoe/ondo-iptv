@@ -30,8 +30,9 @@ final class LocalSync {
         /// The digest of the snapshot last sent to it, and the one it answered with (docs/SYNC.md, "Transport").
         var sentDigest: String?
         var answerDigest: String?
-        /// When this device last sent it a full snapshot: probes go only in between (docs/SYNC.md, "Transport").
-        var fullAt: Date?
+        /// When this device last sent it a full snapshot: probes go only in between (docs/SYNC.md, "Transport"). On a
+        /// clock that never goes back (not the wall clock, which a time server may move).
+        var fullAt: ContinuousClock.Instant?
     }
 
     enum Problem: Equatable {
@@ -62,7 +63,7 @@ final class LocalSync {
     /// A regular session during playback goes only with a snapshot this small (or a probe).
     static let lightSnapshotBytes = 64 * 1024
     /// A full snapshot goes to each device at least this often, probes in between.
-    static let fullEvery: TimeInterval = 3_600
+    static let fullEvery: Duration = .seconds(3_600)
 
     /// A digest of `contentForDigest()`: SHA-256, hexadecimal.
     nonisolated static func digest(_ data: Data) -> String {
@@ -235,7 +236,9 @@ final class LocalSync {
         guard let snapshot = model?.syncSnapshotForSending() else { return }
         do {
             let (sentDigest, answerDigest) = (device.sentDigest, device.answerDigest)
-            let full = device.fullAt.map { Date().timeIntervalSince($0) >= Self.fullEvery } ?? true
+            // During playback, no full snapshot is built only to be put off: a probe goes (docs/SYNC.md).
+            let playing = model?.playingKeys.isEmpty == false
+            let full = !playing && (device.fullAt.map { $0.duration(to: .now) >= Self.fullEvery } ?? true)
             // The items playing are left out of the digest: their progress, saved every few seconds, would make every
             // session a full one.
             let leavingOut = Set((model?.playingKeys ?? []).map { "progress:" + SyncMapping.lowercasingPlaylistID($0) })
@@ -259,7 +262,7 @@ final class LocalSync {
                     // The server has what was sent (a probe sent nothing new); its digest says what it has now.
                     if !offer.isProbe {
                         devices[index].sentDigest = offer.digest
-                        devices[index].fullAt = Date()
+                        devices[index].fullAt = .now
                         model.noteSyncSession(with: merged.device)
                     }
                     devices[index].answerDigest = merged.digest
