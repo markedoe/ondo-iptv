@@ -463,8 +463,8 @@ class OndoRepository(
             val base = _state.value
             val time = now()
             val (merged, applied) = withContext(syncMerging) {
-                val merged = SyncMerge.merge(local, incoming.onReceiverClock(time))
-                merged to SyncData.apply(base, merged)
+                val result = SyncMerge.merge(local, incoming.onReceiverClock(time))
+                result to SyncData.apply(base, result)
             }
             val current = _state.value
             if (current.playlists === base.playlists && current.library === base.library && current.settings === base.settings) {

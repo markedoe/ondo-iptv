@@ -241,8 +241,9 @@ class SyncDataTest {
             return offer to answer
         }
         // The first sessions send everything; once the phone has what the TV has, a probe is enough.
-        repeat(2) { round() }
+        round()
         phone.state.first { it.content.movies.isNotEmpty() }
+        round()
         val (probe, unchanged) = round()
         assertTrue(probe.isProbe)
         assertTrue(probe.encoded().size < 1_024)
