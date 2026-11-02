@@ -89,7 +89,7 @@ final class ResumePlaybackTests: XCTestCase {
         let controller = PlayerController()
         controller.isMuted = true
         var reported: [Double] = []
-        controller.onProgress = { _, position, _ in reported.append(position) }
+        controller.onProgress = { _, position, _, _ in reported.append(position) }
 
         controller.load(film(startingAt: 300))
         try await wait(controller, seconds: 45) { controller.state == .playing }

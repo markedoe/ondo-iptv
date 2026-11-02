@@ -99,6 +99,7 @@ final class LibraryTests: XCTestCase {
         XCTAssertFalse(HistoryEntry(reference: ref(.live, "c"), title: "C", position: 6_000, duration: 6_600, creditsStart: 5_000).isFinished)
         XCTAssertTrue(HistoryEntry.isFinished(position: 6_300, duration: 7_200, creditsStart: 6_300))
         XCTAssertFalse(HistoryEntry.isFinished(position: 6_300, duration: 7_200))
+        XCTAssertFalse(HistoryEntry.isFinished(position: 3_000, duration: 7_200, creditsStart: 3_000), "a value outside the last quarter")
 
         // The library keeps where the credits start: a progress without it (another engine) and a new start keep it.
         var library = UserLibrary()

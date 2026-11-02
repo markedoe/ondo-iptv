@@ -152,6 +152,7 @@ class LibraryTest {
         assertFalse(HistoryEntry(ref(ContentType.LIVE, "c"), "C", position = 6_000.0, duration = 6_600.0, creditsStart = 5_000.0).isFinished)
         assertTrue(HistoryEntry.isFinished(6_300.0, 7_200.0, creditsStart = 6_300.0))
         assertFalse(HistoryEntry.isFinished(6_300.0, 7_200.0))
+        assertFalse(HistoryEntry.isFinished(3_000.0, 7_200.0, creditsStart = 3_000.0), "a value outside the last quarter")
 
         // The library keeps where the credits start: a progress without it (another engine) and a new start keep it.
         var library = UserLibrary()

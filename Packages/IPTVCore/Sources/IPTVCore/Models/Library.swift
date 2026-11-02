@@ -157,7 +157,8 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
     /// never finished.
     public static func isFinished(position: Double, duration: Double, creditsStart: Double? = nil) -> Bool {
         guard duration > 0 else { return false }
-        if let creditsStart, creditsStart > 0, position >= creditsStart { return true }
+        // Only in the last quarter, as `CreditsChapter` found it: a value kept for another file never counts.
+        if let creditsStart, creditsStart >= duration * (1 - CreditsChapter.lastShare), position >= creditsStart { return true }
         let progress = min(max(position / duration, 0), 1)
         return progress >= finishedProgress
             || (duration - position <= finishedTimeLeft && progress >= finishedTimeLeftMinimumProgress)

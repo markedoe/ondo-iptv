@@ -140,7 +140,7 @@ final class VLCBackend: NSObject {
 
     /// The chapters of the title playing: their names and where they start.
     var chapters: [MediaChapter] {
-        player.chapterDescriptions(ofTitle: player.currentTitleIndex).compactMap { description in
+        ((player.chapterDescriptions(ofTitle: player.currentTitleIndex) as [Any]?) ?? []).compactMap { description in
             guard let chapter = description as? [String: Any],
                   let offset = (chapter[VLCChapterDescriptionTimeOffset] as? NSNumber)?.doubleValue else { return nil }
             return MediaChapter(title: chapter[VLCChapterDescriptionName] as? String, start: offset / 1000)

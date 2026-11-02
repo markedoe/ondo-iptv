@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.model
 
+import com.markedoe.ondo.core.playback.CreditsChapter
 import kotlinx.serialization.Serializable
 
 /** "Recently watched" / "Continue watching" entry. */
@@ -17,7 +18,7 @@ data class HistoryEntry(
     val duration: Double = 0.0,
     /**
      * Where the file's end credits start (seconds), from its chapters
-     * ([com.markedoe.ondo.core.playback.CreditsChapter]); null when not known.
+     * ([CreditsChapter]); null when not known.
      */
     val creditsStart: Double? = null,
 ) {
@@ -52,7 +53,8 @@ data class HistoryEntry(
          */
         fun isFinished(position: Double, duration: Double, creditsStart: Double? = null): Boolean {
             if (!(duration > 0)) return false
-            if (creditsStart != null && creditsStart > 0 && position >= creditsStart) return true
+            // Only in the last quarter, as CreditsChapter found it: a value kept for another file never counts.
+            if (creditsStart != null && creditsStart >= duration * (1 - CreditsChapter.LAST_SHARE) && position >= creditsStart) return true
             val progress = (position / duration).coerceIn(0.0, 1.0)
             return progress >= FINISHED_PROGRESS ||
                 (duration - position <= FINISHED_TIME_LEFT && progress >= FINISHED_TIME_LEFT_MINIMUM_PROGRESS)
