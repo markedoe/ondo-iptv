@@ -8,9 +8,9 @@ import com.markedoe.ondo.core.sync.SyncPerson
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncSnapshot
-import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * The merge's promises (docs/SYNC.md, "Merge") on generated snapshots: the order of the two snapshots does not
@@ -151,15 +151,107 @@ class SyncMergeFuzzTest {
     fun threeDevicesAgreeWhateverTheOrderOfTheirSessions() = checkThreeDevices(simultaneousEdits = false, cases = 5_000)
 
     /**
-     * One record changed on two devices in the same millisecond: when the tie strings are equal too (a favourite's
-     * image, a progress's duration, a list's item titles differ), the first record met wins, so each device keeps its
-     * own; and a list's tie string counts the items of deleted playlists, which an earlier merge may have dropped.
+     * One record changed on two devices in the same millisecond: ties are broken on every field of a record, and the
+     * order of a list is kept as it was set, so the devices agree all the same.
      */
-    @Ignore("waits for a total order of tied records and list ties without deleted items: docs/SYNC.md, Kotlin and Swift together")
     @Test
     fun twoDevicesAgreeOnChangesMadeInTheSameMillisecond() = checkTwoDevices(simultaneousEdits = true, cases = 3_000)
 
-    @Ignore("waits for a total order of tied records and list ties without deleted items: docs/SYNC.md, Kotlin and Swift together")
     @Test
     fun threeDevicesAgreeOnChangesMadeInTheSameMillisecond() = checkThreeDevices(simultaneousEdits = true, cases = 3_000)
+
+    // Three devices with clocks hours apart, syncing in a random order (the Swift `SyncFuzzTests`).
+
+    /** A device's data, its times on its own clock ([skew] ahead of the true time). */
+    private fun device(name: String, skew: Long, fuzz: Fuzz): SyncSnapshot {
+        fun time() = START + fuzz.int(1_000) + skew
+        val items = listOf("m1", "m2", "m3")
+        val favorites = items.filter { fuzz.chance(40) }.map { SyncFavorite("p", "movie", it, fuzz.pick("T", "U"), fuzz.pick(null, "i1"), time()) }
+        val progress = items.filter { fuzz.chance(40) }.map {
+            SyncProgress("p", "movie", it, title = "T", position = fuzz.int(3) * 10.0, duration = 100.0 + fuzz.int(2) * 100, watchedAt = time())
+        }
+        val people = listOf("Ada", "Bea").filter { fuzz.chance(40) }.map { SyncPerson(it, fuzz.pick(null, "i1"), time()) }
+        val lists = if (fuzz.chance(60)) {
+            val listTime = time()
+            val keys = items.filter { fuzz.chance(50) }.shuffled(java.util.Random(fuzz.int(1_000).toLong()))
+            listOf(
+                SyncList(
+                    "l", fuzz.pick("Kids", "Weekend"),
+                    items = keys.map { SyncListItem("p", "movie", it, "T", addedAt = listTime - fuzz.int(5)) },
+                    updatedAt = listTime, renamedAt = listTime - fuzz.int(3), orderedAt = listTime - fuzz.int(3),
+                ),
+            )
+        } else {
+            emptyList()
+        }
+        val deleted = HashMap<String, Long>()
+        items.filter { fuzz.chance(15) }.forEach { deleted["favorite:p|movie|$it"] = time() }
+        items.filter { fuzz.chance(10) }.forEach { deleted["progress:p|movie|$it|"] = time() }
+        items.filter { fuzz.chance(10) }.forEach { deleted["listitem:l|p|movie|$it"] = time() }
+        if (fuzz.chance(10)) deleted["person:ada"] = time()
+        return SyncSnapshot(device = name, favorites = favorites, progress = progress, lists = lists, people = people, deleted = deleted)
+    }
+
+    /** One session: the client sends with its clock; the server merges on its clock and answers on the client's. */
+    private fun skewedSession(client: SyncSnapshot, clientSkew: Long, server: SyncSnapshot, serverSkew: Long, now: Long): Pair<SyncSnapshot, SyncSnapshot> {
+        val offer = client.copy(clock = now + clientSkew)
+        val skew = offer.skewAt(now + serverSkew)
+        val kept = SyncMerge.merge(server, offer.onReceiverClock(now + serverSkew))
+        val answer = kept.forSender(skew)
+        return SyncMerge.merge(client, answer.onReceiverClock(now + clientSkew)) to kept
+    }
+
+    private fun SyncSnapshot.onTrueClock(skew: Long) = mappingTimes { it - skew }.copy(device = "", clock = null)
+
+    @Test
+    fun threeDevicesWithSkewedClocksAgreeAndLoseNothing() {
+        for (seed in 0 until 2_000L) {
+            val fuzz = Fuzz(seed)
+            val skews = List(3) { fuzz.pick(-2 * HOUR, 0L, 2 * HOUR) }
+            val start = List(3) { device(listOf("a", "b", "c")[it], skews[it], fuzz) }
+            val devices = start.toMutableList()
+            var now = START + 10_000
+            // Random sessions, then each pair once more both ways: everything has reached everyone.
+            val pairs = List(fuzz.int(6)) { fuzz.int(3) to fuzz.int(3) }.filter { it.first != it.second } +
+                listOf(0 to 1, 1 to 2, 2 to 0, 1 to 0, 2 to 1, 0 to 2)
+            for ((client, server) in pairs) {
+                now += 1_000
+                val (kept, answered) = skewedSession(devices[client], skews[client], devices[server], skews[server], now)
+                devices[client] = kept
+                devices[server] = answered
+            }
+            val seen = List(3) { devices[it].onTrueClock(skews[it]) }
+            assertEquals(seen[0], seen[1], "seed $seed")
+            assertEquals(seen[1], seen[2], "seed $seed")
+            assertNothingLost(List(3) { start[it].onTrueClock(skews[it]) }, seen[0], seed)
+        }
+    }
+
+    /** Each record of a key is kept unless a deletion of that key is at least as late as its latest version. */
+    private fun assertNothingLost(start: List<SyncSnapshot>, result: SyncSnapshot, seed: Long) {
+        val deleted = HashMap<String, Long>()
+        start.forEach { snapshot -> snapshot.deleted.forEach { (key, time) -> deleted.merge(key, time, ::maxOf) } }
+        fun check(key: String, time: Long, present: Boolean, what: String) {
+            if (deleted[key]?.let { time > it } == false) return
+            assertTrue(present, "seed $seed: $what lost")
+        }
+        start.flatMap { it.favorites }.forEach { favorite -> check(favorite.key, favorite.addedAt, result.favorites.any { it.key == favorite.key && it.addedAt >= favorite.addedAt }, favorite.key) }
+        start.flatMap { it.progress }.forEach { entry -> check(entry.key, entry.watchedAt, result.progress.any { it.key == entry.key && it.watchedAt >= entry.watchedAt }, entry.key) }
+        start.flatMap { it.people }.forEach { person -> check(person.key, person.addedAt, result.people.any { it.key == person.key && it.addedAt >= person.addedAt }, person.key) }
+        val lists = start.flatMap { it.lists }
+        val list = lists.firstOrNull() ?: return
+        check(list.key, lists.maxOf { it.updatedAt }, result.lists.isNotEmpty(), "list")
+        val kept = result.lists.firstOrNull() ?: return
+        for (source in lists) {
+            for (item in source.items) {
+                val time = item.addedAt ?: source.updatedAt
+                check(list.itemKey(item.key), time, kept.items.any { it.key == item.key && (it.addedAt ?: 0) >= time }, "list item ${item.key}")
+            }
+        }
+    }
+
+    private companion object {
+        const val START = 1_760_000_000_000L
+        const val HOUR = 3_600_000L
+    }
 }

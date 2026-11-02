@@ -372,12 +372,96 @@ final class SyncTests: XCTestCase {
         var back = merged.lists[0]
         back.items.append(SyncListItem(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: 30))
         back.updatedAt = 30
-        XCTAssertEqual(SyncMerge.merge(merged, SyncSnapshot(device: "b", lists: [back])).lists[0].items.map(\.item), ["m4", "m3", "m1"])
+        XCTAssertEqual(SyncMerge.merge(merged, SyncSnapshot(device: "b", lists: [back])).lists[0].items.map(\.item), ["m1", "m4", "m3"], "back in its place in the order set last")
     }
 
     func testListItemDeletionsAreReadWithTheirIDsInLowercase() {
         XCTAssertEqual(SyncSnapshot.lowercasingID(ofDeleted: "listitem:L1|P1|movie|M1"), "listitem:l1|p1|movie|M1")
         XCTAssertEqual(SyncSnapshot.lowercasingID(ofDeleted: "listitem:L1|person:ADA Élodie"), "listitem:l1|person:ada Élodie")
+    }
+
+    /// Twenty sessions between a device 10 minutes ahead (the client) and one on time, 40 ms each way: the server's
+    /// answer goes back on the client's clock, so after the first one no time moves on either side.
+    func testSessionsBetweenSkewedDevicesMoveNoTime() {
+        var now: Int64 = 1_760_000_000_000
+        let ahead: Int64 = 10 * 60_000
+        var client = SyncSnapshot(device: "a", favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: now + ahead - 5_000)],
+                                  people: [SyncPerson(name: "Ada", addedAt: now + ahead - 4_000)], deleted: ["favorite:p|movie|m9": now + ahead - 3_000])
+        var server = SyncSnapshot(device: "b", progress: [SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "Glass City", position: 60,
+                                                                          duration: 6_000, watchedAt: now - 2_000)])
+        var rounds: [(SyncSnapshot, SyncSnapshot)] = []
+        for _ in 0..<20 {
+            now += 60_000
+            var offer = client
+            offer.clock = now + ahead
+            now += 40
+            let skew = offer.skewAt(now: now)
+            server = SyncMerge.merge(server, offer.onReceiverClock(now: now))
+            let answer = server.forSender(skew: skew)
+            XCTAssertNil(answer.clock)
+            now += 40
+            client = SyncMerge.merge(client, answer.onReceiverClock(now: now + ahead))
+            rounds.append((withoutDevice(client), withoutDevice(server)))
+        }
+        for (index, round) in rounds.enumerated().dropFirst() {
+            XCTAssertEqual(round.0, rounds[0].0, "client, round \(index)")
+            XCTAssertEqual(round.1, rounds[0].1, "server, round \(index)")
+        }
+        // The client's own times came back as they were.
+        XCTAssertEqual(client.favorites.map(\.addedAt), [1_760_000_000_000 + ahead - 5_000])
+    }
+
+    func testOwnTimesAheadOfTheClockAreBroughtBackWhenSent() {
+        let now: Int64 = 1_760_000_000_000
+        let year: Int64 = 365 * 86_400_000
+        let own = SyncSnapshot(device: "a", favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "T", addedAt: now + year)],
+                               progress: [SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "T", position: 1, duration: 2, watchedAt: now + 60_000)],
+                               deleted: ["k": now + year]).clampingFuture(now: now)
+        XCTAssertEqual(own.favorites.map(\.addedAt), [now])
+        XCTAssertEqual(own.progress.map(\.watchedAt), [now + 60_000], "within the margin: as it is")
+        XCTAssertEqual(own.deleted, ["k": now])
+    }
+
+    func testADeletionLearnedLateIsKeptFromWhenItWasLearned() {
+        let day: Int64 = 86_400_000
+        let now = 1_000 * day
+        let snapshot = SyncSnapshot(device: "a", deleted: ["favorite:p|movie|m1": now - 250 * day])
+        XCTAssertTrue(snapshot.pruned(now: now, sessions: [now - day]).deleted.isEmpty, "by its date alone, it goes")
+        XCTAssertEqual(snapshot.pruned(now: now, sessions: [now - day], learned: ["favorite:p|movie|m1": now - 2 * day]).deleted.count, 1)
+        XCTAssertTrue(snapshot.pruned(now: now, sessions: [now - day], learned: ["favorite:p|movie|m1": now - 200 * day]).deleted.isEmpty)
+    }
+
+    func testTiesBetweenRecordsDifferingInAnyFieldEndTheSameWayInEitherOrder() {
+        let image1 = SyncSnapshot(device: "a", favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "T", image: "https://a/1.jpg", addedAt: 5)])
+        let image2 = SyncSnapshot(device: "b", favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "T", image: "https://a/2.jpg", addedAt: 5)])
+        let none = SyncSnapshot(device: "c", favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "T", addedAt: 5)])
+        for pair in [(image1, image2), (image1, none), (image2, none)] {
+            XCTAssertEqual(SyncMerge.merge(pair.0, pair.1).favorites, SyncMerge.merge(pair.1, pair.0).favorites)
+        }
+        let long = SyncSnapshot(device: "a", progress: [SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "T", position: 10, duration: 7_000, watchedAt: 5)])
+        let short = SyncSnapshot(device: "b", progress: [SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "T", subtitle: "S", position: 10, duration: 6_900, watchedAt: 5)])
+        XCTAssertEqual(SyncMerge.merge(long, short).progress.map(\.duration), [7_000])
+        XCTAssertEqual(SyncMerge.merge(short, long).progress.map(\.duration), [7_000])
+        let m3u = SyncPlaylist(id: "p", name: "Home", kind: SyncPlaylist.m3u, url: "http://example.com/a.m3u", addedAt: 1, updatedAt: 5)
+        var older = m3u
+        older.addedAt = 0
+        XCTAssertEqual(SyncMerge.merge(SyncSnapshot(device: "a", playlists: [m3u]), SyncSnapshot(device: "b", playlists: [older])).playlists,
+                       SyncMerge.merge(SyncSnapshot(device: "b", playlists: [older]), SyncSnapshot(device: "a", playlists: [m3u])).playlists)
+    }
+
+    func testListOrderEndsTheSameWhateverTheOrderOfTheMergesOfThreeDevices() {
+        func list(_ keys: [String], added: Int64) -> SyncSnapshot {
+            SyncSnapshot(device: "d", lists: [SyncList(id: "l", name: "L", items: keys.map {
+                SyncListItem(playlist: "p", kind: "movie", item: $0, title: $0, addedAt: added)
+            }, updatedAt: 10, orderedAt: 10)])
+        }
+        let a = list(["x", "y"], added: 1), b = list(["y", "x", "z"], added: 2), c = list(["w", "x"], added: 3)
+        let left = SyncMerge.merge(SyncMerge.merge(a, b), c)
+        let right = SyncMerge.merge(a, SyncMerge.merge(b, c))
+        let other = SyncMerge.merge(SyncMerge.merge(c, a), b)
+        XCTAssertEqual(withoutDevice(left).lists, withoutDevice(right).lists)
+        XCTAssertEqual(withoutDevice(left).lists, withoutDevice(other).lists)
+        XCTAssertEqual(left.lists.first?.items.map(\.item).sorted(), ["w", "x", "y", "z"])
     }
 
     func testTimesMoveByTheSendersClockDifference() {

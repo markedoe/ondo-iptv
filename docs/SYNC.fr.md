@@ -72,13 +72,15 @@ fois et ferme les connexions en plus.
 
 **Sondes.** Chaque instantané envoyé porte `digest`, une empreinte de ses éléments et suppressions (SHA-256 de
 l’instantané sans `device`, `deviceName`, `clock`, `digest`, `seen`, `probe` ni `unchanged`, les suppressions dans
-l’ordre des clés) ; la réponse d’un serveur porte la sienne. Un appareil ne compare une empreinte qu’avec ses
+l’ordre des clés, et sans la progression de ce qui est en lecture sur l’appareil, enregistrée toutes les quelques
+secondes) ; la réponse d’un serveur porte la sienne, celle des données dont vient la réponse. Un appareil ne compare une empreinte qu’avec ses
 propres empreintes antérieures et celles qu’un pair lui a envoyées, donc les appareils n’ont pas à la calculer
 octet pour octet de la même façon. Quand les données d’un client ont l’empreinte de l’instantané qu’il a envoyé en
 dernier à un serveur, et que ce serveur a répondu avec une empreinte, le client envoie une **sonde** à la place :
 `{"type", "version", "device", "deviceName", "clock", "digest", "seen": <l’empreinte du serveur>, "probe": true}`,
 sans éléments. Un serveur dont l’empreinte est toujours `seen` répond `{"type", "version", "device", "deviceName",
-"clock", "digest", "unchanged": true}`, et rien n’est fusionné ; sinon il répond avec son propre instantané. Un
+"digest", "unchanged": true}`, et rien n’est fusionné ; sinon il répond avec son propre instantané. Un client envoie
+quand même son instantané entier à chaque serveur au moins une fois par heure. Un
 serveur plus ancien lit une sonde comme un instantané vide, la fusionne (ce qui ne retire rien) et répond en entier ;
 un client plus ancien n’en envoie jamais. Une session où rien n’a changé d’un côté ni de l’autre fait ainsi quelques
 centaines d’octets dans chaque sens.
@@ -88,7 +90,14 @@ ouverte, et quelques secondes après un changement local (une playlist, Ma liste
 lecture). Après une session ratée, il retrouve l’adresse de l’appareil et réessaie au bout de 15 secondes, puis
 1 minute, puis toutes les 5 minutes tant que Bonjour trouve encore l’appareil. Pendant la lecture d’un film ou
 d’un épisode sur le client, une session du rythme de 60 secondes qui enverrait un instantané de plus de 64 Kio
-(pas une sonde) attend la suivante ; celle qui suit un changement part.
+(pas une sonde) attend la suivante ; celle qui suit un changement part. Un changement compte quand il est fait sur
+l’appareil : ce qu’une fusion a apporté repart avec la session régulière suivante, donc une fusion n’appelle jamais
+une autre session. L’instantané, l’empreinte et la fusion sont calculés hors du fil principal ; une fusion dont les
+données ont changé entre-temps est refaite, et après trois essais elle attend la session suivante.
+
+Une session compte pour un serveur (les suppressions qu’il a envoyées sont reçues, voir **Supprimés**) une fois sa
+réponse à un instantané entier arrivée au client : le client ferme la connexion après l’avoir lue. Une sonde ne
+compte pas. Un client la compte une fois qu’il a fusionné une réponse entière.
 
 Entre deux appareils Android, celui dont l’identifiant est le plus petit (comme chaîne) se connecte quand il
 trouve l’autre et toutes les 60 secondes ; chacun se connecte quelques secondes après un changement qui lui est
@@ -163,10 +172,11 @@ instantané sans `keys` (d’un appareil qui ne les synchronise pas) ne retire r
 garde chacune 180 jours, et plus longtemps tant que chaque appareil avec lequel il a eu une session dans l’année
 n’en a pas eu une avec lui après la suppression (il retient, au jour près, sa dernière session avec chaque
 appareil) : un appareil absent des mois reçoit quand même la suppression, et rien de supprimé ne revient par lui. Un
-appareil qu’il n’a pas vu depuis un an ne retient rien.
+appareil qu’il n’a pas vu depuis un an ne retient rien. Une suppression apprise d’un autre appareil compte à partir
+du moment où elle a été apprise, s’il est plus tardif que son propre instant.
 
-**Horloge** — l’horloge de l’expéditeur quand il a envoyé l’instantané (une réponse porte celle du serveur).
-Facultative : les versions plus anciennes n’en envoient pas.
+**Horloge** — l’horloge de l’expéditeur quand il a envoyé l’instantané. Facultative : les versions plus anciennes
+n’en envoient pas, et la réponse d’un serveur n’en a pas (elle est sur l’horloge du client, voir **Horloges**).
 
 **Remplacés** — les identifiants de playlist devenus une autre playlist (règle 4 de la fusion) : l’ancien
 identifiant, puis celui qui l’a remplacé. Un appareil garde une entrée aussi longtemps que la suppression de
@@ -184,10 +194,11 @@ change rien.
 2. Pour chaque clé présente d’un côté ou de l’autre, l’élément à l’instant le plus tardif gagne. À instants égaux,
    l’élément dont la **chaîne de départage** est la plus petite (comparée en unités UTF-16, comme le font les
    chaînes Kotlin et Swift) gagne :
-   - playlist : `name`, `url`, `username`, `password`, `epgUrl` joints par un saut de ligne (valeurs absentes
-     vides) ;
-   - favori : `title` ;
-   - progression : pas de chaîne : la plus grande `position` gagne, puis le plus petit `title` ;
+   - playlist : `name`, `kind`, `url`, `username`, `password`, `epgUrl`, `addedAt` (en décimal) joints par un saut de
+     ligne, une valeur facultative écrite `0` quand elle manque et `1` suivi d’elle sinon ;
+   - favori : `title`, `image` (facultative, comme ci-dessus) ;
+   - progression : pas une chaîne d’abord : la plus grande `position` gagne, puis la plus grande `duration` ; puis
+     `title`, `subtitle`, `image` (facultatives, comme ci-dessus) ;
    - personne : pas une chaîne d’abord : celle qui a une `image` gagne ; puis le plus petit `name`, puis la plus
      petite `image` ;
    - clé : `value`.
@@ -209,11 +220,13 @@ change rien.
 7. **Les listes se fusionnent partie par partie.** Une liste reste sauf si `list:<id>` est supprimé au plus tôt à
    son `updatedAt` le plus tardif, qu’elle garde. Son nom est celui au `renamedAt` le plus tardif (puis le plus petit
    nom). Ses éléments sont ceux de l’un ou l’autre côté, un par clé, l’`addedAt` le plus tardif gagnant (puis le plus
-   petit `title`, puis la plus petite `image`), sans ceux dont l’`addedAt` n’est pas postérieur à leur suppression
+   petite chaîne de départage de `title` et `image`, facultative comme à la règle 2), sans ceux dont l’`addedAt` n’est pas postérieur à leur suppression
    `listitem:` ; ses personnes de même (l’`addedAt` le plus tardif, puis comme la règle 2 pour une personne), rangées
-   par `addedAt` puis clé. Les éléments suivent l’ordre du côté à l’`orderedAt` le plus tardif (puis la plus petite
-   ligne de clés d’éléments jointes par un saut de ligne) ; ceux qui n’y sont pas viennent après, par `addedAt` puis
-   clé. Le résultat écrit toujours `renamedAt`, `orderedAt` et chaque `addedAt`. Une version plus ancienne garde
+   par `addedAt` puis clé. L’ordre est l’`order` (clés d’éléments) du côté à l’`orderedAt` le plus tardif (puis la
+   plus petite ligne de ces clés jointes par un saut de ligne ; une liste sans `order` a l’ordre de ses `items`),
+   écrit tel quel dans le résultat : le résultat ne dépend alors pas de l’ordre des fusions. Les éléments le suivent ;
+   ceux qui n’y sont pas viennent après, par `addedAt` puis clé. Le résultat écrit toujours `renamedAt`, `orderedAt`,
+   `order` et chaque `addedAt`. Une version plus ancienne garde
    encore une liste entière comme un seul élément et n’envoie pas de suppression `listitem:` : un élément qu’elle a
    retiré revient depuis un appareil qui l’a encore.
 
@@ -232,7 +245,9 @@ joint un serveur de temps : un appareil qui reçoit un instantané met donc d’
 (`onReceiverClock`) :
 
 1. Quand l’instantané a une `clock` à plus de 5 minutes de celle du destinataire, chacun de ses instants est décalé
-   de la différence (les instants d’une réponse reviennent ainsi à l’horloge du client). Un instant que le décalage
+   de la différence. Un serveur répond sur l’horloge du client : il décale les instants de sa réponse en sens inverse
+   de la différence qu’il a mesurée, et n’envoie pas de `clock` ; le client ne décale rien. Une session ne déplace
+   ainsi aucun instant, quelle que soit sa durée. Un instant que le décalage
    porterait au-delà de l’horloge du destinataire plus 5 minutes alors qu’il n’y était pas garde sa valeur : il a été
    fixé avant que l’horloge de l’expéditeur se dérègle.
 2. Puis chaque élément et chaque suppression encore daté de plus de 5 minutes après l’horloge du destinataire est
@@ -241,9 +256,10 @@ joint un serveur de temps : un appareil qui reçoit un instantané met donc d’
    sont écartés, pas déplacés : l’appareil qui les a faits les garde, ils voyagent une fois leur heure venue, et rien
    n’est supprimé parce qu’il manque.
 
-Un élément n’est remplacé que par un autre à l’instant strictement postérieur, donc les éléments d’un appareil ne
-reviennent jamais à une version plus ancienne. Les instants sont décalés d’une différence mesurée une fois par
-session, donc les éléments d’un appareil peuvent revenir à quelques millisecondes près : le même contenu.
+Un appareil envoie ses propres instants postérieurs à son horloge plus 5 minutes (fixés quand son horloge avançait) à
+son horloge : un tel changement voyage tout de suite, et perd face à un changement fait ailleurs plus tard. Un
+élément n’est remplacé que par un autre à l’instant strictement postérieur, donc les éléments d’un appareil ne
+reviennent jamais à une version plus ancienne.
 
 ## Confidentialité
 

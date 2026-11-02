@@ -7,12 +7,15 @@ import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.net.InetAddress
 import java.net.ServerSocket
+import java.net.Socket
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -197,7 +200,7 @@ class SyncTest {
         assertEquals(merged.withoutDevice(), SyncMerge.merge(b, a).withoutDevice())
         // An item put back after its removal comes back.
         val back = merged.lists[0].let { it.copy(items = it.items + m1.copy(addedAt = 30), updatedAt = 30) }
-        assertEquals(listOf("m4", "m3", "m1"), SyncMerge.merge(merged, SyncSnapshot(device = "b", lists = listOf(back))).lists[0].items.map { it.item })
+        assertEquals(listOf("m1", "m4", "m3"), SyncMerge.merge(merged, SyncSnapshot(device = "b", lists = listOf(back))).lists[0].items.map { it.item })
     }
 
     @Test
@@ -216,6 +219,99 @@ class SyncTest {
         // Once it has synced since, both old ones go; a device not seen for over a year holds nothing back.
         assertEquals(setOf("list:recent"), snapshot.pruned(now, sessions = listOf(now - 100 * day)).deleted.keys)
         assertEquals(setOf("list:recent"), snapshot.pruned(now, sessions = listOf(now - 400 * day)).deleted.keys)
+    }
+
+    /**
+     * Twenty sessions between a device 10 minutes ahead (the client) and one on time, 40 ms each way: the server's
+     * answer goes back on the client's clock, so after the first one no time moves on either side.
+     */
+    @Test
+    fun sessionsBetweenSkewedDevicesMoveNoTime() {
+        var now = 1_760_000_000_000L
+        val ahead = 10 * 60_000L
+        var client = SyncSnapshot(
+            device = "a",
+            favorites = listOf(SyncFavorite("p", "movie", "m1", "Glass City", addedAt = now + ahead - 5_000)),
+            people = listOf(SyncPerson("Ada", addedAt = now + ahead - 4_000)),
+            deleted = mapOf("favorite:p|movie|m9" to now + ahead - 3_000),
+        )
+        var server = SyncSnapshot(device = "b", progress = listOf(SyncProgress("p", "movie", "m1", title = "Glass City", position = 60.0, duration = 6_000.0, watchedAt = now - 2_000)))
+        val rounds = mutableListOf<Pair<SyncSnapshot, SyncSnapshot>>()
+        repeat(20) {
+            now += 60_000
+            val offer = client.copy(clock = now + ahead)
+            now += 40
+            val skew = offer.skewAt(now)
+            server = SyncMerge.merge(server, offer.onReceiverClock(now))
+            val answer = server.forSender(skew)
+            assertNull(answer.clock)
+            now += 40
+            client = SyncMerge.merge(client, answer.onReceiverClock(now + ahead))
+            rounds += client.withoutDevice() to server.withoutDevice()
+        }
+        for ((index, round) in rounds.withIndex().drop(1)) assertEquals("round $index", rounds[0], round)
+        // The client's own times came back as they were.
+        assertEquals(listOf(1_760_000_000_000L + ahead - 5_000), client.favorites.map { it.addedAt })
+    }
+
+    @Test
+    fun ownTimesAheadOfTheClockAreBroughtBackWhenSent() {
+        val now = 1_760_000_000_000L
+        val year = 365 * 86_400_000L
+        val own = SyncSnapshot(
+            device = "a",
+            favorites = listOf(SyncFavorite("p", "movie", "m1", "T", addedAt = now + year)),
+            progress = listOf(SyncProgress("p", "movie", "m1", title = "T", position = 1.0, duration = 2.0, watchedAt = now + 60_000)),
+            deleted = mapOf("k" to now + year),
+        ).clampingFuture(now)
+        assertEquals(listOf(now), own.favorites.map { it.addedAt })
+        assertEquals("within the margin: as it is", listOf(now + 60_000), own.progress.map { it.watchedAt })
+        assertEquals(mapOf("k" to now), own.deleted)
+    }
+
+    @Test
+    fun aDeletionLearnedLateIsKeptFromWhenItWasLearned() {
+        val day = 86_400_000L
+        val now = 1_000 * day
+        val snapshot = SyncSnapshot(device = "a", deleted = mapOf("favorite:p|movie|m1" to now - 250 * day))
+        assertTrue("by its date alone, it goes", snapshot.pruned(now, sessions = listOf(now - day)).deleted.isEmpty())
+        assertEquals(1, snapshot.pruned(now, sessions = listOf(now - day), learned = mapOf("favorite:p|movie|m1" to now - 2 * day)).deleted.size)
+        assertTrue(snapshot.pruned(now, sessions = listOf(now - day), learned = mapOf("favorite:p|movie|m1" to now - 200 * day)).deleted.isEmpty())
+    }
+
+    @Test
+    fun tiesBetweenRecordsDifferingInAnyFieldEndTheSameWayInEitherOrder() {
+        val image1 = SyncSnapshot(device = "a", favorites = listOf(SyncFavorite("p", "movie", "m1", "T", image = "https://a/1.jpg", addedAt = 5)))
+        val image2 = SyncSnapshot(device = "b", favorites = listOf(SyncFavorite("p", "movie", "m1", "T", image = "https://a/2.jpg", addedAt = 5)))
+        val none = SyncSnapshot(device = "c", favorites = listOf(SyncFavorite("p", "movie", "m1", "T", addedAt = 5)))
+        for ((first, second) in listOf(image1 to image2, image1 to none, image2 to none)) {
+            assertEquals(SyncMerge.merge(first, second).favorites, SyncMerge.merge(second, first).favorites)
+        }
+        val long = SyncSnapshot(device = "a", progress = listOf(SyncProgress("p", "movie", "m1", title = "T", position = 10.0, duration = 7_000.0, watchedAt = 5)))
+        val short = SyncSnapshot(device = "b", progress = listOf(SyncProgress("p", "movie", "m1", title = "T", subtitle = "S", position = 10.0, duration = 6_900.0, watchedAt = 5)))
+        assertEquals(listOf(7_000.0), SyncMerge.merge(long, short).progress.map { it.duration })
+        assertEquals(listOf(7_000.0), SyncMerge.merge(short, long).progress.map { it.duration })
+        val m3u = SyncPlaylist("p", "Home", SyncPlaylist.M3U, "http://example.com/a.m3u", addedAt = 1, updatedAt = 5)
+        val older = m3u.copy(addedAt = 0)
+        assertEquals(
+            SyncMerge.merge(SyncSnapshot(device = "a", playlists = listOf(m3u)), SyncSnapshot(device = "b", playlists = listOf(older))).playlists,
+            SyncMerge.merge(SyncSnapshot(device = "b", playlists = listOf(older)), SyncSnapshot(device = "a", playlists = listOf(m3u))).playlists,
+        )
+    }
+
+    @Test
+    fun listOrderEndsTheSameWhateverTheOrderOfTheMergesOfThreeDevices() {
+        fun list(keys: List<String>, added: Long) = SyncSnapshot(
+            device = "d",
+            lists = listOf(SyncList("l", "L", items = keys.map { SyncListItem("p", "movie", it, it, addedAt = added) }, updatedAt = 10, orderedAt = 10)),
+        )
+        val a = list(listOf("x", "y"), 1)
+        val b = list(listOf("y", "x", "z"), 2)
+        val c = list(listOf("w", "x"), 3)
+        val left = SyncMerge.merge(SyncMerge.merge(a, b), c)
+        assertEquals(left.withoutDevice().lists, SyncMerge.merge(a, SyncMerge.merge(b, c)).withoutDevice().lists)
+        assertEquals(left.withoutDevice().lists, SyncMerge.merge(SyncMerge.merge(c, a), b).withoutDevice().lists)
+        assertEquals(listOf("w", "x", "y", "z"), left.lists.single().items.map { it.item }.sorted())
     }
 
     @Test
@@ -400,6 +496,24 @@ class SyncTest {
         assertEquals(answer, SyncSession.exchange(loopback, server.localPort, a))
         serving.cancelAndJoin()
         assertTrue(server.isClosed)
+    }
+
+    @Test
+    fun aSessionCountsAsDeliveredOnlyOnceTheClientHasReadTheAnswer() = runBlocking {
+        val a = fixture("a.json")
+        val server = ServerSocket(0, 8, loopback)
+        val delivered = AtomicInteger()
+        val serving = launch { SyncSession.serve(server, delivered = { delivered.incrementAndGet() }) { incoming, _ -> incoming } }
+        assertEquals(a, SyncSession.exchange(loopback, server.localPort, a))
+        withTimeout(5_000) { while (delivered.get() == 0) delay(10) }
+        // A client that resets the connection instead of reading the answer: not delivered.
+        Socket(loopback, server.localPort).use { socket ->
+            SyncNetwork.writeFrame(socket.getOutputStream(), a.encoded())
+            socket.setSoLinger(true, 0)
+        }
+        delay(300)
+        assertEquals(1, delivered.get())
+        serving.cancelAndJoin()
     }
 
     @Test

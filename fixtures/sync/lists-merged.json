@@ -36,7 +36,11 @@
       "people": [],
       "updatedAt": 3000,
       "renamedAt": 2200,
-      "orderedAt": 3000
+      "orderedAt": 3000,
+      "order": [
+        "a0000000-0000-4000-8000-00000000000a|movie|m2",
+        "a0000000-0000-4000-8000-00000000000a|movie|m1"
+      ]
     },
     {
       "id": "e2000000-0000-4000-8000-00000000000e",
@@ -60,7 +64,10 @@
       "people": [],
       "updatedAt": 700,
       "renamedAt": 500,
-      "orderedAt": 500
+      "orderedAt": 500,
+      "order": [
+        "a0000000-0000-4000-8000-00000000000a|movie|m1"
+      ]
     }
   ],
   "people": [],

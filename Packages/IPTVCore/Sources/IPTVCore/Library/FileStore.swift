@@ -75,6 +75,21 @@ public final class FileStore: Sendable {
         }
     }
 
+    /// The document `name` kept as `newName` instead (and its previous version); when `newName` already exists, it
+    /// stays and `name` is removed.
+    public func move(name: String, to newName: String) {
+        lock.lock()
+        defer { lock.unlock() }
+        let fileManager = FileManager.default
+        for (source, target) in [(url(for: name), url(for: newName)),
+                                 (url(for: name).appendingPathExtension("bak"), url(for: newName).appendingPathExtension("bak"))] {
+            guard fileManager.fileExists(atPath: source.path) else { continue }
+            if fileManager.fileExists(atPath: target.path) || (try? fileManager.moveItem(at: source, to: target)) == nil {
+                try? fileManager.removeItem(at: source)
+            }
+        }
+    }
+
     public func remove(name: String) {
         lock.lock()
         defer { lock.unlock() }

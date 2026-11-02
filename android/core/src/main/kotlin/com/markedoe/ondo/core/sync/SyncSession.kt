@@ -24,16 +24,18 @@ object SyncSession {
      * Answers sessions on [server] until cancelled (then closes it). [merge] gets each snapshot received and the
      * address it came from, and gives the snapshot to answer with; null answers nothing. Connections from an address
      * [isAllowed] refuses, and those over [SyncNetwork.MAX_SESSIONS] at a time, are closed before anything is read.
+     * [delivered] gets each snapshot whose answer reached its client: the client closed the connection after it.
      */
     suspend fun serve(
         server: ServerSocket,
         isAllowed: (InetAddress) -> Boolean = SyncNetwork::isLocal,
+        delivered: suspend (SyncSnapshot) -> Unit = {},
         merge: suspend (SyncSnapshot, InetAddress) -> SyncSnapshot?,
     ) = coroutineScope {
         val sessions = Semaphore(SyncNetwork.MAX_SESSIONS)
         val closer = launch { closing(server) }
         try {
-            accept(server, sessions, isAllowed, merge)
+            accept(server, sessions, isAllowed, delivered, merge)
         } finally {
             closer.cancel()
         }
@@ -43,6 +45,7 @@ object SyncSession {
         server: ServerSocket,
         sessions: Semaphore,
         isAllowed: (InetAddress) -> Boolean,
+        delivered: suspend (SyncSnapshot) -> Unit,
         merge: suspend (SyncSnapshot, InetAddress) -> SyncSnapshot?,
     ) {
         withContext(Dispatchers.IO) {
@@ -59,7 +62,7 @@ object SyncSession {
                 }
                 launch {
                     try {
-                        answer(client, address, merge)
+                        answer(client, address, delivered, merge)
                     } catch (_: IOException) {
                         // The other side left, sent something else, or took too long: the session ends here.
                     } finally {
@@ -70,12 +73,22 @@ object SyncSession {
         }
     }
 
-    private suspend fun answer(client: Socket, address: InetAddress, merge: suspend (SyncSnapshot, InetAddress) -> SyncSnapshot?) {
+    private suspend fun answer(
+        client: Socket,
+        address: InetAddress,
+        delivered: suspend (SyncSnapshot) -> Unit,
+        merge: suspend (SyncSnapshot, InetAddress) -> SyncSnapshot?,
+    ) {
         withDeadline(client) {
             client.soTimeout = SyncNetwork.SESSION_TIMEOUT_MS
             val incoming = SyncSnapshot.decode(SyncNetwork.readFrame(client.getInputStream())) ?: return@withDeadline
             val answer = merge(incoming, address) ?: return@withDeadline
-            withContext(Dispatchers.IO) { SyncNetwork.writeFrame(client.getOutputStream(), answer.encoded()) }
+            // Written, then read by the client once it closes (end of stream): only then does the session count.
+            val closed = withContext(Dispatchers.IO) {
+                SyncNetwork.writeFrame(client.getOutputStream(), answer.encoded())
+                client.getInputStream().read() == -1
+            }
+            if (closed) delivered(incoming)
         }
     }
 

@@ -503,6 +503,20 @@ final class ChannelManagementTests: XCTestCase {
         XCTAssertEqual(content.applying([:]), content)
     }
 
+    func testADocumentMovesToAnotherNameAndAnExistingOneStays() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = FileStore(directory: directory)
+        try store.save(["a"], name: "content-old")
+        store.move(name: "content-old", to: "content-new")
+        XCTAssertNil(store.load([String].self, name: "content-old"))
+        XCTAssertEqual(store.load([String].self, name: "content-new"), ["a"])
+        try store.save(["b"], name: "content-other")
+        store.move(name: "content-other", to: "content-new")
+        XCTAssertEqual(store.load([String].self, name: "content-new"), ["a"], "what the new name has stays")
+        XCTAssertNil(store.load([String].self, name: "content-other"))
+    }
+
     func testListEditsAreDatedOneByOne() {
         let t0 = Date.utc(2025, 10, 1, 8)
         var library = UserLibrary()

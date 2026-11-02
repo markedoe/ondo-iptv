@@ -27,7 +27,10 @@
       ],
       "updatedAt": 2000,
       "renamedAt": 2000,
-      "orderedAt": 2000
+      "orderedAt": 2000,
+      "order": [
+        "a0000000-0000-4000-8000-00000000000a|movie|m1"
+      ]
     },
     {
       "id": "d2000000-0000-4000-8000-00000000000d",
@@ -42,7 +45,8 @@
       ],
       "updatedAt": 2600,
       "renamedAt": 2600,
-      "orderedAt": 2600
+      "orderedAt": 2600,
+      "order": []
     }
   ],
   "people": [

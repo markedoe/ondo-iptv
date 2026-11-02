@@ -41,12 +41,14 @@ data class SyncSnapshot(
     val isUnchanged: Boolean get() = unchanged == true
 
     /**
-     * A digest of the records and deletions (SHA-256, hexadecimal), without who sends them or when: the same data gives
-     * the same digest. A device compares it only with its own earlier digests and those a peer sent it.
+     * A digest of the records and deletions (SHA-256, hexadecimal), without who sends them or when, nor the progress
+     * records whose key is in [leavingOut] (the item playing, saved every few seconds): the same data gives the same
+     * digest. A device compares it only with its own earlier digests and those a peer sent it.
      */
-    fun contentDigest(): String {
+    fun contentDigest(leavingOut: Set<String> = emptySet()): String {
         val content = copy(
             device = "", deviceName = null, clock = null, digest = null, seen = null, probe = null, unchanged = null,
+            progress = if (leavingOut.isEmpty()) progress else progress.filter { it.key !in leavingOut },
             deleted = deleted.toSortedMap(), replaced = replaced.toSortedMap(),
         )
         return MessageDigest.getInstance("SHA-256").digest(content.encoded()).joinToString("") { "%02x".format(it) }
@@ -58,12 +60,12 @@ data class SyncSnapshot(
 
     /**
      * What a client sends a server (docs/SYNC.md, "Transport"): a probe when its data is the same as in the snapshot it
-     * last sent ([sentDigest]) and the server answered with a digest ([answerDigest]); else this snapshot, with its
-     * digest.
+     * last sent ([sentDigest]) and the server answered with a digest ([answerDigest]), unless [full] (the regular full
+     * session); else this snapshot, with its digest. [leavingOut]: as for [contentDigest].
      */
-    fun offer(sentDigest: String?, answerDigest: String?): SyncSnapshot {
-        val digest = contentDigest()
-        return if (answerDigest != null && digest == sentDigest) probe(digest, answerDigest) else copy(digest = digest)
+    fun offer(sentDigest: String?, answerDigest: String?, full: Boolean = false, leavingOut: Set<String> = emptySet()): SyncSnapshot {
+        val digest = contentDigest(leavingOut)
+        return if (!full && answerDigest != null && digest == sentDigest) probe(digest, answerDigest) else copy(digest = digest)
     }
 
     fun encoded(): ByteArray = json.encodeToString(serializer(), this).encodeToByteArray()
@@ -74,9 +76,10 @@ data class SyncSnapshot(
      * in the last [PEERS_KEPT_DAYS] days: a deletion goes only once every such device has had it (docs/SYNC.md,
      * "Deleted").
      */
-    fun pruned(now: Long, days: Int = DELETIONS_KEPT_DAYS, sessions: Collection<Long> = emptyList()): SyncSnapshot {
+    fun pruned(now: Long, days: Int = DELETIONS_KEPT_DAYS, sessions: Collection<Long> = emptyList(), learned: Map<String, Long> = emptyMap()): SyncSnapshot {
         val oldest = minOf(now - days * DAY_MS, sessions.filter { it >= now - PEERS_KEPT_DAYS * DAY_MS }.minOrNull() ?: Long.MAX_VALUE)
-        val kept = deleted.filterValues { it >= oldest }
+        // A deletion learned late (from a device away for months) counts from when this device learned it.
+        val kept = deleted.filter { (key, time) -> maxOf(time, learned[key] ?: time) >= oldest }
         return copy(deleted = kept, replaced = replaced.filterKeys { "playlist:$it" in kept })
     }
 
@@ -87,10 +90,31 @@ data class SyncSnapshot(
      * ahead is left out ([withoutFutureRecords]).
      */
     fun onReceiverClock(now: Long, marginMs: Long = FUTURE_MARGIN_MS): SyncSnapshot {
-        val skew = clock?.let { saturated(it, -now) } ?: 0L
-        if (skew in -marginMs..marginMs) return withoutFutureRecords(now, marginMs)
+        val skew = skewAt(now, marginMs)
+        if (skew == 0L) return withoutFutureRecords(now, marginMs)
         val latest = saturated(now, marginMs)
         return mappingTimes { time -> saturated(time, if (skew == Long.MIN_VALUE) Long.MAX_VALUE else -skew).takeIf { it <= latest || time > latest } ?: time }.withoutFutureRecords(now, marginMs)
+    }
+
+    /** How far the sender's [clock] is ahead of [now] (behind when negative); 0 within [marginMs], or without a clock. */
+    fun skewAt(now: Long, marginMs: Long = FUTURE_MARGIN_MS): Long {
+        val skew = clock?.let { saturated(it, if (now == Long.MIN_VALUE) Long.MAX_VALUE else -now) } ?: return 0L
+        return if (skew in -marginMs..marginMs) 0L else skew
+    }
+
+    /**
+     * A server's answer put back on the client's clock, by the [skew] measured on its snapshot ([skewAt]), and without
+     * a clock: the client moves nothing, so a session moves no time (docs/SYNC.md, "Clocks").
+     */
+    fun forSender(skew: Long): SyncSnapshot = (if (skew == 0L) this else mappingTimes { saturated(it, skew) }).copy(clock = null)
+
+    /**
+     * This device's own snapshot with the times later than [now] plus [marginMs] brought back to [now]: a change
+     * stamped while the clock ran ahead neither waits for its time nor wins over every later change.
+     */
+    fun clampingFuture(now: Long, marginMs: Long = FUTURE_MARGIN_MS): SyncSnapshot {
+        val latest = saturated(now, marginMs)
+        return mappingTimes { if (it > latest) now else it }
     }
 
     /** Every time of the snapshot (records, list people, deletions) through [time]. */
@@ -125,7 +149,9 @@ data class SyncSnapshot(
             playlists = playlists.filter { past(it.addedAt) && past(it.updatedAt) },
             favorites = favorites.filter { past(it.addedAt) },
             progress = progress.filter { past(it.watchedAt) },
-            lists = lists.filter { past(it.updatedAt) },
+            lists = lists.filter { past(it.updatedAt) }.map { list ->
+                list.copy(items = list.items.filter { past(it.addedAt ?: list.updatedAt) }, people = list.people.filter { past(it.addedAt) })
+            },
             people = people.filter { past(it.addedAt) },
             keys = keys.filter { past(it.updatedAt) },
             deleted = deleted.filterValues(::past),
@@ -166,7 +192,13 @@ data class SyncSnapshot(
         playlists = playlists.map { it.copy(id = it.id.lowercase()) },
         favorites = favorites.map { it.copy(playlist = it.playlist.lowercase()) },
         progress = progress.map { it.copy(playlist = it.playlist.lowercase()) },
-        lists = lists.map { list -> list.copy(id = list.id.lowercase(), items = list.items.map { it.copy(playlist = it.playlist.lowercase()) }) },
+        lists = lists.map { list ->
+            list.copy(
+                id = list.id.lowercase(),
+                items = list.items.map { it.copy(playlist = it.playlist.lowercase()) },
+                order = list.order?.map { key -> SyncListItem.withPlaylist(key) { it.lowercase() } },
+            )
+        },
         deleted = deleted.entries.fold(LinkedHashMap<String, Long>()) { times, (key, time) ->
             val lowercased = lowercasingId(key)
             times[lowercased] = maxOf(times[lowercased] ?: time, time)
@@ -275,10 +307,13 @@ data class SyncList(
     val renamedAt: Long? = null,
     /** When the items were last put in order; [updatedAt] when absent (an older version). */
     val orderedAt: Long? = null,
+    /** The order of the items set at [orderedAt], by [SyncListItem.key]; the order of [items] when absent. */
+    val order: List<String>? = null,
 ) {
     val key: String get() = "list:$id"
     val nameTime: Long get() = renamedAt ?: updatedAt
     val orderTime: Long get() = orderedAt ?: updatedAt
+    val itemOrder: List<String> get() = order ?: items.map { it.key }
 
     /** The key of the removal of an item or a person ([SyncListItem.key], [SyncPerson.key]) from this list. */
     fun itemKey(item: String) = "$ITEM_PREFIX$id|$item"
@@ -299,6 +334,14 @@ data class SyncListItem(
     val addedAt: Long? = null,
 ) {
     val key: String get() = "$playlist|$kind|$item"
+
+    companion object {
+        /** An item [key] with its playlist ID through [playlist]. */
+        fun withPlaylist(key: String, playlist: (String) -> String): String {
+            val bar = key.indexOf('|')
+            return if (bar < 0) key else playlist(key.substring(0, bar)) + key.substring(bar)
+        }
+    }
 }
 
 /** An actor or a director kept in My List or in a list, by name, whatever the playlist. */

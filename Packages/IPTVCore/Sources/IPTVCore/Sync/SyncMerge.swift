@@ -51,7 +51,8 @@ public enum SyncMerge {
                 favorite.playlist = id(favorite.playlist)
                 return favorite
             },
-            key: \.key, time: \.addedAt, tie: { $0.title.isBefore($1.title) }, deleted: deleted
+            key: \.key, time: \.addedAt, tie: { tie($0.title, optional($0.image)).isBefore(tie($1.title, optional($1.image))) },
+            deleted: deleted
         ).filter { alive($0.playlist) }
         let progress = pick(
             (left.progress + right.progress).map { progress in
@@ -69,6 +70,7 @@ public enum SyncMerge {
                     item.playlist = id(item.playlist)
                     return item
                 }
+                list.order = list.order?.map { SyncListItem.withPlaylist($0, id) }
                 return list
             },
             deleted: deleted
@@ -114,14 +116,28 @@ public enum SyncMerge {
     }
 
     private static func playlistTieString(_ playlist: SyncPlaylist) -> String {
-        [playlist.name, playlist.url, playlist.username ?? "", playlist.password ?? "", playlist.epgUrl ?? ""].joined(separator: "\n")
+        tie(playlist.name, playlist.kind, playlist.url, optional(playlist.username), optional(playlist.password),
+            optional(playlist.epgUrl), String(playlist.addedAt))
     }
 
-    /// The larger position wins, then the smaller title.
+    /// The larger position wins, then the longer duration, then the smaller title, subtitle and image (none first).
     private static func progressOrder(_ first: SyncProgress, _ second: SyncProgress) -> Bool {
         let positions = kotlinCompare(first.position, second.position)
         if positions != 0 { return positions > 0 }
-        return first.title.isBefore(second.title)
+        let durations = kotlinCompare(first.duration, second.duration)
+        if durations != 0 { return durations > 0 }
+        return tie(first.title, optional(first.subtitle), optional(first.image))
+            .isBefore(tie(second.title, optional(second.subtitle), optional(second.image)))
+    }
+
+    /// A tie string (docs/SYNC.md, "Merge", rule 2): the fields joined with a line feed.
+    private static func tie(_ fields: String...) -> String {
+        fields.joined(separator: "\n")
+    }
+
+    /// An optional field in a tie string: `0` when missing, else `1` then its value (none comes before any).
+    private static func optional(_ value: String?) -> String {
+        value.map { "1" + $0 } ?? "0"
     }
 
     /// One list per key, merged field by field (docs/SYNC.md, "Merge", rule 7): it stays unless deleted after its last
@@ -150,9 +166,12 @@ public enum SyncMerge {
             let people = grouped(same.flatMap(\.people), by: { Array($0.key.utf16) })
                 .compactMap { $0.min(by: { $0.addedAt != $1.addedAt ? $0.addedAt > $1.addedAt : personOrder($0, $1) }) }
                 .filter { kept($0.key, $0.addedAt) }
+            // The order set last is kept as it was set (an order that changes as it is merged would depend on the order of
+            // the merges); the items it does not name come after it.
+            let order = ordered.itemOrder
             var position: [[UInt16]: Int] = [:]
-            for (index, item) in ordered.items.enumerated() where position[Array(item.key.utf16)] == nil {
-                position[Array(item.key.utf16)] = index
+            for (index, key) in order.enumerated() where position[Array(key.utf16)] == nil {
+                position[Array(key.utf16)] = index
             }
             var list = first
             list.name = named.name
@@ -165,20 +184,20 @@ public enum SyncMerge {
             list.updatedAt = updatedAt
             list.renamedAt = named.nameTime
             list.orderedAt = ordered.orderTime
+            list.order = order
             return list
         }
     }
 
     private static func orderString(_ list: SyncList) -> String {
-        list.items.map(\.key).joined(separator: "\n")
+        list.itemOrder.joined(separator: "\n")
     }
 
-    /// The later addition wins, then the smaller title, then the smaller image address.
+    /// The later addition wins, then the smaller title, then no image, then the smaller image address.
     private static func itemOrder(_ first: SyncListItem, _ second: SyncListItem) -> Bool {
         let firstTime = first.addedAt ?? 0, secondTime = second.addedAt ?? 0
         if firstTime != secondTime { return firstTime > secondTime }
-        if !first.title.utf16.elementsEqual(second.title.utf16) { return first.title.isBefore(second.title) }
-        return (first.image ?? "").isBefore(second.image ?? "")
+        return tie(first.title, optional(first.image)).isBefore(tie(second.title, optional(second.image)))
     }
 
     /// The person with a photo wins, then the smaller name, then the smaller photo address.

@@ -66,13 +66,15 @@ Connecting gets 10 seconds and the whole session 30 seconds. A server handles at
 closes further connections.
 
 **Probes.** Each snapshot sent carries `digest`, a digest of its records and deletions (SHA-256 of the snapshot
-without `device`, `deviceName`, `clock`, `digest`, `seen`, `probe` and `unchanged`, deletions in key order); a
-server's answer carries its own. A device compares a digest only with its own earlier ones and those a peer sent it,
+without `device`, `deviceName`, `clock`, `digest`, `seen`, `probe` and `unchanged`, deletions in key order, and
+without the progress of what plays on the device, saved every few seconds); a server's answer carries its own, of the
+data the answer comes from. A device compares a digest only with its own earlier ones and those a peer sent it,
 so devices need not compute it byte for byte alike. When a client's data has the digest of the snapshot it last sent
 to a server, and that server answered with a digest, the client sends a **probe** instead: `{"type", "version",
 "device", "deviceName", "clock", "digest", "seen": <the server's digest>, "probe": true}`, without records. A server
-whose own digest is still `seen` answers `{"type", "version", "device", "deviceName", "clock", "digest",
-"unchanged": true}`, and nothing is merged; otherwise it answers with its own snapshot. An older server reads a
+whose own digest is still `seen` answers `{"type", "version", "device", "deviceName", "digest", "unchanged": true}`,
+and nothing is merged; otherwise it answers with its own snapshot. A client still sends its whole snapshot to each
+server at least once an hour. An older server reads a
 probe as an empty snapshot, merges it (which removes nothing) and answers in full; an older client never sends one.
 A session where nothing changed on either side is thus a few hundred bytes each way.
 
@@ -80,7 +82,14 @@ A session where nothing changed on either side is thus a few hundred bytes each 
 after a local change (a playlist, My List, a list, or the end of a playback). After a failed session it finds the
 device's address again and tries after 15 seconds, then 1 minute, then every 5 minutes while Bonjour still finds
 the device. While a movie or an episode plays on the client, a session of the 60-second rhythm that would send a
-snapshot over 64 KiB (not a probe) waits for the next one; one after a change goes.
+snapshot over 64 KiB (not a probe) waits for the next one; one after a change goes. A change counts when it is made on
+the device: what a merge brought travels on with the next regular session, so a merge never calls for another
+session. The snapshot, the digest and the merge are worked out off the main thread; a merge whose data changed
+meanwhile is done again, and after three tries it waits for the next session.
+
+A session counts for a server (the deletions it sent are had, see **Deleted**) once its answer to a whole snapshot
+reached the client: the client closes the connection after reading it. A probe does not count. A client counts it
+once it has merged a whole answer.
 
 Between two Android devices, the one with the smaller device ID (as a string) connects when it finds the other and
 every 60 seconds; either one connects a few seconds after a change of its own. An Android device that keeps what
@@ -149,10 +158,11 @@ nothing: only `deleted` does.
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for
 180 days, and longer until every device it had a session with in the last year has had a session with it after the
 removal (it remembers, to the day, its last session with each device): a device away for months still gets the
-removal, and nothing removed comes back from it. A device not seen for a year holds nothing back.
+removal, and nothing removed comes back from it. A device not seen for a year holds nothing back. A deletion learned
+from another device counts from when it was learned, if that is later than its own time.
 
-**Clock** — the sender's clock when it sent the snapshot (an answer carries the server's). Optional: older versions
-send none.
+**Clock** — the sender's clock when it sent the snapshot. Optional: older versions send none, and a server's answer
+has none (it is on the client's clock, see **Clocks**).
 
 **Replaced** — playlist IDs that became another playlist (rule 4 of the merge): the old ID, then the ID that
 replaced it. A device keeps an entry as long as the deletion of the old playlist.
@@ -167,9 +177,11 @@ nothing.
    new ID, again while the result is in `replaced` (at most 10 times).
 2. For each key present in either side, the record with the later time wins. On equal times, the record whose
    **tie string** is smaller (compared as UTF-16 code units, as both Kotlin and Swift strings compare) wins:
-   - playlist: `name`, `url`, `username`, `password`, `epgUrl` joined with a line feed (missing values as empty);
-   - favorite: `title`;
-   - progress: not a string: the larger `position` wins, then the smaller `title`;
+   - playlist: `name`, `kind`, `url`, `username`, `password`, `epgUrl`, `addedAt` (in decimal) joined with a line feed,
+     an optional value written `0` when missing and `1` followed by it otherwise;
+   - favorite: `title`, `image` (optional, as above);
+   - progress: not a string first: the larger `position` wins, then the larger `duration`; then `title`, `subtitle`,
+     `image` (optional, as above);
    - person: not a string first: the one with an `image` wins; then the smaller `name`, then the smaller `image`;
    - key: `value`.
 3. A record whose time is not later than its key's deletion time is dropped (on equal times, the deletion wins).
@@ -186,11 +198,14 @@ nothing.
    (latest first) then key, lists by `id`, people by `addedAt` then key, and keys by `service`.
 7. **Lists merge part by part.** A list stays unless `list:<id>` is deleted at or after its latest `updatedAt`, which
    it keeps. Its name is the one with the latest `renamedAt` (then the smaller name). Its items are those of either
-   side, one per key, the latest `addedAt` winning (then the smaller `title`, then the smaller `image`), without those
+   side, one per key, the latest `addedAt` winning (then the smaller tie string of `title` and `image`, optional as in
+   rule 2), without those
    whose `addedAt` is not later than their `listitem:` deletion; its people likewise (the latest `addedAt`, then as
-   rule 2 for a person), sorted by `addedAt` then key. The items follow the order of the side with the latest
-   `orderedAt` (then the smaller line of item keys joined with a line feed); those not in it come after, by `addedAt`
-   then key. The result always writes `renamedAt`, `orderedAt` and each `addedAt`. An older version still keeps a
+   rule 2 for a person), sorted by `addedAt` then key. The order is the `order` (item keys) of the side with the latest
+   `orderedAt` (then the smaller line of those keys joined with a line feed; a list without `order` has the order of
+   its `items`), written as it is into the result: the result then does not depend on the order of the merges. The
+   items follow it; those not in it come after, by `addedAt` then key. The result always writes `renamedAt`,
+   `orderedAt`, `order` and each `addedAt`. An older version still keeps a
    whole list as one record and sends no `listitem:` deletion: an item it took out comes back from a device that
    still has it.
 
@@ -207,7 +222,9 @@ Times are each device's wall clock. A TV box can run with a wrong clock until it
 that receives a snapshot first puts its times on its own clock (`onReceiverClock`):
 
 1. When the snapshot has a `clock` more than 5 minutes away from the receiver's, every time in it moves by the
-   difference (an answer's times thus come back to the client's clock). A time that would move past the receiver's
+   difference. A server answers on the client's clock: it moves the times of its answer back by the difference it
+   measured, and sends no `clock`; the client moves nothing. A session thus moves no time, however long it takes. A
+   time that would move past the receiver's
    clock plus 5 minutes while it was not there before keeps its value: it was stamped before the sender's clock went
    wrong.
 2. Then every record and deletion still dated more than 5 minutes after the receiver's clock is left out: a clock
@@ -215,9 +232,9 @@ that receives a snapshot first puts its times on its own clock (`onReceiverClock
    without `clock`, goes only through this step). The records are left out, not moved: the device that made them
    keeps them, they travel once their time has come, and nothing is deleted because it is missing.
 
-A record is only replaced by one with a strictly later time, so a device's own records never go back to an older
-version. Times move by a difference measured once per session, so a device's own records can come back a few
-milliseconds apart: the same content.
+A device sends its own times later than its clock plus 5 minutes (stamped while its clock ran ahead) at its clock: such
+a change travels at once, and loses to a later one made elsewhere. A record is only replaced by one with a strictly
+later time, so a device's own records never go back to an older version.
 
 ## Privacy
 
