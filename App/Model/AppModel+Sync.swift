@@ -336,9 +336,17 @@ enum SyncMapping {
                 entry.sortIndex = seenItems.count - 1
                 return entry
             }
+            // A merged list always states when it was renamed and put in order; a list of this device without those
+            // times (an older version's) means its `updatedAt`. When that is what the record states, and the list was
+            // not edited since, it stays as it is: applying its own snapshot changes nothing.
+            let unchanged = listsByID[id].map { $0.updatedAt.syncMilliseconds == record.updatedAt } ?? false
+            func time(_ value: Int64?, here: Date?) -> Date? {
+                guard let value else { return nil }
+                return unchanged && here == nil && value == record.updatedAt ? nil : Date(syncMilliseconds: value)
+            }
             lists[id] = CustomList(id: id, name: record.name, items: items, updatedAt: updatedAt,
-                                   renamedAt: record.renamedAt.map { Date(syncMilliseconds: $0) },
-                                   orderedAt: record.orderedAt.map { Date(syncMilliseconds: $0) })
+                                   renamedAt: time(record.renamedAt, here: listsByID[id]?.renamedAt),
+                                   orderedAt: time(record.orderedAt, here: listsByID[id]?.orderedAt))
             order.append(id)
         }
         // The device's lists keep their place; new ones come after them.
