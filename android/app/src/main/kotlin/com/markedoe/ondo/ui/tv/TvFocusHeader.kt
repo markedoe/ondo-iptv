@@ -331,7 +331,10 @@ fun TvHeaderAbove(
                                 sortChip.requester,
                                 reachable = { sortChip.fromFirstRow || chipsFocused || sorting },
                                 onOpen = { sorting = true },
-                                modifier = Modifier.onFocusChanged { chipsFocused = it.hasFocus },
+                                modifier = Modifier.onFocusChanged {
+                                    chipsFocused = it.hasFocus
+                                    if (!it.hasFocus) sortChip.fromFirstRow = false
+                                },
                                 sortModifier = Modifier.onGloballyPositioned { chip = it },
                             )
                         }

@@ -42,6 +42,11 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -76,8 +81,8 @@ class TvSortChoice(
 )
 
 /**
- * The Sort chip of a page's label line ([TvSortChips]): its [requester], and whether a poster of the first row has the
- * remote ([fromFirstRow]), the only place, with the chips themselves, from which the chips take it.
+ * The Sort chip of a page's label line ([TvSortChips]): its [requester], and whether the remote is coming up to it from
+ * the first row of posters ([fromFirstRow]): with the chips themselves, the only way into them.
  */
 @Stable
 internal class SortChip {
@@ -94,8 +99,12 @@ internal val LocalSortChip = staticCompositionLocalOf<SortChip?> { null }
  */
 fun Modifier.upToTheSortChip(): Modifier = composed {
     val chip = LocalSortChip.current ?: return@composed this
-    // Before the poster's own focus target: told of its focus, and its Up goes to the chip.
-    onFocusChanged { chip.fromFirstRow = it.hasFocus }.focusProperties { up = chip.requester }
+    onPreviewKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionUp) return@onPreviewKeyEvent false
+        // The chips take the remote from here: Up lands on Sort rather than on the top bar.
+        chip.fromFirstRow = true
+        runCatching { chip.requester.requestFocus() }.getOrDefault(false).also { moved -> if (!moved) chip.fromFirstRow = false }
+    }
 }
 
 /** The tag of the Sort chip. */
