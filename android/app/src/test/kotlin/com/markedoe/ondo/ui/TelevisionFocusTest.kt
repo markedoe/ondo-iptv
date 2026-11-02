@@ -483,6 +483,8 @@ class TelevisionFocusTest {
         openDramaGrid()
         assertTrue("the bar stays over the category", exists("topBar"))
         assertTrue("on the tab it belongs to", tabSelected("tabMovies"))
+        val pill = compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes()
+        assertEquals("the Categories pill names the category shown", listOf("Drama"), pill.mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
         pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
         assertEquals("Up lands on the tab shown", "tabMovies", focusedTag())
         press(Key.DirectionDown)

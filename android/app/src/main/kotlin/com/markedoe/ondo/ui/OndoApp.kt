@@ -128,7 +128,9 @@ import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvCategoriesScreen
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
+import com.markedoe.ondo.ui.tv.TvCategoryChoice
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
+import com.markedoe.ondo.ui.tv.TvTopBarCategories
 import com.markedoe.ondo.ui.tv.TvSearchScreen
 import com.markedoe.ondo.ui.tv.TvSeriesDetailScreen
 import com.markedoe.ondo.ui.tv.TvSettingsScreen
@@ -763,6 +765,27 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
         withContext(Dispatchers.Default) {
             UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
         }
+    }
+    // On a TV, the top bar's Categories pill names the category shown; another chosen there replaces this page.
+    if (isTelevision() && !route.myList && !route.anyType) {
+        val vod by (if (route.series) viewModel.series else viewModel.movies).collectAsStateWithLifecycle()
+        val categories = vod?.categories.orEmpty()
+        val shown = route.categoryId?.let { id -> (if (route.series) state.content.seriesCategories else state.content.movieCategories).firstOrNull { it.id == id } }
+        TvTopBarCategories(
+            TvCategoryChoice(
+                categories = categories,
+                locked = vod?.lockedCategoryIds.orEmpty(),
+                selected = shown,
+                onChoose = { category ->
+                    if (category?.id != route.categoryId) {
+                        navController.navigate(Routes.Grid(series = route.series, categoryId = category?.id)) {
+                            popUpTo<Routes.Grid> { inclusive = true }
+                        }
+                    }
+                },
+                onManage = { navController.navigate(Routes.Categories(if (route.series) "series" else "movie")) },
+            ),
+        )
     }
     CompositionLocalProvider(LocalShowsMyList provides route.myList) {
         PosterGridScreen(
