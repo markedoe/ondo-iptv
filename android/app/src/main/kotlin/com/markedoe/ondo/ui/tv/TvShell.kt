@@ -97,6 +97,9 @@ class TvTopBar {
     /** A short line at the bar's end, before Search. */
     internal val note: String? get() = pageNote.let { if (it != null) it.text else defaultNote }
 
+    /** The Movies and Series tabs' categories ([TvTopBarCategories]): a pill next to Search; none on other pages. */
+    internal var categories: TvCategoryHolder? by mutableStateOf(null)
+
     /** The page draws a picture under the bar ([TvTopBarOverArt]): the bar's band is a shade over it, not a wall. */
     internal var overArt: Any? by mutableStateOf(null)
 
@@ -183,7 +186,7 @@ fun rememberTabGridState(): LazyGridState {
 
 /**
  * The TV's navigation: a bar always at the top of the tab pages, which scroll under it. Ondo's mark, the tabs, then
- * Search and Settings at the far end.
+ * the playlist's line, the page's Categories pill (Movies and Series), Search and Settings at the far end.
  * [selected] is the tab shown. A category's or a genre's titles keep the bar ([showBar]) on the tab they belong to,
  * though no tab page ([tabPage] false: Back goes back to the page before). Pages beyond a tab (Search, a movie, the
  * guide, Settings) take the whole screen ([showBar] false).
@@ -328,6 +331,20 @@ fun TvNavigationFrame(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
+                        }
+                    }
+                }
+                // The tab's categories, after the playlist's line: Up from the rows reaches the bar, Right along it.
+                bar.categories?.choice?.let { choice ->
+                    TvCategoriesPill(choice, shown, requester(CATEGORIES_TAG), ::below) {
+                        // The page chosen takes the focus ([FocusEntry]); the same page shown, its first item does.
+                        bar.browsing = false
+                        scope.launch {
+                            repeat(ENTER_PAGE_FRAMES) {
+                                withFrameNanos { }
+                                if (!barHasFocus) return@launch
+                            }
+                            runCatching { pages.requestFocus() }
                         }
                     }
                 }

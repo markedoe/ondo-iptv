@@ -12,6 +12,7 @@ import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -37,6 +38,7 @@ import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.ResumeItem
@@ -56,8 +58,11 @@ import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvArtworkAlignment
 import com.markedoe.ondo.ui.tv.TvHomeScreen
+import com.markedoe.ondo.ui.tv.LocalTvTopBar
+import com.markedoe.ondo.ui.tv.TvCategoryChoice
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
-import com.markedoe.ondo.ui.tv.VisibleRowsBottom
+import com.markedoe.ondo.ui.tv.TvTopBar
+import com.markedoe.ondo.ui.tv.TvTopBarCategories
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
@@ -72,8 +77,10 @@ import org.robolectric.annotation.Config
  * What a TV's tab pages must keep, at Google's 960 × 540 dp: the header's backdrop from the screen's very top, cropped
  * towards its top (faces stay whole); the playlist and when it was updated at the top bar's end, on Home and on the
  * Movies tab; every row type whole below the header (its name, its cards and their lines) once the remote is in it;
- * the chips focused, no card cut by the screen's bottom; a focused card, grown, whole within its row at either end in
- * both directions; and a continue watching card's lines clear of its focus frame.
+ * the viewer's path on the Movies and Series tabs (on the tab, the first row whole below the header showing its first
+ * title; Down, that card and its title at once; Down again, the next row), the Categories pill in the bar and its
+ * picker; a focused card, grown, whole within its row at either end in both directions; and a continue watching card's
+ * lines clear of its focus frame.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -100,20 +107,29 @@ class TvLayoutRegressionTest {
         override suspend fun load(item: ShowcaseItem) = Unit
     }
 
-    /** [content] as a tab page on a TV: under the top bar, which shows [playlist] unless the page says otherwise. */
-    private fun show(tab: TopLevel, direction: LayoutDirection = LayoutDirection.Ltr, content: @Composable () -> Unit) {
+    /**
+     * [content] as a tab page on a TV: under the top bar, which shows [playlist] unless the page says otherwise. [onTab]:
+     * the page opened as the remote moved along the bar, the focus left on [tab] (the page's first card never had it).
+     */
+    private fun show(tab: TopLevel, direction: LayoutDirection = LayoutDirection.Ltr, onTab: Boolean = false, content: @Composable () -> Unit) {
         var inputModes: InputModeManager? = null
+        var bar: TvTopBar? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
             OndoTheme {
                 TelevisionFrame {
                     TvNavigationFrame(tab, showBar = true, onSelect = {}, onSearch = {}, onSettings = {}, playlist = playlist) {
+                        bar = LocalTvTopBar.current
                         CompositionLocalProvider(LocalTitleHeaders provides Headers, LocalLayoutDirection provides direction, content = content)
                     }
                 }
             }
         }
         compose.waitForIdle()
+        if (onTab) {
+            compose.runOnIdle { bar?.browsing = true }
+            compose.onNodeWithTag(tab.tag).requestFocus()
+        }
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
         advance(500)
@@ -136,13 +152,6 @@ class TvLayoutRegressionTest {
     private fun assertWithin(what: String, inner: DpRect, top: Dp, bottom: Dp) {
         assertTrue("$what starts at ${inner.top}, above $top", inner.top >= top - 0.5.dp)
         assertTrue("$what ends at ${inner.bottom}, below $bottom", inner.bottom <= bottom + 0.5.dp)
-    }
-
-    /** Where the Movies tab's list stops drawing its rows, from the screen's top. */
-    private fun visibleRowsBottom(): Dp {
-        val list = compose.onNodeWithTag("vod").fetchSemanticsNode()
-        val pixels = list.config.getOrNull(VisibleRowsBottom)?.invoke() ?: error("the rows' list says where it stops drawing")
-        return bounds("vod").top + with(compose.density) { pixels.toDp() }
     }
 
     @Test
@@ -200,7 +209,6 @@ class TvLayoutRegressionTest {
         assertEquals("the list right below the header", header.bottom.value, list.top.value, 0.5f)
         // The row's name and its cards with their lines: the shelf, whole.
         assertWithin(shelf, bounds(shelf), list.top, list.bottom)
-        assertWithin("$shelf's drawn part", bounds(shelf), list.top, visibleRowsBottom())
     }
 
     @Test
@@ -221,29 +229,151 @@ class TvLayoutRegressionTest {
         "shelf:m-drama",
     )
 
-    /** The chips focused: the first row shows whole below them, and no row is cut by the screen's bottom. */
-    @Test
-    fun withTheChipsFocusedNoCardIsCutAtTheBottom() {
-        val shelves = listOf("shelfResume", "shelfMyList", "shelf:m-drama")
-        moviesTab(VodUiState(title = "Movies", categories = listOf(drama), continueWatching = resume, myList = movies, rows = listOf(CategoryRow(drama, movies))))
-        compose.onNodeWithTag("categoryFilter").requestFocus()
-        advance(1_000)
-        val list = bounds("vod")
-        val drawn = visibleRowsBottom()
-        assertTrue("the list draws within itself", drawn <= list.bottom + 0.5.dp)
-        assertWithin("the first row", bounds("shelfResume"), list.top, drawn)
-        for (shelf in shelves) {
-            if (compose.onAllNodesWithTag(shelf, useUnmergedTree = true).fetchSemanticsNodes().isEmpty()) continue
-            val row = bounds(shelf)
-            assertTrue("$shelf is cut at the bottom: $row, drawn to $drawn", row.bottom <= drawn + 0.5.dp || row.top >= drawn - 0.5.dp)
-        }
+    /** The texts of the header's nodes tagged [tag]. */
+    private fun headerTexts(tag: String): List<String> =
+        compose.onAllNodes(hasTestTag(tag) and hasAnyAncestor(hasTestTag("titleHeader")), useUnmergedTree = true).fetchSemanticsNodes()
+            .mapNotNull { node -> node.config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") }
 
-        // Down to the first row: the header back, the row whole below it.
-        compose.onNodeWithTag("categoryFilter").performKeyInput { pressKey(Key.DirectionDown) }
+    private fun focusedIn(shelf: String) = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(shelf))).fetchSemanticsNodes().isNotEmpty()
+
+    private fun press(key: Key) {
+        compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(key) }
+        compose.waitForIdle()
+    }
+
+    /** The header shows [title], with its facts line's rating and its synopsis. */
+    private fun assertHeaderShows(title: String, step: String) {
+        assertEquals("$step: the header's title", listOf(title), headerTexts("headerTitle"))
+        assertEquals("$step: the header's rating", listOf("7.2"), headerTexts("headerRating"))
+        assertEquals("$step: the header's synopsis", listOf("A keeper counts the ships that never come."), headerTexts("headerPlot"))
+    }
+
+    /** [shelf], its name and its cards, whole within the rows' list right below the header. */
+    private fun assertWholeBelowTheHeader(shelf: String, step: String) {
+        val list = bounds("vod")
+        assertEquals("$step: the list right below the header", bounds("titleHeader").bottom.value, list.top.value, 0.5f)
+        assertWithin("$step: $shelf", bounds(shelf), list.top, list.bottom)
+    }
+
+    /**
+     * The remote's path the viewer takes on a tab ([tab], [state]): on the tab, the header shows the first card's title
+     * ([first]) and the first row ([firstShelf]) shows whole below it, no chips between; Down goes straight to that card,
+     * the header already on its title before any wait; Down again, the next row ([secondShelf]),
+     * whole, the header following it (the row's card below the first one: one of [second]).
+     */
+    private fun assertTheDownPath(tab: TopLevel, state: VodUiState, firstShelf: String, first: String, secondShelf: String, second: List<String>) {
+        show(tab, onTab = true) { VodScreen(state, VodActions()) }
+        assertTrue("the focus on the tab", compose.onNodeWithTag(tab.tag).fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
+        assertHeaderShows(first, "on the tab")
+        assertWholeBelowTheHeader(firstShelf, "on the tab")
+        assertTrue(
+            "no category chips between the header and the first row",
+            compose.onAllNodes(hasText("All") and hasAnyAncestor(hasTestTag("vod")), useUnmergedTree = true).fetchSemanticsNodes().isEmpty(),
+        )
+
+        // Down once: the first card, its title at once (the header's wait not over yet).
+        press(Key.DirectionDown)
+        advance(16)
+        assertTrue("Down from the tab lands in $firstShelf", focusedIn(firstShelf))
+        val card = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag(firstShelf))).onFirst().fetchSemanticsNode()
+        assertTrue("on the row's first card", card.config.getOrNull(SemanticsProperties.Focused) == true)
+        assertHeaderShows(first, "Down once")
+        advance(1_000)
+        assertHeaderShows(first, "Down once, settled")
+        assertWholeBelowTheHeader(firstShelf, "Down once")
+
+        // Down again: the next row, whole, the header on its first title.
+        press(Key.DirectionDown)
         advance(1_500)
-        assertTrue("a card of the first row has the focus", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfResume"))).fetchSemanticsNodes().isNotEmpty())
-        assertEquals("the list right below the header", bounds("titleHeader").bottom.value, bounds("vod").top.value, 0.5f)
-        assertWithin("the first row", bounds("shelfResume"), bounds("vod").top, bounds("vod").bottom)
+        assertTrue("Down again lands in $secondShelf", focusedIn(secondShelf))
+        val focused = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(secondShelf))).onLast().fetchSemanticsNode()
+        val title = focused.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull().orEmpty()
+        assertTrue("a card of the row's first ones ($title)", title in second)
+        assertHeaderShows(title, "Down twice")
+        assertWholeBelowTheHeader(secondShelf, "Down twice")
+    }
+
+    private fun resumed(item: ShowcaseItem) = ResumeItem("resume:${item.key}", item.title, subtitle = "2026", imageUrl = null, progress = 0.4f, minutesLeft = 7, hasPage = true, showcase = item)
+
+    private val comedies = (7..12).map { movie("$it", "Example Comedy $it") }
+
+    private val moviesPath = VodUiState(
+        title = "Movies",
+        categories = listOf(drama, comedy),
+        continueWatching = movies.take(3).map(::resumed),
+        rows = listOf(CategoryRow(drama, movies.drop(3)), CategoryRow(comedy, comedies)),
+    )
+
+    @Test
+    fun theMoviesTabFromItsTabDownTwice() = assertTheDownPath(TopLevel.MOVIES, moviesPath, "shelfResume", "Example Film 1", "shelf:m-drama", listOf("Example Film 4", "Example Film 5"))
+
+    @Test
+    fun theSeriesTabFromItsTabDownTwice() {
+        fun series(id: String, name: String, category: String) = ShowcaseItem.SeriesItem(
+            Series(id = id, name = name, categoryId = category, plot = "A keeper counts the ships that never come.", rating = 7.0, year = 2025),
+        )
+        val crime = MediaCategory("s-crime", "Crime", ContentType.SERIES)
+        val nature = MediaCategory("s-nature", "Nature", ContentType.SERIES)
+        val crimes = (1..6).map { series("c$it", "Example Series $it", crime.id) }
+        val natures = (1..6).map { series("n$it", "Example Nature $it", nature.id) }
+        val state = VodUiState(
+            title = "Series",
+            categories = listOf(crime, nature),
+            continueWatching = crimes.take(2).map(::resumed),
+            rows = listOf(CategoryRow(crime, crimes.drop(2)), CategoryRow(nature, natures)),
+        )
+        assertTheDownPath(TopLevel.SERIES, state, "shelfResume", "Example Series 1", "shelf:s-crime", listOf("Example Series 3", "Example Series 4"))
+    }
+
+    /**
+     * The categories in the top bar: Up from the first row reaches the tab, Right along the bar the Categories pill; OK
+     * opens the picker on All, and a category chosen there is the one the tab opens.
+     */
+    @Test
+    fun upThenRightReachesTheCategoriesPillAndItsPicker() {
+        var chosen: MediaCategory? = null
+        show(TopLevel.MOVIES, onTab = true) { VodScreen(moviesPath, VodActions(onCategory = { chosen = it })) }
+        press(Key.DirectionDown)
+        advance(500)
+        assertTrue(focusedIn("shelfResume"))
+        press(Key.DirectionUp)
+        advance(300)
+        assertTrue("Up from the first row lands on the tab", compose.onNodeWithTag("tabMovies").fetchSemanticsNode().config.getOrNull(SemanticsProperties.Focused) == true)
+        var presses = 0
+        while (compose.onAllNodes(isFocused() and hasTestTag("categoryFilter")).fetchSemanticsNodes().isEmpty()) {
+            check(presses++ < 8) { "Right along the bar never reached the Categories pill" }
+            press(Key.DirectionRight)
+            advance(50)
+        }
+        assertEquals("the pill reads Categories", listOf("Categories"), compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
+        assertTrue("the pill sits before Search", bounds("categoryFilter").right <= bounds("tabSearch").left + 0.5.dp)
+
+        press(Key.DirectionCenter)
+        advance(500)
+        assertTrue("the picker opens on All", compose.onAllNodes(isFocused() and hasTestTag("categoryAll")).fetchSemanticsNodes().isNotEmpty())
+        presses = 0
+        while (compose.onAllNodes(isFocused() and hasTestTag("category:m-comedy")).fetchSemanticsNodes().isEmpty()) {
+            check(presses++ < 6) { "Down along the picker never reached Comedy" }
+            press(Key.DirectionDown)
+            advance(50)
+        }
+        press(Key.DirectionCenter)
+        advance(500)
+        assertEquals(comedy, chosen)
+        assertTrue("the picker closed", compose.onAllNodesWithTag("categoryPicker").fetchSemanticsNodes().isEmpty())
+    }
+
+    /** A category's titles: the pill names it, and its picker opens on it. */
+    @Test
+    fun thePillNamesTheCategoryShown() {
+        show(TopLevel.MOVIES) {
+            TvTopBarCategories(TvCategoryChoice(listOf(drama, comedy), locked = emptySet(), selected = comedy, onChoose = {}, onManage = {}))
+        }
+        assertEquals(listOf("Comedy"), compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
+        compose.onNodeWithTag("categoryFilter").requestFocus()
+        press(Key.DirectionCenter)
+        advance(500)
+        assertTrue("the picker opens on the category shown", compose.onAllNodes(isFocused() and hasTestTag("category:m-comedy")).fetchSemanticsNodes().isNotEmpty())
     }
 
     /** Home with one row of [shelf]'s type under its carousel, made smaller while the rows have the focus. */

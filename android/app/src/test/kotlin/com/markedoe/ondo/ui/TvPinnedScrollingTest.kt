@@ -12,7 +12,7 @@ class TvPinnedScrollingTest {
 
     @Test
     fun aCardWhollyInViewBelowTheLeadStaysWhereItIs() {
-        // The first row below the page's chips: moving along it moves only the focus.
+        // The first row, right below the header: moving along it moves only the focus.
         assertEquals(0f, spec.calculateScrollDistance(offset = 272f, size = 336f, containerSize = 646f), 0f)
         assertEquals(0f, spec.calculateScrollDistance(offset = 104f, size = 336f, containerSize = 646f), 0f)
     }

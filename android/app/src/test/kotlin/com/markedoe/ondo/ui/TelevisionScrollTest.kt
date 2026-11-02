@@ -31,6 +31,7 @@ import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
+import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -54,8 +55,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionScrollTest {
-    /** The chips above the first row: Up from its smaller posters, under the header, lands on one of them. */
-    private val chipsAboveTheRows = setOf("Categories", "All", "Drama")
 
     @get:Rule val uncaught = UncaughtErrors()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
@@ -191,6 +190,19 @@ class TelevisionScrollTest {
      * Along a row, the focus moves over the cards on screen and the row stays still; only near the right edge does
      * the row move, by the same step at every press, the focused card whole on screen with the next one beside it.
      */
+    /**
+     * A category of the tab shown ([name]; All: every title), chosen as the viewer does: Up to the top bar, Right along
+     * it to the Categories pill, OK, then down the picker (it opens on All) to it, OK.
+     */
+    private fun chooseCategory(name: String) {
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
+        press(Key.DirectionCenter)
+        waitFor { focusedTag() == "categoryAll" }
+        pressUntil(Key.DirectionDown) { focused() == name }
+        press(Key.DirectionCenter)
+    }
+
     @Test
     fun alongARowOnlyTheFocusMovesUntilTheEdge() {
         start()
@@ -224,10 +236,8 @@ class TelevisionScrollTest {
     fun backLandsOnThePosterItLeftFarDownAllMovies() {
         start()
         openTab(1, "vod")
-        // The category chips above the rows: All opens every movie in a grid.
-        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
-        pressUntil(if (focused() == "Categories") Key.DirectionRight else Key.DirectionLeft) { focused() == "All" }
-        press(Key.DirectionCenter)
+        // The top bar's Categories pill: All opens every movie in a grid.
+        chooseCategory("All")
         waitFor { exists("grid") }
         settle(1_000)
         pressUntil(Key.DirectionDown, max = 20) { focused().startsWith("Film") }

@@ -36,6 +36,7 @@ import com.markedoe.ondo.ui.components.LocalPosterMyList
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.PosterMyList
 import com.markedoe.ondo.ui.model.ShowcaseItem
+import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import com.markedoe.ondo.ui.tv.TvPosterCard
 import com.markedoe.ondo.ui.theme.OndoTheme
 import java.time.Duration
@@ -59,8 +60,6 @@ import org.robolectric.shadows.ShadowToast
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class PosterMyListTest {
-    /** The chips above the first row: Up from its smaller posters, under the header, lands on one of them. */
-    private val chipsAboveTheRows = setOf("Categories", "All", "Drama")
 
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
@@ -157,18 +156,29 @@ class PosterMyListTest {
 
     private fun movie(title: String) = Fixtures.content.movies.first { it.name == title }
 
+    /**
+     * A category of the tab shown ([name]; All: every title), chosen as the viewer does: Up to the top bar, Right along
+     * it to the Categories pill, OK, then down the picker (it opens on All) to it, OK.
+     */
+    private fun chooseCategory(name: String) {
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
+        press(Key.DirectionCenter)
+        waitFor { focusedTag() == "categoryAll" }
+        pressUntil(Key.DirectionDown) { focused() == name }
+        press(Key.DirectionCenter)
+    }
+
     @Test
     fun okHeldOnACategorysPosterAddsItToMyListThenTakesItAway() {
         start()
-        // Movies, then a category's posters from its chip.
+        // Movies, then a category's posters from the top bar's Categories pill.
         pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionRight) { focusedTag() == "tabMovies" }
         press(Key.DirectionCenter)
         waitFor { exists("vod") && !focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
-        pressUntil(Key.DirectionRight) { focused() == "Drama" }
-        press(Key.DirectionCenter)
+        chooseCategory("Drama")
         waitFor { exists("grid") && focusedIn("grid") }
         pressUntil(Key.DirectionDown) { focused() == "Northern Lights" }
         val id = movie("Northern Lights").id

@@ -44,6 +44,7 @@ import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
+import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import com.markedoe.ondo.ui.tv.SEARCH_TAG
 import com.markedoe.ondo.ui.theme.OndoTheme
 import java.time.Duration
@@ -74,9 +75,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionFocusTest {
-    /** The chips above the first row: Up from its smaller posters, under the header, lands on one of them. */
-    private val chipsAboveTheRows = setOf("Categories", "All", "Drama")
-
     @get:Rule val uncaught = UncaughtErrors()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
@@ -400,6 +398,19 @@ class TelevisionFocusTest {
     private val movieTitles = Fixtures.content.movies.map { it.name }.toSet()
 
     /** From the page, up to the top bar, onto [tag], and opens it; the remote then moves into the page. */
+    /**
+     * A category of the tab shown, chosen as the viewer does: Up to the top bar, Right along it to the Categories pill,
+     * OK, then down the picker (it opens on All) to [name], OK.
+     */
+    private fun chooseCategory(name: String) {
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
+        press(Key.DirectionCenter)
+        waitFor { focusedTag() == "categoryAll" }
+        pressUntil(Key.DirectionDown) { focused() == name }
+        press(Key.DirectionCenter)
+    }
+
     private fun openFromDrawer(tag: String) {
         pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionLeft) { focusedTag() == "tabHome" }
@@ -427,11 +438,9 @@ class TelevisionFocusTest {
     fun aPosterGridsFilterGoesOnToThePostersWithTheKeyboardsAction() {
         start(answers = emptyMap(), stored = Fixtures.content)
         openFromDrawer("tabMovies")
-        // Up from the first poster: its category's chip, which opens the category's posters.
+        // The category's posters, chosen in the top bar's picker.
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
-        pressUntil(Key.DirectionRight) { focused() == "Drama" }
-        press(Key.DirectionCenter)
+        chooseCategory("Drama")
         waitFor { exists("grid") && focusedIn("grid") }
         // Onto the first poster, then up onto the filter: the key goes down, then up a moment later, as on a remote.
         pressUntil(Key.DirectionDown) { focused() == "Northern Lights" }
@@ -456,13 +465,11 @@ class TelevisionFocusTest {
         settle(500)
     }
 
-    /** A category's posters on Movies, opened from its chip. */
+    /** A category's posters on Movies, opened from the top bar's Categories pill. */
     private fun openDramaGrid() {
         openFromDrawer("tabMovies")
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
-        pressUntil(Key.DirectionRight) { focused() == "Drama" }
-        press(Key.DirectionCenter)
+        chooseCategory("Drama")
         waitFor { exists("grid") && focusedIn("grid") }
     }
 
@@ -487,9 +494,7 @@ class TelevisionFocusTest {
         assertTrue(tabSelected("tabMovies"))
         // Again, and back to the tab's page with OK on its tab.
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
-        pressUntil(Key.DirectionRight) { focused() == "Drama" }
-        press(Key.DirectionCenter)
+        chooseCategory("Drama")
         waitFor { exists("grid") && focusedIn("grid") }
         pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
         press(Key.DirectionCenter)
@@ -536,9 +541,13 @@ class TelevisionFocusTest {
     fun theCategoriesFieldsGoOnWithTheKeyboardsAction() {
         start(answers = emptyMap(), stored = Fixtures.content)
         openFromDrawer("tabMovies")
-        // The chips above the rows start with Categories.
-        pressUntil(Key.DirectionUp) { focused() == "All" || focusedTag() == "categoryFilter" }
-        pressUntil(Key.DirectionLeft) { focusedTag() == "categoryFilter" }
+        // The top bar's Categories pill, its picker's last entry: which categories are shown.
+        pressUntil(Key.DirectionDown) { focused() in movieTitles }
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
+        press(Key.DirectionCenter)
+        waitFor { focusedTag() == "categoryAll" }
+        pressUntil(Key.DirectionDown, max = 30) { focusedTag() == "categoryManage" }
         press(Key.DirectionCenter)
         waitFor { exists("categories") && focusedIn("categories") }
         pressUntil(Key.DirectionDown) { editing() }

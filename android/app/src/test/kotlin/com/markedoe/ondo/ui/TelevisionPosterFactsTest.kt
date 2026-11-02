@@ -29,6 +29,7 @@ import com.markedoe.ondo.data.FakeHttp
 import com.markedoe.ondo.data.OndoRepository
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
+import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,8 +49,6 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionPosterFactsTest {
-    /** The chips above the first row: Up from its smaller posters, under the header, lands on one of them. */
-    private val chipsAboveTheRows = setOf("Categories", "All", "Drama")
 
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
@@ -146,6 +145,19 @@ class TelevisionPosterFactsTest {
         check(focused() == title) { "never reached $title; the focus is on ${focused()}" }
     }
 
+    /**
+     * A category of the tab shown ([name]; All: every title), chosen as the viewer does: Up to the top bar, Right along
+     * it to the Categories pill, OK, then down the picker (it opens on All) to it, OK.
+     */
+    private fun chooseCategory(name: String) {
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
+        press(Key.DirectionCenter)
+        waitFor { focusedTag() == "categoryAll" }
+        pressUntil(Key.DirectionDown) { focused() == name }
+        press(Key.DirectionCenter)
+    }
+
     @Test
     fun theHeaderShowsTheFocusedPostersRatingAndGenres() {
         start()
@@ -154,9 +166,7 @@ class TelevisionPosterFactsTest {
         press(Key.DirectionCenter)
         waitFor { exists("vod") && !focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        pressUntil(Key.DirectionUp) { focused() in chipsAboveTheRows }
-        pressUntil(if (focused() == "Categories") Key.DirectionRight else Key.DirectionLeft) { focused() == "All" }
-        press(Key.DirectionCenter)
+        chooseCategory("All")
         waitFor { exists("grid") && focusedIn("grid") }
         pressUntil(Key.DirectionDown, max = 20) { focused() in movieTitles }
         // TMDb's, kept on the device: its rating with TMDb's badge, its genres.

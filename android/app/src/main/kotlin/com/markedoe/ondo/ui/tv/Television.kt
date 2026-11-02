@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyListLayoutInfo
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.ripple.RippleAlpha
@@ -40,14 +38,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
@@ -61,8 +57,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
-import androidx.compose.ui.semantics.SemanticsPropertyKey
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -133,7 +127,7 @@ fun TvRow(content: @Composable () -> Unit) {
  * How a page's rows scroll under a header pinned above them ([TvFocusHeader]): the focused card [lead] pixels below the
  * list's top (room for its row's name above it), rather than a third of the way. A card already wholly in view, at
  * least [lead] below the top, stays where it is: moving along a row on screen moves only the focus, the rows never
- * jump under it (the first row, below the page's chips, as any other).
+ * jump under it (the first row, right below the header, as any other).
  */
 @ExperimentalFoundationApi
 class TvPinnedScrolling(private val lead: Float) : BringIntoViewSpec {
@@ -141,35 +135,6 @@ class TvPinnedScrolling(private val lead: Float) : BringIntoViewSpec {
         if (offset >= lead && offset + size <= containerSize) return 0f
         return offset - lead.coerceAtMost((containerSize - size).coerceAtLeast(0f))
     }
-}
-
-/**
- * Where the rows wholly in view end, in the list's pixels from its top ([height] its height): the first row the
- * list's bottom cuts starts there. A row taller than the list, or the one with the focus ([focusedKey]), is never left
- * out: then [height].
- */
-internal fun LazyListLayoutInfo.wholeRowsBottom(height: Float, focusedKey: Any?): Float {
-    val shift = -viewportStartOffset
-    val cut = visibleItemsInfo.firstOrNull { shift + it.offset + it.size > height + 0.5f } ?: return height
-    val top = (shift + cut.offset).toFloat()
-    return if (top > 0f && cut.key != focusedKey) top.coerceAtMost(height) else height
-}
-
-/** Where a list drawn by [wholeRowsOnly] stops drawing, in its own pixels from its top, for the tests. */
-val VisibleRowsBottom = SemanticsPropertyKey<() -> Float>("VisibleRowsBottom")
-
-/**
- * The list [state] draws only its rows wholly in view: one its bottom would cut (half its cards showing) is left out
- * until the remote brings it up, and the screen never shows a row cut in two. [focusedKey]: the key of the list's item
- * with the focus, always drawn.
- */
-fun Modifier.wholeRowsOnly(state: LazyListState, focusedKey: () -> Any?): Modifier {
-    val bottom = { state.layoutInfo.let { it.wholeRowsBottom(it.viewportSize.height.toFloat(), focusedKey()) } }
-    return semantics { this[VisibleRowsBottom] = bottom }
-        .drawWithContent {
-            val rows = this
-            clipRect(bottom = bottom().coerceAtMost(size.height)) { rows.drawContent() }
-        }
 }
 
 /** [content]'s list scrolls as [TvPinnedScrolling] says on a TV, the focused card [lead] below its top; elsewhere, as it is. */
@@ -187,8 +152,8 @@ fun TvPinnedHeaderList(lead: Dp, content: @Composable () -> Unit) {
 
 /**
  * Keeps the lazy list's item this is called in composed and placed while it is scrolled out above the top. Under a
- * pinned header ([TvPinnedScrolling]) the first row's card lands where the items above it were (a page's chips, its
- * Sort button and filter): kept, the remote's Up still reaches them instead of jumping to the top bar.
+ * pinned header ([TvPinnedScrolling]) the first row's card lands where the items above it were (a grid's Sort button
+ * and filter): kept, the remote's Up still reaches them instead of jumping to the top bar.
  */
 @Composable
 fun KeptForTheRemote() {

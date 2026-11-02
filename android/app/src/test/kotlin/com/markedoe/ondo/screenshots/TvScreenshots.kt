@@ -19,7 +19,9 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
+import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.github.takahirom.roborazzi.captureScreenRoboImage
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.TopLevel
 import com.markedoe.ondo.ui.UiMappers
@@ -29,13 +31,17 @@ import com.markedoe.ondo.ui.model.TitleHeader
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
+import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.LocalTitleHeaders
 import com.markedoe.ondo.ui.tv.PlaylistUpdate
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvHomeScreen
+import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
+import com.markedoe.ondo.ui.tv.LocalTvTopBar
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
+import com.markedoe.ondo.ui.tv.TvTopBar
 import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -52,7 +58,8 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Reference screenshots of a TV's tab pages as the remote leaves them, from the demo catalogue: the header above the
  * Movies tab (its backdrop from the screen's top, the playlist's line in the bar), with a card of Continue watching
- * focused, with the chips focused, and Home with the remote in its rows. Compared by `verifyRoborazziDebug` with
+ * focused and with My List's; the viewer's path on the Movies and Series tabs (the focus on the tab, Down once, Down
+ * again), the Categories picker open, and Home with the remote in its rows. Compared by `verifyRoborazziDebug` with
  * [BASELINES]`/tv/`; the store listing has none of them.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -80,14 +87,17 @@ class TvScreenshots {
     @After
     fun noPictures() = ShowcaseImages.reset()
 
-    private fun show(tab: TopLevel, content: @Composable () -> Unit) {
+    /** [content] as [tab]'s page; [onTab]: opened as the remote moved along the bar, the focus left on the tab. */
+    private fun show(tab: TopLevel, onTab: Boolean = false, content: @Composable () -> Unit) {
         var inputModes: InputModeManager? = null
+        var bar: TvTopBar? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
             OndoTheme {
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
                     TelevisionFrame {
                         TvNavigationFrame(tab, showBar = true, onSelect = {}, onSearch = {}, onSettings = {}, playlist = playlist) {
+                            bar = LocalTvTopBar.current
                             CompositionLocalProvider(LocalTitleHeaders provides headers, content = content)
                         }
                     }
@@ -95,6 +105,10 @@ class TvScreenshots {
             }
         }
         compose.waitForIdle()
+        if (onTab) {
+            compose.runOnIdle { bar?.browsing = true }
+            compose.onNodeWithTag(tab.tag).requestFocus()
+        }
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
         advance()
@@ -115,7 +129,43 @@ class TvScreenshots {
 
     private fun capture(name: String) = compose.onRoot().captureRoboImage("$BASELINES/tv/en-US/$name.png", BaselineOptions)
 
-    private fun moviesTab() = show(TopLevel.MOVIES) { VodScreen(UiMappers.vod(state, series = false, title = "Movies"), VodActions()) }
+    /** The whole screen, the picker's window over the page included. */
+    @OptIn(ExperimentalRoborazziApi::class)
+    private fun captureScreen(name: String) = captureScreenRoboImage("$BASELINES/tv/en-US/$name.png", BaselineOptions)
+
+    private fun moviesTab(onTab: Boolean = false) = show(TopLevel.MOVIES, onTab) { VodScreen(UiMappers.vod(state, series = false, title = "Movies"), VodActions()) }
+
+    private fun press(key: Key) {
+        compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(key) }
+        advance()
+    }
+
+    private fun focusedIn(shelf: String) = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(shelf))).fetchSemanticsNodes().isNotEmpty()
+
+    /** The rows of [vod], by their tags from the top: Continue watching first, then at least two more. */
+    private fun shelves(vod: VodUiState): List<String> {
+        val tags = listOfNotNull(
+            "shelfResume".takeIf { vod.continueWatching.isNotEmpty() },
+            "shelfMyList".takeIf { vod.myList.isNotEmpty() },
+            "shelfAwards".takeIf { vod.awardWinners.isNotEmpty() },
+        ) + vod.rows.map { "shelf:${it.category.id}" }
+        assertTrue("Continue watching, then at least two more rows: $tags", tags.size >= 3 && tags.first() == "shelfResume")
+        return tags
+    }
+
+    /** The viewer's path on the Movies or the Series tab: on the tab, Down once, Down again, each captured as [name]`-…`. */
+    private fun downPath(name: String, series: Boolean) {
+        val vod = UiMappers.vod(state, series = series, title = if (series) "Series" else "Movies")
+        val rows = shelves(vod)
+        show(if (series) TopLevel.SERIES else TopLevel.MOVIES, onTab = true) { VodScreen(vod, VodActions()) }
+        capture("$name-tab-focused")
+        press(Key.DirectionDown)
+        assertTrue("Down from the tab: the first row", focusedIn(rows[0]))
+        capture("$name-down-1")
+        press(Key.DirectionDown)
+        assertTrue("Down again: the next row", focusedIn(rows[1]))
+        capture("$name-down-2")
+    }
 
     @Test
     fun moviesWithContinueWatchingFocused() {
@@ -136,11 +186,22 @@ class TvScreenshots {
     }
 
     @Test
-    fun moviesWithTheChipsFocused() {
-        moviesTab()
-        compose.onNodeWithTag("categoryFilter").requestFocus()
-        advance()
-        capture("movies-chips")
+    fun moviesDownFromTheTab() = downPath("movies", series = false)
+
+    @Test
+    fun seriesDownFromTheTab() = downPath("series", series = true)
+
+    @Test
+    fun theCategoriesPickerOpen() {
+        moviesTab(onTab = true)
+        var presses = 0
+        while (compose.onAllNodes(isFocused() and hasTestTag(CATEGORIES_TAG)).fetchSemanticsNodes().isEmpty()) {
+            check(presses++ < 8) { "Right along the bar never reached the Categories pill" }
+            press(Key.DirectionRight)
+        }
+        press(Key.DirectionCenter)
+        assertTrue("the picker has the focus", compose.onAllNodes(isFocused() and hasTestTag("categoryAll")).fetchSemanticsNodes().isNotEmpty())
+        captureScreen("categories-picker-open")
     }
 
     @Test

@@ -70,16 +70,14 @@ import com.markedoe.ondo.ui.components.rememberShelfMetrics
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.PosterFacts
 import com.markedoe.ondo.ui.model.ShowcaseItem
-import com.markedoe.ondo.ui.tv.TvRow
 import com.markedoe.ondo.ui.tv.focusMemory
 import com.markedoe.ondo.ui.tv.TvSeeAllCard
 import com.markedoe.ondo.ui.tv.rememberLeaveField
 import com.markedoe.ondo.ui.tv.rememberTvTextField
 import com.markedoe.ondo.ui.tv.TvHeaderPosterWidth
 import com.markedoe.ondo.ui.tv.TvHeaderWideCardWidth
-import com.markedoe.ondo.ui.tv.LocalTvHeaderChips
-import com.markedoe.ondo.ui.tv.collapsesTvHeader
-import com.markedoe.ondo.ui.tv.wholeRowsOnly
+import com.markedoe.ondo.ui.tv.TvCategoryChoice
+import com.markedoe.ondo.ui.tv.TvTopBarCategories
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
 import com.markedoe.ondo.ui.tv.KeptForTheRemote
 import androidx.compose.ui.unit.Dp
@@ -114,10 +112,11 @@ class VodActions(
 const val TV_ROW_LENGTH = 10
 
 /**
- * Movies or Series tab: category chips, continue watching, My List, award winners, one row per category. On a TV, a
- * header pinned above the rows shows the poster with the focus ([TvFocusHeader]), the cards a little smaller: a row
- * with its name and its cards' lines fits whole below it on a 960 × 540 dp screen. The chips focused, the header steps
- * aside and the first row shows whole below them; a row the screen's bottom would cut is not drawn.
+ * Movies or Series tab: category chips (on a phone), continue watching, My List, award winners, one row per category.
+ * On a TV, a header pinned above the rows shows the poster with the focus ([TvFocusHeader]), the cards a little smaller: a row
+ * with its name and its cards' lines fits whole below it on a 960 × 540 dp screen. There, the categories are a pill in
+ * the top bar ([TvTopBarCategories]) rather than chips above the rows: with the focus on the tab, the header shows the
+ * first card's title and the first row shows whole below it; Down goes straight to that card.
  */
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
@@ -128,13 +127,20 @@ fun VodScreen(state: VodUiState, actions: VodActions) {
     TvHeaderAbove(fallback, lead = SHELF_TITLE_ROOM) { modifier, top, underHeader ->
         VodRows(state, actions, modifier, top, underHeader)
     }
+    // On a TV, the categories: All, then each one, in the top bar's pill.
+    TvTopBarCategories(
+        TvCategoryChoice(
+            categories = state.categories,
+            locked = state.lockedCategoryIds,
+            selected = null,
+            onChoose = actions.onCategory,
+            onManage = actions.onCategories,
+        ),
+    )
 }
 
 /** The room a row's name takes above its posters ([Shelf]'s title line on a TV). */
 private val SHELF_TITLE_ROOM = 52.dp
-
-/** The chips' item in the tab's list. */
-private const val CHIPS_KEY = "vod:chips"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -146,25 +152,13 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
     // On a TV a row shows its first titles, then a See all card: the remote reaches it by going on along the row.
     val rowLength = if (television) TV_ROW_LENGTH else Int.MAX_VALUE
     val list = rememberTabListState()
-    // Under the header, the row with the focus is always drawn; one the screen's bottom would cut, not.
+    // Under the header, the row with the focus is brought whole into view.
     var focusedRow by remember { mutableStateOf<Any?>(null) }
     fun Modifier.row(key: Any): Modifier = if (underHeader) onFocusChanged { if (it.hasFocus) focusedRow = key } else this
-    // Down from the chips, the header comes back: the row the remote went to goes to the top, whole below it.
-    val chipsFocused = LocalTvHeaderChips.current?.focused == true
-    var chipsWereFocused by remember { mutableStateOf(false) }
-    LaunchedEffect(chipsFocused) {
-        val leaving = chipsWereFocused && !chipsFocused
-        chipsWereFocused = chipsFocused
-        if (!leaving) return@LaunchedEffect
-        withFrameNanos { }
-        val key = focusedRow?.takeIf { it != CHIPS_KEY } ?: return@LaunchedEffect
-        val index = list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == key }?.index ?: return@LaunchedEffect
-        list.animateScrollToItem(index)
-    }
     // A row that takes the focus while the page opens (its first card) is brought whole too: the focus then comes
     // before the list is laid out, and nothing scrolls it. Once a scroll in progress ends, a row still cut is moved up.
     LaunchedEffect(focusedRow, underHeader) {
-        val key = focusedRow?.takeIf { underHeader && it != CHIPS_KEY } ?: return@LaunchedEffect
+        val key = focusedRow?.takeIf { underHeader } ?: return@LaunchedEffect
         withFrameNanos { }
         if (list.isScrollInProgress) snapshotFlow { list.isScrollInProgress }.first { !it }
         val info = list.layoutInfo
@@ -174,12 +168,12 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
     }
     LazyColumn(
         state = list,
-        modifier = modifier.testTag("vod").then(if (underHeader) Modifier.wholeRowsOnly(list) { focusedRow } else Modifier),
+        modifier = modifier.testTag("vod"),
         verticalArrangement = Arrangement.spacedBy(if (metrics.compact) 24.dp else 32.dp),
         contentPadding = PaddingValues(top = top, bottom = 32.dp),
     ) {
-        // On a TV the top bar names the tab and holds Search: the page starts with its categories, the button that
-        // chooses which ones show first.
+        // On a TV the top bar names the tab and holds Search and the categories' pill: the page starts with its first
+        // row, right below the header, which Down from the tab reaches at once.
         if (!television) {
             item {
                 TopAppBar(
@@ -193,27 +187,11 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 )
             }
-        }
-        item(key = CHIPS_KEY) {
-            // Above the first row's card, under the header: kept for the remote's Up.
-            if (television) KeptForTheRemote()
-            TvRow {
+            item(key = "vod:chips") {
                 LazyRow(
-                    // Focused, the chips have the header step aside: the first row shows whole below them.
-                    modifier = Modifier.row(CHIPS_KEY).collapsesTvHeader(),
                     contentPadding = PaddingValues(horizontal = metrics.gutter),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    if (television) {
-                        item {
-                            CategoryPill(
-                                stringResource(R.string.categories),
-                                onClick = actions.onCategories,
-                                leadingIcon = { Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                                modifier = Modifier.testTag("categoryFilter"),
-                            )
-                        }
-                    }
                     item { CategoryPill(stringResource(R.string.all), onClick = { actions.onCategory(null) }) }
                     items(state.categories, key = { it.id }) { category ->
                         val locked = category.id in state.lockedCategoryIds
