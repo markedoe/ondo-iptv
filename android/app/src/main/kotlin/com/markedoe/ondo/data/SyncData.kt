@@ -75,7 +75,17 @@ object SyncData {
         state.settings.serviceKeys,
     )
 
-    fun snapshot(state: OndoState, device: String, deviceName: String?, now: Long): SyncSnapshot {
+    /**
+     * This device's snapshot, without the deletions [SyncSnapshot.pruned] forgets at [now] (this device's sync clock,
+     * [com.markedoe.ondo.core.sync.SyncClock.now]). Its times are those stored: never moved.
+     */
+    fun snapshot(state: OndoState, device: String, deviceName: String?, now: Long): SyncSnapshot =
+        records(state, device, deviceName, now).pruned(now, sessions = state.library.syncPeers.values, learned = state.library.syncDeletedLearned)
+
+    /** The latest time of what this device holds for sync (its records and deletions); null without any. */
+    fun latestTime(state: OndoState): Long? = records(state, "", null, 0).latestTime()
+
+    private fun records(state: OndoState, device: String, deviceName: String?, now: Long): SyncSnapshot {
         val synced = state.playlists.filter(SyncKeys::syncs)
         val ids = synced.mapTo(HashSet()) { it.id.lowercase() }
         val known = state.playlists.mapTo(HashSet()) { it.id.lowercase() }
@@ -133,7 +143,7 @@ object SyncData {
             deleted = library.syncDeleted,
             replaced = library.syncReplaced,
             clock = now,
-        ).clampingFuture(now).pruned(now, sessions = library.syncPeers.values, learned = library.syncDeletedLearned)
+        )
     }
 
     /**

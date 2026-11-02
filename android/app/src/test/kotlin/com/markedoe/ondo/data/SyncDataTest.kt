@@ -497,26 +497,39 @@ class SyncDataTest {
         assertTrue("no session asked for by a merge: $raised", raised.isEmpty())
     }
 
-    /** A change stamped while the clock ran ahead is brought back to the clock when sent: a later removal still wins. */
+    /**
+     * A change made while the TV's clock ran more than a day ahead is left out by the phone, whose own changes stay on
+     * its clock; once the TV's clock is right and that time is within a day, the change arrives, and a removal made
+     * on the phone after it wins on both.
+     */
     @Test
-    fun aChangeStampedAheadIsSentAtTheClockAndLosesToALaterRemoval() = runTest {
-        val tv = device("tv").ready()
+    fun aChangeDatedMoreThanADayAheadWaitsForItsTimeAndALaterRemovalWins() = runTest {
+        val tv = device("tv", offset = 0).ready()
         val phone = device("phone").ready()
         tv.addPlaylist("Home", list)
         session(phone, tv)
         val movie = tv.state.value.content.movies.single()
-        // The TV's clock ran a year ahead when the favourite was kept.
-        time += 365 * 86_400_000L
+        // The TV's clock ran a day and an hour ahead when the favourite was kept.
+        time += 86_400_000L + 3_600_000L
         tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
-        time -= 365 * 86_400_000L
-        assertTrue(requireNotNull(tv.syncSnapshot("tv")).favorites.all { it.addedAt <= time })
+        time -= 86_400_000L + 3_600_000L
+        val stamped = tv.state.value.library.favorites.single().addedAt
         session(phone, tv)
-        assertTrue(phone.state.value.favorite(movie.id))
-        // Taken out on the phone a minute later: gone from the TV too.
+        assertFalse(phone.state.value.favorite(movie.id))
+        assertTrue("the TV keeps it, as it was dated", tv.state.value.library.favorites.single().addedAt == stamped)
+        time += 1_000
+        phone.togglePerson("Ada Example", null)
+        assertTrue("the phone did not follow the TV's clock", phone.state.value.library.favorites.single().addedAt < stamped)
+        // Its time come within a day: it arrives as it was dated.
+        time += 2 * 3_600_000L
+        session(phone, tv)
+        assertEquals(stamped, phone.state.value.library.favorites.single { it.itemId == movie.id }.addedAt)
+        // Taken out on the phone a minute later: dated after it, so gone from the TV too.
         time += 60_000
         phone.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
         session(phone, tv)
         assertFalse(tv.state.value.favorite(movie.id))
+        assertFalse(phone.state.value.favorite(movie.id))
     }
 
     /** A deletion learned from a box back after months is kept from the day it was learned, not from its own date. */
@@ -576,7 +589,10 @@ class SyncDataTest {
         assertTrue(own != replacement)
     }
 
-    /** A box whose clock runs a day ahead cannot date a removal in the future: it is left out until its time comes. */
+    /**
+     * A box whose clock runs more than a day ahead cannot date a removal in the future: it is left out until its time
+     * comes within a day.
+     */
     @Test
     fun aClockAheadDoesNotWinOverLaterChanges() = runTest {
         val tv = device("tv").ready()
@@ -585,14 +601,14 @@ class SyncDataTest {
         time += 1_000
         tv.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
         val key = SyncKeys.favorite(tv.state.value.library.favorites.single())
-        val ahead = SyncSnapshot(device = "ahead", deleted = mapOf(key to time + 86_400_000L))
+        val ahead = SyncSnapshot(device = "ahead", deleted = mapOf(key to time + 86_400_000L + 3_600_000L))
 
         time += 1_000
         tv.mergeSync(ahead, "tv")
         assertTrue(tv.state.value.favorite(movie.id))
         assertNull(tv.state.value.library.syncDeleted[key])
-        // Its time come, the removal applies like any other.
-        time += 86_400_000L
+        // Its time come within a day, the removal applies like any other.
+        time += 3_600_000L
         tv.mergeSync(ahead, "tv")
         assertFalse(tv.state.value.favorite(movie.id))
     }

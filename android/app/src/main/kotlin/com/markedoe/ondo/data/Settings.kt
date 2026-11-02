@@ -56,6 +56,8 @@ data class AppSettings(
     val syncOnLocalNetwork: Boolean = false,
     /** This installation's ID for sync, made once. */
     val syncDeviceId: String = "",
+    /** The latest time sync dated or received here (`SyncClock.last`, docs/SYNC.md "Clocks"); 0 before any. */
+    val syncClock: Long = 0,
     /** The viewer's sound and subtitle languages, learned from their choices in the player (see `TrackPreferences`). */
     val preferredAudioLanguage: String? = null,
     val preferredSubtitleLanguage: String? = null,

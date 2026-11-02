@@ -40,6 +40,7 @@ import com.markedoe.ondo.core.model.XtreamCredentials
 import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.core.sync.SyncClock
 import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -187,6 +188,18 @@ class OndoRepository(
     /** Settings changed before the saved ones were read (the player opened again alone): applied to them once read. */
     private val pendingSettingsChanges = mutableListOf<(AppSettings) -> AppSettings>()
 
+    /**
+     * This device's clock for sync (docs/SYNC.md, "Clocks"): every change sync carries is dated by [stamp], later than
+     * everything this device dated or received before, whatever its wall clock says.
+     */
+    private val syncClock = SyncClock()
+
+    /** The time of a change sync carries, made now ([SyncClock.stamp]). */
+    private fun stamp(): Long = syncClock.stamp(now())
+
+    /** Now as sync dates it ([SyncClock.now]): to prune by and to note sessions, never earlier than a time it gave. */
+    private fun syncNow(): Long = syncClock.now(now())
+
     /** Saves run one at a time, in order: the last change is the one on disk. */
     @OptIn(ExperimentalCoroutinesApi::class)
     private val writer = io.limitedParallelism(1)
@@ -279,6 +292,10 @@ class OndoRepository(
                 store.forgetUnusedImports(playlists)
                 store.loadLastCrash()
             }
+            // The sync clock starts after every time this device holds: after a restart with its clock back at 1970,
+            // a change is still dated after the ones it made or received before.
+            syncClock.advance(savedSettings.syncClock)
+            syncClock.advance(SyncData.latestTime(OndoState(settings = savedSettings, playlists = playlists, library = saved)))
             val pending = pendingLibraryChanges.toList()
             pendingLibraryChanges.clear()
             val library = pending.fold(saved) { library, change -> change(library) }
@@ -320,15 +337,14 @@ class OndoRepository(
 
     fun setPrepareAhead(on: Boolean) = updateSettings { it.copy(prepareAhead = on) }
 
-    /** Saves in order, off the main thread. A failed save (disk full) keeps the app running. */
-    private fun persist(save: AppStore.() -> Unit) {
-        scope.launch(writer) { runCatching { store.save() } }
-    }
+    /** Saves in order, off the main thread; the job ends once saved. A failed save (disk full) keeps the app running. */
+    private fun persist(save: AppStore.() -> Unit): Job = scope.launch(writer) { runCatching { store.save() } }
 
     // MARK: Playlists
 
     /** Loads the playlist once to check it, then saves and activates it. */
     suspend fun addPlaylist(name: String, url: String, username: String? = null, password: String? = null, epgUrl: String? = null): Result<Unit> {
+        val time = stamp()
         val saved = SavedPlaylist(
             id = UUID.randomUUID().toString(),
             name = name.ifBlank { hostName(url) },
@@ -336,8 +352,8 @@ class OndoRepository(
             username = username?.trim(),
             password = password,
             epgUrl = epgUrl?.trim()?.ifBlank { null },
-            addedAt = now(),
-            updatedAt = now(),
+            addedAt = time,
+            updatedAt = time,
         )
         _state.update { it.copy(isLoading = true, error = null) }
         return try {
@@ -393,7 +409,7 @@ class OndoRepository(
         val removed = _state.value.playlists.firstOrNull { it.id == id } ?: return
         val playlists = _state.value.playlists.filterNot { it.id == id }
         _state.value.library.reminders.filter { it.playlistId == id }.forEach(reminderScheduler::cancel)
-        val library = _state.value.library.removingPlaylist(id, now())
+        val library = _state.value.library.removingPlaylist(id, stamp())
         val settings = _state.value.settings.let { if (it.activePlaylistId == id) it.copy(activePlaylistId = playlists.firstOrNull()?.id) else it }
         persist {
             savePlaylists(playlists, removed)
@@ -442,20 +458,28 @@ class OndoRepository(
     /** What this device sends to sync; null until its data is loaded. Main thread. */
     fun syncSnapshot(deviceName: String?): SyncSnapshot? {
         if (!_state.value.isReady) return null
-        return SyncData.snapshot(_state.value, syncDeviceId(), deviceName, now())
+        return SyncData.snapshot(_state.value, syncDeviceId(), deviceName, syncNow())
     }
 
     /**
-     * Merges [incoming] with this device's data as it is now, keeps the result and returns the answer for its sender
-     * ([SyncSnapshot.forSender]: on the sender's clock, so that a session moves no time). Main thread, all of it: for
-     * tests and screens that merge at once; sync merges with [mergeSyncInBackground].
+     * What this device takes of [incoming] (docs/SYNC.md, "Clocks"): without what is dated more than a day after its
+     * clock; the rest goes into its sync clock, so that a change made here next is dated after it. No time is moved.
+     */
+    private fun received(incoming: SyncSnapshot): SyncSnapshot {
+        val wall = now()
+        return incoming.withoutRecordsAhead(wall).also { syncClock.observe(it, wall) }
+    }
+
+    /**
+     * Merges [incoming] with this device's data as it is now, keeps the result and returns it as the answer for its
+     * sender. Main thread, all of it: for tests and screens that merge at once; sync merges with
+     * [mergeSyncInBackground].
      */
     fun mergeSync(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
         val local = syncSnapshot(deviceName) ?: return null
-        val time = now()
-        val merged = SyncMerge.merge(local, incoming.onReceiverClock(time))
-        commitSync(SyncData.apply(_state.value, merged, time))
-        return merged.forSender(incoming.skewAt(time))
+        val merged = SyncMerge.merge(local, received(incoming))
+        commitSync(SyncData.apply(_state.value, merged, syncNow()))
+        return merged
     }
 
     /** This device's snapshot, built on [syncMerging] from the data as it is now (returned with it); null until loaded. */
@@ -463,7 +487,7 @@ class OndoRepository(
         if (!_state.value.isReady) return null
         val id = syncDeviceId()
         val base = _state.value
-        val time = now()
+        val time = syncNow()
         return base to withContext(syncMerging) { SyncData.snapshot(base, id, deviceName, time) }
     }
 
@@ -475,7 +499,7 @@ class OndoRepository(
     private suspend fun syncDigest(state: OndoState, deviceName: String?): String {
         val id = syncDeviceId()
         val leavingOut = digestLeavingOut(state)
-        val time = now()
+        val time = syncNow()
         return withContext(syncMerging) { SyncData.snapshot(state, id, deviceName, time).contentDigest(leavingOut) }
     }
 
@@ -499,17 +523,19 @@ class OndoRepository(
      * and the data as kept. Main thread.
      */
     private suspend fun mergeInBackground(incoming: SyncSnapshot, deviceName: String?): Pair<SyncSnapshot, OndoState>? {
+        if (!_state.value.isReady) return null
+        val taken = received(incoming)
         repeat(MERGE_TRIES) {
             val (base, local) = syncSnapshotInBackground(deviceName) ?: return null
-            val time = now()
+            val time = syncNow()
             val (merged, applied) = withContext(syncMerging) {
-                val result = SyncMerge.merge(local, incoming.onReceiverClock(time))
+                val result = SyncMerge.merge(local, taken)
                 result to SyncData.apply(base, result, time)
             }
             val current = _state.value
             if (current.playlists === base.playlists && current.library === base.library && current.settings === base.settings) {
                 commitSync(applied)
-                return merged.forSender(incoming.skewAt(time)) to _state.value
+                return merged to _state.value
             }
         }
         return null
@@ -533,7 +559,7 @@ class OndoRepository(
             return if (incoming.seen == digest) {
                 SyncSnapshot(device = own.device, deviceName = own.deviceName, digest = digest, unchanged = true)
             } else {
-                own.copy(digest = digest).forSender(incoming.skewAt(now()))
+                own.copy(digest = digest)
             }
         }
         val (answer, kept) = mergeInBackground(incoming, deviceName) ?: return null
@@ -615,7 +641,7 @@ class OndoRepository(
      * once it has merged a server's full answer; a server once its answer to a full snapshot was delivered. Main thread.
      */
     fun noteSyncSession(device: String) {
-        val time = now()
+        val time = syncNow()
         val peers = _state.value.library.syncPeers
         if (time - (peers[device.lowercase()] ?: Long.MIN_VALUE / 2) < DAY_MS) return
         val forgotten = time - SyncSnapshot.PEERS_KEPT_DAYS * DAY_MS
@@ -644,9 +670,9 @@ class OndoRepository(
         val active = state.settings.activePlaylistId?.takeIf { id -> applied.playlists.any { it.id == id } }
             ?: state.activePlaylistId?.let { applied.replacements[it] }
             ?: applied.playlists.firstOrNull()?.id
-        val settings = state.settings.copy(activePlaylistId = active, serviceKeys = applied.keys)
+        val settings = state.settings.copy(activePlaylistId = active, serviceKeys = applied.keys, syncClock = syncClock.last)
         val before = state.activePlaylist
-        persist {
+        val saved = persist {
             if (applied.removed.isEmpty()) savePlaylists(applied.playlists) else applied.removed.forEach { savePlaylists(applied.playlists, it) }
             saveLibrary(library)
             saveSettings(settings)
@@ -665,12 +691,23 @@ class OndoRepository(
         _state.update { current ->
             current.copy(playlists = applied.playlists, library = library, settings = settings).also { committedBySync = SyncData.changes(it) }
         }
-        if (inPlayback) {
-            // Nothing is reloaded under the player: the catalogue follows once playback ends.
-            if (!contentFollowsSync) contentBeforeSync = before
-            contentFollowsSync = true
+        fun follow() {
+            if (inPlayback) {
+                // Nothing is reloaded under the player: the catalogue follows once playback ends.
+                if (!contentFollowsSync) contentBeforeSync = before
+                contentFollowsSync = true
+            } else {
+                followSyncedPlaylist(before)
+            }
+        }
+        if (applied.replacements.isEmpty()) {
+            follow()
         } else {
-            followSyncedPlaylist(before)
+            // The catalogue of a replaced playlist is moved to the one that replaced it: read from there once moved.
+            scope.launch {
+                saved.join()
+                follow()
+            }
         }
         // A TMDb token saved, changed or removed on another device: used from now on, as if typed here.
         if (state.settings.tmdbToken != settings.tmdbToken) tmdbTokenChanged()
@@ -888,7 +925,7 @@ class OndoRepository(
 
     fun toggleFavorite(kind: ItemKind, itemId: String, title: String, imageUrl: String?) {
         val playlistId = _state.value.activePlaylistId ?: return
-        updateLibrary { it.toggleFavorite(Favorite(playlistId, kind, itemId, title, imageUrl, now())) }
+        updateLibrary { it.toggleFavorite(Favorite(playlistId, kind, itemId, title, imageUrl, stamp())) }
     }
 
     /**
@@ -992,20 +1029,20 @@ class OndoRepository(
     }
 
     /** Keeps an actor or a director in My List (whatever the playlist), or takes them out. */
-    fun togglePerson(name: String, photoUrl: String?) = updateLibrary { it.toggleFavorite(Favorite.person(name, photoUrl, now())) }
+    fun togglePerson(name: String, photoUrl: String?) = updateLibrary { it.toggleFavorite(Favorite.person(name, photoUrl, stamp())) }
 
     /** Adds an actor or a director to a collection, or takes them out. */
     fun togglePersonInCollection(id: String, name: String, photoUrl: String?) =
-        updateLibrary { it.togglingInCollection(id, Favorite.person(name, photoUrl, now()), now()) }
+        updateLibrary { library -> stamp().let { time -> library.togglingInCollection(id, Favorite.person(name, photoUrl, time), time) } }
 
     fun recordProgress(key: String, position: Double, duration: Double) {
-        updateLibrary { it.updateProgress(key, position, duration, now()) }
+        updateLibrary { it.updateProgress(key, position, duration, stamp()) }
     }
 
     /** Takes a "Continue watching" card away: the movie, or the series' episodes in progress. */
     fun removeFromContinueWatching(key: String) {
         val entry = _state.value.library.progress(key) ?: return
-        updateLibrary { it.removingFromContinueWatching(entry, now()) }
+        updateLibrary { it.removingFromContinueWatching(entry, stamp()) }
     }
 
     // MARK: Reminders
@@ -1029,18 +1066,18 @@ class OndoRepository(
     /** Creates a collection and returns its id. */
     fun createCollection(name: String): String {
         val id = UUID.randomUUID().toString()
-        updateLibrary { it.creatingCollection(id, name, now()) }
+        updateLibrary { it.creatingCollection(id, name, stamp()) }
         return id
     }
 
-    fun renameCollection(id: String, name: String) = updateLibrary { it.renamingCollection(id, name, now()) }
+    fun renameCollection(id: String, name: String) = updateLibrary { it.renamingCollection(id, name, stamp()) }
 
-    fun deleteCollection(id: String) = updateLibrary { it.deletingCollection(id, now()) }
+    fun deleteCollection(id: String) = updateLibrary { it.deletingCollection(id, stamp()) }
 
     /** Adds an item of the current playlist to a collection, or takes it out. */
     fun toggleInCollection(id: String, kind: ItemKind, itemId: String, title: String, imageUrl: String?) {
         val playlistId = _state.value.activePlaylistId ?: return
-        updateLibrary { it.togglingInCollection(id, Favorite(playlistId, kind, itemId, title, imageUrl, now()), now()) }
+        updateLibrary { library -> stamp().let { time -> library.togglingInCollection(id, Favorite(playlistId, kind, itemId, title, imageUrl, time), time) } }
     }
 
     private fun updateLibrary(change: (LibraryState) -> LibraryState) {
@@ -1184,7 +1221,7 @@ class OndoRepository(
     fun playRequest(movie: Movie, fromStart: Boolean = false): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(movie)
-        val entry = WatchEntry(playlist.id, ItemKind.MOVIE, movie.id, null, movie.name, movie.year?.toString(), movie.posterUrl, lastWatchedAt = now())
+        val entry = WatchEntry(playlist.id, ItemKind.MOVIE, movie.id, null, movie.name, movie.year?.toString(), movie.posterUrl, lastWatchedAt = stamp())
         return start(item, entry, fromStart)
     }
 
@@ -1193,7 +1230,7 @@ class OndoRepository(
         // The episodes of the provider's details are kept in the core's words (see OndoState.placeholderNames).
         val shown = _state.value.placeholderNames.rename(episode)
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(shown, series)
-        val entry = WatchEntry(playlist.id, ItemKind.SERIES, series.id, shown.id, series.name, "${shown.code} · ${shown.title}", shown.posterUrl ?: series.coverUrl, lastWatchedAt = now())
+        val entry = WatchEntry(playlist.id, ItemKind.SERIES, series.id, shown.id, series.name, "${shown.code} · ${shown.title}", shown.posterUrl ?: series.coverUrl, lastWatchedAt = stamp())
         return start(item, entry, fromStart = false)
     }
 
@@ -1236,7 +1273,7 @@ class OndoRepository(
     fun playRequest(channel: Channel): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(channel)
-        val entry = WatchEntry(playlist.id, ItemKind.CHANNEL, channel.id, null, channel.name, null, channel.logoUrl, lastWatchedAt = now())
+        val entry = WatchEntry(playlist.id, ItemKind.CHANNEL, channel.id, null, channel.name, null, channel.logoUrl, lastWatchedAt = stamp())
         return start(item, entry, fromStart = true).copy(channelId = channel.id)
     }
 
@@ -1358,7 +1395,7 @@ class OndoRepository(
             return TmdbCheck.UNREACHABLE
         }
         if (!accepted) return TmdbCheck.REFUSED
-        updateSettings { settings -> settings.copy(serviceKeys = settings.serviceKeys.filterNot { it.service == SyncKey.TMDB } + SyncKey(SyncKey.TMDB, trimmed, now())) }
+        updateSettings { settings -> settings.copy(serviceKeys = settings.serviceKeys.filterNot { it.service == SyncKey.TMDB } + SyncKey(SyncKey.TMDB, trimmed, stamp())) }
         tmdbTokenChanged()
         return TmdbCheck.ACCEPTED
     }
@@ -1367,7 +1404,7 @@ class OndoRepository(
     fun removeTmdbToken() {
         if (_state.value.settings.serviceKeys.none { it.service == SyncKey.TMDB }) return
         updateSettings { settings -> settings.copy(serviceKeys = settings.serviceKeys.filterNot { it.service == SyncKey.TMDB }) }
-        updateLibrary { it.deleting("key:${SyncKey.TMDB}", now()) }
+        updateLibrary { it.deleting("key:${SyncKey.TMDB}", stamp()) }
         tmdbTokenChanged()
     }
 
