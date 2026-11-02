@@ -16,8 +16,6 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.assert
-import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
@@ -56,7 +54,6 @@ import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.ArtworkAlignment
 import com.markedoe.ondo.ui.tv.LocalTitleHeaders
-import com.markedoe.ondo.ui.tv.PlaylistUpdate
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvArtworkAlignment
@@ -66,9 +63,25 @@ import com.markedoe.ondo.ui.tv.TvCategoryChoice
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
 import com.markedoe.ondo.ui.tv.TvTopBar
 import com.markedoe.ondo.ui.tv.TvTopBarCategories
+import com.markedoe.ondo.ui.tv.TvSortChoice
+import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
+import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.ui.screens.BrowseKind
+import com.markedoe.ondo.ui.screens.BrowseScreen
+import com.markedoe.ondo.ui.screens.BrowseUiState
+import com.markedoe.ondo.ui.screens.PosterGridScreen
+import com.markedoe.ondo.ui.screens.browseTitle
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.assertIsSelected
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -78,11 +91,12 @@ import org.robolectric.annotation.Config
 
 /**
  * What a TV's tab pages must keep, at Google's 960 × 540 dp: the header's backdrop from the screen's very top, cropped
- * towards its top (faces stay whole); the playlist and when it was updated at the top bar's end, on Home and on the
- * Movies tab; every row type whole below the header (its name, its cards and their lines) once the remote is in it;
+ * towards its top (faces stay whole); no line of the playlist in the top bar, on Home, the Movies and Series tabs, a
+ * category's and a genre's titles; every row type whole below the header (its name, its cards and their lines) once the remote is in it;
  * the viewer's path on the Movies and Series tabs (on the tab, the first row whole below the header showing its first
  * title; Down, that card and its title at once; Down again, the next row), the Categories pill in the bar and its
- * picker; a focused card, grown, whole within its row at either end in both directions; and a continue watching card's
+ * picker; a category's and a genre's titles with no row of their own above them (the pill names them and holds their
+ * order: Down from the tab lands on the first poster); a focused card, grown, whole within its row at either end in both directions; and a continue watching card's
  * lines clear of its focus frame.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -90,8 +104,8 @@ import org.robolectric.annotation.Config
 class TvLayoutRegressionTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private fun movie(id: String, name: String) = ShowcaseItem.MovieItem(
-        Movie(id = id, name = name, categoryId = "m-drama", streamUrl = "https://example.com/movie/$id.mp4", rating = 7.0, year = 2024, plot = "A keeper counts the ships that never come.", addedAt = 1_700_000_000L),
+    private fun movie(id: String, name: String, rating: Double = 7.0) = ShowcaseItem.MovieItem(
+        Movie(id = id, name = name, categoryId = "m-drama", streamUrl = "https://example.com/movie/$id.mp4", rating = rating, year = 2024, plot = "A keeper counts the ships that never come.", addedAt = 1_700_000_000L),
     )
 
     private val movies = (1..6).map { movie("$it", "Example Film $it") }
@@ -102,7 +116,7 @@ class TvLayoutRegressionTest {
         ChannelRow(Channel(id = "c$it", name = "Example Channel $it", categoryId = "news", streamUrl = "https://example.com/live/c$it.m3u8"), nowTitle = "Morning News", nowProgress = 0.3f, nextTitle = null)
     }
 
-    private val playlist = PlaylistUpdate("Example Playlist", updatedAt = NOW - 5 * 60_000L, now = NOW)
+    private val playlistName = "Example Playlist"
 
     private object Headers : TitleHeaders {
         override fun header(item: ShowcaseItem): Flow<TitleHeader> = flowOf(TitleHeader(item, genres = listOf("Drama"), tmdbRating = "7.2", plot = "A keeper counts the ships that never come."))
@@ -111,17 +125,18 @@ class TvLayoutRegressionTest {
     }
 
     /**
-     * [content] as a tab page on a TV: under the top bar, which shows [playlist] unless the page says otherwise. [onTab]:
-     * the page opened as the remote moved along the bar, the focus left on [tab] (the page's first card never had it).
+     * [content] as a tab page on a TV, under the top bar ([tabPage] false: a page beyond the tab, a category's or a
+     * genre's titles). [onTab]: the page opened as the remote moved along the bar, the focus left on [tab] (the page's
+     * first card never had it).
      */
-    private fun show(tab: TopLevel, direction: LayoutDirection = LayoutDirection.Ltr, onTab: Boolean = false, update: PlaylistUpdate = playlist, content: @Composable () -> Unit) {
+    private fun show(tab: TopLevel, direction: LayoutDirection = LayoutDirection.Ltr, onTab: Boolean = false, tabPage: Boolean = true, content: @Composable () -> Unit) {
         var inputModes: InputModeManager? = null
         var bar: TvTopBar? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
             OndoTheme {
                 TelevisionFrame {
-                    TvNavigationFrame(tab, showBar = true, onSelect = {}, onSearch = {}, onSettings = {}, playlist = update) {
+                    TvNavigationFrame(tab, showBar = true, tabPage = tabPage, onSelect = {}, onSearch = {}, onSettings = {}) {
                         bar = LocalTvTopBar.current
                         CompositionLocalProvider(LocalTitleHeaders provides Headers, LocalLayoutDirection provides direction, content = content)
                     }
@@ -180,26 +195,35 @@ class TvLayoutRegressionTest {
         assertEquals(TvArtworkAlignment, art.fetchSemanticsNode().config.getOrNull(ArtworkAlignment))
     }
 
+    /** Whether the top bar shows anything of the playlist: its name, when it was updated, a line of its own. */
+    private fun playlistLineInTheBar(): Boolean = compose.onAllNodes(
+        hasAnyAncestor(hasTestTag("topBar")) and (hasTestTag("lastUpdate") or hasText("Updated", substring = true) or hasText(playlistName, substring = true)),
+        useUnmergedTree = true,
+    ).fetchSemanticsNodes().isNotEmpty()
+
     @Test
-    fun homeShowsWhenThePlaylistWasUpdated() {
+    fun homeShowsNoPlaylistLineInTheBar() {
         val featured = HeroPage(movies[0], meta = "Movie · 2024", inMyList = false, resumable = false)
-        val state = HomeUiState(playlistName = playlist.name, updatedAt = playlist.updatedAt, now = NOW, hero = listOf(featured), newMovies = movies, hasVod = true)
+        val state = HomeUiState(playlistName = playlistName, updatedAt = NOW - 5 * 60_000L, now = NOW, hero = listOf(featured), newMovies = movies, hasVod = true)
         show(TopLevel.HOME) { TvHomeScreen(state, HomeActions(), autoAdvance = false) }
-        compose.onNodeWithTag("lastUpdate").assertIsDisplayed()
-            .assert(hasText("Updated", substring = true)).assert(hasText(playlist.name, substring = true))
-        assertTrue("above the carousel", bounds("lastUpdate").bottom <= bounds("heroFrame").top + 0.5.dp)
+        assertTrue("the bar is there", compose.onAllNodesWithTag("topBar").fetchSemanticsNodes().isNotEmpty())
+        assertFalse("no playlist line in the bar", playlistLineInTheBar())
     }
 
     @Test
-    fun theMoviesTabShowsWhenThePlaylistWasUpdatedClearOfTheHeadersWords() {
+    fun theMoviesTabShowsNoPlaylistLineAndItsHeadersWordsStartBelowTheBar() {
         moviesTab(VodUiState(title = "Movies", categories = listOf(drama), rows = listOf(CategoryRow(drama, movies))))
         focusFirstCard("shelf:m-drama")
-        compose.onNodeWithTag("lastUpdate").assertIsDisplayed()
-            .assert(hasText("Updated", substring = true)).assert(hasText(playlist.name, substring = true))
-        val note = bounds("lastUpdate")
+        assertFalse("no playlist line in the bar", playlistLineInTheBar())
         val words = compose.onNode(hasTestTag("headerText") and hasAnyAncestor(hasTestTag("titleHeader")), useUnmergedTree = true).getUnclippedBoundsInRoot()
-        assertTrue("the line ends before Search", note.right <= bounds("tabSearch").left + 0.5.dp)
-        assertTrue("the header's words start below the bar's line", words.top >= note.bottom - 0.5.dp)
+        assertTrue("the header's words start below the bar", words.top >= bounds("tabSearch").bottom - 0.5.dp)
+    }
+
+    @Test
+    fun theSeriesTabShowsNoPlaylistLine() {
+        show(TopLevel.SERIES) { VodScreen(VodUiState(title = "Series", categories = listOf(drama), rows = listOf(CategoryRow(drama, movies))), VodActions()) }
+        assertTrue(compose.onAllNodesWithTag(CATEGORIES_TAG).fetchSemanticsNodes().isNotEmpty())
+        assertFalse("no playlist line in the bar", playlistLineInTheBar())
     }
 
     /** The Movies tab with one row of [shelf]'s type, and a row of posters below it. */
@@ -389,46 +413,50 @@ class TvLayoutRegressionTest {
     }
 
     /**
-     * On the Movies tab, the playlist line beside the Categories pill keeps both its lines whole ([updated]: the
-     * update's words in the language shown); the pill, named [categories], before Search, reads it whole when
-     * [labelShown] (otherwise it may give way to its icon alone).
+     * On the Movies tab, the Categories pill, named [categories], sits before Search with no playlist line beside it,
+     * and reads its name whole when [labelShown] (otherwise it may give way to its icon alone).
      */
-    private fun assertThePlaylistLineIsWholeBesideThePill(updated: String, categories: String, labelShown: Boolean) {
-        val update = PlaylistUpdate("Example Playlist", updatedAt = NOW - 12 * 60_000L, now = NOW)
-        show(TopLevel.MOVIES, update = update) { VodScreen(moviesPath, VodActions()) }
-        compose.onNodeWithTag("lastUpdate").assertIsDisplayed()
-            .assert(hasText(updated, substring = true)).assert(hasText(update.name, substring = true))
-        val lines = textLayouts(hasAnyAncestor(hasTestTag("lastUpdate")))
-        assertEquals("the playlist, then when it was updated", 2, lines.size)
-        lines.forEach(::assertWhole)
+    private fun assertThePillReadsWhole(categories: String, labelShown: Boolean) {
+        show(TopLevel.MOVIES) { VodScreen(moviesPath, VodActions()) }
+        assertFalse("no playlist line in the bar", playlistLineInTheBar())
         assertEquals(categories, pillName())
         if (labelShown) {
             val label = textLayouts(hasTestTag("categoryFilterLabel"))
             assertEquals("the pill reads $categories", listOf(categories), label.map { it.layoutInput.text.text })
             label.forEach(::assertWhole)
         }
-        val note = bounds("lastUpdate")
         val pill = bounds("categoryFilter")
         val search = bounds("tabSearch")
         if (compose.activity.resources.configuration.layoutDirection == android.util.LayoutDirection.RTL) {
-            assertTrue("the pill after the line", pill.right <= note.left + 0.5.dp)
             assertTrue("Search after the pill", search.right <= pill.left + 0.5.dp)
         } else {
-            assertTrue("the pill after the line", note.right <= pill.left + 0.5.dp)
             assertTrue("Search after the pill", pill.right <= search.left + 0.5.dp)
         }
     }
 
     @Test
-    fun thePlaylistLineStaysWholeBesideTheCategoriesPill() = assertThePlaylistLineIsWholeBesideThePill("Updated 12 minutes ago", "Categories", labelShown = true)
+    fun theCategoriesPillReadsWholeBeforeSearch() = assertThePillReadsWhole("Categories", labelShown = true)
 
     @Test
     @Config(qualifiers = "+fr")
-    fun thePlaylistLineStaysWholeBesideTheCategoriesPillInFrench() = assertThePlaylistLineIsWholeBesideThePill("Mis à jour il y a 12 minutes", "Catégories", labelShown = true)
+    fun theCategoriesPillReadsWholeBeforeSearchInFrench() = assertThePillReadsWhole("Catégories", labelShown = true)
 
     @Test
     @Config(qualifiers = "+ar-rSA")
-    fun thePlaylistLineStaysWholeBesideTheCategoriesPillInArabic() = assertThePlaylistLineIsWholeBesideThePill("حُدّثت", "الفئات", labelShown = false)
+    fun theCategoriesPillReadsWholeBeforeSearchInArabic() = assertThePillReadsWhole("الفئات", labelShown = false)
+
+    /** A category's name as providers write it, on the pill in French: whole, now that the bar has no playlist line. */
+    @Test
+    @Config(qualifiers = "+fr")
+    fun aCategorysNameReadsWholeOnThePill() {
+        val news = MediaCategory("m-new", "|FR| NOUVEAUTÉS", ContentType.MOVIE)
+        show(TopLevel.MOVIES, tabPage = false) {
+            TvTopBarCategories(TvCategoryChoice(listOf(news, drama), locked = emptySet(), selected = news, onChoose = {}, onManage = {}, sort = TvSortChoice(PosterSort.PLAYLIST, {})))
+        }
+        val label = textLayouts(hasTestTag("categoryFilterLabel"))
+        assertEquals(listOf("|FR| NOUVEAUTÉS"), label.map { it.layoutInput.text.text })
+        label.forEach(::assertWhole)
+    }
 
     /** A category's titles: the pill names it, and its picker opens on it. */
     @Test
@@ -443,6 +471,149 @@ class TvLayoutRegressionTest {
         assertTrue("the picker opens on the category shown", compose.onAllNodes(isFocused() and hasTestTag("category:m-comedy")).fetchSemanticsNodes().isNotEmpty())
     }
 
+    /** Movies of a category, in the playlist's order: the best rated last but one. */
+    private val rated = listOf(
+        movie("21", "Example Film A", rating = 6.1),
+        movie("22", "Example Film B", rating = 7.4),
+        movie("23", "Example Film C", rating = 6.8),
+        movie("24", "Example Film D", rating = 8.6),
+        movie("25", "Example Film E", rating = 5.9),
+    )
+
+    /** The orders chosen in the pill's picker, as the shared setting receives them. */
+    private val chosenOrders = mutableListOf<PosterSort>()
+
+    /**
+     * A category's titles ([drama]) as the app shows them on a TV: the top bar's pill names the category and holds the
+     * order, the grid below sorts its posters by it. The focus is left on the Movies tab.
+     */
+    private fun categoryGrid() = show(TopLevel.MOVIES, onTab = true, tabPage = false) {
+        var sort by remember { mutableStateOf(PosterSort.PLAYLIST) }
+        val order = TvSortChoice(sort, { sort = it; chosenOrders += it })
+        TvTopBarCategories(TvCategoryChoice(listOf(drama, comedy), locked = emptySet(), selected = drama, onChoose = {}, onManage = {}, sort = order))
+        PosterGridScreen("Drama", UiMappers.sorted(rated, sort), filter = "", onFilter = {}, onOpen = {}, onBack = {}, sort = sort, onSort = order.onSort)
+    }
+
+    /** A genre's titles ([genre]) as the app shows them on a TV, opened from Home: the pill names the genre and holds the order. */
+    private fun genrePage(genre: String) = show(TopLevel.HOME, onTab = true, tabPage = false) {
+        var sort by remember { mutableStateOf(PosterSort.PLAYLIST) }
+        val state = BrowseUiState(BrowseKind.GENRE, genre, movies = UiMappers.sorted(rated, sort))
+        TvTopBarCategories(TvCategoryChoice.page(browseTitle(state), TvSortChoice(sort, { sort = it; chosenOrders += it })))
+        BrowseScreen(state, onOpen = {}, onFestival = {}, onBack = {}, sort = sort, onSort = { sort = it })
+    }
+
+    /** The posters of the page tagged [page], in their order. */
+    private fun posters(page: String): List<String> = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag(page))).fetchSemanticsNodes()
+        .mapNotNull { it.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull() }
+
+    private fun focusedTag(): String? = compose.onAllNodes(isFocused()).fetchSemanticsNodes().lastOrNull()?.config?.getOrNull(SemanticsProperties.TestTag)
+
+    /** Right along the bar to the Categories pill, then OK: its picker opens. */
+    private fun openThePicker() {
+        var presses = 0
+        while (focusedTag() != CATEGORIES_TAG) {
+            check(presses++ < 8) { "Right along the bar never reached the Categories pill" }
+            press(Key.DirectionRight)
+            advance(50)
+        }
+        press(Key.DirectionCenter)
+        advance(500)
+    }
+
+    /** In the open picker, Rating, chosen with the remote ([across]: from the categories to the orders first). */
+    private fun chooseRating(across: Boolean) {
+        var presses = 0
+        if (across) {
+            while (focusedTag()?.startsWith("sort-") != true) {
+                check(presses++ < 4) { "Right never reached the orders" }
+                press(Key.DirectionRight)
+                advance(50)
+            }
+        }
+        presses = 0
+        while (focusedTag() != "sort-rating") {
+            check(presses++ < 8) { "Down along the orders never reached Rating" }
+            press(Key.DirectionDown)
+            advance(50)
+        }
+        press(Key.DirectionCenter)
+        advance(1_000)
+    }
+
+    /**
+     * A category's titles: no row of their own above the posters (no Back, no title, no Sort, no filter), no playlist
+     * line in the bar; Down from the tab lands on the first poster, its title in the header at once.
+     */
+    @Test
+    fun aCategorysTitlesStartWithTheirPostersAndDownLandsOnTheFirst() {
+        categoryGrid()
+        fun inGrid(matcher: SemanticsMatcher) = compose.onAllNodes(matcher and hasAnyAncestor(hasTestTag("grid")), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        assertFalse("no filter field", inGrid(hasSetTextAction()))
+        assertFalse("no Filter placeholder", inGrid(hasText("Filter")))
+        assertFalse("no Back button", inGrid(hasContentDescription("Back")))
+        assertFalse("no title of its own", inGrid(hasText("Drama")))
+        assertTrue("no Sort button", compose.onAllNodesWithTag("sort").fetchSemanticsNodes().isEmpty())
+        assertFalse("no playlist line in the bar", playlistLineInTheBar())
+        assertEquals("the pill names the category", "Drama", pillName())
+        assertHeaderShows("Example Film A", "on the tab")
+
+        press(Key.DirectionDown)
+        advance(16)
+        val first = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("grid"))).onFirst().fetchSemanticsNode()
+        assertTrue("Down from the tab lands on the first poster", first.config.getOrNull(SemanticsProperties.Focused) == true)
+        assertHeaderShows("Example Film A", "Down once")
+        val grid = bounds("grid")
+        assertEquals("the posters right below the header", bounds("titleHeader").bottom.value, grid.top.value, 0.5f)
+        assertWithin("the first poster", compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("grid"))).onFirst().getUnclippedBoundsInRoot(), grid.top, grid.bottom)
+    }
+
+    /**
+     * The pill's picker on a category's titles: the categories (the one shown ticked) and, beside them, the orders (the
+     * one shown ticked). Rating, chosen with the remote, puts the best rated first and goes to the shared setting.
+     */
+    @Test
+    fun thePickerHoldsTheCategoriesAndTheOrder() {
+        categoryGrid()
+        assertEquals("the playlist's order", "Example Film A", posters("grid").first())
+        openThePicker()
+        assertEquals("the picker opens on the category shown", "category:m-drama", focusedTag())
+        for (tag in listOf("categoryAll", "category:m-comedy", "categoryManage") + PosterSort.entries.map { "sort-" + it.name.lowercase() }) {
+            assertTrue("$tag in the picker", compose.onAllNodes(hasTestTag(tag) and hasAnyAncestor(hasTestTag("categoryPicker"))).fetchSemanticsNodes().isNotEmpty())
+        }
+        compose.onNodeWithTag("sort-playlist").assertIsSelected()
+        assertTrue("the order beside the categories", bounds("pickerSort").left >= bounds("pickerCategories").right - 0.5.dp)
+        chooseRating(across = true)
+        assertEquals(listOf(PosterSort.RATING), chosenOrders)
+        assertTrue("the picker closed", compose.onAllNodesWithTag("categoryPicker").fetchSemanticsNodes().isEmpty())
+        assertEquals("the best rated first", "Example Film D", posters("grid").first())
+    }
+
+    /**
+     * A genre's titles, opened from Home: the pill names the genre and its picker holds the order alone, the one shown
+     * ticked and focused; Rating puts the best rated first. No row of their own above the posters, no playlist line.
+     */
+    @Test
+    fun aGenresPillNamesItAndSortsItsTitles() {
+        genrePage("Mystery")
+        assertEquals("the pill names the genre", "Mystery", pillName())
+        assertFalse("no playlist line in the bar", playlistLineInTheBar())
+        assertTrue("no Back button", compose.onAllNodes(hasContentDescription("Back") and hasAnyAncestor(hasTestTag("browse")), useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        assertTrue("no Sort button", compose.onAllNodesWithTag("sort").fetchSemanticsNodes().isEmpty())
+        press(Key.DirectionDown)
+        advance(16)
+        assertEquals("Down from the tab lands on the first poster", "Example Film A", compose.onAllNodes(isFocused()).onLast().fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull())
+        assertHeaderShows("Example Film A", "Down once")
+        press(Key.DirectionUp)
+        advance(300)
+        assertEquals("Up lands on the tab shown", "tabHome", focusedTag())
+        openThePicker()
+        assertEquals("the picker opens on the order shown", "sort-playlist", focusedTag())
+        assertTrue("no categories on a genre's page", compose.onAllNodesWithTag("categoryAll").fetchSemanticsNodes().isEmpty())
+        chooseRating(across = false)
+        assertEquals(listOf(PosterSort.RATING), chosenOrders)
+        assertEquals("the best rated first", "Example Film D", posters("browse").first())
+    }
+
     /** Home with one row of [shelf]'s type under its carousel, made smaller while the rows have the focus. */
     private fun assertHomeRowWhole(state: HomeUiState, shelf: String) {
         show(TopLevel.HOME) { TvHomeScreen(state, HomeActions(), autoAdvance = false) }
@@ -453,7 +624,7 @@ class TvLayoutRegressionTest {
     }
 
     private fun home(continueWatching: List<ResumeItem> = emptyList(), newMovies: List<ShowcaseItem> = emptyList(), channels: List<ChannelRow> = emptyList()) = HomeUiState(
-        playlistName = playlist.name,
+        playlistName = playlistName,
         hero = listOf(HeroPage(movies[0], meta = "Movie · 2024", inMyList = false, resumable = false)),
         continueWatching = continueWatching,
         newMovies = newMovies,

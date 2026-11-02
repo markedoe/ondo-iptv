@@ -18,15 +18,22 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.SemanticsNodeInteraction
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performTextInput
@@ -43,6 +50,7 @@ import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.OndoRepository
+import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import com.markedoe.ondo.ui.tv.SEARCH_TAG
@@ -439,27 +447,67 @@ class TelevisionFocusTest {
         assertTrue("the focus is on ${focused()} (${focusedTag()})", focusedIn("search") && !editing() && focusedTag() != "searchFilters")
     }
 
-    /** A poster grid's filter, the same: its keyboard's action key goes on to the posters. */
+    /** The posters of the grid shown, in their order. */
+    private fun gridPosters(): List<String> = compose.onAllNodes(hasClickAction() and hasAnyAncestor(hasTestTag("grid"))).fetchSemanticsNodes()
+        .mapNotNull { it.config.getOrNull(SemanticsProperties.ContentDescription)?.firstOrNull() }
+
+    /**
+     * A category's posters on a TV have no row of their own above them: no Back (the remote's Back goes back), no title
+     * (the top bar's pill names the category), no Sort (the pill holds it), no filter (Search finds a title). Down from
+     * the tab lands on the first poster, its title in the header at once.
+     */
     @Test
-    fun aPosterGridsFilterGoesOnToThePostersWithTheKeyboardsAction() {
+    fun aCategorysPostersHaveNoRowNorFilterAboveThem() {
+        start(answers = emptyMap(), stored = Fixtures.content)
+        openDramaGrid()
+        fun inGrid(matcher: SemanticsMatcher) = compose.onAllNodes(matcher and hasAnyAncestor(hasTestTag("grid")), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        assertFalse("no filter field", inGrid(hasSetTextAction()))
+        assertFalse("no Filter placeholder", inGrid(hasText("Filter")))
+        assertFalse("no Back button", inGrid(hasContentDescription("Back")))
+        assertFalse("no Sort button", exists("sort"))
+        assertFalse("no title of its own", inGrid(hasText("Drama")))
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        press(Key.DirectionDown)
+        assertEquals("Down from the tab: the first poster", gridPosters().first(), focused())
+        assertEquals(listOf(gridPosters().first()), compose.onAllNodes(hasTestTag("headerTitle"), useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
+        // Back still goes back to the tab's page.
+        back()
+        waitFor { exists("vod") && !exists("grid") }
+    }
+
+    /**
+     * The top bar's Categories pill holds the posters' order too: its picker lists the categories and, beside them, the
+     * orders, the one shown ticked. Rating puts the best rated first, and stays chosen.
+     */
+    @Test
+    fun theCategoriesPickerSortsThePostersAndKeepsTheOrder() {
         start(answers = emptyMap(), stored = Fixtures.content)
         openFromDrawer("tabMovies")
-        // The category's posters, chosen in the top bar's picker.
         pressUntil(Key.DirectionDown) { focused() in movieTitles }
-        chooseCategory("Drama")
+        chooseCategory("All")
         waitFor { exists("grid") && focusedIn("grid") }
-        // Onto the first poster, then up onto the filter: the key goes down, then up a moment later, as on a remote.
-        pressUntil(Key.DirectionDown) { focused() == "Northern Lights" }
-        focusedInteraction().performKeyInput { keyDown(Key.DirectionUp) }
-        settle()
-        focusedInteraction().performKeyInput { keyUp(Key.DirectionUp) }
-        settle()
-        assertTrue("the focus is on ${focused()}", editing())
-        virtualKey(Key.DirectionCenter)
-        focusedInteraction().performTextInput("north")
-        settle(1_000)
-        keyboardActionKey()
-        assertEquals("the focus is on ${if (editing()) "the filter" else focused()}", "Northern Lights", focused())
+        assertEquals("the playlist's order", "Northern Lights", gridPosters().first())
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
+        press(Key.DirectionCenter)
+        waitFor { focusedTag() == "categoryAll" }
+        assertTrue("the categories", exists("category:${Fixtures.drama.id}"))
+        compose.onNodeWithTag("sort-playlist").assertIsSelected()
+        compose.onNodeWithTag("sort-rating").assertIsNotSelected()
+        // Right, to the orders; down to Rating.
+        pressUntil(Key.DirectionRight) { focusedTag().startsWith("sort-") }
+        pressUntil(Key.DirectionDown) { focusedTag() == "sort-rating" }
+        press(Key.DirectionCenter)
+        waitFor { repository.state.value.settings.posterSort == PosterSort.RATING }
+        val best = Fixtures.content.movies.filter { it.categoryId != Fixtures.adultMovies.id }.maxBy { it.rating ?: 0.0 }.name
+        waitFor { gridPosters().firstOrNull() == best }
+        assertFalse("the picker closed", exists("categoryPicker"))
+        // Ticked the next time.
+        pressUntil(Key.DirectionUp, max = 20) { focusedTag().startsWith("tab") }
+        pressUntil(Key.DirectionRight) { focusedTag() == CATEGORIES_TAG }
+        press(Key.DirectionCenter)
+        waitFor { exists("categoryPicker") }
+        compose.onNodeWithTag("sort-rating").assertIsSelected()
     }
 
     /** Whether the top bar's tab [tag] is the one shown. */

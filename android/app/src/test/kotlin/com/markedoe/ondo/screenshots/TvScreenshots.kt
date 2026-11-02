@@ -35,7 +35,6 @@ import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.LocalTitleHeaders
-import com.markedoe.ondo.ui.tv.PlaylistUpdate
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvHomeScreen
@@ -43,6 +42,18 @@ import com.markedoe.ondo.ui.tv.CATEGORIES_TAG
 import com.markedoe.ondo.ui.tv.LocalTvTopBar
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
 import com.markedoe.ondo.ui.tv.TvTopBar
+import com.markedoe.ondo.ui.tv.TvCategoryChoice
+import com.markedoe.ondo.ui.tv.TvSortChoice
+import com.markedoe.ondo.ui.tv.TvTopBarCategories
+import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.ui.screens.BrowseKind
+import com.markedoe.ondo.ui.screens.BrowseScreen
+import com.markedoe.ondo.ui.screens.PosterGridScreen
+import com.markedoe.ondo.ui.screens.browseTitle
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -58,9 +69,11 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * Reference screenshots of a TV's tab pages as the remote leaves them, from the demo catalogue: the header above the
- * Movies tab (its backdrop from the screen's top, the playlist's line in the bar), with a card of Continue watching
+ * Movies tab (its backdrop from the screen's top, no playlist line in the bar), with a card of Continue watching
  * focused and with My List's; the viewer's path on the Movies and Series tabs (the focus on the tab, Down once, Down
- * again), the Categories picker open, and Home with the remote in its rows. Compared by `verifyRoborazziDebug` with
+ * again), the Categories picker open; a category's titles (the focus on the tab, then Down: no row of their own above
+ * the posters, the pill naming the category) and the pill's picker there with the order beside the categories; a
+ * genre's titles, the pill naming the genre; and Home with the remote in its rows. Compared by `verifyRoborazziDebug` with
  * [BASELINES]`/tv/`; the store listing has none of them.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -73,7 +86,6 @@ class TvScreenshots {
     private val state = catalogue.state()
     private val now = ShowcaseCatalogue.NOW
     private val labels = Labels("Movie", "Series", Locale.US)
-    private val playlist = PlaylistUpdate(state.activePlaylist?.name.orEmpty(), state.content.fetchedAt, now)
 
     /** What the app's view model would show of a title in the header: the demo's details. */
     private val headers = object : TitleHeaders {
@@ -88,8 +100,11 @@ class TvScreenshots {
     @After
     fun noPictures() = ShowcaseImages.reset()
 
-    /** [content] as [tab]'s page; [onTab]: opened as the remote moved along the bar, the focus left on the tab. */
-    private fun show(tab: TopLevel, onTab: Boolean = false, content: @Composable () -> Unit) {
+    /**
+     * [content] as [tab]'s page ([tabPage] false: a page beyond the tab, a category's or a genre's titles); [onTab]:
+     * opened as the remote moved along the bar, the focus left on the tab.
+     */
+    private fun show(tab: TopLevel, onTab: Boolean = false, tabPage: Boolean = true, content: @Composable () -> Unit) {
         var inputModes: InputModeManager? = null
         var bar: TvTopBar? = null
         compose.setContent {
@@ -97,7 +112,7 @@ class TvScreenshots {
             OndoTheme {
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
                     TelevisionFrame {
-                        TvNavigationFrame(tab, showBar = true, onSelect = {}, onSearch = {}, onSettings = {}, playlist = playlist) {
+                        TvNavigationFrame(tab, showBar = true, tabPage = tabPage, onSelect = {}, onSearch = {}, onSettings = {}) {
                             bar = LocalTvTopBar.current
                             CompositionLocalProvider(LocalTitleHeaders provides headers, content = content)
                         }
@@ -203,6 +218,57 @@ class TvScreenshots {
         press(Key.DirectionCenter)
         assertTrue("the picker has the focus", compose.onAllNodes(isFocused() and hasTestTag("categoryAll")).fetchSemanticsNodes().isNotEmpty())
         captureScreen("categories-picker-open")
+    }
+
+    /** The demo's first movie category with six titles or more: a full grid. */
+    private val category = state.content.movieCategories.first { c -> state.content.movies.count { it.categoryId == c.id } >= 6 }
+
+    /** A category's titles as the app shows them on a TV: the pill names the category and holds the order. */
+    private fun categoryGrid() = show(TopLevel.MOVIES, onTab = true, tabPage = false) {
+        var sort by remember { mutableStateOf(PosterSort.PLAYLIST) }
+        val vod = remember { UiMappers.vod(state, series = false, title = "Movies") }
+        val order = TvSortChoice(sort, { sort = it }, hideWatched = state.settings.hideWatchedMovies, onHideWatched = {})
+        TvTopBarCategories(TvCategoryChoice(vod.categories, vod.lockedCategoryIds, selected = category, onChoose = {}, onManage = {}, sort = order))
+        val items = remember(sort) { UiMappers.grid(state, series = false, categoryId = category.id, myList = false, filter = "", sort = sort) }
+        PosterGridScreen(category.name, items, filter = "", onFilter = {}, onOpen = {}, onBack = {}, sort = sort, onSort = { sort = it })
+    }
+
+    @Test
+    fun aCategorysTitlesFromTheTabThenDown() {
+        categoryGrid()
+        capture("grid-category")
+        press(Key.DirectionDown)
+        assertTrue("Down from the tab: the posters", focusedIn("grid"))
+        capture("grid-down-1")
+    }
+
+    @Test
+    fun thePickerWithTheOrderBesideTheCategories() {
+        categoryGrid()
+        var presses = 0
+        while (compose.onAllNodes(isFocused() and hasTestTag(CATEGORIES_TAG)).fetchSemanticsNodes().isEmpty()) {
+            check(presses++ < 8) { "Right along the bar never reached the Categories pill" }
+            press(Key.DirectionRight)
+        }
+        press(Key.DirectionCenter)
+        assertTrue("the picker has the order", compose.onAllNodes(hasTestTag("sort-rating")).fetchSemanticsNodes().isNotEmpty())
+        captureScreen("picker-with-sort")
+    }
+
+    /** The demo's most common movie genre: a full page of titles. */
+    private val genre = state.movieDetails.values.flatMap { details -> details.genre.orEmpty().split(',').map { it.trim() }.filter { it.isNotEmpty() } }
+        .groupingBy { it }.eachCount().maxBy { it.value }.key
+
+    @Test
+    fun aGenresTitles() {
+        show(TopLevel.HOME, tabPage = false) {
+            var sort by remember { mutableStateOf(PosterSort.PLAYLIST) }
+            val page = remember(sort) { UiMappers.browse(state, BrowseKind.GENRE, genre, Locale.US, sort = sort) }
+            TvTopBarCategories(TvCategoryChoice.page(browseTitle(page), TvSortChoice(sort, { sort = it })))
+            BrowseScreen(page, onOpen = {}, onFestival = {}, onBack = {}, sort = sort, onSort = { sort = it })
+        }
+        focusFirstCard("browse")
+        capture("browse-genre")
     }
 
     @Test

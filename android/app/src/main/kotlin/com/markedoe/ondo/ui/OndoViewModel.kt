@@ -31,7 +31,6 @@ import com.markedoe.ondo.ui.screens.PlaylistForm
 import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.VodUiState
-import com.markedoe.ondo.ui.tv.PlaylistUpdate
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -95,13 +94,6 @@ class OndoViewModel(
         UiMappers.home(state, labels, now).copy(beta = BuildConfig.BETA)
     }
         .flowOn(computation)
-        .stateIn(viewModelScope, sharing, null)
-
-    /** The playlist shown and when it was last fetched, for a TV's top bar on every tab page. */
-    val playlistUpdate: StateFlow<PlaylistUpdate?> = combine(state, minutes) { state, now ->
-        PlaylistUpdate(state.activePlaylist?.name.orEmpty(), state.content.fetchedAt.takeIf { it > 0 && !state.content.isEmpty }, now)
-    }
-        .distinctUntilChanged()
         .stateIn(viewModelScope, sharing, null)
 
     val movies: StateFlow<VodUiState?> = state.map { UiMappers.vod(it, series = false, title = "") }

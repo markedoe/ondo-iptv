@@ -12,9 +12,10 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -137,33 +138,46 @@ class TelevisionTest {
         compose.onNodeWithTag("heroPlay").assertIsFocused()
     }
 
-    /** In the top bar, just before Search, off the picture: which playlist Home shows, and when it was last updated. */
+    /** Whether the top bar shows anything of the playlist: its name ([name]), when it was updated, a line of its own. */
+    private fun playlistLineInTheBar(name: String): Boolean = compose.onAllNodes(
+        hasAnyAncestor(hasTestTag("topBar")) and (hasTestTag("lastUpdate") or hasText("Updated", substring = true) or hasText(name, substring = true)),
+        useUnmergedTree = true,
+    ).fetchSemanticsNodes().isNotEmpty()
+
+    /**
+     * The top bar shows no line of the playlist on any tab page (neither its name nor when it was updated), Home
+     * included: Settings shows when each playlist was updated.
+     */
     @Test
-    fun homeShowsThePlaylistAndItsLastUpdateInTheTopBar() {
-        start()
-        val line = compose.onNodeWithTag("lastUpdate")
-        line.assertIsDisplayed().assert(hasText("Updated", substring = true)).assert(hasText(Fixtures.playlist.name, substring = true))
-        val bounds = line.fetchSemanticsNode().boundsInRoot
-        val search = compose.onNodeWithTag(SEARCH_TAG, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        val frame = compose.onNodeWithTag("heroFrame", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        assertTrue("before Search", bounds.right <= search.left)
-        assertTrue("level with Search", bounds.center.y in search.top..search.bottom)
-        assertTrue("above the picture", bounds.bottom <= frame.top)
+    fun theTopBarShowsNoPlaylistLineOnAnyTab() {
+        val name = "Example Playlist Name"
+        start(playlistName = name)
+        assertFalse("Home", playlistLineInTheBar(name))
+        openTab(1)
+        assertTrue(compose.onAllNodesWithTag("vod").fetchSemanticsNodes().isNotEmpty())
+        assertFalse("Movies", playlistLineInTheBar(name))
+        openTab(2)
+        assertFalse("Series", playlistLineInTheBar(name))
+        // Settings, its playlists first: when the one in use was updated.
+        repeat(40) { if (!focusedTag().startsWith("tab")) press(Key.DirectionUp) }
+        repeat(12) { if (focusedTag() != SETTINGS_TAG) press(Key.DirectionRight) }
+        assertEquals(SETTINGS_TAG, focusedTag())
+        press(Key.DirectionCenter)
+        compose.waitUntil(5_000) { compose.onAllNodesWithTag("settings").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasText("Updated", substring = true) and hasAnyAncestor(hasTestTag("settingsPane")), useUnmergedTree = true).assertIsDisplayed()
     }
 
-    /** A long playlist name is cut short: Search and Settings keep their whole round buttons. */
+    /** A long playlist name never reaches the top bar: Search and Settings keep their whole round buttons. */
     @Test
     fun aLongPlaylistNameLeavesSearchAndSettingsWhole() {
-        start(playlistName = "a-very-long-playlist-name.example.com · " + "x".repeat(80))
+        val name = "a-very-long-playlist-name.example.com · " + "x".repeat(80)
+        start(playlistName = name)
         fun bounds(tag: String) = compose.onNodeWithTag(tag, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val search = bounds(SEARCH_TAG)
         val settings = bounds(SETTINGS_TAG)
-        val line = bounds("lastUpdate")
         assertEquals("Settings as wide as Search", search.width, settings.width, 1f)
         assertEquals("round", settings.width, settings.height, 1f)
-        assertTrue("the line ends before Search", line.right <= search.left)
-        // The update has its own line: whole, under the name cut short.
-        compose.onNodeWithText("Updated", substring = true, useUnmergedTree = true).assertIsDisplayed()
+        assertFalse("no playlist line in the bar", playlistLineInTheBar(name))
     }
 
     @Test

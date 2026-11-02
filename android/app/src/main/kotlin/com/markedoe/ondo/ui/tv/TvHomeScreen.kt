@@ -131,9 +131,8 @@ fun TvHomeScreen(
         state.channels.isEmpty() && state.newMovies.isEmpty() && state.newSeries.isEmpty() && state.trending.isEmpty()
     val memory = LocalFocusMemory.current
     LaunchedEffect(empty) { if (empty) memory?.given() }
-    // A playlist with featured titles names itself in the top bar, as on the other tab pages; one without has its name
-    // above the channels instead.
-    TvTopBarNote(if (state.hero.isNotEmpty()) playlistNote(PlaylistUpdate(state.playlistName, state.updatedAt, state.now)) else null)
+    // A playlist without featured titles has its name and when it was updated above the channels (no line in the top
+    // bar: Settings shows when each playlist was updated).
     val focusManager = LocalFocusManager.current
     // A card taken away hands the remote on before it goes: to the next card of its row, or the one before; the last
     // one, its row going with it, to the row below (or above). Not back to the carousel at the top.

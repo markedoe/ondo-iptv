@@ -26,7 +26,6 @@ import com.markedoe.ondo.ui.screens.SeriesDetailScreen
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
 import com.markedoe.ondo.ui.theme.OndoTheme
-import com.markedoe.ondo.ui.tv.PlaylistUpdate
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
@@ -90,26 +89,23 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
         val language = locale.substringBefore('-')
         val region = locale.substringAfter('-')
         RuntimeEnvironment.setQualifiers("$language-r$region-${device.qualifiers}")
-        // The bar's line on the tab pages, as in the app: the playlist and when it was updated.
-        val shown = state
-        val playlist = PlaylistUpdate(shown.activePlaylist?.name.orEmpty(), shown.content.fetchedAt, now)
         captureRoboImage(filePath = "src/test/screenshots/play/$locale/${device.folder}/$name.png", roborazziOptions = StoreOptions) {
-            screen(tab, bar, playlist, content)
+            screen(tab, bar, content)
         }
         if (baseline) {
             captureRoboImage(filePath = "$BASELINES/${device.folder}/$locale/$name.png", roborazziOptions = BaselineOptions) {
-                screen(tab, bar, playlist, content)
+                screen(tab, bar, content)
             }
         }
     }
 
     @Composable
-    private fun screen(tab: TopLevel, bar: Boolean, playlist: PlaylistUpdate, content: @Composable () -> Unit) {
+    private fun screen(tab: TopLevel, bar: Boolean, content: @Composable () -> Unit) {
         OndoTheme {
             CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
                 TelevisionFrame {
                     if (tv) {
-                        TvNavigationFrame(tab, showBar = bar, onSelect = {}, onSearch = {}, onSettings = {}, playlist = playlist) { content() }
+                        TvNavigationFrame(tab, showBar = bar, onSelect = {}, onSearch = {}, onSettings = {}) { content() }
                     } else {
                         OndoNavigationFrame(tab, onSelect = {}) { content() }
                     }

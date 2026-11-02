@@ -85,6 +85,7 @@ import com.markedoe.ondo.ui.screens.AddPlaylistScreen
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.BrowseScreen
 import com.markedoe.ondo.ui.screens.BrowseUiState
+import com.markedoe.ondo.ui.screens.browseTitle
 import com.markedoe.ondo.ui.screens.CategoriesActions
 import com.markedoe.ondo.ui.screens.CategoriesScreen
 import com.markedoe.ondo.ui.screens.CollectionActions
@@ -129,6 +130,7 @@ import com.markedoe.ondo.ui.tv.TvCategoriesScreen
 import com.markedoe.ondo.ui.tv.TvHomeScreen
 import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
 import com.markedoe.ondo.ui.tv.TvCategoryChoice
+import com.markedoe.ondo.ui.tv.TvSortChoice
 import com.markedoe.ondo.ui.tv.TvNavigationFrame
 import com.markedoe.ondo.ui.tv.TvTopBarCategories
 import com.markedoe.ondo.ui.tv.TvSearchScreen
@@ -222,8 +224,6 @@ private fun MainTabs(viewModel: OndoViewModel) {
     val categoryPage = destination?.hasRoute(Routes.Grid::class) == true || destination?.hasRoute(Routes.Browse::class) == true
     val frame: @Composable (@Composable () -> Unit) -> Unit = if (isTelevision()) {
         { pages ->
-            // At the bar's end on every tab page: the playlist and when it was last updated.
-            val playlist by viewModel.playlistUpdate.collectAsStateWithLifecycle()
             TvNavigationFrame(
                 selected = selected,
                 showBar = tabPage || categoryPage,
@@ -231,7 +231,6 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 onSelect = { tab -> navController.openTabFromBar(tab, reselected = tab == selected && !tabPage) },
                 onSearch = { navController.openSearch(viewModel) },
                 onSettings = { navController.navigate(Routes.Settings) },
-                playlist = playlist,
                 content = pages,
             )
         }
@@ -690,6 +689,8 @@ private fun BrowseDestination(viewModel: OndoViewModel, navController: NavHostCo
     val browse by produceKept("browse", BrowseUiState(kind, route.value), state, route, locale, found, sort) {
         withContext(Dispatchers.Default) { UiMappers.browse(state, kind, route.value, locale, found, sort) }
     }
+    // On a TV, the top bar's pill names the page (the genre, the year, the award) and holds its order.
+    if (isTelevision()) TvTopBarCategories(TvCategoryChoice.page(browseTitle(browse), TvSortChoice(sort, viewModel::setPosterSort)))
     BrowseScreen(
         browse,
         onOpen = navController::open,
@@ -766,26 +767,38 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
             UiMappers.grid(state, route.series, route.categoryId, route.myList, query, route.anyType, sort)
         }
     }
-    // On a TV, the top bar's Categories pill names the category shown; another chosen there replaces this page.
-    if (isTelevision() && !route.myList && !route.anyType) {
-        val vod by (if (route.series) viewModel.series else viewModel.movies).collectAsStateWithLifecycle()
-        val categories = vod?.categories.orEmpty()
-        val shown = route.categoryId?.let { id -> (if (route.series) state.content.seriesCategories else state.content.movieCategories).firstOrNull { it.id == id } }
-        TvTopBarCategories(
-            TvCategoryChoice(
-                categories = categories,
-                locked = vod?.lockedCategoryIds.orEmpty(),
-                selected = shown,
-                onChoose = { category ->
-                    if (category?.id != route.categoryId) {
-                        navController.navigate(Routes.Grid(series = route.series, categoryId = category?.id)) {
-                            popUpTo<Routes.Grid> { inclusive = true }
-                        }
-                    }
-                },
-                onManage = { navController.navigate(Routes.Categories(if (route.series) "series" else "movie")) },
-            ),
+    // On a TV, the top bar's Categories pill names the category shown (another chosen there replaces this page), or the
+    // page (My List, every title of both types), and holds the posters' order.
+    if (isTelevision()) {
+        val order = TvSortChoice(
+            sort,
+            viewModel::setPosterSort,
+            hideWatched = state.settings.hideWatchedMovies.takeIf { !route.series && !route.myList },
+            onHideWatched = viewModel::setHideWatchedMovies,
         )
+        if (!route.myList && !route.anyType) {
+            val vod by (if (route.series) viewModel.series else viewModel.movies).collectAsStateWithLifecycle()
+            val categories = vod?.categories.orEmpty()
+            val shown = route.categoryId?.let { id -> (if (route.series) state.content.seriesCategories else state.content.movieCategories).firstOrNull { it.id == id } }
+            TvTopBarCategories(
+                TvCategoryChoice(
+                    categories = categories,
+                    locked = vod?.lockedCategoryIds.orEmpty(),
+                    selected = shown,
+                    onChoose = { category ->
+                        if (category?.id != route.categoryId) {
+                            navController.navigate(Routes.Grid(series = route.series, categoryId = category?.id)) {
+                                popUpTo<Routes.Grid> { inclusive = true }
+                            }
+                        }
+                    },
+                    onManage = { navController.navigate(Routes.Categories(if (route.series) "series" else "movie")) },
+                    sort = order,
+                ),
+            )
+        } else {
+            TvTopBarCategories(TvCategoryChoice.page(title, order))
+        }
     }
     CompositionLocalProvider(LocalShowsMyList provides route.myList) {
         PosterGridScreen(

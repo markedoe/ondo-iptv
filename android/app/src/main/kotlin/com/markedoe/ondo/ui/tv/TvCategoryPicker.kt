@@ -63,13 +63,17 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.core.model.MediaCategory
+import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.ui.screens.label
 import com.markedoe.ondo.ui.theme.OndoColors
 import kotlin.math.roundToInt
 
 /**
  * What the top bar's Categories pill offers on the Movies and Series tabs and on a category's titles: All, then each
  * of the tab's [categories] ([locked] ones with a lock), [selected] ticked and named on the pill (null: All, the pill
- * reads Categories); then the screen choosing which categories show ([onManage]).
+ * reads Categories); then the screen choosing which categories show ([onManage]). Beside them, the posters' order
+ * ([sort]) where the page has one. A page that is no category ([title]: a genre's, a year's or an award's titles, My
+ * List) has its name on the pill and its order alone in the picker ([page]).
  */
 class TvCategoryChoice(
     val categories: List<MediaCategory>,
@@ -77,6 +81,27 @@ class TvCategoryChoice(
     val selected: MediaCategory?,
     val onChoose: (MediaCategory?) -> Unit,
     val onManage: () -> Unit,
+    val sort: TvSortChoice? = null,
+    val title: String? = null,
+) {
+    /** Whether the picker lists the categories: on the tabs and a category's titles, not on a page of its own. */
+    val showsCategories: Boolean get() = title == null
+
+    companion object {
+        /** A page that is no category: its [title] on the pill, its order ([sort]) in the picker. */
+        fun page(title: String, sort: TvSortChoice) = TvCategoryChoice(emptyList(), emptySet(), null, onChoose = {}, onManage = {}, sort = sort, title = title)
+    }
+}
+
+/**
+ * The order of a page's posters, the same for every page that has one ([PosterSort], the shared setting): [sort]
+ * ticked; and whether finished movies are left out, where that applies ([hideWatched] null: it does not).
+ */
+class TvSortChoice(
+    val sort: PosterSort,
+    val onSort: (PosterSort) -> Unit,
+    val hideWatched: Boolean? = null,
+    val onHideWatched: (Boolean) -> Unit = {},
 )
 
 /** The page's [TvCategoryChoice], kept by the top bar while the page is on screen. */
@@ -105,9 +130,9 @@ fun TvTopBarCategories(choice: TvCategoryChoice) {
 const val CATEGORIES_TAG = "categoryFilter"
 
 /**
- * The top bar's Categories pill: the category shown, or Categories; OK opens the picker ([onOpen], [TvCategoryPicker]).
- * It takes the room the bar leaves it after the playlist's line: short of room for its whole label, it shows the
- * category shown cut short, or its icon alone (named for TalkBack).
+ * The top bar's Categories pill: the page's name ([TvCategoryChoice.title]), the category shown, or Categories; OK
+ * opens the picker ([onOpen], [TvCategoryPicker]). It takes the room the bar leaves it after the tabs: short of room
+ * for its whole label, it shows the name cut short, or its icon alone (named for TalkBack).
  */
 @Composable
 internal fun TvCategoriesPill(
@@ -119,15 +144,16 @@ internal fun TvCategoriesPill(
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    val name = choice.selected?.name ?: stringResource(R.string.categories)
+    val name = choice.title ?: choice.selected?.name ?: stringResource(R.string.categories)
     val style = LocalTextStyle.current.copy(fontSize = 14.sp)
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     BoxWithConstraints {
         val labelRoom = minOf(PILL_TEXT_WIDTH, maxWidth - PILL_ICON_WIDTH - PILL_LABEL_GAP)
         val whole = with(density) { measurer.measure(name, style, maxLines = 1).size.width.toDp() }
-        // Categories shows whole or not at all; a category's name may be cut short, down to a few letters.
-        val label = name.takeIf { whole <= labelRoom || (choice.selected != null && labelRoom >= PILL_SHORTEST_LABEL) }
+        // Categories shows whole or not at all; a category's or a page's name may be cut short, down to a few letters.
+        val cut = choice.selected != null || choice.title != null
+        val label = name.takeIf { whole <= labelRoom || (cut && labelRoom >= PILL_SHORTEST_LABEL) }
         Surface(
             onClick = onOpen,
             modifier = modifier
@@ -168,9 +194,10 @@ internal fun TvCategoriesPill(
 /**
  * The Categories pill's picker, open: a panel drawn in the app's own window over the page, below the pill ([anchor],
  * its bounds in the panel's parent), not in a window of its own: the remote's focus goes into it at once, on the
- * category shown (All when it is not in the list), and stays in it, Up and Down along it. OK on a line closes it and
- * then does what the line says ([onChoose]: a category, All, or the screen choosing which categories show); Back is
- * the caller's.
+ * category shown (All when it is not in the list; the order shown on a page without categories), and stays in it, Up
+ * and Down along a column, Left and Right between the categories and the order. OK on a line closes it and then does
+ * what the line says ([onChoose]: a category, All, the screen choosing which categories show, an order); Back is the
+ * caller's.
  */
 @Composable
 internal fun TvCategoryPicker(choice: TvCategoryChoice, anchor: Rect, onChoose: (() -> Unit) -> Unit) {
@@ -185,11 +212,11 @@ internal fun TvCategoryPicker(choice: TvCategoryChoice, anchor: Rect, onChoose: 
     }
     val margin = with(LocalDensity.current) { TvTokens.EdgeEnd.roundToPx() }
     val gap = with(LocalDensity.current) { PICKER_GAP.roundToPx() }
+    val sort = choice.sort
     Layout(
         content = {
-            Column(
+            Row(
                 Modifier
-                    .width(PICKER_WIDTH)
                     .shadow(16.dp, PICKER_SHAPE)
                     .clip(PICKER_SHAPE)
                     .background(OndoColors.Surface)
@@ -199,22 +226,49 @@ internal fun TvCategoryPicker(choice: TvCategoryChoice, anchor: Rect, onChoose: 
                         onExit = { if (requestedFocusDirection in TRAPPED_DIRECTIONS) cancelFocusChange() }
                     }
                     .focusGroup()
-                    .verticalScroll(rememberScrollState())
-                    .padding(vertical = 8.dp)
                     .testTag("categoryPicker"),
             ) {
-                PickerOption(stringResource(R.string.all), choice.selected == null, if (tickedId == null) ticked else null, "categoryAll", locked = false) {
-                    onChoose { choice.onChoose(null) }
-                }
-                choice.categories.forEach { category ->
-                    val selected = category.id == choice.selected?.id
-                    PickerOption(category.name, selected, if (selected && category.id == tickedId) ticked else null, "category:${category.id}", category.id in choice.locked) {
-                        onChoose { choice.onChoose(category) }
+                if (choice.showsCategories) {
+                    Column(Modifier.width(PICKER_WIDTH).verticalScroll(rememberScrollState()).padding(vertical = 8.dp).testTag("pickerCategories")) {
+                        if (sort != null) PickerHeading(stringResource(R.string.categories))
+                        PickerOption(stringResource(R.string.all), choice.selected == null, if (tickedId == null) ticked else null, "categoryAll", locked = false) {
+                            onChoose { choice.onChoose(null) }
+                        }
+                        choice.categories.forEach { category ->
+                            val selected = category.id == choice.selected?.id
+                            PickerOption(category.name, selected, if (selected && category.id == tickedId) ticked else null, "category:${category.id}", category.id in choice.locked) {
+                                onChoose { choice.onChoose(category) }
+                            }
+                        }
+                        PickerDivider()
+                        PickerOption(stringResource(R.string.languages_and_categories), selected = false, requester = null, tag = "categoryManage", locked = false) {
+                            onChoose { choice.onManage() }
+                        }
                     }
                 }
-                Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.12f)))
-                PickerOption(stringResource(R.string.languages_and_categories), selected = false, requester = null, tag = "categoryManage", locked = false) {
-                    onChoose { choice.onManage() }
+                if (sort != null) {
+                    // The page's order beside its categories (or alone): every order in sight, none below a long list.
+                    Column(Modifier.width(SORT_WIDTH).verticalScroll(rememberScrollState()).padding(vertical = 8.dp).testTag("pickerSort")) {
+                        PickerHeading(stringResource(R.string.sort))
+                        PosterSort.entries.forEach { option ->
+                            val selected = option == sort.sort
+                            PickerOption(
+                                stringResource(option.label),
+                                selected,
+                                if (selected && !choice.showsCategories) ticked else null,
+                                "sort-" + option.name.lowercase(),
+                                locked = false,
+                            ) {
+                                onChoose { sort.onSort(option) }
+                            }
+                        }
+                        sort.hideWatched?.let { hidden ->
+                            PickerDivider()
+                            PickerOption(stringResource(R.string.hide_watched), hidden, requester = null, tag = "hideWatched", locked = false) {
+                                onChoose { sort.onHideWatched(!hidden) }
+                            }
+                        }
+                    }
                 }
             }
         },
@@ -229,6 +283,25 @@ internal fun TvCategoryPicker(choice: TvCategoryChoice, anchor: Rect, onChoose: 
         val x = start.coerceAtMost(constraints.maxWidth - margin - panel.width).coerceAtLeast(margin.coerceAtMost(constraints.maxWidth - panel.width))
         layout(constraints.maxWidth, constraints.maxHeight) { panel.place(x, top) }
     }
+}
+
+/** A column's name in the picker, when it has two: Categories, Sort. */
+@Composable
+private fun PickerHeading(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(start = 18.dp, end = 18.dp, top = 4.dp, bottom = 6.dp),
+    )
+}
+
+/** A thin line between a column's parts. */
+@Composable
+private fun PickerDivider() {
+    Box(Modifier.padding(horizontal = 16.dp, vertical = 6.dp).fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.12f)))
 }
 
 /** A line of the picker: [text], ticked when [selected], a lock when [locked]; [requester]: the one focused first. */
@@ -276,8 +349,8 @@ private val TRAPPED_DIRECTIONS = setOf(FocusDirection.Up, FocusDirection.Down, F
 /** How many frames the picker waits for its panel to take the focus. */
 private const val PICKER_FOCUS_FRAMES = 10
 
-/** The widest a category's name shows on the pill. */
-private val PILL_TEXT_WIDTH = 180.dp
+/** The widest a category's or a page's name shows on the pill: only a very long one is cut short. */
+private val PILL_TEXT_WIDTH = 260.dp
 
 /** The narrowest a category's name shows on the pill, cut short; narrower, the pill shows its icon alone. */
 private val PILL_SHORTEST_LABEL = 40.dp
@@ -291,6 +364,7 @@ private val PILL_LABEL_GAP = 6.dp
 internal val PILL_ICON_WIDTH = PILL_START + PILL_ICON + PILL_END
 
 private val PICKER_WIDTH = 300.dp
+private val SORT_WIDTH = 230.dp
 private val PICKER_GAP = 8.dp
 private val PICKER_SHAPE = RoundedCornerShape(14.dp)
 

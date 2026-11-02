@@ -40,6 +40,7 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.TvHeaderAbove
 import com.markedoe.ondo.ui.tv.KeptForTheRemote
+import com.markedoe.ondo.ui.tv.LocalTvTopBar
 
 /** What a value of a movie's or a series' page stands for: an award, a festival, a year, a genre. */
 enum class BrowseKind { AWARD, FESTIVAL, YEAR, GENRE }
@@ -55,7 +56,19 @@ data class BrowseUiState(
     val festival: String? = null,
 )
 
-/** The titles of the playlist sharing a value tapped on a movie's or a series' page. */
+/** What a Browse page is called: the award's or the genre's name, the festival's, "Released in 2024". */
+@Composable
+fun browseTitle(state: BrowseUiState): String = when (state.kind) {
+    BrowseKind.AWARD, BrowseKind.GENRE -> state.name
+    BrowseKind.FESTIVAL -> awardGroupName(state.value)
+    BrowseKind.YEAR -> stringResource(R.string.released_in_year, state.value)
+}
+
+/**
+ * The titles of the playlist sharing a value tapped on a movie's or a series' page. On a TV under the top bar, no row
+ * of its own above them: the bar's Categories pill names the page and holds its order ([TvTopBarCategories]), Back on
+ * the remote goes back, and Down from the bar lands on the first poster (an award's festival comes after the titles).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BrowseScreen(
@@ -70,11 +83,9 @@ fun BrowseScreen(
     onSort: (PosterSort) -> Unit = {},
 ) {
     val metrics = rememberShelfMetrics()
-    val title = when (state.kind) {
-        BrowseKind.AWARD, BrowseKind.GENRE -> state.name
-        BrowseKind.FESTIVAL -> awardGroupName(state.value)
-        BrowseKind.YEAR -> stringResource(R.string.released_in_year, state.value)
-    }
+    val title = browseTitle(state)
+    // On a TV, the top bar names the page and holds its order.
+    val inTheBar = LocalTvTopBar.current != null
     // On a TV, a header pinned above the grid shows the poster with the focus: the posters show nothing more.
     TvHeaderAbove(fallback = state.movies.firstOrNull() ?: state.series.firstOrNull()) { modifier, top, posterOnly ->
         LazyVerticalGrid(
@@ -84,31 +95,33 @@ fun BrowseScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = modifier.windowInsetsPadding(WindowInsets.statusBars).testTag("browse"),
         ) {
-            fullWidth {
-                // Back and Sort above the first posters: kept for the remote's Up under the header.
-                if (posterOnly) KeptForTheRemote()
-                TopAppBar(
-                    title = { Text(title, maxLines = 1) },
-                    navigationIcon = {
-                        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
-                    },
-                    actions = { SortButton(sort, onSort) },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                    windowInsets = WindowInsets(0),
-                )
-            }
-            state.festival?.let { festival ->
+            if (!inTheBar) {
                 fullWidth {
+                    // Back and Sort above the first posters: kept for the remote's Up under a header.
                     if (posterOnly) KeptForTheRemote()
-                    ListItem(
-                        headlineContent = { Text(awardGroupName(festival), color = MaterialTheme.colorScheme.primary) },
-                        leadingContent = { Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                        modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onFestival(festival) }.testTag("festival"),
+                    TopAppBar(
+                        title = { Text(title, maxLines = 1) },
+                        navigationIcon = {
+                            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
+                        },
+                        actions = { SortButton(sort, onSort) },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                        windowInsets = WindowInsets(0),
                     )
+                }
+            }
+            if (!inTheBar) {
+                state.festival?.let { festival ->
+                    fullWidth {
+                        if (posterOnly) KeptForTheRemote()
+                        FestivalLink(festival, onFestival)
+                    }
                 }
             }
             titles(R.string.movies, state.movies, onOpen, facts.takeUnless { posterOnly }, posterOnly)
             titles(R.string.series, state.series, onOpen, facts.takeUnless { posterOnly }, posterOnly)
+            // On a TV, the festival after the titles: Down from the bar goes straight to the first poster.
+            if (inTheBar) state.festival?.let { festival -> fullWidth { FestivalLink(festival, onFestival) } }
             if (state.movies.isEmpty() && state.series.isEmpty()) {
                 fullWidth {
                     Text(stringResource(R.string.person_nothing_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(vertical = 24.dp))
@@ -123,6 +136,16 @@ fun BrowseScreen(
             }
         }
     }
+}
+
+/** The festival or ceremony of an award's titles, which opens its page. */
+@Composable
+private fun FestivalLink(festival: String, onFestival: (String) -> Unit) {
+    ListItem(
+        headlineContent = { Text(awardGroupName(festival), color = MaterialTheme.colorScheme.primary) },
+        leadingContent = { Icon(Icons.Rounded.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+        modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable { onFestival(festival) }.testTag("festival"),
+    )
 }
 
 private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) = item(span = { GridItemSpan(maxLineSpan) }) { content() }

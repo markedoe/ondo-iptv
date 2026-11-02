@@ -42,9 +42,15 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   goes to that card, its title already in the header (the first poster reached shows at once, with no wait); Down
   again, the next row comes up whole and the header follows. The categories are a Categories pill in the top bar,
   before Search (Up from the first row reaches the bar, Right along it): OK opens a picker with All, each category
-  and Languages and categories; it names the category shown on a category's titles (`TvCategoryPicker.kt`).
+  and Languages and categories; it names the category shown on a category's titles (`TvCategoryPicker.kt`). The top
+  bar shows no playlist line (Settings → Playlists says when each was updated): the pill has the room for a category's
+  name, cut short only when very long. A category's titles and the genre, year and award pages on a TV start with
+  their posters right under the header: no Back row (the remote's Back goes back), no title (the pill names the
+  category, or the genre, year or award), no Sort button and no filter field (Search finds a title); Down from the
+  tab lands on the first poster, its title in the header at once. An award's festival comes after its titles.
 - **Sort**: a category's grid and the genre, year, award and festival pages share one order (`AppSettings.posterSort`,
-  the Sort button above the posters, reached with Up on a TV): playlist order (on those pages, their own order),
+  the Sort button above the posters on a phone; on a TV, in the Categories pill's picker, beside the categories, with
+  Hide watched for movies): playlist order (on those pages, their own order),
   name, date added, release date or rating. A genre's titles found through TMDb are sorted with the others
   (`UiMappers.browse`).
 - **TV posters**: holding OK on a poster adds the title to My List or takes it out (a short message says which), and a check mark
@@ -146,7 +152,9 @@ channels, `example.com` addresses):
 - **Reference screenshots**, half size, committed in `android/app/src/test/snapshots/`: the TV's (English and French)
   and the phone's (English) store screens, and the TV's tab pages as the remote leaves them (`TvScreenshots`: Movies
   with a row focused, the path tab → Down → Down on Movies and on Series (`movies-tab-focused`, `movies-down-1`,
-  `movies-down-2`, `series-…`), the Categories picker open, Home with the remote in its rows).
+  `movies-down-2`, `series-…`), the Categories picker open, a category's titles from the tab then Down
+  (`grid-category`, `grid-down-1`), the picker there with the order beside the categories (`picker-with-sort`), a
+  genre's titles (`browse-genre`), Home with the remote in its rows).
 
 The *Android* workflow compares every screenshot with its reference (`./gradlew :app:verifyRoborazziDebug`); at most
 0.1 % of the pixels may differ (anti-aliasing, `screenshots/Baselines.kt`). A screenshot that changed fails the run:
@@ -161,9 +169,11 @@ the only one allowed to write, then commits the new references to that branch (a
 the images' metadata removed). Pull the branch afterwards, and look at the images in the commit before merging it.
 
 Behaviour that a picture does not prove has its own tests: `TvLayoutRegressionTest` (the header's backdrop from the
-screen's top and cropped towards its top, the playlist's last update in the top bar of Home and of the Movies tab,
-each row type whole under the header at 960 × 540 dp, the path tab → Down → Down on Movies and Series with the header
-on the focused title before its wait, the Categories pill reached with Up then Right and its picker).
+screen's top and cropped towards its top, no playlist line in the top bar (Home, Movies, Series, a category's and a
+genre's titles), each row type whole under the header at 960 × 540 dp, the path tab → Down → Down on Movies and
+Series with the header on the focused title before its wait, the Categories pill reached with Up then Right and its
+picker, a category's name whole on the pill, a category's and a genre's titles with no row of their own above the
+posters, Down from the tab on the first poster, and the order chosen in the pill's picker).
 
 ### Before changing a TV screen (regressions checklist)
 
@@ -173,11 +183,12 @@ on the focused title before its wait, the Categories pill reached with Up then R
 3. Run the workflow again. A screenshot that changed: open **android-screenshot-diffs** and look at each difference.
 4. Every difference is wanted: record the references anew (*record_screenshots*) and check the committed images.
    One is not: fix the change, never the reference.
-5. Check at 960 × 540 dp that each row (its name, its cards and their lines) fits under the header, and that the
-   playlist's line stays at the top bar's end.
+5. Check at 960 × 540 dp that each row (its name, its cards and their lines) fits under the header, that the top bar
+   shows no playlist line, and that the Categories pill reads a category's name whole.
 6. Check the path tab → Down → Down with screenshots, on Movies and on Series (`movies-tab-focused`,
    `movies-down-1`, `movies-down-2` and the same for `series`): on the tab, the first row whole under the header and
-   no empty area; each Down, the focused card's title in the header at once.
+   no empty area; each Down, the focused card's title in the header at once. The same on a category's titles
+   (`grid-category`, `grid-down-1`): the posters right under the header, no row of their own above them.
 
 ## Initial plan
 

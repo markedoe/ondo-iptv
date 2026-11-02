@@ -5,9 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,8 +12,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -63,7 +58,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -76,7 +70,6 @@ import androidx.tv.material3.Text
 import com.markedoe.ondo.R
 import com.markedoe.ondo.ui.TopLevel
 import com.markedoe.ondo.ui.screens.OndoLogo
-import com.markedoe.ondo.ui.updatedAgoText
 import com.markedoe.ondo.ui.theme.OndoColors
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -91,18 +84,10 @@ class TvTopBar {
 
     internal var page: Page? by mutableStateOf(null)
 
-    /** A page's own line at the bar's end ([TvTopBarNote]); its text null: no line on that page. */
-    internal class PageNote(val text: String?)
-
-    internal var pageNote: PageNote? by mutableStateOf(null)
-
-    /** The line every tab page shows unless it has its own: the playlist and when it was updated. */
-    internal var defaultNote: String? by mutableStateOf(null)
-
-    /** A short line at the bar's end, before Search. */
-    internal val note: String? get() = pageNote.let { if (it != null) it.text else defaultNote }
-
-    /** The Movies and Series tabs' categories ([TvTopBarCategories]): a pill next to Search; none on other pages. */
+    /**
+     * The page's Categories pill ([TvTopBarCategories]): next to Search on the Movies and Series tabs, a category's
+     * titles and a genre's, a year's or an award's (their name and their order); none on other pages.
+     */
     internal var categories: TvCategoryHolder? by mutableStateOf(null)
 
     /** The page draws a picture under the bar ([TvTopBarOverArt]): the bar's band is a shade over it, not a wall. */
@@ -114,20 +99,6 @@ class TvTopBar {
      */
     var browsing: Boolean = false
         internal set
-}
-
-/**
- * Shows [text] at the top bar's end while the calling page is on screen, in place of the playlist's line the bar
- * shows on every tab page; null: no line at all (on a TV; nothing elsewhere).
- */
-@Composable
-fun TvTopBarNote(text: String?) {
-    val bar = LocalTvTopBar.current ?: return
-    DisposableEffect(bar, text) {
-        val note = TvTopBar.PageNote(text)
-        bar.pageNote = note
-        onDispose { if (bar.pageNote === note) bar.pageNote = null }
-    }
 }
 
 /**
@@ -143,17 +114,6 @@ fun TvTopBarOverArt(on: Boolean = true) {
         bar.overArt = owner
         onDispose { if (bar.overArt === owner) bar.overArt = null }
     }
-}
-
-/** The playlist Home shows and when it was last fetched ([updatedAt], null: not yet), at [now]. */
-data class PlaylistUpdate(val name: String, val updatedAt: Long?, val now: Long)
-
-/** The top bar's line for [update]: the playlist's name, then when it was updated, one line each; null: neither. */
-@Composable
-fun playlistNote(update: PlaylistUpdate?): String? {
-    update ?: return null
-    val lines = listOfNotNull(update.name.takeIf { it.isNotBlank() }, update.updatedAt?.let { updatedAgoText(it, update.now) })
-    return lines.takeIf { it.isNotEmpty() }?.joinToString("\n")
 }
 
 val LocalTvTopBar = staticCompositionLocalOf<TvTopBar?> { null }
@@ -191,10 +151,10 @@ fun rememberTabGridState(): LazyGridState {
 
 /**
  * The TV's navigation: a bar always at the top of the tab pages, which scroll under it. Ondo's mark, the tabs, then
- * the playlist's line, the page's Categories pill (Movies and Series), Search and Settings at the far end.
- * [selected] is the tab shown. A category's or a genre's titles keep the bar ([showBar]) on the tab they belong to,
- * though no tab page ([tabPage] false: Back goes back to the page before). Pages beyond a tab (Search, a movie, the
- * guide, Settings) take the whole screen ([showBar] false).
+ * the page's Categories pill (the Movies and Series tabs, a category's or a genre's titles: their name, their order),
+ * Search and Settings at the far end. [selected] is the tab shown. A category's or a genre's titles keep the bar
+ * ([showBar]) on the tab they belong to, though no tab page ([tabPage] false: Back goes back to the page before).
+ * Pages beyond a tab (Search, a movie, the guide, Settings) take the whole screen ([showBar] false).
  *
  * The tab the remote moves to along the bar opens at once; OK goes into its page. Up from a page's top reaches the bar, on the tab shown; Down from the
  * bar goes to the page's first item. Back
@@ -209,15 +169,12 @@ fun TvNavigationFrame(
     onSelect: (TopLevel) -> Unit,
     onSearch: () -> Unit,
     onSettings: () -> Unit,
-    playlist: PlaylistUpdate? = null,
     content: @Composable () -> Unit,
 ) {
     val requesters = remember { HashMap<String, FocusRequester>() }
     fun requester(tag: String) = requesters.getOrPut(tag) { FocusRequester() }
     val selectedTag = selected.tag
     val bar = remember { TvTopBar() }
-    val defaultNote = playlistNote(playlist)
-    SideEffect { bar.defaultNote = defaultNote }
     var barHasFocus by remember { mutableStateOf(false) }
     // The tab the remote rests on, about to open (a spinner shows it).
     var openingTab by remember { mutableStateOf<String?>(null) }
@@ -232,9 +189,9 @@ fun TvNavigationFrame(
     var picking by remember { mutableStateOf(false) }
     var frameCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var pillCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    // The categories of the tab shown only: a page still fading out as another tab opens keeps none in the bar (the
-    // pill would leave under the remote, the focus with it).
-    val categories = bar.categories?.choice?.takeIf { selected == TopLevel.MOVIES || selected == TopLevel.SERIES }
+    // The categories of the tab shown, or of the page beyond it (a category's, a genre's titles): a tab page still
+    // fading out as another tab opens keeps none in the bar (the pill would leave under the remote, the focus with it).
+    val categories = bar.categories?.choice?.takeIf { selected == TopLevel.MOVIES || selected == TopLevel.SERIES || !tabPage }
     val pickerChoice = categories?.takeIf { showBar }
     // The page leaves with its categories: nothing left to pick.
     if (picking && pickerChoice == null) SideEffect { picking = false }
@@ -326,11 +283,9 @@ fun TvNavigationFrame(
                         }
                     }
                 }
-                // The playlist's line, then the tab's categories (Up from the rows reaches the bar, Right along it), in
-                // the room the tabs leave before Search and Settings. The line keeps its whole width (up to a cap):
-                // the gap after the tabs gives way first, then the Categories pill ([TvCategoriesPill] shrinks to its
-                // icon), never the line.
-                BoxWithConstraints(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                // The page's Categories pill (Up from the rows reaches the bar, Right along it), at the end of the room
+                // the tabs leave before Search and Settings: it shrinks to its icon before they do.
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     // A tab about to open: a small spinner after the tabs, in the gap (it takes no room of its own).
                     if (openingTab != null) {
                         Box(Modifier.align(Alignment.CenterStart).padding(start = 10.dp).size(18.dp), contentAlignment = Alignment.Center) {
@@ -341,32 +296,9 @@ fun TvNavigationFrame(
                             )
                         }
                     }
-                    val noteWidth = if (categories == null) NOTE_WIDTH else minOf(NOTE_WIDTH_BESIDE_PILL, maxWidth - PILL_ICON_WIDTH - BAR_GAP)
-                    Row(horizontalArrangement = Arrangement.spacedBy(BAR_GAP), verticalAlignment = Alignment.CenterVertically) {
-                        bar.note?.let { note ->
-                            // One line each (the playlist, then when it was updated), at their natural width: only a
-                            // name longer than the cap is cut short.
-                            Column(
-                                horizontalAlignment = Alignment.End,
-                                modifier = Modifier
-                                    .widthIn(max = maxOf(0.dp, noteWidth))
-                                    .padding(start = if (categories == null) 12.dp else 0.dp, end = if (categories == null) 12.dp else 4.dp)
-                                    .width(IntrinsicSize.Max)
-                                    .semantics(mergeDescendants = true) {}
-                                    .testTag("lastUpdate"),
-                            ) {
-                                note.lines().forEach { line ->
-                                    Text(
-                                        line,
-                                        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.sp),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                        }
-                        categories?.let { choice ->
+                    categories?.let { choice ->
+                        // Clear of the spinner's place: the pill gives way first (its name cut short, then its icon alone).
+                        Box(Modifier.padding(start = PILL_CLEARANCE)) {
                             TvCategoriesPill(
                                 choice,
                                 shown,
@@ -427,9 +359,8 @@ fun TvNavigationFrame(
 /** The space between the bar's items. */
 private val BAR_GAP = 4.dp
 
-/** The widest the playlist's line shows on Home, and beside the Categories pill on the Movies and Series tabs. */
-private val NOTE_WIDTH = 360.dp
-private val NOTE_WIDTH_BESIDE_PILL = 220.dp
+/** The room the Categories pill leaves after the tabs, for the spinner of a tab about to open. */
+private val PILL_CLEARANCE = 36.dp
 
 /** How much of the bar's lower edge the black band behind it takes to fade out. */
 private val BAND_FADE = 12.dp
