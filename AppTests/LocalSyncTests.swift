@@ -219,6 +219,27 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertGreaterThan(relaunched.syncStamp(Date(timeIntervalSince1970: 0)).syncMilliseconds, ahead)
     }
 
+    /// The playlist in use deleted on another device while something plays here: the catalogue stays under the player
+    /// and follows once playback ends.
+    func testAPlaylistDeletedElsewhereDuringPlaybackLeavesTheCatalogueUntilItEnds() async throws {
+        let model = try await deviceWithLibrary()
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        let item = PlaybackItem(reference: MediaReference(playlistID: playlist.id, type: .live, itemID: "news"), title: "News",
+                                streamURL: URL(string: "http://127.0.0.1:9/news.m3u8")!, isLive: true)
+        let session = PlaybackSession(queue: [item], index: 0)
+        model.sessions[session.id] = session
+        let deleted = ["playlist:" + playlist.id.uuidString.lowercased(): model.syncStamp().syncMilliseconds + 1]
+        let applied = await model.applySync(SyncSnapshot(device: "tv", deleted: deleted))
+        XCTAssertTrue(applied)
+        XCTAssertTrue(model.playlists.isEmpty)
+        XCTAssertFalse(model.content.channels.isEmpty, "nothing is emptied under the player")
+        XCTAssertEqual(model.contentAfterPlayback, .activate)
+
+        model.sessions[session.id] = nil
+        await model.followSyncedContent(.activate)
+        XCTAssertTrue(model.content.channels.isEmpty)
+    }
+
     func testTheTMDbKeyTravelsAndSoDoesItsRemoval() async throws {
         let first = try await device("first")
         let second = try await device("second")

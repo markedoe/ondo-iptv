@@ -591,7 +591,7 @@ extension AppModel {
                 updateSettings { $0.activePlaylistID = replacement.id }
                 await deletePlaylist(local, recordsSyncDeletion: false)
                 // Nothing is reloaded under the player: the catalogue follows once playback ends (`endSession`).
-                if sessions.isEmpty { await activate(replacement) } else { activationAfterPlayback = replacement.id }
+                if sessions.isEmpty { await activate(replacement) } else { contentAfterPlayback = .activate }
             } else {
                 await deletePlaylist(local, recordsSyncDeletion: false)
             }

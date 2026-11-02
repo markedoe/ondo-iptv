@@ -331,9 +331,9 @@ extension AppModel {
         if pictureInPictureSession === session { pictureInPictureSession = nil }
         if playbackRequest === session { playbackRequest = nil }
         applyParkedProgress()
-        if sessions.isEmpty, let id = activationAfterPlayback {
-            activationAfterPlayback = nil
-            if let playlist = playlists.first(where: { $0.id == id }), activePlaylist?.id == id { Task { await activate(playlist) } }
+        if sessions.isEmpty, let change = contentAfterPlayback {
+            contentAfterPlayback = nil
+            Task { await followSyncedContent(change) }
         }
         // Where the movie or episode was left goes to the other devices once playback ends (not at every save).
         if session.current?.isLive == false { syncSoon() }

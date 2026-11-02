@@ -143,8 +143,16 @@ final class AppModel {
     /// Where other devices left an item playing here, received during its playback (by `playbackKey`): applied once
     /// it no longer plays, when it is the later (`applyParkedProgress`).
     @ObservationIgnored var parkedProgress: [String: HistoryEntry] = [:]
-    /// The playlist sync made the one in use while something played: opened once playback ends (`endSession`).
-    @ObservationIgnored var activationAfterPlayback: UUID?
+    /// What sync changed in the playlist in use while something played: the catalogue follows once playback ends
+    /// (`endSession`, `followSyncedContent`), never under the player.
+    @ObservationIgnored var contentAfterPlayback: ContentAfterPlayback?
+
+    enum ContentAfterPlayback: Equatable {
+        /// The playlist in use became another one (or none): it is opened then.
+        case activate
+        /// The address or login of this playlist changed: its catalogue is downloaded again then.
+        case reload(UUID)
+    }
 
     @ObservationIgnored private let libraryWriter: LibraryWriter
     /// What `bootstrap()` read from disk, before sync or the viewer changed anything (the diagnostic report).
@@ -519,6 +527,10 @@ final class AppModel {
             if let fresh {
                 await apply(fresh, for: playlist)
                 phase = .loaded
+            } else if !recordsSyncChange, !sessions.isEmpty {
+                // Changed on another device while something plays here: nothing is reloaded under the player.
+                if contentAfterPlayback == nil { contentAfterPlayback = .reload(playlist.id) }
+                return
             } else {
                 await refreshContent(of: playlist, silent: false)
             }
@@ -545,19 +557,42 @@ final class AppModel {
         updateLibrary { $0.removeData(for: playlist.id) }
         if settings.activePlaylistID == playlist.id || activePlaylist == nil {
             updateSettings { $0.activePlaylistID = playlists.first?.id }
-            if let next = activePlaylist {
+            if !recordsSyncDeletion, !sessions.isEmpty {
+                // Deleted on another device while something plays here: nothing is reloaded under the player.
+                contentAfterPlayback = .activate
+            } else if let next = activePlaylist {
                 await activate(next)
             } else {
-                content = .empty
-                rawContent = .empty
-                index = ContentIndex()
-                peopleIndex = PeopleIndex()
-                categoryTags = CategoryTagIndex()
-                movieAwards = [:]
-                epg = .empty
-                phase = .idle
-                epgPhase = .idle
+                showNoPlaylist()
             }
+        }
+    }
+
+    /// No playlist left: an empty catalogue and guide.
+    private func showNoPlaylist() {
+        content = .empty
+        rawContent = .empty
+        index = ContentIndex()
+        peopleIndex = PeopleIndex()
+        categoryTags = CategoryTagIndex()
+        movieAwards = [:]
+        epg = .empty
+        phase = .idle
+        epgPhase = .idle
+    }
+
+    /// Playback ended after sync changed the playlist in use (`contentAfterPlayback`): the catalogue follows now, for
+    /// the playlist in use as it is now.
+    func followSyncedContent(_ change: ContentAfterPlayback) async {
+        guard let playlist = activePlaylist else {
+            showNoPlaylist()
+            return
+        }
+        if change == .reload(playlist.id) {
+            await refreshContent(of: playlist, silent: false)
+            loadEPG(for: playlist, force: true)
+        } else {
+            await activate(playlist)
         }
     }
 
