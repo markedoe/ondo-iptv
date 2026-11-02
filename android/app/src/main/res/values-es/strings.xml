@@ -81,8 +81,7 @@
     <string name="feature_player_title">Un reproductor fiable</string>
     <string name="feature_player_text">HLS, TS, MP4 y MKV, subtítulos e imagen dentro de imagen.</string>
     <string name="add_playlist">Añadir una playlist</string>
-    <string name="try_demo">Probar la demo</string>
-    <string name="demo">Demo</string>
+    <string name="welcome_no_channels">Ondo no incluye ningún canal: añade el enlace M3U, el archivo o el acceso Xtream Codes de tu proveedor.</string>
     <string name="disclaimer">Ondo es solo un reproductor: no aloja, proporciona ni vende ningún contenido ni suscripción IPTV. Úsalo solo con fuentes que tengas autorización para ver.</string>
     <string name="xtream_codes">Xtream Codes</string>
     <string name="m3u_link">Enlace M3U</string>

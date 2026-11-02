@@ -338,14 +338,13 @@ class ScreensTest {
     }
 
     @Test
-    fun welcomeOffersAPlaylistOrTheDemoAndSaysOndoHasNoContent() {
-        var demo = 0
+    fun welcomeOffersToAddAPlaylistAndSaysOndoHasNoContent() {
         var add = 0
-        compose.setContent { OndoTheme { WelcomeScreen(onAddPlaylist = { add++ }, onTryDemo = { demo++ }, isLoading = false) } }
+        compose.setContent { OndoTheme { WelcomeScreen(onAddPlaylist = { add++ }) } }
         compose.onNodeWithText("player only", substring = true).assertExists()
-        compose.onNodeWithTag("demoButton").performClick()
+        compose.onNodeWithText("comes with no channels", substring = true).assertExists()
+        compose.onNodeWithTag("demoButton").assertDoesNotExist()
         compose.onNodeWithTag("addPlaylist").performClick()
-        assertEquals(1, demo)
         assertEquals(1, add)
     }
 
@@ -588,7 +587,7 @@ class ScreensTest {
     @Test
     fun welcomeOffersToSyncWithTheDevicesNearby() {
         val turned = mutableListOf<Boolean>()
-        compose.setContent { OndoTheme { WelcomeScreen(onAddPlaylist = {}, onTryDemo = {}, isLoading = false, syncOn = true, onSync = { turned += it }) } }
+        compose.setContent { OndoTheme { WelcomeScreen(onAddPlaylist = {}, syncOn = true, onSync = { turned += it }) } }
         compose.onNodeWithText("Looking for other devices with Ondo open…").assertExists()
         compose.onNodeWithTag("welcomeSync").performScrollTo().performClick()
         assertEquals(listOf(false), turned)

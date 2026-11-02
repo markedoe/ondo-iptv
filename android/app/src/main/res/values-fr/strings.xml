@@ -81,8 +81,7 @@
     <string name="feature_player_title">Un lecteur fiable</string>
     <string name="feature_player_text">HLS, TS, MP4 et MKV, sous-titres et image dans l\'image.</string>
     <string name="add_playlist">Ajouter une playlist</string>
-    <string name="try_demo">Essayer la démo</string>
-    <string name="demo">Démo</string>
+    <string name="welcome_no_channels">Ondo ne contient aucune chaîne : ajoutez le lien M3U, le fichier ou l’identifiant Xtream Codes de votre fournisseur.</string>
     <string name="disclaimer">Ondo est uniquement un lecteur : il n’héberge, ne fournit ni ne vend aucun contenu ni abonnement IPTV. Utilisez-le seulement avec des sources que vous êtes autorisé à regarder.</string>
     <string name="xtream_codes">Xtream Codes</string>
     <string name="m3u_link">Lien M3U</string>

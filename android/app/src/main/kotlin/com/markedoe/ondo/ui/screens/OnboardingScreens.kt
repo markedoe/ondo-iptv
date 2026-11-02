@@ -97,14 +97,12 @@ fun OndoLogo(size: Dp = 96.dp) {
 }
 
 /**
- * First launch: what Ondo is, the player-only disclaimer, add a playlist or try the demo, or turn sync on to get the
- * playlists of the devices nearby where Ondo is open (typing a login with a TV remote is the slow way).
+ * First launch: what Ondo is, the player-only disclaimer, add a playlist (Ondo comes with none), or turn sync on to get
+ * the playlists of the devices nearby where Ondo is open (typing a login with a TV remote is the slow way).
  */
 @Composable
 fun WelcomeScreen(
     onAddPlaylist: () -> Unit,
-    onTryDemo: () -> Unit,
-    isLoading: Boolean,
     syncOn: Boolean = false,
     syncDevices: List<SyncDevice> = emptyList(),
     onSync: ((Boolean) -> Unit)? = null,
@@ -139,9 +137,13 @@ fun WelcomeScreen(
         Button(onClick = onAddPlaylist, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().testTag("addPlaylist")) {
             Text(stringResource(R.string.add_playlist))
         }
-        OutlinedButton(onClick = onTryDemo, enabled = !isLoading, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().padding(top = 8.dp).testTag("demoButton")) {
-            if (isLoading) ButtonProgress() else Text(stringResource(R.string.try_demo))
-        }
+        Text(
+            stringResource(R.string.welcome_no_channels),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp).widthIn(max = 480.dp),
+        )
         if (onSync != null) {
             Spacer(Modifier.height(20.dp))
             WelcomeSync(syncOn, syncDevices, onSync)

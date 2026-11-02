@@ -80,8 +80,7 @@
     <string name="feature_player_title">एक भरोसेमंद प्लेयर</string>
     <string name="feature_player_text">HLS, TS, MP4 और MKV, सबटाइटल और पिक्चर इन पिक्चर।</string>
     <string name="add_playlist">प्लेलिस्ट जोड़ें</string>
-    <string name="try_demo">डेमो आज़माएँ</string>
-    <string name="demo">डेमो</string>
+    <string name="welcome_no_channels">Ondo में कोई चैनल शामिल नहीं है: अपने प्रदाता से मिला M3U लिंक, फ़ाइल या Xtream Codes लॉगिन जोड़ें।</string>
     <string name="disclaimer">Ondo सिर्फ़ एक प्लेयर है: यह कोई कॉन्टेंट या IPTV सब्सक्रिप्शन होस्ट नहीं करता, न देता है, न बेचता है। इसे सिर्फ़ उन्हीं स्रोतों के साथ इस्तेमाल करें जिन्हें देखने की आपको अनुमति है।</string>
     <string name="xtream_codes">Xtream Codes</string>
     <string name="m3u_link">M3U लिंक</string>

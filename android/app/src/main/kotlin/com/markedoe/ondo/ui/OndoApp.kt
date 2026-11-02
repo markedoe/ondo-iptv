@@ -178,7 +178,6 @@ fun OndoApp(viewModel: OndoViewModel) {
 private fun Onboarding(viewModel: OndoViewModel) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var adding by rememberSaveable { mutableStateOf(false) }
-    val demoName = stringResource(R.string.demo)
     if (adding) {
         var picked by remember { mutableStateOf<PickedFile?>(null) }
         // System back returns to the welcome screen (without it, back closed the app).
@@ -196,13 +195,11 @@ private fun Onboarding(viewModel: OndoViewModel) {
             val syncDevices by viewModel.syncDevices.collectAsStateWithLifecycle()
             WelcomeScreen(
                 onAddPlaylist = { adding = true },
-                onTryDemo = { viewModel.addDemo(demoName) },
-                isLoading = state.isLoading,
                 syncOn = state.settings.syncOnLocalNetwork,
                 syncDevices = syncDevices,
                 onSync = viewModel::setSyncOnLocalNetwork,
             )
-            ErrorSnackbar(viewModel, Modifier.align(Alignment.BottomCenter), onRetry = { viewModel.addDemo(demoName) })
+            ErrorSnackbar(viewModel, Modifier.align(Alignment.BottomCenter), onRetry = null)
         }
     }
 }
@@ -374,18 +371,18 @@ fun OndoNavigationFrame(selected: TopLevel, onSelect: (TopLevel) -> Unit, conten
     )
 }
 
-/** Loading failures (the cached catalogue stays on screen), with a retry. */
+/** Loading failures (the cached catalogue stays on screen), with a retry when [onRetry] is given. */
 @Composable
-private fun ErrorSnackbar(viewModel: OndoViewModel, modifier: Modifier, onRetry: () -> Unit) {
+private fun ErrorSnackbar(viewModel: OndoViewModel, modifier: Modifier, onRetry: (() -> Unit)?) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val host = remember { SnackbarHostState() }
     val message = state.error?.let { stringResource(R.string.error_playlist, loadErrorText(it)) }
     val retry = stringResource(R.string.try_again)
     LaunchedEffect(message) {
         if (message == null) return@LaunchedEffect
-        val result = host.showSnackbar(message, actionLabel = retry, withDismissAction = true, duration = SnackbarDuration.Long)
+        val result = host.showSnackbar(message, actionLabel = retry.takeIf { onRetry != null }, withDismissAction = true, duration = SnackbarDuration.Long)
         viewModel.clearError()
-        if (result == SnackbarResult.ActionPerformed) onRetry()
+        if (result == SnackbarResult.ActionPerformed) onRetry?.invoke()
     }
     SnackbarHost(host, modifier.testTag("errorSnackbar"))
 }

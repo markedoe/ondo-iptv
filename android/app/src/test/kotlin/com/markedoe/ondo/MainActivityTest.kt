@@ -17,10 +17,10 @@ class MainActivityTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun firstLaunchWelcomesTheUserWithTheDemoAndTheDisclaimer() {
+    fun firstLaunchWelcomesTheUserWithAddAPlaylistAndTheDisclaimer() {
         compose.waitUntil(timeoutMillis = 10_000) { compose.onAllNodesWithTag("welcome").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithTag("demoButton").assertExists()
         compose.onNodeWithTag("addPlaylist").assertExists()
+        compose.onNodeWithText("comes with no channels", substring = true).assertExists()
         compose.onNodeWithText("player only", substring = true).assertExists()
     }
 }

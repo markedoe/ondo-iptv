@@ -219,7 +219,7 @@ class Tv:
         self.shell(f"am start -W -n {ACTIVITY}")
         self.pid = self.current_pid()
         self.say(f"restarted, pid {self.pid}")
-        self.wait_for("home after a restart", lambda: self.visible("Live TV") and not self.visible("Try the demo"), 60)
+        self.wait_for("home after a restart", lambda: self.visible("Live TV") and not self.visible("Welcome to Ondo"), 60)
         try:
             self.wait_for("the catalogue after a restart", self.catalogue_on_screen, 90, every=0.5)
             self.say(f"  catalogue on screen {time.time() - started:.1f} s after the restart")

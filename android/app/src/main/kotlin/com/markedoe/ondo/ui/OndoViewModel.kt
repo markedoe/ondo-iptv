@@ -518,10 +518,6 @@ class OndoViewModel(
         }
     }
 
-    fun addDemo(name: String) {
-        viewModelScope.launch { repository.addPlaylist(name, DEMO_PLAYLIST_URL) }
-    }
-
     fun activate(id: String) = repository.activate(id)
     fun refresh() = repository.refresh()
     fun delete(id: String) = repository.delete(id)
@@ -597,8 +593,5 @@ class OndoViewModel(
 
         /** TMDb is asked for people from three letters on ([OndoRepository.tmdbPeople]). */
         const val TMDB_PEOPLE_MIN_LENGTH = 3
-
-        /** Public channels listed by the iptv-org project, the same demo as on iPhone. */
-        const val DEMO_PLAYLIST_URL = "https://iptv-org.github.io/iptv/countries/fr.m3u"
     }
 }

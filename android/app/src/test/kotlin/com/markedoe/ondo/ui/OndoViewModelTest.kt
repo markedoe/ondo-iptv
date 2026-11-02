@@ -106,8 +106,7 @@ class OndoViewModelTest {
     }
 
     private fun TestScope.viewModel(): OndoViewModel {
-        // The demo address answers with the same fictional catalogue: no network in tests.
-        val http = FakeHttp(mapOf(list to catalogue, OndoViewModel.DEMO_PLAYLIST_URL to catalogue))
+        val http = FakeHttp(mapOf(list to catalogue))
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
         return OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
     }
@@ -432,16 +431,16 @@ class OndoViewModelTest {
     }
 
     @Test
-    fun theDemoAddsAPlaylistAndTheHomeFollows() = runTest {
+    fun theFirstPlaylistAddedBecomesActiveAndTheHomeFollows() = runTest {
         val viewModel = viewModel()
         viewModel.state.first { it.isReady }
-        viewModel.addDemo("Demo")
+        viewModel.addPlaylist(PlaylistForm.M3u("Home", list, "")) {}
         val state = viewModel.state.first { it.content.movies.isNotEmpty() }
-        assertEquals(OndoViewModel.DEMO_PLAYLIST_URL, state.activePlaylist?.url)
+        assertEquals(list, state.activePlaylist?.url)
         viewModel.home.test {
             var home = awaitItem()
             while (home == null || home.hero.isEmpty()) home = awaitItem()
-            assertEquals("Demo", home.playlistName)
+            assertEquals("Home", home.playlistName)
             assertEquals(listOf("Long Road"), home.newMovies.map { it.title })
             assertEquals(listOf("Harbor"), home.newSeries.map { it.title })
             cancelAndIgnoreRemainingEvents()

@@ -81,8 +81,7 @@
     <string name="feature_player_title">Um player confiável</string>
     <string name="feature_player_text">HLS, TS, MP4 e MKV, legendas e Picture-in-Picture.</string>
     <string name="add_playlist">Adicionar uma playlist</string>
-    <string name="try_demo">Experimentar a demo</string>
-    <string name="demo">Demo</string>
+    <string name="welcome_no_channels">O Ondo não vem com nenhum canal: adicione o link M3U, o arquivo ou o login Xtream Codes do seu provedor.</string>
     <string name="disclaimer">O Ondo é apenas um player: ele não hospeda, fornece nem vende nenhum conteúdo ou assinatura de IPTV. Use-o somente com fontes que você tem autorização para assistir.</string>
     <string name="xtream_codes">Xtream Codes</string>
     <string name="m3u_link">Link M3U</string>

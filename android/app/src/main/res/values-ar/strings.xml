@@ -84,8 +84,7 @@
     <string name="feature_player_title">مشغّل موثوق</string>
     <string name="feature_player_text">يدعم HLS وTS وMP4 وMKV، والترجمة، ووضع صورة داخل صورة.</string>
     <string name="add_playlist">إضافة قائمة تشغيل</string>
-    <string name="try_demo">تجربة العرض التوضيحي</string>
-    <string name="demo">عرض توضيحي</string>
+    <string name="welcome_no_channels">لا يتضمن Ondo أي قناة: أضف رابط M3U أو الملف أو بيانات دخول Xtream Codes من مزوّدك.</string>
     <string name="disclaimer">يقتصر دور Ondo على التشغيل: فهو لا يستضيف أي محتوى أو اشتراك IPTV ولا يوفّره ولا يبيعه. استخدمه فقط مع مصادر مصرّح لك بمشاهدتها.</string>
     <string name="xtream_codes">Xtream Codes</string>
     <string name="m3u_link">رابط M3U</string>

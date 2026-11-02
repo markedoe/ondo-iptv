@@ -79,8 +79,7 @@
     <string name="feature_player_title">可靠的播放器</string>
     <string name="feature_player_text">HLS、TS、MP4 和 MKV，支持字幕和画中画。</string>
     <string name="add_playlist">添加播放列表</string>
-    <string name="try_demo">试用演示</string>
-    <string name="demo">演示</string>
+    <string name="welcome_no_channels">Ondo 不含任何频道：请添加服务商提供的 M3U 链接、文件或 Xtream Codes 登录信息。</string>
     <string name="disclaimer">Ondo 只是一款播放器：它不托管、不提供也不销售任何内容或 IPTV 订阅。请仅将其用于你有权观看的来源。</string>
     <string name="xtream_codes">Xtream Codes</string>
     <string name="m3u_link">M3U 链接</string>
