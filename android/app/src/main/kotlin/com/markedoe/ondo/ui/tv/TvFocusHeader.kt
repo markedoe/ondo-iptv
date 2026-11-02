@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui.tv
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.animation.Crossfade
@@ -331,10 +332,13 @@ fun TvHeaderAbove(
                                 sortChip.requester,
                                 reachable = { sortChip.fromFirstRow || chipsFocused || sorting },
                                 onOpen = { sorting = true },
-                                modifier = Modifier.onFocusChanged {
-                                    chipsFocused = it.hasFocus
-                                    if (!it.hasFocus) sortChip.fromFirstRow = false
-                                },
+                                // A group of their own: whether the remote is on either chip, as one.
+                                modifier = Modifier
+                                    .onFocusChanged {
+                                        chipsFocused = it.hasFocus
+                                        if (!it.hasFocus) sortChip.fromFirstRow = false
+                                    }
+                                    .focusGroup(),
                                 sortModifier = Modifier.onGloballyPositioned { chip = it },
                             )
                         }
