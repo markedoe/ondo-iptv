@@ -220,8 +220,8 @@ class TvScreenshots {
         captureScreen("categories-picker-open")
     }
 
-    /** The demo's first movie category with six titles or more: a full grid. */
-    private val category = state.content.movieCategories.first { c -> state.content.movies.count { it.categoryId == c.id } >= 6 }
+    /** The demo's movie category with the most titles: the fullest grid. */
+    private val category = state.content.movieCategories.maxBy { c -> state.content.movies.count { it.categoryId == c.id } }
 
     /** A category's titles as the app shows them on a TV: the pill names the category and holds the order. */
     private fun categoryGrid() = show(TopLevel.MOVIES, onTab = true, tabPage = false) {
