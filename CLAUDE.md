@@ -8,8 +8,8 @@ screenshots.
   (`Settings → Secrets and variables → Actions`, see `docs/RELEASE.md` and `docs/RELEASE-ANDROID.md`).
   Never write them in a repository file, a commit, a log or a CI artifact.
 - **Privacy**: no personal email address (only `noreply` addresses), no real name, no personal folder path,
-  no local network IP address, no real IPTV subscription data (panel URL, credentials). Tests and the demo
-  use `example.com` and public streams.
+  no local network IP address, no real IPTV subscription data (panel URL, credentials). Tests and screenshot
+  fixtures use `example.com` and public streams.
 - **Neutrality**: do not name other IPTV applications; Ondo is a player, it provides no content; never use
   "free" / "gratuit" to describe IPTV.
 - **Always bilingual, English and French**: everything written for people exists in both languages and both
@@ -43,7 +43,9 @@ screenshots.
     apps open.
   - The listing matches the build: no feature it lacks, no other platform named, nothing "coming soon", no test or
     placeholder words, this year's copyright. The review notes explain every permission, background mode and
-    entitlement, and give a way to test without a subscription (the demo).
+    entitlement, and give a way to test without a subscription: a test playlist hosted on our own site
+    (`site/review`) with only content we have the rights to (CC-licensed or our own). The apps ship no demo and no
+    third-party channel.
   - Never "beta" in the App Store build, its listing or the site pages the listing opens (2.2: betas belong on
     TestFlight); the beta badge is in the TestFlight edition only (`#if TESTFLIGHT_DOWNLOADS`).
   - `.github/scripts/check_app_store.py` (CI, security and release workflows) checks this: extend it with each
