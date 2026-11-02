@@ -40,6 +40,13 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   un film sans résumé (gardé avec les autres détails) ; rien sans réseau. Les rangées gardent l'affiche qui a le
   focus au même endroit, les affiches un peu plus petites ; le cadre du carrousel de l'accueil rapetisse et montre
   l'affiche qui a le focus tant que les rangées l'ont, ses boutons revenant avec Haut.
+  Le parcours de la télécommande sur les onglets Films et Séries : le focus sur l'onglet, l'en-tête montre le titre de
+  la première carte et la première rangée s'affiche entière juste dessous (pas de filtres entre les deux ; une rangée
+  défile pour se montrer, jamais masquée) ; Bas mène à cette carte, son titre déjà dans l'en-tête (la première affiche
+  atteinte s'affiche aussitôt, sans attente) ; Bas encore, la rangée suivante monte entière et l'en-tête suit. Les
+  catégories sont une pastille Catégories dans la barre du haut, avant Recherche (Haut depuis la première rangée
+  atteint la barre, Droite la parcourt) : OK ouvre un choix avec Tout, chaque catégorie et Langues et catégories ;
+  elle porte le nom de la catégorie montrée sur les titres d'une catégorie (`TvCategoryPicker.kt`).
 - **Tri** : la grille d'une catégorie et les pages de genre, d'année, de prix et de festival partagent un même ordre
   (`AppSettings.posterSort`, le bouton Trier au-dessus des affiches, atteint avec Haut sur TV) : ordre de la playlist
   (sur ces pages, leur propre ordre), nom, date d'ajout, date de sortie ou note. Les titres d'un genre trouvés via
@@ -158,8 +165,9 @@ libres, chaînes inventées, adresses `example.com`) :
   le workflow de release les refait).
 - **Captures de référence**, en demi-taille, versionnées dans `android/app/src/test/snapshots/` : les écrans du store
   de la TV (anglais et français) et du téléphone (anglais), et les onglets de la TV tels que la télécommande les laisse
-  (`TvScreenshots` : Films avec une rangée sélectionnée et avec les filtres sélectionnés, Accueil avec la télécommande
-  dans ses rangées).
+  (`TvScreenshots` : Films avec une rangée sélectionnée, le parcours onglet → Bas → Bas sur Films et sur Séries
+  (`movies-tab-focused`, `movies-down-1`, `movies-down-2`, `series-…`), le choix des catégories ouvert, Accueil avec
+  la télécommande dans ses rangées).
 
 Le workflow *Android* compare chaque capture à sa référence (`./gradlew :app:verifyRoborazziDebug`) ; au plus 0,1 %
 des pixels peuvent différer (anticrénelage, `screenshots/Baselines.kt`). Une capture qui a changé fait échouer le
@@ -176,8 +184,9 @@ de la fusionner.
 
 Ce qu'une image ne prouve pas a ses propres tests : `TvLayoutRegressionTest` (l'image de l'en-tête depuis le haut de
 l'écran et cadrée vers son haut, la dernière mise à jour de la playlist dans la barre du haut de l'Accueil et de
-l'onglet Films, chaque type de rangée entier sous l'en-tête en 960 × 540 dp, aucune rangée coupée quand les filtres
-sont sélectionnés).
+l'onglet Films, chaque type de rangée entier sous l'en-tête en 960 × 540 dp, le parcours onglet → Bas → Bas sur Films
+et Séries avec l'en-tête sur le titre sélectionné avant son attente, la pastille Catégories atteinte avec Haut puis
+Droite et son choix).
 
 ### Avant de modifier un écran TV (liste anti-régressions)
 
@@ -189,6 +198,9 @@ sont sélectionnés).
    images versionnées. L'une ne l'est pas : corriger le changement, jamais la référence.
 5. Vérifier en 960 × 540 dp que chaque rangée (son nom, ses cartes et leurs lignes) tient sous l'en-tête, et que la
    ligne de la playlist reste au bout de la barre du haut.
+6. Vérifier le parcours onglet → Bas → Bas avec les captures, sur Films et sur Séries (`movies-tab-focused`,
+   `movies-down-1`, `movies-down-2` et de même pour `series`) : sur l'onglet, la première rangée entière sous
+   l'en-tête et aucune zone vide ; à chaque Bas, le titre de la carte sélectionnée aussitôt dans l'en-tête.
 
 ## Plan initial
 

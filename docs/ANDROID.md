@@ -37,6 +37,12 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   provider's `get_vod_info` for a movie without a plot (saved with the other details); nothing without a network.
   The rows below keep the focused poster at the same place, posters a little smaller; Home's carousel frame becomes
   smaller and shows the focused poster while the rows have the focus, its buttons coming back with Up.
+  The remote's path on the Movies and Series tabs: with the focus on the tab, the header shows the first card's title
+  and the first row shows whole right below it (no chips between; a row is scrolled into view, never hidden); Down
+  goes to that card, its title already in the header (the first poster reached shows at once, with no wait); Down
+  again, the next row comes up whole and the header follows. The categories are a Categories pill in the top bar,
+  before Search (Up from the first row reaches the bar, Right along it): OK opens a picker with All, each category
+  and Languages and categories; it names the category shown on a category's titles (`TvCategoryPicker.kt`).
 - **Sort**: a category's grid and the genre, year, award and festival pages share one order (`AppSettings.posterSort`,
   the Sort button above the posters, reached with Up on a TV): playlist order (on those pages, their own order),
   name, date added, release date or rating. A genre's titles found through TMDb are sorted with the others
@@ -139,7 +145,8 @@ channels, `example.com` addresses):
   workflow makes them anew).
 - **Reference screenshots**, half size, committed in `android/app/src/test/snapshots/`: the TV's (English and French)
   and the phone's (English) store screens, and the TV's tab pages as the remote leaves them (`TvScreenshots`: Movies
-  with a row focused and with the chips focused, Home with the remote in its rows).
+  with a row focused, the path tab → Down → Down on Movies and on Series (`movies-tab-focused`, `movies-down-1`,
+  `movies-down-2`, `series-…`), the Categories picker open, Home with the remote in its rows).
 
 The *Android* workflow compares every screenshot with its reference (`./gradlew :app:verifyRoborazziDebug`); at most
 0.1 % of the pixels may differ (anti-aliasing, `screenshots/Baselines.kt`). A screenshot that changed fails the run:
@@ -155,7 +162,8 @@ the images' metadata removed). Pull the branch afterwards, and look at the image
 
 Behaviour that a picture does not prove has its own tests: `TvLayoutRegressionTest` (the header's backdrop from the
 screen's top and cropped towards its top, the playlist's last update in the top bar of Home and of the Movies tab,
-each row type whole under the header at 960 × 540 dp, no row cut with the chips focused).
+each row type whole under the header at 960 × 540 dp, the path tab → Down → Down on Movies and Series with the header
+on the focused title before its wait, the Categories pill reached with Up then Right and its picker).
 
 ### Before changing a TV screen (regressions checklist)
 
@@ -167,6 +175,9 @@ each row type whole under the header at 960 × 540 dp, no row cut with the chips
    One is not: fix the change, never the reference.
 5. Check at 960 × 540 dp that each row (its name, its cards and their lines) fits under the header, and that the
    playlist's line stays at the top bar's end.
+6. Check the path tab → Down → Down with screenshots, on Movies and on Series (`movies-tab-focused`,
+   `movies-down-1`, `movies-down-2` and the same for `series`): on the tab, the first row whole under the header and
+   no empty area; each Down, the focused card's title in the header at once.
 
 ## Initial plan
 
