@@ -52,6 +52,8 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -223,7 +225,19 @@ fun TvNavigationFrame(
     fun below(): FocusRequester = pages
     val atHome = selected == TopLevel.HOME
     val shownTab = rememberUpdatedState(selected)
-    Box(Modifier.fillMaxSize()) {
+    // The Categories pill's picker is open ([TvCategoryPicker]), drawn over the page below the pill.
+    var picking by remember { mutableStateOf(false) }
+    var frameCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    var pillCoordinates by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val pickerChoice = bar.categories?.choice?.takeIf { showBar }
+    // The page leaves with its categories: nothing left to pick.
+    if (picking && pickerChoice == null) SideEffect { picking = false }
+    fun closePicker() {
+        // The pill takes the focus back before the picker leaves: the remote is never left nowhere.
+        runCatching { requester(CATEGORIES_TAG).requestFocus() }
+        picking = false
+    }
+    Box(Modifier.fillMaxSize().onGloballyPositioned { frameCoordinates = it }) {
         // The pages start at the screen's top, under the bar: Down from the bar goes to them by name ([below]), as
         // nothing of theirs lies wholly below it.
         Box(Modifier.fillMaxSize().focusRequester(pages).focusGroup()) {
@@ -336,17 +350,14 @@ fun TvNavigationFrame(
                 }
                 // The tab's categories, after the playlist's line: Up from the rows reaches the bar, Right along it.
                 bar.categories?.choice?.let { choice ->
-                    TvCategoriesPill(choice, shown, requester(CATEGORIES_TAG), ::below) {
-                        // The page chosen takes the focus ([FocusEntry]); the same page shown, its first item does.
-                        bar.browsing = false
-                        scope.launch {
-                            repeat(ENTER_PAGE_FRAMES) {
-                                withFrameNanos { }
-                                if (!barHasFocus) return@launch
-                            }
-                            runCatching { pages.requestFocus() }
-                        }
-                    }
+                    TvCategoriesPill(
+                        choice,
+                        shown,
+                        requester(CATEGORIES_TAG),
+                        ::below,
+                        onOpen = { picking = true },
+                        modifier = Modifier.onGloballyPositioned { pillCoordinates = it },
+                    )
                 }
                 BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)
                 BarIcon(stringResource(R.string.settings), Icons.Rounded.Settings, shown, SETTINGS_TAG, requester(SETTINGS_TAG), ::below, onSettings)
@@ -370,6 +381,26 @@ fun TvNavigationFrame(
                     bar.page?.toTop()
                 }
             }
+        }
+        // Last: over the page and the bar, and its Back before the bar's.
+        if (picking && pickerChoice != null) {
+            val anchor = frameCoordinates?.let { frame -> pillCoordinates?.takeIf { it.isAttached }?.let { frame.localBoundingBoxOf(it) } }
+            if (anchor != null) {
+                TvCategoryPicker(pickerChoice, anchor) { choose ->
+                    closePicker()
+                    bar.browsing = false
+                    choose()
+                    // The page chosen takes the focus ([FocusEntry]); the same page shown, its first item does.
+                    scope.launch {
+                        repeat(ENTER_PAGE_FRAMES) {
+                            withFrameNanos { }
+                            if (!barHasFocus) return@launch
+                        }
+                        runCatching { pages.requestFocus() }
+                    }
+                }
+            }
+            BackHandler { closePicker() }
         }
     }
 }
