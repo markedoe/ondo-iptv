@@ -85,14 +85,15 @@ jobs:
               exit 1
             fi
           done
-      - name: Demo playlist answers
-        # The Google Play reviewer taps "Try the demo": if the public list moved or broke, the review fails
-        # for a reason no test sees. The address is read from the app's code.
+      - name: Review playlist answers
+        # Internal testing has no review.
+        if: env.TRACK != 'internal'
+        # App Review and the Google Play reviewer test the apps with the playlist the review notes give, hosted on
+        # main's site (site/review): if it or any of its streams stopped answering, the review would fail for a
+        # reason no test sees.
         run: |
-          URL=$(grep -o 'https://[^"]*\.m3u' android/app/src/main/kotlin/com/markedoe/ondo/ui/OndoViewModel.kt | head -1)
-          curl -fsSL --retry 2 --max-time 60 "$URL" -o demo.m3u
-          head -c 7 demo.m3u | grep -q '#EXTM3U' || { echo "::error::$URL is not an M3U playlist"; exit 1; }
-          echo "$(grep -c '^#EXTINF' demo.m3u) entries in $URL"
+          OWNER=$(echo "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')
+          python3 .github/scripts/check_review_playlist.py --online "https://$OWNER.github.io/ondo-iptv/review/ondo-review.m3u"
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin

@@ -13,7 +13,7 @@ PELÍCULAS Y SERIES
 UN REPRODUCTOR QUE FUNCIONA
 • Dos motores: el reproductor de Apple (HDR10, Dolby Vision, Dolby Atmos, imagen en imagen, AirPlay), con películas MKV incluidas en iPhone y iPad cuando puede decodificarlas, y un motor basado en VLC para el resto (MKV, AVI, TS)
 • Pistas de audio y subtítulos, archivos de subtítulos SRT/VTT, relación de aspecto, velocidad, temporizador de apagado, bloqueo de controles
-• Búsqueda de subtítulos en línea desde el reproductor: OpenSubtitles, SubDL y SubSource con tu propia clave, Addic7ed para series sin clave
+• Búsqueda de subtítulos en línea desde el reproductor: OpenSubtitles, SubDL y SubSource con tu propia clave
 • Mensajes de error claros que indican si el fallo es del proveedor, de la red o de la app
 
 EN TU TELEVISOR

@@ -28,6 +28,11 @@ submitted, its listing and its review notes are checked here, before any upload:
    docs/SYNC.md), the Local Network prompt says so (5.1.1). The Mac App Store edition never listens for connections
    (no NWListener outside iPhone and iPad code): it has no network.server entitlement, which App Review refused.
 
+8. No built-in playlist from a third party (5.2.3): the apps ship no demo, so no playlist address (.m3u, .m3u8) in the
+   App Store edition's code, the Android app's code or the review notes points anywhere but our own site (or
+   example.com in placeholders), and the review notes give the test playlist hosted there (site/review, checked by
+   check_review_playlist.py). The listing never names Addic7ed, a subtitle source without an official API.
+
 The addresses of the listing are checked to answer in the release workflow, before the upload.
 
 Usage: check_app_store.py [repository root]. Exit code 1 lists each problem.
@@ -62,6 +67,11 @@ DONATION_WORD = re.compile(r"(?i)\bdonat|\bsponsor|faire un don|pourboire")
 SITE_PAGE = re.compile(r"https://[\w-]+\.github\.io/ondo-iptv/([\w.-]*)")
 # A link from one of the website's pages to another of them (relative: not to another site, nor within the page).
 SITE_LINK = re.compile(r'href="(?![a-z][a-z0-9+.-]*:|#)([^"#?]*)')
+# A playlist address with a real host name ("http://…/playlist.m3u" placeholders have none).
+PLAYLIST_ADDRESS = re.compile(r"""https?://((?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,})(/[^\s"'<>()]*?)?\.m3u8?\b""")
+# Where a playlist address may point: our own site's review folder, or a placeholder.
+OWN_PLAYLIST = re.compile(r"https://[\w-]+\.github\.io/ondo-iptv/review/[\w./-]+\.m3u8?\b")
+PLACEHOLDER_HOST = re.compile(r"(?:^|\.)example\.(?:com|net|org)$")
 # A string the App Store edition would show that calls the app a beta (2.2).
 BETA_TEXT = re.compile(r'(?i)"[^"\n]*(?<![\w])(?:beta|bêta)(?![\w])[^"\n]*"')
 # A string the App Store edition would show that speaks of downloads, which it does not have (2.3.1): the feature's
@@ -109,6 +119,7 @@ LISTING_RULES = [
     ("mentions downloads, which the App Store edition does not have (2.3.1)", re.compile(
         r"(?i)download|télécharg|\b(?:watch|watching|view|play)\s+offline|\boffline\s+(?:viewing|playback|mode)|"
         r"\b(?:regarder|voir|lecture)\s+hors[ -]ligne|descarga|\bbaixa[rd]|下载|تنزيل|تحميل|डाउनलोड")),
+    ("names Addic7ed, a subtitle source without an official API (5.2.3)", re.compile(r"(?i)addic7ed|gestdown")),
     # Ondo is a player and provides no content: never "free" IPTV, channels or app (CLAUDE.md, Neutrality).
     ("calls the app or what it plays free (CLAUDE.md)", re.compile(
         r"(?i)\bfree\b|gratuit|\bgratis\b|grátis|免费|免費|مجان|मुफ़्त|मुफ्त|फ्री")),
@@ -477,6 +488,39 @@ def check_local_network(problems: list) -> None:
                             f"to sync (the app browses {SYNC_SERVICE}), not only for Chromecast and AirPlay (5.1.1)")
 
 
+def foreign_playlists(text: str) -> list:
+    """The playlist addresses of a text that are neither on our own site nor placeholders."""
+    found = []
+    for match in PLAYLIST_ADDRESS.finditer(text):
+        if OWN_PLAYLIST.fullmatch(match.group(0)) or PLACEHOLDER_HOST.search(match.group(1)):
+            continue
+        found.append(match.group(0))
+    return found
+
+
+def check_playlists(problems: list) -> None:
+    # Comments are left out, but not the "//" of an address.
+    sources = [(path, re.sub(r"(?<!:)//.*", "", edition_source(path.read_text(encoding="utf-8"))))
+               for path in swift_files("App")]
+    for folder in ("android/app/src/main", "android/core/src/main"):
+        base = ROOT / folder
+        if base.is_dir():
+            sources += [(path, path.read_text(encoding="utf-8")) for path in sorted(base.rglob("*"))
+                        if path.suffix in (".kt", ".xml") and path.is_file()]
+    notes = NOTES.read_text(encoding="utf-8") if NOTES.is_file() else ""
+    sources.append((NOTES, notes))
+    for path, text in sources:
+        relative = path.relative_to(ROOT).as_posix()
+        for address in foreign_playlists(text):
+            problems.append(f"{relative}: {address} is a playlist the apps or the review notes would point to, not on "
+                            "our own site: the apps ship no demo, and App Review tests with site/review (5.2.3)")
+        if re.search(r"(?i)iptv-org", text):
+            problems.append(f"{relative}: names a public channel list (iptv-org): the apps ship no third-party channel")
+    if notes and not OWN_PLAYLIST.search(notes):
+        problems.append("the review notes do not give the test playlist hosted on our site "
+                        "(https://<user>.github.io/ondo-iptv/review/ondo-review.m3u)")
+
+
 def main() -> int:
     problems = []
     check_code(problems)
@@ -487,6 +531,7 @@ def main() -> int:
     check_review_notes(problems)
     check_payments(problems)
     check_local_network(problems)
+    check_playlists(problems)
     for problem in problems:
         print(f"::error::{problem}")
     print(f"App Store edition: {len(problems)} problem(s).")

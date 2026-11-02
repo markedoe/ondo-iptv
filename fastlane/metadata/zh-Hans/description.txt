@@ -13,7 +13,7 @@ Ondo 是一款优雅的 IPTV 播放器，适用于 iPhone、iPad 和 Mac。添�
 省心好用的播放器
 • 双引擎：Apple 播放器（HDR10、杜比视界、杜比全景声、画中画、AirPlay），iPhone 和 iPad 上能解码时也可播放 MKV 电影；其余内容（MKV、AVI、TS）由基于 VLC 的引擎播放
 • 音轨与字幕、SRT/VTT 字幕文件、画面比例、播放速度、睡眠定时器、控制锁定
-• 在播放器中在线搜索字幕：OpenSubtitles、SubDL 和 SubSource（使用你自己的密钥），剧集还可用无需密钥的 Addic7ed
+• 在播放器中在线搜索字幕：OpenSubtitles、SubDL 和 SubSource（使用你自己的密钥）
 • 清晰的错误提示，告诉你问题出在服务商、网络还是应用
 
 在电视上观看

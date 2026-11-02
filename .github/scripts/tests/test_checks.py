@@ -371,7 +371,7 @@ class AppStoreTests(CheckTestCase):
                "release_notes.txt": "• Movies start faster. Some channels may be offline.",
                "support_url.txt": "https://example.com/support", "privacy_url.txt": "https://example.com/privacy",
                "marketing_url.txt": "https://example.com/"}
-    NOTES = ("HOW TO TEST: tap Try the demo.\nLocal network (NSLocalNetworkUsageDescription). Notifications. "
+    NOTES = ("HOW TO TEST: add the M3U URL https://example.github.io/ondo-iptv/review/ondo-review.m3u.\nLocal network (NSLocalNetworkUsageDescription). Notifications. "
              "NSAllowsArbitraryLoads. UIBackgroundModes audio. com.apple.security.network.client.\n")
     FLAGS = ("enum FeatureFlags {\n    #if TESTFLIGHT_DOWNLOADS || DEBUG\n    static let downloads: Bool = {\n"
              "        #if TESTFLIGHT_DOWNLOADS\n        return true\n        #else\n"
@@ -406,6 +406,40 @@ class AppStoreTests(CheckTestCase):
 
     def test_the_app_store_edition_passes(self):
         self.assertPasses("app_store")
+
+    def test_a_built_in_third_party_playlist_fails(self):
+        self.write("App/Model/AppPaths.swift", 'static let demo = URL(string: "https://lists.example.io/countries/fr.m3u")!\n')
+        self.assertFails("app_store", "App/Model/AppPaths.swift: https://lists.example.io/countries/fr.m3u is a playlist")
+
+    def test_a_third_party_playlist_in_the_android_app_fails(self):
+        self.write("android/app/src/main/kotlin/Demo.kt", 'const val DEMO = "https://streams.example.tv/live/index.m3u8"\n')
+        self.assertFails("app_store", "Demo.kt: https://streams.example.tv/live/index.m3u8 is a playlist")
+
+    def test_a_public_channel_list_in_the_review_notes_fails(self):
+        self.write("fastlane/metadata/review_information/notes.txt",
+                   self.NOTES + "Or tap Try the demo: https://iptv-org.github.io/iptv/countries/fr.m3u\n")
+        self.assertFails("app_store", "is a playlist the apps or the review notes would point to",
+                         "names a public channel list (iptv-org)")
+
+    def test_review_notes_without_our_test_playlist_fail(self):
+        self.write("fastlane/metadata/review_information/notes.txt",
+                   self.NOTES.replace("https://example.github.io/ondo-iptv/review/ondo-review.m3u", "a playlist"))
+        self.assertFails("app_store", "the review notes do not give the test playlist hosted on our site")
+
+    def test_placeholders_and_our_own_playlist_pass(self):
+        self.write("App/Features/AddPlaylist.swift", 'TextField("Playlist URL", text: $url, prompt: Text("http://…/playlist.m3u"))\n'
+                   'let sample = "http://provider.example.com/list.m3u"\n')
+        self.write("android/app/src/main/kotlin/Hint.kt", 'const val HINT = "https://example.github.io/ondo-iptv/review/ondo-review.m3u"\n')
+        self.assertPasses("app_store")
+
+    def test_a_playlist_in_debug_only_code_is_not_shipped(self):
+        self.write("App/Model/UITestFixture.swift", '#if DEBUG\nlet hls = "https://devstreaming.example.net/bipbop/master.m3u8"\n'
+                   'let other = "https://cdn.example.tv/master.m3u8"\n#endif\n')
+        self.assertPasses("app_store")
+
+    def test_a_listing_naming_addic7ed_fails(self):
+        self.write("fastlane/metadata/fr-FR/description.txt", "Sous-titres : OpenSubtitles, Addic7ed pour les séries.\n")
+        self.assertFails("app_store", "fastlane/metadata/fr-FR/description.txt:1 names Addic7ed")
 
     def test_download_code_the_app_store_edition_compiles_fails(self):
         self.write("App/Features/Series.swift", "#if DEBUG\nlet a = 1\n#else\nlet manager = DownloadManager.shared\n#endif\n")

@@ -13,7 +13,7 @@ FILMES E SÉRIES
 UM PLAYER QUE SIMPLESMENTE FUNCIONA
 • Dois mecanismos: o player da Apple (HDR10, Dolby Vision, Dolby Atmos, Picture in Picture, AirPlay), com filmes MKV incluídos no iPhone e no iPad quando ele consegue decodificá-los, e um mecanismo baseado no VLC para o resto (MKV, AVI, TS)
 • Faixas de áudio e legendas, arquivos de legenda SRT/VTT, proporção da tela, velocidade, timer de desligamento, bloqueio dos controles
-• Busca de legendas online no player: OpenSubtitles, SubDL e SubSource com sua própria chave, Addic7ed para séries sem chave
+• Busca de legendas online no player: OpenSubtitles, SubDL e SubSource com sua própria chave
 • Mensagens de erro claras que dizem se a falha é do provedor, da rede ou do app
 
 NA SUA TV

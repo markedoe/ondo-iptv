@@ -13,7 +13,7 @@ MOVIES & SERIES
 A PLAYER THAT JUST WORKS
 • Two engines: Apple’s player (HDR10, Dolby Vision, Dolby Atmos, Picture in Picture, AirPlay), MKV movies included on iPhone and iPad when it can decode them, and a VLC-based engine for the rest (MKV, AVI, TS)
 • Audio and subtitle tracks, SRT/VTT subtitle files, aspect ratio, speed, sleep timer, control lock
-• Online subtitle search from the player: OpenSubtitles, SubDL and SubSource with your own key, Addic7ed for series without a key
+• Online subtitle search from the player: OpenSubtitles, SubDL and SubSource with your own key
 • Clear error messages that say whether the provider, the network or the app is at fault
 
 ON YOUR TV
