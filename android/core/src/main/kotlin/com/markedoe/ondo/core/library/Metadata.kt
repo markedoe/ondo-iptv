@@ -77,6 +77,8 @@ data class TitleMetadata(
     val genres: List<TmdbGenre>? = null,
     /** The titles TMDb recommends with it, in TMDb's order; null when kept before they were. */
     val related: List<RelatedTitle>? = null,
+    /** Its title as a picture ([TmdbLogo.best]); null when it has none, or was kept before logos were. */
+    val logoUrl: String? = null,
 ) {
     /** "TMDb 7.3 (12,345)" needs both: a rating TMDb's users gave, and how many gave it. */
     val rating: TmdbRating?
@@ -101,6 +103,7 @@ data class TitleMetadata(
             found = info != null,
             genres = info?.genres,
             related = info?.related?.map { RelatedTitle(it.mediaType == TmdbItem.MediaType.TV, it.id, it.title, it.year) },
+            logoUrl = info?.logoUrl,
         )
     }
 }

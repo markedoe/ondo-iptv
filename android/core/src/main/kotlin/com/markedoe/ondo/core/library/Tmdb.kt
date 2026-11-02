@@ -161,10 +161,13 @@ class TmdbClient(
 
     private suspend fun infoOf(kind: String, id: Int): TmdbTitleInfo {
         val viewer = language.substringBefore('-').lowercase()
-        // Videos in the viewer's language, in English, and without a language.
+        // Videos and logos in the viewer's language, in English, and without a language.
         val languages = listOf(viewer, "en", "null").distinct().joinToString(",")
-        // Credits, videos and the titles TMDb recommends with it: one request.
-        val details = get("$kind/$id", listOf("append_to_response" to "credits,videos,recommendations", "include_video_language" to languages)) as? JsonObject
+        // Credits, videos, logos and the titles TMDb recommends with it: one request.
+        val details = get(
+            "$kind/$id",
+            listOf("append_to_response" to "credits,videos,recommendations,images", "include_video_language" to languages, "include_image_language" to languages),
+        ) as? JsonObject
             ?: throw SerializationException("Not a TMDb answer")
         val item = TmdbItem.from(details) ?: throw SerializationException("TMDb title without id")
         val credits = details["credits"] as? JsonObject
@@ -180,7 +183,8 @@ class TmdbClient(
             .mapNotNull { TmdbItem.from(it)?.let { found -> if (found.mediaType == TmdbItem.MediaType.UNKNOWN) found.copy(mediaType = ownType) else found } }
             .filter { (it.mediaType == TmdbItem.MediaType.MOVIE || it.mediaType == TmdbItem.MediaType.TV) && it.title.isNotBlank() }
             .take(TmdbTitleInfo.RELATED_LIMIT)
-        return TmdbTitleInfo(item.id, item.backdropUrl, TmdbVideo.best(videos, viewer)?.key, item.rating, directors, cast, genres, related)
+        val logos = ((details["images"] as? JsonObject)?.get("logos") as? JsonArray).orEmpty().mapNotNull { TmdbLogo.from(it) }
+        return TmdbTitleInfo(item.id, item.backdropUrl, TmdbVideo.best(videos, viewer)?.key, item.rating, directors, cast, genres, related, TmdbLogo.best(logos, viewer)?.url)
     }
 
     /** TMDb's genres of movies or series, in the viewer's language. */
@@ -245,6 +249,8 @@ data class TmdbTitleInfo(
     val genres: List<TmdbGenre> = emptyList(),
     /** The titles TMDb recommends with it, [RELATED_LIMIT] at most. */
     val related: List<TmdbItem> = emptyList(),
+    /** Its title as a picture, its logo ([TmdbLogo.best]). */
+    val logoUrl: String? = null,
 ) {
     companion object {
         const val CAST_LIMIT = 20
@@ -360,6 +366,57 @@ object CatalogueMatcher {
         return first == null || second == null || closeYears(first, second)
     }
 
+    /** Words of a copy's quality or edition, never the film's, in a provider's title ("Sandstorm MULTI 4K"). */
+    private val qualityWords = setOf("multi", "4k", "uhd", "fhd", "hd", "sd", "hdr", "dv", "hevc", "x265", "h265", "1080p", "720p", "2160p", "vfq", "imax")
+
+    /**
+     * A tag of the provider's, not a word of the film's: a language or version ([versionWords]) or a quality. A short one
+     * (three letters at most) only in capitals: "FR" and "VF" are tags, "De" in "De Gaulle" is a word.
+     */
+    private fun isTag(word: String): Boolean {
+        val lower = word.lowercase()
+        if (lower !in versionWords && lower !in qualityWords) return false
+        return word.length > 3 || word == word.uppercase()
+    }
+
+    private val leadingTag = Regex("""^\s*([\p{L}\p{N}]{2,8}(?:[-+ ][\p{L}\p{N}]{1,6})?)\s*[-:|·]\s+""")
+    private val parenthesizedYear = Regex("""\(\s*\d{4}\s*\)""")
+    private val separators = " -:|·_.,"
+
+    /**
+     * A provider's title as people read it, its case kept: without the provider's tags around the name.
+     * `"|FR| Le Transport"`, `"[FR] Le Transport"`, `"FR - Le Transport"`, `"Le Transport VFF"`,
+     * `"Le Transport (MULTI) (2021)"` -> `"Le Transport"`. The title as it is when nothing would be left of it.
+     */
+    fun displayTitle(title: String): String {
+        var name = title.replace(bracketed, " ").replace(barred, " ").replace(parenthesizedYear, " ")
+        // "(MULTI)", "(VOSTFR 4K)": a group of tags only.
+        name = name.replace(parenthesized) { group ->
+            val words = group.value.trim('(', ')').split(' ', '-', '/').filter { it.isNotBlank() }
+            if (words.isNotEmpty() && words.all(::isTag)) " " else group.value
+        }
+        // "FR - ", "FR-4K: ", "EN | " before the name.
+        leadingTag.find(name)?.let { match ->
+            val words = match.groupValues[1].split(' ', '-', '+').filter { it.isNotBlank() }
+            if (words.all(::isTag)) name = name.substring(match.range.last + 1)
+        }
+        val words = name.split(' ').map { it.trim(*separators.toCharArray()) }.filter { it.isNotEmpty() }.toMutableList()
+        while (words.size > 1 && isTag(words.last())) words.removeAt(words.size - 1)
+        while (words.size > 1 && isTag(words.first())) words.removeAt(0)
+        // The separators inside the name stay: only the words' own edges were trimmed above.
+        val cleaned = rebuild(name, words).trim(*separators.toCharArray()).replace(Regex("""\s+"""), " ")
+        return cleaned.ifEmpty { title.trim() }
+    }
+
+    /** [name] from its first kept word to its last ([words], in order), with what lies between them as it was. */
+    private fun rebuild(name: String, words: List<String>): String {
+        if (words.isEmpty()) return ""
+        val start = name.indexOf(words.first())
+        var end = start
+        for (word in words) end = name.indexOf(word, end) + word.length
+        return if (start < 0 || end < start) words.joinToString(" ") else name.substring(start, end)
+    }
+
     private fun words(title: String): List<String> {
         // Remove bracketed tags: [MULTI], (VOSTFR)…
         var name = title.replace(bracketed, " ").replace(barred, " ")
@@ -439,5 +496,30 @@ data class TmdbVideo(
             .firstOrNull()
 
         private val TRAILER_TYPES = setOf("Trailer", "Teaser")
+    }
+}
+
+/** A title's logo on TMDb: its title drawn as a picture, in a [language] (ISO 639-1) or in none (no words). */
+data class TmdbLogo(val path: String, val language: String?) {
+    val url: String? get() = "https://image.tmdb.org/t/p/w500$path".takeIf(Urls::isValidAbsolute)
+
+    companion object {
+        internal fun from(json: JsonElement): TmdbLogo? {
+            val o = json as? JsonObject ?: return null
+            fun string(name: String) = (o[name] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
+            val path = string("file_path")?.takeIf { it.startsWith("/") } ?: return null
+            return TmdbLogo(path, string("iso_639_1"))
+        }
+
+        /**
+         * The logo to show for a viewer reading [language]: one in that language, else in English, else one without a
+         * language; TMDb's order within each (the best voted first). Pictures only that the app decodes (PNG): an SVG
+         * is left out.
+         */
+        fun best(logos: List<TmdbLogo>, language: String): TmdbLogo? {
+            val usable = logos.filter { it.path.endsWith(".png", ignoreCase = true) && it.url != null }
+            return listOf(language.substringBefore('-').lowercase(), "en", null).distinct()
+                .firstNotNullOfOrNull { wanted -> usable.firstOrNull { it.language?.lowercase() == wanted } }
+        }
     }
 }

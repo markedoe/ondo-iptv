@@ -59,6 +59,8 @@ data class TitleHeader(
     val backdropUrl: String? = null,
     /** The title's category in the playlist, shown when no genre is known. */
     val category: String? = null,
+    /** Its title as a picture (TMDb's logo), shown instead of its name once known. */
+    val logoUrl: String? = null,
 )
 
 /** A "continue watching" card. */

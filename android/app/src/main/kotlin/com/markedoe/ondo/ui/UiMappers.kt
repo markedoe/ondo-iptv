@@ -240,6 +240,7 @@ object UiMappers {
             plot = (details?.plot?.takeIf { it.isNotBlank() } ?: plot)?.trim()?.takeIf { it.isNotEmpty() },
             backdropUrl = backdrop(state, item),
             category = category?.takeIf { it.isNotBlank() },
+            logoUrl = state.tmdbLogos[item.key],
         )
     }
 

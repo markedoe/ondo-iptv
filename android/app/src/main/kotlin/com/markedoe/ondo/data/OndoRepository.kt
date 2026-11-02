@@ -109,6 +109,8 @@ data class OndoState(
     val tmdbRelated: Map<String, List<TrendingMatch>> = emptyMap(),
     /** TMDb's trailers (YouTube ids) of titles whose provider gave none, by the title's key. */
     val tmdbTrailers: Map<String, String> = emptyMap(),
+    /** TMDb's logos of titles (their title as a picture), by the title's key. */
+    val tmdbLogos: Map<String, String> = emptyMap(),
     /**
      * TMDb's rating of a title with its number of votes, by the title's key, from the answers TMDb gave for its
      * backdrop or its cast (the trending titles carry theirs).
@@ -1376,7 +1378,7 @@ class OndoRepository(
         headerFetches.clear()
         genreMatches.clear()
         personMatches.clear()
-        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbRelated = emptyMap(), tmdbTrailers = emptyMap(), tmdbRatings = emptyMap()) }
+        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbRelated = emptyMap(), tmdbTrailers = emptyMap(), tmdbLogos = emptyMap(), tmdbRatings = emptyMap()) }
         loadTrending()
     }
 
@@ -1553,6 +1555,7 @@ class OndoRepository(
                 tmdbRelated = if (related.isEmpty()) state.tmdbRelated else state.tmdbRelated + (key to related),
                 tmdbBackdrops = title.backdropUrl?.let { state.tmdbBackdrops + (key to it) } ?: state.tmdbBackdrops,
                 tmdbTrailers = title.trailerKey?.let { state.tmdbTrailers + (key to it) } ?: state.tmdbTrailers,
+                tmdbLogos = title.logoUrl?.let { state.tmdbLogos + (key to it) } ?: state.tmdbLogos,
                 tmdbRatings = state.tmdbRatings.with(key, title.rating),
                 tmdbFaces = if (faces.isEmpty()) state.tmdbFaces else state.tmdbFaces + (key to faces),
             )

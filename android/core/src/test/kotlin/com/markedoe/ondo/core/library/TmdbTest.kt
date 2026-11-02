@@ -83,7 +83,7 @@ class TmdbTest {
     @Test
     fun aTitlesInfoComesInOneCallByItsId() = runTest {
         val http = MockHttpClient()
-        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos,recommendations&include_video_language=fr,en,null&language=fr-FR&api_key=KEY"] = (
+        http.routes["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos,recommendations,images&include_video_language=fr,en,null&include_image_language=fr,en,null&language=fr-FR&api_key=KEY"] = (
             """{"id":910001,"title":"Lighthouse","backdrop_path":"/lighthouse-wide.jpg","vote_average":7.346,"vote_count":12345,"credits":{""" +
                 """"cast":[{"id":11,"name":"Ana Lima","profile_path":"/ana.jpg","known_for_department":"Acting"},""" +
                 """{"id":12,"name":"José Silva","profile_path":null}],""" +
@@ -109,7 +109,7 @@ class TmdbTest {
     @Test
     fun genresAndRecommendationsComeWithTheTitle() = runTest {
         val http = MockHttpClient()
-        http.routes["https://api.themoviedb.org/3/movie/5?append_to_response=credits,videos,recommendations&include_video_language=en,null&language=en-US&api_key=KEY"] = (
+        http.routes["https://api.themoviedb.org/3/movie/5?append_to_response=credits,videos,recommendations,images&include_video_language=en,null&include_image_language=en,null&language=en-US&api_key=KEY"] = (
             """{"id":5,"title":"Harbor","genres":[{"id":80,"name":"Crime"},{"id":18,"name":"Drama"}],""" +
                 """"recommendations":{"results":[{"id":6,"title":"Dock Street","release_date":"2015-03-01"},""" +
                 """{"id":7,"name":"Port Watch","media_type":"tv","first_air_date":"2019-01-01"},{"id":8,"name":"Somebody","media_type":"person"}]}}"""
@@ -137,11 +137,11 @@ class TmdbTest {
             ("""{"results":[{"id":1,"title":"Sandstorm Rising","backdrop_path":"/rising.jpg","release_date":"2021-01-01"},""" +
                 """{"id":2,"title":"Sandstorm","backdrop_path":"/old.jpg","release_date":"1988-05-01"},""" +
                 """{"id":3,"title":"Sandstorm","backdrop_path":"/sandstorm.jpg","release_date":"2021-03-01","vote_average":6.5,"vote_count":80}]}""").encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/movie/3?append_to_response=credits,videos,recommendations&include_video_language=en,null&language=en-US&api_key=KEY"] =
+        http.routes["https://api.themoviedb.org/3/movie/3?append_to_response=credits,videos,recommendations,images&include_video_language=en,null&include_image_language=en,null&language=en-US&api_key=KEY"] =
             """{"id":3,"title":"Sandstorm","credits":{"cast":[{"id":21,"name":"Ruth Ames","profile_path":"/ruth.jpg"}],"crew":[]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/tv?query=copper%20valley&language=en-US&api_key=KEY"] =
             """{"results":[{"id":7,"name":"Copper Valley","first_air_date":"2008-01-20"}]}""".encodeToByteArray()
-        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits,videos,recommendations&include_video_language=en,null&language=en-US&api_key=KEY"] =
+        http.routes["https://api.themoviedb.org/3/tv/7?append_to_response=credits,videos,recommendations,images&include_video_language=en,null&include_image_language=en,null&language=en-US&api_key=KEY"] =
             """{"id":7,"name":"Copper Valley","videos":{"results":[{"key":"teaserEN001","site":"YouTube","type":"Teaser","iso_639_1":"en"}]}}""".encodeToByteArray()
         http.routes["https://api.themoviedb.org/3/search/movie?query=paper%20trail&language=en-US&api_key=KEY"] =
             """{"results":[{"id":9,"title":"Paper Trail","release_date":"1960-01-01"}]}""".encodeToByteArray()
@@ -169,7 +169,7 @@ class TmdbTest {
     @Test
     fun aRefusedTokenIsNotANotFound() = runTest {
         val http = MockHttpClient()
-        http.failures["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos,recommendations&include_video_language=en,null&language=en-US&api_key=KEY"] =
+        http.failures["https://api.themoviedb.org/3/movie/910001?append_to_response=credits,videos,recommendations,images&include_video_language=en,null&include_image_language=en,null&language=en-US&api_key=KEY"] =
             mutableListOf(HttpException.BadStatus(401))
         val error = assertFailsWith<HttpException.BadStatus> {
             TmdbClient("KEY", http).titleInfo(series = false, tmdbId = "910001", title = "Lighthouse", year = 2010)
@@ -247,5 +247,52 @@ class TmdbTest {
         assertNull(TmdbClient("KEY", http).person("  "))
         assertTrue(TmdbClient("KEY", http).people(" ").isEmpty())
         assertTrue(http.requested.isEmpty())
+    }
+
+    @Test
+    fun theLogoShownIsTheViewersLanguageThenEnglishThenNone() {
+        val french = TmdbLogo("/fr.png", "fr")
+        val english = TmdbLogo("/en.png", "en")
+        val none = TmdbLogo("/none.png", null)
+        val german = TmdbLogo("/de.png", "de")
+        assertEquals(french, TmdbLogo.best(listOf(none, english, german, french), "fr"))
+        assertEquals(french, TmdbLogo.best(listOf(english, french), "fr-FR"))
+        assertEquals(english, TmdbLogo.best(listOf(none, german, english), "fr"))
+        assertEquals(none, TmdbLogo.best(listOf(german, none), "fr"))
+        assertNull(TmdbLogo.best(listOf(german), "fr"), "another language's words are not shown")
+        assertEquals(TmdbLogo("/first.png", "en"), TmdbLogo.best(listOf(TmdbLogo("/first.png", "en"), TmdbLogo("/second.png", "en")), "en"), "TMDb's order: the best voted first")
+        assertEquals(english, TmdbLogo.best(listOf(TmdbLogo("/fr.svg", "fr"), english), "fr"), "an SVG is left out")
+        assertEquals("https://image.tmdb.org/t/p/w500/en.png", english.url)
+    }
+
+    @Test
+    fun aTitlesLogoComesWithItsDetails() = runTest {
+        val http = MockHttpClient()
+        http.routes["https://api.themoviedb.org/3/movie/42?append_to_response=credits,videos,recommendations,images&include_video_language=fr,en,null&include_image_language=fr,en,null&language=fr-FR&api_key=KEY"] =
+            """{"id":42,"title":"Le Transport","images":{"logos":[{"file_path":"/en.png","iso_639_1":"en"},{"file_path":"/fr.png","iso_639_1":"fr"}]}}""".encodeToByteArray()
+        val info = TmdbClient("KEY", http, language = "fr-FR").titleInfo(series = false, tmdbId = "42", title = "Le Transport", year = null)
+        assertEquals("https://image.tmdb.org/t/p/w500/fr.png", info?.logoUrl)
+        assertEquals(info?.logoUrl, TitleMetadata.of("movie:42", series = false, info = info, fetchedAt = 1).logoUrl)
+    }
+
+    @Test
+    fun aProvidersTitleWithoutItsTags() {
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("|FR| Le Transport"))
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("[FR] Le Transport"))
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("FR - Le Transport"))
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("FR: Le Transport"))
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport VFF"))
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport MULTI 4K"))
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport (MULTI) (2021)"))
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("|FR-4K DV| Le Transport [VOSTFR]"))
+        assertEquals("MobLand", CatalogueMatcher.displayTitle("MobLand |MULTI|"))
+        // The film's own words stay.
+        assertEquals("Spider-Man: No Way Home", CatalogueMatcher.displayTitle("Spider-Man: No Way Home"))
+        assertEquals("De Gaulle", CatalogueMatcher.displayTitle("De Gaulle"))
+        assertEquals("Up", CatalogueMatcher.displayTitle("Up"))
+        assertEquals("Star Runner 2049", CatalogueMatcher.displayTitle("Star Runner 2049"))
+        assertEquals("Vost", CatalogueMatcher.displayTitle("Vost"))
+        // Nothing left: the title as it is.
+        assertEquals("[MULTI]", CatalogueMatcher.displayTitle("[MULTI]"))
     }
 }
