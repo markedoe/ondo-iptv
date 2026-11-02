@@ -123,12 +123,18 @@ class TelevisionTextFieldsTest {
     }
 
     private fun pressUntil(key: Key, max: Int = 20, done: () -> Boolean) {
+        // Where the focus went after each press, and the page shown then: the failure says how it got lost.
+        val trail = mutableListOf<String>()
         repeat(max) {
             if (done()) return
             press(key)
+            trail += "${focused()} [${pageShown()}]"
         }
-        check(done()) { "never reached with $key; the focus is on ${focused()}" }
+        check(done()) { "never reached with $key; the focus is on ${focused()}; along the way: ${trail.joinToString(" → ")}" }
     }
+
+    /** The tab page on screen, for a failure's trail. */
+    private fun pageShown(): String = listOf("home", "vod", "live", "myList", "grid", "settings", "categoryFilter").filter(::exists).joinToString("+")
 
     private fun focusedNode(): SemanticsNode? = compose.onAllNodes(isFocused()).fetchSemanticsNodes().lastOrNull()
 
