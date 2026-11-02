@@ -1,11 +1,14 @@
 name: Website
 
 # Publishes site/ on GitHub Pages: the home, support and privacy policy pages the App Store listing links to
-# (fastlane/metadata/*_url.txt) and the privacy policy URL given to Google Play.
+# (fastlane/metadata/*_url.txt), the privacy policy URL given to Google Play, and the review playlist the review
+# notes give (site/review). Every week too, so that the review playlist's guide always covers the weeks ahead.
 on:
   push:
     branches: [main]
-    paths: [site/**, .github/workflows/pages.yml]
+    paths: [site/**, .github/workflows/pages.yml, .github/scripts/review_guide.py]
+  schedule:
+    - cron: '17 3 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -32,6 +35,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Review playlist guide from today
+        # The test channel's programmes, two days back to four weeks ahead (.github/scripts/review_guide.py).
+        run: python3 .github/scripts/review_guide.py site/review/guide.xml
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

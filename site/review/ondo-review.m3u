@@ -1,0 +1,17 @@
+#EXTM3U url-tvg="https://markedoe.github.io/ondo-iptv/review/guide.xml"
+#EXTINF:-1 tvg-id="ondo.test" tvg-name="Ondo Test Channel" tvg-logo="https://markedoe.github.io/ondo-iptv/review/live/logo.png" tvg-type="live" group-title="Test channel",Ondo Test Channel
+https://markedoe.github.io/ondo-iptv/review/live/channel.m3u8
+#EXTINF:-1 tvg-type="movie" group-title="Open movies (Blender Foundation, CC BY)",Big Buck Bunny (2008)
+https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
+#EXTINF:-1 tvg-type="movie" group-title="Open movies (Blender Foundation, CC BY)",Elephants Dream (2006)
+https://download.blender.org/ED/elephantsdream-720-h264-st-aac.mov
+#EXTINF:-1 tvg-type="movie" group-title="Open movies (Blender Foundation, CC BY)",Sintel - Trailer (2010)
+https://download.blender.org/durian/trailer/sintel_trailer-720p.mp4
+#EXTINF:-1 tvg-type="movie" group-title="Open movies (Blender Foundation, CC BY)",Tears of Steel (2012)
+https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8
+#EXTINF:-1 tvg-type="series" tvg-logo="https://markedoe.github.io/ondo-iptv/review/series/poster.png" group-title="Test series",Test Pattern Stories S01E01 - Bars
+https://markedoe.github.io/ondo-iptv/review/series/episode1.mp4
+#EXTINF:-1 tvg-type="series" tvg-logo="https://markedoe.github.io/ondo-iptv/review/series/poster.png" group-title="Test series",Test Pattern Stories S01E02 - Squares
+https://markedoe.github.io/ondo-iptv/review/series/episode2.mp4
+#EXTINF:-1 tvg-type="series" tvg-logo="https://markedoe.github.io/ondo-iptv/review/series/poster.png" group-title="Test series",Test Pattern Stories S01E03 - Colours
+https://markedoe.github.io/ondo-iptv/review/series/episode3.mp4

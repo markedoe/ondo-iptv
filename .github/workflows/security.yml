@@ -51,3 +51,7 @@ jobs:
         # Here too because CI skips store listing changes, and App Review reads the listing.
         if: success() || failure()
         run: python3 .github/scripts/check_app_store.py
+      - name: Review playlist (our site and the open films' hosts only)
+        # Here because CI skips website changes: site/review/ondo-review.m3u is what App Review plays.
+        if: success() || failure()
+        run: python3 .github/scripts/check_review_playlist.py
