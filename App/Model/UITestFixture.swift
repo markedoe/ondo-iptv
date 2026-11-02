@@ -325,7 +325,7 @@ enum UITestFixture {
         try writeArtwork(to: artworkFolder)
         let fileName = "fixture-playlist.m3u"
         try Data(m3u(epgURL: epgURL, artwork: artworkFolder).utf8).write(to: AppPaths.importedPlaylist(fileName))
-        return Playlist(name: "Demo", source: .local(fileName: fileName), autoRefreshHours: 0)
+        return Playlist(name: "My Playlist", source: .local(fileName: fileName), autoRefreshHours: 0)
     }
 }
 #endif
