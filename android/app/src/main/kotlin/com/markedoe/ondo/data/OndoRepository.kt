@@ -1222,7 +1222,7 @@ class OndoRepository(
     fun playRequest(movie: Movie, fromStart: Boolean = false): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(movie)
-        val entry = WatchEntry(playlist.id, ItemKind.MOVIE, movie.id, null, movie.name, movie.year?.toString(), movie.posterUrl, lastWatchedAt = stamp())
+        val entry = WatchEntry(playlist.id, ItemKind.MOVIE, movie.id, null, movie.name, movie.year?.toString(), movie.posterUrl, lastWatchedAt = 0)
         return start(item, entry, fromStart)
     }
 
@@ -1231,7 +1231,7 @@ class OndoRepository(
         // The episodes of the provider's details are kept in the core's words (see OndoState.placeholderNames).
         val shown = _state.value.placeholderNames.rename(episode)
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(shown, series)
-        val entry = WatchEntry(playlist.id, ItemKind.SERIES, series.id, shown.id, series.name, "${shown.code} · ${shown.title}", shown.posterUrl ?: series.coverUrl, lastWatchedAt = stamp())
+        val entry = WatchEntry(playlist.id, ItemKind.SERIES, series.id, shown.id, series.name, "${shown.code} · ${shown.title}", shown.posterUrl ?: series.coverUrl, lastWatchedAt = 0)
         return start(item, entry, fromStart = false)
     }
 
@@ -1274,7 +1274,7 @@ class OndoRepository(
     fun playRequest(channel: Channel): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(channel)
-        val entry = WatchEntry(playlist.id, ItemKind.CHANNEL, channel.id, null, channel.name, null, channel.logoUrl, lastWatchedAt = stamp())
+        val entry = WatchEntry(playlist.id, ItemKind.CHANNEL, channel.id, null, channel.name, null, channel.logoUrl, lastWatchedAt = 0)
         return start(item, entry, fromStart = true).copy(channelId = channel.id)
     }
 
@@ -1336,8 +1336,9 @@ class OndoRepository(
         return channel to programme
     }
 
+    /** [entry] starts now: dated by [stamp] when it is kept (after the sync clock is set up, at a launch). */
     private fun start(item: PlaybackItem, entry: WatchEntry, fromStart: Boolean): PlayRequest {
-        updateLibrary { it.recordStart(entry) }
+        updateLibrary { it.recordStart(entry.copy(lastWatchedAt = stamp())) }
         val known = _state.value.library.progress(entry.key)
         val resumeAt = if (!fromStart && known?.isResumable == true) (known.position * 1000).toLong() else 0L
         return PlayRequest(
