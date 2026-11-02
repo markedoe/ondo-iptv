@@ -74,7 +74,7 @@ to a server, and that server answered with a digest, the client sends a **probe*
 "device", "deviceName", "clock", "digest", "seen": <the server's digest>, "probe": true}`, without records. A server
 whose own digest is still `seen` answers `{"type", "version", "device", "deviceName", "digest", "unchanged": true}`,
 and nothing is merged; otherwise it answers with its own snapshot. A client still sends its whole snapshot to each
-server at least once an hour. An older server reads a
+server at least once an hour, except while something plays on it (it then sends a probe). An older server reads a
 probe as an empty snapshot, merges it (which removes nothing) and answers in full; an older client never sends one.
 A session where nothing changed on either side is thus a few hundred bytes each way.
 
@@ -82,7 +82,8 @@ A session where nothing changed on either side is thus a few hundred bytes each 
 after a local change (a playlist, My List, a list, or the end of a playback). After a failed session it finds the
 device's address again and tries after 15 seconds, then 1 minute, then every 5 minutes while Bonjour still finds
 the device. While a movie or an episode plays on the client, a session of the 60-second rhythm that would send a
-snapshot over 64 KiB (not a probe) waits for the next one; one after a change goes. A change counts when it is made on
+snapshot over 64 KiB (not a probe) waits for the next one; one after a change goes. When a session is due is timed on a
+clock that never goes back (time since the device started), not on the wall clock, which a time server may move. A change counts when it is made on
 the device: what a merge brought travels on with the next regular session, so a merge never calls for another
 session. The snapshot, the digest and the merge are worked out off the main thread; a merge whose data changed
 meanwhile is done again, and after three tries it waits for the next session.
@@ -162,8 +163,8 @@ removal (it remembers, to the day, its last session with each device): a device 
 removal, and nothing removed comes back from it. A device not seen for a year holds nothing back. A deletion learned
 from another device counts from when it was learned, if that is later than its own time.
 
-**Clock** — the sender's clock when it sent the snapshot. Optional: older versions send none, and a server's answer
-has none (it is on the client's clock, see **Clocks**).
+**Clock** — the sender's wall clock when it sent the snapshot. Optional, and receivers ignore it (see **Clocks**):
+older versions send none.
 
 **Replaced** — playlist IDs that became another playlist (rule 4 of the merge): the old ID, then the ID that
 replaced it. A device keeps an entry as long as the deletion of the old playlist.
@@ -214,28 +215,37 @@ A device keeps the merged snapshot as its own: it adds the playlists it did not 
 updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists and
 progress with the merged ones, and saves the keys of the services it uses (removing those deleted). It keeps
 whatever it does not sync. The progress of a movie or episode playing on the device is not replaced while it
-plays: the one received waits, and applies when playback ends if it is the later. If the viewer changed something during the
+plays: the one received waits, and applies when playback ends if it is the later. Nor is the catalogue reloaded
+under the player: when the playlist in use was deleted, replaced, or its address or login changed, the catalogue
+follows once playback ends. If the viewer changed something during the
 session, the device merges again with its current state, so no change is lost.
 
 ## Clocks
 
-Times are each device's wall clock. A TV box can run with a wrong clock until it reaches a time server, so a device
-that receives a snapshot first puts its times on its own clock (`onReceiverClock`):
+Every time is given by the device that makes the change, with a **hybrid logical clock** (`SyncClock`). A TV box can
+run with a wrong clock until it reaches a time server (at 1970, or hours off), so the wall clock alone cannot order
+changes made on different devices. Each device keeps `last`, the latest time it gave or received (saved with its
+sync data, and at launch never earlier than any time it holds):
 
-1. When the snapshot has a `clock` more than 5 minutes away from the receiver's, every time in it moves by the
-   difference. A server answers on the client's clock: it moves the times of its answer back by the difference it
-   measured, and sends no `clock`; the client moves nothing. A session thus moves no time, however long it takes. A
-   time that would move past the receiver's
-   clock plus 5 minutes while it was not there before keeps its value: it was stamped before the sender's clock went
-   wrong.
-2. Then every record and deletion still dated more than 5 minutes after the receiver's clock is left out: a clock
-   running ahead cannot date a change in the future and win over every later one (a snapshot from an older version,
-   without `clock`, goes only through this step). The records are left out, not moved: the device that made them
-   keeps them, they travel once their time has come, and nothing is deleted because it is missing.
+1. **A change made on the device** (a favourite added or removed, a position, a list edited, a playlist or a key
+   saved, any deletion) is dated `max(wall clock, last + 1)`, which becomes `last`. A change made after the device
+   saw another one is thus dated after it, whatever its wall clock says: a removal made after an add wins
+   everywhere, and a position saved after one received wins over it.
+2. **A snapshot received** first loses the records and deletions dated more than **one day** after the receiver's
+   wall clock: one device far ahead cannot date its changes in the future, win over every later one, or carry the
+   others' clocks along. They are left out, not moved: the device that made them keeps them, and they travel once
+   their time is within a day of the receiver's clock (until then, its sessions with that device are whole snapshots,
+   not probes). Then `last` becomes the latest time of what is left, if that is later.
+3. A receiver whose wall clock reads before 2024 has no idea of the time: it leaves nothing out.
 
-A device sends its own times later than its clock plus 5 minutes (stamped while its clock ran ahead) at its clock: such
-a change travels at once, and loses to a later one made elsewhere. A record is only replaced by one with a strictly
-later time, so a device's own records never go back to an older version.
+A sync session never changes a time: a record is kept or replaced as it was dated where it was made. The `clock` of a
+snapshot is ignored. Older versions send their wall clock's times and leave nothing out, which the newer ones read
+as any other times. "Now", to prune deletions and to note sessions, is the later of the wall clock and `last`.
+
+Limits: a device whose clock was more than a day ahead keeps dating its changes after its own earlier ones once its
+clock is right, so the other devices take them only once that time is within a day of their clocks (an hour later
+for a clock that was a day and an hour ahead, a year later for a clock that was a year ahead). A device whose clock is
+not set takes in any time, a far one included, and then dates its changes after it.
 
 ## Privacy
 

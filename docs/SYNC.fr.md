@@ -80,7 +80,8 @@ dernier à un serveur, et que ce serveur a répondu avec une empreinte, le clien
 `{"type", "version", "device", "deviceName", "clock", "digest", "seen": <l’empreinte du serveur>, "probe": true}`,
 sans éléments. Un serveur dont l’empreinte est toujours `seen` répond `{"type", "version", "device", "deviceName",
 "digest", "unchanged": true}`, et rien n’est fusionné ; sinon il répond avec son propre instantané. Un client envoie
-quand même son instantané entier à chaque serveur au moins une fois par heure. Un
+quand même son instantané entier à chaque serveur au moins une fois par heure, sauf pendant une lecture sur lui (il
+envoie alors une sonde). Un
 serveur plus ancien lit une sonde comme un instantané vide, la fusionne (ce qui ne retire rien) et répond en entier ;
 un client plus ancien n’en envoie jamais. Une session où rien n’a changé d’un côté ni de l’autre fait ainsi quelques
 centaines d’octets dans chaque sens.
@@ -90,7 +91,9 @@ ouverte, et quelques secondes après un changement local (une playlist, Ma liste
 lecture). Après une session ratée, il retrouve l’adresse de l’appareil et réessaie au bout de 15 secondes, puis
 1 minute, puis toutes les 5 minutes tant que Bonjour trouve encore l’appareil. Pendant la lecture d’un film ou
 d’un épisode sur le client, une session du rythme de 60 secondes qui enverrait un instantané de plus de 64 Kio
-(pas une sonde) attend la suivante ; celle qui suit un changement part. Un changement compte quand il est fait sur
+(pas une sonde) attend la suivante ; celle qui suit un changement part. Le moment où une session est due se mesure
+sur une horloge qui ne recule jamais (le temps depuis le démarrage de l’appareil), pas sur l’horloge murale, qu’un
+serveur de temps peut déplacer. Un changement compte quand il est fait sur
 l’appareil : ce qu’une fusion a apporté repart avec la session régulière suivante, donc une fusion n’appelle jamais
 une autre session. L’instantané, l’empreinte et la fusion sont calculés hors du fil principal ; une fusion dont les
 données ont changé entre-temps est refaite, et après trois essais elle attend la session suivante.
@@ -176,8 +179,8 @@ appareil) : un appareil absent des mois reçoit quand même la suppression, et r
 appareil qu’il n’a pas vu depuis un an ne retient rien. Une suppression apprise d’un autre appareil compte à partir
 du moment où elle a été apprise, s’il est plus tardif que son propre instant.
 
-**Horloge** — l’horloge de l’expéditeur quand il a envoyé l’instantané. Facultative : les versions plus anciennes
-n’en envoient pas, et la réponse d’un serveur n’en a pas (elle est sur l’horloge du client, voir **Horloges**).
+**Horloge** — l’horloge murale de l’expéditeur quand il a envoyé l’instantané. Facultative, et ignorée par le
+destinataire (voir **Horloges**) : les versions plus anciennes n’en envoient pas.
 
 **Remplacés** — les identifiants de playlist devenus une autre playlist (règle 4 de la fusion) : l’ancien
 identifiant, puis celui qui l’a remplacé. Un appareil garde une entrée aussi longtemps que la suppression de
@@ -236,31 +239,41 @@ télécharge), met à jour celles qui ont changé, supprime celles qui ont été
 chaînes favorites, les personnes, les listes et la progression par celles fusionnées, et enregistre les clés des services qu’il
 utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synchronisé. La progression d’un film ou d’un épisode en lecture sur
 l’appareil n’est pas remplacée pendant la lecture : celle reçue attend, et s’applique à la fin de la lecture si elle
-est la plus tardive. Si le spectateur a changé quelque chose pendant la session, l’appareil fusionne à nouveau avec son
+est la plus tardive. Le catalogue n’est pas non plus rechargé sous le lecteur : quand la playlist utilisée a été
+supprimée, remplacée, ou que son adresse ou son identifiant a changé, le catalogue suit à la fin de la lecture. Si le spectateur a changé quelque chose pendant la session, l’appareil fusionne à nouveau avec son
 état actuel, donc aucun changement n’est perdu.
 
 ## Horloges
 
-Les instants sont l’horloge de chaque appareil. Un boîtier TV peut avoir une horloge fausse tant qu’il n’a pas
-joint un serveur de temps : un appareil qui reçoit un instantané met donc d’abord ses instants sur sa propre horloge
-(`onReceiverClock`) :
+Chaque instant est donné par l’appareil qui fait le changement, avec une **horloge logique hybride** (`SyncClock`).
+Un boîtier TV peut avoir une horloge fausse tant qu’il n’a pas joint un serveur de temps (à 1970, ou décalée de
+plusieurs heures) : l’horloge murale seule ne peut donc pas ordonner des changements faits sur des appareils
+différents. Chaque appareil garde `last`, le dernier instant qu’il a donné ou reçu (enregistré avec ses données de
+synchronisation, et au lancement jamais antérieur à un instant qu’il détient) :
 
-1. Quand l’instantané a une `clock` à plus de 5 minutes de celle du destinataire, chacun de ses instants est décalé
-   de la différence. Un serveur répond sur l’horloge du client : il décale les instants de sa réponse en sens inverse
-   de la différence qu’il a mesurée, et n’envoie pas de `clock` ; le client ne décale rien. Une session ne déplace
-   ainsi aucun instant, quelle que soit sa durée. Un instant que le décalage
-   porterait au-delà de l’horloge du destinataire plus 5 minutes alors qu’il n’y était pas garde sa valeur : il a été
-   fixé avant que l’horloge de l’expéditeur se dérègle.
-2. Puis chaque élément et chaque suppression encore daté de plus de 5 minutes après l’horloge du destinataire est
-   écarté : une horloge en avance ne peut pas dater une modification dans le futur et gagner sur toutes les
-   suivantes (un instantané d’une version plus ancienne, sans `clock`, ne passe que par cette étape). Ces éléments
-   sont écartés, pas déplacés : l’appareil qui les a faits les garde, ils voyagent une fois leur heure venue, et rien
-   n’est supprimé parce qu’il manque.
+1. **Un changement fait sur l’appareil** (un favori ajouté ou retiré, une position, une liste modifiée, une playlist
+   ou une clé enregistrée, toute suppression) est daté `max(horloge murale, last + 1)`, qui devient `last`. Un
+   changement fait après que l’appareil en a vu un autre est donc daté après lui, quoi que dise son horloge murale :
+   un retrait fait après un ajout gagne partout, et une position enregistrée après une position reçue gagne sur elle.
+2. **Un instantané reçu** perd d’abord les éléments et suppressions datés de plus d’**un jour** après l’horloge
+   murale du destinataire : un appareil très en avance ne peut pas dater ses changements dans le futur, gagner sur
+   tous les suivants, ni entraîner les horloges des autres. Ils sont écartés, pas déplacés : l’appareil qui les a
+   faits les garde, et ils voyagent une fois leur instant à moins d’un jour de l’horloge du destinataire (d’ici là,
+   ses sessions avec cet appareil sont des instantanés entiers, pas des sondes). Puis `last` devient le dernier
+   instant de ce qui reste, s’il est plus tardif.
+3. Un destinataire dont l’horloge murale indique une date antérieure à 2024 n’a aucune idée de l’heure : il n’écarte
+   rien.
 
-Un appareil envoie ses propres instants postérieurs à son horloge plus 5 minutes (fixés quand son horloge avançait) à
-son horloge : un tel changement voyage tout de suite, et perd face à un changement fait ailleurs plus tard. Un
-élément n’est remplacé que par un autre à l’instant strictement postérieur, donc les éléments d’un appareil ne
-reviennent jamais à une version plus ancienne.
+Une session de synchronisation ne change jamais un instant : un élément est gardé ou remplacé tel qu’il a été daté là
+où il a été fait. La `clock` d’un instantané est ignorée. Les versions plus anciennes envoient les instants de leur
+horloge murale et n’écartent rien, ce que les plus récentes lisent comme tout autre instant. « Maintenant », pour
+élaguer les suppressions et noter les sessions, est le plus tardif de l’horloge murale et de `last`.
+
+Limites : un appareil dont l’horloge avançait de plus d’un jour continue, une fois son horloge juste, à dater ses
+changements après ses précédents ; les autres appareils ne les prennent donc qu’une fois cet instant à moins d’un
+jour de leur horloge (une heure plus tard pour une horloge qui avançait d’un jour et une heure, un an plus tard pour
+une horloge qui avançait d’un an). Un appareil dont l’horloge n’est pas réglée accepte tout instant, même lointain,
+et date ensuite ses changements après lui.
 
 ## Confidentialité
 
