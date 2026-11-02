@@ -6357,46 +6357,6 @@
         }
       }
     },
-    "Demo": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Démo"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Demo"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Demo"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "演示"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "عرض توضيحي"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "डेमो"
-          }
-        }
-      }
-    },
     "Director": {
       "localizations": {
         "fr": {
@@ -14753,6 +14713,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ondo सहायता"
+          }
+        }
+      }
+    },
+    "Ondo comes with no channels: add the M3U link, file or Xtream Codes login from your provider.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo ne contient aucune chaîne : ajoutez le lien M3U, le fichier ou l’identifiant Xtream Codes de votre fournisseur."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo no incluye ningún canal: añade el enlace M3U, el archivo o el acceso Xtream Codes de tu proveedor."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Ondo não vem com nenhum canal: adicione o link M3U, o arquivo ou o login Xtream Codes do seu provedor."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo 不含任何频道：请添加服务商提供的 M3U 链接、文件或 Xtream Codes 登录信息。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا يتضمن Ondo أي قناة: أضف رابط M3U أو الملف أو بيانات دخول Xtream Codes من مزوّدك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ondo में कोई चैनल शामिल नहीं है: अपने प्रदाता से मिला M3U लिंक, फ़ाइल या Xtream Codes लॉगिन जोड़ें।"
           }
         }
       }
@@ -24159,46 +24159,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "फिर से कोशिश करें"
-          }
-        }
-      }
-    },
-    "Try the demo": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Essayer la démo"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Probar la demo"
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Experimentar a demo"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "试用演示"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تجربة العرض التوضيحي"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "डेमो आज़माएँ"
           }
         }
       }

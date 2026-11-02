@@ -179,7 +179,7 @@ final class OndoUITests: XCTestCase {
 
     func testWelcomeScreen() {
         launch(["-uitest-reset"])
-        XCTAssertTrue(app.buttons["demoButton"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["addPlaylistButton"].waitForExistence(timeout: 15))
         snapshot("01-welcome")
     }
 

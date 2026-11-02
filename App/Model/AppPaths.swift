@@ -35,7 +35,4 @@ enum AppPaths {
         let last = (name as NSString).lastPathComponent
         return ["", ".", "..", "/"].contains(last) ? "_" : last
     }
-
-    /// Public demonstration channels curated by the iptv-org project, used by "Try the demo".
-    static let demoPlaylistURL = URL(string: "https://iptv-org.github.io/iptv/countries/fr.m3u")!
 }

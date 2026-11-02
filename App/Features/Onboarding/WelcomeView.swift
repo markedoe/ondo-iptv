@@ -7,7 +7,6 @@ struct WelcomeView: View {
     @Environment(AppModel.self) private var model
     @State private var showingAdd = false
     @State private var showingImport = false
-    @State private var isLoadingDemo = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -50,19 +49,11 @@ struct WelcomeView: View {
                     .controlSize(.large)
                     .accessibilityIdentifier("addPlaylistButton")
 
-                    Button {
-                        Task { await addDemo() }
-                    } label: {
-                        if isLoadingDemo {
-                            ProgressView().frame(maxWidth: 320)
-                        } else {
-                            Text("Try the demo").frame(maxWidth: 320)
-                        }
-                    }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-                    .disabled(isLoadingDemo)
-                    .accessibilityIdentifier("demoButton")
+                    Text("Ondo comes with no channels: add the M3U link, file or Xtream Codes login from your provider.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 360)
 
                     Button("Restore a backup…") { showingImport = true }
                         .buttonStyle(.borderless)
@@ -102,16 +93,6 @@ struct WelcomeView: View {
                     errorMessage = error.localizedDescription
                 }
             }
-        }
-    }
-
-    private func addDemo() async {
-        isLoadingDemo = true
-        defer { isLoadingDemo = false }
-        do {
-            try await model.addPlaylist(Playlist(name: String(localized: "Demo"), source: .remote(AppPaths.demoPlaylistURL)))
-        } catch {
-            errorMessage = error.localizedDescription
         }
     }
 }
