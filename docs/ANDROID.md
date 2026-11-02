@@ -123,10 +123,49 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
 - **Tests**: unit (library, showcase, screens, repository, ViewModel), Compose (Robolectric), the remote on a TV
   (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), the phone player's gestures
   (`PhonePlayerOverlayTest`), Roborazzi screenshots that double as Google Play screenshots (phone,
-  7" and 10" tablets, TV, English and French).
+  7" and 10" tablets, TV, English and French), compared with committed references (see
+  [Screenshots and regressions](#screenshots-and-regressions)).
 
 Planned next (not included in v1): Chromecast, downloads, profiles and PIN, online
 subtitles, second libVLC engine; on a TV, launcher channels and voice search.
+
+## Screenshots and regressions
+
+The Roborazzi tests take two kinds of screenshots from the demo catalogue (fictional titles, open films, made-up
+channels, `example.com` addresses):
+
+- **Store listing screenshots**, full size, in `android/app/src/test/screenshots/play/` (not committed: the release
+  workflow makes them anew).
+- **Reference screenshots**, half size, committed in `android/app/src/test/snapshots/`: the TV's (English and French)
+  and the phone's (English) store screens, and the TV's tab pages as the remote leaves them (`TvScreenshots`: Movies
+  with a row focused and with the chips focused, Home with the remote in its rows).
+
+The *Android* workflow compares every screenshot with its reference (`./gradlew :app:verifyRoborazziDebug`); at most
+0.1 % of the pixels may differ (anti-aliasing, `screenshots/Baselines.kt`). A screenshot that changed fails the run:
+the job summary lists them and the **android-screenshot-diffs** artifact holds, for each, the reference, the new
+image and their difference. While no reference is committed, the screenshots are recorded, not compared, and the
+summary says so.
+
+A change of the interface made on purpose records the references anew, on the working branch, never on `main` or a
+tag: run the *Android* workflow by hand on that branch with *record_screenshots* checked
+(`gh workflow run android.yml --ref <branch> -f record_screenshots=true`). Its tests must pass; a job of its own,
+the only one allowed to write, then commits the new references to that branch (author `ci`, a `noreply` address,
+the images' metadata removed). Pull the branch afterwards, and look at the images in the commit before merging it.
+
+Behaviour that a picture does not prove has its own tests: `TvLayoutRegressionTest` (the header's backdrop from the
+screen's top and cropped towards its top, the playlist's last update in the top bar of Home and of the Movies tab,
+each row type whole under the header at 960 × 540 dp, no row cut with the chips focused).
+
+### Before changing a TV screen (regressions checklist)
+
+1. Run the tests and the screenshots on the branch (the *Android* workflow) before the change: they must pass.
+2. Make the change; add or update a behavioural test for what it must keep (bounds, texts, focus), as in
+   `TvLayoutRegressionTest`.
+3. Run the workflow again. A screenshot that changed: open **android-screenshot-diffs** and look at each difference.
+4. Every difference is wanted: record the references anew (*record_screenshots*) and check the committed images.
+   One is not: fix the change, never the reference.
+5. Check at 960 × 540 dp that each row (its name, its cards and their lines) fits under the header, and that the
+   playlist's line stays at the top bar's end.
 
 ## Initial plan
 

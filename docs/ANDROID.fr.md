@@ -143,10 +143,52 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
 - **Tests** : unitaires (bibliothèque, vitrine, écrans, dépôt, ViewModel), Compose (Robolectric), la
   télécommande sur une TV (`TelevisionTest`, `PlayerRemoteTest`, `TvPlayerRemoteTest`, `TvPlayerControlsTest`), les gestes du
   lecteur du téléphone (`PhonePlayerOverlayTest`), captures Roborazzi qui servent de captures
-  Google Play (téléphone, tablettes 7" et 10", TV, anglais et français).
+  Google Play (téléphone, tablettes 7" et 10", TV, anglais et français), comparées à des références versionnées
+  (voir [Captures d'écran et régressions](#captures-décran-et-régressions)).
 
 Prévu ensuite (non inclus en v1) : Chromecast, téléchargements, profils et PIN,
 sous-titres en ligne, second moteur libVLC ; sur une TV, chaînes du lanceur et recherche vocale.
+
+## Captures d'écran et régressions
+
+Les tests Roborazzi prennent deux sortes de captures à partir du catalogue de démonstration (titres fictifs, films
+libres, chaînes inventées, adresses `example.com`) :
+
+- **Captures de la fiche du store**, en taille réelle, dans `android/app/src/test/screenshots/play/` (non versionnées :
+  le workflow de release les refait).
+- **Captures de référence**, en demi-taille, versionnées dans `android/app/src/test/snapshots/` : les écrans du store
+  de la TV (anglais et français) et du téléphone (anglais), et les onglets de la TV tels que la télécommande les laisse
+  (`TvScreenshots` : Films avec une rangée sélectionnée et avec les filtres sélectionnés, Accueil avec la télécommande
+  dans ses rangées).
+
+Le workflow *Android* compare chaque capture à sa référence (`./gradlew :app:verifyRoborazziDebug`) ; au plus 0,1 %
+des pixels peuvent différer (anticrénelage, `screenshots/Baselines.kt`). Une capture qui a changé fait échouer le
+run : le résumé du job les liste et l'artefact **android-screenshot-diffs** contient, pour chacune, la référence, la
+nouvelle image et leur différence. Tant qu'aucune référence n'est versionnée, les captures sont enregistrées, pas
+comparées, et le résumé le dit.
+
+Un changement voulu de l'interface enregistre de nouvelles références, sur la branche de travail, jamais sur `main`
+ni sur un tag : lancer à la main le workflow *Android* sur cette branche avec *record_screenshots* coché
+(`gh workflow run android.yml --ref <branche> -f record_screenshots=true`). Ses tests doivent passer ; un job à part,
+le seul autorisé à écrire, versionne alors les nouvelles références sur cette branche (auteur `ci`, une adresse
+`noreply`, les métadonnées des images retirées). Récupérer la branche ensuite, et regarder les images du commit avant
+de la fusionner.
+
+Ce qu'une image ne prouve pas a ses propres tests : `TvLayoutRegressionTest` (l'image de l'en-tête depuis le haut de
+l'écran et cadrée vers son haut, la dernière mise à jour de la playlist dans la barre du haut de l'Accueil et de
+l'onglet Films, chaque type de rangée entier sous l'en-tête en 960 × 540 dp, aucune rangée coupée quand les filtres
+sont sélectionnés).
+
+### Avant de modifier un écran TV (liste anti-régressions)
+
+1. Lancer les tests et les captures sur la branche (le workflow *Android*) avant le changement : ils doivent passer.
+2. Faire le changement ; ajouter ou mettre à jour un test du comportement qu'il doit garder (positions, textes,
+   focus), comme dans `TvLayoutRegressionTest`.
+3. Relancer le workflow. Une capture a changé : ouvrir **android-screenshot-diffs** et regarder chaque différence.
+4. Toutes les différences sont voulues : enregistrer de nouvelles références (*record_screenshots*) et vérifier les
+   images versionnées. L'une ne l'est pas : corriger le changement, jamais la référence.
+5. Vérifier en 960 × 540 dp que chaque rangée (son nom, ses cartes et leurs lignes) tient sous l'en-tête, et que la
+   ligne de la playlist reste au bout de la barre du haut.
 
 ## Plan initial
 
