@@ -4637,42 +4637,42 @@
         }
       }
     },
-    "Choose the audio and subtitle tracks from the player. You can also open an SRT or VTT file, or search subtitles online: Addic7ed works without an account for series, and OpenSubtitles, SubDL and SubSource work with your own key (Settings, Online Subtitles).": {
+    "Choose the audio and subtitle tracks from the player. You can also open an SRT or VTT file, or search subtitles online: OpenSubtitles, SubDL and SubSource work with your own key, and Addic7ed, for series without an account, once turned on (Settings, Online Subtitles).": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisissez les pistes audio et de sous-titres depuis le lecteur. Vous pouvez aussi ouvrir un fichier SRT ou VTT, ou chercher des sous-titres en ligne : Addic7ed fonctionne sans compte pour les séries, et OpenSubtitles, SubDL et SubSource avec votre propre clé (Réglages, Sous-titres en ligne)."
+            "value": "Choisissez les pistes audio et de sous-titres depuis le lecteur. Vous pouvez aussi ouvrir un fichier SRT ou VTT, ou chercher des sous-titres en ligne : OpenSubtitles, SubDL et SubSource avec votre propre clé, et Addic7ed, pour les séries sans compte, une fois activé (Réglages, Sous-titres en ligne)."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elige las pistas de audio y de subtítulos desde el reproductor. También puedes abrir un archivo SRT o VTT, o buscar subtítulos en línea: Addic7ed funciona sin cuenta para las series, y OpenSubtitles, SubDL y SubSource con tu propia clave (Ajustes, Subtítulos en línea)."
+            "value": "Elige las pistas de audio y de subtítulos desde el reproductor. También puedes abrir un archivo SRT o VTT, o buscar subtítulos en línea: OpenSubtitles, SubDL y SubSource con tu propia clave, y Addic7ed, para las series sin cuenta, una vez activado (Ajustes, Subtítulos en línea)."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escolha as faixas de áudio e de legendas pelo player. Você também pode abrir um arquivo SRT ou VTT, ou buscar legendas online: o Addic7ed funciona sem conta para séries, e OpenSubtitles, SubDL e SubSource com sua própria chave (Ajustes, Legendas online)."
+            "value": "Escolha as faixas de áudio e de legendas pelo player. Você também pode abrir um arquivo SRT ou VTT, ou buscar legendas online: OpenSubtitles, SubDL e SubSource com sua própria chave, e o Addic7ed, para séries sem conta, depois de ativado (Ajustes, Legendas online)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在播放器中选择音轨和字幕轨。你也可以打开 SRT 或 VTT 文件，或在线搜索字幕：Addic7ed 无需账户即可用于剧集，OpenSubtitles、SubDL 和 SubSource 需使用你自己的密钥（“设置”>“在线字幕”）。"
+            "value": "在播放器中选择音轨和字幕轨。你也可以打开 SRT 或 VTT 文件，或在线搜索字幕：OpenSubtitles、SubDL 和 SubSource 需使用你自己的密钥；Addic7ed 无需账户即可用于剧集，但需先开启（“设置”>“在线字幕”）。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اختر مسارات الصوت والترجمة من المشغّل. يمكنك أيضًا فتح ملف SRT أو VTT، أو البحث عن ترجمات عبر الإنترنت: يعمل Addic7ed دون حساب للمسلسلات، وتعمل OpenSubtitles وSubDL وSubSource بمفتاحك الخاص (الإعدادات، الترجمة عبر الإنترنت)."
+            "value": "اختر مسارات الصوت والترجمة من المشغّل. يمكنك أيضًا فتح ملف SRT أو VTT، أو البحث عن ترجمات عبر الإنترنت: تعمل OpenSubtitles وSubDL وSubSource بمفتاحك الخاص، ويعمل Addic7ed للمسلسلات دون حساب بعد تفعيله (الإعدادات، الترجمة عبر الإنترنت)."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "प्लेयर से ऑडियो और सबटाइटल ट्रैक चुनें। आप SRT या VTT फ़ाइल भी खोल सकते हैं, या ऑनलाइन सबटाइटल खोज सकते हैं: सीरीज़ के लिए Addic7ed बिना अकाउंट के काम करता है, और OpenSubtitles, SubDL और SubSource आपकी अपनी कुंजी से (सेटिंग्स, ऑनलाइन सबटाइटल)।"
+            "value": "प्लेयर से ऑडियो और सबटाइटल ट्रैक चुनें। आप SRT या VTT फ़ाइल भी खोल सकते हैं, या ऑनलाइन सबटाइटल खोज सकते हैं: OpenSubtitles, SubDL और SubSource आपकी अपनी कुंजी से, और सीरीज़ के लिए Addic7ed बिना अकाउंट के, उसे चालू करने के बाद (सेटिंग्स, ऑनलाइन सबटाइटल)।"
           }
         }
       }

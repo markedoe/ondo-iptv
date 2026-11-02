@@ -153,8 +153,8 @@ extension HelpTopic {
             id: "subtitles", title: "Subtitles and Audio", systemImage: "captions.bubble",
             body: """
             Choose the audio and subtitle tracks from the player. You can also open an SRT or VTT file, or search \
-            subtitles online: Addic7ed works without an account for series, and OpenSubtitles, SubDL and SubSource \
-            work with your own key (Settings, Online Subtitles).
+            subtitles online: OpenSubtitles, SubDL and SubSource work with your own key, and Addic7ed, for series \
+            without an account, once turned on (Settings, Online Subtitles).
             """
         ),
         HelpTopic(

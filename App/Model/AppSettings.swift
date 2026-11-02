@@ -69,8 +69,9 @@ struct AppSettings: Codable, Equatable {
     var hasCompletedOnboarding = false
     /// Minutes before the start of a programme a reminder is delivered.
     var reminderLeadMinutes = 2
-    /// Addic7ed needs no account: searched unless switched off.
-    var addic7edSubtitles = true
+    /// Addic7ed needs no account, and is searched only once the user turns it on. A new name: the former setting
+    /// (`addic7edSubtitles`) was on by default, so it records no choice and is not read.
+    var addic7edOptIn = false
     /// Languages of the last subtitle search (ISO 639-1), preferred first.
     var subtitleSearchLanguages: [String] = []
     /// Playlists whose "show only your languages?" suggestion was answered or dismissed.
@@ -112,7 +113,7 @@ struct AppSettings: Codable, Equatable {
         landscapeForVOD = (try? c.decodeIfPresent(Bool.self, forKey: .landscapeForVOD)) ?? d.landscapeForVOD
         hasCompletedOnboarding = (try? c.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)) ?? d.hasCompletedOnboarding
         reminderLeadMinutes = (try? c.decodeIfPresent(Int.self, forKey: .reminderLeadMinutes)) ?? d.reminderLeadMinutes
-        addic7edSubtitles = (try? c.decodeIfPresent(Bool.self, forKey: .addic7edSubtitles)) ?? d.addic7edSubtitles
+        addic7edOptIn = (try? c.decodeIfPresent(Bool.self, forKey: .addic7edOptIn)) ?? d.addic7edOptIn
         subtitleSearchLanguages = (try? c.decodeIfPresent([String].self, forKey: .subtitleSearchLanguages)) ?? d.subtitleSearchLanguages
         dismissedTagSuggestions = (try? c.decodeIfPresent(Set<UUID>.self, forKey: .dismissedTagSuggestions)) ?? d.dismissedTagSuggestions
         updateAwards = (try? c.decodeIfPresent(Bool.self, forKey: .updateAwards)) ?? d.updateAwards

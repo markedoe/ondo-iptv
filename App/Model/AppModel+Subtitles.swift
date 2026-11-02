@@ -84,11 +84,11 @@ extension AppModel {
     }
 
     func setAddic7edSubtitles(_ enabled: Bool) {
-        updateSettings { $0.addic7edSubtitles = enabled }
+        updateSettings { $0.addic7edOptIn = enabled }
         subtitleProviders = nil
     }
 
-    /// Services that can be searched: those with a key, and Addic7ed unless switched off.
+    /// Services that can be searched: those with a key, and Addic7ed once turned on (off by default).
     var subtitleServices: [SubtitleService] {
         subtitleSearch().providers.map(\.service)
     }
@@ -108,7 +108,7 @@ extension AppModel {
         }
         if let key = subtitleCredential(.subdlKey) { providers.append(SubDLClient(apiKey: key, http: http)) }
         if let key = subtitleCredential(.subSourceKey) { providers.append(SubSourceClient(apiKey: key, http: http)) }
-        if settings.addic7edSubtitles { providers.append(Addic7edClient(userAgent: userAgent, http: http)) }
+        if settings.addic7edOptIn { providers.append(Addic7edClient(userAgent: userAgent, http: http)) }
         subtitleProviders = providers
         return SubtitleSearch(providers: providers)
     }

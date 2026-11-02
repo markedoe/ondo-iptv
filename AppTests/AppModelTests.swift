@@ -324,11 +324,13 @@ final class AppModelTests: XCTestCase {
     func testSubtitleKeysGoToTheKeychainAndEnableTheirService() async throws {
         let model = makeModel()
         await model.bootstrap()
-        XCTAssertEqual(model.subtitleServices, [.addic7ed], "no key yet: only the service that needs none")
+        XCTAssertEqual(model.subtitleServices, [], "no key yet, and the service that needs none is off by default")
 
         model.setSubtitleCredential("  key-example-0001 \n", for: .openSubtitlesKey)
         model.setSubtitleCredential("key-example-0002", for: .subSourceKey)
         XCTAssertEqual(secrets.values[SubtitleCredential.openSubtitlesKey.rawValue], "key-example-0001", "trimmed, kept with the secrets")
+        XCTAssertEqual(model.subtitleServices, [.openSubtitles, .subSource])
+        model.setAddic7edSubtitles(true)
         XCTAssertEqual(model.subtitleServices, [.openSubtitles, .subSource, .addic7ed])
 
         model.setSubtitleCredential("", for: .subSourceKey)
@@ -337,6 +339,20 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(model.subtitleServices, [.openSubtitles])
         let saved = try String(contentsOf: root.appendingPathComponent("Support/settings.json"), encoding: .utf8)
         XCTAssertFalse(saved.contains("key-example"), "keys never reach the settings file")
+    }
+
+    /// Addic7ed is off by default. The former setting was on by default, so a settings file that holds it records no
+    /// choice: it is not read, and only turning the new one on keeps the service.
+    func testAddic7edIsOffByDefaultAndTheFormerDefaultIsNotKept() throws {
+        XCTAssertFalse(AppSettings().addic7edOptIn)
+        let decoder = JSONDecoder()
+        let former = try decoder.decode(AppSettings.self, from: Data(#"{"addic7edSubtitles": true, "updateAwards": false}"#.utf8))
+        XCTAssertFalse(former.addic7edOptIn, "the former default does not turn the service on")
+        XCTAssertFalse(former.updateAwards, "the other settings are kept")
+        let chosen = try decoder.decode(AppSettings.self, from: Data(#"{"addic7edOptIn": true}"#.utf8))
+        XCTAssertTrue(chosen.addic7edOptIn)
+        let saved = try decoder.decode(AppSettings.self, from: JSONEncoder().encode(chosen))
+        XCTAssertTrue(saved.addic7edOptIn, "a choice made in Settings is saved")
     }
 
     func testTheSubtitleSearchStartsFromWhatIsPlaying() async throws {

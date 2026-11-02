@@ -50,7 +50,7 @@ struct SubtitleServicesView: View {
 
             Section {
                 Toggle("Search Addic7ed", isOn: Binding(
-                    get: { model.settings.addic7edSubtitles },
+                    get: { model.settings.addic7edOptIn },
                     set: { model.setAddic7edSubtitles($0) }
                 ))
             } header: {
