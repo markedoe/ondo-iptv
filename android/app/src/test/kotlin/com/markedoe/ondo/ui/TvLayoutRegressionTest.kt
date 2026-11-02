@@ -11,9 +11,11 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
@@ -30,6 +32,7 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.LayoutDirection
@@ -111,14 +114,14 @@ class TvLayoutRegressionTest {
      * [content] as a tab page on a TV: under the top bar, which shows [playlist] unless the page says otherwise. [onTab]:
      * the page opened as the remote moved along the bar, the focus left on [tab] (the page's first card never had it).
      */
-    private fun show(tab: TopLevel, direction: LayoutDirection = LayoutDirection.Ltr, onTab: Boolean = false, content: @Composable () -> Unit) {
+    private fun show(tab: TopLevel, direction: LayoutDirection = LayoutDirection.Ltr, onTab: Boolean = false, update: PlaylistUpdate = playlist, content: @Composable () -> Unit) {
         var inputModes: InputModeManager? = null
         var bar: TvTopBar? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
             OndoTheme {
                 TelevisionFrame {
-                    TvNavigationFrame(tab, showBar = true, onSelect = {}, onSearch = {}, onSettings = {}, playlist = playlist) {
+                    TvNavigationFrame(tab, showBar = true, onSelect = {}, onSearch = {}, onSettings = {}, playlist = update) {
                         bar = LocalTvTopBar.current
                         CompositionLocalProvider(LocalTitleHeaders provides Headers, LocalLayoutDirection provides direction, content = content)
                     }
@@ -345,7 +348,7 @@ class TvLayoutRegressionTest {
             press(Key.DirectionRight)
             advance(50)
         }
-        assertEquals("the pill reads Categories", listOf("Categories"), compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
+        assertEquals("the pill is Categories", "Categories", pillName())
         assertTrue("the pill sits before Search", bounds("categoryFilter").right <= bounds("tabSearch").left + 0.5.dp)
 
         press(Key.DirectionCenter)
@@ -362,6 +365,62 @@ class TvLayoutRegressionTest {
         assertEquals(comedy, chosen)
         assertTrue("the picker closed", compose.onAllNodesWithTag("categoryPicker").fetchSemanticsNodes().isEmpty())
     }
+
+    /** What the Categories pill reads, or, with its icon alone, what it is named for TalkBack. */
+    private fun pillName(): String? =
+        compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes()
+            .firstNotNullOfOrNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() }
+            ?: compose.onNodeWithTag("categoryFilter", useUnmergedTree = true).fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+
+    /** The top bar's playlist line, its texts as laid out. */
+    private fun playlistLineLayouts(): List<TextLayoutResult> =
+        compose.onAllNodes(hasAnyAncestor(hasTestTag("lastUpdate")) and SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+            .map { node ->
+                val layouts = mutableListOf<TextLayoutResult>()
+                node.config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+                layouts.single()
+            }
+
+    /**
+     * On the Movies tab, the playlist line beside the Categories pill keeps both its lines whole ([updated]: the
+     * update's words in the language shown); the pill, named [categories], gives way instead, before Search.
+     */
+    private fun assertThePlaylistLineIsWholeBesideThePill(updated: String, categories: String) {
+        val update = PlaylistUpdate("Example Playlist", updatedAt = NOW - 12 * 60_000L, now = NOW)
+        show(TopLevel.MOVIES, update = update) { VodScreen(moviesPath, VodActions()) }
+        compose.onNodeWithTag("lastUpdate").assertIsDisplayed()
+            .assert(hasText(updated, substring = true)).assert(hasText(update.name, substring = true))
+        val lines = playlistLineLayouts()
+        assertEquals("the playlist, then when it was updated", 2, lines.size)
+        lines.forEach { line ->
+            val text = line.layoutInput.text.text
+            assertTrue("\"$text\" is cut short", !line.isLineEllipsized(0) && !line.hasVisualOverflow)
+            assertTrue("\"$text\" is narrower than its words", line.size.width + 0.5f >= line.multiParagraph.intrinsics.maxIntrinsicWidth)
+        }
+        assertEquals(categories, pillName())
+        val note = bounds("lastUpdate")
+        val pill = bounds("categoryFilter")
+        val search = bounds("tabSearch")
+        if (compose.activity.resources.configuration.layoutDirection == android.util.LayoutDirection.RTL) {
+            assertTrue("the pill after the line", pill.right <= note.left + 0.5.dp)
+            assertTrue("Search after the pill", search.right <= pill.left + 0.5.dp)
+        } else {
+            assertTrue("the pill after the line", note.right <= pill.left + 0.5.dp)
+            assertTrue("Search after the pill", pill.right <= search.left + 0.5.dp)
+        }
+    }
+
+    @Test
+    fun thePlaylistLineStaysWholeBesideTheCategoriesPill() = assertThePlaylistLineIsWholeBesideThePill("Updated 12 minutes ago", "Categories")
+
+    @Test
+    @Config(qualifiers = "+fr")
+    fun thePlaylistLineStaysWholeBesideTheCategoriesPillInFrench() = assertThePlaylistLineIsWholeBesideThePill("Mis à jour il y a 12 minutes", "Catégories")
+
+    @Test
+    @Config(qualifiers = "+ar-rSA")
+    fun thePlaylistLineStaysWholeBesideTheCategoriesPillInArabic() = assertThePlaylistLineIsWholeBesideThePill("حُدّثت", "الفئات")
 
     /** A category's titles: the pill names it, and its picker opens on it. */
     @Test

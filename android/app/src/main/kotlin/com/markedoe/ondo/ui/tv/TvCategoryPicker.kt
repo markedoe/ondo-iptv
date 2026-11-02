@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,8 +46,10 @@ import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.LayoutDirection
@@ -54,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.Icon
+import androidx.tv.material3.LocalTextStyle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -102,6 +106,8 @@ const val CATEGORIES_TAG = "categoryFilter"
 
 /**
  * The top bar's Categories pill: the category shown, or Categories; OK opens the picker ([onOpen], [TvCategoryPicker]).
+ * It takes the room the bar leaves it after the playlist's line: short of room for its whole label, it shows the
+ * category shown cut short, or its icon alone (named for TalkBack).
  */
 @Composable
 internal fun TvCategoriesPill(
@@ -113,35 +119,48 @@ internal fun TvCategoriesPill(
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
-    Surface(
-        onClick = onOpen,
-        modifier = modifier
-            .focusRequester(requester)
-            .focusProperties {
-                canFocus = shown
-                down = below()
+    val name = choice.selected?.name ?: stringResource(R.string.categories)
+    val style = LocalTextStyle.current.copy(fontSize = 14.sp)
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    BoxWithConstraints {
+        val labelRoom = minOf(PILL_TEXT_WIDTH, maxWidth - PILL_ICON_WIDTH - PILL_LABEL_GAP)
+        val whole = with(density) { measurer.measure(name, style, maxLines = 1).size.width.toDp() }
+        // Categories shows whole or not at all; a category's name may be cut short, down to a few letters.
+        val label = name.takeIf { whole <= labelRoom || (choice.selected != null && labelRoom >= PILL_SHORTEST_LABEL) }
+        Surface(
+            onClick = onOpen,
+            modifier = modifier
+                .focusRequester(requester)
+                .focusProperties {
+                    canFocus = shown
+                    down = below()
+                }
+                .then(if (label == null) Modifier.semantics { contentDescription = name } else Modifier)
+                .testTag(CATEGORIES_TAG),
+            shape = ClickableSurfaceDefaults.shape(CircleShape),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = OndoColors.SurfaceHigh,
+                contentColor = colors.onBackground.copy(alpha = 0.86f),
+                focusedContainerColor = colors.onBackground,
+                focusedContentColor = colors.background,
+                pressedContainerColor = colors.onBackground,
+                pressedContentColor = colors.background,
+            ),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
+        ) {
+            Row(Modifier.padding(start = PILL_START, end = PILL_END, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(PILL_ICON))
+                if (label != null) {
+                    Text(
+                        label,
+                        style = style,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(start = PILL_LABEL_GAP).widthIn(max = labelRoom).testTag("categoryFilterLabel"),
+                    )
+                }
             }
-            .testTag(CATEGORIES_TAG),
-        shape = ClickableSurfaceDefaults.shape(CircleShape),
-        colors = ClickableSurfaceDefaults.colors(
-            containerColor = OndoColors.SurfaceHigh,
-            contentColor = colors.onBackground.copy(alpha = 0.86f),
-            focusedContainerColor = colors.onBackground,
-            focusedContentColor = colors.background,
-            pressedContainerColor = colors.onBackground,
-            pressedContentColor = colors.background,
-        ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
-    ) {
-        Row(Modifier.padding(start = 12.dp, end = 14.dp, top = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.FilterList, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(
-                choice.selected?.name ?: stringResource(R.string.categories),
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(start = 6.dp).widthIn(max = PILL_TEXT_WIDTH).testTag("categoryFilterLabel"),
-            )
         }
     }
 }
@@ -257,9 +276,21 @@ private val TRAPPED_DIRECTIONS = setOf(FocusDirection.Up, FocusDirection.Down, F
 /** How many frames the picker waits for its panel to take the focus. */
 private const val PICKER_FOCUS_FRAMES = 10
 
-/** The widest a category's name shows on the pill: the playlist's line keeps its room. */
+/** The widest a category's name shows on the pill. */
 private val PILL_TEXT_WIDTH = 180.dp
+
+/** The narrowest a category's name shows on the pill, cut short; narrower, the pill shows its icon alone. */
+private val PILL_SHORTEST_LABEL = 40.dp
+
+private val PILL_START = 12.dp
+private val PILL_END = 14.dp
+private val PILL_ICON = 18.dp
+private val PILL_LABEL_GAP = 6.dp
+
+/** The Categories pill's width with its icon alone: the least the top bar leaves it. */
+internal val PILL_ICON_WIDTH = PILL_START + PILL_ICON + PILL_END
 
 private val PICKER_WIDTH = 300.dp
 private val PICKER_GAP = 8.dp
 private val PICKER_SHAPE = RoundedCornerShape(14.dp)
+

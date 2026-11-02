@@ -5,7 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -292,7 +295,7 @@ fun TvNavigationFrame(
                     .focusGroup()
                     .selectableGroup()
                     .testTag("topBar"),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(BAR_GAP),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Ondo's mark and name, then the tabs; Search and Settings at the far end.
@@ -320,47 +323,57 @@ fun TvNavigationFrame(
                         }
                     }
                 }
-                // A tab about to open: a small spinner after the tabs.
-                Box(Modifier.padding(start = 10.dp).size(18.dp), contentAlignment = Alignment.Center) {
+                // The playlist's line, then the tab's categories (Up from the rows reaches the bar, Right along it), in
+                // the room the tabs leave before Search and Settings. The line keeps its whole width (up to a cap):
+                // the gap after the tabs gives way first, then the Categories pill ([TvCategoriesPill] shrinks to its
+                // icon), never the line.
+                BoxWithConstraints(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                    // A tab about to open: a small spinner after the tabs, in the gap (it takes no room of its own).
                     if (openingTab != null) {
-                        androidx.compose.material3.CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(16.dp).testTag("tabOpening"),
-                        )
-                    }
-                }
-                // The note takes only the room left once Search and Settings have theirs (it is cut short, never them).
-                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    bar.note?.let { note ->
-                        // One line each (the playlist, then when it was updated): a long name is cut short, never
-                        // the update, which stays whole and readable.
-                        Column(
-                            horizontalAlignment = Alignment.End,
-                            modifier = Modifier.widthIn(max = 360.dp).padding(start = 12.dp, end = 12.dp).semantics(mergeDescendants = true) {}.testTag("lastUpdate"),
-                        ) {
-                            note.lines().forEach { line ->
-                                Text(
-                                    line,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
+                        Box(Modifier.align(Alignment.CenterStart).padding(start = 10.dp).size(18.dp), contentAlignment = Alignment.Center) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.8f),
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(16.dp).testTag("tabOpening"),
+                            )
                         }
                     }
-                }
-                // The tab's categories, after the playlist's line: Up from the rows reaches the bar, Right along it.
-                categories?.let { choice ->
-                    TvCategoriesPill(
-                        choice,
-                        shown,
-                        requester(CATEGORIES_TAG),
-                        ::below,
-                        onOpen = { picking = true },
-                        modifier = Modifier.onGloballyPositioned { pillCoordinates = it },
-                    )
+                    val noteWidth = if (categories == null) NOTE_WIDTH else minOf(NOTE_WIDTH_BESIDE_PILL, maxWidth - PILL_ICON_WIDTH - BAR_GAP)
+                    Row(horizontalArrangement = Arrangement.spacedBy(BAR_GAP), verticalAlignment = Alignment.CenterVertically) {
+                        bar.note?.let { note ->
+                            // One line each (the playlist, then when it was updated), at their natural width: only a
+                            // name longer than the cap is cut short.
+                            Column(
+                                horizontalAlignment = Alignment.End,
+                                modifier = Modifier
+                                    .widthIn(max = maxOf(0.dp, noteWidth))
+                                    .padding(start = if (categories == null) 12.dp else 8.dp, end = if (categories == null) 12.dp else 4.dp)
+                                    .width(IntrinsicSize.Max)
+                                    .semantics(mergeDescendants = true) {}
+                                    .testTag("lastUpdate"),
+                            ) {
+                                note.lines().forEach { line ->
+                                    Text(
+                                        line,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+                        categories?.let { choice ->
+                            TvCategoriesPill(
+                                choice,
+                                shown,
+                                requester(CATEGORIES_TAG),
+                                ::below,
+                                onOpen = { picking = true },
+                                modifier = Modifier.onGloballyPositioned { pillCoordinates = it },
+                            )
+                        }
+                    }
                 }
                 BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)
                 BarIcon(stringResource(R.string.settings), Icons.Rounded.Settings, shown, SETTINGS_TAG, requester(SETTINGS_TAG), ::below, onSettings)
@@ -407,6 +420,13 @@ fun TvNavigationFrame(
         }
     }
 }
+
+/** The space between the bar's items. */
+private val BAR_GAP = 4.dp
+
+/** The widest the playlist's line shows on Home, and beside the Categories pill on the Movies and Series tabs. */
+private val NOTE_WIDTH = 360.dp
+private val NOTE_WIDTH_BESIDE_PILL = 220.dp
 
 /** How much of the bar's lower edge the black band behind it takes to fade out. */
 private val BAND_FADE = 12.dp
