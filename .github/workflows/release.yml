@@ -12,7 +12,7 @@ on:
         description: "What to deliver (builds: iOS and macOS without the listing, what a push to main sends to TestFlight)"
         type: choice
         default: all
-        options: [all, builds, ios, mac, metadata, metadata-ios, metadata-mac, release, submit, status]
+        options: [all, builds, ios, mac, metadata, metadata-ios, metadata-mac, release, submit, status, withdraw-ios, withdraw-mac]
       edition:
         description: "testflight: with downloads, for testers only; app-store: without downloads, the build to submit"
         type: choice
@@ -107,7 +107,7 @@ jobs:
         id: ci
         # A TestFlight edition build (a push to main through deliver.yml) of a commit CI passed: CI already ran the core
         # tests on it, on Linux and macOS. The App Store edition, the one submitted for review, always runs them here.
-        if: env.TARGET != 'status' && env.EDITION == 'testflight'
+        if: env.TARGET != 'status' && !startsWith(env.TARGET, 'withdraw') && env.EDITION == 'testflight'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -120,11 +120,11 @@ jobs:
             echo "No successful CI run on $GITHUB_SHA: the core tests run here."
           fi
       - name: Core tests
-        if: env.TARGET != 'status' && steps.ci.outputs.passed != 'true'
+        if: env.TARGET != 'status' && !startsWith(env.TARGET, 'withdraw') && steps.ci.outputs.passed != 'true'
         working-directory: Packages/IPTVCore
         run: swift test --parallel
       - name: Demo playlist answers
-        if: env.TARGET != 'status'
+        if: env.TARGET != 'status' && !startsWith(env.TARGET, 'withdraw')
         # App Review taps "Try the demo": if the public list moved or broke, the review fails for a reason
         # no test sees. The address is read from the app's code.
         run: |
@@ -261,6 +261,16 @@ jobs:
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: bundle exec fastlane status
+      - name: Withdraw from App Review
+        # The user's decision, run by hand: removes this platform's submission (waiting, in review or with unresolved
+        # issues) from App Review. Uploads, submits and changes nothing else.
+        if: startsWith(env.TARGET, 'withdraw')
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          if [ "$TARGET" = withdraw-ios ]; then bundle exec fastlane ios withdraw; else bundle exec fastlane mac withdraw; fi
       - name: Build log
         if: failure()
         # Printed in the job log, where GitHub masks the secrets (an uploaded file would not be masked).

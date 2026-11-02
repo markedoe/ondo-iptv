@@ -384,6 +384,11 @@ platform :ios do
     submit_for_review("ios")
   end
 
+  desc "Withdraw the iOS submission from App Review (the user's decision), nothing else"
+  lane :withdraw do
+    withdraw_from_review("ios")
+  end
+
   desc "Version tag: listing, App Store edition build BUILD_NUMBER and submission for App Review (SUBMIT=true)"
   lane :release do
     release_for_review("ios", "ios")
@@ -413,6 +418,11 @@ platform :mac do
   desc "Submit the App Store edition build BUILD_NUMBER of this version for App Review"
   lane :submit do
     submit_for_review("osx")
+  end
+
+  desc "Withdraw the macOS submission from App Review (the user's decision), nothing else"
+  lane :withdraw do
+    withdraw_from_review("osx")
   end
 
   desc "Version tag: listing, App Store edition build BUILD_NUMBER and submission for App Review (SUBMIT=true)"

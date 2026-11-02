@@ -162,6 +162,8 @@ réseau, fichiers choisis par l'utilisateur).
      si iOS échoue (deux versions indépendantes). Ensuite l'édition TestFlight du tag est reconstruite pour les
      testeurs, sauf si un autre lancement de *Release* attend déjà (celui d'un tag plus récent, les builds d'un
      push) : il n'est pas remplacé. Le même tag envoie Android en test fermé (RELEASE-ANDROID.fr.md).
+   - **Retrait de l'examen** (décision de l'utilisateur) : *Actions → Release → Run workflow*, cible `withdraw-ios` ou
+     `withdraw-mac` : retire la soumission de cette plateforme de l'App Review, sans rien changer d'autre.
    - **Répétition** : *Actions → Release → Run workflow*, cible `release`, `submit` décoché (par défaut) : les
      builds de l'édition App Store et la fiche, sans la soumission.
 

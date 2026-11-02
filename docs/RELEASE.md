@@ -163,6 +163,8 @@ user-selected files).
      released even when iOS fails (two independent versions). Then the TestFlight edition of the tag is built again
      for the testers, unless another *Release* run is already waiting (a newer tag's, a push's builds): it is not
      replaced. The same tag sends Android to closed testing (RELEASE-ANDROID.md).
+   - **Withdraw from review** (the user's decision): *Actions → Release → Run workflow*, target `withdraw-ios` or
+     `withdraw-mac`: removes that platform's submission from App Review and changes nothing else.
    - **Rehearsal**: *Actions → Release → Run workflow*, target `release`, `submit` off (the default): the App
      Store edition builds and the listing, without the submission.
 
