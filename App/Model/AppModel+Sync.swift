@@ -31,11 +31,14 @@ struct SyncState: Codable, Equatable {
     /// Milliseconds since 1970, by device ID: the last session with each device. Deletions stay until each device seen
     /// in the last year has had a session after them (`SyncSnapshot.pruned`).
     var peers: [String: Int64] = [:]
+    /// Milliseconds since 1970, by deleted key: when this device learned a deletion made elsewhere (kept from then).
+    var learned: [String: Int64] = [:]
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, people, listPeople, deleted, replaced, lastSyncedAt, peers
+        case learned
     }
 
     init(from decoder: Decoder) throws {
@@ -50,15 +53,17 @@ struct SyncState: Codable, Equatable {
         replaced = (try? c.decodeIfPresent([String: String].self, forKey: .replaced)) ?? [:]
         lastSyncedAt = try? c.decodeIfPresent(Int64.self, forKey: .lastSyncedAt)
         peers = (try? c.decodeIfPresent([String: Int64].self, forKey: .peers)) ?? [:]
+        learned = (try? c.decodeIfPresent([String: Int64].self, forKey: .learned)) ?? [:]
     }
 
     /// Without deletions older than the spec keeps them (180 days, and until each device seen in the last year has had
     /// a session after them), nor the replacements they ended, nor the devices not seen for a year.
     func pruned(now: Date) -> SyncState {
         let kept = SyncSnapshot(device: deviceID, deleted: deleted, replaced: replaced)
-            .pruned(now: now.syncMilliseconds, sessions: Array(peers.values))
+            .pruned(now: now.syncMilliseconds, sessions: Array(peers.values), learned: learned)
         var copy = self
         copy.deleted = kept.deleted
+        copy.learned = learned.filter { kept.deleted[$0.key] != nil }
         copy.replaced = kept.replaced
         let forgotten = now.syncMilliseconds - Int64(SyncSnapshot.peersKeptDays) * 86_400_000
         copy.peers = peers.filter { $0.value >= forgotten }
@@ -137,7 +142,8 @@ enum SyncMapping {
             replaced: state.replaced,
             clock: now.syncMilliseconds
         )
-        return snapshot.pruned(now: now.syncMilliseconds, sessions: Array(state.peers.values))
+        return snapshot.clampingFuture(now: now.syncMilliseconds)
+            .pruned(now: now.syncMilliseconds, sessions: Array(state.peers.values), learned: state.learned)
     }
 
     /// The people of each list of `snapshot` that has any, by list ID: kept to be sent with the list again.
@@ -488,8 +494,11 @@ extension AppModel {
     /// their catalogue downloaded), changed ones updated, deleted ones removed, My List, favourite channels, lists and
     /// progress replaced, and the TMDb key saved or removed. Merged again with the current state first, so nothing
     /// changed during the session is lost (and an answer without keys removes none).
-    func applySync(_ received: SyncSnapshot, now: Date = Date()) async {
-        guard isReady, syncsThisProfile else { return }
+    /// Returns whether the library was applied: not when this device does not sync now (another profile), nor when its
+    /// data kept changing during the merge (the next session merges then).
+    @discardableResult
+    func applySync(_ received: SyncSnapshot, now: Date = Date()) async -> Bool {
+        guard isReady, syncsThisProfile else { return false }
         // The times received put on this device's clock first (docs/SYNC.md, "Clocks"). Merged off the main actor: the
         // merge that is kept is the one with the data as it is at the end (below), on the main actor.
         let local = syncSnapshot(now: now)
@@ -527,36 +536,76 @@ extension AppModel {
             let replacement = replacementID(of: id, in: merged).flatMap { newID in
                 playlists.first { $0.id.uuidString.lowercased() == newID }
             }
-            if let replacement { carryDeviceSettings(from: local.id, to: replacement.id) }
+            if let replacement {
+                carryDeviceSettings(from: local.id, to: replacement.id)
+                // The same account under another ID keeps its catalogue, guide and details: nothing is downloaded again.
+                cacheStore.move(name: "content-\(local.id.uuidString)", to: "content-\(replacement.id.uuidString)")
+                cacheStore.move(name: "epg-\(local.id.uuidString)", to: "epg-\(replacement.id.uuidString)")
+                await storedDetailsWrite?.value
+                cacheStore.move(name: DetailsArchive.documentName(for: local.id), to: DetailsArchive.documentName(for: replacement.id))
+            }
             if let replacement, activePlaylist?.id == local.id {
                 updateSettings { $0.activePlaylistID = replacement.id }
                 await deletePlaylist(local, recordsSyncDeletion: false)
-                await activate(replacement)
+                // Nothing is reloaded under the player: the catalogue follows once playback ends (`endSession`).
+                if sessions.isEmpty { await activate(replacement) } else { activationAfterPlayback = replacement.id }
             } else {
                 await deletePlaylist(local, recordsSyncDeletion: false)
             }
         }
 
-        // The library, merged again with what changed while the playlists were applied. Not when another profile was
-        // opened meanwhile: its library is not the one that synced.
-        guard syncsThisProfile else {
-            saveSyncState()
-            return
+        // The library, merged again with what changed while the playlists were applied, off the main actor; kept only
+        // if nothing it read changed meanwhile, else merged again (the next session merges after a few tries). Not when
+        // another profile was opened meanwhile: its library is not the one that synced.
+        var outcome: (latest: SyncSnapshot, library: UserLibrary, parked: [String: HistoryEntry])?
+        for _ in 0..<Self.syncMergeTries {
+            guard syncsThisProfile else { break }
+            let (base, bases, state, tmdbKey, playing) = (library, playlists, syncState, secrets.get(Keychain.tmdbKey), playingKeys)
+            let name = Self.syncDeviceName
+            let result = await Task.detached(priority: .utility) { () -> (SyncSnapshot, UserLibrary, [String: HistoryEntry]) in
+                let current = SyncMapping.snapshot(playlists: bases, library: base, state: state, tmdbKey: tmdbKey, deviceName: name, now: now)
+                let latest = SyncMerge.merge(current, merged)
+                let kept = SyncMapping.keepingPlayback(SyncMapping.library(base, applying: latest), local: base, playing: playing)
+                return (latest, kept.library, kept.parked)
+            }.value
+            if syncsThisProfile, library == base, playlists == bases, syncState == state, playingKeys == playing {
+                outcome = result
+                break
+            }
         }
-        let latest = SyncMerge.merge(syncSnapshot(), merged)
+        guard let outcome else {
+            saveSyncState()
+            return false
+        }
         // The items playing here keep their entry as the player left it; what came for them waits for playback to end.
-        let kept = SyncMapping.keepingPlayback(SyncMapping.library(library, applying: latest), local: library, playing: playingKeys)
-        parkedProgress.merge(kept.parked) { _, received in received }
-        let applied = kept.library
-        if applied != library { updateLibrary { $0 = applied } }
+        parkedProgress.merge(outcome.parked) { _, received in received }
+        if outcome.library != library { updateLibrary { $0 = outcome.library } }
         applyParkedProgress()
+        let latest = outcome.latest
         applySyncedKeys(latest)
         syncState.people = latest.people
         syncState.listPeople = SyncMapping.listPeople(latest)
+        let time = now.syncMilliseconds
+        syncState.learned = latest.deleted.reduce(into: [:]) { learned, entry in
+            if let known = syncState.learned[entry.key] {
+                learned[entry.key] = known
+            } else if syncState.deleted[entry.key] == nil {
+                learned[entry.key] = time
+            }
+        }
         syncState.deleted = latest.deleted
         syncState.replaced = latest.replaced
-        syncState.lastSyncedAt = now.syncMilliseconds
-        syncState.peers[received.device.lowercased()] = now.syncMilliseconds
+        syncState.lastSyncedAt = time
+        saveSyncState()
+        return true
+    }
+
+    /// Merges of the library in the background before giving up until the next session, when the data keeps changing.
+    static let syncMergeTries = 3
+
+    /// A session with `device` worked: deletions are kept until each device has had a session after them.
+    func noteSyncSession(with device: String, now: Date = Date()) {
+        syncState.peers[device.lowercased()] = now.syncMilliseconds
         saveSyncState()
     }
 

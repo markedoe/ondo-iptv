@@ -168,6 +168,35 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertTrue(model.syncSnapshot().people.isEmpty)
     }
 
+    /// A session counts only when its answer was applied: on another profile nothing is, and the caller is told so
+    /// (it then keeps sending everything until one is).
+    func testAnAnswerNotAppliedIsReportedAsSuch() async throws {
+        let model = try await device("first")
+        let person = SyncPerson(name: "Ada Example", addedAt: Date().syncMilliseconds - 1_000)
+        let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
+        model.switchProfile(to: kid)
+        let skipped = await model.applySync(SyncSnapshot(device: "tv", people: [person]))
+        XCTAssertFalse(skipped)
+        model.switchProfile(to: try XCTUnwrap(model.profiles.first { $0.id == Profile.defaultID }))
+        let applied = await model.applySync(SyncSnapshot(device: "tv", people: [person]))
+        XCTAssertTrue(applied)
+        XCTAssertEqual(model.syncSnapshot().people, [person])
+    }
+
+    /// Times stamped while the clock ran ahead go out on the clock; a deletion learned late is kept from then.
+    func testOwnTimesAheadAreSentOnTheClockAndLateDeletionsAreKept() async throws {
+        let model = try await device("first")
+        let now = Date()
+        let year: Int64 = 365 * 86_400_000
+        let learnedLate = "favorite:" + UUID().uuidString.lowercased() + "|movie|m1"
+        let applied = await model.applySync(SyncSnapshot(device: "tv", people: [SyncPerson(name: "Ada", addedAt: now.syncMilliseconds - 1_000)],
+                                                         deleted: [learnedLate: now.syncMilliseconds - 250 * 86_400_000]), now: now)
+        XCTAssertTrue(applied)
+        XCTAssertNotNil(model.syncSnapshot(now: now.addingTimeInterval(86_400)).deleted[learnedLate], "kept from when it was learned")
+        model.syncState.people = [SyncPerson(name: "Bea", addedAt: now.syncMilliseconds + year)]
+        XCTAssertEqual(model.syncSnapshot(now: now).people.map(\.addedAt), [now.syncMilliseconds])
+    }
+
     func testTheTMDbKeyTravelsAndSoDoesItsRemoval() async throws {
         let first = try await device("first")
         let second = try await device("second")

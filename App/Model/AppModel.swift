@@ -141,6 +141,8 @@ final class AppModel {
     /// Where other devices left an item playing here, received during its playback (by `playbackKey`): applied once
     /// it no longer plays, when it is the later (`applyParkedProgress`).
     @ObservationIgnored var parkedProgress: [String: HistoryEntry] = [:]
+    /// The playlist sync made the one in use while something played: opened once playback ends (`endSession`).
+    @ObservationIgnored var activationAfterPlayback: UUID?
 
     @ObservationIgnored private let libraryWriter: LibraryWriter
     /// What `bootstrap()` read from disk, before sync or the viewer changed anything (the diagnostic report).
