@@ -5,14 +5,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
+import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -36,6 +40,7 @@ import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -122,7 +127,11 @@ class TvScreenshots {
     @Test
     fun moviesWithMyListFocused() {
         moviesTab()
-        focusFirstCard("shelfMyList")
+        // My List is below Continue watching, off the screen: the remote goes down to it.
+        focusFirstCard("shelfResume")
+        compose.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionDown) }
+        advance()
+        assertTrue("a card of My List has the focus", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfMyList"))).fetchSemanticsNodes().isNotEmpty())
         capture("movies-my-list")
     }
 
