@@ -144,8 +144,12 @@ ajoutée ou modifiée).
 
 **Progression** — `{"playlist", "kind": "movie" | "series", "item", "episode"?, "title", "subtitle"?, "image"?,
 "position", "duration", "watchedAt"}`. `item` est le film ou la série, `episode` l’épisode d’une série ;
-`position` et `duration` sont des secondes (nombres). Un titre est terminé (vu) à 95 % de sa durée, ou quand il
-en reste 10 minutes ou moins une fois les trois quarts vus ; sans durée connue, jamais. Clé :
+`position` et `duration` sont des secondes (nombres). Un titre est terminé (vu) dès que la lecture atteint son
+générique de fin, quand le fichier a un chapitre pour lui dans son dernier quart (nommé « Credits », « Générique »,
+« Abspann », « Créditos »…) ; sinon à 95 % de sa durée, ou quand il en reste 10 minutes ou moins une fois les trois
+quarts vus ; sans durée connue, jamais. Le début du générique ne se synchronise pas : chaque appareil garde ce que son
+propre lecteur a lu dans le fichier (Apple : chapitres MP4 et MOV, chapitres MKV, VLC ; Android : chapitres MP4, que
+Media3 lit, aucun pour le MKV). Un appareil qui n’a jamais lu le fichier en juge par la règle du temps. Clé :
 `progress:<playlist>|<kind>|<item>|<épisode ou vide>` ; instant : `watchedAt`.
 
 **Liste** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],

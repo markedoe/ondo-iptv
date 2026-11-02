@@ -41,12 +41,14 @@ data class WatchEntry(
     val position: Double = 0.0,
     val duration: Double = 0.0,
     val lastWatchedAt: Long,
+    /** Where the file's end credits start (seconds), from its chapters; null when not known. Not synced. */
+    val creditsStart: Double? = null,
 ) {
     /** Identifies the exact playable thing (episode level for series). */
     val key: String get() = "$playlistId|$kind|$itemId|${episodeId.orEmpty()}"
     val progress: Double get() = if (duration > 0) (position / duration).coerceIn(0.0, 1.0) else 0.0
     /** Watched, by the shared rule of [HistoryEntry.isFinished]: movies and episodes alike. */
-    val isFinished: Boolean get() = kind != ItemKind.CHANNEL && HistoryEntry.isFinished(position, duration)
+    val isFinished: Boolean get() = kind != ItemKind.CHANNEL && HistoryEntry.isFinished(position, duration, creditsStart)
     val isResumable: Boolean get() = kind != ItemKind.CHANNEL && position > 30 && !isFinished
     val minutesLeft: Int get() = (((duration - position).coerceAtLeast(0.0)) / 60).toInt()
 }
@@ -147,12 +149,25 @@ data class LibraryState(
         val updated = entry.copy(
             position = existing?.position ?: entry.position,
             duration = existing?.duration?.takeIf { it > 0 } ?: entry.duration,
+            // The file's chapters stay the same: keep where its end credits start.
+            creditsStart = entry.creditsStart ?: existing?.creditsStart,
         )
         return copy(history = listOf(updated) + history.filterNot { it.key == entry.key }).trimmed()
     }
 
-    fun updateProgress(key: String, position: Double, duration: Double, now: Long): LibraryState =
-        copy(history = history.map { if (it.key == key) it.copy(position = position.coerceAtLeast(0.0), duration = if (duration > 0) duration else it.duration, lastWatchedAt = now) else it })
+    /** [creditsStart]: where the end credits start, when the player found them in the file's chapters; null keeps the one known. */
+    fun updateProgress(key: String, position: Double, duration: Double, now: Long, creditsStart: Double? = null): LibraryState =
+        copy(
+            history = history.map {
+                if (it.key != key) return@map it
+                it.copy(
+                    position = position.coerceAtLeast(0.0),
+                    duration = if (duration > 0) duration else it.duration,
+                    lastWatchedAt = now,
+                    creditsStart = creditsStart?.takeIf { start -> start.isFinite() && start > 0 } ?: it.creditsStart,
+                )
+            },
+        )
 
     fun progress(key: String): WatchEntry? = history.firstOrNull { it.key == key }
 

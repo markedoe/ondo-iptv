@@ -218,6 +218,8 @@ object SyncData {
             val kind = SyncKeys.itemKind(synced.kind) ?: return@mapNotNull null
             Favorite(local(synced.playlist), kind, synced.item, synced.title, synced.image, synced.addedAt)
         }.filter { it.playlistId !in filePlaylists } + people(merged.people)
+        // Where the end credits start does not sync: each device keeps what its player read in the file's chapters.
+        val creditsStarts = library.history.mapNotNull { entry -> entry.creditsStart?.let { entry.key to it } }.toMap()
         val history = library.history.filter { !SyncKeys.syncs(it) || it.playlistId in filePlaylists } + merged.progress.mapNotNull { synced ->
             val kind = SyncKeys.itemKind(synced.kind)?.takeIf { it != ItemKind.CHANNEL } ?: return@mapNotNull null
             WatchEntry(
@@ -231,7 +233,7 @@ object SyncData {
                 position = synced.position,
                 duration = synced.duration,
                 lastWatchedAt = synced.watchedAt,
-            )
+            ).let { entry -> entry.copy(creditsStart = creditsStarts[entry.key]) }
         }.filter { it.playlistId !in filePlaylists }
         val localItems = library.collections.flatMap { it.items }.associateBy { "${it.playlistId.lowercase()}|${SyncKeys.kind(it.kind)}|${it.itemId}" }
         // The device's own list IDs, whatever their case (the first of each, as a search in order would find).

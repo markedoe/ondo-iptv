@@ -759,6 +759,31 @@ class SyncDataTest {
         assertTrue(applied.library.favorites.any { it.playlistId == "P1" && it.itemId == "m1" })
     }
 
+    /** Where the end credits start stays on the device that read it: a snapshot applied keeps it and brings none. */
+    @Test
+    fun theEndCreditsStartStaysOnTheDevice() {
+        val online = SavedPlaylist("P1", "Home", "http://provider.example.com/list.m3u", addedAt = 1)
+        val state = OndoState(
+            isReady = true,
+            playlists = listOf(online),
+            library = LibraryState(
+                history = listOf(
+                    WatchEntry("P1", ItemKind.MOVIE, "m1", title = "Quiet Water", position = 60.0, duration = 7_200.0, lastWatchedAt = 8, creditsStart = 6_300.0),
+                ),
+            ),
+        )
+        val snapshot = SyncData.snapshot(state, "device", "TV", now = 10)
+        val moved = snapshot.progress.map { it.copy(position = 6_300.0, watchedAt = 20) } +
+            SyncProgress("p1", "movie", "m2", title = "Glass City", position = 6_300.0, duration = 7_200.0, watchedAt = 21)
+        val applied = SyncData.apply(state, SyncSnapshot(device = "other", playlists = snapshot.playlists, progress = moved)).library
+        val quiet = applied.history.single { it.itemId == "m1" }
+        assertEquals(6_300.0, quiet.creditsStart!!, 0.0)
+        assertTrue("watched at the credits read here", quiet.isFinished)
+        val glass = applied.history.single { it.itemId == "m2" }
+        assertNull(glass.creditsStart)
+        assertFalse("15 minutes left, no chapter known here", glass.isFinished)
+    }
+
     /**
      * A snapshot of many lists, or of many records of playlists this device does not know, is applied and sent again
      * in one pass: sync runs on the main thread, and the next session works on everything the first one kept.

@@ -183,6 +183,20 @@ class LibraryStateTest {
         assertTrue(watched.progress(entry("m1").key)!!.isFinished)
     }
 
+    /** Watched once the end credits start, when the file's chapters say where; kept by a progress or a start without it. */
+    @Test
+    fun watchedAtTheEndCredits() {
+        val watching = LibraryState().recordStart(entry("m1").copy(position = 6_000.0, duration = 7_200.0))
+            .updateProgress(entry("m1").key, 6_000.0, 7_200.0, now = 1, creditsStart = 6_300.0)
+        assertEquals(listOf("m1"), watching.continueWatching("p1").map { it.itemId })
+        val later = watching.updateProgress(entry("m1").key, 6_200.0, 7_200.0, now = 2).recordStart(entry("m1"))
+        assertEquals(6_300.0, later.progress(entry("m1").key)!!.creditsStart!!, 0.0)
+        val watched = later.updateProgress(entry("m1").key, 6_300.0, 7_200.0, now = 3)
+        assertEquals("watched at the credits", emptyList<WatchEntry>(), watched.continueWatching("p1"))
+        assertEquals(setOf("m1"), watched.finishedMovies("p1"))
+        assertFalse("no chapter: 15 minutes left", entry("m2").copy(position = 6_300.0, duration = 7_200.0).isFinished)
+    }
+
     /** "Hide watched movies": a movie of this playlist watched (see [WatchEntry.isFinished]), never an episode or a channel. */
     @Test
     fun finishedMoviesAreThisPlaylistsMoviesWatchedToTheEnd() {

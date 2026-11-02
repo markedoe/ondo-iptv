@@ -91,6 +91,7 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.common.TrackSelectionParameters
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
 import androidx.media3.datasource.DataSource
@@ -107,6 +108,7 @@ import androidx.media3.exoplayer.SeekParameters
 import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
+import androidx.media3.extractor.metadata.Chapter
 import androidx.media3.session.MediaSession
 import androidx.media3.ui.PlayerView
 import androidx.media3.ui.SubtitleView
@@ -119,6 +121,8 @@ import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.net.DEFAULT_IPTV_USER_AGENT
+import com.markedoe.ondo.core.playback.CreditsChapter
+import com.markedoe.ondo.core.playback.MediaChapter
 import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.PlaybackHealth
@@ -1381,8 +1385,21 @@ class PlayerActivity : ComponentActivity() {
         val duration = exoPlayer.duration
         if (duration == C.TIME_UNSET || duration <= 0) return
         val position = if (ended) duration else exoPlayer.currentPosition
-        (application as OndoApplication).repository.recordProgress(key, position / 1000.0, duration / 1000.0)
+        val creditsStart = CreditsChapter.start(chapters(exoPlayer.currentTracks), duration / 1000.0)
+        (application as OndoApplication).repository.recordProgress(key, position / 1000.0, duration / 1000.0, creditsStart)
     }
+
+    /**
+     * The file's chapters, as Media3 reads them into its tracks' formats: an MP4 film's (Nero or QuickTime chapters).
+     * Media3 reads no chapters from MKV files: those are watched by the rule by time.
+     */
+    private fun chapters(tracks: Tracks): List<MediaChapter> =
+        tracks.groups.flatMap { group -> (0 until group.length).mapNotNull { group.getTrackFormat(it).metadata } }
+            .flatMap { metadata -> (0 until metadata.length()).map { metadata.get(it) } }
+            .filterIsInstance<Chapter>()
+            .filter { it.startTimeMs != C.TIME_UNSET && !it.isHidden }
+            .map { MediaChapter(it.title?.value, it.startTimeMs / 1000.0) }
+            .distinct()
 
     /**
      * Picture-in-Picture settings, kept up to date: the video's bounds (the window shrinks from them) and its

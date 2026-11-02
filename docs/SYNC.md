@@ -130,9 +130,13 @@ the playlist address. Key: `playlist:<id>`; time: `updatedAt` (set when the play
 
 **Progress** — `{"playlist", "kind": "movie" | "series", "item", "episode"?, "title", "subtitle"?, "image"?,
 "position", "duration", "watchedAt"}`. `item` is the movie or the series, `episode` the episode of a series;
-`position` and `duration` are seconds (numbers). A title is finished (watched) at 95 % of its duration, or with
-10 minutes or less left once three quarters are seen; with no known duration, never. Key:
-`progress:<playlist>|<kind>|<item>|<episode or empty>`; time: `watchedAt`.
+`position` and `duration` are seconds (numbers). A title is finished (watched) once playback reaches its end credits,
+when the file has a chapter for them in its last quarter (named "Credits", "Générique", "Abspann", "Créditos"…);
+otherwise at 95 % of its duration, or with 10 minutes or less left once three quarters are seen; with no known
+duration, never. Where the credits start is not synced: each device keeps what its own player read in the file
+(Apple: MP4 and MOV chapters, MKV chapters, VLC; Android: MP4 chapters, which Media3 reads, and none for MKV). A device
+that never played the file judges by the rule by time. Key: `progress:<playlist>|<kind>|<item>|<episode or empty>`;
+time: `watchedAt`.
 
 **List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],
 "people": [<person>], "updatedAt", "renamedAt"?, "orderedAt"?}`. Key: `list:<id>`; time: `updatedAt` (set when the

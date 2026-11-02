@@ -1036,8 +1036,9 @@ class OndoRepository(
     fun togglePersonInCollection(id: String, name: String, photoUrl: String?) =
         updateLibrary { library -> stamp().let { time -> library.togglingInCollection(id, Favorite.person(name, photoUrl, time), time) } }
 
-    fun recordProgress(key: String, position: Double, duration: Double) {
-        updateLibrary { it.updateProgress(key, position, duration, stamp()) }
+    /** [creditsStart]: where the end credits start, when the player found them in the file's chapters. */
+    fun recordProgress(key: String, position: Double, duration: Double, creditsStart: Double? = null) {
+        updateLibrary { it.updateProgress(key, position, duration, stamp(), creditsStart) }
     }
 
     /** Takes a "Continue watching" card away: the movie, or the series' episodes in progress. */
