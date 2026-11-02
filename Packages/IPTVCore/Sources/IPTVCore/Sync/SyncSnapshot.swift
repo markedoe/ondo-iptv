@@ -288,6 +288,53 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         return copy
     }
 
+    /// Every time of the snapshot: of the records, of the items and people of the lists, and of the deletions.
+    public var times: [Int64] {
+        var times: [Int64] = []
+        for playlist in playlists { times += [playlist.addedAt, playlist.updatedAt] }
+        times += favorites.map(\.addedAt)
+        times += progress.map(\.watchedAt)
+        for list in lists {
+            times.append(list.updatedAt)
+            if let renamedAt = list.renamedAt { times.append(renamedAt) }
+            if let orderedAt = list.orderedAt { times.append(orderedAt) }
+            times += list.items.compactMap(\.addedAt)
+            times += list.people.map(\.addedAt)
+        }
+        times += people.map(\.addedAt)
+        times += keys.map(\.updatedAt)
+        times += deleted.values
+        return times
+    }
+
+    /// The latest of `times`; nil for a snapshot without any.
+    public var latestTime: Int64? { times.max() }
+
+    /// The same snapshot without the records and deletions dated more than `SyncClock.maxAheadMilliseconds` after
+    /// `wall`, the receiver's own clock (docs/SYNC.md, "Clocks"): one device whose clock is far ahead cannot date its
+    /// changes in the future and win over every later one, nor push the others' clocks there. They are left out, not
+    /// moved: the device that made them keeps them, and they travel once their time has come. A receiver whose clock is
+    /// not set (`SyncClock.isSet`) leaves nothing out. Applied by the device that receives a snapshot, before the merge.
+    public func withoutRecordsAhead(wall: Int64) -> SyncSnapshot {
+        let latest = SyncClock.latestAccepted(wall: wall)
+        guard latest != .max else { return self }
+        func past(_ time: Int64) -> Bool { time <= latest }
+        var copy = self
+        copy.playlists = playlists.filter { past($0.addedAt) && past($0.updatedAt) }
+        copy.favorites = favorites.filter { past($0.addedAt) }
+        copy.progress = progress.filter { past($0.watchedAt) }
+        copy.lists = lists.filter { past($0.updatedAt) && past($0.renamedAt ?? $0.updatedAt) && past($0.orderedAt ?? $0.updatedAt) }.map { list in
+            var list = list
+            list.items = list.items.filter { past($0.addedAt ?? list.updatedAt) }
+            list.people = list.people.filter { past($0.addedAt) }
+            return list
+        }
+        copy.people = people.filter { past($0.addedAt) }
+        copy.keys = keys.filter { past($0.updatedAt) }
+        copy.deleted = deleted.filter { past($0.value) }
+        return copy
+    }
+
     /// Playlist and list IDs in lowercase, as every device writes them, in the records and in the keys of what was
     /// deleted (two keys that become one keep the later time).
     public func normalized() -> SyncSnapshot {

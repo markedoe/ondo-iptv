@@ -158,6 +158,50 @@ data class SyncSnapshot(
         )
     }
 
+    /** Every time of the snapshot: of the records, of the items and people of the lists, and of the deletions. */
+    fun times(): Sequence<Long> = sequence {
+        playlists.forEach { yield(it.addedAt); yield(it.updatedAt) }
+        favorites.forEach { yield(it.addedAt) }
+        progress.forEach { yield(it.watchedAt) }
+        lists.forEach { list ->
+            yield(list.updatedAt)
+            list.renamedAt?.let { yield(it) }
+            list.orderedAt?.let { yield(it) }
+            list.items.forEach { item -> item.addedAt?.let { yield(it) } }
+            list.people.forEach { yield(it.addedAt) }
+        }
+        people.forEach { yield(it.addedAt) }
+        keys.forEach { yield(it.updatedAt) }
+        yieldAll(deleted.values)
+    }
+
+    /** The latest of [times]; null for a snapshot without any. */
+    fun latestTime(): Long? = times().maxOrNull()
+
+    /**
+     * The same snapshot without the records and deletions dated more than [SyncClock.MAX_AHEAD_MS] after [wall], the
+     * receiver's own clock (docs/SYNC.md, "Clocks"): one device whose clock is far ahead cannot date its changes in the
+     * future and win over every later one, nor push the others' clocks there. They are left out, not moved: the device
+     * that made them keeps them, and they travel once their time has come. A receiver whose clock is not set
+     * ([SyncClock.isSet]) leaves nothing out. Applied by the device that receives a snapshot, before the merge.
+     */
+    fun withoutRecordsAhead(wall: Long): SyncSnapshot {
+        val latest = SyncClock.latestAccepted(wall)
+        if (latest == Long.MAX_VALUE) return this
+        fun past(time: Long) = time <= latest
+        return copy(
+            playlists = playlists.filter { past(it.addedAt) && past(it.updatedAt) },
+            favorites = favorites.filter { past(it.addedAt) },
+            progress = progress.filter { past(it.watchedAt) },
+            lists = lists.filter { past(it.updatedAt) && past(it.nameTime) && past(it.orderTime) }.map { list ->
+                list.copy(items = list.items.filter { past(it.addedAt ?: list.updatedAt) }, people = list.people.filter { past(it.addedAt) })
+            },
+            people = people.filter { past(it.addedAt) },
+            keys = keys.filter { past(it.updatedAt) },
+            deleted = deleted.filterValues(::past),
+        )
+    }
+
     companion object {
         const val TYPE = "ondo-sync"
         const val VERSION = 1
