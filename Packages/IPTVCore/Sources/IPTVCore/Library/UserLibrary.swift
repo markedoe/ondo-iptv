@@ -36,6 +36,10 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     public var history: [HistoryEntry]
     /// `playlistID|categoryID`
     public var hiddenCategoryKeys: Set<String>
+    /// `playlistID|categoryID` -> when it was hidden, and when it was shown again: dated markers so that showing a
+    /// category again reaches the other copy in a merge (a key hidden before these dates existed has no date).
+    public var categoryHiddenAt: [String: Date]
+    public var categoryShownAt: [String: Date]
     /// `playlistID|categoryID` locked behind the parental PIN.
     public var lockedCategoryKeys: Set<String>
     public var customLists: [CustomList]
@@ -71,6 +75,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         self.favorites = favorites
         self.history = history
         self.hiddenCategoryKeys = hiddenCategoryKeys
+        self.categoryHiddenAt = [:]
+        self.categoryShownAt = [:]
         self.lockedCategoryKeys = lockedCategoryKeys
         self.customLists = customLists
         self.favoriteTombstones = [:]
@@ -88,7 +94,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case favorites, history, hiddenCategoryKeys, lockedCategoryKeys, customLists
+        case favorites, history, hiddenCategoryKeys, categoryHiddenAt, categoryShownAt, lockedCategoryKeys, customLists
         case favoriteTombstones, historyTombstones, historyClearedAt, deletedListIDs
         case reminders, reminderTombstones, hiddenChannels, unhiddenChannels
         case hiddenCategoryTags, shownCategoryTags, hiddenCategoryWords, shownCategoryWords
@@ -100,6 +106,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         favorites = (try? c.decodeIfPresent([FavoriteEntry].self, forKey: .favorites)) ?? []
         history = (try? c.decodeIfPresent([HistoryEntry].self, forKey: .history)) ?? []
         hiddenCategoryKeys = (try? c.decodeIfPresent(Set<String>.self, forKey: .hiddenCategoryKeys)) ?? []
+        categoryHiddenAt = (try? c.decodeIfPresent([String: Date].self, forKey: .categoryHiddenAt)) ?? [:]
+        categoryShownAt = (try? c.decodeIfPresent([String: Date].self, forKey: .categoryShownAt)) ?? [:]
         lockedCategoryKeys = (try? c.decodeIfPresent(Set<String>.self, forKey: .lockedCategoryKeys)) ?? []
         customLists = (try? c.decodeIfPresent([CustomList].self, forKey: .customLists)) ?? []
         favoriteTombstones = (try? c.decodeIfPresent([String: Date].self, forKey: .favoriteTombstones)) ?? [:]
@@ -237,9 +245,17 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         hiddenCategoryKeys.contains(Self.categoryKey(playlistID: playlistID, categoryID: categoryID))
     }
 
-    public mutating func setHidden(_ hidden: Bool, playlistID: UUID, categoryID: String) {
+    /// Hides or shows a category, dated for a merge with another copy (`merged(with:)`).
+    public mutating func setHidden(_ hidden: Bool, playlistID: UUID, categoryID: String, now: Date = Date()) {
         let key = Self.categoryKey(playlistID: playlistID, categoryID: categoryID)
-        if hidden { hiddenCategoryKeys.insert(key) } else { hiddenCategoryKeys.remove(key) }
+        if hidden {
+            hiddenCategoryKeys.insert(key)
+            categoryHiddenAt[key] = now
+            categoryShownAt[key] = nil
+        } else if hiddenCategoryKeys.remove(key) != nil {
+            categoryHiddenAt[key] = nil
+            categoryShownAt[key] = now
+        }
     }
 
     /// Whether every category carrying this tag is hidden, in all playlists.
@@ -399,7 +415,16 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         result.hiddenCategoryWords = hiddenCategoryWords.merging(other.hiddenCategoryWords) { max($0, $1) }
             .filter { word, hiddenAt in result.shownCategoryWords[word].map { $0 < hiddenAt } ?? true }
 
-        result.hiddenCategoryKeys.formUnion(other.hiddenCategoryKeys)
+        // Hidden on either copy, unless shown again later (a key hidden without a date loses to any later showing).
+        result.categoryShownAt = categoryShownAt.merging(other.categoryShownAt) { max($0, $1) }
+        result.categoryHiddenAt = categoryHiddenAt.merging(other.categoryHiddenAt) { max($0, $1) }
+        let shown = result.categoryShownAt
+        let hiddenAt = result.categoryHiddenAt
+        result.hiddenCategoryKeys = hiddenCategoryKeys.union(other.hiddenCategoryKeys).filter { key in
+            shown[key].map { $0 < (hiddenAt[key] ?? .distantPast) } ?? true
+        }
+        result.categoryHiddenAt = hiddenAt.filter { result.hiddenCategoryKeys.contains($0.key) }
+        result.categoryShownAt = shown.filter { !result.hiddenCategoryKeys.contains($0.key) }
         result.lockedCategoryKeys.formUnion(other.lockedCategoryKeys)
 
         result.deletedListIDs = deletedListIDs.union(other.deletedListIDs)
@@ -471,6 +496,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         history.removeAll { $0.reference.playlistID == playlistID }
         let prefix = playlistID.uuidString + "|"
         hiddenCategoryKeys = hiddenCategoryKeys.filter { !$0.hasPrefix(prefix) }
+        categoryHiddenAt = categoryHiddenAt.filter { !$0.key.hasPrefix(prefix) }
+        categoryShownAt = categoryShownAt.filter { !$0.key.hasPrefix(prefix) }
         lockedCategoryKeys = lockedCategoryKeys.filter { !$0.hasPrefix(prefix) }
         for index in customLists.indices {
             customLists[index].items.removeAll { $0.reference.playlistID == playlistID }

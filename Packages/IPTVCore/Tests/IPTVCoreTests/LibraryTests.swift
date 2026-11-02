@@ -503,6 +503,33 @@ final class ChannelManagementTests: XCTestCase {
         XCTAssertEqual(content.applying([:]), content)
     }
 
+    func testShowingACategoryAgainReachesTheOtherCopy() {
+        let t0 = Date.utc(2025, 10, 1, 8)
+        var phone = UserLibrary()
+        phone.setHidden(true, playlistID: playlistID, categoryID: "c1", now: t0)
+        var mac = UserLibrary().merged(with: phone)
+        XCTAssertTrue(mac.isHidden(playlistID: playlistID, categoryID: "c1"), "hiding reaches the other copy")
+
+        mac.setHidden(false, playlistID: playlistID, categoryID: "c1", now: t0.addingTimeInterval(60))
+        XCTAssertFalse(phone.merged(with: mac).isHidden(playlistID: playlistID, categoryID: "c1"), "showing it again reaches it too")
+        XCTAssertFalse(mac.merged(with: phone).isHidden(playlistID: playlistID, categoryID: "c1"), "and an old copy does not hide it again")
+
+        phone = phone.merged(with: mac)
+        phone.setHidden(true, playlistID: playlistID, categoryID: "c1", now: t0.addingTimeInterval(120))
+        XCTAssertTrue(mac.merged(with: phone).isHidden(playlistID: playlistID, categoryID: "c1"), "hidden again later wins")
+        XCTAssertTrue(phone.merged(with: mac).isHidden(playlistID: playlistID, categoryID: "c1"))
+
+        // Hidden by an older version (no date): shown again elsewhere, it is shown.
+        var old = UserLibrary()
+        old.hiddenCategoryKeys = [UserLibrary.categoryKey(playlistID: playlistID, categoryID: "c2")]
+        var shown = old
+        shown.setHidden(false, playlistID: playlistID, categoryID: "c2", now: t0)
+        XCTAssertFalse(old.merged(with: shown).isHidden(playlistID: playlistID, categoryID: "c2"))
+
+        phone.removeData(for: playlistID)
+        XCTAssertTrue(phone.categoryHiddenAt.isEmpty && phone.categoryShownAt.isEmpty)
+    }
+
     func testHiddenChannelsSyncBothWays() {
         let t0 = Date.utc(2025, 10, 1, 8)
         var phone = UserLibrary()
