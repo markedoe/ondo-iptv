@@ -138,6 +138,46 @@ class LibraryTest {
         assertFalse(HistoryEntry(ref(ContentType.LIVE, "c"), "C", position = 50.0, duration = 100.0).isResumable)
     }
 
+    /** Watched once the end credits start, when the file's chapters say where; else the rule by time. */
+    @Test
+    fun watchedAtTheEndCredits() {
+        fun movie(minutes: Double, of: Double, credits: Double?) =
+            HistoryEntry(ref(ContentType.MOVIE, "m"), "M", position = minutes * 60, duration = of * 60, creditsStart = credits?.let { it * 60 })
+        assertTrue(movie(105.0, of = 120.0, credits = 105.0).isFinished, "at the credits, 15 minutes left")
+        assertFalse(movie(104.0, of = 120.0, credits = 105.0).isFinished, "just before them")
+        assertTrue(movie(104.0, of = 120.0, credits = 105.0).isResumable)
+        assertFalse(movie(104.0, of = 120.0, credits = null).isFinished, "no chapter: 16 minutes left")
+        assertTrue(movie(115.0, of = 120.0, credits = 117.0).isFinished, "the rule by time still applies before late credits")
+        assertFalse(movie(105.0, of = 0.0, credits = 105.0).isFinished, "no duration: never")
+        assertFalse(HistoryEntry(ref(ContentType.LIVE, "c"), "C", position = 6_000.0, duration = 6_600.0, creditsStart = 5_000.0).isFinished)
+        assertTrue(HistoryEntry.isFinished(6_300.0, 7_200.0, creditsStart = 6_300.0))
+        assertFalse(HistoryEntry.isFinished(6_300.0, 7_200.0))
+
+        // The library keeps where the credits start: a progress without it (another engine) and a new start keep it.
+        var library = UserLibrary()
+        library = library.recordPlayback(HistoryEntry(ref(ContentType.MOVIE, "m1"), "M1", lastWatchedAt = 1))
+        library = library.updateProgress(ref(ContentType.MOVIE, "m1"), 6_000.0, 7_200.0, now = 2, creditsStart = 6_300.0)
+        assertEquals(listOf("M1"), library.continueWatching(playlistId).map { it.title })
+        library = library.updateProgress(ref(ContentType.MOVIE, "m1"), 6_200.0, 7_200.0, now = 3)
+        assertEquals(6_300.0, library.progress(ref(ContentType.MOVIE, "m1"))?.creditsStart)
+        library = library.recordPlayback(HistoryEntry(ref(ContentType.MOVIE, "m1"), "M1", lastWatchedAt = 4))
+        assertEquals(6_300.0, library.progress(ref(ContentType.MOVIE, "m1"))?.creditsStart)
+        library = library.updateProgress(ref(ContentType.MOVIE, "m1"), 6_300.0, 7_200.0, now = 5)
+        assertEquals(emptyList(), library.continueWatching(playlistId), "watched at the credits")
+        assertTrue(library.progress(ref(ContentType.MOVIE, "m1"))!!.isFinished)
+
+        // Saved and read back with it; an entry saved before has none, and reads as before.
+        val saved = CoreJson.decodeFromString(HistoryEntry.serializer(), CoreJson.encodeToString(HistoryEntry.serializer(), library.history.first()))
+        assertEquals(6_300.0, saved.creditsStart)
+        val entry = HistoryEntry(ref(ContentType.MOVIE, "m2"), "M2", position = 6_000.0, duration = 7_200.0)
+        val text = CoreJson.encodeToString(HistoryEntry.serializer(), entry)
+        assertFalse("creditsStart" in text, "not written when not known")
+        val old = """{"reference":{"playlistId":"$playlistId","type":"movie","itemId":"m2"},"title":"M2","position":6000.0,"duration":7200.0}"""
+        val read = CoreJson.decodeFromString(HistoryEntry.serializer(), old)
+        assertNull(read.creditsStart)
+        assertEquals(entry, read)
+    }
+
     /** Watched with 10 minutes or less left once three quarters are seen, or at 95 %; never by time with no duration. */
     @Test
     fun watchedWithTenMinutesLeft() {

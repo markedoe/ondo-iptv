@@ -267,8 +267,8 @@ extension AppModel {
         controller.enginePreference = settings.playerEngine
         controller.liveBufferSetting = settings.liveBuffer
         controller.vodBufferSetting = settings.vodBuffer
-        controller.onProgress = { [weak self] item, position, duration in
-            self?.recordProgress(item, position: position, duration: duration)
+        controller.onProgress = { [weak self] item, position, duration, creditsStart in
+            self?.recordProgress(item, position: position, duration: duration, creditsStart: creditsStart)
         }
         controller.onEnded = { [weak session] item in
             guard let session else { return }

@@ -217,6 +217,31 @@ final class MatroskaReaderTests: XCTestCase {
         XCTAssertThrowsError(try MatroskaReader.laceSizes(Data([0x81, 0, 0, 0x06, 0x02, 0x84, 0x80]) + Data(count: 8), offset: &offset, lacing: 3))
     }
 
+    /// Chapters of the first edition, in seconds (ChapterTimeStart in nanoseconds), hidden ones left out; damaged
+    /// chapters only go without.
+    func testChapters() async throws {
+        typealias Bytes = MatroskaBytes
+        func atom(_ start: UInt64, _ title: String, hidden: Bool = false) -> Data {
+            Bytes.element(0xB6, [
+                Bytes.unsigned(0x73C4, 1), Bytes.unsigned(0x91, start), Bytes.unsigned(0x98, hidden ? 1 : 0),
+                Bytes.element(0x80, [Bytes.string(0x85, title), Bytes.string(0x437C, "eng")]),
+            ])
+        }
+        let chapters = Bytes.element(0x1043_A770, [
+            Bytes.element(0x45B9, [atom(0, "Opening"), atom(1_000_000_000, "Hidden", hidden: true), atom(2_500_000_000, "End Credits")]),
+            Bytes.element(0x45B9, [atom(0, "Other edition")]),
+        ])
+        let file = try await MatroskaReader.open(DataByteSource(Bytes.film(chapters: chapters)))
+        XCTAssertEqual(file.chapters, [MediaChapter(title: "Opening", start: 0), MediaChapter(title: "End Credits", start: 2.5)])
+        XCTAssertEqual(CreditsChapter.start(in: file.chapters, duration: try XCTUnwrap(file.duration)), 2.5)
+        let without = try await MatroskaReader.open(DataByteSource(Bytes.film()))
+        XCTAssertEqual(without.chapters, [])
+        let damaged = Bytes.element(0x1043_A770, Data([0x45, 0xB9, 0x88]))
+        let plain = try await MatroskaReader.open(DataByteSource(Bytes.film(chapters: damaged)))
+        XCTAssertEqual(plain.chapters, [])
+        XCTAssertEqual(plain.tracks.count, 1, "the film opens all the same")
+    }
+
     func testVariableLengthIntegers() {
         XCTAssertEqual(EBML.vint(Data([0x81]), at: 0, isID: false)?.value, 1)
         XCTAssertEqual(EBML.vint(Data([0x40, 0x02]), at: 0, isID: false)?.value, 2)

@@ -29,8 +29,11 @@ enum MatroskaBytes {
     }
 
     /// An H.264 film without audio (only the first byte of its configuration is read): a cluster at each of
-    /// `clusterTimes` (ms) holding 25 frames 40 ms apart, a key frame first, and an index before the clusters.
-    static func film(clusterTimes: [UInt64] = [0, 1_000, 2_000], defaultDuration: UInt64? = 40_000_000, duration: Double = 3_000) -> Data {
+    /// `clusterTimes` (ms) holding 25 frames 40 ms apart, a key frame first, and an index before the clusters;
+    /// `chapters` (a Chapters element) after the tracks.
+    static func film(
+        clusterTimes: [UInt64] = [0, 1_000, 2_000], defaultDuration: UInt64? = 40_000_000, duration: Double = 3_000, chapters: Data = Data()
+    ) -> Data {
         let header = element(0x1A45_DFA3, [string(0x4282, "matroska")])
         let info = element(0x1549_A966, [unsigned(0x2AD7B1, 1_000_000), float(0x4489, duration)])
         var track = [
@@ -52,12 +55,12 @@ enum MatroskaBytes {
                 element(0xBB, [unsigned(0xB3, time), element(0xB7, [unsigned(0xF7, 1), unsigned(0xF1, position)])])
             })
         }
-        var position = UInt64(info.count + tracks.count + cues(clusterTimes.map { _ in 0 }).count)
+        var position = UInt64(info.count + tracks.count + chapters.count + cues(clusterTimes.map { _ in 0 }).count)
         var positions: [UInt64] = []
         for cluster in clusters {
             positions.append(position)
             position += UInt64(cluster.count)
         }
-        return header + element(0x1853_8067, [info, tracks, cues(positions)] + clusters)
+        return header + element(0x1853_8067, [info, tracks, chapters, cues(positions)] + clusters)
     }
 }

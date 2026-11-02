@@ -187,6 +187,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     public mutating func recordPlayback(_ entry: HistoryEntry) {
         if let index = history.firstIndex(where: { $0.id == entry.id }) {
             var updated = entry
+            // The file's chapters stay the same: keep where its end credits start.
+            if updated.creditsStart == nil { updated.creditsStart = history[index].creditsStart }
             // Keep the known position when starting again without an explicit one.
             if updated.position == 0 && history[index].position > 0 && !history[index].isFinished {
                 updated.position = history[index].position
@@ -202,11 +204,16 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         }
     }
 
-    public mutating func updateProgress(_ reference: MediaReference, position: Double, duration: Double, now: Date = Date()) {
+    /// `creditsStart`: where the end credits start, when the player found them in the file's chapters; nil keeps the
+    /// one known (an engine that cannot read chapters plays the same file).
+    public mutating func updateProgress(
+        _ reference: MediaReference, position: Double, duration: Double, creditsStart: Double? = nil, now: Date = Date()
+    ) {
         guard let index = history.firstIndex(where: { $0.reference.isSamePlayback(as: reference) }) else { return }
         // NaN or infinite (a clock not known yet) has no JSON form: the library could no longer be saved.
         if position.isFinite { history[index].position = max(position, 0) }
         if duration.isFinite && duration > 0 { history[index].duration = duration }
+        if let creditsStart, creditsStart.isFinite, creditsStart > 0 { history[index].creditsStart = creditsStart }
         history[index].lastWatchedAt = now
     }
 

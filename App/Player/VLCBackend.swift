@@ -137,6 +137,15 @@ final class VLCBackend: NSObject {
         return (Int(stats.readBytes), Int(stats.demuxReadBytes), Int(stats.displayedPictures), Int(stats.lostPictures))
     }
     var duration: Double { Double(player.media?.length.intValue ?? 0) / 1000 }
+
+    /// The chapters of the title playing: their names and where they start.
+    var chapters: [MediaChapter] {
+        player.chapterDescriptions(ofTitle: player.currentTitleIndex).compactMap { description in
+            guard let chapter = description as? [String: Any],
+                  let offset = (chapter[VLCChapterDescriptionTimeOffset] as? NSNumber)?.doubleValue else { return nil }
+            return MediaChapter(title: chapter[VLCChapterDescriptionName] as? String, start: offset / 1000)
+        }
+    }
     var videoSize: CGSize { player.videoSize }
 
     // MARK: Tracks

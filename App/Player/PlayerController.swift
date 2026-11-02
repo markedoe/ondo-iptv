@@ -72,8 +72,11 @@ final class PlayerController: NSObject {
         }
     }
 
-    /// Called about every 10 s and when playback stops, to persist resume positions.
-    @ObservationIgnored var onProgress: ((PlaybackItem, Double, Double) -> Void)?
+    /// Called about every 10 s and when playback stops, to persist resume positions (and `creditsStart`).
+    @ObservationIgnored var onProgress: ((PlaybackItem, Double, Double, Double?) -> Void)?
+    /// Where the item's end credits start, from its chapters (PlayerController+Chapters); VLC's were read.
+    @ObservationIgnored var creditsStart: Double?
+    @ObservationIgnored var vlcChaptersRead = false
     /// Called when a VOD item plays to the end (auto-play next episode).
     @ObservationIgnored var onEnded: ((PlaybackItem) -> Void)?
     @ObservationIgnored var onPictureInPictureChange: ((Bool) -> Void)?
@@ -195,6 +198,8 @@ final class PlayerController: NSObject {
     func load(_ item: PlaybackItem) {
         reportProgress(force: true)
         self.item = item
+        creditsStart = nil
+        vlcChaptersRead = false
         candidates = item.candidateURLs
         candidateIndex = 0
         retries = 0
@@ -601,7 +606,7 @@ extension PlayerController {
         guard force || Date().timeIntervalSince(lastReportedProgress) > 30 else { return }
         guard currentTime > 0 else { return }
         lastReportedProgress = Date()
-        onProgress?(item, currentTime, duration)
+        onProgress?(item, currentTime, duration, creditsStart)
     }
 
     // MARK: - Tracks
@@ -633,6 +638,7 @@ extension PlayerController {
             }
             selectedSubtitleTrackID = playerItem.currentMediaSelection.selectedMediaOption(in: legible).flatMap { legible.options.firstIndex(of: $0) }
         }
+        await readCreditsStart(of: playerItem)
     }
 
     private static func tracks(in group: AVMediaSelectionGroup?) -> [MediaTrack] {
@@ -910,6 +916,7 @@ extension PlayerController {
         currentTime = current
         if total > 0 && total != duration { duration = total }
         if state == .loading { state = .playing }
+        readVLCCreditsStart()
         reportProgress(force: false)
     }
 

@@ -42,6 +42,10 @@ extension PlayerController {
                     }
                 }
                 self.remuxServer = server
+                if let duration = remux.file.duration,
+                   let credits = CreditsChapter.start(in: remux.file.chapters, duration: duration) {
+                    self.creditsStart = credits
+                }
                 let codecs = remux.tracks.map { FragmentWriter.codecName($0.codec) }.joined(separator: ", ")
                 let wait = String(format: "%.1f", self.clock - opened)
                 self.note("remux ready after \(wait) s: \(codecs), \(remux.videoRange), \(remux.segments.count) segments")

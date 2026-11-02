@@ -103,6 +103,8 @@ public struct MatroskaFile: Sendable, Equatable {
     /// Where the clusters end: the index or the tags after them, or the end of the file.
     public var clustersEnd: Int64
     public var fileSize: Int64?
+    /// The chapters of the first edition (seconds), for where the end credits start (`CreditsChapter`).
+    public var chapters: [MediaChapter] = []
 }
 
 /// Reads Matroska files for the remux to the system player: their header, index and clusters. Anything it does not
@@ -166,6 +168,13 @@ public enum MatroskaReader {
         static let block: UInt32 = 0xA1
         static let blockDuration: UInt32 = 0x9B
         static let referenceBlock: UInt32 = 0xFB
+        static let chapters: UInt32 = 0x1043_A770
+        static let editionEntry: UInt32 = 0x45B9
+        static let chapterAtom: UInt32 = 0xB6
+        static let chapterTimeStart: UInt32 = 0x91
+        static let chapterFlagHidden: UInt32 = 0x98
+        static let chapterDisplay: UInt32 = 0x80
+        static let chapString: UInt32 = 0x85
     }
 
     /// Top-level elements larger than this are not read whole (attachments, a stray cluster): the header is.
@@ -199,6 +208,7 @@ public enum MatroskaReader {
         let seenTracks = scan.tracks != nil, seenCues = scan.cues != nil
         file.tracks = scan.tracks ?? []
         file.cues = scan.cues ?? []
+        file.chapters = scan.chapters ?? []
         guard file.firstClusterOffset > 0 else { throw RemuxError("no cluster") }
         guard seenTracks else { throw RemuxError("no tracks") }
         // The first element the seek head places after the clusters ends them.
@@ -216,6 +226,10 @@ public enum MatroskaReader {
             file.cues = try cues(body, segmentOffset: segmentOffset, scale: 1)
         }
         guard !file.cues.isEmpty else { throw RemuxError("no index") }
+        // Chapters after the clusters: read where the seek head says, never a reason not to play.
+        if scan.chapters == nil, let position = seekPositions[IDs.chapters] {
+            file.chapters = (try? await chapters(source, at: segmentOffset.adding(position))) ?? []
+        }
         // Cue times are in timestamp units until the scale is known.
         let scale = Int64(clamping: file.timestampScale)
         file.cues = try file.cues.map { cue in
@@ -234,6 +248,7 @@ public enum MatroskaReader {
         var duration: Double?
         var tracks: [MatroskaTrack]?
         var cues: [MatroskaCuePoint]?
+        var chapters: [MediaChapter]?
         var firstCluster: Int64?
     }
 
@@ -251,7 +266,14 @@ public enum MatroskaReader {
             let bodyStart = offset + Int64(header.headerLength)
             let bodyEnd = try bodyStart.adding(Int64(clamping: header.size))
             offset = bodyEnd
-            // Void, Chapters, Tags, Attachments… are skipped.
+            // Void, Tags, Attachments… are skipped.
+            if header.id == IDs.chapters {
+                // Damaged or too large chapters only go without: the film plays all the same.
+                guard header.size <= largestHeaderElement, let body = try? await source.read(bodyStart..<bodyEnd),
+                      body.count == Int(header.size) else { continue }
+                scan.chapters = (try? chapters(body)) ?? []
+                continue
+            }
             guard [IDs.seekHead, IDs.info, IDs.tracks, IDs.cues].contains(header.id) else { continue }
             guard header.size <= largestHeaderElement else { throw RemuxError("header element too large") }
             let body = try await source.read(bodyStart..<bodyEnd)
@@ -264,6 +286,40 @@ public enum MatroskaReader {
             }
         }
         return scan
+    }
+
+    /// The Chapters element at `at` (after the clusters).
+    static func chapters(_ source: ByteSource, at: Int64) async throws -> [MediaChapter] {
+        let headerBytes = try await source.read(at..<at.adding(12))
+        guard let header = EBML.header(headerBytes, at: 0), header.id == IDs.chapters, !header.hasUnknownSize,
+              header.size <= largestHeaderElement else { return [] }
+        let bodyStart = at + Int64(header.headerLength)
+        let body = try await source.read(bodyStart..<bodyStart.adding(Int64(header.size)))
+        guard body.count == Int(header.size) else { return [] }
+        return try chapters(body)
+    }
+
+    /// The chapters of the first edition, in order: their first name and their start (ChapterTimeStart is in
+    /// nanoseconds, whatever the timestamp scale). Hidden chapters and nested ones are left out.
+    static func chapters(_ body: Data) throws -> [MediaChapter] {
+        guard let edition = try EBML.children(body, in: 0..<body.count).first(where: { $0.id == IDs.editionEntry }) else { return [] }
+        var chapters: [MediaChapter] = []
+        for atom in try EBML.children(body, in: edition.dataOffset..<(edition.end ?? edition.dataOffset)) where atom.id == IDs.chapterAtom {
+            var start: UInt64?, hidden = false, title: String?
+            for child in try EBML.children(body, in: atom.dataOffset..<(atom.end ?? atom.dataOffset)) {
+                switch child.id {
+                case IDs.chapterTimeStart: start = try EBML.unsigned(body, child)
+                case IDs.chapterFlagHidden: hidden = try EBML.unsigned(body, child) != 0
+                case IDs.chapterDisplay where title == nil:
+                    title = try EBML.children(body, in: child.dataOffset..<(child.end ?? child.dataOffset))
+                        .first { $0.id == IDs.chapString }
+                        .map { try EBML.string(body, $0) }
+                default: break
+                }
+            }
+            if let start, !hidden { chapters.append(MediaChapter(title: title, start: Double(start) / 1e9)) }
+        }
+        return chapters
     }
 
     static func seekHead(_ body: Data) throws -> [UInt32: Int64] {

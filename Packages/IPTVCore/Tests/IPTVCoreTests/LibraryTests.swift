@@ -85,6 +85,46 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(library.progress(for: ref(.movie, "m1"))?.isFinished, true)
     }
 
+    /// Watched once the end credits start, when the file's chapters say where; else the rule by time.
+    func testWatchedAtTheEndCredits() throws {
+        func movie(_ minutes: Double, of total: Double, credits: Double?) -> HistoryEntry {
+            HistoryEntry(reference: ref(.movie, "m"), title: "M", position: minutes * 60, duration: total * 60, creditsStart: credits.map { $0 * 60 })
+        }
+        XCTAssertTrue(movie(105, of: 120, credits: 105).isFinished, "at the credits, 15 minutes left")
+        XCTAssertFalse(movie(104, of: 120, credits: 105).isFinished, "just before them")
+        XCTAssertTrue(movie(104, of: 120, credits: 105).isResumable)
+        XCTAssertFalse(movie(104, of: 120, credits: nil).isFinished, "no chapter: 16 minutes left")
+        XCTAssertTrue(movie(115, of: 120, credits: 117).isFinished, "the rule by time still applies before late credits")
+        XCTAssertFalse(movie(105, of: 0, credits: 105).isFinished, "no duration: never")
+        XCTAssertFalse(HistoryEntry(reference: ref(.live, "c"), title: "C", position: 6_000, duration: 6_600, creditsStart: 5_000).isFinished)
+        XCTAssertTrue(HistoryEntry.isFinished(position: 6_300, duration: 7_200, creditsStart: 6_300))
+        XCTAssertFalse(HistoryEntry.isFinished(position: 6_300, duration: 7_200))
+
+        // The library keeps where the credits start: a progress without it (another engine) and a new start keep it.
+        var library = UserLibrary()
+        library.recordPlayback(HistoryEntry(reference: ref(.movie, "m1"), title: "M1", lastWatchedAt: Date(timeIntervalSince1970: 1)))
+        library.updateProgress(ref(.movie, "m1"), position: 6_000, duration: 7_200, creditsStart: 6_300, now: Date(timeIntervalSince1970: 2))
+        XCTAssertEqual(library.continueWatching(playlistID: playlistID).map(\.title), ["M1"])
+        library.updateProgress(ref(.movie, "m1"), position: 6_200, duration: 7_200, now: Date(timeIntervalSince1970: 3))
+        XCTAssertEqual(library.progress(for: ref(.movie, "m1"))?.creditsStart, 6_300)
+        library.recordPlayback(HistoryEntry(reference: ref(.movie, "m1"), title: "M1", lastWatchedAt: Date(timeIntervalSince1970: 4)))
+        XCTAssertEqual(library.progress(for: ref(.movie, "m1"))?.creditsStart, 6_300)
+        library.updateProgress(ref(.movie, "m1"), position: 6_300, duration: 7_200, now: Date(timeIntervalSince1970: 5))
+        XCTAssertEqual(library.continueWatching(playlistID: playlistID).map(\.title), [], "watched at the credits")
+        XCTAssertEqual(library.progress(for: ref(.movie, "m1"))?.isFinished, true)
+
+        // Saved and read back with it; a library saved before has none, and reads as before.
+        let saved = try JSONDecoder().decode(UserLibrary.self, from: JSONEncoder().encode(library))
+        XCTAssertEqual(saved.history.first?.creditsStart, 6_300)
+        let entry = HistoryEntry(reference: ref(.movie, "m2"), title: "M2", position: 6_000, duration: 7_200)
+        var old = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(entry)) as? [String: Any])
+        XCTAssertNil(old["creditsStart"], "not written when not known")
+        old.removeValue(forKey: "creditsStart")
+        let read = try JSONDecoder().decode(HistoryEntry.self, from: JSONSerialization.data(withJSONObject: old))
+        XCTAssertEqual(read, entry)
+        XCTAssertNil(read.creditsStart)
+    }
+
     /// A position the player cannot tell (NaN, infinite) keeps the one known: JSON has no such number, and one in the
     /// history would make every later save of the library fail.
     func testAnUnknownPositionKeepsTheLibrarySavable() throws {

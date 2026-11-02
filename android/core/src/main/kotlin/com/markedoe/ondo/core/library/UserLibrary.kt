@@ -85,6 +85,8 @@ data class UserLibrary(
         var updated = entry
         if (index >= 0) {
             val existing = history[index]
+            // The file's chapters stay the same: keep where its end credits start.
+            if (updated.creditsStart == null) updated = updated.copy(creditsStart = existing.creditsStart)
             if (updated.position == 0.0 && existing.position > 0 && !existing.isFinished) {
                 updated = updated.copy(position = existing.position, duration = maxOf(updated.duration, existing.duration))
             }
@@ -107,8 +109,17 @@ data class UserLibrary(
         ),
     )
 
-    /** Updates the resume position (seconds) of an item already in the history. */
-    fun updateProgress(reference: MediaReference, position: Double, duration: Double, now: Long = System.currentTimeMillis()): UserLibrary {
+    /**
+     * Updates the resume position (seconds) of an item already in the history. [creditsStart]: where the end credits
+     * start, when the player found them in the file's chapters; null keeps the one known.
+     */
+    fun updateProgress(
+        reference: MediaReference,
+        position: Double,
+        duration: Double,
+        now: Long = System.currentTimeMillis(),
+        creditsStart: Double? = null,
+    ): UserLibrary {
         val index = history.indexOfFirst { it.reference.playbackKey == reference.playbackKey }
         if (index < 0) return this
         val existing = history[index]
@@ -116,6 +127,7 @@ data class UserLibrary(
             position = maxOf(position, 0.0),
             duration = if (duration.isFinite() && duration > 0) duration else existing.duration,
             lastWatchedAt = now,
+            creditsStart = creditsStart?.takeIf { it.isFinite() && it > 0 } ?: existing.creditsStart,
         )
         return copy(history = history.toMutableList().also { it[index] = updated })
     }

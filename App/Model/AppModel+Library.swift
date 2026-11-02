@@ -209,11 +209,11 @@ extension AppModel {
         }
     }
 
-    func recordProgress(_ item: PlaybackItem, position: Double, duration: Double) {
+    func recordProgress(_ item: PlaybackItem, position: Double, duration: Double, creditsStart: Double? = nil) {
         // Replays belong to the channel's history entry, not to a resumable position.
         guard !item.isCatchup else { return }
         let time = syncStamp()
-        updateLibrary { $0.updateProgress(item.reference, position: position, duration: duration, now: time) }
+        updateLibrary { $0.updateProgress(item.reference, position: position, duration: duration, creditsStart: creditsStart, now: time) }
     }
 
     func resumePosition(for item: PlaybackItem) -> Double? {

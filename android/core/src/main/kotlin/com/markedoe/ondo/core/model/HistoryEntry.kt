@@ -15,6 +15,11 @@ data class HistoryEntry(
     val position: Double = 0.0,
     /** Seconds. */
     val duration: Double = 0.0,
+    /**
+     * Where the file's end credits start (seconds), from its chapters
+     * ([com.markedoe.ondo.core.playback.CreditsChapter]); null when not known.
+     */
+    val creditsStart: Double? = null,
 ) {
     val id: String
         get() = reference.playbackKey
@@ -28,7 +33,7 @@ data class HistoryEntry(
 
     /** Watched: the "watched" badge, the hidden watched movies, out of "Continue watching". Movies and episodes alike. */
     val isFinished: Boolean
-        get() = reference.type != ContentType.LIVE && isFinished(position, duration)
+        get() = reference.type != ContentType.LIVE && isFinished(position, duration, creditsStart)
 
     companion object {
         /** Watched at 95 % of the duration. */
@@ -40,9 +45,14 @@ data class HistoryEntry(
         /** …once this share is seen, so a short film still needs 95 %. */
         const val FINISHED_TIME_LEFT_MINIMUM_PROGRESS = 0.75
 
-        /** The rule of [isFinished] (positions and durations in seconds); with no known duration, never finished. */
-        fun isFinished(position: Double, duration: Double): Boolean {
+        /**
+         * The rule of [isFinished] (positions and durations in seconds): watched once the end credits start, when the
+         * file's chapters say where ([creditsStart]), else by the share seen and the time left; with no known
+         * duration, never finished.
+         */
+        fun isFinished(position: Double, duration: Double, creditsStart: Double? = null): Boolean {
             if (!(duration > 0)) return false
+            if (creditsStart != null && creditsStart > 0 && position >= creditsStart) return true
             val progress = (position / duration).coerceIn(0.0, 1.0)
             return progress >= FINISHED_PROGRESS ||
                 (duration - position <= FINISHED_TIME_LEFT && progress >= FINISHED_TIME_LEFT_MINIMUM_PROGRESS)

@@ -105,6 +105,8 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
     /// The container of an episode ("mkv"…): with the episode id, enough to play it again at once, before the
     /// season is fetched from the provider.
     public var streamExtension: String?
+    /// Where the file's end credits start (seconds), from its chapters (`CreditsChapter`); nil when not known.
+    public var creditsStart: Double?
 
     public init(
         reference: MediaReference,
@@ -114,7 +116,8 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
         lastWatchedAt: Date = Date(),
         position: Double = 0,
         duration: Double = 0,
-        streamExtension: String? = nil
+        streamExtension: String? = nil,
+        creditsStart: Double? = nil
     ) {
         self.reference = reference
         self.title = title
@@ -124,6 +127,7 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
         self.position = position
         self.duration = duration
         self.streamExtension = streamExtension
+        self.creditsStart = creditsStart
     }
 
     public var progress: Double {
@@ -137,7 +141,9 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
     }
 
     /// Watched: the "watched" badge, the hidden watched movies, out of "Continue watching". Movies and episodes alike.
-    public var isFinished: Bool { reference.type != .live && Self.isFinished(position: position, duration: duration) }
+    public var isFinished: Bool {
+        reference.type != .live && Self.isFinished(position: position, duration: duration, creditsStart: creditsStart)
+    }
 
     /// Watched at 95 % of the duration.
     public static let finishedProgress = 0.95
@@ -146,9 +152,12 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
     /// …once this share is seen, so a short film still needs 95 %.
     public static let finishedTimeLeftMinimumProgress = 0.75
 
-    /// The rule of `isFinished` (positions and durations in seconds); with no known duration, never finished.
-    public static func isFinished(position: Double, duration: Double) -> Bool {
+    /// The rule of `isFinished` (positions and durations in seconds): watched once the end credits start, when the
+    /// file's chapters say where (`creditsStart`), else by the share seen and the time left; with no known duration,
+    /// never finished.
+    public static func isFinished(position: Double, duration: Double, creditsStart: Double? = nil) -> Bool {
         guard duration > 0 else { return false }
+        if let creditsStart, creditsStart > 0, position >= creditsStart { return true }
         let progress = min(max(position / duration, 0), 1)
         return progress >= finishedProgress
             || (duration - position <= finishedTimeLeft && progress >= finishedTimeLeftMinimumProgress)
