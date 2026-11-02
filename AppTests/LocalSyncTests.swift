@@ -240,6 +240,43 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertTrue(model.content.channels.isEmpty)
     }
 
+    /// A playlist edited here while sync waits on another one (its new address downloads) keeps the edit: the older
+    /// copy sync merged before it is not applied over it.
+    func testAPlaylistEditedWhileSyncUpdatesAnotherKeepsTheEdit() async throws {
+        let gate = DispatchSemaphore(value: 0)
+        defer { gate.signal() }
+        let text = Self.catalogue
+        let server = try LocalHTTPServer { request in
+            if request.path.hasSuffix("moved.m3u") { gate.wait() }
+            return LocalHTTPServer.Response.text(text, type: "audio/x-mpegurl")
+        }
+        let base = try await server.start()
+        self.server = server
+        let model = try await device("first")
+        try await model.addPlaylist(Playlist(name: "Living room", source: .remote(base.appending(path: "list.m3u")), autoRefreshHours: 0))
+        let living = try XCTUnwrap(model.activePlaylist)
+        try await model.addPlaylist(Playlist(name: "Kitchen", source: .remote(base.appending(path: "kitchen.m3u")), autoRefreshHours: 0))
+        let kitchen = try XCTUnwrap(model.activePlaylist)
+        await model.activate(living)
+        // Another device moved the living room playlist to another address: sync downloads it, and waits.
+        let moved = SyncPlaylist(id: living.id.uuidString.lowercased(), name: "Living room", kind: SyncPlaylist.m3u,
+                                 url: base.appending(path: "moved.m3u").absoluteString, addedAt: living.createdAt.syncMilliseconds,
+                                 updatedAt: model.syncStamp().syncMilliseconds + 60_000)
+        let sync = Task { await model.applySync(SyncSnapshot(device: "tv", playlists: [moved])) }
+        let deadline = Date().addingTimeInterval(10)
+        while !server.requests.contains(where: { $0.path.hasSuffix("moved.m3u") }) {
+            guard Date() < deadline else { return XCTFail("sync never downloaded the moved playlist") }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        var renamed = try XCTUnwrap(model.playlists.first { $0.id == kitchen.id })
+        renamed.name = "Kitchen TV"
+        await model.updatePlaylist(renamed)
+        gate.signal()
+        await sync.value
+        XCTAssertEqual(model.playlists.first { $0.id == kitchen.id }?.name, "Kitchen TV")
+        XCTAssertEqual(model.syncSnapshot().playlists.first { $0.id == kitchen.id.uuidString.lowercased() }?.name, "Kitchen TV")
+    }
+
     func testTheTMDbKeyTravelsAndSoDoesItsRemoval() async throws {
         let first = try await device("first")
         let second = try await device("second")

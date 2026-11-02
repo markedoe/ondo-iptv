@@ -547,33 +547,15 @@ extension AppModel {
         let merged = await Task.detached(priority: .utility) { SyncMerge.merge(local, taken) }.value
         let records = Dictionary(merged.playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
-        // Playlists edited elsewhere, then the new ones. The device's own are found by ID (a snapshot can hold tens of
-        // thousands), and found again after an update, which waits and lets other changes in.
-        func byID() -> [UUID: Playlist] { Dictionary(playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }) }
-        var locals = byID()
-        var added: [Playlist] = []
-        for record in merged.playlists {
-            guard let id = UUID(uuidString: record.id) else { continue }
-            if let local = locals[id] {
-                guard let updated = SyncMapping.playlist(from: record, base: local) else { continue }
-                if updated != local {
-                    await updatePlaylist(updated, recordsSyncChange: false)
-                    locals = byID()
-                }
-            } else if let created = SyncMapping.playlist(from: record, base: duplicate(becoming: record, in: merged)) {
-                added.append(created)
-            } else {
-                continue
-            }
-            syncState.playlistUpdatedAt[record.id] = record.updatedAt
-        }
-        if !added.isEmpty { await addSyncedPlaylists(added) }
+        await applySyncedPlaylistRecords(merged)
 
         // Playlists deleted elsewhere, or that turned out to be another one (the same account added twice).
         for local in playlists {
             let id = local.id.uuidString.lowercased()
             if case .local = local.source { continue }
-            guard records[id] == nil, merged.deleted["playlist:" + id] != nil else { continue }
+            guard records[id] == nil, let deletedAt = merged.deleted["playlist:" + id] else { continue }
+            // Edited here after the deletion (while sync was busy): the edit wins, as the merge would have it.
+            if let edited = syncState.playlistUpdatedAt[id], edited > deletedAt { continue }
             let replacement = replacementID(of: id, in: merged).flatMap { newID in
                 playlists.first { $0.id.uuidString.lowercased() == newID }
             }
@@ -640,6 +622,34 @@ extension AppModel {
         syncState.lastSyncedAt = now.syncMilliseconds
         saveSyncState()
         return true
+    }
+
+    /// The playlists of `merged` kept here: those edited elsewhere updated, then the new ones added.
+    private func applySyncedPlaylistRecords(_ merged: SyncSnapshot) async {
+        // Playlists edited elsewhere, then the new ones. The device's own are found by ID (a snapshot can hold tens of
+        // thousands), and found again after an update, which waits and lets other changes in.
+        func byID() -> [UUID: Playlist] { Dictionary(playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first }) }
+        var locals = byID()
+        var added: [Playlist] = []
+        for record in merged.playlists {
+            guard let id = UUID(uuidString: record.id) else { continue }
+            // Edited here while sync was busy with another playlist: the edit is later than the merged record (it is
+            // dated after everything received), so it stays and goes to the other devices next.
+            if let edited = syncState.playlistUpdatedAt[record.id], edited > record.updatedAt { continue }
+            if let local = locals[id] {
+                guard let updated = SyncMapping.playlist(from: record, base: local) else { continue }
+                if updated != local {
+                    await updatePlaylist(updated, recordsSyncChange: false)
+                    locals = byID()
+                }
+            } else if let created = SyncMapping.playlist(from: record, base: duplicate(becoming: record, in: merged)) {
+                added.append(created)
+            } else {
+                continue
+            }
+            syncState.playlistUpdatedAt[record.id] = record.updatedAt
+        }
+        if !added.isEmpty { await addSyncedPlaylists(added) }
     }
 
     /// Merges of the library in the background before giving up until the next session, when the data keeps changing.
