@@ -78,7 +78,7 @@ raccourcis, lecteur dans sa propre fenêtre (plusieurs fenêtres = multi-écran)
 
 ### Phase 2 — App MVP iPhone + Mac (P1) ✅
 - [x] Projet XcodeGen, Info.plist (ATS, audio en arrière-plan), sandbox Mac, icône originale
-- [x] Onboarding + ajout de playlist (Xtream, URL M3U, fichier, démo publique) avec détection des liens Xtream
+- [x] Onboarding + ajout de playlist (Xtream, URL M3U, fichier ; la démo publique a été retirée depuis) avec détection des liens Xtream
 - [x] Gestion des playlists : modifier, actualiser (auto), supprimer, réordonner, EPG additionnels, UA/Referer
 - [x] Accueil : continuer à regarder, tendances, favoris, chaînes récentes, ajouts récents, statut du compte
 - [x] Live : catégories → chaînes (logo, numéro, programme en cours + progression, badge replay)
@@ -150,7 +150,7 @@ Fonctions jugées indispensables pour un lecteur moderne, traitées par jalons :
 | Playlists énormes (50 000+ entrées) | parsing en tâche de fond, index de recherche pré-normalisé, listes paresseuses, cache disque |
 | Guides XMLTV de centaines de Mo | SAX en flux, filtrage chaînes/fenêtre, cache élagué |
 | Panels Xtream non conformes | décodage JSON tolérant, tests sur réponses réelles |
-| Validation App Store (apps IPTV) | aucun contenu fourni, avertissement clair, playlist de démo légale |
+| Validation App Store (apps IPTV) | aucun contenu fourni, avertissement clair, pas de démo ; playlist de test de la review sur notre site, avec du contenu dont nous avons les droits |
 | Licences | dépendances MIT/BSD/LGPL, Apache 2.0 (bibliothèques Android), SDK Cast de Google selon les conditions de Google (iPhone/iPad) |
 | Pas de Mac dans l'environnement de dev | cœur testé sous Linux (Docker Swift 6) ; app compilée par la CI macOS |
 

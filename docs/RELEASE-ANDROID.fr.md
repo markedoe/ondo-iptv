@@ -98,16 +98,20 @@ URL : `https://markedoe.github.io/ondo-iptv/privacy.html` (le site est publié p
 *Is any part of your app restricted?* **No** : Ondo n'a ni compte ni paiement et ne bloque rien. Les champs
 Xtream (serveur, nom d'utilisateur, mot de passe) reçoivent les informations du fournisseur de l'utilisateur,
 comme une adresse de playlist : ce n'est pas une connexion à Ondo. Ne choisissez pas l'option restreinte :
-Play demande alors des identifiants qui fonctionnent (« Missing sign in details »). Les examinateurs trouvent
-**Try the demo** sur l'écran de bienvenue affiché au premier lancement : une playlist de chaînes publiques
-(projet iptv-org).
+Play demande alors des identifiants qui fonctionnent (« Missing sign in details »). L'app n'embarque ni
+chaîne ni démo : les examinateurs la testent avec la playlist de test hébergée sur le site du projet,
+`https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u` ([site/review](../site/review/README.fr.md) : notre chaîne et notre série
+de test, des films de la Blender Foundation sous CC BY), donnée dans les instructions ci-dessous.
 
 Si Play signale encore « Missing sign in details » (ses vérifications voient les champs Xtream), répondez **Yes**
-et ajoutez un jeu d'instructions : nom `Demo – no account`, utilisateur `No account needed`, mot de passe `No
-password needed`, et dans *Any other instructions* : « Ondo has no accounts and no payments. On the welcome
-screen, tap "Try the demo": a playlist of public TV channels (iptv-org project) loads, and every screen of the
-app can be reviewed with it. The Xtream fields (server, username, password) are for the user's own provider: Ondo
-provides no server and no content. » Ne donnez jamais les identifiants d'un vrai abonnement IPTV.
+et ajoutez un jeu d'instructions : nom `Test playlist – no account`, utilisateur `No account needed`, mot de
+passe `No password needed`, et dans *Any other instructions* (en anglais pour l'examinateur) : « Ondo has no
+accounts and no payments, and ships no channels. On the welcome screen, tap Add a Playlist, choose M3U link and
+enter https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u : a test playlist hosted on the project's own site, with only content we
+have the rights to (a test channel and series we produce, and Blender Foundation films under Creative Commons).
+Every screen of the app can be reviewed with it. The Xtream fields (server, username, password) are for the
+user's own provider: Ondo provides no server and no content. » Ne donnez jamais les identifiants d'un vrai
+abonnement IPTV.
 
 ### D3. Annonces
 
@@ -129,8 +133,7 @@ programme Familles.
 ### D6. Sécurité des données
 
 Ondo n'a ni serveur, ni compte, ni statistiques, ni publicité, ni rapport de plantage : toutes les données
-restent sur l'appareil. Les requêtes réseau vont aux serveurs que l'utilisateur a saisis, à la playlist
-publique de démonstration (projet iptv-org) quand il touche *Essayer la démo*, et une fois par semaine, sauf
+restent sur l'appareil. Les requêtes réseau vont aux serveurs que l'utilisateur a saisis, et une fois par semaine, sauf
 si c'est désactivé dans les Réglages (*Mettre à jour les prix automatiquement*), à GitHub pour le fichier
 public des prix ; rien concernant l'utilisateur n'est envoyé (voir les règles de confidentialité). Avec un jeton
 TMDb saisi par l'utilisateur (ou arrivé par la synchronisation), l'app interroge aussi TMDb, avec ce jeton, pour
@@ -185,7 +188,7 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
 
 *Tester et publier → Tests fermés → Créer un canal* : ajoutez au moins **12 testeurs** (liste d'e-mails ou
 groupe Google), envoyez-leur le lien d'inscription, et gardez-les inscrits **14 jours d'affilée** (si le
-nombre passe sous 12, le compteur repart à zéro). Demandez-leur d'utiliser réellement l'app (mode démo,
+nombre passe sous 12, le compteur repart à zéro). Demandez-leur d'utiliser réellement l'app (la playlist de test,
 leurs propres playlists). Ensuite : *Tableau de bord → Demander l'accès à la production* et répondez au
 questionnaire sur le test.
 

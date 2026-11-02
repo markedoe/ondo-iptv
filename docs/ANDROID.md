@@ -18,7 +18,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   and directors; filters by release years and by festival or ceremony), categories hidden by language or
   country code, by style or word, or one by one, help, settings (playlists, adult categories hidden
   by default, Update awards automatically, Languages and categories, App language, player buffers, TMDb token),
-  welcome screen with a demo and a "player without content" disclaimer.
+  welcome screen to add the first playlist (no channels and no demo are shipped) and a "player without content"
+  disclaimer.
 - **Search** finds a word anywhere in a title ("dust" finds "Stardust"): the exact title first, then titles starting
   with it, then a word starting with it, then the others. Titles and channels whose own name carries a hidden
   language tag (such as "|DE| …") are left out like hidden categories. On a TV, Search opens on its field with the
@@ -228,6 +229,7 @@ launch from the home screen (recommended channels).
 ## 5. Google Play considerations
 
 - "Unauthorized content / intellectual property" policy: as on the App Store, no channels
-  provided, clear disclaimer, legal demo playlist.
+  provided and no demo, clear disclaimer; reviewers test with a playlist hosted on the project's site that holds
+  only content we have the rights to (site/review).
 - Declarations: no data collection (*Data safety* form), minimal permissions
   (network, notifications, foreground for playback).

@@ -96,15 +96,18 @@ URL: `https://markedoe.github.io/ondo-iptv/privacy.html` (the site is published 
 *Is any part of your app restricted?* **No**: Ondo has no account, no payment and locks nothing. The Xtream
 fields (server, username, password) take the details of the user's own provider, like a playlist address: they
 are not a sign-in to Ondo. Do not choose the restricted option: Play then asks for working login credentials
-("Missing sign in details"). Reviewers find **Try the demo** on the welcome screen shown at first launch: a
-playlist of public channels (iptv-org project).
+("Missing sign in details"). The app ships no channels and no demo: reviewers test it with the test playlist
+hosted on the project's site, `https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u` ([site/review](../site/review/README.md): our own
+test channel and series, Blender Foundation films under CC BY), given in the instructions below.
 
 If Play still reports "Missing sign in details" (its checks see the Xtream fields), answer **Yes** and add one set
-of instructions: name `Demo – no account`, username `No account needed`, password `No password needed`, and in
-*Any other instructions*: "Ondo has no accounts and no payments. On the welcome screen, tap "Try the demo": a
-playlist of public TV channels (iptv-org project) loads, and every screen of the app can be reviewed with it. The
-Xtream fields (server, username, password) are for the user's own provider: Ondo provides no server and no
-content." Never give the credentials of a real IPTV subscription.
+of instructions: name `Test playlist – no account`, username `No account needed`, password `No password needed`,
+and in *Any other instructions*: "Ondo has no accounts and no payments, and ships no channels. On the welcome
+screen, tap Add a Playlist, choose M3U link and enter https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u : a test playlist hosted on the
+project's own site, with only content we have the rights to (a test channel and series we produce, and Blender
+Foundation films under Creative Commons). Every screen of the app can be reviewed with it. The Xtream fields
+(server, username, password) are for the user's own provider: Ondo provides no server and no content." Never give
+the credentials of a real IPTV subscription.
 
 ### D3. Ads
 
@@ -125,8 +128,7 @@ requirements.
 ### D6. Data safety
 
 Ondo has no server, no account, no analytics, no ads and no crash reporting: all data stays on the device.
-Network requests go to the servers the user has entered, to the public demo playlist (iptv-org project) when
-*Try the demo* is tapped, and once a week, unless turned off in Settings (*Update awards automatically*), to
+Network requests go to the servers the user has entered, and once a week, unless turned off in Settings (*Update awards automatically*), to
 GitHub for the public awards file; nothing about the user is sent (see the privacy policy). With a TMDb token the
 user entered (or that came by sync), the app also asks TMDb, with that token, for trending titles, backdrops,
 people and their credits: like the user's own servers, a service the user set up, asked at the user's request.
@@ -177,8 +179,8 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
 
 *Test and release → Closed testing → Create track*: add at least **12 testers** (email list or Google
 Group), send them the opt-in link, and keep them opted in for **14 consecutive days** (if the number drops
-below 12, the counter restarts from zero). Ask them to actually use the app (demo mode, their own
-playlists). Then: *Dashboard → Apply for production* and answer the questionnaire about the test.
+below 12, the counter restarts from zero). Ask them to actually use the app (the test playlist, their
+own playlists). Then: *Dashboard → Apply for production* and answer the questionnaire about the test.
 
 A version tag publishes to this track by itself (above). By hand: *Run workflow* with the `alpha` track (`alpha`
 = closed testing, `beta` = open testing); status `completed` (the default) sends it for review at once, `draft`

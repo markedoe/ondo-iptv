@@ -3,7 +3,7 @@
 [English](README.md)
 
 Les captures App Store et Google Play montrent ce catalogue plutôt qu'une app vide. Il ne sert qu'aux tests de
-captures : la playlist de démonstration de l'app ne change pas, et Ondo ne fournit toujours aucun contenu.
+captures : les apps n'embarquent ni playlist, ni chaîne, ni démo, et Ondo ne fournit toujours aucun contenu.
 
 - `catalogue.json` : films, une série, des chaînes fictives avec leur guide, et une bibliothèque en usage (en cours,
   Ma liste, chaînes favorites).

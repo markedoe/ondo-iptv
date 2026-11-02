@@ -18,7 +18,8 @@ version Android : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
 ## Captures
 
-La playlist de démonstration intégrée (titres fictifs), capturée par la CI à chaque changement de l'interface.
+Un catalogue de captures fait de films libres et de chaînes fictives (`fixtures/showcase`), capturé par la CI à
+chaque changement de l'interface.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/appstore-screenshots/fr-FR/01-home-iphone-max.png" width="200" alt="L'accueil sur iPhone">
@@ -75,7 +76,7 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
 - **Lecteur** : deux moteurs — **AVPlayer** (PiP, AirPlay, HDR) et **VLC** (MKV, AVI, TS…) avec bascule
   automatique —, **films MKV remuxés pour AVPlayer** sur iPhone et iPad (VLC les lit sur Mac), sans transcodage (HDR10, HLG, Dolby Vision,
   Dolby Atmos, PiP), VLC lisant ceux qu'il ne sait pas décoder, zapping, pistes audio / sous-titres, **sous-titres SRT externes**, **recherche de
-  sous-titres en ligne** (OpenSubtitles, SubDL et SubSource avec votre clé, vérifiée auprès du service à l'enregistrement, Addic7ed sans clé), format d'image,
+  sous-titres en ligne** (OpenSubtitles, SubDL et SubSource avec votre clé, vérifiée auprès du service à l'enregistrement, Addic7ed sans clé, désactivé par défaut), format d'image,
   vitesse, minuterie, verrouillage, gestes (iPhone), paysage forcé, reconnexion automatique, bascule vers
   une autre version d'une chaîne morte, erreurs expliquées, écran verrouillé / touches média, raccourcis
   clavier, menu Lecture, une fenêtre par flux et **plein écran** (bouton, touche F, double-clic) sur Mac ;
@@ -195,7 +196,8 @@ La playlist de démonstration intégrée (titres fictifs), capturée par la CI �
   recherche et sur leur page sans réseau. Une image du fournisseur qui ne mène nulle part n'est pas réessayée
   pendant 7 jours.
 - **Réglages** : playlists, catégories adultes masquées par défaut, langues et catégories, langue de
-  l'app, mise à jour automatique des prix, mémoire tampon du lecteur, jeton TMDb ; écran d'accueil avec démo.
+  l'app, mise à jour automatique des prix, mémoire tampon du lecteur, jeton TMDb ; un écran d'accueil pour ajouter la première playlist
+  (Ondo n'embarque ni chaîne ni démo).
 - **Android TV / Google TV** : Ondo dans le lanceur de la TV avec sa bannière, chaque écran à la télécommande
   (une sélection bien visible, qui revient sur la carte que vous avez quittée, des mises en page qui restent à
   l'écart des bords de l'écran) ; un lecteur dessiné pour la télécommande : de grands boutons, une barre de
@@ -328,8 +330,9 @@ Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur donné
   vigueur est affichée.
 - **Tests de mutation** du cœur Kotlin, une fois par semaine (Pitest) : de petits bugs sont introduits dans le
   code et ceux qu'aucun test ne détecte sont signalés ; ils ne font pas échouer la CI.
-- **Avant chaque publication** : la playlist de démonstration utilisée par la review d'Apple et de Google
-  doit répondre.
+- **Avant chaque publication** : la playlist de test qu'utilisent les reviews d'Apple et de Google, hébergée sur
+  le site du projet ([site/review](site/review/README.fr.md)), doit répondre : ses flux et son guide, sur notre
+  propre site et une courte liste d'hôtes de films libres (`check_review_playlist.py`).
 
 ## Android
 

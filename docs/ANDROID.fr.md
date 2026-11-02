@@ -19,8 +19,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   collections, recherche (chaînes, films, séries, acteurs et réalisateurs ; filtres par années de sortie et
   par festival ou cérémonie), catégories masquées par code de langue ou de pays, par style ou par mot, ou une
   à une, aide, réglages (playlists, catégories adultes masquées par défaut, Mettre à jour les prix
-  automatiquement, Langues et catégories, Langue de l'app, mémoires tampons du lecteur, jeton TMDb), accueil avec
-  démonstration et avertissement « lecteur sans contenu ».
+  automatiquement, Langues et catégories, Langue de l'app, mémoires tampons du lecteur, jeton TMDb), accueil pour
+  ajouter la première playlist (aucune chaîne ni démo embarquée) et avertissement « lecteur sans contenu ».
 - **Recherche** : un mot est trouvé n'importe où dans un titre (« dust » trouve « Stardust ») : le titre exact
   d'abord, puis les titres qui commencent par le mot, puis ceux dont un mot commence par lui, puis les autres. Les
   titres et chaînes dont le nom porte lui-même une étiquette de langue masquée (comme « |DE| … ») sont écartés
@@ -251,6 +251,7 @@ lancement depuis l'écran d'accueil (chaînes recommandées).
 ## 5. Points d'attention Google Play
 
 - Politique « Contenu non autorisé / propriété intellectuelle » : comme sur l'App Store, aucune chaîne
-  fournie, avertissement clair, playlist de démonstration légale.
+  fournie et pas de démo, avertissement clair ; les examinateurs testent avec une playlist hébergée sur le site
+  du projet, qui ne contient que du contenu dont nous avons les droits (site/review).
 - Déclarations : pas de collecte de données (formulaire *Data safety*), autorisations minimales
   (réseau, notifications, premier plan pour la lecture).

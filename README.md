@@ -18,7 +18,8 @@ platform (Swift / SwiftUI, Kotlin / Jetpack Compose). It runs on iOS / iPadOS 17
 
 ## Screenshots
 
-The built-in demo playlist (fictional titles), taken by CI each time the interface changes.
+A screenshot catalogue of open films and fictional channels (`fixtures/showcase`), taken by CI each time the
+interface changes.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/markedoe/ondo-iptv/appstore-screenshots/en-US/01-home-iphone-max.png" width="200" alt="Home on iPhone">
@@ -74,7 +75,7 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
 - **Player**: two engines, **AVPlayer** (PiP, AirPlay, HDR) and **VLC** (MKV, AVI, TS…), with automatic
   switching; **MKV films remuxed for AVPlayer** on iPhone and iPad (VLC plays them on the Mac), without transcoding (HDR10, HLG, Dolby Vision,
   Dolby Atmos, PiP), VLC playing those it cannot decode; zapping, audio / subtitle tracks, **external SRT subtitles**, **online subtitle search**
-  (OpenSubtitles, SubDL and SubSource with your key, checked with the service when saved, Addic7ed without one), aspect ratio, speed, sleep timer,
+  (OpenSubtitles, SubDL and SubSource with your key, checked with the service when saved, Addic7ed without one, off by default), aspect ratio, speed, sleep timer,
   lock, gestures (iPhone), forced landscape, automatic reconnection, switch to another version of a dead
   channel, explained errors, lock screen / media keys, keyboard shortcuts, Playback menu, one window per
   stream and **full screen** (button, F key, double-click) on the Mac; **exact resume**, **last channel**,
@@ -177,7 +178,8 @@ The built-in demo playlist (fictional titles), taken by CI each time the interfa
   show it at once, offline too, and the people of those titles are found in Search and on their page without
   network. A provider image that leads nowhere is not tried again for 7 days.
 - **Settings**: playlists, adult categories hidden by default, languages and categories, app language,
-  automatic awards updates, player buffers, TMDb token; welcome screen with a demo.
+  automatic awards updates, player buffers, TMDb token; a welcome screen to add the first playlist (Ondo ships
+  no channels and no demo).
 - **Android TV / Google TV**: Ondo in the TV's launcher with its banner, every screen with the remote (a visible
   focus that comes back to the card you left, layouts that keep clear of the screen's edges); a player drawn for
   the remote: large buttons, a progress bar to move through the video, Subtitles and Audio panels that list the
@@ -304,7 +306,9 @@ Some defects only show up in real conditions, where tests on simulated data cann
   for, applied when the emulator allows it; the limit in force is printed.
 - **Mutation testing** of the Kotlin core, once a week (Pitest): small bugs are planted in the code and those
   no test catches are reported; it does not fail the build.
-- **Before each release**: the demo playlist used by Apple's and Google's review must answer.
+- **Before each release**: the test playlist that Apple's and Google's reviewers use, hosted on the project's
+  site ([site/review](site/review/README.md)), must answer: its streams and its guide, from our own site and a
+  short list of hosts of open films (`check_review_playlist.py`).
 
 ## Android
 

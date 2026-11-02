@@ -132,8 +132,10 @@ ICP license).
 ### C5. App Review Information (in the version to submit)
 
 Contact information (name, phone, email), *Sign-in required*: no. The notes are uploaded by fastlane
-(`fastlane/metadata/review_information/notes.txt`): player with no content, how to test with the "Try the
-demo" button, why HTTP (`NSAllowsArbitraryLoads`), then each permission, background mode and entitlement:
+(`fastlane/metadata/review_information/notes.txt`): player with no content, how to test with the test playlist
+hosted on the project's site (`https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u`, see
+[site/review](../site/review/README.md): our own test channel and series, Blender Foundation films under CC BY;
+the apps ship no demo), why HTTP (`NSAllowsArbitraryLoads`), then each permission, background mode and entitlement:
 local network, notifications, background audio, AirPlay and Cast, the Mac sandbox (network client,
 user-selected files).
 
@@ -175,8 +177,10 @@ user-selected files).
    Each run of *Release* (macOS 26, Xcode 26.6 as in CI: `DEVELOPER_DIR` of each macOS job; Xcode 26 is
    required by Apple since April 2026) runs the core tests (a TestFlight edition run skips them when CI already
    passed on the same commit, as it has for a push to main; the App Store edition always runs them), then three
-   checks, any of which stops the run before any build or submission: *Demo playlist answers* (App Review
-   tests the app with the demo playlist; every target but `status`), *App Store edition checks*
+   checks, any of which stops the run before any build or submission: *Review playlist answers* (App Review
+   tests the app with the playlist the review notes give: `check_review_playlist.py --online` fetches it from
+   main's site and checks that each of its streams and its guide answer; App Store edition only, every target
+   but `status` and the withdrawals), *App Store edition checks*
    (`check_app_store.py` and the listing's addresses, see E; for the App Store edition, and for the targets
    `all`, `release`, `submit` and the three `metadata` ones whatever the edition) and *Privacy manifest and Mac
    sandbox checks* (`check_privacy_manifest.py` and `check_mac_entitlements.py`; every target that builds or
@@ -251,7 +255,7 @@ user-selected files).
    TestFlight the App Store edition build you will submit (by its build number: the latest Mac build is
    normally a TestFlight edition one) and run it on your Mac at least once.
 
-If a run fails (demo playlist, App Store edition checks, signing, export, upload), the job log says why. To
+If a run fails (review playlist, App Store edition checks, signing, export, upload), the job log says why. To
 sign the archive, Xcode creates an *Apple Development* certificate on each new runner; its private key
 disappears with the runner, so the workflow revokes it when the job ends (step *Revoke this runner's
 development certificate*, matched by serial number: distribution certificates and your Mac's certificate are
@@ -273,18 +277,19 @@ TestFlight builds are not affected.
   - the copyright is this year's and the same as `NSHumanReadableCopyright` in `project.yml`;
   - the review notes (4000 characters at most) name no other platform, promise nothing to come, have no
     placeholder words and say nothing of downloads; they explain `NSAllowsArbitraryLoads` and every
-    permission, background mode and Mac entitlement.
+    permission, background mode and Mac entitlement, and give the test playlist hosted on our own site; no
+    playlist address in the apps or the notes points anywhere else (the apps ship no demo).
 - The support, privacy and website addresses answer (the release workflow checks them).
 - `ITSAppUsesNonExemptEncryption = NO` is declared: no export compliance question on each build.
 - `PrivacyInfo.xcprivacy` is present (reasons for using sensitive APIs) and covers the shipped code, and the Mac
   sandbox has exactly the entitlements the app needs: `check_privacy_manifest.py` and
   `check_mac_entitlements.py` pass (CI runs them, and the release workflow before every upload).
-- The screenshots only show the generated demo (drawn posters, fictional channels): no logo or
+- The screenshots only show the generated showcase (open films, fictional channels): no logo or
   protected visual.
 
 ## F. Manual checks on a device (TestFlight)
 
-The CI builds, tests the logic and walks through the interface in the simulator with demo streams;
+The CI builds, tests the logic and walks through the interface in the simulator with test streams;
 these points require a real device and a real subscription before submission:
 
 - **Movies & series** from an Xtream account: home (carousel, resume), detail pages, next episode, resume.

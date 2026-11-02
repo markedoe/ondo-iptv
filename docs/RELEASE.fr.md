@@ -130,8 +130,10 @@ licence ICP).
 ### C5. Informations pour la review (dans la version à soumettre)
 
 Coordonnées (nom, téléphone, e-mail), *Sign-in required* : non. Les notes sont envoyées par fastlane
-(`fastlane/metadata/review_information/notes.txt`) : lecteur sans contenu, comment tester avec le bouton
-« Try the demo », pourquoi HTTP (`NSAllowsArbitraryLoads`), puis chaque autorisation, mode d'arrière-plan et
+(`fastlane/metadata/review_information/notes.txt`) : lecteur sans contenu, comment tester avec la playlist de test
+hébergée sur le site du projet (`https://markedoe.github.io/ondo-iptv/review/ondo-review.m3u`, voir
+[site/review](../site/review/README.fr.md) : notre chaîne et notre série de test, des films de la Blender
+Foundation sous CC BY ; les apps n'embarquent pas de démo), pourquoi HTTP (`NSAllowsArbitraryLoads`), puis chaque autorisation, mode d'arrière-plan et
 entitlement : réseau local, notifications, audio en arrière-plan, AirPlay et Cast, bac à sable du Mac (client
 réseau, fichiers choisis par l'utilisateur).
 
@@ -176,8 +178,10 @@ réseau, fichiers choisis par l'utilisateur).
    Xcode 26 est exigé par Apple depuis avril 2026) lance les tests du cœur (un lancement de l'édition TestFlight
    s'en passe quand la CI a déjà réussi sur le même commit, comme pour un push sur main ; l'édition App Store les
    lance toujours),
-   puis trois vérifications dont chacune arrête le lancement avant toute compilation ou soumission : *Demo
-   playlist answers* (la review d'Apple teste l'app avec la playlist de démo ; toutes les cibles sauf `status`),
+   puis trois vérifications dont chacune arrête le lancement avant toute compilation ou soumission : *Review
+   playlist answers* (la review d'Apple teste l'app avec la playlist que donnent les notes :
+   `check_review_playlist.py --online` la récupère sur le site de main et vérifie que chacun de ses flux et son
+   guide répondent ; édition App Store seulement, toutes les cibles sauf `status` et les retraits),
    *App Store edition checks* (`check_app_store.py` et les adresses de la fiche, voir E ; pour l'édition App
    Store, et pour les cibles `all`, `release`, `submit` et les trois `metadata` quelle que soit l'édition) et
    *Privacy manifest and Mac sandbox checks* (`check_privacy_manifest.py` et `check_mac_entitlements.py` ; toute
@@ -259,7 +263,7 @@ réseau, fichiers choisis par l'utilisateur).
    de build : le dernier build Mac est normalement un de l'édition TestFlight) et lancez-le au moins une fois
    sur votre Mac.
 
-Si un lancement échoue (playlist de démo, vérifications de l'édition App Store, signature, export, envoi), le
+Si un lancement échoue (playlist de review, vérifications de l'édition App Store, signature, export, envoi), le
 log du job dit pourquoi. Pour signer l'archive, Xcode crée un certificat *Apple Development* sur chaque
 nouveau runner ; sa clé privée disparaît avec le runner, donc le workflow le révoque à la fin du job (étape
 *Revoke this runner's development certificate*, repéré par son numéro de série : ni les certificats de
@@ -285,18 +289,20 @@ Les builds TestFlight ne sont pas touchés.
   - le copyright est celui de l'année et le même que `NSHumanReadableCopyright` dans `project.yml` ;
   - les notes pour la review (4000 caractères au plus) ne nomment aucune autre plateforme, ne promettent rien
     « à venir », n'ont pas de texte provisoire et ne parlent pas de téléchargements ; elles expliquent
-    `NSAllowsArbitraryLoads` et chaque autorisation, mode d'arrière-plan et entitlement Mac.
+    `NSAllowsArbitraryLoads` et chaque autorisation, mode d'arrière-plan et entitlement Mac, et donnent la
+    playlist de test hébergée sur notre propre site ; aucune adresse de playlist dans les apps ou les notes ne
+    mène ailleurs (les apps n'embarquent pas de démo).
 - Les adresses d'assistance, de confidentialité et du site répondent (le workflow de release les vérifie).
 - `ITSAppUsesNonExemptEncryption = NO` est déclaré : pas de question d'export à chaque build.
 - `PrivacyInfo.xcprivacy` présent (raisons d'usage des API sensibles) et couvrant le code livré, et le bac à
   sable du Mac a exactement les droits (entitlements) dont l'app a besoin : `check_privacy_manifest.py` et
   `check_mac_entitlements.py` passent (la CI les lance, et le workflow de release avant chaque envoi).
-- Les captures ne montrent que la démo générée (affiches dessinées, chaînes fictives) : aucun logo ni
+- Les captures ne montrent que le catalogue généré (films libres, chaînes fictives) : aucun logo ni
   visuel protégé.
 
 ## F. Vérifications manuelles sur appareil (TestFlight)
 
-La CI compile, teste la logique et parcourt l'interface sur simulateur avec des flux de démonstration ;
+La CI compile, teste la logique et parcourt l'interface sur simulateur avec des flux de test ;
 ces points demandent un vrai appareil et un vrai abonnement avant la soumission :
 
 - **Films et séries** d'un compte Xtream : accueil (carrousel, reprise), fiches, épisode suivant, reprise.

@@ -78,7 +78,7 @@ windows = multi-screen).
 
 ### Phase 2 — iPhone + Mac MVP app (P1) ✅
 - [x] XcodeGen project, Info.plist (ATS, background audio), Mac sandbox, original icon
-- [x] Onboarding + adding a playlist (Xtream, M3U URL, file, public demo) with detection of Xtream links
+- [x] Onboarding + adding a playlist (Xtream, M3U URL, file; the public demo was removed since) with detection of Xtream links
 - [x] Playlist management: edit, refresh (auto), delete, reorder, additional EPGs, UA/Referer
 - [x] Home: Continue Watching, Trending, Favorites, recent channels, Recently Added, account status
 - [x] Live: categories → channels (logo, number, current programme + progress, catch-up badge)
@@ -150,7 +150,7 @@ Features deemed essential for a modern player, handled in milestones:
 | Huge playlists (50,000+ entries) | background parsing, pre-normalized search index, lazy lists, disk cache |
 | XMLTV guides of hundreds of MB | streaming SAX, channel/window filtering, pruned cache |
 | Non-compliant Xtream panels | tolerant JSON decoding, tests on real responses |
-| App Store review (IPTV apps) | no content provided, clear disclaimer, legal demo playlist |
+| App Store review (IPTV apps) | no content provided, clear disclaimer, no demo; review test playlist on our own site with content we have the rights to |
 | Licenses | MIT/BSD/LGPL dependencies, Apache 2.0 (Android libraries), Google's Cast SDK under Google's terms (iPhone/iPad) |
 | No Mac in the development environment | core tested on Linux (Docker Swift 6); app built by the macOS CI |
 

@@ -3,7 +3,7 @@
 [Français](README.fr.md)
 
 The App Store and Google Play screenshots show this catalogue instead of an empty app. It is used by the screenshot
-tests only: the in-app demo playlist is unchanged, and Ondo still provides no content.
+tests only: the apps ship no playlist, channel or demo, and Ondo still provides no content.
 
 - `catalogue.json`: movies, a series, fictional channels with a guide, and a library in use (in progress, My List,
   favourite channels).
