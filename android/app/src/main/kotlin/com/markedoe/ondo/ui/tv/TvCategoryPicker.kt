@@ -282,8 +282,8 @@ private val PILL_TEXT_WIDTH = 180.dp
 /** The narrowest a category's name shows on the pill, cut short; narrower, the pill shows its icon alone. */
 private val PILL_SHORTEST_LABEL = 40.dp
 
-private val PILL_START = 12.dp
-private val PILL_END = 14.dp
+private val PILL_START = 10.dp
+private val PILL_END = 12.dp
 private val PILL_ICON = 18.dp
 private val PILL_LABEL_GAP = 6.dp
 

@@ -348,7 +348,7 @@ class TvLayoutRegressionTest {
             press(Key.DirectionRight)
             advance(50)
         }
-        assertEquals("the pill is Categories", "Categories", pillName())
+        assertEquals("the pill reads Categories", listOf("Categories"), compose.onAllNodesWithTag("categoryFilterLabel", useUnmergedTree = true).fetchSemanticsNodes().mapNotNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() })
         assertTrue("the pill sits before Search", bounds("categoryFilter").right <= bounds("tabSearch").left + 0.5.dp)
 
         press(Key.DirectionCenter)
@@ -372,9 +372,9 @@ class TvLayoutRegressionTest {
             .firstNotNullOfOrNull { it.config.getOrNull(SemanticsProperties.Text)?.joinToString() }
             ?: compose.onNodeWithTag("categoryFilter", useUnmergedTree = true).fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
 
-    /** The top bar's playlist line, its texts as laid out. */
-    private fun playlistLineLayouts(): List<TextLayoutResult> =
-        compose.onAllNodes(hasAnyAncestor(hasTestTag("lastUpdate")) and SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
+    /** The texts under [matcher] (in the unmerged tree), as laid out. */
+    private fun textLayouts(matcher: SemanticsMatcher): List<TextLayoutResult> =
+        compose.onAllNodes(matcher and SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
             .fetchSemanticsNodes()
             .map { node ->
                 val layouts = mutableListOf<TextLayoutResult>()
@@ -382,23 +382,31 @@ class TvLayoutRegressionTest {
                 layouts.single()
             }
 
+    private fun assertWhole(line: TextLayoutResult) {
+        val text = line.layoutInput.text.text
+        assertTrue("\"$text\" is cut short", !line.isLineEllipsized(0) && !line.hasVisualOverflow)
+        assertTrue("\"$text\" is narrower than its words", line.size.width + 0.5f >= line.multiParagraph.intrinsics.maxIntrinsicWidth)
+    }
+
     /**
      * On the Movies tab, the playlist line beside the Categories pill keeps both its lines whole ([updated]: the
-     * update's words in the language shown); the pill, named [categories], gives way instead, before Search.
+     * update's words in the language shown); the pill, named [categories], before Search, reads it whole when
+     * [labelShown] (otherwise it may give way to its icon alone).
      */
-    private fun assertThePlaylistLineIsWholeBesideThePill(updated: String, categories: String) {
+    private fun assertThePlaylistLineIsWholeBesideThePill(updated: String, categories: String, labelShown: Boolean) {
         val update = PlaylistUpdate("Example Playlist", updatedAt = NOW - 12 * 60_000L, now = NOW)
         show(TopLevel.MOVIES, update = update) { VodScreen(moviesPath, VodActions()) }
         compose.onNodeWithTag("lastUpdate").assertIsDisplayed()
             .assert(hasText(updated, substring = true)).assert(hasText(update.name, substring = true))
-        val lines = playlistLineLayouts()
+        val lines = textLayouts(hasAnyAncestor(hasTestTag("lastUpdate")))
         assertEquals("the playlist, then when it was updated", 2, lines.size)
-        lines.forEach { line ->
-            val text = line.layoutInput.text.text
-            assertTrue("\"$text\" is cut short", !line.isLineEllipsized(0) && !line.hasVisualOverflow)
-            assertTrue("\"$text\" is narrower than its words", line.size.width + 0.5f >= line.multiParagraph.intrinsics.maxIntrinsicWidth)
-        }
+        lines.forEach(::assertWhole)
         assertEquals(categories, pillName())
+        if (labelShown) {
+            val label = textLayouts(hasTestTag("categoryFilterLabel"))
+            assertEquals("the pill reads $categories", listOf(categories), label.map { it.layoutInput.text.text })
+            label.forEach(::assertWhole)
+        }
         val note = bounds("lastUpdate")
         val pill = bounds("categoryFilter")
         val search = bounds("tabSearch")
@@ -412,15 +420,15 @@ class TvLayoutRegressionTest {
     }
 
     @Test
-    fun thePlaylistLineStaysWholeBesideTheCategoriesPill() = assertThePlaylistLineIsWholeBesideThePill("Updated 12 minutes ago", "Categories")
+    fun thePlaylistLineStaysWholeBesideTheCategoriesPill() = assertThePlaylistLineIsWholeBesideThePill("Updated 12 minutes ago", "Categories", labelShown = true)
 
     @Test
     @Config(qualifiers = "+fr")
-    fun thePlaylistLineStaysWholeBesideTheCategoriesPillInFrench() = assertThePlaylistLineIsWholeBesideThePill("Mis à jour il y a 12 minutes", "Catégories")
+    fun thePlaylistLineStaysWholeBesideTheCategoriesPillInFrench() = assertThePlaylistLineIsWholeBesideThePill("Mis à jour il y a 12 minutes", "Catégories", labelShown = true)
 
     @Test
     @Config(qualifiers = "+ar-rSA")
-    fun thePlaylistLineStaysWholeBesideTheCategoriesPillInArabic() = assertThePlaylistLineIsWholeBesideThePill("حُدّثت", "الفئات")
+    fun thePlaylistLineStaysWholeBesideTheCategoriesPillInArabic() = assertThePlaylistLineIsWholeBesideThePill("حُدّثت", "الفئات", labelShown = false)
 
     /** A category's titles: the pill names it, and its picker opens on it. */
     @Test

@@ -299,27 +299,30 @@ fun TvNavigationFrame(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Ondo's mark and name, then the tabs; Search and Settings at the far end.
-                Row(Modifier.padding(end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.padding(end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     OndoLogo(36.dp)
                     Text("Ondo", fontSize = 17.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = (-0.03).em, modifier = Modifier.padding(start = 2.dp))
                 }
-                TopLevel.entries.forEach { tab ->
-                    BarTab(
-                        stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below,
-                        browsing = { bar.browsing },
-                        onOpening = { on -> openingTab = if (on) tab.tag else openingTab.takeIf { it != tab.tag } },
-                        onReach = { onSelect(tab) },
-                    ) {
-                        bar.browsing = false
-                        onSelect(tab)
-                        // OK goes into the tab's page, where the page puts the focus, once that page is the one shown.
-                        scope.launch {
-                            repeat(ENTER_PAGE_FRAMES) {
-                                withFrameNanos { }
-                                if (!barHasFocus) return@launch
-                                if (shownTab.value == tab && runCatching { bar.page?.memory?.entry()?.requestFocus() == true }.getOrDefault(false)) return@launch
+                // Side by side: each tab's own padding parts their names.
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    TopLevel.entries.forEach { tab ->
+                        BarTab(
+                            stringResource(tab.label), tab == selected, shown, tab.tag, requester(tab.tag), ::below,
+                            browsing = { bar.browsing },
+                            onOpening = { on -> openingTab = if (on) tab.tag else openingTab.takeIf { it != tab.tag } },
+                            onReach = { onSelect(tab) },
+                        ) {
+                            bar.browsing = false
+                            onSelect(tab)
+                            // OK goes into the tab's page, where the page puts the focus, once that page is the one shown.
+                            scope.launch {
+                                repeat(ENTER_PAGE_FRAMES) {
+                                    withFrameNanos { }
+                                    if (!barHasFocus) return@launch
+                                    if (shownTab.value == tab && runCatching { bar.page?.memory?.entry()?.requestFocus() == true }.getOrDefault(false)) return@launch
+                                }
+                                if (barHasFocus) runCatching { pages.requestFocus() }
                             }
-                            if (barHasFocus) runCatching { pages.requestFocus() }
                         }
                     }
                 }
@@ -347,7 +350,7 @@ fun TvNavigationFrame(
                                 horizontalAlignment = Alignment.End,
                                 modifier = Modifier
                                     .widthIn(max = maxOf(0.dp, noteWidth))
-                                    .padding(start = if (categories == null) 12.dp else 8.dp, end = if (categories == null) 12.dp else 4.dp)
+                                    .padding(start = if (categories == null) 12.dp else 0.dp, end = if (categories == null) 12.dp else 4.dp)
                                     .width(IntrinsicSize.Max)
                                     .semantics(mergeDescendants = true) {}
                                     .testTag("lastUpdate"),
@@ -355,7 +358,7 @@ fun TvNavigationFrame(
                                 note.lines().forEach { line ->
                                     Text(
                                         line,
-                                        style = MaterialTheme.typography.labelMedium,
+                                        style = MaterialTheme.typography.labelMedium.copy(letterSpacing = 0.sp),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -502,7 +505,7 @@ private fun BarTab(
             letterSpacing = 0.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             maxLines = 1,
-            modifier = Modifier.padding(PaddingValues(horizontal = 16.dp, vertical = 8.dp)),
+            modifier = Modifier.padding(PaddingValues(horizontal = 12.dp, vertical = 8.dp)),
         )
     }
 }
