@@ -5,17 +5,23 @@ public struct CustomList: Identifiable, Codable, Hashable, Sendable {
     public var id: UUID
     public var name: String
     public var items: [FavoriteEntry]
-    /// Last edit, used to resolve conflicts between devices (last writer wins per list).
+    /// Last edit (sync keeps a list while it is later than the list's deletion).
     public var updatedAt: Date
+    /// When the name was set, and when the items were put in order: sync merges each on its own (nil: `updatedAt`).
+    public var renamedAt: Date?
+    public var orderedAt: Date?
 
-    public init(id: UUID = UUID(), name: String, items: [FavoriteEntry] = [], updatedAt: Date = Date()) {
+    public init(id: UUID = UUID(), name: String, items: [FavoriteEntry] = [], updatedAt: Date = Date(), renamedAt: Date? = nil,
+                orderedAt: Date? = nil) {
         self.id = id
         self.name = name
         self.items = items
         self.updatedAt = updatedAt
+        self.renamedAt = renamedAt
+        self.orderedAt = orderedAt
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, items, updatedAt }
+    enum CodingKeys: String, CodingKey { case id, name, items, updatedAt, renamedAt, orderedAt }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -23,6 +29,8 @@ public struct CustomList: Identifiable, Codable, Hashable, Sendable {
         name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? ""
         items = (try? c.decodeIfPresent([FavoriteEntry].self, forKey: .items)) ?? []
         updatedAt = (try? c.decodeIfPresent(Date.self, forKey: .updatedAt)) ?? Date(timeIntervalSince1970: 0)
+        renamedAt = try? c.decodeIfPresent(Date.self, forKey: .renamedAt)
+        orderedAt = try? c.decodeIfPresent(Date.self, forKey: .orderedAt)
     }
 
     public func contains(_ reference: MediaReference) -> Bool {
@@ -45,6 +53,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     public var customLists: [CustomList]
     /// Deletion markers so removals propagate when merging with another device.
     public var favoriteTombstones: [String: Date]
+    /// `listID|itemKey` -> when the item was taken out of the list: sync sends it as a `listitem:` deletion.
+    public var listItemTombstones: [String: Date]
     public var historyTombstones: [String: Date]
     public var historyClearedAt: Date?
     public var deletedListIDs: Set<UUID>
@@ -80,6 +90,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         self.lockedCategoryKeys = lockedCategoryKeys
         self.customLists = customLists
         self.favoriteTombstones = [:]
+        self.listItemTombstones = [:]
         self.historyTombstones = [:]
         self.historyClearedAt = nil
         self.deletedListIDs = []
@@ -95,7 +106,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case favorites, history, hiddenCategoryKeys, categoryHiddenAt, categoryShownAt, lockedCategoryKeys, customLists
-        case favoriteTombstones, historyTombstones, historyClearedAt, deletedListIDs
+        case favoriteTombstones, listItemTombstones, historyTombstones, historyClearedAt, deletedListIDs
         case reminders, reminderTombstones, hiddenChannels, unhiddenChannels
         case hiddenCategoryTags, shownCategoryTags, hiddenCategoryWords, shownCategoryWords
     }
@@ -111,6 +122,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         lockedCategoryKeys = (try? c.decodeIfPresent(Set<String>.self, forKey: .lockedCategoryKeys)) ?? []
         customLists = (try? c.decodeIfPresent([CustomList].self, forKey: .customLists)) ?? []
         favoriteTombstones = (try? c.decodeIfPresent([String: Date].self, forKey: .favoriteTombstones)) ?? [:]
+        listItemTombstones = (try? c.decodeIfPresent([String: Date].self, forKey: .listItemTombstones)) ?? [:]
         historyTombstones = (try? c.decodeIfPresent([String: Date].self, forKey: .historyTombstones)) ?? [:]
         historyClearedAt = try? c.decodeIfPresent(Date.self, forKey: .historyClearedAt)
         deletedListIDs = (try? c.decodeIfPresent(Set<UUID>.self, forKey: .deletedListIDs)) ?? []
@@ -370,6 +382,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         var result = self
 
         result.favoriteTombstones = favoriteTombstones.merging(other.favoriteTombstones) { max($0, $1) }
+        result.listItemTombstones = listItemTombstones.merging(other.listItemTombstones) { max($0, $1) }
         result.historyTombstones = historyTombstones.merging(other.historyTombstones) { max($0, $1) }
         result.historyClearedAt = [historyClearedAt, other.historyClearedAt].compactMap { $0 }.max()
 
@@ -447,7 +460,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
 
     @discardableResult
     public mutating func createList(named name: String, now: Date = Date()) -> UUID {
-        let list = CustomList(name: name, updatedAt: now)
+        let list = CustomList(name: name, updatedAt: now, renamedAt: now, orderedAt: now)
         customLists.append(list)
         return list.id
     }
@@ -456,6 +469,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         guard let index = customLists.firstIndex(where: { $0.id == id }) else { return }
         customLists[index].name = name
         customLists[index].updatedAt = now
+        customLists[index].renamedAt = now
     }
 
     public mutating func deleteList(_ id: UUID) {
@@ -470,10 +484,13 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         var ref = reference
         ref.episodeID = nil
         customLists[index].updatedAt = now
+        let tombstone = id.uuidString + "|" + ref.itemKey
         if let position = customLists[index].items.firstIndex(where: { $0.reference.itemKey == ref.itemKey }) {
             customLists[index].items.remove(at: position)
+            listItemTombstones[tombstone] = now
             return false
         }
+        listItemTombstones[tombstone] = nil
         customLists[index].items.append(FavoriteEntry(reference: ref, title: title, imageURL: imageURL, addedAt: now, sortIndex: customLists[index].items.count))
         return true
     }
@@ -487,6 +504,7 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         items.insert(contentsOf: moving, at: min(max(adjusted, 0), items.count))
         customLists[index].items = items
         customLists[index].updatedAt = now
+        customLists[index].orderedAt = now
     }
 
     // MARK: Cleanup

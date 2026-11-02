@@ -300,6 +300,47 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot(device: "box", deleted: ["k": .max]).withoutFutureRecords(now: .max - 1).deleted, ["k": .max])
     }
 
+    // MARK: Lists, item by item
+
+    func testListsMergeItemByItemInEitherOrder() throws {
+        let a = try fixture("lists-a.json")
+        let b = try fixture("lists-b.json")
+        let expected = try fixture("lists-merged.json")
+        XCTAssertEqual(SyncMerge.merge(a, b), expected)
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(b, a)), withoutDevice(expected))
+        XCTAssertEqual(SyncMerge.merge(expected, expected), expected)
+        XCTAssertEqual(SyncMerge.merge(expected, b), expected)
+    }
+
+    func testTwoDevicesAddingAndRemovingInTheSameListKeepEveryChange() {
+        let start = SyncList(id: "l", name: "Weekend", items: [SyncListItem(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: 10),
+                                                               SyncListItem(playlist: "p", kind: "movie", item: "m2", title: "Quiet Water", addedAt: 10)], updatedAt: 10)
+        // At the same moment, one device adds m3 and removes m1, the other adds m4 and a person, and removes m2.
+        var one = start
+        one.items = [start.items[1], SyncListItem(playlist: "p", kind: "movie", item: "m3", title: "Harbor Lights", addedAt: 20)]
+        one.updatedAt = 20
+        var other = start
+        other.items = [start.items[0], SyncListItem(playlist: "p", kind: "movie", item: "m4", title: "Late Show", addedAt: 20)]
+        other.people = [SyncPerson(name: "Ada Example", addedAt: 20)]
+        other.updatedAt = 20
+        let a = SyncSnapshot(device: "a", lists: [one], deleted: [start.itemKey("p|movie|m1"): 20])
+        let b = SyncSnapshot(device: "b", lists: [other], deleted: [start.itemKey("p|movie|m2"): 20])
+        let merged = SyncMerge.merge(a, b)
+        XCTAssertEqual(merged.lists.flatMap { $0.items.map(\.item) }, ["m4", "m3"], "in the order of the list put in order last (a tie: the smaller order)")
+        XCTAssertEqual(merged.lists.flatMap { $0.people.map(\.name) }, ["Ada Example"])
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(b, a)), withoutDevice(merged))
+        // An item put back after its removal comes back.
+        var back = merged.lists[0]
+        back.items.append(SyncListItem(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: 30))
+        back.updatedAt = 30
+        XCTAssertEqual(SyncMerge.merge(merged, SyncSnapshot(device: "b", lists: [back])).lists[0].items.map(\.item), ["m4", "m3", "m1"])
+    }
+
+    func testListItemDeletionsAreReadWithTheirIDsInLowercase() {
+        XCTAssertEqual(SyncSnapshot.lowercasingID(ofDeleted: "listitem:L1|P1|movie|M1"), "listitem:l1|p1|movie|M1")
+        XCTAssertEqual(SyncSnapshot.lowercasingID(ofDeleted: "listitem:L1|person:ADA Élodie"), "listitem:l1|person:ada Élodie")
+    }
+
     func testTimesMoveByTheSendersClockDifference() {
         let now: Int64 = 1_760_000_000_000
         let hours: Int64 = 2 * 3_600_000

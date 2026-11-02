@@ -30,6 +30,11 @@ object SyncKeys {
     fun favorite(favorite: Favorite) =
         if (favorite.kind == ItemKind.PERSON) person(favorite.itemId) else "favorite:${favorite.playlistId.lowercase()}|${kind(favorite.kind)}|${favorite.itemId}"
     fun person(name: String) = SyncPerson.KEY_PREFIX + SyncPerson.folded(name)
+
+    /** The removal of [item] from the collection [listId]: `listitem:<list>|<item key>` (docs/SYNC.md). */
+    fun listItem(listId: String, item: Favorite) =
+        SyncList.ITEM_PREFIX + listId.lowercase() + "|" +
+            (if (item.kind == ItemKind.PERSON) person(item.itemId) else "${item.playlistId.lowercase()}|${kind(item.kind)}|${item.itemId}")
     fun progress(entry: WatchEntry) = "progress:${entry.playlistId.lowercase()}|${kind(entry.kind)}|${entry.itemId}|${entry.episodeId.orEmpty()}"
 
     /** A person kept (in My List or a list) travels as a person, whatever the playlist; the rest as a favourite. */
@@ -114,9 +119,13 @@ object SyncData {
                 SyncList(
                     id = list.id.lowercase(),
                     name = list.name,
-                    items = list.items.filterNot(SyncKeys::isPerson).map { SyncListItem(it.playlistId.lowercase(), SyncKeys.kind(it.kind), it.itemId, it.title, it.imageUrl) },
+                    items = list.items.filterNot(SyncKeys::isPerson).map {
+                        SyncListItem(it.playlistId.lowercase(), SyncKeys.kind(it.kind), it.itemId, it.title, it.imageUrl, it.addedAt)
+                    },
                     people = list.items.filter(SyncKeys::isPerson).map(SyncKeys::syncPerson),
                     updatedAt = list.updatedAt,
+                    renamedAt = list.renamedAt.takeIf { it > 0 },
+                    orderedAt = list.orderedAt.takeIf { it > 0 },
                 )
             },
             people = library.favorites.filter(SyncKeys::isPerson).map(SyncKeys::syncPerson),
@@ -223,9 +232,11 @@ object SyncData {
                 name = synced.name,
                 items = synced.items.mapNotNull { item ->
                     val kind = SyncKeys.itemKind(item.kind) ?: return@mapNotNull null
-                    Favorite(local(item.playlist), kind, item.item, item.title, item.image, localItems[item.key]?.addedAt ?: synced.updatedAt)
+                    Favorite(local(item.playlist), kind, item.item, item.title, item.image, item.addedAt ?: localItems[item.key]?.addedAt ?: synced.updatedAt)
                 } + people(synced.people),
                 updatedAt = synced.updatedAt,
+                renamedAt = synced.renamedAt ?: 0,
+                orderedAt = synced.orderedAt ?: 0,
             )
         }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
         val applied = library.copy(

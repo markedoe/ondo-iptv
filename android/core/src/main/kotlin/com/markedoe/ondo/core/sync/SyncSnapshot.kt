@@ -55,7 +55,15 @@ data class SyncSnapshot(
         playlists = playlists.map { it.copy(addedAt = time(it.addedAt), updatedAt = time(it.updatedAt)) },
         favorites = favorites.map { it.copy(addedAt = time(it.addedAt)) },
         progress = progress.map { it.copy(watchedAt = time(it.watchedAt)) },
-        lists = lists.map { list -> list.copy(people = list.people.map { it.copy(addedAt = time(it.addedAt)) }, updatedAt = time(list.updatedAt)) },
+        lists = lists.map { list ->
+            list.copy(
+                items = list.items.map { item -> item.copy(addedAt = item.addedAt?.let(time)) },
+                people = list.people.map { it.copy(addedAt = time(it.addedAt)) },
+                updatedAt = time(list.updatedAt),
+                renamedAt = list.renamedAt?.let(time),
+                orderedAt = list.orderedAt?.let(time),
+            )
+        },
         people = people.map { it.copy(addedAt = time(it.addedAt)) },
         keys = keys.map { it.copy(updatedAt = time(it.updatedAt)) },
         deleted = deleted.mapValues { time(it.value) },
@@ -123,19 +131,28 @@ data class SyncSnapshot(
     )
 }
 
-/**
- * The key of a deleted record with its playlist or list ID in lowercase: `playlist:<id>`, `list:<id>`, and the
- * playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`; the name of `person:<name>` with A to Z in lowercase.
- * The rest (the provider's item IDs, the service of `key:`) keeps its case.
- */
 /** [a] + [b], held at the ends of Long's range instead of wrapping around. */
 internal fun saturated(a: Long, b: Long): Long {
     val sum = a + b
     return if (((a xor sum) and (b xor sum)) < 0) (if (a < 0) Long.MIN_VALUE else Long.MAX_VALUE) else sum
 }
 
+/**
+ * The key of a deleted record with its playlist or list ID in lowercase: `playlist:<id>`, `list:<id>`, and the
+ * playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`; the name of `person:<name>` with A to Z in lowercase;
+ * in `listitem:<list>|<item>`, the list and the item the same way. The rest (the provider's item IDs, the service of
+ * `key:`) keeps its case.
+ */
 internal fun lowercasingId(key: String): String {
     if (key.startsWith(SyncPerson.KEY_PREFIX)) return SyncPerson.KEY_PREFIX + SyncPerson.folded(key.substring(SyncPerson.KEY_PREFIX.length))
+    if (key.startsWith(SyncList.ITEM_PREFIX)) {
+        val listEnd = key.indexOf('|', SyncList.ITEM_PREFIX.length).takeIf { it >= 0 } ?: return key.lowercase()
+        val list = key.substring(0, listEnd).lowercase()
+        val item = key.substring(listEnd + 1)
+        if (item.startsWith(SyncPerson.KEY_PREFIX)) return "$list|${lowercasingId(item)}"
+        val bar = item.indexOf('|').takeIf { it >= 0 } ?: return "$list|${item.lowercase()}"
+        return "$list|${item.substring(0, bar).lowercase()}${item.substring(bar)}"
+    }
     for (prefix in listOf("playlist:", "list:", "favorite:", "progress:")) {
         if (!key.startsWith(prefix)) continue
         val bar = if (prefix == "favorite:" || prefix == "progress:") key.indexOf('|', prefix.length) else -1
@@ -209,8 +226,21 @@ data class SyncList(
     /** The actors and directors in the list; none from a device that does not keep any. */
     val people: List<SyncPerson> = emptyList(),
     val updatedAt: Long,
+    /** When the name was last set; [updatedAt] when absent (an older version). */
+    val renamedAt: Long? = null,
+    /** When the items were last put in order; [updatedAt] when absent (an older version). */
+    val orderedAt: Long? = null,
 ) {
     val key: String get() = "list:$id"
+    val nameTime: Long get() = renamedAt ?: updatedAt
+    val orderTime: Long get() = orderedAt ?: updatedAt
+
+    /** The key of the removal of an item or a person ([SyncListItem.key], [SyncPerson.key]) from this list. */
+    fun itemKey(item: String) = "$ITEM_PREFIX$id|$item"
+
+    companion object {
+        const val ITEM_PREFIX = "listitem:"
+    }
 }
 
 @Serializable
@@ -220,6 +250,8 @@ data class SyncListItem(
     val item: String,
     val title: String,
     val image: String? = null,
+    /** When it was put in the list; the list's `updatedAt` when absent (an older version). */
+    val addedAt: Long? = null,
 ) {
     val key: String get() = "$playlist|$kind|$item"
 }

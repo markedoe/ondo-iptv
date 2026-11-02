@@ -70,9 +70,12 @@ class SyncMergeFuzzTest {
                 SyncList(
                     id = id,
                     name = fuzz.pick("Kids", "Weekend"),
-                    items = List(fuzz.int(3)) { SyncListItem(playlistOfRecords(), "movie", fuzz.pick("m1", "m2"), title = title()) },
+                    // Without a time of its own (an older version) or with one, no later than the list's.
+                    items = List(fuzz.int(3)) { SyncListItem(playlistOfRecords(), "movie", fuzz.pick("m1", "m2"), title = title(), addedAt = fuzz.pick(null, time, time - 1)) },
                     people = List(fuzz.int(2)) { SyncPerson(fuzz.pick("Ada", "ADA", "Bea"), image = fuzz.pick(null, "i1"), addedAt = time) },
                     updatedAt = time,
+                    renamedAt = fuzz.pick(null, time, time - 1),
+                    orderedAt = fuzz.pick(null, time, time - 2),
                 )
             }
         }
@@ -83,7 +86,8 @@ class SyncMergeFuzzTest {
         }
 
         private val keys = playlistIds.map { "playlist:$it" } + favorites.values.map { it.first().key } +
-            progress.values.map { it.first().key } + listOf("list:l1", "list:l2", "person:ada", "person:BEA")
+            progress.values.map { it.first().key } + listOf("list:l1", "list:l2", "person:ada", "person:BEA") +
+            listOf("l1", "L2").flatMap { list -> listOf("listitem:$list|${playlistIds.first()}|movie|m1", "listitem:$list|px|movie|m2", "listitem:$list|person:ADA") }
         private val deletions = keys.associateWith { versions { time -> time } }
 
         /** Of each record, nothing or one of its versions; the ID in the case the device writes it. */

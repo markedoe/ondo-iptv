@@ -145,6 +145,45 @@ class SyncTest {
         assertEquals(mapOf("k" to Long.MAX_VALUE), SyncSnapshot(device = "box", deleted = mapOf("k" to Long.MAX_VALUE)).withoutFutureRecords(Long.MAX_VALUE - 1).deleted)
     }
 
+    // Lists, item by item
+
+    @Test
+    fun listsMergeItemByItemInEitherOrder() {
+        val a = fixture("lists-a.json")
+        val b = fixture("lists-b.json")
+        val expected = fixture("lists-merged.json")
+        assertEquals(expected, SyncMerge.merge(a, b))
+        assertEquals(expected.withoutDevice(), SyncMerge.merge(b, a).withoutDevice())
+        assertEquals(expected, SyncMerge.merge(expected, expected))
+        assertEquals(expected, SyncMerge.merge(expected, b))
+    }
+
+    @Test
+    fun twoDevicesAddingAndRemovingInTheSameListKeepEveryChange() {
+        val m1 = SyncListItem("p", "movie", "m1", "Glass City", addedAt = 10)
+        val m2 = SyncListItem("p", "movie", "m2", "Quiet Water", addedAt = 10)
+        val start = SyncList("l", "Weekend", items = listOf(m1, m2), updatedAt = 10)
+        // At the same moment, one device adds m3 and removes m1, the other adds m4 and a person, and removes m2.
+        val one = start.copy(items = listOf(m2, SyncListItem("p", "movie", "m3", "Harbor Lights", addedAt = 20)), updatedAt = 20)
+        val other = start.copy(items = listOf(m1, SyncListItem("p", "movie", "m4", "Late Show", addedAt = 20)), people = listOf(SyncPerson("Ada Example", addedAt = 20)), updatedAt = 20)
+        val a = SyncSnapshot(device = "a", lists = listOf(one), deleted = mapOf(start.itemKey("p|movie|m1") to 20L))
+        val b = SyncSnapshot(device = "b", lists = listOf(other), deleted = mapOf(start.itemKey("p|movie|m2") to 20L))
+        val merged = SyncMerge.merge(a, b)
+        // In the order of the list put in order last (a tie: the smaller order).
+        assertEquals(listOf("m4", "m3"), merged.lists.flatMap { list -> list.items.map { it.item } })
+        assertEquals(listOf("Ada Example"), merged.lists.flatMap { list -> list.people.map { it.name } })
+        assertEquals(merged.withoutDevice(), SyncMerge.merge(b, a).withoutDevice())
+        // An item put back after its removal comes back.
+        val back = merged.lists[0].let { it.copy(items = it.items + m1.copy(addedAt = 30), updatedAt = 30) }
+        assertEquals(listOf("m4", "m3", "m1"), SyncMerge.merge(merged, SyncSnapshot(device = "b", lists = listOf(back))).lists[0].items.map { it.item })
+    }
+
+    @Test
+    fun listItemDeletionsAreReadWithTheirIdsInLowercase() {
+        assertEquals("listitem:l1|p1|movie|M1", lowercasingId("listitem:L1|P1|movie|M1"))
+        assertEquals("listitem:l1|person:ada Élodie", lowercasingId("listitem:L1|person:ADA Élodie"))
+    }
+
     @Test
     fun timesMoveByTheSendersClockDifference() {
         val now = 1_760_000_000_000L

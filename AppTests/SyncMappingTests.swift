@@ -58,6 +58,30 @@ final class SyncMappingTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot.decode(try snapshot.encoded()), snapshot)
     }
 
+    func testListsAreSentItemByItemWithTheirRemovals() throws {
+        let (playlists, base, state) = model()
+        var library = base
+        let list = library.customLists[0].id
+        let movie = ref(xtreamID, .movie, "m1")
+        library.toggle(movie, title: "Glass City", imageURL: nil, inList: list, now: t0.addingTimeInterval(5))
+        library.renameList(list, to: "Films", now: t0.addingTimeInterval(6))
+        let snapshot = SyncMapping.snapshot(playlists: playlists, library: library, state: state, deviceName: "iPhone", now: t0)
+        let id = list.uuidString.lowercased()
+        XCTAssertEqual(snapshot.deleted["listitem:\(id)|\(xtreamID.uuidString.lowercased())|movie|m1"], t0.addingTimeInterval(5).syncMilliseconds)
+        XCTAssertEqual(snapshot.lists[0].renamedAt, t0.addingTimeInterval(6).syncMilliseconds)
+
+        // Applied back: the times of each item and of the name stay.
+        var record = snapshot.lists[0]
+        record.items = [SyncListItem(playlist: xtreamID.uuidString.lowercased(), kind: "movie", item: "m2", title: "Quiet Water", addedAt: 1_760_000_000_000)]
+        record.orderedAt = 1_760_000_000_500
+        var received = snapshot
+        received.lists = [record]
+        let applied = SyncMapping.library(library, applying: received).customLists[0]
+        XCTAssertEqual(applied.items.map(\.addedAt), [Date(syncMilliseconds: 1_760_000_000_000)])
+        XCTAssertEqual(applied.renamedAt?.syncMilliseconds, t0.addingTimeInterval(6).syncMilliseconds)
+        XCTAssertEqual(applied.orderedAt, Date(syncMilliseconds: 1_760_000_000_500))
+    }
+
     func testThePeopleOtherDevicesKeepAreSentOnWithTheirLists() throws {
         let (playlists, library, base) = model()
         var state = base

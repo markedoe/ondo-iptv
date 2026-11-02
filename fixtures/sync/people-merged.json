@@ -15,7 +15,8 @@
           "playlist": "a0000000-0000-4000-8000-00000000000a",
           "kind": "movie",
           "item": "m1",
-          "title": "Glass City"
+          "title": "Glass City",
+          "addedAt": 2000
         }
       ],
       "people": [
@@ -24,7 +25,9 @@
           "addedAt": 1200
         }
       ],
-      "updatedAt": 2000
+      "updatedAt": 2000,
+      "renamedAt": 2000,
+      "orderedAt": 2000
     },
     {
       "id": "d2000000-0000-4000-8000-00000000000d",
@@ -37,7 +40,9 @@
           "addedAt": 2600
         }
       ],
-      "updatedAt": 2600
+      "updatedAt": 2600,
+      "renamedAt": 2600,
+      "orderedAt": 2600
     }
   ],
   "people": [

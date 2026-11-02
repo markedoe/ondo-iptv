@@ -47,9 +47,9 @@ object SyncMerge {
             (left.progress + right.progress).map { it.copy(playlist = id(it.playlist)) },
             { it.key }, { it.watchedAt }, compareByDescending<SyncProgress> { it.position }.thenBy { it.title }, deleted,
         ).filter { alive(it.playlist) }
-        val lists = pick(
+        val lists = mergeLists(
             (left.lists + right.lists).map { list -> list.copy(items = list.items.map { it.copy(playlist = id(it.playlist)) }) },
-            { it.key }, { it.updatedAt }, listOrder, deleted,
+            deleted,
         ).map { list -> list.copy(items = list.items.filter { alive(it.playlist) }) }
         // A side without people (a device that does not keep them) removes none: only a deletion does.
         val people = pick(left.people + right.people, { it.key }, { it.addedAt }, personOrder, deleted)
@@ -68,12 +68,41 @@ object SyncMerge {
     }
 
     /**
-     * The list with more people wins (a device that does not keep them sends the list without them), then the smaller
-     * tie string.
+     * One list per key, merged field by field (docs/SYNC.md, "Merge", rule 7): it stays unless deleted after its last
+     * change; its name is the one set last; its items and people are those of either side, each at its own time,
+     * without those removed since; their order is the one set last, then the others by the time they were added.
      */
-    private val listOrder: Comparator<SyncList> = compareByDescending<SyncList> { it.people.size }.thenBy { list ->
-        (listOf(list.name) + list.items.map { it.key } + list.people.map { "${it.name}|${it.image.orEmpty()}|${it.addedAt}" }).joinToString("\n")
-    }
+    private fun mergeLists(lists: List<SyncList>, deleted: Map<String, Long>): List<SyncList> =
+        lists.groupBy { it.key }.mapNotNull { (key, same) ->
+            val updatedAt = same.maxOf { it.updatedAt }
+            if (deleted[key]?.let { updatedAt <= it } == true) return@mapNotNull null
+            val first = same.first()
+            val named = same.minWith(compareByDescending<SyncList> { it.nameTime }.thenBy { it.name })
+            val ordered = same.minWith(compareByDescending<SyncList> { it.orderTime }.thenBy { list -> list.items.joinToString("\n") { it.key } })
+            fun kept(item: String, time: Long) = deleted[first.itemKey(item)]?.let { time > it } ?: true
+            val items = same.flatMap { list -> list.items.map { it.copy(addedAt = it.addedAt ?: list.updatedAt) } }
+                .groupBy { it.key }.values
+                .map { versions -> versions.minWith(itemOrder) }
+                .filter { kept(it.key, it.addedAt ?: 0) }
+            val people = same.flatMap { it.people }
+                .groupBy { it.key }.values
+                .map { versions -> versions.minWith(compareByDescending<SyncPerson> { it.addedAt }.then(personOrder)) }
+                .filter { kept(it.key, it.addedAt) }
+            val position = HashMap<String, Int>()
+            ordered.items.forEachIndexed { index, item -> position.putIfAbsent(item.key, index) }
+            first.copy(
+                name = named.name,
+                items = items.sortedWith(compareBy<SyncListItem> { position[it.key] ?: Int.MAX_VALUE }.thenBy { it.addedAt }.thenBy { it.key }),
+                people = people.sortedWith(compareBy<SyncPerson> { it.addedAt }.thenBy { it.key }),
+                updatedAt = updatedAt,
+                renamedAt = named.nameTime,
+                orderedAt = ordered.orderTime,
+            )
+        }
+
+    /** The later addition wins, then the smaller title, then the smaller image address. */
+    private val itemOrder: Comparator<SyncListItem> =
+        compareByDescending<SyncListItem> { it.addedAt ?: 0 }.thenBy { it.title }.thenBy { it.image.orEmpty() }
 
     /** The person with a photo wins, then the smaller name, then the smaller photo address. */
     private val personOrder: Comparator<SyncPerson> = compareBy<SyncPerson> { it.image == null }.thenBy { it.name }.thenBy { it.image.orEmpty() }

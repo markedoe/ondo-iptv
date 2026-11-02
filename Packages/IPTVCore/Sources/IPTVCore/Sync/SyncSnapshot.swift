@@ -141,6 +141,13 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         copy.lists = lists.map { list in
             var list = list
             list.updatedAt = time(list.updatedAt)
+            list.renamedAt = list.renamedAt.map(time)
+            list.orderedAt = list.orderedAt.map(time)
+            list.items = list.items.map { item in
+                var item = item
+                item.addedAt = item.addedAt.map(time)
+                return item
+            }
             list.people = list.people.map { person in
                 var person = person
                 person.addedAt = time(person.addedAt)
@@ -227,6 +234,15 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         let scalars = key.unicodeScalars
         if scalars.starts(with: SyncPerson.keyPrefix.unicodeScalars) {
             return SyncPerson.keyPrefix + SyncPerson.folded(String(scalars.dropFirst(SyncPerson.keyPrefix.unicodeScalars.count)))
+        }
+        if scalars.starts(with: SyncList.itemPrefix.unicodeScalars) {
+            let rest = scalars.dropFirst(SyncList.itemPrefix.unicodeScalars.count)
+            guard let listEnd = rest.firstIndex(of: "|") else { return key.lowercased() }
+            let list = SyncList.itemPrefix + String(rest[..<listEnd]).lowercased()
+            let item = String(rest[rest.index(after: listEnd)...])
+            if item.unicodeScalars.starts(with: SyncPerson.keyPrefix.unicodeScalars) { return list + "|" + lowercasingID(ofDeleted: item) }
+            guard let bar = item.unicodeScalars.firstIndex(of: "|") else { return list + "|" + item.lowercased() }
+            return list + "|" + String(item.unicodeScalars[..<bar]).lowercased() + String(item.unicodeScalars[bar...])
         }
         for prefix in ["playlist:", "list:", "favorite:", "progress:"] where scalars.starts(with: prefix.unicodeScalars) {
             let rest = String(scalars.dropFirst(prefix.unicodeScalars.count))
@@ -333,16 +349,31 @@ public struct SyncList: Codable, Hashable, Sendable {
     /// The actors and directors in the list; none from a device that does not keep any.
     public var people: [SyncPerson]
     public var updatedAt: Int64
+    /// When the name was last set; `updatedAt` when absent (an older version).
+    public var renamedAt: Int64?
+    /// When the items were last put in order; `updatedAt` when absent (an older version).
+    public var orderedAt: Int64?
 
-    public init(id: String, name: String, items: [SyncListItem] = [], people: [SyncPerson] = [], updatedAt: Int64) {
+    public static let itemPrefix = "listitem:"
+
+    public init(id: String, name: String, items: [SyncListItem] = [], people: [SyncPerson] = [], updatedAt: Int64,
+                renamedAt: Int64? = nil, orderedAt: Int64? = nil) {
         self.id = id
         self.name = name
         self.items = items
         self.people = people
         self.updatedAt = updatedAt
+        self.renamedAt = renamedAt
+        self.orderedAt = orderedAt
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, items, people, updatedAt }
+    enum CodingKeys: String, CodingKey { case id, name, items, people, updatedAt, renamedAt, orderedAt }
+
+    public var nameTime: Int64 { renamedAt ?? updatedAt }
+    public var orderTime: Int64 { orderedAt ?? updatedAt }
+
+    /// The key of the removal of an item or a person (`SyncListItem.key`, `SyncPerson.key`) from this list.
+    public func itemKey(_ item: String) -> String { Self.itemPrefix + id + "|" + item }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -351,6 +382,8 @@ public struct SyncList: Codable, Hashable, Sendable {
         items = try c.value(.items, default: [])
         people = try c.value(.people, default: [])
         updatedAt = try c.decode(Int64.self, forKey: .updatedAt)
+        renamedAt = try c.decodeIfPresent(Int64.self, forKey: .renamedAt)
+        orderedAt = try c.decodeIfPresent(Int64.self, forKey: .orderedAt)
     }
 
     public var key: String { "list:" + id }
@@ -362,13 +395,16 @@ public struct SyncListItem: Codable, Hashable, Sendable {
     public var item: String
     public var title: String
     public var image: String?
+    /// When it was put in the list; the list's `updatedAt` when absent (an older version).
+    public var addedAt: Int64?
 
-    public init(playlist: String, kind: String, item: String, title: String, image: String? = nil) {
+    public init(playlist: String, kind: String, item: String, title: String, image: String? = nil, addedAt: Int64? = nil) {
         self.playlist = playlist
         self.kind = kind
         self.item = item
         self.title = title
         self.image = image
+        self.addedAt = addedAt
     }
 
     public var key: String { "\(playlist)|\(kind)|\(item)" }

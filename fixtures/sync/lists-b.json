@@ -1,0 +1,54 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "66666666-6666-4666-8666-666666666666",
+  "deviceName": "Living room TV",
+  "lists": [
+    {
+      "id": "e1000000-0000-4000-8000-00000000000e",
+      "name": "Weekend films",
+      "items": [
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m1",
+          "title": "Glass City",
+          "addedAt": 1000
+        },
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m3",
+          "title": "Harbor Lights",
+          "addedAt": 2000
+        },
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m4",
+          "title": "Late Show",
+          "addedAt": 2600
+        }
+      ],
+      "updatedAt": 2600,
+      "renamedAt": 2200,
+      "orderedAt": 1000
+    },
+    {
+      "id": "e2000000-0000-4000-8000-00000000000e",
+      "name": "Old",
+      "items": [
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m1",
+          "title": "Glass City"
+        }
+      ],
+      "updatedAt": 500
+    }
+  ],
+  "deleted": {
+    "listitem:e1000000-0000-4000-8000-00000000000e|person:ADA EXAMPLE": 2400
+  }
+}

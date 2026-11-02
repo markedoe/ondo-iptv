@@ -73,6 +73,10 @@ data class UserCollection(
     val name: String,
     val items: List<Favorite> = emptyList(),
     val updatedAt: Long = 0,
+    /** When the name was set (sync merges it on its own); 0 when not known (an older version): [updatedAt] then. */
+    val renamedAt: Long = 0,
+    /** When the items were put in this order (sync); 0 when not known: [updatedAt] then. */
+    val orderedAt: Long = 0,
 ) {
     fun contains(playlistId: String, kind: ItemKind, itemId: String): Boolean =
         items.any { it.playlistId == playlistId && it.kind == kind && it.itemId == itemId }
@@ -213,10 +217,10 @@ data class LibraryState(
     // Collections
 
     fun creatingCollection(id: String, name: String, now: Long): LibraryState =
-        copy(collections = sortedByName(collections + UserCollection(id, name.trim(), updatedAt = now)))
+        copy(collections = sortedByName(collections + UserCollection(id, name.trim(), updatedAt = now, renamedAt = now, orderedAt = now)))
 
     fun renamingCollection(id: String, name: String, now: Long): LibraryState =
-        copy(collections = sortedByName(collections.map { if (it.id == id) it.copy(name = name.trim(), updatedAt = now) else it }))
+        copy(collections = sortedByName(collections.map { if (it.id == id) it.copy(name = name.trim(), updatedAt = now, renamedAt = now) else it }))
 
     fun deletingCollection(id: String, now: Long = 0): LibraryState =
         copy(collections = collections.filterNot { it.id == id }).deleting(SyncKeys.list(id), now)
@@ -225,16 +229,20 @@ data class LibraryState(
     fun deleting(key: String, time: Long): LibraryState =
         if ((syncDeleted[key] ?: Long.MIN_VALUE) >= time) this else copy(syncDeleted = syncDeleted + (key to time))
 
-    /** Adds the item to the collection, or takes it out if it is there. */
-    fun togglingInCollection(id: String, item: Favorite, now: Long): LibraryState = copy(
-        collections = collections.map { list ->
-            when {
-                list.id != id -> list
-                list.items.any { it.key == item.key } -> list.copy(items = list.items.filterNot { it.key == item.key }, updatedAt = now)
-                else -> list.copy(items = list.items + item, updatedAt = now)
-            }
-        },
-    )
+    /** Adds the item to the collection, or takes it out if it is there (remembered for sync at [now]). */
+    fun togglingInCollection(id: String, item: Favorite, now: Long): LibraryState {
+        val removed = collections.any { list -> list.id == id && list.items.any { it.key == item.key } }
+        val toggled = copy(
+            collections = collections.map { list ->
+                when {
+                    list.id != id -> list
+                    removed -> list.copy(items = list.items.filterNot { it.key == item.key }, updatedAt = now)
+                    else -> list.copy(items = list.items + item, updatedAt = now)
+                }
+            },
+        )
+        return if (removed) toggled.deleting(SyncKeys.listItem(id, item), now) else toggled
+    }
 
     private fun sortedByName(lists: List<UserCollection>) = lists.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
 

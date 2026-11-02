@@ -153,6 +153,45 @@ class SyncDataTest {
         assertEquals(listOf("Ada Example" to null), phone.state.value.library.people())
     }
 
+    /** Two boxes change the same collection between two sessions: every addition and every removal is kept. */
+    @Test
+    fun twoBoxesChangingTheSameCollectionKeepEveryChange() = runTest {
+        val living = device("living").ready()
+        val bedroom = device("bedroom").ready()
+        living.addPlaylist("Films", films)
+        val (glass, quiet) = living.state.value.content.movies.sortedBy { it.name }.let { it[0] to it[1] }
+        val weekend = living.createCollection("Weekend")
+        living.toggleInCollection(weekend, ItemKind.MOVIE, glass.id, glass.name, null)
+        living.togglePersonInCollection(weekend, "Tom Example", null)
+        session(bedroom, living)
+        bedroom.state.first { it.content.movies.size == 2 }
+
+        // Meanwhile: the living room box adds a film and takes the person out; the bedroom box adds a person, renames
+        // the collection, and takes the first film out.
+        time += 1_000
+        living.toggleInCollection(weekend, ItemKind.MOVIE, quiet.id, quiet.name, null)
+        living.togglePersonInCollection(weekend, "Tom Example", null)
+        time += 1_000
+        bedroom.togglePersonInCollection(weekend, "Ada Example", null)
+        bedroom.renameCollection(weekend, "Weekend films")
+        bedroom.toggleInCollection(weekend, ItemKind.MOVIE, glass.id, glass.name, null)
+        session(bedroom, living)
+        session(living, bedroom)
+
+        for (box in listOf(living, bedroom)) {
+            val collection = box.state.value.library.collections.single()
+            assertEquals("Weekend films", collection.name)
+            assertEquals(listOf(quiet.id), collection.items.filter { it.kind == ItemKind.MOVIE }.map { it.itemId })
+            assertEquals(listOf("Ada Example"), collection.items.filter { it.kind == ItemKind.PERSON }.map { it.title })
+        }
+        // Renamed again on the living room box: only the name changes.
+        time += 1_000
+        living.renameCollection(weekend, "Films")
+        session(bedroom, living)
+        assertEquals(living.state.value.library.collections, bedroom.state.value.library.collections)
+        assertEquals(2, bedroom.state.value.library.collections.single().items.size)
+    }
+
     /** Two boxes playing two films, with sessions both ways in between: each position moves only forward. */
     @Test
     fun twoBoxesPlayingTwoFilmsKeepBothPositions() = runTest {

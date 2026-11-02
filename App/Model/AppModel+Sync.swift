@@ -90,6 +90,11 @@ enum SyncMapping {
         for (playbackKey, date) in library.historyTombstones where isSyncedProgressKey(playbackKey) {
             delete("progress:" + lowercasingPlaylistID(playbackKey), at: date)
         }
+        // `listID|itemKey`: the list's ID and the item's playlist in lowercase.
+        for (key, date) in library.listItemTombstones {
+            guard let bar = key.firstIndex(of: "|") else { continue }
+            delete(SyncList.itemPrefix + key[..<bar].lowercased() + "|" + lowercasingPlaylistID(String(key[key.index(after: bar)...])), at: date)
+        }
         let snapshot = SyncSnapshot(
             device: state.deviceID,
             deviceName: deviceName,
@@ -113,8 +118,10 @@ enum SyncMapping {
                 let id = list.id.uuidString.lowercased()
                 return SyncList(id: id, name: list.name, items: list.items.map { item in
                     SyncListItem(playlist: item.reference.playlistID.uuidString.lowercased(), kind: item.reference.type.rawValue,
-                                 item: item.reference.itemID, title: item.title, image: item.imageURL?.absoluteString)
-                }, people: state.listPeople[id] ?? [], updatedAt: list.updatedAt.syncMilliseconds)
+                                 item: item.reference.itemID, title: item.title, image: item.imageURL?.absoluteString,
+                                 addedAt: item.addedAt.syncMilliseconds)
+                }, people: state.listPeople[id] ?? [], updatedAt: list.updatedAt.syncMilliseconds,
+                   renamedAt: list.renamedAt?.syncMilliseconds, orderedAt: list.orderedAt?.syncMilliseconds)
             },
             people: state.people,
             keys: keys(tmdbKey: tmdbKey, state: state),
@@ -294,12 +301,15 @@ enum SyncMapping {
                 guard let reference = reference(playlist: item.playlist, kind: item.kind, item: item.item),
                       seenItems.insert(reference.itemKey).inserted else { return nil }
                 var entry = itemsByKey[reference.itemKey] ?? FavoriteEntry(reference: reference, title: item.title, imageURL: nil, addedAt: updatedAt)
+                entry.addedAt = item.addedAt.map { Date(syncMilliseconds: $0) } ?? entry.addedAt
                 entry.title = item.title
                 entry.imageURL = image(item.image, keeping: entry.imageURL)
                 entry.sortIndex = seenItems.count - 1
                 return entry
             }
-            lists[id] = CustomList(id: id, name: record.name, items: items, updatedAt: updatedAt)
+            lists[id] = CustomList(id: id, name: record.name, items: items, updatedAt: updatedAt,
+                                   renamedAt: record.renamedAt.map { Date(syncMilliseconds: $0) },
+                                   orderedAt: record.orderedAt.map { Date(syncMilliseconds: $0) })
             order.append(id)
         }
         // The device's lists keep their place; new ones come after them.

@@ -118,10 +118,16 @@ ajoutée ou modifiée).
 `position` et `duration` sont des secondes (nombres). Un titre est terminé à 95 % de sa durée. Clé :
 `progress:<playlist>|<kind>|<item>|<épisode ou vide>` ; instant : `watchedAt`.
 
-**Liste** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?}], "people": [<personne>],
-"updatedAt"}`. Clé : `list:<id>` ; instant : `updatedAt` (fixé quand la liste est créée, renommée ou que ses
-éléments ou ses personnes changent). `id` est mis en minuscules. `people` (les acteurs et réalisateurs de la liste)
-peut manquer : un appareil qui ne garde pas de personnes n’en envoie aucune.
+**Liste** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],
+"people": [<personne>], "updatedAt", "renamedAt"?, "orderedAt"?}`. Clé : `list:<id>` ; instant : `updatedAt` (fixé
+quand la liste est créée, renommée, remise en ordre, ou que ses éléments ou ses personnes changent). `id` est mis en
+minuscules. `people` (les acteurs et réalisateurs de la liste) peut manquer : un appareil qui ne garde pas de
+personnes n’en envoie aucune. Chaque partie a son propre instant (règle 7 de la fusion) : `renamedAt` quand le nom a
+été fixé, `orderedAt` quand les éléments ont été mis en ordre (tous deux `updatedAt` s’ils manquent), et l’`addedAt`
+de chaque élément et de chaque personne (celui d’un élément est l’`updatedAt` de la liste s’il manque, comme
+l’envoie une version plus ancienne). Retirer un élément ou une personne d’une liste ajoute
+`listitem:<id de liste>|<playlist>|<kind>|<item>` ou `listitem:<id de liste>|person:<nom>` à `deleted` (identifiants
+de liste et de playlist en minuscules, le nom replié comme pour une personne).
 
 **Personne** (un acteur ou un réalisateur gardé dans Ma liste, quelle que soit la playlist) — `{"name", "image"?,
 "addedAt"}`. `image` est sa photo (une adresse web). Clé : `person:<name>` avec seulement les lettres A à Z en
@@ -164,10 +170,6 @@ change rien.
      vides) ;
    - favori : `title` ;
    - progression : pas de chaîne : la plus grande `position` gagne, puis le plus petit `title` ;
-   - liste : pas une chaîne d’abord : la liste qui a le plus de `people` gagne (un appareil qui ne garde pas de
-     personnes envoie la liste sans elles au même instant) ; puis `name`, la clé de chaque élément
-     (`<playlist>|<kind>|<item>`) dans l’ordre, et chaque personne sous la forme `<name>|<image ou vide>|<addedAt>`
-     dans l’ordre, joints par un saut de ligne ;
    - personne : pas une chaîne d’abord : celle qui a une `image` gagne ; puis le plus petit `name`, puis la plus
      petite `image` ;
    - clé : `value`.
@@ -184,7 +186,18 @@ change rien.
    `deleted` et aucune playlist gardée n’a cet identifiant) est écarté. Celui dont la playlist est simplement
    inconnue (une playlist fichier d’un autre appareil) est gardé.
 6. Le résultat range les playlists par `addedAt` puis `id`, les favoris par `addedAt` puis clé, les progressions
-   par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, les personnes par `addedAt` puis clé, et les clés par `service`.
+   par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, les personnes par `addedAt` puis clé, et les clés par
+   `service`.
+7. **Les listes se fusionnent partie par partie.** Une liste reste sauf si `list:<id>` est supprimé au plus tôt à
+   son `updatedAt` le plus tardif, qu’elle garde. Son nom est celui au `renamedAt` le plus tardif (puis le plus petit
+   nom). Ses éléments sont ceux de l’un ou l’autre côté, un par clé, l’`addedAt` le plus tardif gagnant (puis le plus
+   petit `title`, puis la plus petite `image`), sans ceux dont l’`addedAt` n’est pas postérieur à leur suppression
+   `listitem:` ; ses personnes de même (l’`addedAt` le plus tardif, puis comme la règle 2 pour une personne), rangées
+   par `addedAt` puis clé. Les éléments suivent l’ordre du côté à l’`orderedAt` le plus tardif (puis la plus petite
+   ligne de clés d’éléments jointes par un saut de ligne) ; ceux qui n’y sont pas viennent après, par `addedAt` puis
+   clé. Le résultat écrit toujours `renamedAt`, `orderedAt` et chaque `addedAt`. Une version plus ancienne garde
+   encore une liste entière comme un seul élément et n’envoie pas de suppression `listitem:` : un élément qu’elle a
+   retiré revient depuis un appareil qui l’a encore.
 
 Un appareil garde l’instantané fusionné comme le sien : il ajoute les playlists qu’il n’avait pas (et les
 télécharge), met à jour celles qui ont changé, supprime celles qui ont été supprimées, et remplace Ma liste, les

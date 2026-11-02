@@ -110,10 +110,15 @@ the playlist address. Key: `playlist:<id>`; time: `updatedAt` (set when the play
 `position` and `duration` are seconds (numbers). A title is finished at 95 % of its duration. Key:
 `progress:<playlist>|<kind>|<item>|<episode or empty>`; time: `watchedAt`.
 
-**List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?}], "people": [<person>],
-"updatedAt"}`. Key: `list:<id>`; time: `updatedAt` (set when the list is created, renamed or its items or people
-change). `id` is lowercased. `people` (the actors and directors in the list) may be missing: a device that does not
-keep people sends none.
+**List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],
+"people": [<person>], "updatedAt", "renamedAt"?, "orderedAt"?}`. Key: `list:<id>`; time: `updatedAt` (set when the
+list is created, renamed, put in order, or its items or people change). `id` is lowercased. `people` (the actors and
+directors in the list) may be missing: a device that does not keep people sends none. Each part has its own time
+(rule 7 of the merge): `renamedAt` when the name was set, `orderedAt` when the items were put in order (both
+`updatedAt` when missing), and each item's and person's `addedAt` (an item's is the list's `updatedAt` when missing,
+as an older version sends it). Taking an item or a person out of a list adds
+`listitem:<list id>|<playlist>|<kind>|<item>` or `listitem:<list id>|person:<name>` to `deleted` (list and playlist IDs
+lowercased, the name folded as for a person).
 
 **Person** (an actor or a director kept in My List, whatever the playlist) — `{"name", "image"?, "addedAt"}`.
 `image` is their photo (a web address). Key: `person:<name>` with only the letters A to Z in lowercase (the same on
@@ -151,9 +156,6 @@ nothing.
    - playlist: `name`, `url`, `username`, `password`, `epgUrl` joined with a line feed (missing values as empty);
    - favorite: `title`;
    - progress: not a string: the larger `position` wins, then the smaller `title`;
-   - list: not a string first: the list with more `people` wins (a device that does not keep people sends the list
-     without them at the same time); then `name`, each item's key (`<playlist>|<kind>|<item>`) in order, and each
-     person as `<name>|<image or empty>|<addedAt>` in order, joined with a line feed;
    - person: not a string first: the one with an `image` wins; then the smaller `name`, then the smaller `image`;
    - key: `value`.
 3. A record whose time is not later than its key's deletion time is dropped (on equal times, the deletion wins).
@@ -168,6 +170,15 @@ nothing.
    kept.
 6. The result lists playlists by `addedAt` then `id`, favorites by `addedAt` then key, progress by `watchedAt`
    (latest first) then key, lists by `id`, people by `addedAt` then key, and keys by `service`.
+7. **Lists merge part by part.** A list stays unless `list:<id>` is deleted at or after its latest `updatedAt`, which
+   it keeps. Its name is the one with the latest `renamedAt` (then the smaller name). Its items are those of either
+   side, one per key, the latest `addedAt` winning (then the smaller `title`, then the smaller `image`), without those
+   whose `addedAt` is not later than their `listitem:` deletion; its people likewise (the latest `addedAt`, then as
+   rule 2 for a person), sorted by `addedAt` then key. The items follow the order of the side with the latest
+   `orderedAt` (then the smaller line of item keys joined with a line feed); those not in it come after, by `addedAt`
+   then key. The result always writes `renamedAt`, `orderedAt` and each `addedAt`. An older version still keeps a
+   whole list as one record and sends no `listitem:` deletion: an item it took out comes back from a device that
+   still has it.
 
 A device keeps the merged snapshot as its own: it adds the playlists it did not have (and downloads them),
 updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists and

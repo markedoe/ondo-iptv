@@ -61,7 +61,7 @@ public enum SyncMerge {
             },
             key: \.key, time: \.watchedAt, tie: progressOrder, deleted: deleted
         ).filter { alive($0.playlist) }
-        let lists = pick(
+        let lists = mergeLists(
             (left.lists + right.lists).map { list in
                 var list = list
                 list.items = list.items.map { item in
@@ -71,7 +71,7 @@ public enum SyncMerge {
                 }
                 return list
             },
-            key: \.key, time: \.updatedAt, tie: listOrder, deleted: deleted
+            deleted: deleted
         ).map { list in
             var list = list
             list.items = list.items.filter { alive($0.playlist) }
@@ -124,15 +124,61 @@ public enum SyncMerge {
         return first.title.isBefore(second.title)
     }
 
-    /// The list with more people wins (a device that does not keep them sends the list without them), then the smaller
-    /// tie string.
-    private static func listOrder(_ first: SyncList, _ second: SyncList) -> Bool {
-        if first.people.count != second.people.count { return first.people.count > second.people.count }
-        return listTieString(first).isBefore(listTieString(second))
+    /// One list per key, merged field by field (docs/SYNC.md, "Merge", rule 7): it stays unless deleted after its last
+    /// change; its name is the one set last; its items and people are those of either side, each at its own time,
+    /// without those removed since; their order is the one set last, then the others by the time they were added.
+    private static func mergeLists(_ lists: [SyncList], deleted: [String: Int64]) -> [SyncList] {
+        grouped(lists, by: { Array($0.key.utf16) }).compactMap { same -> SyncList? in
+            guard let first = same.first else { return nil }
+            let updatedAt = same.map(\.updatedAt).max() ?? first.updatedAt
+            if let removed = deleted[first.key], updatedAt <= removed { return nil }
+            guard let named = same.min(by: { $0.nameTime != $1.nameTime ? $0.nameTime > $1.nameTime : $0.name.isBefore($1.name) }),
+                  let ordered = same.min(by: { a, b in
+                      a.orderTime != b.orderTime ? a.orderTime > b.orderTime : orderString(a).isBefore(orderString(b))
+                  }) else { return nil }
+            func kept(_ item: String, _ time: Int64) -> Bool { deleted[first.itemKey(item)].map { time > $0 } ?? true }
+            let allItems = same.flatMap { list in
+                list.items.map { item in
+                    var item = item
+                    item.addedAt = item.addedAt ?? list.updatedAt
+                    return item
+                }
+            }
+            let items = grouped(allItems, by: { Array($0.key.utf16) })
+                .compactMap { $0.min(by: itemOrder) }
+                .filter { kept($0.key, $0.addedAt ?? 0) }
+            let people = grouped(same.flatMap(\.people), by: { Array($0.key.utf16) })
+                .compactMap { $0.min(by: { $0.addedAt != $1.addedAt ? $0.addedAt > $1.addedAt : personOrder($0, $1) }) }
+                .filter { kept($0.key, $0.addedAt) }
+            var position: [[UInt16]: Int] = [:]
+            for (index, item) in ordered.items.enumerated() where position[Array(item.key.utf16)] == nil {
+                position[Array(item.key.utf16)] = index
+            }
+            var list = first
+            list.name = named.name
+            list.items = items.sorted { a, b in
+                let first = position[Array(a.key.utf16)] ?? .max, second = position[Array(b.key.utf16)] ?? .max
+                if first != second { return first < second }
+                return before((a.addedAt ?? 0, a.key), (b.addedAt ?? 0, b.key))
+            }
+            list.people = people.sorted { before(($0.addedAt, $0.key), ($1.addedAt, $1.key)) }
+            list.updatedAt = updatedAt
+            list.renamedAt = named.nameTime
+            list.orderedAt = ordered.orderTime
+            return list
+        }
     }
 
-    private static func listTieString(_ list: SyncList) -> String {
-        ([list.name] + list.items.map(\.key) + list.people.map { "\($0.name)|\($0.image ?? "")|\($0.addedAt)" }).joined(separator: "\n")
+    private static func orderString(_ list: SyncList) -> String {
+        list.items.map(\.key).joined(separator: "\n")
+    }
+
+    /// The later addition wins, then the smaller title, then the smaller image address.
+    private static func itemOrder(_ first: SyncListItem, _ second: SyncListItem) -> Bool {
+        let firstTime = first.addedAt ?? 0, secondTime = second.addedAt ?? 0
+        if firstTime != secondTime { return firstTime > secondTime }
+        if !first.title.utf16.elementsEqual(second.title.utf16) { return first.title.isBefore(second.title) }
+        return (first.image ?? "").isBefore(second.image ?? "")
     }
 
     /// The person with a photo wins, then the smaller name, then the smaller photo address.

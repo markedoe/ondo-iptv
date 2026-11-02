@@ -503,6 +503,23 @@ final class ChannelManagementTests: XCTestCase {
         XCTAssertEqual(content.applying([:]), content)
     }
 
+    func testListEditsAreDatedOneByOne() {
+        let t0 = Date.utc(2025, 10, 1, 8)
+        var library = UserLibrary()
+        let list = library.createList(named: "Weekend", now: t0)
+        let movie = MediaReference(playlistID: playlistID, type: .movie, itemID: "m1")
+        library.toggle(movie, title: "Glass City", imageURL: nil, inList: list, now: t0.addingTimeInterval(10))
+        library.toggle(movie, title: "Glass City", imageURL: nil, inList: list, now: t0.addingTimeInterval(20))
+        XCTAssertEqual(library.listItemTombstones, [list.uuidString + "|" + movie.itemKey: t0.addingTimeInterval(20)])
+        library.toggle(movie, title: "Glass City", imageURL: nil, inList: list, now: t0.addingTimeInterval(30))
+        XCTAssertTrue(library.listItemTombstones.isEmpty, "put back: no longer removed")
+        library.renameList(list, to: "Films", now: t0.addingTimeInterval(40))
+        library.moveItems(inList: list, fromOffsets: [0], toOffset: 1, now: t0.addingTimeInterval(50))
+        let stored = library.customLists[0]
+        XCTAssertEqual([stored.renamedAt, stored.orderedAt, stored.updatedAt], [t0.addingTimeInterval(40), t0.addingTimeInterval(50), t0.addingTimeInterval(50)])
+        XCTAssertEqual(stored.items.map(\.addedAt), [t0.addingTimeInterval(30)])
+    }
+
     func testShowingACategoryAgainReachesTheOtherCopy() {
         let t0 = Date.utc(2025, 10, 1, 8)
         var phone = UserLibrary()

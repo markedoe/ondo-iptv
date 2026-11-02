@@ -1,0 +1,56 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "55555555-5555-4555-8555-555555555555",
+  "deviceName": "Bedroom TV",
+  "lists": [
+    {
+      "id": "E1000000-0000-4000-8000-00000000000E",
+      "name": "Weekend",
+      "items": [
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m2",
+          "title": "Quiet Water",
+          "addedAt": 2000
+        },
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m1",
+          "title": "Glass City",
+          "addedAt": 1000
+        }
+      ],
+      "people": [
+        {
+          "name": "Ada Example",
+          "addedAt": 1500
+        }
+      ],
+      "updatedAt": 3000,
+      "renamedAt": 1000,
+      "orderedAt": 3000
+    },
+    {
+      "id": "e2000000-0000-4000-8000-00000000000e",
+      "name": "Kids",
+      "items": [
+        {
+          "playlist": "a0000000-0000-4000-8000-00000000000a",
+          "kind": "movie",
+          "item": "m5",
+          "title": "Night Train",
+          "addedAt": 700
+        }
+      ],
+      "updatedAt": 700,
+      "renamedAt": 100,
+      "orderedAt": 100
+    }
+  ],
+  "deleted": {
+    "listitem:E1000000-0000-4000-8000-00000000000E|A0000000-0000-4000-8000-00000000000A|movie|m3": 2500
+  }
+}
