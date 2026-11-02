@@ -53,16 +53,22 @@ final class SyncFuzzTests: XCTestCase {
         return snapshot
     }
 
+    /// A device in a session: its data, its sync clock, and its wall clock now.
+    struct Side {
+        var data: SyncSnapshot
+        var clock = SyncClock()
+        var wall: Int64 = 0
+    }
+
     /// One session: what each side receives is left out when dated more than a day after its own clock, taken into
     /// its clock, and merged; no time is moved (docs/SYNC.md, "Clocks").
-    static func session(client: SyncSnapshot, clientClock: inout SyncClock, clientWall: Int64,
-                        server: SyncSnapshot, serverClock: inout SyncClock, serverWall: Int64) -> (SyncSnapshot, SyncSnapshot) {
-        let received = client.withoutRecordsAhead(wall: serverWall)
-        serverClock.observe(received, wall: serverWall)
-        let kept = SyncMerge.merge(server, received)
-        let answer = kept.withoutRecordsAhead(wall: clientWall)
-        clientClock.observe(answer, wall: clientWall)
-        return (SyncMerge.merge(client, answer), kept)
+    static func session(client: inout Side, server: inout Side) {
+        let received = client.data.withoutRecordsAhead(wall: server.wall)
+        server.clock.observe(received, wall: server.wall)
+        server.data = SyncMerge.merge(server.data, received)
+        let answer = server.data.withoutRecordsAhead(wall: client.wall)
+        client.clock.observe(answer, wall: client.wall)
+        client.data = SyncMerge.merge(client.data, answer)
     }
 
     /// The snapshot without who holds it.
@@ -78,20 +84,20 @@ final class SyncFuzzTests: XCTestCase {
             var random = Random(state: UInt64(seed))
             let skews = (0..<3).map { _ in random.pick([-2 * Self.hour, 0, 2 * Self.hour]) }
             let start = (0..<3).map { Self.device(["a", "b", "c"][$0], skew: skews[$0], random: &random) }
-            var devices = start
-            var clocks = (0..<3).map { _ in SyncClock() }
+            var devices = start.map { Side(data: $0) }
             var now = Self.start + 10_000
             // Random sessions, then each pair once more both ways: everything has reached everyone.
             let pairs = (0..<random.int(6)).map { _ in (random.int(3), random.int(3)) }.filter { $0.0 != $0.1 }
                 + [(0, 1), (1, 2), (2, 0), (1, 0), (2, 1), (0, 2)]
             for (client, server) in pairs {
                 now += 1_000
-                var (clientClock, serverClock) = (clocks[client], clocks[server])
-                (devices[client], devices[server]) = Self.session(client: devices[client], clientClock: &clientClock, clientWall: now + skews[client],
-                                                                  server: devices[server], serverClock: &serverClock, serverWall: now + skews[server])
-                (clocks[client], clocks[server]) = (clientClock, serverClock)
+                var (one, other) = (devices[client], devices[server])
+                one.wall = now + skews[client]
+                other.wall = now + skews[server]
+                Self.session(client: &one, server: &other)
+                (devices[client], devices[server]) = (one, other)
             }
-            let seen = devices.map(Self.content)
+            let seen = devices.map { Self.content($0.data) }
             XCTAssertEqual(seen[0], seen[1], "seed \(seed)")
             XCTAssertEqual(seen[1], seen[2], "seed \(seed)")
             Self.assertNothingLost(from: start.map(Self.content), in: seen[0], seed: seed)
