@@ -133,7 +133,7 @@ object SyncData {
             deleted = library.syncDeleted,
             replaced = library.syncReplaced,
             clock = now,
-        ).pruned(now)
+        ).pruned(now, sessions = library.syncPeers.values)
     }
 
     /**

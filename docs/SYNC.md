@@ -134,8 +134,10 @@ devices use it as it comes, and their Settings say so when the service refuses i
 on the keys of services it does not know. A snapshot without `keys` (from a device that does not sync them) removes
 nothing: only `deleted` does.
 
-**Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps these for
-180 days.
+**Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for
+180 days, and longer until every device it had a session with in the last year has had a session with it after the
+removal (it remembers, to the day, its last session with each device): a device away for months still gets the
+removal, and nothing removed comes back from it. A device not seen for a year holds nothing back.
 
 **Clock** — the sender's clock when it sent the snapshot (an answer carries the server's). Optional: older versions
 send none.

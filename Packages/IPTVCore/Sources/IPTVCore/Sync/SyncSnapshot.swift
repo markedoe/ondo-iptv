@@ -8,6 +8,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public static let typeName = "ondo-sync"
     public static let currentVersion = 1
     public static let deletionsKeptDays = 180
+    /// A device not synced with for this long no longer holds deletions back.
+    public static let peersKeptDays = 365
     /// How far ahead of the receiving device's clock a time may be (docs/SYNC.md, "Clocks").
     public static let futureMarginMilliseconds: Int64 = 5 * 60_000
     static let dayMilliseconds: Int64 = 86_400_000
@@ -95,9 +97,13 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         return snapshot.normalized()
     }
 
-    /// The same snapshot without deletions older than `days` before `now` (and the replacements they ended).
-    public func pruned(now: Int64, days: Int = SyncSnapshot.deletionsKeptDays) -> SyncSnapshot {
-        let oldest = now - Int64(days) * Self.dayMilliseconds
+    /// The same snapshot without deletions older than `days` before `now` (and the replacements they ended), nor older
+    /// than the last session with each device of `sessions` (when it last synced with this one), for the devices seen
+    /// in the last `peersKeptDays` days: a deletion goes only once every such device has had it (docs/SYNC.md,
+    /// "Deleted").
+    public func pruned(now: Int64, days: Int = SyncSnapshot.deletionsKeptDays, sessions: [Int64] = []) -> SyncSnapshot {
+        let recent = sessions.filter { $0 >= now - Int64(Self.peersKeptDays) * Self.dayMilliseconds }
+        let oldest = min(now - Int64(days) * Self.dayMilliseconds, recent.min() ?? .max)
         let kept = deleted.filter { $0.value >= oldest }
         var copy = self
         copy.deleted = kept

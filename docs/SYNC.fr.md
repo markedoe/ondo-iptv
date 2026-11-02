@@ -145,7 +145,10 @@ quand le service la refuse plus tard. Un appareil garde et transmet les clés de
 instantané sans `keys` (d’un appareil qui ne les synchronise pas) ne retire rien : seul `deleted` le fait.
 
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil
-les garde 180 jours.
+garde chacune 180 jours, et plus longtemps tant que chaque appareil avec lequel il a eu une session dans l’année
+n’en a pas eu une avec lui après la suppression (il retient, au jour près, sa dernière session avec chaque
+appareil) : un appareil absent des mois reçoit quand même la suppression, et rien de supprimé ne revient par lui. Un
+appareil qu’il n’a pas vu depuis un an ne retient rien.
 
 **Horloge** — l’horloge de l’expéditeur quand il a envoyé l’instantané (une réponse porte celle du serveur).
 Facultative : les versions plus anciennes n’en envoient pas.

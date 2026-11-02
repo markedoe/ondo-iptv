@@ -153,6 +153,30 @@ class SyncDataTest {
         assertEquals(listOf("Ada Example" to null), phone.state.value.library.people())
     }
 
+    /** A box off for more than 180 days still gets a removal made meanwhile: it is kept until that box has had it. */
+    @Test
+    fun aRemovalWaitsForABoxThatWasAwayForMonths() = runTest {
+        val living = device("living").ready()
+        val bedroom = device("bedroom").ready()
+        living.addPlaylist("Home", list)
+        val movie = living.state.value.content.movies.single()
+        time += 1_000
+        living.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        session(bedroom, living)
+        assertTrue(bedroom.state.value.library.favorites.any { it.itemId == movie.id })
+
+        time += 1_000
+        living.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+        val key = SyncKeys.favorite(Favorite(living.state.value.activePlaylistId!!, ItemKind.MOVIE, movie.id, movie.name, null, 0))
+        time += 200 * 86_400_000L
+        assertNotNull(living.syncSnapshot("living")!!.deleted[key])
+        session(bedroom, living)
+        assertTrue(bedroom.state.value.library.favorites.none { it.itemId == movie.id })
+        // Had by every box: now it can go.
+        time += 1_000
+        assertNull(living.syncSnapshot("living")!!.deleted[key])
+    }
+
     /** Two boxes change the same collection between two sessions: every addition and every removal is kept. */
     @Test
     fun twoBoxesChangingTheSameCollectionKeepEveryChange() = runTest {

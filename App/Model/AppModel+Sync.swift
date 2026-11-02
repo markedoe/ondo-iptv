@@ -28,11 +28,14 @@ struct SyncState: Codable, Equatable {
     var replaced: [String: String] = [:]
     /// Milliseconds since 1970: when a snapshot from another device was last applied here (the diagnostic report).
     var lastSyncedAt: Int64?
+    /// Milliseconds since 1970, by device ID: the last session with each device. Deletions stay until each device seen
+    /// in the last year has had a session after them (`SyncSnapshot.pruned`).
+    var peers: [String: Int64] = [:]
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
-        case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, people, listPeople, deleted, replaced, lastSyncedAt
+        case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, people, listPeople, deleted, replaced, lastSyncedAt, peers
     }
 
     init(from decoder: Decoder) throws {
@@ -46,14 +49,19 @@ struct SyncState: Codable, Equatable {
         deleted = (try? c.decodeIfPresent([String: Int64].self, forKey: .deleted)) ?? [:]
         replaced = (try? c.decodeIfPresent([String: String].self, forKey: .replaced)) ?? [:]
         lastSyncedAt = try? c.decodeIfPresent(Int64.self, forKey: .lastSyncedAt)
+        peers = (try? c.decodeIfPresent([String: Int64].self, forKey: .peers)) ?? [:]
     }
 
-    /// Without deletions older than the spec keeps them (180 days), nor the replacements they ended.
+    /// Without deletions older than the spec keeps them (180 days, and until each device seen in the last year has had
+    /// a session after them), nor the replacements they ended, nor the devices not seen for a year.
     func pruned(now: Date) -> SyncState {
-        let kept = SyncSnapshot(device: deviceID, deleted: deleted, replaced: replaced).pruned(now: now.syncMilliseconds)
+        let kept = SyncSnapshot(device: deviceID, deleted: deleted, replaced: replaced)
+            .pruned(now: now.syncMilliseconds, sessions: Array(peers.values))
         var copy = self
         copy.deleted = kept.deleted
         copy.replaced = kept.replaced
+        let forgotten = now.syncMilliseconds - Int64(SyncSnapshot.peersKeptDays) * 86_400_000
+        copy.peers = peers.filter { $0.value >= forgotten }
         return copy
     }
 }
@@ -129,7 +137,7 @@ enum SyncMapping {
             replaced: state.replaced,
             clock: now.syncMilliseconds
         )
-        return snapshot.pruned(now: now.syncMilliseconds)
+        return snapshot.pruned(now: now.syncMilliseconds, sessions: Array(state.peers.values))
     }
 
     /// The people of each list of `snapshot` that has any, by list ID: kept to be sent with the list again.
@@ -524,6 +532,7 @@ extension AppModel {
         syncState.deleted = latest.deleted
         syncState.replaced = latest.replaced
         syncState.lastSyncedAt = now.syncMilliseconds
+        syncState.peers[received.device.lowercased()] = now.syncMilliseconds
         saveSyncState()
     }
 

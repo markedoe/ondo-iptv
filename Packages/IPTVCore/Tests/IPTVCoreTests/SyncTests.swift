@@ -214,6 +214,17 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(pruned.replaced, ["new": "other"])
     }
 
+    func testADeletionStaysUntilEachDeviceSeenThisYearHasHadIt() {
+        let day: Int64 = 86_400_000
+        let now = 1_000 * day
+        let snapshot = SyncSnapshot(device: "a", deleted: ["list:old": now - 300 * day, "list:older": now - 250 * day, "list:recent": now - 10 * day])
+        // A device last synced 260 days ago has not had the deletion of 250 days ago: it stays, the older one goes.
+        XCTAssertEqual(Set(snapshot.pruned(now: now, sessions: [now - 260 * day, now - 1 * day]).deleted.keys), ["list:older", "list:recent"])
+        // Once it has synced since, both old ones go; a device not seen for over a year holds nothing back.
+        XCTAssertEqual(Set(snapshot.pruned(now: now, sessions: [now - 100 * day]).deleted.keys), ["list:recent"])
+        XCTAssertEqual(Set(snapshot.pruned(now: now, sessions: [now - 400 * day]).deleted.keys), ["list:recent"])
+    }
+
     private func local(_ address: String, file: StaticString = #filePath, line: UInt = #line) -> Bool {
         guard let bytes = SyncNetwork.addressBytes(address) else {
             XCTFail("not an address: \(address)", file: file, line: line)

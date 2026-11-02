@@ -104,6 +104,11 @@ data class LibraryState(
     val syncDeleted: Map<String, Long> = emptyMap(),
     /** Sync: playlist IDs that became another playlist (the same one added on two devices). */
     val syncReplaced: Map<String, String> = emptyMap(),
+    /**
+     * Sync: the last session with each device, by device ID (kept to the day). Deletions stay until each device seen in
+     * the last year has had a session after them.
+     */
+    val syncPeers: Map<String, Long> = emptyMap(),
 ) {
     fun isCategoryHidden(playlistId: String, categoryId: String): Boolean = "$playlistId|$categoryId" in hiddenCategories
 

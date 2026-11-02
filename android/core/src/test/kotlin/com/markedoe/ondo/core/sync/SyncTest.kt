@@ -185,6 +185,18 @@ class SyncTest {
     }
 
     @Test
+    fun aDeletionStaysUntilEachDeviceSeenThisYearHasHadIt() {
+        val day = 86_400_000L
+        val now = 1_000 * day
+        val snapshot = SyncSnapshot(device = "a", deleted = mapOf("list:old" to now - 300 * day, "list:older" to now - 250 * day, "list:recent" to now - 10 * day))
+        // A device last synced 260 days ago has not had the deletion of 250 days ago: it stays, the older one goes.
+        assertEquals(setOf("list:older", "list:recent"), snapshot.pruned(now, sessions = listOf(now - 260 * day, now - day)).deleted.keys)
+        // Once it has synced since, both old ones go; a device not seen for over a year holds nothing back.
+        assertEquals(setOf("list:recent"), snapshot.pruned(now, sessions = listOf(now - 100 * day)).deleted.keys)
+        assertEquals(setOf("list:recent"), snapshot.pruned(now, sessions = listOf(now - 400 * day)).deleted.keys)
+    }
+
+    @Test
     fun timesMoveByTheSendersClockDifference() {
         val now = 1_760_000_000_000L
         val hours = 2 * 3_600_000L

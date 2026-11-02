@@ -30,9 +30,14 @@ data class SyncSnapshot(
 ) {
     fun encoded(): ByteArray = json.encodeToString(serializer(), this).encodeToByteArray()
 
-    /** The same snapshot without deletions older than [days] before [now] (and the replacements they ended). */
-    fun pruned(now: Long, days: Int = DELETIONS_KEPT_DAYS): SyncSnapshot {
-        val oldest = now - days * DAY_MS
+    /**
+     * The same snapshot without deletions older than [days] before [now] (and the replacements they ended), nor older
+     * than the last session with each device of [sessions] (when it last synced with this one), for the devices seen
+     * in the last [PEERS_KEPT_DAYS] days: a deletion goes only once every such device has had it (docs/SYNC.md,
+     * "Deleted").
+     */
+    fun pruned(now: Long, days: Int = DELETIONS_KEPT_DAYS, sessions: Collection<Long> = emptyList()): SyncSnapshot {
+        val oldest = minOf(now - days * DAY_MS, sessions.filter { it >= now - PEERS_KEPT_DAYS * DAY_MS }.minOrNull() ?: Long.MAX_VALUE)
         val kept = deleted.filterValues { it >= oldest }
         return copy(deleted = kept, replaced = replaced.filterKeys { "playlist:$it" in kept })
     }
@@ -93,6 +98,8 @@ data class SyncSnapshot(
         const val TYPE = "ondo-sync"
         const val VERSION = 1
         const val DELETIONS_KEPT_DAYS = 180
+        /** A device not synced with for this long no longer holds deletions back. */
+        const val PEERS_KEPT_DAYS = 365
         /** How far ahead of the receiving device's clock a time may be (docs/SYNC.md, "Clocks"). */
         const val FUTURE_MARGIN_MS = 5 * 60_000L
         private const val DAY_MS = 86_400_000L

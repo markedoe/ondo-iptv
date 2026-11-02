@@ -445,7 +445,20 @@ class OndoRepository(
         val local = syncSnapshot(deviceName) ?: return null
         val merged = SyncMerge.merge(local, incoming.onReceiverClock(now()))
         applySync(merged)
+        noteSyncSession(incoming.device)
         return merged
+    }
+
+    /**
+     * Remembers a session with [device] (to the day: the library is not written at each session), and forgets the
+     * devices not seen for a year: deletions are kept until each device remembered has had them.
+     */
+    private fun noteSyncSession(device: String) {
+        val time = now()
+        val peers = _state.value.library.syncPeers
+        if (time - (peers[device.lowercase()] ?: Long.MIN_VALUE / 2) < DAY_MS) return
+        val forgotten = time - SyncSnapshot.PEERS_KEPT_DAYS * DAY_MS
+        updateLibrary { library -> library.copy(syncPeers = (library.syncPeers + (device.lowercase() to time)).filterValues { it >= forgotten }) }
     }
 
     private fun applySync(merged: SyncSnapshot) {
@@ -1488,6 +1501,7 @@ class OndoRepository(
 
         /** A person's TMDb credits are asked again after a day; the last people opened are kept. */
         const val PERSON_CREDITS_FRESH_MS = 24 * 60 * 60 * 1000L
+        private const val DAY_MS = 24 * 60 * 60 * 1000L
 
         /** A person's movies and series on TMDb, kept on the device, are asked again after a week. */
         const val PERSON_WORKS_FRESH_MS = 7 * 24 * 60 * 60 * 1000L
