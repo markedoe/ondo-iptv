@@ -276,6 +276,30 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot.lowercasingID(ofDeleted: "person:ΣΟΦΙΑ Ex"), "person:ΣΟΦΙΑ ex")
     }
 
+    func testWhatIsDatedAheadOfTheReceivingClockIsLeftOut() {
+        let now: Int64 = 1_000_000
+        let ahead = now + SyncSnapshot.futureMarginMilliseconds + 1
+        let near = now + SyncSnapshot.futureMarginMilliseconds
+        let snapshot = SyncSnapshot(
+            device: "box",
+            playlists: [SyncPlaylist(id: "p", name: "Home", kind: SyncPlaylist.m3u, url: "http://example.com/a.m3u", addedAt: 1, updatedAt: ahead),
+                        SyncPlaylist(id: "q", name: "News", kind: SyncPlaylist.m3u, url: "http://example.com/b.m3u", addedAt: 1, updatedAt: near)],
+            favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: ahead)],
+            progress: [SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "Glass City", position: 1, duration: 2, watchedAt: near)],
+            lists: [SyncList(id: "l", name: "L", updatedAt: ahead)],
+            people: [SyncPerson(name: "Tom", addedAt: ahead), SyncPerson(name: "Ada", addedAt: now)],
+            keys: [SyncKey(service: SyncKey.tmdb, value: "k", updatedAt: ahead)],
+            deleted: ["favorite:p|movie|m2": ahead, "favorite:p|movie|m3": 5]
+        ).withoutFutureRecords(now: now)
+        // Within the margin: kept as it is.
+        XCTAssertEqual(snapshot.playlists.map(\.id), ["q"])
+        XCTAssertEqual(snapshot.progress.map(\.watchedAt), [near])
+        XCTAssertEqual(snapshot.people.map(\.name), ["Ada"])
+        XCTAssertTrue(snapshot.favorites.isEmpty && snapshot.lists.isEmpty && snapshot.keys.isEmpty)
+        XCTAssertEqual(snapshot.deleted, ["favorite:p|movie|m3": 5])
+        XCTAssertEqual(SyncSnapshot(device: "box", deleted: ["k": .max]).withoutFutureRecords(now: .max - 1).deleted, ["k": .max])
+    }
+
     func testOnlyLocalNetworkAddressesAreLocal() {
         // Private, link-local and loopback ranges, IPv4 and IPv6 (and IPv4 mapped in IPv6).
         let localAddresses = [

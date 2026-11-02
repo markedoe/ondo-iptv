@@ -188,6 +188,18 @@ chaînes favorites, les personnes, les listes et la progression par celles fusio
 utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synchronisé. Si le spectateur a changé quelque chose pendant la session, l’appareil fusionne à nouveau avec son
 état actuel, donc aucun changement n’est perdu.
 
+## Horloges
+
+Les instants sont l’horloge de chaque appareil. Un boîtier TV peut avoir une horloge fausse tant qu’il n’a pas
+joint un serveur de temps : un appareil qui reçoit un instantané écarte donc d’abord chaque élément et chaque
+suppression daté de plus de 5 minutes après sa propre horloge (`withoutFutureRecords`) : une horloge en avance ne
+peut pas dater une modification dans le futur et gagner sur toutes les suivantes. Ces éléments sont écartés, pas
+déplacés : l’appareil qui les a faits les garde, ils voyagent une fois leur heure venue, et rien n’est supprimé
+parce qu’il manque. Un élément n’est remplacé que par un autre à l’instant strictement postérieur, donc les éléments
+d’un appareil ne reviennent jamais à une version plus ancienne. Une horloge en retard date ses modifications dans
+le passé : elles arrivent quand même (un élément absent n’est jamais une suppression), mais perdent un conflit avec
+une modification faite ailleurs depuis.
+
 ## Confidentialité
 
 Les instantanés contiennent en clair les identifiants et mots de passe des playlists, et les clés des services

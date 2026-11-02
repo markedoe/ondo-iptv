@@ -438,11 +438,12 @@ class OndoRepository(
 
     /**
      * Merges [incoming] with this device's data as it is now, keeps the result and returns it (what a server answers,
-     * what a client keeps). Main thread: a change made during the session is part of the merge, so none is lost.
+     * what a client keeps). Main thread: a change made during the session is part of the merge, so none is lost. What
+     * [incoming] dates ahead of this device's clock is left out first (docs/SYNC.md, "Clocks").
      */
     fun mergeSync(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
         val local = syncSnapshot(deviceName) ?: return null
-        val merged = SyncMerge.merge(local, incoming)
+        val merged = SyncMerge.merge(local, incoming.withoutFutureRecords(now()))
         applySync(merged)
         return merged
     }

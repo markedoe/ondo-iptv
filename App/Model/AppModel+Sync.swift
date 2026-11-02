@@ -439,7 +439,8 @@ extension AppModel {
     /// changed during the session is lost (and an answer without keys removes none).
     func applySync(_ received: SyncSnapshot, now: Date = Date()) async {
         guard isReady, syncsThisProfile else { return }
-        let merged = SyncMerge.merge(syncSnapshot(now: now), received)
+        // What is dated ahead of this device's clock is left out (docs/SYNC.md, "Clocks").
+        let merged = SyncMerge.merge(syncSnapshot(now: now), received.withoutFutureRecords(now: now.syncMilliseconds))
         let records = Dictionary(merged.playlists.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         // Playlists edited elsewhere, then the new ones. The device's own are found by ID (a snapshot can hold tens of

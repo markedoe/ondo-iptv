@@ -8,6 +8,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public static let typeName = "ondo-sync"
     public static let currentVersion = 1
     public static let deletionsKeptDays = 180
+    /// How far ahead of the receiving device's clock a time may be (docs/SYNC.md, "Clocks").
+    public static let futureMarginMilliseconds: Int64 = 5 * 60_000
     static let dayMilliseconds: Int64 = 86_400_000
 
     public var type: String
@@ -95,6 +97,24 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         var copy = self
         copy.deleted = kept
         copy.replaced = replaced.filter { kept["playlist:" + $0.key] != nil }
+        return copy
+    }
+
+    /// The same snapshot without the records and deletions dated later than `now` plus `margin`: a device whose clock
+    /// is ahead (a box before it reaches a time server) cannot date a change in the future and win over every later
+    /// one. They are left out, not moved: the device that made them keeps them, and they travel once their time has
+    /// come. Applied by the device that receives a snapshot, to the snapshot it receives, before the merge.
+    public func withoutFutureRecords(now: Int64, margin: Int64 = SyncSnapshot.futureMarginMilliseconds) -> SyncSnapshot {
+        let latest = now.addingReportingOverflow(margin).overflow ? Int64.max : now + margin
+        func past(_ time: Int64) -> Bool { time <= latest }
+        var copy = self
+        copy.playlists = playlists.filter { past($0.addedAt) && past($0.updatedAt) }
+        copy.favorites = favorites.filter { past($0.addedAt) }
+        copy.progress = progress.filter { past($0.watchedAt) }
+        copy.lists = lists.filter { past($0.updatedAt) }
+        copy.people = people.filter { past($0.addedAt) }
+        copy.keys = keys.filter { past($0.updatedAt) }
+        copy.deleted = deleted.filter { past($0.value) }
         return copy
     }
 

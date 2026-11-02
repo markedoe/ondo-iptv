@@ -35,10 +35,32 @@ data class SyncSnapshot(
         return copy(deleted = kept, replaced = replaced.filterKeys { "playlist:$it" in kept })
     }
 
+    /**
+     * The same snapshot without the records and deletions dated later than [now] plus [marginMs]: a device whose clock
+     * is ahead (a box before it reaches a time server) cannot date a change in the future and win over every later
+     * one. They are left out, not moved: the device that made them keeps them, and they travel once their time has
+     * come. Applied by the device that receives a snapshot, to the snapshot it receives, before the merge.
+     */
+    fun withoutFutureRecords(now: Long, marginMs: Long = FUTURE_MARGIN_MS): SyncSnapshot {
+        val latest = if (now > Long.MAX_VALUE - marginMs) Long.MAX_VALUE else now + marginMs
+        fun past(time: Long) = time <= latest
+        return copy(
+            playlists = playlists.filter { past(it.addedAt) && past(it.updatedAt) },
+            favorites = favorites.filter { past(it.addedAt) },
+            progress = progress.filter { past(it.watchedAt) },
+            lists = lists.filter { past(it.updatedAt) },
+            people = people.filter { past(it.addedAt) },
+            keys = keys.filter { past(it.updatedAt) },
+            deleted = deleted.filterValues(::past),
+        )
+    }
+
     companion object {
         const val TYPE = "ondo-sync"
         const val VERSION = 1
         const val DELETIONS_KEPT_DAYS = 180
+        /** How far ahead of the receiving device's clock a time may be (docs/SYNC.md, "Clocks"). */
+        const val FUTURE_MARGIN_MS = 5 * 60_000L
         private const val DAY_MS = 86_400_000L
 
         private val json = Json {

@@ -119,6 +119,33 @@ class SyncTest {
     }
 
     @Test
+    fun whatIsDatedAheadOfTheReceivingClockIsLeftOut() {
+        val now = 1_000_000L
+        val ahead = now + SyncSnapshot.FUTURE_MARGIN_MS + 1
+        val near = now + SyncSnapshot.FUTURE_MARGIN_MS
+        val snapshot = SyncSnapshot(
+            device = "box",
+            playlists = listOf(
+                SyncPlaylist("p", "Home", SyncPlaylist.M3U, "http://example.com/a.m3u", addedAt = 1, updatedAt = ahead),
+                SyncPlaylist("q", "News", SyncPlaylist.M3U, "http://example.com/b.m3u", addedAt = 1, updatedAt = near),
+            ),
+            favorites = listOf(SyncFavorite("p", "movie", "m1", "Glass City", addedAt = ahead)),
+            progress = listOf(SyncProgress("p", "movie", "m1", title = "Glass City", position = 1.0, duration = 2.0, watchedAt = near)),
+            lists = listOf(SyncList("l", "L", updatedAt = ahead)),
+            people = listOf(SyncPerson("Tom", addedAt = ahead), SyncPerson("Ada", addedAt = now)),
+            keys = listOf(SyncKey(SyncKey.TMDB, "k", updatedAt = ahead)),
+            deleted = mapOf("favorite:p|movie|m2" to ahead, "favorite:p|movie|m3" to 5L),
+        ).withoutFutureRecords(now)
+        // Within the margin: kept as it is.
+        assertEquals(listOf("q"), snapshot.playlists.map { it.id })
+        assertEquals(listOf(near), snapshot.progress.map { it.watchedAt })
+        assertEquals(listOf("Ada"), snapshot.people.map { it.name })
+        assertTrue(snapshot.favorites.isEmpty() && snapshot.lists.isEmpty() && snapshot.keys.isEmpty())
+        assertEquals(mapOf("favorite:p|movie|m3" to 5L), snapshot.deleted)
+        assertEquals(mapOf("k" to Long.MAX_VALUE), SyncSnapshot(device = "box", deleted = mapOf("k" to Long.MAX_VALUE)).withoutFutureRecords(Long.MAX_VALUE - 1).deleted)
+    }
+
+    @Test
     fun keysOfOutsideServicesFollowTheLaterSaveAndTheirRemoval() {
         val merged = SyncMerge.merge(fixture("a.json"), fixture("b.json"))
         // The later save wins, a removal after a save drops it, the key of a service this device does not know stays.

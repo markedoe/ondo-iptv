@@ -171,6 +171,16 @@ progress with the merged ones, and saves the keys of the services it uses (remov
 whatever it does not sync. If the viewer changed something during the
 session, the device merges again with its current state, so no change is lost.
 
+## Clocks
+
+Times are each device's wall clock. A TV box can run with a wrong clock until it reaches a time server, so a device
+that receives a snapshot first leaves out every record and deletion dated more than 5 minutes after its own clock
+(`withoutFutureRecords`): a clock running ahead cannot date a change in the future and win over every later one. The
+records are left out, not moved: the device that made them keeps them, they travel once their time has come, and
+nothing is deleted because it is missing. A record is only replaced by one with a strictly later time, so a
+device's own records never go back to an older version. A clock running behind dates its changes in the past: they
+still arrive (a missing record is never a deletion), but lose a conflict with a change made elsewhere since.
+
 ## Privacy
 
 Snapshots hold playlist logins and passwords, and the keys of outside services (the TMDb token), in clear, as the
