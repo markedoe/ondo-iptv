@@ -123,6 +123,7 @@ object SyncData {
             keys = state.settings.serviceKeys.filter { it.value.isNotBlank() },
             deleted = library.syncDeleted,
             replaced = library.syncReplaced,
+            clock = now,
         ).pruned(now)
     }
 

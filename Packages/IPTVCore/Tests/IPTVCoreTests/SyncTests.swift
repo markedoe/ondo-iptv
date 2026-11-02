@@ -300,6 +300,35 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot(device: "box", deleted: ["k": .max]).withoutFutureRecords(now: .max - 1).deleted, ["k": .max])
     }
 
+    func testTimesMoveByTheSendersClockDifference() {
+        let now: Int64 = 1_760_000_000_000
+        let hours: Int64 = 2 * 3_600_000
+        for skew in [hours, -hours] {
+            let sent = SyncSnapshot(
+                device: "box",
+                favorites: [SyncFavorite(playlist: "p", kind: "movie", item: "m1", title: "Glass City", addedAt: now + skew - 60_000)],
+                lists: [SyncList(id: "l", name: "L", people: [SyncPerson(name: "Ada", addedAt: now + skew - 1)], updatedAt: now + skew - 2)],
+                people: [SyncPerson(name: "Tom", addedAt: now + skew)],
+                deleted: ["favorite:p|movie|m2": now + skew - 5],
+                clock: now + skew
+            ).onReceiverClock(now: now)
+            XCTAssertEqual(sent.favorites.map(\.addedAt), [now - 60_000], "skew \(skew)")
+            XCTAssertEqual(sent.lists.map(\.updatedAt) + sent.lists.flatMap { $0.people.map(\.addedAt) }, [now - 2, now - 1])
+            XCTAssertEqual(sent.people.map(\.addedAt), [now])
+            XCTAssertEqual(sent.deleted, ["favorite:p|movie|m2": now - 5])
+        }
+        // Within the margin, or from a version without a clock: as sent.
+        let close = SyncSnapshot(device: "box", people: [SyncPerson(name: "Tom", addedAt: now + 60_000)], clock: now + 60_000)
+        XCTAssertEqual(close.onReceiverClock(now: now).people.map(\.addedAt), [now + 60_000])
+        let old = SyncSnapshot(device: "box", people: [SyncPerson(name: "Tom", addedAt: now - 5)])
+        XCTAssertEqual(old.onReceiverClock(now: now).people.map(\.addedAt), [now - 5])
+        // A clock gone back after a time stamped right: that time is kept rather than moved into the future.
+        let reset = SyncSnapshot(device: "box", people: [SyncPerson(name: "Tom", addedAt: now - 1_000), SyncPerson(name: "Ada", addedAt: 10)], clock: 0)
+        XCTAssertEqual(reset.onReceiverClock(now: now).people.map(\.addedAt), [now - 1_000, now + 10])
+        // At the ends of the range: no overflow, and still ahead, so left out.
+        XCTAssertEqual(SyncSnapshot(device: "box", deleted: ["k": .max], clock: .min).onReceiverClock(now: now).deleted, [:])
+    }
+
     func testOnlyLocalNetworkAddressesAreLocal() {
         // Private, link-local and loopback ranges, IPv4 and IPv6 (and IPv4 mapped in IPv6).
         let localAddresses = [

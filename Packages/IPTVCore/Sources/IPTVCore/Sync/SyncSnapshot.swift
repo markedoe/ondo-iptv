@@ -27,6 +27,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public var deleted: [String: Int64]
     /// Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID.
     public var replaced: [String: String]
+    /// The sender's clock when it sent the snapshot (docs/SYNC.md, "Clocks"); none from an older version.
+    public var clock: Int64?
 
     public init(
         type: String = SyncSnapshot.typeName,
@@ -40,7 +42,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         people: [SyncPerson] = [],
         keys: [SyncKey] = [],
         deleted: [String: Int64] = [:],
-        replaced: [String: String] = [:]
+        replaced: [String: String] = [:],
+        clock: Int64? = nil
     ) {
         self.type = type
         self.version = version
@@ -54,10 +57,11 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         self.keys = keys
         self.deleted = deleted
         self.replaced = replaced
+        self.clock = clock
     }
 
     enum CodingKeys: String, CodingKey {
-        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, deleted, replaced
+        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, deleted, replaced, clock
     }
 
     /// A missing field takes its default; a field present with the wrong type, or `null` where a value is needed, makes
@@ -76,6 +80,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         keys = try c.value(.keys, default: [])
         deleted = try c.value(.deleted, default: [:])
         replaced = try c.value(.replaced, default: [:])
+        clock = try c.decodeIfPresent(Int64.self, forKey: .clock)
     }
 
     public func encoded() throws -> Data {
@@ -98,6 +103,69 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         copy.deleted = kept
         copy.replaced = replaced.filter { kept["playlist:" + $0.key] != nil }
         return copy
+    }
+
+    /// The snapshot as the receiver's clock dates it (docs/SYNC.md, "Clocks"): when the sender's `clock` is more than
+    /// `margin` away from `now`, every time moves by the difference, unless that would put it after `now` plus `margin`
+    /// while it was not (a time stamped before the sender's clock went wrong); then what is still dated ahead is left
+    /// out (`withoutFutureRecords`).
+    public func onReceiverClock(now: Int64, margin: Int64 = SyncSnapshot.futureMarginMilliseconds) -> SyncSnapshot {
+        let skew = clock.map { Self.saturated($0, -now) } ?? 0
+        guard skew < -margin || skew > margin else { return withoutFutureRecords(now: now, margin: margin) }
+        let latest = Self.saturated(now, margin)
+        return mappingTimes { time in
+            let moved = Self.saturated(time, skew == .min ? .max : -skew)
+            return moved <= latest || time > latest ? moved : time
+        }.withoutFutureRecords(now: now, margin: margin)
+    }
+
+    /// Every time of the snapshot (records, list people, deletions) through `time`.
+    public func mappingTimes(_ time: (Int64) -> Int64) -> SyncSnapshot {
+        var copy = self
+        copy.playlists = playlists.map { playlist in
+            var playlist = playlist
+            playlist.addedAt = time(playlist.addedAt)
+            playlist.updatedAt = time(playlist.updatedAt)
+            return playlist
+        }
+        copy.favorites = favorites.map { favorite in
+            var favorite = favorite
+            favorite.addedAt = time(favorite.addedAt)
+            return favorite
+        }
+        copy.progress = progress.map { progress in
+            var progress = progress
+            progress.watchedAt = time(progress.watchedAt)
+            return progress
+        }
+        copy.lists = lists.map { list in
+            var list = list
+            list.updatedAt = time(list.updatedAt)
+            list.people = list.people.map { person in
+                var person = person
+                person.addedAt = time(person.addedAt)
+                return person
+            }
+            return list
+        }
+        copy.people = people.map { person in
+            var person = person
+            person.addedAt = time(person.addedAt)
+            return person
+        }
+        copy.keys = keys.map { key in
+            var key = key
+            key.updatedAt = time(key.updatedAt)
+            return key
+        }
+        copy.deleted = deleted.mapValues(time)
+        return copy
+    }
+
+    /// `a + b`, held at the ends of Int64's range instead of trapping.
+    static func saturated(_ a: Int64, _ b: Int64) -> Int64 {
+        let (sum, overflow) = a.addingReportingOverflow(b)
+        return overflow ? (b < 0 ? .min : .max) : sum
     }
 
     /// The same snapshot without the records and deletions dated later than `now` plus `margin`: a device whose clock

@@ -46,8 +46,9 @@ class SyncDataTest {
         http://provider.example.com/glass.mp4
     """.trimIndent()
 
-    private fun TestScope.device(name: String, http: FakeHttp = FakeHttp(mapOf(list to catalogue, sports to catalogue, films to twoFilms))) =
-        OndoRepository(AppStore(folder.newFolder(name)), http, backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler))
+    /** A device whose clock is [offset] ahead of [time] (behind when negative). */
+    private fun TestScope.device(name: String, http: FakeHttp = FakeHttp(mapOf(list to catalogue, sports to catalogue, films to twoFilms)), offset: Long = 0) =
+        OndoRepository(AppStore(folder.newFolder(name)), http, backgroundScope, now = { time + offset }, io = StandardTestDispatcher(testScheduler))
 
     private suspend fun OndoRepository.ready(): OndoRepository {
         bootstrap()
@@ -211,6 +212,46 @@ class SyncDataTest {
         session(phone, tv)
         assertEquals(610.0, tv.state.value.library.progress(key)!!.position, 0.0)
         assertEquals(610.0, phone.state.value.library.continueWatching(phone.state.value.activePlaylistId!!).single().position, 0.0)
+    }
+
+    /**
+     * One box two hours ahead of the other, then two hours behind: what each adds reaches the other, and the later
+     * position always wins, whichever box's clock is wrong.
+     */
+    @Test
+    fun aBoxHoursAheadOrBehindLosesNothingAndGoesNotBack() = runTest {
+        for ((index, offset) in listOf(2 * 3_600_000L, -2 * 3_600_000L).withIndex()) {
+            val wrong = device("wrong$index", offset = offset).ready()
+            val right = device("right$index").ready()
+            wrong.addPlaylist("Films", films)
+            session(right, wrong)
+            right.state.first { it.content.movies.size == 2 }
+            val movie = wrong.state.value.content.movies.first()
+            val key = requireNotNull(wrong.playRequest(movie)?.progressKey)
+            time += 1_000
+            wrong.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+            wrong.togglePerson("Ada Example", null)
+            wrong.recordProgress(key, 60.0, 5_400.0)
+            session(right, wrong)
+            assertTrue("offset $offset", right.state.value.favorite(movie.id))
+            assertEquals(listOf("Ada Example" to null), right.state.value.library.people())
+            assertEquals(60.0, right.state.value.library.progress(key)!!.position, 0.0)
+
+            // Each box in turn moves the film on, a minute apart, with sessions both ways.
+            for (step in 1..4) {
+                time += 60_000
+                val (box, other) = if (step % 2 == 0) wrong to right else right to wrong
+                box.playRequest(box.state.value.content.movies.single { it.id == movie.id })
+                box.recordProgress(key, 60.0 + step * 60, 5_400.0)
+                if (step % 2 == 0) session(box, other) else session(other, box)
+                for (device in listOf(wrong, right)) assertEquals("offset $offset, step $step", 60.0 + step * 60, device.state.value.library.progress(key)!!.position, 0.0)
+            }
+            // A removal on the box that is right reaches the other one.
+            time += 60_000
+            right.toggleFavorite(ItemKind.MOVIE, movie.id, movie.name, null)
+            session(wrong, right)
+            assertFalse(wrong.state.value.favorite(movie.id))
+        }
     }
 
     /** A box whose clock runs a day ahead cannot date a removal in the future: it is left out until its time comes. */

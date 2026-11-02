@@ -146,6 +146,36 @@ class SyncTest {
     }
 
     @Test
+    fun timesMoveByTheSendersClockDifference() {
+        val now = 1_760_000_000_000L
+        val hours = 2 * 3_600_000L
+        for (skew in listOf(hours, -hours)) {
+            val sent = SyncSnapshot(
+                device = "box",
+                favorites = listOf(SyncFavorite("p", "movie", "m1", "Glass City", addedAt = now + skew - 60_000)),
+                lists = listOf(SyncList("l", "L", people = listOf(SyncPerson("Ada", addedAt = now + skew - 1)), updatedAt = now + skew - 2)),
+                people = listOf(SyncPerson("Tom", addedAt = now + skew)),
+                deleted = mapOf("favorite:p|movie|m2" to now + skew - 5),
+                clock = now + skew,
+            ).onReceiverClock(now)
+            assertEquals("skew $skew", listOf(now - 60_000), sent.favorites.map { it.addedAt })
+            assertEquals(listOf(now - 2, now - 1), sent.lists.map { it.updatedAt } + sent.lists.flatMap { list -> list.people.map { it.addedAt } })
+            assertEquals(listOf(now), sent.people.map { it.addedAt })
+            assertEquals(mapOf("favorite:p|movie|m2" to now - 5), sent.deleted)
+        }
+        // Within the margin, or from a version without a clock: as sent.
+        val close = SyncSnapshot(device = "box", people = listOf(SyncPerson("Tom", addedAt = now + 60_000)), clock = now + 60_000)
+        assertEquals(listOf(now + 60_000), close.onReceiverClock(now).people.map { it.addedAt })
+        val old = SyncSnapshot(device = "box", people = listOf(SyncPerson("Tom", addedAt = now - 5)))
+        assertEquals(listOf(now - 5), old.onReceiverClock(now).people.map { it.addedAt })
+        // A clock gone back after a time stamped right: that time is kept rather than moved into the future.
+        val reset = SyncSnapshot(device = "box", people = listOf(SyncPerson("Tom", addedAt = now - 1_000), SyncPerson("Ada", addedAt = 10)), clock = 0)
+        assertEquals(listOf(now - 1_000, now + 10), reset.onReceiverClock(now).people.map { it.addedAt })
+        // At the ends of the range: no overflow, and still ahead, so left out.
+        assertEquals(emptyMap<String, Long>(), SyncSnapshot(device = "box", deleted = mapOf("k" to Long.MAX_VALUE), clock = Long.MIN_VALUE).onReceiverClock(now).deleted)
+    }
+
+    @Test
     fun keysOfOutsideServicesFollowTheLaterSaveAndTheirRemoval() {
         val merged = SyncMerge.merge(fixture("a.json"), fixture("b.json"))
         // The later save wins, a removal after a save drops it, the key of a service this device does not know stays.

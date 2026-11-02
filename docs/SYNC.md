@@ -89,7 +89,8 @@ an iPhone, iPad or Mac sent thus passes it on to the other Android devices.
   "people": [ … ],
   "keys": [ … ],
   "deleted": { "<key>": 1760000000000 },
-  "replaced": { "<playlist id>": "<playlist id>" }
+  "replaced": { "<playlist id>": "<playlist id>" },
+  "clock": 1760000000000
 }
 ```
 
@@ -130,6 +131,9 @@ nothing: only `deleted` does.
 
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps these for
 180 days.
+
+**Clock** — the sender's clock when it sent the snapshot (an answer carries the server's). Optional: older versions
+send none.
 
 **Replaced** — playlist IDs that became another playlist (rule 4 of the merge): the old ID, then the ID that
 replaced it. A device keeps an entry as long as the deletion of the old playlist.
@@ -174,12 +178,20 @@ session, the device merges again with its current state, so no change is lost.
 ## Clocks
 
 Times are each device's wall clock. A TV box can run with a wrong clock until it reaches a time server, so a device
-that receives a snapshot first leaves out every record and deletion dated more than 5 minutes after its own clock
-(`withoutFutureRecords`): a clock running ahead cannot date a change in the future and win over every later one. The
-records are left out, not moved: the device that made them keeps them, they travel once their time has come, and
-nothing is deleted because it is missing. A record is only replaced by one with a strictly later time, so a
-device's own records never go back to an older version. A clock running behind dates its changes in the past: they
-still arrive (a missing record is never a deletion), but lose a conflict with a change made elsewhere since.
+that receives a snapshot first puts its times on its own clock (`onReceiverClock`):
+
+1. When the snapshot has a `clock` more than 5 minutes away from the receiver's, every time in it moves by the
+   difference (an answer's times thus come back to the client's clock). A time that would move past the receiver's
+   clock plus 5 minutes while it was not there before keeps its value: it was stamped before the sender's clock went
+   wrong.
+2. Then every record and deletion still dated more than 5 minutes after the receiver's clock is left out: a clock
+   running ahead cannot date a change in the future and win over every later one (a snapshot from an older version,
+   without `clock`, goes only through this step). The records are left out, not moved: the device that made them
+   keeps them, they travel once their time has come, and nothing is deleted because it is missing.
+
+A record is only replaced by one with a strictly later time, so a device's own records never go back to an older
+version. Times move by a difference measured once per session, so a device's own records can come back a few
+milliseconds apart: the same content.
 
 ## Privacy
 

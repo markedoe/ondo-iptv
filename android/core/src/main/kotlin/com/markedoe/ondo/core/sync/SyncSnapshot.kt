@@ -25,6 +25,8 @@ data class SyncSnapshot(
     val deleted: Map<String, Long> = emptyMap(),
     /** Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID. */
     val replaced: Map<String, String> = emptyMap(),
+    /** The sender's clock when it sent the snapshot (docs/SYNC.md, "Clocks"); none from an older version. */
+    val clock: Long? = null,
 ) {
     fun encoded(): ByteArray = json.encodeToString(serializer(), this).encodeToByteArray()
 
@@ -34,6 +36,30 @@ data class SyncSnapshot(
         val kept = deleted.filterValues { it >= oldest }
         return copy(deleted = kept, replaced = replaced.filterKeys { "playlist:$it" in kept })
     }
+
+    /**
+     * The snapshot as the receiver's clock dates it (docs/SYNC.md, "Clocks"): when the sender's [clock] is more than
+     * [marginMs] away from [now], every time moves by the difference, unless that would put it after [now] plus
+     * [marginMs] while it was not (a time stamped before the sender's clock went wrong); then what is still dated
+     * ahead is left out ([withoutFutureRecords]).
+     */
+    fun onReceiverClock(now: Long, marginMs: Long = FUTURE_MARGIN_MS): SyncSnapshot {
+        val skew = clock?.let { saturated(it, -now) } ?: 0L
+        if (skew in -marginMs..marginMs) return withoutFutureRecords(now, marginMs)
+        val latest = saturated(now, marginMs)
+        return mappingTimes { time -> saturated(time, if (skew == Long.MIN_VALUE) Long.MAX_VALUE else -skew).takeIf { it <= latest || time > latest } ?: time }.withoutFutureRecords(now, marginMs)
+    }
+
+    /** Every time of the snapshot (records, list people, deletions) through [time]. */
+    fun mappingTimes(time: (Long) -> Long): SyncSnapshot = copy(
+        playlists = playlists.map { it.copy(addedAt = time(it.addedAt), updatedAt = time(it.updatedAt)) },
+        favorites = favorites.map { it.copy(addedAt = time(it.addedAt)) },
+        progress = progress.map { it.copy(watchedAt = time(it.watchedAt)) },
+        lists = lists.map { list -> list.copy(people = list.people.map { it.copy(addedAt = time(it.addedAt)) }, updatedAt = time(list.updatedAt)) },
+        people = people.map { it.copy(addedAt = time(it.addedAt)) },
+        keys = keys.map { it.copy(updatedAt = time(it.updatedAt)) },
+        deleted = deleted.mapValues { time(it.value) },
+    )
 
     /**
      * The same snapshot without the records and deletions dated later than [now] plus [marginMs]: a device whose clock
@@ -102,6 +128,12 @@ data class SyncSnapshot(
  * playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`; the name of `person:<name>` with A to Z in lowercase.
  * The rest (the provider's item IDs, the service of `key:`) keeps its case.
  */
+/** [a] + [b], held at the ends of Long's range instead of wrapping around. */
+internal fun saturated(a: Long, b: Long): Long {
+    val sum = a + b
+    return if (((a xor sum) and (b xor sum)) < 0) (if (a < 0) Long.MIN_VALUE else Long.MAX_VALUE) else sum
+}
+
 internal fun lowercasingId(key: String): String {
     if (key.startsWith(SyncPerson.KEY_PREFIX)) return SyncPerson.KEY_PREFIX + SyncPerson.folded(key.substring(SyncPerson.KEY_PREFIX.length))
     for (prefix in listOf("playlist:", "list:", "favorite:", "progress:")) {

@@ -95,7 +95,8 @@ appareils Android.
   "people": [ … ],
   "keys": [ … ],
   "deleted": { "<clé>": 1760000000000 },
-  "replaced": { "<id de playlist>": "<id de playlist>" }
+  "replaced": { "<id de playlist>": "<id de playlist>" },
+  "clock": 1760000000000
 }
 ```
 
@@ -139,6 +140,9 @@ instantané sans `keys` (d’un appareil qui ne les synchronise pas) ne retire r
 
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil
 les garde 180 jours.
+
+**Horloge** — l’horloge de l’expéditeur quand il a envoyé l’instantané (une réponse porte celle du serveur).
+Facultative : les versions plus anciennes n’en envoient pas.
 
 **Remplacés** — les identifiants de playlist devenus une autre playlist (règle 4 de la fusion) : l’ancien
 identifiant, puis celui qui l’a remplacé. Un appareil garde une entrée aussi longtemps que la suppression de
@@ -191,14 +195,22 @@ utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synch
 ## Horloges
 
 Les instants sont l’horloge de chaque appareil. Un boîtier TV peut avoir une horloge fausse tant qu’il n’a pas
-joint un serveur de temps : un appareil qui reçoit un instantané écarte donc d’abord chaque élément et chaque
-suppression daté de plus de 5 minutes après sa propre horloge (`withoutFutureRecords`) : une horloge en avance ne
-peut pas dater une modification dans le futur et gagner sur toutes les suivantes. Ces éléments sont écartés, pas
-déplacés : l’appareil qui les a faits les garde, ils voyagent une fois leur heure venue, et rien n’est supprimé
-parce qu’il manque. Un élément n’est remplacé que par un autre à l’instant strictement postérieur, donc les éléments
-d’un appareil ne reviennent jamais à une version plus ancienne. Une horloge en retard date ses modifications dans
-le passé : elles arrivent quand même (un élément absent n’est jamais une suppression), mais perdent un conflit avec
-une modification faite ailleurs depuis.
+joint un serveur de temps : un appareil qui reçoit un instantané met donc d’abord ses instants sur sa propre horloge
+(`onReceiverClock`) :
+
+1. Quand l’instantané a une `clock` à plus de 5 minutes de celle du destinataire, chacun de ses instants est décalé
+   de la différence (les instants d’une réponse reviennent ainsi à l’horloge du client). Un instant que le décalage
+   porterait au-delà de l’horloge du destinataire plus 5 minutes alors qu’il n’y était pas garde sa valeur : il a été
+   fixé avant que l’horloge de l’expéditeur se dérègle.
+2. Puis chaque élément et chaque suppression encore daté de plus de 5 minutes après l’horloge du destinataire est
+   écarté : une horloge en avance ne peut pas dater une modification dans le futur et gagner sur toutes les
+   suivantes (un instantané d’une version plus ancienne, sans `clock`, ne passe que par cette étape). Ces éléments
+   sont écartés, pas déplacés : l’appareil qui les a faits les garde, ils voyagent une fois leur heure venue, et rien
+   n’est supprimé parce qu’il manque.
+
+Un élément n’est remplacé que par un autre à l’instant strictement postérieur, donc les éléments d’un appareil ne
+reviennent jamais à une version plus ancienne. Les instants sont décalés d’une différence mesurée une fois par
+session, donc les éléments d’un appareil peuvent revenir à quelques millisecondes près : le même contenu.
 
 ## Confidentialité
 
