@@ -76,7 +76,9 @@ l’ordre des clés, et sans la progression de ce qui est en lecture sur l’app
 secondes) ; la réponse d’un serveur porte la sienne, celle des données dont vient la réponse. Un appareil ne compare une empreinte qu’avec ses
 propres empreintes antérieures et celles qu’un pair lui a envoyées, donc les appareils n’ont pas à la calculer
 octet pour octet de la même façon. Quand les données d’un client ont l’empreinte de l’instantané qu’il a envoyé en
-dernier à un serveur, et que ce serveur a répondu avec une empreinte, le client envoie une **sonde** à la place :
+entier en dernier à un serveur (toutes deux calculées sans ce qui est en lecture sur le client maintenant, donc un film
+lancé depuis ne compte pas comme un changement), et que ce serveur a répondu avec une empreinte, le client envoie une
+**sonde** à la place :
 `{"type", "version", "device", "deviceName", "clock", "digest", "seen": <l’empreinte du serveur>, "probe": true}`,
 sans éléments. Un serveur dont l’empreinte est toujours `seen` répond `{"type", "version", "device", "deviceName",
 "digest", "unchanged": true}`, et rien n’est fusionné ; sinon il répond avec son propre instantané. Un client envoie
@@ -258,22 +260,31 @@ synchronisation, et au lancement jamais antérieur à un instant qu’il détien
 2. **Un instantané reçu** perd d’abord les éléments et suppressions datés de plus d’**un jour** après l’horloge
    murale du destinataire : un appareil très en avance ne peut pas dater ses changements dans le futur, gagner sur
    tous les suivants, ni entraîner les horloges des autres. Ils sont écartés, pas déplacés : l’appareil qui les a
-   faits les garde, et ils voyagent une fois leur instant à moins d’un jour de l’horloge du destinataire (d’ici là,
-   ses sessions avec cet appareil sont des instantanés entiers, pas des sondes). Puis `last` devient le dernier
-   instant de ce qui reste, s’il est plus tardif.
-3. Un destinataire dont l’horloge murale indique une date antérieure à 2024 n’a aucune idée de l’heure : il n’écarte
-   rien.
+   faits les garde, et ils voyagent avec un instantané entier une fois leur instant à moins d’un jour de l’horloge du
+   destinataire : celui de chaque heure, ou le suivant après un changement d’un côté ou de l’autre (entre-temps, les
+   sessions sont des sondes, qui ne portent aucun élément). Puis `last` devient le dernier instant de ce qui reste,
+   s’il est plus tardif.
+3. Un destinataire dont l’horloge murale indique une date antérieure à 2024 n’est pas réglé : il n’a aucune idée de
+   l’heure. Il écarte ce qui est daté après le 1er janvier 2029 ou, si c’est plus tardif, plus de deux ans après
+   `last` : une horloge qui indique 2100, ou un instant abîmé, n’y entraîne aucun appareil.
 
 Une session de synchronisation ne change jamais un instant : un élément est gardé ou remplacé tel qu’il a été daté là
 où il a été fait. La `clock` d’un instantané est ignorée. Les versions plus anciennes envoient les instants de leur
 horloge murale et n’écartent rien, ce que les plus récentes lisent comme tout autre instant. « Maintenant », pour
-élaguer les suppressions et noter les sessions, est le plus tardif de l’horloge murale et de `last`.
+élaguer les suppressions et noter les sessions et les suppressions apprises, est le plus tardif de l’horloge murale et
+de `last`, mais jamais plus d’un jour après une horloge murale réglée, ni après le 1er janvier 2024 quand elle ne l’est
+pas : un instant très en avance ne peut pas faire paraître toutes les suppressions anciennes et les élaguer d’un coup.
 
 Limites : un appareil dont l’horloge avançait de plus d’un jour continue, une fois son horloge juste, à dater ses
 changements après ses précédents ; les autres appareils ne les prennent donc qu’une fois cet instant à moins d’un
 jour de leur horloge (une heure plus tard pour une horloge qui avançait d’un jour et une heure, un an plus tard pour
-une horloge qui avançait d’un an). Un appareil dont l’horloge n’est pas réglée accepte tout instant, même lointain,
-et date ensuite ses changements après lui.
+une horloge qui avançait d’un an). Un appareil dont l’horloge n’est pas réglée accepte un instant jusqu’à cette
+limite, et date ensuite ses changements après lui. Et un appareil en avance de moins d’un jour entraîne les horloges
+des autres : tant que leurs horloges murales ne l’ont pas rattrapé, chaque changement fait ailleurs est daté juste
+après le dernier instant vu ; un appareil loin des autres pendant ce temps (un téléphone hors de la maison) date donc
+ses changements avant ceux faits sur cet appareil après leur dernière session, et perd face à eux quel que soit
+l’ordre réel. Sur un réseau domestique, où les appareils se synchronisent chaque minute, cette fenêtre est d’environ
+une minute, mais elle dure tant que le téléphone est absent.
 
 ## Confidentialité
 

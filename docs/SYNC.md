@@ -70,7 +70,8 @@ without `device`, `deviceName`, `clock`, `digest`, `seen`, `probe` and `unchange
 without the progress of what plays on the device, saved every few seconds); a server's answer carries its own, of the
 data the answer comes from. A device compares a digest only with its own earlier ones and those a peer sent it,
 so devices need not compute it byte for byte alike. When a client's data has the digest of the snapshot it last sent
-to a server, and that server answered with a digest, the client sends a **probe** instead: `{"type", "version",
+in full to a server (both worked out without what plays on the client now, so a film started since does not count as a
+change), and that server answered with a digest, the client sends a **probe** instead: `{"type", "version",
 "device", "deviceName", "clock", "digest", "seen": <the server's digest>, "probe": true}`, without records. A server
 whose own digest is still `seen` answers `{"type", "version", "device", "deviceName", "digest", "unchanged": true}`,
 and nothing is merged; otherwise it answers with its own snapshot. A client still sends its whole snapshot to each
@@ -233,19 +234,28 @@ sync data, and at launch never earlier than any time it holds):
    everywhere, and a position saved after one received wins over it.
 2. **A snapshot received** first loses the records and deletions dated more than **one day** after the receiver's
    wall clock: one device far ahead cannot date its changes in the future, win over every later one, or carry the
-   others' clocks along. They are left out, not moved: the device that made them keeps them, and they travel once
-   their time is within a day of the receiver's clock (until then, its sessions with that device are whole snapshots,
-   not probes). Then `last` becomes the latest time of what is left, if that is later.
-3. A receiver whose wall clock reads before 2024 has no idea of the time: it leaves nothing out.
+   others' clocks along. They are left out, not moved: the device that made them keeps them, and they travel with a
+   whole snapshot once their time is within a day of the receiver's clock: the hourly one, or the next after a change
+   on either side (in between, sessions are probes, which carry no records). Then `last` becomes the latest time of
+   what is left, if that is later.
+3. A receiver whose wall clock reads before 2024 is not set: it has no idea of the time. It leaves out what is dated
+   after 2029-01-01 or, when that is later, more than two years after `last`: a clock reading 2100, or a damaged time,
+   carries no device there.
 
 A sync session never changes a time: a record is kept or replaced as it was dated where it was made. The `clock` of a
 snapshot is ignored. Older versions send their wall clock's times and leave nothing out, which the newer ones read
-as any other times. "Now", to prune deletions and to note sessions, is the later of the wall clock and `last`.
+as any other times. "Now", to prune deletions and to note sessions and the deletions learned, is the later of the wall
+clock and `last`, but never more than a day after a wall clock that is set, nor after 2024-01-01 when it is not: one
+time far ahead cannot make every deletion look old and prune it at once.
 
 Limits: a device whose clock was more than a day ahead keeps dating its changes after its own earlier ones once its
 clock is right, so the other devices take them only once that time is within a day of their clocks (an hour later
 for a clock that was a day and an hour ahead, a year later for a clock that was a year ahead). A device whose clock is
-not set takes in any time, a far one included, and then dates its changes after it.
+not set takes in a time up to that bound, and then dates its changes after it. And a device running ahead by less
+than a day carries the others' clocks along: until their wall clocks catch up, each change made elsewhere is dated
+just after the latest time seen, so a device away from the others meanwhile (a phone out of the home) dates its
+changes before those made on that device after their last session, and loses to them whatever the real order. On a
+home network, where devices sync every minute, that window is about a minute, but it is as long as the phone is away.
 
 ## Privacy
 
