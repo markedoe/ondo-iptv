@@ -185,14 +185,15 @@ class LibraryStateTest {
         assertEquals(30L, library.deleting("list:a", 30).syncDeleted["list:a"])
     }
 
-    /** A movie taken out of My List is remembered for sync at the time of the toggle; a person never syncs. */
+    /** A movie or a person taken out of My List is remembered for sync at the time of the toggle. */
     @Test
-    fun aFavouriteTakenAwayIsRememberedForSyncButNotAPerson() {
+    fun aFavouriteTakenAwayIsRememberedForSyncPeopleToo() {
         val movie = Favorite("p1", ItemKind.MOVIE, "m1", "Movie", addedAt = 1)
         val removed = LibraryState().toggleFavorite(movie).toggleFavorite(movie.copy(addedAt = 7))
         assertEquals(7L, removed.syncDeleted[SyncKeys.favorite(movie)])
         val person = Favorite.person("Alex Marsh", photoUrl = null, now = 1)
-        assertTrue(LibraryState().toggleFavorite(person).toggleFavorite(person).syncDeleted.isEmpty())
+        val gone = LibraryState().toggleFavorite(person).toggleFavorite(person.copy(addedAt = 9))
+        assertEquals(9L, gone.syncDeleted[SyncKeys.favorite(person)])
     }
 
     /** A photo found later fills a person kept without one, in My List and the collections; a known photo stays. */
