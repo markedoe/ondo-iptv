@@ -4,10 +4,14 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.BiasAlignment
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.layout.findRootCoordinates
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsDisplayed
@@ -20,12 +24,14 @@ import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpRect
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ContentType
@@ -66,7 +72,8 @@ import org.robolectric.annotation.Config
  * What a TV's tab pages must keep, at Google's 960 × 540 dp: the header's backdrop from the screen's very top, cropped
  * towards its top (faces stay whole); the playlist and when it was updated at the top bar's end, on Home and on the
  * Movies tab; every row type whole below the header (its name, its cards and their lines) once the remote is in it;
- * and, the chips focused, no card cut by the screen's bottom.
+ * the chips focused, no card cut by the screen's bottom; a focused card, grown, whole within its row at either end in
+ * both directions; and a continue watching card's lines clear of its focus frame.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
@@ -94,14 +101,14 @@ class TvLayoutRegressionTest {
     }
 
     /** [content] as a tab page on a TV: under the top bar, which shows [playlist] unless the page says otherwise. */
-    private fun show(tab: TopLevel, content: @Composable () -> Unit) {
+    private fun show(tab: TopLevel, direction: LayoutDirection = LayoutDirection.Ltr, content: @Composable () -> Unit) {
         var inputModes: InputModeManager? = null
         compose.setContent {
             inputModes = LocalInputModeManager.current
             OndoTheme {
                 TelevisionFrame {
                     TvNavigationFrame(tab, showBar = true, onSelect = {}, onSearch = {}, onSettings = {}, playlist = playlist) {
-                        CompositionLocalProvider(LocalTitleHeaders provides Headers, content = content)
+                        CompositionLocalProvider(LocalTitleHeaders provides Headers, LocalLayoutDirection provides direction, content = content)
                     }
                 }
             }
@@ -117,7 +124,7 @@ class TvLayoutRegressionTest {
         compose.waitForIdle()
     }
 
-    private fun moviesTab(state: VodUiState) = show(TopLevel.MOVIES) { VodScreen(state, VodActions()) }
+    private fun moviesTab(state: VodUiState, direction: LayoutDirection = LayoutDirection.Ltr) = show(TopLevel.MOVIES, direction) { VodScreen(state, VodActions()) }
 
     private fun bounds(tag: String): DpRect = compose.onNodeWithTag(tag, useUnmergedTree = true).getUnclippedBoundsInRoot()
 
@@ -265,6 +272,109 @@ class TvLayoutRegressionTest {
 
     @Test
     fun homesChannelRowFitsWhole() = assertHomeRowWhole(home(channels = channels), "shelfChannels")
+
+    /** Where [node] is drawn, in the root's pixels: with its focus scale, and not cut by its parents. */
+    private fun drawnBounds(node: SemanticsNode): Rect {
+        val coordinates = node.layoutInfo.coordinates
+        return coordinates.findRootCoordinates().localBoundingBoxOf(coordinates, clipBounds = false)
+    }
+
+    private fun focusedCard(shelf: String): SemanticsNode = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(shelf))).onLast().fetchSemanticsNode()
+
+    /**
+     * The focused card of [shelf], grown by its focus, is drawn whole within its row's visible part, at the row's
+     * start and at its end, [cards] cards along ([direction]'s Right or Left along the row).
+     */
+    private fun assertFocusedCardsWithinTheRow(shelf: String, cards: Int, direction: LayoutDirection) {
+        focusFirstCard(shelf)
+        assertCardWithinTheRow(shelf, "the first card")
+        val along = if (direction == LayoutDirection.Rtl) Key.DirectionLeft else Key.DirectionRight
+        repeat(cards - 1) {
+            compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(along) }
+            advance(600)
+        }
+        assertTrue("the focus stays in $shelf", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(shelf))).fetchSemanticsNodes().isNotEmpty())
+        assertCardWithinTheRow(shelf, "the last card")
+    }
+
+    private fun assertCardWithinTheRow(shelf: String, which: String) {
+        val card = focusedCard(shelf)
+        val drawn = drawnBounds(card)
+        // The scale shows in the bounds: else the check below would hold for a card drawn at its plain size.
+        assertTrue("$which of $shelf is grown by its focus: ${drawn.width} for ${card.size.width}", drawn.width > card.size.width * 1.03f)
+        val row = compose.onNode(hasTestTag("shelfRow") and hasAnyAncestor(hasTestTag(shelf)), useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        assertTrue("$which of $shelf is cut at the left: $drawn in $row", drawn.left >= row.left - 0.5f)
+        assertTrue("$which of $shelf is cut at the right: $drawn in $row", drawn.right <= row.right + 0.5f)
+    }
+
+    private val vodRows = VodUiState(title = "Movies", categories = listOf(drama), continueWatching = resume, rows = listOf(CategoryRow(drama, movies)))
+    private val vodPosters = VodUiState(title = "Movies", categories = listOf(drama), rows = listOf(CategoryRow(drama, movies)))
+
+    @Test
+    fun aFocusedContinueWatchingCardIsWholeInItsRow() {
+        moviesTab(vodRows)
+        assertFocusedCardsWithinTheRow("shelfResume", resume.size, LayoutDirection.Ltr)
+    }
+
+    @Test
+    fun aFocusedContinueWatchingCardIsWholeInItsRowRightToLeft() {
+        moviesTab(vodRows, LayoutDirection.Rtl)
+        assertFocusedCardsWithinTheRow("shelfResume", resume.size, LayoutDirection.Rtl)
+    }
+
+    @Test
+    fun aFocusedPosterIsWholeInItsRow() {
+        moviesTab(vodPosters)
+        assertFocusedCardsWithinTheRow("shelf:m-drama", movies.size + 1, LayoutDirection.Ltr)
+    }
+
+    @Test
+    fun aFocusedPosterIsWholeInItsRowRightToLeft() {
+        moviesTab(vodPosters, LayoutDirection.Rtl)
+        assertFocusedCardsWithinTheRow("shelf:m-drama", movies.size + 1, LayoutDirection.Rtl)
+    }
+
+    private fun assertHomesFocusedCardsWithinTheRow(state: HomeUiState, shelf: String, cards: Int, direction: LayoutDirection) {
+        show(TopLevel.HOME, direction) { TvHomeScreen(state, HomeActions(), autoAdvance = false) }
+        assertFocusedCardsWithinTheRow(shelf, cards, direction)
+    }
+
+    @Test
+    fun homesFocusedContinueWatchingCardIsWholeInItsRow() = assertHomesFocusedCardsWithinTheRow(home(continueWatching = resume), "shelfResumeMovies", resume.size, LayoutDirection.Ltr)
+
+    @Test
+    fun homesFocusedContinueWatchingCardIsWholeInItsRowRightToLeft() = assertHomesFocusedCardsWithinTheRow(home(continueWatching = resume), "shelfResumeMovies", resume.size, LayoutDirection.Rtl)
+
+    @Test
+    fun homesFocusedPosterIsWholeInItsRow() = assertHomesFocusedCardsWithinTheRow(home(newMovies = movies), "shelfNewMovies", movies.size, LayoutDirection.Ltr)
+
+    @Test
+    fun homesFocusedPosterIsWholeInItsRowRightToLeft() = assertHomesFocusedCardsWithinTheRow(home(newMovies = movies), "shelfNewMovies", movies.size, LayoutDirection.Rtl)
+
+    @Test
+    fun homesFocusedChannelIsWholeInItsRow() = assertHomesFocusedCardsWithinTheRow(home(channels = channels), "shelfChannels", channels.size + 1, LayoutDirection.Ltr)
+
+    @Test
+    fun homesFocusedChannelIsWholeInItsRowRightToLeft() = assertHomesFocusedCardsWithinTheRow(home(channels = channels), "shelfChannels", channels.size + 1, LayoutDirection.Rtl)
+
+    /** A continue watching card's lines keep clear of its focus frame and its corners, at both its sides. */
+    private fun assertCardLinesInsideTheFrame(direction: LayoutDirection) {
+        moviesTab(vodRows, direction)
+        focusFirstCard("shelfResume")
+        val card = drawnBounds(focusedCard("shelfResume"))
+        val frame = with(compose.density) { 3.dp.toPx() }
+        for (line in listOf(hasText("Resumed Film 1"), hasText("min left", substring = true))) {
+            val text = drawnBounds(compose.onAllNodes(line and hasAnyAncestor(hasTestTag("shelfResume")), useUnmergedTree = true).onFirst().fetchSemanticsNode())
+            assertTrue("a line ($direction) under the frame's start: $text in $card", text.left >= card.left + frame)
+            assertTrue("a line ($direction) under the frame's end: $text in $card", text.right <= card.right - frame)
+        }
+    }
+
+    @Test
+    fun aContinueWatchingCardsLinesStayInsideItsFrame() = assertCardLinesInsideTheFrame(LayoutDirection.Ltr)
+
+    @Test
+    fun aContinueWatchingCardsLinesStayInsideItsFrameRightToLeft() = assertCardLinesInsideTheFrame(LayoutDirection.Rtl)
 
     private companion object {
         const val NOW = 1_760_000_000_000L

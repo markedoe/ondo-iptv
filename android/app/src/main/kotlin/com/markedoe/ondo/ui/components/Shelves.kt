@@ -132,6 +132,7 @@ fun Shelf(
         }
         TvRow {
             LazyRow(
+                modifier = Modifier.testTag("shelfRow"),
                 contentPadding = PaddingValues(horizontal = metrics.gutter),
                 horizontalArrangement = Arrangement.spacedBy(if (metrics.compact) 10.dp else 14.dp),
                 content = content,
@@ -390,7 +391,14 @@ fun ContinueCard(
                 Box(Modifier.fillMaxWidth(item.progress.coerceIn(0f, 1f)).height(3.dp).background(Color.White))
             }
         }
-        Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 8.dp))
+        // Inside the card's frame and its rounded corners, which would cut the lines' first and last letters.
+        Text(
+            item.title,
+            style = MaterialTheme.typography.titleSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = CardTextInset, top = 8.dp, end = CardTextInset),
+        )
         val left = if (item.minutesLeft > 1) timeLeftText(item.minutesLeft) else stringResource(R.string.resume)
         Text(
             listOfNotNull(item.subtitle, left).joinToString(" · "),
@@ -398,12 +406,16 @@ fun ContinueCard(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = CardTextInset),
         )
     }
 }
 
 /** The corners of a landscape card (continue watching, channels): as on a TV. */
 val CardShape = RoundedCornerShape(10.dp)
+
+/** How far a card's lines keep from its sides: clear of its focus frame (3 dp) and of its rounded corners. */
+val CardTextInset = 8.dp
 
 /** A card that gives under the finger: 97 % of its size while [interaction] is pressed. */
 fun Modifier.pressScale(interaction: InteractionSource): Modifier = composed {

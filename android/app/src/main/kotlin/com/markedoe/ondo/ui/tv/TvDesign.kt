@@ -293,6 +293,7 @@ fun LazyListScope.tvShelf(title: String, tag: String, start: Dp = TvTokens.Conte
             TvRow {
                 LazyRow(
                     state = row,
+                    modifier = Modifier.testTag("shelfRow"),
                     contentPadding = PaddingValues(start = start, end = TvTokens.EdgeEnd, top = 8.dp, bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(TvTokens.CardGap),
                     content = content,
