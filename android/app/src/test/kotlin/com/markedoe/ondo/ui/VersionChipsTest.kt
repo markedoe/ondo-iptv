@@ -2,10 +2,14 @@ package com.markedoe.ondo.ui
 
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.hasScrollToNodeAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.screens.DetailActions
@@ -40,10 +44,11 @@ class VersionChipsTest {
     fun onAPhoneATapPicksAVersion() {
         val picked = mutableListOf<String>()
         compose.setContent { OndoTheme { MovieDetailScreen(state, DetailActions(onVersion = { picked += it })) } }
+        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasTestTag("versions"))
         compose.onNodeWithText("Version").assertExists()
         compose.onNodeWithText("4K 2").assertExists()
         assertEquals(true, selected("version-${movie.id}"))
-        compose.onNodeWithTag("version-dv").performClick()
+        compose.onNodeWithTag("version-dv").performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf("dv"), picked)
     }
 
@@ -52,9 +57,9 @@ class VersionChipsTest {
     fun onATvTheRemotePicksAVersion() {
         val picked = mutableListOf<String>()
         compose.setContent { OndoTheme { TelevisionFrame { TvMovieDetailScreen(state, DetailActions(onVersion = { picked += it })) } } }
-        compose.onNodeWithTag("versions").assertExists()
+        compose.onNodeWithTag("detail").performScrollToNode(hasTestTag("versions"))
         assertEquals(true, selected("version-${movie.id}"))
-        compose.onNodeWithTag("version-4k-2").performClick()
+        compose.onNodeWithTag("version-4k-2").performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(listOf("4k-2"), picked)
     }
 }

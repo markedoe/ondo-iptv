@@ -53,8 +53,8 @@ class FilmVersionsAppTest {
         val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state), films = UiMappers.films(state))
         return mapOf(
             "grid" to UiMappers.grid(state, false, null, false, "").map { (it as com.markedoe.ondo.ui.model.ShowcaseItem.MovieItem).movie.id },
-            "sci-fi row" to vod.rows.first { it.category.id == Fixtures.sciFi.id }.items.map { it.key.removePrefix("m-") },
-            "4K row" to vod.rows.first { it.category.id == uhdFilms.id }.items.map { it.key.removePrefix("m-") },
+            "sci-fi row" to vod.rows.firstOrNull { it.category.id == Fixtures.sciFi.id }?.items.orEmpty().map { it.key.removePrefix("m-") },
+            "4K row" to vod.rows.firstOrNull { it.category.id == uhdFilms.id }?.items.orEmpty().map { it.key.removePrefix("m-") },
             "year" to UiMappers.browse(state, BrowseKind.YEAR, "2024").movies.map { it.key.removePrefix("m-") },
             "search" to UiMappers.search(index, "glass", state, Fixtures.NOW).movies.map { it.key.removePrefix("m-") },
             "new" to UiMappers.home(state, labels, Fixtures.NOW).newMovies.map { it.key.removePrefix("m-") },

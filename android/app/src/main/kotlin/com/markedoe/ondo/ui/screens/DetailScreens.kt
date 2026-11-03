@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -239,7 +240,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.testTag("versions"),
                     ) {
-                        items(state.versions, key = { it.id }) { chip ->
+                        itemsIndexed(state.versions, key = { index, chip -> "$index:${chip.id}" }) { _, chip ->
                             FilterChip(
                                 selected = chip.id == selected,
                                 onClick = { actions.onVersion(chip.id) },

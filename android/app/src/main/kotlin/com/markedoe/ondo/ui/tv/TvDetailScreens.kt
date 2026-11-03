@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -664,7 +665,7 @@ private fun LazyListScope.versionsShelf(versions: List<VersionChip>, selected: S
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.testTag("versions"),
             ) {
-                items(versions, key = { "version:${it.id}" }) { chip ->
+                itemsIndexed(versions, key = { index, chip -> "version:$index:${chip.id}" }) { _, chip ->
                     TvChip(
                         text = versionLabel(chip),
                         selected = chip.id == selected,

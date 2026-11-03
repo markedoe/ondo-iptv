@@ -129,7 +129,8 @@ object UiMappers {
         val versions = grouped.versions(movie)
         if (versions.size < 2) return versions
         val hidden = hiddenCategoryIds(state)
-        return versions.filter { it.id == movie.id || it.categoryId !in hidden }
+        // A stream a panel lists twice (the same id) is one version.
+        return versions.filter { it.id == movie.id || it.categoryId !in hidden }.distinctBy { it.id }
     }
 
     /**
