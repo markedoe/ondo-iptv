@@ -253,6 +253,9 @@ final class OndoUITests: XCTestCase {
         XCTAssertTrue(poster.waitForExistence(timeout: 5), "movie poster")
         poster.tap()
         XCTAssertTrue(app.navigationBars["Northern Lights"].waitForExistence(timeout: 5), "movie detail on top")
+        // The film's versions as badges (the fixture lists it four times): the film is one poster, its page offers them.
+        XCTAssertTrue(app.buttons["4K DV"].waitForExistence(timeout: 5), "version badges")
+        XCTAssertTrue(app.buttons["VOSTFR"].exists)
         sleep(1)
         snapshot("09-movie-detail")
 

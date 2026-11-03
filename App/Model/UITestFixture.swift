@@ -154,7 +154,7 @@ enum UITestFixture {
             lines.append("#EXTINF:\(movie.minutes * 60)\(logo("poster-\(movie.slug).png")) group-title=\"Movies | \(movie.category)\",\(movie.title) (\(movie.year))")
             lines.append(hlsAdvanced)
         }
-        if isShowcase, let film = movies.first {
+        if let film = movies.first {
             // Other versions of the first film, as providers list them (the same title and year, another quality or
             // language): the app shows the film once, its versions as badges on its page (FilmVersions).
             for tags in ["4K DV", "4K", "VOSTFR"] {
