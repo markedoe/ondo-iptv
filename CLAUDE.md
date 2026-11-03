@@ -54,6 +54,10 @@ screenshots.
   outside service is checked with that service as soon as the user saves it, with a clear message (accepted,
   refused, service unreachable); a refused one is not saved. Fields and help texts use the service's own words for
   its credentials (e.g. TMDb's "API Read Access Token"), with a short explanation of where to find them.
+- **Every bug fix comes with its regression test**: a test that fails on the code before the fix and passes after
+  it, on each platform the bug touches (Android and Apple when the logic is shared), in the same change. A behaviour
+  that must hold on every screen (hidden categories, display titles, D-pad paths) gets one test that lists every
+  surface, so a new screen is added to it.
 - **Guard**: `.claude/hooks/leak_guard.py` is wired as a `PreToolUse` hook (`.claude/settings.json`): it
   blocks writing secrets or personal data into the repository and checks the changes before `git commit` /
   `git push`. CI runs it again on the whole history with gitleaks. For a false positive, add a regex to
