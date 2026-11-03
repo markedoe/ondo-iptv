@@ -292,6 +292,10 @@ class TmdbTest {
         assertEquals("Up", CatalogueMatcher.displayTitle("Up"))
         assertEquals("Star Runner 2049", CatalogueMatcher.displayTitle("Star Runner 2049"))
         assertEquals("Vost", CatalogueMatcher.displayTitle("Vost"))
+        // Tags that are words too stay words unless in capitals.
+        assertEquals("French Kiss", CatalogueMatcher.displayTitle("French Kiss"))
+        assertEquals("Johnny English", CatalogueMatcher.displayTitle("Johnny English"))
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport FRENCH"))
         // Nothing left: the title as it is.
         assertEquals("[MULTI]", CatalogueMatcher.displayTitle("[MULTI]"))
     }

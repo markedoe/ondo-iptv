@@ -10,7 +10,8 @@ liste, exactement comme avant.
 Les règles sont dans les cœurs, avec les mêmes tests sur les deux plateformes : `FilmVersions` dans IPTVCore
 (`Packages/IPTVCore/Sources/IPTVCore/Library/FilmVersions.swift`) et dans le cœur Kotlin
 (`android/core/src/main/kotlin/com/markedoe/ondo/core/library/FilmVersions.kt`). Elles ne perdent ni ne cachent aucun
-flux : chaque flux est dans exactement un groupe. Dans le doute, les flux restent séparés.
+flux : chaque flux est dans exactement un groupe. Dans le doute, les flux restent séparés. Les deux cœurs lisent les
+mêmes catalogues écrits à la main et leurs groupes attendus (`fixtures/film-versions/golden.json`).
 
 ## Quand deux flux sont un seul film
 
@@ -20,15 +21,25 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   `FR -`, `VFF`, `MULTI`, `4K`…), sans tenir compte de la casse ni des accents : « |FR| Le Transport 4K » et « Le
   Transport VOSTFR » sont tous deux « le transport ».
 - **Règle A, l'identifiant TMDb du fournisseur.** Le champ `tmdb` (ou `tmdb_id`) de la liste Xtream ne compte que s'il
-  est un nombre entier supérieur à zéro (`0`, vide, `true`, `12.5` ou du texte ne sont pas un identifiant). Deux flux du
-  même identifiant sont regroupés quand leurs titres s'accordent :
-  - le même titre ; ou
-  - les mots de l'un sont les premiers mots de l'autre (« le transport » et « le transport heritage ») ; ou
-  - au moins la moitié des mots distincts du titre le plus long sont partagés, sans les mots courts comme « the »,
-    « le » ou « de » (« the matrix » et « matrix » ; pas « the matrix » et « the godfather »).
+  est un nombre entier supérieur à zéro (`0`, vide, `true`, `12.5` ou du texte ne sont pas un identifiant). L'identifiant
+  d'un fournisseur peut être faux (une suite associée au premier film, l'identifiant d'une saga sur chaque film) : deux
+  flux du même identifiant ne sont regroupés que si tout concorde :
+  - **la même année** quand les deux en ont une (un groupe n'a jamais deux années : « Dune » 1984 et « Dune » 2021
+    restent séparés) ;
+  - **les mêmes nombres** : un nombre dans un titre que l'autre n'a pas ou écrit autrement (2, IV, deux, two…) fait un
+    autre film (« Toy Story » et « Toy Story 3 », « Episode IV » et « Episode V », « Fast and Furious 7 » et « 8 ») ;
+  - puis **le même titre**, ou **les mêmes mots** sans les mots courts comme « the », « le » ou « de » (« the matrix » et
+    « matrix ») ; ou les mots de l'un sont les premiers mots de l'autre (« le transport » et « le transport heritage »)
+    **seulement avec la même année donnée des deux côtés** et aucun mot de suite parmi les autres (partie, chapitre,
+    épisode, volume… dans les langues des apps) : « Dune: Part Two » n'est pas « Dune ».
 
-  « Alien » et « Aliens » ne s'accordent pas. Un flux dont le titre ne s'accorde pas reste à part et est compté
-  (`idTitleMismatches`). **Deux identifiants différents ne sont jamais dans le même groupe**, quels que soient les titres.
+  « Alien » et « Aliens » ne s'accordent pas, ni « Harry Potter and the Chamber of Secrets » et « …the Prisoner of
+  Azkaban ». Un flux dont le titre ne s'accorde pas reste à part et est compté (`idTitleMismatches` ; parmi eux,
+  `prefixWithoutYears` sont ceux gardés à part seulement faute d'année). **Deux identifiants différents ne sont jamais
+  dans le même groupe**, quels que soient les titres.
+- **Les noms qui ne disent rien du film** ne sont jamais regroupés : un nom fait seulement des étiquettes des fournisseurs
+  (« 4K », « [FR] MULTI »), ou, sans identifiant, un simple nombre (« FR - 2021 »). Les mots qui sont aussi des étiquettes
+  (« French Kiss », « Johnny English ») ne sont des étiquettes qu'en capitales (« FRENCH »).
 - **Règle B, pas d'identifiant d'un côté ou des deux.** Exactement le même titre et la même année, présente des deux
   côtés : pas d'année, pas de groupe ; aucune année de tolérance (« Dune » 1984 et « Dune » 2021 sont deux films ;
   « Sandstorm » et « Sandstorm 2 » aussi). Un flux sans identifiant ne rejoint un groupe avec identifiant que si un seul

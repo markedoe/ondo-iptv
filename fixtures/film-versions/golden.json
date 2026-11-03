@@ -1,0 +1,624 @@
+{
+ "about": "Catalogues and the groups both cores must make of them (FilmVersions, docs/VERSIONS.md). Rows by index.",
+ "cases": [
+  {
+   "name": "A film, its remake and its sequels under one id stay apart (years, numbers, part words)",
+   "rows": [
+    {
+     "id": "d1",
+     "name": "Dune",
+     "category": "c",
+     "year": 1984,
+     "tmdb": 438631
+    },
+    {
+     "id": "d2",
+     "name": "Dune",
+     "category": "c",
+     "year": 2021,
+     "tmdb": 438631
+    },
+    {
+     "id": "d3",
+     "name": "Dune 2",
+     "category": "c",
+     "year": 2024,
+     "tmdb": 438631
+    },
+    {
+     "id": "d4",
+     "name": "Dune: Part Two",
+     "category": "c",
+     "year": 2024,
+     "tmdb": 438631
+    },
+    {
+     "id": "d5",
+     "name": "Alien",
+     "category": "c",
+     "year": 1979,
+     "tmdb": 348
+    },
+    {
+     "id": "d6",
+     "name": "Alien: Covenant",
+     "category": "c",
+     "year": 2017,
+     "tmdb": 348
+    },
+    {
+     "id": "d7",
+     "name": "It",
+     "category": "c",
+     "year": 2017,
+     "tmdb": 346364
+    },
+    {
+     "id": "d8",
+     "name": "It Chapter Two",
+     "category": "c",
+     "year": 2019,
+     "tmdb": 346364
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ]
+   ]
+  },
+  {
+   "name": "A saga under one collection id stays five films",
+   "rows": [
+    {
+     "id": "h0",
+     "name": "Harry Potter and the Chamber of Secrets",
+     "category": "c",
+     "year": 2002,
+     "tmdb": 1241
+    },
+    {
+     "id": "h1",
+     "name": "Harry Potter and the Prisoner of Azkaban",
+     "category": "c",
+     "year": 2004,
+     "tmdb": 1241
+    },
+    {
+     "id": "h2",
+     "name": "Harry Potter and the Goblet of Fire",
+     "category": "c",
+     "year": 2006,
+     "tmdb": 1241
+    },
+    {
+     "id": "h3",
+     "name": "Harry Potter and the Order of the Phoenix",
+     "category": "c",
+     "year": 2008,
+     "tmdb": 1241
+    },
+    {
+     "id": "h4",
+     "name": "Harry Potter and the Half-Blood Prince",
+     "category": "c",
+     "year": 2010,
+     "tmdb": 1241
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ]
+  },
+  {
+   "name": "Numbered films stay apart, with or without years",
+   "rows": [
+    {
+     "id": "f7",
+     "name": "Fast and Furious 7",
+     "category": "c",
+     "year": 2015,
+     "tmdb": 1
+    },
+    {
+     "id": "f8",
+     "name": "Fast and Furious 8",
+     "category": "c",
+     "year": 2017,
+     "tmdb": 1
+    },
+    {
+     "id": "s4",
+     "name": "Star Wars Episode IV",
+     "category": "c",
+     "tmdb": 2
+    },
+    {
+     "id": "s5",
+     "name": "Star Wars Episode V",
+     "category": "c",
+     "tmdb": 2
+    },
+    {
+     "id": "t1",
+     "name": "Toy Story",
+     "category": "c",
+     "year": 1995,
+     "tmdb": 3
+    },
+    {
+     "id": "t3",
+     "name": "Toy Story 3",
+     "category": "c",
+     "year": 1995,
+     "tmdb": 3
+    },
+    {
+     "id": "r1",
+     "name": "Le Transport",
+     "category": "c",
+     "year": 2015,
+     "tmdb": 4
+    },
+    {
+     "id": "r2",
+     "name": "Le Transport 2",
+     "category": "c",
+     "year": 2015,
+     "tmdb": 4
+    },
+    {
+     "id": "s6",
+     "name": "Scream",
+     "category": "c",
+     "tmdb": 5
+    },
+    {
+     "id": "s7",
+     "name": "Scream VI",
+     "category": "c",
+     "tmdb": 5
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ],
+    [
+     7
+    ],
+    [
+     8
+    ],
+    [
+     9
+    ]
+   ]
+  },
+  {
+   "name": "The versions of a film group: one id, the same year; a stream without an id joins by title and year",
+   "rows": [
+    {
+     "id": "v1",
+     "name": "|FR| Le Transport 4K DV",
+     "category": "c",
+     "year": 2015,
+     "tmdb": 7
+    },
+    {
+     "id": "v2",
+     "name": "Le Transport",
+     "category": "c",
+     "year": 2015,
+     "tmdb": 7
+    },
+    {
+     "id": "v3",
+     "name": "Le Transport VOSTFR",
+     "category": "c",
+     "year": 2015
+    },
+    {
+     "id": "v4",
+     "name": "Le Transport : Héritage",
+     "category": "c",
+     "year": 2015,
+     "tmdb": 7
+    },
+    {
+     "id": "m1",
+     "name": "The Matrix",
+     "category": "c",
+     "year": 1999,
+     "tmdb": 603
+    },
+    {
+     "id": "m2",
+     "name": "Matrix VOSTFR",
+     "category": "c",
+     "year": 1999,
+     "tmdb": 603
+    }
+   ],
+   "groups": [
+    [
+     0,
+     1,
+     2,
+     3
+    ],
+    [
+     4,
+     5
+    ]
+   ]
+  },
+  {
+   "name": "One title the first words of another: kept apart without both years",
+   "rows": [
+    {
+     "id": "p1",
+     "name": "Le Transport",
+     "category": "c",
+     "tmdb": 7
+    },
+    {
+     "id": "p2",
+     "name": "Le Transport : Héritage",
+     "category": "c",
+     "tmdb": 7
+    },
+    {
+     "id": "p3",
+     "name": "Mission Impossible",
+     "category": "c",
+     "year": 1996,
+     "tmdb": 8
+    },
+    {
+     "id": "p4",
+     "name": "Mission Impossible Fallout",
+     "category": "c",
+     "tmdb": 8
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "diagnostics": {
+    "idTitleMismatches": 2,
+    "prefixWithoutYears": 2
+   }
+  },
+  {
+   "name": "A stream without an id whose title and year two ids have joins neither",
+   "rows": [
+    {
+     "id": "a0",
+     "name": "Dune VOSTFR",
+     "category": "c",
+     "year": 2021
+    },
+    {
+     "id": "a1",
+     "name": "Dune",
+     "category": "c",
+     "year": 2021,
+     "tmdb": 1
+    },
+    {
+     "id": "a2",
+     "name": "Dune 4K",
+     "category": "c",
+     "year": 2021,
+     "tmdb": 2
+    },
+    {
+     "id": "a3",
+     "name": "Dune MULTI",
+     "category": "c",
+     "year": 2021
+    }
+   ],
+   "groups": [
+    [
+     0,
+     3
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ]
+   ],
+   "diagnostics": {
+    "ambiguousTitles": 2
+   }
+  },
+  {
+   "name": "A stream listed twice keeps each row in its own group",
+   "rows": [
+    {
+     "id": "dup",
+     "name": "Sandstorm",
+     "category": "x",
+     "year": 2021,
+     "tmdb": 5
+    },
+    {
+     "id": "dup",
+     "name": "Ocean Drift",
+     "category": "y",
+     "year": 2020,
+     "tmdb": 9
+    },
+    {
+     "id": "o4",
+     "name": "Ocean Drift 4K",
+     "category": "y",
+     "year": 2020,
+     "tmdb": 9
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1,
+     2
+    ]
+   ],
+   "sublists": [
+    {
+     "category": "y",
+     "distinct": [
+      1
+     ]
+    },
+    {
+     "category": "x",
+     "distinct": [
+      0
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Names made of tags only, or a bare number, never group",
+   "rows": [
+    {
+     "id": "g1",
+     "name": "4K",
+     "category": "c",
+     "year": 2020
+    },
+    {
+     "id": "g2",
+     "name": "4K",
+     "category": "c",
+     "year": 2020
+    },
+    {
+     "id": "g3",
+     "name": "[FR] 4K",
+     "category": "c",
+     "year": 2020
+    },
+    {
+     "id": "g4",
+     "name": "FR - 2021",
+     "category": "c",
+     "year": 2021
+    },
+    {
+     "id": "g5",
+     "name": "FR - 2021",
+     "category": "c",
+     "year": 2021
+    },
+    {
+     "id": "g6",
+     "name": "MULTI",
+     "category": "c",
+     "year": 2020,
+     "tmdb": 9
+    },
+    {
+     "id": "g7",
+     "name": "MULTI 4K",
+     "category": "c",
+     "year": 2020,
+     "tmdb": 9
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ],
+    [
+     6
+    ]
+   ]
+  },
+  {
+   "name": "Words that are also tags stay words",
+   "rows": [
+    {
+     "id": "w1",
+     "name": "French Kiss",
+     "category": "c",
+     "year": 1995
+    },
+    {
+     "id": "w2",
+     "name": "Kiss",
+     "category": "c",
+     "year": 1995
+    },
+    {
+     "id": "w3",
+     "name": "Johnny English",
+     "category": "c",
+     "year": 2003
+    },
+    {
+     "id": "w4",
+     "name": "Johnny",
+     "category": "c",
+     "year": 2003
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ]
+  },
+  {
+   "name": "A film is in every category one of its versions is in",
+   "rows": [
+    {
+     "id": "c1",
+     "name": "Sintel",
+     "category": "a",
+     "year": 2010,
+     "tmdb": 45745
+    },
+    {
+     "id": "c2",
+     "name": "Sintel 4K",
+     "category": "b",
+     "year": 2010,
+     "tmdb": 45745
+    },
+    {
+     "id": "c3",
+     "name": "Spring",
+     "category": "a",
+     "year": 2019
+    },
+    {
+     "id": "c4",
+     "name": "Sintel VOSTFR",
+     "category": "a",
+     "year": 2010
+    }
+   ],
+   "groups": [
+    [
+     0,
+     1,
+     3
+    ],
+    [
+     2
+    ]
+   ],
+   "sublists": [
+    {
+     "category": "a",
+     "distinct": [
+      0,
+      2
+     ]
+    },
+    {
+     "category": "b",
+     "distinct": [
+      1
+     ]
+    }
+   ]
+  }
+ ]
+}

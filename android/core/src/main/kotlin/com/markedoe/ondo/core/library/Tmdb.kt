@@ -370,14 +370,24 @@ object CatalogueMatcher {
     private val qualityWords = setOf("multi", "4k", "uhd", "fhd", "hd", "sd", "hdr", "dv", "hevc", "x265", "h265", "1080p", "720p", "2160p", "vfq", "imax")
 
     /**
+     * Tags that are also words of titles ("French Kiss", "Johnny English", "Dual"): tags only in capitals, like the short
+     * ones.
+     */
+    private val wordLikeTags = setOf("french", "english", "dubbed", "subbed", "dual")
+
+    /**
      * A tag of the provider's, not a word of the film's: a language or version ([versionWords]) or a quality. A short one
-     * (three letters at most) only in capitals: "FR" and "VF" are tags, "De" in "De Gaulle" is a word.
+     * (three letters at most) or one that is also a word ([wordLikeTags]) only in capitals: "FR", "VF" and "FRENCH" are
+     * tags, "De" in "De Gaulle" and "French" in "French Kiss" are words.
      */
     private fun isTag(word: String): Boolean {
         val lower = word.lowercase()
-        if (lower !in versionWords && lower !in qualityWords) return false
-        return word.length > 3 || word == word.uppercase()
+        if (!isTagWord(lower)) return false
+        return (word.length > 3 && lower !in wordLikeTags) || word == word.uppercase()
     }
+
+    /** Whether a word (lowercase) is one of the providers' tag words, a language, a version or a quality. */
+    fun isTagWord(lower: String): Boolean = lower in versionWords || lower in qualityWords
 
     private val leadingTag = Regex("""^\s*([\p{L}\p{N}]{2,8}(?:[-+ ][\p{L}\p{N}]{1,6})?)\s*[-:|·]\s+""")
     private val parenthesizedYear = Regex("""\(\s*\d{4}\s*\)""")

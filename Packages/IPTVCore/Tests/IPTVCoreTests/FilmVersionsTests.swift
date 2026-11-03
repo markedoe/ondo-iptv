@@ -37,17 +37,82 @@ final class FilmVersionsTests: XCTestCase {
 
     func testRuleAGroupsOneIDWhenTheTitlesAgree() {
         let uhd = movie("|FR| Le Transport 4K DV", 2021, tmdb: 7)
-        let hd = movie("Le Transport", 2020, tmdb: 7)
-        let longer = movie("Le Transport : Héritage", nil, tmdb: 7)
+        let hd = movie("Le Transport", nil, tmdb: 7)
+        let longer = movie("Le Transport : Héritage", 2021, tmdb: 7)
         let matrix = movie("The Matrix", 1999, tmdb: 603)
         let short = movie("Matrix VOSTFR", 1999, tmdb: 603)
         let versions = FilmVersions.of([uhd, hd, longer, matrix, short])
-        XCTAssertTrue(together(versions, uhd, hd), "the same id: years are not compared")
-        XCTAssertTrue(together(versions, uhd, longer), "one title starts with the other")
-        XCTAssertTrue(together(versions, matrix, short), "half the words shared")
+        XCTAssertTrue(together(versions, uhd, hd), "the same title, one year missing")
+        XCTAssertTrue(together(versions, uhd, longer), "one title starts with the other, the same year on both")
+        XCTAssertTrue(together(versions, matrix, short), "the same words, \"the\" left out")
         XCTAssertEqual(versions.groupCount, 2)
         XCTAssertEqual(versions.diagnostics.groupedByID, 3)
         XCTAssertEqual(versions.diagnostics.idTitleMismatches, 0)
+    }
+
+    /// The review's probes: under one id, a remake, a sequel or a saga's next film is another film.
+    func testFranchisesUnderOneIDStayApart() {
+        let pairs: [(String, Int?, String, Int?)] = [
+            ("Dune", 1984, "Dune", 2021), ("Dune", 2021, "Dune 2", 2024), ("Dune", nil, "Dune 2", nil), ("Dune", 2024, "Dune: Part Two", 2024),
+            ("Alien", 1979, "Alien: Covenant", 2017), ("Alien", nil, "Alien: Covenant", nil), ("Toy Story", 1995, "Toy Story 3", 1995),
+            ("It", 2017, "It Chapter Two", 2017), ("The Matrix", 1999, "The Matrix Reloaded", 2003), ("Matrix", nil, "Matrix Resurrections", nil),
+            ("Harry Potter and the Chamber of Secrets", 2002, "Harry Potter and the Prisoner of Azkaban", 2002),
+            ("Harry Potter and the Chamber of Secrets", nil, "Harry Potter and the Goblet of Fire", nil),
+            ("Star Wars Episode IV", nil, "Star Wars Episode V", nil), ("Spider-Man", 2002, "Spider-Man 2", 2002),
+            ("Mission Impossible", nil, "Mission Impossible Fallout", nil), ("Halloween", 2018, "Halloween Kills", 2021),
+            ("Scream", 2022, "Scream VI", 2022), ("Rocky", 1976, "Rocky Balboa", 2006), ("John Wick", 2014, "John Wick Chapter 4", 2014),
+            ("Fast and Furious 7", 2015, "Fast and Furious 8", 2015), ("Le Transport", 2015, "Le Transport 2", 2015),
+            ("Le Transport", nil, "Le Transport : Héritage", nil), ("Le Film", 2010, "Le Film deux", 2010),
+        ]
+        for (a, aYear, b, bYear) in pairs {
+            XCTAssertFalse(FilmVersions.titlesAgree(FilmVersions.titleKey(a), aYear, FilmVersions.titleKey(b), bYear), "\(a) / \(b)")
+        }
+        let saga = ["Harry Potter and the Chamber of Secrets", "Harry Potter and the Prisoner of Azkaban", "Harry Potter and the Goblet of Fire",
+                    "Harry Potter and the Order of the Phoenix", "Harry Potter and the Half-Blood Prince"]
+            .enumerated().map { movie($0.element, 2002 + $0.offset * 2, tmdb: 1241) }
+        XCTAssertEqual(FilmVersions.of(saga).groupCount, 5, "a saga under one collection id")
+        let remake = [movie("Dune", 1984, tmdb: 438631), movie("Dune", 2021, tmdb: 438631), movie("Dune 2", 2024, tmdb: 438631)]
+        let versions = FilmVersions.of(remake)
+        XCTAssertEqual(versions.groupCount, 3)
+        XCTAssertEqual(versions.expand([remake[1].id]), [remake[1].id], "watching one does not hide the others")
+    }
+
+    /// A stream without a year never brings two years into one group.
+    func testOneGroupHoldsOneYear() {
+        let none = movie("Dune", nil, tmdb: 1)
+        let first = movie("Dune", 1984, tmdb: 1)
+        let second = movie("Dune", 2021, tmdb: 1)
+        let versions = FilmVersions.of([none, first, second])
+        XCTAssertTrue(together(versions, none, first))
+        XCTAssertFalse(together(versions, first, second))
+    }
+
+    /// Names made of the providers' tags only, or a bare number, never group.
+    func testTagOnlyNamesNeverGroup() {
+        let list = [movie("4K", 2020), movie("4K", 2020), movie("[FR] 4K", 2020), movie("FR - 2021", 2021), movie("FR - 2021", 2021),
+                    movie("MULTI", 2020, tmdb: 9), movie("MULTI 4K", 2020, tmdb: 9)]
+        XCTAssertEqual(FilmVersions.of(list).groupCount, list.count)
+        XCTAssertFalse(FilmVersions.groupable("fr 4k"))
+        XCTAssertTrue(FilmVersions.groupable("1917"), "a title of digits is a title: rule A may group it")
+    }
+
+    /// "French Kiss" is not "Kiss", "Johnny English" not "Johnny".
+    func testWordsThatAreAlsoTagsStayWords() {
+        XCTAssertEqual(FilmVersions.titleKey("French Kiss"), "french kiss")
+        XCTAssertEqual(FilmVersions.titleKey("Johnny English"), "johnny english")
+        XCTAssertEqual(FilmVersions.of([movie("French Kiss", 1995), movie("Kiss", 1995)]).groupCount, 2)
+    }
+
+    /// A stream a panel lists twice (two categories) keeps each row in its own group.
+    func testAStreamListedTwiceKeepsEachRow() {
+        let a = movie("Sandstorm", 2021, tmdb: 5, category: "x", id: "dup")
+        let b = movie("Ocean Drift", 2020, tmdb: 9, category: "y", id: "dup")
+        let c = movie("Ocean Drift 4K", 2020, tmdb: 9, category: "y")
+        let versions = FilmVersions.of([a, b, c])
+        XCTAssertEqual(versions.distinct([b, c]), [b])
+        XCTAssertEqual(versions.versions(of: b), [b, c])
+        XCTAssertEqual(versions.versions(of: a), [a])
+        XCTAssertEqual(versions.expand(["dup"]), ["dup", c.id])
     }
 
     func testRuleAKeepsApartOneIDWhoseTitlesDisagree() {
@@ -59,8 +124,8 @@ final class FilmVersionsTests: XCTestCase {
         let versions = FilmVersions.of(list)
         XCTAssertEqual(versions.groupCount, 6, "unrelated titles of one id are not grouped")
         XCTAssertEqual(versions.diagnostics.idTitleMismatches, 3)
-        XCTAssertFalse(FilmVersions.titlesAgree("the matrix", "the godfather"), "\"the\" is no shared word")
-        XCTAssertFalse(FilmVersions.titlesAgree("alien", "aliens"), "a word is not a prefix of another")
+        XCTAssertFalse(FilmVersions.titlesAgree("the matrix", 1999, "the godfather", 1999), "\"the\" is no shared word")
+        XCTAssertFalse(FilmVersions.titlesAgree("alien", 1979, "aliens", 1979), "a word is not a prefix of another")
     }
 
     func testTwoIDsAreNeverGrouped() {
@@ -176,7 +241,7 @@ final class FilmVersionsTests: XCTestCase {
             var random = SplitMix(seed: UInt64(round))
             let list = (0..<Int(random.next() % 60)).map { index in
                 Movie(
-                    id: "s\(index)",
+                    id: index % 7 == 6 ? "s\(index - 1)" : "s\(index)",  // a stream listed twice now and then
                     name: String(format: decorations[random.index(decorations.count)], titles[random.index(titles.count)]),
                     categoryID: "c\(random.index(3))",
                     streamURL: URL(string: "http://stream.example.com/\(index)")!,
@@ -192,18 +257,40 @@ final class FilmVersionsTests: XCTestCase {
                 let ids = Set(group.compactMap { $0.tmdbID.flatMap { $0 > 0 ? $0 : nil } })
                 XCTAssertLessThanOrEqual(ids.count, 1, "round \(round): two ids in \(group.map(\.name))")
                 guard group.count > 1 else { continue }
+                // Forbidden whatever the code: two years, or two different numbers, in one group.
+                XCTAssertLessThanOrEqual(Set(group.compactMap(\.year)).count, 1, "round \(round): two years in \(group.map(\.name))")
+                let numbers = Set(group.map { FilmVersions.titleKey($0.name).split(separator: " ").map(String.init).filter(FilmVersions.isNumber).sorted() })
+                XCTAssertEqual(numbers.count, 1, "round \(round): two numbers in \(group.map(\.name))")
+                // A stream without an id is with an id only when no other id has its title and year.
+                if let groupID = ids.first {
+                    for member in group where member.tmdbID.flatMap({ $0 > 0 ? $0 : nil }) == nil {
+                        let key = FilmVersions.titleKey(member.name)
+                        let others = list.filter { other in
+                            guard let id = other.tmdbID, id > 0, id != groupID else { return false }
+                            return other.year == member.year && FilmVersions.titleKey(other.name) == key
+                        }
+                        XCTAssertTrue(others.isEmpty, "round \(round): \(member.name) joined id \(groupID) though another id has its title")
+                    }
+                }
                 for a in group {
                     let justified = group.contains { b in
-                        guard b.id != a.id else { return false }
+                        guard b != a else { return false }
                         let aID = a.tmdbID.flatMap { $0 > 0 ? $0 : nil }
                         let bID = b.tmdbID.flatMap { $0 > 0 ? $0 : nil }
-                        let byID = aID != nil && aID == bID && FilmVersions.titlesAgree(FilmVersions.titleKey(a.name), FilmVersions.titleKey(b.name))
+                        let byID = aID != nil && aID == bID && FilmVersions.titleKey(a.name) == FilmVersions.titleKey(b.name)
+                            || aID != nil && aID == bID && FilmVersions.titlesAgree(FilmVersions.titleKey(a.name), a.year, FilmVersions.titleKey(b.name), b.year)
                         let byTitle = (aID == nil || bID == nil) && a.year != nil && a.year == b.year
                             && !FilmVersions.titleKey(a.name).isEmpty && FilmVersions.titleKey(a.name) == FilmVersions.titleKey(b.name)
                         return byID || byTitle
                     }
                     XCTAssertTrue(justified, "round \(round): \(a.name) in \(group.map(\.name)) by no rule")
                 }
+            }
+            // A category's list shows each film it has exactly once.
+            for category in Set(list.map(\.categoryID)) {
+                let sub = list.filter { $0.categoryID == category }
+                let shown = versions.distinct(sub)
+                XCTAssertEqual(Set(sub.compactMap { versions.group(of: $0) }).count, shown.count, "round \(round): category \(category)")
             }
             let off = FilmVersions.of(list, grouped: false)
             XCTAssertEqual(off.distinct(list), list, "round \(round): off is the catalogue")

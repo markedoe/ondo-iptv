@@ -65,6 +65,8 @@ class FilmVersions private constructor(
         val idTitleMismatches: Int = 0,
         /** Streams without an id whose title and year two different ids have: not grouped with either. */
         val ambiguousTitles: Int = 0,
+        /** Of [idTitleMismatches], the streams whose title starts like another of their id's, kept apart for want of years. */
+        val prefixWithoutYears: Int = 0,
     )
 
     /** Whether versions are grouped at all ("Group versions" on, a catalogue with movies). */
@@ -72,21 +74,54 @@ class FilmVersions private constructor(
 
     val groupCount: Int get() = if (groupOf == null) movies.size else starts.size - 1
 
-    private fun indexOf(id: String): Int {
-        if (table.isEmpty()) return -1
+    /** Each row of the catalogue with this stream id (a panel can list one stream twice, in two categories). */
+    private inline fun forEachIndexOf(id: String, action: (Int) -> Unit) {
+        if (table.isEmpty()) return
         val mask = table.size - 1
         var slot = mix(id.hashCode()) and mask
         while (true) {
             val entry = table[slot]
-            if (entry == 0) return -1
-            if (movies[entry - 1].id == id) return entry - 1
+            if (entry == 0) return
+            if (movies[entry - 1].id == id) action(entry - 1)
             slot = (slot + 1) and mask
         }
     }
 
-    /** The group of a stream, or -1 when the catalogue does not list it. */
+    /** The first row with this id, or -1. */
+    private fun indexOf(id: String): Int {
+        var first = Int.MAX_VALUE
+        forEachIndexOf(id) { if (it < first) first = it }
+        return if (first == Int.MAX_VALUE) -1 else first
+    }
+
+    /** [movie]'s own row: the same object, else an equal one, else the first row of its id; -1 when not listed. */
+    private fun indexOf(movie: Movie): Int {
+        var same = -1
+        var equal = Int.MAX_VALUE
+        var first = Int.MAX_VALUE
+        forEachIndexOf(movie.id) { index ->
+            val row = movies[index]
+            if (row === movie) same = index
+            if (row == movie && index < equal) equal = index
+            if (index < first) first = index
+        }
+        return when {
+            same >= 0 -> same
+            equal != Int.MAX_VALUE -> equal
+            first != Int.MAX_VALUE -> first
+            else -> -1
+        }
+    }
+
+    /** The group of a stream (its first row), or -1 when the catalogue does not list it. */
     fun groupOf(id: String): Int {
         val index = indexOf(id)
+        return if (index < 0) -1 else groupOf?.get(index) ?: index
+    }
+
+    /** The group of [movie]'s own row (a stream listed twice can be in two groups), or -1. */
+    fun groupOf(movie: Movie): Int {
+        val index = indexOf(movie)
         return if (index < 0) -1 else groupOf?.get(index) ?: index
     }
 
@@ -99,7 +134,7 @@ class FilmVersions private constructor(
 
     /** The versions of [movie]'s film, [movie] among them, in catalogue order; [movie] alone when it has none. */
     fun versions(movie: Movie): List<Movie> {
-        val group = groupOf(movie.id)
+        val group = groupOf(movie)
         if (groupOf == null || group < 0) return listOf(movie)
         return versions(group)
     }
@@ -107,7 +142,7 @@ class FilmVersions private constructor(
     /** Whether [movie]'s film has another version. */
     fun hasVersions(movie: Movie): Boolean {
         val group = groupOf ?: return false
-        val index = indexOf(movie.id)
+        val index = indexOf(movie)
         if (index < 0) return false
         val g = group[index]
         return starts[g + 1] - starts[g] > 1
@@ -122,7 +157,7 @@ class FilmVersions private constructor(
         val seen = BitSet(groupCount)
         val result = ArrayList<Movie>(list.size)
         for (movie in list) {
-            val group = groupOf(movie.id)
+            val group = groupOf(movie)
             if (group < 0) {
                 result.add(movie)
             } else if (!seen[group]) {
@@ -137,10 +172,12 @@ class FilmVersions private constructor(
     fun expand(ids: Set<String>): Set<String> {
         if (groupOf == null || ids.isEmpty()) return ids
         val result = HashSet<String>(ids)
+        val groups = groupOf ?: return ids
         for (id in ids) {
-            val group = groupOf(id)
-            if (group < 0) continue
-            for (k in starts[group] until starts[group + 1]) result.add(movies[members[k]].id)
+            forEachIndexOf(id) { index ->
+                val group = groups[index]
+                for (k in starts[group] until starts[group + 1]) result.add(movies[members[k]].id)
+            }
         }
         return if (result.size == ids.size) ids else result
     }
@@ -171,21 +208,70 @@ class FilmVersions private constructor(
         /** The title the rules compare: the provider's tags left out ([CatalogueMatcher.displayTitle]), case and accents too. */
         fun titleKey(name: String): String = TextNormalizer.normalize(CatalogueMatcher.displayTitle(name))
 
-        /**
-         * Rule A's test of two [titleKey]s of one TMDb id: the same; or the words of one are the first words of the other
-         * ("le transport" and "le transport heritage"); or half the words at least are shared, of the longer title's
-         * distinct words ("the matrix" and "matrix"). "alien" and "aliens" do not agree.
-         */
-        fun titlesAgree(a: String, b: String): Boolean {
-            if (a.isEmpty() || b.isEmpty()) return false
-            if (a == b) return true
-            val (short, long) = if (a.length <= b.length) a to b else b to a
-            if (long.startsWith(short) && long[short.length] == ' ') return true
-            val first = contentWords(a)
-            val second = contentWords(b)
-            val shared = first.count { it in second }
-            return shared * 2 >= maxOf(first.size, second.size)
+        /** What rule A makes of two titles of one TMDb id. */
+        enum class Agreement {
+            /** One film. */
+            SAME,
+            /** Another film (another year, another number, another title). */
+            DIFFERENT,
+            /** One title is the other's first words; years would decide, and one is missing: kept apart. */
+            NEEDS_YEARS,
         }
+
+        /**
+         * Rule A's test of two [titleKey]s of one TMDb id with their years. Two years given and different: another film.
+         * A number of one that the other lacks (2, IV, deux, two…): another film. Then the same key, or the same words
+         * ("the matrix" and "matrix", short words such as "the" left out): one film. The words of one the first words of
+         * the other ("le transport" and "le transport heritage"): one film only with the same year given on both, and
+         * no word of a sequel among the others ("part", "chapter", "episode"…). Anything else: another film.
+         */
+        fun agreement(a: String, aYear: Int?, b: String, bYear: Int?): Agreement {
+            if (!groupable(a) || !groupable(b)) return Agreement.DIFFERENT
+            if (aYear != null && bYear != null && aYear != bYear) return Agreement.DIFFERENT
+            val first = a.split(' ')
+            val second = b.split(' ')
+            if (first.filter { isNumber(it) }.sorted() != second.filter { isNumber(it) }.sorted()) return Agreement.DIFFERENT
+            if (a == b || contentWords(a) == contentWords(b)) return Agreement.SAME
+            val (short, long) = if (first.size <= second.size) first to second else second to first
+            if (long.size > short.size && long.subList(0, short.size) == short) {
+                if (long.drop(short.size).any { it in SEQUEL_WORDS }) return Agreement.DIFFERENT
+                return if (aYear != null && bYear != null) Agreement.SAME else Agreement.NEEDS_YEARS
+            }
+            return Agreement.DIFFERENT
+        }
+
+        /** [agreement] is [Agreement.SAME]. */
+        fun titlesAgree(a: String, aYear: Int?, b: String, bYear: Int?): Boolean = agreement(a, aYear, b, bYear) == Agreement.SAME
+
+        /** Roman numerals of sequels (II to XX; "I" is a word too often). */
+        private val ROMAN = setOf(
+            "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv", "xv", "xvi", "xvii", "xviii",
+            "xix", "xx",
+        )
+
+        /** Numbers written as words in the apps' Latin-script languages (English, French, Spanish, Portuguese). */
+        private val NUMBER_WORDS = setOf(
+            "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+            "deux", "trois", "quatre", "cinq", "sept", "huit", "neuf", "dix",
+            "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+            "dois", "duas", "quatro", "sete", "oito", "nove", "dez",
+        )
+
+        /** Words of a sequel or a part, in those languages (accents already gone). */
+        private val SEQUEL_WORDS = setOf(
+            "part", "partie", "parte", "chapter", "chapitre", "capitulo", "episode", "episodio", "vol", "volume", "volumen",
+            "tome", "tomo", "saga", "returns", "retour", "regreso", "volta",
+        )
+
+        /** A number in a title key: digits (any script), a roman numeral, a number word. */
+        internal fun isNumber(word: String): Boolean =
+            (word.isNotEmpty() && word.all { it.isDigit() }) || word in ROMAN || word in NUMBER_WORDS
+
+        /**
+         * Whether a title key can stand for a film: not empty, and not made of the providers' tags only ("4k", "multi",
+         * "fr 4k"): such names say nothing of the film.
+         */
+        fun groupable(key: String): Boolean = key.isNotEmpty() && !key.split(' ').all(CatalogueMatcher::isTagWord)
 
         /** Short words of many languages that say nothing of a film ("the", "le", "de"): "The Matrix" and "The Godfather" share none. */
         private val STOP_WORDS = setOf(
@@ -198,6 +284,9 @@ class FilmVersions private constructor(
             val all = key.split(' ').toHashSet()
             return all.filterTo(HashSet()) { it !in STOP_WORDS }.ifEmpty { all }
         }
+
+        /** Rule B's titles: [groupable], and more than a number ("FR - 2021" is "2021"). */
+        private fun groupableByTitle(key: String): Boolean = groupable(key) && !key.all { it.isDigit() || it == ' ' }
 
         /**
          * The versions of [movies] (one playlist's). [grouped] false ("Group versions" off): each stream alone, the
@@ -215,11 +304,16 @@ class FilmVersions private constructor(
             val firstAnchor = IntIntTable(n)
             val lastAnchor = IntIntTable(n)
             val nextAnchor = IntArray(n) { -1 }
+            // A cluster's year: its first stream's, else the first one a stream joining it gave (0: none yet). Compared
+            // with every stream joining, so one cluster never holds two years.
+            val clusterYear = IntArray(n)
             var groupedById = 0
             var mismatches = 0
+            var withoutYears = 0
             for (i in 0 until n) {
                 val id = validId(movies[i])
                 if (id == 0) continue
+                clusterYear[i] = movies[i].year ?: 0
                 var anchor = firstAnchor[id]
                 if (anchor < 0) {
                     firstAnchor[id] = i
@@ -228,12 +322,18 @@ class FilmVersions private constructor(
                 }
                 var compared = 0
                 var joined = false
+                var needsYears = false
                 while (anchor >= 0 && compared < MAX_CLUSTERS_PER_ID) {
-                    if (titlesAgree(key(i), key(anchor))) {
-                        cluster[i] = anchor
-                        joined = true
-                        break
+                    when (agreement(key(i), movies[i].year, key(anchor), clusterYear[anchor].takeIf { it != 0 })) {
+                        Agreement.SAME -> {
+                            cluster[i] = anchor
+                            joined = true
+                            if (clusterYear[anchor] == 0) clusterYear[anchor] = movies[i].year ?: 0
+                        }
+                        Agreement.NEEDS_YEARS -> needsYears = true
+                        Agreement.DIFFERENT -> Unit
                     }
+                    if (joined) break
                     compared++
                     anchor = nextAnchor[anchor]
                 }
@@ -241,6 +341,7 @@ class FilmVersions private constructor(
                     groupedById++
                 } else {
                     mismatches++
+                    if (needsYears) withoutYears++
                     nextAnchor[lastAnchor[id]] = i
                     lastAnchor[id] = i
                 }
@@ -253,7 +354,7 @@ class FilmVersions private constructor(
                 if (id == 0) continue
                 val year = movie.year ?: continue
                 val k = keys[i] ?: titleKey(movie.name)
-                if (k.isEmpty()) continue
+                if (!groupableByTitle(k)) continue
                 val slot = titles.find(k, year, ::key)
                 if (slot < 0) {
                     keys[i] = k
@@ -269,7 +370,7 @@ class FilmVersions private constructor(
                 if (validId(movie) != 0) continue
                 val year = movie.year ?: continue
                 val k = titleKey(movie.name)
-                if (k.isEmpty()) continue
+                if (!groupableByTitle(k)) continue
                 var slot = titles.find(k, year, ::key)
                 if (slot >= 0 && titles.isAmbiguous(slot)) ambiguous++
                 val target = when {
@@ -307,24 +408,18 @@ class FilmVersions private constructor(
             for (g in 0 until groups) if (starts[g + 1] - starts[g] > 1) withVersions++
             return FilmVersions(
                 movies, groupOf, starts, members, idTable(movies),
-                Diagnostics(n, groups, withVersions, groupedById, groupedByTitle, mismatches, ambiguous),
+                Diagnostics(n, groups, withVersions, groupedById, groupedByTitle, mismatches, ambiguous, withoutYears),
             )
         }
 
         private fun idTable(movies: List<Movie>): IntArray {
             val table = IntArray(capacity(movies.size))
             val mask = table.size - 1
+            // Every row, a stream listed twice too: each row keeps its own group.
             movies.forEachIndexed { index, movie ->
                 var slot = mix(movie.id.hashCode()) and mask
-                while (true) {
-                    val entry = table[slot]
-                    if (entry == 0) {
-                        table[slot] = index + 1
-                        break
-                    }
-                    if (movies[entry - 1].id == movie.id) break
-                    slot = (slot + 1) and mask
-                }
+                while (table[slot] != 0) slot = (slot + 1) and mask
+                table[slot] = index + 1
             }
             return table
         }

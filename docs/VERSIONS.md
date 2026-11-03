@@ -9,7 +9,8 @@ versions as badges to choose from. Off, every stream appears as the playlist lis
 The rules live in the cores, with the same tests on both platforms: `FilmVersions` in IPTVCore
 (`Packages/IPTVCore/Sources/IPTVCore/Library/FilmVersions.swift`) and in the Kotlin core
 (`android/core/src/main/kotlin/com/markedoe/ondo/core/library/FilmVersions.kt`). They never lose or hide a stream: every
-stream is in exactly one group. When in doubt, streams stay apart.
+stream is in exactly one group. When in doubt, streams stay apart. Both cores read the same hand-written catalogues and
+their expected groups (`fixtures/film-versions/golden.json`).
 
 ## When two streams are one film
 
@@ -19,15 +20,23 @@ Only movies, and only within one playlist (live channels and series are never gr
   `FR -`, `VFF`, `MULTI`, `4K`…), case and accents ignored: "|FR| Le Transport 4K" and "Le Transport VOSTFR" are both
   "le transport".
 - **Rule A, the provider's TMDb id.** The Xtream list's `tmdb` (or `tmdb_id`) field counts only when it is a whole
-  number above zero (`0`, empty, `true`, `12.5` or text are no id). Two streams of the same id are grouped when their
-  titles agree:
-  - the same title; or
-  - the words of one are the first words of the other ("le transport" and "le transport heritage"); or
-  - at least half of the longer title's distinct words are shared, short words such as "the", "le" or "de" left out
-    ("the matrix" and "matrix"; not "the matrix" and "the godfather").
+  number above zero (`0`, empty, `true`, `12.5` or text are no id). A provider's id can be wrong (a sequel matched to
+  the first film, a saga's id on every film), so two streams of the same id are grouped only when everything agrees:
+  - **the same year** when both have one (a group never holds two years: "Dune" 1984 and "Dune" 2021 stay apart);
+  - **the same numbers**: a number in one title that the other lacks or writes differently (2, IV, deux, two…) makes
+    another film ("Toy Story" and "Toy Story 3", "Episode IV" and "Episode V", "Fast and Furious 7" and "8");
+  - then **the same title**, or **the same words** with short words such as "the", "le" or "de" left out ("the matrix"
+    and "matrix"); or the words of one are the first words of the other ("le transport" and "le transport heritage")
+    **only with the same year given on both** and no word of a sequel among the others (part, chapter, episode,
+    volume… in the apps' languages): "Dune: Part Two" is not "Dune".
 
-  "Alien" and "Aliens" do not agree. A stream whose title does not agree stays apart and is counted
-  (`idTitleMismatches`). **Two different ids are never in the same group**, whatever the titles.
+  "Alien" and "Aliens" do not agree; nor do "Harry Potter and the Chamber of Secrets" and "…the Prisoner of Azkaban". A
+  stream whose title does not agree stays apart and is counted (`idTitleMismatches`; of them, `prefixWithoutYears` are
+  those kept apart only because a year was missing). **Two different ids are never in the same group**, whatever the
+  titles.
+- **Names that say nothing of the film** never group: a name made of the providers' tags only ("4K", "[FR] MULTI"), or,
+  without an id, a bare number ("FR - 2021"). Words that are also tags ("French Kiss", "Johnny English") are tags only in
+  capitals ("FRENCH").
 - **Rule B, no id on one side or both.** The same title exactly and the same year, present on both: no year, no group;
   no year of tolerance ("Dune" 1984 and "Dune" 2021 are two films; so are "Sandstorm" and "Sandstorm 2"). A stream
   without an id joins a group with an id only when a single id has that title and year; when two ids do, it stays with

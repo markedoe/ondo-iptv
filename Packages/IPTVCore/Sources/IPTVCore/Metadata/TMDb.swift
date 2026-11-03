@@ -458,8 +458,17 @@ public enum CatalogueMatcher {
     /// letters at most) only in capitals: "FR" and "VF" are tags, "De" in "De Gaulle" is a word.
     private static func isTag(_ word: String) -> Bool {
         let lower = word.lowercased()
-        guard versionWords.contains(lower) || qualityWords.contains(lower) else { return false }
-        return word.utf16.count > 3 || word == word.uppercased()
+        guard isTagWord(lower) else { return false }
+        return (word.utf16.count > 3 && !wordLikeTags.contains(lower)) || word == word.uppercased()
+    }
+
+    /// Tags that are also words of titles ("French Kiss", "Johnny English", "Dual"): tags only in capitals, like the
+    /// short ones.
+    private static let wordLikeTags: Set<String> = ["french", "english", "dubbed", "subbed", "dual"]
+
+    /// Whether a word (lowercase) is one of the providers' tag words, a language, a version or a quality.
+    static func isTagWord(_ lower: String) -> Bool {
+        versionWords.contains(lower) || qualityWords.contains(lower)
     }
 
     private static let separators = CharacterSet(charactersIn: " -:|·_.,")

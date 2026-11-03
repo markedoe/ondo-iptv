@@ -42,17 +42,91 @@ class FilmVersionsTest {
     @Test
     fun ruleAGroupsOneIdWhenTheTitlesAgree() {
         val uhd = movie("|FR| Le Transport 4K DV", 2021, tmdb = 7)
-        val hd = movie("Le Transport", 2020, tmdb = 7)
-        val longer = movie("Le Transport : Héritage", null, tmdb = 7)
+        val hd = movie("Le Transport", null, tmdb = 7)
+        val longer = movie("Le Transport : Héritage", 2021, tmdb = 7)
         val matrix = movie("The Matrix", 1999, tmdb = 603)
         val short = movie("Matrix VOSTFR", 1999, tmdb = 603)
         val versions = FilmVersions.of(listOf(uhd, hd, longer, matrix, short))
-        assertTrue(together(versions, uhd, hd), "the same id: years are not compared")
-        assertTrue(together(versions, uhd, longer), "one title starts with the other")
-        assertTrue(together(versions, matrix, short), "half the words shared")
+        assertTrue(together(versions, uhd, hd), "the same title, one year missing")
+        assertTrue(together(versions, uhd, longer), "one title starts with the other, the same year on both")
+        assertTrue(together(versions, matrix, short), "the same words, \"the\" left out")
         assertEquals(2, versions.groupCount)
         assertEquals(3, versions.diagnostics.groupedById)
         assertEquals(0, versions.diagnostics.idTitleMismatches)
+    }
+
+    /** The review's probes: under one id, a remake, a sequel or a saga's next film is another film. */
+    @Test
+    fun franchisesUnderOneIdStayApart() {
+        val pairs = listOf(
+            Pair("Dune" to 1984, "Dune" to 2021), Pair("Dune" to 2021, "Dune 2" to 2024), Pair("Dune" to null, "Dune 2" to null),
+            Pair("Dune" to 2024, "Dune: Part Two" to 2024), Pair("Alien" to 1979, "Alien: Covenant" to 2017), Pair("Alien" to null, "Alien: Covenant" to null),
+            Pair("Toy Story" to 1995, "Toy Story 3" to 1995), Pair("It" to 2017, "It Chapter Two" to 2017),
+            Pair("The Matrix" to 1999, "The Matrix Reloaded" to 2003), Pair("Matrix" to null, "Matrix Resurrections" to null),
+            Pair("Harry Potter and the Chamber of Secrets" to 2002, "Harry Potter and the Prisoner of Azkaban" to 2002),
+            Pair("Harry Potter and the Chamber of Secrets" to null, "Harry Potter and the Goblet of Fire" to null),
+            Pair("Star Wars Episode IV" to null, "Star Wars Episode V" to null), Pair("Spider-Man" to 2002, "Spider-Man 2" to 2002),
+            Pair("Mission Impossible" to null, "Mission Impossible Fallout" to null), Pair("Halloween" to 2018, "Halloween Kills" to 2021),
+            Pair("Scream" to 2022, "Scream VI" to 2022), Pair("Rocky" to 1976, "Rocky Balboa" to 2006), Pair("John Wick" to 2014, "John Wick Chapter 4" to 2014),
+            Pair("Fast and Furious 7" to 2015, "Fast and Furious 8" to 2015), Pair("Le Transport" to 2015, "Le Transport 2" to 2015),
+            Pair("Le Transport" to null, "Le Transport : Héritage" to null), Pair("Le Film" to 2010, "Le Film deux" to 2010),
+        )
+        for ((a, b) in pairs) {
+            assertFalse(FilmVersions.titlesAgree(FilmVersions.titleKey(a.first), a.second, FilmVersions.titleKey(b.first), b.second), "${a.first} / ${b.first}")
+        }
+        val saga = listOf(
+            "Harry Potter and the Chamber of Secrets", "Harry Potter and the Prisoner of Azkaban", "Harry Potter and the Goblet of Fire",
+            "Harry Potter and the Order of the Phoenix", "Harry Potter and the Half-Blood Prince",
+        ).mapIndexed { index, title -> movie(title, 2002 + index * 2, tmdb = 1241) }
+        assertEquals(5, FilmVersions.of(saga).groupCount, "a saga under one collection id")
+        val remake = listOf(movie("Dune", 1984, tmdb = 438631), movie("Dune", 2021, tmdb = 438631), movie("Dune 2", 2024, tmdb = 438631))
+        val versions = FilmVersions.of(remake)
+        assertEquals(3, versions.groupCount)
+        assertEquals(setOf(remake[1].id), versions.expand(setOf(remake[1].id)), "watching one does not hide the others")
+    }
+
+    /** A stream without a year never brings two years into one group. */
+    @Test
+    fun oneGroupHoldsOneYear() {
+        val none = movie("Dune", null, tmdb = 1)
+        val first = movie("Dune", 1984, tmdb = 1)
+        val second = movie("Dune", 2021, tmdb = 1)
+        val versions = FilmVersions.of(listOf(none, first, second))
+        assertTrue(together(versions, none, first))
+        assertFalse(together(versions, first, second))
+    }
+
+    /** Names made of the providers' tags only, or a bare number, never group. */
+    @Test
+    fun tagOnlyNamesNeverGroup() {
+        val list = listOf(
+            movie("4K", 2020), movie("4K", 2020), movie("[FR] 4K", 2020), movie("FR - 2021", 2021), movie("FR - 2021", 2021),
+            movie("MULTI", 2020, tmdb = 9), movie("MULTI 4K", 2020, tmdb = 9),
+        )
+        assertEquals(list.size, FilmVersions.of(list).groupCount)
+        assertFalse(FilmVersions.groupable("fr 4k"))
+        assertTrue(FilmVersions.groupable("1917"), "a title of digits is a title: rule A may group it")
+    }
+
+    /** "French Kiss" is not "Kiss", "Johnny English" not "Johnny". */
+    @Test
+    fun wordsThatAreAlsoTagsStayWords() {
+        assertEquals("french kiss", FilmVersions.titleKey("French Kiss"))
+        assertEquals("johnny english", FilmVersions.titleKey("Johnny English"))
+        assertEquals(2, FilmVersions.of(listOf(movie("French Kiss", 1995), movie("Kiss", 1995))).groupCount)
+    }
+
+    /** A stream a panel lists twice (two categories) keeps each row in its own group. */
+    @Test
+    fun aStreamListedTwiceKeepsEachRow() {
+        val a = movie("Sandstorm", 2021, tmdb = 5, category = "x", id = "dup")
+        val b = movie("Ocean Drift", 2020, tmdb = 9, category = "y", id = "dup")
+        val c = movie("Ocean Drift 4K", 2020, tmdb = 9, category = "y")
+        val versions = FilmVersions.of(listOf(a, b, c))
+        assertEquals(listOf(b), versions.distinct(listOf(b, c)))
+        assertEquals(listOf(b, c), versions.versions(b))
+        assertEquals(listOf(a), versions.versions(a))
+        assertEquals(setOf("dup", c.id), versions.expand(setOf("dup")))
     }
 
     @Test
@@ -66,8 +140,8 @@ class FilmVersionsTest {
         val versions = FilmVersions.of(listOf(transport, other, matrix, godfather, alien, aliens))
         assertEquals(6, versions.groupCount, "unrelated titles of one id are not grouped")
         assertEquals(3, versions.diagnostics.idTitleMismatches)
-        assertFalse(FilmVersions.titlesAgree("the matrix", "the godfather"), "\"the\" is no shared word")
-        assertFalse(FilmVersions.titlesAgree("alien", "aliens"), "a word is not a prefix of another")
+        assertFalse(FilmVersions.titlesAgree("the matrix", 1999, "the godfather", 1999), "\"the\" is no shared word")
+        assertFalse(FilmVersions.titlesAgree("alien", 1979, "aliens", 1979), "a word is not a prefix of another")
     }
 
     @Test
@@ -205,7 +279,7 @@ class FilmVersionsTest {
             val random = Random(round)
             val list = List(random.nextInt(0, 60)) { index ->
                 Movie(
-                    id = "s$index",
+                    id = if (index % 7 == 6) "s${index - 1}" else "s$index", // a stream listed twice now and then
                     name = decorations.random(random).format(titles.random(random)),
                     categoryId = "c${random.nextInt(3)}",
                     streamUrl = "http://stream.example.com/$index",
@@ -220,19 +294,44 @@ class FilmVersionsTest {
                 val group = versions.versions(g)
                 val ids = group.mapNotNull { it.tmdbId?.takeIf { id -> id > 0 } }.toSet()
                 assertTrue(ids.size <= 1, "round $round: two ids in $group")
+                if (group.size > 1) {
+                    // Forbidden whatever the code: two years, or two different numbers, in one group.
+                    assertTrue(group.mapNotNull { it.year }.toSet().size <= 1, "round $round: two years in $group")
+                    val numbers = group.map { FilmVersions.titleKey(it.name).split(' ').filter { FilmVersions.isNumber(it) }.sorted() }.toSet()
+                    assertEquals(1, numbers.size, "round $round: two numbers in $group")
+                    // A stream without an id is with an id only when no other id has its title and year.
+                    ids.firstOrNull()?.let { groupId ->
+                        for (member in group.filter { (it.tmdbId ?: 0) <= 0 }) {
+                            val key = FilmVersions.titleKey(member.name)
+                            val others = list.filter { other ->
+                                val id = other.tmdbId ?: 0
+                                id > 0 && id != groupId && other.year == member.year && FilmVersions.titleKey(other.name) == key
+                            }
+                            assertTrue(others.isEmpty(), "round $round: ${member.name} joined id $groupId though another id has its title")
+                        }
+                    }
+                }
                 if (group.size < 2) continue
                 for (a in group) {
                     val justified = group.any { b ->
                         if (b === a) return@any false
                         val aId = a.tmdbId?.takeIf { it > 0 }
                         val bId = b.tmdbId?.takeIf { it > 0 }
-                        val byId = aId != null && aId == bId && FilmVersions.titlesAgree(FilmVersions.titleKey(a.name), FilmVersions.titleKey(b.name))
+                        val byId = aId != null && aId == bId && (
+                            FilmVersions.titleKey(a.name) == FilmVersions.titleKey(b.name) ||
+                                FilmVersions.titlesAgree(FilmVersions.titleKey(a.name), a.year, FilmVersions.titleKey(b.name), b.year)
+                            )
                         val byTitle = (aId == null || bId == null) && a.year != null && a.year == b.year &&
                             FilmVersions.titleKey(a.name).isNotEmpty() && FilmVersions.titleKey(a.name) == FilmVersions.titleKey(b.name)
                         byId || byTitle
                     }
                     assertTrue(justified, "round $round: ${a.name} in $group by no rule")
                 }
+            }
+            // A category's list shows each film it has exactly once.
+            for (category in list.map { it.categoryId }.toSet()) {
+                val sub = list.filter { it.categoryId == category }
+                assertEquals(sub.map { versions.groupOf(it) }.toSet().size, versions.distinct(sub).size, "round $round: category $category")
             }
             val off = FilmVersions.of(list, grouped = false)
             assertSame(list, off.distinct(list), "round $round: off is the catalogue")

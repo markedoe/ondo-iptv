@@ -84,6 +84,8 @@ public struct FilmVersions: Sendable {
         public var idTitleMismatches = 0
         /// Streams without an id whose title and year two different ids have: not grouped with either.
         public var ambiguousTitles = 0
+        /// Of `idTitleMismatches`, the streams whose title starts like another of their id's, kept apart for want of years.
+        public var prefixWithoutYears = 0
 
         public init() {}
     }
@@ -95,8 +97,8 @@ public struct FilmVersions: Sendable {
     private let starts: [Int32]
     /// Stream indices, group after group.
     private let members: [Int32]
-    /// Stream id -> its index (the first stream of an id a panel lists twice).
-    private let indexByID: [String: Int32]
+    /// Stream id -> its rows (a panel can list one stream twice, in two categories), in catalogue order.
+    private let indexByID: [String: [Int32]]
     public let diagnostics: Diagnostics
 
     /// Whether versions are grouped at all ("Group versions" on, a catalogue with movies).
@@ -112,7 +114,7 @@ public struct FilmVersions: Sendable {
         return FilmVersions(movies: movies, groupOf: nil, starts: [0], members: [], indexByID: [:], diagnostics: diagnostics)
     }
 
-    private init(movies: [Movie], groupOf: [Int32]?, starts: [Int32], members: [Int32], indexByID: [String: Int32], diagnostics: Diagnostics) {
+    private init(movies: [Movie], groupOf: [Int32]?, starts: [Int32], members: [Int32], indexByID: [String: [Int32]], diagnostics: Diagnostics) {
         self.movies = movies
         self.groupOf = groupOf
         self.starts = starts
@@ -121,10 +123,17 @@ public struct FilmVersions: Sendable {
         self.diagnostics = diagnostics
     }
 
-    /// The group of a stream, or nil when the catalogue does not list it (or nothing is grouped).
+    /// The group of a stream (its first row), or nil when the catalogue does not list it (or nothing is grouped).
     public func group(of id: String) -> Int? {
-        guard let groupOf, let index = indexByID[id] else { return nil }
+        guard let groupOf, let index = indexByID[id]?.first else { return nil }
         return Int(groupOf[Int(index)])
+    }
+
+    /// The group of `movie`'s own row (a stream listed twice can be in two groups): the equal row, else its id's first.
+    public func group(of movie: Movie) -> Int? {
+        guard let groupOf, let rows = indexByID[movie.id], let first = rows.first else { return nil }
+        let row = rows.count == 1 ? first : rows.first { movies[Int($0)] == movie } ?? first
+        return Int(groupOf[Int(row)])
     }
 
     /// The streams of a group, in catalogue order.
@@ -135,13 +144,13 @@ public struct FilmVersions: Sendable {
 
     /// The versions of `movie`'s film, `movie` among them, in catalogue order; `movie` alone when it has none.
     public func versions(of movie: Movie) -> [Movie] {
-        guard let group = group(of: movie.id) else { return [movie] }
+        guard let group = group(of: movie) else { return [movie] }
         return versions(group: group)
     }
 
     /// Whether `movie`'s film has another version.
     public func hasVersions(_ movie: Movie) -> Bool {
-        guard let group = group(of: movie.id) else { return false }
+        guard let group = group(of: movie) else { return false }
         return starts[group + 1] - starts[group] > 1
     }
 
@@ -153,7 +162,7 @@ public struct FilmVersions: Sendable {
         var result: [Movie] = []
         result.reserveCapacity(list.count)
         for movie in list {
-            if let group = group(of: movie.id) {
+            if let group = group(of: movie) {
                 guard !seen[group] else { continue }
                 seen[group] = true
             }
@@ -164,11 +173,13 @@ public struct FilmVersions: Sendable {
 
     /// `ids` with the other versions of their films: a film is watched, or in My List, when one of its versions is.
     public func expand(_ ids: Set<String>) -> Set<String> {
-        guard groupOf != nil, !ids.isEmpty else { return ids }
+        guard let groupOf, !ids.isEmpty else { return ids }
         var result = ids
         for id in ids {
-            guard let group = group(of: id) else { continue }
-            for k in Int(starts[group])..<Int(starts[group + 1]) { result.insert(movies[Int(members[k])].id) }
+            for row in indexByID[id] ?? [] {
+                let group = Int(groupOf[Int(row)])
+                for k in Int(starts[group])..<Int(starts[group + 1]) { result.insert(movies[Int(members[k])].id) }
+            }
         }
         return result
     }
@@ -197,18 +208,75 @@ public struct FilmVersions: Sendable {
         TextNormalizer.normalize(CatalogueMatcher.displayTitle(name))
     }
 
-    /// Rule A's test of two `titleKey`s of one TMDb id: the same; or the words of one are the first words of the other
-    /// ("le transport" and "le transport heritage"); or half the words at least are shared, of the longer title's
-    /// distinct words, short words such as "the" left out ("the matrix" and "matrix"). "alien" and "aliens" do not agree.
-    public static func titlesAgree(_ a: String, _ b: String) -> Bool {
-        guard !a.isEmpty, !b.isEmpty else { return false }
-        if a == b { return true }
-        let (short, long) = a.utf8.count <= b.utf8.count ? (a, b) : (b, a)
-        if long.hasPrefix(short + " ") { return true }
-        let first = contentWords(a)
-        let second = contentWords(b)
-        let shared = first.filter { second.contains($0) }.count
-        return shared * 2 >= max(first.count, second.count)
+    /// What rule A makes of two titles of one TMDb id.
+    public enum Agreement: Sendable {
+        /// One film.
+        case same
+        /// Another film (another year, another number, another title).
+        case different
+        /// One title is the other's first words; years would decide, and one is missing: kept apart.
+        case needsYears
+    }
+
+    /// Rule A's test of two `titleKey`s of one TMDb id with their years. Two years given and different: another film. A
+    /// number of one that the other lacks (2, IV, deux, two…): another film. Then the same key, or the same words
+    /// ("the matrix" and "matrix", short words such as "the" left out): one film. The words of one the first words of the
+    /// other ("le transport" and "le transport heritage"): one film only with the same year given on both, and no word of
+    /// a sequel among the others ("part", "chapter", "episode"…). Anything else: another film.
+    public static func agreement(_ a: String, _ aYear: Int?, _ b: String, _ bYear: Int?) -> Agreement {
+        guard groupable(a), groupable(b) else { return .different }
+        if let aYear, let bYear, aYear != bYear { return .different }
+        let first = a.split(separator: " ").map(String.init)
+        let second = b.split(separator: " ").map(String.init)
+        guard first.filter(isNumber).sorted() == second.filter(isNumber).sorted() else { return .different }
+        if a == b || contentWords(a) == contentWords(b) { return .same }
+        let (short, long) = first.count <= second.count ? (first, second) : (second, first)
+        if long.count > short.count && Array(long.prefix(short.count)) == short {
+            if long.dropFirst(short.count).contains(where: sequelWords.contains) { return .different }
+            return aYear != nil && bYear != nil ? .same : .needsYears
+        }
+        return .different
+    }
+
+    /// `agreement` is `.same`.
+    public static func titlesAgree(_ a: String, _ aYear: Int?, _ b: String, _ bYear: Int?) -> Bool {
+        agreement(a, aYear, b, bYear) == .same
+    }
+
+    /// Roman numerals of sequels (II to XX; "I" is a word too often).
+    static let roman: Set<String> = [
+        "ii", "iii", "iv", "v", "vi", "vii", "viii", "ix", "x", "xi", "xii", "xiii", "xiv", "xv", "xvi", "xvii", "xviii",
+        "xix", "xx",
+    ]
+
+    /// Numbers written as words in the apps' Latin-script languages (English, French, Spanish, Portuguese).
+    static let numberWords: Set<String> = [
+        "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+        "deux", "trois", "quatre", "cinq", "sept", "huit", "neuf", "dix",
+        "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+        "dois", "duas", "quatro", "sete", "oito", "nove", "dez",
+    ]
+
+    /// Words of a sequel or a part, in those languages (accents already gone).
+    static let sequelWords: Set<String> = [
+        "part", "partie", "parte", "chapter", "chapitre", "capitulo", "episode", "episodio", "vol", "volume", "volumen",
+        "tome", "tomo", "saga", "returns", "retour", "regreso", "volta",
+    ]
+
+    /// A number in a title key: digits (any script), a roman numeral, a number word.
+    static func isNumber(_ word: String) -> Bool {
+        (!word.isEmpty && word.allSatisfy(\.isNumber)) || roman.contains(word) || numberWords.contains(word)
+    }
+
+    /// Whether a title key can stand for a film: not empty, and not made of the providers' tags only ("4k", "multi",
+    /// "fr 4k"): such names say nothing of the film.
+    public static func groupable(_ key: String) -> Bool {
+        !key.isEmpty && !key.split(separator: " ").allSatisfy { CatalogueMatcher.isTagWord(String($0)) }
+    }
+
+    /// Rule B's titles: `groupable`, and more than a number ("FR - 2021" is "2021").
+    static func groupableByTitle(_ key: String) -> Bool {
+        groupable(key) && !key.allSatisfy { $0.isNumber || $0 == " " }
     }
 
     /// Short words of many languages that say nothing of a film ("the", "le", "de"): "The Matrix" and "The Godfather"
@@ -255,10 +323,14 @@ public struct FilmVersions: Sendable {
         var firstAnchor: [Int: Int] = [:]
         var lastAnchor: [Int: Int] = [:]
         var nextAnchor = [Int](repeating: -1, count: n)
+        // A cluster's year: its first stream's, else the first one a stream joining it gave. Compared with every stream
+        // joining, so one cluster never holds two years.
+        var clusterYear = [Int?](repeating: nil, count: n)
         var diagnostics = Diagnostics()
         for i in 0..<n {
             let id = validID(movies[i])
             guard id != 0 else { continue }
+            clusterYear[i] = movies[i].year
             guard var anchor = firstAnchor[id] else {
                 firstAnchor[id] = i
                 lastAnchor[id] = i
@@ -266,12 +338,19 @@ public struct FilmVersions: Sendable {
             }
             var compared = 0
             var joined = false
+            var needsYears = false
             while anchor >= 0 && compared < maxClustersPerID {
-                if titlesAgree(key(i), key(anchor)) {
+                switch agreement(key(i), movies[i].year, key(anchor), clusterYear[anchor]) {
+                case .same:
                     cluster[i] = anchor
                     joined = true
+                    if clusterYear[anchor] == nil { clusterYear[anchor] = movies[i].year }
+                case .needsYears:
+                    needsYears = true
+                case .different:
                     break
                 }
+                if joined { break }
                 compared += 1
                 anchor = nextAnchor[anchor]
             }
@@ -279,6 +358,7 @@ public struct FilmVersions: Sendable {
                 diagnostics.groupedByID += 1
             } else {
                 diagnostics.idTitleMismatches += 1
+                if needsYears { diagnostics.prefixWithoutYears += 1 }
                 if let last = lastAnchor[id] { nextAnchor[last] = i }
                 lastAnchor[id] = i
             }
@@ -290,7 +370,7 @@ public struct FilmVersions: Sendable {
             let id = validID(movie)
             guard id != 0, let year = movie.year else { continue }
             let k = key(i)
-            guard !k.isEmpty else { continue }
+            guard groupableByTitle(k) else { continue }
             let title = TitleYear(key: k, year: year)
             if var entry = titles[title] {
                 if entry.idCluster < 0 {
@@ -308,7 +388,7 @@ public struct FilmVersions: Sendable {
             let movie = movies[i]
             guard validID(movie) == 0, let year = movie.year else { continue }
             let k = key(i)
-            guard !k.isEmpty else { continue }
+            guard groupableByTitle(k) else { continue }
             let title = TitleYear(key: k, year: year)
             var entry = titles[title] ?? TitleEntry()
             if entry.ambiguous { diagnostics.ambiguousTitles += 1 }
@@ -343,9 +423,9 @@ public struct FilmVersions: Sendable {
             members[Int(fill[g])] = Int32(i)
             fill[g] += 1
         }
-        var indexByID: [String: Int32] = [:]
+        var indexByID: [String: [Int32]] = [:]
         indexByID.reserveCapacity(n)
-        for (i, movie) in movies.enumerated() where indexByID[movie.id] == nil { indexByID[movie.id] = Int32(i) }
+        for (i, movie) in movies.enumerated() { indexByID[movie.id, default: []].append(Int32(i)) }
         diagnostics.streams = n
         diagnostics.groups = groups
         diagnostics.groupsWithVersions = (0..<groups).filter { starts[$0 + 1] - starts[$0] > 1 }.count

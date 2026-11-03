@@ -275,6 +275,10 @@ final class PeopleTests: XCTestCase {
         XCTAssertEqual(CatalogueMatcher.displayTitle("Up"), "Up")
         XCTAssertEqual(CatalogueMatcher.displayTitle("Star Runner 2049"), "Star Runner 2049")
         XCTAssertEqual(CatalogueMatcher.displayTitle("Vost"), "Vost")
+        // Tags that are words too stay words unless in capitals.
+        XCTAssertEqual(CatalogueMatcher.displayTitle("French Kiss"), "French Kiss")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Johnny English"), "Johnny English")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Le Transport FRENCH"), "Le Transport")
         // Nothing left: the title as it is.
         XCTAssertEqual(CatalogueMatcher.displayTitle("[MULTI]"), "[MULTI]")
     }
