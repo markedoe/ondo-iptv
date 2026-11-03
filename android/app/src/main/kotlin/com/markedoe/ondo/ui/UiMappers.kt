@@ -7,6 +7,7 @@ import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.PictureSupport
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
+import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
@@ -47,6 +48,8 @@ import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.MyListUiState
 import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PlaylistSummary
+import com.markedoe.ondo.ui.screens.RowOrderEntry
+import com.markedoe.ondo.ui.screens.RowOrderUiState
 import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailUiState
@@ -407,22 +410,38 @@ object UiMappers {
         )
     }
 
-    fun vod(state: OndoState, series: Boolean, title: String): VodUiState {
+    fun vod(state: OndoState, series: Boolean, title: String, now: Long = System.currentTimeMillis()): VodUiState {
         val showcase = showcase(state)
         val hidden = hiddenCategoryIds(state)
         // A panel can list a category twice (same id): one chip and one row each.
         val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }.distinctBy { it.id }
         val watched = hiddenMovieIds(state)
-        // A title whose own name carries a hidden language stays out of its category's row.
+        // A title whose own name carries a hidden language stays out of its category's row, and out of All.
         val byName = CategoryFilter.hiddenTitles(state)
-        val byCategory: Map<String, List<ShowcaseItem>> =
-            if (series) state.content.series.filter { it.id !in byName.series }.groupBy({ it.categoryId }) { ShowcaseItem.SeriesItem(it) }
-            else films(state).let { films ->
-                // Each film once in a category's row, in every category one of its versions is in.
-                state.content.movies.filter { it.id !in watched && it.id !in byName.movies }.groupBy { it.categoryId }.mapValues { (_, list) -> films.distinct(list).map { ShowcaseItem.MovieItem(it) } }
-            }
+        val all: List<ShowcaseItem>
+        val allCount: Int
+        val byCategory: Map<String, List<ShowcaseItem>>
+        if (series) {
+            val shown = state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series }
+            byCategory = shown.groupBy({ it.categoryId }) { ShowcaseItem.SeriesItem(it) }
+            allCount = shown.size
+            all = latest(shown, ROW_LENGTH) { it.addedAt }.map { ShowcaseItem.SeriesItem(it) }
+        } else {
+            val films = films(state)
+            val shown = state.content.movies.filter { it.categoryId !in hidden && it.id !in watched && it.id !in byName.movies }
+            // Each film once in a category's row, in every category one of its versions is in.
+            byCategory = shown.groupBy { it.categoryId }.mapValues { (_, list) -> films.distinct(list).map { ShowcaseItem.MovieItem(it) } }
+            // All: each film once, as the grid of the whole catalogue lists them (a list of the same movies, not copies).
+            val distinct = films.distinct(shown)
+            allCount = distinct.size
+            all = latest(distinct, ROW_LENGTH) { it.addedAt }.map { ShowcaseItem.MovieItem(it) }
+        }
         val rows = categories.mapNotNull { category -> byCategory[category.id]?.take(ROW_LENGTH)?.let { CategoryRow(category, it) } }
         val kind = if (series) ItemKind.SERIES else ItemKind.MOVIE
+        val saved = state.settings.rowOrder(series)
+        // The viewer's order (Settings → Row order); a row they hid never shows, nor one a hidden category or language left out.
+        val order = RowOrder.arrange(tabRowKeys(categories, series), saved?.order.orEmpty(), saved?.hidden.orEmpty())
+            .filter { !it.hidden }.map { it.key }
         return VodUiState(
             title = title,
             categories = rows.map { it.category },
@@ -430,7 +449,57 @@ object UiMappers {
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
             awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH, watched + byName.movies, films(state)).map { ShowcaseItem.MovieItem(it) },
+            all = all,
+            allCount = allCount,
+            newReleases = if (series) showcase.newSeries(now, ROW_LENGTH) else showcase.newMovies(now, ROW_LENGTH),
+            trending = showcase.trending().filter { (it is ShowcaseItem.SeriesItem) == series },
+            order = order,
+            series = series,
         )
+    }
+
+    /** The keys of the rows of the Movies or Series tab ([RowOrder]): the built-in rows, then [categories] in their order. */
+    fun tabRowKeys(categories: List<MediaCategory>, series: Boolean): List<String> =
+        RowOrder.builtIns(series) + categories.map { RowOrder.categoryKey(it.id, it.name) }
+
+    /**
+     * Settings → Row order: the rows of each tab in the viewer's order, hidden or not. The categories hidden in Settings
+     * (or by a hidden language, or adult) are not listed: they never show, whatever the order.
+     */
+    fun rowOrder(state: OndoState): RowOrderUiState {
+        val hidden = hiddenCategoryIds(state)
+        fun tab(series: Boolean): List<RowOrderEntry> {
+            val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }.distinctBy { it.id }
+            val names = categories.associate { RowOrder.categoryKey(it.id, it.name) to it.name }
+            val saved = state.settings.rowOrder(series)
+            return RowOrder.arrange(tabRowKeys(categories, series), saved?.order.orEmpty(), saved?.hidden.orEmpty())
+                .map { RowOrderEntry(it.key, names[it.key], it.hidden) }
+        }
+        return RowOrderUiState(movies = tab(series = false), series = tab(series = true))
+    }
+
+    /**
+     * The [count] latest additions of [items] (by the provider's date, [addedAt]; those without one after, in the
+     * playlist's order), without sorting the whole catalogue: a TV's memory holds no second copy of it.
+     */
+    internal fun <T> latest(items: List<T>, count: Int, addedAt: (T) -> Long?): List<T> {
+        if (count <= 0) return emptyList()
+        // Kept sorted, the latest first; an item later in the playlist goes after those of the same date.
+        val kept = ArrayList<T>(count + 1)
+        val dates = ArrayList<Long>(count + 1)
+        for (item in items) {
+            val date = addedAt(item) ?: Long.MIN_VALUE
+            if (kept.size == count && date <= dates[count - 1]) continue
+            var at = kept.size
+            while (at > 0 && dates[at - 1] < date) at--
+            kept.add(at, item)
+            dates.add(at, date)
+            if (kept.size > count) {
+                kept.removeAt(count)
+                dates.removeAt(count)
+            }
+        }
+        return kept
     }
 
     /** Items of a poster grid, filtered by [filter] (accent and case insensitive), in the order [sort]. */

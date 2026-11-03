@@ -41,6 +41,9 @@ object Routes {
     /** Which categories are shown, opened on one type (`ContentType.rawValue`). */
     @Serializable data class Categories(val type: String = "movie")
     @Serializable data object Help
+
+    /** Settings → Row order: the order of the rows of the Movies and Series tabs. */
+    @Serializable data object RowOrder
     @Serializable data object AddPlaylist
 
     /** The privacy policy or the support page inside the app, on a TV (no browser there: Google's TV-WB). */

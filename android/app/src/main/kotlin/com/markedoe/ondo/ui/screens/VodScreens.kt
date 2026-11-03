@@ -63,7 +63,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.model.MediaCategory
+import java.text.NumberFormat
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.components.ContinueCard
 import com.markedoe.ondo.ui.components.PosterCard
@@ -90,7 +92,10 @@ import com.markedoe.ondo.ui.tv.LocalTvTopBar
 import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.flow.first
 
-data class CategoryRow(val category: MediaCategory, val items: List<ShowcaseItem>)
+data class CategoryRow(val category: MediaCategory, val items: List<ShowcaseItem>) {
+    /** Its key in the order of the rows ([RowOrder.categoryKey]). */
+    val key: String get() = RowOrder.categoryKey(category.id, category.name)
+}
 
 data class VodUiState(
     val title: String,
@@ -101,7 +106,49 @@ data class VodUiState(
     val rows: List<CategoryRow> = emptyList(),
     /** Movies that won an award (Palme d'Or, Oscars…), the most recent first. */
     val awardWinners: List<ShowcaseItem> = emptyList(),
-)
+    /** All movies (or series): the latest additions, each film once; See all opens the whole catalogue. */
+    val all: List<ShowcaseItem> = emptyList(),
+    /** How many titles the whole catalogue's grid lists (each film once, hidden ones left out). */
+    val allCount: Int = 0,
+    val newReleases: List<ShowcaseItem> = emptyList(),
+    val trending: List<ShowcaseItem> = emptyList(),
+    /**
+     * The rows to show, by key ([RowOrder]), in the viewer's order (Settings → Row order), without those hidden; null:
+     * the default order. A key whose row is empty shows nothing.
+     */
+    val order: List<String>? = null,
+    val series: Boolean = false,
+) {
+    /** The rows shown, in their order: those with titles. */
+    val shownRows: List<String>
+        get() {
+            val categories = rows.associateBy { it.key }
+            val keys = order ?: (RowOrder.builtIns(series) + rows.map { it.key })
+            return keys.distinct().filter { key ->
+                when (key) {
+                    RowOrder.ALL -> all.isNotEmpty()
+                    RowOrder.CONTINUE_WATCHING -> continueWatching.isNotEmpty()
+                    RowOrder.MY_LIST -> myList.isNotEmpty()
+                    RowOrder.NEW_RELEASES -> newReleases.isNotEmpty()
+                    RowOrder.TRENDING -> trending.isNotEmpty()
+                    RowOrder.AWARD_WINNERS -> awardWinners.isNotEmpty()
+                    else -> categories[key]?.items?.isNotEmpty() == true
+                }
+            }
+        }
+
+    /** The first title of a row: the one the focus starts on when the tab opens. */
+    fun firstTitle(key: String?): ShowcaseItem? = when (key) {
+        null -> null
+        RowOrder.ALL -> all.firstOrNull()
+        RowOrder.CONTINUE_WATCHING -> continueWatching.firstOrNull()?.showcase
+        RowOrder.MY_LIST -> myList.firstOrNull()
+        RowOrder.NEW_RELEASES -> newReleases.firstOrNull()
+        RowOrder.TRENDING -> trending.firstOrNull()
+        RowOrder.AWARD_WINNERS -> awardWinners.firstOrNull()
+        else -> rows.firstOrNull { it.key == key }?.items?.firstOrNull()
+    }
+}
 
 class VodActions(
     val onOpen: (ShowcaseItem) -> Unit = {},
@@ -129,8 +176,7 @@ const val TV_ROW_LENGTH = 10
 @Composable
 fun VodScreen(state: VodUiState, actions: VodActions) {
     // The first card's title: the one the focus starts on when the tab opens.
-    val fallback = state.continueWatching.firstOrNull()?.showcase
-        ?: state.myList.firstOrNull() ?: state.awardWinners.firstOrNull() ?: state.rows.firstOrNull()?.items?.firstOrNull()
+    val fallback = state.firstTitle(state.shownRows.firstOrNull())
     // The focused poster below its row's name, at the same place at every press.
     TvHeaderAbove(fallback, lead = SHELF_TITLE_ROOM) { modifier, top, underHeader ->
         VodRows(state, actions, modifier, top, underHeader)
@@ -202,56 +248,76 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                 }
             }
         }
-        // On a TV, the first card of the first shelf takes the focus when the tab opens.
-        val first = when {
-            state.continueWatching.isNotEmpty() -> "resume"
-            state.myList.isNotEmpty() -> "myList"
-            state.awardWinners.isNotEmpty() -> "awards"
-            else -> state.rows.firstOrNull()?.category?.id
-        }
-        if (state.continueWatching.isNotEmpty()) {
-            item(key = "vod:resume") {
+        // The rows in the viewer's order (Settings → Row order); on a TV, the first card of the first one takes the
+        // focus when the tab opens.
+        val shown = state.shownRows
+        val first = shown.firstOrNull()
+        val categoryRows = state.rows.associateBy { it.key }
+        for (key in shown) when (key) {
+            RowOrder.ALL -> item(key = "vod:all") {
+                val count = remember(state.allCount) { NumberFormat.getIntegerInstance().format(state.allCount) }
+                val name = stringResource(if (state.series) R.string.all_series_count else R.string.all_movies_count, count)
+                Shelf(name, metrics, Modifier.row("vod:all").testTag("shelfAll"), onSeeAll = { actions.onCategory(null) }) {
+                    itemsIndexed(state.all.take(rowLength), key = { _, it -> it.key }) { index, item ->
+                        PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "all:${item.key}", initialFocus = first == key && index == 0)
+                    }
+                    if (television) item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onCategory(null) }, tall = true, width = width, modifier = Modifier.focusMemory("all:seeAll").testTag("seeAllAll")) }
+                }
+            }
+            RowOrder.CONTINUE_WATCHING -> item(key = "vod:resume") {
                 Shelf(stringResource(R.string.continue_watching), metrics, Modifier.row("vod:resume").testTag("shelfResume")) {
                     itemsIndexed(state.continueWatching, key = { _, it -> it.key }) { index, item ->
-                        ContinueCard(item, wideWidth, onClick = { actions.onResume(item) }, initialFocus = first == "resume" && index == 0, onRemove = { actions.onRemoveResume(item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
+                        ContinueCard(item, wideWidth, onClick = { actions.onResume(item) }, initialFocus = first == key && index == 0, onRemove = { actions.onRemoveResume(item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
                     }
                 }
             }
-        }
-        if (state.myList.isNotEmpty()) {
-            item(key = "vod:myList") {
+            RowOrder.MY_LIST -> item(key = "vod:myList") {
                 Shelf(stringResource(R.string.my_list), metrics, Modifier.row("vod:myList").testTag("shelfMyList"), onSeeAll = actions.onSeeAllMyList) {
                     itemsIndexed(state.myList.take(rowLength), key = { _, it -> it.key }) { index, item ->
                         CompositionLocalProvider(LocalShowsMyList provides true) {
-                            PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == "myList" && index == 0)
+                            PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "myList:${item.key}", initialFocus = first == key && index == 0)
                         }
                     }
                     if (television) item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true, width = width, modifier = Modifier.focusMemory("myList:seeAll")) }
                 }
             }
-        }
-        if (state.awardWinners.isNotEmpty()) {
-            item(key = "vod:awards") {
-                Shelf(stringResource(R.string.award_winners), metrics, Modifier.row("vod:awards").testTag("shelfAwards")) {
-                    itemsIndexed(state.awardWinners, key = { _, it -> it.key }) { index, item ->
-                        PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "awards:${item.key}", initialFocus = first == "awards" && index == 0)
+            RowOrder.NEW_RELEASES -> item(key = "vod:new") {
+                Shelf(stringResource(if (state.series) R.string.new_series else R.string.new_movies), metrics, Modifier.row("vod:new").testTag("shelfNew")) {
+                    itemsIndexed(state.newReleases, key = { _, it -> it.key }) { index, item ->
+                        PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "new:${item.key}", initialFocus = first == key && index == 0)
                     }
                 }
             }
-        }
-        // Keyed apart from the items above: a category's id is the provider's, any word.
-        items(state.rows, key = { "row:" + it.category.id }) { row ->
-            Shelf(row.category.name, metrics, Modifier.row("row:" + row.category.id).testTag("shelf:${row.category.id}"), onSeeAll = { actions.onCategory(row.category) }) {
-                itemsIndexed(row.items.take(rowLength), key = { _, it -> it.key }) { index, item ->
-                    PosterCard(
-                        item,
-                        width,
-                        onClick = { actions.onOpen(item) },
-                        focusKey = "${row.category.id}:${item.key}",
-                        initialFocus = first == row.category.id && index == 0,
-                    )
+            RowOrder.TRENDING -> item(key = "vod:trending") {
+                Shelf(stringResource(R.string.trending), metrics, Modifier.row("vod:trending").testTag("shelfTrending")) {
+                    itemsIndexed(state.trending, key = { _, it -> it.key }) { index, item ->
+                        PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "trending:${item.key}", initialFocus = first == key && index == 0)
+                    }
                 }
-                if (television) item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onCategory(row.category) }, tall = true, width = width, modifier = Modifier.focusMemory("${row.category.id}:seeAll")) }
+            }
+            RowOrder.AWARD_WINNERS -> item(key = "vod:awards") {
+                Shelf(stringResource(R.string.award_winners), metrics, Modifier.row("vod:awards").testTag("shelfAwards")) {
+                    itemsIndexed(state.awardWinners, key = { _, it -> it.key }) { index, item ->
+                        PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "awards:${item.key}", initialFocus = first == key && index == 0)
+                    }
+                }
+            }
+            // Keyed apart from the items above: a category's id is the provider's, any word.
+            else -> categoryRows[key]?.let { row ->
+                item(key = "row:" + row.category.id) {
+                    Shelf(row.category.name, metrics, Modifier.row("row:" + row.category.id).testTag("shelf:${row.category.id}"), onSeeAll = { actions.onCategory(row.category) }) {
+                        itemsIndexed(row.items.take(rowLength), key = { _, it -> it.key }) { index, item ->
+                            PosterCard(
+                                item,
+                                width,
+                                onClick = { actions.onOpen(item) },
+                                focusKey = "${row.category.id}:${item.key}",
+                                initialFocus = first == key && index == 0,
+                            )
+                        }
+                        if (television) item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onCategory(row.category) }, tall = true, width = width, modifier = Modifier.focusMemory("${row.category.id}:seeAll")) }
+                    }
+                }
             }
         }
         if (state.rows.isEmpty()) {

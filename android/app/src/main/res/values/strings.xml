@@ -426,4 +426,19 @@
     <string name="tips_failed">The tip didn’t go through.</string>
     <string name="my_list_added">Added to My List</string>
     <string name="my_list_removed">Removed from My List</string>
+    <string name="row_order">Row order</string>
+    <string name="row_order_summary">The order of the rows of Movies and Series, and the ones shown.</string>
+    <string name="row_order_hint">Drag a row by its handle to move it, and turn its switch off to hide it. With Sync on this network, the order follows on your other devices.</string>
+    <string name="row_order_hint_tv">OK picks up a row, Up and Down move it, OK puts it down. Right reaches its switch, which hides or shows it.</string>
+    <string name="row_order_moving_tv">Up and Down move the row. OK puts it down, Back puts it back where it was.</string>
+    <string name="row_order_moving">Moving</string>
+    <string name="row_order_default">Default order</string>
+    <string name="row_shown">Shown</string>
+    <string name="row_hidden">Hidden</string>
+    <string name="move_up">Move up</string>
+    <string name="move_down">Move down</string>
+    <string name="all_movies_count">All movies (%1$s)</string>
+    <string name="all_series_count">All series (%1$s)</string>
+    <string name="help_rows_title">Order the rows of Movies and Series</string>
+    <string name="help_rows_body">The Movies and Series tabs start with All movies (or All series): the latest additions, then See All, which opens the whole catalogue with its sort and Hide watched movies. Then come Continue Watching, My List, the new titles, Trending, Award winners and each category of your provider.\n\nSettings → Row order sets their order and which ones show: drag a row to move it, or on a TV press OK to pick it up, Up and Down to move it, OK to put it down and Back to cancel; turn a row’s switch off to hide it. Default order puts the rows back as they come. A category new to your playlist goes to the end; one your provider removes keeps its place for when it comes back. Hidden languages and categories stay hidden whatever the order. With Sync on this network, the order follows on your other devices.</string>
 </resources>

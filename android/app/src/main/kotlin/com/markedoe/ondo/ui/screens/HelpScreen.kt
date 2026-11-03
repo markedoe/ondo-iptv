@@ -53,6 +53,7 @@ val helpTopics = listOf(
     HelpTopic("search", R.string.help_search_title, R.string.help_search_body),
     HelpTopic("tmdb", R.string.help_tmdb_title, R.string.help_tmdb_body),
     HelpTopic("categories", R.string.help_categories_title, R.string.help_categories_body),
+    HelpTopic("rows", R.string.help_rows_title, R.string.help_rows_body),
     HelpTopic("my-list", R.string.help_mylist_title, R.string.help_mylist_body),
     HelpTopic("player", R.string.help_player_title, R.string.help_player_body, touch = true),
     HelpTopic("guide", R.string.help_guide_title, R.string.help_guide_body),

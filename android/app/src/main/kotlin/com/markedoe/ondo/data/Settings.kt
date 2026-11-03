@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.sync.SyncKey
+import com.markedoe.ondo.core.sync.SyncRows
 import kotlinx.serialization.Serializable
 
 /** A playlist as the user configured it (credentials stay in the app's private storage). */
@@ -81,7 +82,15 @@ data class AppSettings(
      * carries them (docs/SYNC.md), the keys of services this version does not know included.
      */
     val serviceKeys: List<SyncKey> = emptyList(),
+    /**
+     * The order of the rows of the Movies and Series tabs and the rows hidden (Settings → Row order, `RowOrder`), one
+     * record per tab with the time it was set; sync carries them (docs/SYNC.md, "Rows").
+     */
+    val rowOrders: List<SyncRows> = emptyList(),
 ) {
+    /** The order saved for the Movies or the Series tab; null: the default order. */
+    fun rowOrder(series: Boolean): SyncRows? = rowOrders.firstOrNull { it.tab == (if (series) SyncRows.SERIES else SyncRows.MOVIES) }
+
     /** The viewer's TMDb token (or API Key), typed here or arrived by sync. */
     val tmdbToken: String?
         get() = serviceKeys.firstOrNull { it.service == SyncKey.TMDB }?.value?.takeIf { it.isNotBlank() }

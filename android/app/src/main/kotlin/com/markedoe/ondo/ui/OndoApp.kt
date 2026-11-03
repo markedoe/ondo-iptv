@@ -116,6 +116,9 @@ import com.markedoe.ondo.ui.screens.SettingsActions
 import com.markedoe.ondo.ui.screens.SettingsScreen
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
+import com.markedoe.ondo.ui.screens.RowOrderActions
+import com.markedoe.ondo.ui.screens.RowOrderScreen
+import com.markedoe.ondo.ui.tv.TvRowOrderScreen
 import com.markedoe.ondo.ui.screens.WebPageScreen
 import com.markedoe.ondo.ui.screens.WelcomeScreen
 import com.markedoe.ondo.ui.theme.OndoColors
@@ -265,6 +268,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                     page<Routes.Grid>(TvMargins.HEADER) { GridDestination(viewModel, navController, it.toRoute()) }
                     page<Routes.Settings>(TvMargins.NONE) { SettingsDestination(viewModel, navController) }
                     page<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
+                    page<Routes.RowOrder> { RowOrderDestination(viewModel, navController) }
                     page<Routes.Help> {
                         val open = rememberPageOpener(navController)
                         HelpScreen(onBack = { navController.popBackStack() }, onSupport = { open(SUPPORT_URL) })
@@ -849,6 +853,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onAutoRefresh = viewModel::setAutoRefreshHours,
             onVodBuffer = viewModel::setVodBuffer,
             onCategories = { navController.navigate(Routes.Categories()) },
+            onRowOrder = { navController.navigate(Routes.RowOrder) },
             onAppLanguage = { context.openAppLanguageSettings() },
             onHelp = { navController.navigate(Routes.Help) },
             onPrivacy = { browse(PRIVACY_URL) },
@@ -888,6 +893,18 @@ private fun CategoriesDestination(viewModel: OndoViewModel, navController: NavHo
         onAll = { hidden -> viewModel.setCategoriesHidden(ui.categories.filter { it.hiddenWith == null }.map { it.id }, hidden) },
     )
     if (isTelevision()) TvCategoriesScreen(ui, type, filter, actions) else CategoriesScreen(ui, type, filter, actions)
+}
+
+@Composable
+private fun RowOrderDestination(viewModel: OndoViewModel, navController: NavHostController) {
+    val rows by viewModel.rowOrder.collectAsStateWithLifecycle()
+    val state = rows ?: return Loading()
+    val actions = RowOrderActions(
+        onBack = { navController.popBackStack() },
+        onSave = viewModel::setRowOrder,
+        onReset = viewModel::resetRowOrder,
+    )
+    if (isTelevision()) TvRowOrderScreen(state, actions) else RowOrderScreen(state, actions)
 }
 
 /** Opens a web page in the browser (nothing happens on a device without one). */

@@ -7,6 +7,7 @@ import com.markedoe.ondo.core.sync.SyncListItem
 import com.markedoe.ondo.core.sync.SyncPerson
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProgress
+import com.markedoe.ondo.core.sync.SyncRows
 import com.markedoe.ondo.core.sync.SyncSnapshot
 
 /** The keys sync gives each record (docs/SYNC.md), from this app's records. */
@@ -73,6 +74,7 @@ object SyncData {
         state.library.syncDeleted,
         state.library.history.filter(SyncKeys::syncs).map { it.key to it.isFinished },
         state.settings.serviceKeys,
+        state.settings.rowOrders,
     )
 
     /**
@@ -140,6 +142,7 @@ object SyncData {
             },
             people = library.favorites.filter(SyncKeys::isPerson).map(SyncKeys::syncPerson),
             keys = state.settings.serviceKeys.filter { it.value.isNotBlank() },
+            rows = state.settings.rowOrders,
             deleted = library.syncDeleted,
             replaced = library.syncReplaced,
             clock = now,
@@ -157,6 +160,8 @@ object SyncData {
         val replacements: Map<String, String> = emptyMap(),
         /** The keys of outside services to keep: the merged ones (this device's own were part of the merge). */
         val keys: List<SyncKey> = emptyList(),
+        /** The order of the rows of the tabs to keep: the merged ones (this device's own were part of the merge). */
+        val rows: List<SyncRows> = emptyList(),
     )
 
     private fun usable(playlist: SyncPlaylist) = playlist.id.isNotBlank() && playlist.url.isNotBlank() && !SyncKeys.isFile(playlist.url) && when (playlist.kind) {
@@ -269,7 +274,7 @@ object SyncData {
                 }
                 if (carried.isEmpty()) result else result.copy(hiddenCategories = result.hiddenCategories + carried)
             }
-        return Applied(playlists, removed, applied, replacements.toMap(), merged.keys)
+        return Applied(playlists, removed, applied, replacements.toMap(), merged.keys, merged.rows)
     }
 
     /** The people of a snapshot as this app keeps them: one per name (whatever its case), in the order they come. */

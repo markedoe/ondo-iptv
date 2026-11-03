@@ -13,6 +13,7 @@ import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.MetadataStore
 import com.markedoe.ondo.core.library.MetadataTitles
 import com.markedoe.ondo.core.library.RelatedTitle
+import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbGenre
 import com.markedoe.ondo.core.library.TmdbItem
@@ -41,6 +42,7 @@ import com.markedoe.ondo.core.net.HttpClient
 import com.markedoe.ondo.core.net.HttpException
 import com.markedoe.ondo.core.playback.ProblemReport
 import com.markedoe.ondo.core.sync.SentSnapshot
+import com.markedoe.ondo.core.sync.SyncRows
 import com.markedoe.ondo.core.sync.SyncClock
 import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncMerge
@@ -666,7 +668,7 @@ class OndoRepository(
     private fun commitSync(applied: SyncData.Applied) {
         val state = _state.value
         val library = keepingPlayback(state.library, applied.library)
-        val keysChanged = applied.keys != state.settings.serviceKeys
+        val keysChanged = applied.keys != state.settings.serviceKeys || applied.rows != state.settings.rowOrders
         if (applied.playlists == state.playlists && library == state.library && !keysChanged) return
         val removedIds = applied.removed.mapTo(HashSet()) { it.id }
         state.library.reminders.filter { it.playlistId in removedIds }.forEach(reminderScheduler::cancel)
@@ -675,7 +677,7 @@ class OndoRepository(
         val active = state.settings.activePlaylistId?.takeIf { id -> applied.playlists.any { it.id == id } }
             ?: state.activePlaylistId?.let { applied.replacements[it] }
             ?: applied.playlists.firstOrNull()?.id
-        val settings = state.settings.copy(activePlaylistId = active, serviceKeys = applied.keys, syncClock = syncClock.last)
+        val settings = state.settings.copy(activePlaylistId = active, serviceKeys = applied.keys, rowOrders = applied.rows, syncClock = syncClock.last)
         val before = state.activePlaylist
         val saved = persist {
             if (applied.removed.isEmpty()) savePlaylists(applied.playlists) else applied.removed.forEach { savePlaylists(applied.playlists, it) }
@@ -739,6 +741,30 @@ class OndoRepository(
     fun setHideWatchedMovies(hide: Boolean) = updateSettings { it.copy(hideWatchedMovies = hide) }
 
     fun setGroupVersions(group: Boolean) = updateSettings { it.copy(groupVersions = group) }
+
+    /**
+     * Saves the order of the rows of the Movies or Series tab as the viewer set it in Settings → Row order: [arranged],
+     * the keys of the tab's rows now (`RowOrder`), [hidden] those hidden. The rows the tab no longer has (a category gone
+     * from the playlist) keep their place and their choice (`RowOrder.saving`); the record is dated for sync.
+     */
+    fun setRowOrder(series: Boolean, arranged: List<String>, hidden: Collection<String>) = updateSettings { settings ->
+        val previous = settings.rowOrder(series)
+        val record = SyncRows(
+            tab = if (series) SyncRows.SERIES else SyncRows.MOVIES,
+            order = RowOrder.saving(arranged, previous?.order.orEmpty()),
+            hidden = RowOrder.savingHidden(arranged, hidden, previous?.hidden.orEmpty()),
+            updatedAt = stamp(),
+        ).normalized()
+        if (previous != null && previous.order == record.order && previous.hidden == record.hidden) settings
+        else settings.copy(rowOrders = settings.rowOrders.filterNot { it.tab == record.tab } + record)
+    }
+
+    /** Default order: the rows of the tab in their default order again, those hidden staying hidden. */
+    fun resetRowOrder(series: Boolean) = updateSettings { settings ->
+        val previous = settings.rowOrder(series) ?: return@updateSettings settings
+        if (previous.order.isEmpty()) return@updateSettings settings
+        settings.copy(rowOrders = settings.rowOrders.filterNot { it.tab == previous.tab } + previous.copy(order = emptyList(), updatedAt = stamp()))
+    }
 
     /** The version of a film the viewer chose on its page ([AppSettings.chosenVersions]), on this device only. */
     fun rememberVersion(movieId: String) = updateSettings { settings ->

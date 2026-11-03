@@ -403,4 +403,19 @@
     <string name="tips_failed">打赏未能完成。</string>
     <string name="my_list_added">已添加到我的片单</string>
     <string name="my_list_removed">已从我的片单中移除</string>
+    <string name="row_order">行顺序</string>
+    <string name="row_order_summary">“电影”和“剧集”中各行的顺序，以及显示哪些行。</string>
+    <string name="row_order_hint">拖动行左侧的手柄即可移动该行，关闭开关即可隐藏该行。开启“在此网络上同步”后，顺序会同步到你的其他设备。</string>
+    <string name="row_order_hint_tv">按“确定”拿起一行，按“上”和“下”移动，再按“确定”放下。按“右”可到达它的开关，用于隐藏或显示该行。</string>
+    <string name="row_order_moving_tv">按“上”和“下”移动该行。按“确定”放下，按“返回”放回原处。</string>
+    <string name="row_order_moving">正在移动</string>
+    <string name="row_order_default">默认顺序</string>
+    <string name="row_shown">显示</string>
+    <string name="row_hidden">已隐藏</string>
+    <string name="move_up">上移</string>
+    <string name="move_down">下移</string>
+    <string name="all_movies_count">所有电影（%1$s）</string>
+    <string name="all_series_count">所有剧集（%1$s）</string>
+    <string name="help_rows_title">调整“电影”和“剧集”的行顺序</string>
+    <string name="help_rows_body">“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖电影”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动；在电视上，按“确定”拿起，按“上”和“下”移动，按“确定”放下，按“返回”取消；关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。</string>
 </resources>

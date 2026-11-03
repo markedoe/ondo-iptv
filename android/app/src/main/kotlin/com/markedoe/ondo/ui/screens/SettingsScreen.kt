@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.FilterList
+import androidx.compose.material.icons.rounded.Reorder
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Speed
@@ -128,6 +129,8 @@ class SettingsActions(
     val onAutoRefresh: (Int) -> Unit = {},
     val onVodBuffer: (Int) -> Unit = {},
     val onCategories: () -> Unit = {},
+    /** Settings → Row order. */
+    val onRowOrder: () -> Unit = {},
     val onAppLanguage: () -> Unit = {},
     val onHelp: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
@@ -284,6 +287,14 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     supportingContent = { Text(stringResource(R.string.categories_hint)) },
                     leadingContent = { Icon(Icons.Rounded.FilterList, contentDescription = null) },
                     modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onCategories).testTag("categoriesRow"),
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.row_order)) },
+                    supportingContent = { Text(stringResource(R.string.row_order_summary)) },
+                    leadingContent = { Icon(Icons.Rounded.Reorder, contentDescription = null) },
+                    modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onRowOrder).testTag("rowOrderRow"),
                 )
             }
             item {

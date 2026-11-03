@@ -34,6 +34,7 @@ import com.markedoe.ondo.ui.screens.PlaylistForm
 import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.VodUiState
+import com.markedoe.ondo.ui.screens.RowOrderUiState
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -110,6 +111,11 @@ class OndoViewModel(
         .stateIn(viewModelScope, sharing, null)
 
     val series: StateFlow<VodUiState?> = state.map { UiMappers.vod(it, series = true, title = "") }
+        .flowOn(computation)
+        .stateIn(viewModelScope, sharing, null)
+
+    /** Settings → Row order: the rows of the Movies and Series tabs in the viewer's order. */
+    val rowOrder: StateFlow<RowOrderUiState?> = state.map { UiMappers.rowOrder(it) }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
@@ -562,6 +568,10 @@ class OndoViewModel(
     fun setHideWatchedMovies(hide: Boolean) = repository.setHideWatchedMovies(hide)
 
     fun setGroupVersions(group: Boolean) = repository.setGroupVersions(group)
+
+    fun setRowOrder(series: Boolean, arranged: List<String>, hidden: Collection<String>) = repository.setRowOrder(series, arranged, hidden)
+
+    fun resetRowOrder(series: Boolean) = repository.resetRowOrder(series)
 
     fun setSyncOnLocalNetwork(on: Boolean) = repository.setSyncOnLocalNetwork(on)
 

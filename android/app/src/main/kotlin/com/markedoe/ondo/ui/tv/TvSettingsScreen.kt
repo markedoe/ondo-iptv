@@ -31,6 +31,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.HelpOutline
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Reorder
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.CloudDownload
@@ -473,6 +474,9 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
     title(R.string.settings_catalogue)
     item(key = "categories") {
         SettingRow(stringResource(R.string.languages_and_categories), Icons.Rounded.FilterList, subtitle = stringResource(R.string.categories_hint), onClick = actions.onCategories, modifier = Modifier.focusRequester(first).focusMemory("settings-categories").testTag("categoriesRow"))
+    }
+    item(key = "rowOrder") {
+        SettingRow(stringResource(R.string.row_order), Icons.Rounded.Reorder, subtitle = stringResource(R.string.row_order_summary), onClick = actions.onRowOrder, modifier = Modifier.focusMemory("settings-rowOrder").testTag("rowOrderRow"))
     }
     item(key = "adult") {
         SwitchRow(stringResource(R.string.adult_categories), stringResource(R.string.adult_categories_hint), Icons.Rounded.Lock, state.showAdultCategories, actions.onShowAdultCategories, Modifier.focusMemory("settings-adult").testTag("adultSwitch"))
