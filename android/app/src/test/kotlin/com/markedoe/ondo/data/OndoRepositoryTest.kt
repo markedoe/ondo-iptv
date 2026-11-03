@@ -366,7 +366,7 @@ class OndoRepositoryTest {
         // thread of its own to wait for in real time.
         fun TestScope.launch(): OndoRepository {
             val test = StandardTestDispatcher(testScheduler)
-            return OndoRepository(AppStore(folder.root), http, backgroundScope, now = { time.get() }, io = test, parsing = test, guideWork = test)
+            return OndoRepository(AppStore(folder.root), http, backgroundScope, now = { time.get() }, io = test, parsing = test, guideWork = test, guideFiles = test)
         }
         fun TestScope.until(what: String, done: () -> Boolean) {
             repeat(10_000) {
