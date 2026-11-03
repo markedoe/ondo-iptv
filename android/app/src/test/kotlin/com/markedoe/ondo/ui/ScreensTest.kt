@@ -366,7 +366,9 @@ class ScreensTest {
     fun homeShowsTheCarouselAndItsActionsWork() {
         val listed = mutableListOf<ShowcaseItem>()
         val played = mutableListOf<ShowcaseItem>()
-        val state = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
+        // Harbor Lights leads the carousel as the best recent title by TMDb's votes.
+        val voted = Fixtures.state().copy(tmdbRatings = mapOf(Fixtures.harborLights.let { "s-" + it.id } to com.markedoe.ondo.core.library.TmdbRating(8.2, 5_000)))
+        val state = UiMappers.home(voted, labels, Fixtures.NOW)
         compose.setContent {
             OndoTheme {
                 HomeScreen(state, HomeActions(onPlay = { played += it }, onToggleMyList = { listed += it }), autoAdvance = false)

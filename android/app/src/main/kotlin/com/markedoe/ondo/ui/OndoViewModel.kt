@@ -554,7 +554,7 @@ class OndoViewModel(
                 // Not while the app is still starting or the catalogue is being shown.
                 delay(PREPARE_START_DELAY_MS)
                 val now = clock()
-                val titles = withContext(computation) { UiMappers.showcase(state.value, repository.keptPosterFacts()).aheadTitles(now, PREPARE_LIMIT) }
+                val titles = withContext(computation) { UiMappers.showcase(state.value).aheadTitles(now, PREPARE_LIMIT) }
                 for (item in titles) {
                     val details = details(state.value, item)
                     val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title
