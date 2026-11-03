@@ -35,9 +35,12 @@ final class FilmVersionsAppTests: XCTestCase {
     }
 
     private func model(with text: String = catalogue) async throws -> AppModel {
-        let file = root.appendingPathComponent("list.m3u")
+        // A folder of its own: a test may make two.
+        let folder = root.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let file = folder.appendingPathComponent("list.m3u")
         try Data(text.utf8).write(to: file)
-        let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        let model = AppModel(storageRoot: folder, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
         await model.bootstrap()
         try await model.addPlaylist(Playlist(name: "Test", source: .remote(file), autoRefreshHours: 0))
         return model
@@ -109,14 +112,14 @@ final class FilmVersionsAppTests: XCTestCase {
         XCTAssertEqual(model.versionLabel(for: entry), "4K DV")
     }
 
-    /// A playlist listing an address twice: two streams (the M3U reader gives each its own id), so two badges of the same
-    /// tags, never collapsed: "4K DV" and "4K DV 2".
-    func testTheSameTagsTwiceAreTwoBadges() async throws {
-        let twice = Self.catalogue + "#EXTINF:6000 group-title=\"Movies | 4K\",Glass City 4K DV (2024)\nhttp://127.0.0.1:9/glass-dv.mkv\n"
-        let model = try await model(with: twice)
-        let hd = try movie("Glass City", in: model)
-        let versions = model.visibleVersions(of: hd)
-        XCTAssertEqual(versions.count, 5)
-        XCTAssertEqual(model.versionBadges(versions).compactMap(\.label), ["4K DV", "4K", "VOSTFR", "4K DV 2"])
+    /// A playlist listing a stream twice (the same address) is one version; two streams of the same tags are two badges,
+    /// never collapsed: "4K DV" and "4K DV 2".
+    func testAStreamListedTwiceIsOneVersionAndTheSameTagsTwiceAreTwoBadges() async throws {
+        let line = "#EXTINF:6000 group-title=\"Movies | 4K\",Glass City 4K DV (2024)\n"
+        let twice = try await model(with: Self.catalogue + line + "http://127.0.0.1:9/glass-dv.mkv\n")
+        XCTAssertEqual(twice.visibleVersions(of: try movie("Glass City", in: twice)).count, 4)
+        let other = try await model(with: Self.catalogue + line + "http://127.0.0.1:9/glass-dv-2.mkv\n")
+        let versions = other.visibleVersions(of: try movie("Glass City", in: other))
+        XCTAssertEqual(other.versionBadges(versions).compactMap(\.label), ["4K DV", "4K", "VOSTFR", "4K DV 2"])
     }
 }
