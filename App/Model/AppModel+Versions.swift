@@ -60,7 +60,7 @@ extension AppModel {
         guard films.isGrouped, items.count > 1 else { return items }
         var seen = Set<Int>()
         return items.filter { item in
-            guard case .movie(let movie) = item, let group = films.group(of: movie.id) else { return true }
+            guard case .movie(let movie) = item, let group = films.group(of: movie) else { return true }
             return seen.insert(group).inserted
         }
     }

@@ -273,7 +273,7 @@ extension AppModel {
             guard case .movie(let movie, _) = match else { return true }
             if watched.contains(movie.id) { return false }
             // Each film once, whatever its versions.
-            guard let group = films.group(of: movie.id) else { return true }
+            guard let group = films.group(of: movie) else { return true }
             return seen.insert(group).inserted
         }
     }
@@ -355,13 +355,18 @@ extension AppModel {
         let excluded = exclusions
         guard !excluded.contains(movie) else { return [] }
         let watched = hiddenWatchedMovieIDs()
-        // Never another version of the film itself; each film once.
+        // Never another version of the film itself; each film once. Kept for the page's redraws (a picked version, a
+        // detail arriving): the category is gone through once per movie, catalogue, exclusions and watched movies.
         let films = self.films
-        let own = films.group(of: movie.id)
-        let others = (index.moviesByCategory[movie.categoryID] ?? []).filter {
-            $0.id != movie.id && !watched.contains($0.id) && !excluded.contains($0) && (own == nil || films.group(of: $0.id) != own)
+        let key = "similar|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(movie.id)|\(movie.categoryID)|"
+            + "\(limit)|\(excluded.hashValue)|\(watched.hashValue)|\(films.isGrouped)"
+        return cachedList(key) {
+            let own = films.group(of: movie)
+            let others = (index.moviesByCategory[movie.categoryID] ?? []).filter {
+                $0.id != movie.id && !watched.contains($0.id) && !excluded.contains($0) && (own == nil || films.group(of: $0) != own)
+            }
+            return Array(films.distinct(others).prefix(limit))
         }
-        return Array(films.distinct(others).prefix(limit))
     }
 
     func similarSeries(to series: Series, limit: Int = 15) -> [Series] {
