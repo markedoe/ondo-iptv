@@ -17,7 +17,9 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -124,9 +126,14 @@ class TelevisionSearchRowsTest {
     }
 
     /** Whether the poster of [title] is on screen (laid out within the window), not only composed. */
+    /**
+     * Whether Search shows [title]'s card across the screen. Search's own cards only: a title's page fading out after Back
+     * has its own row of the same titles (More like this) for a moment.
+     */
     private fun onScreen(title: String): Boolean {
         val width = compose.onAllNodes(isRoot()).fetchSemanticsNodes().first().size.width
-        return compose.onAllNodes(hasContentDescription(title)).fetchSemanticsNodes().any { it.boundsInRoot.left >= 0f && it.boundsInRoot.left < width }
+        return compose.onAllNodes(hasContentDescription(title) and hasAnyAncestor(hasTestTag("search"))).fetchSemanticsNodes()
+            .any { it.boundsInRoot.left >= 0f && it.boundsInRoot.left < width }
     }
 
     private fun startScreen(initial: SearchUiState, memory: FocusMemory = FocusMemory()): (SearchUiState) -> Unit {
@@ -268,6 +275,22 @@ class TelevisionSearchRowsTest {
     /** Back from a title opened far along a row: the remote is on its card again, the row where it was. */
     @Test
     fun backFromATitleLandsOnItsCard() {
+        searchFilmsOnFilm13()
+        openAndComeBack()
+    }
+
+    /**
+     * The same, twenty times over: Back from a title, whatever arrives meanwhile (the title's details, the search found
+     * anew), lands on the card each time, the row where it was.
+     */
+    @Test
+    fun backFromATitleLandsOnItsCardEveryTime() {
+        searchFilmsOnFilm13()
+        repeat(20) { round -> openAndComeBack("round ${round + 1}") }
+    }
+
+    /** The app on a TV, Search for "film", the remote on Film 13, far along the first row. */
+    private fun searchFilmsOnFilm13() {
         val store = AppStore(folder.root)
         store.savePlaylists(listOf(Fixtures.playlist))
         store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID))
@@ -295,11 +318,18 @@ class TelevisionSearchRowsTest {
         assertEquals("Film 1", focused())
         press(Key.DirectionRight, times = 12)
         assertEquals("Film 13", focused())
+    }
+
+    /**
+     * OK on the card the remote is on (Film 13), its page, Back: once that page is gone (it fades out), the remote is on
+     * the card again and the row where it was. Waits for the real conditions, never for a set time.
+     */
+    private fun openAndComeBack(step: String = "") {
         press(Key.DirectionCenter)
         waitFor { exists("detail") }
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
-        waitFor { exists("searchField") && focused() == "Film 13" }
-        assertTrue(onScreen("Film 13"))
-        assertFalse("the row where it was", onScreen("Film 1"))
+        waitFor { !exists("detail") && exists("searchField") && focused() == "Film 13" }
+        assertTrue("$step: Film 13 on screen", onScreen("Film 13"))
+        assertFalse("$step: the row where it was", onScreen("Film 1"))
     }
 }
