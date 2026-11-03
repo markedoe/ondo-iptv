@@ -99,7 +99,7 @@ struct MovieDetailView: View {
         let progress = model.progress(movie: movie)
         let resumable = progress?.isResumable == true
         DetailScaffold(
-            title: movie.name,
+            title: ShowcaseItem.movie(movie).displayTitle,
             posterURL: details?.posterURL ?? movie.posterURL,
             backdropURL: model.backdropURL(for: .movie(movie)),
             facts: facts,

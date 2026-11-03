@@ -258,4 +258,24 @@ final class PeopleTests: XCTestCase {
         XCTAssertTrue(People.field("Lena Moss, Élodie Marçeau", names: "elodie marceau"))
         XCTAssertFalse(People.field("Lena Mossberg", names: "Lena Moss"))
     }
+    /// The same cases as Android's `TmdbTest.aProvidersTitleWithoutItsTags`.
+    func testAProvidersTitleWithoutItsTags() {
+        XCTAssertEqual(CatalogueMatcher.displayTitle("|FR| Le Transport"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("[FR] Le Transport"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("FR - Le Transport"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("FR: Le Transport"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Le Transport VFF"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Le Transport MULTI 4K"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Le Transport (MULTI) (2021)"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("|FR-4K DV| Le Transport [VOSTFR]"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("MobLand |MULTI|"), "MobLand")
+        // The film's own words stay.
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Spider-Man: No Way Home"), "Spider-Man: No Way Home")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("De Gaulle"), "De Gaulle")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Up"), "Up")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Star Runner 2049"), "Star Runner 2049")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Vost"), "Vost")
+        // Nothing left: the title as it is.
+        XCTAssertEqual(CatalogueMatcher.displayTitle("[MULTI]"), "[MULTI]")
+    }
 }

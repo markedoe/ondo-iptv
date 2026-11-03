@@ -258,4 +258,13 @@ final class ShowcaseTests: XCTestCase {
         model.toggleFavorite(bright)
         XCTAssertEqual(model.myList(), [.series(series)])
     }
+
+    /// The hero and the movie and series pages showed the provider's raw title ("|FR| Le Transport VFF").
+    func testHeroAndDetailTitlesAreShownWithoutTheProvidersTags() {
+        let movie = Movie(id: "m", name: "|FR| Le Transport VFF", categoryID: "c", streamURL: URL(string: "http://stream.example.com/m.mp4")!)
+        let series = Series(id: "s", name: "[FR] Harbor (MULTI)", categoryID: "c")
+        XCTAssertEqual(ShowcaseItem.movie(movie).displayTitle, "Le Transport")
+        XCTAssertEqual(ShowcaseItem.series(series).displayTitle, "Harbor")
+        XCTAssertEqual(ShowcaseItem.movie(movie).title, "|FR| Le Transport VFF", "the stored title stays the provider's")
+    }
 }

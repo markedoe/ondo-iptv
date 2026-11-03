@@ -20,6 +20,10 @@ enum ShowcaseItem: Identifiable, Hashable {
         }
     }
 
+    /// The title as the hero and the detail pages show it: without the provider's tags ("|FR| Le Transport VFF" ->
+    /// "Le Transport"). Display only: `title` stays the provider's for keys, search and history.
+    var displayTitle: String { CatalogueMatcher.displayTitle(title) }
+
     var posterURL: URL? {
         switch self {
         case .movie(let movie): return movie.posterURL

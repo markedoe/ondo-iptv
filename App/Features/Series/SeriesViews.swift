@@ -69,7 +69,7 @@ struct SeriesDetailView: View {
         let next = details.flatMap { model.nextEpisode(in: series, details: $0) }
         let nextProgress = next.flatMap { model.progress(episode: $0.episode, in: series) }
         DetailScaffold(
-            title: series.name,
+            title: ShowcaseItem.series(series).displayTitle,
             posterURL: details?.info.posterURL ?? series.coverURL,
             backdropURL: model.backdropURL(for: .series(series)),
             facts: facts,

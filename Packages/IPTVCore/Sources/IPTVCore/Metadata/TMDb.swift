@@ -443,6 +443,90 @@ public enum CatalogueMatcher {
         return !difference.overflow && (-1...1).contains(difference.partialValue)
     }
 
+    /// Words after or before a title that name a copy's language or version, not the film ("Sandstorm VF", "EN - Sandstorm").
+    private static let versionWords: Set<String> = [
+        "vf", "vff", "vfq", "vfi", "vo", "vost", "vostfr", "vosta", "truefrench", "french", "english", "subbed", "dubbed", "dub",
+        "sub", "dual", "en", "eng", "fr", "es", "esp", "de", "ger", "ita", "pt", "br", "ar", "tr", "nl", "pl",
+    ]
+
+    /// Words of a copy's quality or edition, never the film's, in a provider's title ("Sandstorm MULTI 4K").
+    private static let qualityWords: Set<String> = [
+        "multi", "4k", "uhd", "fhd", "hd", "sd", "hdr", "dv", "hevc", "x265", "h265", "1080p", "720p", "2160p", "vfq", "imax",
+    ]
+
+    /// A tag of the provider's, not a word of the film's: a language or version, or a quality. A short one (three
+    /// letters at most) only in capitals: "FR" and "VF" are tags, "De" in "De Gaulle" is a word.
+    private static func isTag(_ word: String) -> Bool {
+        let lower = word.lowercased()
+        guard versionWords.contains(lower) || qualityWords.contains(lower) else { return false }
+        return word.utf16.count > 3 || word == word.uppercased()
+    }
+
+    private static let separators = CharacterSet(charactersIn: " -:|·_.,")
+
+    /// A provider's title as people read it, its case kept: without the provider's tags around the name.
+    /// "|FR| Le Transport", "[FR] Le Transport", "FR - Le Transport", "Le Transport VFF",
+    /// "Le Transport (MULTI) (2021)" -> "Le Transport". The title as it is when nothing would be left of it.
+    /// The same rules as Android's `CatalogueMatcher.displayTitle`, with the same tests. Display only: keys and
+    /// stored titles stay the provider's.
+    public static func displayTitle(_ title: String) -> String {
+        var name = title
+        name = name.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
+        name = name.replacingOccurrences(of: #"\|[^|\s][^|]{0,23}\|"#, with: " ", options: .regularExpression)
+        name = name.replacingOccurrences(of: #"\(\s*\d{4}\s*\)"#, with: " ", options: .regularExpression)
+        // "(MULTI)", "(VOSTFR 4K)": a group of tags only.
+        name = replacingGroups(in: name, pattern: #"\([^)]*\)"#) { group in
+            let inner = group.trimmingCharacters(in: CharacterSet(charactersIn: "()"))
+            let words = inner.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "/" })
+                .map(String.init).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+            return !words.isEmpty && words.allSatisfy(isTag) ? " " : group
+        }
+        // "FR - ", "FR-4K: ", "EN | " before the name.
+        if let match = leadingTag.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
+           let tagRange = Range(match.range(at: 1), in: name), let whole = Range(match.range, in: name) {
+            let words = name[tagRange].split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "+" }).map(String.init)
+            if words.allSatisfy(isTag) { name = String(name[whole.upperBound...]) }
+        }
+        var words = name.split(separator: " ", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: separators) }
+            .filter { !$0.isEmpty }
+        while words.count > 1, let last = words.last, isTag(last) { words.removeLast() }
+        while words.count > 1, let first = words.first, isTag(first) { words.removeFirst() }
+        // The separators inside the name stay: only the words' own edges were trimmed above.
+        let cleaned = rebuild(name, words: words)
+            .trimmingCharacters(in: separators)
+            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        return cleaned.isEmpty ? title.trimmingCharacters(in: .whitespacesAndNewlines) : cleaned
+    }
+
+    private static let leadingTag = try! NSRegularExpression(pattern: #"^\s*([\p{L}\p{N}]{2,8}(?:[-+ ][\p{L}\p{N}]{1,6})?)\s*[-:|·]\s+"#)
+
+    /// `name` from its first kept word to its last (`words`, in order), with what lies between them as it was.
+    private static func rebuild(_ name: String, words: [String]) -> String {
+        guard let first = words.first, let start = name.range(of: first) else { return words.joined(separator: " ") }
+        var end = start.lowerBound
+        for word in words {
+            guard let found = name.range(of: word, range: end..<name.endIndex) else { return words.joined(separator: " ") }
+            end = found.upperBound
+        }
+        return String(name[start.lowerBound..<end])
+    }
+
+    /// `text` with each match of `pattern` replaced by what `transform` makes of it.
+    private static func replacingGroups(in text: String, pattern: String, _ transform: (String) -> String) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
+        var result = ""
+        var last = text.startIndex
+        for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            guard let range = Range(match.range, in: text) else { continue }
+            result += text[last..<range.lowerBound]
+            result += transform(String(text[range]))
+            last = range.upperBound
+        }
+        result += text[last...]
+        return result
+    }
+
     private static func words(of title: String) -> [String] {
         var name = title
         // Remove bracketed tags: [MULTI], (VOSTFR)…

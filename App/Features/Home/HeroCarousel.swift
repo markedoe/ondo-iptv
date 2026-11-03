@@ -165,7 +165,7 @@ private struct HeroPage: View {
     private func content(details: MediaDetails?) -> some View {
         VStack(alignment: .leading, spacing: compact ? 8 : 10) {
             detailLink {
-                Text(item.title)
+                Text(item.displayTitle)
                     .font(compact ? .title.bold() : .system(.largeTitle, weight: .bold))
                     .tracking(compact ? -0.4 : -0.6)
                     .lineLimit(2)
