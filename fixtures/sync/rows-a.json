@@ -1,0 +1,19 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "44444444-4444-4444-8444-444444444444",
+  "deviceName": "Living room TV",
+  "rows": [
+    {
+      "tab": "movie",
+      "order": ["all", "cat:movie-1|action", "continue"],
+      "hidden": ["trending", "cat:movie-9|kids"],
+      "updatedAt": 2000
+    },
+    {
+      "tab": "series",
+      "order": ["continue"],
+      "updatedAt": 1000
+    }
+  ]
+}

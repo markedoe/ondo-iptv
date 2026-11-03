@@ -83,6 +83,8 @@ public enum SyncMerge {
         let people = pick(left.people + right.people, key: \.key, time: \.addedAt, tie: personOrder, deleted: deleted)
         // A side without keys (a device that does not sync them) removes none: only a deletion does.
         let keys = pick(left.keys + right.keys, key: \.key, time: \.updatedAt, tie: { $0.value.isBefore($1.value) }, deleted: deleted)
+        // Likewise for the order of the rows: a side without it (an older version) changes none.
+        let rows = pick(left.rows + right.rows, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: deleted)
 
         var result = left
         result.playlists = kept.sorted { before(($0.addedAt, $0.id), ($1.addedAt, $1.id)) }
@@ -93,6 +95,7 @@ public enum SyncMerge {
         result.lists = lists.sorted { $0.id.isBefore($1.id) }
         result.people = people.sorted { before(($0.addedAt, $0.key), ($1.addedAt, $1.key)) }
         result.keys = keys.sorted { $0.service.isBefore($1.service) }
+        result.rows = rows.sorted { $0.tab.isBefore($1.tab) }
         result.deleted = deleted
         result.replaced = replaced
         return result

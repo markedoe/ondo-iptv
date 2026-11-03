@@ -7,7 +7,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * What a device sends to sync on the local network: its playlists, My List and favourite channels, the people kept,
- * lists, playback progress and the keys of outside services, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+ * lists, playback progress, the keys of outside services and the order of the rows of the Movies and Series tabs, and
+ * what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
  */
 @Serializable
 data class SyncSnapshot(
@@ -23,6 +24,8 @@ data class SyncSnapshot(
     val people: List<SyncPerson> = emptyList(),
     /** The keys typed in Settings for outside services (the TMDb token); none from a device that does not sync them. */
     val keys: List<SyncKey> = emptyList(),
+    /** The order of the rows of the Movies and Series tabs, and the rows hidden; none from a device that does not sync them. */
+    val rows: List<SyncRows> = emptyList(),
     val deleted: Map<String, Long> = emptyMap(),
     /** Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID. */
     val replaced: Map<String, String> = emptyMap(),
@@ -112,6 +115,7 @@ data class SyncSnapshot(
         }
         people.forEach { yield(it.addedAt) }
         keys.forEach { yield(it.updatedAt) }
+        rows.forEach { yield(it.updatedAt) }
         yieldAll(deleted.values)
     }
 
@@ -136,6 +140,7 @@ data class SyncSnapshot(
             },
             people = people.filter { past(it.addedAt) },
             keys = keys.filter { past(it.updatedAt) },
+            rows = rows.filter { past(it.updatedAt) },
             deleted = deleted.filterValues(::past),
         )
     }
@@ -179,6 +184,7 @@ data class SyncSnapshot(
                 order = list.order?.map { key -> SyncListItem.withPlaylist(key) { it.lowercase() } },
             )
         },
+        rows = rows.map(SyncRows::normalized),
         deleted = deleted.entries.fold(LinkedHashMap<String, Long>()) { times, (key, time) ->
             val lowercased = lowercasingId(key)
             times[lowercased] = maxOf(times[lowercased] ?: time, time)
@@ -363,5 +369,39 @@ data class SyncKey(
 
     companion object {
         const val TMDB = "tmdb"
+    }
+}
+
+/**
+ * The rows of a tab of the Movies or Series tabs ([tab] `movie` or `series`) in the order the viewer set ([order], keys of
+ * `RowOrder`: `all`, `continue`, … and `cat:<id>|<name>` for a category), and the rows they hid ([hidden]). One record
+ * per tab, the whole of it set at once: the later [updatedAt] wins (docs/SYNC.md, "Rows").
+ */
+@Serializable
+data class SyncRows(
+    val tab: String,
+    val order: List<String> = emptyList(),
+    val hidden: List<String> = emptyList(),
+    val updatedAt: Long,
+) {
+    val key: String get() = "rows:$tab"
+
+    /** The tie string of the merge (docs/SYNC.md, "Merge", rule 2): unambiguous, as no key holds a line feed. */
+    val tie: String get() = "${order.size}\n" + (order + hidden).joinToString("\n")
+
+    /**
+     * As every device keeps it: keys without control characters and not blank, [order] each once (the first), [hidden]
+     * each once and sorted (UTF-16 code units).
+     */
+    fun normalized(): SyncRows = copy(
+        order = order.filter(::valid).distinct(),
+        hidden = hidden.filter(::valid).distinct().sorted(),
+    )
+
+    companion object {
+        const val MOVIES = "movie"
+        const val SERIES = "series"
+
+        private fun valid(key: String) = key.isNotBlank() && key.none { it < ' ' || it == '\u007f' }
     }
 }

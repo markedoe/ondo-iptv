@@ -1,7 +1,8 @@
 import Foundation
 
 /// What a device sends to sync on the local network: its playlists, My List and favourite channels, the people kept,
-/// lists, playback progress and the keys of outside services, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+/// lists, playback progress, the keys of outside services and the order of the rows of the Movies and Series tabs, and
+/// what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
 ///
 /// The same document as the Kotlin `SyncSnapshot` (android/core): both read the examples of `fixtures/sync`.
 public struct SyncSnapshot: Codable, Hashable, Sendable {
@@ -24,6 +25,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public var people: [SyncPerson]
     /// The keys typed in Settings for outside services (the TMDb token); none from a device that does not sync them.
     public var keys: [SyncKey]
+    /// The order of the rows of the Movies and Series tabs, and the rows hidden; none from a device that does not sync them.
+    public var rows: [SyncRows]
     public var deleted: [String: Int64]
     /// Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID.
     public var replaced: [String: String]
@@ -52,6 +55,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         lists: [SyncList] = [],
         people: [SyncPerson] = [],
         keys: [SyncKey] = [],
+        rows: [SyncRows] = [],
         deleted: [String: Int64] = [:],
         replaced: [String: String] = [:],
         clock: Int64? = nil,
@@ -70,6 +74,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         self.lists = lists
         self.people = people
         self.keys = keys
+        self.rows = rows
         self.deleted = deleted
         self.replaced = replaced
         self.clock = clock
@@ -80,7 +85,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, deleted, replaced, clock
+        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, rows, deleted, replaced, clock
         case digest, seen, probe, unchanged
     }
 
@@ -98,6 +103,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         lists = try c.value(.lists, default: [])
         people = try c.value(.people, default: [])
         keys = try c.value(.keys, default: [])
+        rows = try c.value(.rows, default: [])
         deleted = try c.value(.deleted, default: [:])
         replaced = try c.value(.replaced, default: [:])
         clock = try c.decodeIfPresent(Int64.self, forKey: .clock)
@@ -198,6 +204,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         }
         times += people.map(\.addedAt)
         times += keys.map(\.updatedAt)
+        times += rows.map(\.updatedAt)
         times += deleted.values
         return times
     }
@@ -230,6 +237,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         }
         copy.people = people.filter { past($0.addedAt) }
         copy.keys = keys.filter { past($0.updatedAt) }
+        copy.rows = rows.filter { past($0.updatedAt) }
         copy.deleted = deleted.filter { past($0.value) }
         return copy
     }
@@ -264,6 +272,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             list.order = list.order?.map { SyncListItem.withPlaylist($0) { $0.lowercased() } }
             return list
         }
+        copy.rows = rows.map { $0.normalized() }
         copy.deleted = Dictionary(deleted.map { (Self.lowercasingID(ofDeleted: $0.key), $0.value) }, uniquingKeysWith: max)
         copy.replaced = Dictionary(replaced.map { ($0.key.lowercased(), $0.value.lowercased()) }, uniquingKeysWith: { _, last in last })
         return copy
@@ -503,6 +512,58 @@ public struct SyncKey: Codable, Hashable, Sendable {
     }
 
     public var key: String { "key:" + service }
+}
+
+/// The rows of a tab of the Movies or Series tabs (`tab` `movie` or `series`) in the order the viewer set (`order`, keys
+/// of `RowOrder`: `all`, `continue`, … and `cat:<id>|<name>` for a category), and the rows they hid (`hidden`). One
+/// record per tab, the whole of it set at once: the later `updatedAt` wins (docs/SYNC.md, "Rows").
+public struct SyncRows: Codable, Hashable, Sendable {
+    public static let movies = "movie"
+    public static let series = "series"
+
+    public var tab: String
+    public var order: [String]
+    public var hidden: [String]
+    public var updatedAt: Int64
+
+    public init(tab: String, order: [String] = [], hidden: [String] = [], updatedAt: Int64) {
+        self.tab = tab
+        self.order = order
+        self.hidden = hidden
+        self.updatedAt = updatedAt
+    }
+
+    enum CodingKeys: String, CodingKey { case tab, order, hidden, updatedAt }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        tab = try c.decode(String.self, forKey: .tab)
+        order = try c.value(.order, default: [])
+        hidden = try c.value(.hidden, default: [])
+        updatedAt = try c.decode(Int64.self, forKey: .updatedAt)
+    }
+
+    public var key: String { "rows:" + tab }
+
+    /// The tie string of the merge (docs/SYNC.md, "Merge", rule 2): unambiguous, as no key holds a line feed.
+    var tie: String { "\(order.count)\n" + (order + hidden).joined(separator: "\n") }
+
+    /// As every device keeps it: keys without control characters and not blank, `order` each once (the first),
+    /// `hidden` each once and sorted (UTF-16 code units). Keys are the same when their UTF-16 code units are, as in
+    /// Kotlin (Swift's `==` would also join canonically equivalent strings).
+    public func normalized() -> SyncRows {
+        var copy = self
+        var seen = Set<[UInt16]>()
+        copy.order = order.filter { Self.isValid($0) && seen.insert(Array($0.utf16)).inserted }
+        var seenHidden = Set<[UInt16]>()
+        copy.hidden = hidden.filter { Self.isValid($0) && seenHidden.insert(Array($0.utf16)).inserted }.sorted { $0.isBefore($1) }
+        return copy
+    }
+
+    /// Not blank (as Kotlin's `isNotBlank`), and no control characters (below U+0020, and U+007F).
+    static func isValid(_ key: String) -> Bool {
+        !key.utf16.contains { $0 < 0x20 || $0 == 0x7F } && !SyncMerge.kotlinTrimmed(key).isEmpty
+    }
 }
 
 private extension KeyedDecodingContainer {

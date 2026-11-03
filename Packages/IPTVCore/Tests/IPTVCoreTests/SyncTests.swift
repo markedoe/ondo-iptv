@@ -77,6 +77,73 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncMerge.merge(other, mine).keys.map(\.value), ["example-tmdb-token-0"])
     }
 
+    func testTheRowOrderOfTheSharedExamplesMergesInEitherOrder() throws {
+        let a = try fixture("rows-a.json")
+        let b = try fixture("rows-b.json")
+        let expected = try fixture("rows-merged.json")
+        XCTAssertEqual(SyncMerge.merge(a, b), expected)
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(b, a)), withoutDevice(expected))
+        XCTAssertEqual(SyncMerge.merge(expected, b), expected)
+    }
+
+    /// Two devices put the rows in order at about the same time: both keep the later one, whichever merges.
+    func testConcurrentRowOrdersConvergeToTheLaterStamp() {
+        var clockA = SyncClock(last: 1_000)
+        var clockB = SyncClock(last: 1_000)
+        let earlier = SyncRows(tab: SyncRows.movies, order: ["all", "cat:movie-1|action"], updatedAt: clockA.stamp(wall: 5_000))
+        let later = SyncRows(tab: SyncRows.movies, order: ["cat:movie-1|action", "all"], hidden: ["trending"],
+                             updatedAt: clockB.stamp(wall: 5_001))
+        let a = SyncSnapshot(device: "a", rows: [earlier])
+        let b = SyncSnapshot(device: "b", rows: [later])
+        XCTAssertEqual(SyncMerge.merge(a, b).rows, [later])
+        XCTAssertEqual(SyncMerge.merge(b, a).rows, [later])
+        // A third device that saw neither ends up with the same.
+        let c = SyncSnapshot(device: "c")
+        XCTAssertEqual(SyncMerge.merge(SyncMerge.merge(c, a), b).rows, SyncMerge.merge(SyncMerge.merge(c, b), a).rows)
+        // On equal stamps, the smaller tie string, whatever the order.
+        let same = SyncRows(tab: SyncRows.movies, order: ["all"], updatedAt: earlier.updatedAt)
+        let tied = SyncMerge.merge(a, SyncSnapshot(device: "b", rows: [same])).rows
+        XCTAssertEqual(SyncMerge.merge(SyncSnapshot(device: "b", rows: [same]), a).rows, tied)
+        XCTAssertEqual(tied, [same])
+    }
+
+    /// An older version sends no rows: the merge keeps the device's own, and its snapshot reads as before.
+    func testASnapshotWithoutRowsChangesNone() throws {
+        let mine = SyncSnapshot(device: "a", rows: [SyncRows(tab: SyncRows.series, order: ["mylist", "all"], hidden: ["new"], updatedAt: 700)])
+        let old = try XCTUnwrap(SyncSnapshot.decode(Data(#"{"type":"ondo-sync","version":1,"device":"old","keys":[]}"#.utf8)))
+        XCTAssertEqual(old.rows, [])
+        XCTAssertEqual(SyncMerge.merge(mine, old).rows, mine.rows)
+        XCTAssertEqual(SyncMerge.merge(old, mine).rows, mine.rows)
+        XCTAssertEqual(SyncSnapshot.decode(try mine.encoded()), mine)
+    }
+
+    func testTheDigestOfTheRowsIsStableAndFollowsAChange() throws {
+        let hash: (Data) -> String = { $0.base64EncodedString() }
+        let rows = SyncRows(tab: SyncRows.movies, order: ["all", "cat:movie-1|action"], hidden: ["awards"], updatedAt: 900)
+        let snapshot = SyncSnapshot(device: "a", rows: [rows])
+        let digest = hash(try snapshot.contentForDigest())
+        var moved = snapshot
+        moved.device = "b"
+        moved.clock = 5
+        XCTAssertEqual(hash(try moved.contentForDigest()), digest)
+        XCTAssertEqual(hash(try SyncMerge.merge(snapshot, snapshot).contentForDigest()), digest)
+        XCTAssertEqual(hash(try SyncMerge.merge(snapshot, SyncSnapshot(device: "old")).contentForDigest()), digest)
+        var reordered = snapshot
+        reordered.rows = [SyncRows(tab: rows.tab, order: rows.order.reversed(), hidden: rows.hidden, updatedAt: rows.updatedAt)]
+        XCTAssertNotEqual(hash(try reordered.contentForDigest()), digest)
+        var shown = snapshot
+        shown.rows = [SyncRows(tab: rows.tab, order: rows.order, updatedAt: rows.updatedAt)]
+        XCTAssertNotEqual(hash(try shown.contentForDigest()), digest)
+    }
+
+    /// A record dated far ahead of the receiver's clock is left out, as any other (docs/SYNC.md, "Clocks").
+    func testRowsDatedFarAheadAreLeftOut() {
+        let ahead = SyncSnapshot(device: "b", rows: [SyncRows(tab: SyncRows.movies, order: ["all"], updatedAt: 10_000)])
+        XCTAssertEqual(ahead.withoutRecordsAfter(9_999).rows, [])
+        XCTAssertEqual(ahead.withoutRecordsAfter(10_000).rows, ahead.rows)
+        XCTAssertEqual(ahead.latestTime, 10_000)
+    }
+
     /// On equal times both platforms keep the same record: strings compare as UTF-16 code units (Kotlin's order), not
     /// as Swift orders them.
     func testTiesCompareStringsAsUTF16CodeUnits() {

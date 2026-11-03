@@ -57,6 +57,8 @@ object SyncMerge {
         val people = pick(left.people + right.people, { it.key }, { it.addedAt }, personOrder, deleted)
         // A side without keys (a device that does not sync them) removes none: only a deletion does.
         val keys = pick(left.keys + right.keys, { it.key }, { it.updatedAt }, compareBy { it.value }, deleted)
+        // Likewise for the order of the rows: a side without it (an older version) changes none.
+        val rows = pick(left.rows + right.rows, { it.key }, { it.updatedAt }, compareBy { it.tie }, deleted)
         return left.copy(
             playlists = kept.sortedWith(compareBy<SyncPlaylist> { it.addedAt }.thenBy { it.id }),
             favorites = favorites.sortedWith(compareBy<SyncFavorite> { it.addedAt }.thenBy { it.key }),
@@ -64,6 +66,7 @@ object SyncMerge {
             lists = lists.sortedBy { it.id },
             people = people.sortedWith(compareBy<SyncPerson> { it.addedAt }.thenBy { it.key }),
             keys = keys.sortedBy { it.service },
+            rows = rows.sortedBy { it.tab },
             deleted = deleted.toSortedMap(),
             replaced = replaced.toSortedMap(),
         )

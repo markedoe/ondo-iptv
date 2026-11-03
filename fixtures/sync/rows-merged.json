@@ -1,0 +1,26 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "44444444-4444-4444-8444-444444444444",
+  "deviceName": "Living room TV",
+  "rows": [
+    {
+      "tab": "live",
+      "order": ["future-row"],
+      "hidden": [],
+      "updatedAt": 500
+    },
+    {
+      "tab": "movie",
+      "order": ["cat:movie-2|drama", "all"],
+      "hidden": [],
+      "updatedAt": 3000
+    },
+    {
+      "tab": "series",
+      "order": ["all"],
+      "hidden": ["awards", "trending"],
+      "updatedAt": 1000
+    }
+  ]
+}

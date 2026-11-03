@@ -259,6 +259,71 @@ class SyncTest {
     }
 
     @Test
+    fun theRowOrderOfTheSharedExamplesMergesInEitherOrder() {
+        val a = fixture("rows-a.json")
+        val b = fixture("rows-b.json")
+        val expected = fixture("rows-merged.json")
+        assertEquals(expected, SyncMerge.merge(a, b))
+        assertEquals(expected.withoutDevice(), SyncMerge.merge(b, a).withoutDevice())
+        assertEquals(expected, SyncMerge.merge(expected, b))
+    }
+
+    /** Two devices put the rows in order at about the same time: both keep the later one, whichever merges. */
+    @Test
+    fun concurrentRowOrdersConvergeToTheLaterStamp() {
+        val clockA = SyncClock(last = 1_000)
+        val clockB = SyncClock(last = 1_000)
+        val earlier = SyncRows(SyncRows.MOVIES, listOf("all", "cat:movie-1|action"), updatedAt = clockA.stamp(5_000))
+        val later = SyncRows(SyncRows.MOVIES, listOf("cat:movie-1|action", "all"), listOf("trending"), updatedAt = clockB.stamp(5_001))
+        val a = SyncSnapshot(device = "a", rows = listOf(earlier))
+        val b = SyncSnapshot(device = "b", rows = listOf(later))
+        assertEquals(listOf(later), SyncMerge.merge(a, b).rows)
+        assertEquals(listOf(later), SyncMerge.merge(b, a).rows)
+        // A third device that saw neither ends up with the same.
+        val c = SyncSnapshot(device = "c")
+        assertEquals(SyncMerge.merge(SyncMerge.merge(c, a), b).rows, SyncMerge.merge(SyncMerge.merge(c, b), a).rows)
+        // On equal stamps, the smaller tie string, whatever the order.
+        val same = later.copy(order = listOf("all"), hidden = emptyList(), updatedAt = earlier.updatedAt)
+        val tied = SyncMerge.merge(a, SyncSnapshot(device = "b", rows = listOf(same))).rows
+        assertEquals(tied, SyncMerge.merge(SyncSnapshot(device = "b", rows = listOf(same)), a).rows)
+        assertEquals(listOf(same), tied)
+    }
+
+    /** An older version sends no rows: the merge keeps the device's own, and its snapshot reads as before. */
+    @Test
+    fun aSnapshotWithoutRowsChangesNone() {
+        val mine = SyncSnapshot(device = "a", rows = listOf(SyncRows(SyncRows.SERIES, listOf("mylist", "all"), listOf("new"), 700)))
+        val old = SyncSnapshot.decode("""{"type":"ondo-sync","version":1,"device":"old","keys":[]}""".encodeToByteArray())!!
+        assertEquals(emptyList<SyncRows>(), old.rows)
+        assertEquals(mine.rows, SyncMerge.merge(mine, old).rows)
+        assertEquals(mine.rows, SyncMerge.merge(old, mine).rows)
+        // And an older version reading this one ignores the field it does not know (`ignoreUnknownKeys`), as the
+        // shared examples check with an unknown field.
+        assertEquals(mine, SyncSnapshot.decode(mine.encoded()))
+    }
+
+    @Test
+    fun theDigestOfTheRowsIsStableAndFollowsAChange() {
+        val rows = SyncRows(SyncRows.MOVIES, listOf("all", "cat:movie-1|action"), listOf("awards"), 900)
+        val snapshot = SyncSnapshot(device = "a", rows = listOf(rows))
+        val digest = snapshot.contentDigest()
+        assertEquals(digest, snapshot.copy(device = "b", clock = 5).contentDigest())
+        assertEquals(digest, SyncMerge.merge(snapshot, snapshot).contentDigest())
+        assertEquals(digest, SyncMerge.merge(snapshot, SyncSnapshot(device = "old")).contentDigest())
+        assertTrue(digest != snapshot.copy(rows = listOf(rows.copy(order = rows.order.reversed()))).contentDigest())
+        assertTrue(digest != snapshot.copy(rows = listOf(rows.copy(hidden = emptyList()))).contentDigest())
+    }
+
+    /** A record dated far ahead of the receiver's clock is left out, as any other (docs/SYNC.md, "Clocks"). */
+    @Test
+    fun rowsDatedFarAheadAreLeftOut() {
+        val ahead = SyncSnapshot(device = "b", rows = listOf(SyncRows(SyncRows.MOVIES, listOf("all"), updatedAt = 10_000)))
+        assertEquals(emptyList<SyncRows>(), ahead.withoutRecordsAfter(9_999).rows)
+        assertEquals(ahead.rows, ahead.withoutRecordsAfter(10_000).rows)
+        assertEquals(10_000L, ahead.latestTime())
+    }
+
+    @Test
     fun aSnapshotOfAnotherKindOrVersionIsRefused() {
         assertNull(SyncSnapshot.decode("""{"type":"other","version":1,"device":"a"}""".encodeToByteArray()))
         assertNull(SyncSnapshot.decode("""{"type":"ondo-sync","version":2,"device":"a"}""".encodeToByteArray()))

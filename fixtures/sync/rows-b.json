@@ -1,0 +1,24 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "55555555-5555-4555-8555-555555555555",
+  "deviceName": "Phone",
+  "rows": [
+    {
+      "tab": "movie",
+      "order": ["cat:movie-2|drama", "all", "cat:movie-2|drama", "", "bad\u0001key"],
+      "updatedAt": 3000
+    },
+    {
+      "tab": "series",
+      "order": ["all"],
+      "hidden": ["trending", "awards", "trending"],
+      "updatedAt": 1000
+    },
+    {
+      "tab": "live",
+      "order": ["future-row"],
+      "updatedAt": 500
+    }
+  ]
+}
