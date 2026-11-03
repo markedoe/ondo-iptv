@@ -159,6 +159,12 @@ struct SettingsView: View {
                     Label("Languages and Categories", systemImage: "line.3.horizontal.decrease.circle")
                 }
                 NavigationLink {
+                    RowOrderView()
+                } label: {
+                    Label("Row Order", systemImage: "list.bullet.indent")
+                }
+                .accessibilityIdentifier("rowOrderRow")
+                NavigationLink {
                     HiddenChannelsView()
                 } label: {
                     LabeledContent {

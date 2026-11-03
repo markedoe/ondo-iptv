@@ -105,6 +105,20 @@ extension HelpTopic {
             """
         ),
         HelpTopic(
+            id: "rows", title: "Order the Rows of Movies and Series", systemImage: "list.bullet.indent",
+            body: """
+            The Movies and Series tabs start with All Movies (or All Series): the latest additions, then See All, \
+            which opens the whole catalogue with its sort and Hide watched movies. Then come Continue Watching, My \
+            List, the new titles, Trending, Award Winners and each category of your provider.
+
+            Settings → Row Order sets their order and which ones show: drag a row to move it, and turn its switch \
+            off to hide it. Default Order puts the rows back as they come. A category new to your playlist goes to \
+            the end; one your provider removes keeps its place for when it comes back. Hidden languages and \
+            categories stay hidden whatever the order. With Sync on this network, the order follows on your other \
+            devices.
+            """
+        ),
+        HelpTopic(
             id: "my-list", title: "My List and Collections", systemImage: "list.star",
             body: """
             Add to My List keeps a movie, a series or a channel at hand. On iPhone, My List is a tab with Movies, \

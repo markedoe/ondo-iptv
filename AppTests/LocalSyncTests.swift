@@ -143,6 +143,48 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertNotNil(deleted["progress:\(id)|movie|\(movie.id)|"], "Clear Watch History reaches the other devices")
     }
 
+    /// The order of the rows of a tab travels as one record, dated by the sync clock: the later one wins on both
+    /// devices, and a snapshot from an older version (no rows) leaves it as it is.
+    func testTheRowOrderSyncsAndTheLaterOneWins() async throws {
+        let first = try await device("first")
+        let second = try await device("second")
+        first.setRowOrder(.movie, arranged: ["mylist", "all", "continue"], hidden: ["trending"])
+        let sent = try XCTUnwrap(first.syncSnapshot().rows.first)
+        XCTAssertEqual(sent.tab, "movie")
+        XCTAssertEqual(Array(sent.order.prefix(3)), ["mylist", "all", "continue"])
+        XCTAssertEqual(sent.hidden, ["trending"])
+        // The second device reorders after it saw the first one's: its order is the later, everywhere.
+        XCTAssertTrue(await second.applySync(first.syncSnapshot()))
+        XCTAssertEqual(second.savedRowOrder(.movie), sent)
+        second.setRowOrder(.movie, arranged: ["continue", "all"], hidden: [])
+        let later = try XCTUnwrap(second.savedRowOrder(.movie))
+        XCTAssertGreaterThan(later.updatedAt, sent.updatedAt)
+        XCTAssertTrue(await first.applySync(second.syncSnapshot()))
+        XCTAssertEqual(first.savedRowOrder(.movie), later)
+        // An older version sends no rows: nothing changes.
+        XCTAssertTrue(await first.applySync(SyncSnapshot(device: "old")))
+        XCTAssertEqual(first.savedRowOrder(.movie), later)
+        // Default order keeps what is hidden.
+        first.setRowOrder(.series, arranged: ["all", "mylist"], hidden: ["mylist"])
+        first.resetRowOrder(.series)
+        XCTAssertEqual(first.savedRowOrder(.series)?.order, [])
+        XCTAssertEqual(first.savedRowOrder(.series)?.hidden, ["mylist"])
+    }
+
+    /// The tab's rows follow the order saved; a category the playlist no longer has keeps its place in it.
+    func testTheTabFollowsTheRowOrder() async throws {
+        let model = try await deviceWithLibrary()
+        let drama = try XCTUnwrap(model.categories(for: .movie).first)
+        let key = RowOrder.categoryKey(id: drama.id, name: drama.name)
+        model.setRowOrder(.movie, arranged: [key, "all", "continue", "mylist", "new", "trending", "awards"], hidden: ["mylist"])
+        let rows = model.arrangedRows(.movie)
+        XCTAssertEqual(rows.first?.key, key)
+        XCTAssertEqual(rows.filter(\.hidden).map(\.key), ["mylist"])
+        // All movies: the latest additions, and its count is the whole grid's.
+        XCTAssertEqual(model.allCount(.movie), model.movies(in: nil, sort: .playlist).count)
+        XCTAssertEqual(model.allTitles(.movie, limit: 20).count, min(20, model.allCount(.movie)))
+    }
+
     /// An Android device keeps actors and directors in My List and in a list: this device passes them on, and its own
     /// edit of the list keeps them.
     func testThePeopleOfAndroidDevicesArePassedOnAndSurviveAnEditOfTheList() async throws {

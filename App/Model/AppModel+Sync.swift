@@ -23,6 +23,9 @@ struct SyncState: Codable, Equatable {
     /// not show them, it keeps them to pass them on, so that its own edits of a list never drop them.
     var people: [SyncPerson] = []
     var listPeople: [String: [SyncPerson]] = [:]
+    /// The order of the rows of the Movies and Series tabs and the rows hidden (Settings → Row order, `RowOrder`), one
+    /// record per tab with the time it was set: here rather than in the settings, as sync carries it (docs/SYNC.md, "Rows").
+    var rowOrders: [SyncRows] = []
     /// Deleted records (`playlist:…`, `list:…`, `progress:…`, and those other devices sent) and when, in milliseconds.
     var deleted: [String: Int64] = [:]
     var replaced: [String: String] = [:]
@@ -40,7 +43,7 @@ struct SyncState: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, people, listPeople, deleted, replaced, lastSyncedAt, peers
-        case learned, clock
+        case learned, clock, rowOrders
     }
 
     init(from decoder: Decoder) throws {
@@ -57,6 +60,7 @@ struct SyncState: Codable, Equatable {
         peers = (try? c.decodeIfPresent([String: Int64].self, forKey: .peers)) ?? [:]
         learned = (try? c.decodeIfPresent([String: Int64].self, forKey: .learned)) ?? [:]
         clock = (try? c.decodeIfPresent(Int64.self, forKey: .clock)) ?? 0
+        rowOrders = (try? c.decodeIfPresent([SyncRows].self, forKey: .rowOrders)) ?? []
     }
 
     /// Without deletions older than the spec keeps them (180 days, and until each device seen in the last year has had
@@ -155,6 +159,7 @@ enum SyncMapping {
             },
             people: state.people,
             keys: keys(tmdbKey: tmdbKey, state: state),
+            rows: state.rowOrders,
             deleted: deleted,
             replaced: state.replaced,
             clock: now.syncMilliseconds
@@ -419,6 +424,7 @@ extension AppModel {
     func advanceSyncClockToStoredData() {
         syncClock.advance(to: syncState.clock)
         syncClock.advance(to: syncState.tmdbKeyUpdatedAt)
+        syncClock.advance(to: syncState.rowOrders.map(\.updatedAt).max())
         guard syncsThisProfile else { return }
         syncClock.advance(to: SyncMapping.latestTime(playlists: playlists, library: library, state: syncState))
     }
@@ -616,6 +622,7 @@ extension AppModel {
         let latest = outcome.latest
         applySyncedKeys(latest)
         syncState.people = latest.people
+        syncState.rowOrders = latest.rows
         syncState.listPeople = SyncMapping.listPeople(latest)
         let time = syncNow(now).syncMilliseconds
         syncState.learned = latest.deleted.reduce(into: [:]) { learned, entry in

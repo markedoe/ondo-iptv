@@ -63,50 +63,16 @@ struct VODBrowser: View {
 
     private func shelves(_ metrics: ShelfMetrics) -> some View {
         let categories = model.categories(for: type)
-        let resume = model.continueWatching(type)
-        let mine = model.myList().filter { item in
-            switch item {
-            case .movie: return type == .movie
-            case .series: return type == .series
-            }
-        }
+        // The rows in the viewer's order (Settings → Row order), without those they hid. Locked categories only appear
+        // as chips.
+        let rows = model.arrangedRows(type, categories: categories).filter { !$0.hidden }.map(\.key)
+        let byKey = Dictionary(categories.filter { !model.isLocked($0) }.map { (RowOrder.categoryKey(id: $0.id, name: $0.name), $0) },
+                               uniquingKeysWith: { first, _ in first })
 
         return LazyVStack(alignment: .leading, spacing: compact ? 26 : 34) {
             chips(categories, metrics: metrics)
-            if !resume.isEmpty {
-                Shelf(title: "Continue Watching", metrics: metrics) {
-                    ForEach(resume) { entry in
-                        ContinueCard(entry: entry, width: metrics.wideCardWidth)
-                    }
-                }
-            }
-            if !mine.isEmpty {
-                Shelf(title: "My List", route: .favorites(FavoritesRoute(type: type)), metrics: metrics) {
-                    ForEach(mine) { item in
-                        ShowcasePoster(item: item, width: metrics.posterWidth)
-                    }
-                }
-            }
-            if type == .movie {
-                let winners = model.awardWinners(limit: Self.rowLength)
-                if !winners.isEmpty {
-                    Shelf(title: "Award Winners", metrics: metrics) {
-                        ForEach(winners) { movie in
-                            ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
-                        }
-                    }
-                }
-            }
-            ForEach(categories.filter { !model.isLocked($0) }) { category in
-                // A category whose movies are all hidden as watched has no row.
-                let titles = items(in: category)
-                if !titles.isEmpty {
-                    Shelf(category: category, metrics: metrics) {
-                        ForEach(titles) { item in
-                            ShowcasePoster(item: item, width: metrics.posterWidth)
-                        }
-                    }
-                }
+            ForEach(rows, id: \.self) { key in
+                row(key, categories: byKey, metrics: metrics)
             }
             HiddenCategoriesNote(type: type)
                 .padding(.horizontal, metrics.gutter)
@@ -116,6 +82,87 @@ struct VODBrowser: View {
             if categories.isEmpty {
                 ContentUnavailableView(type == .movie ? String(localized: "No movies") : String(localized: "No series"),
                                        systemImage: AppSection(type: type).systemImage)
+            }
+        }
+    }
+
+    /// One row of the tab, by its key (`RowOrder`); nothing when it has no titles.
+    @ViewBuilder
+    private func row(_ key: String, categories: [String: MediaCategory], metrics: ShelfMetrics) -> some View {
+        switch key {
+        case RowOrder.all:
+            let titles = model.allTitles(type, limit: Self.rowLength)
+            if !titles.isEmpty {
+                let count = model.allCount(type).formatted()
+                Shelf(title: type == .movie ? "All Movies (\(count))" : "All Series (\(count))",
+                      route: .category(PosterCategoryRoute(category: PseudoCategory.all(type))), metrics: metrics) {
+                    ForEach(titles) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
+                    }
+                }
+                .accessibilityIdentifier("shelf-all")
+            }
+        case RowOrder.continueWatching:
+            let resume = model.continueWatching(type)
+            if !resume.isEmpty {
+                Shelf(title: "Continue Watching", metrics: metrics) {
+                    ForEach(resume) { entry in
+                        ContinueCard(entry: entry, width: metrics.wideCardWidth)
+                    }
+                }
+            }
+        case RowOrder.myList:
+            let mine = model.myList().filter { item in
+                switch item {
+                case .movie: return type == .movie
+                case .series: return type == .series
+                }
+            }
+            if !mine.isEmpty {
+                Shelf(title: "My List", route: .favorites(FavoritesRoute(type: type)), metrics: metrics) {
+                    ForEach(mine) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
+                    }
+                }
+            }
+        case RowOrder.newReleases:
+            let titles = type == .movie ? model.newMovies(limit: Self.rowLength) : model.newSeries(limit: Self.rowLength)
+            if !titles.isEmpty {
+                Shelf(title: type == .movie ? "New Movies" : "New Series", metrics: metrics) {
+                    ForEach(titles) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
+                    }
+                }
+            }
+        case RowOrder.trending:
+            let titles = model.trending(type)
+            if !titles.isEmpty {
+                Shelf(title: "Trending", metrics: metrics) {
+                    ForEach(titles) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
+                    }
+                }
+            }
+        case RowOrder.awardWinners:
+            let winners = type == .movie ? model.awardWinners(limit: Self.rowLength) : []
+            if !winners.isEmpty {
+                Shelf(title: "Award Winners", metrics: metrics) {
+                    ForEach(winners) { movie in
+                        ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
+                    }
+                }
+            }
+        default:
+            if let category = categories[key] {
+                // A category whose movies are all hidden as watched has no row.
+                let titles = items(in: category)
+                if !titles.isEmpty {
+                    Shelf(category: category, metrics: metrics) {
+                        ForEach(titles) { item in
+                            ShowcasePoster(item: item, width: metrics.posterWidth)
+                        }
+                    }
+                }
             }
         }
     }
