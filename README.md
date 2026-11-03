@@ -92,7 +92,8 @@ interface changes.
 - **My List** (a tab on iPhone): movies, series and channels kept in one place, reorderable; **collections**
   to group them your way.
 - **Categories**: hide a whole language or country in one go (providers start category names with codes
-  such as `|PT|` or `FR:`), a rule that also covers the categories added later; offered once when a playlist
+  such as `|PT|` or `FR:`), a rule that also covers the categories added later and every movie, series or
+  channel whose own name starts with that code (`|PT| …`, `[PT] …`, `PT - …`) wherever it is filed; offered once when a playlist
   has many of them (keep your languages, choose, or not now); hide a **style** (manga & anime, children,
   documentaries…) or any word of category names (Bollywood…) the same way; or hide categories one by one.
   The filter button is on the Movies, Series and Live TV screens.

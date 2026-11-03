@@ -13,10 +13,10 @@ extension AppModel {
 
     /// Reminders of locked or hidden categories are left out, like their channels.
     var upcomingReminders: [ProgramReminder] {
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         return library.upcomingReminders().filter { reminder in
             guard reminder.playlistID == activePlaylist?.id, let channel = index.channelsByID[reminder.channelID] else { return true }
-            return !excluded.contains(channel.categoryID)
+            return !excluded.contains(channel)
         }
     }
 

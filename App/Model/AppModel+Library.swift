@@ -37,12 +37,12 @@ extension AppModel {
 
     func favorites(_ type: ContentType) -> [FavoriteEntry] {
         guard let playlist = activePlaylist else { return [] }
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         return library.favorites(playlistID: playlist.id, type: type).filter { entry in
             switch type {
-            case .live: return index.channelsByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
-            case .movie: return index.moviesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
-            case .series: return index.seriesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } ?? false
+            case .live: return index.channelsByID[entry.reference.itemID].map { !excluded.contains($0) } ?? false
+            case .movie: return index.moviesByID[entry.reference.itemID].map { !excluded.contains($0) } ?? false
+            case .series: return index.seriesByID[entry.reference.itemID].map { !excluded.contains($0) } ?? false
             }
         }
     }
@@ -88,13 +88,13 @@ extension AppModel {
     /// Items of a list that belong to the active playlist and are not locked.
     func items(in list: CustomList) -> [FavoriteEntry] {
         guard let playlist = activePlaylist else { return [] }
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         return list.items.filter { entry in
             guard entry.reference.playlistID == playlist.id, let item = libraryItem(for: entry.reference) else { return false }
             switch item {
-            case .channel(let channel): return !excluded.contains(channel.categoryID)
-            case .movie(let movie): return !excluded.contains(movie.categoryID)
-            case .series(let series): return !excluded.contains(series.categoryID)
+            case .channel(let channel): return !excluded.contains(channel)
+            case .movie(let movie): return !excluded.contains(movie)
+            case .series(let series): return !excluded.contains(series)
             }
         }
     }
@@ -132,15 +132,16 @@ extension AppModel {
 
     func recentChannels() -> [Channel] {
         guard let playlist = activePlaylist else { return [] }
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         let hidden = hiddenChannelIDs
         return library.recentChannels(playlistID: playlist.id, limit: 20)
             .compactMap { index.channelsByID[$0.reference.itemID] }
-            .filter { !excluded.contains($0.categoryID) && !hidden.contains($0.id) }
+            .filter { !excluded.contains($0) && !hidden.contains($0.id) }
     }
 
     func continueWatching() -> [HistoryEntry] {
         guard let playlist = activePlaylist else { return [] }
+        // Categories only: a title already started stays here though its own name carries a hidden language.
         let excluded = excludedCategoryIDs
         return library.continueWatching(playlistID: playlist.id).filter { entry in
             switch entry.reference.type {

@@ -23,10 +23,10 @@ extension AppModel {
     private func allTitles(for route: MetadataRoute) -> SearchResults {
         switch route {
         case .award(let id):
-            let excluded = excludedCategoryIDs
+            let excluded = exclusions
             let found = movieAwards.compactMap { movieID, entries -> (Movie, AwardsCatalogue.Entry)? in
                 guard let entry = entries.first(where: { $0.awardID == id }), let movie = index.moviesByID[movieID],
-                      !excluded.contains(movie.categoryID) else { return nil }
+                      !excluded.contains(movie) else { return nil }
                 return (movie, entry)
             }
             // Winners first, then the most recent.
@@ -38,14 +38,14 @@ extension AppModel {
             return search("", releasedIn: year...year, awardGroup: nil, winnersOnly: false)
         case .genre(let genre):
             let wanted = TextNormalizer.normalize(genre)
-            let excluded = excludedCategoryIDs
+            let excluded = exclusions
             func has(_ field: String?) -> Bool { Self.genres(in: field).contains { TextNormalizer.normalize($0) == wanted } }
             // A movie's genre is known once its page was opened; a series' comes with the catalogue.
             let movies = movieDetailsCache.compactMap { id, details -> Movie? in
-                guard has(details.genre), let movie = index.moviesByID[id], !excluded.contains(movie.categoryID) else { return nil }
+                guard has(details.genre), let movie = index.moviesByID[id], !excluded.contains(movie) else { return nil }
                 return movie
             }
-            let series = content.series.filter { !excluded.contains($0.categoryID) && (has($0.genre) || has(seriesDetailsCache[$0.id]?.info.genre)) }
+            let series = content.series.filter { !excluded.contains($0) && (has($0.genre) || has(seriesDetailsCache[$0.id]?.info.genre)) }
             return SearchResults(movies: movies.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending },
                                  series: series.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending })
         }

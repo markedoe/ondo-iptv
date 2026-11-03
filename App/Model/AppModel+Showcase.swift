@@ -1,6 +1,16 @@
 import Foundation
 import IPTVCore
 
+extension TitleExclusions {
+    /// Whether a movie or a series is left out of the lists (`AppModel.exclusions`).
+    func contains(_ item: ShowcaseItem) -> Bool {
+        switch item {
+        case .movie(let movie): return contains(movie)
+        case .series(let series): return contains(series)
+        }
+    }
+}
+
 /// A movie or a series shown on the home screen.
 enum ShowcaseItem: Identifiable, Hashable {
     case movie(Movie)
@@ -102,7 +112,7 @@ extension AppModel {
     /// What the new titles depend on: the catalogue, the categories left out (hidden, locked, kids) and the years.
     private func newKey(_ kind: String, _ window: ClosedRange<Int>) -> String {
         "new-\(kind)|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(content.movies.count)|"
-            + "\(content.series.count)|\(excludedCategoryIDs.hashValue)|\(window.lowerBound)"
+            + "\(content.series.count)|\(exclusions.hashValue)|\(window.lowerBound)"
     }
 
     /// New movies and series alternating (the carousel).
@@ -200,8 +210,10 @@ extension AppModel {
         func append(_ item: ShowcaseItem) {
             if items.count < limit, !items.contains(item) { items.append(item) }
         }
+        // Continue watching keeps a started title whose own name carries a hidden language; the carousel does not.
+        let excluded = exclusions
         for entry in continueWatching().prefix(2) {
-            if let item = showcaseItem(for: entry) { append(item) }
+            if let item = showcaseItem(for: entry), !excluded.contains(item) { append(item) }
         }
         for item in bestRecent(limit: limit, now: now) { append(item) }
         for match in trendingTitles() {
@@ -218,8 +230,14 @@ extension AppModel {
     func trendingTitles() -> [TrendingMatch] {
         let watched = hiddenWatchedMovieIDs()
         let films = self.films
+        // Again here: a language hidden after the trending titles were read leaves them too.
+        let excluded = exclusions
         var seen = Set<Int>()
         return trending.filter { match in
+            switch match {
+            case .movie(let movie, _): if excluded.contains(movie) { return false }
+            case .series(let series, _): if excluded.contains(series) { return false }
+            }
             guard case .movie(let movie, _) = match else { return true }
             if watched.contains(movie.id) { return false }
             // Each film once, whatever its versions.
@@ -302,19 +320,21 @@ extension AppModel {
 /// "More like this": other titles of the same category (none from a locked or hidden category, no movie hidden as watched).
 extension AppModel {
     func similarMovies(to movie: Movie, limit: Int = 15) -> [Movie] {
-        guard !excludedCategoryIDs.contains(movie.categoryID) else { return [] }
+        let excluded = exclusions
+        guard !excluded.contains(movie) else { return [] }
         let watched = hiddenWatchedMovieIDs()
         // Never another version of the film itself; each film once.
         let films = self.films
         let own = films.group(of: movie.id)
         let others = (index.moviesByCategory[movie.categoryID] ?? []).filter {
-            $0.id != movie.id && !watched.contains($0.id) && (own == nil || films.group(of: $0.id) != own)
+            $0.id != movie.id && !watched.contains($0.id) && !excluded.contains($0) && (own == nil || films.group(of: $0.id) != own)
         }
         return Array(films.distinct(others).prefix(limit))
     }
 
     func similarSeries(to series: Series, limit: Int = 15) -> [Series] {
-        guard !excludedCategoryIDs.contains(series.categoryID) else { return [] }
-        return Array((index.seriesByCategory[series.categoryID] ?? []).lazy.filter { $0.id != series.id }.prefix(limit))
+        let excluded = exclusions
+        guard !excluded.contains(series) else { return [] }
+        return Array((index.seriesByCategory[series.categoryID] ?? []).lazy.filter { $0.id != series.id && !excluded.contains($0) }.prefix(limit))
     }
 }

@@ -22,10 +22,10 @@ extension AppModel {
     func visibleVersions(of movie: Movie) -> [Movie] {
         let versions = films.versions(of: movie)
         guard versions.count > 1 else { return versions }
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         // A stream a panel lists twice (the same id) is one version.
         var seen = Set<String>()
-        return versions.filter { ($0.id == movie.id || !excluded.contains($0.categoryID)) && seen.insert($0.id).inserted }
+        return versions.filter { ($0.id == movie.id || !excluded.contains($0)) && seen.insert($0.id).inserted }
     }
 
     /// The version a film's card plays and its page selects first (`FilmVersions.defaultVersion`): the one in progress,

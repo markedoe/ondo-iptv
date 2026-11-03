@@ -96,7 +96,9 @@ chaque changement de l'interface.
 - **Ma liste** (un onglet sur iPhone) : films, séries et chaînes au même endroit, réordonnables ;
   **collections** pour les regrouper à votre façon.
 - **Catégories** : masquez d'un coup une langue ou un pays (les fournisseurs commencent le nom des catégories
-  par des codes comme `|PT|` ou `FR:`), une règle qui couvre aussi les catégories ajoutées plus tard ;
+  par des codes comme `|PT|` ou `FR:`), une règle qui couvre aussi les catégories ajoutées plus tard et chaque
+  film, série ou chaîne dont le nom lui-même commence par ce code (`|PT| …`, `[PT] …`, `PT - …`), où qu'il soit
+  classé ;
   proposé une fois quand une playlist en compte beaucoup (garder vos langues, choisir, ou plus tard) ;
   masquez de la même façon un **style** (manga et anime, enfants, documentaires…) ou n'importe quel mot des noms
   de catégories (Bollywood…) ; ou masquez les catégories une par une. Le bouton de filtre est sur les écrans

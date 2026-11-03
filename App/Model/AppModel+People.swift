@@ -15,21 +15,21 @@ extension AppModel {
     /// Pages already opened whose cast or director names this person, and the series whose list entry does (series
     /// lists name their cast; movie lists do not).
     func knownWorks(of name: String) -> PersonWorks {
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         let watched = hiddenWatchedMovieIDs()
         let movies = movieDetailsCache.compactMap { id, details -> Movie? in
             guard People.field(details.cast, names: name) || People.field(details.director, names: name),
-                  let movie = index.moviesByID[id], !excluded.contains(movie.categoryID), !watched.contains(movie.id) else { return nil }
+                  let movie = index.moviesByID[id], !excluded.contains(movie), !watched.contains(movie.id) else { return nil }
             return movie
         }
         var series = seriesDetailsCache.compactMap { id, details -> Series? in
             guard People.field(details.info.cast, names: name) || People.field(details.info.director, names: name),
-                  let show = index.seriesByID[id], !excluded.contains(show.categoryID) else { return nil }
+                  let show = index.seriesByID[id], !excluded.contains(show) else { return nil }
             return show
         }
         let opened = Set(series.map(\.id))
         series += content.series.filter { show in
-            !opened.contains(show.id) && !excluded.contains(show.categoryID)
+            !opened.contains(show.id) && !excluded.contains(show)
                 && (People.field(show.cast, names: name) || People.field(show.director, names: name))
         }
         return sorted(PersonWorks(movies: movies, series: series))
@@ -82,11 +82,11 @@ extension AppModel {
         guard PeopleSearch.tokens(query) != nil else { return [] }
         let store = metadataStore
         let catalogue = catalogueByMetadataKey
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         let found = await Task.detached(priority: .userInitiated) { () -> [PersonRecord] in
             store.people(matching: query, limit: 60).compactMap { entry in
                 let shown = store.titleKeys(ofPerson: entry.person.personKey).contains { key in
-                    (catalogue[key] ?? []).contains { !excluded.contains($0.categoryID) }
+                    (catalogue[key] ?? []).contains { !excluded.contains($0) }
                 }
                 return shown ? entry.person : nil
             }
@@ -119,14 +119,14 @@ extension AppModel {
         let store = metadataStore
         let key = MetadataKey.person(name)
         let titleKeys = await Task.detached(priority: .userInitiated) { store.titleKeys(ofPerson: key) }.value
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         let watched = hiddenWatchedMovieIDs()
         for item in titleKeys.flatMap({ catalogueByMetadataKey[$0] ?? [] }) {
             switch item {
-            case .movie(let movie) where !excluded.contains(movie.categoryID) && !watched.contains(movie.id)
+            case .movie(let movie) where !excluded.contains(movie) && !watched.contains(movie.id)
                 && !works.movies.contains(where: { $0.id == movie.id }):
                 works.movies.append(movie)
-            case .series(let show) where !excluded.contains(show.categoryID) && !works.series.contains(where: { $0.id == show.id }):
+            case .series(let show) where !excluded.contains(show) && !works.series.contains(where: { $0.id == show.id }):
                 works.series.append(show)
             default:
                 break
@@ -167,14 +167,14 @@ extension AppModel {
             let store = metadataStore
             Task.detached(priority: .utility) { store.index(links) }
         }
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         let watched = hiddenWatchedMovieIDs()
         for match in matches {
             switch match {
-            case .movie(let movie, _) where !excluded.contains(movie.categoryID) && !watched.contains(movie.id)
+            case .movie(let movie, _) where !excluded.contains(movie) && !watched.contains(movie.id)
                 && !works.movies.contains(where: { $0.id == movie.id }):
                 works.movies.append(movie)
-            case .series(let show, _) where !excluded.contains(show.categoryID) && !works.series.contains(where: { $0.id == show.id }):
+            case .series(let show, _) where !excluded.contains(show) && !works.series.contains(where: { $0.id == show.id }):
                 works.series.append(show)
             default:
                 break
@@ -196,10 +196,10 @@ extension AppModel {
 
     /// Release years of the playlist's movies and series, newest first (the search filter's choices).
     func releaseYears() -> [Int] {
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         var years = Set<Int>()
-        for movie in content.movies where !excluded.contains(movie.categoryID) { if let year = movie.year { years.insert(year) } }
-        for show in content.series where !excluded.contains(show.categoryID) { if let year = show.year { years.insert(year) } }
+        for movie in content.movies where !excluded.contains(movie) { if let year = movie.year { years.insert(year) } }
+        for show in content.series where !excluded.contains(show) { if let year = show.year { years.insert(year) } }
         return years.sorted(by: >)
     }
 

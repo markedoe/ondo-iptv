@@ -48,6 +48,8 @@ struct ContentIndex: Sendable {
     var search = SearchEngine(content: .empty)
     /// The versions of the catalogue's films (4K, HD, VOSTFR…), grouped once per catalogue (`FilmVersions`).
     var films = FilmVersions.none()
+    /// The language tag each title's and channel's own name starts with ("|PT| …"), for hidden languages.
+    var titleTags = TitleTags()
 
     init() {}
 
@@ -65,6 +67,7 @@ struct ContentIndex: Sendable {
         }
         search = SearchEngine(content: content)
         films = FilmVersions.of(content.movies)
+        titleTags = TitleTags(content: content)
     }
 }
 
@@ -95,6 +98,8 @@ final class AppModel {
     /// The catalogue as loaded, before the user's channel edits (kept to undo them).
     @ObservationIgnored private(set) var rawContent = PlaylistContent.empty
     private(set) var index = ContentIndex()
+    /// What the hidden languages leave out by name, kept per catalogue (`TitleTags.id`) and hidden tags (`exclusions`).
+    @ObservationIgnored var hiddenByNameCache: (id: UUID, tags: Set<String>, hidden: HiddenTitles)? = nil
     /// Language and country tags of the catalogue's categories ("|PT| Filmes").
     private(set) var categoryTags = CategoryTagIndex()
     /// Awards and festival selections of the catalogue's movies, by movie id (bundled data, matched on the device).
@@ -468,11 +473,11 @@ final class AppModel {
         let movies = content.movies
         let series = content.series
         let matches = await Task.detached { CatalogueMatcher.match(items, movies: movies, series: series) }.value
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         trending = matches.filter { match in
             switch match {
-            case .movie(let movie, _): return !excluded.contains(movie.categoryID)
-            case .series(let series, _): return !excluded.contains(series.categoryID)
+            case .movie(let movie, _): return !excluded.contains(movie)
+            case .series(let series, _): return !excluded.contains(series)
             }
         }
         trendingLoadedFor = (playlist.id, Date())
@@ -969,6 +974,25 @@ extension AppModel {
         case .movie: return index.moviesByCategory[category.id]?.count ?? 0
         case .series: return index.seriesByCategory[category.id]?.count ?? 0
         }
+    }
+
+    /// What every list of titles leaves out: the excluded categories (`excludedCategoryIDs`), and the titles and
+    /// channels whose own name carries a language hidden as a whole ("|PT| …" in "Concerts"). Continue watching keeps
+    /// the titles already started (it does not use this).
+    var exclusions: TitleExclusions {
+        TitleExclusions(categoryIDs: excludedCategoryIDs, byName: hiddenByName)
+    }
+
+    /// The titles and channels whose own name carries a hidden language, built once per catalogue and hidden tags.
+    var hiddenByName: HiddenTitles {
+        guard activePlaylist != nil else { return HiddenTitles() }
+        let tags = hiddenTags
+        guard !tags.isEmpty else { return HiddenTitles() }
+        let titleTags = index.titleTags
+        if let cached = hiddenByNameCache, cached.id == titleTags.id, cached.tags == tags { return cached.hidden }
+        let hidden = titleTags.hidden(by: tags)
+        hiddenByNameCache = (titleTags.id, tags, hidden)
+        return hidden
     }
 
     /// Category ids excluded from aggregated lists (search, home, "all channels").

@@ -51,12 +51,12 @@ extension AppModel {
 
     private func programResults(_ matches: [EPGIndex.ProgramMatch], now: Date, limit: Int) -> [ProgramSearchResult] {
         let channelsByGuideID = channelsByGuideID()
-        let excluded = excludedCategoryIDs
+        let excluded = exclusions
         let hidden = hiddenChannelIDs
         var results: [ProgramSearchResult] = []
         for match in matches {
             // Hidden, locked and (for kids) adult categories stay out of search, like everywhere else.
-            guard let channel = channelsByGuideID[match.guideID]?.first(where: { !excluded.contains($0.categoryID) && !hidden.contains($0.id) }) else { continue }
+            guard let channel = channelsByGuideID[match.guideID]?.first(where: { !excluded.contains($0) && !hidden.contains($0.id) }) else { continue }
             if match.program.end <= now && !canReplay(match.program, on: channel) { continue }
             results.append(ProgramSearchResult(channel: channel, program: match.program))
             if results.count == limit { break }

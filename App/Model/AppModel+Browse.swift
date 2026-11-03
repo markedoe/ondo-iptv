@@ -7,12 +7,14 @@ extension AppModel {
 
     func channels(in category: MediaCategory?) -> [Channel] {
         let hidden = hiddenChannelIDs
+        // A channel whose own name carries a hidden language leaves every list, its category's too.
+        let excluded = exclusions
         guard let category else {
-            let excluded = excludedCategoryIDs
-            return content.channels.filter { !excluded.contains($0.categoryID) && !hidden.contains($0.id) }
+            return content.channels.filter { !excluded.contains($0) && !hidden.contains($0.id) }
         }
         let list = index.channelsByCategory[category.id] ?? []
-        return hidden.isEmpty ? list : list.filter { !hidden.contains($0.id) }
+        let byName = excluded.byName.channelIDs
+        return hidden.isEmpty && byName.isEmpty ? list : list.filter { !hidden.contains($0.id) && !byName.contains($0.id) }
     }
 
     /// The movies of a category, or of all of them; the ones hidden as watched are left out unless `includingWatched`
@@ -29,7 +31,7 @@ extension AppModel {
         let list = sortedMovies(in: category, sort: sort)
         let films = self.films
         guard films.isGrouped else { return list }
-        let excluded = category == nil ? excludedCategoryIDs.hashValue : 0
+        let excluded = category == nil ? exclusions.hashValue : hiddenByName.hashValue
         let key = "films|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category?.id ?? "*")|\(excluded)|\(sort.rawValue)"
         return cachedList(key) { films.distinct(list) }
     }
@@ -38,11 +40,14 @@ extension AppModel {
         let list: [Movie]
         let key: String
         if let category {
-            list = index.moviesByCategory[category.id] ?? []
-            key = "movies|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category.id)|\(sort.rawValue)"
+            // A title whose own name carries a hidden language leaves its category's list too.
+            let byName = hiddenByName.movieIDs
+            let all = index.moviesByCategory[category.id] ?? []
+            list = byName.isEmpty ? all : all.filter { !byName.contains($0.id) }
+            key = "movies|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category.id)|\(byName.hashValue)|\(sort.rawValue)"
         } else {
-            let excluded = excludedCategoryIDs
-            list = content.movies.filter { !excluded.contains($0.categoryID) }
+            let excluded = exclusions
+            list = content.movies.filter { !excluded.contains($0) }
             key = "movies|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|*|\(excluded.hashValue)|\(sort.rawValue)"
         }
         guard sort != .playlist else { return list }
@@ -67,11 +72,13 @@ extension AppModel {
         let list: [Series]
         let key: String
         if let category {
-            list = index.seriesByCategory[category.id] ?? []
-            key = "series|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category.id)|\(sort.rawValue)"
+            let byName = hiddenByName.seriesIDs
+            let all = index.seriesByCategory[category.id] ?? []
+            list = byName.isEmpty ? all : all.filter { !byName.contains($0.id) }
+            key = "series|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category.id)|\(byName.hashValue)|\(sort.rawValue)"
         } else {
-            let excluded = excludedCategoryIDs
-            list = content.series.filter { !excluded.contains($0.categoryID) }
+            let excluded = exclusions
+            list = content.series.filter { !excluded.contains($0) }
             key = "series|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|*|\(excluded.hashValue)|\(sort.rawValue)"
         }
         guard sort != .playlist else { return list }
