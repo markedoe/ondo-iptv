@@ -47,7 +47,7 @@ screenshots.
     (`site/review`) with only content we have the rights to (CC-licensed or our own). The apps ship no demo and no
     third-party channel.
   - Never "beta" in the App Store build, its listing or the site pages the listing opens (2.2: betas belong on
-    TestFlight); the beta badge is in the TestFlight edition only (`#if TESTFLIGHT_DOWNLOADS`).
+    TestFlight). No beta badge in any edition.
   - `.github/scripts/check_app_store.py` (CI, security and release workflows) checks this: extend it with each
     new permission, entitlement or edition difference.
 - **Keys and logins are checked when saved**: every API key, token, login or other setting that depends on an

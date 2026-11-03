@@ -21,7 +21,6 @@
     <string name="go_to_movie">الانتقال إلى الفيلم</string>
     <string name="go_to_series">الانتقال إلى المسلسل</string>
     <string name="remove_from_history_text">سيُنسى الموضع الذي توقفت عنده.</string>
-    <string name="beta">تجريبي</string>
     <string name="movies_in_progress">أفلام قيد المشاهدة</string>
     <string name="series_in_progress">مسلسلات قيد المشاهدة</string>
     <string name="recently_added">أُضيف مؤخرًا</string>

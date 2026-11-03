@@ -8,8 +8,8 @@ submitted, its listing and its review notes are checked here, before any upload:
    read as that build compiles it) holds no download code; no build setting turns TESTFLIGHT_DOWNLOADS on for it and a
    tag, the release that gets submitted, builds it; `FeatureFlags` reads nothing at run time and switches nothing off
    for good (code no build can use is left out of the build), and no code reads the launch arguments or the
-   environment (test hooks are `#if DEBUG`). It never says "beta": betas belong on TestFlight, not
-   on the App Store (2.2); the TestFlight edition's beta badge is left out of this build. Nor do its texts speak of
+   environment (test hooks are `#if DEBUG`). No edition says "beta" anywhere (2.2): no beta badge, no beta
+   word in an app string, in Swift or Kotlin UI code or on the website. Nor do the App Store texts speak of
    downloads ("Downloads", "Downloaded files…"): App Review would look for a feature the build does not have (2.3.1).
 2. No private API: no class, selector or symbol looked up by name, no method swapped, no script run (2.5.1, 2.5.2).
 3. The listing (fastlane/metadata, every language) fits App Store Connect's limits, names no other platform, promises
@@ -73,8 +73,11 @@ PLAYLIST_ADDRESS = re.compile(r"""https?://((?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,})(/[
 # Where a playlist address may point: our own site's review folder, or a placeholder.
 OWN_PLAYLIST = re.compile(r"https://[\w-]+\.github\.io/ondo-iptv/review/[\w./-]+\.m3u8?\b")
 PLACEHOLDER_HOST = re.compile(r"(?:^|\.)example\.(?:com|net|org)$")
-# A string the App Store edition would show that calls the app a beta (2.2).
-BETA_TEXT = re.compile(r'(?i)"[^"\n]*(?<![\w])(?:beta|bêta)(?![\w])[^"\n]*"')
+# "beta" as a whole word in the seven languages' words (English/Spanish/Portuguese beta, French bêta, Chinese 测试版,
+# Arabic بيتا, Hindi बीटा), and the names of the old badge's code. No edition has a beta badge (2.2). Dependency
+# versions ("1.0.0-beta01") and Google Play track names (workflows, scripts) are outside the scanned folders.
+BETA_WORD = re.compile(r"(?i)(?<![\w])(?:beta|bêta)(?![\w])|测试版|بيتا|बीटा")
+BETA_CODE = re.compile(r"BetaBadge|betaBadge|BuildConfig\.BETA|ANDROID_BETA")
 # A string the App Store edition would show that speaks of downloads, which it does not have (2.3.1): the feature's
 # words ("Downloads", "Download Details", "Downloaded", "the download", watch offline). Fetching a playlist or the
 # awards ("Downloading playlist…", "Ondo downloads the latest awards") is not that feature.
@@ -232,6 +235,26 @@ def braced_body(text: str, start: int) -> str:
     return text[opening + 1:]
 
 
+def check_beta(problems: list) -> None:
+    """No edition has a beta badge or says "beta" (2.2): app strings, UI source and website, all editions."""
+    sources = list(swift_files("App", "Packages/IPTVCore/Sources"))
+    android = ROOT / "android"
+    if android.is_dir():
+        sources += sorted(path for path in android.rglob("*")
+                          if path.is_file() and "build" not in path.relative_to(android).parts
+                          and "src/main/" in path.as_posix() and path.suffix in (".kt", ".xml"))
+    sources += sorted((ROOT / "App").rglob("*.xcstrings"))
+    site = ROOT / "site"
+    if site.is_dir():
+        sources += sorted(path for path in site.rglob("*") if path.is_file() and path.suffix in (".html", ".js", ".json", ".css"))
+    for path in sources:
+        relative = path.relative_to(ROOT).as_posix()
+        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            if BETA_WORD.search(line) or BETA_CODE.search(line):
+                problems.append(f"{relative}:{number} says or shows a beta, which no edition does (2.2): "
+                                f"{line.strip()[:120]}")
+
+
 def check_code(problems: list) -> None:
     for path in swift_files("App", "Packages/IPTVCore/Sources"):
         relative = path.relative_to(ROOT).as_posix()
@@ -246,9 +269,6 @@ def check_code(problems: list) -> None:
                 problems.append(f"{relative}: the App Store edition reads its launch arguments or environment: "
                                 f"{line.strip()} (a switch an argument can turn is a hidden feature, 2.5.19: put it "
                                 "under `#if DEBUG`)")
-            if relative.startswith("App/") and BETA_TEXT.search(line):
-                problems.append(f"{relative}: the App Store edition calls the app a beta: {line.strip()} (betas belong "
-                                "on TestFlight, not the App Store, 2.2: put it under `#if TESTFLIGHT_DOWNLOADS`)")
             if relative.startswith("App/") and DOWNLOAD_TEXT.search(line):
                 problems.append(f"{relative}: the App Store edition speaks of downloads, which it does not have: "
                                 f"{line.strip()} (2.3.1: put it under `#if TESTFLIGHT_DOWNLOADS || DEBUG`, or reword it)")
@@ -541,6 +561,7 @@ def check_playlists(problems: list) -> None:
 def main() -> int:
     problems = []
     check_code(problems)
+    check_beta(problems)
     check_build_settings(problems)
     check_listing(problems)
     check_play_listing(problems)

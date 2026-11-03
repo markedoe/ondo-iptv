@@ -193,10 +193,8 @@ draft.
 *Production → Create new release* (or the workflow with the `production` track: the release is created as
 a draft, to check and send for review in the console). Start that run from the version's `vX.Y.Z` tag,
 chosen in *Use workflow from → Tags*: the workflow refuses `production` from a branch, whose bundle would keep
-the default `versionName`. Builds for the test tracks (internal, closed, open)
-show a *Beta* badge on Home and next to the version in Settings; a build made for the `production` track does
-not. So publish production from a bundle built for it (the workflow with the `production` track), not by
-promoting a test release, which would keep its badge. Choose the countries, then *Send changes for
+the default `versionName`. Publish production from a bundle built for it
+(the workflow with the `production` track), not by promoting a test release. Choose the countries, then *Send changes for
 review*. The review takes from a few hours to a few days.
 
 ### E4. Android TV

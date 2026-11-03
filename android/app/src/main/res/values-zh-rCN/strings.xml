@@ -21,7 +21,6 @@
     <string name="go_to_movie">前往电影</string>
     <string name="go_to_series">前往剧集</string>
     <string name="remove_from_history_text">将不再记住你停下的位置。</string>
-    <string name="beta">测试版</string>
     <string name="movies_in_progress">正在观看的电影</string>
     <string name="series_in_progress">正在观看的剧集</string>
     <string name="recently_added">最近添加</string>

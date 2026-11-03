@@ -203,10 +203,8 @@ arrive en brouillon.
 *Production → Créer une version* (ou workflow avec la piste `production` : la version est créée en
 brouillon, à vérifier et envoyer en examen dans la console). Lancez ce workflow depuis le tag `vX.Y.Z`
 de la version, choisi dans *Use workflow from → Tags* : le workflow refuse `production` depuis une branche, dont
-le bundle garderait le `versionName` par défaut. Les builds des pistes de test (interne, fermée,
-ouverte) affichent un badge *Bêta* sur l'accueil et à côté de la version dans les réglages ; un build fait pour
-la piste `production` ne l'a pas. Publiez donc la production avec un bundle construit pour elle (le workflow
-avec la piste `production`), pas en promouvant une version de test, qui garderait son badge. Choisissez les pays, puis *Envoyer pour
+le bundle garderait le `versionName` par défaut. Publiez la production avec un bundle construit pour
+elle (le workflow avec la piste `production`), pas en promouvant une version de test. Choisissez les pays, puis *Envoyer pour
 examen*. L'examen prend de quelques heures à quelques jours.
 
 ### E4. Android TV

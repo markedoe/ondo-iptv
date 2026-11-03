@@ -183,7 +183,7 @@ jobs:
     # code (UI test catalogue, screenshot routes) and without the TestFlight edition's downloads
     # (`#if TESTFLIGHT_DOWNLOADS || DEBUG`). A break of the edition that gets submitted shows here, not at archive time.
     # The TestFlight edition (Release with TESTFLIGHT_DOWNLOADS) is built too, for iOS only: its own code (`#if
-    # TESTFLIGHT_DOWNLOADS`: beta badge, version text) is shared by both platforms, and the iOS build also has the
+    # TESTFLIGHT_DOWNLOADS`) is shared by both platforms, and the iOS build also has the
     # iOS-only download code and the Cast SDK.
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -555,14 +555,17 @@ class AppStoreTests(CheckTestCase):
                          "pt-BR/short_description.txt has 81 characters, Google Play takes 80",
                          "pt-BR/changelogs/default.txt is missing")
 
-    def test_the_app_store_edition_never_says_beta(self):
-        self.write("App/Features/Badge.swift", "#if TESTFLIGHT_DOWNLOADS\nlet badge = Text(\"Beta\")\n#endif\n"
-                   "let version = \"1.1 (beta)\"\n")
-        self.assertFails("app_store", "App/Features/Badge.swift: the App Store edition calls the app a beta")
+    def test_no_edition_has_a_beta_badge(self):
+        self.write("App/Features/Badge.swift", "#if TESTFLIGHT_DOWNLOADS\nlet badge = Text(\"Beta\")\n#endif\n")
+        self.assertFails("app_store", "App/Features/Badge.swift:2 says or shows a beta")
 
-    def test_the_testflight_beta_badge_passes(self):
-        self.write("App/Features/Badge.swift", "#if TESTFLIGHT_DOWNLOADS\nlet badge = Text(\"Beta\")\n#endif\n"
-                   "let alphabet = \"betamax\"\n")
+    def test_a_beta_word_in_any_language_or_in_android_code_fails(self):
+        self.write("android/app/src/main/res/values-fr/strings.xml", '<string name="x">Bêta</string>\n')
+        self.write("android/app/src/main/kotlin/Home.kt", "val on = BuildConfig.BETA\n")
+        self.assertFails("app_store", "values-fr/strings.xml:1 says or shows a beta", "Home.kt:1 says or shows a beta")
+
+    def test_words_that_only_contain_beta_pass(self):
+        self.write("App/Features/Badge.swift", 'let alphabet = "betamax"\nlet list = "alphabetical"\n')
         self.assertPasses("app_store")
 
     def test_the_app_store_edition_never_speaks_of_downloads(self):
@@ -588,7 +591,7 @@ class AppStoreTests(CheckTestCase):
         self.write("site/notes.html", "<p>Beta builds on TestFlight.</p>\n")
         self.assertFails("app_store", "site/index.html:2 has test words")
         code, output = run("app_store", self.root)
-        self.assertNotIn("site/notes.html", output, "a page the listing does not open may talk of the beta")
+        self.assertIn("site/notes.html:1 says or shows a beta", output, "no page of the site may talk of a beta")
 
     def test_the_copyright_must_be_this_years(self):
         self.write("fastlane/metadata/copyright.txt", f"© {self.YEAR - 1} example\n")

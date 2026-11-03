@@ -12,9 +12,7 @@ platform (Swift / SwiftUI, Kotlin / Jetpack Compose). It runs on iOS / iPadOS 17
 > Ondo is **only a player**: it does not host, provide or sell any content, channel, playlist or IPTV
 > subscription. It plays the sources that users add themselves and are allowed to watch.
 
-> **Beta.** Ondo is still young: screens and features may change, and bugs are expected. The TestFlight edition
-> (iPhone, iPad, Mac) and the Google Play test builds show a *Beta* badge. Feedback and bug reports are welcome
-> in the [issues](https://github.com/markedoe/ondo-iptv/issues).
+> Feedback and bug reports are welcome in the [issues](https://github.com/markedoe/ondo-iptv/issues).
 
 ## Screenshots
 

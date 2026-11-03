@@ -100,7 +100,7 @@ class OndoViewModel(
             .onStart { emit(emptyMap()) }
 
     val home: StateFlow<HomeUiState?> = combine(state, minutes, this.labels, keptFacts) { state, now, labels, kept ->
-        UiMappers.home(state, labels, now, kept).copy(beta = BuildConfig.BETA)
+        UiMappers.home(state, labels, now, kept)
     }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)

@@ -813,11 +813,10 @@ private fun Context.isOnline(): Boolean {
     return connectivity.getNetworkCapabilities(network)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
 }
 
-/** The app's version and its build (the version code); a build for a Google Play test track says it is a beta. */
+/** The app's version and its build (the version code). */
 @Composable
 private fun appVersion(): String {
-    val version = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
-    return if (BuildConfig.BETA) "$version · ${stringResource(R.string.beta)}" else version
+    return "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})"
 }
 
 @Composable

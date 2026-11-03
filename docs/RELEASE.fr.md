@@ -228,12 +228,9 @@ réseau, fichiers choisis par l'utilisateur).
    `all`), relancez *Release* avec la cible `builds` et l'`edition` laissée à `testflight`, sinon les testeurs
    reçoivent le build sans téléchargements.
 
-   **Badge bêta.** L'édition TestFlight affiche un badge *Bêta* (barre d'outils de l'accueil, version dans les
-   réglages) ; l'édition App Store est construite sans, car les bêtas vont sur TestFlight, pas sur l'App Store
-   (règle 2.2). Rien dans le build App Store, sa fiche ou les pages du site que la fiche ouvre (accueil, support,
-   confidentialité : la review d'Apple les visite) ne doit dire que l'app est une bêta ; `check_app_store.py`
-   vérifie les trois. Le mot reste dans le catalogue de traductions des deux éditions : une traduction que
-   personne ne voit n'est pas une fonction, la laisser.
+   **Pas de badge bêta.** Aucune édition n'en affiche. Rien dans l'app, sa fiche ou les pages du site que la fiche
+   ouvre (accueil, support, confidentialité : la review d'Apple les visite) ne doit dire que l'app est une bêta
+   (règle 2.2) ; `check_app_store.py` vérifie les trois.
 4. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
    fiche. Relancez *App Store screenshots* avant une release si l'interface a changé.

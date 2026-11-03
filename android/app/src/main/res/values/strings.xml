@@ -22,7 +22,6 @@
     <string name="go_to_movie">Go to Movie</string>
     <string name="go_to_series">Go to Series</string>
     <string name="remove_from_history_text">Where you stopped will be forgotten.</string>
-    <string name="beta">Beta</string>
     <string name="movies_in_progress">Movies in Progress</string>
     <string name="series_in_progress">Series in Progress</string>
     <string name="recently_added">Recently Added</string>
