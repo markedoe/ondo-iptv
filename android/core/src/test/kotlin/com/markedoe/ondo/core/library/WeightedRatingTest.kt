@@ -56,6 +56,18 @@ class WeightedRatingTest {
     }
 
     @Test
+    fun aTenFromTenVotesAddedYesterdayIsNotInTheBestRecentPick() {
+        val pick = WeightedRating.bestRecent(listOf(candidate("Ten Votes", 10.0, 10, daysAgo = 1.0), candidate("Solid", 7.8, 5_000, daysAgo = 1.0)), now)
+        assertEquals(listOf("Solid"), pick.map { it.title })
+    }
+
+    @Test
+    fun aTitleAddedFiveDaysAgoIsNotInTheBestRecentPick() {
+        val pick = WeightedRating.bestRecent(listOf(candidate("Old", 9.0, 50_000, daysAgo = 5.0), candidate("Fresh", 7.0, 500, daysAgo = 3.0)), now)
+        assertEquals(listOf("Fresh"), pick.map { it.title })
+    }
+
+    @Test
     fun tiesGoToTheLatestAddedThenToTheTitle() {
         val ranked = WeightedRating.rank(
             listOf(

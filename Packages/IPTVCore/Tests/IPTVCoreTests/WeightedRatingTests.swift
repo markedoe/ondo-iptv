@@ -46,6 +46,16 @@ final class WeightedRatingTests: XCTestCase {
         XCTAssertFalse(WeightedRating.isRecent(now.addingTimeInterval(-5 * day), now: now))
     }
 
+    func testATenFromTenVotesAddedYesterdayIsNotInTheBestRecentPick() {
+        let pick = WeightedRating.bestRecent([candidate("Ten Votes", 10, 10, daysAgo: 1), candidate("Solid", 7.8, 5_000, daysAgo: 1)], now: now)
+        XCTAssertEqual(pick.map(\.title), ["Solid"])
+    }
+
+    func testATitleAddedFiveDaysAgoIsNotInTheBestRecentPick() {
+        let pick = WeightedRating.bestRecent([candidate("Old", 9, 50_000, daysAgo: 5), candidate("Fresh", 7, 500, daysAgo: 3)], now: now)
+        XCTAssertEqual(pick.map(\.title), ["Fresh"])
+    }
+
     func testTiesGoToTheLatestAddedThenToTheTitle() {
         let ranked = WeightedRating.rank([
             candidate("Beta", 8, 1_000, daysAgo: 2),

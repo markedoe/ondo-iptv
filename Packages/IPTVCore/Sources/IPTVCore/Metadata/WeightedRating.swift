@@ -47,6 +47,11 @@ public enum WeightedRating {
         return v / (v + priorVotes) * average + priorVotes / (v + priorVotes) * priorAverage
     }
 
+    /// The carousel's pick: the candidates added inside the window at `now` that qualify, best first (`rank`).
+    public static func bestRecent(_ candidates: [Candidate], now: Date) -> [Candidate] {
+        rank(candidates.filter { isRecent($0.addedAt, now: now) })
+    }
+
     /// The qualifying candidates, best first: highest score, then latest added, then title (without regard to case).
     public static func rank(_ candidates: [Candidate]) -> [Candidate] {
         candidates

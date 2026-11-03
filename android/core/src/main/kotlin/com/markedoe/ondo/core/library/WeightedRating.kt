@@ -34,6 +34,9 @@ object WeightedRating {
         return v / (v + PRIOR_VOTES) * average + PRIOR_VOTES / (v + PRIOR_VOTES) * PRIOR_AVERAGE
     }
 
+    /** The carousel's pick: the candidates added inside the window at [now] (epoch seconds) that qualify, best first ([rank]). */
+    fun bestRecent(candidates: List<Candidate>, now: Long): List<Candidate> = rank(candidates.filter { isRecent(it.addedAt, now) })
+
     /** The qualifying candidates, best first: highest score, then latest added, then title (without regard to case). */
     fun rank(candidates: List<Candidate>): List<Candidate> =
         candidates

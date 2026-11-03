@@ -106,6 +106,21 @@ class ShowcaseTest {
     }
 
     @Test
+    fun aTenFromTenVotesAddedYesterdayIsNotInTheCarouselsBestRecent() {
+        val tenVotes = mapOf("m-1" to TmdbRating(10.0, 10), "m-4" to TmdbRating(7.0, 500))
+        val pick = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = tenVotes).bestRecent(Fixtures.NOW).map { it.title }
+        assertFalse("Northern Lights" in pick)
+        assertEquals(listOf("The Last Signal"), pick)
+    }
+
+    @Test
+    fun aTitleAddedFiveDaysAgoIsNotInTheCarouselsBestRecent() {
+        val pick = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = mapOf("m-5" to TmdbRating(9.5, 50_000), "m-3" to TmdbRating(7.0, 500))).bestRecent(Fixtures.NOW).map { it.title }
+        assertFalse("Summer in Lisbon" in pick)
+        assertEquals(listOf("Silent Harbor"), pick)
+    }
+
+    @Test
     fun theBestRecentWindowIsFourDays() {
         val showcase = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = votes)
         assertEquals(4L, RECENT_DAYS)

@@ -158,7 +158,7 @@ extension AppModel {
         }
         var seen = Set<String>()
         var result: [ShowcaseItem] = []
-        for candidate in WeightedRating.rank(candidates) where result.count < limit {
+        for candidate in WeightedRating.bestRecent(candidates, now: now) where result.count < limit {
             guard let item = byID[candidate.id] else { continue }
             let film = item.title.trimmingCharacters(in: .whitespaces).lowercased() + "|" + (item.year.map(String.init) ?? "")
             if seen.insert(film).inserted { result.append(item) }

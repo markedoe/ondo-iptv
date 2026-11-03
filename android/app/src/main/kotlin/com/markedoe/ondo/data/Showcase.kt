@@ -127,7 +127,7 @@ class Showcase(
             byKey[item.key] = item
             WeightedRating.Candidate(item.key, item.title, rating.average, rating.votes, item.addedAt ?: 0L)
         }
-        return WeightedRating.rank(candidates)
+        return WeightedRating.bestRecent(candidates, now / 1_000)
             .mapNotNull { byKey[it.id] }
             .distinctBy { "${it.title.trim().lowercase()}|${it.year}" }
             .take(limit)
