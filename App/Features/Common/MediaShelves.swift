@@ -211,7 +211,8 @@ struct ContinueCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .cardLift()
                 Text(entry.title).font(.subheadline.weight(.semibold)).lineLimit(1)
-                if let subtitle = entry.subtitle {
+                // A film of several versions: the one in progress.
+                if let subtitle = entry.subtitle ?? model.versionLabel(for: entry) {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }

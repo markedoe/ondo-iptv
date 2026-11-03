@@ -132,6 +132,13 @@ class FilmVersionsAppTest {
         assertFalse(UiMappers.resume(library.progress(watching.key)!!, state(library, grouped = false)).subtitle == "4K DV")
     }
 
+    /** A panel listing a stream twice (the same id): one version, one badge (the page's rows need one key each). */
+    @Test
+    fun aStreamListedTwiceIsOneVersion() {
+        val twice = Fixtures.state(content = content.copy(movies = content.movies + dv))
+        assertEquals(4, UiMappers.movieDetail(twice, hd).versions.size)
+    }
+
     @Test
     fun aVersionInAHiddenCategoryIsNoBadge() {
         val adult = version("g-adult", "Glass City MULTI", Fixtures.adultMovies, 77)

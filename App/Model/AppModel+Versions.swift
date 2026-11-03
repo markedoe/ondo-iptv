@@ -65,6 +65,15 @@ extension AppModel {
         }
     }
 
+    /// What a Continue Watching card says of its stream when its film has several versions: its badge ("4K DV", else
+    /// "Version" with its number); nil for a film of one version, a series or a channel. Continue Watching stays per stream.
+    func versionLabel(for entry: HistoryEntry) -> String? {
+        guard entry.reference.type == .movie, let movie = index.moviesByID[entry.reference.itemID] else { return nil }
+        let versions = visibleVersions(of: movie)
+        guard versions.count > 1, let index = versions.firstIndex(where: { $0.id == movie.id }) else { return nil }
+        return VersionChips.label(versionBadges(versions)[index])
+    }
+
     /// Whether a film is in My List: when one of its versions is.
     func isFavoriteFilm(_ movie: Movie) -> Bool {
         visibleVersions(of: movie).contains { isFavorite(.movie, id: $0.id) }

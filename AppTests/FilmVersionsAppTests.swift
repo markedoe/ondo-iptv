@@ -34,9 +34,9 @@ final class FilmVersionsAppTests: XCTestCase {
         try? FileManager.default.removeItem(at: root)
     }
 
-    private func model() async throws -> AppModel {
+    private func model(with text: String = catalogue) async throws -> AppModel {
         let file = root.appendingPathComponent("list.m3u")
-        try Data(Self.catalogue.utf8).write(to: file)
+        try Data(text.utf8).write(to: file)
         let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
         await model.bootstrap()
         try await model.addPlaylist(Playlist(name: "Test", source: .remote(file), autoRefreshHours: 0))
@@ -104,5 +104,19 @@ final class FilmVersionsAppTests: XCTestCase {
         model.recordStart(item)
         model.recordProgress(item, position: 600, duration: 6_000)
         XCTAssertEqual(model.defaultVersion(of: hd), dv, "the one in progress first")
+        // Continue Watching stays per stream and says which version is in progress.
+        let entry = try XCTUnwrap(model.continueWatching(.movie).first)
+        XCTAssertEqual(model.versionLabel(for: entry), "4K DV")
+    }
+
+    /// A playlist listing an address twice: two streams (the M3U reader gives each its own id), so two badges of the same
+    /// tags, never collapsed: "4K DV" and "4K DV 2".
+    func testTheSameTagsTwiceAreTwoBadges() async throws {
+        let twice = Self.catalogue + "#EXTINF:6000 group-title=\"Movies | 4K\",Glass City 4K DV (2024)\nhttp://127.0.0.1:9/glass-dv.mkv\n"
+        let model = try await model(with: twice)
+        let hd = try movie("Glass City", in: model)
+        let versions = model.visibleVersions(of: hd)
+        XCTAssertEqual(versions.count, 5)
+        XCTAssertEqual(model.versionBadges(versions).compactMap(\.label), ["4K DV", "4K", "VOSTFR", "4K DV 2"])
     }
 }
