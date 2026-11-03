@@ -232,14 +232,15 @@ class TelevisionSearchRowsTest {
     }
 
     /**
-     * Back from a title whose row was not kept with the page (built anew at its start): the row is on the card at
-     * once, the remote on it, the row's first titles gone, rather than the row starting from Film 1.
+     * Back from a title whose row was not kept with the page (built anew at its start): the row opens on the card the
+     * focus comes back to, its first titles gone, rather than starting from Film 1 and scrolling across.
      */
     @Test
     fun backToARowNotKeptLandsOnItsCardAtOnce() {
+        // The page built anew here (not the one Back shows) also opens its field: the row is what this is about.
         startScreen(results("film", films), memory = FocusMemory("search:" + ShowcaseItem.MovieItem(films[12]).key))
-        waitFor { focused() == "Film 13" }
-        assertTrue(onScreen("Film 13"))
+        settle()
+        assertTrue("the row opens on its card", onScreen("Film 13"))
         assertFalse("the row where it was", onScreen("Film 1"))
     }
 

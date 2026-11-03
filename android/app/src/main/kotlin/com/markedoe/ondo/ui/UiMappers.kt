@@ -871,24 +871,38 @@ object UiMappers {
         val people = PeopleIndex(series.flatMap { (_, it) -> listOf(it.cast, it.director) })
 
         companion object {
-            private class Key(val content: PlaylistContent, val hidden: Set<String>, val hiddenTags: Set<String>, val films: FilmVersions)
+            /** A catalogue (the same object, not an equal one) with its hidden categories and tags and its versions. */
+            private class Key(val content: PlaylistContent, val hidden: Set<String>, val hiddenTags: Set<String>, val films: FilmVersions) {
+                override fun equals(other: Any?) =
+                    other is Key && other.content === content && other.hidden == hidden && other.hiddenTags == hiddenTags && other.films === films
+                override fun hashCode() = ((System.identityHashCode(content) * 31 + hidden.hashCode()) * 31 + hiddenTags.hashCode()) * 31 + System.identityHashCode(films)
+            }
 
-            @Volatile private var cached: Pair<Key, SearchIndex>? = null
+            /**
+             * The last few indexes, the most recently used kept: another search on another thread (another catalogue,
+             * other hidden categories) does not throw away the one Search is about to use again.
+             */
+            private val cached = object : LinkedHashMap<Key, SearchIndex>(8, 0.75f, true) {
+                override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, SearchIndex>?) = size > CACHED_INDEXES
+            }
 
             /**
              * The index of this catalogue, these hidden categories and tags and these versions: coming back to Search does
              * not build it again.
              */
             fun of(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet(), films: FilmVersions = FilmVersions.none()): SearchIndex {
-                cached?.let { (key, index) ->
-                    if (key.content === content && key.hidden == hidden && key.hiddenTags == hiddenTags && key.films === films) return index
-                }
-                return SearchIndex(content, hidden, hiddenTags, films).also { cached = Key(content, hidden, hiddenTags, films) to it }
+                val key = Key(content, hidden, hiddenTags, films)
+                synchronized(cached) { cached[key]?.let { return it } }
+                val index = SearchIndex(content, hidden, hiddenTags, films)
+                synchronized(cached) { return cached.getOrPut(key) { index } }
             }
 
             internal fun forget() {
-                cached = null
+                synchronized(cached) { cached.clear() }
             }
+
+            // Two: an index holds every title of a catalogue, and a big one weighs on a TV's memory.
+            private const val CACHED_INDEXES = 2
         }
     }
 
