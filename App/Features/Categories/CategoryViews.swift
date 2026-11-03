@@ -77,6 +77,7 @@ struct CategoryManagerView: View {
         } header: {
             Text("Languages and Countries")
         } footer: {
+            // swiftlint:disable:next line_length
             Text("Many providers start category names with a code such as |PT| or FR:. Hiding a code hides all its categories, in every playlist, including those added later. Movies, series and channels whose own name starts with that code are hidden too, whatever their category.")
         }
     }
