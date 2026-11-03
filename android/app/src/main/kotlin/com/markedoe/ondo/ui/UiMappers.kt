@@ -890,7 +890,7 @@ object UiMappers {
              * The index of this catalogue, these hidden categories and tags and these versions: coming back to Search does
              * not build it again.
              */
-            fun of(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet(), films: FilmVersions = FilmVersions.none()): SearchIndex {
+            fun of(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet(), films: FilmVersions = noFilms): SearchIndex {
                 val key = Key(content, hidden, hiddenTags, films)
                 synchronized(cached) { cached[key]?.let { return it } }
                 val index = SearchIndex(content, hidden, hiddenTags, films)
@@ -900,6 +900,9 @@ object UiMappers {
             internal fun forget() {
                 synchronized(cached) { cached.clear() }
             }
+
+            /** No versions grouped, one object for all: the key compares versions by identity. */
+            private val noFilms = FilmVersions.none()
 
             // Two: an index holds every title of a catalogue, and a big one weighs on a TV's memory.
             private const val CACHED_INDEXES = 2
