@@ -187,8 +187,8 @@ extension AppModel {
         var works = works
         // Each film once, whatever its versions.
         works.movies = films.distinct(works.movies)
-        works.movies.sort { releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
-        works.series.sort { releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
+        works.movies.sort { Self.releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
+        works.series.sort { Self.releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
         return works
     }
 

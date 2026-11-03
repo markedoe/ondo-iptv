@@ -33,9 +33,10 @@ extension AppModel {
     func defaultVersion(of movie: Movie, among known: [Movie]? = nil) -> Movie {
         let versions = known ?? visibleVersions(of: movie)
         guard versions.count > 1 else { return movie }
-        let inProgress = versions.compactMap { version in
-            progress(movie: version).flatMap { $0.isResumable ? (version, $0.lastWatchedAt) : nil }
-        }.max { $0.1 < $1.1 }?.0
+        let inProgress = versions.compactMap { version -> (movie: Movie, watched: Date)? in
+            guard let entry = progress(movie: version), entry.isResumable else { return nil }
+            return (version, entry.lastWatchedAt)
+        }.max { $0.watched < $1.watched }?.movie
         let names = categoryNames
         return FilmVersions.defaultVersion(
             versions, inProgress: inProgress?.id, chosen: settings.chosenVersions, support: Self.pictureSupport,
@@ -55,7 +56,7 @@ extension AppModel {
 
     /// `items` with each film once: the first of its versions stands for it; series stay as they are.
     func distinctFilms(_ items: [ShowcaseItem]) -> [ShowcaseItem] {
-        let films = films
+        let films = self.films
         guard films.isGrouped, items.count > 1 else { return items }
         var seen = Set<Int>()
         return items.filter { item in

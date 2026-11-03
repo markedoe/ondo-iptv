@@ -27,7 +27,7 @@ extension AppModel {
     /// `sortedMovies` with each film once, kept like the sorted lists (once per catalogue, category and order).
     private func distinctMovies(in category: MediaCategory?, sort: PosterSort) -> [Movie] {
         let list = sortedMovies(in: category, sort: sort)
-        let films = films
+        let films = self.films
         guard films.isGrouped else { return list }
         let excluded = category == nil ? excludedCategoryIDs.hashValue : 0
         let key = "films|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category?.id ?? "*")|\(excluded)|\(sort.rawValue)"
@@ -121,7 +121,7 @@ extension AppModel {
 
     /// `search` on a background task: the main thread (and the keyboard) stays free while a large playlist is searched.
     func searchInBackground(_ query: String) async -> SearchResults {
-        let engine = index.search, excluded = excludedCategoryIDs, hidden = hiddenChannelIDs, films = films
+        let engine = index.search, excluded = excludedCategoryIDs, hidden = hiddenChannelIDs, films = self.films
         return await Task.detached(priority: .userInitiated) {
             Self.search(query, in: engine, excluded: excluded, hidden: hidden, films: films)
         }.value

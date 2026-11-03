@@ -217,7 +217,7 @@ extension AppModel {
     /// Trending titles as Home shows them: without the movies hidden as watched.
     func trendingTitles() -> [TrendingMatch] {
         let watched = hiddenWatchedMovieIDs()
-        let films = films
+        let films = self.films
         var seen = Set<Int>()
         return trending.filter { match in
             guard case .movie(let movie, _) = match else { return true }
@@ -305,7 +305,7 @@ extension AppModel {
         guard !excludedCategoryIDs.contains(movie.categoryID) else { return [] }
         let watched = hiddenWatchedMovieIDs()
         // Never another version of the film itself; each film once.
-        let films = films
+        let films = self.films
         let own = films.group(of: movie.id)
         let others = (index.moviesByCategory[movie.categoryID] ?? []).filter {
             $0.id != movie.id && !watched.contains($0.id) && (own == nil || films.group(of: $0.id) != own)

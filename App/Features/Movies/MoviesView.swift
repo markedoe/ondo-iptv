@@ -334,7 +334,9 @@ struct VersionChips: View {
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(Array(zip(versions, badges)), id: \.0.id) { movie, badge in
+                ForEach(versions.indices, id: \.self) { index in
+                    let movie = versions[index]
+                    let badge = index < badges.count ? badges[index] : VersionBadge(tags: [], ordinal: index + 1)
                     let isSelected = movie.id == selected
                     Button {
                         onPick(movie)
