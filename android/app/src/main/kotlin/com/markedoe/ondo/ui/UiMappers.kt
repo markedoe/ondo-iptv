@@ -11,11 +11,14 @@ import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.model.Series
+import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.Favorite
 import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.OndoState
@@ -86,13 +89,13 @@ object UiMappers {
      * [kept]: what TMDb said and the device kept, by poster key ([OndoRepository.keptPosterFacts]); its votes, and those of
      * the answers of this session, rank the carousel's best recent titles.
      */
-    fun showcase(state: OndoState, kept: Map<String, TitleMetadata> = emptyMap()): Showcase {
+    fun showcase(state: OndoState, kept: Map<String, TitleMetadata> = emptyMap(), grouped: FilmVersions = films(state)): Showcase {
         val votes = HashMap<String, TmdbRating>()
         kept.forEach { (key, title) -> title.rating?.let { votes[key] = it } }
         votes.putAll(state.tmdbRatings)
         val byName = CategoryFilter.hiddenTitles(state)
         return Showcase(
-            state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes, films(state),
+            state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes, grouped,
             excludedMovieIds = byName.movies, excludedSeriesIds = byName.series,
         )
     }
@@ -137,6 +140,13 @@ object UiMappers {
             return FilmVersions.of(content.movies).also { filmVersions = content to it }
         }
     }
+
+    /**
+     * The episode a series' Play plays, and its season. On the main thread (a tap): never waits for a catalogue's grouping
+     * being built ([filmsIfReady]); a series' episodes do not depend on it.
+     */
+    fun nextEpisode(state: OndoState, series: Series, details: SeriesDetails): Pair<Episode, Season>? =
+        showcase(state, grouped = filmsIfReady(state)).nextEpisode(series, details)
 
     /** The versions of [movie]'s film the viewer can see ([movie] itself, and the others not in a hidden category), in catalogue order. */
     fun visibleVersions(state: OndoState, movie: Movie, grouped: FilmVersions = films(state)): List<Movie> {

@@ -619,6 +619,216 @@
      ]
     }
    ]
+  },
+  {
+   "name": "A year at the end of the name is the year, not a number of the title",
+   "rows": [
+    {
+     "id": "y1",
+     "name": "Dune 2021",
+     "category": "c",
+     "year": 2021,
+     "tmdb": 438631
+    },
+    {
+     "id": "y2",
+     "name": "Dune",
+     "category": "c",
+     "year": 2021,
+     "tmdb": 438631
+    },
+    {
+     "id": "y3",
+     "name": "Dune - 2021",
+     "category": "c"
+    },
+    {
+     "id": "y4",
+     "name": "Dune 2021 VOSTFR",
+     "category": "c"
+    }
+   ],
+   "groups": [
+    [
+     0,
+     1,
+     2,
+     3
+    ]
+   ]
+  },
+  {
+   "name": "A title that is a number stays a title",
+   "rows": [
+    {
+     "id": "n1",
+     "name": "1917",
+     "category": "c",
+     "year": 2019,
+     "tmdb": 530915
+    },
+    {
+     "id": "n2",
+     "name": "1917 4K",
+     "category": "c",
+     "year": 2019,
+     "tmdb": 530915
+    },
+    {
+     "id": "n3",
+     "name": "2001",
+     "category": "c"
+    },
+    {
+     "id": "n4",
+     "name": "2001",
+     "category": "c"
+    },
+    {
+     "id": "n5",
+     "name": "Blade Runner 2049",
+     "category": "c",
+     "year": 2017,
+     "tmdb": 335984
+    },
+    {
+     "id": "n6",
+     "name": "Blade Runner 2049 4K",
+     "category": "c",
+     "year": 2017,
+     "tmdb": 335984
+    }
+   ],
+   "groups": [
+    [
+     0,
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4,
+     5
+    ]
+   ]
+  },
+  {
+   "name": "Number words make other films, at the same year too",
+   "rows": [
+    {
+     "id": "w1",
+     "name": "Le Film",
+     "category": "c",
+     "year": 2010,
+     "tmdb": 11
+    },
+    {
+     "id": "w2",
+     "name": "Le Film deux",
+     "category": "c",
+     "year": 2010,
+     "tmdb": 11
+    },
+    {
+     "id": "w3",
+     "name": "Le Film trois",
+     "category": "c",
+     "year": 2010,
+     "tmdb": 11
+    },
+    {
+     "id": "w4",
+     "name": "Rocky",
+     "category": "c",
+     "year": 1976,
+     "tmdb": 12
+    },
+    {
+     "id": "w5",
+     "name": "Rocky Two",
+     "category": "c",
+     "year": 1976,
+     "tmdb": 12
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ]
+  },
+  {
+   "name": "Numbers of other scripts make other films",
+   "rows": [
+    {
+     "id": "c1",
+     "name": "流浪地球",
+     "category": "c",
+     "year": 2019,
+     "tmdb": 13
+    },
+    {
+     "id": "c2",
+     "name": "流浪地球 2",
+     "category": "c",
+     "year": 2019,
+     "tmdb": 13
+    },
+    {
+     "id": "c3",
+     "name": "流浪地球 二",
+     "category": "c",
+     "year": 2019,
+     "tmdb": 13
+    },
+    {
+     "id": "c4",
+     "name": "الرسالة",
+     "category": "c",
+     "year": 1976,
+     "tmdb": 14
+    },
+    {
+     "id": "c5",
+     "name": "الرسالة ٢",
+     "category": "c",
+     "year": 1976,
+     "tmdb": 14
+    }
+   ],
+   "groups": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ]
   }
  ]
 }

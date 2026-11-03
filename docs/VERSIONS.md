@@ -60,6 +60,19 @@ Only movies, and only within one playlist (live channels and series are never gr
   version kept. Continue Watching keeps each stream, with its version's badge. The version chosen last is kept on the
   device only.
 
+## Known limits
+
+These keep two versions apart that are one film (an extra card, never a film hidden):
+
+- A tag written in title case ("Sandstorm French", "Sandstorm Dual") stays a word of the title: "French", "English",
+  "Dubbed", "Subbed" and "Dual" are tags only in capitals, so that "French Kiss" and "Johnny English" keep their name.
+- A provider's year one apart between two versions (release dates differ between countries) makes two films under one
+  id.
+- Without both years, a version whose name adds words to the film's ("Le Transport : Héritage") stays apart
+  (`prefixWithoutYears`).
+- A year at the end of a name ("Dune 2021") is taken as the stream's year when it is its own, or when it has none and
+  the number is a year up to next year; "Blade Runner 2049" keeps its number.
+
 ## Cost
 
 The groups are built once per catalogue, off the main thread, in one pass over the movies (hash tables, no

@@ -102,6 +102,19 @@ class FilmVersionsAppTest {
         }
     }
 
+    /**
+     * A series' Play (a tap, on the main thread) finds its episode without grouping the catalogue's films: it never waits
+     * for a large catalogue's grouping being built.
+     */
+    @Test
+    fun aSeriesPlaysWithoutWaitingForTheGrouping() {
+        val fresh = Fixtures.state(content = content.copy(fetchedAt = 7))
+        val series = Fixtures.harborLights
+        val next = UiMappers.nextEpisode(fresh, series, fresh.seriesDetails.getValue(series.id))
+        assertEquals(series.episodes.first().id, next?.first?.id)
+        assertSame("nothing grouped on the way", com.markedoe.ondo.core.library.FilmVersions.NONE, UiMappers.filmsIfReady(fresh))
+    }
+
     /** A version whose title differs from its film's card is found by its own words, and by its own year. */
     @Test
     fun aVersionIsFoundByItsOwnWords() {

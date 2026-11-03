@@ -77,6 +77,18 @@ final class FilmVersionsTests: XCTestCase {
         XCTAssertEqual(versions.expand([remake[1].id]), [remake[1].id], "watching one does not hide the others")
     }
 
+    /// A year at the end of a name is the stream's year; a title that is a number stays one.
+    func testAYearAtTheEndOfTheNameIsTheYear() {
+        XCTAssertTrue(FilmVersions.keyAndYear("Dune 2021", year: 2021, latest: 2027) == ("dune", 2021))
+        XCTAssertTrue(FilmVersions.keyAndYear("Dune - 2021", year: nil, latest: 2027) == ("dune", 2021))
+        XCTAssertTrue(FilmVersions.keyAndYear("1917", year: 2019, latest: 2027) == ("1917", 2019))
+        XCTAssertTrue(FilmVersions.keyAndYear("Blade Runner 2049", year: 2017, latest: 2027) == ("blade runner 2049", 2017))
+        XCTAssertTrue(FilmVersions.keyAndYear("Blade Runner 2049", year: nil, latest: 2027) == ("blade runner 2049", nil))
+        XCTAssertTrue(FilmVersions.keyAndYear("Space 1999", year: 1975, latest: 2027) == ("space 1999", 1975), "another year: a number of the title")
+        XCTAssertTrue(FilmVersions.isNumber("二") && FilmVersions.isNumber("٢") && FilmVersions.isNumber("2"))
+        XCTAssertFalse(FilmVersions.isNumber("地球"))
+    }
+
     /// A stream without a year never brings two years into one group.
     func testOneGroupHoldsOneYear() {
         let none = movie("Dune", nil, tmdb: 1)

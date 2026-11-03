@@ -263,9 +263,18 @@ class FilmVersions private constructor(
             "tome", "tomo", "saga", "returns", "retour", "regreso", "volta",
         )
 
-        /** A number in a title key: digits (any script), a roman numeral, a number word. */
-        internal fun isNumber(word: String): Boolean =
-            (word.isNotEmpty() && word.all { it.isDigit() }) || word in ROMAN || word in NUMBER_WORDS
+        /** Chinese numerals (simplified), a sequel's number written as a word of its own ("流浪地球 二"). */
+        private const val CJK_NUMERALS = "〇零一二三四五六七八九十百千两"
+
+        /**
+         * A number in a title key: decimal digits of any script (2, ٢, २), Chinese numerals, a roman numeral, a number
+         * word. The same characters on both platforms (Apple's `FilmVersions.isNumber`).
+         */
+        internal fun isNumber(word: String): Boolean = isNumeral(word) || word in ROMAN || word in NUMBER_WORDS
+
+        /** Written in figures: decimal digits of any script, or Chinese numerals. */
+        private fun isNumeral(word: String): Boolean =
+            word.isNotEmpty() && (word.all { it.isDigit() } || word.all { it in CJK_NUMERALS })
 
         /**
          * Whether a title key can stand for a film: not empty, and not made of the providers' tags only ("4k", "multi",
@@ -285,8 +294,29 @@ class FilmVersions private constructor(
             return all.filterTo(HashSet()) { it !in STOP_WORDS }.ifEmpty { all }
         }
 
+        val LATEST_YEAR = java.time.Year.now().value + 1
+
+        /**
+         * A stream's title key and year: a year at the end of its name ("Dune 2021", "Dune - 2021") is its year, not a
+         * number of the title, when it is the stream's own year, or the stream has none and it is one (1900 to next year).
+         * A title that is a number only stays one ("1917", "2001").
+         */
+        fun keyAndYear(name: String, year: Int?, latest: Int = LATEST_YEAR): Pair<String, Int?> {
+            val key = titleKey(name)
+            val cut = key.lastIndexOf(' ')
+            if (cut < 0) return key to year
+            val last = key.substring(cut + 1)
+            if (last.length != 4 || !last.all { it in '0'..'9' }) return key to year
+            val number = last.toInt()
+            return when {
+                year == number -> key.substring(0, cut) to year
+                year == null && number in 1900..latest -> key.substring(0, cut) to number
+                else -> key to year
+            }
+        }
+
         /** Rule B's titles: [groupable], and more than a number ("FR - 2021" is "2021"). */
-        private fun groupableByTitle(key: String): Boolean = groupable(key) && !key.all { it.isDigit() || it == ' ' }
+        private fun groupableByTitle(key: String): Boolean = groupable(key) && !key.split(' ').all { isNumeral(it) }
 
         /**
          * The versions of [movies] (one playlist's). [grouped] false ("Group versions" off): each stream alone, the
@@ -297,7 +327,18 @@ class FilmVersions private constructor(
             val n = movies.size
             // Titles kept only for the streams compared again later (a cluster's first stream, a title's first stream).
             val keys = arrayOfNulls<String>(n)
-            fun key(i: Int): String = keys[i] ?: titleKey(movies[i].name).also { keys[i] = it }
+            // Each stream's year: its own, or the one its name ends with ("Dune 2021"); -1 until read, 0 none.
+            val years = IntArray(n) { -1 }
+            fun read(i: Int): String {
+                val (k, year) = keyAndYear(movies[i].name, movies[i].year)
+                years[i] = year ?: 0
+                return k
+            }
+            fun key(i: Int): String = keys[i] ?: read(i).also { keys[i] = it }
+            fun year(i: Int): Int? {
+                if (years[i] < 0) read(i)
+                return years[i].takeIf { it != 0 }
+            }
             // A stream's cluster is the index of its cluster's first stream (an anchor).
             val cluster = IntArray(n) { it }
             // Rule A: per TMDb id, its clusters' anchors (a list through `nextAnchor`, its last in `lastAnchor`).
@@ -313,7 +354,7 @@ class FilmVersions private constructor(
             for (i in 0 until n) {
                 val id = validId(movies[i])
                 if (id == 0) continue
-                clusterYear[i] = movies[i].year ?: 0
+                clusterYear[i] = year(i) ?: 0
                 var anchor = firstAnchor[id]
                 if (anchor < 0) {
                     firstAnchor[id] = i
@@ -324,11 +365,11 @@ class FilmVersions private constructor(
                 var joined = false
                 var needsYears = false
                 while (anchor >= 0 && compared < MAX_CLUSTERS_PER_ID) {
-                    when (agreement(key(i), movies[i].year, key(anchor), clusterYear[anchor].takeIf { it != 0 })) {
+                    when (agreement(key(i), year(i), key(anchor), clusterYear[anchor].takeIf { it != 0 })) {
                         Agreement.SAME -> {
                             cluster[i] = anchor
                             joined = true
-                            if (clusterYear[anchor] == 0) clusterYear[anchor] = movies[i].year ?: 0
+                            if (clusterYear[anchor] == 0) clusterYear[anchor] = year(i) ?: 0
                         }
                         Agreement.NEEDS_YEARS -> needsYears = true
                         Agreement.DIFFERENT -> Unit
@@ -352,8 +393,8 @@ class FilmVersions private constructor(
                 val movie = movies[i]
                 val id = validId(movie)
                 if (id == 0) continue
-                val year = movie.year ?: continue
-                val k = keys[i] ?: titleKey(movie.name)
+                val k = keys[i] ?: read(i)
+                val year = year(i) ?: continue
                 if (!groupableByTitle(k)) continue
                 val slot = titles.find(k, year, ::key)
                 if (slot < 0) {
@@ -368,8 +409,8 @@ class FilmVersions private constructor(
             for (i in 0 until n) {
                 val movie = movies[i]
                 if (validId(movie) != 0) continue
-                val year = movie.year ?: continue
-                val k = titleKey(movie.name)
+                val k = read(i)
+                val year = year(i) ?: continue
                 if (!groupableByTitle(k)) continue
                 var slot = titles.find(k, year, ::key)
                 if (slot >= 0 && titles.isAmbiguous(slot)) ambiguous++

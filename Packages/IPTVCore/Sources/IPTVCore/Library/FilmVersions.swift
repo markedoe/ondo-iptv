@@ -265,7 +265,31 @@ public struct FilmVersions: Sendable {
 
     /// A number in a title key: digits (any script), a roman numeral, a number word.
     static func isNumber(_ word: String) -> Bool {
-        (!word.isEmpty && word.allSatisfy(\.isNumber)) || roman.contains(word) || numberWords.contains(word)
+        isNumeral(word) || roman.contains(word) || numberWords.contains(word)
+    }
+
+    /// Chinese numerals (simplified), a sequel's number written as a word of its own ("流浪地球 二").
+    static let cjkNumerals = Set("〇零一二三四五六七八九十百千两")
+
+    /// Written in figures: decimal digits of any script (2, ٢, २), or Chinese numerals. The same characters as Android's
+    /// `FilmVersions.isNumber` (Character.isDigit there).
+    static func isNumeral(_ word: String) -> Bool {
+        !word.isEmpty && (word.unicodeScalars.allSatisfy { $0.properties.numericType == .decimal } || word.allSatisfy(cjkNumerals.contains))
+    }
+
+    public static let latestYear = Calendar(identifier: .gregorian).component(.year, from: Date()) + 1
+
+    /// A stream's title key and year: a year at the end of its name ("Dune 2021", "Dune - 2021") is its year, not a
+    /// number of the title, when it is the stream's own year, or the stream has none and it is one (1900 to next year).
+    /// A title that is a number only stays one ("1917", "2001").
+    public static func keyAndYear(_ name: String, year: Int?, latest: Int = latestYear) -> (key: String, year: Int?) {
+        let key = titleKey(name)
+        guard let cut = key.lastIndex(of: " ") else { return (key, year) }
+        let last = key[key.index(after: cut)...]
+        guard last.utf8.count == 4, last.utf8.allSatisfy({ (0x30...0x39).contains($0) }), let number = Int(last) else { return (key, year) }
+        if year == number { return (String(key[..<cut]), year) }
+        if year == nil, (1900...latest).contains(number) { return (String(key[..<cut]), number) }
+        return (key, year)
     }
 
     /// Whether a title key can stand for a film: not empty, and not made of the providers' tags only ("4k", "multi",
@@ -276,7 +300,7 @@ public struct FilmVersions: Sendable {
 
     /// Rule B's titles: `groupable`, and more than a number ("FR - 2021" is "2021").
     static func groupableByTitle(_ key: String) -> Bool {
-        groupable(key) && !key.allSatisfy { $0.isNumber || $0 == " " }
+        groupable(key) && !key.split(separator: " ").allSatisfy { isNumeral(String($0)) }
     }
 
     /// Short words of many languages that say nothing of a film ("the", "le", "de"): "The Matrix" and "The Godfather"
@@ -311,11 +335,18 @@ public struct FilmVersions: Sendable {
         guard grouped, !movies.isEmpty else { return none(movies) }
         let n = movies.count
         var keys = [String?](repeating: nil, count: n)
+        // Each stream's year: its own, or the one its name ends with ("Dune 2021"), read with its key.
+        var years = [Int?](repeating: nil, count: n)
         func key(_ i: Int) -> String {
             if let known = keys[i] { return known }
-            let value = titleKey(movies[i].name)
+            let (value, year) = keyAndYear(movies[i].name, year: movies[i].year)
             keys[i] = value
+            years[i] = year
             return value
+        }
+        func year(_ i: Int) -> Int? {
+            _ = key(i)
+            return years[i]
         }
         // A stream's cluster is the index of its cluster's first stream (an anchor).
         var cluster = Array(0..<n)
@@ -330,7 +361,7 @@ public struct FilmVersions: Sendable {
         for i in 0..<n {
             let id = validID(movies[i])
             guard id != 0 else { continue }
-            clusterYear[i] = movies[i].year
+            clusterYear[i] = year(i)
             guard var anchor = firstAnchor[id] else {
                 firstAnchor[id] = i
                 lastAnchor[id] = i
@@ -340,11 +371,11 @@ public struct FilmVersions: Sendable {
             var joined = false
             var needsYears = false
             while anchor >= 0 && compared < maxClustersPerID {
-                switch agreement(key(i), movies[i].year, key(anchor), clusterYear[anchor]) {
+                switch agreement(key(i), year(i), key(anchor), clusterYear[anchor]) {
                 case .same:
                     cluster[i] = anchor
                     joined = true
-                    if clusterYear[anchor] == nil { clusterYear[anchor] = movies[i].year }
+                    if clusterYear[anchor] == nil { clusterYear[anchor] = year(i) }
                 case .needsYears:
                     needsYears = true
                 case .different:
@@ -368,9 +399,9 @@ public struct FilmVersions: Sendable {
         for i in 0..<n {
             let movie = movies[i]
             let id = validID(movie)
-            guard id != 0, let year = movie.year else { continue }
+            guard id != 0 else { continue }
             let k = key(i)
-            guard groupableByTitle(k) else { continue }
+            guard let year = year(i), groupableByTitle(k) else { continue }
             let title = TitleYear(key: k, year: year)
             if var entry = titles[title] {
                 if entry.idCluster < 0 {
@@ -386,9 +417,9 @@ public struct FilmVersions: Sendable {
         }
         for i in 0..<n {
             let movie = movies[i]
-            guard validID(movie) == 0, let year = movie.year else { continue }
+            guard validID(movie) == 0 else { continue }
             let k = key(i)
-            guard groupableByTitle(k) else { continue }
+            guard let year = year(i), groupableByTitle(k) else { continue }
             let title = TitleYear(key: k, year: year)
             var entry = titles[title] ?? TitleEntry()
             if entry.ambiguous { diagnostics.ambiguousTitles += 1 }

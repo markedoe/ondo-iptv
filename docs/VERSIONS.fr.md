@@ -65,6 +65,20 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   sa version montrée d'abord, le retirer retire toutes les versions gardées. « Continuer à regarder » garde chaque flux,
   avec le badge de sa version. La dernière version choisie reste sur l'appareil.
 
+## Limites connues
+
+Elles gardent séparées deux versions d'un même film (une affiche de plus, jamais un film caché) :
+
+- Une étiquette écrite avec une seule majuscule (« Sandstorm French », « Sandstorm Dual ») reste un mot du titre :
+  « French », « English », « Dubbed », « Subbed » et « Dual » ne sont des étiquettes qu'en capitales, pour que « French
+  Kiss » et « Johnny English » gardent leur nom.
+- Une année du fournisseur différente d'un an entre deux versions (les dates de sortie varient selon les pays) fait deux
+  films sous un même identifiant.
+- Sans les deux années, une version dont le nom ajoute des mots à celui du film (« Le Transport : Héritage ») reste à
+  part (`prefixWithoutYears`).
+- Une année à la fin d'un nom (« Dune 2021 ») est prise pour l'année du flux quand c'est la sienne, ou quand il n'en a
+  pas et que le nombre est une année jusqu'à l'an prochain ; « Blade Runner 2049 » garde son nombre.
+
 ## Coût
 
 Les groupes sont construits une fois par catalogue, hors du fil principal, en un passage sur les films (tables de

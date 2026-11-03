@@ -521,7 +521,7 @@ class OndoViewModel(
 
     private suspend fun nextEpisode(series: Series): Episode? {
         val details = seriesDetails(series).getOrNull() ?: return null
-        return UiMappers.showcase(state.value).nextEpisode(series, details)?.first
+        return UiMappers.nextEpisode(state.value, series, details)?.first
     }
 
     /**

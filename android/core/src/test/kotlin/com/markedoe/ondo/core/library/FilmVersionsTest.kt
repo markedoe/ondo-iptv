@@ -85,6 +85,19 @@ class FilmVersionsTest {
         assertEquals(setOf(remake[1].id), versions.expand(setOf(remake[1].id)), "watching one does not hide the others")
     }
 
+    /** A year at the end of a name is the stream's year; a title that is a number stays one. */
+    @Test
+    fun aYearAtTheEndOfTheNameIsTheYear() {
+        assertEquals("dune" to 2021, FilmVersions.keyAndYear("Dune 2021", 2021, latest = 2027))
+        assertEquals("dune" to 2021, FilmVersions.keyAndYear("Dune - 2021", null, latest = 2027))
+        assertEquals("1917" to 2019, FilmVersions.keyAndYear("1917", 2019, latest = 2027))
+        assertEquals("blade runner 2049" to 2017, FilmVersions.keyAndYear("Blade Runner 2049", 2017, latest = 2027))
+        assertEquals("blade runner 2049" to null, FilmVersions.keyAndYear("Blade Runner 2049", null, latest = 2027))
+        assertEquals("space 1999" to 1975, FilmVersions.keyAndYear("Space 1999", 1975, latest = 2027), "another year: a number of the title")
+        assertTrue(FilmVersions.isNumber("二") && FilmVersions.isNumber("٢") && FilmVersions.isNumber("2"))
+        assertFalse(FilmVersions.isNumber("地球"))
+    }
+
     /** A stream without a year never brings two years into one group. */
     @Test
     fun oneGroupHoldsOneYear() {
