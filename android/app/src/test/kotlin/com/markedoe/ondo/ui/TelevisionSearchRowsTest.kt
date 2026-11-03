@@ -129,14 +129,14 @@ class TelevisionSearchRowsTest {
         return compose.onAllNodes(hasContentDescription(title)).fetchSemanticsNodes().any { it.boundsInRoot.left >= 0f && it.boundsInRoot.left < width }
     }
 
-    private fun startScreen(initial: SearchUiState): (SearchUiState) -> Unit {
+    private fun startScreen(initial: SearchUiState, memory: FocusMemory = FocusMemory()): (SearchUiState) -> Unit {
         var state by mutableStateOf(initial)
         compose.setContent {
             inputModes = LocalInputModeManager.current
             focusManager = LocalFocusManager.current
             OndoTheme {
                 TelevisionFrame {
-                    CompositionLocalProvider(LocalFocusMemory provides FocusMemory()) {
+                    CompositionLocalProvider(LocalFocusMemory provides memory) {
                         TvSearchScreen(state, onQuery = {}, onOpen = {}, onPlayChannel = {}, onFilters = {}, onPerson = {})
                     }
                 }
@@ -229,6 +229,18 @@ class TelevisionSearchRowsTest {
         val captions = compose.onAllNodesWithTag("resultTitle", useUnmergedTree = true).fetchSemanticsNodes()
             .flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty().map { text -> text.text } }
         assertEquals(listOf("Le Transport"), captions)
+    }
+
+    /**
+     * Back from a title whose row was not kept with the page (built anew at its start): the row is on the card at
+     * once, the remote on it, the row's first titles gone, rather than the row starting from Film 1.
+     */
+    @Test
+    fun backToARowNotKeptLandsOnItsCardAtOnce() {
+        startScreen(results("film", films), memory = FocusMemory("search:" + ShowcaseItem.MovieItem(films[12]).key))
+        waitFor { focused() == "Film 13" }
+        assertTrue(onScreen("Film 13"))
+        assertFalse("the row where it was", onScreen("Film 1"))
     }
 
     /** Down from the field lands on the first card of the first row, not on the card below the middle of the field. */

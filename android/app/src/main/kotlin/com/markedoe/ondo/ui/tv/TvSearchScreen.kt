@@ -167,11 +167,11 @@ fun TvSearchScreen(
         val search = state.query to filters
         posterRow(titles[0], "searchMovies", state.movies, search, onOpen)
         posterRow(titles[1], "searchSeries", state.series, search, onOpen)
-        resultRow(countedTitle(titles[2], state.channels.size), "searchChannels", state.channels, search, key = { it.channel.id }) { row, entry ->
-            TvChannelCard(row, onClick = { onPlayChannel(row) }, modifier = Modifier.resultFocus(entry, "search-channel:${row.channel.id}"))
+        resultRow(countedTitle(titles[2], state.channels.size), "searchChannels", state.channels, search, key = { it.channel.id }, memoryKey = { "search-channel:${it.channel.id}" }) { row, entry ->
+            TvChannelCard(row, onClick = { onPlayChannel(row) }, modifier = Modifier.resultFocus(entry, entry.memoryKey))
         }
-        resultRow(countedTitle(titles[3], state.people.size), "searchPeople", state.people, search, key = { "person-$it" }) { name, entry ->
-            TvPersonCard(name, onClick = { onPerson(name) }, photoUrl = state.photoOf(name), modifier = Modifier.resultFocus(entry, "search-person:$name").testTag("person-$name"))
+        resultRow(countedTitle(titles[3], state.people.size), "searchPeople", state.people, search, key = { "person-$it" }, memoryKey = { "search-person:$it" }) { name, entry ->
+            TvPersonCard(name, onClick = { onPerson(name) }, photoUrl = state.photoOf(name), modifier = Modifier.resultFocus(entry, entry.memoryKey).testTag("person-$name"))
         }
         val message = when {
             state.searching && nothing -> R.string.searching
@@ -200,9 +200,9 @@ private fun countedTitle(title: String, count: Int) = "$title ($count)"
 
 /** A row of posters found, each with its title (and year) beneath. */
 private fun LazyListScope.posterRow(title: String, tag: String, posters: List<ShowcaseItem>, search: Any, onOpen: (ShowcaseItem) -> Unit) {
-    resultRow(countedTitle(title, posters.size), tag, posters, search, key = { it.key }) { item, entry ->
+    resultRow(countedTitle(title, posters.size), tag, posters, search, key = { it.key }, memoryKey = { "search:${it.key}" }) { item, entry ->
         Column(Modifier.width(TvTokens.PosterWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            TvPosterCard(item, onClick = { onOpen(item) }, modifier = Modifier.resultFocus(entry, "search:${item.key}"))
+            TvPosterCard(item, onClick = { onOpen(item) }, modifier = Modifier.resultFocus(entry, entry.memoryKey))
             Text(
                 CatalogueMatcher.displayTitle(item.title),
                 style = MaterialTheme.typography.labelLarge,
@@ -215,8 +215,8 @@ private fun LazyListScope.posterRow(title: String, tag: String, posters: List<Sh
     }
 }
 
-/** One card of a row of results: its row and its place in it. */
-private class ResultCard(val row: ResultRowFocus, val index: Int)
+/** One card of a row of results: its row, its place in it, and its key in the page's memory. */
+private class ResultCard(val row: ResultRowFocus, val index: Int, val memoryKey: String)
 
 /**
  * Gives [card] its place in the page's memory (Back from a title lands on it) and in its row's (the remote enters the
@@ -258,6 +258,8 @@ private fun <T> LazyListScope.resultRow(
     results: List<T>,
     search: Any,
     key: (T) -> Any,
+    /** A card's key in the page's focus memory ([focusMemory]). */
+    memoryKey: (T) -> String,
     card: @Composable (T, ResultCard) -> Unit,
 ) {
     if (results.isEmpty()) return
@@ -273,6 +275,17 @@ private fun <T> LazyListScope.resultRow(
                 focus.last = 0
                 // Before the new results are laid out: the row does not first follow one of the old ones.
                 state.requestScrollToItem(0)
+            }
+        }
+        // Back from a title: the page gives the focus back to one of this row's cards. A row at its start (its place
+        // not kept with the page) goes to that card before it is drawn, rather than scrolling there from its first card
+        // once the card has the focus.
+        val restoring = LocalFocusMemory.current?.restore
+        if (restoring != null && !focus.hasFocus && state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset == 0) {
+            val index = results.indexOfFirst { memoryKey(it) == restoring }
+            if (index > 0) {
+                focus.last = index
+                state.requestScrollToItem(index)
             }
         }
         Column(Modifier.testTag(tag)) {
@@ -294,7 +307,7 @@ private fun <T> LazyListScope.resultRow(
                         }
                         .focusGroup(),
                 ) {
-                    itemsIndexed(results, key = { _, item -> key(item) }) { index, item -> card(item, ResultCard(focus, index)) }
+                    itemsIndexed(results, key = { _, item -> key(item) }) { index, item -> card(item, ResultCard(focus, index, memoryKey(item))) }
                 }
             }
         }
