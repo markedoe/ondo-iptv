@@ -464,6 +464,101 @@ class UiMappersTest {
         assertEquals(listOf("Desert Bleu", "Petit Desert"), filtered.movies.map { it.title })
     }
 
+    /** A hidden language's catalogue: every name carries [MARKER], so a list showing any of it is caught. */
+    private object HiddenLanguage {
+        const val MARKER = "Saudade"
+        val films = MediaCategory("m-pt", "|PT| Films", ContentType.MOVIE)
+        val kids = MediaCategory("m-pt-kids", "|PT| Infantil", ContentType.MOVIE)
+        val series = MediaCategory("s-pt", "|PT| Séries", ContentType.SERIES)
+        val live = MediaCategory("l-pt", "|PT| Canais", ContentType.LIVE)
+        val categories = listOf(films, kids, series, live)
+        val movie = Movie("pt1", "|PT| $MARKER do Mar", categoryId = films.id, streamUrl = "http://example.com/movie/pt1.mp4", year = 2024, rating = 9.9, addedAt = Fixtures.NOW / 1000)
+        val started = Movie("pt2", "|PT| $MARKER em Casa", categoryId = kids.id, streamUrl = "http://example.com/movie/pt2.mp4", year = 2024, rating = 9.8, addedAt = Fixtures.NOW / 1000)
+        val show = Series(id = "spt", name = "|PT| $MARKER Nocturna", categoryId = series.id, year = 2024, rating = 9.9, genre = "Drama", cast = "Rui $MARKER", addedAt = Fixtures.NOW / 1000)
+        val channel = Channel(id = "cpt", name = "|PT| $MARKER TV", categoryId = live.id, streamUrl = "http://example.com/live/cpt.m3u8")
+        val content = Fixtures.content.copy(
+            movies = Fixtures.content.movies + listOf(movie, started),
+            series = Fixtures.content.series + show,
+            channels = Fixtures.content.channels + channel,
+            movieCategories = Fixtures.content.movieCategories + listOf(films, kids),
+            seriesCategories = Fixtures.content.seriesCategories + series,
+            liveCategories = Fixtures.content.liveCategories + live,
+        )
+    }
+
+    /**
+     * Regression guard for hidden categories, on every list of titles at once. A language hidden in Settings (as a
+     * language, or its categories one by one) leaves none of its titles, channels or people in:
+     *  - Home: carousel, new movies, new series, trending, channels;
+     *  - Movies and Series: rows and grids (every category);
+     *  - Search: movies, series, channels and people, with and without filters;
+     *  - pages reached from a title: person, genre, year, award, similar titles (movie and series);
+     *  - Live TV and the guide;
+     *  - My List.
+     * The one exception, the current product rule: Continue watching keeps a title the viewer already started.
+     * A new screen that lists titles is added to [surfaces] here.
+     */
+    @Test
+    fun noListShowsTheTitlesOfAHiddenLanguage() {
+        val marker = HiddenLanguage.MARKER
+        val started = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, HiddenLanguage.started.id, title = HiddenLanguage.started.name, lastWatchedAt = 1)
+        val library = LibraryState()
+            .recordStart(started).updateProgress(started.key, 600.0, 6_000.0, now = 2)
+            .toggleFavorite(Favorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, HiddenLanguage.movie.id, HiddenLanguage.movie.name, addedAt = 3))
+        val base = Fixtures.state(library, content = HiddenLanguage.content).copy(
+            // The hidden titles share a genre, a year and an award with visible ones, are named by TMDb among a visible
+            // movie's similar titles, and name an actor only they name.
+            movieDetails = mapOf(
+                HiddenLanguage.movie.id to MediaDetails(title = HiddenLanguage.movie.name, genre = "Drama", cast = "Ana $marker"),
+                Fixtures.northernLights.id to MediaDetails(title = Fixtures.northernLights.name, genre = "Drama"),
+            ),
+            tmdbRelated = mapOf(
+                ShowcaseItem.MovieItem(Fixtures.glassCity).key to listOf(TrendingMatch.MovieMatch(HiddenLanguage.movie, TmdbItem(1, TmdbItem.MediaType.MOVIE, HiddenLanguage.movie.name))),
+                ShowcaseItem.SeriesItem(Fixtures.harborLights).key to listOf(TrendingMatch.SeriesMatch(HiddenLanguage.show, TmdbItem(2, TmdbItem.MediaType.TV, HiddenLanguage.show.name))),
+            ),
+        )
+        /** Every list of titles, by its name: what each shows, as text (the titles and names in it). */
+        fun surfaces(state: OndoState): Map<String, String> {
+            val home = UiMappers.home(state, labels, Fixtures.NOW)
+            val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state), state.library.hiddenTags)
+            // What a search found, without the words typed.
+            fun found(search: SearchUiState) = listOf(search.movies, search.series, search.channels.map { it.channel.name }, search.people).toString()
+            val categories = state.content.movieCategories.map { it.id }
+            val seriesCategories = state.content.seriesCategories.map { it.id }
+            return mapOf(
+                "home" to home.copy(continueWatching = emptyList(), tagSuggestion = null).toString(),
+                "movies rows" to UiMappers.vod(state, series = false, title = "").copy(continueWatching = emptyList()).toString(),
+                "series rows" to UiMappers.vod(state, series = true, title = "").copy(continueWatching = emptyList()).toString(),
+                "movie grids" to (categories.map { UiMappers.grid(state, false, it, false, "") } + listOf(UiMappers.grid(state, false, null, false, ""))).toString(),
+                "series grids" to (seriesCategories.map { UiMappers.grid(state, true, it, false, "") } + listOf(UiMappers.grid(state, true, null, false, ""))).toString(),
+                "my list" to UiMappers.myList(state, Fixtures.NOW).toString(),
+                "search" to listOf("a", "o", marker.lowercase(), "do mar", "tv").joinToString { found(UiMappers.search(index, it, state, Fixtures.NOW)) },
+                "filtered search" to found(UiMappers.search(index, "", state, Fixtures.NOW, SearchFilters(fromYear = 2024, toYear = 2024))),
+                "person" to listOf("Ana $marker", "Rui $marker").map { UiMappers.person(state, it).let { page -> page.movies + page.series } }.toString(),
+                "genre" to UiMappers.browse(state, BrowseKind.GENRE, "Drama", Locale.ENGLISH).toString(),
+                "year" to UiMappers.browse(state, BrowseKind.YEAR, "2024", Locale.ENGLISH).toString(),
+                "similar movies" to UiMappers.movieDetail(state, Fixtures.glassCity).similar.toString(),
+                "similar series" to UiMappers.seriesDetail(state, Fixtures.harborLights, null, null).similar.toString(),
+                "live" to UiMappers.live(state, null, false, Fixtures.NOW).toString(),
+                "guide" to UiMappers.guide(state, null, false, Fixtures.NOW).toString(),
+            )
+        }
+        // Shown: every surface that can list them does, so the check below proves something.
+        val shown = surfaces(base)
+        listOf("movies rows", "series rows", "movie grids", "series grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
+            .forEach { assertTrue("$it lists the language while it is shown", marker in shown.getValue(it)) }
+
+        val byLanguage = base.copy(library = base.library.settingTagsHidden(listOf("PT"), hidden = true))
+        val oneByOne = base.copy(library = base.library.settingCategoriesHidden(Fixtures.PLAYLIST_ID, HiddenLanguage.categories.map { it.id }, hidden = true))
+        for ((how, state) in listOf("as a language" to byLanguage, "one by one" to oneByOne)) {
+            surfaces(state).forEach { (surface, text) -> assertFalse("hidden $how, $surface still shows it: $text", marker in text) }
+            // The exception: Continue watching keeps the title already started; My List does not keep the saved one.
+            val home = UiMappers.home(state, labels, Fixtures.NOW)
+            assertEquals("hidden $how", listOf(HiddenLanguage.started.name), home.continueWatching.filter { marker in it.title }.map { it.title })
+            assertTrue("hidden $how, My List leaves it out", home.myList.none { marker in it.title })
+        }
+    }
+
     @Test
     fun aCollectionShowsItsItemsOfThePlaylistInTheOrderAdded() {
         fun favorite(kind: ItemKind, id: String, playlistId: String = Fixtures.PLAYLIST_ID) = Favorite(playlistId, kind, id, id, addedAt = 1)

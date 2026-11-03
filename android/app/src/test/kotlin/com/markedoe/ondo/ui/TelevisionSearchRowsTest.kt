@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.isFocused
 import androidx.compose.ui.test.isRoot
@@ -28,7 +29,11 @@ import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.pressKey
 import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.UncaughtErrors
+import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.ContentType
+import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.AppStore
 import com.markedoe.ondo.data.FakeHttp
@@ -182,6 +187,48 @@ class TelevisionSearchRowsTest {
         settle()
         assertTrue(onScreen("Film 13"))
         assertFalse("the row where it was", onScreen("Film 1"))
+    }
+
+    /** The texts shown in the unmerged tree (captions, row titles). */
+    private fun texts(): List<String> = compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).fetchSemanticsNodes()
+        .flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty().map { text -> text.text } }
+
+    /**
+     * A language hidden in Settings ("|PT| Films" and "|PT| Séries", a PT channel group) leaves Search on a TV: "a" finds
+     * the visible titles, none of the hidden ones, in any row.
+     */
+    @Test
+    fun searchOnATvLeavesOutAHiddenLanguage() {
+        val ptFilms = MediaCategory("m-pt", "|PT| Films", ContentType.MOVIE)
+        val ptSeries = MediaCategory("s-pt", "|PT| Séries", ContentType.SERIES)
+        val ptLive = MediaCategory("l-pt", "|PT| Canais", ContentType.LIVE)
+        val content = Fixtures.content.copy(
+            movies = Fixtures.content.movies + Movie("pt1", "|PT| Tony Carreira - Ao Vivo", categoryId = ptFilms.id, streamUrl = "http://example.com/movie/pt1.mp4"),
+            series = Fixtures.content.series + Series(id = "spt", name = "|PT| Tony Carreira - A Série", categoryId = ptSeries.id),
+            channels = Fixtures.content.channels + Channel(id = "cpt", name = "|PT| Tony TV", categoryId = ptLive.id, streamUrl = "http://example.com/live/cpt.m3u8"),
+            movieCategories = Fixtures.content.movieCategories + ptFilms,
+            seriesCategories = Fixtures.content.seriesCategories + ptSeries,
+            liveCategories = Fixtures.content.liveCategories + ptLive,
+        )
+        val shown = Fixtures.state(content = content)
+        val state = shown.copy(library = shown.library.settingTagsHidden(listOf("PT"), hidden = true))
+        val index = UiMappers.SearchIndex(state.content, UiMappers.hiddenCategoryIds(state), state.library.hiddenTags)
+        startScreen(UiMappers.search(index, "a", state, Fixtures.NOW))
+        settle()
+        assertTrue("the visible titles are found", onScreen("Glass City") || texts().any { "Glass City" in it })
+        assertTrue("nothing of the hidden language: ${texts()}", texts().none { "Tony" in it })
+        assertTrue(compose.onAllNodes(hasContentDescription("Tony", substring = true)).fetchSemanticsNodes().isEmpty())
+    }
+
+    /** A provider's tags are left out of a result's caption ("|FR| Le Transport" reads "Le Transport"). */
+    @Test
+    fun aResultsCaptionReadsWithoutTheProvidersTags() {
+        val tagged = Movie("fr1", "|FR| Le Transport", categoryId = Fixtures.drama.id, streamUrl = "http://example.com/movie/fr1.mp4", year = 2021)
+        startScreen(SearchUiState(query = "transport", movies = listOf(ShowcaseItem.MovieItem(tagged))))
+        settle()
+        val captions = compose.onAllNodesWithTag("resultTitle", useUnmergedTree = true).fetchSemanticsNodes()
+            .flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty().map { text -> text.text } }
+        assertEquals(listOf("Le Transport"), captions)
     }
 
     /** Down from the field lands on the first card of the first row, not on the card below the middle of the field. */

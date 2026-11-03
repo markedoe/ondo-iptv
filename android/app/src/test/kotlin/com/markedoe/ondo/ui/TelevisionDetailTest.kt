@@ -84,6 +84,16 @@ class TelevisionDetailTest {
         compose.onAllNodesWithTag("detailLogo", useUnmergedTree = true).assertCountEquals(0)
     }
 
+    /** A Continue watching card on a TV reads the title without the provider's tags. */
+    @Test
+    fun aContinueWatchingCardReadsWithoutTheProvidersTags() {
+        val item = com.markedoe.ondo.ui.model.ResumeItem("movie:fr1", "|FR| Le Transport", subtitle = "2021", imageUrl = null, progress = 0.4f, minutesLeft = 30)
+        compose.setContent { OndoTheme { TelevisionFrame { com.markedoe.ondo.ui.tv.TvResumeCard(item, onClick = {}) } } }
+        compose.waitForIdle()
+        compose.onAllNodesWithText("Le Transport", useUnmergedTree = true).assertCountEquals(1)
+        compose.onAllNodesWithText("|FR| Le Transport", useUnmergedTree = true).assertCountEquals(0)
+    }
+
     /** With TMDb's logo kept for the title, the page has it in the title's slot, the name still under it. */
     @Test
     fun aTitlesPageHasTmdbsLogoWhenKept() {

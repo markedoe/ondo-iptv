@@ -65,6 +65,32 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(engine.search("zzz").totalCount, 0)
     }
 
+    /// A hidden language's categories ("|PT| Films", "|PT| Séries", a PT channel group) leave Search for every type
+    /// alike: movies, series and channels.
+    func testHiddenCategoriesLeaveEveryTypeOfSearch() {
+        let url = URL(string: "http://example.com/1")!
+        let content = PlaylistContent(
+            channels: [
+                Channel(id: "c1", name: "Tony TV", categoryID: "l-shown", streamURL: url),
+                Channel(id: "c2", name: "|PT| Tony TV", categoryID: "l-pt", streamURL: url),
+            ],
+            movies: [
+                Movie(id: "m1", name: "Tony Takitani", categoryID: "m-shown", streamURL: url),
+                Movie(id: "m2", name: "|PT| Tony Carreira - Ao Vivo", categoryID: "m-pt", streamURL: url),
+            ],
+            series: [
+                Series(id: "s1", name: "Tony Hawk Stories", categoryID: "s-shown"),
+                Series(id: "s2", name: "|PT| Tony Carreira - A Série", categoryID: "s-pt"),
+            ]
+        )
+        let engine = SearchEngine(content: content)
+        XCTAssertEqual(engine.search("tony").totalCount, 6)
+        let hidden = engine.search("tony", excludedCategoryIDs: ["m-pt", "s-pt", "l-pt"])
+        XCTAssertEqual(hidden.movies.map(\.id), ["m1"])
+        XCTAssertEqual(hidden.series.map(\.id), ["s1"])
+        XCTAssertEqual(hidden.channels.map(\.id), ["c1"])
+    }
+
     /// Prefix matches filling the limit before the exact name is reached do not push the exact name out.
     func testAnExactNameIsFoundPastALimitOfPrefixMatches() {
         let url = URL(string: "http://example.com/1")!
