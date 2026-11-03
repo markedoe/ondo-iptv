@@ -14,6 +14,13 @@ extension KeyedDecodingContainer {
         return nil
     }
 
+    /// An id: a string, or a whole number written as text; never a boolean (`true` is not an id) nor a decimal number.
+    func lenientIDString(_ key: Key) -> String? {
+        if let value = try? decodeIfPresent(String.self, forKey: key) { return value }
+        if let value = try? decodeIfPresent(Int.self, forKey: key) { return String(value) }
+        return nil
+    }
+
     func lenientInt(_ key: Key) -> Int? {
         if let value = try? decodeIfPresent(Int.self, forKey: key) { return value }
         if let value = try? decodeIfPresent(String.self, forKey: key) {

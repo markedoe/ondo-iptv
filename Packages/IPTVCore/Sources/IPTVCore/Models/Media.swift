@@ -100,6 +100,8 @@ public struct Movie: Identifiable, Codable, Hashable, Sendable {
     public var headers: HTTPHeaders?
     public var xtreamStreamID: Int?
     public var containerExtension: String?
+    /// The film's TMDb id as the provider's list gives it (Xtream `tmdb`), a positive number only; see `FilmVersions`.
+    public var tmdbID: Int?
 
     public init(
         id: String,
@@ -113,7 +115,8 @@ public struct Movie: Identifiable, Codable, Hashable, Sendable {
         plot: String? = nil,
         headers: HTTPHeaders? = nil,
         xtreamStreamID: Int? = nil,
-        containerExtension: String? = nil
+        containerExtension: String? = nil,
+        tmdbID: Int? = nil
     ) {
         self.id = id
         self.name = name
@@ -127,6 +130,7 @@ public struct Movie: Identifiable, Codable, Hashable, Sendable {
         self.headers = headers
         self.xtreamStreamID = xtreamStreamID
         self.containerExtension = containerExtension
+        self.tmdbID = tmdbID
     }
 }
 

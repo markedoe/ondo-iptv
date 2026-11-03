@@ -35,6 +35,12 @@ private fun JsonPrimitive.integerLiteral(): Long? = if (isString) null else cont
 private fun JsonPrimitive.numberLiteral(): Double? =
     if (isString || isBooleanLiteral()) null else content.toDoubleOrNull()?.takeIf { it.isFinite() }
 
+/** An id: a string, or a whole number written as text; never a boolean (`true` is not an id) nor a decimal number. */
+internal fun JsonElement?.lenientIdString(): String? {
+    val p = primitive ?: return null
+    return if (p.isString) p.content else p.integerLiteral()?.toString()
+}
+
 /** String, or Int / Double / Bool rendered as text, or the first element of an array of strings. */
 internal fun JsonElement?.lenientString(): String? {
     if (this is JsonArray) {

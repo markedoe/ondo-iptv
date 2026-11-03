@@ -28,6 +28,26 @@ final class PerformanceTests: XCTestCase {
         XCTAssertLessThan(searchElapsed, 10)
     }
 
+    /// 100,000 films, a third of them in three versions (two with the TMDb id, one without): grouped in one pass.
+    func testAHundredThousandFilmsAreGroupedQuickly() {
+        let tags = ["|FR| %@ 4K DV", "%@ VOSTFR", "%@ (MULTI)"]
+        let movies = (0..<100_000).map { i -> Movie in
+            let film = i < 30_000 ? i / 3 : i
+            let name = i < 30_000 ? String(format: tags[i % 3], "Film \(film)") : "Film \(film)"
+            return Movie(
+                id: "x\(i)", name: name, categoryID: "c\(i % 40)", streamURL: URL(string: "http://host.example.com/\(i).mkv")!,
+                year: 1950 + film % 70, tmdbID: i < 30_000 && i % 3 == 1 ? nil : 10_000 + film
+            )
+        }
+        let start = Date()
+        let versions = FilmVersions.of(movies)
+        let elapsed = Date().timeIntervalSince(start)
+        print("100k films grouped in \(elapsed)s: \(versions.diagnostics)")
+        XCTAssertEqual(versions.groupCount, 80_000)
+        XCTAssertEqual(versions.diagnostics.groupsWithVersions, 10_000)
+        XCTAssertLessThan(elapsed, 30)
+    }
+
     /// A long-running series lists thousands of episodes: adding each one must not copy the ones before it.
     func testASeriesWithManyEpisodesBuildsQuickly() {
         let url = URL(string: "http://example.com/s/1.mkv")!

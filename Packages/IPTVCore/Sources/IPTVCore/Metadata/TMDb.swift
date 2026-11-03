@@ -471,18 +471,20 @@ public enum CatalogueMatcher {
     /// stored titles stay the provider's.
     public static func displayTitle(_ title: String) -> String {
         var name = title
-        name = name.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
-        name = name.replacingOccurrences(of: #"\|[^|\s][^|]{0,23}\|"#, with: " ", options: .regularExpression)
-        name = name.replacingOccurrences(of: #"\(\s*\d{4}\s*\)"#, with: " ", options: .regularExpression)
+        // Each pattern only where its first character is (the same result, without a regular expression per title of a
+        // whole catalogue: FilmVersions cleans every title).
+        if name.contains("[") { name = name.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression) }
+        if name.contains("|") { name = name.replacingOccurrences(of: #"\|[^|\s][^|]{0,23}\|"#, with: " ", options: .regularExpression) }
+        if name.contains("(") { name = name.replacingOccurrences(of: #"\(\s*\d{4}\s*\)"#, with: " ", options: .regularExpression) }
         // "(MULTI)", "(VOSTFR 4K)": a group of tags only.
-        name = replacingGroups(in: name, pattern: #"\([^)]*\)"#) { group in
+        if name.contains("(") { name = replacingGroups(in: name, pattern: #"\([^)]*\)"#) { group in
             let inner = group.trimmingCharacters(in: CharacterSet(charactersIn: "()"))
             let words = inner.split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "/" })
                 .map(String.init).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             return !words.isEmpty && words.allSatisfy(isTag) ? " " : group
-        }
+        } }
         // "FR - ", "FR-4K: ", "EN | " before the name.
-        if let match = leadingTag.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
+        if name.contains(where: { "-:|·".contains($0) }), let match = leadingTag.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
            let tagRange = Range(match.range(at: 1), in: name), let whole = Range(match.range, in: name) {
             let words = name[tagRange].split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "+" }).map(String.init)
             if words.allSatisfy(isTag) { name = String(name[whole.upperBound...]) }
@@ -493,9 +495,10 @@ public enum CatalogueMatcher {
         while words.count > 1, let last = words.last, isTag(last) { words.removeLast() }
         while words.count > 1, let first = words.first, isTag(first) { words.removeFirst() }
         // The separators inside the name stay: only the words' own edges were trimmed above.
-        let cleaned = rebuild(name, words: words)
-            .trimmingCharacters(in: separators)
-            .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        var cleaned = rebuild(name, words: words).trimmingCharacters(in: separators)
+        if cleaned.contains("  ") || cleaned.contains(where: { $0.isWhitespace && $0 != " " }) {
+            cleaned = cleaned.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        }
         return cleaned.isEmpty ? title.trimmingCharacters(in: .whitespacesAndNewlines) : cleaned
     }
 

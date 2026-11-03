@@ -1,7 +1,9 @@
 package com.markedoe.ondo.core
 
+import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.model.Channel
+import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.Playlist
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.PlaylistSource
@@ -34,6 +36,28 @@ class MemoryBudgetTest {
         val playlist = Playlist(name = "X", source = PlaylistSource.Xtream(XtreamCredentials("http://panel.example.com", "demo", "demo")))
         val content = PlaylistLoader(FileHttp(routes), downloadFolder = folder.resolve("downloads")).load(playlist)
         assertEquals(listOf(5_000, 20_000, 5_000), listOf(content.channels.size, content.movies.size, content.series.size))
+    }
+
+    /** 100,000 films, a third of them in three versions: grouped within the heap, the same counts as Apple's PerformanceTests. */
+    @Test
+    fun aHundredThousandFilmsAreGrouped() {
+        val tags = listOf("|FR| %s 4K DV", "%s VOSTFR", "%s (MULTI)")
+        val movies = List(100_000) { i ->
+            val film = if (i < 30_000) i / 3 else i
+            Movie(
+                id = "x$i",
+                name = if (i < 30_000) tags[i % 3].format("Film $film") else "Film $film",
+                categoryId = "c${i % 40}",
+                streamUrl = "http://host.example.com/$i.mkv",
+                year = 1950 + film % 70,
+                tmdbId = if (i < 30_000 && i % 3 == 1) null else 10_000 + film,
+            )
+        }
+        val started = System.nanoTime()
+        val versions = FilmVersions.of(movies)
+        println("100k films grouped in ${(System.nanoTime() - started) / 1_000_000} ms: ${versions.diagnostics}")
+        assertEquals(80_000, versions.groupCount)
+        assertEquals(10_000, versions.diagnostics.groupsWithVersions)
     }
 
     @Test

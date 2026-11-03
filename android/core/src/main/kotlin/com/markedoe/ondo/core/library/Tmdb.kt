@@ -381,6 +381,7 @@ object CatalogueMatcher {
 
     private val leadingTag = Regex("""^\s*([\p{L}\p{N}]{2,8}(?:[-+ ][\p{L}\p{N}]{1,6})?)\s*[-:|·]\s+""")
     private val parenthesizedYear = Regex("""\(\s*\d{4}\s*\)""")
+    private val whitespace = Regex("""\s+""")
     private val separators = " -:|·_.,"
 
     /**
@@ -389,14 +390,21 @@ object CatalogueMatcher {
      * `"Le Transport (MULTI) (2021)"` -> `"Le Transport"`. The title as it is when nothing would be left of it.
      */
     fun displayTitle(title: String): String {
-        var name = title.replace(bracketed, " ").replace(barred, " ").replace(parenthesizedYear, " ")
-        // "(MULTI)", "(VOSTFR 4K)": a group of tags only.
-        name = name.replace(parenthesized) { group ->
-            val words = group.value.trim('(', ')').split(' ', '-', '/').filter { it.isNotBlank() }
-            if (words.isNotEmpty() && words.all(::isTag)) " " else group.value
+        // Each pattern only where its first character is (the same result, without a regular expression per title of a
+        // whole catalogue: FilmVersions cleans every title).
+        var name = title
+        if ('[' in name) name = name.replace(bracketed, " ")
+        if ('|' in name) name = name.replace(barred, " ")
+        if ('(' in name) {
+            name = name.replace(parenthesizedYear, " ")
+            // "(MULTI)", "(VOSTFR 4K)": a group of tags only.
+            name = name.replace(parenthesized) { group ->
+                val words = group.value.trim('(', ')').split(' ', '-', '/').filter { it.isNotBlank() }
+                if (words.isNotEmpty() && words.all(::isTag)) " " else group.value
+            }
         }
         // "FR - ", "FR-4K: ", "EN | " before the name.
-        leadingTag.find(name)?.let { match ->
+        if (name.any { it in "-:|·" }) leadingTag.find(name)?.let { match ->
             val words = match.groupValues[1].split(' ', '-', '+').filter { it.isNotBlank() }
             if (words.all(::isTag)) name = name.substring(match.range.last + 1)
         }
@@ -404,7 +412,8 @@ object CatalogueMatcher {
         while (words.size > 1 && isTag(words.last())) words.removeAt(words.size - 1)
         while (words.size > 1 && isTag(words.first())) words.removeAt(0)
         // The separators inside the name stay: only the words' own edges were trimmed above.
-        val cleaned = rebuild(name, words).trim(*separators.toCharArray()).replace(Regex("""\s+"""), " ")
+        var cleaned = rebuild(name, words).trim(*separators.toCharArray())
+        if ("  " in cleaned || cleaned.any { it in "\t\n\u000B\u000C\r" }) cleaned = cleaned.replace(whitespace, " ")
         return cleaned.ifEmpty { title.trim() }
     }
 

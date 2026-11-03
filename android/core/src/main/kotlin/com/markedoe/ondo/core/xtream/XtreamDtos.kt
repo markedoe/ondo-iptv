@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.xtream
 
 import com.markedoe.ondo.core.isNewline
+import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.nilIfBlank
 import com.markedoe.ondo.core.net.Urls
 import kotlinx.serialization.json.JsonArray
@@ -113,6 +114,7 @@ internal data class XtreamVodStreamDto(
     val containerExtension: String?,
     val year: Int?,
     val plot: String?,
+    val tmdbId: Int? = null,
 ) {
     companion object {
         fun from(json: JsonElement): XtreamVodStreamDto? {
@@ -130,6 +132,7 @@ internal data class XtreamVodStreamDto(
                 containerExtension = o["container_extension"].lenientString()?.nilIfBlank(),
                 year = o["year"].lenientYear(),
                 plot = o["plot"].lenientString()?.nilIfBlank(),
+                tmdbId = FilmVersions.tmdbId(o["tmdb"].lenientIdString() ?: o["tmdb_id"].lenientIdString()),
             )
         }
     }

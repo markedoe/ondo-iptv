@@ -158,7 +158,8 @@ public struct XtreamClient: Sendable {
                     addedAt: dto.added,
                     plot: dto.plot,
                     xtreamStreamID: dto.streamID,
-                    containerExtension: dto.containerExtension
+                    containerExtension: dto.containerExtension,
+                    tmdbID: dto.tmdbID
                 )
             }
         }

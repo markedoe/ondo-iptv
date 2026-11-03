@@ -18,4 +18,6 @@ data class Movie(
     val xtreamStreamId: Int? = null,
     val containerExtension: String? = null,
     val headers: HttpHeaders? = null,
+    /** The film's TMDb id as the provider's list gives it (Xtream `tmdb`), a positive number only; see `FilmVersions`. */
+    val tmdbId: Int? = null,
 )

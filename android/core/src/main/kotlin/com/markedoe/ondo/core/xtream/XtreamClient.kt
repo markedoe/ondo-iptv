@@ -166,6 +166,7 @@ class XtreamClient(
                 plot = dto.plot,
                 xtreamStreamId = dto.streamId,
                 containerExtension = dto.containerExtension,
+                tmdbId = dto.tmdbId,
             )
         }.distinctBy { it.id }
 

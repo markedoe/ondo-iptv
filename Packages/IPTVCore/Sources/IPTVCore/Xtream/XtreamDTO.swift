@@ -159,9 +159,11 @@ struct XtreamVODStreamDTO: Decodable {
     var directSource: String?
     var year: Int?
     var plot: String?
+    var tmdbID: Int?
 
     enum CodingKeys: String, CodingKey {
-        case name, rating, added, year, plot
+        case name, rating, added, year, plot, tmdb
+        case tmdbID = "tmdb_id"
         case streamID = "stream_id"
         case icon = "stream_icon"
         case categoryID = "category_id"
@@ -187,6 +189,7 @@ struct XtreamVODStreamDTO: Decodable {
         directSource = c.lenientString(.directSource)?.nilIfBlank
         year = c.lenientYear(.year)
         plot = c.lenientString(.plot)?.nilIfBlank
+        tmdbID = FilmVersions.tmdbID(c.lenientIDString(.tmdb) ?? c.lenientIDString(.tmdbID))
     }
 }
 
