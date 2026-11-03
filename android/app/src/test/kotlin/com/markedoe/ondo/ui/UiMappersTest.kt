@@ -79,10 +79,23 @@ class UiMappersTest {
         val library = LibraryState().recordStart(finished).updateProgress(finished.key, 5_900.0, 6_000.0, now = 2)
         val home = UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, Fixtures.NOW)
         assertEquals(listOf("The Long Road", "Blue Horizon", "Summer in Lisbon"), home.trending.map { it.title })
-        // The best rated additions of the week come first; trending titles fill the carousel after them.
+        // Without TMDb votes there is no best recent source: trending titles come first, then new releases.
         assertEquals(
-            listOf("Harbor Lights", "The Last Signal", "Northern Lights", "The Archive", "Summer in Lisbon", "Blue Horizon", "Glass City", "The Long Road", "Silent Harbor", "Midnight Orchard"),
+            listOf("The Long Road", "Blue Horizon", "Summer in Lisbon", "Northern Lights", "Harbor Lights", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
             home.hero.map { it.item.title },
+        )
+        // With votes, the best rated additions of the last four days (weighted by the votes) come first.
+        val voted = Fixtures.state(library).copy(
+            trending = trending,
+            tmdbRatings = mapOf(
+                "m-1" to TmdbRating(7.3, 12_345),
+                "s-s1" to TmdbRating(7.9, 800),
+                "m-4" to TmdbRating(10.0, 10),
+            ),
+        )
+        assertEquals(
+            listOf("Harbor Lights", "Northern Lights", "The Long Road", "Blue Horizon", "Summer in Lisbon", "The Last Signal", "The Archive", "Glass City", "Midnight Orchard"),
+            UiMappers.home(voted, labels, Fixtures.NOW).hero.map { it.item.title },
         )
         val week = Fixtures.NOW + 14 * 86_400_000L
         assertEquals("The Long Road", UiMappers.home(Fixtures.state(library).copy(trending = trending), labels, week).hero.first().item.title)
@@ -175,7 +188,7 @@ class UiMappersTest {
     fun homeShowsTheCarouselShelvesAndChannels() {
         val home = UiMappers.home(Fixtures.state(), labels, Fixtures.NOW)
         assertEquals("Home", home.playlistName)
-        assertEquals(10, home.hero.size)
+        assertEquals(6, home.hero.size)
         assertEquals("Movie · 2025 · ★ 7.8", home.hero.first { it.item.title == "Northern Lights" }.meta)
         assertEquals("Series · 2025 · Drama · ★ 8.2", home.hero.first { it.item.title == "Harbor Lights" }.meta)
         assertTrue(home.hasVod)

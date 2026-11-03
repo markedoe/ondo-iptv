@@ -118,7 +118,8 @@ interface changes.
 
 ### Android (phones, tablets and TV)
 
-- **Home**: carousel, movies and series in progress (one row each; long-press a card, or hold OK on a TV, to take
+- **Home**: carousel (with a TMDb token, first the best rated titles added in the last four days: TMDb's average
+  vote weighted by the number of votes, at least 50 votes to qualify; then Trending and new releases), movies and series in progress (one row each; long-press a card, or hold OK on a TV, to take
   it out), My List, new releases, channels; when the playlist was last updated, above its name.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), watched movies hidden if you like, detail pages (Resume, From Start, next

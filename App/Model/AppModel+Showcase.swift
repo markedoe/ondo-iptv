@@ -63,7 +63,7 @@ enum ShowcaseItem: Identifiable, Hashable {
     }
 }
 
-/// What the home screen features: continue watching first, then trending titles and new releases.
+/// What the home screen features: continue watching first, then the best recent titles, trending titles and new releases.
 extension AppModel {
     /// New movies: released this year or last year, by release year and not by the date the provider
     /// added them (an old film added yesterday is not new). Newest first, then the latest additions, then
@@ -126,6 +126,52 @@ extension AppModel {
         return a.title.localizedStandardCompare(b.title) == .orderedAscending
     }
 
+    /// The movies and series the provider added in the last `WeightedRating.recentDays` days (its own date, which an M3U
+    /// list does not give), without anything from a hidden or locked category or a movie hidden as watched.
+    func recentlyAdded(now: Date = .now) -> [ShowcaseItem] {
+        // Home asks several times per redraw: the catalogue is gone through once an hour. The list is kept a day wider than
+        // the window, and cut exactly below.
+        let hour = Int(now.timeIntervalSince1970 / 3600)
+        let wide = now.addingTimeInterval(-TimeInterval(WeightedRating.recentDays + 1) * 24 * 3600)
+        let all = cachedList(newKey("recent", (hour...hour))) { () -> [ShowcaseItem] in
+            let movies = self.movies(in: nil, sort: .playlist, includingWatched: true).filter { ($0.addedAt ?? .distantPast) >= wide }
+            let series = self.series(in: nil, sort: .playlist).filter { ($0.addedAt ?? .distantPast) >= wide }
+            return movies.map(ShowcaseItem.movie) + series.map(ShowcaseItem.series)
+        }
+        let watched = hiddenWatchedMovieIDs()
+        return all.filter { item in
+            guard let added = item.addedAt, WeightedRating.isRecent(added, now: now) else { return false }
+            if case .movie(let movie) = item { return !watched.contains(movie.id) }
+            return true
+        }
+    }
+
+    /// The best rated titles the provider added in the last four days, by TMDb's average vote weighted by the number of
+    /// votes (`WeightedRating`: at least 50 votes to qualify, ties to the latest added, then the title). A title whose
+    /// votes are not known yet is left out, so without TMDb data the list is empty. Each film once whatever its copies.
+    func bestRecent(limit: Int = 15, now: Date = .now) -> [ShowcaseItem] {
+        var byID: [String: ShowcaseItem] = [:]
+        let candidates = recentlyAdded(now: now).compactMap { item -> WeightedRating.Candidate? in
+            guard let votes = tmdbTitle(for: item)?.votes, let added = item.addedAt else { return nil }
+            byID[item.id] = item
+            return WeightedRating.Candidate(id: item.id, title: item.title, average: votes.average, votes: votes.count, addedAt: added)
+        }
+        var seen = Set<String>()
+        var result: [ShowcaseItem] = []
+        for candidate in WeightedRating.rank(candidates) where result.count < limit {
+            guard let item = byID[candidate.id] else { continue }
+            let film = item.title.trimmingCharacters(in: .whitespaces).lowercased() + "|" + (item.year.map(String.init) ?? "")
+            if seen.insert(film).inserted { result.append(item) }
+        }
+        return result
+    }
+
+    /// The recent titles to ask TMDb about (their votes are what `bestRecent` ranks by): the best rated by the provider
+    /// first, at most `limit`.
+    func recentTitlesToRank(limit: Int = 30, now: Date = .now) -> [ShowcaseItem] {
+        Array(recentlyAdded(now: now).sorted { ($0.rating ?? 0) > ($1.rating ?? 0) }.prefix(limit))
+    }
+
     /// Movies and series of the user's favourites (My List), most recently added first.
     func myList() -> [ShowcaseItem] {
         let movies = favorites(.movie).compactMap { entry in index.moviesByID[entry.reference.itemID].map { (entry.addedAt, ShowcaseItem.movie($0)) } }
@@ -142,8 +188,9 @@ extension AppModel {
         }
     }
 
-    /// Up to `limit` titles for the hero carousel, without duplicates.
-    func heroItems(limit: Int = 5) -> [ShowcaseItem] {
+    /// Up to `limit` titles for the hero carousel, without duplicates: what is being watched, the best recent titles,
+    /// the trending ones, then the new releases.
+    func heroItems(limit: Int = 5, now: Date = .now) -> [ShowcaseItem] {
         var items: [ShowcaseItem] = []
         func append(_ item: ShowcaseItem) {
             if items.count < limit, !items.contains(item) { items.append(item) }
@@ -151,13 +198,14 @@ extension AppModel {
         for entry in continueWatching().prefix(2) {
             if let item = showcaseItem(for: entry) { append(item) }
         }
+        for item in bestRecent(limit: limit, now: now) { append(item) }
         for match in trendingTitles() {
             switch match {
             case .movie(let movie, _): append(.movie(movie))
             case .series(let series, _): append(.series(series))
             }
         }
-        for item in newReleases(limit: limit * 2) { append(item) }
+        for item in newReleases(limit: limit * 2, now: now) { append(item) }
         return items
     }
 

@@ -78,8 +78,16 @@ object UiMappers {
         return state.content.channels.filter { it.categoryId !in hidden && it.id !in left }
     }
 
-    fun showcase(state: OndoState): Showcase =
-        Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending)
+    /**
+     * [kept]: what TMDb said and the device kept, by poster key ([OndoRepository.keptPosterFacts]); its votes, and those of
+     * the answers of this session, rank the carousel's best recent titles.
+     */
+    fun showcase(state: OndoState, kept: Map<String, TitleMetadata> = emptyMap()): Showcase {
+        val votes = HashMap<String, TmdbRating>()
+        kept.forEach { (key, title) -> title.rating?.let { votes[key] = it } }
+        votes.putAll(state.tmdbRatings)
+        return Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes)
+    }
 
     /** The movies left out where the viewer browses: the finished ones, when Settings hides them. */
     fun hiddenMovieIds(state: OndoState): Set<String> =
@@ -265,8 +273,8 @@ object UiMappers {
         ).joinToString(" · ")
     }
 
-    fun home(state: OndoState, labels: Labels, now: Long): HomeUiState {
-        val showcase = showcase(state)
+    fun home(state: OndoState, labels: Labels, now: Long, kept: Map<String, TitleMetadata> = emptyMap()): HomeUiState {
+        val showcase = showcase(state, kept)
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val hero = showcase.heroItems(now).map { item ->

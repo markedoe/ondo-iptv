@@ -90,8 +90,14 @@ class OndoViewModel(
         this.labels.value = labels
     }
 
-    val home: StateFlow<HomeUiState?> = combine(state, minutes, this.labels) { state, now, labels ->
-        UiMappers.home(state, labels, now).copy(beta = BuildConfig.BETA)
+    /** What TMDb said of the catalogue's titles and the device kept (votes included), again as more is kept; empty until read. */
+    private val keptFacts: Flow<Map<String, TitleMetadata>> =
+        state.distinctUntilChanged { old, new -> old.content === new.content && old.tmdbRatings === new.tmdbRatings }
+            .mapLatest { repository.keptPosterFacts() }
+            .onStart { emit(emptyMap()) }
+
+    val home: StateFlow<HomeUiState?> = combine(state, minutes, this.labels, keptFacts) { state, now, labels, kept ->
+        UiMappers.home(state, labels, now, kept).copy(beta = BuildConfig.BETA)
     }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
@@ -548,7 +554,7 @@ class OndoViewModel(
                 // Not while the app is still starting or the catalogue is being shown.
                 delay(PREPARE_START_DELAY_MS)
                 val now = clock()
-                val titles = withContext(computation) { UiMappers.showcase(state.value).aheadTitles(now, PREPARE_LIMIT) }
+                val titles = withContext(computation) { UiMappers.showcase(state.value, repository.keptPosterFacts()).aheadTitles(now, PREPARE_LIMIT) }
                 for (item in titles) {
                     val details = details(state.value, item)
                     val title = details?.title?.takeIf { it.isNotBlank() } ?: item.title

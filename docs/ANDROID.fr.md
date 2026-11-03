@@ -82,8 +82,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   dans la recherche, et les titres d'une personne d'après ses crédits TMDb. Les réponses de TMDb sont gardées sur
   l'appareil (`SqliteMetadataStore`, `metadata.sqlite`, comme sur les appareils Apple ; clés
   `movie:603` ou `movie:sandstorm:2021`) : les fiches les affichent tout de suite, TMDb n'est redemandé qu'après
-  30 jours (7 pour un titre qu'il ne connaît pas), les titres du carrousel de l'accueil sont demandés à l'avance deux
-  à la fois, les crédits gardés trouvent les personnes dans la recherche et leurs titres sans réseau, et une adresse
+  30 jours (7 pour un titre qu'il ne connaît pas), les titres du carrousel de l'accueil et ceux ajoutés ces quatre derniers jours sont demandés à l'avance deux
+  à la fois (la première source du carrousel classe ces derniers par la note moyenne de TMDb pondérée par son nombre de
+  votes : `v/(v+200)·R + 200/(v+200)·6,5`, 50 votes au moins, égalité au plus récemment ajouté puis au titre ;
+  `WeightedRating`, comme sur Apple), les crédits gardés trouvent les personnes dans la recherche et leurs titres sans réseau, et une adresse
   d'image morte est retenue 7 jours. Un 401 plus tard (un
   jeton révoqué, ou arrivé par la synchronisation) s'affiche comme refusé dans les Réglages, et plus rien n'est demandé.
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,

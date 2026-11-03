@@ -292,7 +292,7 @@ struct HomeView: View {
     // MARK: - Details prefetch
 
     private func prefetchKey(_ hero: [ShowcaseItem]) -> String {
-        hero.map(\.id).joined(separator: ",") + "|" + firstResumeCards().map(\.id).joined(separator: ",")
+        hero.map(\.id).joined(separator: ",") + "|\(model.content.fetchedAt.timeIntervalSince1970)|" + firstResumeCards().map(\.id).joined(separator: ",")
     }
 
     /// The first cards of the movies and series in progress: the ones on screen.
@@ -304,7 +304,8 @@ struct HomeView: View {
     /// (with a TMDb token) what TMDb knows of them, ahead of the rows' cards.
     private func prefetchDetails(_ hero: [ShowcaseItem]) async {
         let resume = firstResumeCards().compactMap { model.showcaseItem(for: $0) }
-        model.prefetchMetadata(hero + resume)
+        // The titles added in the last days are asked about too: the carousel ranks them by TMDb's votes.
+        model.prefetchMetadata(hero + resume + model.recentTitlesToRank())
         for item in hero + resume where model.cachedDetails(for: item) == nil {
             guard !Task.isCancelled else { return }
             _ = await model.loadDetails(for: item)

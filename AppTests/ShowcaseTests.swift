@@ -135,6 +135,19 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(model.heroItems(limit: 2).count, 2)
     }
 
+    /// The carousel's best recent source needs the provider's date added (an M3U list gives none) and TMDb's votes; the
+    /// ranking itself (weighted rating, 50 votes at least, the four-day window) is tested in IPTVCore.
+    func testBestRecentNeedsTheDateAddedAndTMDbVotes() async throws {
+        let model = try await model()
+        XCTAssertTrue(model.bestRecent().isEmpty, "no TMDb data: the source is empty")
+        let bright = try movie("Bright Side", in: model)
+        let key = try XCTUnwrap(MetadataKey.title(.movie, name: bright.name, year: bright.year))
+        model.tmdbMetadata.titles[key] = TitleMetadata(key: key, kind: "movie", voteAverage: 7.8, voteCount: 5_000, fetchedAt: Date())
+        XCTAssertTrue(model.recentlyAdded().isEmpty, "an M3U list gives no date added")
+        XCTAssertTrue(model.bestRecent().isEmpty)
+        XCTAssertEqual(model.heroItems(limit: 5).first, .movie(bright), "the carousel falls back to new releases")
+    }
+
     func testMoviesAndSeriesInProgressAreApart() async throws {
         let model = try await model()
         let road = try movie("Long Road", in: model)

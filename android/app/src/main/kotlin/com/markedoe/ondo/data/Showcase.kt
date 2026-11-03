@@ -1,7 +1,9 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.library.CatalogueMatcher
+import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
+import com.markedoe.ondo.core.library.WeightedRating
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
@@ -27,6 +29,8 @@ class Showcase(
     private val hideWatchedMovies: Boolean = false,
     /** Titles of the catalogue that are trending on TMDb (with the viewer's token), in TMDb's order. */
     private val trendingMatches: List<TrendingMatch> = emptyList(),
+    /** What TMDb's voters said of the catalogue's titles, by [ShowcaseItem.key]: the carousel's best recent source ranks by it. */
+    private val votes: Map<String, TmdbRating> = emptyMap(),
 ) {
     private val movies by lazy { content.movies.filter { it.categoryId !in excludedCategoryIds } }
     private val browsableMovies by lazy {
@@ -104,30 +108,42 @@ class Showcase(
         ItemKind.CHANNEL, ItemKind.PERSON -> null
     }
 
+    /** The movies and series the provider added in the last [RECENT_DAYS] days (its own date, which an M3U list does not give). */
+    private fun recentlyAdded(now: Long): List<ShowcaseItem> {
+        return (browsableMovies.map { ShowcaseItem.MovieItem(it) } + series.map { ShowcaseItem.SeriesItem(it) })
+            .filter { item -> item.addedAt?.let { WeightedRating.isRecent(it, now / 1_000) } == true }
+    }
+
     /**
-     * The best rated movies and series the provider added in the last [RECENT_DAYS] days (its own date, which an M3U
-     * list does not give), each film once whatever its copies (language, quality).
+     * The best rated movies and series the provider added in the last [RECENT_DAYS] days, by TMDb's average vote weighted
+     * by the number of votes ([WeightedRating]: at least [WeightedRating.MINIMUM_VOTES] votes to qualify, ties to the latest
+     * added then the title). A title whose votes are not known is left out, so with no TMDb data the list is empty. Each
+     * film once whatever its copies (language, quality).
      */
     fun bestRecent(now: Long, limit: Int = HERO_TITLES): List<ShowcaseItem> {
-        val since = now / 1_000 - RECENT_DAYS * 86_400L
-        val recent = browsableMovies.map { ShowcaseItem.MovieItem(it) } + series.map { ShowcaseItem.SeriesItem(it) }
-        return recent
-            .filter { (it.addedAt ?: Long.MIN_VALUE) >= since && (it.rating ?: 0.0) > 0.0 }
-            .sortedWith(compareByDescending<ShowcaseItem> { it.rating ?: 0.0 }.thenByDescending { it.addedAt ?: 0L }.thenBy(String.CASE_INSENSITIVE_ORDER) { it.title })
+        val byKey = HashMap<String, ShowcaseItem>()
+        val candidates = recentlyAdded(now).mapNotNull { item ->
+            val rating = votes[item.key] ?: return@mapNotNull null
+            byKey[item.key] = item
+            WeightedRating.Candidate(item.key, item.title, rating.average, rating.votes, item.addedAt ?: 0L)
+        }
+        return WeightedRating.rank(candidates)
+            .mapNotNull { byKey[it.id] }
             .distinctBy { "${it.title.trim().lowercase()}|${it.year}" }
             .take(limit)
     }
 
     /**
-     * The titles worth preparing ahead (Settings, "Prepare new titles"): the carousel's, the best rated of the week,
-     * the new movies and series and the trending ones, each once, up to [limit].
+     * The titles worth preparing ahead (Settings, "Prepare new titles"): the carousel's, the titles added in
+     * the last [RECENT_DAYS] days (their votes are what the carousel ranks by, so they are asked for first), the new
+     * movies and series and the trending ones, each once, up to [limit].
      */
     fun aheadTitles(now: Long, limit: Int): List<ShowcaseItem> =
-        (heroItems(now) + bestRecent(now, limit) + newReleases(now, limit) + trending())
+        (heroItems(now) + recentlyAdded(now).sortedByDescending { it.rating ?: 0.0 } + newReleases(now, limit) + trending())
             .distinctBy { it.key }
             .take(limit)
 
-    /** Up to [limit] titles for the carousel: the best rated of the week ([bestRecent]), then trending titles, then new releases, no duplicates. */
+    /** Up to [limit] titles for the carousel: the best recent titles ([bestRecent]), then trending titles, then new releases, no duplicates. */
     fun heroItems(now: Long, limit: Int = HERO_TITLES): List<ShowcaseItem> {
         val result = LinkedHashMap<String, ShowcaseItem>()
         fun add(item: ShowcaseItem?) {
@@ -243,5 +259,5 @@ class Showcase(
 /** How many titles the carousel shows at most. */
 const val HERO_TITLES = 15
 
-/** How far back the carousel looks for the best rated additions. */
-const val RECENT_DAYS = 7L
+/** How far back the carousel looks for the best rated additions (days). */
+const val RECENT_DAYS = WeightedRating.RECENT_DAYS

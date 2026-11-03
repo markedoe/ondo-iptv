@@ -126,7 +126,9 @@ chaque changement de l'interface.
 
 ### Android (téléphones, tablettes et TV)
 
-- **Accueil** : carrousel, films et séries en cours (une rangée chacun ; appuyez longuement sur une carte, ou
+- **Accueil** : carrousel (avec un jeton TMDb, d'abord les titres les mieux notés ajoutés ces quatre derniers jours :
+  la note moyenne de TMDb pondérée par le nombre de votes, au moins 50 votes pour être retenu ; puis les Tendances et les
+  nouveautés), films et séries en cours (une rangée chacun ; appuyez longuement sur une carte, ou
   maintenez OK sur une TV, pour la retirer), Ma liste, nouveautés, chaînes ; la date de dernière mise à jour de la
   playlist, au-dessus de son nom.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de

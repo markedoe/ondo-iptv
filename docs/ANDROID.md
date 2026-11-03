@@ -73,7 +73,9 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   (`TmdbClient.titleInfo`, one call, by the provider's TMDb id or the title), TMDb's people in Search, and a person's
   titles from TMDb's credits. What TMDb answers is kept on the device (`SqliteMetadataStore`, `metadata.sqlite`, like
   the store on Apple devices; keys `movie:603` or `movie:sandstorm:2021`): pages show it at once, TMDb is asked
-  again only after 30 days (7 for a title it does not know), Home's carousel titles are asked ahead two at a time,
+  again only after 30 days (7 for a title it does not know), Home's carousel titles and the titles added in the last four days are asked ahead two at a time (the carousel's first
+  source ranks the latter by TMDb's average vote weighted by its number of votes: `v/(v+200)·R + 200/(v+200)·6.5`, 50 votes
+  at least, ties to the latest added then the title; `WeightedRating`, as on Apple),
   the credits kept find people in Search and their titles without network, and a dead image address is remembered
   for 7 days.
   A 401 later (a token revoked, or one that came by sync) shows as refused in Settings, and nothing more is asked.
