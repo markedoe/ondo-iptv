@@ -241,7 +241,8 @@ class ContinueWatchingRemovalTest {
         assertEquals("tabMovies", focusedTag())
         press(Key.DirectionCenter)
         val card = hasText(movie.name) and SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick)
-        waitFor { compose.onAllNodes(card and isFocused()).fetchSemanticsNodes().isNotEmpty() || run { press(Key.DirectionRight); false } }
+        // The tab opens on All movies, the first row: Continue watching is the next one down.
+        waitFor { compose.onAllNodes(card and isFocused()).fetchSemanticsNodes().isNotEmpty() || run { press(Key.DirectionDown); false } }
         askToRemove()
         press(Key.DirectionRight)
         press(Key.DirectionCenter)

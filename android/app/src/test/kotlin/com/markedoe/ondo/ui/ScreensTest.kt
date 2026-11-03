@@ -684,8 +684,10 @@ class ScreensTest {
             }
         }
         compose.onNodeWithText("Languages and categories").assertExists()
-        compose.onNodeWithTag("categoriesRow").performScrollTo().performClick()
-        compose.onNodeWithTag("appLanguageRow").performScrollTo().performClick()
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("categoriesRow"))
+        compose.onNodeWithTag("categoriesRow").performClick()
+        compose.onNodeWithTag("settingsList").performScrollToNode(hasTestTag("appLanguageRow"))
+        compose.onNodeWithTag("appLanguageRow").performClick()
         assertEquals(listOf("categories", "language"), opened)
     }
 }

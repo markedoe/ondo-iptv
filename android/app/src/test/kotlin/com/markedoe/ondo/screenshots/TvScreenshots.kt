@@ -196,7 +196,10 @@ class TvScreenshots {
     @Test
     fun moviesWithContinueWatchingFocused() {
         moviesTab()
-        focusFirstCard("shelfResume")
+        // Below All movies, the first row.
+        focusFirstCard("shelfAll")
+        press(Key.DirectionDown)
+        assertTrue("a card of Continue watching has the focus", focusedIn("shelfResume"))
         capture("movies-continue-watching")
     }
 
@@ -236,10 +239,10 @@ class TvScreenshots {
     @Test
     fun moviesWithMyListFocused() {
         moviesTab()
-        // My List is below Continue watching, off the screen: the remote goes down to it.
-        focusFirstCard("shelfResume")
-        compose.onNode(isFocused()).performKeyInput { pressKey(Key.DirectionDown) }
-        advance()
+        // My List is below All movies and Continue watching, off the screen: the remote goes down to it.
+        focusFirstCard("shelfAll")
+        press(Key.DirectionDown)
+        press(Key.DirectionDown)
         assertTrue("a card of My List has the focus", compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag("shelfMyList"))).fetchSemanticsNodes().isNotEmpty())
         capture("movies-my-list")
     }

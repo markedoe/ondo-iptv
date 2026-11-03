@@ -601,7 +601,7 @@ class TelevisionFocusTest {
         openFromDrawer("tabMovies")
         waitFor { exists("vod") }
         assertFalse("no category's titles", exists("grid"))
-        assertTrue("the rows", exists("shelf:${Fixtures.drama.id}"))
+        assertTrue("the rows", exists("shelfAll"))
     }
 
     /** Whether the top bar's tab [tag] is the one shown. */
