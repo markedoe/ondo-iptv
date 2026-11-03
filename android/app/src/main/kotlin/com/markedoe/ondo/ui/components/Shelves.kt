@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.components
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Indication
 import androidx.compose.foundation.LocalIndication
@@ -278,7 +279,8 @@ fun PosterCard(
             if (kept) MyListBadge(Modifier.align(Alignment.TopEnd))
         }
         Text(
-            text = item.title,
+            // Without the provider's tags: the title as people read it (the stored name stays as it is).
+            text = CatalogueMatcher.displayTitle(item.title),
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -393,7 +395,7 @@ fun ContinueCard(
         }
         // Inside the card's frame and its rounded corners, which would cut the lines' first and last letters.
         Text(
-            item.title,
+            CatalogueMatcher.displayTitle(item.title),
             style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -442,10 +444,10 @@ fun ResumeCardMenu(item: ResumeItem, onOpen: (() -> Unit)?, onRemove: (() -> Uni
     if (isTelevision()) {
         var confirming by remember { mutableStateOf(onOpen == null) }
         if (confirming && onRemove != null) {
-            TvConfirmDialog(item.title, stringResource(R.string.remove_from_history_text), remove, onConfirm = { onDismiss(); onRemove() }, onDismiss = onDismiss)
+            TvConfirmDialog(CatalogueMatcher.displayTitle(item.title), stringResource(R.string.remove_from_history_text), remove, onConfirm = { onDismiss(); onRemove() }, onDismiss = onDismiss)
         } else if (onOpen != null) {
             TvResumeMenu(
-                title = item.title,
+                title = CatalogueMatcher.displayTitle(item.title),
                 openLabel = open,
                 onOpen = { onDismiss(); onOpen() },
                 removeLabel = remove.takeIf { onRemove != null },

@@ -35,6 +35,9 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   the app's language, else English, else one without words, crossfading from the name; the name without the
   provider's tags such as "|FR|" or "VFF" until then or without one), year and genres (else its category), TMDb's rating with its badge
   (else the provider's), the date added (last changed for a series) in the app's language and two lines of synopsis.
+  A title's page on a TV has the same title slot (its logo, else its name without the provider's tags, nothing moving
+  when the logo arrives). Everywhere else a title shows as text (posters' captions, Continue watching, Search, a phone's
+  title page, the player, Up next), it reads without the provider's tags too; the stored name is unchanged.
   It follows the focus once it rests 200 ms on a poster; 450 ms later, what is missing is fetched, one title at a time
   and cancelled when the focus moves on: TMDb's answer kept on the device, then TMDb with the token, then the
   provider's `get_vod_info` for a movie without a plot (saved with the other details); nothing without a network.

@@ -436,29 +436,52 @@ private const val LOGO_WIDTH_SHARE = 0.4f
  */
 @Composable
 private fun TitleSlot(header: TitleHeader, titleStyle: TextStyle) {
-    val logo = header.logoUrl
-    var logoLoaded by remember(logo) { mutableStateOf(false) }
-    val logoAlpha by animateFloatAsState(if (logo != null && logoLoaded) 1f else 0f, label = "headerLogo")
-    val name = remember(header.item.title) { CatalogueMatcher.displayTitle(header.item.title) }
+    TvTitleOrLogo(header.item.title, header.logoUrl, titleStyle, Modifier.height(TITLE_SLOT), maxLines = 1, textTag = "headerTitle", logoTag = "headerLogo")
+}
+
+/**
+ * A title on a TV, as its header and its page show it: its logo ([logoUrl], TMDb's picture of the title) once it has
+ * loaded, crossfading from its name; its name without the provider's tags ([CatalogueMatcher.displayTitle]) while the
+ * logo loads, when it fails or when there is none. The name keeps its room under the logo ([modifier] gives the slot
+ * its height): nothing moves when the logo arrives. [title] is the provider's name, as stored; only its display is cleaned.
+ * [fillsSlot]: the logo takes the whole slot (a slot as wide as the page's words, its height the name's); otherwise it
+ * takes the slot's set height, as wide as it needs up to [LOGO_WIDTH_SHARE] of the screen.
+ */
+@Composable
+internal fun TvTitleOrLogo(
+    title: String,
+    logoUrl: String?,
+    style: TextStyle,
+    modifier: Modifier = Modifier,
+    maxLines: Int = 1,
+    fillsSlot: Boolean = false,
+    textTag: String,
+    logoTag: String,
+) {
+    var logoLoaded by remember(logoUrl) { mutableStateOf(false) }
+    val logoAlpha by animateFloatAsState(if (logoUrl != null && logoLoaded) 1f else 0f, label = "titleLogo")
+    val name = remember(title) { CatalogueMatcher.displayTitle(title) }
     val widest = LocalWindowInfo.current.containerDpSize.width * LOGO_WIDTH_SHARE
-    Box(Modifier.height(TITLE_SLOT), contentAlignment = Alignment.CenterStart) {
+    Box(modifier, contentAlignment = Alignment.CenterStart) {
         Text(
             name,
-            style = titleStyle,
+            style = style,
             fontWeight = FontWeight.ExtraBold,
-            maxLines = 1,
+            maxLines = maxLines,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.graphicsLayer { alpha = 1f - logoAlpha }.testTag("headerTitle"),
+            modifier = Modifier.graphicsLayer { alpha = 1f - logoAlpha }.testTag(textTag),
         )
-        if (logo != null) {
+        if (logoUrl != null) {
             AsyncImage(
-                model = logo,
-                // The name above says it: TalkBack reads it once.
+                model = logoUrl,
+                // The name says it: TalkBack reads it once.
                 contentDescription = null,
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.CenterStart,
                 onSuccess = { logoLoaded = true },
-                modifier = Modifier.fillMaxHeight().widthIn(max = widest).graphicsLayer { alpha = logoAlpha }.testTag("headerLogo"),
+                modifier = (if (fillsSlot) Modifier.matchParentSize() else Modifier.fillMaxHeight().widthIn(max = widest))
+                    .graphicsLayer { alpha = logoAlpha }
+                    .testTag(logoTag),
             )
         }
     }

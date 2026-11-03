@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.components
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -280,7 +281,7 @@ private fun BoxScope.Words(page: HeroPage, titleStyle: androidx.compose.ui.text.
             .widthIn(max = maxWidth),
     ) {
         Text(
-            text = page.item.title,
+            text = CatalogueMatcher.displayTitle(page.item.title),
             style = titleStyle,
             fontWeight = FontWeight.ExtraBold,
             color = Color.White,

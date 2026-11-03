@@ -1,5 +1,6 @@
 package com.markedoe.ondo.player
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import android.annotation.SuppressLint
 import android.app.PictureInPictureParams
 import android.content.ActivityNotFoundException
@@ -565,7 +566,8 @@ class PlayerActivity : ComponentActivity() {
         val replayAt = current.replayStart?.takeIf { current.isReplay }?.let { it + (player?.currentPosition ?: 0) }
         val programme = channel?.let { state.guide?.current(it, replayAt ?: now) }
         return PlayerInfo(
-            title = channel?.let { listOfNotNull(it.number?.toString(), it.name).joinToString("  ") } ?: current.title,
+            // A title without the provider's tags; a channel's name as the provider writes it.
+            title = channel?.let { listOfNotNull(it.number?.toString(), it.name).joinToString("  ") } ?: current.title.let { if (current.isLive) it else CatalogueMatcher.displayTitle(it) },
             subtitle = programme?.title ?: current.title.takeIf { channel != null && current.isReplay } ?: current.subtitle,
             live = current.isLive,
             programmeStart = programme?.start?.takeIf { current.isLive },
@@ -889,7 +891,7 @@ class PlayerActivity : ComponentActivity() {
             .apply { if (url.contains(".m3u8", ignoreCase = true)) setMimeType(MimeTypes.APPLICATION_M3U8) }
             .setMediaMetadata(
                 MediaMetadata.Builder()
-                    .setTitle(request.title)
+                    .setTitle(if (request.isLive) request.title else CatalogueMatcher.displayTitle(request.title))
                     .setSubtitle(request.subtitle)
                     .setArtworkUri(request.artworkUrl?.let(android.net.Uri::parse))
                     .build(),

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.player
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -40,7 +41,7 @@ data class UpNext(val title: String, val subtitle: String, val seconds: Int) {
         fun offer(next: Pair<Series, Episode>?, leftMs: Long): UpNext? {
             val (series, episode) = next ?: return null
             if (leftMs > SHOWN_MS) return null
-            return UpNext(series.name, "${episode.code} · ${episode.title}", ((leftMs + 999) / 1_000).toInt().coerceAtLeast(0))
+            return UpNext(CatalogueMatcher.displayTitle(series.name), "${episode.code} · ${episode.title}", ((leftMs + 999) / 1_000).toInt().coerceAtLeast(0))
         }
     }
 }

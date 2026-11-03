@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -379,7 +380,7 @@ fun TvResumeCard(
                 CardSheen(focused)
             }
         }
-        Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(CatalogueMatcher.displayTitle(item.title), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(
             listOfNotNull(
                 item.subtitle,

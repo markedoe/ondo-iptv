@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.tv
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
@@ -203,7 +204,7 @@ private fun LazyListScope.posterRow(title: String, tag: String, posters: List<Sh
         Column(Modifier.width(TvTokens.PosterWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             TvPosterCard(item, onClick = { onOpen(item) }, modifier = Modifier.resultFocus(entry, "search:${item.key}"))
             Text(
-                item.title,
+                CatalogueMatcher.displayTitle(item.title),
                 style = MaterialTheme.typography.labelLarge,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.screens
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
@@ -120,6 +121,8 @@ data class MovieDetailUiState(
     val details: MediaDetails? = null,
     /** The provider's backdrop, else TMDb's (see `UiMappers.backdrop`). */
     val backdropUrl: String? = null,
+    /** TMDb's picture of the title (its logo), shown in place of its name on a TV. */
+    val logoUrl: String? = null,
     /** The YouTube id of the provider's trailer (see `UiMappers.youTubeId`). */
     val trailer: String? = null,
     /** TMDb's photos of the cast and directors, by name (`TextNormalizer.normalize`), with the viewer's token. */
@@ -139,6 +142,8 @@ data class SeriesDetailUiState(
     val details: MediaDetails? = null,
     /** The provider's backdrop, else TMDb's (see `UiMappers.backdrop`). */
     val backdropUrl: String? = null,
+    /** TMDb's picture of the title (its logo), shown in place of its name on a TV. */
+    val logoUrl: String? = null,
     /** The YouTube id of the provider's trailer (see `UiMappers.youTubeId`). */
     val trailer: String? = null,
     /** TMDb's photos of the cast and directors, by name (`TextNormalizer.normalize`), with the viewer's token. */
@@ -192,7 +197,7 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
     val resumable = state.progress?.let { !it.finished && it.fraction > 0f } == true
     var picking by rememberSaveable { mutableStateOf(false) }
     DetailScaffold(
-        title = movie.name,
+        title = CatalogueMatcher.displayTitle(movie.name),
         posterUrl = state.details?.posterUrl ?: movie.posterUrl,
         backdropUrl = state.backdropUrl,
         facts = facts,
@@ -270,7 +275,7 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
     val season = state.seasons.firstOrNull { it.number == state.selectedSeason } ?: state.seasons.firstOrNull()
     var picking by rememberSaveable { mutableStateOf(false) }
     DetailScaffold(
-        title = series.name,
+        title = CatalogueMatcher.displayTitle(series.name),
         posterUrl = state.details?.posterUrl ?: series.coverUrl,
         backdropUrl = state.backdropUrl,
         facts = facts,

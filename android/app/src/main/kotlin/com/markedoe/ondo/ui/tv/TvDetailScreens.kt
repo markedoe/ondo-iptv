@@ -132,6 +132,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         item(key = "header") {
             TvDetailHeader(
                 title = movie.name,
+                logoUrl = state.logoUrl,
                 posterUrl = details?.posterUrl ?: movie.posterUrl,
                 backdropUrl = state.backdropUrl,
                 onBackdropFailed = actions.onBackdropFailed,
@@ -188,6 +189,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         item(key = "header") {
             TvDetailHeader(
                 title = series.name,
+                logoUrl = state.logoUrl,
                 posterUrl = details?.posterUrl ?: series.coverUrl,
                 backdropUrl = state.backdropUrl,
                 onBackdropFailed = actions.onBackdropFailed,
@@ -258,10 +260,15 @@ private fun TvDetailPage(content: LazyListScope.() -> Unit) {
     )
 }
 
+/** The least height of a page's title: one line of its name, or its logo at that height. */
+private val DETAIL_TITLE_SLOT = 64.dp
+
 /** The first screen of a page: the artwork behind, faded towards the text on the left and the rows below. */
 @Composable
 private fun TvDetailHeader(
+    /** The provider's name, its tags left out on screen ([TvTitleOrLogo]). */
     title: String,
+    logoUrl: String?,
     posterUrl: String?,
     backdropUrl: String?,
     onBackdropFailed: (String) -> Unit,
@@ -283,13 +290,16 @@ private fun TvDetailHeader(
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             award?.let { AwardLine(it) }
-            Text(
+            // TMDb's logo of the title, else its name without the provider's tags; the slot keeps the name's height.
+            TvTitleOrLogo(
                 title,
-                style = MaterialTheme.typography.displayMedium,
-                fontWeight = FontWeight.ExtraBold,
+                logoUrl,
+                MaterialTheme.typography.displayMedium,
+                Modifier.widthIn(max = 640.dp).fillMaxWidth().heightIn(min = DETAIL_TITLE_SLOT),
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 640.dp).testTag("detailTitle"),
+                fillsSlot = true,
+                textTag = "detailTitle",
+                logoTag = "detailLogo",
             )
             TvFacts(facts, badges)
             plot?.takeIf { it.isNotBlank() }?.let {

@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.components
 
+import com.markedoe.ondo.core.library.CatalogueMatcher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -121,7 +122,7 @@ fun GeneratedCover(title: String, modifier: Modifier = Modifier, showsTitle: Boo
 @Composable
 private fun CoverTitle(title: String) {
     Text(
-        text = title.uppercase(),
+        text = CatalogueMatcher.displayTitle(title).uppercase(),
         color = Color.White,
         fontWeight = FontWeight.Black,
         fontSize = 15.sp,

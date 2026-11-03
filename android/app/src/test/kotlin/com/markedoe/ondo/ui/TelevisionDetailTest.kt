@@ -9,6 +9,8 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
@@ -60,6 +62,43 @@ class TelevisionDetailTest {
         val state = Fixtures.state()
         val withInfo = state.seriesDetails.getValue(series.id).copy(info = details.copy(title = series.name))
         return UiMappers.seriesDetail(state.copy(seriesDetails = state.seriesDetails + (series.id to withInfo)), series, null, null)
+    }
+
+    /** The text of the node tagged [tag], in the unmerged tree. */
+    private fun text(tag: String): List<String> = compose.onAllNodesWithTag(tag, useUnmergedTree = true).fetchSemanticsNodes()
+        .flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty().map { line -> line.text } }
+
+    /**
+     * A title named as providers write it ("|FR| Le Transport"): its page shows the name without the provider's tags,
+     * as the header and the posters do, and TMDb's logo in the same slot once kept for it. The stored name is unchanged.
+     */
+    @Test
+    fun aTitlesPageShowsItsNameWithoutTheProvidersTags() {
+        val tagged = movie.copy(name = "|FR| Le Transport")
+        val state = Fixtures.state().let { it.copy(content = it.content.copy(movies = it.content.movies + tagged)) }
+        val ui = UiMappers.movieDetail(state, tagged, Locale.ENGLISH)
+        compose.setContent { OndoTheme { TelevisionFrame { TvMovieDetailScreen(ui, DetailActions()) } } }
+        compose.waitForIdle()
+        assertEquals(listOf("Le Transport"), text("detailTitle"))
+        assertEquals("the stored name stays", "|FR| Le Transport", ui.item.movie.name)
+        compose.onAllNodesWithTag("detailLogo", useUnmergedTree = true).assertCountEquals(0)
+    }
+
+    /** With TMDb's logo kept for the title, the page has it in the title's slot, the name still under it. */
+    @Test
+    fun aTitlesPageHasTmdbsLogoWhenKept() {
+        val tagged = movie.copy(name = "|FR| Le Transport")
+        val base = Fixtures.state()
+        val state = base.copy(
+            content = base.content.copy(movies = base.content.movies + tagged),
+            tmdbLogos = mapOf(com.markedoe.ondo.ui.model.ShowcaseItem.MovieItem(tagged).key to "https://image.tmdb.org/t/p/w500/logo.png"),
+        )
+        val ui = UiMappers.movieDetail(state, tagged, Locale.ENGLISH)
+        assertEquals("https://image.tmdb.org/t/p/w500/logo.png", ui.logoUrl)
+        compose.setContent { OndoTheme { TelevisionFrame { TvMovieDetailScreen(ui, DetailActions()) } } }
+        compose.waitForIdle()
+        compose.onAllNodesWithTag("detailLogo", useUnmergedTree = true).assertCountEquals(1)
+        assertEquals(listOf("Le Transport"), text("detailTitle"))
     }
 
     @Test
