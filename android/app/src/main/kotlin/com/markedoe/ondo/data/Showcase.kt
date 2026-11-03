@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.library.CatalogueMatcher
+import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.library.WeightedRating
@@ -31,10 +32,13 @@ class Showcase(
     private val trendingMatches: List<TrendingMatch> = emptyList(),
     /** What TMDb's voters said of the catalogue's titles, by [ShowcaseItem.key]: the carousel's best recent source ranks by it. */
     private val votes: Map<String, TmdbRating> = emptyMap(),
+    /** The versions of the catalogue's films: each film once in every list, finished when one of its versions is. */
+    private val films: FilmVersions = FilmVersions.none(),
 ) {
     private val movies by lazy { content.movies.filter { it.categoryId !in excludedCategoryIds } }
+    private val watchedMovies by lazy { if (hideWatchedMovies) films.expand(library.finishedMovies(playlistId)) else emptySet() }
     private val browsableMovies by lazy {
-        if (!hideWatchedMovies) movies else library.finishedMovies(playlistId).let { watched -> movies.filter { it.id !in watched } }
+        if (!hideWatchedMovies) movies else watchedMovies.let { watched -> movies.filter { it.id !in watched } }
     }
     private val series by lazy { content.series.filter { it.categoryId !in excludedCategoryIds } }
     private val moviesById by lazy { movies.associateBy { it.id } }
@@ -49,7 +53,8 @@ class Showcase(
      */
     fun newMovies(now: Long, limit: Int = 20): List<ShowcaseItem> {
         val window = releaseWindow(now)
-        return browsableMovies.filter { it.year?.let { year -> year in window } == true }.map { ShowcaseItem.MovieItem(it) }.sortedWith(newer).take(limit)
+        val found = browsableMovies.filter { it.year?.let { year -> year in window } == true }.map { ShowcaseItem.MovieItem(it) }.sortedWith(newer)
+        return films.distinctItems(found).take(limit)
     }
 
     /** New series, by the same rule as [newMovies]. */
@@ -84,21 +89,23 @@ class Showcase(
 
     /** The trending titles to show: not in an excluded category, and not finished when Settings hides those. */
     fun trending(): List<ShowcaseItem> {
-        val watched = if (hideWatchedMovies) library.finishedMovies(playlistId) else emptySet()
-        return trendingMatches.mapNotNull { match ->
+        val watched = watchedMovies
+        val found = trendingMatches.mapNotNull { match ->
             when (match) {
                 is TrendingMatch.MovieMatch -> match.movie.takeIf { it.categoryId !in excludedCategoryIds && it.id !in watched }?.let { ShowcaseItem.MovieItem(it) }
                 is TrendingMatch.SeriesMatch -> match.series.takeIf { it.categoryId !in excludedCategoryIds }?.let { ShowcaseItem.SeriesItem(it) }
             }
         }.distinctBy { it.key }
+        return films.distinctItems(found)
     }
 
-    /** Movies and series of My List, most recently added first. */
+    /** Movies and series of My List, most recently added first; a film once, whichever of its versions are kept. */
     fun myList(): List<ShowcaseItem> =
         library.favorites
             .filter { it.playlistId == playlistId && (it.kind == ItemKind.MOVIE || it.kind == ItemKind.SERIES) }
             .sortedByDescending { it.addedAt }
             .mapNotNull { item(it.kind, it.itemId) }
+            .let(films::distinctItems)
 
     fun continueWatching(): List<WatchEntry> = library.continueWatching(playlistId)
 
@@ -112,6 +119,7 @@ class Showcase(
     private fun recentlyAdded(now: Long): List<ShowcaseItem> {
         return (browsableMovies.map { ShowcaseItem.MovieItem(it) } + series.map { ShowcaseItem.SeriesItem(it) })
             .filter { item -> item.addedAt?.let { WeightedRating.isRecent(it, now / 1_000) } == true }
+            .let(films::distinctItems)
     }
 
     /**
@@ -167,8 +175,11 @@ class Showcase(
         // TMDb's recommendations the playlist has come first (from any category: TMDb chose them), then the closest of
         // the category (another one is often another language).
         val shown = browsableIds
-        val pinned = related.filter { it.id in shown && it.id != movie.id }
-        val candidates = browsableMovies.filter { it.id != movie.id && it.categoryId == movie.categoryId }
+        // Never another version of the film itself.
+        val own = films.groupOf(movie.id)
+        fun versionOfItself(other: Movie) = own >= 0 && films.isGrouped && films.groupOf(other.id) == own
+        val pinned = films.distinct(related.filter { it.id in shown && it.id != movie.id && !versionOfItself(it) })
+        val candidates = films.distinct(browsableMovies.filter { it.id != movie.id && it.categoryId == movie.categoryId && !versionOfItself(it) })
         val pinnedIds = pinned.mapTo(HashSet()) { it.id }
         val ranked = Similarity.rank(
             Similarity.Title(movie.name, movie.year, details(movie.id)),

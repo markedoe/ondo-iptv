@@ -2,6 +2,8 @@ package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.FilmVersions
+import com.markedoe.ondo.core.library.PictureSupport
 import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.PeopleIndex
 import com.markedoe.ondo.core.library.TitleMetadata
@@ -45,6 +47,7 @@ import com.markedoe.ondo.ui.screens.SearchFilters
 import com.markedoe.ondo.ui.screens.SearchUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailUiState
 import com.markedoe.ondo.ui.screens.SettingsUiState
+import com.markedoe.ondo.ui.screens.VersionChip
 import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.screens.WatchProgress
 import java.util.Locale
@@ -86,12 +89,71 @@ object UiMappers {
         val votes = HashMap<String, TmdbRating>()
         kept.forEach { (key, title) -> title.rating?.let { votes[key] = it } }
         votes.putAll(state.tmdbRatings)
-        return Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes)
+        return Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes, films(state))
     }
 
-    /** The movies left out where the viewer browses: the finished ones, when Settings hides them. */
+    /**
+     * The movies left out where the viewer browses: the finished ones, when Settings hides them, with the other versions
+     * of their films (a film is watched once one of its versions is).
+     */
     fun hiddenMovieIds(state: OndoState): Set<String> =
-        if (state.settings.hideWatchedMovies) state.library.finishedMovies(state.activePlaylistId.orEmpty()) else emptySet()
+        if (state.settings.hideWatchedMovies) films(state).expand(state.library.finishedMovies(state.activePlaylistId.orEmpty())) else emptySet()
+
+    private val noVersions = FilmVersions.none()
+
+    @Volatile private var filmVersions: Pair<PlaylistContent, FilmVersions>? = null
+
+    /** What the screen shows (HDR, Dolby Vision, 4K), for the version a film plays first; set by the activity. */
+    @Volatile var pictureSupport: PictureSupport = PictureSupport()
+
+    /**
+     * The versions of the catalogue's films (`FilmVersions`): grouped once per catalogue, in the background (the view
+     * model starts it when a catalogue arrives); each stream alone when Settings' "Group versions" is off.
+     */
+    fun films(state: OndoState): FilmVersions = if (state.settings.groupVersions) films(state.content) else noVersions
+
+    /** [films] when already grouped, else each stream alone: for the main thread, which never groups a catalogue. */
+    fun filmsIfReady(state: OndoState): FilmVersions {
+        if (!state.settings.groupVersions) return noVersions
+        val known = filmVersions ?: return noVersions
+        return if (known.first === state.content) known.second else noVersions
+    }
+
+    fun films(content: PlaylistContent): FilmVersions {
+        filmVersions?.let { (known, versions) -> if (known === content) return versions }
+        return FilmVersions.of(content.movies).also { filmVersions = content to it }
+    }
+
+    /** The versions of [movie]'s film the viewer can see ([movie] itself, and the others not in a hidden category), in catalogue order. */
+    fun visibleVersions(state: OndoState, movie: Movie, grouped: FilmVersions = films(state)): List<Movie> {
+        val versions = grouped.versions(movie)
+        if (versions.size < 2) return versions
+        val hidden = hiddenCategoryIds(state)
+        return versions.filter { it.id == movie.id || it.categoryId !in hidden }
+    }
+
+    /**
+     * The version of [movie]'s film its card plays and its page selects first (`FilmVersions.defaultVersion`): the one in
+     * progress, else the one chosen last on this device, else the best for the screen, else the first.
+     */
+    fun defaultVersion(state: OndoState, movie: Movie, versions: List<Movie> = visibleVersions(state, movie)): Movie {
+        if (versions.size < 2) return movie
+        val playlistId = state.activePlaylistId.orEmpty()
+        val inProgress = versions.mapNotNull { version ->
+            state.library.progress(WatchEntry(playlistId, ItemKind.MOVIE, version.id, null, title = "", lastWatchedAt = 0).key)
+                ?.takeIf { it.isResumable }?.let { version to it.lastWatchedAt }
+        }.maxByOrNull { it.second }?.first
+        return FilmVersions.defaultVersion(
+            versions, inProgress?.id, state.settings.chosenVersions, pictureSupport, FilmVersions.categoryNames(state.content.movieCategories),
+        ) ?: movie
+    }
+
+    /** The badges of a film's versions, each with its stream (for its page); empty when the film has one. */
+    fun versionChips(state: OndoState, versions: List<Movie>): List<VersionChip> {
+        if (versions.size < 2) return emptyList()
+        val badges = FilmVersions.badges(versions, FilmVersions.categoryNames(state.content.movieCategories))
+        return versions.zip(badges) { movie, badge -> VersionChip(movie.id, badge.label, badge.ordinal) }
+    }
 
     /** Movies and series by id; the first of an id the catalogue lists twice, as a search through the list would find. */
     class CatalogueIndex(content: PlaylistContent) {
@@ -107,6 +169,7 @@ object UiMappers {
      */
     fun forgetCatalogue() {
         catalogueIndex = null
+        filmVersions = null
         SearchIndex.forget()
         CategoryFilter.forget()
         MovieAwards.forget()
@@ -128,10 +191,16 @@ object UiMappers {
             ItemKind.SERIES -> backdrop(state, ItemKind.SERIES, entry.itemId)
             ItemKind.CHANNEL, ItemKind.PERSON -> null
         }
+        // Continue Watching stays per stream: a film of several versions says which one is in progress.
+        val version = if (entry.kind == ItemKind.MOVIE && entry.subtitle.isNullOrBlank()) {
+            movie(state, entry.itemId)?.let { movie -> versionChips(state, visibleVersions(state, movie)).firstOrNull { it.id == movie.id }?.label }
+        } else {
+            null
+        }
         return ResumeItem(
             key = entry.key,
             title = entry.title,
-            subtitle = entry.subtitle,
+            subtitle = version ?: entry.subtitle,
             imageUrl = backdrop ?: entry.imageUrl,
             progress = entry.progress.toFloat(),
             minutesLeft = entry.minutesLeft,
@@ -278,7 +347,7 @@ object UiMappers {
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val hero = showcase.heroItems(now).map { item ->
-            val resumable = (item as? ShowcaseItem.MovieItem)?.let { showcase.progress(it.movie)?.isResumable } == true
+            val resumable = (item as? ShowcaseItem.MovieItem)?.let { showcase.progress(defaultVersion(state, it.movie))?.isResumable } == true
             val details = when (item) {
                 is ShowcaseItem.MovieItem -> state.movieDetails[item.movie.id]
                 is ShowcaseItem.SeriesItem -> state.seriesDetails[item.series.id]?.info
@@ -320,7 +389,10 @@ object UiMappers {
         val watched = hiddenMovieIds(state)
         val byCategory: Map<String, List<ShowcaseItem>> =
             if (series) state.content.series.groupBy({ it.categoryId }) { ShowcaseItem.SeriesItem(it) }
-            else state.content.movies.filter { it.id !in watched }.groupBy({ it.categoryId }) { ShowcaseItem.MovieItem(it) }
+            else films(state).let { films ->
+                // Each film once in a category's row, in every category one of its versions is in.
+                state.content.movies.filter { it.id !in watched }.groupBy { it.categoryId }.mapValues { (_, list) -> films.distinct(list).map { ShowcaseItem.MovieItem(it) } }
+            }
         val rows = categories.mapNotNull { category -> byCategory[category.id]?.take(ROW_LENGTH)?.let { CategoryRow(category, it) } }
         val kind = if (series) ItemKind.SERIES else ItemKind.MOVIE
         return VodUiState(
@@ -329,7 +401,7 @@ object UiMappers {
             continueWatching = showcase.continueWatching().filter { it.kind == kind }.map { resume(it, state) },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
-            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH, watched).map { ShowcaseItem.MovieItem(it) },
+            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH, watched, films(state)).map { ShowcaseItem.MovieItem(it) },
         )
     }
 
@@ -349,7 +421,8 @@ object UiMappers {
             series -> state.content.series.filter { it.categoryId !in hidden && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.SeriesItem(it) }
             else -> {
                 val watched = hiddenMovieIds(state)
-                state.content.movies.filter { it.categoryId !in hidden && it.id !in watched && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.MovieItem(it) }
+                films(state).distinct(state.content.movies.filter { it.categoryId !in hidden && it.id !in watched && (categoryId == null || it.categoryId == categoryId) })
+                    .map { ShowcaseItem.MovieItem(it) }
             }
         }
         val query = TextNormalizer.normalize(filter)
@@ -522,22 +595,30 @@ object UiMappers {
     }
 
     /** The keys ([ShowcaseItem.key]) of the movies and series in My List, for the current playlist. */
+    /** A film is in My List when one of its versions is: every version's key then. Main thread ([filmsIfReady]). */
     fun myListKeys(state: OndoState): Set<String> {
         val playlistId = state.activePlaylistId.orEmpty()
-        return state.library.favorites.mapNotNullTo(HashSet()) { favorite ->
+        val movies = HashSet<String>()
+        val keys = state.library.favorites.mapNotNullTo(HashSet()) { favorite ->
             when {
                 favorite.playlistId != playlistId -> null
-                favorite.kind == ItemKind.MOVIE -> "m-" + favorite.itemId
+                favorite.kind == ItemKind.MOVIE -> {
+                    movies.add(favorite.itemId)
+                    "m-" + favorite.itemId
+                }
                 favorite.kind == ItemKind.SERIES -> "s-" + favorite.itemId
                 else -> null
             }
         }
+        filmsIfReady(state).expand(movies).forEach { keys.add("m-$it") }
+        return keys
     }
 
+    /** Whether the item is in My List: a film when one of its versions is. Main thread too ([filmsIfReady]). */
     fun isFavorite(state: OndoState, item: ShowcaseItem): Boolean {
         val playlistId = state.activePlaylistId.orEmpty()
         return when (item) {
-            is ShowcaseItem.MovieItem -> state.library.isFavorite(playlistId, ItemKind.MOVIE, item.movie.id)
+            is ShowcaseItem.MovieItem -> visibleVersions(state, item.movie, filmsIfReady(state)).any { state.library.isFavorite(playlistId, ItemKind.MOVIE, it.id) }
             is ShowcaseItem.SeriesItem -> state.library.isFavorite(playlistId, ItemKind.SERIES, item.series.id)
         }
     }
@@ -557,9 +638,16 @@ object UiMappers {
         """^(?:https?://)?(?:(?:www|m)\.)?(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:[^#]*&)?v=|embed/|shorts/|v/)|youtu\.be/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])""",
     )
 
-    fun movieDetail(state: OndoState, movie: Movie, locale: Locale = Locale.getDefault()): MovieDetailUiState {
+    /**
+     * A movie's page: its details, and its film's versions as badges ([MovieDetailUiState.versions]) with [selected] (one
+     * the viewer picked on the page), else the default version ([defaultVersion]), the one Play plays and whose progress
+     * shows.
+     */
+    fun movieDetail(state: OndoState, movie: Movie, locale: Locale = Locale.getDefault(), selected: String? = null): MovieDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.MovieItem(movie)
+        val versions = visibleVersions(state, movie)
+        val version = selected?.let { id -> versions.firstOrNull { it.id == id } } ?: defaultVersion(state, movie, versions)
         return MovieDetailUiState(
             item = item,
             details = state.movieDetails[movie.id],
@@ -568,8 +656,10 @@ object UiMappers {
             trailer = youTubeId(state.movieDetails[movie.id]?.trailerYouTubeId) ?: state.tmdbTrailers[item.key],
             faces = state.tmdbFaces[item.key].orEmpty(),
             votes = tmdbRating(state, item),
-            progress = progress(showcase.progress(movie)),
+            progress = progress(showcase.progress(version)),
             inMyList = isFavorite(state, item),
+            versions = versionChips(state, versions),
+            version = version,
             similar = showcase.similarMovies(movie, related = state.tmdbRelated[item.key].orEmpty().mapNotNull { (it as? TrendingMatch.MovieMatch)?.movie }) { state.movieDetails[it] }
                 .map { ShowcaseItem.MovieItem(it) },
             awards = MovieAwards.rows(state, movie, locale),
@@ -627,6 +717,7 @@ object UiMappers {
         version = version,
         isRefreshing = state.isLoading,
         hideWatchedMovies = state.settings.hideWatchedMovies,
+        groupVersions = state.settings.groupVersions,
         syncOnLocalNetwork = state.settings.syncOnLocalNetwork,
         syncDevices = if (state.settings.syncOnLocalNetwork) syncDevices else emptyList(),
         lastCrash = state.lastCrash,
@@ -669,7 +760,9 @@ object UiMappers {
         val movies = state.content.movies.filter { it.categoryId !in hidden && it.id !in watched }
         val series = state.content.series.filter { it.categoryId !in hidden }
         val awards = MovieAwards.of(state)
-        fun items(list: List<Movie>) = list.map { ShowcaseItem.MovieItem(it) }
+        val films = films(state)
+        // Each film once, the first of its versions in the page's order standing for it.
+        fun items(list: List<Movie>) = films.distinct(list).map { ShowcaseItem.MovieItem(it) }
         return when (kind) {
             BrowseKind.AWARD -> {
                 val award = state.awards.award(value)
@@ -728,6 +821,7 @@ object UiMappers {
         val movies = state.content.movies
             .filter { (it.id in movieIds || it.id in onlineMovies) && it.categoryId !in hidden && it.id !in watched }
             .distinctBy { it.id }
+            .let(films(state)::distinct)
             .map { ShowcaseItem.MovieItem(it) }
         val series = state.content.series.filter { show ->
             show.categoryId !in hidden &&
@@ -752,29 +846,43 @@ object UiMappers {
      * What Search looks through: not the hidden categories, nor a title or channel whose own name carries a hidden
      * language tag ("|DE| …" in a category of no language).
      */
-    class SearchIndex(content: PlaylistContent, private val hidden: Set<String>, private val hiddenTags: Set<String> = emptySet()) {
+    class SearchIndex(
+        content: PlaylistContent,
+        private val hidden: Set<String>,
+        private val hiddenTags: Set<String> = emptySet(),
+        /** Each film once ([FilmVersions.distinct]): the first of its versions shown. */
+        films: FilmVersions = FilmVersions.none(),
+    ) {
         private fun shown(categoryId: String, name: String) =
             categoryId !in hidden && (hiddenTags.isEmpty() || CategoryFilter.channelTag(name) !in hiddenTags)
 
-        val movies = content.movies.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }
+        val movies = films.distinct(content.movies.filter { shown(it.categoryId, it.name) }).map { TextNormalizer.normalize(it.name) to it }
         val series = content.series.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }
         val channels = content.channels.filter { shown(it.categoryId, it.name) && !CategoryFilter.isHeader(it.name) }.map { TextNormalizer.normalize(it.name) to it }
 
         /** Release years of the movies and series, newest first (the filter's choices). */
         val years: List<Int> = (movies.mapNotNull { it.second.year } + series.mapNotNull { it.second.year }).distinct().sortedDescending()
-        val movieIds: Set<String> = movies.mapTo(HashSet()) { it.second.id }
+        /** Every movie shown, each version of a film included (the people of the pages opened). */
+        val movieIds: Set<String> = content.movies.filter { shown(it.categoryId, it.name) }.mapTo(HashSet()) { it.id }
         val seriesIds: Set<String> = series.mapTo(HashSet()) { it.second.id }
 
         /** Actors and directors of the series shown (movie lists give no cast). */
         val people = PeopleIndex(series.flatMap { (_, it) -> listOf(it.cast, it.director) })
 
         companion object {
-            @Volatile private var cached: Pair<Triple<PlaylistContent, Set<String>, Set<String>>, SearchIndex>? = null
+            private class Key(val content: PlaylistContent, val hidden: Set<String>, val hiddenTags: Set<String>, val films: FilmVersions)
 
-            /** The index of this catalogue and these hidden categories and tags: coming back to Search does not build it again. */
-            fun of(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet()): SearchIndex {
-                cached?.let { (key, index) -> if (key.first === content && key.second == hidden && key.third == hiddenTags) return index }
-                return SearchIndex(content, hidden, hiddenTags).also { cached = Triple(content, hidden, hiddenTags) to it }
+            @Volatile private var cached: Pair<Key, SearchIndex>? = null
+
+            /**
+             * The index of this catalogue, these hidden categories and tags and these versions: coming back to Search does
+             * not build it again.
+             */
+            fun of(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet(), films: FilmVersions = FilmVersions.none()): SearchIndex {
+                cached?.let { (key, index) ->
+                    if (key.content === content && key.hidden == hidden && key.hiddenTags == hiddenTags && key.films === films) return index
+                }
+                return SearchIndex(content, hidden, hiddenTags, films).also { cached = Key(content, hidden, hiddenTags, films) to it }
             }
 
             internal fun forget() {

@@ -4,11 +4,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.markedoe.ondo.BuildConfig
 import com.markedoe.ondo.core.TextNormalizer
+import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.TitleMetadata
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.EpgProgram
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
+import com.markedoe.ondo.core.model.Movie
+import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.ItemKind
@@ -118,6 +121,14 @@ class OndoViewModel(
     val liveFilter: StateFlow<LiveFilter> = _liveFilter.asStateFlow()
 
     init {
+        // A film's versions are grouped as soon as a catalogue arrives, in the background, once (UiMappers.films).
+        viewModelScope.launch(computation) {
+            state.map { it.content to it.settings.groupVersions }.distinctUntilChanged { a, b -> a.first === b.first && a.second == b.second }
+                .collect { (content, group) -> if (group && content.movies.isNotEmpty()) UiMappers.films(content) }
+        }
+    }
+
+    init {
         // Another playlist opens on all its channels: a category chosen on the previous one is not carried over.
         viewModelScope.launch {
             state.map { it.activePlaylistId }.distinctUntilChanged().drop(1).collect { _liveFilter.value = LiveFilter() }
@@ -140,10 +151,12 @@ class OndoViewModel(
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
+    private data class SearchKey(val content: PlaylistContent, val hidden: Set<String>, val tags: Set<String>, val groupVersions: Boolean)
+
     private val searchIndex = state
-        .map { Triple(it.content, UiMappers.hiddenCategoryIds(it), it.library.hiddenTags) }
+        .map { SearchKey(it.content, UiMappers.hiddenCategoryIds(it), it.library.hiddenTags, it.settings.groupVersions) }
         .distinctUntilChanged()
-        .map { (content, hidden, tags) -> UiMappers.SearchIndex.of(content, hidden, tags) }
+        .map { key -> UiMappers.SearchIndex.of(key.content, key.hidden, key.tags, if (key.groupVersions) UiMappers.films(key.content) else FilmVersions.none()) }
 
     /** What a search reads besides its index: a change of the library or the settings does not run it again. */
     private val searchState = state.distinctUntilChanged { old, new ->
@@ -324,10 +337,31 @@ class OndoViewModel(
 
     // Library
 
-    fun toggleMyList(item: ShowcaseItem) = when (item) {
-        is ShowcaseItem.MovieItem -> repository.toggleFavorite(ItemKind.MOVIE, item.movie.id, item.title, item.posterUrl)
-        is ShowcaseItem.SeriesItem -> repository.toggleFavorite(ItemKind.SERIES, item.series.id, item.title, item.posterUrl)
+    /**
+     * A film is in My List when one of its versions is: out of it, every version kept goes; into it, [version] (the one a
+     * page selects) or else the film's default version (`UiMappers.defaultVersion`). Each stream is kept as before.
+     */
+    fun toggleMyList(item: ShowcaseItem, version: Movie? = null) {
+        when (item) {
+            is ShowcaseItem.MovieItem -> {
+                val current = state.value
+                val playlistId = current.activePlaylistId.orEmpty()
+                // The versions grouped in the background already (never grouped here, on the main thread).
+                val versions = UiMappers.visibleVersions(current, item.movie, UiMappers.filmsIfReady(current))
+                val kept = versions.filter { current.library.isFavorite(playlistId, ItemKind.MOVIE, it.id) }
+                val chosen = version ?: UiMappers.defaultVersion(current, item.movie, versions)
+                if (kept.isEmpty()) {
+                    repository.toggleFavorite(ItemKind.MOVIE, chosen.id, chosen.name, chosen.posterUrl ?: item.posterUrl)
+                } else {
+                    kept.forEach { repository.toggleFavorite(ItemKind.MOVIE, it.id, it.name, it.posterUrl) }
+                }
+            }
+            is ShowcaseItem.SeriesItem -> repository.toggleFavorite(ItemKind.SERIES, item.series.id, item.title, item.posterUrl)
+        }
     }
+
+    /** A version picked on a film's page: remembered on this device, the film's card and page start from it. */
+    fun chooseVersion(movieId: String) = repository.rememberVersion(movieId)
 
     // Reminders
 
@@ -395,7 +429,12 @@ class OndoViewModel(
     /** Movie: plays it. Series: the next episode (details loaded first when needed, see [preparing]). */
     fun play(item: ShowcaseItem) {
         when (item) {
-            is ShowcaseItem.MovieItem -> playMovie(item.movie.id)
+            // A film's card plays its default version (the one in progress, chosen last, or best for the screen).
+            is ShowcaseItem.MovieItem -> {
+                val current = state.value
+                val versions = UiMappers.visibleVersions(current, item.movie, UiMappers.filmsIfReady(current))
+                playMovie(UiMappers.defaultVersion(current, item.movie, versions).id)
+            }
             is ShowcaseItem.SeriesItem -> prepare(item.key) { nextEpisode(item.series)?.let { emit(repository.playRequest(item.series, it)) } }
         }
     }
@@ -522,6 +561,8 @@ class OndoViewModel(
     fun setShowAdultCategories(show: Boolean) = repository.setShowAdultCategories(show)
     fun setHideWatchedMovies(hide: Boolean) = repository.setHideWatchedMovies(hide)
 
+    fun setGroupVersions(group: Boolean) = repository.setGroupVersions(group)
+
     fun setSyncOnLocalNetwork(on: Boolean) = repository.setSyncOnLocalNetwork(on)
 
     /** The devices sync on the local network found or heard from. */
@@ -564,7 +605,7 @@ class OndoViewModel(
             }
     }
 
-    private class PrepareInput(val on: Boolean, val content: com.markedoe.ondo.core.model.PlaylistContent)
+    private class PrepareInput(val on: Boolean, val content: PlaylistContent)
     suspend fun checkAndSaveTmdbToken(token: String) = repository.checkAndSaveTmdbToken(token)
     fun removeTmdbToken() = repository.removeTmdbToken()
     fun acceptSuggestion(suggestion: TagSuggestion) = repository.setTagsHidden(suggestion.hidden, hidden = true)

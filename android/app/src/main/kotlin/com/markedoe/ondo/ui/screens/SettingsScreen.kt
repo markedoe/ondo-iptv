@@ -98,6 +98,7 @@ data class SettingsUiState(
     val version: String = "",
     val isRefreshing: Boolean = false,
     val hideWatchedMovies: Boolean = false,
+    val groupVersions: Boolean = true,
     val syncOnLocalNetwork: Boolean = false,
     /** The devices sync found or heard from (only while it is on). */
     val syncDevices: List<SyncDevice> = emptyList(),
@@ -119,6 +120,7 @@ class SettingsActions(
     val onDelete: (String) -> Unit = {},
     val onShowAdultCategories: (Boolean) -> Unit = {},
     val onHideWatchedMovies: (Boolean) -> Unit = {},
+    val onGroupVersions: (Boolean) -> Unit = {},
     val onSyncOnLocalNetwork: (Boolean) -> Unit = {},
     val onUpdateAwards: (Boolean) -> Unit = {},
     val onPrepareAhead: (Boolean) -> Unit = {},
@@ -227,6 +229,21 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                             onCheckedChange = actions.onHideWatchedMovies,
                             colors = ondoSwitchColors(),
                             modifier = Modifier.testTag("hideWatchedSwitch").semantics { contentDescription = label },
+                        )
+                    },
+                )
+            }
+            item {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.group_versions)) },
+                    supportingContent = { Text(stringResource(R.string.group_versions_hint)) },
+                    trailingContent = {
+                        val label = stringResource(R.string.group_versions)
+                        Switch(
+                            checked = state.groupVersions,
+                            onCheckedChange = actions.onGroupVersions,
+                            colors = ondoSwitchColors(),
+                            modifier = Modifier.testTag("groupVersionsSwitch").semantics { contentDescription = label },
                         )
                     },
                 )

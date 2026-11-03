@@ -32,6 +32,9 @@ enum class VideoScale { FIT, FILL, STRETCH }
 @Serializable
 enum class SubtitleSize(val scale: Float) { SMALL(0.75f), NORMAL(1f), LARGE(1.3f), EXTRA_LARGE(1.6f) }
 
+/** Versions remembered at most in [AppSettings.chosenVersions]. */
+const val MAX_CHOSEN_VERSIONS = 200
+
 @Serializable
 data class AppSettings(
     val activePlaylistId: String? = null,
@@ -52,6 +55,13 @@ data class AppSettings(
     val autoRefreshHours: Int = 24,
     /** Movies finished (see [WatchEntry.isFinished]) left out where the viewer browses movies; search and My List keep them. */
     val hideWatchedMovies: Boolean = false,
+    /** A film's versions (4K, HD, VOSTFR…) shown as one title with its versions on its page (`FilmVersions`); off: each stream as the playlist lists it. */
+    val groupVersions: Boolean = true,
+    /**
+     * The versions the viewer chose on movie pages, the latest first ([MAX_CHOSEN_VERSIONS] at most): a film's page and
+     * card play the one chosen last. Kept on this device only (sync does not carry settings).
+     */
+    val chosenVersions: List<String> = emptyList(),
     /** Sync with Ondo on other devices of the local network (docs/SYNC.md); off until the viewer turns it on. */
     val syncOnLocalNetwork: Boolean = false,
     /** This installation's ID for sync, made once. */

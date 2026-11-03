@@ -1,6 +1,7 @@
 package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.data.OndoState
@@ -36,12 +37,14 @@ object MovieAwards {
     }
 
     /** Movies that won an award, the most recent award first. */
-    fun winners(state: OndoState, hidden: Set<String>, limit: Int, leftOut: Set<String> = emptySet()): List<Movie> {
+    fun winners(state: OndoState, hidden: Set<String>, limit: Int, leftOut: Set<String> = emptySet(), films: FilmVersions = FilmVersions.none()): List<Movie> {
         val byId = state.content.movies.associateBy { it.id }
-        return of(state).mapNotNull { (id, entries) ->
+        val sorted = of(state).mapNotNull { (id, entries) ->
             val win = entries.firstOrNull { it.won } ?: return@mapNotNull null
             val movie = byId[id]?.takeIf { it.categoryId !in hidden && it.id !in leftOut } ?: return@mapNotNull null
             movie to win.year
-        }.sortedWith(compareByDescending<Pair<Movie, Int>> { it.second }.thenBy { it.first.name }).take(limit).map { it.first }
+        }.sortedWith(compareByDescending<Pair<Movie, Int>> { it.second }.thenBy { it.first.name }).map { it.first }
+        // Each film once, whatever its versions.
+        return films.distinct(sorted).take(limit)
     }
 }

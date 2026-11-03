@@ -556,18 +556,25 @@ private fun MovieDestination(viewModel: OndoViewModel, navController: NavHostCon
     // Off the main thread: finding the movie, its similar titles, awards and hidden categories go through the whole
     // catalogue. A change (My List, details loaded) keeps the page on screen until the new one is ready.
     var gone by remember { mutableStateOf(false) }
-    val detail by produceKept<MovieDetailUiState?>("movie", null, state, id, locale) {
-        withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale) } }
+    // The version picked on the page (a badge), else the film's default version (UiMappers.movieDetail).
+    var picked by rememberSaveable(id) { mutableStateOf<String?>(null) }
+    val detail by produceKept<MovieDetailUiState?>("movie", null, state, id, locale, picked) {
+        withContext(Dispatchers.Default) { UiMappers.movie(state, id)?.let { UiMappers.movieDetail(state, it, locale, picked) } }
             .also { gone = it == null && !state.isLoading && !state.isRestoring }
     }
     BackWhenGone(gone, navController)
     val ui = detail ?: return Loading()
     val movie = ui.item.movie
+    val version = ui.version ?: movie
     val actions = DetailActions(
             onBack = { navController.popBackStack() },
-            onPlay = { viewModel.playMovie(id) },
-            onPlayFromStart = { viewModel.playMovie(id, fromStart = true) },
-            onToggleMyList = { viewModel.toggleMyList(ShowcaseItem.MovieItem(movie)) },
+            onPlay = { viewModel.playMovie(version.id) },
+            onPlayFromStart = { viewModel.playMovie(version.id, fromStart = true) },
+            onVersion = { chosen ->
+                picked = chosen
+                viewModel.chooseVersion(chosen)
+            },
+            onToggleMyList = { viewModel.toggleMyList(ShowcaseItem.MovieItem(movie), version) },
             onOpen = navController::open,
             onPerson = { navController.navigate(Routes.Person(it)) },
             onBrowse = { kind, value -> navController.navigate(Routes.Browse(kind.name, value)) },
@@ -835,6 +842,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onDelete = viewModel::delete,
             onShowAdultCategories = viewModel::setShowAdultCategories,
             onHideWatchedMovies = viewModel::setHideWatchedMovies,
+            onGroupVersions = viewModel::setGroupVersions,
             onSyncOnLocalNetwork = viewModel::setSyncOnLocalNetwork,
             onUpdateAwards = viewModel::setUpdateAwards,
             onPrepareAhead = viewModel::setPrepareAhead,

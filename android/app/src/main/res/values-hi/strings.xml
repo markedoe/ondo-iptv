@@ -126,6 +126,9 @@
     <string name="adult_categories_hint">जिन श्रेणियों का नाम वयस्क कॉन्टेंट जैसा लगता है, वे हर जगह छिपी रहती हैं, जब तक आप उन्हें न दिखाएँ।</string>
     <string name="hide_watched">देखी गई फ़िल्में छिपाएँ</string>
     <string name="hide_watched_hint">जो फ़िल्में आप पूरी देख चुके हैं, वे फ़िल्में, होम और इससे मिलते-जुलते में नहीं दिखेंगी। खोज, मेरी सूची और संग्रह में वे अब भी दिखेंगी।</string>
+    <string name="group_versions">संस्करण एक साथ रखें</string>
+    <string name="group_versions_hint">प्लेलिस्ट में कई बार दी गई फ़िल्म (4K, HD, VOSTFR…) एक ही बार दिखती है; उसके पेज पर हर संस्करण चुनने के लिए एक बैज के रूप में दिखता है।</string>
+    <string name="film_version">संस्करण</string>
     <string name="kind_movie">फ़िल्म</string>
     <string name="kind_series">सीरीज़</string>
     <string name="kind_m3u">M3U प्लेलिस्ट</string>

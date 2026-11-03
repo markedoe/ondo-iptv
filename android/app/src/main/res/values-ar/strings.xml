@@ -146,6 +146,9 @@
     <string name="adult_categories_hint">تُخفى الفئات التي يبدو اسمها مخصصًا للبالغين في كل مكان حتى تُظهرها.</string>
     <string name="hide_watched">إخفاء الأفلام التي شاهدتها</string>
     <string name="hide_watched_hint">لن تظهر الأفلام التي أنهيتها في الأفلام أو الرئيسية أو عناوين مشابهة. يظل البحث وقائمتي والمجموعات تعرضها.</string>
+    <string name="group_versions">تجميع النسخ</string>
+    <string name="group_versions_hint">يظهر الفيلم الذي تُدرجه قائمة التشغيل عدة مرات (4K وHD وVOSTFR…) مرة واحدة؛ وتعرض صفحته كل نسخة كشارة للاختيار منها.</string>
+    <string name="film_version">نسخة</string>
     <string name="kind_movie">فيلم</string>
     <string name="kind_series">مسلسل</string>
     <string name="kind_m3u">قائمة تشغيل M3U</string>

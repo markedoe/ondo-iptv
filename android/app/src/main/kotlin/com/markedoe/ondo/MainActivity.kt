@@ -23,6 +23,8 @@ import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.OndoApp
 import com.markedoe.ondo.ui.OndoViewModel
+import com.markedoe.ondo.ui.UiMappers
+import com.markedoe.ondo.player.PictureSupportProbe
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
 import com.markedoe.ondo.ui.theme.OndoTheme
 
@@ -39,6 +41,8 @@ class MainActivity : ComponentActivity() {
         val repository = (application as OndoApplication).repository
         // Another app language (Settings, App language) recreates the activity, not the repository.
         repository.setPlaceholderNames(resources.placeholderNames())
+        // The version of a film shown first suits this screen (4K, HDR, Dolby Vision).
+        UiMappers.pictureSupport = PictureSupportProbe.of(this)
         (application as OndoApplication).localSync.start()
         // The splash screen stays until the saved playlists are read (no welcome screen flash), and the saved
         // catalogue too for a moment (Home appears with its content, see keepsSplash).

@@ -90,7 +90,29 @@
     "page": "https://commons.wikimedia.org/wiki/File:Sintel_Poster_Paintover_clean.jpg",
     "focus_y": 0.35
    },
-   "added_days_ago": 1
+   "added_days_ago": 1,
+   "tmdb": 45745,
+   "versions": [
+    {
+     "id": "m-sintel-dv",
+     "title": "Sintel 4K DV",
+     "category": "v-4k",
+     "tmdb": 45745,
+     "container": "mkv"
+    },
+    {
+     "id": "m-sintel-4k",
+     "title": "Sintel 4K",
+     "category": "v-4k",
+     "tmdb": 45745,
+     "container": "mkv"
+    },
+    {
+     "id": "m-sintel-vostfr",
+     "title": "Sintel VOSTFR",
+     "category": "v-en-anim"
+    }
+   ]
   },
   {
    "id": "m-tos",

@@ -131,6 +131,9 @@
     <string name="adult_categories_hint">Categorias com nome de conteúdo adulto ficam ocultas em todo lugar até você mostrá-las.</string>
     <string name="hide_watched">Ocultar filmes assistidos</string>
     <string name="hide_watched_hint">Os filmes que você terminou não aparecem mais em Filmes, no Início nem em Títulos semelhantes. A busca, a Minha lista e as coleções continuam mostrando esses filmes.</string>
+    <string name="group_versions">Agrupar versões</string>
+    <string name="group_versions_hint">Um filme que a lista traz várias vezes (4K, HD, VOSTFR…) aparece uma vez só; a página dele mostra cada versão como um selo para escolher.</string>
+    <string name="film_version">Versão</string>
     <string name="kind_movie">Filme</string>
     <string name="kind_series">Série</string>
     <string name="kind_m3u">Playlist M3U</string>

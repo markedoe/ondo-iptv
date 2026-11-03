@@ -91,6 +91,7 @@ import com.markedoe.ondo.core.library.People
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
+import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.playback.MediaFormat
 import com.markedoe.ondo.ui.AwardRow
@@ -129,8 +130,13 @@ data class MovieDetailUiState(
     val faces: Map<String, String> = emptyMap(),
     /** TMDb's rating with its number of votes, when TMDb gave it (see `UiMappers.tmdbRating`). */
     val votes: TmdbRating? = null,
+    /** The progress of [version]. */
     val progress: WatchProgress? = null,
     val inMyList: Boolean = false,
+    /** The film's versions as badges (4K DV, HD, VOSTFR…), when it has several (`FilmVersions`); empty otherwise. */
+    val versions: List<VersionChip> = emptyList(),
+    /** The version Play plays: the one picked among [versions], else the film's default version; null is [item]'s own stream. */
+    val version: Movie? = null,
     val similar: List<ShowcaseItem> = emptyList(),
     /** Awards and festival selections, wins first. */
     val awards: List<AwardRow> = emptyList(),
@@ -162,6 +168,14 @@ data class SeriesDetailUiState(
     val collections: List<CollectionChoice> = emptyList(),
 )
 
+/** A version of a film on its page: its stream and its badge (`FilmVersions.badges`; no tag: "Version"). */
+data class VersionChip(val id: String, val label: String?, val ordinal: Int)
+
+/** What a version's badge says: its tags ("4K DV"), else "Version" in the viewer's language, with its number from the second on. */
+@Composable
+fun versionLabel(chip: VersionChip): String =
+    chip.label ?: stringResource(R.string.film_version).let { if (chip.ordinal > 1) "$it ${chip.ordinal}" else it }
+
 class DetailActions(
     val onBack: () -> Unit = {},
     val onPlay: () -> Unit = {},
@@ -181,6 +195,8 @@ class DetailActions(
     val onBackdropFailed: (String) -> Unit = {},
     /** The trailer with this YouTube id. */
     val onTrailer: (String) -> Unit = {},
+    /** A version of the film picked on its page (its stream's id). */
+    val onVersion: (String) -> Unit = {},
 )
 
 @Composable
@@ -192,8 +208,8 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
         UiMappers.ratingFact(state.details?.rating ?: movie.rating, state.votes, LocalConfiguration.current.locales[0]),
         state.details?.genre,
     )
-    // MKV, MP4…: the format the provider sends, as a badge.
-    val badges = listOfNotNull(MediaFormat.label(movie.streamUrl))
+    // MKV, MP4…: the format the provider sends (of the version Play plays), as a badge.
+    val badges = listOfNotNull(MediaFormat.label((state.version ?: movie).streamUrl))
     val resumable = state.progress?.let { !it.finished && it.fraction > 0f } == true
     var picking by rememberSaveable { mutableStateOf(false) }
     DetailScaffold(
@@ -214,6 +230,26 @@ fun MovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
             }
         },
         content = { metrics ->
+            if (state.versions.size > 1) {
+                item(key = "versions") {
+                    // The film's versions: the one picked plays.
+                    val selected = (state.version ?: movie).id
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = metrics.gutter),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.testTag("versions"),
+                    ) {
+                        items(state.versions, key = { it.id }) { chip ->
+                            FilterChip(
+                                selected = chip.id == selected,
+                                onClick = { actions.onVersion(chip.id) },
+                                label = { Text(versionLabel(chip)) },
+                                modifier = Modifier.testTag("version-${chip.id}"),
+                            )
+                        }
+                    }
+                }
+            }
             item { TextBlock(state.details?.plot ?: movie.plot, state.details, metrics, actions, year = movie.year, genre = state.details?.genre) }
             peopleRow(state.details?.director, state.details?.cast, state.faces, metrics, actions)
             if (state.awards.isNotEmpty()) item { AwardsBlock(state.awards, metrics) { actions.onBrowse(BrowseKind.AWARD, it) } }

@@ -76,8 +76,18 @@ def generate(folder, base, live, movies, series, guide_channels, guide_days):
         "category_id": str(i % CATEGORIES + 1), "category_ids": [i % CATEGORIES + 1], "custom_sid": "",
         "tv_archive": i % 7 // 6, "direct_source": "", "tv_archive_duration": i % 7 // 6 * 3})
     now = int(time.time())
+    def film(i):
+        """Movies 7 and 8 of each ten are other versions of movie 6 (4K with its TMDb id, VOSTFR without one), as
+        providers list them: the apps show the film once (FilmVersions). The others have their own id, or none."""
+        base = i - i % 10 + 6
+        if i % 10 in (7, 8) and base < movies:
+            tag = "4K" if i % 10 == 7 else "VOSTFR"
+            title = f"Movie {base} {tag} ({1980 + base % 45})"
+            return title, base, str(500000 + base) if i % 10 == 7 else ""
+        return name("Movie", i), i, str(500000 + i) if i % 2 == 0 else ""
+
     write_array(path("get_vod_streams"), movies, lambda i: {
-        "num": i, "name": name("Movie", i), "title": name("Movie", i), "year": str(1980 + i % 45), "stream_type": "movie",
+        "num": i, "name": film(i)[0], "title": film(i)[0], "year": str(1980 + film(i)[1] % 45), "tmdb": film(i)[2], "stream_type": "movie",
         "stream_id": i, "stream_icon": f"{img}/poster{i}.jpg", "rating": f"{i % 10}.{i % 7}", "rating_5based": i % 5 + 0.5,
         # A few added this week: the "new" shelves have something.
         "added": str(now - i * 600), "is_adult": "0", "category_id": str(i % CATEGORIES + 1),

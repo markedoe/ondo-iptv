@@ -734,6 +734,14 @@ class OndoRepository(
 
     fun setHideWatchedMovies(hide: Boolean) = updateSettings { it.copy(hideWatchedMovies = hide) }
 
+    fun setGroupVersions(group: Boolean) = updateSettings { it.copy(groupVersions = group) }
+
+    /** The version of a film the viewer chose on its page ([AppSettings.chosenVersions]), on this device only. */
+    fun rememberVersion(movieId: String) = updateSettings { settings ->
+        if (settings.chosenVersions.firstOrNull() == movieId) settings
+        else settings.copy(chosenVersions = (listOf(movieId) + settings.chosenVersions.filter { it != movieId }).take(MAX_CHOSEN_VERSIONS))
+    }
+
     fun setPosterSort(sort: PosterSort) = updateSettings { it.copy(posterSort = sort) }
 
     fun setLiveBuffer(seconds: Int) = updateSettings { it.copy(liveBuffer = seconds) }

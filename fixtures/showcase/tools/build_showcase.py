@@ -103,7 +103,7 @@ def build_title(title: dict, cache: pathlib.Path, credits: list) -> dict:
     backdrop_source = title.get("backdrop")
     poster = picture(poster_source, cache)
     backdrop = picture(backdrop_source, cache)
-    out = {key: value for key, value in title.items() if key not in ("poster", "backdrop", "seasons")}
+    out = {key: value for key, value in title.items() if key not in ("poster", "backdrop", "seasons", "versions")}
     if backdrop is not None:
         save_jpeg(cover(backdrop, WIDE, backdrop_source.get("focus_y", 0.5)), f"{slug}-backdrop.jpg")
         out["backdrop"] = f"{slug}-backdrop.jpg"
@@ -196,6 +196,13 @@ def main() -> None:
         old.unlink()
     credits: list = []
     movies = [build_title(movie, args.cache, credits) for movie in titles["movies"]]
+    # Other versions of a film (4K, Dolby Vision, VOSTFR…), as providers list them, after the films: its pictures,
+    # their own name, category and TMDb id (none: grouped by title and year). The apps show the film once, with badges.
+    for movie, built in zip(titles["movies"], list(movies)):
+        for version in movie.get("versions", []):
+            copy = {key: value for key, value in built.items() if key != "tmdb"}
+            copy.update(version)
+            movies.append(copy)
     series = [build_title(show, args.cache, credits) for show in titles["series"]]
     out_channels = []
     for number, channel in enumerate(channels["channels"], start=1):

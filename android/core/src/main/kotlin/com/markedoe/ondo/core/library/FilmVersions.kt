@@ -92,7 +92,7 @@ class FilmVersions private constructor(
 
     /** The streams of a group, in catalogue order. */
     fun versions(group: Int): List<Movie> {
-        if (groupOf == null) return movies.getOrNull(group)?.let(::listOf).orEmpty()
+        if (groupOf == null) return movies.getOrNull(group)?.let { listOf(it) }.orEmpty()
         if (group !in 0 until groupCount) return emptyList()
         return (starts[group] until starts[group + 1]).map { movies[members[it]] }
     }
@@ -326,9 +326,9 @@ class FilmVersions private constructor(
         }
 
         /** A power of two at least twice [count]. */
-        private fun capacity(count: Int): Int = Integer.highestOneBit(maxOf(4, count) * 2 - 1) shl 1
+        internal fun capacity(count: Int): Int = Integer.highestOneBit(maxOf(4, count) * 2 - 1) shl 1
 
-        private fun mix(hash: Int): Int {
+        internal fun mix(hash: Int): Int {
             val h = hash * -0x61c88647
             return h xor (h ushr 16)
         }

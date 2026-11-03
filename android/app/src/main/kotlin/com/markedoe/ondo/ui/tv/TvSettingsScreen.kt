@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.FilterList
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Layers
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Speed
@@ -478,6 +479,9 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
     }
     item(key = "hideWatched") {
         SwitchRow(stringResource(R.string.hide_watched), stringResource(R.string.hide_watched_hint), Icons.Rounded.VisibilityOff, state.hideWatchedMovies, actions.onHideWatchedMovies, Modifier.focusMemory("settings-hideWatched").testTag("hideWatchedSwitch"))
+    }
+    item(key = "groupVersions") {
+        SwitchRow(stringResource(R.string.group_versions), stringResource(R.string.group_versions_hint), Icons.Rounded.Layers, state.groupVersions, actions.onGroupVersions, Modifier.focusMemory("settings-groupVersions").testTag("groupVersionsSwitch"))
     }
     item(key = "awards") {
         SwitchRow(stringResource(R.string.update_awards), stringResource(R.string.update_awards_hint), Icons.Rounded.Refresh, state.updateAwards, actions.onUpdateAwards, Modifier.focusMemory("settings-awards").testTag("awardsSwitch"))

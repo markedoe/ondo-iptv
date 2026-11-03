@@ -103,9 +103,11 @@ import com.markedoe.ondo.ui.screens.CollectionNameDialog
 import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.SeriesDetailUiState
+import com.markedoe.ondo.ui.screens.VersionChip
 import com.markedoe.ondo.ui.screens.WatchProgress
 import com.markedoe.ondo.ui.screens.durationText
 import com.markedoe.ondo.ui.screens.myListState
+import com.markedoe.ondo.ui.screens.versionLabel
 import com.markedoe.ondo.ui.theme.OndoColors
 
 /** Where the text and rows of a page without the drawer start. */
@@ -138,7 +140,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                 onBackdropFailed = actions.onBackdropFailed,
                 award = state.awards.firstOrNull(),
                 facts = facts,
-                badges = listOfNotNull(MediaFormat.label(movie.streamUrl)),
+                badges = listOfNotNull(MediaFormat.label((state.version ?: movie).streamUrl)),
                 plot = details?.plot ?: movie.plot,
                 director = details?.director,
                 progress = state.progress.takeIf { resumable },
@@ -156,6 +158,7 @@ fun TvMovieDetailScreen(state: MovieDetailUiState, actions: DetailActions) {
                 state.trailer?.let { TrailerButton(it, actions) }
             }
         }
+        versionsShelf(state.versions, (state.version ?: movie).id, actions)
         exploreShelf(details?.genre, movie.year ?: details?.releaseDate?.take(4)?.toIntOrNull(), actions)
         peopleShelf(details?.director, details?.cast, state.faces, actions)
         awardsShelf(state.awards, actions)
@@ -651,6 +654,29 @@ private fun LazyListScope.awardsShelf(awards: List<AwardRow>, actions: DetailAct
 }
 
 /** The genres and the year: each opens the titles of the playlist sharing it. */
+/** A film's versions (4K DV, HD, VOSTFR…) as chips the remote moves through: the one picked is selected and plays. */
+private fun LazyListScope.versionsShelf(versions: List<VersionChip>, selected: String, actions: DetailActions) {
+    if (versions.size < 2) return
+    item(key = "versions") {
+        TvRow {
+            LazyRow(
+                contentPadding = PaddingValues(start = PageStart, end = TvTokens.EdgeEnd, top = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.testTag("versions"),
+            ) {
+                items(versions, key = { "version:${it.id}" }) { chip ->
+                    TvChip(
+                        text = versionLabel(chip),
+                        selected = chip.id == selected,
+                        onClick = { actions.onVersion(chip.id) },
+                        modifier = Modifier.focusMemory("version:${chip.id}").testTag("version-${chip.id}"),
+                    )
+                }
+            }
+        }
+    }
+}
+
 private fun LazyListScope.exploreShelf(genre: String?, year: Int?, actions: DetailActions) {
     val genres = UiMappers.genres(genre)
     if (genres.isEmpty() && year == null) return

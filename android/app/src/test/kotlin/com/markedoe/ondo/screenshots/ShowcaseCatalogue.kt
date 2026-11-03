@@ -76,6 +76,8 @@ class ShowcaseCatalogue private constructor(private val file: CatalogueFile, pri
         @SerialName("added_days_ago") val addedDaysAgo: Int = 30,
         val container: String = "mp4",
         val seasons: List<CatalogueSeason> = emptyList(),
+        /** The provider's TMDb id (Xtream `tmdb`): the versions of a film share it (see `FilmVersions`). */
+        val tmdb: Int? = null,
     )
 
     @Serializable
@@ -132,6 +134,7 @@ class ShowcaseCatalogue private constructor(private val file: CatalogueFile, pri
             addedAt = addedAt(movie.addedDaysAgo) - index,
             plot = text(movie.plot),
             containerExtension = movie.container,
+            tmdbId = movie.tmdb,
         )
     }
 
