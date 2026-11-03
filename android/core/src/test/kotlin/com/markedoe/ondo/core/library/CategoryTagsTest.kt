@@ -35,4 +35,21 @@ class CategoryTagsTest {
         assertEquals(setOf("PT"), found.keys)
         assertEquals(listOf("1", "2"), found.getValue("PT").map { it.id })
     }
+
+    /**
+     * A title's own tag: only a delimited code at the start of its name ("|PT| …", "[PT] …", "PT - …", "PT| …", a flag),
+     * never a word that only starts with the letters ("Portugal: The Man", "PTSD"). Same cases as the Swift core.
+     */
+    @Test
+    fun aTitlesOwnTag() {
+        for (name in listOf("|PT| Tony Carreira – Ao Vivo", "[PT] Tony Carreira", "PT - Tony Carreira", "PT| Tony Carreira", "PT: Tony Carreira", "\uD83C\uDDF5\uD83C\uDDF9 Tony Carreira", "---|PT| Tony Carreira")) {
+            assertEquals("PT", CategoryTags.titleTag(name), name)
+            assertTrue(CategoryTags.isHiddenByName(name, setOf("PT")), name)
+        }
+        for (name in listOf("Portugal: The Man – Live", "PTSD Stories", "PTSD: A Life", "Pt - lower case", "Tony Carreira", "Partners - In Crime")) {
+            assertTrue(!CategoryTags.isHiddenByName(name, setOf("PT")), name)
+        }
+        assertTrue(!CategoryTags.isHiddenByName("|PT| Tony Carreira", emptySet()), "no language hidden")
+        assertTrue(!CategoryTags.isHiddenByName("|FR| Le Transport", setOf("PT")), "another language")
+    }
 }

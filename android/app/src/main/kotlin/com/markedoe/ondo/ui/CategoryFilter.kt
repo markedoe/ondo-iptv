@@ -73,6 +73,7 @@ object CategoryFilter {
     internal fun forget() {
         cached = null
         hiddenChannels = null
+        hiddenTitles = null
     }
 
     /** What providers put around a header's name ("-----▼", "---●★|"). */
@@ -89,7 +90,34 @@ object CategoryFilter {
     }
 
     /** The language or country tag a channel's own name starts with ("|DE| ARD", "▼--- |DE| VOD"), or null. */
-    fun channelTag(name: String): String? = CategoryTags.tagOf(name.trimStart { it != '|' && it in DECORATION })
+    fun channelTag(name: String): String? = CategoryTags.titleTag(name)
+
+    /** The movies and the series left out wherever titles are listed because their own name carries a hidden tag. */
+    class HiddenTitles(val movies: Set<String>, val series: Set<String>) {
+        companion object {
+            val NONE = HiddenTitles(emptySet(), emptySet())
+        }
+    }
+
+    @Volatile private var hiddenTitles: Triple<PlaylistContent, Set<String>, HiddenTitles>? = null
+
+    /**
+     * The movies and series whose own name carries a hidden language or country tag ("|PT| Tony Carreira" filed under
+     * "Concerts"), whatever their category: a hidden language leaves them as it leaves its categories. Built once per
+     * catalogue and hidden tags.
+     */
+    fun hiddenTitles(state: OndoState): HiddenTitles {
+        val tags = state.library.hiddenTags
+        if (tags.isEmpty()) return HiddenTitles.NONE
+        val content = state.content
+        hiddenTitles?.let { (known, knownTags, titles) -> if (known === content && knownTags == tags) return titles }
+        val titles = HiddenTitles(
+            movies = content.movies.filter { CategoryTags.isHiddenByName(it.name, tags) }.mapTo(HashSet()) { it.id },
+            series = content.series.filter { CategoryTags.isHiddenByName(it.name, tags) }.mapTo(HashSet()) { it.id },
+        )
+        hiddenTitles = Triple(content, tags, titles)
+        return titles
+    }
 
     @Volatile private var hiddenChannels: Triple<PlaylistContent, Set<String>, Set<String>>? = null
 

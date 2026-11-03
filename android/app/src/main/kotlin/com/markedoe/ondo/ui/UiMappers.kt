@@ -2,6 +2,7 @@ package com.markedoe.ondo.ui
 
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
+import com.markedoe.ondo.core.library.CategoryTags
 import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.PictureSupport
 import com.markedoe.ondo.core.library.People
@@ -89,7 +90,11 @@ object UiMappers {
         val votes = HashMap<String, TmdbRating>()
         kept.forEach { (key, title) -> title.rating?.let { votes[key] = it } }
         votes.putAll(state.tmdbRatings)
-        return Showcase(state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes, films(state))
+        val byName = CategoryFilter.hiddenTitles(state)
+        return Showcase(
+            state.content, state.library, state.activePlaylistId.orEmpty(), hiddenCategoryIds(state), state.settings.hideWatchedMovies, state.trending, votes, films(state),
+            excludedMovieIds = byName.movies, excludedSeriesIds = byName.series,
+        )
     }
 
     /**
@@ -129,8 +134,9 @@ object UiMappers {
         val versions = grouped.versions(movie)
         if (versions.size < 2) return versions
         val hidden = hiddenCategoryIds(state)
+        val byName = CategoryFilter.hiddenTitles(state).movies
         // A stream a panel lists twice (the same id) is one version.
-        return versions.filter { it.id == movie.id || it.categoryId !in hidden }.distinctBy { it.id }
+        return versions.filter { it.id == movie.id || (it.categoryId !in hidden && it.id !in byName) }.distinctBy { it.id }
     }
 
     /**
@@ -388,11 +394,13 @@ object UiMappers {
         // A panel can list a category twice (same id): one chip and one row each.
         val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }.distinctBy { it.id }
         val watched = hiddenMovieIds(state)
+        // A title whose own name carries a hidden language stays out of its category's row.
+        val byName = CategoryFilter.hiddenTitles(state)
         val byCategory: Map<String, List<ShowcaseItem>> =
-            if (series) state.content.series.groupBy({ it.categoryId }) { ShowcaseItem.SeriesItem(it) }
+            if (series) state.content.series.filter { it.id !in byName.series }.groupBy({ it.categoryId }) { ShowcaseItem.SeriesItem(it) }
             else films(state).let { films ->
                 // Each film once in a category's row, in every category one of its versions is in.
-                state.content.movies.filter { it.id !in watched }.groupBy { it.categoryId }.mapValues { (_, list) -> films.distinct(list).map { ShowcaseItem.MovieItem(it) } }
+                state.content.movies.filter { it.id !in watched && it.id !in byName.movies }.groupBy { it.categoryId }.mapValues { (_, list) -> films.distinct(list).map { ShowcaseItem.MovieItem(it) } }
             }
         val rows = categories.mapNotNull { category -> byCategory[category.id]?.take(ROW_LENGTH)?.let { CategoryRow(category, it) } }
         val kind = if (series) ItemKind.SERIES else ItemKind.MOVIE
@@ -402,7 +410,7 @@ object UiMappers {
             continueWatching = showcase.continueWatching().filter { it.kind == kind }.map { resume(it, state) },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
-            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH, watched, films(state)).map { ShowcaseItem.MovieItem(it) },
+            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH, watched + byName.movies, films(state)).map { ShowcaseItem.MovieItem(it) },
         )
     }
 
@@ -417,12 +425,13 @@ object UiMappers {
         sort: PosterSort = PosterSort.PLAYLIST,
     ): List<ShowcaseItem> {
         val hidden = hiddenCategoryIds(state)
+        val byName = CategoryFilter.hiddenTitles(state)
         val items: List<ShowcaseItem> = when {
             myList -> showcase(state).myList().filter { anyType || (it is ShowcaseItem.SeriesItem) == series }
-            series -> state.content.series.filter { it.categoryId !in hidden && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.SeriesItem(it) }
+            series -> state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.SeriesItem(it) }
             else -> {
                 val watched = hiddenMovieIds(state)
-                films(state).distinct(state.content.movies.filter { it.categoryId !in hidden && it.id !in watched && (categoryId == null || it.categoryId == categoryId) })
+                films(state).distinct(state.content.movies.filter { it.categoryId !in hidden && it.id !in watched && it.id !in byName.movies && (categoryId == null || it.categoryId == categoryId) })
                     .map { ShowcaseItem.MovieItem(it) }
             }
         }
@@ -549,10 +558,11 @@ object UiMappers {
     /** The collections, each with the number of its items the collection page shows. */
     private fun collectionRows(state: OndoState, hidden: Set<String>): List<CollectionRow> {
         val playlistId = state.activePlaylistId.orEmpty()
+        val byName = CategoryFilter.hiddenTitles(state)
         val shown by lazy {
             mapOf(
-                ItemKind.MOVIE to state.content.movies.filter { it.categoryId !in hidden }.mapTo(HashSet()) { it.id },
-                ItemKind.SERIES to state.content.series.filter { it.categoryId !in hidden }.mapTo(HashSet()) { it.id },
+                ItemKind.MOVIE to state.content.movies.filter { it.categoryId !in hidden && it.id !in byName.movies }.mapTo(HashSet()) { it.id },
+                ItemKind.SERIES to state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series }.mapTo(HashSet()) { it.id },
                 ItemKind.CHANNEL to visibleChannels(state, hidden).mapTo(HashSet()) { it.id },
             )
         }
@@ -566,6 +576,7 @@ object UiMappers {
         val list = state.library.collections.firstOrNull { it.id == id } ?: return null
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
+        val byName = CategoryFilter.hiddenTitles(state)
         fun order(kind: ItemKind): Map<String, Int> =
             list.items.filter { it.playlistId == playlistId && it.kind == kind }.withIndex().associate { it.value.itemId to it.index }
         val movies = order(ItemKind.MOVIE)
@@ -574,8 +585,8 @@ object UiMappers {
         return CollectionUiState(
             id = list.id,
             name = list.name,
-            movies = state.content.movies.filter { it.id in movies && it.categoryId !in hidden }.sortedBy { movies[it.id] }.map { ShowcaseItem.MovieItem(it) },
-            series = state.content.series.filter { it.id in series && it.categoryId !in hidden }.sortedBy { series[it.id] }.map { ShowcaseItem.SeriesItem(it) },
+            movies = state.content.movies.filter { it.id in movies && it.categoryId !in hidden && it.id !in byName.movies }.sortedBy { movies[it.id] }.map { ShowcaseItem.MovieItem(it) },
+            series = state.content.series.filter { it.id in series && it.categoryId !in hidden && it.id !in byName.series }.sortedBy { series[it.id] }.map { ShowcaseItem.SeriesItem(it) },
             channels = visibleChannels(state, hidden).filter { it.id in channels }.sortedBy { channels[it.id] }.map { channelRow(it, state, now) },
             people = list.items.filter { it.kind == ItemKind.PERSON }.map { PersonRow(it.title, it.imageUrl) },
         )
@@ -758,8 +769,9 @@ object UiMappers {
     private fun browsePage(state: OndoState, kind: BrowseKind, value: String, locale: Locale, found: List<TrendingMatch>): BrowseUiState {
         val hidden = hiddenCategoryIds(state)
         val watched = hiddenMovieIds(state)
-        val movies = state.content.movies.filter { it.categoryId !in hidden && it.id !in watched }
-        val series = state.content.series.filter { it.categoryId !in hidden }
+        val byName = CategoryFilter.hiddenTitles(state)
+        val movies = state.content.movies.filter { it.categoryId !in hidden && it.id !in watched && it.id !in byName.movies }
+        val series = state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series }
         val awards = MovieAwards.of(state)
         val films = films(state)
         // Each film once, the first of its versions in the page's order standing for it.
@@ -810,6 +822,7 @@ object UiMappers {
      */
     fun person(state: OndoState, name: String, online: List<TrendingMatch>? = null, kept: List<TrendingMatch> = emptyList()): PersonUiState {
         val hidden = hiddenCategoryIds(state)
+        val byName = CategoryFilter.hiddenTitles(state)
         fun names(details: MediaDetails) = People.mentions(details.cast, name) || People.mentions(details.director, name)
         val movieIds = state.movieDetails.filterValues(::names).keys
         val seriesIds = state.seriesDetails.filterValues { names(it.info) }.keys
@@ -820,12 +833,12 @@ object UiMappers {
         val onlineMovies = credited.mapNotNullTo(HashSet()) { (it as? TrendingMatch.MovieMatch)?.movie?.id }
         val onlineSeries = credited.mapNotNullTo(HashSet()) { (it as? TrendingMatch.SeriesMatch)?.series?.id }
         val movies = state.content.movies
-            .filter { (it.id in movieIds || it.id in onlineMovies) && it.categoryId !in hidden && it.id !in watched }
+            .filter { (it.id in movieIds || it.id in onlineMovies) && it.categoryId !in hidden && it.id !in watched && it.id !in byName.movies }
             .distinctBy { it.id }
             .let(films(state)::distinct)
             .map { ShowcaseItem.MovieItem(it) }
         val series = state.content.series.filter { show ->
-            show.categoryId !in hidden &&
+            show.categoryId !in hidden && show.id !in byName.series &&
                 (show.id in seriesIds || show.id in onlineSeries || People.mentions(show.cast, name) || People.mentions(show.director, name))
         }.distinctBy { it.id }.map { ShowcaseItem.SeriesItem(it) }
         val keptPerson = state.library.favorites.firstOrNull { it.kind == ItemKind.PERSON && it.itemId == name.trim() }
@@ -855,7 +868,7 @@ object UiMappers {
         films: FilmVersions = FilmVersions.none(),
     ) {
         private fun shown(categoryId: String, name: String) =
-            categoryId !in hidden && (hiddenTags.isEmpty() || CategoryFilter.channelTag(name) !in hiddenTags)
+            categoryId !in hidden && !CategoryTags.isHiddenByName(name, hiddenTags)
 
         val movies = films.distinct(content.movies.filter { shown(it.categoryId, it.name) }).map { TextNormalizer.normalize(it.name) to it }
         val series = content.series.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }

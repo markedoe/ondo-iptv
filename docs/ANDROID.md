@@ -22,7 +22,9 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   disclaimer.
 - **Search** finds a word anywhere in a title ("dust" finds "Stardust"): the exact title first, then titles starting
   with it, then a word starting with it, then the others. Titles and channels whose own name carries a hidden
-  language tag (such as "|DE| …") are left out like hidden categories. On a TV, Search opens on its field with the
+  language tag (such as "|DE| …", "[DE] …", "DE - …") are left out like hidden categories, there and in every other
+  list (rows, grids, Home, a person's, genre's, year's or award's titles, similar titles, Live TV and the guide),
+  whatever their category (`CategoryTags.titleTag`; "Portugal: …" or "PTSD …" carry no tag). On a TV, Search opens on its field with the
   keyboard up.
 - **Automatic refresh** (Settings → Playlists → Automatic refresh: Only when I ask, Every 6 hours, Every 12 hours,
   Every day (default), Every week), checked when Ondo opens and when it comes back to the front

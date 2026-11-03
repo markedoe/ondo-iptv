@@ -219,7 +219,7 @@ extension AppModel {
             movies = self.movies(in: nil, sort: .release, includingWatched: true)
             series = self.series(in: nil, sort: .release)
         } else {
-            let found = index.search.search(trimmed, limitPerType: 5000, excludedCategoryIDs: excludedCategoryIDs)
+            let found = index.search.search(trimmed, limitPerType: 5000, excludedCategoryIDs: excludedCategoryIDs, hiddenTags: hiddenTags)
             movies = films.distinct(found.movies)
             series = found.series
         }

@@ -115,22 +115,25 @@ extension AppModel {
         return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
     }
 
+    /// The hidden languages: a title whose own name carries one is left out of Search whatever its category.
+    var hiddenTags: Set<String> { Set(library.hiddenCategoryTags.keys) }
+
     func search(_ query: String) -> SearchResults {
-        Self.search(query, in: index.search, excluded: excludedCategoryIDs, hidden: hiddenChannelIDs, films: films)
+        Self.search(query, in: index.search, excluded: excludedCategoryIDs, hidden: hiddenChannelIDs, hiddenTags: hiddenTags, films: films)
     }
 
     /// `search` on a background task: the main thread (and the keyboard) stays free while a large playlist is searched.
     func searchInBackground(_ query: String) async -> SearchResults {
-        let engine = index.search, excluded = excludedCategoryIDs, hidden = hiddenChannelIDs, films = self.films
+        let engine = index.search, excluded = excludedCategoryIDs, hidden = hiddenChannelIDs, tags = hiddenTags, films = self.films
         return await Task.detached(priority: .userInitiated) {
-            Self.search(query, in: engine, excluded: excluded, hidden: hidden, films: films)
+            Self.search(query, in: engine, excluded: excluded, hidden: hidden, hiddenTags: tags, films: films)
         }.value
     }
 
     private nonisolated static func search(
-        _ query: String, in engine: SearchEngine, excluded: Set<String>, hidden: Set<String>, films: FilmVersions
+        _ query: String, in engine: SearchEngine, excluded: Set<String>, hidden: Set<String>, hiddenTags: Set<String>, films: FilmVersions
     ) -> SearchResults {
-        var results = engine.search(query, limitPerType: 150, excludedCategoryIDs: excluded)
+        var results = engine.search(query, limitPerType: 150, excludedCategoryIDs: excluded, hiddenTags: hiddenTags)
         if !hidden.isEmpty { results.channels.removeAll { hidden.contains($0.id) } }
         // Each film once, whatever its versions.
         results.movies = films.distinct(results.movies)

@@ -476,13 +476,29 @@ class UiMappersTest {
         val started = Movie("pt2", "|PT| $MARKER em Casa", categoryId = kids.id, streamUrl = "http://example.com/movie/pt2.mp4", year = 2024, rating = 9.8, addedAt = Fixtures.NOW / 1000)
         val show = Series(id = "spt", name = "|PT| $MARKER Nocturna", categoryId = series.id, year = 2024, rating = 9.9, genre = "Drama", cast = "Rui $MARKER", addedAt = Fixtures.NOW / 1000)
         val channel = Channel(id = "cpt", name = "|PT| $MARKER TV", categoryId = live.id, streamUrl = "http://example.com/live/cpt.m3u8")
+
+        /** In visible categories of no language, titles whose own name carries the language: each holds [BY_NAME]. */
+        const val BY_NAME = "Carreira"
+        val concerts = MediaCategory("m-concerts", "Concerts", ContentType.MOVIE)
+        val classics = MediaCategory("s-classics", "Clássicos", ContentType.SERIES)
+        val radio = MediaCategory("l-radio", "Rádio", ContentType.LIVE)
+        val concert = Movie("ct1", "|PT| Tony $BY_NAME – Ao Vivo em Lisboa", categoryId = concerts.id, streamUrl = "http://example.com/movie/ct1.mp4", year = 2024, addedAt = Fixtures.NOW / 1000)
+        val classic = Series(id = "sct", name = "PT - $BY_NAME Antiga", categoryId = classics.id, year = 2024, addedAt = Fixtures.NOW / 1000)
+        val station = Channel(id = "cct", name = "[PT] $BY_NAME Rádio", categoryId = radio.id, streamUrl = "http://example.com/live/cct.m3u8")
+
+        /** Names that start like a tag but carry none: they stay whatever language is hidden. */
+        val notTagged = listOf(
+            Movie("nt1", "Portugal: The Man – Live", categoryId = concerts.id, streamUrl = "http://example.com/movie/nt1.mp4", year = 2024),
+            Movie("nt2", "PTSD Stories", categoryId = concerts.id, streamUrl = "http://example.com/movie/nt2.mp4", year = 2024),
+        )
+
         val content = Fixtures.content.copy(
-            movies = Fixtures.content.movies + listOf(movie, started),
-            series = Fixtures.content.series + show,
-            channels = Fixtures.content.channels + channel,
-            movieCategories = Fixtures.content.movieCategories + listOf(films, kids),
-            seriesCategories = Fixtures.content.seriesCategories + series,
-            liveCategories = Fixtures.content.liveCategories + live,
+            movies = Fixtures.content.movies + listOf(movie, started, concert) + notTagged,
+            series = Fixtures.content.series + show + classic,
+            channels = Fixtures.content.channels + channel + station,
+            movieCategories = Fixtures.content.movieCategories + listOf(films, kids, concerts),
+            seriesCategories = Fixtures.content.seriesCategories + listOf(series, classics),
+            liveCategories = Fixtures.content.liveCategories + listOf(live, radio),
         )
     }
 
@@ -532,7 +548,7 @@ class UiMappersTest {
                 "movie grids" to (categories.map { UiMappers.grid(state, false, it, false, "") } + listOf(UiMappers.grid(state, false, null, false, ""))).toString(),
                 "series grids" to (seriesCategories.map { UiMappers.grid(state, true, it, false, "") } + listOf(UiMappers.grid(state, true, null, false, ""))).toString(),
                 "my list" to UiMappers.myList(state, Fixtures.NOW).toString(),
-                "search" to listOf("a", "o", marker.lowercase(), "do mar", "tv").joinToString { found(UiMappers.search(index, it, state, Fixtures.NOW)) },
+                "search" to listOf("a", "o", marker.lowercase(), "do mar", "tv", "carreira", "tony").joinToString { found(UiMappers.search(index, it, state, Fixtures.NOW)) },
                 "filtered search" to found(UiMappers.search(index, "", state, Fixtures.NOW, SearchFilters(fromYear = 2024, toYear = 2024))),
                 "person" to listOf("Ana $marker", "Rui $marker").map { UiMappers.person(state, it).let { page -> page.movies + page.series } }.toString(),
                 "genre" to UiMappers.browse(state, BrowseKind.GENRE, "Drama", Locale.ENGLISH).toString(),
@@ -548,8 +564,22 @@ class UiMappersTest {
         listOf("movies rows", "series rows", "movie grids", "series grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
             .forEach { assertTrue("$it lists the language while it is shown", marker in shown.getValue(it)) }
 
+        // The titles named with the language in visible categories of no language, shown while the language is.
+        val byName = HiddenLanguage.BY_NAME
+        listOf("movies rows", "series rows", "movie grids", "series grids", "search", "filtered search", "year", "live", "guide")
+            .forEach { assertTrue("$it lists the titles named with the language while it is shown", byName in shown.getValue(it)) }
+
         val byLanguage = base.copy(library = base.library.settingTagsHidden(listOf("PT"), hidden = true))
         val oneByOne = base.copy(library = base.library.settingCategoriesHidden(Fixtures.PLAYLIST_ID, HiddenLanguage.categories.map { it.id }, hidden = true))
+        // A hidden language leaves the titles whose own name carries it too ("|PT| …", "PT - …", "[PT] …"), whatever
+        // their category; names that only look like a tag ("Portugal: …", "PTSD …") stay.
+        surfaces(byLanguage).forEach { (surface, text) -> assertFalse("hidden as a language, $surface still shows a title named with it: $text", byName in text) }
+        val left = surfaces(byLanguage)
+        for (name in HiddenLanguage.notTagged.map { it.name }) {
+            listOf("movies rows", "movie grids", "year").forEach { assertTrue("$name stays in $it", name in left.getValue(it)) }
+        }
+        // Categories hidden one by one hide those categories only: the language itself is not hidden.
+        assertTrue("one by one, a title of a visible category stays", byName in surfaces(oneByOne).getValue("movies rows"))
         for ((how, state) in listOf("as a language" to byLanguage, "one by one" to oneByOne)) {
             surfaces(state).forEach { (surface, text) -> assertFalse("hidden $how, $surface still shows it: $text", marker in text) }
             // The exception: Continue watching keeps the title already started; My List does not keep the saved one.

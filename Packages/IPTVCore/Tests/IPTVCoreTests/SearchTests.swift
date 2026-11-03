@@ -91,6 +91,41 @@ final class SearchTests: XCTestCase {
         XCTAssertEqual(hidden.channels.map(\.id), ["c1"])
     }
 
+    /// A hidden language leaves the titles whose own name carries it ("|PT| …", "PT - …", "[PT] …") whatever their
+    /// category ("Concerts", of no language); names that only start like a tag ("Portugal: …", "PTSD …") stay.
+    func testAHiddenLanguageLeavesTheTitlesNamedWithIt() {
+        let url = URL(string: "http://example.com/1")!
+        let content = PlaylistContent(
+            channels: [Channel(id: "c1", name: "[PT] Tony Rádio", categoryID: "l-radio", streamURL: url)],
+            movies: [
+                Movie(id: "m1", name: "|PT| Tony Carreira – Ao Vivo em Lisboa", categoryID: "m-concerts", streamURL: url),
+                Movie(id: "m2", name: "Portugal: The Man – Tony Live", categoryID: "m-concerts", streamURL: url),
+                Movie(id: "m3", name: "PTSD Tony Stories", categoryID: "m-concerts", streamURL: url),
+            ],
+            series: [Series(id: "s1", name: "PT - Tony Antiga", categoryID: "s-classics")]
+        )
+        let engine = SearchEngine(content: content)
+        XCTAssertEqual(engine.search("tony").totalCount, 5, "shown while the language is")
+        let hidden = engine.search("tony", hiddenTags: ["PT"])
+        XCTAssertEqual(hidden.movies.map(\.id), ["m2", "m3"])
+        XCTAssertTrue(hidden.series.isEmpty)
+        XCTAssertTrue(hidden.channels.isEmpty)
+        XCTAssertEqual(engine.search("tony", hiddenTags: ["FR"]).totalCount, 5, "another language hidden")
+    }
+
+    /// A title's own tag: only a delimited code at the start of its name. Same cases as the Kotlin core.
+    func testATitlesOwnTag() {
+        for name in ["|PT| Tony Carreira – Ao Vivo", "[PT] Tony Carreira", "PT - Tony Carreira", "PT| Tony Carreira", "PT: Tony Carreira", "🇵🇹 Tony Carreira", "---|PT| Tony Carreira"] {
+            XCTAssertEqual(CategoryTags.titleTag(of: name), "PT", name)
+            XCTAssertTrue(CategoryTags.isHidden(name: name, hiddenTags: ["PT"]), name)
+        }
+        for name in ["Portugal: The Man – Live", "PTSD Stories", "PTSD: A Life", "Pt - lower case", "Tony Carreira", "Partners - In Crime"] {
+            XCTAssertFalse(CategoryTags.isHidden(name: name, hiddenTags: ["PT"]), name)
+        }
+        XCTAssertFalse(CategoryTags.isHidden(name: "|PT| Tony Carreira", hiddenTags: []))
+        XCTAssertFalse(CategoryTags.isHidden(name: "|FR| Le Transport", hiddenTags: ["PT"]))
+    }
+
     /// Prefix matches filling the limit before the exact name is reached do not push the exact name out.
     func testAnExactNameIsFoundPastALimitOfPrefixMatches() {
         let url = URL(string: "http://example.com/1")!

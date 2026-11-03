@@ -27,6 +27,22 @@ public enum CategoryTags {
         return nil
     }
 
+    /// What providers put around a header's or a title's name before its tag ("-----▼", "---●★|").
+    private static let decoration: Set<Character> = ["-", "=", "_", "~", "*", "#", "•", "●", "○", "◆", "★", "☆", "▼", "▲", "►", "◄", "▶", "◀", "|", " "]
+
+    /// The tag a title's or a channel's own name starts with, by the rules of `tag(of:)` ("|PT| Tony Carreira",
+    /// "[PT] …", "PT - …", "PT| …", "🇵🇹 …"), decorations before it left out; nil without one. Only a delimited code at
+    /// the very start counts: "Portugal: The Man" and "PTSD" carry none. Same rules as the Kotlin `CategoryTags.titleTag`.
+    public static func titleTag(of name: String) -> String? {
+        tag(of: String(name.drop { $0 != "|" && decoration.contains($0) }))
+    }
+
+    /// Whether a title's or a channel's own `name` carries one of these hidden tags (see `titleTag(of:)`).
+    public static func isHidden(name: String, hiddenTags: Set<String>) -> Bool {
+        guard !hiddenTags.isEmpty, let tag = titleTag(of: name) else { return false }
+        return hiddenTags.contains(tag)
+    }
+
     /// Tags carried by at least two of these categories, and the categories that carry each one.
     public static func detect(in categories: [MediaCategory]) -> [String: [MediaCategory]] {
         var found: [String: [MediaCategory]] = [:]

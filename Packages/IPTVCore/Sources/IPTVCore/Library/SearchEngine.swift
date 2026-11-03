@@ -28,18 +28,21 @@ public struct SearchEngine: Sendable {
         series = content.series.map { (TextNormalizer.normalize($0.name), $0) }
     }
 
-    public func search(_ query: String, limitPerType: Int = 200, excludedCategoryIDs: Set<String> = []) -> SearchResults {
+    /// `hiddenTags`: hidden languages; a title or a channel whose own name carries one is left out whatever its
+    /// category (`CategoryTags.isHidden(name:hiddenTags:)`).
+    public func search(_ query: String, limitPerType: Int = 200, excludedCategoryIDs: Set<String> = [], hiddenTags: Set<String> = []) -> SearchResults {
         let normalized = TextNormalizer.normalize(query)
         guard !normalized.isEmpty else { return SearchResults() }
         let tokens = normalized.split(separator: " ")
 
-        func run<T>(_ list: [(key: String, item: T)], categoryID: (T) -> String) -> [T] {
+        func run<T>(_ list: [(key: String, item: T)], categoryID: (T) -> String, name: (T) -> String) -> [T] {
             var exact: [T] = []
             var prefix: [T] = []
             var other: [T] = []
             for entry in list {
                 guard !excludedCategoryIDs.contains(categoryID(entry.item)),
-                      TextNormalizer.matches(normalizedText: entry.key, queryTokens: tokens) else { continue }
+                      TextNormalizer.matches(normalizedText: entry.key, queryTokens: tokens),
+                      !CategoryTags.isHidden(name: name(entry.item), hiddenTags: hiddenTags) else { continue }
                 // Only exact names fill the limit for good: a later exact name ranks before any prefix match.
                 if entry.key == normalized {
                     exact.append(entry.item)
@@ -54,9 +57,9 @@ public struct SearchEngine: Sendable {
         }
 
         return SearchResults(
-            channels: run(channels, categoryID: \.categoryID),
-            movies: run(movies, categoryID: \.categoryID),
-            series: run(series, categoryID: \.categoryID)
+            channels: run(channels, categoryID: \.categoryID, name: \.name),
+            movies: run(movies, categoryID: \.categoryID, name: \.name),
+            series: run(series, categoryID: \.categoryID, name: \.name)
         )
     }
 }

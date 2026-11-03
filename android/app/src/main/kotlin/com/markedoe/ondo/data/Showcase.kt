@@ -34,13 +34,18 @@ class Showcase(
     private val votes: Map<String, TmdbRating> = emptyMap(),
     /** The versions of the catalogue's films: each film once in every list, finished when one of its versions is. */
     private val films: FilmVersions = FilmVersions.none(),
+    /** Movies and series left out whatever their category: their own name carries a hidden language ("|PT| …"). */
+    private val excludedMovieIds: Set<String> = emptySet(),
+    private val excludedSeriesIds: Set<String> = emptySet(),
 ) {
-    private val movies by lazy { content.movies.filter { it.categoryId !in excludedCategoryIds } }
+    private fun shown(movie: Movie) = movie.categoryId !in excludedCategoryIds && movie.id !in excludedMovieIds
+    private fun shown(series: Series) = series.categoryId !in excludedCategoryIds && series.id !in excludedSeriesIds
+    private val movies by lazy { content.movies.filter(::shown) }
     private val watchedMovies by lazy { if (hideWatchedMovies) films.expand(library.finishedMovies(playlistId)) else emptySet() }
     private val browsableMovies by lazy {
         if (!hideWatchedMovies) movies else watchedMovies.let { watched -> movies.filter { it.id !in watched } }
     }
-    private val series by lazy { content.series.filter { it.categoryId !in excludedCategoryIds } }
+    private val series by lazy { content.series.filter(::shown) }
     private val moviesById by lazy { movies.associateBy { it.id } }
     private val seriesById by lazy { series.associateBy { it.id } }
 
@@ -92,8 +97,8 @@ class Showcase(
         val watched = watchedMovies
         val found = trendingMatches.mapNotNull { match ->
             when (match) {
-                is TrendingMatch.MovieMatch -> match.movie.takeIf { it.categoryId !in excludedCategoryIds && it.id !in watched }?.let { ShowcaseItem.MovieItem(it) }
-                is TrendingMatch.SeriesMatch -> match.series.takeIf { it.categoryId !in excludedCategoryIds }?.let { ShowcaseItem.SeriesItem(it) }
+                is TrendingMatch.MovieMatch -> match.movie.takeIf { shown(it) && it.id !in watched }?.let { ShowcaseItem.MovieItem(it) }
+                is TrendingMatch.SeriesMatch -> match.series.takeIf { shown(it) }?.let { ShowcaseItem.SeriesItem(it) }
             }
         }.distinctBy { it.key }
         return films.distinctItems(found)
@@ -171,7 +176,7 @@ class Showcase(
      * opened, [details]), then released in the same years, then the best rated, then in the playlist's order.
      */
     fun similarMovies(movie: Movie, limit: Int = 15, related: List<Movie> = emptyList(), details: (String) -> MediaDetails? = { null }): List<Movie> {
-        if (movie.categoryId in excludedCategoryIds) return emptyList()
+        if (!shown(movie)) return emptyList()
         // TMDb's recommendations the playlist has come first (from any category: TMDb chose them), then the closest of
         // the category (another one is often another language).
         val shown = browsableIds
@@ -215,7 +220,7 @@ class Showcase(
 
     /** "More like this" for a series, by the rules of [similarMovies]; a series list names its genre and cast itself. */
     fun similarSeries(item: Series, limit: Int = 15, related: List<Series> = emptyList(), details: (String) -> MediaDetails? = { null }): List<Series> {
-        if (item.categoryId in excludedCategoryIds) return emptyList()
+        if (!shown(item)) return emptyList()
         fun title(series: Series): Similarity.Title {
             val info = details(series.id)
             return Similarity.Title(

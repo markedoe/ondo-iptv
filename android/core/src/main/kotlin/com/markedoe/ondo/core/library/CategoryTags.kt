@@ -29,6 +29,19 @@ object CategoryTags {
         return null
     }
 
+    /** What providers put around a header's or a title's name before its tag ("-----▼", "---●★|"). */
+    private const val DECORATION = "-=_~*#•●○◆★☆▼▲►◄▶◀| "
+
+    /**
+     * The tag a title's or a channel's own name starts with, by the rules of [tagOf] ("|PT| Tony Carreira", "[PT] …",
+     * "PT - …", "PT| …", "🇵🇹 …"), decorations before it left out; null without one. Only a delimited code at the very
+     * start counts: "Portugal: The Man" and "PTSD" carry none. Same rules as the Swift `CategoryTags.titleTag`.
+     */
+    fun titleTag(name: String): String? = tagOf(name.trimStart { it != '|' && it in DECORATION })
+
+    /** Whether a title's or a channel's own [name] carries one of these hidden tags (see [titleTag]). */
+    fun isHiddenByName(name: String, hiddenTags: Set<String>): Boolean = hiddenTags.isNotEmpty() && titleTag(name) in hiddenTags
+
     /** Tags carried by at least two of these categories, and the categories that carry each one. */
     fun detect(categories: List<MediaCategory>): Map<String, List<MediaCategory>> =
         categories.mapNotNull { category -> tagOf(category.name)?.let { it to category } }

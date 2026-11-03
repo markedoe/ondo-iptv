@@ -23,8 +23,10 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   ajouter la première playlist (aucune chaîne ni démo embarquée) et avertissement « lecteur sans contenu ».
 - **Recherche** : un mot est trouvé n'importe où dans un titre (« dust » trouve « Stardust ») : le titre exact
   d'abord, puis les titres qui commencent par le mot, puis ceux dont un mot commence par lui, puis les autres. Les
-  titres et chaînes dont le nom porte lui-même une étiquette de langue masquée (comme « |DE| … ») sont écartés
-  comme les catégories masquées. Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
+  titres et chaînes dont le nom porte lui-même une étiquette de langue masquée (comme « |DE| … », « [DE] … »,
+  « DE - … ») sont écartés comme les catégories masquées, là et dans toutes les autres listes (rangées, grilles,
+  Accueil, titres d'une personne, d'un genre, d'une année ou d'un prix, titres similaires, TV en direct et guide),
+  quelle que soit leur catégorie (`CategoryTags.titleTag` ; « Portugal: … » ou « PTSD … » ne portent pas d'étiquette). Sur une TV, la Recherche s'ouvre sur son champ, clavier affiché.
 - **Actualisation automatique** (Réglages → Playlists → Actualisation automatique : Seulement sur demande, Toutes
   les 6 heures, Toutes les 12 heures, Chaque jour (par défaut), Chaque semaine), vérifiée à l'ouverture d'Ondo et
   quand il revient au premier plan (`MainActivity.onStart`, `OndoRepository.refreshIfStale`). Un seul réglage pour
