@@ -217,10 +217,13 @@ private struct HeroPage: View {
     }
 
     private var myListButton: some View {
-        let inList = model.isFavorite(item.contentType, id: item.itemID)
+        let inList: Bool = {
+            if case .movie(let movie) = item { return model.isFavoriteFilm(movie) }
+            return model.isFavorite(item.contentType, id: item.itemID)
+        }()
         return Button {
             switch item {
-            case .movie(let movie): model.toggleFavorite(movie)
+            case .movie(let movie): model.toggleFavoriteFilm(movie)
             case .series(let series): model.toggleFavorite(series)
             }
         } label: {
@@ -234,7 +237,7 @@ private struct HeroPage: View {
     }
 
     private var playTitle: LocalizedStringKey {
-        if case .movie(let movie) = item, let progress = model.progress(movie: movie), !progress.isFinished, progress.position > 0 {
+        if case .movie(let movie) = item, let progress = model.progress(movie: model.defaultVersion(of: movie)), !progress.isFinished, progress.position > 0 {
             return "Resume"
         }
         return "Play"

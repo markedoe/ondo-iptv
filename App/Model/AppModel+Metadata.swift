@@ -16,7 +16,7 @@ extension AppModel {
     /// watched left out.
     func titles(for route: MetadataRoute) -> SearchResults {
         var results = allTitles(for: route)
-        results.movies = hidingWatched(results.movies)
+        results.movies = films.distinct(hidingWatched(results.movies))
         return results
     }
 

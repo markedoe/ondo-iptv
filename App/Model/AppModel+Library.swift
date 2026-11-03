@@ -164,9 +164,10 @@ extension AppModel {
     /// are browsed (Movies, Home, the pages opened from a movie), still found by search, My List and collections.
     func hiddenWatchedMovieIDs() -> Set<String> {
         guard settings.hideWatchedMovies, let playlist = activePlaylist else { return [] }
-        return Set(library.history.lazy
+        // A film is watched once one of its versions is: every version is left out.
+        return films.expand(Set(library.history.lazy
             .filter { $0.reference.type == .movie && $0.reference.playlistID == playlist.id && $0.isFinished }
-            .map(\.reference.itemID))
+            .map(\.reference.itemID)))
     }
 
     /// `movies` without the ones `hiddenWatchedMovieIDs` leaves out.

@@ -81,6 +81,13 @@ struct AppSettings: Codable, Equatable {
     var awardsCheckedAt: Date?
     /// Movies the viewer has finished are left out where movies are browsed (not of search, My List or collections).
     var hideWatchedMovies = false
+    /// A film's versions (4K, HD, VOSTFR…) shown as one title with its versions on its page (`FilmVersions`); off: each
+    /// stream as the playlist lists it.
+    var groupVersions = true
+    /// The versions the viewer chose on movie pages, the latest first (`maxChosenVersions` at most): a film's page and
+    /// card start from the one chosen last. Kept on this device only (settings are not synced).
+    var chosenVersions: [String] = []
+    static let maxChosenVersions = 200
     /// Sync with Ondo on the other devices of the local network (docs/SYNC.md): off until the viewer turns it on, on
     /// each device. The device's sync ID is kept apart (`SyncState`), not here.
     var syncOnLocalNetwork = false
@@ -119,6 +126,8 @@ struct AppSettings: Codable, Equatable {
         updateAwards = (try? c.decodeIfPresent(Bool.self, forKey: .updateAwards)) ?? d.updateAwards
         awardsCheckedAt = try? c.decodeIfPresent(Date.self, forKey: .awardsCheckedAt)
         hideWatchedMovies = (try? c.decodeIfPresent(Bool.self, forKey: .hideWatchedMovies)) ?? d.hideWatchedMovies
+        groupVersions = (try? c.decodeIfPresent(Bool.self, forKey: .groupVersions)) ?? d.groupVersions
+        chosenVersions = (try? c.decodeIfPresent([String].self, forKey: .chosenVersions)) ?? d.chosenVersions
         syncOnLocalNetwork = (try? c.decodeIfPresent(Bool.self, forKey: .syncOnLocalNetwork)) ?? d.syncOnLocalNetwork
     }
 }

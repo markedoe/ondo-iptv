@@ -17,9 +17,21 @@ extension AppModel {
 
     /// The movies of a category, or of all of them; the ones hidden as watched are left out unless `includingWatched`
     /// (search, and the lists kept in a cache, which leave them out once read from it).
+    /// Each film once (`films`): in a category, the first of its versions there stands for it, so a film is in every
+    /// category one of its versions is in.
     func movies(in category: MediaCategory?, sort: PosterSort, includingWatched: Bool = false) -> [Movie] {
-        let list = sortedMovies(in: category, sort: sort)
+        let list = distinctMovies(in: category, sort: sort)
         return includingWatched ? list : hidingWatched(list)
+    }
+
+    /// `sortedMovies` with each film once, kept like the sorted lists (once per catalogue, category and order).
+    private func distinctMovies(in category: MediaCategory?, sort: PosterSort) -> [Movie] {
+        let list = sortedMovies(in: category, sort: sort)
+        let films = films
+        guard films.isGrouped else { return list }
+        let excluded = category == nil ? excludedCategoryIDs.hashValue : 0
+        let key = "films|\(activePlaylist?.id.uuidString ?? "")|\(content.fetchedAt.timeIntervalSince1970)|\(list.count)|\(category?.id ?? "*")|\(excluded)|\(sort.rawValue)"
+        return cachedList(key) { films.distinct(list) }
     }
 
     private func sortedMovies(in category: MediaCategory?, sort: PosterSort) -> [Movie] {
@@ -104,20 +116,24 @@ extension AppModel {
     }
 
     func search(_ query: String) -> SearchResults {
-        Self.search(query, in: index.search, excluded: excludedCategoryIDs, hidden: hiddenChannelIDs)
+        Self.search(query, in: index.search, excluded: excludedCategoryIDs, hidden: hiddenChannelIDs, films: films)
     }
 
     /// `search` on a background task: the main thread (and the keyboard) stays free while a large playlist is searched.
     func searchInBackground(_ query: String) async -> SearchResults {
-        let engine = index.search, excluded = excludedCategoryIDs, hidden = hiddenChannelIDs
+        let engine = index.search, excluded = excludedCategoryIDs, hidden = hiddenChannelIDs, films = films
         return await Task.detached(priority: .userInitiated) {
-            Self.search(query, in: engine, excluded: excluded, hidden: hidden)
+            Self.search(query, in: engine, excluded: excluded, hidden: hidden, films: films)
         }.value
     }
 
-    private nonisolated static func search(_ query: String, in engine: SearchEngine, excluded: Set<String>, hidden: Set<String>) -> SearchResults {
+    private nonisolated static func search(
+        _ query: String, in engine: SearchEngine, excluded: Set<String>, hidden: Set<String>, films: FilmVersions
+    ) -> SearchResults {
         var results = engine.search(query, limitPerType: 150, excludedCategoryIDs: excluded)
         if !hidden.isEmpty { results.channels.removeAll { hidden.contains($0.id) } }
+        // Each film once, whatever its versions.
+        results.movies = films.distinct(results.movies)
         return results
     }
 

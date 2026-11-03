@@ -32,7 +32,7 @@ extension AppModel {
             !opened.contains(show.id) && !excluded.contains(show.categoryID)
                 && (People.field(show.cast, names: name) || People.field(show.director, names: name))
         }
-        return Self.sorted(PersonWorks(movies: movies, series: series))
+        return sorted(PersonWorks(movies: movies, series: series))
     }
 
     /// The actors and directors of `content`'s series (`peopleIndex`), and the catalogue's titles by their key
@@ -132,7 +132,7 @@ extension AppModel {
                 break
             }
         }
-        return Self.sorted(works)
+        return sorted(works)
     }
 
     /// The pages already opened and the local people index, then the person's credits on TMDb (when a key is set) that
@@ -180,11 +180,13 @@ extension AppModel {
                 break
             }
         }
-        return Self.sorted(works)
+        return sorted(works)
     }
 
-    private static func sorted(_ works: PersonWorks) -> PersonWorks {
+    private func sorted(_ works: PersonWorks) -> PersonWorks {
         var works = works
+        // Each film once, whatever its versions.
+        works.movies = films.distinct(works.movies)
         works.movies.sort { releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
         works.series.sort { releasedFirst(($0.year, $0.addedAt, $0.name), ($1.year, $1.addedAt, $1.name)) }
         return works
@@ -218,7 +220,7 @@ extension AppModel {
             series = self.series(in: nil, sort: .release)
         } else {
             let found = index.search.search(trimmed, limitPerType: 5000, excludedCategoryIDs: excludedCategoryIDs)
-            movies = found.movies
+            movies = films.distinct(found.movies)
             series = found.series
         }
         func released(_ year: Int?) -> Bool {

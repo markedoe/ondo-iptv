@@ -236,14 +236,14 @@ struct MovieContextMenu: View {
 
     var body: some View {
         Button {
-            model.play(movie)
+            model.playFilm(movie)
         } label: {
             Label("Play", systemImage: "play.fill")
         }
         Button {
-            model.toggleFavorite(movie)
+            model.toggleFavoriteFilm(movie)
         } label: {
-            MyListLabel(inList: model.isFavorite(.movie, id: movie.id))
+            MyListLabel(inList: model.isFavoriteFilm(movie))
         }
         AddToListMenu(item: .movie(movie))
     }

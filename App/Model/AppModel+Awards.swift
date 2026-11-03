@@ -130,7 +130,8 @@ extension AppModel {
                   !watched.contains(movie.id) else { return nil }
             return (movie, win.year)
         }
-        return winners.sorted { ($0.1, $0.0.name) > ($1.1, $1.0.name) }.prefix(limit).map(\.0)
+        // Each film once, whatever its versions.
+        return Array(films.distinct(winners.sorted { ($0.1, $0.0.name) > ($1.1, $1.0.name) }.map(\.0)).prefix(limit))
     }
 
     /// The festivals and ceremonies some movie of the playlist took part in (the search filter's choices).

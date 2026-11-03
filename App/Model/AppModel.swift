@@ -46,6 +46,8 @@ struct ContentIndex: Sendable {
     /// thousands of channels is built without normalising every name.
     var matchKeyByChannelID: [String: String] = [:]
     var search = SearchEngine(content: .empty)
+    /// The versions of the catalogue's films (4K, HD, VOSTFR…), grouped once per catalogue (`FilmVersions`).
+    var films = FilmVersions.none()
 
     init() {}
 
@@ -62,6 +64,7 @@ struct ContentIndex: Sendable {
             for channel in versions { matchKeyByChannelID[channel.id] = key }
         }
         search = SearchEngine(content: content)
+        films = FilmVersions.of(content.movies)
     }
 }
 

@@ -194,17 +194,19 @@ extension CircleAction where Icon == Image {
 struct MyListAction: View {
     @Environment(AppModel.self) private var model
     let item: ShowcaseItem
+    /// A film's version its page selects: the one My List keeps (else the film's default version).
+    var version: Movie?
 
     var body: some View {
         let inList: Bool = {
             switch item {
-            case .movie(let movie): return model.isFavorite(.movie, id: movie.id)
+            case .movie(let movie): return model.isFavoriteFilm(movie)
             case .series(let series): return model.isFavorite(.series, id: series.id)
             }
         }()
         Button {
             switch item {
-            case .movie(let movie): model.toggleFavorite(movie)
+            case .movie(let movie): model.toggleFavoriteFilm(movie, version: version)
             case .series(let series): model.toggleFavorite(series)
             }
         } label: {

@@ -180,7 +180,8 @@ extension AppModel {
     func myList() -> [ShowcaseItem] {
         let movies = favorites(.movie).compactMap { entry in index.moviesByID[entry.reference.itemID].map { (entry.addedAt, ShowcaseItem.movie($0)) } }
         let series = favorites(.series).compactMap { entry in index.seriesByID[entry.reference.itemID].map { (entry.addedAt, ShowcaseItem.series($0)) } }
-        return (movies + series).sorted { $0.0 > $1.0 }.map(\.1)
+        // A film once, whichever of its versions are kept.
+        return distinctFilms((movies + series).sorted { $0.0 > $1.0 }.map(\.1))
     }
 
     /// The item a history entry belongs to (movie or series).
@@ -210,16 +211,20 @@ extension AppModel {
             }
         }
         for item in newReleases(limit: limit * 2, now: now) { append(item) }
-        return items
+        return distinctFilms(items)
     }
 
     /// Trending titles as Home shows them: without the movies hidden as watched.
     func trendingTitles() -> [TrendingMatch] {
         let watched = hiddenWatchedMovieIDs()
-        guard !watched.isEmpty else { return trending }
+        let films = films
+        var seen = Set<Int>()
         return trending.filter { match in
-            if case .movie(let movie, _) = match { return !watched.contains(movie.id) }
-            return true
+            guard case .movie(let movie, _) = match else { return true }
+            if watched.contains(movie.id) { return false }
+            // Each film once, whatever its versions.
+            guard let group = films.group(of: movie.id) else { return true }
+            return seen.insert(group).inserted
         }
     }
 
@@ -244,7 +249,8 @@ extension AppModel {
     func playShowcase(_ item: ShowcaseItem) async {
         switch item {
         case .movie(let movie):
-            play(movie)
+            // A film's card plays its default version.
+            playFilm(movie)
         case .series(let series):
             guard let details = await episodes(of: series), let next = nextEpisode(in: series, details: details) else { return }
             play(next.episode, in: series, season: next.season.episodes)
@@ -298,7 +304,13 @@ extension AppModel {
     func similarMovies(to movie: Movie, limit: Int = 15) -> [Movie] {
         guard !excludedCategoryIDs.contains(movie.categoryID) else { return [] }
         let watched = hiddenWatchedMovieIDs()
-        return Array((index.moviesByCategory[movie.categoryID] ?? []).lazy.filter { $0.id != movie.id && !watched.contains($0.id) }.prefix(limit))
+        // Never another version of the film itself; each film once.
+        let films = films
+        let own = films.group(of: movie.id)
+        let others = (index.moviesByCategory[movie.categoryID] ?? []).filter {
+            $0.id != movie.id && !watched.contains($0.id) && (own == nil || films.group(of: $0.id) != own)
+        }
+        return Array(films.distinct(others).prefix(limit))
     }
 
     func similarSeries(to series: Series, limit: Int = 15) -> [Series] {

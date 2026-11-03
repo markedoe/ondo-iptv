@@ -94,17 +94,21 @@ struct MovieDetailView: View {
     let movie: Movie
     @State private var details: MediaDetails?
     @State private var isLoading = true
+    /// The version picked among the film's badges; nil: its default version (`AppModel.defaultVersion`).
+    @State private var picked: String?
 
     var body: some View {
-        let progress = model.progress(movie: movie)
+        let versions = model.visibleVersions(of: movie)
+        let version = picked.flatMap { id in versions.first { $0.id == id } } ?? model.defaultVersion(of: movie, among: versions)
+        let progress = model.progress(movie: version)
         let resumable = progress?.isResumable == true
         DetailScaffold(
             title: ShowcaseItem.movie(movie).displayTitle,
             posterURL: details?.posterURL ?? movie.posterURL,
             backdropURL: model.backdropURL(for: .movie(movie)),
             facts: facts,
-            // MKV, MP4…: the format the provider sends (MKV plays differently on each device).
-            badges: MediaFormat.label(for: movie.streamURL).map { [$0] } ?? [],
+            // MKV, MP4…: the format the provider sends (MKV plays differently on each device), of the version Play plays.
+            badges: MediaFormat.label(for: version.streamURL).map { [$0] } ?? [],
             onBackdropFailure: { model.backdropFailed($0, for: .movie(movie), permanently: $1) }
         ) { metrics in
             metrics.actionsLayout {
@@ -113,14 +117,14 @@ struct MovieDetailView: View {
                     subtitle: progress?.timeLeftText,
                     progress: resumable ? progress?.progress : nil
                 ) {
-                    model.play(movie)
+                    model.play(version)
                 }
                 HStack(alignment: .top, spacing: 14) {
-                    MyListAction(item: .movie(movie))
+                    MyListAction(item: .movie(movie), version: version)
                     CollectionAction(item: .movie(movie))
                     if resumable {
                         Button {
-                            model.play(movie, fromStart: true)
+                            model.play(version, fromStart: true)
                         } label: {
                             CircleAction("From Start", systemImage: "backward.end.fill")
                         }
@@ -133,6 +137,13 @@ struct MovieDetailView: View {
                 }
             }
         } content: { metrics in
+            if versions.count > 1 {
+                VersionChips(versions: versions, badges: model.versionBadges(versions), selected: version.id) { chosen in
+                    picked = chosen.id
+                    model.rememberVersion(chosen)
+                }
+                .padding(.horizontal, metrics.gutter)
+            }
             VStack(alignment: .leading, spacing: 16) {
                 if isLoading && details == nil && movie.xtreamStreamID != nil {
                     ProgressView()
@@ -309,5 +320,46 @@ struct AwardsList: View {
         let year = String(award.year)
         if award.won { return String(localized: "Winner, \(year)") }
         return award.isFestival ? String(localized: "In competition, \(year)") : String(localized: "Nominated, \(year)")
+    }
+}
+
+/// A film's versions as badges (4K DV, HD, VOSTFR…): the one selected plays; a tap, a click or the remote picks another.
+/// Two versions of the same tags are two badges ("4K", "4K 2").
+struct VersionChips: View {
+    let versions: [Movie]
+    let badges: [VersionBadge]
+    let selected: String
+    let onPick: (Movie) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(zip(versions, badges)), id: \.0.id) { movie, badge in
+                    let isSelected = movie.id == selected
+                    Button {
+                        onPick(movie)
+                    } label: {
+                        Text(Self.label(badge))
+                            .font(.subheadline.weight(isSelected ? .bold : .medium))
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 7)
+                            .foregroundStyle(isSelected ? Color.black : Color.primary)
+                            .background(isSelected ? Color.white : Color.primary.opacity(0.12), in: Capsule())
+                            .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    .accessibilityIdentifier("version-\(movie.id)")
+                }
+            }
+        }
+        .accessibilityIdentifier("versions")
+    }
+
+    /// Its tags ("4K DV"), else "Version" in the viewer's language, with its number from the second on.
+    static func label(_ badge: VersionBadge) -> String {
+        if let label = badge.label { return label }
+        let word = String(localized: "Version")
+        return badge.ordinal > 1 ? "\(word) \(badge.ordinal)" : word
     }
 }

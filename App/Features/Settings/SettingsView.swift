@@ -183,6 +183,15 @@ struct SettingsView: View {
             }
 
             Section {
+                Toggle(isOn: binding(\.groupVersions)) {
+                    Label("Group versions", systemImage: "square.stack")
+                }
+                .accessibilityIdentifier("groupVersionsSwitch")
+            } footer: {
+                Text("A film the playlist lists several times (4K, HD, VOSTFR…) appears once; its page shows each version as a badge to choose from.")
+            }
+
+            Section {
                 if PlayerEngine.isVLCAvailable {
                     Picker(selection: binding(\.playerEngine)) {
                         ForEach(PlayerEngine.allCases) { engine in

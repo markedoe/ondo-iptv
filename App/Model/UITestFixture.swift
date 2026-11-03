@@ -154,6 +154,14 @@ enum UITestFixture {
             lines.append("#EXTINF:\(movie.minutes * 60)\(logo("poster-\(movie.slug).png")) group-title=\"Movies | \(movie.category)\",\(movie.title) (\(movie.year))")
             lines.append(hlsAdvanced)
         }
+        if isShowcase, let film = movies.first {
+            // Other versions of the first film, as providers list them (the same title and year, another quality or
+            // language): the app shows the film once, its versions as badges on its page (FilmVersions).
+            for tags in ["4K DV", "4K", "VOSTFR"] {
+                lines.append("#EXTINF:\(film.minutes * 60)\(logo("poster-\(film.slug).png")) group-title=\"Movies | \(film.category)\",\(film.title) \(tags) (\(film.year))")
+                lines.append(hlsAdvanced)
+            }
+        }
         if hasLanguages {
             for (index, group) in ["|EN| Movies", "|EN| Drama", "|FR| Films", "|FR| Action", "|DE| Filme", "|DE| Action", "|PT| Filmes", "|PT| Ação"].enumerated() {
                 lines.append("#EXTINF:5400 tvg-type=\"movie\" group-title=\"\(group)\",Language Sample \(index + 1) (2020)")

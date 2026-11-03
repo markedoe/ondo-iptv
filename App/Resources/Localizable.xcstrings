@@ -9357,6 +9357,86 @@
         }
       }
     },
+    "Group versions": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Regrouper les versions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrupar versiones"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrupar versões"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合并版本"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تجميع النسخ"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "संस्करण एक साथ रखें"
+          }
+        }
+      }
+    },
+    "A film the playlist lists several times (4K, HD, VOSTFR…) appears once; its page shows each version as a badge to choose from.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un film que la playlist liste plusieurs fois (4K, HD, VOSTFR…) n’apparaît qu’une fois ; sa page montre chaque version en badge à choisir."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una película que la lista incluye varias veces (4K, HD, VOSTFR…) aparece una sola vez; su página muestra cada versión como una insignia para elegir."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Um filme que a lista traz várias vezes (4K, HD, VOSTFR…) aparece uma vez só; a página dele mostra cada versão como um selo para escolher."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "播放列表中多次列出的同一部电影（4K、HD、VOSTFR…）只显示一次；其详情页以标签列出每个版本供选择。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يظهر الفيلم الذي تُدرجه قائمة التشغيل عدة مرات (4K وHD وVOSTFR…) مرة واحدة؛ وتعرض صفحته كل نسخة كشارة للاختيار منها."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेलिस्ट में कई बार दी गई फ़िल्म (4K, HD, VOSTFR…) एक ही बार दिखती है; उसके पेज पर हर संस्करण चुनने के लिए एक बैज के रूप में दिखता है।"
+          }
+        }
+      }
+    },
     "Hides the categories whose name holds a style or a word (Manga, Bollywood…), in every playlist, including those added later. Only category names count, not the genre of each movie.": {
       "localizations": {
         "fr": {
