@@ -129,6 +129,7 @@ import com.markedoe.ondo.core.playback.PlaybackBuffer
 import com.markedoe.ondo.core.playback.PlaybackHealth
 import com.markedoe.ondo.core.playback.PlaybackSample
 import com.markedoe.ondo.core.playback.ProblemReport
+import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PlayingNow
 import com.markedoe.ondo.data.SubtitleSize
 import com.markedoe.ondo.data.VideoScale
@@ -347,15 +348,19 @@ class PlayerActivity : ComponentActivity() {
         val exoPlayer = buildPlayer()
         player = exoPlayer
         // Opened again alone, before the settings were read: the viewer's languages as soon as they are.
-        if (!repository.state.value.isReady) {
+        val opening = repository.state.value
+        if (!opening.isReady) {
             lifecycleScope.launch {
                 repository.state.first { it.isReady }
                 player?.let { it.trackSelectionParameters = TrackPreferences.parameters(it.trackSelectionParameters, trackLanguages(), deviceLanguages()) }
             }
-            // An episode's series, Up next and Episodes row, once the catalogue is read (unless another title plays by then).
+        }
+        // Opened again alone, before the catalogue was read (the settings may be read already): an episode's series, Up
+        // next and Episodes row once it is, read from the device or downloaded (unless another title plays by then).
+        if (!catalogueRead(opening)) {
             val opened = request
             lifecycleScope.launch {
-                repository.state.first { it.isReady && !it.isRestoring }
+                repository.state.first { catalogueRead(it) }
                 if (request !== opened) return@launch
                 nextEpisode = repository.nextEpisode(opened)
                 episodes = episodeList(opened)
@@ -688,6 +693,10 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** The Episodes row of the series [request] plays (a TV): its seasons, the episode playing marked. */
+    /** Whether the playlist's catalogue is there to look in: read from the device, or its download over. */
+    private fun catalogueRead(state: OndoState): Boolean =
+        state.isReady && !state.isRestoring && (state.content.series.isNotEmpty() || state.content.movies.isNotEmpty() || !state.isLoading)
+
     private fun episodeList(request: PlayRequest): EpisodeList? {
         if (!television) return null
         val playing = repository.playingSeries(request) ?: return null
