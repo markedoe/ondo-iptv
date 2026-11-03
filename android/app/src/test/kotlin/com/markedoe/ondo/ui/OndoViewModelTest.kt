@@ -82,7 +82,10 @@ class OndoViewModelTest {
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
 
-    /** The view models of a test: their work is stopped before the test's main dispatcher goes. */
+    /**
+     * The view models of a test, every one: their work is stopped before the test's main dispatcher goes. One left running
+     * kept a search debounce on a real timer, which fired into a later test after the main dispatcher was reset.
+     */
     private val models = mutableListOf<OndoViewModel>()
 
     private fun track(model: OndoViewModel) = model.also { models += it }
@@ -108,7 +111,7 @@ class OndoViewModelTest {
     private fun TestScope.viewModel(): OndoViewModel {
         val http = FakeHttp(mapOf(list to catalogue))
         val repository = OndoRepository(AppStore(folder.root), http, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        return OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        return track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
     }
 
     /** A provider's playlist of six series, saved earlier (restored without downloading). */
@@ -126,7 +129,7 @@ class OndoViewModelTest {
             ),
         )
         val repository = OndoRepository(store, panel, backgroundScope, io = StandardTestDispatcher(testScheduler))
-        return OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L))
+        return track(OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)))
     }
 
     /**

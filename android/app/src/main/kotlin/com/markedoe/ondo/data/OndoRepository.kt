@@ -161,6 +161,8 @@ class OndoRepository(
     private val metadata: MetadataStore = InMemoryMetadataStore(),
     /** Where sync merges a snapshot received ([mergeSyncInBackground]), off the main thread. */
     private val syncMerging: CoroutineDispatcher = Dispatchers.Default,
+    /** Where the guide is downloaded, read and indexed (tests pass their own dispatcher: no thread outlives a step). */
+    private val guideWork: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val _state = MutableStateFlow(OndoState(placeholderNames = placeholderNames))
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -881,7 +883,7 @@ class OndoRepository(
         guideJob = scope.launch {
             suspend fun kept(): StoredGuide? = withContext(io) { store.loadGuide(playlist.id) }?.takeIf { it.sources == sources }
             suspend fun show(data: EpgData) {
-                val guide = withContext(Dispatchers.Default) { EpgIndex(data) }
+                val guide = withContext(guideWork) { EpgIndex(data) }
                 if (_state.value.activePlaylistId == playlist.id) _state.update { it.copy(guide = guide) }
             }
             if (!download) {
@@ -897,7 +899,7 @@ class OndoRepository(
                 _state.update { it.copy(guide = null) }
             }
             // Downloading, matching to the catalogue's channels, merging and indexing: all of it off the main thread.
-            val data = loadCatching { withContext(Dispatchers.Default) { loader().loadEpg(core, content).data } }.getOrNull()
+            val data = loadCatching { withContext(guideWork) { loader().loadEpg(core, content).data } }.getOrNull()
             if (data != null && data.programs.isNotEmpty()) {
                 show(data)
                 persist { saveGuide(playlist.id, StoredGuide(sources, data)) }
@@ -1365,7 +1367,8 @@ class OndoRepository(
         )
     }
 
-    private fun loader() = PlaylistLoader(http, parsingDispatcher = parsing, clock = now, downloadFolder = downloadFolder, guideBudgetBytes = guideBudgetBytes)
+    private fun loader() =
+        PlaylistLoader(http, parsingDispatcher = parsing, ioDispatcher = io, clock = now, downloadFolder = downloadFolder, guideBudgetBytes = guideBudgetBytes)
 
     private fun SavedPlaylist.credentials(): XtreamCredentials? =
         if (isXtream) XtreamCredentials(XtreamCredentials.normalizeServer(url) ?: url, username.orEmpty(), password.orEmpty()) else null

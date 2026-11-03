@@ -362,7 +362,19 @@ class OndoRepositoryTest {
                 return answers[url]?.encodeToByteArray() ?: throw HttpException.BadStatus(404)
             }
         }
-        fun TestScope.launch(): OndoRepository = OndoRepository(AppStore(folder.root), http, backgroundScope, now = { time.get() }, io = StandardTestDispatcher(testScheduler))
+        // Files, parsing and the guide's own work all on the test's scheduler: each step runs when the test runs it, no
+        // thread of its own to wait for in real time.
+        fun TestScope.launch(): OndoRepository {
+            val test = StandardTestDispatcher(testScheduler)
+            return OndoRepository(AppStore(folder.root), http, backgroundScope, now = { time.get() }, io = test, parsing = test, guideWork = test)
+        }
+        fun TestScope.until(what: String, done: () -> Boolean) {
+            repeat(10_000) {
+                if (done()) return
+                testScheduler.runCurrent()
+            }
+            check(done()) { what }
+        }
         fun TestScope.saved() {
             repeat(50) { testScheduler.runCurrent() }
             check(folder.root.listFiles().orEmpty().any { it.name.startsWith("guide-") && it.name.endsWith(".json") }) { "the guide was not saved" }
@@ -395,14 +407,9 @@ class OndoRepositoryTest {
         assertEquals(2, http.guides.size)
         saved()
 
-        // Refresh asks for it again, however recent (the guide is read on a thread of its own: waited for in real time).
+        // Refresh asks for it again, however recent.
         third.refresh()
-        val deadline = System.currentTimeMillis() + 30_000
-        while (http.guides.size < 3) {
-            check(System.currentTimeMillis() < deadline) { "Refresh did not download the guide again" }
-            testScheduler.runCurrent()
-            Thread.sleep(10)
-        }
+        until("Refresh did not download the guide again") { http.guides.size >= 3 }
         repeat(50) { testScheduler.runCurrent() }
         assertEquals(3, http.guides.size)
 
@@ -412,13 +419,7 @@ class OndoRepositoryTest {
         val fourth = launch()
         fourth.bootstrap()
         assertEquals(listOf("Evening News"), fourth.programme())
-        // The download tried runs on a thread of its own: waited for in real time, as for Refresh above.
-        val tried = System.currentTimeMillis() + 30_000
-        while (http.guides.size < 4) {
-            check(System.currentTimeMillis() < tried) { "the old guide was not asked for again" }
-            testScheduler.runCurrent()
-            Thread.sleep(10)
-        }
+        until("the old guide was not asked for again") { http.guides.size >= 4 }
         assertEquals(4, http.guides.size)
     }
 
