@@ -471,7 +471,8 @@ public struct FilmVersions: Sendable {
         "hdr": .hdr, "hdr10": .hdr, "hdr10plus": .hdr,
         "hd": .hd, "fhd": .hd, "1080p": .hd, "720p": .hd,
         "hevc": .hevc, "h265": .hevc, "x265": .hevc,
-        "truefrench": .truefrench, "vff": .vff, "vfq": .vfq, "vf": .vf, "vostfr": .vostfr, "multi": .multi,
+        "truefrench": .truefrench, "vff": .vff, "vfq": .vfq, "vf": .vf,
+        "vostfr": .vostfr, "stfr": .vostfr, "subfr": .vostfr, "frsub": .vostfr, "multi": .multi,
     ]
 
     /// The tags of a version, from its name and its category's name, in `VersionTag`'s order; 4K leaves HD out.
@@ -484,6 +485,8 @@ public struct FilmVersions: Sendable {
                 let next = index + 1 < words.count ? words[index + 1] : nil
                 if word == "dolby" && next == "vision" { found.insert(.dolbyVision) }
                 if word == "h" && next == "265" { found.insert(.hevc) }
+                // French subtitles in two words: "ST FR", "SUB FR", "FR SUB".
+                if (word == "st" || word == "sub") && next == "fr" || word == "fr" && next == "sub" { found.insert(.vostfr) }
             }
         }
         if found.contains(.uhd) { found.remove(.hd) }

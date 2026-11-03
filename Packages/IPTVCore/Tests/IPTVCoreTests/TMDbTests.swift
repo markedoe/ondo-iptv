@@ -229,6 +229,27 @@ final class TMDbTests: XCTestCase {
         }
     }
 
+    /// A subtitle tag before a bar ("STFR| ") is the provider's, not the title's: the film is searched and matched
+    /// without it, so its page gets TMDb's cast with their photos.
+    func testASubtitleTagBeforeABarIsNotSearched() async throws {
+        let http = MockHTTPClient()
+        http.routes["https://api.themoviedb.org/3/search/movie?"] =
+            Data(#"{"results":[{"id":31,"title":"The Gardener","release_date":"2026-02-01"}]}"#.utf8)
+        http.routes["https://api.themoviedb.org/3/movie/31?"] =
+            Data(#"{"id":31,"title":"The Gardener","credits":{"cast":[{"id":41,"name":"Nora Quill","profile_path":"/nora.jpg"}],"crew":[]}}"#.utf8)
+        http.routes["https://api.themoviedb.org/3/movie/31/videos?"] = Data(#"{"id":31,"results":[]}"#.utf8)
+        let client = TMDbClient(credential: "KEY", http: http, language: "en-US")
+        let found = try await client.titleInfo(of: .movie, tmdbID: nil, title: "STFR| The Gardener", year: 2026)
+        let info = try XCTUnwrap(found, "the film is found without its tag")
+        XCTAssertEqual(info.cast.first?.profileURL?.absoluteString, "https://image.tmdb.org/t/p/w185/nora.jpg")
+        let search = try XCTUnwrap(http.sent.first { $0.url.path.hasSuffix("/search/movie") })
+        let query = URLComponents(url: search.url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "query" }
+        XCTAssertEqual(query?.value, "the gardener")
+        for title in ["STFR| The Gardener", "ST FR - The Gardener", "VOSTFR | The Gardener", "[SUBFR] The Gardener", "FR SUB | The Gardener", "The Gardener VOSTFR"] {
+            XCTAssertEqual(CatalogueMatcher.key(title), "thegardener", title)
+        }
+    }
+
     func testTheTrailerIsOnYouTubeATrailerBeforeATeaserInTheViewersLanguage() {
         let videos = [
             TMDbVideo(key: "teaserDE001", site: "YouTube", type: "Teaser", official: true, language: "de"),
@@ -269,6 +290,13 @@ final class PeopleTests: XCTestCase {
         XCTAssertEqual(CatalogueMatcher.displayTitle("Le Transport (MULTI) (2021)"), "Le Transport")
         XCTAssertEqual(CatalogueMatcher.displayTitle("|FR-4K DV| Le Transport [VOSTFR]"), "Le Transport")
         XCTAssertEqual(CatalogueMatcher.displayTitle("MobLand |MULTI|"), "MobLand")
+        // Subtitle tags, before a bar, a dash or in brackets, in one word or two.
+        for tag in ["STFR| ", "STFR | ", "ST FR - ", "VOSTFR| ", "SUBFR - ", "FR SUB | ", "VOST - ", "[STFR] ", "[ST FR] "] {
+            XCTAssertEqual(CatalogueMatcher.displayTitle(tag + "Le Transport"), "Le Transport", tag)
+        }
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Le Transport STFR"), "Le Transport")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("St. Elmo's Fire"), "St. Elmo's Fire")
+        XCTAssertEqual(CatalogueMatcher.displayTitle("Sub Rosa - The Return"), "Sub Rosa - The Return")
         // The film's own words stay.
         XCTAssertEqual(CatalogueMatcher.displayTitle("Spider-Man: No Way Home"), "Spider-Man: No Way Home")
         XCTAssertEqual(CatalogueMatcher.displayTitle("De Gaulle"), "De Gaulle")

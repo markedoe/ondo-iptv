@@ -482,7 +482,8 @@ class FilmVersions private constructor(
             "hd" to VersionTag.HD, "fhd" to VersionTag.HD, "1080p" to VersionTag.HD, "720p" to VersionTag.HD,
             "hevc" to VersionTag.HEVC, "h265" to VersionTag.HEVC, "x265" to VersionTag.HEVC,
             "truefrench" to VersionTag.TRUEFRENCH, "vff" to VersionTag.VFF, "vfq" to VersionTag.VFQ, "vf" to VersionTag.VF,
-            "vostfr" to VersionTag.VOSTFR, "multi" to VersionTag.MULTI,
+            "vostfr" to VersionTag.VOSTFR, "stfr" to VersionTag.VOSTFR, "subfr" to VersionTag.VOSTFR, "frsub" to VersionTag.VOSTFR,
+            "multi" to VersionTag.MULTI,
         )
 
         /** The tags of a version, from its name and its category's name, in [VersionTag]'s order; 4K leaves HD out. */
@@ -495,6 +496,8 @@ class FilmVersions private constructor(
                     val next = words.getOrNull(index + 1)
                     if (word == "dolby" && next == "vision") found.add(VersionTag.DOLBY_VISION)
                     if (word == "h" && next == "265") found.add(VersionTag.HEVC)
+                    // French subtitles in two words: "ST FR", "SUB FR", "FR SUB".
+                    if ((word == "st" || word == "sub") && next == "fr" || word == "fr" && next == "sub") found.add(VersionTag.VOSTFR)
                 }
             }
             if (VersionTag.UHD in found) found.remove(VersionTag.HD)

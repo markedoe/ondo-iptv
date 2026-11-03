@@ -17,7 +17,7 @@ their expected groups (`fixtures/film-versions/golden.json`).
 Only movies, and only within one playlist (live channels and series are never grouped).
 
 - **The title** compared is the provider's title without its tags (`CatalogueMatcher.displayTitle`: `|FR|`, `[FR]`,
-  `FR -`, `VFF`, `MULTI`, `4K`…), case and accents ignored: "|FR| Le Transport 4K" and "Le Transport VOSTFR" are both
+  `FR -`, `STFR|`, `VFF`, `MULTI`, `4K`…), case and accents ignored: "|FR| Le Transport 4K" and "Le Transport VOSTFR" are both
   "le transport".
 - **Rule A, the provider's TMDb id.** The Xtream list's `tmdb` (or `tmdb_id`) field counts only when it is a whole
   number above zero (`0`, empty, `true`, `12.5` or text are no id). A provider's id can be wrong (a sequel matched to
@@ -49,7 +49,7 @@ Only movies, and only within one playlist (live channels and series are never gr
   of its versions is in.
 - **A film's page**: its versions as badges (focusable chips on a TV), read from the stream's name and category: 4K
   (4K, UHD, 2160p), HDR (HDR, HDR10), DV (DV, Dolby Vision), HD (HD, FHD, 1080p, 720p), HEVC (HEVC, H.265, x265),
-  TRUEFRENCH, VFF, VFQ, VF, VOSTFR, MULTI. A version with none of them reads "Version". Two versions with the same
+  TRUEFRENCH, VFF, VFQ, VF, VOSTFR (VOSTFR, STFR, SUBFR, ST FR, FR SUB), MULTI. A version with none of them reads "Version". Two versions with the same
   badge are two badges ("4K", "4K 2"). The version picked plays; Play, the progress and the format badge are its own.
 - **The version shown first** (and played from a card): the one in progress; else the one chosen last on this device;
   else the one the screen suits best (4K on a 4K screen, HDR or Dolby Vision only where the screen shows them, as

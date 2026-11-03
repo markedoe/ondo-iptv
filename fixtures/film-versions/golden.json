@@ -829,6 +829,59 @@
      4
     ]
    ]
+  },
+  {
+   "name": "Subtitle tags before the name are the provider's, not the title's",
+   "rows": [
+    {
+     "id": "g0",
+     "name": "The Gardener",
+     "category": "c",
+     "year": 2026
+    },
+    {
+     "id": "g1",
+     "name": "STFR| The Gardener",
+     "category": "c",
+     "year": 2026
+    },
+    {
+     "id": "g2",
+     "name": "ST FR - The Gardener",
+     "category": "c",
+     "year": 2026
+    },
+    {
+     "id": "g3",
+     "name": "VOSTFR | The Gardener",
+     "category": "c",
+     "year": 2026
+    },
+    {
+     "id": "g4",
+     "name": "[SUBFR] The Gardener",
+     "category": "c",
+     "year": 2026
+    },
+    {
+     "id": "g5",
+     "name": "Sub Rosa - The Return",
+     "category": "c",
+     "year": 2026
+    }
+   ],
+   "groups": [
+    [
+     0,
+     1,
+     2,
+     3,
+     4
+    ],
+    [
+     5
+    ]
+   ]
   }
  ]
 }

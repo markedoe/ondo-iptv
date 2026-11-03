@@ -45,7 +45,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +60,7 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -523,11 +523,12 @@ fun TvActionButton(onClick: () -> Unit, modifier: Modifier = Modifier, enabled: 
 
 /**
  * A secondary action of a title's page: a round button with its icon, its name written beneath it (TalkBack reads
- * the name once, from the button).
+ * the name once, from the button). A name longer than the slot widens it, up to [CircleActionLabelMax], rather than
+ * breaking a word ("Bande-annonce" on one line, "YouTube" below it).
  */
 @Composable
 fun TvCircleAction(icon: ImageVector, label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    Column(Modifier.width(84.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.widthIn(min = 84.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Button(
             onClick = onClick,
             modifier = modifier.semantics { contentDescription = label },
@@ -551,10 +552,17 @@ fun TvCircleAction(icon: ImageVector, label: String, onClick: () -> Unit, modifi
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            modifier = Modifier.clearAndSetSemantics { },
+            // Hidden from TalkBack (the button says it), still laid out for the tests.
+            modifier = Modifier.widthIn(max = CircleActionLabelMax).testTag(CIRCLE_ACTION_LABEL_TAG).semantics { hideFromAccessibility() },
         )
     }
 }
+
+/** The widest a [TvCircleAction]'s name is written, each of its lines on one line in every language of the app. */
+internal val CircleActionLabelMax = 128.dp
+
+/** A [TvCircleAction]'s name beneath its button. */
+internal const val CIRCLE_ACTION_LABEL_TAG = "circleActionLabel"
 
 /**
  * Brings this block into view as a whole when something in it takes the focus, rather than only the focused child

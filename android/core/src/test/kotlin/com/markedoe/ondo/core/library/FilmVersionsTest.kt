@@ -254,6 +254,11 @@ class FilmVersionsTest {
         assertEquals(listOf(VersionTag.UHD, VersionTag.HDR, VersionTag.HEVC), FilmVersions.tags("Sandstorm 2160p HDR10 H.265", null))
         assertEquals(listOf(VersionTag.DOLBY_VISION), FilmVersions.tags("Sandstorm Dolby Vision", null))
         assertEquals(listOf(VersionTag.HD, VersionTag.VOSTFR), FilmVersions.tags("Sandstorm", "FILMS 1080p VOSTFR"))
+        // French subtitles however a provider writes them.
+        for (name in listOf("STFR| Sandstorm", "ST FR - Sandstorm", "[SUBFR] Sandstorm", "FR SUB | Sandstorm", "Sandstorm SUB FR")) {
+            assertEquals(listOf(VersionTag.VOSTFR), FilmVersions.tags(name, null), name)
+        }
+        assertEquals(emptyList<VersionTag>(), FilmVersions.tags("St Francis", null))
         assertEquals(listOf(VersionTag.UHD), FilmVersions.tags("Sandstorm FHD", "UHD"), "4K leaves HD out")
         assertEquals(emptyList(), FilmVersions.tags("Sandstorm", "Action"))
         val list = listOf(movie("Sandstorm 4K", 2021), movie("Sandstorm", 2021), movie("Sandstorm 4K", 2021), movie("Sandstorm", 2021))

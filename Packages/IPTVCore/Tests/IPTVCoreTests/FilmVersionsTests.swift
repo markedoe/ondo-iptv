@@ -216,6 +216,11 @@ final class FilmVersionsTests: XCTestCase {
         XCTAssertEqual(FilmVersions.tags(name: "|FR| Sandstorm 4K DV VFF", categoryName: nil), [.uhd, .dolbyVision, .vff])
         XCTAssertEqual(FilmVersions.tags(name: "Sandstorm 2160p HDR10 H.265", categoryName: nil), [.uhd, .hdr, .hevc])
         XCTAssertEqual(FilmVersions.tags(name: "Sandstorm Dolby Vision", categoryName: nil), [.dolbyVision])
+        // French subtitles however a provider writes them.
+        for name in ["STFR| Sandstorm", "ST FR - Sandstorm", "[SUBFR] Sandstorm", "FR SUB | Sandstorm", "Sandstorm SUB FR"] {
+            XCTAssertEqual(FilmVersions.tags(name: name, categoryName: nil), [.vostfr], name)
+        }
+        XCTAssertEqual(FilmVersions.tags(name: "St Francis", categoryName: nil), [])
         XCTAssertEqual(FilmVersions.tags(name: "Sandstorm", categoryName: "FILMS 1080p VOSTFR"), [.hd, .vostfr])
         XCTAssertEqual(FilmVersions.tags(name: "Sandstorm FHD", categoryName: "UHD"), [.uhd], "4K leaves HD out")
         XCTAssertEqual(FilmVersions.tags(name: "Sandstorm", categoryName: "Action"), [])

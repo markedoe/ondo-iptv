@@ -165,6 +165,26 @@ class TmdbTest {
         assertNull(client.titleInfo(series = false, tmdbId = null, title = "", year = null))
     }
 
+    /**
+     * A subtitle tag before a bar ("STFR| ") is the provider's, not the title's: the film is searched and matched without
+     * it, so its page gets TMDb's cast with their photos.
+     */
+    @Test
+    fun aSubtitleTagBeforeABarIsNotSearched() = runTest {
+        val http = MockHttpClient()
+        http.routes["https://api.themoviedb.org/3/search/movie?query=the%20gardener&language=en-US&api_key=KEY"] =
+            """{"results":[{"id":31,"title":"The Gardener","release_date":"2026-02-01"}]}""".encodeToByteArray()
+        http.routes["https://api.themoviedb.org/3/movie/31?append_to_response=credits,videos,recommendations,images&include_video_language=en,null&include_image_language=en,null&language=en-US&api_key=KEY"] =
+            """{"id":31,"title":"The Gardener","credits":{"cast":[{"id":41,"name":"Nora Quill","profile_path":"/nora.jpg"}],"crew":[]}}""".encodeToByteArray()
+        val info = TmdbClient("KEY", http).titleInfo(series = false, tmdbId = null, title = "STFR| The Gardener", year = 2026)
+        assertEquals(31, info?.tmdbId)
+        assertEquals("https://image.tmdb.org/t/p/w185/nora.jpg", info?.cast?.single()?.profileUrl)
+        assertEquals("movie:thegardener:2026", MetadataKey.title(series = false, name = "STFR| The Gardener", year = 2026))
+        for (title in listOf("STFR| The Gardener", "ST FR - The Gardener", "VOSTFR | The Gardener", "[SUBFR] The Gardener", "FR SUB | The Gardener", "The Gardener VOSTFR")) {
+            assertEquals("thegardener", CatalogueMatcher.key(title), title)
+        }
+    }
+
     /** A refused token is not taken for "TMDb does not know this title": it throws. */
     @Test
     fun aRefusedTokenIsNotANotFound() = runTest {
@@ -286,7 +306,14 @@ class TmdbTest {
         assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport (MULTI) (2021)"))
         assertEquals("Le Transport", CatalogueMatcher.displayTitle("|FR-4K DV| Le Transport [VOSTFR]"))
         assertEquals("MobLand", CatalogueMatcher.displayTitle("MobLand |MULTI|"))
+        // Subtitle tags, before a bar, a dash or in brackets, in one word or two.
+        for (tag in listOf("STFR| ", "STFR | ", "ST FR - ", "VOSTFR| ", "SUBFR - ", "FR SUB | ", "VOST - ", "[STFR] ", "[ST FR] ")) {
+            assertEquals("Le Transport", CatalogueMatcher.displayTitle(tag + "Le Transport"), tag)
+        }
+        assertEquals("Le Transport", CatalogueMatcher.displayTitle("Le Transport STFR"))
         // The film's own words stay.
+        assertEquals("St. Elmo's Fire", CatalogueMatcher.displayTitle("St. Elmo's Fire"))
+        assertEquals("Sub Rosa - The Return", CatalogueMatcher.displayTitle("Sub Rosa - The Return"))
         assertEquals("Spider-Man: No Way Home", CatalogueMatcher.displayTitle("Spider-Man: No Way Home"))
         assertEquals("De Gaulle", CatalogueMatcher.displayTitle("De Gaulle"))
         assertEquals("Up", CatalogueMatcher.displayTitle("Up"))

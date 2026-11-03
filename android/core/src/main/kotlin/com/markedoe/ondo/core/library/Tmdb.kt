@@ -338,8 +338,8 @@ object CatalogueMatcher {
      * "Sandstorm EN", "EN - Sandstorm"). Only at either end, and never the whole title ("Vost" stays "Vost").
      */
     private val versionWords = setOf(
-        "vf", "vff", "vfq", "vfi", "vo", "vost", "vostfr", "vosta", "truefrench", "french", "english", "subbed", "dubbed", "dub",
-        "sub", "dual", "en", "eng", "fr", "es", "esp", "de", "ger", "ita", "pt", "br", "ar", "tr", "nl", "pl",
+        "vf", "vff", "vfq", "vfi", "vo", "vost", "vostfr", "vosta", "stfr", "subfr", "frsub", "truefrench", "french", "english",
+        "subbed", "dubbed", "dub", "sub", "dual", "en", "eng", "fr", "es", "esp", "de", "ger", "ita", "pt", "br", "ar", "tr", "nl", "pl",
     )
 
     /**
@@ -396,7 +396,7 @@ object CatalogueMatcher {
 
     /**
      * A provider's title as people read it, its case kept: without the provider's tags around the name.
-     * `"|FR| Le Transport"`, `"[FR] Le Transport"`, `"FR - Le Transport"`, `"Le Transport VFF"`,
+     * `"|FR| Le Transport"`, `"[FR] Le Transport"`, `"FR - Le Transport"`, `"STFR| Le Transport"`, `"Le Transport VFF"`,
      * `"Le Transport (MULTI) (2021)"` -> `"Le Transport"`. The title as it is when nothing would be left of it.
      */
     fun displayTitle(title: String): String {
@@ -413,10 +413,10 @@ object CatalogueMatcher {
                 if (words.isNotEmpty() && words.all(::isTag)) " " else group.value
             }
         }
-        // "FR - ", "FR-4K: ", "EN | " before the name.
+        // "FR - ", "FR-4K: ", "EN | ", "STFR| " before the name; "ST FR - ", "FR SUB | " are one tag in two words.
         if (name.any { it in "-:|·" }) leadingTag.find(name)?.let { match ->
             val words = match.groupValues[1].split(' ', '-', '+').filter { it.isNotBlank() }
-            if (words.all(::isTag)) name = name.substring(match.range.last + 1)
+            if (words.all(::isTag) || isTag(words.joinToString(""))) name = name.substring(match.range.last + 1)
         }
         val words = name.split(' ').map { it.trim(*separators.toCharArray()) }.filter { it.isNotEmpty() }.toMutableList()
         while (words.size > 1 && isTag(words.last())) words.removeAt(words.size - 1)
@@ -437,8 +437,10 @@ object CatalogueMatcher {
     }
 
     private fun words(title: String): List<String> {
+        // The provider's tags around the name, as [displayTitle] leaves them out ("STFR| The Florist", "Sandstorm VOSTFR"):
+        // the same title as TMDb's.
         // Remove bracketed tags: [MULTI], (VOSTFR)…
-        var name = title.replace(bracketed, " ").replace(barred, " ")
+        var name = displayTitle(title).replace(bracketed, " ").replace(barred, " ")
         name = TitleParser.splitYear(name).name
         name = name.replace(parenthesized, " ")
         return TextNormalizer.channelMatchWords(name)

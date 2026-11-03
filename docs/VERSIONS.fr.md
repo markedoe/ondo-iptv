@@ -18,7 +18,7 @@ mêmes catalogues écrits à la main et leurs groupes attendus (`fixtures/film-v
 Seulement les films, et seulement dans une même playlist (les chaînes et les séries ne sont jamais regroupées).
 
 - **Le titre** comparé est celui du fournisseur sans ses étiquettes (`CatalogueMatcher.displayTitle` : `|FR|`, `[FR]`,
-  `FR -`, `VFF`, `MULTI`, `4K`…), sans tenir compte de la casse ni des accents : « |FR| Le Transport 4K » et « Le
+  `FR -`, `STFR|`, `VFF`, `MULTI`, `4K`…), sans tenir compte de la casse ni des accents : « |FR| Le Transport 4K » et « Le
   Transport VOSTFR » sont tous deux « le transport ».
 - **Règle A, l'identifiant TMDb du fournisseur.** Le champ `tmdb` (ou `tmdb_id`) de la liste Xtream ne compte que s'il
   est un nombre entier supérieur à zéro (`0`, vide, `true`, `12.5` ou du texte ne sont pas un identifiant). L'identifiant
@@ -53,7 +53,7 @@ Seulement les films, et seulement dans une même playlist (les chaînes et les s
   cette catégorie le représente : un film est donc dans chaque catégorie où se trouve l'une de ses versions.
 - **La fiche d'un film** : ses versions en badges (des pastilles qu'atteint la télécommande sur une TV), lus dans le nom
   du flux et dans sa catégorie : 4K (4K, UHD, 2160p), HDR (HDR, HDR10), DV (DV, Dolby Vision), HD (HD, FHD, 1080p,
-  720p), HEVC (HEVC, H.265, x265), TRUEFRENCH, VFF, VFQ, VF, VOSTFR, MULTI. Une version sans aucun d'eux s'appelle
+  720p), HEVC (HEVC, H.265, x265), TRUEFRENCH, VFF, VFQ, VF, VOSTFR (VOSTFR, STFR, SUBFR, ST FR, FR SUB), MULTI. Une version sans aucun d'eux s'appelle
   « Version ». Deux versions au même badge font deux badges (« 4K », « 4K 2 »). La version choisie est celle qui est
   lue ; Lecture, la progression et le badge du format sont les siens.
 - **La version montrée d'abord** (et lue depuis une affiche) : celle en cours ; sinon la dernière choisie sur cet

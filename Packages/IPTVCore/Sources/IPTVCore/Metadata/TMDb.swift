@@ -445,8 +445,8 @@ public enum CatalogueMatcher {
 
     /// Words after or before a title that name a copy's language or version, not the film ("Sandstorm VF", "EN - Sandstorm").
     private static let versionWords: Set<String> = [
-        "vf", "vff", "vfq", "vfi", "vo", "vost", "vostfr", "vosta", "truefrench", "french", "english", "subbed", "dubbed", "dub",
-        "sub", "dual", "en", "eng", "fr", "es", "esp", "de", "ger", "ita", "pt", "br", "ar", "tr", "nl", "pl",
+        "vf", "vff", "vfq", "vfi", "vo", "vost", "vostfr", "vosta", "stfr", "subfr", "frsub", "truefrench", "french", "english",
+        "subbed", "dubbed", "dub", "sub", "dual", "en", "eng", "fr", "es", "esp", "de", "ger", "ita", "pt", "br", "ar", "tr", "nl", "pl",
     ]
 
     /// Words of a copy's quality or edition, never the film's, in a provider's title ("Sandstorm MULTI 4K").
@@ -474,10 +474,10 @@ public enum CatalogueMatcher {
     private static let separators = CharacterSet(charactersIn: " -:|·_.,")
 
     /// A provider's title as people read it, its case kept: without the provider's tags around the name.
-    /// "|FR| Le Transport", "[FR] Le Transport", "FR - Le Transport", "Le Transport VFF",
+    /// "|FR| Le Transport", "[FR] Le Transport", "FR - Le Transport", "STFR| Le Transport", "Le Transport VFF",
     /// "Le Transport (MULTI) (2021)" -> "Le Transport". The title as it is when nothing would be left of it.
-    /// The same rules as Android's `CatalogueMatcher.displayTitle`, with the same tests. Display only: keys and
-    /// stored titles stay the provider's.
+    /// The same rules as Android's `CatalogueMatcher.displayTitle`, with the same tests. TMDb's searches and keys are
+    /// made of it too (`key`, `searchQuery`); stored titles stay the provider's.
     public static func displayTitle(_ title: String) -> String {
         var name = title
         // Each pattern only where its first character is (the same result, without a regular expression per title of a
@@ -492,11 +492,11 @@ public enum CatalogueMatcher {
                 .map(String.init).filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
             return !words.isEmpty && words.allSatisfy(isTag) ? " " : group
         } }
-        // "FR - ", "FR-4K: ", "EN | " before the name.
+        // "FR - ", "FR-4K: ", "EN | ", "STFR| " before the name; "ST FR - ", "FR SUB | " are one tag in two words.
         if name.contains(where: { "-:|·".contains($0) }), let match = leadingTag.firstMatch(in: name, range: NSRange(name.startIndex..., in: name)),
            let tagRange = Range(match.range(at: 1), in: name), let whole = Range(match.range, in: name) {
             let words = name[tagRange].split(whereSeparator: { $0 == " " || $0 == "-" || $0 == "+" }).map(String.init)
-            if words.allSatisfy(isTag) { name = String(name[whole.upperBound...]) }
+            if words.allSatisfy(isTag) || isTag(words.joined()) { name = String(name[whole.upperBound...]) }
         }
         var words = name.split(separator: " ", omittingEmptySubsequences: false)
             .map { String($0).trimmingCharacters(in: separators) }
@@ -540,7 +540,9 @@ public enum CatalogueMatcher {
     }
 
     private static func words(of title: String) -> [String] {
-        var name = title
+        // The provider's tags around the name, as `displayTitle` leaves them out ("STFR| The Florist", "Sandstorm VOSTFR"):
+        // the same title as TMDb's.
+        var name = displayTitle(title)
         // Remove bracketed tags: [MULTI], (VOSTFR)…
         name = name.replacingOccurrences(of: #"\[[^\]]*\]"#, with: " ", options: .regularExpression)
         // A provider's tag between bars, before or after the name: "|FR-4K DV| MobLand", "MobLand |MULTI|". A bar

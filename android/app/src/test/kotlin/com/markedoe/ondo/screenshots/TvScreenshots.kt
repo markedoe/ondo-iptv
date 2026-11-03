@@ -17,10 +17,12 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performScrollToKey
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.test.requestFocus
 import androidx.test.core.app.ApplicationProvider
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.TopLevel
 import com.markedoe.ondo.ui.UiMappers
@@ -36,6 +38,8 @@ import com.markedoe.ondo.ui.tv.LocalTitleHeaders
 import com.markedoe.ondo.ui.tv.TelevisionFrame
 import com.markedoe.ondo.ui.tv.TitleHeaders
 import com.markedoe.ondo.ui.tv.TvHomeScreen
+import com.markedoe.ondo.ui.tv.TvMovieDetailScreen
+import com.markedoe.ondo.ui.screens.DetailActions
 import com.markedoe.ondo.ui.tv.FocusEntry
 import com.markedoe.ondo.ui.tv.LocalFocusMemory
 import com.markedoe.ondo.ui.tv.LocalTvTopBar
@@ -326,6 +330,41 @@ class TvScreenshots {
         show(TopLevel.HOME) { TvHomeScreen(UiMappers.home(state, labels, now).copy(channels = emptyList()), HomeActions(), autoAdvance = false) }
         focusFirstCard("shelfResumeMovies", "shelfResumeSeries", "shelfMyList", "shelfNewMovies")
         capture("home-rows")
+    }
+
+    /**
+     * A movie's page in French: the trailer's name whole on its button ("Bande-annonce" above "YouTube"), and the cast
+     * with their photos (a demo picture stands for each, from the device, no network).
+     */
+    @Test
+    @Config(qualifiers = "fr-rFR-w960dp-h540dp-land-television-xhdpi")
+    fun aMoviesPageInFrenchWithTheCastsPhotos() {
+        val french = ShowcaseCatalogue.load(french = true)
+        val movie = french.movie(french.screens.movie)
+        val cast = listOf("Nora Quill", "Ana Lima", "José Silva", "Kim Park", "Lena Ward", "Mira Holt")
+        val page = UiMappers.movieDetail(french.state(), movie, Locale.FRANCE).let { page ->
+            page.copy(
+                details = (page.details ?: com.markedoe.ondo.core.model.MediaDetails(title = movie.name)).copy(director = "Sam Reed", cast = cast.joinToString(", ")),
+                trailer = "aaaaaaaaaaa",
+                faces = (cast + "Sam Reed").associate { TextNormalizer.normalize(it) to "https://example.com/m-sintel-poster.jpg" },
+            )
+        }
+        compose.setContent {
+            OndoTheme {
+                CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
+                    TelevisionFrame {
+                        TvNavigationFrame(TopLevel.MOVIES, showBar = false, onSelect = {}, onSearch = {}, onSettings = {}) { TvMovieDetailScreen(page, DetailActions()) }
+                    }
+                }
+            }
+        }
+        compose.mainClock.autoAdvance = false
+        advance()
+        compose.onRoot().captureRoboImage("$BASELINES/tv/fr-FR/movie-trailer-label.png", BaselineOptions)
+        compose.onNodeWithTag("detail").performScrollToKey("people")
+        advance()
+        assertTrue("the cast's photos", compose.onAllNodes(hasTestTag("personPhoto"), useUnmergedTree = true).fetchSemanticsNodes().size >= 4)
+        compose.onRoot().captureRoboImage("$BASELINES/tv/fr-FR/movie-cast-photos.png", BaselineOptions)
     }
 
     private companion object {
