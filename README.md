@@ -49,7 +49,8 @@ interface changes.
   updated, above its name. Black pages, white for what is chosen; cards rise under the pointer, the keyboard focus
   or a finger.
 - **Movies & series**: poster grids sorted by playlist order, name, date added, release date or rating,
-  watched movies hidden if you like (Search and My List keep them),
+  watched movies hidden if you like (Search and My List keep them), **a film's versions grouped** (4K, Dolby Vision,
+  HD, VOSTFR…: the film once, its versions as badges on its page; [docs/VERSIONS.md](docs/VERSIONS.md)),
   detail pages (plot, cast, trailer), seasons / episodes,
   "Continue Watching", resume, automatic next episode, **TMDb trending**; **tap an actor or a director** to
   see their other movies and series in the playlist (series from the provider's list, movies from the pages
@@ -122,7 +123,8 @@ interface changes.
   vote weighted by the number of votes, at least 50 votes to qualify; then Trending and new releases), movies and series in progress (one row each; long-press a card, or hold OK on a TV, to take
   it out), My List, new releases, channels; when the playlist was last updated, above its name.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
-  included), watched movies hidden if you like, detail pages (Resume, From Start, next
+  included), watched movies hidden if you like, a film's versions grouped (badges on its page, chips on a TV;
+  [docs/VERSIONS.md](docs/VERSIONS.md)), detail pages (Resume, From Start, next
   episode, seasons, the provider's trailer on YouTube, More Like This); a director's or an actor's name opens their other movies and series
   (series always, movies among the pages already opened), and a genre, the year or an award the titles that share it.
 - **Live TV**: categories, My List, current and next programme.

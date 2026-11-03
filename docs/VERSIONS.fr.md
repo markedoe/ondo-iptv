@@ -1,0 +1,61 @@
+# Versions des films
+
+*[English version](VERSIONS.md)*
+
+Les playlists listent souvent le même film plusieurs fois : une copie 4K Dolby Vision, une 4K, une HD, une VOSTFR…
+Avec **Regrouper les versions** activé (Réglages, activé par défaut), les apps montrent chaque film une seule fois dans
+leurs listes, et sa fiche affiche ses versions en badges à choisir. Désactivé, chaque flux apparaît comme la playlist le
+liste, exactement comme avant.
+
+Les règles sont dans les cœurs, avec les mêmes tests sur les deux plateformes : `FilmVersions` dans IPTVCore
+(`Packages/IPTVCore/Sources/IPTVCore/Library/FilmVersions.swift`) et dans le cœur Kotlin
+(`android/core/src/main/kotlin/com/markedoe/ondo/core/library/FilmVersions.kt`). Elles ne perdent ni ne cachent aucun
+flux : chaque flux est dans exactement un groupe. Dans le doute, les flux restent séparés.
+
+## Quand deux flux sont un seul film
+
+Seulement les films, et seulement dans une même playlist (les chaînes et les séries ne sont jamais regroupées).
+
+- **Le titre** comparé est celui du fournisseur sans ses étiquettes (`CatalogueMatcher.displayTitle` : `|FR|`, `[FR]`,
+  `FR -`, `VFF`, `MULTI`, `4K`…), sans tenir compte de la casse ni des accents : « |FR| Le Transport 4K » et « Le
+  Transport VOSTFR » sont tous deux « le transport ».
+- **Règle A, l'identifiant TMDb du fournisseur.** Le champ `tmdb` (ou `tmdb_id`) de la liste Xtream ne compte que s'il
+  est un nombre entier supérieur à zéro (`0`, vide, `true`, `12.5` ou du texte ne sont pas un identifiant). Deux flux du
+  même identifiant sont regroupés quand leurs titres s'accordent :
+  - le même titre ; ou
+  - les mots de l'un sont les premiers mots de l'autre (« le transport » et « le transport heritage ») ; ou
+  - au moins la moitié des mots distincts du titre le plus long sont partagés, sans les mots courts comme « the »,
+    « le » ou « de » (« the matrix » et « matrix » ; pas « the matrix » et « the godfather »).
+
+  « Alien » et « Aliens » ne s'accordent pas. Un flux dont le titre ne s'accorde pas reste à part et est compté
+  (`idTitleMismatches`). **Deux identifiants différents ne sont jamais dans le même groupe**, quels que soient les titres.
+- **Règle B, pas d'identifiant d'un côté ou des deux.** Exactement le même titre et la même année, présente des deux
+  côtés : pas d'année, pas de groupe ; aucune année de tolérance (« Dune » 1984 et « Dune » 2021 sont deux films ;
+  « Sandstorm » et « Sandstorm 2 » aussi). Un flux sans identifiant ne rejoint un groupe avec identifiant que si un seul
+  identifiant a ce titre et cette année ; si deux en ont, il reste avec les flux sans identifiant (`ambiguousTitles`),
+  et ne relie donc jamais deux identifiants.
+
+## Ce que montrent les apps
+
+- **Les listes** (rangées, grilles, recherche, pages d'une personne, d'un genre, d'une année ou d'une récompense,
+  Accueil, Ma liste, Titres similaires) : chaque film une fois. Dans une catégorie, la première de ses versions dans
+  cette catégorie le représente : un film est donc dans chaque catégorie où se trouve l'une de ses versions.
+- **La fiche d'un film** : ses versions en badges (des pastilles qu'atteint la télécommande sur une TV), lus dans le nom
+  du flux et dans sa catégorie : 4K (4K, UHD, 2160p), HDR (HDR, HDR10), DV (DV, Dolby Vision), HD (HD, FHD, 1080p,
+  720p), HEVC (HEVC, H.265, x265), TRUEFRENCH, VFF, VFQ, VF, VOSTFR, MULTI. Une version sans aucun d'eux s'appelle
+  « Version ». Deux versions au même badge font deux badges (« 4K », « 4K 2 »). La version choisie est celle qui est
+  lue ; Lecture, la progression et le badge du format sont les siens.
+- **La version montrée d'abord** (et lue depuis une affiche) : celle en cours ; sinon la dernière choisie sur cet
+  appareil ; sinon celle qui convient le mieux à l'écran (la 4K sur un écran 4K, le HDR ou le Dolby Vision seulement là
+  où l'écran les affiche, selon l'écran d'Android et AVFoundation chez Apple) ; sinon la première.
+- **Les données gardées restent par flux** : favoris, historique, progression et synchronisation ne changent pas, et
+  rien de nouveau n'est synchronisé. Un film est vu (et écarté par « Masquer les films déjà vus ») quand l'une de ses
+  versions est terminée, et dans Ma liste quand l'une de ses versions y est ; ajouter un film depuis son affiche ajoute
+  sa version montrée d'abord, le retirer retire toutes les versions gardées. « Continuer à regarder » garde chaque flux,
+  avec le badge de sa version. La dernière version choisie reste sur l'appareil.
+
+## Coût
+
+Les groupes sont construits une fois par catalogue, hors du fil principal, en un passage sur les films (tables de
+hachage, sans comparer chaque paire), et gardés sous forme de tableaux d'indices dans le catalogue : 100 000 films sont
+regroupés dans le tas de 64 Mo du test de mémoire du cœur Kotlin.

@@ -49,7 +49,9 @@ chaque changement de l'interface.
   dernier ; la date de dernière mise à jour de la playlist, au-dessus de son nom. Des pages noires, du blanc pour
   ce qui est choisi ; les cartes se soulèvent sous le pointeur, le focus du clavier ou le doigt.
 - **Films & séries** : grilles d'affiches triées par ordre de la playlist, nom, date d'ajout, date de sortie
-  ou note, films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), fiches (synopsis, casting, bande-annonce), saisons /
+  ou note, films déjà vus masqués si vous le souhaitez (la recherche et Ma liste les gardent), **versions d'un film
+  regroupées** (4K, Dolby Vision, HD, VOSTFR… : le film une fois, ses versions en badges sur sa fiche ;
+  [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (synopsis, casting, bande-annonce), saisons /
   épisodes, « Continuer à regarder », reprise, épisode suivant automatique, **tendances TMDb** ; **touchez un
   acteur ou un réalisateur** pour voir ses autres films et séries de la playlist (les séries d'après la liste
   du fournisseur, les films parmi les fiches déjà ouvertes et l'index des personnes gardé sur l'appareil, ou tous
@@ -132,7 +134,8 @@ chaque changement de l'interface.
   maintenez OK sur une TV, pour la retirer), Ma liste, nouveautés, chaînes ; la date de dernière mise à jour de la
   playlist, au-dessus de son nom.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
-  sortie comprise), films déjà vus masqués si vous le souhaitez, fiches (Reprendre, Depuis le début,
+  sortie comprise), films déjà vus masqués si vous le souhaitez, versions d'un film regroupées (badges sur sa fiche,
+  pastilles sur une TV ; [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (Reprendre, Depuis le début,
   épisode suivant, saisons, la bande-annonce du fournisseur sur YouTube, Titres similaires) ; le nom d'un réalisateur ou d'un acteur ouvre ses autres
   films et séries (les séries toujours, les films parmi les fiches déjà ouvertes), et un genre, l'année ou un prix les titres qui le
   partagent.
