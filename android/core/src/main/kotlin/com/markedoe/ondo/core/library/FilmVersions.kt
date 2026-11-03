@@ -147,7 +147,11 @@ class FilmVersions private constructor(
 
     companion object {
         /** Each stream alone: "Group versions" off, exactly as before. */
-        fun none(movies: List<Movie> = emptyList()): FilmVersions = FilmVersions(movies, null, IntArray(1), IntArray(0), IntArray(0), Diagnostics(movies.size, movies.size))
+        fun none(movies: List<Movie> = emptyList()): FilmVersions =
+            if (movies.isEmpty()) NONE else FilmVersions(movies, null, IntArray(1), IntArray(0), IntArray(0), Diagnostics(movies.size, movies.size))
+
+        /** Nothing grouped, one instance (caches keyed on the versions see the same one). */
+        val NONE: FilmVersions by lazy { FilmVersions(emptyList(), null, IntArray(1), IntArray(0), IntArray(0), Diagnostics()) }
 
         /** At most this many groups of one TMDb id compared with a stream: a panel giving one id to everything stays linear. */
         private const val MAX_CLUSTERS_PER_ID = 16

@@ -139,6 +139,13 @@ class FilmVersionsTest {
         assertFalse(versions.hasVersions(list[0]))
     }
 
+    /** A search index cached on the versions it was built with found a new "nothing grouped" each time, and was built again. */
+    @Test
+    fun nothingGroupedIsOneInstance() {
+        assertSame(FilmVersions.none(), FilmVersions.none())
+        assertSame(FilmVersions.NONE, FilmVersions.of(emptyList()))
+    }
+
     @Test
     fun aFilmIsInEveryCategoryOfItsVersions() {
         val action = movie("Sandstorm 4K", 2021, category = "action")
