@@ -903,6 +903,9 @@ object UiMappers {
              * The index of this catalogue, these hidden categories and tags and these versions: coming back to Search does
              * not build it again.
              */
+            /** The index Search uses for [state]: its hidden categories and tags, each film once when "Group versions" is on. */
+            fun of(state: OndoState): SearchIndex = of(state.content, UiMappers.hiddenCategoryIds(state), state.library.hiddenTags, UiMappers.films(state))
+
             fun of(content: PlaylistContent, hidden: Set<String>, hiddenTags: Set<String> = emptySet(), films: FilmVersions = noFilms): SearchIndex {
                 val key = Key(content, hidden, hiddenTags, films)
                 synchronized(cached) { cached[key]?.let { return it } }

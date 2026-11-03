@@ -76,6 +76,15 @@ class FilmVersionsAppTest {
         assertEquals("every other film stays", Fixtures.content.movies.size - 2, UiMappers.grid(state(), false, null, false, "").size - 1)
     }
 
+    /** The store screenshot's search built its index without the versions and showed Sintel three times. */
+    @Test
+    fun searchAsTheAppBuildsItShowsAFilmOnce() {
+        val found = UiMappers.search(UiMappers.SearchIndex.of(state()), "glass", state(), Fixtures.NOW).movies.map { it.key.removePrefix("m-") }
+        assertEquals(1, count(found))
+        val off = UiMappers.search(UiMappers.SearchIndex.of(state(grouped = false)), "glass", state(grouped = false), Fixtures.NOW).movies.map { it.key.removePrefix("m-") }
+        assertEquals(4, count(off))
+    }
+
     @Test
     fun groupVersionsOffIsThePlaylistAsItIs() {
         val off = lists(state(grouped = false))

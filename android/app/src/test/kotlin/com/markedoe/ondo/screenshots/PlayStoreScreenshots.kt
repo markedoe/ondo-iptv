@@ -157,7 +157,8 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
 
     @Test
     fun search() = capture("07-search", TopLevel.HOME, bar = false) {
-        val index = UiMappers.SearchIndex.of(state.content, UiMappers.hiddenCategoryIds(state))
+        // As the app builds it: each film once.
+        val index = UiMappers.SearchIndex.of(state)
         val results = UiMappers.search(index, catalogue.searchQuery, state, now)
         Box(Modifier.tvSafeArea()) {
             if (tv) TvSearchScreen(results, {}, {}, {}, {}, {}) else SearchScreen(results, onQuery = {}, onOpen = {}, onPlayChannel = {})
