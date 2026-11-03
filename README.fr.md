@@ -101,6 +101,10 @@ chaque changement de l'interface.
   masquez de la même façon un **style** (manga et anime, enfants, documentaires…) ou n'importe quel mot des noms
   de catégories (Bollywood…) ; ou masquez les catégories une par une. Le bouton de filtre est sur les écrans
   Films, Séries et TV en direct.
+- **Ordre des rangées** (Réglages) : les rangées de Films et Séries dans l'ordre choisi, chacune affichée ou
+  masquée (glisser pour déplacer) ; « Tous les films » / « Toutes les séries » en tête par défaut, avec le nombre de
+  titres du catalogue : les derniers ajouts, puis Tout voir. Les nouvelles catégories vont à la fin, celle que le
+  fournisseur retire garde sa place, et l'ordre se synchronise.
 - **Téléchargements** hors ligne (films, épisodes ; édition TestFlight, pas celle de l'App Store), avec leur vitesse et le temps restant, la raison en clair
   quand le fournisseur refuse, limite les connexions ou n'envoie rien, et leurs détails à partager.
 - **Données** : sauvegarde / restauration JSON, cache vidable. Les affiches, les vignettes et les pages des films et
@@ -133,6 +137,10 @@ chaque changement de l'interface.
   nouveautés), films et séries en cours (une rangée chacun ; appuyez longuement sur une carte, ou
   maintenez OK sur une TV, pour la retirer), Ma liste, nouveautés, chaînes ; la date de dernière mise à jour de la
   playlist, au-dessus de son nom.
+- **Ordre des rangées** (Réglages) : les rangées de Films et Séries dans l'ordre choisi, chacune affichée ou
+  masquée (glisser sur un téléphone ; sur une TV, OK prend une rangée, Haut et Bas la déplacent, OK la pose, Retour
+  annule) ; « Tous les films » / « Toutes les séries » en tête par défaut, avec le nombre de titres du catalogue :
+  les derniers ajouts, puis Tout voir. L'ordre se synchronise.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), films déjà vus masqués si vous le souhaitez, versions d'un film regroupées (badges sur sa fiche,
   pastilles sur une TV ; [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (Reprendre, Depuis le début,

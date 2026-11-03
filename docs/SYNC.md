@@ -22,7 +22,8 @@ This document is the specification. The Kotlin implementation is in
 
 Synced: the playlists (name, kind, address, login and password, guide address), My List and favourite channels,
 the actors and directors kept in My List, the lists (collections) with the people in them, playback progress (where each movie and episode was left, and what was finished), and the
-keys typed in Settings for outside services (the TMDb token).
+keys typed in Settings for outside services (the TMDb token), and the order of the rows of the Movies and Series tabs
+with the rows hidden (Settings → Row order).
 
 Stays on each device: the other settings, hidden categories, channel edits, reminders, profiles, downloads, the catalogues
 themselves (each device downloads its playlists), and file playlists (a file imported on one device is not on the
@@ -111,6 +112,7 @@ an iPhone, iPad or Mac sent thus passes it on to the other Android devices.
   "lists": [ … ],
   "people": [ … ],
   "keys": [ … ],
+  "rows": [ … ],
   "deleted": { "<key>": 1760000000000 },
   "replaced": { "<playlist id>": "<playlist id>" },
   "clock": 1760000000000
@@ -162,6 +164,24 @@ devices use it as it comes, and their Settings say so when the service refuses i
 on the keys of services it does not know. A snapshot without `keys` (from a device that does not sync them) removes
 nothing: only `deleted` does.
 
+**Rows** (the order of the rows of a tab, Settings → Row order) — `{"tab", "order", "hidden", "updatedAt"}`. `tab`
+is `movie` or `series`; `order` lists the rows of the tab by key, in the viewer's order; `hidden` the keys of the rows
+the viewer hid. A row's key is `all` (All movies or All series), `continue` (Continue Watching), `mylist`, `new` (new
+movies or series), `trending`, `awards` (award winners, Movies only), or `cat:<category id>|<name>` for a provider
+category: its ID as the playlist gives it (`movie-12`, without control characters or `|`), then its name trimmed, runs
+of spaces and control characters made one space, A to Z in lowercase (other letters keep their case). A device finds a
+category by the same key, else by its ID, else by its name: a category the provider renumbers or renames keeps its
+place. Rows the tab has but `order` does not name come after, as they come (a category new to the playlist goes to the
+end); keys no row has (a category gone from the playlist, or of another playlist) are kept, after the row they
+followed, for when it comes back. Hidden categories and languages stay hidden whatever the order. Key: `rows:<tab>`;
+time: `updatedAt` (set each time the viewer moves, hides or shows a row, or chooses Default order, which writes an empty
+`order` and keeps `hidden`). The whole record is one change: a row moved on one device and another hidden on another
+at the same time keep only the later change. Readers drop keys that are blank or hold a control character (below
+U+0020, or U+007F), keep the first of keys repeated in `order`, and keep `hidden` once each, sorted (UTF-16 code
+units). A device keeps and passes on the record of a tab it does not know. A snapshot without `rows` (from an older
+version) changes nothing; no record is ever deleted. On Apple devices the order is the device's, whichever profile
+is open, and travels while the main profile is.
+
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for
 180 days, and longer until every device it had a session with in the last year has had a session with it after the
 removal (it remembers, to the day, its last session with each device): a device away for months still gets the
@@ -190,7 +210,9 @@ nothing.
    - progress: not a string first: the larger `position` wins, then the larger `duration`; then `title`, `subtitle`,
      `image` (optional, as above);
    - person: not a string first: the one with an `image` wins; then the smaller `name`, then the smaller `image`;
-   - key: `value`.
+   - key: `value`;
+   - rows: the number of keys of `order` in decimal, a line feed, then the keys of `order` and of `hidden` joined with a
+     line feed (no key holds one).
 3. A record whose time is not later than its key's deletion time is dropped (on equal times, the deletion wins).
 4. **The same playlist added twice** (on two devices before they synced): playlists of the same `kind`, `url`
    (trimmed, then compared ignoring case) and `username` are one playlist. The one with the smallest `addedAt`
@@ -202,7 +224,7 @@ nothing.
    playlist has that ID) is dropped. One whose playlist is simply unknown (a file playlist of another device) is
    kept.
 6. The result lists playlists by `addedAt` then `id`, favorites by `addedAt` then key, progress by `watchedAt`
-   (latest first) then key, lists by `id`, people by `addedAt` then key, and keys by `service`.
+   (latest first) then key, lists by `id`, people by `addedAt` then key, keys by `service`, and rows by `tab`.
 7. **Lists merge part by part.** A list stays unless `list:<id>` is deleted at or after its latest `updatedAt`, which
    it keeps. Its name is the one with the latest `renamedAt` (then the smaller name). Its items are those of either
    side, one per key, the latest `addedAt` winning (then the smaller tie string of `title` and `image`, optional as in
@@ -218,7 +240,8 @@ nothing.
 
 A device keeps the merged snapshot as its own: it adds the playlists it did not have (and downloads them),
 updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists and
-progress with the merged ones, and saves the keys of the services it uses (removing those deleted). It keeps
+progress with the merged ones, saves the keys of the services it uses (removing those deleted), and keeps the
+merged order of the rows. It keeps
 whatever it does not sync. The progress of a movie or episode playing on the device is not replaced while it
 plays: the one received waits, and applies when playback ends if it is the later. Nor is the catalogue reloaded
 under the player: when the playlist in use was deleted, replaced, or its address or login changed, the catalogue

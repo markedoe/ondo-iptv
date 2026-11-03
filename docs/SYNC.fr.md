@@ -22,7 +22,8 @@ Ce document est la spécification. L’implémentation Kotlin est dans
 
 Synchronisés : les playlists (nom, type, adresse, identifiant et mot de passe, adresse du guide), Ma liste et les
 chaînes favorites, les acteurs et réalisateurs gardés dans Ma liste, les listes (collections) avec leurs personnes, la progression de lecture (où chaque film et épisode a été laissé, et
-ce qui a été terminé), et les clés de services extérieurs saisies dans les Réglages (le jeton TMDb).
+ce qui a été terminé), les clés de services extérieurs saisies dans les Réglages (le jeton TMDb), et l’ordre des
+rangées des onglets Films et Séries avec les rangées masquées (Réglages → Ordre des rangées).
 
 Restent sur chaque appareil : les autres réglages, les catégories masquées, les modifications de chaînes, les rappels,
 les profils, les téléchargements, les catalogues eux-mêmes (chaque appareil télécharge ses playlists), et les
@@ -123,6 +124,7 @@ appareils Android.
   "lists": [ … ],
   "people": [ … ],
   "keys": [ … ],
+  "rows": [ … ],
   "deleted": { "<clé>": 1760000000000 },
   "replaced": { "<id de playlist>": "<id de playlist>" },
   "clock": 1760000000000
@@ -178,6 +180,27 @@ l’appareil où elle est saisie ; les autres appareils l’utilisent telle qu�
 quand le service la refuse plus tard. Un appareil garde et transmet les clés des services qu’il ne connaît pas. Un
 instantané sans `keys` (d’un appareil qui ne les synchronise pas) ne retire rien : seul `deleted` le fait.
 
+**Rangées** (l’ordre des rangées d’un onglet, Réglages → Ordre des rangées) — `{"tab", "order", "hidden",
+"updatedAt"}`. `tab` vaut `movie` ou `series` ; `order` liste les rangées de l’onglet par clé, dans l’ordre choisi ;
+`hidden` les clés des rangées masquées. La clé d’une rangée est `all` (Tous les films ou Toutes les séries), `continue`
+(Continuer à regarder), `mylist`, `new` (nouveaux films ou séries), `trending`, `awards` (films primés, Films
+seulement), ou `cat:<id de la catégorie>|<nom>` pour une catégorie du fournisseur : son identifiant tel que la playlist
+le donne (`movie-12`, sans caractères de contrôle ni `|`), puis son nom sans espaces autour, chaque suite d’espaces et
+de caractères de contrôle réduite à une espace, A à Z en minuscules (les autres lettres gardent leur casse). Un
+appareil retrouve une catégorie par la même clé, sinon par son identifiant, sinon par son nom : une catégorie que le
+fournisseur renumérote ou renomme garde sa place. Les rangées que l’onglet a mais qu’`order` ne nomme pas viennent
+après, dans leur ordre (une catégorie nouvelle dans la playlist va à la fin) ; les clés qu’aucune rangée n’a (une
+catégorie partie de la playlist, ou d’une autre playlist) sont gardées, après la rangée qu’elles suivaient, pour son
+retour. Les catégories et langues masquées le restent, quel que soit l’ordre. Clé : `rows:<tab>` ; instant :
+`updatedAt` (fixé chaque fois qu’une rangée est déplacée, masquée ou affichée, ou que l’ordre par défaut est choisi,
+ce qui écrit un `order` vide et garde `hidden`). Tout l’enregistrement est un seul changement : une rangée déplacée sur
+un appareil et une autre masquée sur un autre au même moment ne gardent que le changement le plus tardif. Les lecteurs
+écartent les clés vides ou qui contiennent un caractère de contrôle (sous U+0020, ou U+007F), gardent la première des
+clés répétées dans `order`, et gardent `hidden` une fois chacune, triées (en unités UTF-16). Un appareil garde et
+transmet l’enregistrement d’un onglet qu’il ne connaît pas. Un instantané sans `rows` (d’une version plus ancienne) ne
+change rien ; aucun enregistrement n’est jamais supprimé. Sur les appareils Apple, l’ordre est celui de l’appareil,
+quel que soit le profil ouvert, et voyage tant que le profil principal l’est.
+
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil
 garde chacune 180 jours, et plus longtemps tant que chaque appareil avec lequel il a eu une session dans l’année
 n’en a pas eu une avec lui après la suppression (il retient, au jour près, sa dernière session avec chaque
@@ -211,7 +234,9 @@ change rien.
      `title`, `subtitle`, `image` (facultatives, comme ci-dessus) ;
    - personne : pas une chaîne d’abord : celle qui a une `image` gagne ; puis le plus petit `name`, puis la plus
      petite `image` ;
-   - clé : `value`.
+   - clé : `value` ;
+   - rangées : le nombre de clés d’`order` en décimal, un saut de ligne, puis les clés d’`order` et de `hidden` jointes
+     par un saut de ligne (aucune clé n’en contient).
 3. Un élément dont l’instant n’est pas postérieur à l’instant de suppression de sa clé est écarté (à instants
    égaux, la suppression gagne).
 4. **La même playlist ajoutée deux fois** (sur deux appareils avant qu’ils se synchronisent) : les playlists de
@@ -225,8 +250,8 @@ change rien.
    `deleted` et aucune playlist gardée n’a cet identifiant) est écarté. Celui dont la playlist est simplement
    inconnue (une playlist fichier d’un autre appareil) est gardé.
 6. Le résultat range les playlists par `addedAt` puis `id`, les favoris par `addedAt` puis clé, les progressions
-   par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, les personnes par `addedAt` puis clé, et les clés par
-   `service`.
+   par `watchedAt` (la plus récente d’abord) puis clé, les listes par `id`, les personnes par `addedAt` puis clé, les clés par
+   `service`, et les rangées par `tab`.
 7. **Les listes se fusionnent partie par partie.** Une liste reste sauf si `list:<id>` est supprimé au plus tôt à
    son `updatedAt` le plus tardif, qu’elle garde. Son nom est celui au `renamedAt` le plus tardif (puis le plus petit
    nom). Ses éléments sont ceux de l’un ou l’autre côté, un par clé, l’`addedAt` le plus tardif gagnant (puis le plus
@@ -242,7 +267,7 @@ change rien.
 
 Un appareil garde l’instantané fusionné comme le sien : il ajoute les playlists qu’il n’avait pas (et les
 télécharge), met à jour celles qui ont changé, supprime celles qui ont été supprimées, et remplace Ma liste, les
-chaînes favorites, les personnes, les listes et la progression par celles fusionnées, et enregistre les clés des services qu’il
+chaînes favorites, les personnes, les listes et la progression par celles fusionnées, garde l’ordre des rangées fusionné, et enregistre les clés des services qu’il
 utilise (en retirant celles supprimées). Il garde tout ce qui n’est pas synchronisé. La progression d’un film ou d’un épisode en lecture sur
 l’appareil n’est pas remplacée pendant la lecture : celle reçue attend, et s’applique à la fin de la lecture si elle
 est la plus tardive. Le catalogue n’est pas non plus rechargé sous le lecteur : quand la playlist utilisée a été

@@ -32,6 +32,9 @@ import com.markedoe.ondo.ui.model.TitleHeader
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.VodActions
 import com.markedoe.ondo.ui.screens.VodScreen
+import com.markedoe.ondo.ui.screens.RowOrderActions
+import com.markedoe.ondo.ui.tv.TvRowOrderScreen
+import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.ui.screens.VodUiState
 import com.markedoe.ondo.ui.theme.OndoTheme
 import com.markedoe.ondo.ui.tv.LocalTitleHeaders
@@ -159,14 +162,20 @@ class TvScreenshots {
 
     private fun focusedIn(shelf: String) = compose.onAllNodes(isFocused() and hasAnyAncestor(hasTestTag(shelf))).fetchSemanticsNodes().isNotEmpty()
 
-    /** The rows of [vod], by their tags from the top: Continue watching first, then at least two more. */
+    /** The rows of [vod], by their tags from the top: All movies (or series) first, then at least two more. */
     private fun shelves(vod: VodUiState): List<String> {
-        val tags = listOfNotNull(
-            "shelfResume".takeIf { vod.continueWatching.isNotEmpty() },
-            "shelfMyList".takeIf { vod.myList.isNotEmpty() },
-            "shelfAwards".takeIf { vod.awardWinners.isNotEmpty() },
-        ) + vod.rows.map { "shelf:${it.category.id}" }
-        assertTrue("Continue watching, then at least two more rows: $tags", tags.size >= 3 && tags.first() == "shelfResume")
+        val tags = vod.shownRows.map { key ->
+            when (key) {
+                RowOrder.ALL -> "shelfAll"
+                RowOrder.CONTINUE_WATCHING -> "shelfResume"
+                RowOrder.MY_LIST -> "shelfMyList"
+                RowOrder.NEW_RELEASES -> "shelfNew"
+                RowOrder.TRENDING -> "shelfTrending"
+                RowOrder.AWARD_WINNERS -> "shelfAwards"
+                else -> "shelf:" + vod.rows.first { it.key == key }.category.id
+            }
+        }
+        assertTrue("All, then at least two more rows: $tags", tags.size >= 3 && tags.first() == "shelfAll")
         return tags
     }
 
@@ -189,6 +198,39 @@ class TvScreenshots {
         moviesTab()
         focusFirstCard("shelfResume")
         capture("movies-continue-watching")
+    }
+
+    /** All movies at the top of the tab: the latest additions, its count in its name, then See all. */
+    @Test
+    fun moviesWithAllMoviesFocused() {
+        moviesTab()
+        focusFirstCard("shelfAll")
+        capture("movies-all")
+    }
+
+    /** Settings → Row order with a row picked up by the remote and moved down once: it shows in the accent colour. */
+    @Test
+    fun rowOrderWithARowPickedUp() {
+        var rows by mutableStateOf(UiMappers.rowOrder(state))
+        val actions = RowOrderActions(onSave = { series, arranged, hidden ->
+            val byKey = (if (series) rows.series else rows.movies).associateBy { it.key }
+            val next = arranged.map { byKey.getValue(it).copy(hidden = it in hidden) }
+            rows = if (series) rows.copy(series = next) else rows.copy(movies = next)
+        })
+        // A page of Settings: no top bar above it.
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            OndoTheme { TelevisionFrame { TvRowOrderScreen(rows, actions) } }
+        }
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        compose.mainClock.autoAdvance = false
+        advance()
+        compose.onNodeWithTag("row-movies-mylist").requestFocus()
+        advance()
+        press(Key.DirectionCenter)
+        press(Key.DirectionUp)
+        capture("row-order")
     }
 
     @Test
