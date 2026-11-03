@@ -205,8 +205,8 @@ class Showcase(
         // the category (another one is often another language).
         val shown = browsableIds
         // Never another version of the film itself.
-        val own = films.groupOf(movie.id)
-        fun versionOfItself(other: Movie) = own >= 0 && films.isGrouped && films.groupOf(other.id) == own
+        val own = films.groupOf(movie)
+        fun versionOfItself(other: Movie) = own >= 0 && films.isGrouped && films.groupOf(other) == own
         val pinned = films.distinct(related.filter { it.id in shown && it.id != movie.id && !versionOfItself(it) })
         val candidates = films.distinct(browsableMovies.filter { it.id != movie.id && it.categoryId == movie.categoryId && !versionOfItself(it) })
         val pinnedIds = pinned.mapTo(HashSet()) { it.id }

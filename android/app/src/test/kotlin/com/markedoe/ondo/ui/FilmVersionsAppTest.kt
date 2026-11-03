@@ -16,6 +16,7 @@ import java.util.Locale
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -83,6 +84,34 @@ class FilmVersionsAppTest {
         assertEquals(1, count(found))
         val off = UiMappers.search(UiMappers.SearchIndex.of(state(grouped = false)), "glass", state(grouped = false), Fixtures.NOW).movies.map { it.key.removePrefix("m-") }
         assertEquals(4, count(off))
+    }
+
+    /** The screens asking at once when a catalogue arrives get one grouping, built once (a TV holds one in memory). */
+    @Test
+    fun everyScreenGetsTheSameGrouping() {
+        val fresh = content.copy(fetchedAt = 42)
+        val start = java.util.concurrent.CountDownLatch(1)
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(8)
+        try {
+            val results = (1..8).map { pool.submit<com.markedoe.ondo.core.library.FilmVersions> { start.await(); UiMappers.films(fresh) } }
+            start.countDown()
+            val first = results.first().get()
+            results.forEach { assertSame(first, it.get()) }
+        } finally {
+            pool.shutdown()
+        }
+    }
+
+    /** A version whose title differs from its film's card is found by its own words, and by its own year. */
+    @Test
+    fun aVersionIsFoundByItsOwnWords() {
+        val heritage = version("g-heritage", "Glass City : Héritage", Fixtures.sciFi, 77).copy(year = 2024)
+        val state = Fixtures.state(content = content.copy(movies = content.movies + heritage))
+        assertEquals("grouped with the film", UiMappers.films(state).groupOf(hd), UiMappers.films(state).groupOf(heritage))
+        val index = UiMappers.SearchIndex.of(state)
+        assertEquals(listOf(heritage.id), UiMappers.search(index, "heritage", state, Fixtures.NOW).movies.map { it.key.removePrefix("m-") })
+        val byYear = UiMappers.search(index, "glass", state, Fixtures.NOW, com.markedoe.ondo.ui.screens.SearchFilters(fromYear = 2024, toYear = 2024))
+        assertEquals("one card for the film", 1, byYear.movies.count { it.key.removePrefix("m-") in glass + heritage.id })
     }
 
     @Test

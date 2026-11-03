@@ -124,9 +124,18 @@ object UiMappers {
         return if (known.first === state.content) known.second else noVersions
     }
 
+    private val filmsLock = Any()
+
+    /**
+     * Built once per catalogue: the screens asking at once when a catalogue arrives wait for the one build (a TV's memory
+     * holds one grouping of a large catalogue, not one per screen).
+     */
     fun films(content: PlaylistContent): FilmVersions {
         filmVersions?.let { (known, versions) -> if (known === content) return versions }
-        return FilmVersions.of(content.movies).also { filmVersions = content to it }
+        synchronized(filmsLock) {
+            filmVersions?.let { (known, versions) -> if (known === content) return versions }
+            return FilmVersions.of(content.movies).also { filmVersions = content to it }
+        }
     }
 
     /** The versions of [movie]'s film the viewer can see ([movie] itself, and the others not in a hidden category), in catalogue order. */
@@ -864,13 +873,14 @@ object UiMappers {
         content: PlaylistContent,
         private val hidden: Set<String>,
         private val hiddenTags: Set<String> = emptySet(),
-        /** Each film once ([FilmVersions.distinct]): the first of its versions shown. */
-        films: FilmVersions = FilmVersions.none(),
+        /** The versions of the films: every version is searched by its own words, each film found once. */
+        val films: FilmVersions = FilmVersions.none(),
     ) {
         private fun shown(categoryId: String, name: String) =
             categoryId !in hidden && !CategoryTags.isHiddenByName(name, hiddenTags)
 
-        val movies = films.distinct(content.movies.filter { shown(it.categoryId, it.name) }).map { TextNormalizer.normalize(it.name) to it }
+        // Every version, found by its own title and year; a search keeps each film once ([search]).
+        val movies = content.movies.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }
         val series = content.series.filter { shown(it.categoryId, it.name) }.map { TextNormalizer.normalize(it.name) to it }
         val channels = content.channels.filter { shown(it.categoryId, it.name) && !CategoryFilter.isHeader(it.name) }.map { TextNormalizer.normalize(it.name) to it }
 
@@ -972,21 +982,28 @@ object UiMappers {
         }
         // One pass, each rank kept up to [cap]: a short query on a big catalogue stops once enough titles named
         // exactly that are found, and a newer query stops it between titles.
-        fun <T> List<Pair<String, T>>.find(cap: Int = Int.MAX_VALUE): Sequence<T> {
+        // [film]: the film an item is a version of, so that a rank holds each film once (the cap counts films).
+        fun <T> List<Pair<String, T>>.find(cap: Int = Int.MAX_VALUE, film: (T) -> Int = { -1 }): Sequence<T> {
             val ranked = List(4) { ArrayList<T>() }
+            val seen = List(4) { HashSet<Int>() }
             for ((title, item) in this) {
                 checkCancelled()
                 if (!words.all { title.contains(it) }) continue
-                val bucket = ranked[rank(title)]
-                if (bucket.size < cap) bucket += item
+                val level = rank(title)
+                val bucket = ranked[level]
+                val group = film(item)
+                if (bucket.size < cap && (group < 0 || seen[level].add(group))) bucket += item
                 if (ranked[0].size >= cap) break
             }
             return ranked.asSequence().flatten()
         }
+        val films = index.films
+        fun film(movie: Movie) = if (films.isGrouped) films.groupOf(movie) else -1
         if (!filters.isActive) {
             return empty.copy(
                 people = if (withPeople) people(index, state, query) else emptyList(),
-                movies = index.movies.find(limit).take(limit).map { ShowcaseItem.MovieItem(it) }.toList(),
+                // Each film once, the version found at the best rank standing for it.
+                movies = films.distinct(index.movies.find(limit, ::film).toList()).take(limit).map { ShowcaseItem.MovieItem(it) },
                 series = index.series.find(limit).take(limit).map { ShowcaseItem.SeriesItem(it) }.toList(),
                 channels = index.channels.find(limit).take(limit).map { channelRow(it, state, now) }.toList(),
             )
@@ -997,7 +1014,8 @@ object UiMappers {
         fun awarded(movie: Movie) = filters.awardGroup == null || awards[movie.id].orEmpty().any { entry ->
             (!filters.winnersOnly || entry.won) && state.awards.award(entry.awardId)?.group == filters.awardGroup
         }
-        val movies = index.movies.find().filter { released(it.year) && awarded(it) }.map { ShowcaseItem.MovieItem(it) }.toList()
+        // Each version by its own year; each film once.
+        val movies = films.distinct(index.movies.find().filter { released(it.year) && awarded(it) }.toList()).map { ShowcaseItem.MovieItem(it) }
         // Awards are given to films: series are left out. Release years and awards are not about channels.
         val series = if (filters.awardGroup != null) emptyList() else index.series.find().filter { released(it.year) }.map { ShowcaseItem.SeriesItem(it) }.toList()
         return empty.copy(
