@@ -180,6 +180,36 @@ extension AppModel {
         return result
     }
 
+    /// The last resort of the carousel: the movies and series with artwork, the latest added first (then by title); in
+    /// the playlist's order when the provider gives no date added. Nothing from a hidden or locked category, a hidden
+    /// language or a movie hidden as watched (`exclusions`).
+    func latestWithArtwork(limit: Int = 15) -> [ShowcaseItem] {
+        let all = cachedList(newKey("latest-art", 0...0)) { () -> [ShowcaseItem] in
+            let items = (self.movies(in: nil, sort: .playlist, includingWatched: true).map(ShowcaseItem.movie)
+                + self.series(in: nil, sort: .playlist).map(ShowcaseItem.series)).filter { $0.posterURL != nil }
+            // Titles without a date keep the playlist's order (the offset breaks the tie).
+            return items.enumerated().sorted { a, b in
+                switch (a.element.addedAt, b.element.addedAt) {
+                case (nil, nil): return a.offset < b.offset
+                case (nil, _): return false
+                case (_, nil): return true
+                case let (x?, y?):
+                    if x != y { return x > y }
+                    return a.element.title.localizedStandardCompare(b.element.title) == .orderedAscending
+                }
+            }.map(\.element)
+        }
+        let watched = hiddenWatchedMovieIDs()
+        var seen = Set<String>()
+        var result: [ShowcaseItem] = []
+        for item in all where result.count < limit {
+            if case .movie(let movie) = item, watched.contains(movie.id) { continue }
+            let film = item.title.trimmingCharacters(in: .whitespaces).lowercased() + "|" + (item.year.map(String.init) ?? "")
+            if seen.insert(film).inserted { result.append(item) }
+        }
+        return result
+    }
+
     /// The recent titles to ask TMDb about (their votes are what `bestRecent` ranks by): the best rated by the provider
     /// first, at most `limit`.
     func recentTitlesToRank(limit: Int = 30, now: Date = .now) -> [ShowcaseItem] {
@@ -223,6 +253,8 @@ extension AppModel {
             }
         }
         for item in newReleases(limit: limit * 2, now: now) { append(item) }
+        // Never empty while the catalogue has titles with artwork (no TMDb votes, nothing released lately).
+        for item in latestWithArtwork(limit: limit) { append(item) }
         return distinctFilms(items)
     }
 

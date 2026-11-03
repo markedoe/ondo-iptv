@@ -148,6 +148,34 @@ final class ShowcaseTests: XCTestCase {
         XCTAssertEqual(model.heroItems(limit: 5).first, .movie(bright), "the carousel falls back to new releases")
     }
 
+    /// Old films with posters and no date added: no best recent title, no new release, yet the carousel is not empty.
+    private static let oldWithPosters = """
+    #EXTM3U
+    #EXTINF:5400 tvg-logo="http://127.0.0.1:9/a.png" group-title="Movies | Drama",Old Film A (2010)
+    http://127.0.0.1:9/a.mp4
+    #EXTINF:5400 tvg-logo="http://127.0.0.1:9/b.png" group-title="Movies | Drama",Old Film B (2011)
+    http://127.0.0.1:9/b.mp4
+    #EXTINF:5400 group-title="Movies | Drama",Old Film C (2012)
+    http://127.0.0.1:9/c.mp4
+    """
+
+    func testACatalogueWithoutVotesOrRecentReleasesStillShowsACarousel() async throws {
+        let model = try await model(with: Self.oldWithPosters)
+        XCTAssertTrue(model.bestRecent().isEmpty)
+        XCTAssertTrue(model.newReleases().isEmpty)
+        let hero = model.heroItems(limit: 5).map(\.title)
+        XCTAssertEqual(hero, ["Old Film A", "Old Film B"], "the playlist's order, titles with artwork only")
+    }
+
+    func testATenFromTenVotesTitleIsStillNotRankedFirst() async throws {
+        let model = try await model(with: Self.oldWithPosters)
+        let second = try movie("Old Film B", in: model)
+        let key = try XCTUnwrap(MetadataKey.title(.movie, name: second.name, year: second.year))
+        model.tmdbMetadata.titles[key] = TitleMetadata(key: key, kind: "movie", voteAverage: 10, voteCount: 10, fetchedAt: Date())
+        XCTAssertTrue(model.bestRecent().isEmpty, "ten votes do not qualify")
+        XCTAssertEqual(model.heroItems(limit: 5).first?.title, "Old Film A")
+    }
+
     func testMoviesAndSeriesInProgressAreApart() async throws {
         let model = try await model()
         let road = try movie("Long Road", in: model)

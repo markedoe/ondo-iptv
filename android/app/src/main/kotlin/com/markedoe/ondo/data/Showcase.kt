@@ -147,6 +147,28 @@ class Showcase(
     }
 
     /**
+     * The last resort of the carousel: the movies and series with artwork, the latest added first (then by title); in the
+     * playlist's order when the provider gives no date added. Titles in a hidden category or hidden by name are never in it.
+     */
+    fun latestWithArtwork(limit: Int = HERO_TITLES): List<ShowcaseItem> =
+        (browsableMovies.map { ShowcaseItem.MovieItem(it) } + series.map { ShowcaseItem.SeriesItem(it) })
+            .filter { !it.posterUrl.isNullOrBlank() }
+            // sortedWith is stable: titles without a date keep the playlist's order.
+            .sortedWith { a, b ->
+                val first = a.addedAt
+                val second = b.addedAt
+                when {
+                    first == null && second == null -> 0
+                    first == null -> 1
+                    second == null -> -1
+                    first != second -> second.compareTo(first)
+                    else -> String.CASE_INSENSITIVE_ORDER.compare(a.title, b.title)
+                }
+            }
+            .distinctBy { "${it.title.trim().lowercase()}|${it.year}" }
+            .take(limit)
+
+    /**
      * The titles worth preparing ahead (Settings, "Prepare new titles"): the carousel's, the titles added in
      * the last [RECENT_DAYS] days (their votes are what the carousel ranks by, so they are asked for first), the new
      * movies and series and the trending ones, each once, up to [limit].
@@ -156,7 +178,7 @@ class Showcase(
             .distinctBy { it.key }
             .take(limit)
 
-    /** Up to [limit] titles for the carousel: the best recent titles ([bestRecent]), then trending titles, then new releases, no duplicates. */
+    /** Up to [limit] titles for the carousel: the best recent titles ([bestRecent]), then trending titles, then new releases, then the latest titles with artwork, no duplicates. */
     fun heroItems(now: Long, limit: Int = HERO_TITLES): List<ShowcaseItem> {
         val result = LinkedHashMap<String, ShowcaseItem>()
         fun add(item: ShowcaseItem?) {
@@ -165,6 +187,8 @@ class Showcase(
         bestRecent(now, limit).forEach { add(it) }
         trending().forEach { add(it) }
         newReleases(now, limit * 2).forEach { add(it) }
+        // Never empty while the catalogue has titles with artwork (no TMDb votes, nothing released lately).
+        latestWithArtwork(limit).forEach { add(it) }
         return result.values.toList()
     }
 

@@ -120,6 +120,42 @@ class ShowcaseTest {
         assertEquals(listOf("Silent Harbor"), pick)
     }
 
+    /** A catalogue of old titles with posters, in a hidden category too, one without a poster. */
+    private fun oldCatalogue(): PlaylistContent {
+        fun art(id: String) = "http://example.com/poster/$id.jpg"
+        return Fixtures.content.copy(
+            movies = Fixtures.content.movies.map { it.copy(year = 2010, posterUrl = if (it.id == Fixtures.summerInLisbon.id) null else art(it.id)) },
+            series = Fixtures.content.series.map { it.copy(year = 2010, coverUrl = art(it.id)) },
+        )
+    }
+
+    @Test
+    fun aCatalogueWithoutTmdbVotesOrRecentReleasesStillShowsACarousel() {
+        val showcase = showcase(content = oldCatalogue(), hidden = setOf(Fixtures.adultMovies.id))
+        assertTrue(showcase.bestRecent(Fixtures.NOW).isEmpty())
+        assertTrue(showcase.newReleases(Fixtures.NOW).isEmpty())
+        val hero = showcase.heroItems(Fixtures.NOW).map { it.title }
+        assertEquals("the latest added with artwork first, then by title", listOf("Harbor Lights", "Northern Lights"), hero.take(2))
+        assertFalse("a hidden category stays out", "Late Show" in hero)
+        assertFalse("no artwork, no place", "Summer in Lisbon" in hero)
+        assertTrue(hero.size > 2)
+    }
+
+    @Test
+    fun withoutAnAddedDateTheLatestWithArtworkFollowThePlaylistOrder() {
+        val content = oldCatalogue().let { it.copy(movies = it.movies.map { m -> m.copy(addedAt = null) }, series = emptyList()) }
+        val hero = showcase(content = content, hidden = setOf(Fixtures.adultMovies.id)).heroItems(Fixtures.NOW).map { it.title }
+        assertEquals(listOf("Northern Lights", "Glass City", "Silent Harbor"), hero.take(3))
+    }
+
+    @Test
+    fun aTenFromTenVotesTitleIsStillNotRankedFirstByTheBestRecentSource() {
+        val ranked = mapOf("m-1" to TmdbRating(10.0, 10), "m-4" to TmdbRating(7.0, 500))
+        val showcase = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = ranked)
+        assertEquals("The Last Signal", showcase.bestRecent(Fixtures.NOW).first().title)
+        assertEquals("The Last Signal", showcase.heroItems(Fixtures.NOW).first().title)
+    }
+
     @Test
     fun theBestRecentWindowIsFourDays() {
         val showcase = showcase(hidden = setOf(Fixtures.adultMovies.id), votes = votes)
