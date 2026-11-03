@@ -6,6 +6,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollToNode
@@ -44,7 +45,8 @@ class VersionChipsTest {
     fun onAPhoneATapPicksAVersion() {
         val picked = mutableListOf<String>()
         compose.setContent { OndoTheme { MovieDetailScreen(state, DetailActions(onVersion = { picked += it })) } }
-        compose.onNode(hasScrollToNodeAction()).performScrollToNode(hasTestTag("versions"))
+        // The page's list (the chips' row scrolls too).
+        compose.onAllNodes(hasScrollToNodeAction()).onFirst().performScrollToNode(hasTestTag("versions"))
         compose.onNodeWithText("Version").assertExists()
         compose.onNodeWithText("4K 2").assertExists()
         assertEquals(true, selected("version-${movie.id}"))
