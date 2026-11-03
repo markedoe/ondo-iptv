@@ -154,15 +154,18 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertEqual(Array(sent.order.prefix(3)), ["mylist", "all", "continue"])
         XCTAssertEqual(sent.hidden, ["trending"])
         // The second device reorders after it saw the first one's: its order is the later, everywhere.
-        XCTAssertTrue(await second.applySync(first.syncSnapshot()))
+        let received = await second.applySync(first.syncSnapshot())
+        XCTAssertTrue(received)
         XCTAssertEqual(second.savedRowOrder(.movie), sent)
         second.setRowOrder(.movie, arranged: ["continue", "all"], hidden: [])
         let later = try XCTUnwrap(second.savedRowOrder(.movie))
         XCTAssertGreaterThan(later.updatedAt, sent.updatedAt)
-        XCTAssertTrue(await first.applySync(second.syncSnapshot()))
+        let answered = await first.applySync(second.syncSnapshot())
+        XCTAssertTrue(answered)
         XCTAssertEqual(first.savedRowOrder(.movie), later)
         // An older version sends no rows: nothing changes.
-        XCTAssertTrue(await first.applySync(SyncSnapshot(device: "old")))
+        let fromOld = await first.applySync(SyncSnapshot(device: "old"))
+        XCTAssertTrue(fromOld)
         XCTAssertEqual(first.savedRowOrder(.movie), later)
         // Default order keeps what is hidden.
         first.setRowOrder(.series, arranged: ["all", "mylist"], hidden: ["mylist"])
