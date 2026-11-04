@@ -890,6 +890,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onCheckTmdbToken = viewModel::checkAndSaveTmdbToken,
             onRemoveTmdbToken = viewModel::removeTmdbToken,
             onOpenTmdbApiPage = { context.browse(TMDB_API_PAGE) },
+            subtitleServices = (context.applicationContext as? com.markedoe.ondo.OndoApplication)?.subtitleServices,
             onTip = { tip -> activity?.let { tipJar?.purchase(it, tip) } },
         )
     if (isTelevision()) {

@@ -18,6 +18,20 @@ interface HttpClient {
     suspend fun download(url: String, headers: Map<String, String> = emptyMap(), file: File) {
         file.writeBytes(get(url, headers))
     }
+
+    /**
+     * Downloads `url` like [get], refusing an answer longer than [limit] bytes ([HttpException.TooLarge]) before it is
+     * read whole: for small files from services (a subtitle). The default reads it, then checks.
+     */
+    suspend fun getLimited(url: String, headers: Map<String, String> = emptyMap(), limit: Long): ByteArray =
+        get(url, headers).also { if (it.size > limit) throw HttpException.TooLarge(limit) }
+
+    /**
+     * Sends [body] (of [contentType]) to `url` with POST and returns the answer: for the services that take a request
+     * body (signing in to a subtitle service). Clients that only read playlists do not have it.
+     */
+    suspend fun post(url: String, headers: Map<String, String> = emptyMap(), body: ByteArray, contentType: String = "application/json"): ByteArray =
+        throw UnsupportedOperationException("POST is not supported by this client")
 }
 
 /** Default user agent: many panels block unknown agents, VLC's is widely accepted. */
