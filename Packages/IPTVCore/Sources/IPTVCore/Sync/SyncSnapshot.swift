@@ -32,6 +32,9 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     /// The data of each profile other than the main one, whose data is the records above (an older device knows only
     /// those); none from a device that does not sync profiles.
     public var profileData: [SyncProfileData]
+    /// The lists shared with every profile (docs/SYNC.md, "Shared lists"), with what was deleted among them; nil when
+    /// there are none, and from a device that does not share lists.
+    public var household: SyncHousehold?
     public var deleted: [String: Int64]
     /// Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID.
     public var replaced: [String: String]
@@ -63,6 +66,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         rows: [SyncRows] = [],
         profiles: [SyncProfile] = [],
         profileData: [SyncProfileData] = [],
+        household: SyncHousehold? = nil,
         deleted: [String: Int64] = [:],
         replaced: [String: String] = [:],
         clock: Int64? = nil,
@@ -84,6 +88,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         self.rows = rows
         self.profiles = profiles
         self.profileData = profileData
+        self.household = household
         self.deleted = deleted
         self.replaced = replaced
         self.clock = clock
@@ -95,6 +100,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
 
     enum CodingKeys: String, CodingKey {
         case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, rows, profiles, profileData
+        case household
         case deleted, replaced, clock
         case digest, seen, probe, unchanged
     }
@@ -116,6 +122,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         rows = try c.value(.rows, default: [])
         profiles = try c.value(.profiles, default: [])
         profileData = try c.value(.profileData, default: [])
+        household = try c.decodeIfPresent(SyncHousehold.self, forKey: .household)
         deleted = try c.value(.deleted, default: [:])
         replaced = try c.value(.replaced, default: [:])
         clock = try c.decodeIfPresent(Int64.self, forKey: .clock)
@@ -144,6 +151,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
                 return bucket
             }
         }
+        // No household (no list shared) is left out, as an older version writes it: the digest stays the same.
+        if content.household?.isEmpty == true { content.household = nil }
         content.device = ""
         content.deviceName = nil
         content.clock = nil
@@ -199,8 +208,10 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     /// "Deleted").
     /// `profileLearned`: for each profile other than the main one, by ID, when this device learned the deletions made in
     /// it elsewhere.
+    /// `householdLearned`: when this device learned the deletions made among the shared lists elsewhere.
     public func pruned(now: Int64, days: Int = SyncSnapshot.deletionsKeptDays, sessions: [Int64] = [],
-                       learned: [String: Int64] = [:], profileLearned: [String: [String: Int64]] = [:]) -> SyncSnapshot {
+                       learned: [String: Int64] = [:], profileLearned: [String: [String: Int64]] = [:],
+                       householdLearned: [String: Int64] = [:]) -> SyncSnapshot {
         let recent = sessions.filter { $0 >= now - Int64(Self.peersKeptDays) * Self.dayMilliseconds }
         let oldest = min(now - Int64(days) * Self.dayMilliseconds, recent.min() ?? .max)
         // A deletion learned late (from a device away for months) counts from when this device learned it.
@@ -215,6 +226,12 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             bucket.deleted = bucket.deleted.filter { max($0.value, learnedHere[$0.key] ?? $0.value) >= oldest }
             return bucket
         }
+        // Among the shared lists too.
+        copy.household = household.map { household in
+            var household = household
+            household.deleted = household.deleted.filter { max($0.value, householdLearned[$0.key] ?? $0.value) >= oldest }
+            return household
+        }.flatMap { $0.isEmpty ? nil : $0 }
         return copy
     }
 
@@ -228,6 +245,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             times.append(list.updatedAt)
             if let renamedAt = list.renamedAt { times.append(renamedAt) }
             if let orderedAt = list.orderedAt { times.append(orderedAt) }
+            if let placedAt = list.placedAt { times.append(placedAt) }
             times += list.items.compactMap(\.addedAt)
             times += list.people.map(\.addedAt)
         }
@@ -236,6 +254,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         times += rows.map(\.updatedAt)
         times += profiles.map(\.updatedAt)
         for bucket in profileData { times += bucket.records().times }
+        if let household { times += household.records().times }
         times += deleted.values
         return times
     }
@@ -260,7 +279,9 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         copy.playlists = playlists.filter { past($0.addedAt) && past($0.updatedAt) }
         copy.favorites = favorites.filter { past($0.addedAt) }
         copy.progress = progress.filter { past($0.watchedAt) }
-        copy.lists = lists.filter { past($0.updatedAt) && past($0.renamedAt ?? $0.updatedAt) && past($0.orderedAt ?? $0.updatedAt) }.map { list in
+        copy.lists = lists.filter {
+            past($0.updatedAt) && past($0.renamedAt ?? $0.updatedAt) && past($0.orderedAt ?? $0.updatedAt) && past($0.placedAt ?? $0.updatedAt)
+        }.map { list in
             var list = list
             list.items = list.items.filter { past($0.addedAt ?? list.updatedAt) }
             list.people = list.people.filter { past($0.addedAt) }
@@ -271,6 +292,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         copy.rows = rows.filter { past($0.updatedAt) }
         copy.profiles = profiles.filter { past($0.updatedAt) }
         copy.profileData = profileData.map { SyncProfileData(profile: $0.profile, records: $0.records().withoutRecordsAfter(latest)) }
+        copy.household = household.map { SyncHousehold(records: $0.records().withoutRecordsAfter(latest)) }.flatMap { $0.isEmpty ? nil : $0 }
         copy.deleted = deleted.filter { past($0.value) }
         return copy
     }
@@ -312,6 +334,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             return profile
         })
         copy.profileData = profileData.map { SyncProfileData(profile: $0.profile.lowercased(), records: $0.records().normalized()) }
+        // No shared list is no household: an empty one is never written (an older version writes none).
+        copy.household = household.map { SyncHousehold(records: $0.records().normalized()) }.flatMap { $0.isEmpty ? nil : $0 }
         copy.deleted = Dictionary(deleted.map { (Self.lowercasingID(ofDeleted: $0.key), $0.value) }, uniquingKeysWith: max)
         copy.replaced = Dictionary(replaced.map { ($0.key.lowercased(), $0.value.lowercased()) }, uniquingKeysWith: { _, last in last })
         return copy
@@ -445,11 +469,14 @@ public struct SyncList: Codable, Hashable, Sendable {
     public var orderedAt: Int64?
     /// The order of the items set at `orderedAt`, by `SyncListItem.key`; the order of `items` when absent.
     public var order: [String]?
+    /// When the list was moved into the space it is in (shared with every profile, or taken back into a profile: docs/SYNC.md,
+    /// "Shared lists"); absent for a list never moved.
+    public var placedAt: Int64?
 
     public static let itemPrefix = "listitem:"
 
     public init(id: String, name: String, items: [SyncListItem] = [], people: [SyncPerson] = [], updatedAt: Int64,
-                renamedAt: Int64? = nil, orderedAt: Int64? = nil, order: [String]? = nil) {
+                renamedAt: Int64? = nil, orderedAt: Int64? = nil, order: [String]? = nil, placedAt: Int64? = nil) {
         self.id = id
         self.name = name
         self.items = items
@@ -458,9 +485,10 @@ public struct SyncList: Codable, Hashable, Sendable {
         self.renamedAt = renamedAt
         self.orderedAt = orderedAt
         self.order = order
+        self.placedAt = placedAt
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, items, people, updatedAt, renamedAt, orderedAt, order }
+    enum CodingKeys: String, CodingKey { case id, name, items, people, updatedAt, renamedAt, orderedAt, order, placedAt }
 
     public var nameTime: Int64 { renamedAt ?? updatedAt }
     public var orderTime: Int64 { orderedAt ?? updatedAt }
@@ -479,6 +507,7 @@ public struct SyncList: Codable, Hashable, Sendable {
         renamedAt = try c.decodeIfPresent(Int64.self, forKey: .renamedAt)
         orderedAt = try c.decodeIfPresent(Int64.self, forKey: .orderedAt)
         order = try c.decodeIfPresent([String].self, forKey: .order)
+        placedAt = try c.decodeIfPresent(Int64.self, forKey: .placedAt)
     }
 
     public var key: String { "list:" + id }
@@ -753,5 +782,39 @@ public struct SyncProfileData: Codable, Hashable, Sendable {
     public func records(playlists: [SyncPlaylist] = [], deletedPlaylists: [String: Int64] = [:], replaced: [String: String] = [:]) -> SyncSnapshot {
         SyncSnapshot(device: "", playlists: playlists, favorites: favorites, progress: progress, lists: lists, people: people,
                      rows: rows, deleted: deleted.merging(deletedPlaylists) { _, playlist in playlist }, replaced: replaced)
+    }
+}
+
+/// The lists shared with every profile (docs/SYNC.md, "Shared lists"): a space of their own, apart from any profile's
+/// library, with what was deleted among them (a shared list deleted for every profile, an item taken out of one, a list
+/// taken back into a profile). Merged by the same rules as a profile's lists.
+public struct SyncHousehold: Codable, Hashable, Sendable {
+    public var lists: [SyncList]
+    public var deleted: [String: Int64]
+
+    public init(lists: [SyncList] = [], deleted: [String: Int64] = [:]) {
+        self.lists = lists
+        self.deleted = deleted
+    }
+
+    /// The household of `records` (only their lists and the deletions of lists and their items).
+    public init(records: SyncSnapshot) {
+        self.init(lists: records.lists, deleted: records.deleted.filter { $0.key.hasPrefix("list:") || $0.key.hasPrefix(SyncList.itemPrefix) })
+    }
+
+    enum CodingKeys: String, CodingKey { case lists, deleted }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        lists = try c.value(.lists, default: [])
+        deleted = try c.value(.deleted, default: [:])
+    }
+
+    public var isEmpty: Bool { lists.isEmpty && deleted.isEmpty }
+
+    /// Its records as a snapshot of their own (to merge, normalise, date them with the snapshot's rules).
+    public func records(playlists: [SyncPlaylist] = [], deletedPlaylists: [String: Int64] = [:], replaced: [String: String] = [:]) -> SyncSnapshot {
+        SyncSnapshot(device: "", playlists: playlists, lists: lists, deleted: deleted.merging(deletedPlaylists) { _, playlist in playlist },
+                     replaced: replaced)
     }
 }

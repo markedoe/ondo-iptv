@@ -8,7 +8,8 @@ network).
 
 This document is the specification. The Kotlin implementation is in
 `android/core/src/main/kotlin/com/markedoe/ondo/core/sync/`, the Swift one in
-`Packages/IPTVCore/Sources/IPTVCore/Sync/`. Both read the same example files in `fixtures/sync/`.
+`Packages/IPTVCore/Sources/IPTVCore/Sync/`. Both read the same example files in `fixtures/sync/`, and each merges the
+snapshots the other wrote in `fixtures/sync/interop/` (see its README).
 
 ## Roles
 
@@ -24,7 +25,8 @@ Synced: the playlists (name, kind, address, login and password, guide address), 
 the actors and directors kept in My List, the lists (collections) with the people in them, playback progress (where each movie and episode was left, and what was finished), and the
 keys typed in Settings for outside services (the TMDb token), the order of the rows of the Movies and Series tabs
 with the rows hidden (Settings → Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's
-own My List, favourite channels, people, lists, progress and order of rows (docs/PROFILES.md).
+own My List, favourite channels, people, lists, progress and order of rows (docs/PROFILES.md), and the lists shared with
+every profile.
 
 Stays on each device: the other settings, hidden categories, channel edits, reminders, profile PINs (never sent, salted
 or not: see docs/PROFILES.md), "Always open this profile", downloads, the catalogues themselves (each device downloads
@@ -116,6 +118,7 @@ an iPhone, iPad or Mac sent thus passes it on to the other Android devices.
   "rows": [ … ],
   "profiles": [ … ],
   "profileData": [ … ],
+  "household": { "lists": [ … ], "deleted": { … } },
   "deleted": { "<key>": 1760000000000 },
   "replaced": { "<playlist id>": "<playlist id>" },
   "clock": 1760000000000
@@ -144,14 +147,15 @@ that never played the file judges by the rule by time. Key: `progress:<playlist>
 time: `watchedAt`.
 
 **List** — `{"id", "name", "items": [{"playlist", "kind", "item", "title", "image"?, "addedAt"?}],
-"people": [<person>], "updatedAt", "renamedAt"?, "orderedAt"?}`. Key: `list:<id>`; time: `updatedAt` (set when the
+"people": [<person>], "updatedAt", "renamedAt"?, "orderedAt"?, "order"?, "placedAt"?}`. Key: `list:<id>`; time: `updatedAt` (set when the
 list is created, renamed, put in order, or its items or people change). `id` is lowercased. `people` (the actors and
 directors in the list) may be missing: a device that does not keep people sends none. Each part has its own time
 (rule 7 of the merge): `renamedAt` when the name was set, `orderedAt` when the items were put in order (both
 `updatedAt` when missing), and each item's and person's `addedAt` (an item's is the list's `updatedAt` when missing,
 as an older version sends it). Taking an item or a person out of a list adds
 `listitem:<list id>|<playlist>|<kind>|<item>` or `listitem:<list id>|person:<name>` to `deleted` (list and playlist IDs
-lowercased, the name folded as for a person).
+lowercased, the name folded as for a person). `placedAt` is when the list was last moved into the space it is in (see
+**Shared lists**); a list never moved has none, and it is written only when set.
 
 **Person** (an actor or a director kept in My List, whatever the playlist) — `{"name", "image"?, "addedAt"}`.
 `image` is their photo (a web address). Key: `person:<name>` with only the letters A to Z in lowercase (the same on
@@ -211,6 +215,30 @@ device dates it again, and sends Kids back to every device); and, the first time
 profiles, a profile of its own made apart is one with a received profile of the same name (trimmed, whatever its case
 and accents) and the same Kids switch: the smaller ID is kept on both devices, the other is deleted (dated), and its
 data goes into the one kept.
+
+**Shared lists** (docs/PROFILES.md, "Shared lists") — `household`: `{"lists"?, "deleted"?}`, the lists shared with
+every profile and what was deleted among them (`list:<id>` and `listitem:<id>|…` keys only), merged by the same rules as
+a profile's lists (rules 2 to 7, as a space of its own whose playlists are the merged ones) and by rule 9. Left out when
+there is none: a snapshot without shared lists is written, and digested, as before. A shared list is in no profile's
+data: it is in the household, the same list for every profile.
+
+- **Sharing** a list of a profile (the main one's or another's) moves it, whole and under the same ID, at two times
+  taken one after the other: the profile's space deletes it (`list:<id>` in its `deleted`) at the first, the household
+  has it at the second, as its `updatedAt` and its `placedAt`. The names, items, people and times of its parts do not
+  change, and the deletions of its items (`listitem:<id>|…`) go with it.
+- **Taking a list back** (the switch turned off, by any profile that may edit shared lists) moves it the other way, into
+  the profile that takes it back: the household deletes it, that profile has it later, with `placedAt`. The other
+  profiles lose it.
+- **Deleting** a shared list deletes it for every profile: `list:<id>` in the household's `deleted`.
+- A Kids profile sees the shared lists (without what its rules hide) and changes none of them.
+
+A device that still has the list where it was (not told of the move) drops it: its copy is not later than the deletion.
+One that changed it there meanwhile has its changes merged into the list where it went (rule 9). Rule 9 runs only for a
+list found in two spaces or more, or outside the household while the household deleted it: a list never shared merges
+as before. Shared lists do not travel through an older device: two devices that only meet through one keep each their
+own. Such a device destroys nothing: it ignores `household`, drops the copy of a list a profile shared (its deletion),
+and a copy it changed meanwhile is merged into the shared list by the next device that shares lists. The household's
+deletions learned from another device are kept from when they were learned, as a profile's are (see **Deleted**).
 
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for
 180 days, and longer until every device it had a session with in the last year has had a session with it after the
@@ -277,9 +305,28 @@ nothing.
    whose playlists are the merged ones: a favourite or progress of a deleted playlist goes, a replaced playlist's
    becomes the one kept, and a record deleted in that profile (its `deleted`) goes. The result lists profiles and
    profile data by ID.
+9. **A list is in one space.** The spaces are the household (the shared lists), the main profile (the snapshot's own
+   lists) and each profile kept other than the main one. A list found in two spaces or more (moved on one device while
+   another still had it where it was), or outside the household while the household's `deleted` has `list:<id>`, ends in
+   one:
+   - a space keeps its copies when their latest `updatedAt` is after that space's own `list:<id>` deletion and, outside
+     the household, after the household's: a list deleted for every profile goes from every profile, unless changed
+     after the deletion (as rule 7);
+   - of the spaces that keep it, the one it was last moved into wins: the latest `placedAt` of its copies (0 when none),
+     then the household, the main profile, the other profiles by ID. The list there is every copy of the spaces that
+     keep it, merged by rule 7, without the items whose `listitem:` deletion, in any space, is not earlier than their
+     `addedAt`; its `placedAt` is the latest of them;
+   - every other profile space (not the household) that had a copy gets `list:<id>` deleted at that copy's latest
+     `updatedAt`, if later than its own: a device that does not share lists then drops its copy too;
+   - without any space keeping it, the list goes from every space.
+
+   A change made, before the move, in the space the list left is not carried if that space does not keep its copy (as a
+   list deleted, rule 7). With three devices, the order of the sessions can decide whether an older copy's changes are
+   carried (a device that meets the merged result first gets the deletion of its copy), but every device ends with the
+   same state.
 
 A device keeps the merged snapshot as its own: it adds the playlists it did not have (and downloads them),
-updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists and
+updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists (each profile's and the shared ones) and
 progress with the merged ones, saves the keys of the services it uses (removing those deleted), and keeps the
 merged order of the rows. It keeps
 whatever it does not sync. The progress of a movie or episode playing on the device is not replaced while it
