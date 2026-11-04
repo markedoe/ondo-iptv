@@ -6,12 +6,15 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.CreditRecord
+import com.markedoe.ondo.core.library.EpisodeText
 import com.markedoe.ondo.core.library.GenreText
 import com.markedoe.ondo.core.library.IndexedPerson
+import com.markedoe.ondo.core.library.MetadataFreshness
 import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.MetadataStore
 import com.markedoe.ondo.core.library.RelatedTitle
 import com.markedoe.ondo.core.library.TitleMetadata
+import com.markedoe.ondo.core.library.TmdbEpisode
 
 /**
  * The [MetadataStore] of the app: a SQLite file (`metadata.sqlite`, as on Apple devices). It is a
@@ -31,11 +34,16 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
             db.execSQL("CREATE INDEX credit_person ON credit (person_key)")
             db.execSQL("CREATE TABLE dead_image (url TEXT PRIMARY KEY, at INTEGER NOT NULL)")
             createPersonWorks(db)
+            createSeasons(db)
         }
 
         /** A person's movies and series on TMDb, one line per title ([RelatedTitle.encode]). */
         private fun createPersonWorks(db: SQLiteDatabase) =
             db.execSQL("CREATE TABLE IF NOT EXISTS person_works (person_key TEXT PRIMARY KEY, fetched_at INTEGER NOT NULL, titles TEXT NOT NULL)")
+
+        /** TMDb's episodes of a season, one line per episode ([EpisodeText.encode]). */
+        private fun createSeasons(db: SQLiteDatabase) =
+            db.execSQL("CREATE TABLE IF NOT EXISTS season (key TEXT PRIMARY KEY, fetched_at INTEGER NOT NULL, episodes TEXT NOT NULL)")
 
         /** Entries older than [KEPT_FOR_MS] leave the file: a title nobody opens for months is not kept for ever. */
         override fun onOpen(db: SQLiteDatabase) {
@@ -46,16 +54,18 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
                 db.delete("title", "fetched_at < ?", arrayOf(before))
                 db.delete("dead_image", "at < ?", arrayOf(before))
                 db.delete("person_works", "fetched_at < ?", arrayOf(before))
+                db.delete("season", "fetched_at < ?", arrayOf(before))
             }
         }
 
         /**
          * Version 2 keeps genres and recommendations (added to the titles kept, asked again as they show); version 3,
          * the people's movies and series; version 4, the titles' logos (a title kept before has none until it is asked
-         * again).
+         * again); version 5, the seasons' episodes, and a series' cast of every season (its kept credits, its latest
+         * season's only, are asked again as it shows).
          */
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            if (oldVersion !in 1..3) return restart(db)
+            if (oldVersion !in 1..4) return restart(db)
             try {
                 if (oldVersion < 2) {
                     db.execSQL("ALTER TABLE title ADD COLUMN genres TEXT")
@@ -63,6 +73,12 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
                 }
                 if (oldVersion < 4) db.execSQL("ALTER TABLE title ADD COLUMN logo TEXT")
                 createPersonWorks(db)
+                createSeasons(db)
+                if (oldVersion < 5) {
+                    // Kept (the page shows them at once) but old: asked again as they show.
+                    val stale = System.currentTimeMillis() - MetadataFreshness.FOUND_MS - 1
+                    db.execSQL("UPDATE title SET fetched_at = ? WHERE kind = 'series' AND found = 1 AND fetched_at > ?", arrayOf<Any>(stale, stale))
+                }
             } catch (_: android.database.SQLException) {
                 restart(db)
             }
@@ -72,7 +88,7 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
 
         /** A cache: another layout starts empty. */
         private fun restart(db: SQLiteDatabase) {
-            for (table in listOf("title", "credit", "dead_image", "person_works")) db.execSQL("DROP TABLE IF EXISTS $table")
+            for (table in listOf("title", "credit", "dead_image", "person_works", "season")) db.execSQL("DROP TABLE IF EXISTS $table")
             onCreate(db)
         }
     }
@@ -182,6 +198,20 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
         }, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
+    override fun season(key: String): Pair<Long, List<TmdbEpisode>>? = read(null) { db ->
+        db.rawQuery("SELECT fetched_at, episodes FROM season WHERE key = ?", arrayOf(key)).use { c ->
+            if (c.moveToFirst()) c.getLong(0) to EpisodeText.decode(c.getString(1)) else null
+        }
+    }
+
+    override fun saveSeason(key: String, fetchedAt: Long, episodes: List<TmdbEpisode>) = write { db ->
+        db.insertWithOnConflict("season", null, ContentValues().apply {
+            put("key", key)
+            put("fetched_at", fetchedAt)
+            put("episodes", EpisodeText.encode(episodes))
+        }, SQLiteDatabase.CONFLICT_REPLACE)
+    }
+
     override fun save(titles: List<TitleMetadata>) = write { db ->
         for (title in titles) {
             val values = ContentValues().apply {
@@ -270,14 +300,14 @@ class SqliteMetadataStore(context: Context, name: String? = FILE_NAME) : Metadat
     }
 
     override fun removeAll() = write { db ->
-        for (table in listOf("title", "credit", "dead_image")) db.delete(table, null, null)
+        for (table in listOf("title", "credit", "dead_image", "season")) db.delete(table, null, null)
     }
 
     fun close() = helper.close()
 
     companion object {
         const val FILE_NAME = "metadata.sqlite"
-        private const val VERSION = 4
+        private const val VERSION = 5
         private const val COLUMNS = "key, kind, tmdb_id, backdrop, trailer, vote_average, vote_count, fetched_at, found, genres, related, logo"
         private const val KEPT_FOR_MS = 180L * 24 * 60 * 60 * 1000
 

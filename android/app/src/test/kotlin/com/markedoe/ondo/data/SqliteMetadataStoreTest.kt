@@ -7,8 +7,10 @@ import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.CreditRecord
 import com.markedoe.ondo.core.library.IndexedPerson
 import com.markedoe.ondo.core.library.MetadataFreshness
+import com.markedoe.ondo.core.library.MetadataKey
 import com.markedoe.ondo.core.library.RelatedTitle
 import com.markedoe.ondo.core.library.TitleMetadata
+import com.markedoe.ondo.core.library.TmdbEpisode
 import com.markedoe.ondo.core.library.TmdbGenre
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -70,6 +72,45 @@ class SqliteMetadataStoreTest {
         }
         assertEquals(askedAt to works, SqliteMetadataStore(context, "works.sqlite").personWorks("ana lima"))
         assertEquals(null, SqliteMetadataStore(context, "works.sqlite").personWorks("nobody"))
+    }
+
+    /** TMDb's episodes of a season (stills, names) stay on the device: one request per season, not per page. */
+    @Test
+    fun aSeasonsEpisodesAreKept() {
+        val episodes = listOf(TmdbEpisode(1, "Falcon", "/s1.jpg", "Line\tone\nline two"), TmdbEpisode(2, null, null, null))
+        val askedAt = System.currentTimeMillis()
+        SqliteMetadataStore(context, "seasons.sqlite").apply {
+            saveSeason(MetadataKey.season(73375, 3), askedAt, episodes)
+            close()
+        }
+        val kept = SqliteMetadataStore(context, "seasons.sqlite").season("tv:73375:3")
+        assertEquals(askedAt to listOf(TmdbEpisode(1, "Falcon", "/s1.jpg", "Line one line two"), TmdbEpisode(2, null, null, null)), kept)
+        assertEquals(null, SqliteMetadataStore(context, "seasons.sqlite").season("tv:73375:4"))
+    }
+
+    /**
+     * A file of the fourth layout keeps its titles; a series' credits there are its latest season's only, so the series
+     * are asked again as they show (every season's cast), its movies not.
+     */
+    @Test
+    fun aFileOfTheFourthLayoutAsksItsSeriesAgain() {
+        val now = System.currentTimeMillis()
+        SqliteMetadataStore(context, "fourth.sqlite").apply {
+            save(listOf(TitleMetadata("series:73375", "series", 73375, fetchedAt = now, genres = emptyList()), TitleMetadata("movie:9", "movie", 9, fetchedAt = now, genres = emptyList())))
+            close()
+        }
+        val file = context.getDatabasePath("fourth.sqlite")
+        android.database.sqlite.SQLiteDatabase.openDatabase(file.path, null, android.database.sqlite.SQLiteDatabase.OPEN_READWRITE).use { db ->
+            db.execSQL("DROP TABLE season")
+            db.version = 4
+        }
+        val store = SqliteMetadataStore(context, "fourth.sqlite")
+        val titles = store.titles(listOf("series:73375", "movie:9"))
+        assertTrue("the series is kept", titles.containsKey("series:73375"))
+        assertTrue("its credits are asked again", !MetadataFreshness.isFresh(titles.getValue("series:73375"), System.currentTimeMillis()))
+        assertTrue("a movie's are not", MetadataFreshness.isFresh(titles.getValue("movie:9"), System.currentTimeMillis()))
+        store.saveSeason("tv:73375:1", now, listOf(TmdbEpisode(1, "Pilot")))
+        assertEquals(listOf(TmdbEpisode(1, "Pilot")), store.season("tv:73375:1")?.second)
     }
 
     /** A file of the first layout keeps its titles; they lack genres, so they are asked again as they show. */

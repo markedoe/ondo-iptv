@@ -9,10 +9,12 @@ import SQLite3
 /// Tables: `title` (key, kind, tmdb_id, backdrop_url, trailer_key, vote_average, vote_count, fetched_at, status),
 /// `credit` (title_key, person_key, display_name, role, position, photo_url), `person` (person_key, display_name,
 /// tmdb_id, photo_url, fetched_at), `person_title` (person_key, title_key: the local people index) and `dead_image`
-/// (url, failed_at). Dates are seconds since 1970.
+/// (url, failed_at), `season` (key, fetched_at, episodes: TMDb's episodes of a season, `SeasonEpisodes.encode`). Dates are
+/// seconds since 1970.
 public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
-    /// Bumped when the tables change.
-    static let schemaVersion: Int32 = 1
+    /// Bumped when the tables change, or when what was kept must be asked again: 2 keeps the seasons' episodes, and a
+    /// series' cast of every season (its credits kept before were its latest season's only).
+    static let schemaVersion: Int32 = 2
 
     public let fileURL: URL
     /// One connection, used by one call at a time.
@@ -64,7 +66,7 @@ public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
         try run("PRAGMA user_version") { version = sqlite3_column_int($0, 0) }
         if version != Self.schemaVersion {
             // Another version's tables (or none yet): the cache starts again.
-            for table in ["title", "credit", "person", "person_title", "dead_image"] {
+            for table in Self.tables {
                 try run("DROP TABLE IF EXISTS \(table)")
             }
             try createTables()
@@ -91,7 +93,31 @@ public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
             """)
         try run("CREATE INDEX person_title_by_title ON person_title (title_key)")
         try run("CREATE TABLE dead_image (url TEXT PRIMARY KEY NOT NULL, failed_at REAL NOT NULL)")
+        try run("CREATE TABLE season (key TEXT PRIMARY KEY NOT NULL, fetched_at REAL NOT NULL, episodes TEXT NOT NULL)")
         try run("PRAGMA user_version = \(Self.schemaVersion)")
+    }
+
+    private static let tables = ["title", "credit", "person", "person_title", "dead_image", "season"]
+
+    public func season(_ key: String) -> SeasonEpisodes? {
+        var found: SeasonEpisodes?
+        locked {
+            try run("SELECT fetched_at, episodes FROM season WHERE key = ?", [.text(key)]) { row in
+                found = SeasonEpisodes(
+                    key: key,
+                    episodes: SeasonEpisodes.decode(Self.text(row, 1)),
+                    fetchedAt: Date(timeIntervalSince1970: Self.double(row, 0) ?? 0)
+                )
+            }
+        }
+        return found
+    }
+
+    public func saveSeason(_ season: SeasonEpisodes) {
+        locked {
+            try run("INSERT OR REPLACE INTO season (key, fetched_at, episodes) VALUES (?, ?, ?)",
+                    [.text(season.key), .real(season.fetchedAt.timeIntervalSince1970), .text(SeasonEpisodes.encode(season.episodes))])
+        }
     }
 
     // MARK: - MetadataStoring
@@ -252,7 +278,7 @@ public final class SQLiteMetadataStore: MetadataStoring, @unchecked Sendable {
     public func removeAll() {
         locked {
             try transaction {
-                for table in ["title", "credit", "person", "person_title", "dead_image"] {
+                for table in Self.tables {
                     try run("DELETE FROM \(table)")
                 }
             }

@@ -58,6 +58,11 @@ public struct PlaceholderNames: Sendable {
     public func renaming(_ series: Series) -> Series { renamed(series) ?? series }
     public func renaming(_ episode: Episode) -> Episode { renamed(episode) ?? episode }
 
+    /// An episode's `title` in these words when it is IPTVCore's "Episode <number>", else as it is.
+    public func episodeTitle(_ title: String, number: Int) -> String {
+        numbered(title, word: Self.episodeWord, number: number, in: episode) ?? title
+    }
+
     public func renaming(_ details: SeriesDetails) -> SeriesDetails {
         var result = details
         for index in result.seasons.indices {

@@ -150,27 +150,33 @@ internal fun TvSortChips(
     }
 }
 
-/** A chip of the label line: grey, white once it has the remote's focus. */
+/**
+ * A chip of the label line: grey, white when it is on (Hide watched); the remote's focus puts a white ring around it
+ * and makes it grow ([tvFocusRing]), on or not, as the other chips.
+ */
 @Composable
 private fun SortChip(text: String, icon: ImageVector?, selected: Boolean, reachable: () -> Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     var focused by remember { mutableStateOf(false) }
+    val container = if (selected) colors.onBackground else OndoColors.SurfaceHigh
+    val content = if (selected) colors.background else colors.onBackground.copy(alpha = 0.86f)
     Surface(
         onClick = onClick,
         modifier = modifier
             .onFocusChanged { focused = it.isFocused }
             .focusProperties { canFocus = focused || reachable() }
-            .semantics { this.selected = selected },
+            .semantics { this.selected = selected }
+            .tvFocusRing(focused, chipScale(focused)),
         shape = ClickableSurfaceDefaults.shape(CircleShape),
         colors = ClickableSurfaceDefaults.colors(
-            containerColor = OndoColors.SurfaceHigh,
-            contentColor = colors.onBackground.copy(alpha = 0.86f),
-            focusedContainerColor = colors.onBackground,
-            focusedContentColor = colors.background,
-            pressedContainerColor = colors.onBackground,
-            pressedContentColor = colors.background,
+            containerColor = container,
+            contentColor = content,
+            focusedContainerColor = container,
+            focusedContentColor = content,
+            pressedContainerColor = container,
+            pressedContentColor = content,
         ),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
     ) {
         Row(Modifier.padding(start = if (icon != null) 8.dp else 12.dp, end = 12.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.padding(end = 6.dp).size(16.dp))

@@ -105,7 +105,9 @@ interface changes.
 - **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a Trending
   row on Home and in the carousel; for the titles of Home and the pages you open, TMDb's background image when the
   provider's is missing or broken, TMDb's trailer (in the app's language first, then English) when the provider
-  gives none, and the number of votes next to the rating; the cast's photos in a row on a title's page; the people TMDb knows in Search, with their photo, and all
+  gives none, and the number of votes next to the rating; the cast's photos in a row on a title's page (a series' cast
+  of every season, its creators); for the season of a series you show, TMDb's picture and name of the episodes the
+  provider gives without them; the people TMDb knows in Search, with their photo, and all
   the titles of the playlist on an actor's or a director's page, under their photo. What TMDb answers is kept on the
   device (30 days, 7 for a title TMDb does not know): pages show it at once, offline too, and only what is missing or
   old is asked again, in the background, a few requests a second. A local index of actors and directors, filled
@@ -181,7 +183,8 @@ interface changes.
 - **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a
   Trending row on Home and in the carousel, TMDb's background image when the provider's is missing or broken, TMDb's
   trailer (in the app's language first) when the provider gives none, the number of votes next to the rating, photos
-  of the cast on a title's page, the people TMDb knows in Search, and all the titles of the playlist on an actor's
+  of the cast on a title's page (a series' cast of every season, its creators), TMDb's picture and name of the
+  episodes a provider gives without them, the people TMDb knows in Search, and all the titles of the playlist on an actor's
   or a director's page. What TMDb answers is kept on the device (30 days, 7 for a title TMDb does not know): pages
   show it at once, offline too, and the people of those titles are found in Search and on their page without
   network. A provider image that leads nowhere is not tried again for 7 days.
@@ -291,6 +294,8 @@ cd Packages/IPTVCore && swift test
 
 ### What CI checks beyond unit tests
 
+Which workflow runs when, what decides the jobs a change runs, and the CI's costs: [docs/CI.md](docs/CI.md).
+
 Some defects only show up in real conditions, where tests on simulated data cannot see them:
 
 - **Adding a playlist end to end** (`AppTests/PlaylistOverHTTPTests.swift`, UI test
@@ -306,8 +311,9 @@ Some defects only show up in real conditions, where tests on simulated data cann
   apps, repository neutrality (no other IPTV app named, IPTV never called free, fictional channels in tests),
   and the App Store edition: no download code or dormant feature, no private API, never "beta", a listing and
   review notes App Review accepts (also checked on every change and before each release).
-- **Release build, App Store edition** (iOS and macOS): the `#if DEBUG` code and the TestFlight edition's
-  downloads (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) are left out, as in the build that is submitted.
+- **Release builds of the App Store edition** (iOS and macOS, in the job *Build iOS + macOS (Debug, App Store
+  edition)*, beside the macOS debug build and its launch): the `#if DEBUG` code and the TestFlight edition's downloads
+  (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) are left out, as in the build that is submitted.
 - **Playback lab** (`tools/playback-lab`, when the VLC engine or the playback code changes): libVLC, the library
   of the VLC engine, plays generated streams from a provider that misbehaves on purpose; freezes, film start
   and seek times, the resume position and the app's freeze verdict are checked against limits.

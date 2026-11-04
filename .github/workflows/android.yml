@@ -4,12 +4,49 @@ name: Android
 # reference screenshots, a release bundle and the Google Play listing's length limits. Run by hand on a working
 # branch with record_screenshots, it records the reference screenshots anew and commits them to that branch
 # (docs/ANDROID.md, "Screenshots").
+#
+# The path filter is the ordered list PATHS["android"] of .github/scripts/ci_scope.py, copied byte for byte (its tests
+# check it): Apple-only, documentation-only (but the shared specs docs/SYNC* and docs/PROFILES*), website-only and App
+# Store listing-only changes skip it; anything else runs it: android/, the fixtures both cores read (fixtures/), the
+# scripts and workflows, the Google Play listing. A run by hand on a working branch applies the same filter to the
+# branch's changes since main (job "What to run"), and a push to main whose commit or tree already passed with every
+# job run skips the Kotlin and app jobs (docs/CI.md).
 on:
   push:
     branches: [main]
-    paths: [android/**, fixtures/sync/**, fastlane/metadata-android/**, .github/workflows/android.yml]
+    paths:
+      - '**'
+      - '.*'
+      - '.*/**'
+      - '!App/**'
+      - '!AppTests/**'
+      - '!UITests/**'
+      - '!MacUITests/**'
+      - '!Packages/**'
+      - '!project.yml'
+      - '!fastlane/metadata/**'
+      - '!site/**'
+      - '!docs/**'
+      - 'docs/SYNC*'
+      - 'docs/PROFILES*'
+      - '!*.md'
   pull_request:
-    paths: [android/**, fixtures/sync/**, fastlane/metadata-android/**, .github/workflows/android.yml]
+    paths:
+      - '**'
+      - '.*'
+      - '.*/**'
+      - '!App/**'
+      - '!AppTests/**'
+      - '!UITests/**'
+      - '!MacUITests/**'
+      - '!Packages/**'
+      - '!project.yml'
+      - '!fastlane/metadata/**'
+      - '!site/**'
+      - '!docs/**'
+      - 'docs/SYNC*'
+      - 'docs/PROFILES*'
+      - '!*.md'
   workflow_dispatch:
     inputs:
       record_screenshots:
@@ -25,8 +62,36 @@ permissions:
   contents: read
 
 jobs:
+  scope:
+    name: What to run
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # actions: read: the earlier runs of this workflow (a push to main already tested on its branch).
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Every branch: a run by hand compares its branch with its merge-base on main. Commits and trees only: the
+          # names of the changed files need no file contents.
+          fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
+      - name: Heavy jobs needed
+        id: scope
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECORD: ${{ github.event_name == 'workflow_dispatch' && inputs.record_screenshots }}
+        # When unsure (an error, no main, an unknown path), everything runs. A failure here fails the run.
+        run: python3 -I .github/scripts/ci_scope.py scope android
+
   core:
     name: Core (Kotlin) tests
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
@@ -59,6 +124,8 @@ jobs:
 
   app:
     name: App — lint, tests, screenshots, bundle
+    needs: scope
+    if: needs.scope.outputs.run == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
