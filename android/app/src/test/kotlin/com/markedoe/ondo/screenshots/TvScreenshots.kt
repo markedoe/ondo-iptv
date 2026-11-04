@@ -366,7 +366,11 @@ class TvScreenshots {
      */
     @Test
     fun theNewMoviesSeeAllAndItsGrid() {
+        // The demo's films are older than last year: half of them get this year's or last year's date to be new.
+        val year = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault()).year
+        val state = state.copy(content = state.content.copy(movies = state.content.movies.mapIndexed { index, movie -> if (index % 2 == 0) movie.copy(year = year - index % 4 / 2) else movie }))
         val vod = UiMappers.vod(state, series = false, title = "Movies", now = now)
+        assertTrue("a New movies row", RowOrder.NEW_RELEASES in vod.shownRows)
         val route = Routes.Grid(series = false, source = GridSource.NEW.name)
         show(TopLevel.MOVIES, tabPage = false) {
             val nav = rememberNavController()
@@ -388,7 +392,7 @@ class TvScreenshots {
         }
         var presses = 0
         while (!focusedIn("shelfNew")) {
-            check(presses++ < 12) { "Down never reached the New movies row" }
+            check(presses++ < 20) { "Down never reached the New movies row" }
             press(Key.DirectionDown)
         }
         presses = 0
