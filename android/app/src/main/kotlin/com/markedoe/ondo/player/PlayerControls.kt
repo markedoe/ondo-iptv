@@ -47,6 +47,8 @@ class PlayerControls(
     private val scope: CoroutineScope,
     private val clock: () -> Long = SystemClock::uptimeMillis,
     private val onShownChange: (Boolean) -> Unit = {},
+    /** The time of day ([clockMs]); a fixed one in screenshots, where the clock is drawn. */
+    private val wallClock: () -> Long = System::currentTimeMillis,
 ) {
     /** The buttons are on screen and the remote moves through them. */
     var shown by mutableStateOf(false)
@@ -100,7 +102,7 @@ class PlayerControls(
         private set
 
     /** The time of day, for the clock and a live programme's progress. */
-    var clockMs by mutableLongStateOf(System.currentTimeMillis())
+    var clockMs by mutableLongStateOf(wallClock())
         private set
 
     /** Whether the controls may go away by themselves (the video plays); set by the player screen. */
@@ -126,7 +128,7 @@ class PlayerControls(
         speed = player.playbackParameters.speed
         tracks = player.currentTracks
         trackParameters = player.trackSelectionParameters
-        clockMs = System.currentTimeMillis()
+        clockMs = wallClock()
     }
 
     /** The controls, with the focus on Play/Pause (or on [panel]); a panel already open stays (a media key). */
