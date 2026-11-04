@@ -1,7 +1,9 @@
-• La recherche trouve un mot n'importe où dans un titre ; titres exacts d'abord
-• Actualisation automatique de la playlist (Réglages → Playlists), chaque jour par défaut
-• TV : le haut montre l'affiche choisie : note TMDb, résumé ; OK maintenu l'ajoute à Ma liste ou l'en retire
-• TV : la barre du haut reste sur les titres d'une catégorie ; Retour revient d'une page
-• Ma liste : les personnes gardées ont leur photo
-• Tri des pages de genre, d'année et de prix
+• Profils : « Qui regarde ? », code PIN et profils Enfant
+• Réglages → Ordre des rangées ; Tous les films et Toutes les séries
+• Une carte par film ; ses versions (4K, DV, VOSTFR) sur sa page
+• Titres épurés, avec le logo du film sur TV
+• Marqué vu au générique de fin ou à 10 minutes de la fin
+• Carrousel d'accueil classé par les votes TMDb
+• Langues masquées appliquées partout
+• Synchronisation entre appareils plus fiable
 • Nombreuses corrections

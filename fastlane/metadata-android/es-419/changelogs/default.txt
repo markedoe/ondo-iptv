@@ -1,7 +1,9 @@
-• La búsqueda encuentra una palabra en cualquier parte de un título; primero los títulos exactos
-• Actualización automática de la playlist (Ajustes → Playlists), cada día por defecto
-• TV: arriba se ve el póster elegido: TMDb, sinopsis; OK mantenido lo añade a Mi lista o lo quita
-• TV: la barra superior se queda sobre los títulos de una categoría; Atrás vuelve una página
-• Mi lista: las personas guardadas muestran su foto
-• Orden en las páginas de género, año y premio
+• Perfiles: "¿Quién está viendo?", PIN y perfiles Infantil
+• Ajustes → Orden de las filas; Todas las películas y Todas las series
+• Una tarjeta por película; sus versiones (4K, DV, VOSTFR) en su página
+• Títulos limpios, con el logo de la película en TV
+• Marcada como vista en los créditos finales o a 10 minutos del final
+• Carrusel de inicio según los votos de TMDb
+• Los idiomas ocultos se aplican en todas partes
+• Sincronización entre dispositivos más confiable
 • Muchas correcciones

@@ -6,7 +6,8 @@
 #   Admin role, which cloud-managed signing needs; the .p8 file content as is, or base64 encoded), and for the
 #   beta lanes DEVELOPMENT_TEAM (Apple team ID).
 #   android lanes: PLAY_SERVICE_ACCOUNT_JSON (Google Play service account key); deploy also reads TRACK
-#   (default internal) and RELEASE_STATUS (default completed, internal track only).
+#   (default internal) and RELEASE_STATUS (default completed, internal track only); promote reads VERSION_CODE,
+#   TRACK and RELEASE_STATUS (default completed).
 # Apple signing is automatic: Xcode uses the API key to create/download cloud-managed certificates and profiles.
 #
 # Paths: Ruby code and `sh` run in fastlane/, actions (deliver, gym…) from the repository root.
@@ -498,6 +499,8 @@ platform :android do
       # A tag's release must reach review, or the run fails saying why (fastlane would otherwise commit it unsent).
       rescue_changes_not_sent_for_review: ENV.fetch("TRACK", "internal") == "internal"
     )
+    # Release Android's next step (closed testing) promotes only a build that Google Play took.
+    File.write(ENV["GITHUB_OUTPUT"], "delivered=true\n", mode: "a") if ENV["GITHUB_OUTPUT"]
   rescue FastlaneCore::Interface::FastlaneError => e
     raise unless keep_review && e.message.match?(/review/i)
     # The bundle stays in the discarded edit; the next push's delivery sends one.
@@ -505,20 +508,26 @@ platform :android do
     puts "::warning::Google Play has changes in review: this internal build was not sent (#{e.message.lines.first&.strip})"
   end
 
-  desc "Promote a version of internal testing to a test track (VERSION_CODE, TRACK), as a draft: no new build"
+  desc "Release a version of internal testing on a test track (VERSION_CODE, TRACK, RELEASE_STATUS) with its release notes: no new build"
   lane :promote do
+    if ENV["KEEP_PLAY_REVIEW"] == "true"
+      require "supply"
+      Supply::Client.prepend(KeepPlayReview)
+    end
     upload_to_play_store(
       package_name: ANDROID_PACKAGE,
       json_key_data: ENV.fetch("PLAY_SERVICE_ACCOUNT_JSON"),
       track: "internal",
       version_code: Integer(ENV.fetch("VERSION_CODE")),
       track_promote_to: ENV.fetch("TRACK"),
-      # Reviewed and rolled out in the Play Console, like any release outside internal testing.
-      track_promote_release_status: "draft",
+      # Completed sends the release for review at once (managed publishing off); draft leaves it to the Play Console.
+      track_promote_release_status: ENV.fetch("RELEASE_STATUS", "completed"),
       skip_upload_aab: true,
       skip_upload_apk: true,
+      # The release notes of metadata-android/<language>/changelogs/default.txt; the listing stays as it is.
+      metadata_path: File.expand_path("metadata-android", __dir__),
       skip_upload_metadata: true,
-      skip_upload_changelogs: true,
+      skip_upload_changelogs: false,
       skip_upload_images: true,
       skip_upload_screenshots: true
     )

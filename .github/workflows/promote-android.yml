@@ -1,8 +1,9 @@
 name: Promote Android
 
-# Moves a version already in internal testing (the bundle testers checked) to closed or open testing, as a draft
-# to review and roll out in the Play Console: no new build, same version code. A vX.Y.Z tag sends a new build to
-# closed testing by itself (Release Android).
+# Releases a version already in internal testing (the bundle testers checked) on closed or open testing, with the
+# release notes of fastlane/metadata-android: no new build, same version code. Completed (the default) sends it for
+# review at once; draft leaves it to review and roll out in the Play Console. A push to main does this for closed
+# testing by itself, and a vX.Y.Z tag sends a new build there (Release Android).
 on:
   workflow_dispatch:
     inputs:
@@ -15,6 +16,11 @@ on:
         type: choice
         default: alpha
         options: [alpha, beta]
+      release_status:
+        description: "completed: sent for review at once (managed publishing off); draft: reviewed and rolled out in the Play Console"
+        type: choice
+        default: completed
+        options: [completed, draft]
 
 # Never during an upload: both would edit the same Google Play app.
 concurrency:
@@ -50,4 +56,5 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           VERSION_CODE: ${{ github.event.inputs.version_code }}
           TRACK: ${{ github.event.inputs.track }}
+          RELEASE_STATUS: ${{ github.event.inputs.release_status }}
         run: bundle exec fastlane android promote

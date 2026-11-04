@@ -1,9 +1,9 @@
 name: Deliver
 
 # A push to main, once green, goes to the testers by itself: iOS and macOS to TestFlight (TestFlight edition) when CI
-# passed and the Apple app changed, Android to Google Play internal testing (the build alone, not the listing) when
-# the Android workflow passed and android/ changed. Nothing is submitted for review here: a version tag does that
-# (release.yml, release-android.yml; CLAUDE.md, App Store).
+# passed and the Apple app changed, Android to Google Play internal testing (the build alone, not the listing) and then
+# closed testing, which Google reviews, when the Android workflow passed and android/ changed (the owner's standing go,
+# CLAUDE.md). Nothing is submitted for App Review here: a version tag does that (release.yml).
 on:
   workflow_run:
     workflows: [CI, Android]
@@ -87,5 +87,5 @@ jobs:
             echo "TestFlight: iOS and macOS builds of $SHA started (Release, target builds)."
           else
             gh workflow run release-android.yml --repo "$REPO" --ref main -f track=internal -f status=completed -f listing=skip
-            echo "Google Play internal testing: build of $SHA started (Release Android)."
+            echo "Google Play internal testing, then closed testing: build of $SHA started (Release Android)."
           fi

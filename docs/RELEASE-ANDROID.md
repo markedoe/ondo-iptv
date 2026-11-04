@@ -83,8 +83,9 @@ in the app's seven languages: English, French, Spanish, Portuguese, Chinese, Ara
 `fastlane/metadata-android/`; the screenshots are produced by the
 Roborazzi tests on every release. The release notes, `fastlane/metadata-android/<language>/changelogs/default.txt`
 (500 characters at most, checked by the *Android* workflow and `check_app_store.py`), are sent with every release
-that carries the listing (a tag): update every language before tagging. The internal builds of a push send the
-build alone, without notes: a language the listing does not have yet would make Google Play refuse the release. The rest is declared once in the console, in the *Set up your app*
+that carries the listing (a tag) and with the closed testing release that follows each internal build of a push:
+keep every language up to date. The internal build itself goes alone, without notes. A language the listing does not
+have yet would make Google Play refuse the release: add it to the listing (a tag) before its release notes. The rest is declared once in the console, in the *Set up your app*
 section of the dashboard:
 
 ### D1. Privacy policy
@@ -163,7 +164,13 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
    - **a push to `main`**: once the *Android* workflow is green, *Deliver* sends the build alone (not the
      listing) to **internal testing**, rolled out at once, when `android/` changed (tests left out). While Google is reviewing
      something (a closed test, the listing, the Android TV opt-in), it sends nothing rather than restart that
-     review (by default a Google Play commit cancels the changes in review and sends them again);
+     review (by default a Google Play commit cancels the changes in review and sends them again). Once Google Play
+     took that internal build, the same job releases the same version code on **closed testing** (`alpha`), status
+     `completed` with the release notes, so Google reviews it: every internal build also goes to closed testing (the
+     *closed_testing* input, `yes` by default, turns this off for a run by hand). If Google Play refuses it (a review
+     in progress, a language the listing lacks), the *Closed testing* step turns red with an error saying why, the
+     internal build stays delivered and the run counts as green: run *Promote Android* with that version code once
+     Google Play allows it;
    - **a version tag** (`git tag v1.2.0 && git push origin v1.2.0`, the same tag as the App Store, equal to
      `versionName` in `android/app/build.gradle.kts` and `MARKETING_VERSION` in `project.yml`, or the run stops):
      the build **with the listing** goes to **closed testing**, status `completed`, so Google Play sends it for
@@ -184,9 +191,10 @@ own playlists). Then: *Dashboard → Apply for production* and answer the questi
 
 A version tag publishes to this track by itself (above). By hand: *Run workflow* with the `alpha` track (`alpha`
 = closed testing, `beta` = open testing); status `completed` (the default) sends it for review at once, `draft`
-leaves it to review and roll out in the Play Console. To send testers the very bundle already checked in internal
-testing, without a new build, run *Promote Android* with its version code and the track: it lands there as a
-draft.
+leaves it to review and roll out in the Play Console. A push to `main` sends each internal build there too (E1). To
+send testers the very bundle already checked in internal testing, without a new build, run *Promote Android* with
+its version code and the track: it lands there with the release notes, status `completed` (sent for review at once)
+by default, or `draft` (*release_status*) to review and roll out in the Play Console.
 
 ### E3. Production
 
@@ -243,6 +251,6 @@ and the description names Android TV, as Google asks.
 |---|---|---|
 | *Android* | pushes to `main` and pull requests touching `android/`, `fastlane/metadata-android/` or the workflow; manual | Kotlin core tests, unit and Compose tests (Robolectric), Roborazzi screenshots compared with the committed references (`verifyRoborazziDebug`; the differences in the job summary and the **android-screenshot-diffs** artifact; recorded instead while none is committed), published to the `android-screenshots` branch after a push to `main`; run by hand on a working branch with *record_screenshots*, it records the references and commits them to that branch (never `main` or a tag, see [ANDROID.md](ANDROID.md#screenshots-and-regressions)), lint (`lintRelease`), debug APK and release bundle (**android-builds** artifact), Google Play listing lengths (title 30, short description 80, full description 4000, release notes 500 characters) |
 | *TV release check* (`tv-release-check.yml`) | manual | the release APK (shrunk by R8, signed with the debug key) on an Android TV emulator, driven with the remote's keys (`.github/scripts/tv_drive.py`): first launch, an Xtream playlist added from a made-up panel (small, large or huge catalogue; a wrong password first if asked), every tab, then the paths chosen, each from a fresh start, on streams made with ffmpeg (rows: the remote along the Movies tab's rows of posters, filmed; settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, bitrate: a movie at a 4K film's bitrate beside the catalogue, crash). A crash, an ANR or Android ending the app fails the run, and so do a path the remote cannot finish and Back from a page of Settings that does not land on the row that opened it. It asks for a TV box's memory limit (`heap-size`), applied only when the emulator lets adb run as root, which the Android TV image usually does not: the limit in force is printed (`.github/scripts/tv_heap_limit.sh`). Screenshots, logcat, exit reasons, memory use and R8's mapping are kept as an artifact |
-| *Release Android* | `v*` tag (closed testing, listing, sent for review), *Deliver* after a green push (internal testing, build alone) or manual | refuses `production` outside a `v*` tag, checks that the tag equals the apps' version, checks that the five secrets are set and that the demo playlist answers, tests, screenshots copied into the store listing, bundle signed with the upload key (*Beta* badge except for `production`), **ondo-release-bundle** artifact, upload to Google Play with R8's mapping file (crashes in Android vitals show the app's own names and lines), the store listing and release notes (`listing: skip`: the build and its release notes alone, the listing under review untouched) |
-| *Promote Android* | manual | moves a version code of internal testing to closed (`alpha`) or open (`beta`) testing as a draft, without a new build; a `vX.Y.Z` tag sends a new build to closed testing by itself |
+| *Release Android* | `v*` tag (closed testing, listing, sent for review), *Deliver* after a green push (internal testing, build alone, then closed testing) or manual | refuses `production` outside a `v*` tag, checks that the tag equals the apps' version, checks that the five secrets are set and that the demo playlist answers, tests, screenshots copied into the store listing, bundle signed with the upload key (*Beta* badge except for `production`), **ondo-release-bundle** artifact, upload to Google Play with R8's mapping file (crashes in Android vitals show the app's own names and lines), the store listing and release notes (`listing: skip`: the build and its release notes alone, the listing under review untouched); after an internal build Google Play took, the same version code on closed testing, `completed` with the release notes (*closed_testing*; a refusal turns that step red with an error, the internal build stays delivered) |
+| *Promote Android* | manual | releases a version code of internal testing on closed (`alpha`) or open (`beta`) testing with the release notes, `completed` (sent for review) or `draft` (*release_status*), without a new build; a push to `main` does this for closed testing by itself, and a `vX.Y.Z` tag sends a new build there |
 | *Google Play status* | manual | read only: tracks and releases, bundles Play holds, store listing (lengths, number of images of each kind, TV screenshots and banner included), testers' Google Groups, countries, the last week's reviews (count and stars), APKs generated from the latest bundle, crashes and ANRs (Reporting API, to be enabled in the service account's Google Cloud project). Opens an edit and deletes it, never commits it; the log holds no address, e-mail or review text. The review of changes and the Android TV review are in no API |

@@ -84,9 +84,10 @@ dans les sept langues de l'app : anglais, français, espagnol, portugais, chinoi
 `fastlane/metadata-android/` ; les captures sont produites
 par les tests Roborazzi à chaque release. Les notes de version,
 `fastlane/metadata-android/<langue>/changelogs/default.txt` (500 caractères au plus, vérifiés par le workflow
-*Android* et `check_app_store.py`), partent avec chaque release qui porte la fiche (un tag) : mettez toutes les
-langues à jour avant de poser le tag. Les builds internes d'un push partent seuls, sans notes : une langue que la
-fiche n'a pas encore ferait refuser la release par Google Play. Le reste se déclare une fois dans la console, section *Configurer votre application* du tableau de
+*Android* et `check_app_store.py`), partent avec chaque release qui porte la fiche (un tag) et avec la release en
+test fermé qui suit chaque build interne d'un push : gardez toutes les langues à jour. Le build interne lui-même part
+seul, sans notes. Une langue que la fiche n'a pas encore ferait refuser la release par Google Play : ajoutez-la à la
+fiche (un tag) avant ses notes de version. Le reste se déclare une fois dans la console, section *Configurer votre application* du tableau de
 bord :
 
 ### D1. Règles de confidentialité
@@ -172,7 +173,13 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
    - **un push sur `main`** : une fois le workflow *Android* au vert, *Deliver* envoie le build seul (pas la fiche)
      en **test interne**, déployé aussitôt, quand `android/` a changé (hors tests). Pendant que Google examine quelque chose
      (un test fermé, la fiche, l'inscription Android TV), il n'envoie rien plutôt que de relancer cet examen (par
-     défaut, une validation sur Google Play annule les modifications en examen et les renvoie) ;
+     défaut, une validation sur Google Play annule les modifications en examen et les renvoie). Une fois ce build
+     interne accepté par Google Play, le même job publie le même version code en **test fermé** (`alpha`), statut
+     `completed` avec les notes de version, donc Google l'examine : chaque build interne part aussi en test fermé
+     (l'entrée *closed_testing*, `yes` par défaut, le désactive pour un lancement à la main). Si Google Play le
+     refuse (un examen en cours, une langue absente de la fiche), l'étape *Closed testing* passe au rouge avec une
+     erreur qui dit pourquoi, le build interne reste livré et le lancement compte comme vert : lancez *Promote
+     Android* avec ce version code dès que Google Play le permet ;
    - **un tag de version** (`git tag v1.2.0 && git push origin v1.2.0`, le même tag que pour l'App Store, égal au
      `versionName` de `android/app/build.gradle.kts` et au `MARKETING_VERSION` de `project.yml`, sinon le lancement
      s'arrête) : le build **avec la fiche** part en **test fermé**, statut `completed`, donc Google Play l'envoie
@@ -194,9 +201,10 @@ questionnaire sur le test.
 
 Un tag de version publie tout seul sur ce canal (ci-dessus). À la main : *Run workflow* avec la piste `alpha`
 (`alpha` = test fermé, `beta` = test ouvert) ; le statut `completed` (par défaut) l'envoie aussitôt en examen,
-`draft` le laisse à vérifier et déployer dans la Play Console. Pour envoyer aux testeurs le bundle même déjà
-vérifié en test interne, sans nouveau build, lancez *Promote Android* avec son version code et la piste : il y
-arrive en brouillon.
+`draft` le laisse à vérifier et déployer dans la Play Console. Un push sur `main` y envoie aussi chaque build
+interne (E1). Pour envoyer aux testeurs le bundle même déjà vérifié en test interne, sans nouveau build, lancez
+*Promote Android* avec son version code et la piste : il y arrive avec les notes de version, statut `completed`
+(envoyé aussitôt en examen) par défaut, ou `draft` (*release_status*) à vérifier et déployer dans la Play Console.
 
 ### E3. Production
 
@@ -257,6 +265,6 @@ description nomme Android TV, comme Google le demande.
 |---|---|---|
 | *Android* | push sur `main` et pull requests touchant `android/`, `fastlane/metadata-android/` ou le workflow ; manuel | tests du cœur Kotlin, tests unitaires et Compose (Robolectric), captures Roborazzi comparées aux références versionnées (`verifyRoborazziDebug` ; les différences dans le résumé du job et l'artefact **android-screenshot-diffs** ; enregistrées à la place tant qu'aucune n'est versionnée), publiées sur la branche `android-screenshots` après un push sur `main` ; lancé à la main sur une branche de travail avec *record_screenshots*, il enregistre les références et les versionne sur cette branche (jamais `main` ni un tag, voir [ANDROID.fr.md](ANDROID.fr.md#captures-décran-et-régressions)), lint (`lintRelease`), APK de debug et bundle de release (artefact **android-builds**), longueurs de la fiche Google Play (titre 30, description courte 80, description complète 4000, notes de version 500 caractères) |
 | *TV release check* (`tv-release-check.yml`) | manuel | l'APK de release (réduit par R8, signé avec la clé de debug) sur un émulateur Android TV, piloté avec les touches de la télécommande (`.github/scripts/tv_drive.py`) : premier lancement, une playlist Xtream ajoutée depuis un panel fictif (catalogue petit, grand ou énorme ; un mauvais mot de passe d'abord si demandé), chaque onglet, puis les parcours choisis, chacun depuis un nouveau démarrage, sur des flux faits avec ffmpeg (rows : la télécommande le long des rangées d'affiches de l'onglet Films, filmée ; settings, search, details, player, guide, mylist, playlists, restore, browse, sync, keyboard, bitrate : un film au débit d'un film 4K à côté du catalogue, crash). Un plantage, un ANR ou Android qui arrête l'app fait échouer l'exécution, tout comme un parcours que la télécommande ne peut finir et un Retour depuis une page des Réglages qui ne revient pas sur la ligne qui l'a ouverte. Il demande la limite de mémoire d'un boîtier TV (`heap-size`), appliquée seulement quand l'émulateur laisse adb passer en root, ce que l'image Android TV ne permet en général pas : la limite en vigueur est affichée (`.github/scripts/tv_heap_limit.sh`). Captures, logcat, raisons de sortie, mémoire utilisée et mappage de R8 sont gardés en artefact |
-| *Release Android* | tag `v*` (test fermé, fiche, envoyé en examen), *Deliver* après un push au vert (test interne, build seul) ou manuel | refuse `production` hors d'un tag `v*`, vérifie que le tag est la version des apps, vérifie que les cinq secrets sont définis et que la playlist de démonstration répond, tests, captures copiées dans la fiche, bundle signé avec la clé d'importation (badge *Bêta* sauf pour `production`), artefact **ondo-release-bundle**, envoi sur Google Play avec le fichier de mappage de R8 (les plantages dans Android Vitals montrent les noms et lignes de l'app), la fiche et les notes de version (`listing: skip` : le build et ses notes de version seuls, la fiche en examen intacte) |
-| *Promote Android* | manuel | passe un version code du test interne au test fermé (`alpha`) ou ouvert (`beta`), en brouillon, sans nouveau build ; un tag `vX.Y.Z` envoie tout seul un nouveau build en test fermé |
+| *Release Android* | tag `v*` (test fermé, fiche, envoyé en examen), *Deliver* après un push au vert (test interne, build seul, puis test fermé) ou manuel | refuse `production` hors d'un tag `v*`, vérifie que le tag est la version des apps, vérifie que les cinq secrets sont définis et que la playlist de démonstration répond, tests, captures copiées dans la fiche, bundle signé avec la clé d'importation (badge *Bêta* sauf pour `production`), artefact **ondo-release-bundle**, envoi sur Google Play avec le fichier de mappage de R8 (les plantages dans Android Vitals montrent les noms et lignes de l'app), la fiche et les notes de version (`listing: skip` : le build et ses notes de version seuls, la fiche en examen intacte) ; après un build interne accepté par Google Play, le même version code en test fermé, `completed` avec les notes de version (*closed_testing* ; un refus fait passer cette étape au rouge avec une erreur, le build interne reste livré) |
+| *Promote Android* | manuel | publie un version code du test interne en test fermé (`alpha`) ou ouvert (`beta`) avec les notes de version, `completed` (envoyé en examen) ou `draft` (*release_status*), sans nouveau build ; un push sur `main` le fait tout seul pour le test fermé, et un tag `vX.Y.Z` y envoie un nouveau build |
 | *Google Play status* | manuel | lecture seule : canaux et versions, bundles détenus par Play, fiche (longueurs, nombre d'images de chaque type, captures TV et bannière comprises), groupes Google des testeurs, pays, avis de la dernière semaine (nombre et étoiles), APK générés depuis le dernier bundle, plantages et ANR (API Reporting, à activer dans le projet Google Cloud du compte de service). Ouvre une modification et la supprime, sans jamais la valider ; le journal ne contient ni adresse, ni e-mail, ni texte d'avis. L'examen des modifications et l'examen Android TV ne sont dans aucune API |

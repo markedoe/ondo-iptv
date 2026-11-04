@@ -1,7 +1,9 @@
-• Search finds a word anywhere in a title; exact matches first
-• Automatic refresh of the playlist (Settings → Playlists), every day by default
-• TV: the top of the screen shows the poster you are on: TMDb rating, synopsis; hold OK on a poster to add it to My List or take it out
-• TV: the top bar stays over a category's titles; Back goes back one page
-• My List: people keep their photo
-• Genre, year and award pages can be sorted
+• Profiles: "Who's watching?", PIN and Kids profiles
+• Settings → Row order; All movies and All series
+• One card per film; its versions (4K, DV, VOSTFR) on its page
+• Clean titles, with the film's logo on TV
+• Marked as watched at the end credits or 10 minutes from the end
+• Home carousel ranked by TMDb votes
+• Hidden languages apply everywhere
+• More reliable sync between devices
 • Many fixes
