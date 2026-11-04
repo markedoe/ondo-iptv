@@ -24,9 +24,10 @@ content does (rule 7): the profile and its data stay.
 
 `shared-lists-a.json` and `shared-lists-b.json` merge into `shared-lists-merged.json`: the lists shared with every profile
 (`household`, rule 9). Sam shared Movie night on one device while the other, not told yet, added a movie to it in Sam's
-lists: the list is shared once, with that movie, and Sam's copy is deleted at its time. A shared list renamed on one
+lists: the list is shared once, with that movie, and gone from Sam's lists (the move is a `listmoved:` marker in the
+top-level `deleted`, never a deletion of Sam's copy). A shared list renamed on one
 device and an item taken out of it on the other keep both changes. A shared list deleted for every profile on one device
-and not changed since on the other goes. A shared list taken back into the main profile on one device while the other,
+and not changed since on the other goes (`sharedlistdeleted:`). A shared list taken back into the main profile on one device while the other,
 not told yet, added to it: the list is the main profile's, with that addition. IDs in upper case are lowercased.
 
 `interop/` holds snapshots written by each core and merged by the other (see its README).

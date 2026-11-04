@@ -50,7 +50,7 @@ class SharedListsTest {
         assertEquals(ids.size, ids.toSet().size)
         // Shared on one device while another added to it in Sam's lists: shared, with that item, and gone from Sam's.
         assertEquals(listOf("m1", "m2", "m3"), shared(LIST, merged)?.items?.map { it.item })
-        assertEquals(3050L, merged.profileData.first { it.profile == SAM }.deleted["list:$LIST"])
+        assertEquals(listOf("household"), places(LIST, merged))
     }
 
     // Sharing and taking back
@@ -65,7 +65,9 @@ class SharedListsTest {
         assertEquals("Movie night", list?.name)
         assertEquals(3001L, list?.placedAt)
         assertEquals(3001L, list?.updatedAt)
-        assertEquals(3000L, shared.profileData[0].deleted["list:$LIST"])
+        // The move out of Sam's lists is a marker an older device passes on, not a deletion it would apply.
+        assertEquals(3000L, shared.deleted[SyncSharing.movedKey(SAM, LIST)])
+        assertNull(shared.profileData[0].deleted["list:$LIST"])
         // Nothing to share: unchanged.
         assertEquals(before, SyncSharing.share(before, "other", SAM, removedAt = 3000, placedAt = 3001))
     }
@@ -86,7 +88,8 @@ class SharedListsTest {
         // The main profile takes it back: the household deletes it, the main profile has it, later.
         val back = SyncSharing.unshare(shared, LIST, MAIN, removedAt = 4000, placedAt = 4001)
         assertEquals(listOf("main"), places(LIST, back))
-        assertEquals(4000L, back.household?.deleted?.get("list:$LIST"))
+        assertEquals(4000L, back.deleted[SyncSharing.movedKey(SyncSharing.HOUSEHOLD, LIST)])
+        assertNull(back.household?.deleted?.get("list:$LIST"))
         assertEquals(4001L, back.lists.first().placedAt)
         assertEquals(listOf("m1", "m2"), back.lists.first().items.map { it.item })
         // A device that still has it shared (unchanged since) drops it; Sam's old copy stays gone.
@@ -137,8 +140,6 @@ class SharedListsTest {
         for (merged in listOf(SyncMerge.merge(shared, b), SyncMerge.merge(b, shared))) {
             assertEquals(listOf("household"), places(LIST, merged))
             assertEquals(listOf("m1", "m2", "m3"), shared(LIST, merged)?.items?.map { it.item })
-            // Sam's copy is deleted at its time: a device that does not share lists drops it too.
-            assertEquals(3050L, merged.profileData.first { it.profile == SAM }.deleted["list:$LIST"])
         }
     }
 
@@ -171,6 +172,9 @@ class SharedListsTest {
         val shared = SyncSharing.share(device("a"), LIST, SAM, removedAt = 3000, placedAt = 3001)
         val deleted = SyncSharing.deleteShared(shared, LIST, 6000)
         assertEquals(emptyList<String>(), places(LIST, deleted))
+        assertEquals(6000L, deleted.deleted[SyncSharing.deletedForAllKey(LIST)])
+        // Through an older device too, which passes on the deletion though it drops the household.
+        assertEquals(emptyList<String>(), places(LIST, SyncMerge.merge(shared, asOlderDevice(deleted, knowsProfiles = true))))
         // Neither a device that still has it shared, nor one that changed Sam's old copy before the deletion, brings it back.
         val stale = device("c").editing(SAM) { it.copy(items = it.items + item("m3", 5000), updatedAt = 5000) }
         for (other in listOf(shared, device("b"), stale)) {
@@ -210,7 +214,7 @@ class SharedListsTest {
     }
 
     @Test
-    fun anEditOnAnOlderDeviceIsMergedIntoTheSharedListAndItsCopyGoes() {
+    fun anEditOnAnOlderDeviceIsMergedIntoTheSharedListAndTheOlderDeviceKeepsItsCopy() {
         val a = device("a").let { it.copy(lists = it.profileData[0].lists, profileData = emptyList()) }
         val shared = SyncSharing.share(a, LIST, MAIN, removedAt = 3000, placedAt = 3001)
         // An older device, not told yet, adds m3 to the main profile's list at 3500.
@@ -218,10 +222,79 @@ class SharedListsTest {
         val merged = SyncMerge.merge(shared, old)
         assertEquals(listOf("m1", "m2", "m3"), shared(LIST, merged)?.items?.map { it.item })
         assertEquals(listOf("household"), places(LIST, merged))
-        // The main profile's deletion now covers that copy: the older device drops it at the next session.
-        assertEquals(3500L, merged.deleted["list:$LIST"])
+        // The older device keeps its copy (it cannot show a shared list: removing it would lose the list there); it is
+        // merged into the shared list again at each session, and nothing changes from one to the next.
         val relayed = asOlderDevice(SyncMerge.merge(old, asOlderDevice(merged, knowsProfiles = false)), knowsProfiles = false)
-        assertEquals(emptyList<String>(), places(LIST, relayed))
+        assertEquals(listOf("main"), places(LIST, relayed))
+        assertEquals(merged.household, SyncMerge.merge(merged, relayed).household)
+    }
+
+    // An older device between two that share lists (an iPhone and an iPad behind an older TV)
+
+    /** A session as a client and an older server have it: the server keeps and answers without the household or `placedAt`. */
+    private class Session(var client: SyncSnapshot, var server: SyncSnapshot) {
+        fun run() {
+            server = asOlderDevice(SyncMerge.merge(server, asOlderDevice(client, knowsProfiles = true)), knowsProfiles = true)
+            client = SyncMerge.merge(client, server)
+        }
+    }
+
+    /** Sessions of [first] and [second], each with the older [server] in turn, [rounds] times; returns both and the server. */
+    private fun throughOlderServer(first: SyncSnapshot, second: SyncSnapshot, server: SyncSnapshot, rounds: Int): Triple<SyncSnapshot, SyncSnapshot, SyncSnapshot> {
+        var a = first
+        var b = second
+        var tv = server
+        repeat(rounds) {
+            Session(a, tv).also { it.run(); a = it.client; tv = it.server }
+            Session(b, tv).also { it.run(); b = it.client; tv = it.server }
+        }
+        return Triple(a, b, tv)
+    }
+
+    @Test
+    fun aListSharedBehindAnOlderDeviceIsNeverLostOnTheFarSide() {
+        val base = device("base")
+        val (iphone, ipad, tv) = throughOlderServer(SyncSharing.share(base, LIST, SAM, removedAt = 3000, placedAt = 3001), base, asOlderDevice(base, knowsProfiles = true), rounds = 1)
+        // The iPad never got the shared copy (the older TV dropped it): it keeps Sam's, where it was.
+        assertEquals(listOf(SAM), places(LIST, ipad))
+        assertEquals(listOf("household"), places(LIST, iphone))
+        val (iphoneAgain, _, _) = throughOlderServer(iphone, ipad, tv, rounds = 1)
+        assertEquals(listOf("household"), places(LIST, iphoneAgain))
+        // Once both meet (directly, or through a device that shares lists): shared, once, on both.
+        assertEquals(listOf("household"), places(LIST, SyncMerge.merge(ipad, iphone)))
+        assertEquals(listOf("household"), places(LIST, SyncMerge.merge(iphone, ipad)))
+    }
+
+    @Test
+    fun aListTakenBackBehindAnOlderDeviceStaysWithTheProfileThatTookItBack() {
+        val base = SyncSharing.share(device("base"), LIST, SAM, removedAt = 3000, placedAt = 3001)
+        val iphoneFirst = SyncSharing.unshare(base, LIST, MAIN, removedAt = 4000, placedAt = 4001)
+        val (iphone, ipad, _) = throughOlderServer(iphoneFirst, base, asOlderDevice(base, knowsProfiles = true), rounds = 3)
+        // The iPhone keeps it where it took it back; the iPad, whose shared copy is older than the move, follows.
+        assertEquals(listOf("main"), places(LIST, iphone))
+        assertEquals(listOf("main"), places(LIST, ipad))
+        assertEquals(listOf("m1", "m2"), iphone.lists.first().items.map { it.item })
+        assertEquals(listOf("m1", "m2"), ipad.lists.first().items.map { it.item })
+    }
+
+    // A change made where the list was, dated before the move
+
+    @Test
+    fun aChangeDatedBeforeAConcurrentMoveIsCarriedWhateverTheOrderOfTheMerges() {
+        val a = SyncSharing.share(device("a"), LIST, SAM, removedAt = 3006, placedAt = 3007)
+        // Device b, not told yet, adds m3 at 3005 (before the share's time); device c adds m5 at 3003.
+        val b = device("b").editing(SAM) { it.copy(items = it.items + item("m3", 3005), updatedAt = 3005) }
+        assertEquals(listOf("m1", "m2", "m3"), shared(LIST, SyncMerge.merge(a, b))?.items?.map { it.item })
+        val c = device("c").editing(SAM) { it.copy(items = it.items + item("m5", 3003), updatedAt = 3003) }
+        val orders = listOf(SyncMerge.merge(SyncMerge.merge(a, b), c), SyncMerge.merge(a, SyncMerge.merge(b, c)), SyncMerge.merge(SyncMerge.merge(a, c), b))
+        for (merged in orders) {
+            assertEquals(listOf("household"), places(LIST, merged))
+            assertEquals(listOf("m1", "m2", "m3", "m5"), shared(LIST, merged)?.items?.map { it.item }?.sorted())
+        }
+        // An item taken out of the shared list stays out, even if a copy where the list was still has it.
+        val removed = a.editing("household") { list -> list.copy(items = list.items.filter { it.item != "m2" }, updatedAt = 3010) }
+            .let { it.copy(household = it.household!!.copy(deleted = it.household.deleted + ("listitem:$LIST|$PLAYLIST|movie|m2" to 3010L))) }
+        assertEquals(listOf("m1", "m3"), shared(LIST, SyncMerge.merge(removed, b))?.items?.map { it.item })
     }
 
     // Format and digest
@@ -270,11 +343,12 @@ class SharedListsTest {
     fun deletionsAmongSharedListsAreForgottenLikeTheOthers() {
         val a = fixture("shared-lists-a.json")
         val day = 86_400_000L
+        val removal = "listitem:c2c2c2c2-0000-4000-8000-000000000002|$PLAYLIST|movie|s2"
         val now = 3300 + 181 * day
-        assertEquals(emptyMap<String, Long>(), a.pruned(now).household?.deleted.orEmpty())
+        assertEquals(emptyMap<String, Long>(), a.pruned(now).household?.deleted)
         // Learned late: kept from when it was learned.
-        val learned = a.pruned(now, householdLearned = mapOf("list:c3c3c3c3-0000-4000-8000-000000000003" to now - day))
-        assertEquals(mapOf("list:c3c3c3c3-0000-4000-8000-000000000003" to 3300L), learned.household?.deleted)
+        val learned = a.pruned(now, householdLearned = mapOf(removal to now - day))
+        assertEquals(mapOf(removal to 3100L), learned.household?.deleted)
     }
 
     @Test

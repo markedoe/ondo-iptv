@@ -243,31 +243,54 @@ du même nom (sans espaces autour, quelles que soient sa casse et ses accents) e
 ID est gardé sur les deux appareils, l’autre est supprimé (daté), et ses données vont dans celui gardé.
 
 **Listes partagées** (docs/PROFILES.fr.md, « Listes partagées ») — `household` : `{"lists"?, "deleted"?}`, les listes
-partagées avec tous les profils et ce qui a été supprimé parmi elles (clés `list:<id>` et `listitem:<id>|…` seulement),
-fusionnées selon les mêmes règles que les listes d’un profil (règles 2 à 7, comme un espace à part dont les playlists
-sont celles fusionnées) et selon la règle 9. Absent quand il n’y en a pas : un instantané sans liste partagée s’écrit, et
-se résume (digest), comme avant. Une liste partagée n’est dans les données d’aucun profil : elle est dans le foyer, la
-même liste pour tous les profils.
+partagées avec tous les profils et ce qui a été supprimé parmi elles (clés `listitem:<id>|…`, et `list:<id>` pour une
+liste supprimée pour tous les profils), fusionnées selon les mêmes règles que les listes d’un profil (règles 2 à 7, comme
+un espace à part dont les playlists sont celles fusionnées) et selon la règle 9. Absent quand il n’y en a pas : un
+instantané sans liste partagée s’écrit, et se résume (digest), comme avant. Une liste partagée n’est dans les données
+d’aucun profil : elle est dans le foyer, la même liste pour tous les profils.
+
+Deux clés du `deleted` de l’instantané lui-même (celui du profil principal, que toutes les versions gardent et
+transmettent, quelle que soit la clé) notent ce qui arrive aux listes partagées :
+
+- `listmoved:<espace>|<id>` : la liste `id` a quitté `espace` (`household`, ou l’ID d’un profil, y compris celui du
+  profil principal, `00000000-0000-0000-0000-000000000001`) à cet instant. Ce n’est jamais `list:<id>` : un appareil plus
+  ancien appliquerait cette suppression à sa copie et la transmettrait.
+- `sharedlistdeleted:<id>` : la liste partagée `id` a été supprimée pour tous les profils à cet instant.
+
+Ce que fait chaque changement :
 
 - **Partager** une liste d’un profil (le principal ou un autre) la déplace, entière et sous le même ID, à deux instants
-  pris l’un après l’autre : l’espace du profil la supprime (`list:<id>` dans son `deleted`) au premier, le foyer l’a au
-  second, comme son `updatedAt` et son `placedAt`. Les noms, éléments, personnes et instants de ses parties ne changent
-  pas, et les suppressions de ses éléments (`listitem:<id>|…`) la suivent.
+  pris l’un après l’autre : `listmoved:<ce profil>|<id>` au premier, et le foyer l’a au second, comme son `updatedAt` et son
+  `placedAt`. Les noms, éléments, personnes et instants de ses parties ne changent pas, et les suppressions de ses éléments
+  (`listitem:<id>|…`) la suivent.
 - **Reprendre une liste** (l’interrupteur désactivé, par tout profil qui peut modifier les listes partagées) la déplace
-  dans l’autre sens, dans le profil qui la reprend : le foyer la supprime, ce profil l’a ensuite, avec `placedAt`. Les
-  autres profils la perdent.
-- **Supprimer** une liste partagée la supprime pour tous les profils : `list:<id>` dans le `deleted` du foyer.
+  dans l’autre sens, dans le profil qui la reprend : `listmoved:household|<id>`, puis ce profil l’a ensuite, avec
+  `placedAt`. Les autres profils la perdent.
+- **Supprimer** une liste partagée la supprime pour tous les profils : `sharedlistdeleted:<id>`, et `list:<id>` dans le
+  `deleted` du foyer.
 - Un profil Enfant voit les listes partagées (sans ce que ses règles masquent) et n’en modifie aucune.
 
-Un appareil qui a encore la liste là où elle était (pas encore averti du déplacement) l’écarte : sa copie n’est pas
-postérieure à la suppression. Celui qui l’y a modifiée entre-temps voit ses modifications fusionnées dans la liste là où
-elle est allée (règle 9). La règle 9 ne s’applique qu’à une liste trouvée dans deux espaces ou plus, ou hors du foyer
-alors que le foyer l’a supprimée : une liste jamais partagée se fusionne comme avant. Les listes partagées ne passent pas
-par un appareil plus ancien : deux appareils qui ne se rencontrent qu’à travers lui gardent chacun les leurs. Un tel
-appareil ne détruit rien : il ignore `household`, écarte la copie d’une liste qu’un profil a partagée (sa suppression),
-et une copie qu’il a modifiée entre-temps est fusionnée dans la liste partagée par le prochain appareil qui partage des
-listes. Les suppressions du foyer apprises d’un autre appareil sont gardées à partir du moment où elles ont été
-apprises, comme celles d’un profil (voir **Supprimés**).
+La règle 9 de la fusion fait finir une liste dans un seul espace, et n’en perd jamais une qui n’a pas été supprimée. Un
+appareil qui a encore la liste là où elle était la fusionne dans la liste là où elle est allée dès qu’il a les deux,
+modifications comprises (faites avant ou après le déplacement). D’ici là, il la garde là où elle était.
+
+**Appareils plus anciens.** Les listes partagées ne passent pas par un appareil plus ancien : il ignore `household` et
+`placedAt`. Il garde et transmet les deux clés ci-dessus, et ne perd rien :
+
+- Il garde sa propre copie d’une liste qu’un profil a partagée, comme une liste de ce profil : il ne peut pas afficher
+  une liste partagée, et retirer la copie y perdrait la liste. Chaque appareil qui partage des listes fusionne de nouveau
+  cette copie dans la liste partagée, modifications faites sur l’appareil plus ancien comprises, donc rien ne change d’une
+  session à l’autre.
+- Deux appareils qui partagent des listes et ne se rencontrent qu’à travers un appareil plus ancien (un iPhone et un iPad
+  derrière un téléviseur Android pas encore mis à jour) ne perdent jamais une liste :
+  - Une liste partagée sur l’un reste là où elle était sur l’autre (dans les listes de ce profil, non partagée) jusqu’à ce
+    que les deux se rencontrent, ou rencontrent un autre appareil qui partage des listes. Elle est alors partagée, une seule
+    fois, sur les deux.
+  - Une liste reprise sur l’un va aussi dans ce profil sur l’autre : le déplacement hors du foyer rend sa copie partagée
+    périmée (`fixtures/sync/interop/old-relay-*`).
+
+Les suppressions du foyer apprises d’un autre appareil sont gardées à partir du moment où elles ont été apprises, comme
+celles d’un profil (voir **Supprimés**).
 
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil
 garde chacune 180 jours, et plus longtemps tant que chaque appareil avec lequel il a eu une session dans l’année
@@ -344,26 +367,24 @@ change rien.
    une progression d’une playlist supprimée part, ceux d’une playlist remplacée deviennent ceux de la playlist gardée,
    et un élément supprimé dans ce profil (son `deleted`) part. Le résultat liste les profils et leurs données par ID.
 9. **Une liste est dans un seul espace.** Les espaces sont le foyer (les listes partagées), le profil principal (les
-   listes de l’instantané lui-même) et chaque profil gardé autre que le principal. Une liste trouvée dans deux espaces
-   ou plus (déplacée sur un appareil pendant qu’un autre l’avait encore là où elle était), ou hors du foyer alors que le
-   `deleted` du foyer contient `list:<id>`, finit dans un seul :
-   - un espace garde ses copies quand leur `updatedAt` le plus tardif est postérieur à la suppression `list:<id>` de cet
-     espace et, hors du foyer, à celle du foyer : une liste supprimée pour tous les profils part de tous les profils,
-     sauf si elle a été modifiée après la suppression (comme à la règle 7) ;
-   - parmi les espaces qui la gardent, celui où elle a été déplacée en dernier l’emporte : le `placedAt` le plus tardif
-     de ses copies (0 sans), puis le foyer, le profil principal, les autres profils par ID. La liste y est faite de
-     toutes les copies des espaces qui la gardent, fusionnées selon la règle 7, sans les éléments dont la suppression
-     `listitem:`, dans n’importe quel espace, n’est pas antérieure à leur `addedAt` ; son `placedAt` est le plus tardif
-     des leurs ;
-   - chaque autre espace de profil (pas le foyer) qui en avait une copie reçoit la suppression `list:<id>` à l’`updatedAt`
-     le plus tardif de cette copie, s’il est postérieur à la sienne : un appareil qui ne partage pas de listes écarte
-     alors aussi sa copie ;
-   - si aucun espace ne la garde, la liste part de tous les espaces.
-
-   Une modification faite, avant le déplacement, dans l’espace que la liste a quitté n’est pas reprise si cet espace ne
-   garde pas sa copie (comme pour une liste supprimée, règle 7). Avec trois appareils, l’ordre des sessions peut décider
-   si les modifications d’une copie plus ancienne sont reprises (un appareil qui rencontre d’abord le résultat fusionné
-   reçoit la suppression de sa copie), mais tous les appareils finissent dans le même état.
+   listes de l’instantané lui-même) et chaque profil gardé autre que le principal. Cette règle s’applique à une liste
+   trouvée dans deux espaces ou plus (déplacée sur un appareil pendant qu’un autre l’avait encore là où elle était), ou
+   supprimée pour tous les profils. Une telle liste finit dans un seul espace :
+   - **Copies supprimées.** Les copies d’un espace sont supprimées quand leur `updatedAt` le plus tardif n’est pas
+     postérieur à la suppression `list:<id>` de cet espace, ni à la suppression de la liste pour tous les profils (la plus
+     tardive de `sharedlistdeleted:<id>` et du `list:<id>` du foyer). Une liste supprimée pour tous les profils part ainsi
+     de tous les profils, sauf si elle a été modifiée après la suppression (comme à la règle 7).
+   - **Où elle va.** Parmi les espaces restants, ceux dont les copies sont postérieures au départ de la liste
+     (`listmoved:<espace>|<id>`) la gardent. Celui où elle a été déplacée en dernier l’emporte : le `placedAt` le plus
+     tardif de ses copies (0 sans), puis le foyer, le profil principal, les autres profils par ID. Quand la liste a quitté
+     tous les espaces restants (la copie là où elle est allée n’est pas arrivée sur cet appareil), elle reste là où elle
+     est, dans le même ordre : un déplacement ne perd jamais une liste.
+   - **Ce qu’elle contient.** La liste y est faite de toutes les copies des espaces restants, fusionnées selon la règle 7,
+     sans les éléments dont la suppression `listitem:`, dans n’importe quel espace, n’est pas antérieure à leur `addedAt`.
+     Une modification faite là où était la liste, avant ou après un déplacement dont cet appareil n’avait pas entendu
+     parler, est reprise, quel que soit l’ordre des fusions. Son `placedAt` est le plus tardif des leurs.
+   - **Rien d’autre.** Aucun autre espace ne reçoit de suppression : un appareil plus ancien garde sa copie (voir
+     **Listes partagées**).
 
 Un appareil garde l’instantané fusionné comme le sien : il ajoute les playlists qu’il n’avait pas (et les
 télécharge), met à jour celles qui ont changé, supprime celles qui ont été supprimées, et remplace Ma liste, les

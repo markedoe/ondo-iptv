@@ -64,7 +64,9 @@ final class SharedListsAppTests: XCTestCase {
         let shared = try XCTUnwrap(model.household.customLists.first)
         XCTAssertEqual(shared.items, before.items)
         XCTAssertEqual(shared.name, before.name)
-        let removedAt = try XCTUnwrap(model.syncState.deleted["list:" + id.uuidString.lowercased()])
+        // The move out is a marker with the main profile's deletions (passed on by an older device), never a deletion.
+        XCTAssertNil(model.syncState.deleted["list:" + id.uuidString.lowercased()])
+        let removedAt = try XCTUnwrap(model.syncState.deleted[SyncSharing.movedKey(space: SyncProfile.main, list: id.uuidString)])
         XCTAssertGreaterThan(try XCTUnwrap(shared.placedAt).syncMilliseconds, removedAt)
 
         // Sam sees it and adds to it; the main profile sees Sam's addition.
@@ -93,7 +95,7 @@ final class SharedListsAppTests: XCTestCase {
         model.setListShared(id, false)
         XCTAssertFalse(model.isShared(id))
         XCTAssertEqual(model.library.customLists.map(\.id), [id])
-        XCTAssertNotNil(model.syncState.household.deleted["list:" + id.uuidString.lowercased()])
+        XCTAssertNotNil(model.syncState.deleted[SyncSharing.movedKey(space: SyncSharing.household, list: id.uuidString)])
         model.switchProfile(to: try main(model))
         XCTAssertTrue(model.customLists.isEmpty)
     }
@@ -128,8 +130,34 @@ final class SharedListsAppTests: XCTestCase {
         model.deleteList(id)
         XCTAssertTrue(model.household.customLists.isEmpty)
         XCTAssertNotNil(model.syncState.household.deleted["list:" + id.uuidString.lowercased()])
+        XCTAssertNotNil(model.syncState.deleted[SyncSharing.deletedForAllKey(id.uuidString)])
         model.switchProfile(to: try main(model))
         XCTAssertTrue(model.customLists.isEmpty)
+    }
+
+    func testACollectionTakenBackOnOneDeviceWhileAnotherStillHasItSharedStaysTakenBack() async throws {
+        let tv = try await device("tv")
+        let playlist = try XCTUnwrap(tv.playlists.first)
+        let phone = try await device("phone", playlist: playlist)
+        let id = tv.createList(named: "Evening")
+        tv.toggle(.channel(try channel(tv, "Test News")), inList: id)
+        _ = tv.addProfile(name: "Sam", colorIndex: 3, symbol: "star.fill", isKids: false, pin: nil)
+        tv.setListShared(id, true)
+        await phone.applySync(tv.syncSnapshot())
+        await tv.applySync(phone.syncSnapshot())
+        XCTAssertTrue(phone.isShared(id))
+
+        // The phone takes it back into the main profile; the TV, not told yet, adds to the shared collection after it.
+        phone.setListShared(id, false)
+        tv.renameList(id, to: "Evening")
+        tv.toggle(.channel(try channel(tv, "Test Sport")), inList: id)
+        await tv.applySync(phone.syncSnapshot())
+        await phone.applySync(tv.syncSnapshot())
+        for device in [tv, phone] {
+            XCTAssertFalse(device.isShared(id))
+            XCTAssertEqual(device.library.customLists.map(\.id), [id])
+            XCTAssertEqual(device.library.customLists.first.map { device.items(in: $0).map(\.title) }, ["Test News", "Test Sport"])
+        }
     }
 
     func testASharedCollectionSyncsBetweenDevicesWithoutADuplicate() async throws {

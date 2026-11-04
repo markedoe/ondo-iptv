@@ -74,7 +74,7 @@ final class SharedListsTests: XCTestCase {
         XCTAssertEqual(ids.count, Set(ids).count)
         // Shared on one device while another added to it in Sam's lists: shared, with that item, and gone from Sam's.
         XCTAssertEqual(Self.shared(Self.list, in: merged)?.items.map(\.item), ["m1", "m2", "m3"])
-        XCTAssertEqual(merged.profileData.first { $0.profile == Self.sam }?.deleted["list:" + Self.list], 3050)
+        XCTAssertEqual(Self.places(of: Self.list, in: merged), ["household"])
     }
 
     // MARK: Sharing and taking back
@@ -88,7 +88,9 @@ final class SharedListsTests: XCTestCase {
         XCTAssertEqual(list?.name, "Movie night")
         XCTAssertEqual(list?.placedAt, 3001)
         XCTAssertEqual(list?.updatedAt, 3001)
-        XCTAssertEqual(shared.profileData[0].deleted["list:" + Self.list], 3000)
+        // The move out of Sam's lists is a marker an older device passes on, not a deletion it would apply.
+        XCTAssertEqual(shared.deleted[SyncSharing.movedKey(space: Self.sam, list: Self.list)], 3000)
+        XCTAssertNil(shared.profileData[0].deleted["list:" + Self.list])
         // Nothing to share: unchanged.
         XCTAssertEqual(SyncSharing.share(before, list: "other", from: Self.sam, removedAt: 3000, placedAt: 3001), before)
     }
@@ -107,7 +109,8 @@ final class SharedListsTests: XCTestCase {
         // The main profile takes it back: the household deletes it, the main profile has it, later.
         let back = SyncSharing.unshare(shared, list: Self.list, to: Self.main, removedAt: 4000, placedAt: 4001)
         XCTAssertEqual(Self.places(of: Self.list, in: back), ["main"])
-        XCTAssertEqual(back.household?.deleted["list:" + Self.list], 4000)
+        XCTAssertEqual(back.deleted[SyncSharing.movedKey(space: SyncSharing.household, list: Self.list)], 4000)
+        XCTAssertNil(back.household?.deleted["list:" + Self.list])
         XCTAssertEqual(back.lists.first?.placedAt, 4001)
         XCTAssertEqual(back.lists.first?.items.map(\.item), ["m1", "m2"])
         // A device that still has it shared (unchanged since) drops it; Sam's old copy stays gone.
@@ -166,8 +169,6 @@ final class SharedListsTests: XCTestCase {
         for merged in [SyncMerge.merge(shared, b), SyncMerge.merge(b, shared)] {
             XCTAssertEqual(Self.places(of: Self.list, in: merged), ["household"])
             XCTAssertEqual(Self.shared(Self.list, in: merged)?.items.map(\.item), ["m1", "m2", "m3"])
-            // Sam's copy is deleted at its time: a device that does not share lists drops it too.
-            XCTAssertEqual(merged.profileData.first { $0.profile == Self.sam }?.deleted["list:" + Self.list], 3050)
         }
     }
 
@@ -201,6 +202,10 @@ final class SharedListsTests: XCTestCase {
         let shared = SyncSharing.share(Self.device("a"), list: Self.list, from: Self.sam, removedAt: 3000, placedAt: 3001)
         let deleted = SyncSharing.deleteShared(shared, list: Self.list, at: 6000)
         XCTAssertEqual(Self.places(of: Self.list, in: deleted), [])
+        XCTAssertEqual(deleted.deleted[SyncSharing.deletedForAllKey(Self.list)], 6000)
+        // Through an older device too, which passes on the deletion though it drops the household.
+        let relayed = try? Self.asOlderDevice(deleted, knowsProfiles: true)
+        XCTAssertEqual(relayed.map { Self.places(of: Self.list, in: SyncMerge.merge(shared, $0)) }, [])
         // Neither a device that still has it shared, nor one that changed Sam's old copy before the deletion, brings it back.
         var stale = Self.device("c")
         stale.profileData[0].lists[0].items.append(Self.item("m3", at: 5000))
@@ -266,7 +271,7 @@ final class SharedListsTests: XCTestCase {
         }
     }
 
-    func testAnEditOnAnOlderDeviceIsMergedIntoTheSharedListAndItsCopyGoes() throws {
+    func testAnEditOnAnOlderDeviceIsMergedIntoTheSharedListAndTheOlderDeviceKeepsItsCopy() throws {
         var a = Self.device("a")
         a.lists = a.profileData[0].lists
         a.profileData = []
@@ -278,10 +283,79 @@ final class SharedListsTests: XCTestCase {
         let merged = SyncMerge.merge(shared, old)
         XCTAssertEqual(Self.shared(Self.list, in: merged)?.items.map(\.item), ["m1", "m2", "m3"])
         XCTAssertEqual(Self.places(of: Self.list, in: merged), ["household"])
-        // The main profile's deletion now covers that copy: the older device drops it at the next session.
-        XCTAssertEqual(merged.deleted["list:" + Self.list], 3500)
+        // The older device keeps its copy (it cannot show a shared list: removing it would lose the list there); it is
+        // merged into the shared list again at each session, and nothing changes from one to the next.
         let relayed = try Self.asOlderDevice(SyncMerge.merge(old, try Self.asOlderDevice(merged, knowsProfiles: false)), knowsProfiles: false)
-        XCTAssertEqual(Self.places(of: Self.list, in: relayed), [])
+        XCTAssertEqual(Self.places(of: Self.list, in: relayed), ["main"])
+        XCTAssertEqual(SyncMerge.merge(merged, relayed).household, merged.household)
+    }
+
+    // MARK: An older device between two that share lists (an iPhone and an iPad behind an older TV)
+
+    /// A session as a client and an older server have it: the server keeps and answers without the household or `placedAt`.
+    static func sessionWithOlderServer(_ client: inout SyncSnapshot, _ server: inout SyncSnapshot) throws {
+        server = try asOlderDevice(SyncMerge.merge(server, try asOlderDevice(client, knowsProfiles: true)), knowsProfiles: true)
+        client = SyncMerge.merge(client, server)
+    }
+
+    func testAListSharedBehindAnOlderDeviceIsNeverLostOnTheFarSide() throws {
+        let base = Self.device("base")
+        var iphone = SyncSharing.share(base, list: Self.list, from: Self.sam, removedAt: 3000, placedAt: 3001)
+        var tv = try Self.asOlderDevice(base, knowsProfiles: true)
+        var ipad = base
+        try Self.sessionWithOlderServer(&iphone, &tv)
+        try Self.sessionWithOlderServer(&ipad, &tv)
+        // The iPad never got the shared copy (the older TV dropped it): it keeps Sam's, where it was.
+        XCTAssertEqual(Self.places(of: Self.list, in: ipad), [Self.sam])
+        XCTAssertEqual(Self.places(of: Self.list, in: iphone), ["household"])
+        try Self.sessionWithOlderServer(&iphone, &tv)
+        XCTAssertEqual(Self.places(of: Self.list, in: iphone), ["household"])
+        // Once both meet (directly, or through a device that shares lists): shared, once, on both.
+        let met = SyncMerge.merge(ipad, iphone)
+        XCTAssertEqual(Self.places(of: Self.list, in: met), ["household"])
+        XCTAssertEqual(Self.places(of: Self.list, in: SyncMerge.merge(iphone, ipad)), ["household"])
+    }
+
+    func testAListTakenBackBehindAnOlderDeviceStaysWithTheProfileThatTookItBack() throws {
+        let base = SyncSharing.share(Self.device("base"), list: Self.list, from: Self.sam, removedAt: 3000, placedAt: 3001)
+        var iphone = SyncSharing.unshare(base, list: Self.list, to: Self.main, removedAt: 4000, placedAt: 4001)
+        var tv = try Self.asOlderDevice(base, knowsProfiles: true)
+        var ipad = base
+        try Self.sessionWithOlderServer(&iphone, &tv)
+        try Self.sessionWithOlderServer(&ipad, &tv)
+        try Self.sessionWithOlderServer(&iphone, &tv)
+        try Self.sessionWithOlderServer(&ipad, &tv)
+        try Self.sessionWithOlderServer(&iphone, &tv)
+        // The iPhone keeps it where it took it back; the iPad, whose shared copy is older than the move, follows.
+        XCTAssertEqual(Self.places(of: Self.list, in: iphone), ["main"])
+        XCTAssertEqual(Self.places(of: Self.list, in: ipad), ["main"])
+        XCTAssertEqual(iphone.lists.first?.items.map(\.item), ["m1", "m2"])
+        XCTAssertEqual(ipad.lists.first?.items.map(\.item), ["m1", "m2"])
+    }
+
+    // MARK: A change made where the list was, dated before the move
+
+    func testAChangeDatedBeforeAConcurrentMoveIsCarriedWhateverTheOrderOfTheMerges() {
+        let a = SyncSharing.share(Self.device("a"), list: Self.list, from: Self.sam, removedAt: 3006, placedAt: 3007)
+        // Device b, not told yet, adds m3 at 3005 (before the share's time); device c adds m5 at 3003, d adds m6 at 3020.
+        var b = Self.device("b")
+        b.profileData[0].lists[0].items.append(Self.item("m3", at: 3005))
+        b.profileData[0].lists[0].updatedAt = 3005
+        XCTAssertEqual(Self.shared(Self.list, in: SyncMerge.merge(a, b))?.items.map(\.item), ["m1", "m2", "m3"])
+        var c = Self.device("c")
+        c.profileData[0].lists[0].items.append(Self.item("m5", at: 3003))
+        c.profileData[0].lists[0].updatedAt = 3003
+        let orders = [SyncMerge.merge(SyncMerge.merge(a, b), c), SyncMerge.merge(a, SyncMerge.merge(b, c)), SyncMerge.merge(SyncMerge.merge(a, c), b)]
+        for merged in orders {
+            XCTAssertEqual(Self.places(of: Self.list, in: merged), ["household"])
+            XCTAssertEqual(Self.shared(Self.list, in: merged)?.items.map(\.item).sorted(), ["m1", "m2", "m3", "m5"])
+        }
+        // An item taken out of the shared list stays out, even if a copy where the list was still has it.
+        var removed = a
+        removed.household?.lists[0].items.removeAll { $0.item == "m2" }
+        removed.household?.lists[0].updatedAt = 3010
+        removed.household?.deleted["listitem:\(Self.list)|\(Self.playlist)|movie|m2"] = 3010
+        XCTAssertEqual(Self.shared(Self.list, in: SyncMerge.merge(removed, b))?.items.map(\.item), ["m1", "m3"])
     }
 
     // MARK: Format and digest
@@ -298,6 +372,7 @@ final class SharedListsTests: XCTestCase {
         XCTAssertEqual(try empty.contentForDigest(), try snapshot.contentForDigest())
         XCTAssertNil(empty.normalized().household)
         XCTAssertNil(SyncMerge.merge(snapshot, empty).household)
+        XCTAssertFalse(String(decoding: try empty.encoded(), as: UTF8.self).contains("household"))
         XCTAssertEqual(SyncMerge.merge(snapshot, try fixture("profiles-a.json")).household, nil)
     }
 
@@ -329,11 +404,12 @@ final class SharedListsTests: XCTestCase {
     func testDeletionsAmongSharedListsAreForgottenLikeTheOthers() throws {
         let a = try fixture("shared-lists-a.json")
         let day: Int64 = 86_400_000
+        let removal = "listitem:c2c2c2c2-0000-4000-8000-000000000002|\(Self.playlist)|movie|s2"
         let now = 3300 + 181 * day
         XCTAssertEqual(a.pruned(now: now).household?.deleted, [:])
         // Learned late: kept from when it was learned.
-        let learned = a.pruned(now: now, householdLearned: ["list:c3c3c3c3-0000-4000-8000-000000000003": now - day])
-        XCTAssertEqual(learned.household?.deleted, ["list:c3c3c3c3-0000-4000-8000-000000000003": 3300])
+        let learned = a.pruned(now: now, householdLearned: [removal: now - day])
+        XCTAssertEqual(learned.household?.deleted, [removal: 3100])
     }
 
     func testSharedListIDsAreReadInLowercase() throws {

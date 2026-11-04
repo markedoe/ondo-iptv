@@ -58,9 +58,13 @@ Une liste ou une collection peut être partagée avec tous les profils : sa page
 - Désactiver l’interrupteur reprend la liste dans le profil qui le désactive : les autres profils la perdent, et une
   confirmation le dit d’abord.
 - Partager et reprendre déplacent la liste entière, sous le même ID, avec ses éléments et leurs instants : rien n’est
-  perdu. La synchronisation transporte le déplacement comme une suppression datée dans l’espace que la liste quitte et la
-  liste, datée plus tard, dans l’espace où elle entre (docs/SYNC.fr.md, « Listes partagées ») : les appareils s’accordent,
-  et un appareil qui a encore la liste là où elle était n’en fait pas revenir une deuxième copie.
+  perdu. La synchronisation transporte le déplacement comme une marque datée du départ de l’espace que la liste quitte et
+  la liste, datée plus tard, dans l’espace où elle entre (docs/SYNC.fr.md, « Listes partagées »). Les appareils
+  s’accordent ; un appareil qui a encore la liste là où elle était la fusionne dans la liste là où elle est allée,
+  modifications comprises, et n’en fait pas revenir une deuxième copie.
+- Un appareil d’une version antérieure ne peut pas afficher les listes partagées : il garde une liste partagée ailleurs
+  comme la liste du profil qu’elle était et, entre deux appareils qui partagent des listes, ne leur fait jamais perdre une
+  liste.
 - Supprimer un profil laisse les listes qu’il a partagées : elles appartiennent à tous les profils.
 
 Chaque appareil garde les listes partagées dans un document à part : `household.json` sur Android (les listes, ce qui a
@@ -155,8 +159,9 @@ Chaque profil se synchronise, quel que soit le profil ouvert (docs/SYNC.fr.md, �
   réglage Enfant : le plus petit ID est gardé sur les deux appareils, l’autre est supprimé, et ses données vont dans
   celui gardé ;
 - les listes partagées avec tous les profils voyagent dans `household`, à part des données de chaque profil ; un
-  déplacement entre un profil et le foyer est une suppression datée là où était la liste et la liste, datée plus tard, là
-  où elle est allée (`fixtures/sync/shared-lists-*.json`) ;
+  déplacement entre un profil et le foyer est une marque datée là où était la liste et la liste, datée plus tard, là
+  où elle est allée (`fixtures/sync/shared-lists-*.json`) ; un appareil plus ancien entre deux plus récents ne fait perdre
+  aucune liste (`fixtures/sync/interop/old-relay-*`) ;
 - les cœurs Kotlin et Swift partagent les mêmes fichiers d’exemple (`fixtures/sync/profiles-*.json`) et les mêmes
   tests, et chacun fusionne ce que l’autre a écrit (`fixtures/sync/interop/`).
 

@@ -18,6 +18,13 @@ le client :
 | `android-digests.json`| Kotlin    | Les résumés Kotlin de `android.json` et `answer.json`, et le résumé canonique.            |
 | `apple-digests.json`  | Swift     | Les résumés Swift de `apple.json` et `kept.json`, et le résumé canonique.                 |
 
+Deux autres scénarios placent un téléviseur Android de la version précédente (qui ne partage pas de listes) entre
+l’iPhone et un iPad : `old-relay-share` (l’iPhone partage une liste) et `old-relay-take-back` (l’iPhone reprend une liste
+partagée). Là, `android.json` et `answer.json` sont ce que ce téléviseur garde et répond (sans foyer ni `placedAt`), et
+`kept.json` est ce que l’iPad, qui ne rencontre que le téléviseur, garde de la réponse : la liste n’est jamais perdue.
+Partagée, elle reste dans les listes du profil sur l’iPad jusqu’à ce que les deux se rencontrent ; reprise, elle est au
+profil sur les deux.
+
 Le test de chaque cœur, en CI (android.yml, ci.yml ; les deux s’exécutent quand ce dossier change) :
 
 - refait l’instantané de son propre appareil et sa propre fusion, et les retrouve tels qu’enregistrés : un changement du

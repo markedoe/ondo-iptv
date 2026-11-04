@@ -51,9 +51,11 @@ A list or a collection can be shared with every profile: its page and its menu h
 - Turning the switch off takes the list back into the profile that turns it off: the other profiles lose it, and a
   confirmation says so first.
 - Sharing and taking back move the list whole, under the same ID, with its items and their times: nothing is lost. Sync
-  carries the move as a dated deletion in the space the list leaves and the list, dated later, in the space it enters
-  (docs/SYNC.md, "Shared lists"), so devices agree, and a device that still has the list where it was does not bring
-  back a second copy.
+  carries the move as a dated marker of the move out of the space the list leaves and the list, dated later, in the space
+  it enters (docs/SYNC.md, "Shared lists"). Devices agree; a device that still has the list where it was merges it into
+  the list where it went, changes included, and does not bring back a second copy.
+- A device of an earlier version cannot show shared lists: it keeps a list shared elsewhere as the profile's list it was,
+  and, between two devices that share lists, it never makes one lose a list.
 - Deleting a profile leaves the lists it shared: they belong to every profile.
 
 Each device keeps the shared lists in a document of their own: `household.json` on Android (the lists, what was deleted
@@ -139,8 +141,9 @@ Every profile syncs, whichever is open (docs/SYNC.md, "Profiles"):
   received profile of the same name, whatever its case and accents, and the same Kids switch: the smaller ID is kept
   on both devices, the other is deleted, and its data goes into the one kept;
 - the lists shared with every profile travel in `household`, apart from every profile's data; a move between a profile
-  and the household is a dated deletion where the list was and the list, dated later, where it went
-  (`fixtures/sync/shared-lists-*.json`);
+  and the household is a dated marker where the list was and the list, dated later, where it went
+  (`fixtures/sync/shared-lists-*.json`); an older device between two newer ones loses no list
+  (`fixtures/sync/interop/old-relay-*`);
 - the Kotlin and Swift cores share the same fixtures (`fixtures/sync/profiles-*.json`) and the same tests, and each
   merges what the other wrote (`fixtures/sync/interop/`).
 

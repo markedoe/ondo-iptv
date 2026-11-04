@@ -217,28 +217,51 @@ and accents) and the same Kids switch: the smaller ID is kept on both devices, t
 data goes into the one kept.
 
 **Shared lists** (docs/PROFILES.md, "Shared lists") — `household`: `{"lists"?, "deleted"?}`, the lists shared with
-every profile and what was deleted among them (`list:<id>` and `listitem:<id>|…` keys only), merged by the same rules as
-a profile's lists (rules 2 to 7, as a space of its own whose playlists are the merged ones) and by rule 9. Left out when
-there is none: a snapshot without shared lists is written, and digested, as before. A shared list is in no profile's
-data: it is in the household, the same list for every profile.
+every profile and what was deleted among them (`listitem:<id>|…` keys, and `list:<id>` from a list deleted for every
+profile), merged by the same rules as a profile's lists (rules 2 to 7, as a space of its own whose playlists are the merged
+ones) and by rule 9. Left out when there is none: a snapshot without shared lists is written, and digested, as before. A
+shared list is in no profile's data: it is in the household, the same list for every profile.
+
+Two keys of the snapshot's own `deleted` (the main profile's, which every version keeps and passes on, whatever the key)
+note what happens to shared lists:
+
+- `listmoved:<space>|<id>`: list `id` moved out of `space` (`household`, or a profile's ID, the main profile's
+  `00000000-0000-0000-0000-000000000001` included) at that time. It is never `list:<id>`: an older device would apply that
+  deletion to its copy and pass it on.
+- `sharedlistdeleted:<id>`: shared list `id` deleted for every profile at that time.
+
+What each change does:
 
 - **Sharing** a list of a profile (the main one's or another's) moves it, whole and under the same ID, at two times
-  taken one after the other: the profile's space deletes it (`list:<id>` in its `deleted`) at the first, the household
-  has it at the second, as its `updatedAt` and its `placedAt`. The names, items, people and times of its parts do not
-  change, and the deletions of its items (`listitem:<id>|…`) go with it.
+  taken one after the other: `listmoved:<that profile>|<id>` at the first, and the household has it at the second, as its
+  `updatedAt` and its `placedAt`. The names, items, people and times of its parts do not change, and the deletions of
+  its items (`listitem:<id>|…`) go with it.
 - **Taking a list back** (the switch turned off, by any profile that may edit shared lists) moves it the other way, into
-  the profile that takes it back: the household deletes it, that profile has it later, with `placedAt`. The other
+  the profile that takes it back: `listmoved:household|<id>`, then that profile has it later, with `placedAt`. The other
   profiles lose it.
-- **Deleting** a shared list deletes it for every profile: `list:<id>` in the household's `deleted`.
+- **Deleting** a shared list deletes it for every profile: `sharedlistdeleted:<id>`, and `list:<id>` in the household's
+  `deleted`.
 - A Kids profile sees the shared lists (without what its rules hide) and changes none of them.
 
-A device that still has the list where it was (not told of the move) drops it: its copy is not later than the deletion.
-One that changed it there meanwhile has its changes merged into the list where it went (rule 9). Rule 9 runs only for a
-list found in two spaces or more, or outside the household while the household deleted it: a list never shared merges
-as before. Shared lists do not travel through an older device: two devices that only meet through one keep each their
-own. Such a device destroys nothing: it ignores `household`, drops the copy of a list a profile shared (its deletion),
-and a copy it changed meanwhile is merged into the shared list by the next device that shares lists. The household's
-deletions learned from another device are kept from when they were learned, as a profile's are (see **Deleted**).
+Rule 9 of the merge makes a list end in one space, and never loses one that was not deleted. A device that still has the
+list where it was merges it into the list where it went once it has both, changes included (made before or after the
+move). Until then it keeps it where it was.
+
+**Older devices.** Shared lists do not travel through an older device: it ignores `household` and `placedAt`. It keeps and
+passes on the two keys above, and loses nothing:
+
+- It keeps its own copy of a list a profile shared, as that profile's list: it cannot show a shared list, and removing the
+  copy would lose the list there. Each device that shares lists merges that copy into the shared list again, changes made
+  on the older device included, so nothing changes from one session to the next.
+- Two devices that share lists and only meet through an older one (an iPhone and an iPad behind an Android TV not yet
+  updated) never lose a list:
+  - A list shared on one stays where it was on the other (in that profile's lists, not shared) until the two meet, or meet
+    another device that shares lists. It is then shared, once, on both.
+  - A list taken back on one goes into that profile on the other too: the move out of the household outdates its shared
+    copy (`fixtures/sync/interop/old-relay-*`).
+
+The household's deletions learned from another device are kept from when they were learned, as a profile's are (see
+**Deleted**).
 
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for
 180 days, and longer until every device it had a session with in the last year has had a session with it after the
@@ -306,24 +329,22 @@ nothing.
    becomes the one kept, and a record deleted in that profile (its `deleted`) goes. The result lists profiles and
    profile data by ID.
 9. **A list is in one space.** The spaces are the household (the shared lists), the main profile (the snapshot's own
-   lists) and each profile kept other than the main one. A list found in two spaces or more (moved on one device while
-   another still had it where it was), or outside the household while the household's `deleted` has `list:<id>`, ends in
-   one:
-   - a space keeps its copies when their latest `updatedAt` is after that space's own `list:<id>` deletion and, outside
-     the household, after the household's: a list deleted for every profile goes from every profile, unless changed
-     after the deletion (as rule 7);
-   - of the spaces that keep it, the one it was last moved into wins: the latest `placedAt` of its copies (0 when none),
-     then the household, the main profile, the other profiles by ID. The list there is every copy of the spaces that
-     keep it, merged by rule 7, without the items whose `listitem:` deletion, in any space, is not earlier than their
-     `addedAt`; its `placedAt` is the latest of them;
-   - every other profile space (not the household) that had a copy gets `list:<id>` deleted at that copy's latest
-     `updatedAt`, if later than its own: a device that does not share lists then drops its copy too;
-   - without any space keeping it, the list goes from every space.
-
-   A change made, before the move, in the space the list left is not carried if that space does not keep its copy (as a
-   list deleted, rule 7). With three devices, the order of the sessions can decide whether an older copy's changes are
-   carried (a device that meets the merged result first gets the deletion of its copy), but every device ends with the
-   same state.
+   lists) and each profile kept other than the main one. This rule applies to a list found in two spaces or more (moved on
+   one device while another still had it where it was), or deleted for every profile. Such a list ends in one space:
+   - **Deleted copies.** A space's copies are deleted when their latest `updatedAt` is not after that space's own
+     `list:<id>` deletion, or not after the list's deletion for every profile (the later of `sharedlistdeleted:<id>` and the
+     household's `list:<id>`). A list deleted for every profile thus goes from every profile, unless changed after the
+     deletion (as rule 7).
+   - **Where it goes.** Of the spaces left, those whose copies are later than the list's move out of them
+     (`listmoved:<space>|<id>`) keep it. The one it was moved into last wins: the latest `placedAt` of its copies (0 when
+     none), then the household, the main profile, the other profiles by ID. When every space left was moved out of (the
+     copy where it went did not reach this device), the list stays where it is, by the same order: a move never loses a
+     list.
+   - **What it holds.** The list there is every copy of the spaces left, merged by rule 7, without the items whose
+     `listitem:` deletion, in any space, is not earlier than their `addedAt`. A change made where the list was, before or
+     after a move this device had not heard of, is carried, whatever the order of the merges. Its `placedAt` is the latest
+     of them.
+   - **Nothing else.** No other space gets a deletion: an older device keeps its copy (see **Shared lists**).
 
 A device keeps the merged snapshot as its own: it adds the playlists it did not have (and downloads them),
 updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists (each profile's and the shared ones) and

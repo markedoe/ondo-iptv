@@ -1452,7 +1452,15 @@ class OndoRepository(
     fun renameCollection(id: String, name: String) = updateCollection(id) { it.renamingCollection(id, name, stamp()) }
 
     /** Deletes a collection: a shared one for every profile (the screen asked first). */
-    fun deleteCollection(id: String) = updateCollection(id) { it.deletingCollection(id, stamp()) }
+    fun deleteCollection(id: String) {
+        val state = _state.value
+        if (!state.isShared(id)) return updateLibrary { it.deletingCollection(id, stamp()) }
+        if (!state.canEditShared) return
+        val time = stamp()
+        updateHousehold { it.deletingCollection(id, time) }
+        // For every profile, behind an older device too (it passes on the main profile's deletions).
+        updateMainLibrary { it.deleting(SyncSharing.deletedForAllKey(id), time) }
+    }
 
     /** Adds an item of the current playlist to a collection, or takes it out. */
     fun toggleInCollection(id: String, kind: ItemKind, itemId: String, title: String, imageUrl: String?) {
@@ -1469,14 +1477,19 @@ class OndoRepository(
         if (!state.isReady || !state.canEditShared || shared == state.isShared(id)) return
         val removedAt = stamp()
         val placedAt = stamp()
+        // The move out of the space it leaves goes with the main profile's deletions (the snapshot's own), which an older
+        // device keeps and passes on without applying: no list is lost behind one (docs/SYNC.md, "Shared lists").
+        val profileSpace = if (state.activeProfile.isMain) SyncProfile.MAIN else state.activeProfile.id.lowercase()
         if (shared) {
-            val (library, household) = SharedCollections.move(state.library, state.household, id, removedAt, placedAt) ?: return
+            val (library, household) = SharedCollections.move(state.library, state.household, id, placedAt) ?: return
             updateLibrary { library }
             updateHousehold { household }
+            updateMainLibrary { it.deleting(SyncSharing.movedKey(profileSpace, id), removedAt) }
         } else {
-            val (household, library) = SharedCollections.move(state.household, state.library, id, removedAt, placedAt) ?: return
+            val (household, library) = SharedCollections.move(state.household, state.library, id, placedAt) ?: return
             updateHousehold { household }
             updateLibrary { library }
+            updateMainLibrary { it.deleting(SyncSharing.movedKey(SyncSharing.HOUSEHOLD, id), removedAt) }
         }
     }
 

@@ -3,8 +3,9 @@ import IPTVCore
 
 /// Collections shared with every profile (docs/PROFILES.md, "Shared lists"): they live in `household`, apart from every
 /// profile's library, and every profile sees them; any profile but a Kids one changes them. Sharing and taking back move a
-/// collection whole, under the same ID, as `SyncSharing` does to a snapshot: the library it leaves deletes it at a first
-/// time, the one it enters has it at a later one (its `updatedAt` and `placedAt`), and the deletions of its items go with it.
+/// collection whole, under the same ID, as `SyncSharing` does to a snapshot: the move out of the library it leaves is noted
+/// with the main profile's deletions (`SyncSharing.movedKey`, which an older device passes on without applying), the one
+/// it enters has it at a later time (its `updatedAt` and `placedAt`), and the deletions of its items go with it.
 extension AppModel {
     /// The document of the shared collections.
     static let householdDocumentName = "library-household"
@@ -38,6 +39,11 @@ extension AppModel {
         try? userStore.save(household, name: Self.householdDocumentName)
     }
 
+    /// Remembers for sync, with the main profile's deletions (the snapshot's own), the move or deletion `key` at `time`.
+    func noteSharedListForSync(_ key: String, at time: Int64) {
+        syncState.deleted[key] = max(syncState.deleted[key] ?? time, time)
+    }
+
     /// Remembers for sync that `key` was deleted among the shared collections at `time`.
     func noteHouseholdDeletedForSync(_ key: String, at time: Int64) {
         syncState.household.deleted[key] = max(syncState.household.deleted[key] ?? time, time)
@@ -48,7 +54,7 @@ extension AppModel {
     func setListShared(_ id: UUID, _ shared: Bool) {
         guard isReady, canEditSharedLists, shared != isShared(id) else { return }
         let removedAt = syncStamp(), placedAt = syncStamp()
-        let key = "list:" + id.uuidString.lowercased()
+        let profileSpace = activeProfile.isMain ? SyncProfile.main : activeProfile.id.uuidString.lowercased()
         let itemPrefix = SyncList.itemPrefix + id.uuidString.lowercased() + "|"
         let tombstonePrefix = id.uuidString + "|"
         if shared {
@@ -57,7 +63,7 @@ extension AppModel {
             let deletions = (activeProfile.isMain ? syncState.deleted : syncState.slice(for: activeProfile.id.uuidString.lowercased()).deleted)
                 .filter { $0.key.hasPrefix(itemPrefix) }
             updateLibrary { $0.customLists.removeAll { $0.id == id } }
-            noteDeletedForSync(key, at: removedAt.syncMilliseconds)
+            noteSharedListForSync(SyncSharing.movedKey(space: profileSpace, list: id.uuidString), at: removedAt.syncMilliseconds)
             list.updatedAt = max(list.updatedAt, placedAt)
             list.placedAt = placedAt
             updateHousehold { household in
@@ -71,7 +77,7 @@ extension AppModel {
             let tombstones = household.listItemTombstones.filter { $0.key.hasPrefix(tombstonePrefix) }
             let deletions = syncState.household.deleted.filter { $0.key.hasPrefix(itemPrefix) }
             updateHousehold { $0.customLists.removeAll { $0.id == id } }
-            noteHouseholdDeletedForSync(key, at: removedAt.syncMilliseconds)
+            noteSharedListForSync(SyncSharing.movedKey(space: SyncSharing.household, list: id.uuidString), at: removedAt.syncMilliseconds)
             list.updatedAt = max(list.updatedAt, placedAt)
             list.placedAt = placedAt
             updateLibrary { library in

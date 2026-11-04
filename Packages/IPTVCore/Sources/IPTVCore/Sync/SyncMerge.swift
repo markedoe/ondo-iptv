@@ -51,7 +51,6 @@ public enum SyncMerge {
         let keptProfiles = Set(profiles.map(\.id)).subtracting([SyncProfile.main])
         let spaces = sharedSpaces(left, right, keptProfiles: keptProfiles, mainDeleted: deleted, mapped: mapped)
         let shared = sharedLists(spaces)
-        for (key, time) in shared.raised[.main] ?? [:] { deleted[key] = max(deleted[key] ?? time, time) }
         func outside(_ lists: [SyncList]) -> [SyncList] { lists.filter { !shared.resolved.contains(Array($0.key.utf16)) } }
 
         let favorites = pick(
@@ -92,8 +91,8 @@ public enum SyncMerge {
             bucket.lists = outside(bucket.lists.map(mapped))
             return bucket
         } + keptProfiles.sorted { $0.isBefore($1) }.compactMap { profile -> SyncProfileData? in
-            let lists = shared.lists[.profile(profile)] ?? [], raised = shared.raised[.profile(profile)] ?? [:]
-            return lists.isEmpty && raised.isEmpty ? nil : SyncProfileData(profile: profile, lists: lists, deleted: raised)
+            let lists = shared.lists[.profile(profile)] ?? []
+            return lists.isEmpty ? nil : SyncProfileData(profile: profile, lists: lists)
         }
         let profileData = mergeProfileData(buckets, profiles: profiles, playlists: keptPlaylists, deleted: deleted, replaced: replaced)
         // The household: its lists merged by the same rules, as a space of their own.
@@ -200,6 +199,15 @@ public enum SyncMerge {
         case main
         case profile(String)
 
+        /// The space as `listmoved:<space>|<id>` names it: `household`, the main profile's ID, or the profile's ID.
+        var name: String {
+            switch self {
+            case .household: return "household"
+            case .main: return SyncProfile.main
+            case .profile(let id): return id
+            }
+        }
+
         func isBefore(_ other: SpaceID) -> Bool {
             switch (self, other) {
             case (.household, .household), (.main, .main): return false
@@ -219,24 +227,29 @@ public enum SyncMerge {
         var deleted: [String: Int64]
     }
 
-    /// What rule 9 decides: the lists it resolved (by key, as UTF-16), each placed in one space, and the deletions it adds.
+    /// What rule 9 decides: the lists it resolved (by key, as UTF-16), each placed in one space.
     struct SharedOutcome {
         var resolved: Set<[UInt16]> = []
         var lists: [SpaceID: [SyncList]] = [:]
-        var raised: [SpaceID: [String: Int64]] = [:]
     }
 
     /// Rule 9 of the merge (docs/SYNC.md, "Shared lists"): a list found in two spaces or more (moved between a profile and
-    /// the household on one device while another still had it where it was), or found outside the household while the
-    /// household deleted it, ends in one space. A space keeps its copies when their latest `updatedAt` is after its own
-    /// deletion of the list and, outside the household, after the household's (a list deleted for every profile goes from
-    /// every profile). Of the spaces that keep it, the one it was last moved into wins (the latest `placedAt`, then the
-    /// household, the main profile, the other profiles by ID); the list there is every kept copy merged by rule 7, without
-    /// the items taken out in any space. Every other profile space that had a copy gets the list's deletion at that copy's
-    /// latest time, so that a device that does not share lists drops it too. Without any space keeping it, the list goes.
+    /// the household on one device while another still had it where it was), or while the list is deleted for every
+    /// profile, ends in one space, and no copy is lost unless it was deleted.
+    /// - A space's copies are deleted when their latest `updatedAt` is not after that space's `list:<id>` deletion or,
+    ///   outside the household, not after the deletion for every profile (`sharedlistdeleted:<id>`, or the household's
+    ///   `list:<id>`).
+    /// - Of the spaces left, those whose copies are later than the list's move out of them (`listmoved:<space>|<id>`, kept
+    ///   with the top-level deletions so that an older device passes it on) keep it; the one it was moved into last wins
+    ///   (the latest `placedAt`, then the household, the main profile, the other profiles by ID). When every space left was
+    ///   moved out of (the copy where it went did not reach this device, through an older one), the list stays where it
+    ///   is, by the same order: a move never loses a list.
+    /// - The list there is every copy of the spaces left merged by rule 7 (a change made where it was, before or after the
+    ///   move, is carried), without the items taken out in any space.
     static func sharedLists(_ spaces: [Space]) -> SharedOutcome {
         var outcome = SharedOutcome()
-        guard let household = spaces.first(where: { $0.id == .household }) else { return outcome }
+        guard let household = spaces.first(where: { $0.id == .household }),
+              let top = spaces.first(where: { $0.id == .main })?.deleted else { return outcome }
         var copies: [[UInt16]: [SpaceID: [SyncList]]] = [:]
         var keys: [[UInt16]] = []
         for space in spaces {
@@ -248,26 +261,24 @@ public enum SyncMerge {
         }
         for key in keys {
             guard let bySpace = copies[key], let first = bySpace.values.first?.first else { continue }
-            let removedForAll = household.deleted[first.key]
-            guard bySpace.count >= 2 || (removedForAll != nil && bySpace.keys.contains { $0 != .household }) else { continue }
+            let forAll = [household.deleted[first.key], top[SyncSharing.deletedForAllKey(first.id)]].compactMap { $0 }.max()
+            guard bySpace.count >= 2 || forAll != nil else { continue }
             outcome.resolved.insert(key)
-            let ordered = spaces.filter { bySpace[$0.id] != nil }
             func latest(_ space: Space) -> Int64 { bySpace[space.id]?.map(\.updatedAt).max() ?? .min }
-            let keeping = ordered.filter { space in
+            let left = spaces.filter { space in
+                guard bySpace[space.id] != nil else { return false }
                 let time = latest(space)
                 if let removed = space.deleted[first.key], time <= removed { return false }
-                if space.id != .household, let removedForAll, time <= removedForAll { return false }
+                if let forAll, time <= forAll { return false }
                 return true
             }
-            func placed(_ space: Space) -> Int64 { bySpace[space.id]?.compactMap(\.placedAt).max() ?? 0 }
-            let winner = keeping.min { a, b in placed(a) != placed(b) ? placed(a) > placed(b) : a.id.isBefore(b.id) }
-            for space in ordered where space.id != winner?.id && space.id != .household {
-                let time = latest(space)
-                if space.deleted[first.key].map({ time > $0 }) ?? true {
-                    outcome.raised[space.id, default: [:]][first.key] = time
-                }
+            let keeping = left.filter { space in
+                top[SyncSharing.movedKey(space: space.id.name, list: first.id)].map { latest(space) > $0 } ?? true
             }
-            guard let winner else { continue }
+            func placed(_ space: Space) -> Int64 { bySpace[space.id]?.compactMap(\.placedAt).max() ?? 0 }
+            guard let winner = (keeping.isEmpty ? left : keeping).min(by: { a, b in
+                placed(a) != placed(b) ? placed(a) > placed(b) : a.id.isBefore(b.id)
+            }) else { continue }
             // The items taken out of the list in any space (its ID is in their keys).
             let itemPrefix = SyncList.itemPrefix + first.id + "|"
             var itemDeletions: [String: Int64] = [:]
@@ -276,7 +287,7 @@ public enum SyncMerge {
                     itemDeletions[deletion] = max(itemDeletions[deletion] ?? time, time)
                 }
             }
-            let merged = mergeLists(keeping.flatMap { bySpace[$0.id] ?? [] }, deleted: itemDeletions)
+            let merged = mergeLists(left.flatMap { bySpace[$0.id] ?? [] }, deleted: itemDeletions)
             outcome.lists[winner.id, default: []] += merged
         }
         return outcome

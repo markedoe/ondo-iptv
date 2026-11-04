@@ -74,7 +74,10 @@ extension AppModel {
         }
         guard canEditSharedLists else { return }
         updateHousehold { $0.deleteList(id) }
-        noteHouseholdDeletedForSync("list:" + id.uuidString.lowercased(), at: syncStamp().syncMilliseconds)
+        let time = syncStamp().syncMilliseconds
+        noteHouseholdDeletedForSync("list:" + id.uuidString.lowercased(), at: time)
+        // For every profile, behind an older device too (it passes on the main profile's deletions).
+        noteSharedListForSync(SyncSharing.deletedForAllKey(id.uuidString), at: time)
         saveSyncState()
         syncSoon()
     }

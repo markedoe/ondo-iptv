@@ -132,8 +132,12 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         unchanged = try c.decodeIfPresent(Bool.self, forKey: .unchanged)
     }
 
+    /// The snapshot as it is sent; no household when it is empty (as Kotlin writes it, and an older version).
     public func encoded() throws -> Data {
-        try JSONEncoder().encode(self)
+        guard household?.isEmpty == true else { return try JSONEncoder().encode(self) }
+        var copy = self
+        copy.household = nil
+        return try JSONEncoder().encode(copy)
     }
 
     /// The records and deletions alone, encoded the same way each time (keys sorted), without who sends them or when,
@@ -357,6 +361,10 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             if item.unicodeScalars.starts(with: SyncPerson.keyPrefix.unicodeScalars) { return list + "|" + lowercasingID(ofDeleted: item) }
             guard let bar = item.unicodeScalars.firstIndex(of: "|") else { return list + "|" + item.lowercased() }
             return list + "|" + String(item.unicodeScalars[..<bar]).lowercased() + String(item.unicodeScalars[bar...])
+        }
+        // The moves and deletions of shared lists (docs/SYNC.md, "Shared lists"): their space and list IDs.
+        for prefix in ["listmoved:", "sharedlistdeleted:"] where scalars.starts(with: prefix.unicodeScalars) {
+            return prefix + String(scalars.dropFirst(prefix.unicodeScalars.count)).lowercased()
         }
         for prefix in ["playlist:", "list:", "favorite:", "progress:", SyncProfile.keyPrefix] where scalars.starts(with: prefix.unicodeScalars) {
             let rest = String(scalars.dropFirst(prefix.unicodeScalars.count))

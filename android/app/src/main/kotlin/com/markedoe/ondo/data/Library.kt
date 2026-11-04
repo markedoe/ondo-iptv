@@ -293,9 +293,10 @@ data class LibraryState(
 
 /**
  * Collections shared with every profile (docs/PROFILES.md, "Shared lists"): the household's library holds them, apart from
- * every profile's. A move takes a collection whole, under the same ID, from one library to the other: the one it leaves
- * deletes it at a first time, the one it enters has it at a later one (its `updatedAt` and `placedAt`), and the deletions
- * of its items go with it, as `SyncSharing` does to a snapshot.
+ * every profile's. A move takes a collection whole, under the same ID, from one library to the other: the one it enters
+ * has it at a later time (its `updatedAt` and `placedAt`), and the deletions of its items go with it, as `SyncSharing`
+ * does to a snapshot. The move out of the one it leaves is no deletion: the repository notes it with the main profile's
+ * deletions (`SyncSharing.movedKey`), which an older device passes on without applying.
  */
 object SharedCollections {
     /** The deletions of the items of collection [id] in [library] (`listitem:<id>|…`). */
@@ -303,12 +304,11 @@ object SharedCollections {
         library.syncDeleted.filterKeys { it.startsWith(SyncList.ITEM_PREFIX + id.lowercase() + "|") }
 
     /**
-     * Collection [id] moved from [from] into [into]: [from] deletes it at [removedAt], [into] has it from [placedAt] (later).
-     * Null when [from] has no such collection.
+     * Collection [id] moved from [from] into [into], which has it from [placedAt]. Null when [from] has no such collection.
      */
-    fun move(from: LibraryState, into: LibraryState, id: String, removedAt: Long, placedAt: Long): Pair<LibraryState, LibraryState>? {
+    fun move(from: LibraryState, into: LibraryState, id: String, placedAt: Long): Pair<LibraryState, LibraryState>? {
         val list = from.collections.firstOrNull { it.id == id } ?: return null
-        val left = from.copy(collections = from.collections.filterNot { it.id == id }).deleting(SyncKeys.list(id), removedAt)
+        val left = from.copy(collections = from.collections.filterNot { it.id == id })
         val moved = list.copy(updatedAt = maxOf(list.updatedAt, placedAt), placedAt = placedAt)
         val entered = itemDeletions(from, id).entries.fold(into.copy(collections = sorted(into.collections.filterNot { it.id == id } + moved))) { library, (key, time) ->
             library.deleting(key, time)

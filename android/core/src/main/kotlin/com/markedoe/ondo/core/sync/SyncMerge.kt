@@ -45,7 +45,6 @@ object SyncMerge {
         val keptProfiles = profiles.mapTo(HashSet()) { it.id } - SyncProfile.MAIN
         val spaces = sharedSpaces(left, right, keptProfiles, deleted, ::mapped)
         val shared = sharedLists(spaces)
-        shared.raised[SpaceId.Main]?.forEach { (key, time) -> deleted.merge(key, time, ::maxOf) }
         fun outside(lists: List<SyncList>) = lists.filter { it.key !in shared.resolved }
 
         val favorites = pick(
@@ -71,8 +70,7 @@ object SyncMerge {
         val buckets = (left.profileData + right.profileData).map { it.copy(lists = outside(it.lists.map(::mapped))) } +
             keptProfiles.sorted().mapNotNull { profile ->
                 val placed = shared.lists[SpaceId.Profile(profile)].orEmpty()
-                val raised = shared.raised[SpaceId.Profile(profile)].orEmpty()
-                if (placed.isEmpty() && raised.isEmpty()) null else SyncProfileData(profile, lists = placed, deleted = raised)
+                if (placed.isEmpty()) null else SyncProfileData(profile, lists = placed)
             }
         val profileData = profileData(buckets, profiles, keptPlaylists, deleted, replaced)
         // The household: its lists merged by the same rules, as a space of their own.
@@ -183,9 +181,20 @@ object SyncMerge {
 
     /** Where a list is: the household (shared with every profile), the main profile, or another profile. */
     internal sealed interface SpaceId {
-        data object Household : SpaceId
-        data object Main : SpaceId
-        data class Profile(val id: String) : SpaceId
+        /** The space as `listmoved:<space>|<id>` names it: `household`, the main profile's ID, or the profile's ID. */
+        val name: String
+
+        data object Household : SpaceId {
+            override val name = SyncSharing.HOUSEHOLD
+        }
+
+        data object Main : SpaceId {
+            override val name = SyncProfile.MAIN
+        }
+
+        data class Profile(val id: String) : SpaceId {
+            override val name get() = id
+        }
     }
 
     /** Ties between spaces: the household, the main profile, then the others by ID. */
@@ -200,61 +209,58 @@ object SyncMerge {
     /** The lists of one space from both sides (playlists already replaced), and its deletions. */
     internal class Space(val id: SpaceId, val lists: List<SyncList>, val deleted: Map<String, Long>)
 
-    /** What rule 9 decides: the lists it resolved (by key), each placed in one space, and the deletions it adds. */
-    internal class SharedOutcome(
-        val resolved: Set<String>,
-        val lists: Map<SpaceId, List<SyncList>>,
-        val raised: Map<SpaceId, Map<String, Long>>,
-    )
+    /** What rule 9 decides: the lists it resolved (by key), each placed in one space. */
+    internal class SharedOutcome(val resolved: Set<String>, val lists: Map<SpaceId, List<SyncList>>)
 
     /**
      * Rule 9 of the merge (docs/SYNC.md, "Shared lists"): a list found in two spaces or more (moved between a profile and
-     * the household on one device while another still had it where it was), or found outside the household while the
-     * household deleted it, ends in one space. A space keeps its copies when their latest `updatedAt` is after its own
-     * deletion of the list and, outside the household, after the household's (a list deleted for every profile goes from
-     * every profile). Of the spaces that keep it, the one it was last moved into wins (the latest `placedAt`, then the
-     * household, the main profile, the other profiles by ID); the list there is every kept copy merged by rule 7, without
-     * the items taken out in any space. Every other profile space that had a copy gets the list's deletion at that copy's
-     * latest time, so that a device that does not share lists drops it too. Without any space keeping it, the list goes.
+     * the household on one device while another still had it where it was), or while the list is deleted for every
+     * profile, ends in one space, and no copy is lost unless it was deleted.
+     * - A space's copies are deleted when their latest `updatedAt` is not after that space's `list:<id>` deletion or,
+     *   outside the household, not after the deletion for every profile (`sharedlistdeleted:<id>`, or the household's
+     *   `list:<id>`).
+     * - Of the spaces left, those whose copies are later than the list's move out of them (`listmoved:<space>|<id>`, kept
+     *   with the top-level deletions so that an older device passes it on) keep it; the one it was moved into last wins
+     *   (the latest `placedAt`, then the household, the main profile, the other profiles by ID). When every space left was
+     *   moved out of (the copy where it went did not reach this device, through an older one), the list stays where it is,
+     *   by the same order: a move never loses a list.
+     * - The list there is every copy of the spaces left merged by rule 7 (a change made where it was, before or after the
+     *   move, is carried), without the items taken out in any space.
      */
     internal fun sharedLists(spaces: List<Space>): SharedOutcome {
         val resolved = HashSet<String>()
         val placed = HashMap<SpaceId, MutableList<SyncList>>()
-        val raised = HashMap<SpaceId, HashMap<String, Long>>()
-        val household = spaces.firstOrNull { it.id == SpaceId.Household } ?: return SharedOutcome(resolved, placed, raised)
+        val household = spaces.firstOrNull { it.id == SpaceId.Household } ?: return SharedOutcome(resolved, placed)
+        val top = spaces.firstOrNull { it.id == SpaceId.Main }?.deleted ?: return SharedOutcome(resolved, placed)
         val copies = LinkedHashMap<String, LinkedHashMap<SpaceId, MutableList<SyncList>>>()
         for (space in spaces) {
             for (list in space.lists) copies.getOrPut(list.key) { LinkedHashMap() }.getOrPut(space.id) { ArrayList() } += list
         }
         for ((key, bySpace) in copies) {
             val first = bySpace.values.first().first()
-            val removedForAll = household.deleted[key]
-            if (bySpace.size < 2 && (removedForAll == null || bySpace.keys.all { it == SpaceId.Household })) continue
+            val forAll = listOfNotNull(household.deleted[key], top[SyncSharing.deletedForAllKey(first.id)]).maxOrNull()
+            if (bySpace.size < 2 && forAll == null) continue
             resolved += key
-            val holding = spaces.filter { it.id in bySpace }
             fun latest(space: Space) = bySpace.getValue(space.id).maxOf { it.updatedAt }
-            val keeping = holding.filter { space ->
-                val time = latest(space)
-                space.deleted[key]?.let { time <= it } != true &&
-                    (space.id == SpaceId.Household || removedForAll?.let { time <= it } != true)
+            val left = spaces.filter { space ->
+                space.id in bySpace && latest(space).let { time ->
+                    space.deleted[key]?.let { time <= it } != true && forAll?.let { time <= it } != true
+                }
             }
+            val keeping = left.filter { space -> top[SyncSharing.movedKey(space.id.name, first.id)]?.let { latest(space) > it } ?: true }
             fun placedAt(space: Space) = bySpace.getValue(space.id).mapNotNull { it.placedAt }.maxOrNull() ?: 0L
-            val winner = keeping.minWithOrNull(compareByDescending<Space> { placedAt(it) }.thenComparator { a, b -> spaceOrder.compare(a.id, b.id) })
-            for (space in holding) {
-                if (space.id == winner?.id || space.id == SpaceId.Household) continue
-                val time = latest(space)
-                if (space.deleted[key]?.let { time > it } != false) raised.getOrPut(space.id) { HashMap() }[key] = time
-            }
-            if (winner == null) continue
+            val winner = keeping.ifEmpty { left }
+                .minWithOrNull(compareByDescending<Space> { placedAt(it) }.thenComparator { a, b -> spaceOrder.compare(a.id, b.id) })
+                ?: continue
             // The items taken out of the list in any space (its ID is in their keys).
             val itemPrefix = SyncList.ITEM_PREFIX + first.id + "|"
             val itemDeletions = HashMap<String, Long>()
             for (space in spaces) {
                 space.deleted.forEach { (deletion, time) -> if (deletion.startsWith(itemPrefix)) itemDeletions.merge(deletion, time, ::maxOf) }
             }
-            placed.getOrPut(winner.id) { ArrayList() } += mergeLists(keeping.flatMap { bySpace.getValue(it.id) }, itemDeletions)
+            placed.getOrPut(winner.id) { ArrayList() } += mergeLists(left.flatMap { bySpace.getValue(it.id) }, itemDeletions)
         }
-        return SharedOutcome(resolved, placed, raised)
+        return SharedOutcome(resolved, placed)
     }
 
     /**

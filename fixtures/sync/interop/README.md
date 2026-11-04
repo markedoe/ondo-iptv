@@ -17,6 +17,12 @@ Then each changes things on its own, and they have one session, the iPhone as th
 | `android-digests.json`| Kotlin     | The Kotlin digests of `android.json` and `answer.json`, and the canonical digest.       |
 | `apple-digests.json`  | Swift      | The Swift digests of `apple.json` and `kept.json`, and the canonical digest.            |
 
+Two more scenarios put an Android TV of the previous version (which does not share lists) between the iPhone and an iPad:
+`old-relay-share` (the iPhone shares a list) and `old-relay-take-back` (the iPhone takes a shared list back). There,
+`android.json` and `answer.json` are what that TV keeps and answers (no household, no `placedAt`), and `kept.json` is what
+the iPad, which only meets the TV, keeps of the answer: the list is never lost. Shared, it stays in the profile's lists on
+the iPad until the two meet; taken back, it is the profile's on both.
+
 Each core's test, in CI (android.yml, ci.yml; both run when this folder changes):
 
 - makes its own device's snapshot and its own merge again, and finds them as committed: a change to that core's format,

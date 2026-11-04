@@ -29,6 +29,69 @@ final class SyncInteropTests: XCTestCase {
 
     func testDeletionsSyncBetweenAndroidAndApple() throws { try check("deletions") }
 
+    /// An iPhone shares a list; an older Android TV (which does not share lists) relays it to an iPad: the iPad keeps the
+    /// list where it was, never loses it.
+    func testAListSharedBehindAnOlderAndroidDeviceIsNotLost() throws {
+        try checkOldRelay("old-relay-share", expectedOnIpad: InteropScenarios.sam)
+    }
+
+    /// An iPhone takes a shared list back; an older Android TV relays it to an iPad: the list stays with that profile.
+    func testAListTakenBackBehindAnOlderAndroidDeviceStaysTakenBack() throws {
+        try checkOldRelay("old-relay-take-back", expectedOnIpad: "main")
+    }
+
+    /// The older relay scenarios: `android.json` and `answer.json` are what a TV of the previous version keeps (no
+    /// household, no `placedAt`; written by the Kotlin core), and `kept.json` is what an iPad that only meets that TV keeps
+    /// of its answer.
+    private func checkOldRelay(_ scenario: String, expectedOnIpad: String) throws {
+        let directory = try root().appendingPathComponent(scenario)
+        var apple = InteropScenarios.apple(scenario)
+        apple.digest = SHA256.hex(try apple.contentForDigest())
+        let appleFile = directory.appendingPathComponent("apple.json")
+        if writing {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            try apple.encoded().write(to: appleFile)
+        }
+        XCTAssertEqual(try read(appleFile), apple, "\(scenario): apple.json")
+        if writing && !FileManager.default.fileExists(atPath: directory.appendingPathComponent("answer.json").path) { return }
+        let tv = try read(directory.appendingPathComponent("android.json"))
+        // The TV's answer, done here as the previous version does it: what the Kotlin core wrote is the same.
+        var serverClock = SyncClock()
+        let received = try SharedListsTests.asOlderDevice(serverClock.receive(apple, wall: InteropScenarios.sessionWall), knowsProfiles: true)
+        let answer = try SharedListsTests.asOlderDevice(SyncMerge.merge(tv, received), knowsProfiles: true)
+        let answerByKotlin = try read(directory.appendingPathComponent("answer.json"))
+        XCTAssertEqual(content(answer), content(answerByKotlin), "\(scenario): answer.json")
+        // The iPad, which only meets the TV, keeps its answer merged with its own data: the list is there.
+        var script = InteropScenarios.Script()
+        var ipad = InteropScenarios.base(scenario, &script)
+        ipad.device = InteropScenarios.ipadDevice
+        ipad.deviceName = "Bedroom iPad"
+        var clientClock = SyncClock()
+        var kept = SyncMerge.merge(ipad, clientClock.receive(answerByKotlin, wall: InteropScenarios.sessionWall))
+        kept.digest = SHA256.hex(try kept.contentForDigest())
+        let keptFile = directory.appendingPathComponent("kept.json")
+        if writing { try kept.encoded().write(to: keptFile) }
+        XCTAssertEqual(try read(keptFile), kept, "\(scenario): kept.json")
+        let id = InteropScenarios.movieNight
+        XCTAssertEqual(SharedListsTests.places(of: id, in: kept), [expectedOnIpad], "\(scenario): on the iPad")
+        // And the iPhone, which keeps the TV's answer, still has it where it put it.
+        var iphoneClock = SyncClock()
+        let iphone = SyncMerge.merge(apple, iphoneClock.receive(answerByKotlin, wall: InteropScenarios.sessionWall))
+        XCTAssertEqual(SharedListsTests.places(of: id, in: iphone), SharedListsTests.places(of: id, in: apple), "\(scenario): on the iPhone")
+        let digests = ["apple": SHA256.hex(try apple.contentForDigest()), "kept": SHA256.hex(try kept.contentForDigest()),
+                       "canonical": try Self.canonicalDigest(kept)]
+        let digestFile = directory.appendingPathComponent("apple-digests.json")
+        if writing {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            try (encoder.encode(digests) + Data("\n".utf8)).write(to: digestFile)
+        }
+        XCTAssertEqual(try JSONDecoder().decode([String: String].self, from: Data(contentsOf: digestFile)), digests, "\(scenario): apple-digests.json")
+        if writing && !FileManager.default.fileExists(atPath: directory.appendingPathComponent("android-digests.json").path) { return }
+        let kotlinDigests = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: directory.appendingPathComponent("android-digests.json")))
+        XCTAssertEqual(kotlinDigests["canonical"], digests["canonical"], "\(scenario): the same canonical digest on both cores")
+    }
+
     private func check(_ scenario: String) throws {
         let directory = try root().appendingPathComponent(scenario)
         var apple = InteropScenarios.apple(scenario)
@@ -235,6 +298,7 @@ enum InteropScenarios {
     static let wall: Int64 = 1_760_000_000_000
     static let sessionWall = wall + 300_000
     static let appleDevice = "b0b0b0b0-0000-4000-8000-00000000000b"
+    static let ipadDevice = "c0c0c0c0-0000-4000-8000-00000000000c"
     static let main = SyncProfile.main
     static let sam = "11111111-1111-4111-8111-111111111111"
     static let kids = "22222222-2222-4222-8222-222222222222"
@@ -308,6 +372,17 @@ enum InteropScenarios {
                 profileData: [SyncProfileData(profile: sam, lists: [movieList])],
                 household: SyncHousehold(lists: [roadList, cartoonList])
             )
+        case "old-relay-share", "old-relay-take-back":
+            // Sam's list (before the iPhone shares it), or the same list shared (before the iPhone takes it back).
+            let first = item(home, "movie", "m1", "Northern Lights", script.at(20))
+            let t21 = script.at(21)
+            let items = [first, item(home, "movie", "m2", "Glass City", t21)]
+            if scenario == "old-relay-share" {
+                return SyncSnapshot(device: "", playlists: [homePlaylist], profiles: profiles,
+                                    profileData: [SyncProfileData(profile: sam, lists: [list(movieNight, "Movie night", items, t21)])])
+            }
+            return SyncSnapshot(device: "", playlists: [homePlaylist], profiles: profiles,
+                                household: SyncHousehold(lists: [list(movieNight, "Movie night", items, t21, placedAt: script.at(22))]))
         default:
             let t5 = script.at(5)
             let sportsPlaylist = SyncPlaylist(id: sports, name: "Sports", kind: SyncPlaylist.xtream, url: "http://example.com:8080", username: "viewer",
@@ -367,6 +442,10 @@ enum InteropScenarios {
                 snapshot.household?.lists[index].renamedAt = t112
                 snapshot.household?.lists[index].updatedAt = t112
             }
+        case "old-relay-share":
+            snapshot = SyncSharing.share(snapshot, list: movieNight, from: sam, removedAt: script.at(100), placedAt: script.at(101))
+        case "old-relay-take-back":
+            snapshot = SyncSharing.unshare(snapshot, list: movieNight, to: main, removedAt: script.at(100), placedAt: script.at(101))
         default:
             // The same Home playlist added again (it becomes the one already there), with a movie of it in My List; a
             // channel of Sports kept in Sam's favourites after the Android device deleted Sports.

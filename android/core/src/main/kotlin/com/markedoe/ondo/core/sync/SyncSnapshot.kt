@@ -279,6 +279,10 @@ internal fun lowercasingId(key: String): String {
         val bar = item.indexOf('|').takeIf { it >= 0 } ?: return "$list|${item.lowercase()}"
         return "$list|${item.substring(0, bar).lowercase()}${item.substring(bar)}"
     }
+    // The moves and deletions of shared lists (docs/SYNC.md, "Shared lists"): their space and list IDs.
+    for (prefix in listOf("listmoved:", "sharedlistdeleted:")) {
+        if (key.startsWith(prefix)) return prefix + key.substring(prefix.length).lowercase()
+    }
     for (prefix in listOf("playlist:", "list:", "favorite:", "progress:", SyncProfile.KEY_PREFIX)) {
         if (!key.startsWith(prefix)) continue
         val bar = if (prefix == "favorite:" || prefix == "progress:") key.indexOf('|', prefix.length) else -1

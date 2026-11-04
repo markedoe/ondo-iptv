@@ -4,6 +4,8 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.sync.SyncList
+import com.markedoe.ondo.core.sync.SyncProfile
+import com.markedoe.ondo.core.sync.SyncSharing
 import com.markedoe.ondo.ui.UiMappers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -72,11 +74,13 @@ class SharedCollectionsTest {
         val state = repository.state.value
         assertTrue(state.isShared(id))
         assertTrue(state.library.collections.none { it.id == id })
-        assertEquals(listOf(SyncKeys.list(id)), state.library.syncDeleted.keys.filter { it.startsWith("list:") })
+        // The move out is a marker with the main profile's deletions (passed on by an older device), never a deletion.
+        val movedOut = SyncSharing.movedKey(SyncProfile.MAIN, id)
+        assertTrue(state.library.syncDeleted.keys.none { it.startsWith("list:") })
         val shared = state.household.collections.single()
         assertEquals(before.items, shared.items)
         assertEquals(before.name, shared.name)
-        assertTrue(shared.placedAt > state.library.syncDeleted.getValue(SyncKeys.list(id)))
+        assertTrue(shared.placedAt > state.library.syncDeleted.getValue(movedOut))
 
         // Sam sees it, marked shared, and adds to it; the main profile sees Sam's addition.
         switch(repository, sam)
@@ -105,7 +109,7 @@ class SharedCollectionsTest {
         val state = repository.state.value
         assertFalse(state.isShared(id))
         assertEquals(listOf(Fixtures.glassCity.id), state.library.collections.single { it.id == id }.items.map { it.itemId })
-        assertTrue(state.household.syncDeleted.containsKey(SyncKeys.list(id)))
+        assertTrue(requireNotNull(repository.syncSnapshot("tv")).deleted.containsKey(SyncSharing.movedKey(SyncSharing.HOUSEHOLD, id)))
         switch(repository, state.profiles.first { it.isMain })
         assertNull(repository.collection("Weekend"))
     }
@@ -142,6 +146,7 @@ class SharedCollectionsTest {
         repository.deleteCollection(id)
         assertTrue(repository.state.value.household.collections.isEmpty())
         assertTrue(repository.state.value.household.syncDeleted.containsKey(SyncKeys.list(id)))
+        assertTrue(requireNotNull(repository.syncSnapshot("tv")).deleted.containsKey(SyncSharing.deletedForAllKey(id)))
         switch(repository, repository.state.value.profiles.first { it.isMain })
         assertNull(repository.collection("Weekend"))
     }
@@ -189,6 +194,31 @@ class SharedCollectionsTest {
         phone.deleteCollection(id)
         session(phone, tv)
         assertTrue(tv.state.value.collections.isEmpty())
+    }
+
+    @Test
+    fun aCollectionTakenBackOnOneDeviceWhileAnotherStillHasItSharedStaysTakenBack() = runTest {
+        val tv = device("tv")
+        val phone = device("phone")
+        val id = tv.createCollection("Weekend")
+        tv.add(id, Fixtures.glassCity)
+        requireNotNull(tv.addProfile("Sam", 3, "star.fill", isKids = false, pin = null))
+        tv.setCollectionShared(id, true)
+        session(tv, phone)
+        assertTrue(phone.state.value.isShared(id))
+
+        // The phone takes it back into the main profile; the TV, not told yet, adds to the shared collection after it.
+        phone.setCollectionShared(id, false)
+        tv.renameCollection(id, "Weekend")
+        tv.add(id, Fixtures.lastSignal)
+        session(phone, tv)
+        session(tv, phone)
+        for (device in listOf(tv, phone)) {
+            val state = device.state.value
+            assertFalse(state.isShared(id))
+            assertEquals(listOf(id), state.library.collections.map { it.id })
+            assertEquals(listOf(Fixtures.glassCity.id, Fixtures.lastSignal.id), state.library.collections.single().items.map { it.itemId })
+        }
     }
 
     @Test

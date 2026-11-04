@@ -43,6 +43,63 @@ class SyncInteropTest {
     @Test
     fun deletionsSyncBetweenAndroidAndApple() = check("deletions")
 
+    /**
+     * An iPhone shares a list; an older Android TV (which does not share lists) relays it to an iPad: the iPad keeps the
+     * list where it was, never loses it.
+     */
+    @Test
+    fun aListSharedBehindAnOlderAndroidDeviceIsNotLost() = checkOldRelay("old-relay-share", expectedOnIpad = InteropScenarios.SAM)
+
+    /** An iPhone takes a shared list back; an older Android TV relays it to an iPad: the list stays with that profile. */
+    @Test
+    fun aListTakenBackBehindAnOlderAndroidDeviceStaysTakenBack() = checkOldRelay("old-relay-take-back", expectedOnIpad = "main")
+
+    /**
+     * The older relay scenarios: the Android device is a TV of the previous version (its snapshot and its answer are
+     * what that version keeps: no household, no `placedAt`), and `kept.json` is what an iPad that only meets that TV keeps
+     * of its answer.
+     */
+    private fun checkOldRelay(scenario: String, expectedOnIpad: String) {
+        val directory = File(root, scenario)
+        val tv = SharedListsTest.asOlderDevice(InteropScenarios.base(scenario, InteropScenarios.Script()).copy(device = InteropScenarios.ANDROID_DEVICE, deviceName = "Living room TV"), knowsProfiles = true)
+        val androidFile = File(directory, "android.json")
+        if (writing) {
+            directory.mkdirs()
+            androidFile.writeBytes(tv.encoded())
+        }
+        assertEquals("$scenario: android.json", tv, read(androidFile))
+        val appleFile = File(directory, "apple.json")
+        if (writing && !File(directory, "kept.json").exists()) {
+            if (appleFile.exists()) File(directory, "answer.json").writeBytes(olderAnswer(tv, read(appleFile)).encoded())
+            return
+        }
+        val apple = read(appleFile)
+        val answer = olderAnswer(tv, apple)
+        if (writing) File(directory, "answer.json").writeBytes(answer.encoded())
+        assertEquals("$scenario: answer.json", answer, read(File(directory, "answer.json")))
+        // The iPad's half, done here with the Kotlin core: what the Swift core kept is the same, and the list is there.
+        val ipad = InteropScenarios.base(scenario, InteropScenarios.Script()).copy(device = InteropScenarios.IPAD_DEVICE, deviceName = "Bedroom iPad")
+        val kept = SyncMerge.merge(ipad, InteropScenarios.clock().receive(answer, InteropScenarios.SESSION_WALL))
+        val keptBySwift = read(File(directory, "kept.json"))
+        assertEquals("$scenario: kept.json", content(kept), content(keptBySwift))
+        val id = InteropScenarios.OLD_RELAY_LIST
+        assertEquals("$scenario: on the iPad", listOf(expectedOnIpad), SharedListsTest.places(id, keptBySwift).map { if (it == SyncProfile.MAIN) "main" else it })
+        // And the iPhone, which keeps the TV's answer, still has it where it put it.
+        val iphone = SyncMerge.merge(apple, InteropScenarios.clock().receive(answer, InteropScenarios.SESSION_WALL))
+        assertEquals("$scenario: on the iPhone", SharedListsTest.places(id, apple), SharedListsTest.places(id, iphone))
+        val digests = mapOf("android" to tv.contentDigest(), "answer" to answer.contentDigest(), "canonical" to canonicalDigest(kept))
+        val digestFile = File(directory, "android-digests.json")
+        if (writing) digestFile.writeText(Json.encodeToString(JsonObject(digests.mapValues { JsonPrimitive(it.value) })) + "\n")
+        assertEquals("$scenario: android-digests.json", digests, readDigests(digestFile))
+        assertEquals("$scenario: the same canonical digest on both cores", canonicalDigest(kept), readDigests(File(directory, "apple-digests.json"))["canonical"])
+    }
+
+    /** What a TV of the previous version answers: its merge of what it keeps of the iPhone's snapshot, as it keeps it. */
+    private fun olderAnswer(tv: SyncSnapshot, apple: SyncSnapshot) = SharedListsTest.asOlderDevice(
+        SyncMerge.merge(tv, SharedListsTest.asOlderDevice(InteropScenarios.clock().receive(apple, InteropScenarios.SESSION_WALL), knowsProfiles = true)),
+        knowsProfiles = true,
+    )
+
     private fun check(scenario: String) {
         val directory = File(root, scenario)
         val android = InteropScenarios.android(scenario).let { it.copy(digest = it.contentDigest()) }
@@ -168,6 +225,7 @@ object InteropScenarios {
     const val WALL = 1_760_000_000_000L
     const val SESSION_WALL = WALL + 300_000L
     const val ANDROID_DEVICE = "a0a0a0a0-0000-4000-8000-00000000000a"
+    const val IPAD_DEVICE = "c0c0c0c0-0000-4000-8000-00000000000c"
     const val MAIN = SyncProfile.MAIN
     const val SAM = "11111111-1111-4111-8111-111111111111"
     const val KIDS = "22222222-2222-4222-8222-222222222222"
@@ -175,6 +233,9 @@ object InteropScenarios {
     const val HOME = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
     const val SPORTS = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
     const val MOVIE_NIGHT = "c1c1c1c1-0000-4000-8000-000000000001"
+
+    /** The list of the older relay scenarios. */
+    const val OLD_RELAY_LIST = MOVIE_NIGHT
     const val DOCUMENTARIES = "c2c2c2c2-0000-4000-8000-000000000002"
     const val ROAD_TRIP = "c3c3c3c3-0000-4000-8000-000000000003"
     const val CARTOONS = "c4c4c4c4-0000-4000-8000-000000000004"
@@ -255,6 +316,28 @@ object InteropScenarios {
                     progress = listOf(SyncProgress(SPORTS, "movie", "q1", null, "Final Whistle", null, null, 1200.0, 5400.0, script.at(11))),
                     profiles = profiles,
                     profileData = listOf(SyncProfileData(SAM, favorites = listOf(SyncFavorite(SPORTS, "live", "c7", "Stadium One", null, script.at(20))))),
+                )
+            }
+            // Sam's list, before the iPhone shares it.
+            "old-relay-share" -> {
+                val first = item(HOME, "movie", "m1", "Northern Lights", script.at(20))
+                val t21 = script.at(21)
+                SyncSnapshot(
+                    device = "",
+                    playlists = listOf(home),
+                    profiles = profiles,
+                    profileData = listOf(SyncProfileData(SAM, lists = listOf(list(MOVIE_NIGHT, "Movie night", listOf(first, item(HOME, "movie", "m2", "Glass City", t21)), t21)))),
+                )
+            }
+            // The same list shared with every profile, before the iPhone takes it back.
+            "old-relay-take-back" -> {
+                val first = item(HOME, "movie", "m1", "Northern Lights", script.at(20))
+                val t21 = script.at(21)
+                SyncSnapshot(
+                    device = "",
+                    playlists = listOf(home),
+                    profiles = profiles,
+                    household = SyncHousehold(listOf(list(MOVIE_NIGHT, "Movie night", listOf(first, item(HOME, "movie", "m2", "Glass City", t21)), t21, placedAt = script.at(22)))),
                 )
             }
             else -> error(scenario)
