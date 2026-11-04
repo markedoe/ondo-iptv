@@ -1,5 +1,6 @@
 package com.markedoe.ondo.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Column
@@ -102,7 +103,7 @@ fun RowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
     var dragged by remember { mutableStateOf<Pair<Boolean, List<RowOrderEntry>>?>(null) }
     val list = rememberLazyListState()
     LaunchedEffect(state) { dragged = null }
-    Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).testTag("rowOrder")) {
+    Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).windowInsetsPadding(WindowInsets.safeDrawing).testTag("rowOrder")) {
         TopAppBar(
             title = { Text(stringResource(R.string.row_order)) },
             navigationIcon = {

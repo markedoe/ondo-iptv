@@ -214,6 +214,10 @@ private fun TvOrderRow(
                     focusedContentColor = TvTokens.Ink,
                     selectedContainerColor = TvTokens.Accent,
                     selectedContentColor = TvTokens.Ink,
+                    focusedSelectedContainerColor = TvTokens.Accent,
+                    focusedSelectedContentColor = TvTokens.Ink,
+                    pressedSelectedContainerColor = TvTokens.Accent,
+                    pressedSelectedContentColor = TvTokens.Ink,
                 )
             } else {
                 tvRowColors()
