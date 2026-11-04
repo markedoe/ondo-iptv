@@ -265,22 +265,28 @@ final class SyncHiddenTests: XCTestCase {
         XCTAssertEqual(SyncHidden.shownAt(SyncHidden.forCategory(playlistID: playlistID, categoryID: "movie-2", hiddenAt: 0).key, in: phone.deleted), 20)
     }
 
-    /// Show All on the library: one marker for each type, the categories of those types still hidden dated after it, and
-    /// one deletion for a category shown again alone.
-    func testShowAllInTheLibraryLeavesOneMarkerForEachType() {
+    /// Show All on the library: past `showAllThreshold` categories of one playlist and type, one marker for that type, and
+    /// the categories of that type still hidden dated after it; up to it, one deletion each (the marker would also show again
+    /// what another device hid before it and had not synced yet); one shown again alone, its own deletion.
+    func testShowAllInTheLibraryLeavesAMarkerOnlyPastTheThreshold() {
         let id = UUID()
+        let limit = SyncHidden.showAllThreshold
+        let movies: [String] = (0...limit).map { "movie-\($0)" }
+        let lives: [String] = (1...limit).map { "live-\($0)" }
         var library = UserLibrary()
         let t0 = Date(timeIntervalSince1970: 1)
-        library.setHidden(true, playlistID: id, categoryIDs: ["movie-1", "movie-2", "movie-3", "live-1", "live-2"], now: t0)
+        library.setHidden(true, playlistID: id, categoryIDs: movies + ["movie-kept"] + lives, now: t0)
         let now = Date(timeIntervalSince1970: 2), after = Date(timeIntervalSince1970: 3)
-        library.setHidden(false, playlistID: id, categoryIDs: ["movie-1", "movie-2", "live-1"], now: now, after: after)
-        let key = { UserLibrary.categoryKey(playlistID: id, categoryID: $0) }
-        XCTAssertEqual(library.hiddenCategoryKeys, [key("movie-3"), key("live-2")])
-        XCTAssertEqual(library.categoryShownAt, [id.uuidString + "|movie-*": now, id.uuidString + "|live-*": now])
-        XCTAssertEqual(library.categoryHiddenAt, [key("movie-3"): after, key("live-2"): after])
+        library.setHidden(false, playlistID: id, categoryIDs: movies + lives, now: now, after: after)
+        let key = { (category: String) -> String in UserLibrary.categoryKey(playlistID: id, categoryID: category) }
+        XCTAssertEqual(library.hiddenCategoryKeys, [key("movie-kept")])
+        var expected: [String: Date] = [id.uuidString + "|movie-*": now]
+        for live in lives { expected[key(live)] = now }
+        XCTAssertEqual(library.categoryShownAt, expected)
+        XCTAssertEqual(library.categoryHiddenAt, [key("movie-kept"): after])
         // One alone: its own deletion.
-        library.setHidden(false, playlistID: id, categoryIDs: ["movie-3"], now: after)
-        XCTAssertEqual(library.categoryShownAt[key("movie-3")], after)
+        library.setHidden(false, playlistID: id, categoryIDs: ["movie-kept"], now: after)
+        XCTAssertEqual(library.categoryShownAt[key("movie-kept")], after)
     }
 
     /// Hidden records dated far ahead of the receiver's clock are left out, as any other (docs/SYNC.md, "Clocks").

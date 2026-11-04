@@ -408,6 +408,8 @@ object InteropScenarios {
             "hidden" -> {
                 // The main profile hides Spanish; Sam shows manga again; a parent hides a live category in the Kids profile.
                 snapshot = snapshot.copy(hiddenCategories = snapshot.hiddenCategories + SyncHidden(SyncHidden.TAG, "ES", script.at(100)))
+                // A movie category hidden before the iPhone's Show all of the movies, and not synced yet: the marker shows it too.
+                snapshot = snapshot.copy(hiddenCategories = snapshot.hiddenCategories + SyncHidden.category(HOME, "movie-77", script.at(101)))
                 val t110 = script.at(110)
                 snapshot = snapshot.copy(
                     profileData = snapshot.profileData.map {

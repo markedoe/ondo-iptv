@@ -279,4 +279,25 @@ class LibraryStateTest {
         val one = shown.settingCategoriesHidden(playlist, listOf("movie-7"), hidden = false, now = 30)
         assertEquals(30L, one.syncDeleted[SyncKeys.hiddenCategory(playlist, "movie-7")])
     }
+
+    /**
+     * The marker shows again, on every device, the categories of its type hidden elsewhere before it and not yet synced:
+     * it is written only past [SyncHidden.SHOW_ALL_THRESHOLD] categories of one playlist and type. Up to it, one deletion
+     * each, which shows again nothing else; for each type on its own.
+     */
+    @Test
+    fun showAllWritesAMarkerOnlyPastTheThresholdForEachType() {
+        val playlist = "p1"
+        val limit = SyncHidden.SHOW_ALL_THRESHOLD
+        val movies = (1..limit).map { "movie-$it" }
+        val series = (1..limit + 1).map { "series-$it" }
+        val hidden = LibraryState().settingCategoriesHidden(playlist, movies + series, hidden = true, now = 10)
+        val shown = hidden.settingCategoriesHidden(playlist, movies + series, hidden = false, now = 20, after = 21)
+        assertEquals(movies.map { SyncKeys.hiddenCategory(playlist, it) }.toSet() + "hide:category:p1|series-*", shown.syncDeleted.keys)
+        assertTrue(shown.hiddenCategories.isEmpty())
+        // At the threshold, a category of the same type hidden on another device before and not yet synced stays hidden.
+        val elsewhere = SyncSnapshot(device = "b", hiddenCategories = listOf(SyncHidden.category(playlist, "movie-999", 15), SyncHidden.category(playlist, "series-999", 15)))
+        val merged = SyncMerge.merge(elsewhere, SyncSnapshot(device = "a", deleted = shown.syncDeleted))
+        assertEquals(listOf(SyncHidden.category(playlist, "movie-999", 15)), merged.hiddenCategories)
+    }
 }

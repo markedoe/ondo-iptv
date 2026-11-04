@@ -540,6 +540,12 @@ data class SyncHidden(
         const val SHOW_ALL = "-*"
 
         /**
+         * A marker is written only when more than this many categories of one playlist and type are shown again at once;
+         * fewer leave one deletion each, which shows again nothing else (docs/SYNC.md, "Hidden categories").
+         */
+        const val SHOW_ALL_THRESHOLD = 50
+
+        /**
          * The "shown again" marker covering the hidden category of [key] (`hide:category:<playlist>|<type>-<id>`), whose ID
          * starts with its type: `hide:category:<playlist>|<type>-*`; null for another key.
          */

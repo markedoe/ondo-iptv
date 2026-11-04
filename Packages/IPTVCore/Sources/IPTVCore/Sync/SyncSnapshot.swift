@@ -733,6 +733,10 @@ public struct SyncHidden: Codable, Hashable, Sendable {
     /// The marker that shows again every category of a playlist and type at once: `hide:category:<playlist>|<type>-*`.
     public static let showAll = "-*"
 
+    /// A marker is written only when more than this many categories of one playlist and type are shown again at once;
+    /// fewer leave one deletion each, which shows again nothing else (docs/SYNC.md, "Hidden categories").
+    public static let showAllThreshold = 50
+
     /// The "shown again" marker covering the hidden category of `key` (`hide:category:<playlist>|<type>-<id>`), whose ID
     /// starts with its type: `hide:category:<playlist>|<type>-*`; nil for another key.
     public static func showAllKey(_ key: String) -> String? {

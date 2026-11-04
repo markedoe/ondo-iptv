@@ -282,18 +282,20 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         }
     }
 
-    /// Hides or shows several categories at once (Hide All, Show All). Several shown again leave one "shown again" marker
-    /// for each type of category (`<playlist>|<type>-*` in `categoryShownAt`, docs/SYNC.md "Hidden categories") instead of
+    /// Hides or shows several categories at once (Hide All, Show All). More than `SyncHidden.showAllThreshold` of one type
+    /// shown again leave one "shown again" marker for that type (`<playlist>|<type>-*` in `categoryShownAt`, docs/SYNC.md "Hidden categories") instead of
     /// one each; the categories of those types still hidden are dated `after`, so that the marker leaves them hidden on the
     /// other devices.
     public mutating func setHidden(_ hidden: Bool, playlistID: UUID, categoryIDs: [String], now: Date = Date(), after: Date? = nil) {
         let keys = categoryIDs.map { Self.categoryKey(playlistID: playlistID, categoryID: $0) }
         let shown = keys.filter { hiddenCategoryKeys.contains($0) }
-        guard !hidden, shown.count > 1 else {
+        var counts: [String: Int] = [:]
+        for key in shown { if let marker = Self.showAllMarker(key) { counts[marker, default: 0] += 1 } }
+        let markers = Set(counts.filter { $0.value > SyncHidden.showAllThreshold }.keys)
+        guard !hidden, !markers.isEmpty else {
             for id in categoryIDs { setHidden(hidden, playlistID: playlistID, categoryID: id, now: now) }
             return
         }
-        let markers = Set(shown.compactMap(Self.showAllMarker))
         for key in shown {
             hiddenCategoryKeys.remove(key)
             categoryHiddenAt[key] = nil

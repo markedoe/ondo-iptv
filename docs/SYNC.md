@@ -210,11 +210,16 @@ each is the main profile's, with its time. A Kids profile cannot change its orde
   lowercase without accents).
 
 Key: `hide:<kind>:<value>`; time: `hiddenAt` (set when it is hidden). Showing it again removes the record and adds its key
-to `deleted`, dated then. Several categories shown again at once (Show all) add instead one marker for each playlist and
-type of category, `hide:category:<playlist id>|<type>-*` (`movie-*`, `live-*`, `series-*`), dated then: it shows again
-every category of that playlist whose ID starts with `<type>-` and whose `hiddenAt` is not later (rule 3, as for its own
-key), and the device dates the categories of that type it still hides just after it, so that they stay hidden everywhere.
-A panel of thousands of categories shown again thus adds one key per type to `deleted`, not one per category. Each record
+to `deleted`, dated then. When more than 50 categories of one playlist and type are shown again at once (Show all on a
+large panel), the device adds instead one marker for that playlist and type, `hide:category:<playlist id>|<type>-*`
+(`movie-*`, `live-*`, `series-*`), dated then: it shows again every category of that playlist whose ID starts with
+`<type>-` and whose `hiddenAt` is not later (rule 3, as for its own key), and the device dates the categories of that
+type it still hides just after it. Thousands of categories shown again thus add one key per type to `deleted`, not one
+per category; 50 or fewer add one key each. The marker reaches further than the categories the viewer chose, in two
+ways: a category of that playlist and type that another device hid before the marker, and had not synced yet, is shown
+again everywhere for good; and a device that meets this one only through an older version (which passes the marker on
+but not the categories dated after it) shows again, until it meets a newer device, the categories this one kept hidden.
+A Kids profile on a device where a parent set a PIN keeps its own (below). Each record
 merges on its own (rule 2): hiding a category on one device and showing a language
 again on another keep both changes; a showing again later than the hide wins, a hide later than the showing again wins,
 and on equal times the showing again wins (rule 3). Readers drop records whose `kind` or `value` is blank, holds a control

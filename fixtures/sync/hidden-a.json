@@ -10,6 +10,7 @@
   "hiddenCategories": [
     { "kind": "category", "value": "a1000000-0000-4000-8000-00000000000a|movie-12", "hiddenAt": 100 },
     { "kind": "category", "value": "a1000000-0000-4000-8000-00000000000a|live-7", "hiddenAt": 300 },
+    { "kind": "category", "value": "a1000000-0000-4000-8000-00000000000a|live-8", "hiddenAt": 100 },
     { "kind": "category", "value": "A1000000-0000-4000-8000-00000000000A|series-3", "hiddenAt": 140 },
     { "kind": "category", "value": "b2000000-0000-4000-8000-00000000000b|movie-1", "hiddenAt": 500 },
     { "kind": "tag", "value": "PT", "hiddenAt": 120 },

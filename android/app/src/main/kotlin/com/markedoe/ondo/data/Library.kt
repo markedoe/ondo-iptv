@@ -143,8 +143,9 @@ data class LibraryState(
         settingCategoriesHidden(playlistId, listOf(categoryId), hidden)
 
     /**
-     * Hides or shows categories of [playlistId], dated [now] for sync (a showing again is remembered as a deletion). Several
-     * shown again at once (Show all) leave one marker for each type of category instead of one deletion each
+     * Hides or shows categories of [playlistId], dated [now] for sync (a showing again is remembered as a deletion). More
+     * than [SyncHidden.SHOW_ALL_THRESHOLD] of one type shown again at once (Show all) leave one marker for that type instead
+     * of one deletion each
      * (`hide:category:<playlist>|<type>-*`, docs/SYNC.md, "Hidden categories"); the categories of those types still hidden
      * are dated [after], so that the marker leaves them hidden everywhere.
      */
@@ -152,7 +153,8 @@ data class LibraryState(
         val keys = categoryIds.associateBy({ "$playlistId|$it" }, { SyncKeys.hiddenCategory(playlistId, it) })
         if (hidden) return copy(hiddenCategories = hiddenCategories + keys.keys, hiddenAt = hiddenAt + keys.values.associateWith { now })
         val shown = keys.filterKeys { it in hiddenCategories }
-        val markers = if (shown.size > 1) shown.values.mapNotNullTo(HashSet()) { SyncHidden.showAllKey(it) } else emptySet()
+        val markers = shown.values.groupingBy { SyncHidden.showAllKey(it) }.eachCount()
+            .filter { (marker, count) -> marker != null && count > SyncHidden.SHOW_ALL_THRESHOLD }.keys.filterNotNullTo(HashSet())
         val remaining = hiddenCategories - keys.keys
         val stillHidden = remaining.mapNotNull { SyncKeys.hiddenCategoryOf(it) }.filter { SyncHidden.showAllKey(it) in markers }
         return copy(

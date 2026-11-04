@@ -236,12 +236,18 @@ profil Enfant ne peut pas changer son ordre.
   (`manga`, un mot saisi en minuscules sans accents).
 
 Clé : `hide:<kind>:<value>` ; instant : `hiddenAt` (fixé quand on le masque). Le réafficher retire l’élément et ajoute sa
-clé à `deleted`, datée de ce moment. Plusieurs catégories réaffichées d’un coup (Tout afficher) ajoutent à la place une
-marque par playlist et par type de catégorie, `hide:category:<id de playlist>|<type>-*` (`movie-*`, `live-*`, `series-*`),
-datée de ce moment : elle réaffiche chaque catégorie de cette playlist dont l’identifiant commence par `<type>-` et dont
-`hiddenAt` n’est pas postérieur (règle 3, comme pour sa propre clé), et l’appareil date les catégories de ce type qu’il
-masque encore juste après elle, pour qu’elles restent masquées partout. Un panneau de milliers de catégories réaffichées
-n’ajoute ainsi qu’une clé par type à `deleted`, pas une par catégorie. Chaque élément se fusionne seul (règle 2) : masquer une catégorie sur un appareil et
+clé à `deleted`, datée de ce moment. Quand plus de 50 catégories d’une même playlist et d’un même type sont réaffichées
+d’un coup (Tout afficher sur un grand panneau), l’appareil ajoute à la place une marque pour cette playlist et ce type,
+`hide:category:<id de playlist>|<type>-*` (`movie-*`, `live-*`, `series-*`), datée de ce moment : elle réaffiche chaque
+catégorie de cette playlist dont l’identifiant commence par `<type>-` et dont `hiddenAt` n’est pas postérieur (règle 3,
+comme pour sa propre clé), et l’appareil date les catégories de ce type qu’il masque encore juste après elle. Des
+milliers de catégories réaffichées n’ajoutent ainsi qu’une clé par type à `deleted`, pas une par catégorie ; 50 ou moins
+en ajoutent une chacune. La marque va plus loin que les catégories choisies, de deux façons : une catégorie de cette
+playlist et de ce type qu’un autre appareil a masquée avant la marque, sans l’avoir encore synchronisée, est réaffichée
+partout, définitivement ; et un appareil qui ne rencontre celui-ci qu’à travers une version antérieure (qui transmet la
+marque mais pas les catégories datées après elle) réaffiche, jusqu’à ce qu’il rencontre un appareil récent, les
+catégories que celui-ci a gardées masquées. Un profil Enfant sur un appareil où un parent a mis un code garde les siennes
+(voir plus bas). Chaque élément se fusionne seul (règle 2) : masquer une catégorie sur un appareil et
 réafficher une langue sur un autre gardent les deux changements ; un réaffichage postérieur au masquage gagne, un
 masquage postérieur au réaffichage gagne, et à instants égaux le réaffichage gagne (règle 3). Les lecteurs écartent les
 éléments dont `kind` ou `value` est vide, contient un caractère de contrôle (sous U+0020, ou U+007F) ou dépasse 256 unités

@@ -462,6 +462,10 @@ enum InteropScenarios {
             let samIndex = snapshot.profileData.firstIndex { $0.profile == sam } ?? 0
             snapshot.profileData[samIndex].hiddenCategories.append(
                 SyncHidden.forCategory(playlistID: home, categoryID: "series-4", hiddenAt: script.at(115)))
+            // Show all of the movie categories, past the threshold: one marker, the movies hidden before it shown again.
+            let t118 = script.at(118)
+            snapshot.hiddenCategories.removeAll { $0.kind == SyncHidden.category && $0.value.hasPrefix(home + "|movie-") }
+            snapshot.deleted[SyncHidden.categoryKeyPrefix + home + "|movie" + SyncHidden.showAll] = t118
         case "old-relay-share":
             snapshot = SyncSharing.share(snapshot, list: movieNight, from: sam, removedAt: script.at(100), placedAt: script.at(101))
         case "old-relay-take-back":
