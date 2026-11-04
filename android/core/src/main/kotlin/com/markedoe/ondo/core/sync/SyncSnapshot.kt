@@ -7,8 +7,8 @@ import kotlinx.serialization.json.Json
 
 /**
  * What a device sends to sync on the local network: its playlists, My List and favourite channels, the people kept,
- * lists, playback progress, the keys of outside services and the order of the rows of the Movies and Series tabs, and
- * what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+ * lists, playback progress, the keys of outside services and the order of the rows of the Home, Movies and Series tabs,
+ * and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
  */
 @Serializable
 data class SyncSnapshot(
@@ -24,7 +24,7 @@ data class SyncSnapshot(
     val people: List<SyncPerson> = emptyList(),
     /** The keys typed in Settings for outside services (the TMDb token); none from a device that does not sync them. */
     val keys: List<SyncKey> = emptyList(),
-    /** The order of the rows of the Movies and Series tabs, and the rows hidden; none from a device that does not sync them. */
+    /** The order of the rows of the Home, Movies and Series tabs, and the rows hidden; none from a device that does not sync them. */
     val rows: List<SyncRows> = emptyList(),
     /** The viewer profiles (docs/PROFILES.md, docs/SYNC.md "Profiles"); none from a device that does not sync them. */
     val profiles: List<SyncProfile> = emptyList(),
@@ -408,9 +408,10 @@ data class SyncKey(
 }
 
 /**
- * The rows of a tab of the Movies or Series tabs ([tab] `movie` or `series`) in the order the viewer set ([order], keys of
- * `RowOrder`: `all`, `continue`, … and `cat:<id>|<name>` for a category), and the rows they hid ([hidden]). One record
- * per tab, the whole of it set at once: the later [updatedAt] wins (docs/SYNC.md, "Rows").
+ * The rows of a tab ([tab] `movie`, `series` or `home`) in the order the viewer set ([order], keys of `RowOrder`: `all`,
+ * `continue`, … and `cat:<id>|<name>` for a category), and the rows they hid ([hidden]). One record per tab, the whole
+ * of it set at once: the later [updatedAt] wins (docs/SYNC.md, "Rows"). A tab a device does not know is kept and passed
+ * on as it comes.
  */
 @Serializable
 data class SyncRows(
@@ -436,6 +437,7 @@ data class SyncRows(
     companion object {
         const val MOVIES = "movie"
         const val SERIES = "series"
+        const val HOME = "home"
 
         /** At most this many tabs in a snapshot, keys in `order` and in `hidden`, and UTF-16 units in a key or a tab. */
         const val MAX_TABS = 8
@@ -452,6 +454,7 @@ data class SyncRows(
             val valid = rows.filter { valid(it.tab) }
             val tabs = valid.map { it.tab }.distinct()
             if (tabs.size <= MAX_TABS) return valid
+            // `home` ranks among the others, as on a device from before it: every version keeps the same 8.
             val known = listOf(MOVIES, SERIES).filter { it in tabs }
             val kept = (known + (tabs - known.toSet()).sorted()).take(MAX_TABS).toHashSet()
             return valid.filter { it.tab in kept }

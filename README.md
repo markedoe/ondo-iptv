@@ -95,7 +95,7 @@ interface changes.
   has many of them (keep your languages, choose, or not now); hide a **style** (manga & anime, children,
   documentaries…) or any word of category names (Bollywood…) the same way; or hide categories one by one.
   The filter button is on the Movies, Series and Live TV screens.
-- **Row order** (Settings): the rows of Movies and Series in the order you choose, each shown or hidden (drag
+- **Row order** (Settings): the rows of Home, Movies and Series in the order you choose, each shown or hidden (drag
   to move); "All Movies" / "All Series" at the top by default, with the catalogue's count: the latest additions, then
   See All. New categories go to the end, one the provider removes keeps its place, and the order syncs.
 - **Offline downloads** (movies, episodes; TestFlight edition, not the App Store one), with their speed and time left, the reason in plain words when the
@@ -124,7 +124,7 @@ interface changes.
 - **Home**: carousel (with a TMDb token, first the best rated titles added in the last four days: TMDb's average
   vote weighted by the number of votes, at least 50 votes to qualify; then Trending and new releases), movies and series in progress (one row each; long-press a card, or hold OK on a TV, to take
   it out), My List, new releases, channels; when the playlist was last updated, above its name.
-- **Row order** (Settings): the rows of Movies and Series in the order you choose, each shown or hidden (drag on
+- **Row order** (Settings): the rows of Home, Movies and Series in the order you choose, each shown or hidden (drag on
   a phone; on a TV, OK picks a row up, Up and Down move it, OK puts it down, Back cancels); "All movies" / "All
   series" at the top by default, with the catalogue's count: the latest additions, then See all. The order syncs.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date

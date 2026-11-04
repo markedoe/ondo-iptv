@@ -1,8 +1,8 @@
 package com.markedoe.ondo.core.library
 
 /**
- * The rows of the Movies or Series tab in the order the viewer chose, and those they hid (Settings → Row order). A row
- * is known by a key that survives a playlist refresh: a built-in row by its name ([ALL], [CONTINUE_WATCHING]…), a
+ * The rows of the Home, Movies or Series tab in the order the viewer chose, and those they hid (Settings → Row order).
+ * A row is known by a key that survives a playlist refresh: a built-in row by its name ([ALL], [CONTINUE_WATCHING]…), a
  * provider category by its ID and its name ([categoryKey]), so that a category the provider numbers anew is still found
  * by its name. The same rules as the Swift `RowOrder` (IPTVCore); the order syncs (docs/SYNC.md, "Rows").
  */
@@ -20,11 +20,39 @@ object RowOrder {
     /** The tabs, as sync names them (`SyncRows.tab`). */
     const val MOVIES = "movie"
     const val SERIES = "series"
+    const val HOME = "home"
+
+    /** Home's rows (below its carousel, which stays at the top): movies and series in progress, … */
+    const val HOME_CONTINUE_MOVIES = "continue-movies"
+    const val HOME_CONTINUE_SERIES = "continue-series"
+    const val HOME_NEW_MOVIES = "new-movies"
+    const val HOME_NEW_SERIES = "new-series"
+    /** Live TV: the channels in My List, or those watched lately. */
+    const val HOME_CHANNELS = "channels"
+    /** The viewer's own lists (Apple devices only). */
+    const val HOME_COLLECTIONS = "collections"
 
     /** The built-in rows of a tab, in their default order, above the categories. */
     fun builtIns(series: Boolean): List<String> =
         if (series) listOf(ALL, CONTINUE_WATCHING, MY_LIST, NEW_RELEASES, TRENDING)
         else listOf(ALL, CONTINUE_WATCHING, MY_LIST, NEW_RELEASES, TRENDING, AWARD_WINNERS)
+
+    /**
+     * Home's rows in their default order: movies and series in progress, My List, the new movies and series, Trending,
+     * the collections ([collections]: the platforms that show them), the channels last; on a playlist without movies or
+     * series ([hasVod] false), the channels right after My List.
+     */
+    fun homeBuiltIns(hasVod: Boolean, collections: Boolean): List<String> = buildList {
+        add(HOME_CONTINUE_MOVIES)
+        add(HOME_CONTINUE_SERIES)
+        add(MY_LIST)
+        if (!hasVod) add(HOME_CHANNELS)
+        add(HOME_NEW_MOVIES)
+        add(HOME_NEW_SERIES)
+        add(TRENDING)
+        if (collections) add(HOME_COLLECTIONS)
+        if (hasVod) add(HOME_CHANNELS)
+    }
 
     /** The key of a provider category: `cat:<id>|<name>`, its name as [normalizedName] gives it. */
     fun categoryKey(id: String, name: String): String = "$CATEGORY_PREFIX${clean(id)}|${normalizedName(name)}"

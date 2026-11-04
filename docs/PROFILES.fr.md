@@ -34,7 +34,7 @@ eu), `library-<id>` pour les autres. Ce document contient tout ce qui est propre
 - Ma liste, les acteurs et réalisateurs suivis, les collections ;
 - les rappels de programmes ;
 - les catégories masquées, les langues et pays masqués, les styles masqués ;
-- l’ordre des rangées des onglets Films et Séries (Réglages → Ordre des rangées) ; un profil Enfant ne peut pas changer
+- l’ordre des rangées des onglets Accueil, Films et Séries (Réglages → Ordre des rangées) ; un profil Enfant ne peut pas changer
   le sien.
 
 Communs à tous les profils : les playlists, le jeton TMDb et les autres clés de services, les réglages de lecture

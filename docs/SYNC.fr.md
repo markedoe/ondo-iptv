@@ -23,7 +23,7 @@ Ce document est la spécification. L’implémentation Kotlin est dans
 Synchronisés : les playlists (nom, type, adresse, identifiant et mot de passe, adresse du guide), Ma liste et les
 chaînes favorites, les acteurs et réalisateurs gardés dans Ma liste, les listes (collections) avec leurs personnes, la progression de lecture (où chaque film et épisode a été laissé, et
 ce qui a été terminé), les clés de services extérieurs saisies dans les Réglages (le jeton TMDb), l’ordre des
-rangées des onglets Films et Séries avec les rangées masquées (Réglages → Ordre des rangées), et les profils (nom,
+rangées des onglets Accueil, Films et Séries avec les rangées masquées (Réglages → Ordre des rangées), et les profils (nom,
 couleur, avatar, Enfant) avec, pour chaque profil, sa liste, ses chaînes favorites, ses personnes, ses listes, sa
 progression et son ordre des rangées (docs/PROFILES.fr.md).
 
@@ -185,11 +185,15 @@ quand le service la refuse plus tard. Un appareil garde et transmet les clés de
 instantané sans `keys` (d’un appareil qui ne les synchronise pas) ne retire rien : seul `deleted` le fait.
 
 **Rangées** (l’ordre des rangées d’un onglet, Réglages → Ordre des rangées) — `{"tab", "order", "hidden",
-"updatedAt"}`. `tab` vaut `movie` ou `series` ; `order` liste les rangées de l’onglet par clé, dans l’ordre choisi ;
-`hidden` les clés des rangées masquées. La clé d’une rangée est `all` (Tous les films ou Toutes les séries), `continue`
-(Continuer à regarder), `mylist`, `new` (nouveaux films ou séries), `trending`, `awards` (films primés, Films
-seulement), ou `cat:<id de la catégorie>|<nom>` pour une catégorie du fournisseur : son identifiant tel que la playlist
-le donne (`movie-12`, sans caractères de contrôle ni `|`), puis son nom sans espaces autour, chaque suite d’espaces et
+"updatedAt"}`. `tab` vaut `movie`, `series` ou `home` ; `order` liste les rangées de l’onglet par clé, dans l’ordre
+choisi ; `hidden` les clés des rangées masquées. Dans Films et Séries, la clé d’une rangée est `all` (Tous les films ou
+Toutes les séries), `continue` (Continuer à regarder), `mylist`, `new` (nouveaux films ou séries), `trending`, `awards`
+(films primés, Films seulement), ou `cat:<id de la catégorie>|<nom>` pour une catégorie du fournisseur. Les rangées de
+l’Accueil (sous son carrousel, qui reste en haut) sont `continue-movies` et `continue-series` (les films et séries en
+cours), `mylist`, `new-movies`, `new-series`, `trending`, `collections` (les listes, sur les appareils Apple) et
+`channels` (les chaînes de Ma liste, ou celles regardées récemment) ; par défaut dans cet ordre, `channels` juste après
+`mylist` sur une playlist sans films ni séries. Un appareil qui n’affiche pas une rangée de l’Accueil garde sa clé à sa
+place, comme pour une catégorie partie. La clé d’une catégorie contient son identifiant tel que la playlist le donne (`movie-12`, sans caractères de contrôle ni `|`), puis son nom sans espaces autour, chaque suite d’espaces et
 de caractères de contrôle réduite à une espace, A à Z en minuscules (les autres lettres gardent leur casse). Un
 appareil retrouve une catégorie par la même clé, sinon par son identifiant, sinon par son nom : une catégorie que le
 fournisseur renumérote ou renomme garde sa place. Les rangées que l’onglet a mais qu’`order` ne nomme pas viennent
@@ -203,8 +207,9 @@ un appareil et une autre masquée sur un autre au même moment ne gardent que le
 clés répétées dans `order`, et gardent `hidden` une fois chacune, triées (en unités UTF-16). Ils gardent ensuite au
 plus 2000 clés dans `order` (les premières) et dans `hidden` (les premières une fois triées), écartent les clés et les
 onglets de plus de 256 unités UTF-16, et gardent les enregistrements de 8 onglets au plus : `movie` et `series`, puis
-les autres dans l’ordre UTF-16 (une fusion garde les mêmes 8). Un appareil garde et
-transmet l’enregistrement d’un onglet qu’il ne connaît pas. Un instantané sans `rows` (d’une version plus ancienne) ne
+les autres dans l’ordre UTF-16 (une fusion garde les mêmes 8 ; `home` est parmi les autres). Un appareil garde et
+transmet l’enregistrement d’un onglet qu’il ne connaît pas : une version d’avant l’ordre de l’Accueil transmet
+`rows:home` tel qu’il est venu. Un instantané sans `rows` (d’une version plus ancienne) ne
 change rien ; aucun enregistrement n’est jamais supprimé. Un appareil Android plus ancien écarte `rows` de ce qu’il
 garde et transmet : deux appareils Apple qui ne se synchronisent qu’à travers lui gardent chacun leur ordre. Chaque
 profil a son ordre : celui du profil principal est `rows`, celui d’un autre profil est dans son `profileData`. L’ordre

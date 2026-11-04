@@ -430,6 +430,84 @@ class SyncTest {
         assertEquals(mine, SyncSnapshot.decode(mine.encoded()))
     }
 
+    /**
+     * The order of Home's rows (`rows:home`) from a newer device, and a tab no version knows yet, in the main profile's
+     * records and in another profile's: a device reads, merges and sends them on as they came, with nothing in this
+     * code naming a tab but `movie` and `series` for the cap (docs/SYNC.md, "Rows").
+     */
+    @Test
+    fun theHomeTabAndATabNoVersionKnowsArePassedOnAsTheyCome() {
+        val kid = "00000000-0000-4000-8000-0000000000aa"
+        val newer = requireNotNull(
+            SyncSnapshot.decode(
+                """{"type":"ondo-sync","version":1,"device":"newer",
+                "rows":[{"tab":"home","order":["channels","mylist","continue-movies"],"hidden":["trending"],"updatedAt":900},
+                        {"tab":"later","order":["some-row"],"updatedAt":800}],
+                "profiles":[{"id":"$kid","name":"Kid","kids":true,"updatedAt":100}],
+                "profileData":[{"profile":"$kid","rows":[{"tab":"home","order":["mylist"],"hidden":["channels"],"updatedAt":700}]}]}""".encodeToByteArray(),
+            ),
+        )
+        val home = SyncRows("home", listOf("channels", "mylist", "continue-movies"), listOf("trending"), 900)
+        val later = SyncRows("later", listOf("some-row"), updatedAt = 800)
+        val kidHome = SyncRows("home", listOf("mylist"), listOf("channels"), 700)
+        // A device with only the Movies order of its own (and no profile data) merges what it receives, then sends it.
+        val older = SyncSnapshot(device = "older", rows = listOf(SyncRows(SyncRows.MOVIES, listOf("all"), updatedAt = 500)))
+        val merged = SyncMerge.merge(older, newer)
+        val sent = requireNotNull(SyncSnapshot.decode(merged.encoded()))
+        assertEquals(listOf(home, later, SyncRows(SyncRows.MOVIES, listOf("all"), updatedAt = 500)), sent.rows)
+        assertEquals(listOf(kidHome), sent.profileData.single { it.profile == kid }.rows)
+        // Back on the newer device, nothing changed but the Movies order it did not have.
+        val back = SyncMerge.merge(newer, sent)
+        assertEquals(newer.rows + sent.rows.filter { it.tab == SyncRows.MOVIES }, back.rows)
+        assertEquals(back.contentDigest(), SyncMerge.merge(back, sent).contentDigest())
+        // A later change of Home's order from another device still wins, as for any record.
+        val moved = SyncSnapshot(device = "other", rows = listOf(home.copy(order = listOf("mylist"), updatedAt = 950)))
+        assertEquals(listOf("mylist"), SyncMerge.merge(sent, moved).rows.single { it.tab == SyncRows.HOME }.order)
+    }
+
+    /** Each profile has its own Home order: the main one's in `rows`, another's in its `profileData`; each merges alone. */
+    @Test
+    fun eachProfileKeepsItsOwnHomeOrder() {
+        val kid = "00000000-0000-4000-8000-0000000000aa"
+        val profile = SyncProfile(kid, name = "Kid", kids = true, updatedAt = 1)
+        fun device(name: String, main: Long, other: Long) = SyncSnapshot(
+            device = name,
+            rows = listOf(SyncRows(SyncRows.HOME, listOf("mylist", "$name-$main"), updatedAt = main)),
+            profiles = listOf(profile),
+            profileData = listOf(SyncProfileData(kid, rows = listOf(SyncRows(SyncRows.HOME, listOf("trending", "$name-$other"), updatedAt = other)))),
+        )
+        val a = device("a", main = 10, other = 5)
+        val b = device("b", main = 4, other = 20)
+        for (merged in listOf(SyncMerge.merge(a, b), SyncMerge.merge(b, a))) {
+            assertEquals(listOf("mylist", "a-10"), merged.rows.single().order)
+            assertEquals(listOf("trending", "b-20"), merged.profileData.single().rows.single().order)
+        }
+    }
+
+    /**
+     * A snapshot without a Home record keeps the digest it had: Home's record is only one more record of `rows` (the
+     * encoding is unchanged); with one, the digest follows it.
+     */
+    @Test
+    fun theDigestStaysTheSameWithoutAHomeRecordAndFollowsOne() {
+        val movies = SyncRows(SyncRows.MOVIES, listOf("all", "cat:movie-1|action"), listOf("awards"), 900)
+        val snapshot = SyncSnapshot(device = "a", rows = listOf(movies))
+        val digest = snapshot.contentDigest()
+        assertEquals(digest, requireNotNull(SyncSnapshot.decode(snapshot.encoded())).contentDigest())
+        assertEquals(digest, SyncMerge.merge(snapshot, SyncSnapshot(device = "old")).contentDigest())
+        assertEquals(digest, SyncMerge.merge(snapshot, snapshot.copy(device = "b")).contentDigest())
+        // The shared examples' Movies and Series records alone: read and written again, the same digest, no trace of Home.
+        val shared = fixture("rows-merged.json")
+        val withoutHome = shared.copy(rows = shared.rows.filter { it.tab != SyncRows.HOME })
+        assertEquals(withoutHome.contentDigest(), requireNotNull(SyncSnapshot.decode(withoutHome.encoded())).contentDigest())
+        assertFalse(withoutHome.encoded().decodeToString().contains("home"))
+        val home = SyncRows(SyncRows.HOME, listOf("channels", "mylist"), listOf("trending"), 950)
+        val withHome = snapshot.copy(rows = listOf(home, movies))
+        assertTrue(digest != withHome.contentDigest())
+        assertEquals(withHome.contentDigest(), SyncMerge.merge(withHome, snapshot).contentDigest())
+        assertTrue(withHome.contentDigest() != withHome.copy(rows = listOf(home.copy(hidden = emptyList()), movies)).contentDigest())
+    }
+
     @Test
     fun theDigestOfTheRowsIsStableAndFollowsAChange() {
         val rows = SyncRows(SyncRows.MOVIES, listOf("all", "cat:movie-1|action"), listOf("awards"), 900)
