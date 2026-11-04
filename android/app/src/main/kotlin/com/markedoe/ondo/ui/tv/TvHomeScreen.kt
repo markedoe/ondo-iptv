@@ -81,6 +81,7 @@ import com.markedoe.ondo.ui.components.PlayIcon
 import com.markedoe.ondo.ui.model.ResumeItem
 import com.markedoe.ondo.ui.model.TitleHeader
 import com.markedoe.ondo.core.library.CatalogueMatcher
+import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.ui.screens.HomeActions
 import com.markedoe.ondo.ui.screens.HomeUiState
 import com.markedoe.ondo.ui.screens.myListState
@@ -129,8 +130,8 @@ fun TvHomeScreen(
         channels = stringResource(if (state.channelsAreFavorites) R.string.favorite_channels else R.string.live_tv),
     )
     val (resumeSeries, resumeMovies) = state.continueWatching.partition { it.isSeries }
-    val empty = state.hero.isEmpty() && state.tagSuggestion == null && state.continueWatching.isEmpty() && state.myList.isEmpty() &&
-        state.channels.isEmpty() && state.newMovies.isEmpty() && state.newSeries.isEmpty() && state.trending.isEmpty()
+    // Nothing to focus: no carousel, no card, no row shown (the viewer may have hidden them all).
+    val empty = state.hero.isEmpty() && state.tagSuggestion == null && state.shownRows.isEmpty()
     val memory = LocalFocusMemory.current
     LaunchedEffect(empty) { if (empty) memory?.given() }
     // A playlist without featured titles has its name and when it was updated above the channels (no line in the top
@@ -180,45 +181,35 @@ fun TvHomeScreen(
                             TvTagSuggestion(suggestion, actions)
                         }
                     }
-                    if (resumeMovies.isNotEmpty()) {
-                        tvShelf(titles.movies, "shelfResumeMovies") {
+                    // The rows in the viewer's order (Settings → Row order), those hidden left out.
+                    for (key in state.shownRows) when (key) {
+                        RowOrder.HOME_CONTINUE_MOVIES -> tvShelf(titles.movies, "shelfResumeMovies") {
                             items(resumeMovies, key = { it.key }) { item ->
                                 TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeMovies, item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
                             }
                         }
-                    }
-                    if (resumeSeries.isNotEmpty()) {
-                        tvShelf(titles.series, "shelfResumeSeries") {
+                        RowOrder.HOME_CONTINUE_SERIES -> tvShelf(titles.series, "shelfResumeSeries") {
                             items(resumeSeries, key = { it.key }) { item ->
                                 TvResumeCard(item, onClick = { actions.onResume(item) }, modifier = Modifier.focusMemory("resume:${item.key}"), preparing = item.key == preparingKey, onRemove = { removeResume(resumeSeries, item) }, onOpen = if (item.hasPage) ({ actions.onOpenResume(item) }) else null)
                             }
                         }
-                    }
-                    if (state.myList.isNotEmpty()) {
-                        tvShelf(titles.myList, "shelfMyList") {
+                        RowOrder.MY_LIST -> tvShelf(titles.myList, "shelfMyList") {
                             items(state.myList, key = { it.key }) { item ->
                                 CompositionLocalProvider(LocalShowsMyList provides true) { TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("myList:${item.key}")) }
                             }
                             item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true) }
                         }
-                    }
-                    if (!state.hasVod) channelShelf(state, titles.channels, actions)
-                    if (state.newMovies.isNotEmpty()) {
-                        tvShelf(titles.newMovies, "shelfNewMovies") {
+                        RowOrder.HOME_CHANNELS -> channelShelf(state, titles.channels, actions)
+                        RowOrder.HOME_NEW_MOVIES -> tvShelf(titles.newMovies, "shelfNewMovies") {
                             items(state.newMovies, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newMovies:${item.key}")) }
                         }
-                    }
-                    if (state.newSeries.isNotEmpty()) {
-                        tvShelf(titles.newSeries, "shelfNewSeries") {
+                        RowOrder.HOME_NEW_SERIES -> tvShelf(titles.newSeries, "shelfNewSeries") {
                             items(state.newSeries, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newSeries:${item.key}")) }
                         }
-                    }
-                    if (state.trending.isNotEmpty()) {
-                        tvShelf(titles.trending, "shelfTrending") {
+                        RowOrder.TRENDING -> tvShelf(titles.trending, "shelfTrending") {
                             items(state.trending, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("trending:${item.key}")) }
                         }
                     }
-                    if (state.hasVod) channelShelf(state, titles.channels, actions)
                     if (!state.hasVod && state.channels.isEmpty() && !state.isLoading && !state.isRestoring) {
                         item(key = "empty") {
                             Text(

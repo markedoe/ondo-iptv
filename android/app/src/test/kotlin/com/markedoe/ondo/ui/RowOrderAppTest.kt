@@ -154,11 +154,10 @@ class RowOrderAppTest {
     fun theRemotePicksUpMovesAndPutsDownARowAndBackCancels() {
         var state by mutableStateOf(UiMappers.rowOrder(Fixtures.state()))
         val saves = mutableListOf<List<String>>()
-        val actions = RowOrderActions(onSave = { series, arranged, hidden ->
-            if (!series) saves += arranged
-            val rows = (if (series) state.series else state.movies).associateBy { it.key }
-            val next = arranged.map { rows.getValue(it).copy(hidden = it in hidden) }
-            state = if (series) state.copy(series = next) else state.copy(movies = next)
+        val actions = RowOrderActions(onSave = { tab, arranged, hidden ->
+            if (tab == RowOrder.MOVIES) saves += arranged
+            val rows = state.rows(tab).associateBy { it.key }
+            state = state.with(tab, arranged.map { rows.getValue(it).copy(hidden = it in hidden) })
         })
         var inputModes: InputModeManager? = null
         compose.setContent {
@@ -166,6 +165,8 @@ class RowOrderAppTest {
             OndoTheme { TelevisionFrame { TvRowOrderScreen(state, actions) } }
         }
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        // Below Home's rows.
+        compose.onNodeWithTag("rowOrder").performScrollToNode(hasTestTag("row-movies-all"))
         compose.onNodeWithTag("row-movies-all").requestFocus()
         compose.waitForIdle()
         fun press(key: Key) {
@@ -202,13 +203,14 @@ class RowOrderAppTest {
     @Test
     fun aPhoneMovesARowAndHidesIt() {
         var state by mutableStateOf(UiMappers.rowOrder(Fixtures.state()))
-        val actions = RowOrderActions(onSave = { series, arranged, hidden ->
-            val rows = (if (series) state.series else state.movies).associateBy { it.key }
-            val next = arranged.map { rows.getValue(it).copy(hidden = it in hidden) }
-            state = if (series) state.copy(series = next) else state.copy(movies = next)
+        val actions = RowOrderActions(onSave = { tab, arranged, hidden ->
+            val rows = state.rows(tab).associateBy { it.key }
+            state = state.with(tab, arranged.map { rows.getValue(it).copy(hidden = it in hidden) })
         })
         compose.setContent { OndoTheme { RowOrderScreen(state, actions) } }
         compose.waitForIdle()
+        // Below Home's rows.
+        compose.onNodeWithTag("rowOrderList").performScrollToNode(hasTestTag("rowSwitch-movies-all"))
         val moveUp = compose.onNodeWithTag("row-movies-continue").fetchSemanticsNode().config[SemanticsActions.CustomActions].first()
         compose.runOnIdle { moveUp.action() }
         compose.waitForIdle()
@@ -217,5 +219,45 @@ class RowOrderAppTest {
         compose.waitForIdle()
         assertTrue(state.movies.first { it.key == "all" }.hidden)
         assertEquals(1, compose.onAllNodesWithTag("rowOrderDefault-movies").fetchSemanticsNodes().size)
+    }
+
+    /** Home comes first in Settings → Row order, and the remote moves and hides its rows as it does the others'. */
+    @Test
+    @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
+    fun theRemoteMovesAndHidesAHomeRow() {
+        var state by mutableStateOf(UiMappers.rowOrder(Fixtures.state()))
+        val saves = mutableListOf<Pair<String, List<String>>>()
+        val actions = RowOrderActions(onSave = { tab, arranged, hidden ->
+            saves += tab to arranged
+            val rows = state.rows(tab).associateBy { it.key }
+            state = state.with(tab, arranged.map { rows.getValue(it).copy(hidden = it in hidden) })
+        })
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            OndoTheme { TelevisionFrame { TvRowOrderScreen(state, actions) } }
+        }
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
+        val top = { tag: String -> compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot.top }
+        assertTrue(top("rowOrderDefault-home") < top("row-home-continue-movies"))
+        compose.onNodeWithTag("row-home-mylist").requestFocus()
+        compose.waitForIdle()
+        fun press(key: Key) {
+            compose.onRoot().performKeyInput { pressKey(key) }
+            compose.waitForIdle()
+        }
+        // OK picks My List up, Up twice brings it to the top, OK puts it down: saved for Home only.
+        press(Key.DirectionCenter)
+        press(Key.DirectionUp)
+        press(Key.DirectionUp)
+        press(Key.DirectionCenter)
+        assertEquals(RowOrder.HOME, saves.single().first)
+        assertEquals(listOf("mylist", "continue-movies", "continue-series"), saves.single().second.take(3))
+        assertEquals(RowOrder.ALL, state.movies.first().key)
+        // Right reaches its switch: OK hides it.
+        press(Key.DirectionRight)
+        assertEquals("rowSwitch-home-mylist", compose.onNode(isFocused()).fetchSemanticsNode().config.getOrNull(SemanticsProperties.TestTag))
+        press(Key.DirectionCenter)
+        assertTrue(state.home.first { it.key == "mylist" }.hidden)
     }
 }

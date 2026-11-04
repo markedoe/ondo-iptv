@@ -432,7 +432,7 @@
     <string name="my_list_added">Ajouté à Ma liste</string>
     <string name="my_list_removed">Retiré de Ma liste</string>
     <string name="row_order">Ordre des rangées</string>
-    <string name="row_order_summary">L’ordre des rangées de Films et Séries, et celles affichées.</string>
+    <string name="row_order_summary">L’ordre des rangées de l’Accueil, Films et Séries, et celles affichées.</string>
     <string name="row_order_hint">Faites glisser une rangée par sa poignée pour la déplacer, et désactivez son interrupteur pour la masquer. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils.</string>
     <string name="row_order_hint_tv">OK prend une rangée, Haut et Bas la déplacent, OK la pose. Droite atteint son interrupteur, qui la masque ou l’affiche.</string>
     <string name="row_order_moving_tv">Haut et Bas déplacent la rangée. OK la pose, Retour la remet à sa place.</string>
@@ -444,8 +444,8 @@
     <string name="move_down">Descendre</string>
     <string name="all_movies_count">Tous les films (%1$s)</string>
     <string name="all_series_count">Toutes les séries (%1$s)</string>
-    <string name="help_rows_title">Ordonner les rangées de Films et Séries</string>
-    <string name="help_rows_body">Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Films primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, ou sur un téléviseur appuyez sur OK pour la prendre, Haut et Bas pour la déplacer, OK pour la poser et Retour pour annuler ; désactivez l’interrupteur d’une rangée pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils.</string>
+    <string name="help_rows_title">Ordonner les rangées de l’Accueil, Films et Séries</string>
+    <string name="help_rows_body">Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Films primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, ou sur un téléviseur appuyez sur OK pour la prendre, Haut et Bas pour la déplacer, OK pour la poser et Retour pour annuler ; désactivez l’interrupteur d’une rangée pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils.\n\nLes rangées de l’Accueil (films et séries en cours, Ma liste, les nouveautés, Tendances et les chaînes) se règlent de la même façon, sous Accueil ; le carrousel reste en haut.</string>
     <!-- Profiles (docs/PROFILES.md) -->
     <string name="profile_main_name">Moi</string>
     <string name="whos_watching">Qui regarde ?</string>

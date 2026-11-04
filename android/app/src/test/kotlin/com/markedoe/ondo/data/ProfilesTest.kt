@@ -435,6 +435,33 @@ class ProfilesTest {
         assertEquals(listOf("continue", "all"), snapshot.profileData.single { it.profile == sam.id }.rows.single().order)
     }
 
+    /** Home's order is each profile's too, synced in that profile's data; a Kids profile cannot change it. */
+    @Test
+    fun eachProfileHasItsOwnHomeOrderAndAKidsProfileCannotChangeIt() = runTest {
+        val repository = started(store(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID)))
+        val sam = requireNotNull(repository.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        val kids = requireNotNull(repository.addProfile("Kids", 4, Profile.INITIAL, isKids = true, pin = null))
+        repository.setRowOrder(SyncRows.HOME, arranged = listOf("mylist", "continue-movies"), hidden = listOf("trending"))
+        switch(repository, sam)
+        assertNull(repository.state.value.library.rowOrder(SyncRows.HOME))
+        repository.setRowOrder(SyncRows.HOME, arranged = listOf("trending", "mylist"), hidden = emptyList())
+        switch(repository, kids)
+        repository.setRowOrder(SyncRows.HOME, arranged = listOf("mylist"), hidden = listOf("mylist"))
+        repository.resetRowOrder(SyncRows.HOME)
+        assertNull(repository.state.value.library.rowOrder(SyncRows.HOME))
+        switch(repository, repository.profile("Me")!!)
+        assertEquals(listOf("mylist", "continue-movies"), repository.state.value.library.rowOrder(SyncRows.HOME)?.order)
+        assertEquals(listOf("trending"), repository.state.value.library.rowOrder(SyncRows.HOME)?.hidden)
+        // Default order empties the order and keeps the rows hidden.
+        repository.resetRowOrder(SyncRows.HOME)
+        assertEquals(emptyList<String>(), repository.state.value.library.rowOrder(SyncRows.HOME)?.order)
+        assertEquals(listOf("trending"), repository.state.value.library.rowOrder(SyncRows.HOME)?.hidden)
+        val snapshot = requireNotNull(repository.syncSnapshot("TV"))
+        assertEquals(listOf(SyncRows.HOME), snapshot.rows.map { it.tab })
+        assertEquals(listOf("trending", "mylist"), snapshot.profileData.single { it.profile == sam.id }.rows.single { it.tab == SyncRows.HOME }.order)
+        assertTrue(snapshot.profileData.none { it.profile == kids.id && it.rows.isNotEmpty() })
+    }
+
     // MARK: Review fixes
 
     /** S5: a film keeps saving into the profile it started in, after a switch; once that profile is gone, nowhere. */

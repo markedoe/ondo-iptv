@@ -113,13 +113,16 @@ data class LibraryState(
     /** Sync: when this device learned a deletion made elsewhere, by key (its own are learned when made). */
     val syncDeletedLearned: Map<String, Long> = emptyMap(),
     /**
-     * The order of the rows of the Movies and Series tabs and the rows hidden (Settings → Row order, `RowOrder`), one
+     * The order of the rows of the Home, Movies and Series tabs and the rows hidden (Settings → Row order, `RowOrder`), one
      * record per tab with the time it was set: this profile's (docs/PROFILES.md); sync carries them (docs/SYNC.md, "Rows").
      */
     val rowOrders: List<SyncRows> = emptyList(),
 ) {
     /** The order saved for the Movies or the Series tab; null: the default order. */
-    fun rowOrder(series: Boolean): SyncRows? = rowOrders.firstOrNull { it.tab == (if (series) SyncRows.SERIES else SyncRows.MOVIES) }
+    fun rowOrder(series: Boolean): SyncRows? = rowOrder(if (series) SyncRows.SERIES else SyncRows.MOVIES)
+
+    /** The order saved for a [tab] as sync names it (`movie`, `series`, `home`); null: the default order. */
+    fun rowOrder(tab: String): SyncRows? = rowOrders.firstOrNull { it.tab == tab }
 
     /** [record] kept for its tab, the records sorted by tab as a merge gives them. */
     fun keepingRowOrder(record: SyncRows): LibraryState = copy(rowOrders = (rowOrders.filterNot { it.tab == record.tab } + record).sortedBy { it.tab })

@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.ui.TagSuggestion
 import com.markedoe.ondo.ui.components.CardShape
@@ -87,6 +88,11 @@ data class HomeUiState(
     /** Trending on TMDb this week and in the playlist (with the viewer's TMDb token). */
     val trending: List<ShowcaseItem> = emptyList(),
     val hasVod: Boolean = false,
+    /**
+     * Home's rows to show, by key ([RowOrder.homeBuiltIns]), in the viewer's order (Settings → Row order), without those
+     * hidden; null: the default order. The carousel stays at the top, above them.
+     */
+    val order: List<String>? = null,
     val channels: List<ChannelRow> = emptyList(),
     val channelsAreFavorites: Boolean = false,
     val isLoading: Boolean = false,
@@ -96,7 +102,22 @@ data class HomeUiState(
     val tagSuggestion: TagSuggestion? = null,
     /** The profile in use: its avatar next to Settings opens the switcher (docs/PROFILES.md). */
     val profile: Profile? = null,
-)
+) {
+    /** Home's rows shown, by key, in their order: those with something in them (a phone's and a TV's Home alike). */
+    val shownRows: List<String>
+        get() = (order ?: RowOrder.homeBuiltIns(hasVod, collections = false)).distinct().filter { key ->
+            when (key) {
+                RowOrder.HOME_CONTINUE_MOVIES -> continueWatching.any { !it.isSeries }
+                RowOrder.HOME_CONTINUE_SERIES -> continueWatching.any { it.isSeries }
+                RowOrder.MY_LIST -> myList.isNotEmpty()
+                RowOrder.HOME_NEW_MOVIES -> newMovies.isNotEmpty()
+                RowOrder.HOME_NEW_SERIES -> newSeries.isNotEmpty()
+                RowOrder.TRENDING -> trending.isNotEmpty()
+                RowOrder.HOME_CHANNELS -> channels.isNotEmpty()
+                else -> false
+            }
+        }
+}
 
 class HomeActions(
     val onOpen: (ShowcaseItem) -> Unit = {},
@@ -160,29 +181,20 @@ fun HomeScreen(
             item { TagSuggestionCard(suggestion, actions, Modifier.padding(horizontal = metrics.gutter)) }
         }
         val (resumeSeries, resumeMovies) = state.continueWatching.partition { it.isSeries }
-        if (resumeMovies.isNotEmpty()) {
-            item { ResumeShelf(stringResource(R.string.movies_in_progress), resumeMovies, metrics, actions, preparingKey) }
-        }
-        if (resumeSeries.isNotEmpty()) {
-            item { ResumeShelf(stringResource(R.string.series_in_progress), resumeSeries, metrics, actions, preparingKey) }
-        }
-        if (state.myList.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.my_list), state.myList, metrics, actions, actions.onSeeAllMyList) }
-        }
-        if (!hasVod) {
-            item { ChannelShelf(state, metrics, actions) }
-        }
-        if (state.newMovies.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.new_movies), state.newMovies, metrics, actions) }
-        }
-        if (state.newSeries.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions) }
-        }
-        if (state.trending.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.trending), state.trending, metrics, actions) }
-        }
-        if (hasVod) {
-            item { ChannelShelf(state, metrics, actions) }
+        // The rows in the viewer's order (Settings → Row order), those hidden left out.
+        for (key in state.shownRows) {
+            item(key = "homeRow:$key") {
+                val modifier = Modifier.testTag("homeRow-$key")
+                when (key) {
+                    RowOrder.HOME_CONTINUE_MOVIES -> ResumeShelf(stringResource(R.string.movies_in_progress), resumeMovies, metrics, actions, preparingKey, modifier)
+                    RowOrder.HOME_CONTINUE_SERIES -> ResumeShelf(stringResource(R.string.series_in_progress), resumeSeries, metrics, actions, preparingKey, modifier)
+                    RowOrder.MY_LIST -> PosterShelf(stringResource(R.string.my_list), state.myList, metrics, actions, actions.onSeeAllMyList, modifier)
+                    RowOrder.HOME_NEW_MOVIES -> PosterShelf(stringResource(R.string.new_movies), state.newMovies, metrics, actions, modifier = modifier)
+                    RowOrder.HOME_NEW_SERIES -> PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions, modifier = modifier)
+                    RowOrder.TRENDING -> PosterShelf(stringResource(R.string.trending), state.trending, metrics, actions, modifier = modifier)
+                    RowOrder.HOME_CHANNELS -> ChannelShelf(state, metrics, actions, modifier)
+                }
+            }
         }
         // Nothing is said while the saved catalogue is read or a download runs: it may well have content.
         if (!hasVod && state.channels.isEmpty() && !state.isLoading && !state.isRestoring) {
@@ -199,8 +211,8 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMetrics, actions: HomeActions, preparingKey: String?) {
-    Shelf(title, metrics) {
+private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMetrics, actions: HomeActions, preparingKey: String?, modifier: Modifier = Modifier) {
+    Shelf(title, metrics, modifier) {
         items(items, key = { it.key }) {
             ContinueCard(it, metrics.wideCardWidth, onClick = { actions.onResume(it) }, preparing = it.key == preparingKey, onRemove = { actions.onRemoveResume(it) }, onOpen = if (it.hasPage) ({ actions.onOpenResume(it) }) else null)
         }
@@ -208,8 +220,8 @@ private fun ResumeShelf(title: String, items: List<ResumeItem>, metrics: ShelfMe
 }
 
 @Composable
-private fun PosterShelf(title: String, items: List<ShowcaseItem>, metrics: ShelfMetrics, actions: HomeActions, onSeeAll: (() -> Unit)? = null) {
-    Shelf(title, metrics, onSeeAll = onSeeAll) {
+private fun PosterShelf(title: String, items: List<ShowcaseItem>, metrics: ShelfMetrics, actions: HomeActions, onSeeAll: (() -> Unit)? = null, modifier: Modifier = Modifier) {
+    Shelf(title, metrics, modifier, onSeeAll = onSeeAll) {
         items(items, key = { it.key }) { item ->
             PosterCard(item, metrics.posterWidth, onClick = { actions.onOpen(item) }, focusKey = "$title:${item.key}")
         }
@@ -217,11 +229,12 @@ private fun PosterShelf(title: String, items: List<ShowcaseItem>, metrics: Shelf
 }
 
 @Composable
-private fun ChannelShelf(state: HomeUiState, metrics: ShelfMetrics, actions: HomeActions) {
+private fun ChannelShelf(state: HomeUiState, metrics: ShelfMetrics, actions: HomeActions, modifier: Modifier = Modifier) {
     if (state.channels.isEmpty()) return
     Shelf(
         title = stringResource(if (state.channelsAreFavorites) R.string.favorite_channels else R.string.live_tv),
         metrics = metrics,
+        modifier = modifier,
         onSeeAll = actions.onSeeAllLive,
     ) {
         items(state.channels, key = { it.channel.id }) { row -> ChannelTile(row) { actions.onPlayChannel(row) } }

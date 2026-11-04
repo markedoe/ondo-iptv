@@ -54,12 +54,13 @@ import com.markedoe.ondo.ui.screens.RowOrderEntry
 import com.markedoe.ondo.ui.screens.RowOrderUiState
 import com.markedoe.ondo.ui.screens.moving
 import com.markedoe.ondo.ui.screens.rowName
+import com.markedoe.ondo.ui.screens.tabName
 
-/** A row being moved with the remote: which tab, its key, and the tab's rows as they were when it was picked up. */
-private data class Moving(val series: Boolean, val key: String, val before: List<RowOrderEntry>)
+/** A row being moved with the remote: which tab (as sync names it), its key, and the tab's rows as they were when it was picked up. */
+private data class Moving(val tab: String, val key: String, val before: List<RowOrderEntry>)
 
 /**
- * Settings → Row order on a TV: the rows of Movies, then of Series. OK on a row picks it up: it turns to the accent
+ * Settings → Row order on a TV: the rows of Home, Movies, then Series. OK on a row picks it up: it turns to the accent
  * colour with arrows, Up and Down move it, OK puts it down (saved), Back puts it back where it was. Right reaches its
  * switch, which shows or hides it. Default order, at the top of each tab, puts its rows back as they come.
  */
@@ -68,7 +69,7 @@ fun TvRowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
     var moving by remember { mutableStateOf<Moving?>(null) }
     // The tab being moved in, as it is on screen; the saved rows otherwise.
     var arranged by remember { mutableStateOf<List<RowOrderEntry>?>(null) }
-    fun rowsOf(series: Boolean) = arranged?.takeIf { moving?.series == series } ?: if (series) state.series else state.movies
+    fun rowsOf(tab: String) = arranged?.takeIf { moving?.tab == tab } ?: state.rows(tab)
     // Back while a row is picked up: it goes back where it was, and the page stays.
     BackHandler(enabled = moving != null) {
         moving = null
@@ -100,19 +101,19 @@ fun TvRowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp).testTag("rowOrderHint"),
                 )
             }
-            for (series in listOf(false, true)) {
-                val tab = if (series) "series" else "movies"
+            for (syncTab in RowOrderUiState.TABS) {
+                val tab = RowOrderUiState.tag(syncTab)
                 item(key = "title-$tab") {
                     Row(Modifier.fillMaxWidth().padding(start = 12.dp, top = 20.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            stringResource(if (series) R.string.series else R.string.movies),
+                            tabName(syncTab),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = TvTokens.Accent,
                             modifier = Modifier.weight(1f),
                         )
                         Button(
-                            onClick = { actions.onReset(series) },
+                            onClick = { actions.onReset(syncTab) },
                             enabled = moving == null,
                             modifier = Modifier.testTag("rowOrderDefault-$tab"),
                             scale = ButtonDefaults.scale(focusedScale = 1.06f),
@@ -120,11 +121,11 @@ fun TvRowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
                         ) { Text(stringResource(R.string.row_order_default)) }
                     }
                 }
-                val rows = rowsOf(series)
+                val rows = rowsOf(syncTab)
                 itemsIndexed(rows, key = { _, it -> "$tab|${it.key}" }) { index, entry ->
-                    val picked = moving?.let { it.series == series && it.key == entry.key } == true
+                    val picked = moving?.let { it.tab == syncTab && it.key == entry.key } == true
                     TvOrderRow(
-                        name = rowName(entry, series),
+                        name = rowName(entry, syncTab),
                         entry = entry,
                         index = index,
                         picked = picked,
@@ -134,13 +135,13 @@ fun TvRowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
                         onOk = {
                             val current = moving
                             if (current == null) {
-                                moving = Moving(series, entry.key, rows)
+                                moving = Moving(syncTab, entry.key, rows)
                                 arranged = rows
                             } else {
                                 // Put down: saved when it moved, left as it was otherwise.
                                 val now = arranged ?: rows
                                 moving = null
-                                if (now != current.before) actions.onSave(series, now.map { it.key }, now.filter { it.hidden }.map { it.key }) else arranged = null
+                                if (now != current.before) actions.onSave(syncTab, now.map { it.key }, now.filter { it.hidden }.map { it.key }) else arranged = null
                             }
                         },
                         onMove = { step ->
@@ -149,7 +150,7 @@ fun TvRowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
                             arranged = now.moving(at, (at + step).coerceIn(0, now.lastIndex))
                         },
                         onToggle = {
-                            actions.onSave(series, rows.map { it.key }, rows.filter { if (it.key == entry.key) !it.hidden else it.hidden }.map { it.key })
+                            actions.onSave(syncTab, rows.map { it.key }, rows.filter { if (it.key == entry.key) !it.hidden else it.hidden }.map { it.key })
                         },
                     )
                 }

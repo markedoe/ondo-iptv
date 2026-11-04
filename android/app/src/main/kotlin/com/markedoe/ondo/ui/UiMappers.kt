@@ -392,6 +392,10 @@ object UiMappers {
         val favoriteChannels = state.library.favorites(playlistId, ItemKind.CHANNEL).mapNotNull { channelsById[it.itemId] }
         val recentChannels = state.library.recentChannels(playlistId).mapNotNull { channelsById[it.itemId] }
         val channels = favoriteChannels.ifEmpty { recentChannels }.ifEmpty { channelsById.values.take(ROW_LENGTH) }
+        val savedOrder = state.library.rowOrder(RowOrder.HOME)
+        // The viewer's order of Home's rows (Settings → Row order); a row they hid never shows.
+        val order = RowOrder.arrange(homeRowKeys(showcase.hasVod), savedOrder?.order.orEmpty(), savedOrder?.hidden.orEmpty())
+            .filter { !it.hidden }.map { it.key }
         return HomeUiState(
             playlistName = state.activePlaylist?.name.orEmpty(),
             updatedAt = state.content.fetchedAt.takeIf { it > 0 && !state.content.isEmpty },
@@ -403,6 +407,7 @@ object UiMappers {
             newSeries = showcase.newSeries(now),
             trending = showcase.trending(),
             hasVod = showcase.hasVod,
+            order = order,
             channels = channels.map { channelRow(it, state, now) },
             channelsAreFavorites = favoriteChannels.isNotEmpty(),
             isLoading = state.isLoading,
@@ -465,11 +470,22 @@ object UiMappers {
         RowOrder.builtIns(series) + categories.map { RowOrder.categoryKey(it.id, it.name) }
 
     /**
+     * The keys of Home's rows ([RowOrder]) in their default order: the channels last, or right after My List on a
+     * playlist without movies or series ([hasVod] false). No collections row: Android's Home has none (an order saved
+     * on an Apple device keeps it in its place).
+     */
+    fun homeRowKeys(hasVod: Boolean): List<String> = RowOrder.homeBuiltIns(hasVod, collections = false)
+
+    /**
      * Settings → Row order: the rows of each tab in the viewer's order, hidden or not. The categories hidden in Settings
      * (or by a hidden language, or adult) are not listed: they never show, whatever the order.
      */
     fun rowOrder(state: OndoState): RowOrderUiState {
         val hidden = hiddenCategoryIds(state)
+        val hasVod = state.content.movies.any { it.categoryId !in hidden } || state.content.series.any { it.categoryId !in hidden }
+        val savedHome = state.library.rowOrder(RowOrder.HOME)
+        val home = RowOrder.arrange(homeRowKeys(hasVod), savedHome?.order.orEmpty(), savedHome?.hidden.orEmpty())
+            .map { RowOrderEntry(it.key, null, it.hidden) }
         fun tab(series: Boolean): List<RowOrderEntry> {
             val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }.distinctBy { it.id }
             val names = categories.associate { RowOrder.categoryKey(it.id, it.name) to it.name }
@@ -477,7 +493,7 @@ object UiMappers {
             return RowOrder.arrange(tabRowKeys(categories, series), saved?.order.orEmpty(), saved?.hidden.orEmpty())
                 .map { RowOrderEntry(it.key, names[it.key], it.hidden) }
         }
-        return RowOrderUiState(movies = tab(series = false), series = tab(series = true))
+        return RowOrderUiState(movies = tab(series = false), series = tab(series = true), home = home)
     }
 
     /**

@@ -432,7 +432,7 @@
     <string name="my_list_added">Añadido a Mi lista</string>
     <string name="my_list_removed">Quitado de Mi lista</string>
     <string name="row_order">Orden de las filas</string>
-    <string name="row_order_summary">El orden de las filas de Películas y Series, y las que se muestran.</string>
+    <string name="row_order_summary">El orden de las filas de Inicio, Películas y Series, y las que se muestran.</string>
     <string name="row_order_hint">Arrastra una fila por su asa para moverla y desactiva su interruptor para ocultarla. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.</string>
     <string name="row_order_hint_tv">OK toma una fila, Arriba y Abajo la mueven, OK la suelta. Derecha llega a su interruptor, que la oculta o la muestra.</string>
     <string name="row_order_moving_tv">Arriba y Abajo mueven la fila. OK la suelta, Atrás la devuelve a su sitio.</string>
@@ -444,8 +444,8 @@
     <string name="move_down">Bajar</string>
     <string name="all_movies_count">Todas las películas (%1$s)</string>
     <string name="all_series_count">Todas las series (%1$s)</string>
-    <string name="help_rows_title">Ordenar las filas de Películas y Series</string>
-    <string name="help_rows_body">Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Películas premiadas y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla, o en un televisor pulsa OK para tomarla, Arriba y Abajo para moverla, OK para soltarla y Atrás para cancelar; desactiva el interruptor de una fila para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.</string>
+    <string name="help_rows_title">Ordenar las filas de Inicio, Películas y Series</string>
+    <string name="help_rows_body">Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Películas premiadas y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla, o en un televisor pulsa OK para tomarla, Arriba y Abajo para moverla, OK para soltarla y Atrás para cancelar; desactiva el interruptor de una fila para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.\n\nLas filas de Inicio (películas y series en curso, Mi lista, las novedades, Tendencias y los canales) se ajustan igual, en Inicio; el carrusel se queda arriba.</string>
     <!-- Profiles (docs/PROFILES.md) -->
     <string name="profile_main_name">Yo</string>
     <string name="whos_watching">¿Quién está viendo?</string>
