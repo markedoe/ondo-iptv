@@ -42,6 +42,7 @@
     <string name="filter">筛选</string>
     <string name="sort">排序</string>
     <string name="sort_playlist_order">播放列表顺序</string>
+    <string name="sort_default_order">默认顺序</string>
     <string name="sort_release_date">上映日期</string>
     <string name="sort_rating">评分</string>
     <string name="sort_by">排序：%1$s</string>

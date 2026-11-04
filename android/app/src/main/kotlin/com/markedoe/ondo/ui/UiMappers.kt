@@ -450,15 +450,30 @@ object UiMappers {
             continueWatching = showcase.continueWatching().filter { it.kind == kind }.map { resume(it, state) },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
-            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH, watched + byName.movies, films(state)).map { ShowcaseItem.MovieItem(it) },
+            awardWinners = rowTitles(state, GridSource.AWARDS, series, now, ROW_LENGTH, showcase),
             all = all,
             allCount = allCount,
-            newReleases = if (series) showcase.newSeries(now, ROW_LENGTH) else showcase.newMovies(now, ROW_LENGTH),
+            newReleases = rowTitles(state, GridSource.NEW, series, now, ROW_LENGTH, showcase),
             trending = showcase.trending().filter { (it is ShowcaseItem.SeriesItem) == series },
             order = order,
             series = series,
         )
     }
+
+    /**
+     * The first [limit] titles of a row Ondo picks ([source]), in the row's order: the row shows the first ones, its See
+     * all grid every one ([grid]). Hidden categories and languages, and movies hidden as watched, stay out of both.
+     */
+    fun rowTitles(state: OndoState, source: GridSource, series: Boolean, now: Long, limit: Int, showcase: Showcase = showcase(state)): List<ShowcaseItem> =
+        when (source) {
+            GridSource.NEW -> if (series) showcase.newSeries(now, limit) else showcase.newMovies(now, limit)
+            GridSource.AWARDS -> if (series) {
+                emptyList()
+            } else {
+                MovieAwards.winners(state, hiddenCategoryIds(state), limit, hiddenMovieIds(state) + CategoryFilter.hiddenTitles(state).movies, films(state))
+                    .map { ShowcaseItem.MovieItem(it) }
+            }
+        }
 
     /** The keys of the rows of the Movies or Series tab ([RowOrder]): the built-in rows, then [categories] in their order. */
     fun tabRowKeys(categories: List<MediaCategory>, series: Boolean): List<String> =
@@ -504,7 +519,10 @@ object UiMappers {
         return kept
     }
 
-    /** Items of a poster grid, filtered by [filter] (accent and case insensitive), in the order [sort]. */
+    /**
+     * Items of a poster grid, filtered by [filter] (accent and case insensitive), in the order [sort]: a category's, My
+     * List's, or every title of a row Ondo picks ([source]; [PosterSort.PLAYLIST] keeps the row's own order).
+     */
     fun grid(
         state: OndoState,
         series: Boolean,
@@ -513,10 +531,13 @@ object UiMappers {
         filter: String,
         anyType: Boolean = false,
         sort: PosterSort = PosterSort.PLAYLIST,
+        source: GridSource? = null,
+        now: Long = System.currentTimeMillis(),
     ): List<ShowcaseItem> {
         val hidden = hiddenCategoryIds(state)
         val byName = CategoryFilter.hiddenTitles(state)
         val items: List<ShowcaseItem> = when {
+            source != null -> rowTitles(state, source, series, now, Int.MAX_VALUE)
             myList -> showcase(state).myList().filter { anyType || (it is ShowcaseItem.SeriesItem) == series }
             series -> state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series && (categoryId == null || it.categoryId == categoryId) }.map { ShowcaseItem.SeriesItem(it) }
             else -> {
@@ -528,6 +549,10 @@ object UiMappers {
         val query = TextNormalizer.normalize(filter)
         return sorted(if (query.isEmpty()) items else items.filter { TextNormalizer.normalize(it.title).contains(query) }, sort)
     }
+
+    /** The titles of the poster grid [route] opens, as [grid] gives them. */
+    fun grid(state: OndoState, route: Routes.Grid, filter: String = "", sort: PosterSort = PosterSort.PLAYLIST, now: Long = System.currentTimeMillis()): List<ShowcaseItem> =
+        grid(state, route.series, route.categoryId, route.myList, filter, route.anyType, sort, GridSource.of(route.source), now)
 
     /**
      * Grid order. Release date: newest year first, titles without a year last, the latest addition first within a

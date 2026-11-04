@@ -42,6 +42,7 @@
     <string name="filter">फ़िल्टर करें</string>
     <string name="sort">सॉर्ट करें</string>
     <string name="sort_playlist_order">प्लेलिस्ट का क्रम</string>
+    <string name="sort_default_order">डिफ़ॉल्ट क्रम</string>
     <string name="sort_release_date">रिलीज़ की तारीख</string>
     <string name="sort_rating">रेटिंग</string>
     <string name="sort_by">क्रम: %1$s</string>

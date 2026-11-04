@@ -43,6 +43,7 @@
     <string name="filter">Filter</string>
     <string name="sort">Sort</string>
     <string name="sort_playlist_order">Playlist order</string>
+    <string name="sort_default_order">Default order</string>
     <string name="sort_release_date">Release date</string>
     <string name="sort_rating">Rating</string>
     <string name="sort_by">Sort: %1$s</string>

@@ -46,6 +46,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +69,7 @@ import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.model.MediaCategory
 import java.text.NumberFormat
 import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.ui.GridSource
 import com.markedoe.ondo.ui.components.ContinueCard
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
@@ -158,6 +161,8 @@ class VodActions(
     val onOpenResume: (ResumeItem) -> Unit = {},
     val onCategory: (MediaCategory?) -> Unit = {},
     val onSeeAllMyList: () -> Unit = {},
+    /** See all of a row Ondo picks (New, Award winners): every title of the row, in its order. */
+    val onSeeAllRow: (GridSource) -> Unit = {},
     val onSearch: () -> Unit = {},
     val onCategories: () -> Unit = {},
 )
@@ -473,10 +478,17 @@ internal fun SortButton(sort: PosterSort, onSort: (PosterSort) -> Unit, hideWatc
     }
 }
 
+/**
+ * What the Sort menus call [PosterSort.PLAYLIST]: the playlist's order, or on the grid of a row Ondo picks (New, Award
+ * winners) the row's own order, its default.
+ */
+val LocalPlaylistOrderLabel = staticCompositionLocalOf { R.string.sort_playlist_order }
+
 /** The name of an order in the Sort menus (a phone's, the TV's Sort chip). */
 internal val PosterSort.label: Int
+    @Composable @ReadOnlyComposable
     get() = when (this) {
-        PosterSort.PLAYLIST -> R.string.sort_playlist_order
+        PosterSort.PLAYLIST -> LocalPlaylistOrderLabel.current
         PosterSort.NAME -> R.string.name
         PosterSort.RECENT -> R.string.recently_added
         PosterSort.RELEASE -> R.string.sort_release_date

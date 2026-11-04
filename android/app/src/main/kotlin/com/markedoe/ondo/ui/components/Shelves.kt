@@ -123,7 +123,7 @@ fun Shelf(
             )
             // On a TV, "See all" is the row's last card instead (hard to reach above the row with a remote).
             if (onSeeAll != null && !isTelevision()) {
-                TextButton(onClick = onSeeAll) {
+                TextButton(onClick = onSeeAll, modifier = Modifier.testTag("seeAll")) {
                     Text(stringResource(R.string.see_all))
                     Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, contentDescription = null, modifier = Modifier.size(18.dp))
                 }

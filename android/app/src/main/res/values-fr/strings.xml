@@ -42,6 +42,7 @@
     <string name="filter">Filtrer</string>
     <string name="sort">Trier</string>
     <string name="sort_playlist_order">Ordre de la playlist</string>
+    <string name="sort_default_order">Ordre par défaut</string>
     <string name="sort_release_date">Date de sortie</string>
     <string name="sort_rating">Note</string>
     <string name="sort_by">Tri : %1$s</string>
