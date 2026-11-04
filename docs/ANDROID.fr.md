@@ -95,7 +95,15 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   d'image morte est retenue 7 jours. Un 401 plus tard (un
   jeton révoqué, ou arrivé par la synchronisation) s'affiche comme refusé dans les Réglages, et plus rien n'est demandé.
 - **Lecteur** Media3 / ExoPlayer : HLS, MPEG-TS, MP4, MKV, en-têtes du fournisseur, adresses de secours,
-  reprise, image dans l'image, MediaSession, pistes audio et sous-titres, les langues de l'audio et des
+  reprise, image dans l'image, MediaSession, pistes audio et sous-titres (une piste de sous-titres que l'appareil
+  ne peut pas afficher, comme un format image sans son décodeur, est listée avec son format et la raison, pas
+  masquée : `player/TrackChoices.kt`), Sous-titres → Rechercher en ligne… pour les films et les épisodes
+  (OpenSubtitles.com, SubDL et SubSource avec la propre clé d'API du spectateur, Addic7ed via Gestdown une fois
+  activé ; par l'identifiant TMDb quand le fournisseur le donne, sinon par le titre sans ses étiquettes, son année,
+  sa saison et son épisode ; la langue de sous-titres du spectateur d'abord ; le sous-titre choisi est chargé à côté
+  de la vidéo et gardé pour le titre sur l'appareil : `core/subtitles/`, `player/OnlineSubtitles.kt` ; les clés se
+  règlent dans Réglages → Services de sous-titres, sont vérifiées auprès de chaque service à l'enregistrement et
+  restent sur l'appareil, hors synchronisation), les langues de l'audio et des
   sous-titres apprises des choix du spectateur et utilisées d'abord pour les flux suivants, les sous-titres forcés
   toujours affichés avec les sous-titres désactivés (`player/TrackPreferences.kt`), mémoires tampons distinctes
   pour le direct et pour les films et séries, jamais plus de la moitié de la mémoire qui reste à l'app quand le
@@ -186,7 +194,7 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   silence son délai.
 
 Prévu ensuite (non inclus en v1) : Chromecast, téléchargements, profils et PIN,
-sous-titres en ligne, second moteur libVLC ; sur une TV, chaînes du lanceur et recherche vocale.
+second moteur libVLC ; sur une TV, chaînes du lanceur et recherche vocale.
 
 ## Captures d'écran et régressions
 

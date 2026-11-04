@@ -141,6 +141,8 @@ class SettingsActions(
     val onCheckTmdbToken: suspend (String) -> TmdbCheck = { TmdbCheck.UNREACHABLE },
     val onRemoveTmdbToken: () -> Unit = {},
     val onOpenTmdbApiPage: () -> Unit = {},
+    /** The subtitle services searched from the player (Settings → Subtitle services); null in tests that leave them out. */
+    val subtitleServices: com.markedoe.ondo.data.SubtitleServices? = null,
     val onTip: (Tip) -> Unit = {},
 )
 
@@ -311,6 +313,11 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
             item { SectionTitle("TMDb") }
             item(key = "tmdb") {
                 TmdbTokenSettings(state.hasTmdbToken, state.tmdbRefused, actions.onCheckTmdbToken, actions.onRemoveTmdbToken, actions.onOpenTmdbApiPage)
+            }
+            actions.subtitleServices?.let { services ->
+                item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
+                item { SectionTitle(stringResource(R.string.subtitle_services)) }
+                item(key = "subtitleServices") { com.markedoe.ondo.ui.components.SubtitleServicesSettings(services, Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
             }
             item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
             item { SectionTitle(stringResource(R.string.player)) }

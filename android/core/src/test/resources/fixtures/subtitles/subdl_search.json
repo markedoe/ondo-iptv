@@ -1,0 +1,4 @@
+{"status":true,"results":[{"sd_id":1,"type":"tv","name":"Copper Valley","imdb_id":"tt0000001","tmdb_id":73375,"first_air_date":"2018-08-31","year":2018}],"subtitles":[
+{"release_name":"Copper.Valley.S03E03.720p.WEB","name":"SUBDL::Copper.Valley.S03E03.720p.WEB.zip","lang":"english","author":"example","url":"/subtitle/1000-2000.zip","subtitlePage":"/s/info/example","season":3,"episode":3,"language":"EN","hi":false,"episode_from":null,"episode_end":0,"full_season":false},
+{"release_name":"Copper.Valley.S03E03.1080p","name":"SUBDL::Copper.Valley.S03E03.1080p.zip","lang":"french","url":"/subtitle/1000-2001.zip","season":3,"episode":3,"language":"FR","hi":true}
+]}
