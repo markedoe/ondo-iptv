@@ -7,6 +7,7 @@ import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
@@ -384,7 +385,7 @@ class TvScreenshots {
                     CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory(), LocalPlaylistOrderLabel provides R.string.sort_default_order) {
                         FocusEntry {
                             val items = remember { UiMappers.grid(state, route, now = now) }
-                            PosterGridScreen("New movies", items, filter = "", onFilter = {}, onOpen = {}, onBack = {}, sort = PosterSort.PLAYLIST, hideWatched = state.settings.hideWatchedMovies)
+                            PosterGridScreen(stringResource(R.string.new_movies), items, filter = "", onFilter = {}, onOpen = {}, onBack = {}, sort = PosterSort.PLAYLIST, hideWatched = state.settings.hideWatchedMovies)
                         }
                     }
                 }
