@@ -75,6 +75,10 @@ class WatchedEpisodesEverywhereTest {
     fun anEpisodeWatchedAnyWayInShowsOnEverySurface() = runTest {
         val repository = OndoRepository(AppStore(folder.root), FakeHttp(mapOf(list to catalogue)), backgroundScope, io = StandardTestDispatcher(testScheduler))
         val viewModel = OndoViewModel(repository, Labels(), computation = Dispatchers.Unconfined, minutes = flowOf(1_760_000_000_000L)).also { models += it }
+        // The view model reads what is saved (bootstrap) as it starts; its state, once read, replaces the playlists and
+        // settings: a playlist added before then would lose its place as the active one. As the app, which shows
+        // nothing to add one before.
+        viewModel.state.first { it.isReady }
         assertTrue(repository.addPlaylist("Home", list).isSuccess)
         val series: Series = viewModel.state.first { it.content.series.isNotEmpty() }.content.series.single()
         // The series page was opened: its seasons are known.
