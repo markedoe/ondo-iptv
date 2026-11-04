@@ -283,4 +283,93 @@ class OnlineSubtitlesTest {
         assertEquals(listOf("fr", "de"), SubtitleLanguages.defaults("fr", listOf("fr-FR", "de-DE")))
         assertEquals(listOf("de", "en"), SubtitleLanguages.defaults(null, listOf("de-DE")))
     }
+
+    /** A hostile archive: too many files, or files that inflate past what the app reads, stop with TooLarge, not OOM. */
+    @Test
+    fun anArchiveThatInflatesTooFarIsRefused() {
+        val many = zip(*Array(SubtitleArchive.MAX_ENTRIES + 1) { "n$it.txt" to "x" })
+        try {
+            SubtitleArchive.pick(many, null)
+            fail("picked")
+        } catch (_: SubtitleSearchException.TooLarge) {
+        }
+        // Six files of 7 MB of zeros: under the cap for one, 42 MB in all, a few kilobytes compressed.
+        val zeros = "\u0000".repeat(7 * 1024 * 1024)
+        val large = zip(*Array(6) { "e$it.srt" to zeros })
+        assertTrue(large.size < 1024 * 1024)
+        try {
+            SubtitleArchive.pick(large, null)
+            fail("picked")
+        } catch (_: SubtitleSearchException.TooLarge) {
+        }
+        // One file over the cap for a file.
+        try {
+            SubtitleArchive.pick(zip("big.srt" to "\u0000".repeat(SubtitleArchive.MAX_FILE_BYTES + 1)), null)
+            fail("picked")
+        } catch (_: SubtitleSearchException.TooLarge) {
+        }
+        // Files that are not subtitles count toward the total, but are not kept.
+        assertEquals("film.srt", SubtitleArchive.pick(zip("a.txt" to "x".repeat(1024), "film.srt" to srt), null).fileName)
+    }
+
+    @Test
+    fun aSubtitleFileLargerThanAnySubtitleIsNotRead() = runBlocking {
+        val http = FakeHttp().apply {
+            routes["https://api.opensubtitles.com/api/v1/download"] = fixture("opensubtitles_download.json")
+            routes["https://www.opensubtitles.com/download/example/subfile/Copper.Valley.S03E03.srt"] = ByteArray(SubtitleArchive.MAX_SUBTITLE_DOWNLOAD.toInt() + 1)
+        }
+        try {
+            OpenSubtitlesClient("k", userAgent = "Ondo", http = http).download(OnlineSubtitle(SubtitleService.OPEN_SUBTITLES, "7000001", "en", ""), episode)
+            fail("downloaded")
+        } catch (_: SubtitleSearchException.TooLarge) {
+        }
+    }
+
+    /** The key and the session go to the service's own hosts only, and its files come over HTTPS. */
+    @Test
+    fun openSubtitlesTalksOnlyToItsOwnHosts() = runBlocking {
+        for (host in listOf("x@evil.example", "evil.example", "opensubtitles.com.evil.example", "api.opensubtitles.com:8080")) {
+            val http = FakeHttp().apply {
+                routes["https://api.opensubtitles.com/api/v1/login"] = """{"token":"example-session-token","base_url":"$host"}""".toByteArray()
+                routes["https://api.opensubtitles.com/api/v1/download"] = fixture("opensubtitles_download.json")
+                routes["https://www.opensubtitles.com/download/example/subfile/Copper.Valley.S03E03.srt"] = srt.toByteArray()
+            }
+            OpenSubtitlesClient("k", "example-user", "example-password", userAgent = "Ondo", http = http)
+                .download(OnlineSubtitle(SubtitleService.OPEN_SUBTITLES, "7000001", "en", ""), episode)
+            assertTrue(host, http.sent.none { "evil" in it.url || ":8080" in it.url })
+        }
+        assertTrue(OpenSubtitlesClient.isServiceHost("vip-api.opensubtitles.com"))
+        val plain = FakeHttp().apply {
+            routes["https://api.opensubtitles.com/api/v1/download"] = """{"link":"http://www.opensubtitles.com/download/a.srt","file_name":"a.srt"}""".toByteArray()
+        }
+        try {
+            OpenSubtitlesClient("k", userAgent = "Ondo", http = plain).download(OnlineSubtitle(SubtitleService.OPEN_SUBTITLES, "7000001", "en", ""), episode)
+            fail("downloaded over HTTP")
+        } catch (_: SubtitleSearchException.ServiceError) {
+        }
+        assertEquals(1, plain.sent.size)
+    }
+
+    @Test
+    fun aLoginTheServiceWillNotTakeIsRefusedAndALimitIsALimit() = runBlocking {
+        val formats = "https://api.opensubtitles.com/api/v1/infos/formats"
+        val badRequest = FakeHttp().apply {
+            routes[formats] = fixture("opensubtitles_formats.json")
+            routes["https://api.opensubtitles.com/api/v1/login"] = HttpException.BadStatus(400)
+        }
+        assertEquals(CredentialCheck.REFUSED, OpenSubtitlesClient("k", "example-user", "x", userAgent = "Ondo", http = badRequest).checkCredentials())
+        val busy = FakeHttp().apply { routes[formats] = HttpException.BadStatus(429) }
+        assertEquals(CredentialCheck.LIMITED, OpenSubtitlesClient("k", userAgent = "Ondo", http = busy).checkCredentials())
+    }
+
+    /** SubDL's `status: false` refuses the key only when it says so; a limit reached is no refused key. */
+    @Test
+    fun subdlTellsARefusedKeyFromALimit() = runBlocking {
+        fun answer(message: String) = FakeHttp().apply { routes["https://api.subdl.com/api/v1/subtitles"] = """{"status":false,"error":"$message"}""".toByteArray() }
+        assertEquals(CredentialCheck.REFUSED, SubDLClient("k", answer("Invalid API key")).checkKey())
+        assertEquals(CredentialCheck.REFUSED, SubDLClient("k", answer("api_key is required")).checkKey())
+        assertEquals(CredentialCheck.LIMITED, SubDLClient("k", answer("API rate limit exceeded, try again later")).checkKey())
+        assertEquals(CredentialCheck.LIMITED, SubDLClient("k", answer("Too many requests for this key")).checkKey())
+        assertEquals(CredentialCheck.ACCEPTED, SubDLClient("k", answer("can't find movie or tv")).checkKey())
+    }
 }

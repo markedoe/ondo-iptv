@@ -46,6 +46,14 @@ class OkHttpClientAdapterTest {
 
     /** The image loader calls the shared client directly, without the adapter's headers. */
     @Test
+    fun aLimitedDownloadStopsPastItsLimit(): Unit = runBlocking(Dispatchers.IO) {
+        server.enqueue(MockResponse().setBody("x".repeat(2048)))
+        assertFailsWith<HttpException.TooLarge> { client.getLimited(server.url("/big.srt").toString(), emptyMap(), 1024) }
+        server.enqueue(MockResponse().setBody("small"))
+        assertEquals("small", client.getLimited(server.url("/small.srt").toString(), emptyMap(), 1024).decodeToString())
+    }
+
+    @Test
     fun postSendsItsBodyWithItsType(): Unit = runBlocking(Dispatchers.IO) {
         server.enqueue(MockResponse().setBody("{\"token\":\"t\"}"))
         val body = client.post(server.url("/api/v1/login").toString(), mapOf("Api-Key" to "example-key"), "{\"username\":\"u\"}".toByteArray())

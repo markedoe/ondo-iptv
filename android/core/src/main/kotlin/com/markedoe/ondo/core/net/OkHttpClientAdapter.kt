@@ -35,6 +35,9 @@ class OkHttpClientAdapter(
     override suspend fun get(url: String, headers: Map<String, String>): ByteArray =
         fetch(url, headers) { body, length -> readLimited(body, MAX_BODY_SIZE, length) }
 
+    override suspend fun getLimited(url: String, headers: Map<String, String>, limit: Long): ByteArray =
+        fetch(url, headers) { body, length -> readLimited(body, limit, length) }
+
     override suspend fun post(url: String, headers: Map<String, String>, body: ByteArray, contentType: String): ByteArray =
         fetch(url, headers, body.toRequestBody(contentType.toMediaTypeOrNull())) { stream, length -> readLimited(stream, MAX_BODY_SIZE, length) }
 

@@ -36,6 +36,15 @@ object SideLoadedSubtitle {
         else -> MimeTypes.APPLICATION_SUBRIP
     }
 
+    /** Whether the viewer's subtitle choice in [parameters] is the downloaded subtitle (not Off, not another track). */
+    fun isChosen(parameters: TrackSelectionParameters): Boolean =
+        parameters.overrides.values.any { override ->
+            override.type == C.TRACK_TYPE_TEXT && override.trackIndices.any { override.mediaTrackGroup.getFormat(it).id?.endsWith(ID) == true }
+        }
+
+    /** Whether a subtitle downloaded for [downloadedFor] belongs to the title [playing] now. */
+    fun sameTitle(downloadedFor: String?, playing: String?): Boolean = downloadedFor == playing
+
     /** [parameters] with the downloaded subtitle's track chosen, once it is among [tracks]; null before. */
     fun select(parameters: TrackSelectionParameters, tracks: Tracks): TrackSelectionParameters? {
         for (group in tracks.groups) {

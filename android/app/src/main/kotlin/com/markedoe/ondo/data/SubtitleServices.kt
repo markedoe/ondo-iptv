@@ -76,9 +76,11 @@ class SubtitleServices(
     private val http: HttpClient,
     /** How the app introduces itself to the services (OpenSubtitles requires a name and version). */
     private val userAgent: String,
-    /** Where downloaded subtitles are kept. */
-    private val folder: File,
+    /** Where downloaded subtitles are kept: the only folder of the app the player reads a file from. */
+    val folder: File,
     private val io: CoroutineDispatcher = Dispatchers.IO,
+    /** The latest subtitles kept; older ones are deleted. */
+    private val maxKept: Int = MAX_KEPT,
 ) : SyncedKeyStore {
     private val _state = MutableStateFlow(readState())
     val state: StateFlow<SubtitleServicesState> = _state.asStateFlow()
@@ -102,22 +104,37 @@ class SubtitleServices(
 
     /**
      * Checks [service]'s key (and OpenSubtitles' account) with the service, and saves them only once it accepts them.
-     * An empty key removes what was saved, without a check: null then.
+     * A field left empty keeps what is saved: with a key saved, typing only a username and a password checks the
+     * account with that key. A username needs its password (and the reverse): [CredentialCheck.INCOMPLETE] otherwise,
+     * without asking the service. Every field empty removes what was saved, without a check: null then.
      */
     suspend fun checkAndSave(service: SubtitleService, values: Map<SubtitleCredential, String>): CredentialCheck? {
         val fields = SubtitleCredential.fields(service)
+        val keyField = fields.firstOrNull() ?: return null
         val typed = fields.associateWith { clean(it, values[it]) }
-        val key = typed[fields.firstOrNull() ?: return null]
-        if (key == null) {
+        if (typed.values.all { it == null }) {
             remove(service)
             return null
+        }
+        val key = typed[keyField] ?: credential(keyField) ?: return CredentialCheck.INCOMPLETE
+        val merged = HashMap<SubtitleCredential, String?>().apply { put(keyField, key) }
+        if (service == SubtitleService.OPEN_SUBTITLES) {
+            val typedUser = typed[SubtitleCredential.OPEN_SUBTITLES_USERNAME]
+            val typedPassword = typed[SubtitleCredential.OPEN_SUBTITLES_PASSWORD]
+            val savedUser = credential(SubtitleCredential.OPEN_SUBTITLES_USERNAME)
+            val user = typedUser ?: savedUser
+            // A new username comes with its password; the saved password goes only with the saved username.
+            val password = typedPassword ?: credential(SubtitleCredential.OPEN_SUBTITLES_PASSWORD)?.takeIf { user == savedUser }
+            if ((user == null) != (password == null)) return CredentialCheck.INCOMPLETE
+            merged[SubtitleCredential.OPEN_SUBTITLES_USERNAME] = user
+            merged[SubtitleCredential.OPEN_SUBTITLES_PASSWORD] = password
         }
         checking += service
         val check = try {
             withContext(io) {
                 when (service) {
                     SubtitleService.OPEN_SUBTITLES -> OpenSubtitlesClient(
-                        key, typed[SubtitleCredential.OPEN_SUBTITLES_USERNAME], typed[SubtitleCredential.OPEN_SUBTITLES_PASSWORD], userAgent, http,
+                        key, merged[SubtitleCredential.OPEN_SUBTITLES_USERNAME], merged[SubtitleCredential.OPEN_SUBTITLES_PASSWORD], userAgent, http,
                     ).checkCredentials()
                     SubtitleService.SUBDL -> SubDLClient(key, http).checkKey()
                     SubtitleService.SUBSOURCE -> SubSourceClient(key, http).checkKey()
@@ -127,7 +144,7 @@ class SubtitleServices(
         } finally {
             checking -= service
         }
-        if (check == CredentialCheck.ACCEPTED) save(typed)
+        if (check == CredentialCheck.ACCEPTED) save(merged)
         return check
     }
 
@@ -292,10 +309,9 @@ class SubtitleServices(
             val target = File(folder, name)
             target.writeBytes(file.data)
             val chosen = ChosenSubtitle(target.absolutePath, subtitle.language, file.format, subtitle.service.displayName)
-            if (titleKey != null) {
-                prefs.edit().putString(CHOSEN + titleKey, Json.encodeToString(ChosenSubtitle.serializer(), chosen)).apply()
-                trim()
-            }
+            if (titleKey != null) prefs.edit().putString(CHOSEN + titleKey, Json.encodeToString(ChosenSubtitle.serializer(), chosen)).apply()
+            // Those of no title too (named after the subtitle): the folder stays bounded.
+            trim(target)
             chosen
         }
     }
@@ -306,12 +322,12 @@ class SubtitleServices(
         return runCatching { Json.decodeFromString(ChosenSubtitle.serializer(), text) }.getOrNull()?.takeIf { File(it.path).isFile }
     }
 
-    /** Keeps the [MAX_KEPT] latest subtitles. */
-    private fun trim() {
-        val files = folder.listFiles()?.sortedByDescending { it.lastModified() } ?: return
-        if (files.size <= MAX_KEPT) return
-        val gone = files.drop(MAX_KEPT).map { it.absolutePath }.toSet()
-        files.drop(MAX_KEPT).forEach { it.delete() }
+    /** Keeps the [maxKept] latest subtitles, [newest] (just written) first. */
+    private fun trim(newest: File) {
+        val files = folder.listFiles()?.sortedWith(compareByDescending<File> { it == newest }.thenByDescending { it.lastModified() }.thenBy { it.name }) ?: return
+        if (files.size <= maxKept) return
+        val gone = files.drop(maxKept).map { it.absolutePath }.toSet()
+        files.drop(maxKept).forEach { it.delete() }
         val editor = prefs.edit()
         prefs.all.filterKeys { it.startsWith(CHOSEN) }.forEach { (key, value) ->
             val path = runCatching { Json.decodeFromString(ChosenSubtitle.serializer(), value as String).path }.getOrNull()

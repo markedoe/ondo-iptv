@@ -275,6 +275,9 @@ class PlayerActivity : ComponentActivity() {
     private var sideLoaded: com.markedoe.ondo.data.ChosenSubtitle? = null
     private var sideLoadPending = false
 
+    /** The downloaded subtitle was just loaded or found for the title: chosen whatever the selection says. */
+    private var sideLoadFresh = false
+
     /** Up next is on screen, near the end of an episode; null otherwise, and once the viewer declined it. */
     private var upNext by mutableStateOf<UpNext?>(null)
     private var upNextDeclined = false
@@ -568,19 +571,26 @@ class PlayerActivity : ComponentActivity() {
     /** The online search for what plays now, and the subtitle downloaded for it earlier. */
     private fun startOnlineSubtitles() {
         val services = (application as OndoApplication).subtitleServices
+        // The previous title's search or download stops: what it brings would be another title's.
+        online?.cancel()
         val hint = request.subtitleSearch?.takeIf { !request.isLive }
-        sideLoaded = hint?.let { services.chosen(request.progressKey) }
+        val titleKey = request.progressKey
+        sideLoaded = hint?.let { services.chosen(titleKey) }
+        sideLoadFresh = sideLoaded != null
         online = hint?.let {
             val languages = com.markedoe.ondo.core.subtitles.SubtitleLanguages.defaults(repository.state.value.settings.preferredSubtitleLanguage, deviceLanguages())
-            OnlineSubtitles(lifecycleScope, ServicesSource(services, request.progressKey), it, languages, ::loadSubtitle)
+            OnlineSubtitles(lifecycleScope, ServicesSource(services, titleKey), it, languages) { chosen -> loadSubtitle(titleKey, chosen) }
         }
     }
 
     /** A subtitle downloaded from the panel: the video starts again where it is, with it, and it shows. */
-    private fun loadSubtitle(chosen: com.markedoe.ondo.data.ChosenSubtitle) {
+    private fun loadSubtitle(titleKey: String?, chosen: com.markedoe.ondo.data.ChosenSubtitle) {
+        // Downloaded for a title that no longer plays: kept for it, not shown over this one.
+        if (!SideLoadedSubtitle.sameTitle(titleKey, request.progressKey)) return
         val exoPlayer = player ?: return
         val item = exoPlayer.currentMediaItem ?: return
         sideLoaded = chosen
+        sideLoadFresh = true
         sideLoadPending = true
         reporter.note("subtitles: one downloaded from ${chosen.label} (${chosen.format})")
         val position = exoPlayer.currentPosition
@@ -800,7 +810,7 @@ class PlayerActivity : ComponentActivity() {
         // A decoder that fails to start (a 4K stream beyond the TV's first one, a codec it has twice) gives way to the next.
         val renderers = DefaultRenderersFactory(this).setEnableDecoderFallback(true)
         return ExoPlayer.Builder(this, renderers)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(dataSources(this, http)))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(dataSources((application as OndoApplication).subtitleServices.folder, http)))
             .setLoadControl(loadControl())
             // A key frame within 1 s of the target, else the exact position: providers often space key frames
             // 10 s apart, and the closest one can land 5 to 10 s away from a 10 s skip.
@@ -828,6 +838,7 @@ class PlayerActivity : ComponentActivity() {
                         if (!sideLoadPending) return
                         val parameters = SideLoadedSubtitle.select(exoPlayer.trackSelectionParameters, tracks) ?: return
                         sideLoadPending = false
+                        sideLoadFresh = false
                         exoPlayer.trackSelectionParameters = parameters
                     }
 
@@ -950,7 +961,9 @@ class PlayerActivity : ComponentActivity() {
             )
             .setSubtitleConfigurations(listOfNotNull(sideLoaded?.let(SideLoadedSubtitle::configuration)))
             .build()
-        sideLoadPending = sideLoaded != null
+        // Chosen again after the video is opened again (a retry, another address) only while the viewer keeps it: a
+        // later Off or another track stays.
+        sideLoadPending = sideLoaded != null && (sideLoadFresh || player?.let { SideLoadedSubtitle.isChosen(it.trackSelectionParameters) } == true)
         player?.apply {
             if (request.isLive || startMs <= 0) setMediaItem(item) else setMediaItem(item, startMs)
             prepare()
@@ -1579,11 +1592,11 @@ class PlayerActivity : ComponentActivity() {
     companion object {
         /**
          * Where the player reads from: the stream over HTTP with [http] (the player's identity, the provider's
-         * headers, the byte count), a subtitle downloaded from a service from its file on the device.
+         * headers, the byte count), a subtitle downloaded from a service from its file in [subtitles], nothing else
+         * of the device ([PlayerDataSource]).
          */
-        @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-        fun dataSources(context: android.content.Context, http: androidx.media3.datasource.DataSource.Factory): androidx.media3.datasource.DataSource.Factory =
-            androidx.media3.datasource.DefaultDataSource.Factory(context, http)
+        fun dataSources(subtitles: java.io.File, http: androidx.media3.datasource.DataSource.Factory): androidx.media3.datasource.DataSource.Factory =
+            PlayerDataSource.Factory(subtitles, http)
 
         private const val EXTRA_REQUEST = "request"
 

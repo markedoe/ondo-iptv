@@ -55,6 +55,8 @@ fun subtitleStatus(check: CredentialCheck?, saved: Boolean, withLogin: Boolean):
     CredentialCheck.ACCEPTED -> R.string.subtitle_accepted to true
     CredentialCheck.REFUSED -> (if (withLogin) R.string.subtitle_refused_login else R.string.subtitle_refused_key) to false
     CredentialCheck.UNREACHABLE -> R.string.subtitle_unreachable to false
+    CredentialCheck.LIMITED -> R.string.subtitle_limited to false
+    CredentialCheck.INCOMPLETE -> R.string.subtitle_incomplete to false
     null -> if (saved) R.string.subtitle_accepted to true else null
 }
 
@@ -88,7 +90,8 @@ fun SubtitleServicesSettings(services: SubtitleServices, modifier: Modifier = Mo
     fun check(service: SubtitleService) {
         if (answers[service] == KeyState.Checking) return
         val fields = SubtitleCredential.fields(service)
-        if (typed[fields.first()].isNullOrBlank()) return
+        // Any field: with a key saved, a username and a password alone are checked with it.
+        if (fields.all { typed[it].isNullOrBlank() }) return
         answers[service] = KeyState.Checking
         scope.launch {
             val answer = services.checkAndSave(service, fields.associateWith { typed[it].orEmpty() })
@@ -127,7 +130,7 @@ fun SubtitleServicesSettings(services: SubtitleServices, modifier: Modifier = Mo
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    val enabled = !typed[fields.first()].isNullOrBlank() && answer != KeyState.Checking
+                    val enabled = fields.any { !typed[it].isNullOrBlank() } && answer != KeyState.Checking
                     val checkTag = Modifier.testTag("subtitleCheck-${service.name}")
                     if (television) {
                         TvActionButton(onClick = { check(service) }, enabled = enabled, modifier = checkTag) { androidx.tv.material3.Text(stringResource(R.string.tmdb_check_and_save)) }
