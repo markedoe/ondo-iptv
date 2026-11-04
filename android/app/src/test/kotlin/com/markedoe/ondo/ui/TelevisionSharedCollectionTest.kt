@@ -89,7 +89,9 @@ class TelevisionSharedCollectionTest {
         press(Key.DirectionCenter)
         compose.onNodeWithText("Stop sharing this collection?").assertExists()
         assertEquals(listOf(true), shares)
-        pressUntil(Key.DirectionDown) { focusedTag() == "confirmUnshare" }
+        // The dialog's buttons sit side by side (Cancel, Stop sharing): into the dialog, then across.
+        if (focusedTag() != "confirmUnshare") press(Key.DirectionDown)
+        pressUntil(Key.DirectionRight, max = 4) { focusedTag() == "confirmUnshare" }
         press(Key.DirectionCenter)
         assertEquals(listOf(true, false), shares)
     }

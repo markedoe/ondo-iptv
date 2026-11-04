@@ -222,7 +222,7 @@ struct CustomListDetailView: View {
                         }
                 }
             }
-            .onMove(perform: canEdit ? { model.moveListItems(listID, fromOffsets: $0, toOffset: $1) } : nil)
+            .onMove(perform: canEdit ? { (source: IndexSet, destination: Int) in model.moveListItems(listID, fromOffsets: source, toOffset: destination) } : nil)
             .deleteDisabled(!canEdit)
             .onDelete { offsets in
                 for offset in offsets {
@@ -239,9 +239,6 @@ struct CustomListDetailView: View {
         }
         .navigationTitle(list?.name ?? "")
         .toolbar {
-            if shared {
-                ToolbarItem(placement: .status) { SharedListMark() }
-            }
             if canEdit {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
