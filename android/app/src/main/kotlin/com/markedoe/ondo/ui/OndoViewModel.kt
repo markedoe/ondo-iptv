@@ -288,6 +288,12 @@ class OndoViewModel(
         repository.findTmdbMetadata(item.key, item is ShowcaseItem.SeriesItem, details?.tmdbId, title, year, ahead)
     }
 
+    /**
+     * TMDb's stills and names of the episodes of [season] of the series [id] whose page shows it, for those its provider
+     * leaves without them: kept on the device, else asked once its TMDb id is known ([wantTmdb]).
+     */
+    fun wantSeason(id: String, season: Int) = repository.findTmdbSeason("s-$id", season)
+
     /** A title Home shows: what TMDb says about it is read or asked ahead (its backdrop when the provider's fails). */
     fun wantBackdrop(item: ShowcaseItem) = wantTmdb(item, ahead = true)
 

@@ -212,7 +212,7 @@ extension AppModel {
               let credentials = activePlaylist?.source.xtreamCredentials else { return nil }
         let url = XtreamURLBuilder(credentials: credentials).episodeURL(episodeID: episodeID, containerExtension: container)
         var item = factory.item(for: Episode(id: episodeID, title: "", season: 0, number: 0, streamURL: url), in: series)
-        item.subtitle = entry.subtitle
+        item.subtitle = episodeLine(of: entry)
         item = Self.preferringDownload(item)
         item.startPosition = resumePosition(for: item)
         return item

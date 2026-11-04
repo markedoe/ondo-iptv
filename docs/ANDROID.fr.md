@@ -81,8 +81,12 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   stockage privé de l'app et transmis par la synchronisation (`key:tmdb`, docs/SYNC.fr.md) ; une rangée Tendances et
   des titres du carrousel, l'image de fond de TMDb quand celle du fournisseur manque ou ne se charge pas,
   sa bande-annonce, sa note avec le nombre de votes et les photos de son casting et de ses réalisateurs
-  (`TmdbClient.titleInfo`, un seul appel, par l'identifiant TMDb du fournisseur ou le titre), les personnes de TMDb
-  dans la recherche, et les titres d'une personne d'après ses crédits TMDb. Les réponses de TMDb sont gardées sur
+  (`TmdbClient.titleInfo`, un seul appel, par l'identifiant TMDb du fournisseur ou le titre ; pour une série, ses
+  `aggregate_credits`, le casting de toutes ses saisons, et ses créateurs, `created_by`), les personnes de TMDb
+  dans la recherche, et les titres d'une personne d'après ses crédits TMDb. La saison qu'affiche la fiche d'une série
+  reçoit de TMDb les images et les noms des épisodes que le fournisseur donne sans (`TmdbClient.seasonEpisodes`,
+  `/tv/{id}/season/{n}`, un appel par saison, gardé sous `tv:<id>:<saison>`) ; chaque écran qui nomme un épisode
+  montre son propre titre, sans le nom de la série, les étiquettes ni le code (`EpisodeTitles`, comme sur Apple). Les réponses de TMDb sont gardées sur
   l'appareil (`SqliteMetadataStore`, `metadata.sqlite`, comme sur les appareils Apple ; clés
   `movie:603` ou `movie:sandstorm:2021`) : les fiches les affichent tout de suite, TMDb n'est redemandé qu'après
   30 jours (7 pour un titre qu'il ne connaît pas), les titres du carrousel de l'accueil et ceux ajoutés ces quatre derniers jours sont demandés à l'avance deux

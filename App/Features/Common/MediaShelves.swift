@@ -218,7 +218,8 @@ struct ContinueCard: View {
                     .cardLift()
                 Text(entry.title).font(.subheadline.weight(.semibold)).lineLimit(1)
                 // A film of several versions: the one in progress.
-                if let subtitle = (upNext && entry.isFinished ? nil : entry.subtitle) ?? model.versionLabel(for: entry) {
+                // An episode: its line as its series' page shows it; none for a finished one standing for its series.
+                if let subtitle = (upNext && entry.isFinished ? nil : model.episodeLine(of: entry)) ?? model.versionLabel(for: entry) {
                     Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }

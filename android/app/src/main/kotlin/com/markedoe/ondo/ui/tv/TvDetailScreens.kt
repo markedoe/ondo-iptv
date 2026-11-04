@@ -42,6 +42,9 @@ import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.tv.material3.Glow
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -232,7 +235,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                                 text = stringResource(R.string.season_number, item.number),
                                 selected = item.number == season?.number,
                                 onClick = { actions.onSeason(item.number) },
-                                modifier = Modifier.focusMemory("season:${item.number}"),
+                                modifier = Modifier.focusMemory("season:${item.number}").testTag("season-${item.number}"),
                             )
                         }
                     }
@@ -520,20 +523,32 @@ internal fun TvCollectionDialog(
     }
 }
 
-/** A small pill: a season, a genre, an award. The selected one is white. */
+/**
+ * A small pill: a season, a version, a genre, a filter, an award. The selected one is white; the one with the remote's
+ * focus has a white ring around it and grows ([tvFocusRing]), selected or not: the two never look alike.
+ */
 @Composable
 fun TvChip(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, selected: Boolean = false, icon: ImageVector? = null, iconTint: Color? = null) {
+    val interactions = remember { MutableInteractionSource() }
+    val focused by interactions.collectIsFocusedAsState()
+    val container = if (selected) TvTokens.Accent else Color.White.copy(alpha = 0.1f)
+    val content = if (selected) TvTokens.Ink else Color.White
     Button(
         onClick = onClick,
-        modifier = if (selected) modifier.semantics { this.selected = true } else modifier,
-        scale = ButtonDefaults.scale(focusedScale = 1.08f),
+        modifier = (if (selected) modifier.semantics { this.selected = true } else modifier).tvFocusRing(focused, chipScale(focused)),
+        // The ring and its scale are drawn around the chip ([tvFocusRing]); the chip keeps its own colors.
+        scale = ButtonDefaults.scale(focusedScale = 1f),
+        glow = ButtonDefaults.glow(focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.8f), elevation = 10.dp)),
         colors = ButtonDefaults.colors(
-            containerColor = if (selected) TvTokens.Accent else Color.White.copy(alpha = 0.1f),
-            contentColor = if (selected) TvTokens.Ink else Color.White,
-            focusedContainerColor = Color.White,
-            focusedContentColor = TvTokens.Ink,
+            containerColor = container,
+            contentColor = content,
+            focusedContainerColor = if (selected) container else Color.White.copy(alpha = 0.2f),
+            focusedContentColor = content,
+            pressedContainerColor = if (selected) container else Color.White.copy(alpha = 0.3f),
+            pressedContentColor = content,
         ),
         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 8.dp),
+        interactionSource = interactions,
     ) {
         icon?.let {
             Icon(it, contentDescription = null, tint = iconTint ?: androidx.tv.material3.LocalContentColor.current, modifier = Modifier.size(18.dp))
