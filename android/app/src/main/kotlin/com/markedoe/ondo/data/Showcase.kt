@@ -112,7 +112,24 @@ class Showcase(
             .mapNotNull { item(it.kind, it.itemId) }
             .let(films::distinctItems)
 
-    fun continueWatching(): List<WatchEntry> = library.continueWatching(playlistId)
+    /**
+     * Continue watching: movies and episodes in progress, and a series whose last episode watched was finished goes on
+     * with the next one ([nextEpisode], from its seasons in [details]: an entry at the start, or the next one's own
+     * when it was started); a series watched to its last episode leaves. Without its seasons yet, the finished entry
+     * stands for the series (its Play plays the next episode).
+     */
+    fun continueWatching(details: (String) -> SeriesDetails? = { null }): List<WatchEntry> =
+        library.continueWatching(playlistId).mapNotNull { entry ->
+            if (entry.kind != ItemKind.SERIES || !entry.isFinished) return@mapNotNull entry
+            val series = seriesById[entry.itemId] ?: return@mapNotNull entry
+            val seasons = details(series.id) ?: return@mapNotNull entry
+            val (episode, _) = nextEpisode(series, seasons) ?: return@mapNotNull null
+            if (episode.id == entry.episodeId) return@mapNotNull null
+            progress(series, episode)?.takeIf { it.isResumable } ?: WatchEntry(
+                playlistId, ItemKind.SERIES, series.id, episode.id, entry.title, "${episode.code} · ${episode.title}",
+                episode.posterUrl ?: series.coverUrl, lastWatchedAt = entry.lastWatchedAt,
+            )
+        }
 
     fun item(kind: ItemKind, itemId: String): ShowcaseItem? = when (kind) {
         ItemKind.MOVIE -> moviesById[itemId]?.let { ShowcaseItem.MovieItem(it) }

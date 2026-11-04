@@ -22,6 +22,7 @@ import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Reminder
 import com.markedoe.ondo.data.SyncDevice
+import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.player.PlayRequest
 import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.ChannelRow
@@ -465,15 +466,19 @@ class OndoViewModel(
     /** Long press on a "Continue watching" card: the card goes. */
     fun removeFromContinueWatching(key: String) = repository.removeFromContinueWatching(key)
 
-    /** A "Continue watching" card: the movie, episode or channel it stands for. */
+    /**
+     * A "Continue watching" card: the movie, episode or channel it stands for. A series' next episode has no entry yet
+     * (its key says which); a finished one stands for its series while its seasons are not known: the next one plays.
+     */
     fun resume(key: String) {
         val current = state.value
-        val entry = current.library.progress(key) ?: return
+        val entry = current.library.progress(key) ?: WatchEntry.ofKey(key)?.takeIf { it.kind == ItemKind.SERIES } ?: return
         when (entry.kind) {
             ItemKind.MOVIE -> playMovie(entry.itemId)
             ItemKind.CHANNEL -> current.content.channels.firstOrNull { it.id == entry.itemId }?.let { emit(repository.playRequest(it)) }
             ItemKind.SERIES -> {
                 val series = current.content.series.firstOrNull { it.id == entry.itemId } ?: return
+                if (entry.isFinished) return prepare(key) { nextEpisode(series)?.let { emit(repository.playRequest(series, it)) } }
                 prepare(key) {
                     val details = seriesDetails(series).getOrNull() ?: return@prepare
                     details.seasons.flatMap { it.episodes }.firstOrNull { it.id == entry.episodeId }
@@ -487,7 +492,7 @@ class OndoViewModel(
     /** The page of a "Continue watching" card: the movie, or the series of the episode; none for a channel. */
     fun resumedTitle(key: String): ShowcaseItem? {
         val current = state.value
-        val entry = current.library.progress(key) ?: return null
+        val entry = current.library.progress(key) ?: WatchEntry.ofKey(key) ?: return null
         return when (entry.kind) {
             ItemKind.MOVIE -> current.content.movies.firstOrNull { it.id == entry.itemId }?.let { ShowcaseItem.MovieItem(it) }
             ItemKind.SERIES -> current.content.series.firstOrNull { it.id == entry.itemId }?.let { ShowcaseItem.SeriesItem(it) }
@@ -519,7 +524,7 @@ class OndoViewModel(
     suspend fun prefetchSeries(home: HomeUiState) {
         val wanted = withContext(computation) {
             val current = state.value
-            val resumed = home.continueWatching.mapNotNull { current.library.progress(it.key) }
+            val resumed = home.continueWatching.mapNotNull { current.library.progress(it.key) ?: WatchEntry.ofKey(it.key) }
                 .filter { it.kind == ItemKind.SERIES }
                 .mapNotNull { UiMappers.series(current, it.itemId) }
             (home.hero.mapNotNull { (it.item as? ShowcaseItem.SeriesItem)?.series } + resumed)
