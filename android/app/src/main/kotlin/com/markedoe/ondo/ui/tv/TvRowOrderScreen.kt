@@ -186,6 +186,8 @@ private fun TvOrderRow(
             enabled = enabled,
             headlineContent = { Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             leadingContent = { Icon(if (picked) Icons.Rounded.UnfoldMore else Icons.Rounded.DragHandle, contentDescription = null, modifier = Modifier.size(24.dp)) },
+            // Picked up: says so, beside the arrows, while the other rows grey out.
+            trailingContent = if (picked) ({ Text(moving, fontWeight = FontWeight.SemiBold) }) else null,
             modifier = Modifier
                 .weight(1f)
                 .then(if (picked) Modifier.border(3.dp, TvTokens.Accent, shape) else Modifier)
