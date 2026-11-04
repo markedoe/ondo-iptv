@@ -64,6 +64,8 @@ struct AppSettings: Codable, Equatable {
     var liveBuffer = 0
     var vodBuffer = 0
     var activeProfileID: UUID?
+    /// The profile ticked "Always open this profile": opened at launch without asking who is watching.
+    var launchProfileID: UUID?
     var landscapeForLive = false
     var landscapeForVOD = true
     var hasCompletedOnboarding = false
@@ -116,6 +118,7 @@ struct AppSettings: Codable, Equatable {
         liveBuffer = (try? c.decodeIfPresent(Int.self, forKey: .liveBuffer)) ?? d.liveBuffer
         vodBuffer = (try? c.decodeIfPresent(Int.self, forKey: .vodBuffer)) ?? d.vodBuffer
         activeProfileID = try? c.decodeIfPresent(UUID.self, forKey: .activeProfileID)
+        launchProfileID = try? c.decodeIfPresent(UUID.self, forKey: .launchProfileID)
         landscapeForLive = (try? c.decodeIfPresent(Bool.self, forKey: .landscapeForLive)) ?? d.landscapeForLive
         landscapeForVOD = (try? c.decodeIfPresent(Bool.self, forKey: .landscapeForVOD)) ?? d.landscapeForVOD
         hasCompletedOnboarding = (try? c.decodeIfPresent(Bool.self, forKey: .hasCompletedOnboarding)) ?? d.hasCompletedOnboarding

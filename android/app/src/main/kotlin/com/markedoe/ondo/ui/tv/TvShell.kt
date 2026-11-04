@@ -65,6 +65,8 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.model.Profile
+import com.markedoe.ondo.ui.screens.ProfileAvatar
 import com.markedoe.ondo.ui.TopLevel
 import com.markedoe.ondo.ui.screens.OndoLogo
 import com.markedoe.ondo.ui.theme.OndoColors
@@ -160,6 +162,9 @@ fun TvNavigationFrame(
     onSelect: (TopLevel) -> Unit,
     onSearch: () -> Unit,
     onSettings: () -> Unit,
+    /** The profile in use, its avatar at the far end, next to Settings: it opens the switcher ([onProfiles]). */
+    profile: Profile? = null,
+    onProfiles: () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val requesters = remember { HashMap<String, FocusRequester>() }
@@ -274,6 +279,7 @@ fun TvNavigationFrame(
                 }
                 BarIcon(stringResource(R.string.search), Icons.Rounded.Search, shown, SEARCH_TAG, requester(SEARCH_TAG), ::below, onSearch)
                 BarIcon(stringResource(R.string.settings), Icons.Rounded.Settings, shown, SETTINGS_TAG, requester(SETTINGS_TAG), ::below, onSettings)
+                profile?.let { BarProfile(it, shown, requester(PROFILE_TAG), ::below, onProfiles) }
             }
         }
         // After the pages: Back reaches this before the pages' own back stack.
@@ -315,6 +321,7 @@ private const val TAB_REST_MS = 500L
 
 const val SEARCH_TAG = "tabSearch"
 const val SETTINGS_TAG = "tabSettings"
+const val PROFILE_TAG = "tabProfile"
 
 @Composable
 private fun BarTab(
@@ -406,6 +413,35 @@ private fun BarIcon(label: String, icon: ImageVector, shown: Boolean, tag: Strin
     ) {
         Box(Modifier.padding(8.dp), contentAlignment = Alignment.Center) {
             Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+/** The profile in use, as a round avatar: OK opens the switcher (docs/PROFILES.md). */
+@Composable
+private fun BarProfile(profile: Profile, shown: Boolean, requester: FocusRequester, below: () -> FocusRequester, onClick: () -> Unit) {
+    val label = stringResource(R.string.switch_profile)
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        modifier = Modifier
+            .focusRequester(requester)
+            .focusProperties {
+                canFocus = shown
+                down = below()
+            }
+            .semantics { contentDescription = "$label, ${profile.name}" }
+            .testTag(PROFILE_TAG),
+        shape = ClickableSurfaceDefaults.shape(CircleShape),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = Color.Transparent,
+            focusedContainerColor = colors.onBackground,
+            pressedContainerColor = colors.onBackground,
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.08f),
+    ) {
+        Box(Modifier.padding(3.dp), contentAlignment = Alignment.Center) {
+            ProfileAvatar(profile, 30.dp, showLock = false)
         }
     }
 }

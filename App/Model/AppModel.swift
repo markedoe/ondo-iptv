@@ -247,8 +247,12 @@ final class AppModel {
         settings = userStore.load(AppSettings.self, name: "settings") ?? AppSettings()
         profiles = userStore.load([Profile].self, name: "profiles") ?? []
         if profiles.isEmpty {
-            profiles = [Profile(id: Profile.defaultID, name: String(localized: "Me"), colorIndex: 0)]
+            // Before profiles, the library was the main profile's: it keeps its document (docs/PROFILES.md).
+            profiles = [Profile.main(name: String(localized: "Me"))]
         }
+        // "Always open this profile": that one opens, without asking who is watching.
+        let launchProfile = profiles.first { $0.id == settings.launchProfileID }
+        if let launchProfile { settings.activeProfileID = launchProfile.id }
         library = userStore.load(UserLibrary.self, name: activeProfile.libraryDocumentName) ?? UserLibrary()
         if let locks = userStore.load(Set<String>.self, name: "parental-locks") {
             lockedCategoryKeys = locks
@@ -256,7 +260,7 @@ final class AppModel {
             // Migration: locks used to live in the (single) library.
             lockedCategoryKeys = library.lockedCategoryKeys
         }
-        needsProfileSelection = profiles.count > 1
+        needsProfileSelection = profiles.count > 1 && launchProfile == nil
         playlists = (userStore.load([Playlist].self, name: "playlists") ?? []).map(withStoredPassword)
         loadedAtLaunch = LaunchCounts(hiddenCategoryTags: library.hiddenCategoryTags.count,
                                       dismissedTagSuggestions: settings.dismissedTagSuggestions.count, playlists: playlists.count)
@@ -395,15 +399,27 @@ final class AppModel {
         saveProfiles()
     }
 
+    /// Ticks or unticks "Always open this profile" (nil: ask who is watching at launch).
+    func setLaunchProfile(_ profile: Profile?) {
+        updateSettings { $0.launchProfileID = profile.flatMap { candidate in profiles.contains { $0.id == candidate.id } ? candidate.id : nil } }
+    }
+
+    /// Whether `profile` can be deleted: never the main one (its data predates profiles, and an older device without
+    /// profiles is matched with it), nor the last one.
+    func canDelete(_ profile: Profile) -> Bool {
+        !profile.isMain && profiles.count > 1 && profiles.contains { $0.id == profile.id }
+    }
+
     func deleteProfile(_ profile: Profile) {
-        guard profiles.count > 1 else { return }
+        guard canDelete(profile) else { return }
+        if settings.launchProfileID == profile.id { updateSettings { $0.launchProfileID = nil } }
         let wasActive = settings.activeProfileID == profile.id || activeProfile.id == profile.id
         profiles.removeAll { $0.id == profile.id }
         saveProfiles()
         // A pending save of the deleted profile's library would write its file again.
         libraryWriter.discard(name: profile.libraryDocumentName)
         userStore.remove(name: profile.libraryDocumentName)
-        if wasActive, let first = profiles.first {
+        if wasActive, let first = profiles.first(where: \.isMain) ?? profiles.first {
             library = userStore.load(UserLibrary.self, name: first.libraryDocumentName) ?? UserLibrary()
             updateSettings { $0.activeProfileID = first.id }
             if isReady { advanceSyncClockToStoredData() }
@@ -565,6 +581,13 @@ final class AppModel {
             try? FileManager.default.removeItem(at: AppPaths.importedPlaylist(fileName))
         }
         updateLibrary { $0.removeData(for: playlist.id) }
+        // Every profile's entries of the playlist go with it. Written at once: the writer keeps one pending library,
+        // the open profile's (the others have none pending: a switch flushes it).
+        for profile in profiles where profile.id != activeProfile.id {
+            guard var other = userStore.load(UserLibrary.self, name: profile.libraryDocumentName) else { continue }
+            other.removeData(for: playlist.id)
+            try? userStore.save(other, name: profile.libraryDocumentName)
+        }
         if settings.activePlaylistID == playlist.id || activePlaylist == nil {
             updateSettings { $0.activePlaylistID = playlists.first?.id }
             if !recordsSyncDeletion, !sessions.isEmpty {

@@ -46,10 +46,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.markedoe.ondo.R
+import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.ui.TagSuggestion
 import com.markedoe.ondo.ui.components.CardShape
 import com.markedoe.ondo.ui.components.ChannelLogo
@@ -91,6 +94,8 @@ data class HomeUiState(
     val isRestoring: Boolean = false,
     /** "Show only your languages?", offered once on a playlist with categories for many languages. */
     val tagSuggestion: TagSuggestion? = null,
+    /** The profile in use: its avatar next to Settings opens the switcher (docs/PROFILES.md). */
+    val profile: Profile? = null,
 )
 
 class HomeActions(
@@ -107,6 +112,7 @@ class HomeActions(
     val onPlayChannel: (ChannelRow) -> Unit = {},
     val onPlaylists: () -> Unit = {},
     val onSettings: () -> Unit = {},
+    val onProfiles: () -> Unit = {},
     val onSearch: () -> Unit = {},
     val onAcceptSuggestion: (TagSuggestion) -> Unit = {},
     val onChooseCategories: () -> Unit = {},
@@ -285,6 +291,12 @@ private fun HomeTopBar(state: HomeUiState, actions: HomeActions) {
             }
             IconButton(onClick = actions.onSettings, modifier = Modifier.testTag("settingsButton")) {
                 Icon(Icons.Rounded.Settings, contentDescription = stringResource(R.string.settings), tint = tint)
+            }
+            state.profile?.let { profile ->
+                val label = stringResource(R.string.switch_profile)
+                IconButton(onClick = actions.onProfiles, modifier = Modifier.semantics { contentDescription = "$label, ${profile.name}" }.testTag("profileButton")) {
+                    ProfileAvatar(profile, 30.dp, showLock = false)
+                }
             }
         }
     }

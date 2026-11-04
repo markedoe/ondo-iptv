@@ -87,6 +87,13 @@ data class AppSettings(
      * record per tab with the time it was set; sync carries them (docs/SYNC.md, "Rows").
      */
     val rowOrders: List<SyncRows> = emptyList(),
+    /** The profile open now (docs/PROFILES.md); null: the main one. */
+    val activeProfileId: String? = null,
+    /** The profile ticked "Always open this profile": opened at launch without asking who is watching. */
+    val launchProfileId: String? = null,
+    /** Wrong profile PINs in a row, and the time before which no PIN is checked ([com.markedoe.ondo.core.model.Profile.pinDelayMs]). */
+    val pinFailures: Int = 0,
+    val pinRetryAt: Long = 0,
 ) {
     /** The order saved for the Movies or the Series tab; null: the default order. */
     fun rowOrder(series: Boolean): SyncRows? = rowOrders.firstOrNull { it.tab == (if (series) SyncRows.SERIES else SyncRows.MOVIES) }

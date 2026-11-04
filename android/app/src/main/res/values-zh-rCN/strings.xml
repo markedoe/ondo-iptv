@@ -418,4 +418,37 @@
     <string name="all_series_count">所有剧集（%1$s）</string>
     <string name="help_rows_title">调整“电影”和“剧集”的行顺序</string>
     <string name="help_rows_body">“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖电影”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动；在电视上，按“确定”拿起，按“上”和“下”移动，按“确定”放下，按“返回”取消；关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。</string>
+    <!-- Profiles (docs/PROFILES.md) -->
+    <string name="profile_main_name">我</string>
+    <string name="whos_watching">谁在观看？</string>
+    <string name="profiles">个人资料</string>
+    <string name="switch_profile">切换个人资料</string>
+    <string name="add_profile">添加个人资料</string>
+    <string name="edit_profile">编辑个人资料</string>
+    <string name="new_profile">新建个人资料</string>
+    <string name="delete_profile">删除个人资料</string>
+    <string name="delete_profile_confirm">删除此个人资料及其观看记录、我的片单和合集？</string>
+    <string name="profile_color">颜色</string>
+    <string name="profile_avatar">头像</string>
+    <string name="profile_initial">首字母</string>
+    <string name="kids_profile">儿童个人资料</string>
+    <string name="kids">儿童</string>
+    <string name="kids_profile_hint">儿童个人资料从不显示成人分类，打开设置需要家长的 PIN。</string>
+    <string name="profile_pin">个人资料 PIN</string>
+    <string name="pin">PIN</string>
+    <string name="pin_optional">PIN（可选）</string>
+    <string name="pin_new_keep">新 PIN（留空则保持不变）</string>
+    <string name="pin_remove">移除 PIN</string>
+    <string name="pin_hint">4 到 8 位数字，切换到此个人资料时需要输入。</string>
+    <string name="pin_enter">输入此个人资料的 PIN。</string>
+    <string name="pin_wrong">PIN 错误</string>
+    <string name="pin_wait">PIN 输错次数过多。请稍后再试。</string>
+    <string name="parent_pin">家长 PIN</string>
+    <string name="parent_pin_hint">输入非儿童个人资料的 PIN。</string>
+    <string name="open">打开</string>
+    <string name="save">保存</string>
+    <string name="edit">编辑</string>
+    <string name="done">完成</string>
+    <string name="current_profile">当前</string>
+    <string name="always_open_profile">始终打开此个人资料</string>
 </resources>

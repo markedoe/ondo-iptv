@@ -103,11 +103,15 @@ import com.markedoe.ondo.ui.screens.MovieDetailUiState
 import com.markedoe.ondo.ui.screens.MyListActions
 import com.markedoe.ondo.ui.screens.MyListKind
 import com.markedoe.ondo.ui.screens.MyListScreen
+import com.markedoe.ondo.ui.screens.ParentGate
 import com.markedoe.ondo.ui.screens.PersonActions
 import com.markedoe.ondo.ui.screens.PersonScreen
 import com.markedoe.ondo.ui.screens.PersonUiState
 import com.markedoe.ondo.ui.screens.PickedFile
 import com.markedoe.ondo.ui.screens.PosterGridScreen
+import com.markedoe.ondo.ui.screens.ProfileEditScreen
+import com.markedoe.ondo.ui.screens.ProfilesActions
+import com.markedoe.ondo.ui.screens.ProfilesScreen
 import com.markedoe.ondo.ui.screens.RemindersScreen
 import com.markedoe.ondo.ui.screens.SearchScreen
 import com.markedoe.ondo.ui.screens.SeriesDetailScreen
@@ -172,6 +176,20 @@ fun OndoApp(viewModel: OndoViewModel) {
         when {
             !state.isReady -> Box(Modifier.fillMaxSize())
             state.playlists.isEmpty() -> FocusEntry(Modifier.tvSafeArea()) { Onboarding(viewModel) }
+            // With several profiles, "Who's watching?" first, unless one is ticked "Always open this profile".
+            state.needsProfileSelection -> ProfilesScreen(
+                profiles = state.profiles,
+                active = state.activeProfile,
+                launchProfileId = state.settings.launchProfileId,
+                whoIsWatching = true,
+                actions = ProfilesActions(
+                    onSwitch = { profile, alwaysOpen ->
+                        if (alwaysOpen) viewModel.setLaunchProfile(profile.id)
+                        viewModel.switchProfile(profile.id)
+                    },
+                    onCheckPin = viewModel::checkPin,
+                ),
+            )
             else -> MainTabs(viewModel)
         }
     }
@@ -209,6 +227,8 @@ private fun Onboarding(viewModel: OndoViewModel) {
 
 @Composable
 private fun MainTabs(viewModel: OndoViewModel) {
+    // The top bar's avatar: the profile in use only (the whole state would recompose the frame at each change).
+    val activeProfile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val entry by navController.currentBackStackEntryAsState()
     var selected by rememberSaveable { mutableStateOf(TopLevel.HOME) }
@@ -230,6 +250,8 @@ private fun MainTabs(viewModel: OndoViewModel) {
                 onSelect = { tab -> navController.openTabFromBar(tab, reselected = tab == selected && !tabPage) },
                 onSearch = { navController.openSearch(viewModel) },
                 onSettings = { navController.navigate(Routes.Settings) },
+                profile = activeProfile,
+                onProfiles = { navController.navigate(Routes.Profiles) },
                 content = pages,
             )
         }
@@ -266,9 +288,11 @@ private fun MainTabs(viewModel: OndoViewModel) {
                     page<Routes.Reminders> { RemindersDestination(viewModel, navController) }
                     page<Routes.Collection> { CollectionDestination(viewModel, navController, it.toRoute<Routes.Collection>().id) }
                     page<Routes.Grid>(TvMargins.HEADER) { GridDestination(viewModel, navController, it.toRoute()) }
-                    page<Routes.Settings>(TvMargins.NONE) { SettingsDestination(viewModel, navController) }
-                    page<Routes.Categories> { CategoriesDestination(viewModel, navController, it.toRoute()) }
-                    page<Routes.RowOrder> { RowOrderDestination(viewModel, navController) }
+                    page<Routes.Settings>(TvMargins.NONE) { ParentGated(viewModel, navController) { SettingsDestination(viewModel, navController) } }
+                    page<Routes.Categories> { route -> ParentGated(viewModel, navController) { CategoriesDestination(viewModel, navController, route.toRoute()) } }
+                    page<Routes.Profiles>(TvMargins.NONE) { ProfilesDestination(viewModel, navController) }
+                    page<Routes.ProfileEdit>(TvMargins.NONE, entry = false) { route -> ParentGated(viewModel, navController) { ProfileEditDestination(viewModel, navController, route.toRoute<Routes.ProfileEdit>().id) } }
+                    page<Routes.RowOrder> { ParentGated(viewModel, navController) { RowOrderDestination(viewModel, navController) } }
                     page<Routes.Help> {
                         val open = rememberPageOpener(navController)
                         HelpScreen(onBack = { navController.popBackStack() }, onSupport = { open(SUPPORT_URL) })
@@ -276,7 +300,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                     page<Routes.Web> {
                         WebPageScreen(it.toRoute<Routes.Web>().url, allowed = setOf(PRIVACY_URL, SUPPORT_URL), onBack = { navController.popBackStack() })
                     }
-                    page<Routes.AddPlaylist> {
+                    page<Routes.AddPlaylist> { ParentGated(viewModel, navController) {
                         val state by viewModel.state.collectAsStateWithLifecycle()
                         var picked by remember { mutableStateOf<PickedFile?>(null) }
                         // A refresh error still on screen when the form opens is not the form's.
@@ -293,7 +317,7 @@ private fun MainTabs(viewModel: OndoViewModel) {
                             onPickFile = rememberPlaylistFilePicker { picked = it },
                             pickedFile = picked,
                         )
-                    }
+                    } }
                 }
                 if (entry?.destination?.hasRoute(Routes.AddPlaylist::class) != true) {
                     ErrorSnackbar(viewModel, Modifier.align(Alignment.BottomCenter), onRetry = viewModel::refresh)
@@ -397,11 +421,15 @@ private enum class TvMargins { NONE, TAB, SAFE_AREA, HEADER }
 /** A page of the app, which keeps where the remote's focus was while another page is open (see [FocusMemory]). */
 private inline fun <reified T : Any> NavGraphBuilder.page(
     margins: TvMargins = TvMargins.SAFE_AREA,
+    /** False: the page gives itself the focus (the profile page, its name field), without [FocusEntry]. */
+    entry: Boolean = true,
     noinline content: @Composable (NavBackStackEntry) -> Unit,
 ) {
-    composable<T> { entry ->
+    composable<T> { backStackEntry ->
         val modifier = if (margins == TvMargins.NONE || margins == TvMargins.HEADER) Modifier else Modifier.tvSafeArea(tab = margins == TvMargins.TAB)
-        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) { FocusEntry(modifier) { content(entry) } }
+        CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) {
+            if (entry) FocusEntry(modifier) { content(backStackEntry) } else Box(modifier) { content(backStackEntry) }
+        }
     }
 }
 
@@ -475,6 +503,7 @@ private fun HomeDestination(viewModel: OndoViewModel, navController: NavHostCont
             onPlayChannel = viewModel::playChannel,
             onPlaylists = { navController.navigate(Routes.Settings) },
             onSettings = { navController.navigate(Routes.Settings) },
+            onProfiles = { navController.navigate(Routes.Profiles) },
             onSearch = { navController.openSearch(viewModel) },
             onAcceptSuggestion = viewModel::acceptSuggestion,
             onChooseCategories = {
@@ -992,5 +1021,54 @@ private fun MyListDestination(viewModel: OndoViewModel, navController: NavHostCo
             onPerson = { navController.navigate(Routes.Person(it)) },
             onNewCollection = { viewModel.newCollection(it) },
         ),
+    )
+}
+
+/** In a Kids profile, [content] first asks a parent's PIN (docs/PROFILES.md, "Kids profiles"). */
+@Composable
+private fun ParentGated(viewModel: OndoViewModel, navController: NavHostController, content: @Composable () -> Unit) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    ParentGate(state.needsParentForSettings, viewModel::unlockKidsSettings, onBack = { navController.popBackStack() }, content = content)
+}
+
+@Composable
+private fun ProfilesDestination(viewModel: OndoViewModel, navController: NavHostController) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    ProfilesScreen(
+        profiles = state.profiles,
+        active = state.activeProfile,
+        launchProfileId = state.settings.launchProfileId,
+        whoIsWatching = false,
+        actions = ProfilesActions(
+            onSwitch = { profile, _ ->
+                viewModel.switchProfile(profile.id)
+                // The new profile's Home, its Continue Watching and My List.
+                navController.navigate(Routes.Home) { popUpTo(Routes.Home) { inclusive = true } }
+            },
+            onCheckPin = viewModel::checkPin,
+            onAdd = { navController.navigate(Routes.ProfileEdit()) },
+            onEdit = { navController.navigate(Routes.ProfileEdit(it.id)) },
+            onAlwaysOpen = { on -> viewModel.setLaunchProfile(if (on) state.activeProfile.id else null) },
+            onBack = { navController.popBackStack() },
+        ),
+    )
+}
+
+@Composable
+private fun ProfileEditDestination(viewModel: OndoViewModel, navController: NavHostController, id: String?) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val profile = id?.let { profileId -> state.profiles.firstOrNull { it.id == profileId } }
+    ProfileEditScreen(
+        profile = profile,
+        canDelete = profile != null && !profile.isMain && state.profiles.size > 1,
+        onSave = { name, colorIndex, symbol, isKids, pin, removePin ->
+            if (profile == null) viewModel.addProfile(name, colorIndex, symbol, isKids, pin) else viewModel.updateProfile(profile.id, name, colorIndex, symbol, isKids, pin, removePin)
+            navController.popBackStack()
+        },
+        onDelete = {
+            profile?.let { viewModel.deleteProfile(it.id) }
+            navController.popBackStack()
+        },
+        onBack = { navController.popBackStack() },
     )
 }

@@ -446,4 +446,37 @@
     <string name="all_series_count">Todas las series (%1$s)</string>
     <string name="help_rows_title">Ordenar las filas de Películas y Series</string>
     <string name="help_rows_body">Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Películas premiadas y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla, o en un televisor pulsa OK para tomarla, Arriba y Abajo para moverla, OK para soltarla y Atrás para cancelar; desactiva el interruptor de una fila para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.</string>
+    <!-- Profiles (docs/PROFILES.md) -->
+    <string name="profile_main_name">Yo</string>
+    <string name="whos_watching">¿Quién está viendo?</string>
+    <string name="profiles">Perfiles</string>
+    <string name="switch_profile">Cambiar de perfil</string>
+    <string name="add_profile">Añadir perfil</string>
+    <string name="edit_profile">Editar perfil</string>
+    <string name="new_profile">Nuevo perfil</string>
+    <string name="delete_profile">Eliminar perfil</string>
+    <string name="delete_profile_confirm">¿Eliminar este perfil con su historial, Mi lista y sus colecciones?</string>
+    <string name="profile_color">Color</string>
+    <string name="profile_avatar">Avatar</string>
+    <string name="profile_initial">Inicial</string>
+    <string name="kids_profile">Perfil infantil</string>
+    <string name="kids">Infantil</string>
+    <string name="kids_profile_hint">Los perfiles infantiles nunca muestran categorías para adultos, y los Ajustes piden el PIN de un adulto.</string>
+    <string name="profile_pin">PIN del perfil</string>
+    <string name="pin">PIN</string>
+    <string name="pin_optional">PIN (opcional)</string>
+    <string name="pin_new_keep">Nuevo PIN (vacío para mantenerlo)</string>
+    <string name="pin_remove">Eliminar PIN</string>
+    <string name="pin_hint">De 4 a 8 cifras; se pide al cambiar a este perfil.</string>
+    <string name="pin_enter">Escribe el PIN de este perfil.</string>
+    <string name="pin_wrong">PIN incorrecto</string>
+    <string name="pin_wait">Demasiados PIN incorrectos. Espera un momento y vuelve a intentarlo.</string>
+    <string name="parent_pin">PIN de un adulto</string>
+    <string name="parent_pin_hint">Escribe el PIN de un perfil que no sea infantil.</string>
+    <string name="open">Abrir</string>
+    <string name="save">Guardar</string>
+    <string name="edit">Editar</string>
+    <string name="done">OK</string>
+    <string name="current_profile">Actual</string>
+    <string name="always_open_profile">Abrir siempre este perfil</string>
 </resources>

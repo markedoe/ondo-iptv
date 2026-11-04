@@ -441,4 +441,37 @@
     <string name="all_series_count">All series (%1$s)</string>
     <string name="help_rows_title">Order the rows of Movies and Series</string>
     <string name="help_rows_body">The Movies and Series tabs start with All movies (or All series): the latest additions, then See All, which opens the whole catalogue with its sort and Hide watched movies. Then come Continue Watching, My List, the new titles, Trending, Award winners and each category of your provider.\n\nSettings → Row order sets their order and which ones show: drag a row to move it, or on a TV press OK to pick it up, Up and Down to move it, OK to put it down and Back to cancel; turn a row’s switch off to hide it. Default order puts the rows back as they come. A category new to your playlist goes to the end; one your provider removes keeps its place for when it comes back. Hidden languages and categories stay hidden whatever the order. With Sync on this network, the order follows on your other devices.</string>
+    <!-- Profiles (docs/PROFILES.md) -->
+    <string name="profile_main_name">Me</string>
+    <string name="whos_watching">Who\'s watching?</string>
+    <string name="profiles">Profiles</string>
+    <string name="switch_profile">Switch profile</string>
+    <string name="add_profile">Add Profile</string>
+    <string name="edit_profile">Edit Profile</string>
+    <string name="new_profile">New Profile</string>
+    <string name="delete_profile">Delete Profile</string>
+    <string name="delete_profile_confirm">Delete this profile with its history, My List and collections?</string>
+    <string name="profile_color">Color</string>
+    <string name="profile_avatar">Avatar</string>
+    <string name="profile_initial">Initial</string>
+    <string name="kids_profile">Kids profile</string>
+    <string name="kids">Kids</string>
+    <string name="kids_profile_hint">Kids profiles never show adult categories, and Settings asks for a parent\'s PIN.</string>
+    <string name="profile_pin">Profile PIN</string>
+    <string name="pin">PIN</string>
+    <string name="pin_optional">PIN (optional)</string>
+    <string name="pin_new_keep">New PIN (leave empty to keep)</string>
+    <string name="pin_remove">Remove PIN</string>
+    <string name="pin_hint">4 to 8 digits, asked when switching to this profile.</string>
+    <string name="pin_enter">Enter the PIN of this profile.</string>
+    <string name="pin_wrong">Wrong PIN</string>
+    <string name="pin_wait">Too many wrong PINs. Wait a moment and try again.</string>
+    <string name="parent_pin">A parent\'s PIN</string>
+    <string name="parent_pin_hint">Enter the PIN of a profile that is not a Kids profile.</string>
+    <string name="open">Open</string>
+    <string name="save">Save</string>
+    <string name="edit">Edit</string>
+    <string name="done">Done</string>
+    <string name="current_profile">Current</string>
+    <string name="always_open_profile">Always open this profile</string>
 </resources>

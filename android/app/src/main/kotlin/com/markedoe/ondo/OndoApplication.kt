@@ -125,6 +125,7 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
             // A quarter of what the device gives the app: the catalogue, the screens and the images need the rest.
             guideBudgetBytes = Runtime.getRuntime().maxMemory() / 4,
             placeholderNames = resources.placeholderNames(),
+            mainProfileName = getString(R.string.profile_main_name),
             metadata = SqliteMetadataStore(this),
         )
     }

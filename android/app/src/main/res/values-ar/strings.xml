@@ -488,4 +488,37 @@
     <string name="all_series_count">كل المسلسلات (%1$s)</string>
     <string name="help_rows_title">ترتيب صفوف الأفلام والمسلسلات</string>
     <string name="help_rows_body">تبدأ علامتا التبويب الأفلام والمسلسلات بصف كل الأفلام (أو كل المسلسلات): أحدث الإضافات، ثم عرض الكل الذي يفتح الكتالوج كاملًا مع الترتيب وإخفاء الأفلام التي شاهدتها. بعدها تأتي متابعة المشاهدة وقائمتي والجديد والرائج والأفلام الفائزة بجوائز وكل فئة من فئات مزوّدك.\n\nتحدد الإعدادات ← ترتيب الصفوف ترتيبها والصفوف المعروضة: اسحب صفًا لنقله، أو على التلفزيون اضغط OK لالتقاطه، والأعلى والأسفل لتحريكه، وOK لوضعه، والرجوع للإلغاء؛ وأوقف مفتاح الصف لإخفائه. يعيد الترتيب الافتراضي الصفوف كما تأتي. تذهب الفئة الجديدة في قائمة التشغيل إلى النهاية؛ وتحتفظ الفئة التي يزيلها مزوّدك بمكانها حتى تعود. تبقى اللغات والفئات المخفية مخفية مهما كان الترتيب. مع المزامنة على هذه الشبكة، ينتقل الترتيب إلى أجهزتك الأخرى.</string>
+    <!-- Profiles (docs/PROFILES.md) -->
+    <string name="profile_main_name">أنا</string>
+    <string name="whos_watching">من يشاهد؟</string>
+    <string name="profiles">الملفات الشخصية</string>
+    <string name="switch_profile">تبديل الملف الشخصي</string>
+    <string name="add_profile">إضافة ملف شخصي</string>
+    <string name="edit_profile">تعديل الملف الشخصي</string>
+    <string name="new_profile">ملف شخصي جديد</string>
+    <string name="delete_profile">حذف الملف الشخصي</string>
+    <string name="delete_profile_confirm">هل تريد حذف هذا الملف الشخصي مع سجله وقائمتي ومجموعاته؟</string>
+    <string name="profile_color">اللون</string>
+    <string name="profile_avatar">الصورة الرمزية</string>
+    <string name="profile_initial">الحرف الأول</string>
+    <string name="kids_profile">ملف شخصي للأطفال</string>
+    <string name="kids">أطفال</string>
+    <string name="kids_profile_hint">لا تعرض ملفات الأطفال الشخصية فئات البالغين أبدًا، وتطلب الإعدادات رمز PIN لأحد الوالدين.</string>
+    <string name="profile_pin">رمز PIN للملف الشخصي</string>
+    <string name="pin">رمز PIN</string>
+    <string name="pin_optional">رمز PIN (اختياري)</string>
+    <string name="pin_new_keep">رمز PIN جديد (اتركه فارغًا للإبقاء عليه)</string>
+    <string name="pin_remove">إزالة رمز PIN</string>
+    <string name="pin_hint">من 4 إلى 8 أرقام، يُطلب عند التبديل إلى هذا الملف الشخصي.</string>
+    <string name="pin_enter">أدخل رمز PIN لهذا الملف الشخصي.</string>
+    <string name="pin_wrong">رمز PIN غير صحيح</string>
+    <string name="pin_wait">محاولات خاطئة كثيرة لرمز PIN. انتظر قليلًا ثم أعد المحاولة.</string>
+    <string name="parent_pin">رمز PIN لأحد الوالدين</string>
+    <string name="parent_pin_hint">أدخل رمز PIN لملف شخصي ليس للأطفال.</string>
+    <string name="open">فتح</string>
+    <string name="save">حفظ</string>
+    <string name="edit">تعديل</string>
+    <string name="done">تم</string>
+    <string name="current_profile">الحالي</string>
+    <string name="always_open_profile">افتح هذا الملف الشخصي دائمًا</string>
 </resources>

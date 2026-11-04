@@ -34,6 +34,7 @@ import com.markedoe.ondo.core.model.PlaybackItem
 import com.markedoe.ondo.core.model.Playlist
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.PlaylistSource
+import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.model.Season
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
@@ -122,9 +123,30 @@ data class OndoState(
     val tmdbRatings: Map<String, TmdbRating> = emptyMap(),
     /** TMDb refused the saved token when it was used (it was checked elsewhere, or revoked since): Settings says so. */
     val tmdbRefused: Boolean = false,
+    /** The viewer profiles (docs/PROFILES.md): the main one first. [library] is the active one's. */
+    val profiles: List<Profile> = emptyList(),
+    /** "Who's watching?" shows: several profiles and none ticked "Always open this profile". */
+    val needsProfileSelection: Boolean = false,
+    /** A parent's PIN was given in this Kids profile session: its settings are open until the profile changes. */
+    val kidsUnlocked: Boolean = false,
 ) {
     val activePlaylist: SavedPlaylist? get() = playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull()
     val activePlaylistId: String? get() = activePlaylist?.id
+
+    val activeProfile: Profile
+        get() = profiles.firstOrNull { it.id == settings.activeProfileId } ?: profiles.firstOrNull { it.isMain } ?: profiles.firstOrNull()
+            ?: Profile(id = Profile.DEFAULT_ID)
+
+    /** Only the main profile syncs for now (docs/PROFILES.md, "Sync"): the others keep their library on this device. */
+    val syncsThisProfile: Boolean get() = activeProfile.isMain
+
+    /**
+     * Whether what could weaken a Kids profile (Settings, the categories, adding a playlist, the profiles) asks a parent
+     * first: a Kids profile, not unlocked, on a device where a profile that is not a Kids one has a PIN (otherwise
+     * nobody could ever leave it).
+     */
+    val needsParentForSettings: Boolean
+        get() = activeProfile.isKids && !kidsUnlocked && profiles.any { !it.isKids && it.isProtected }
 }
 
 /** Why a playlist could not be loaded: shown in the viewer's language (see `loadErrorText`), not as the exception's text. */
@@ -167,6 +189,8 @@ class OndoRepository(
     private val guideWork: CoroutineDispatcher = Dispatchers.Default,
     /** Where the guide's download is written to a file and deleted (as [guideWork], for tests). */
     private val guideFiles: CoroutineDispatcher = Dispatchers.IO,
+    /** The main profile's name when it is made (the first launch with profiles), in the viewer's language. */
+    private val mainProfileName: String = "Me",
 ) {
     private val _state = MutableStateFlow(OndoState(placeholderNames = placeholderNames))
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -290,9 +314,19 @@ class OndoRepository(
         if (_state.value.isReady || bootstrapping) return
         bootstrapping = true
         scope.launch {
-            val savedSettings = withContext(io) { store.loadSettings() }
+            val storedSettings = withContext(io) { store.loadSettings() }
             val playlists = withContext(io) { store.loadPlaylists() }
-            val saved = withContext(io) { store.loadLibrary() }
+            // Before profiles, the library was the main profile's: it keeps its document, and the profiles document is
+            // written once a profile is added (docs/PROFILES.md, "Migration").
+            val storedProfiles = withContext(io) { store.loadProfiles() }
+            val profiles = storedProfiles.ifEmpty { listOf(Profile.main(mainProfileName)) }
+            val launch = profiles.firstOrNull { it.id == storedSettings.launchProfileId }
+            val opened = launch ?: profiles.firstOrNull { it.id == storedSettings.activeProfileId } ?: profiles.firstOrNull { it.isMain } ?: profiles.first()
+            // "Always open this profile" opens that one; otherwise the one open last (none saved: the main one).
+            val savedSettings = if (launch != null) storedSettings.copy(activeProfileId = launch.id) else storedSettings
+            val saved = withContext(io) { store.loadLibrary(opened.libraryDocumentName) }
+            // The main profile's library dates what sync carries, whichever profile opens.
+            val mainLibrary = if (opened.isMain) saved else withContext(io) { store.loadLibrary(AppStore.MAIN_LIBRARY) }
             val lastCrash = withContext(io) {
                 // Downloads left half-read by a stop, and copies of files chosen for a playlist that was not saved.
                 downloadFolder?.listFiles()?.forEach { it.delete() }
@@ -302,7 +336,7 @@ class OndoRepository(
             // The sync clock starts after every time this device holds: after a restart with its clock back at 1970,
             // a change is still dated after the ones it made or received before.
             syncClock.advance(savedSettings.syncClock)
-            syncClock.advance(SyncData.latestTime(OndoState(settings = savedSettings, playlists = playlists, library = saved)))
+            syncClock.advance(SyncData.latestTime(OndoState(settings = savedSettings, playlists = playlists, library = mainLibrary)))
             val pending = pendingLibraryChanges.toList()
             pendingLibraryChanges.clear()
             val library = pending.fold(saved) { library, change -> change(library) }
@@ -311,9 +345,12 @@ class OndoRepository(
             val settings = pendingSettings.fold(savedSettings) { settings, change -> change(settings) }
             // With a playlist, its saved catalogue is read next: restoring from the same update (no "empty" moment).
             _state.update {
-                it.copy(settings = settings, playlists = playlists, library = library, lastCrash = lastCrash, isReady = true, isRestoring = playlists.isNotEmpty())
+                it.copy(
+                    settings = settings, playlists = playlists, library = library, lastCrash = lastCrash, isReady = true, isRestoring = playlists.isNotEmpty(),
+                    profiles = profiles, needsProfileSelection = profiles.size > 1 && launch == null,
+                )
             }
-            if (pending.isNotEmpty()) persist { saveLibrary(library) }
+            if (pending.isNotEmpty()) opened.libraryDocumentName.let { document -> persist { saveLibrary(library, document) } }
             if (pendingSettings.isNotEmpty()) persist { saveSettings(settings) }
             _state.value.activePlaylist?.let { open(it) }
             awardsSource?.let { source ->
@@ -416,11 +453,16 @@ class OndoRepository(
         val removed = _state.value.playlists.firstOrNull { it.id == id } ?: return
         val playlists = _state.value.playlists.filterNot { it.id == id }
         _state.value.library.reminders.filter { it.playlistId == id }.forEach(reminderScheduler::cancel)
-        val library = _state.value.library.removingPlaylist(id, stamp())
+        val time = stamp()
+        val library = _state.value.library.removingPlaylist(id, time)
         val settings = _state.value.settings.let { if (it.activePlaylistId == id) it.copy(activePlaylistId = playlists.firstOrNull()?.id) else it }
+        val document = _state.value.activeProfile.libraryDocumentName
+        val others = _state.value.profiles.map { it.libraryDocumentName }.filter { it != document }
         persist {
             savePlaylists(playlists, removed)
-            saveLibrary(library)
+            saveLibrary(library, document)
+            // Every profile's entries of the playlist go with it.
+            others.forEach { other -> saveLibrary(loadLibrary(other).removingPlaylist(id, time), other) }
             saveSettings(settings)
             deleteContent(id)
             deleteDetails(id)
@@ -440,6 +482,122 @@ class OndoRepository(
 
 
     fun setShowAdultCategories(show: Boolean) = updateSettings { it.copy(showAdultCategories = show) }
+
+    // MARK: Profiles (docs/PROFILES.md)
+
+    /** What a PIN given gets: the profile opens, the PIN was wrong, or too many wrong ones make the next try wait. */
+    enum class PinCheck { OK, WRONG, WAIT }
+
+    /**
+     * Opens profile [id]: what was changed in the profile left is saved to its own library, then the other's is read
+     * (after any save of it still pending). The PIN, if any, was checked before ([checkPin]). Main thread.
+     */
+    fun switchProfile(id: String) {
+        val state = _state.value
+        val profile = state.profiles.firstOrNull { it.id == id } ?: return
+        if (!state.isReady) return
+        if (profile.id == state.activeProfile.id) {
+            _state.update { it.copy(needsProfileSelection = false) }
+            return
+        }
+        scope.launch {
+            // The writer runs saves in order: reading there, after them, gets the profile's latest library.
+            val library = withContext(writer) { runCatching { store.loadLibrary(profile.libraryDocumentName) }.getOrDefault(LibraryState()) }
+            if (profile.isMain) syncClock.advance(SyncData.latestTime(OndoState(settings = _state.value.settings, playlists = _state.value.playlists, library = library)))
+            val settings = _state.value.settings.copy(activeProfileId = profile.id)
+            _state.update { it.copy(library = library, settings = settings, needsProfileSelection = false, kidsUnlocked = false) }
+            persist { saveSettings(settings) }
+        }
+    }
+
+    /** Checks [pin] against [profile]'s, waiting after too many wrong ones in a row (kept across launches). */
+    fun checkPin(profile: Profile, pin: String): PinCheck {
+        val hash = profile.pinHash ?: return PinCheck.OK
+        return checkPinHashes(listOf(hash), pin)
+    }
+
+    /** A parent's PIN (of a profile that is not a Kids one) opens the Kids profile's settings until the profile changes. */
+    fun unlockKidsSettings(pin: String): PinCheck {
+        val hashes = _state.value.profiles.filter { !it.isKids }.mapNotNull { it.pinHash }
+        if (hashes.isEmpty()) return PinCheck.OK.also { _state.update { it.copy(kidsUnlocked = true) } }
+        return checkPinHashes(hashes, pin).also { result -> if (result == PinCheck.OK) _state.update { it.copy(kidsUnlocked = true) } }
+    }
+
+    /** When the next PIN may be tried, if wrong ones made it wait; null: now. */
+    fun pinRetryAt(): Long? = _state.value.settings.pinRetryAt.takeIf { it > now() }
+
+    private fun checkPinHashes(hashes: List<String>, pin: String): PinCheck {
+        if (pinRetryAt() != null) return PinCheck.WAIT
+        if (Profile.hashPin(pin) in hashes) {
+            if (_state.value.settings.pinFailures != 0 || _state.value.settings.pinRetryAt != 0L) updateSettings { it.copy(pinFailures = 0, pinRetryAt = 0) }
+            return PinCheck.OK
+        }
+        val failures = _state.value.settings.pinFailures + 1
+        val retryAt = Profile.pinDelayMs(failures)?.let { now() + it } ?: 0L
+        updateSettings { it.copy(pinFailures = failures, pinRetryAt = retryAt) }
+        return PinCheck.WRONG
+    }
+
+    /** A new profile, with its own empty library; [pin] already checked ([Profile.isValidPin]) or null. */
+    fun addProfile(name: String, colorIndex: Int, symbol: String, isKids: Boolean, pin: String?): Profile? {
+        if (!_state.value.isReady || name.isBlank()) return null
+        val profile = Profile(name = name.trim(), colorIndex = colorIndex, symbol = symbol, isKids = isKids, pinHash = pin?.let(Profile::hashPin))
+        keepProfiles(_state.value.profiles + profile)
+        return profile
+    }
+
+    /** Changes a profile: [pin] sets a new PIN, [removePin] takes it away, neither keeps it. */
+    fun updateProfile(id: String, name: String, colorIndex: Int, symbol: String, isKids: Boolean, pin: String?, removePin: Boolean) {
+        val profiles = _state.value.profiles
+        val profile = profiles.firstOrNull { it.id == id } ?: return
+        if (name.isBlank()) return
+        val pinHash = when {
+            removePin -> null
+            pin != null -> Profile.hashPin(pin)
+            else -> profile.pinHash
+        }
+        val changed = profile.copy(name = name.trim(), colorIndex = colorIndex, symbol = symbol, isKids = isKids, pinHash = pinHash)
+        keepProfiles(profiles.map { if (it.id == id) changed else it })
+    }
+
+    /**
+     * Deletes a profile and its library. The main profile is never deleted (its data predates profiles, and an older
+     * device is matched with it), nor the last one. The profile in use gives way to the main one first.
+     */
+    fun deleteProfile(id: String) {
+        val state = _state.value
+        val profile = state.profiles.firstOrNull { it.id == id } ?: return
+        if (profile.isMain || state.profiles.size <= 1) return
+        if (state.settings.launchProfileId == id) updateSettings { it.copy(launchProfileId = null) }
+        fun forget() {
+            val profiles = _state.value.profiles.filterNot { it.id == id }
+            _state.update { it.copy(profiles = profiles) }
+            // After any save of its library still pending: the file does not come back.
+            persist {
+                saveProfiles(profiles)
+                deleteLibrary(profile.libraryDocumentName)
+            }
+        }
+        if (state.activeProfile.id != id) return forget()
+        // The profile in use: the main one opens first (its library read after any pending save), so that nothing changed
+        // meanwhile is saved where the deleted one's goes.
+        scope.launch {
+            val library = withContext(writer) { runCatching { store.loadLibrary(AppStore.MAIN_LIBRARY) }.getOrDefault(LibraryState()) }
+            syncClock.advance(SyncData.latestTime(OndoState(settings = _state.value.settings, playlists = _state.value.playlists, library = library)))
+            val settings = _state.value.settings.copy(activeProfileId = Profile.DEFAULT_ID)
+            _state.update { it.copy(library = library, settings = settings, kidsUnlocked = false) }
+            persist { saveSettings(settings) }
+            forget()
+        }
+    }
+
+    /** Ticks or unticks "Always open this profile" for [id] (null: ask who is watching at launch). */
+    fun setLaunchProfile(id: String?) = updateSettings { it.copy(launchProfileId = id?.takeIf { profileId -> _state.value.profiles.any { it.id == profileId } }) }
+
+    private fun keepProfiles(profiles: List<Profile>) {
+        _state.update { it.copy(profiles = profiles) }
+        persist { saveProfiles(profiles) }
+    }
 
     // MARK: Sync on the local network (docs/SYNC.md)
 
@@ -464,7 +622,7 @@ class OndoRepository(
 
     /** What this device sends to sync; null until its data is loaded. Main thread. */
     fun syncSnapshot(deviceName: String?): SyncSnapshot? {
-        if (!_state.value.isReady) return null
+        if (!_state.value.isReady || !_state.value.syncsThisProfile) return null
         return SyncData.snapshot(_state.value, syncDeviceId(), deviceName, syncNow())
     }
 
@@ -488,7 +646,8 @@ class OndoRepository(
 
     /** This device's snapshot, built on [syncMerging] from the data as it is now (returned with it); null until loaded. */
     private suspend fun syncSnapshotInBackground(deviceName: String?): Pair<OndoState, SyncSnapshot>? {
-        if (!_state.value.isReady) return null
+        // Another profile than the main one: its library is not the one sync carries (docs/PROFILES.md, "Sync").
+        if (!_state.value.isReady || !_state.value.syncsThisProfile) return null
         val id = syncDeviceId()
         val base = _state.value
         val time = syncNow()
@@ -679,9 +838,10 @@ class OndoRepository(
             ?: applied.playlists.firstOrNull()?.id
         val settings = state.settings.copy(activePlaylistId = active, serviceKeys = applied.keys, rowOrders = applied.rows, syncClock = syncClock.last)
         val before = state.activePlaylist
+        val document = state.activeProfile.libraryDocumentName
         val saved = persist {
             if (applied.removed.isEmpty()) savePlaylists(applied.playlists) else applied.removed.forEach { savePlaylists(applied.playlists, it) }
-            saveLibrary(library)
+            saveLibrary(library, document)
             saveSettings(settings)
             applied.removed.forEach {
                 // The same account under another ID keeps its catalogue, guide and details: nothing is downloaded again.
@@ -1128,7 +1288,9 @@ class OndoRepository(
         }
         _state.update { it.copy(library = change(it.library)) }
         val library = _state.value.library
-        persist { saveLibrary(library) }
+        // The document is the profile's the change was made in, even if another profile opens before it is written.
+        val document = _state.value.activeProfile.libraryDocumentName
+        persist { saveLibrary(library, document) }
     }
 
     // MARK: Details

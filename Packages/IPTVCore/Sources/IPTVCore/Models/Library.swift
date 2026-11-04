@@ -249,8 +249,40 @@ public struct Profile: Identifiable, Codable, Hashable, Sendable {
 
     public var isProtected: Bool { pinHash != nil }
 
+    /// The main profile: its data predates profiles, it is never deleted (docs/PROFILES.md).
+    public var isMain: Bool { id == Self.defaultID }
+
     /// Name of the library document of this profile.
     public var libraryDocumentName: String {
         id == Self.defaultID ? "library" : "library-\(id.uuidString)"
+    }
+
+    /// The name's first letter, upper case, for the avatar ("?" for a profile without a name).
+    public var initial: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines).first.map { String($0).uppercased() } ?? "?"
+    }
+
+    /// The avatar shows the name's first letter.
+    public static let initialSymbol = "initial"
+    /// The icons both platforms draw (SF Symbols names; Android draws its own of each).
+    public static let symbols = ["person.fill", "face.smiling", "star.fill", "heart.fill", "gamecontroller.fill", "film.fill", "pawprint.fill", "leaf.fill"]
+    /// The emoji offered for an avatar (any single emoji received is drawn too).
+    public static let emoji = ["🦊", "🐼", "🦄", "🐙", "🚀", "🌈"]
+
+    /// What the avatar draws for `symbol`: one of `symbols`, an emoji, else the initial (docs/PROFILES.md).
+    public enum Avatar: Equatable, Sendable { case symbol(String), emoji(String), initial }
+
+    public var avatar: Avatar {
+        if Self.symbols.contains(symbol) { return .symbol(symbol) }
+        if symbol != Self.initialSymbol, !symbol.isEmpty, symbol.count <= 4,
+           !symbol.unicodeScalars.contains(where: { CharacterSet.alphanumerics.contains($0) }) {
+            return .emoji(symbol)
+        }
+        return .initial
+    }
+
+    /// The main profile as made the first time (its library is the one that existed before profiles).
+    public static func main(name: String) -> Profile {
+        Profile(id: defaultID, name: name, colorIndex: 0, symbol: initialSymbol)
     }
 }

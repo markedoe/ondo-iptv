@@ -3,7 +3,8 @@ import IPTVCore
 
 enum ProfileStyle {
     static let colors: [Color] = [.indigo, .pink, .orange, .teal, .green, .purple, .blue, .red]
-    static let symbols = ["person.fill", "face.smiling", "star.fill", "heart.fill", "gamecontroller.fill", "film.fill", "pawprint.fill", "leaf.fill"]
+    /// Every avatar offered: the initial, the icons, then the emoji (the same as Android's, docs/PROFILES.md).
+    static let choices = [Profile.initialSymbol] + Profile.symbols + Profile.emoji
 
     static func color(_ index: Int) -> Color { colors[abs(index) % colors.count] }
 }
@@ -14,11 +15,21 @@ struct ProfileAvatar: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: size * 0.22)
+            Circle()
                 .fill(ProfileStyle.color(profile.colorIndex).gradient)
-            Image(systemName: profile.symbol)
-                .font(.system(size: size * 0.45, weight: .semibold))
-                .foregroundStyle(.white)
+            switch profile.avatar {
+            case .symbol(let name):
+                Image(systemName: name)
+                    .font(.system(size: size * 0.45, weight: .semibold))
+                    .foregroundStyle(.white)
+            case .emoji(let emoji):
+                Text(verbatim: emoji)
+                    .font(.system(size: size * 0.5))
+            case .initial:
+                Text(verbatim: profile.initial)
+                    .font(.system(size: size * 0.45, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+            }
         }
         .frame(width: size, height: size)
         .overlay(alignment: .bottomTrailing) {
@@ -33,32 +44,47 @@ struct ProfileAvatar: View {
     }
 }
 
-/// "Who's watching?" screen.
+/// "Who's watching?" screen at launch; with `switching`, the switcher the toolbar's avatar opens.
 struct ProfilePickerView: View {
     @Environment(AppModel.self) private var model
+    var switching = false
+    var onSwitched: () -> Void = {}
     @State private var pinFor: Profile?
     @State private var pin = ""
     @State private var wrongPIN = false
+    @State private var alwaysOpen = false
+
+    private func open(_ profile: Profile) {
+        if alwaysOpen, !switching { model.setLaunchProfile(profile) }
+        model.switchProfile(to: profile)
+        onSwitched()
+    }
 
     var body: some View {
         VStack(spacing: 36) {
-            Text("Who's watching?")
-                .font(.largeTitle.bold())
+            if !switching {
+                Text("Who's watching?")
+                    .font(.largeTitle.bold())
+            }
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 160), spacing: 24)], spacing: 24) {
                 ForEach(model.profiles) { profile in
                     Button {
-                        if profile.isProtected {
+                        if switching, profile.id == model.activeProfile.id {
+                            onSwitched()
+                        } else if profile.isProtected {
                             pin = ""
                             wrongPIN = false
                             pinFor = profile
                         } else {
-                            model.switchProfile(to: profile)
+                            open(profile)
                         }
                     } label: {
                         VStack(spacing: 10) {
                             ProfileAvatar(profile: profile, size: 96)
                             Text(profile.name).font(.headline)
-                            if profile.isKids {
+                            if switching, profile.id == model.activeProfile.id {
+                                Text("Current").font(.caption).foregroundStyle(.secondary)
+                            } else if profile.isKids {
                                 Text("Kids").font(.caption).foregroundStyle(.secondary)
                             }
                         }
@@ -67,6 +93,16 @@ struct ProfilePickerView: View {
                 }
             }
             .frame(maxWidth: 640)
+            if switching {
+                Toggle("Always open this profile", isOn: Binding(
+                    get: { model.settings.launchProfileID == model.activeProfile.id },
+                    set: { model.setLaunchProfile($0 ? model.activeProfile : nil) }
+                ))
+                .frame(maxWidth: 360)
+            } else {
+                Toggle("Always open this profile", isOn: $alwaysOpen)
+                    .frame(maxWidth: 360)
+            }
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -76,7 +112,7 @@ struct ProfilePickerView: View {
                 guard let profile = pinFor else { return }
                 pinFor = nil
                 if model.verifyPIN(pin, for: profile) {
-                    model.switchProfile(to: profile)
+                    open(profile)
                 } else {
                     // The alert closes with its button: ask again, saying the PIN was wrong.
                     pin = ""
@@ -98,23 +134,49 @@ struct ProfilePickerView: View {
     }
 }
 
-/// Profile switcher used in toolbars.
+/// The profile in use, a round avatar at the top right next to Settings: it opens the switcher (switch, add,
+/// rename, delete, change the avatar; docs/PROFILES.md).
 struct ProfileMenu: View {
     @Environment(AppModel.self) private var model
+    @State private var showingSwitcher = false
 
     var body: some View {
-        if model.profiles.count > 1 {
-            Button {
-                model.flush()
-                model.needsProfileSelection = true
-            } label: {
-                ProfileAvatar(profile: model.activeProfile, size: 26)
-            }
-            .buttonStyle(.plain)
-            .help("Switch profile")
-            .accessibilityLabel("Switch profile")
-            .accessibilityValue(Text(verbatim: model.activeProfile.name))
+        Button {
+            model.flush()
+            showingSwitcher = true
+        } label: {
+            ProfileAvatar(profile: model.activeProfile, size: 26)
         }
+        .buttonStyle(.plain)
+        .help("Switch profile")
+        .accessibilityLabel("Switch profile")
+        .accessibilityValue(Text(verbatim: model.activeProfile.name))
+        .sheet(isPresented: $showingSwitcher) {
+            NavigationStack { ProfileSwitcherView { showingSwitcher = false } }
+        }
+    }
+}
+
+/// The switcher: the profiles to switch to, "Always open this profile", and Edit (add, rename, delete, avatar).
+struct ProfileSwitcherView: View {
+    @Environment(AppModel.self) private var model
+    let onDone: () -> Void
+
+    var body: some View {
+        ProfilePickerView(switching: true, onSwitched: onDone)
+            .navigationTitle("Profiles")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Done", action: onDone) }
+                // What could weaken a Kids profile waits for a parent (`settingsNeedParentalUnlock`).
+                if !model.settingsNeedParentalUnlock {
+                    ToolbarItem(placement: .primaryAction) {
+                        NavigationLink { ProfilesSettingsView() } label: { Text("Edit") }
+                    }
+                }
+            }
+            #if os(macOS)
+            .frame(minWidth: 520, minHeight: 420)
+            #endif
     }
 }
 
@@ -148,8 +210,8 @@ struct ProfilesSettingsView: View {
                 .buttonStyle(.plain)
             }
             .onDelete { offsets in
-                guard model.profiles.count > 1 else { return }
-                for offset in offsets { model.deleteProfile(model.profiles[offset]) }
+                // Never the main profile (`canDelete`).
+                for profile in offsets.map({ model.profiles[$0] }) { model.deleteProfile(profile) }
             }
         }
         .navigationTitle("Profiles")
@@ -178,7 +240,7 @@ struct ProfileEditView: View {
 
     @State private var name = ""
     @State private var colorIndex = 0
-    @State private var symbol = "person.fill"
+    @State private var symbol = Profile.initialSymbol
     @State private var isKids = false
     @State private var pin = ""
     @State private var removePIN = false
@@ -205,12 +267,16 @@ struct ProfileEditView: View {
                 }
             }
             Section("Icon") {
-                HStack {
-                    ForEach(ProfileStyle.symbols, id: \.self) { candidate in
-                        Image(systemName: candidate)
-                            .frame(width: 30, height: 30)
-                            .foregroundStyle(candidate == symbol ? OndoColor.selected : .secondary)
-                            .onTapGesture { symbol = candidate }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        ForEach(ProfileStyle.choices, id: \.self) { candidate in
+                            ProfileAvatar(profile: Profile(name: name, colorIndex: colorIndex, symbol: candidate), size: 32)
+                                .padding(2)
+                                .overlay { Circle().stroke(candidate == symbol ? OndoColor.selected : .clear, lineWidth: 2) }
+                                .onTapGesture { symbol = candidate }
+                                .accessibilityAddTraits(candidate == symbol ? [.isButton, .isSelected] : .isButton)
+                                .accessibilityLabel(candidate == Profile.initialSymbol ? Text("Initial") : Text(verbatim: candidate))
+                        }
                     }
                 }
             }
@@ -229,7 +295,7 @@ struct ProfileEditView: View {
             } footer: {
                 Text("Asked when switching to this profile.")
             }
-            if let profile, model.profiles.count > 1 {
+            if let profile, model.canDelete(profile) {
                 Section {
                     Button("Delete Profile", role: .destructive) {
                         model.deleteProfile(profile)

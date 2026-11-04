@@ -12,6 +12,7 @@ import com.markedoe.ondo.core.model.Episode
 import com.markedoe.ondo.core.model.MediaDetails
 import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
 import com.markedoe.ondo.data.ItemKind
@@ -565,6 +566,22 @@ class OndoViewModel(
     fun refresh() = repository.refresh()
     fun delete(id: String) = repository.delete(id)
     fun setShowAdultCategories(show: Boolean) = repository.setShowAdultCategories(show)
+
+    // Profiles (docs/PROFILES.md)
+
+    /** The profile in use, alone: the top bar's avatar follows it without the rest of the state. */
+    val activeProfile: StateFlow<Profile> = repository.state.map { it.activeProfile }.distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, repository.state.value.activeProfile)
+
+
+    fun switchProfile(id: String) = repository.switchProfile(id)
+    fun checkPin(profile: Profile, pin: String) = repository.checkPin(profile, pin)
+    fun unlockKidsSettings(pin: String) = repository.unlockKidsSettings(pin)
+    fun addProfile(name: String, colorIndex: Int, symbol: String, isKids: Boolean, pin: String?) = repository.addProfile(name, colorIndex, symbol, isKids, pin)
+    fun updateProfile(id: String, name: String, colorIndex: Int, symbol: String, isKids: Boolean, pin: String?, removePin: Boolean) =
+        repository.updateProfile(id, name, colorIndex, symbol, isKids, pin, removePin)
+    fun deleteProfile(id: String) = repository.deleteProfile(id)
+    fun setLaunchProfile(id: String?) = repository.setLaunchProfile(id)
     fun setHideWatchedMovies(hide: Boolean) = repository.setHideWatchedMovies(hide)
 
     fun setGroupVersions(group: Boolean) = repository.setGroupVersions(group)

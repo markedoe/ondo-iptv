@@ -74,11 +74,12 @@ object UiMappers {
 
     /**
      * Categories hidden by the user, on their own or with their language tag, and adult-looking ones unless the
-     * user shows them in Settings.
+     * user shows them in Settings; a Kids profile never sees those (docs/PROFILES.md).
      */
     fun hiddenCategoryIds(state: OndoState): Set<String> = with(state.content) {
+        val showAdult = state.settings.showAdultCategories && !state.activeProfile.isKids
         (movieCategories + seriesCategories + liveCategories)
-            .filter { (!state.settings.showAdultCategories && it.looksAdult) || CategoryFilter.isHidden(state, it) }
+            .filter { (!showAdult && it.looksAdult) || CategoryFilter.isHidden(state, it) }
             .mapTo(HashSet()) { it.id }
     }
 
@@ -407,6 +408,7 @@ object UiMappers {
             isLoading = state.isLoading,
             isRestoring = state.isRestoring,
             tagSuggestion = CategoryFilter.suggestion(state, labels.viewerCodes, labels.locale),
+            profile = state.activeProfile.takeIf { state.profiles.isNotEmpty() },
         )
     }
 

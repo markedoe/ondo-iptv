@@ -69,7 +69,8 @@ class LocalSync(
         if (started) return
         started = true
         scope.launch {
-            runs(foreground, repository.state.map { it.isReady && it.settings.syncOnLocalNetwork }, localNetwork)
+            // Only while the main profile is open: the others keep their library on this device (docs/PROFILES.md).
+            runs(foreground, repository.state.map { it.isReady && it.settings.syncOnLocalNetwork && it.syncsThisProfile }, localNetwork)
                 .collectLatest { on ->
                     // Sync never takes the app down: after an error it starts again a minute later.
                     while (on) {

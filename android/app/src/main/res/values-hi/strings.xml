@@ -432,4 +432,37 @@
     <string name="all_series_count">सभी सीरीज़ (%1$s)</string>
     <string name="help_rows_title">फ़िल्मों और सीरीज़ की पंक्तियों का क्रम</string>
     <string name="help_rows_body">फ़िल्में और सीरीज़ टैब सभी फ़िल्में (या सभी सीरीज़) से शुरू होते हैं: सबसे नई जोड़ी गई चीज़ें, फिर सभी देखें, जो पूरा कैटलॉग उसकी छँटाई और देखी गई फ़िल्में छिपाएँ के साथ खोलता है। उसके बाद देखना जारी रखें, मेरी सूची, नए टाइटल, ट्रेंडिंग, पुरस्कार विजेता फ़िल्में और आपके प्रदाता की हर श्रेणी आती है।\n\nसेटिंग्स → पंक्तियों का क्रम उनका क्रम और कौन-सी दिखें, यह तय करता है: किसी पंक्ति को खींचकर हटाएँ, या TV पर उसे उठाने के लिए OK, हिलाने के लिए ऊपर और नीचे, रखने के लिए OK और रद्द करने के लिए वापस दबाएँ; किसी पंक्ति को छिपाने के लिए उसका स्विच बंद करें। डिफ़ॉल्ट क्रम पंक्तियों को वैसे ही लौटा देता है जैसे वे आती हैं। आपकी प्लेलिस्ट में नई श्रेणी अंत में जाती है; जिसे आपका प्रदाता हटाता है, वह लौटने तक अपनी जगह रखती है। छिपी भाषाएँ और श्रेणियाँ, क्रम कुछ भी हो, छिपी रहती हैं। इस नेटवर्क पर सिंक चालू होने पर क्रम आपके दूसरे डिवाइस पर भी लागू होता है।</string>
+    <!-- Profiles (docs/PROFILES.md) -->
+    <string name="profile_main_name">मैं</string>
+    <string name="whos_watching">कौन देख रहा है?</string>
+    <string name="profiles">प्रोफ़ाइल</string>
+    <string name="switch_profile">प्रोफ़ाइल बदलें</string>
+    <string name="add_profile">प्रोफ़ाइल जोड़ें</string>
+    <string name="edit_profile">प्रोफ़ाइल संपादित करें</string>
+    <string name="new_profile">नई प्रोफ़ाइल</string>
+    <string name="delete_profile">प्रोफ़ाइल डिलीट करें</string>
+    <string name="delete_profile_confirm">इस प्रोफ़ाइल को इसके इतिहास, मेरी सूची और कलेक्शन के साथ डिलीट करें?</string>
+    <string name="profile_color">रंग</string>
+    <string name="profile_avatar">अवतार</string>
+    <string name="profile_initial">पहला अक्षर</string>
+    <string name="kids_profile">बच्चों की प्रोफ़ाइल</string>
+    <string name="kids">बच्चे</string>
+    <string name="kids_profile_hint">बच्चों की प्रोफ़ाइल में वयस्क श्रेणियाँ कभी नहीं दिखतीं, और सेटिंग्स के लिए माता-पिता का PIN चाहिए।</string>
+    <string name="profile_pin">प्रोफ़ाइल PIN</string>
+    <string name="pin">PIN</string>
+    <string name="pin_optional">PIN (वैकल्पिक)</string>
+    <string name="pin_new_keep">नया PIN (मौजूदा रखने के लिए खाली छोड़ें)</string>
+    <string name="pin_remove">PIN हटाएँ</string>
+    <string name="pin_hint">4 से 8 अंक, इस प्रोफ़ाइल पर स्विच करते समय पूछा जाता है।</string>
+    <string name="pin_enter">इस प्रोफ़ाइल का PIN डालें।</string>
+    <string name="pin_wrong">गलत PIN</string>
+    <string name="pin_wait">बहुत बार गलत PIN डाला गया। थोड़ी देर रुककर फिर से कोशिश करें।</string>
+    <string name="parent_pin">माता-पिता का PIN</string>
+    <string name="parent_pin_hint">ऐसी प्रोफ़ाइल का PIN डालें जो बच्चों की प्रोफ़ाइल नहीं है।</string>
+    <string name="open">खोलें</string>
+    <string name="save">सेव करें</string>
+    <string name="edit">संपादित करें</string>
+    <string name="done">हो गया</string>
+    <string name="current_profile">वर्तमान</string>
+    <string name="always_open_profile">हमेशा यह प्रोफ़ाइल खोलें</string>
 </resources>

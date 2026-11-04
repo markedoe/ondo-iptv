@@ -469,6 +469,27 @@ final class ProfileTests: XCTestCase {
         XCTAssertFalse(decoded.isKids)
         XCTAssertFalse(decoded.isProtected)
     }
+
+    /// The avatar reads the symbol as Android does (docs/PROFILES.md): an icon, an emoji, else the initial.
+    func testTheAvatarIsAnIconAnEmojiOrTheInitial() {
+        XCTAssertEqual(Profile(name: "sam", symbol: "star.fill").avatar, .symbol("star.fill"))
+        XCTAssertEqual(Profile(name: "sam", symbol: "🦊").avatar, .emoji("🦊"))
+        XCTAssertEqual(Profile(name: "sam", symbol: Profile.initialSymbol).avatar, .initial)
+        XCTAssertEqual(Profile(name: "sam", symbol: "unknown.symbol").avatar, .initial, "a symbol this version does not know")
+        XCTAssertEqual(Profile(name: " sam").initial, "S")
+        XCTAssertEqual(Profile(name: "").initial, "?")
+        XCTAssertTrue(Profile.main(name: "Me").isMain)
+        XCTAssertEqual(Profile.main(name: "Me").libraryDocumentName, "library")
+    }
+
+    /// An Android profile (lower-case id, fields this version does not know) is read.
+    func testAnAndroidProfileIsRead() throws {
+        let json = #"{"id":"6f9619ff-8b86-d011-b42d-00c04fc964ff","name":"Sam","colorIndex":2,"symbol":"initial","isKids":true,"later":1}"#
+        let profile = try JSONDecoder().decode(Profile.self, from: Data(json.utf8))
+        XCTAssertEqual(profile.name, "Sam")
+        XCTAssertTrue(profile.isKids)
+        XCTAssertEqual(profile.avatar, .initial)
+    }
 }
 
 final class ReminderTests: XCTestCase {

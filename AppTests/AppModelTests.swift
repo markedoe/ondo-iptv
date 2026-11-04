@@ -244,10 +244,88 @@ final class AppModelTests: XCTestCase {
         XCTAssertFalse(model.verifyParentalPIN("1234"), "without a PIN, no PIN unlocks")
         XCTAssertTrue(model.isParentalControlActive)
 
-        // A single kids profile and no PIN: nobody could ever leave it, so its settings stay open.
-        model.deleteProfile(try XCTUnwrap(model.profiles.first { $0.id != kid.id }))
-        XCTAssertEqual(model.profiles.map(\.id), [kid.id])
+        // Only kids profiles and no PIN: nobody could ever leave them, so their settings stay open. (The main profile
+        // is never deleted: it becomes a kids profile instead.)
+        var main = try XCTUnwrap(model.profiles.first { $0.isMain })
+        main.isKids = true
+        model.updateProfile(main)
+        XCTAssertTrue(model.profiles.allSatisfy(\.isKids))
         XCTAssertFalse(model.settingsNeedParentalUnlock)
+    }
+
+    /// docs/PROFILES.md, "Migration": a store written before profiles opens as the main profile's, nothing lost.
+    func testAStoreFromBeforeProfilesBecomesTheMainProfilesWithNothingLost() async throws {
+        let model = try await modelWithPlaylist()
+        let channel = try XCTUnwrap(model.content.channels.first)
+        model.toggleFavorite(channel)
+        model.flush()
+        // What a version before profiles left: no profiles document, the settings without a profile.
+        let support = root.appendingPathComponent("Support", isDirectory: true)
+        try? FileManager.default.removeItem(at: support.appendingPathComponent("profiles.json"))
+        let library = try Data(contentsOf: support.appendingPathComponent("library.json"))
+
+        let relaunched = makeModel()
+        await relaunched.bootstrap()
+        XCTAssertEqual(relaunched.profiles.map(\.id), [Profile.defaultID])
+        XCTAssertTrue(relaunched.activeProfile.isMain)
+        XCTAssertFalse(relaunched.needsProfileSelection)
+        XCTAssertEqual(relaunched.favoriteChannels().map(\.id), [channel.id])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: support.appendingPathComponent("library.json").path), "the library keeps its document")
+        XCTAssertFalse(library.isEmpty)
+    }
+
+    func testTheMainProfileIsNeverDeleted() async throws {
+        let model = makeModel()
+        await model.bootstrap()
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        let main = try XCTUnwrap(model.profiles.first { $0.isMain })
+        XCTAssertFalse(model.canDelete(main))
+        model.deleteProfile(main)
+        XCTAssertEqual(model.profiles.map(\.id), [Profile.defaultID, guest.id])
+
+        // The profile in use gives way to the main one.
+        model.switchProfile(to: guest)
+        model.setLaunchProfile(guest)
+        model.deleteProfile(guest)
+        XCTAssertEqual(model.profiles.map(\.id), [Profile.defaultID])
+        XCTAssertTrue(model.activeProfile.isMain)
+        XCTAssertNil(model.settings.launchProfileID)
+    }
+
+    func testAlwaysOpenThisProfileSkipsWhoIsWatching() async throws {
+        let model = makeModel()
+        await model.bootstrap()
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: "🦊", isKids: false, pin: nil)
+        model.flush()
+
+        let second = makeModel()
+        await second.bootstrap()
+        XCTAssertTrue(second.needsProfileSelection, "two profiles: who's watching?")
+        second.setLaunchProfile(guest)
+        second.flush()
+
+        let third = makeModel()
+        await third.bootstrap()
+        XCTAssertFalse(third.needsProfileSelection)
+        XCTAssertEqual(third.activeProfile.id, guest.id)
+    }
+
+    func testDeletingAPlaylistTakesItsEntriesOutOfEveryProfile() async throws {
+        let model = try await modelWithPlaylist()
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        let channel = try XCTUnwrap(model.content.channels.first)
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        model.switchProfile(to: guest)
+        model.toggleFavorite(channel)
+        let main = try XCTUnwrap(model.profiles.first { $0.isMain })
+        model.switchProfile(to: main)
+        model.toggleFavorite(channel)
+
+        await model.deletePlaylist(playlist)
+        model.flush()
+        XCTAssertTrue(model.library.favorites.isEmpty)
+        model.switchProfile(to: guest)
+        XCTAssertTrue(model.library.favorites.isEmpty, "the other profile's entries of the playlist went too")
     }
 
     func testABackupBringsBackLocksHiddenChannelsAndReminders() async throws {

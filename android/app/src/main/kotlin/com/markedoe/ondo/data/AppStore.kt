@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.model.PlaylistContent
+import com.markedoe.ondo.core.model.Profile
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
@@ -70,8 +71,23 @@ class AppStore(
     private fun importedFile(url: String): File? =
         runCatching { File(URI(url)) }.getOrNull()?.takeIf { it.canonicalFile.parentFile == imports.canonicalFile }
 
-    fun loadLibrary(): LibraryState = read("library.json", LibraryState.serializer()) ?: LibraryState()
-    fun saveLibrary(library: LibraryState) = write("library.json", LibraryState.serializer(), library, keepPrevious = true)
+    /** The viewer profiles (docs/PROFILES.md); empty before profiles existed (the main one is made then). */
+    fun loadProfiles(): List<Profile> = read("profiles.json", ListSerializer(Profile.serializer())) ?: emptyList()
+    fun saveProfiles(profiles: List<Profile>) = write("profiles.json", ListSerializer(Profile.serializer()), profiles, keepPrevious = true)
+
+    /** A profile's library, by [Profile.libraryDocumentName]: `library` is the main profile's (the one before profiles). */
+    fun loadLibrary(document: String = MAIN_LIBRARY): LibraryState = read("$document.json", LibraryState.serializer()) ?: LibraryState()
+    fun saveLibrary(library: LibraryState, document: String = MAIN_LIBRARY) =
+        write("$document.json", LibraryState.serializer(), library, keepPrevious = true)
+
+    /** A deleted profile's library, with its previous version and any damaged copy. */
+    fun deleteLibrary(document: String) {
+        require(document != MAIN_LIBRARY) { "The main profile's library is never deleted" }
+        File(directory, "$document.json").delete()
+        File(directory, "$document.json.bak").delete()
+        directory.listFiles { file -> file.name.startsWith("$document.json.corrupt-") || file.name.startsWith("$document.json.too-large-") }
+            ?.forEach(File::delete)
+    }
 
     /** Catalogues can be downloaded again: no previous version is kept, and one that cannot be read is deleted. */
     fun loadContent(playlistId: String): PlaylistContent? = read("content-$playlistId.json", PlaylistContent.serializer(), disposable = true)
@@ -167,7 +183,10 @@ class AppStore(
         }
     }
 
-    private companion object {
-        const val UNUSED_IMPORT_MS = 24 * 3_600_000L
+    companion object {
+        private const val UNUSED_IMPORT_MS = 24 * 3_600_000L
+
+        /** The main profile's library document ([Profile.libraryDocumentName]). */
+        const val MAIN_LIBRARY = "library"
     }
 }
