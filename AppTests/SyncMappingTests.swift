@@ -42,6 +42,36 @@ final class SyncMappingTests: XCTestCase {
         return (playlists, library, state)
     }
 
+    /// An episode watched to the end on one device and watched again on another stays watched on both after their
+    /// merge: watching it again sends nothing that would undo it; the next episode's later position still arrives.
+    func testAnEpisodeWatchedAgainStaysWatchedOnBothDevices() throws {
+        let (playlists, base, _) = model()
+        let first = ref(xtreamID, .series, "s1", "e1")
+        let second = ref(xtreamID, .series, "s1", "e2")
+        var phone = base
+        phone.recordPlayback(HistoryEntry(reference: first, title: "Harbor", lastWatchedAt: t0.addingTimeInterval(40)))
+        phone.updateProgress(first, position: 2700, duration: 2700, now: t0.addingTimeInterval(50))
+        var tv = phone
+        // Watched again on the TV, stopped halfway; then the next episode on the phone.
+        tv.recordPlayback(HistoryEntry(reference: first, title: "Harbor", lastWatchedAt: t0.addingTimeInterval(60)))
+        tv.updateProgress(first, position: 1350, duration: 2700, now: t0.addingTimeInterval(70))
+        phone.updateProgress(second, position: 900, duration: 2700, now: t0.addingTimeInterval(80))
+
+        var phoneState = SyncState()
+        phoneState.deviceID = "phone"
+        var tvState = SyncState()
+        tvState.deviceID = "tv"
+        let merged = SyncMerge.merge(
+            SyncMapping.snapshot(playlists: playlists, library: phone, state: phoneState, deviceName: nil, now: t0.addingTimeInterval(90)),
+            SyncMapping.snapshot(playlists: playlists, library: tv, state: tvState, deviceName: nil, now: t0.addingTimeInterval(90))
+        )
+        for (device, library) in [("phone", phone), ("tv", tv)] {
+            let applied = SyncMapping.library(library, applying: merged)
+            XCTAssertEqual(applied.progress(for: first)?.isFinished, true, "\(device): still watched")
+            XCTAssertEqual(applied.progress(for: second)?.position, 900, device)
+        }
+    }
+
     func testTheSnapshotHoldsWhatSyncCarries() throws {
         let (playlists, library, state) = model()
         let snapshot = SyncMapping.snapshot(playlists: playlists, library: library, state: state, deviceName: "iPhone", now: t0)

@@ -140,6 +140,13 @@ public struct HistoryEntry: Identifiable, Codable, Hashable, Sendable {
         reference.type != .live && position > 30 && !isFinished
     }
 
+    /// An episode watched to the end: watching it again changes nothing (no resume point, the same time), so it stays
+    /// watched here and on the other devices, and the series goes on from where it was. Only removing it from the
+    /// history makes it unwatched. A movie watched again is resumed as before.
+    public var staysWatched: Bool {
+        reference.type == .series && isFinished
+    }
+
     /// Watched: the "watched" badge, the hidden watched movies, out of "Continue watching". Movies and episodes alike.
     public var isFinished: Bool {
         reference.type != .live && Self.isFinished(position: position, duration: duration, creditsStart: creditsStart)

@@ -32,6 +32,14 @@ data class HistoryEntry(
     val isResumable: Boolean
         get() = reference.type != ContentType.LIVE && position > 30 && !isFinished
 
+    /**
+     * An episode watched to the end: watching it again changes nothing (no resume point, the same time), so it stays
+     * watched here and on the other devices, and the series goes on from where it was. Only removing it from the
+     * history makes it unwatched. A movie watched again is resumed as before.
+     */
+    val staysWatched: Boolean
+        get() = reference.type == ContentType.SERIES && isFinished
+
     /** Watched: the "watched" badge, the hidden watched movies, out of "Continue watching". Movies and episodes alike. */
     val isFinished: Boolean
         get() = reference.type != ContentType.LIVE && isFinished(position, duration, creditsStart)
