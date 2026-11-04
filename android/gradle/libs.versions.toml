@@ -1,13 +1,13 @@
 # Versions tested together by Google's Compose samples (JetNews / Jetcaster, 2026).
 [versions]
-androidGradlePlugin = "9.4.1"
+androidGradlePlugin = "9.5.0"
 kotlin = "2.4.21"
 compileSdk = "37"
 # Google Play's minimum for new apps and updates since August 31, 2026 (lint's OldTargetApi asks for 37).
 targetSdk = "36"
 minSdk = "26"
 coroutines = "1.11.0"
-kotlinx-serialization = "1.11.0"
+kotlinx-serialization = "1.12.0"
 okhttp = "5.5.1"
 androidx-compose-bom = "2026.09.00"
 androidx-activity-compose = "1.13.0"
