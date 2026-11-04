@@ -13,7 +13,7 @@ object RowOrder {
     const val MY_LIST = "mylist"
     const val NEW_RELEASES = "new"
     const val TRENDING = "trending"
-    /** Movies only. */
+    /** Award winners: films in Movies, series in Series. */
     const val AWARD_WINNERS = "awards"
     const val CATEGORY_PREFIX = "cat:"
 
@@ -33,9 +33,8 @@ object RowOrder {
     const val HOME_COLLECTIONS = "collections"
 
     /** The built-in rows of a tab, in their default order, above the categories. */
-    fun builtIns(series: Boolean): List<String> =
-        if (series) listOf(ALL, CONTINUE_WATCHING, MY_LIST, NEW_RELEASES, TRENDING)
-        else listOf(ALL, CONTINUE_WATCHING, MY_LIST, NEW_RELEASES, TRENDING, AWARD_WINNERS)
+    @Suppress("UNUSED_PARAMETER")
+    fun builtIns(series: Boolean): List<String> = listOf(ALL, CONTINUE_WATCHING, MY_LIST, NEW_RELEASES, TRENDING, AWARD_WINNERS)
 
     /**
      * Home's rows in their default order: movies and series in progress, My List, the new movies and series, Trending,

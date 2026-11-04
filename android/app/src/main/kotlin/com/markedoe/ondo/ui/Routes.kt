@@ -34,8 +34,17 @@ object Routes {
     /** A collection of My List. */
     @Serializable data class Collection(val id: String)
 
-    /** Poster grid: every movie or series, one category, or My List (of one type, or both with [anyType]). */
-    @Serializable data class Grid(val series: Boolean, val categoryId: String? = null, val myList: Boolean = false, val anyType: Boolean = false)
+    /**
+     * Poster grid: every movie or series, one category, My List (of one type, or both with [anyType]), or a row of titles
+     * Ondo picks ([source], a [GridSource] name: every title of the row, in the row's own order).
+     */
+    @Serializable data class Grid(
+        val series: Boolean,
+        val categoryId: String? = null,
+        val myList: Boolean = false,
+        val anyType: Boolean = false,
+        val source: String? = null,
+    )
     @Serializable data object Settings
 
     /** Which categories are shown, opened on one type (`ContentType.rawValue`). */
@@ -51,6 +60,24 @@ object Routes {
 
     /** The privacy policy or the support page inside the app, on a TV (no browser there: Google's TV-WB). */
     @Serializable data class Web(val url: String)
+}
+
+/**
+ * The rows whose titles Ondo picks rather than the provider's categories, as a grid of their own ([Routes.Grid.source]):
+ * See all at the end of the row shows all of them, in the row's order ([UiMappers.rowTitles]).
+ */
+enum class GridSource {
+    /** New movies or series: released this year or last year, the newest first (`Showcase.newMovies`). */
+    NEW,
+
+    /** Award winners, films or series: the most recent award first ([MovieAwards.winners], [MovieAwards.seriesWinners]). */
+    AWARDS,
+    ;
+
+    companion object {
+        /** The source a route names ([Routes.Grid.source]); null for none, or one this version does not know. */
+        fun of(name: String?): GridSource? = entries.firstOrNull { it.name == name }
+    }
 }
 
 /** The tabs: bottom bar on phones, rail on tablets, Chromebooks and TVs. Search is the magnifying glass of each screen. */

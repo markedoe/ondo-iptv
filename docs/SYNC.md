@@ -192,7 +192,7 @@ keys of services it does not know.
 **Rows** (the order of the rows of a tab, Settings → Row order) — `{"tab", "order", "hidden", "updatedAt"}`. `tab`
 is `movie`, `series` or `home`; `order` lists the rows of the tab by key, in the viewer's order; `hidden` the keys of
 the rows the viewer hid. In Movies and Series, a row's key is `all` (All movies or All series), `continue` (Continue
-Watching), `mylist`, `new` (new movies or series), `trending`, `awards` (award winners, Movies only), or
+Watching), `mylist`, `new` (new movies or series), `trending`, `awards` (award winners: films in Movies, series in Series), or
 `cat:<category id>|<name>` for a provider category. Home's rows (below its carousel, which stays at the top) are
 `continue-movies` and `continue-series` (the movies and series in progress), `mylist`, `new-movies`, `new-series`,
 `trending`, `collections` (the viewer's lists, on Apple devices) and `channels` (the channels in My List, or those

@@ -342,6 +342,14 @@ struct SectionView: View {
         .navigationDestination(for: CustomListRoute.self) { route in
             CustomListDetailView(listID: route.id)
         }
+        // A grid of posters: a category's, All, or a row's (New, Award Winners), from the tabs' rows and Home's.
+        .navigationDestination(for: PosterCategoryRoute.self) { route in
+            if route.category.type == .series {
+                SeriesGridView(category: route.category)
+            } else {
+                MovieGridView(category: route.category)
+            }
+        }
         .navigationDestination(for: FavoritesRoute.self) { route in
             FavoritesView(initialType: route.type)
         }

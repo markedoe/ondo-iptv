@@ -27,7 +27,8 @@ class RowOrderTest {
     fun withoutASavedOrderTheRowsKeepTheirDefaultOrder() {
         val current = RowOrder.builtIns(series = false) + listOf(action, drama)
         assertEquals(current, keys(RowOrder.arrange(current, emptyList(), emptyList())))
-        assertEquals(listOf("all", "continue", "mylist", "new", "trending"), RowOrder.builtIns(series = true))
+        // Series have their award winners too, under the same key as movies.
+        assertEquals(listOf("all", "continue", "mylist", "new", "trending", "awards"), RowOrder.builtIns(series = true))
     }
 
     @Test

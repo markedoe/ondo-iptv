@@ -55,6 +55,27 @@ struct HomeView: View {
         }
     }
 
+    // MARK: - Rows
+
+    /// Home's rows of titles and channels.
+    enum Row: CaseIterable {
+        case moviesInProgress, seriesInProgress, myList, newMovies, newSeries, trending, collections, channels
+    }
+
+    /// Where a row's "See All" leads: every row that can hold more than it shows has one, its grid listing all its
+    /// titles in the row's order. The rows in progress have none (resume cards: a poster grid cannot resume), nor
+    /// Trending (it already lists every trending title). `myListType`: the type of My List's first title.
+    static func seeAll(_ row: Row, myListType: ContentType = .movie) -> AnyHashableRoute? {
+        switch row {
+        case .moviesInProgress, .seriesInProgress, .trending: return nil
+        case .myList: return .favorites(FavoritesRoute(type: myListType))
+        case .newMovies: return .category(PosterCategoryRoute(category: PseudoCategory.newReleases(.movie)))
+        case .newSeries: return .category(PosterCategoryRoute(category: PseudoCategory.newReleases(.series)))
+        case .collections: return .favorites(FavoritesRoute(type: nil))
+        case .channels: return .section(.live)
+        }
+    }
+
     // MARK: - Content
 
     @ViewBuilder
@@ -95,23 +116,25 @@ struct HomeView: View {
     @ViewBuilder
     private func row(_ key: String, metrics: ShelfMetrics) -> some View {
         switch key {
-        case RowOrder.homeContinueMovies: resumeShelf("Movies in Progress", entries: model.continueWatching(.movie), metrics: metrics)
-        case RowOrder.homeContinueSeries: resumeShelf("Series in Progress", entries: model.continueWatching(.series), metrics: metrics)
+        case RowOrder.homeContinueMovies:
+            resumeShelf("Movies in Progress", entries: model.continueWatching(.movie), route: Self.seeAll(.moviesInProgress), metrics: metrics)
+        case RowOrder.homeContinueSeries:
+            resumeShelf("Series in Progress", entries: model.continueWatching(.series), route: Self.seeAll(.seriesInProgress), metrics: metrics)
         case RowOrder.myList:
             let myList = model.myList()
             if !myList.isEmpty {
-                Shelf(title: "My List", route: .favorites(FavoritesRoute(type: myList[0].contentType)), metrics: metrics) {
+                Shelf(title: "My List", route: Self.seeAll(.myList, myListType: myList[0].contentType), metrics: metrics) {
                     ForEach(myList) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
                 }
             }
-        case RowOrder.homeNewMovies: posterShelf("New Movies", items: model.newMovies(), metrics: metrics)
-        case RowOrder.homeNewSeries: posterShelf("New Series", items: model.newSeries(), metrics: metrics)
+        case RowOrder.homeNewMovies: posterShelf("New Movies", items: model.newMovies(), route: Self.seeAll(.newMovies), metrics: metrics)
+        case RowOrder.homeNewSeries: posterShelf("New Series", items: model.newSeries(), route: Self.seeAll(.newSeries), metrics: metrics)
         case RowOrder.trending:
             let trending = model.trendingTitles()
             if !trending.isEmpty {
-                Shelf(title: "Trending", metrics: metrics) {
+                Shelf(title: "Trending", route: Self.seeAll(.trending), metrics: metrics) {
                     ForEach(trending) { match in
                         switch match {
                         case .movie(let movie, _): ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
@@ -127,9 +150,9 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private func resumeShelf(_ title: LocalizedStringKey, entries: [HistoryEntry], metrics: ShelfMetrics) -> some View {
+    private func resumeShelf(_ title: LocalizedStringKey, entries: [HistoryEntry], route: AnyHashableRoute?, metrics: ShelfMetrics) -> some View {
         if !entries.isEmpty {
-            Shelf(title: title, metrics: metrics) {
+            Shelf(title: title, route: route, metrics: metrics) {
                 ForEach(entries) { entry in
                     ContinueCard(entry: entry, width: metrics.wideCardWidth)
                 }
@@ -138,9 +161,9 @@ struct HomeView: View {
     }
 
     @ViewBuilder
-    private func posterShelf(_ title: LocalizedStringKey, items: [ShowcaseItem], metrics: ShelfMetrics) -> some View {
+    private func posterShelf(_ title: LocalizedStringKey, items: [ShowcaseItem], route: AnyHashableRoute?, metrics: ShelfMetrics) -> some View {
         if !items.isEmpty {
-            Shelf(title: title, metrics: metrics) {
+            Shelf(title: title, route: route, metrics: metrics) {
                 ForEach(items) { item in
                     ShowcasePoster(item: item, width: metrics.posterWidth)
                 }
@@ -182,7 +205,7 @@ struct HomeView: View {
     }
 
     private func channelShelf(title: LocalizedStringKey, channels: [Channel], metrics: ShelfMetrics) -> some View {
-        Shelf(title: title, seeAll: .live, metrics: metrics) {
+        Shelf(title: title, route: Self.seeAll(.channels), metrics: metrics) {
             ForEach(channels) { channel in
                 Button { model.play(channel, in: channels) } label: { ChannelTile(channel: channel) }
                     .cardButtonStyle()
@@ -194,7 +217,7 @@ struct HomeView: View {
     private func customLists(metrics: ShelfMetrics) -> some View {
         let lists = model.customLists.filter { !model.items(in: $0).isEmpty }
         if !lists.isEmpty {
-            Shelf(title: "Collections", route: .favorites(FavoritesRoute(type: nil)), metrics: metrics) {
+            Shelf(title: "Collections", route: Self.seeAll(.collections), metrics: metrics) {
                 ForEach(lists) { list in
                     NavigationLink(value: CustomListRoute(id: list.id)) {
                         VStack(alignment: .leading, spacing: 4) {

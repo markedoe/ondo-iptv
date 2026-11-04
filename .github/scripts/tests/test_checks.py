@@ -344,7 +344,9 @@ if __name__ == "__main__":
 
 class AwardsTests(CheckTestCase):
     AWARDS = {"awards": [{"id": "palme-dor", "group": "cannes", "names": {"en": "Palme d'Or", "fr": "Palme d'or"}}],
-              "films": [{"titles": ["Pulp Fiction"], "year": 1994, "awards": [["palme-dor", 1994, 1]]}]}
+              "films": [{"titles": ["Pulp Fiction"], "year": 1994, "awards": [["palme-dor", 1994, 1]]}],
+              "seriesAwards": [{"id": "emmy-drama-series", "group": "emmys", "names": {"en": "Primetime Emmy Award for Outstanding Drama Series"}}],
+              "series": [{"titles": ["Breaking Bad"], "year": 2008, "awards": [["emmy-drama-series", 2013, 1]]}]}
 
     def both(self, document: dict, android: dict | None = None):
         self.write("App/Resources/awards.json", json.dumps(document))
@@ -371,6 +373,25 @@ class AwardsTests(CheckTestCase):
         wrong["films"].append({"titles": ["Other"], "awards": [["golden-raspberry", 2000, 1]]})
         self.both(wrong)
         self.assertFails("awards", "bad award entry")
+
+    def test_rejects_a_series_award_among_the_films(self):
+        # The apps released before series had awards read the films only: a series award there shows a series as a film.
+        wrong = json.loads(json.dumps(self.AWARDS))
+        wrong["films"].append({"titles": ["Breaking Bad"], "year": 2008, "awards": [["emmy-drama-series", 2013, 1]]})
+        self.both(wrong)
+        self.assertFails("awards", "Breaking Bad: bad award entry")
+
+    def test_rejects_an_id_of_both_a_film_and_a_series_award(self):
+        wrong = json.loads(json.dumps(self.AWARDS))
+        wrong["seriesAwards"].append({"id": "palme-dor", "group": "cannes", "names": {"en": "Palme d'Or"}})
+        self.both(wrong)
+        self.assertFails("awards", "ids both of a film and of a series award")
+
+    def test_rejects_a_series_award_that_points_elsewhere(self):
+        wrong = json.loads(json.dumps(self.AWARDS))
+        wrong["series"][0]["awards"] = [["emmy-drama-series", 2013, 0]]
+        self.both(wrong)
+        self.assertFails("awards", "Breaking Bad should have won emmy-drama-series in 2013")
 
     def test_rejects_a_missing_copy(self):
         self.write("App/Resources/awards.json", json.dumps(self.AWARDS))

@@ -48,22 +48,22 @@ class HomeRowOrderTest {
      * Every Home of the Android app: a phone's or a tablet's, and a TV's. A new Home goes here. (Apple's iPhone, iPad
      * and Mac share one Home: AppTests `HomeRowOrderTests`.)
      */
+    /** Each Home row's tag, the same on a phone's Home and a TV's. */
+    private val shelfTags = mapOf(
+        RowOrder.HOME_CONTINUE_MOVIES to "shelfResumeMovies",
+        RowOrder.HOME_CONTINUE_SERIES to "shelfResumeSeries",
+        RowOrder.MY_LIST to "shelfMyList",
+        RowOrder.HOME_NEW_MOVIES to "shelfNewMovies",
+        RowOrder.HOME_NEW_SERIES to "shelfNewSeries",
+        RowOrder.TRENDING to "shelfTrending",
+        RowOrder.HOME_CHANNELS to "shelfChannels",
+    )
+
     private val surfaces = listOf(
-        Surface("phone", RowOrder.homeBuiltIns(hasVod = true, collections = false).associateWith { "homeRow-$it" }) { state ->
+        Surface("phone", shelfTags) { state ->
             OndoTheme { HomeScreen(state, HomeActions(), autoAdvance = false) }
         },
-        Surface(
-            "tv",
-            mapOf(
-                RowOrder.HOME_CONTINUE_MOVIES to "shelfResumeMovies",
-                RowOrder.HOME_CONTINUE_SERIES to "shelfResumeSeries",
-                RowOrder.MY_LIST to "shelfMyList",
-                RowOrder.HOME_NEW_MOVIES to "shelfNewMovies",
-                RowOrder.HOME_NEW_SERIES to "shelfNewSeries",
-                RowOrder.TRENDING to "shelfTrending",
-                RowOrder.HOME_CHANNELS to "shelfChannels",
-            ),
-        ) { state -> OndoTvTheme { TvHomeScreen(state, HomeActions(), autoAdvance = false) } },
+        Surface("tv", shelfTags) { state -> OndoTvTheme { TvHomeScreen(state, HomeActions(), autoAdvance = false) } },
     )
 
     private fun movie(movie: com.markedoe.ondo.core.model.Movie) = ShowcaseItem.MovieItem(movie)

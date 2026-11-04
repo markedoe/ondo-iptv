@@ -3,7 +3,7 @@ import IPTVCore
 
 /// A value on a movie's or a series' page that opens the other titles of the playlist sharing it.
 enum MetadataRoute: Hashable {
-    /// An award ("palme-dor"): its winners and its selections.
+    /// An award ("palme-dor", "emmy-drama-series"): its winners and its selections or nominees.
     case award(String)
     /// A festival or ceremony ("cannes", see `AwardGroup`).
     case festival(String)
@@ -29,9 +29,15 @@ extension AppModel {
                       !excluded.contains(movie) else { return nil }
                 return (movie, entry)
             }
+            let shows = seriesAwards.compactMap { seriesID, entries -> (Series, AwardsCatalogue.Entry)? in
+                guard let entry = entries.first(where: { $0.awardID == id }), let show = index.seriesByID[seriesID],
+                      !excluded.contains(show) else { return nil }
+                return (show, entry)
+            }
             // Winners first, then the most recent.
             let sorted = found.sorted { ($0.1.won ? 1 : 0, $0.1.year, $1.0.name) > ($1.1.won ? 1 : 0, $1.1.year, $0.0.name) }
-            return SearchResults(movies: sorted.map(\.0))
+            let sortedShows = shows.sorted { ($0.1.won ? 1 : 0, $0.1.year, $1.0.name) > ($1.1.won ? 1 : 0, $1.1.year, $0.0.name) }
+            return SearchResults(movies: sorted.map(\.0), series: sortedShows.map(\.0))
         case .festival(let group):
             return search("", releasedIn: nil, awardGroup: group, winnersOnly: false)
         case .year(let year):
@@ -55,6 +61,12 @@ extension AppModel {
     func entry(of movie: Movie, for route: MetadataRoute) -> AwardsCatalogue.Entry? {
         guard case .award(let id) = route else { return nil }
         return movieAwards[movie.id]?.first { $0.awardID == id }
+    }
+
+    /// The award of a series this route stands for ("Winner, 2014").
+    func entry(of series: Series, for route: MetadataRoute) -> AwardsCatalogue.Entry? {
+        guard case .award(let id) = route else { return nil }
+        return seriesAwards[series.id]?.first { $0.awardID == id }
     }
 
     /// The genres of a genre field ("Drama, Thriller", "Action / Adventure").

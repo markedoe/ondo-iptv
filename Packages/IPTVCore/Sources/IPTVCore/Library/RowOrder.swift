@@ -11,7 +11,7 @@ public enum RowOrder {
     public static let myList = "mylist"
     public static let newReleases = "new"
     public static let trending = "trending"
-    /// Movies only.
+    /// Award winners: films in Movies, series in Series.
     public static let awardWinners = "awards"
     public static let categoryPrefix = "cat:"
 
@@ -39,8 +39,7 @@ public enum RowOrder {
 
     /// The built-in rows of a tab, in their default order, above the categories.
     public static func builtIns(series: Bool) -> [String] {
-        series ? [all, continueWatching, myList, newReleases, trending]
-            : [all, continueWatching, myList, newReleases, trending, awardWinners]
+        [all, continueWatching, myList, newReleases, trending, awardWinners]
     }
 
     /// The key of a provider category: `cat:<id>|<name>`, its name as `normalizedName` gives it.

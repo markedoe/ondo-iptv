@@ -74,6 +74,7 @@ import androidx.tv.material3.LocalContentColor
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.GridSource
 import com.markedoe.ondo.ui.TagSuggestion
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
@@ -197,14 +198,16 @@ fun TvHomeScreen(
                             items(state.myList, key = { it.key }) { item ->
                                 CompositionLocalProvider(LocalShowsMyList provides true) { TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("myList:${item.key}")) }
                             }
-                            item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true) }
+                            item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllMyList, tall = true, modifier = Modifier.focusMemory("myList:seeAll")) }
                         }
                         RowOrder.HOME_CHANNELS -> channelShelf(state, titles.channels, actions)
                         RowOrder.HOME_NEW_MOVIES -> tvShelf(titles.newMovies, "shelfNewMovies") {
                             items(state.newMovies, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newMovies:${item.key}")) }
+                            item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onSeeAllRow(GridSource.NEW, false) }, tall = true, modifier = Modifier.focusMemory("newMovies:seeAll")) }
                         }
                         RowOrder.HOME_NEW_SERIES -> tvShelf(titles.newSeries, "shelfNewSeries") {
                             items(state.newSeries, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("newSeries:${item.key}")) }
+                            item(key = "seeAll") { TvSeeAllCard(onClick = { actions.onSeeAllRow(GridSource.NEW, true) }, tall = true, modifier = Modifier.focusMemory("newSeries:seeAll")) }
                         }
                         RowOrder.TRENDING -> tvShelf(titles.trending, "shelfTrending") {
                             items(state.trending, key = { it.key }) { item -> TvPosterCard(item, onClick = { actions.onOpen(item) }, modifier = Modifier.focusMemory("trending:${item.key}")) }
@@ -238,7 +241,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.channelShelf(state: H
         items(state.channels, key = { it.channel.id }) { row ->
             TvChannelCard(row, onClick = { actions.onPlayChannel(row) }, modifier = Modifier.focusMemory("channel:${row.channel.id}"))
         }
-        item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllLive, tall = false) }
+        item(key = "seeAll") { TvSeeAllCard(onClick = actions.onSeeAllLive, tall = false, modifier = Modifier.focusMemory("channels:seeAll")) }
     }
 }
 

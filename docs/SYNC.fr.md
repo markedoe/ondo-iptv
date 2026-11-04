@@ -215,7 +215,7 @@ clés de services qu’il ne connaît pas.
 "updatedAt"}`. `tab` vaut `movie`, `series` ou `home` ; `order` liste les rangées de l’onglet par clé, dans l’ordre
 choisi ; `hidden` les clés des rangées masquées. Dans Films et Séries, la clé d’une rangée est `all` (Tous les films ou
 Toutes les séries), `continue` (Continuer à regarder), `mylist`, `new` (nouveaux films ou séries), `trending`, `awards`
-(films primés, Films seulement), ou `cat:<id de la catégorie>|<nom>` pour une catégorie du fournisseur. Les rangées de
+(titres primés : films dans Films, séries dans Séries), ou `cat:<id de la catégorie>|<nom>` pour une catégorie du fournisseur. Les rangées de
 l’Accueil (sous son carrousel, qui reste en haut) sont `continue-movies` et `continue-series` (les films et séries en
 cours), `mylist`, `new-movies`, `new-series`, `trending`, `collections` (les listes, sur les appareils Apple) et
 `channels` (les chaînes de Ma liste, ou celles regardées récemment) ; par défaut dans cet ordre, `channels` juste après
