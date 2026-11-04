@@ -3,6 +3,7 @@ package com.markedoe.ondo.ui
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.CategoryTags
+import com.markedoe.ondo.core.library.EpisodeTitles
 import com.markedoe.ondo.core.library.FilmVersions
 import com.markedoe.ondo.core.library.PictureSupport
 import com.markedoe.ondo.core.library.People
@@ -27,6 +28,8 @@ import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Showcase
 import com.markedoe.ondo.data.SyncDevice
 import com.markedoe.ondo.data.WatchEntry
+import com.markedoe.ondo.data.shownDetails
+import com.markedoe.ondo.data.shownEpisode
 import com.markedoe.ondo.ui.components.HeroPage
 import com.markedoe.ondo.ui.model.ChannelRow
 import com.markedoe.ondo.ui.model.PersonRow
@@ -215,6 +218,17 @@ object UiMappers {
 
     fun series(state: OndoState, id: String): Series? = index(state.content).series[id]
 
+    /**
+     * The line of an episode in Continue watching, `"S03E02 · <title>"`, as its series' page shows it: from the series'
+     * episodes when they are known ([shownEpisode]: TMDb's name too), else the line kept, cleaned the same way.
+     */
+    private fun episodeLine(state: OndoState, entry: WatchEntry): String? {
+        val series = series(state, entry.itemId)
+        val episode = entry.episodeId?.let { id -> state.seriesDetails[entry.itemId]?.seasons?.firstNotNullOfOrNull { season -> season.episodes.firstOrNull { it.id == id } } }
+        if (series != null && episode != null) return state.shownEpisode(series, episode).let { "${it.code} · ${it.title}" }
+        return entry.subtitle?.let { EpisodeTitles.cleanSubtitle(it, series?.name ?: entry.title, state.placeholderNames) }
+    }
+
     fun resume(entry: WatchEntry, state: OndoState): ResumeItem {
         val backdrop = when (entry.kind) {
             ItemKind.MOVIE -> backdrop(state, ItemKind.MOVIE, entry.itemId)
@@ -227,10 +241,12 @@ object UiMappers {
         } else {
             null
         }
+        // An episode's line as its series' page shows it, a line kept before included ("S03E02 · Episode 2").
+        val subtitle = if (entry.kind == ItemKind.SERIES) episodeLine(state, entry) else entry.subtitle
         return ResumeItem(
             key = entry.key,
             title = entry.title,
-            subtitle = version ?: entry.subtitle,
+            subtitle = version ?: subtitle,
             imageUrl = backdrop ?: entry.imageUrl,
             progress = entry.progress.toFloat(),
             minutesLeft = entry.minutesLeft,
@@ -783,8 +799,9 @@ object UiMappers {
     fun seriesDetail(state: OndoState, series: Series, selectedSeason: Int?, error: String?): SeriesDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.SeriesItem(series)
-        // The provider's episodes as they came (they are saved): an episode it does not name reads in the app's words.
-        val details = state.seriesDetails[series.id]?.let { state.placeholderNames.rename(it) }
+        // The provider's episodes as they came (they are saved), shown with their own titles, TMDb's stills where the
+        // provider has none, and an episode named by nothing in the app's words.
+        val details = state.seriesDetails[series.id]?.let { state.shownDetails(series, it) }
         val next = details?.let { showcase.nextEpisode(series, it) }
         val episodeProgress = details?.seasons.orEmpty().flatMap { it.episodes }
             .mapNotNull { episode -> progress(showcase.progress(series, episode))?.let { episode.id to it } }

@@ -1,6 +1,7 @@
 package com.markedoe.ondo.core.xtream
 
 import com.markedoe.ondo.core.decodeToStringWithoutBom
+import com.markedoe.ondo.core.library.EpisodeTitles
 import com.markedoe.ondo.core.parseJsonOrNull
 import com.markedoe.ondo.core.model.AccountInfo
 import com.markedoe.ondo.core.model.CatchupInfo
@@ -304,8 +305,9 @@ class XtreamClient(
                 val episodeNumber = dto.episodeNumber ?: (index + 1)
                 Episode(
                     id = dto.id,
-                    // An English name of the core's own: the app shows it in its language (PlaceholderNames).
-                    title = dto.title?.let(::cleanEpisodeTitle) ?: "Episode $episodeNumber",
+                    // Its own title, without the series' name, tags or code; else an English name of the core's own,
+                    // which the app shows in its language (PlaceholderNames).
+                    title = EpisodeTitles.clean(dto.title.orEmpty(), info?.name, episodeNumber),
                     season = number,
                     number = episodeNumber,
                     streamUrl = urls.episodeUrl(dto.id, dto.containerExtension),
@@ -380,11 +382,5 @@ class XtreamClient(
 
         /** Epoch [seconds] (positive, as decoded) in millis; too far to count in millis, the farthest time there is. */
         internal fun millis(seconds: Long): Long = if (seconds > Long.MAX_VALUE / 1000) Long.MAX_VALUE else seconds * 1000
-
-        /** `"Copper Valley - S01E01 - Pilot"` -> `"Pilot"`. */
-        internal fun cleanEpisodeTitle(title: String): String {
-            val parsed = TitleParser.parseEpisode(title)
-            return if (parsed != null && !parsed.episodeTitle.startsWith("Episode ")) parsed.episodeTitle else title
-        }
     }
 }

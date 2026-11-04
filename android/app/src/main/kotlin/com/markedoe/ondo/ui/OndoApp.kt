@@ -636,6 +636,9 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
     val computed = detail ?: return Loading()
     // The season chosen and a loading error show at once, without computing the page again.
     val ui = computed.copy(selectedSeason = season ?: computed.selectedSeason, error = errors[id]?.let { loadErrorText(it) })
+    // The season shown: TMDb's stills and names for the episodes its provider leaves without them.
+    val shownSeason = ui.selectedSeason?.takeIf { number -> ui.seasons.any { it.number == number } } ?: ui.seasons.firstOrNull()?.number
+    LaunchedEffect(id, shownSeason) { shownSeason?.let { viewModel.wantSeason(id, it) } }
     val actions = DetailActions(
             onBack = { navController.popBackStack() },
             onPlay = { ui.next?.let { viewModel.playEpisode(id, it) } },
