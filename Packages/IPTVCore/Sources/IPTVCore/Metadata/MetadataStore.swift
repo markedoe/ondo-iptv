@@ -39,6 +39,11 @@ public enum MetadataKey {
     }
 
     /// A person's key: the name without case or accents (`TextNormalizer.normalize`), as the cast fields are matched.
+    /// A season of a series on TMDb (`TMDbClient.seasonEpisodes`): "tv:73375:3".
+    public static func season(seriesTMDbID: Int, season: Int) -> String {
+        "tv:\(seriesTMDbID):\(season)"
+    }
+
     public static func person(_ name: String) -> String {
         TextNormalizer.normalize(name)
     }
@@ -266,15 +271,57 @@ public protocol MetadataStoring: AnyObject, Sendable {
     /// The image addresses that failed since `date`.
     func deadImages(since date: Date) -> Set<URL>
     func markDeadImage(_ url: URL, at date: Date)
+    /// TMDb's episodes of a season (`MetadataKey.season`), with when they were asked; nil if never.
+    func season(_ key: String) -> SeasonEpisodes?
+    func saveSeason(_ season: SeasonEpisodes)
     /// Empties the store (Clear Cache).
     func removeAll()
     /// Bytes on disk.
     func diskUsage() -> Int64
 }
 
+/// TMDb's episodes of a season (`MetadataKey.season`), kept with when they were asked.
+public struct SeasonEpisodes: Hashable, Sendable {
+    public var key: String
+    public var episodes: [TMDbEpisode]
+    public var fetchedAt: Date
+
+    public init(key: String, episodes: [TMDbEpisode], fetchedAt: Date) {
+        self.key = key
+        self.episodes = episodes
+        self.fetchedAt = fetchedAt
+    }
+
+    /// Asked again after `MetadataFreshness.found`, or `notFound` when TMDb had none.
+    public func isFresh(now: Date = Date()) -> Bool {
+        MetadataFreshness.isFresh(fetchedAt, maxAge: episodes.isEmpty ? MetadataFreshness.notFound : MetadataFreshness.found, now: now)
+    }
+
+    /// One "number<TAB>still<TAB>name<TAB>overview" line per episode, as the file keeps them (as on Android).
+    public static func encode(_ episodes: [TMDbEpisode]) -> String {
+        func field(_ text: String?) -> String {
+            (text ?? "").replacingOccurrences(of: "\t", with: " ").replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ")
+        }
+        return episodes.map { [String($0.number), field($0.stillPath), field($0.name), field($0.overview)].joined(separator: "\t") }
+            .joined(separator: "\n")
+    }
+
+    public static func decode(_ text: String?) -> [TMDbEpisode] {
+        (text ?? "").split(separator: "\n", omittingEmptySubsequences: true).compactMap { line in
+            let parts = line.split(separator: "\t", maxSplits: 3, omittingEmptySubsequences: false).map(String.init)
+            guard let number = parts.first.flatMap({ Int($0) }) else { return nil }
+            func part(_ index: Int) -> String? {
+                index < parts.count && !parts[index].trimmingCharacters(in: .whitespaces).isEmpty ? parts[index] : nil
+            }
+            return TMDbEpisode(number: number, name: part(2), stillPath: part(1), overview: part(3))
+        }
+    }
+}
+
 /// The store kept in memory: tests, and the app when the file cannot be opened.
 public final class InMemoryMetadataStore: MetadataStoring, @unchecked Sendable {
     private let lock = NSLock()
+    private var seasons: [String: SeasonEpisodes] = [:]
     private var titleRows: [String: TitleMetadata] = [:]
     private var creditRows: [String: [CreditRecord]] = [:]
     private var personRows: [String: PersonRecord] = [:]
@@ -355,6 +402,14 @@ public final class InMemoryMetadataStore: MetadataStoring, @unchecked Sendable {
         lock.withLock { dead[url] = date }
     }
 
+    public func season(_ key: String) -> SeasonEpisodes? {
+        lock.withLock { seasons[key] }
+    }
+
+    public func saveSeason(_ season: SeasonEpisodes) {
+        lock.withLock { seasons[season.key] = season }
+    }
+
     public func removeAll() {
         lock.withLock {
             titleRows = [:]
@@ -362,6 +417,7 @@ public final class InMemoryMetadataStore: MetadataStoring, @unchecked Sendable {
             personRows = [:]
             links = [:]
             dead = [:]
+            seasons = [:]
         }
     }
 
