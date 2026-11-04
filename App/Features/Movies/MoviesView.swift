@@ -11,15 +11,22 @@ struct SortMenu: View {
     @Environment(AppModel.self) private var model
     /// Movie grids also offer to hide the movies already watched.
     var offersHideWatched = false
+    /// The grid of a row Ondo picks (New, Award Winners): its own order, this page's only, the row's by default
+    /// ("Default order" in place of the playlist's). nil: the order chosen for every category's grid.
+    var rowSort: Binding<PosterSort>?
 
     var body: some View {
         Menu {
-            Picker("Sort by", selection: Binding(
+            Picker("Sort by", selection: rowSort ?? Binding(
                 get: { model.settings.posterSort },
                 set: { value in model.updateSettings { $0.posterSort = value } }
             )) {
                 ForEach(PosterSort.allCases) { sort in
-                    Text(sort.label).tag(sort)
+                    if rowSort != nil && sort == .playlist {
+                        Text("Default order").tag(sort)
+                    } else {
+                        Text(sort.label).tag(sort)
+                    }
                 }
             }
             if offersHideWatched {
@@ -41,14 +48,27 @@ struct MovieGridView: View {
     @Environment(AppModel.self) private var model
     let category: MediaCategory
     @State private var filter = ""
+    /// The order of a row's grid (New, Award Winners): the row's own until another is chosen here.
+    @State private var rowSort = PosterSort.playlist
+
+    /// The movies of `category`'s grid: a category, All, My List, or every title of a row Ondo picks, in the row's order
+    /// (`rowSort`, `.playlist` keeping it).
+    static func movies(_ category: MediaCategory, model: AppModel, rowSort: PosterSort = .playlist) -> [Movie] {
+        switch category.id {
+        case PseudoCategory.all: return model.movies(in: nil, sort: model.settings.posterSort)
+        case PseudoCategory.favorites: return model.favorites(.movie).compactMap { model.index.moviesByID[$0.reference.itemID] }
+        case let id where PseudoCategory.isRow(id):
+            let row = model.rowTitles(id, type: .movie).compactMap { item -> Movie? in
+                if case .movie(let movie) = item { return movie }
+                return nil
+            }
+            return AppModel.sorted(row, by: rowSort)
+        default: return model.movies(in: category, sort: model.settings.posterSort)
+        }
+    }
 
     private var movies: [Movie] {
-        let base: [Movie]
-        switch category.id {
-        case PseudoCategory.all: base = model.movies(in: nil, sort: model.settings.posterSort)
-        case PseudoCategory.favorites: base = model.favorites(.movie).compactMap { model.index.moviesByID[$0.reference.itemID] }
-        default: base = model.movies(in: category, sort: model.settings.posterSort)
-        }
+        let base = Self.movies(category, model: model, rowSort: rowSort)
         guard !filter.isEmpty else { return base }
         let tokens = TextNormalizer.normalize(filter).split(separator: " ")
         return base.filter { TextNormalizer.matches(normalizedText: TextNormalizer.normalize($0.name), queryTokens: tokens) }
@@ -85,7 +105,11 @@ struct MovieGridView: View {
         }
         .searchable(text: $filter, prompt: Text("Search movies"))
         .navigationTitle(category.id == PseudoCategory.all ? String(localized: "All Movies") : category.name)
-        .toolbar { ToolbarItem(placement: .primaryAction) { SortMenu(offersHideWatched: category.id != PseudoCategory.favorites) } }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                SortMenu(offersHideWatched: category.id != PseudoCategory.favorites, rowSort: PseudoCategory.isRow(category.id) ? $rowSort : nil)
+            }
+        }
     }
 }
 

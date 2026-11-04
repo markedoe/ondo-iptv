@@ -47,13 +47,6 @@ struct VODBrowser: View {
                 CategoryFilterButton(type: type)
             }
         }
-        .navigationDestination(for: PosterCategoryRoute.self) { route in
-            if type == .movie {
-                MovieGridView(category: route.category)
-            } else {
-                SeriesGridView(category: route.category)
-            }
-        }
         .sheet(item: $pinRequest) { category in
             PINPromptView { router?.push(PosterCategoryRoute(category: category)) }
         }
@@ -86,6 +79,20 @@ struct VODBrowser: View {
         }
     }
 
+    /// Where the "See All" of the row `key` leads: every row that can hold more titles than it shows has one, its grid
+    /// listing them all in the row's order. Continue Watching has none (resume cards: a poster grid cannot resume), nor
+    /// Trending (the row already lists every trending title). `category`: the row's, for a provider category's row.
+    static func seeAll(_ key: String, type: ContentType, category: MediaCategory? = nil) -> AnyHashableRoute? {
+        switch key {
+        case RowOrder.all: return .category(PosterCategoryRoute(category: PseudoCategory.all(type)))
+        case RowOrder.continueWatching, RowOrder.trending: return nil
+        case RowOrder.myList: return .favorites(FavoritesRoute(type: type))
+        case RowOrder.newReleases: return .category(PosterCategoryRoute(category: PseudoCategory.newReleases(type)))
+        case RowOrder.awardWinners: return .category(PosterCategoryRoute(category: PseudoCategory.awardWinners(type)))
+        default: return category.map { .category(PosterCategoryRoute(category: $0)) }
+        }
+    }
+
     /// One row of the tab, by its key (`RowOrder`); nothing when it has no titles.
     @ViewBuilder
     private func row(_ key: String, categories: [String: MediaCategory], metrics: ShelfMetrics) -> some View {
@@ -95,7 +102,7 @@ struct VODBrowser: View {
             if !titles.isEmpty {
                 let count = model.allCount(type).formatted()
                 Shelf(title: type == .movie ? "All Movies (\(count))" : "All Series (\(count))",
-                      route: .category(PosterCategoryRoute(category: PseudoCategory.all(type))), metrics: metrics) {
+                      route: Self.seeAll(key, type: type), metrics: metrics) {
                     ForEach(titles) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
@@ -105,7 +112,7 @@ struct VODBrowser: View {
         case RowOrder.continueWatching:
             let resume = model.continueWatching(type)
             if !resume.isEmpty {
-                Shelf(title: "Continue Watching", metrics: metrics) {
+                Shelf(title: "Continue Watching", route: Self.seeAll(key, type: type), metrics: metrics) {
                     ForEach(resume) { entry in
                         ContinueCard(entry: entry, width: metrics.wideCardWidth)
                     }
@@ -119,16 +126,16 @@ struct VODBrowser: View {
                 }
             }
             if !mine.isEmpty {
-                Shelf(title: "My List", route: .favorites(FavoritesRoute(type: type)), metrics: metrics) {
+                Shelf(title: "My List", route: Self.seeAll(key, type: type), metrics: metrics) {
                     ForEach(mine) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
                 }
             }
         case RowOrder.newReleases:
-            let titles = type == .movie ? model.newMovies(limit: Self.rowLength) : model.newSeries(limit: Self.rowLength)
+            let titles = model.rowTitles(PseudoCategory.newReleases, type: type, limit: Self.rowLength)
             if !titles.isEmpty {
-                Shelf(title: type == .movie ? "New Movies" : "New Series", metrics: metrics) {
+                Shelf(title: type == .movie ? "New Movies" : "New Series", route: Self.seeAll(key, type: type), metrics: metrics) {
                     ForEach(titles) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
@@ -137,18 +144,18 @@ struct VODBrowser: View {
         case RowOrder.trending:
             let titles = model.trending(type)
             if !titles.isEmpty {
-                Shelf(title: "Trending", metrics: metrics) {
+                Shelf(title: "Trending", route: Self.seeAll(key, type: type), metrics: metrics) {
                     ForEach(titles) { item in
                         ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
                 }
             }
         case RowOrder.awardWinners:
-            let winners = type == .movie ? model.awardWinners(limit: Self.rowLength) : []
+            let winners = model.rowTitles(PseudoCategory.awardWinners, type: type, limit: Self.rowLength)
             if !winners.isEmpty {
-                Shelf(title: "Award Winners", metrics: metrics) {
-                    ForEach(winners) { movie in
-                        ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
+                Shelf(title: "Award Winners", route: Self.seeAll(key, type: type), metrics: metrics) {
+                    ForEach(winners) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
                 }
             }
@@ -157,6 +164,7 @@ struct VODBrowser: View {
                 // A category whose movies are all hidden as watched has no row.
                 let titles = items(in: category)
                 if !titles.isEmpty {
+                    // "See All": the category's grid (`seeAll`).
                     Shelf(category: category, metrics: metrics) {
                         ForEach(titles) { item in
                             ShowcasePoster(item: item, width: metrics.posterWidth)
@@ -167,11 +175,16 @@ struct VODBrowser: View {
         }
     }
 
-    private func items(in category: MediaCategory) -> [ShowcaseItem] {
+    /// A category's row: its first titles, in the playlist's order.
+    static func items(in category: MediaCategory, type: ContentType, model: AppModel) -> [ShowcaseItem] {
         if type == .movie {
-            return model.movies(in: category, sort: .playlist).prefix(Self.rowLength).map(ShowcaseItem.movie)
+            return model.movies(in: category, sort: .playlist).prefix(rowLength).map(ShowcaseItem.movie)
         }
-        return model.series(in: category, sort: .playlist).prefix(Self.rowLength).map(ShowcaseItem.series)
+        return model.series(in: category, sort: .playlist).prefix(rowLength).map(ShowcaseItem.series)
+    }
+
+    private func items(in category: MediaCategory) -> [ShowcaseItem] {
+        Self.items(in: category, type: type, model: model)
     }
 
     // MARK: Chips

@@ -29,8 +29,8 @@ struct Shelf<Content: View>: View {
         self.content = content
     }
 
-    /// "See All" opening a route other than a section (My List → the favourite movies or series).
-    init(title: LocalizedStringKey, route: AnyHashableRoute, metrics: ShelfMetrics, @ViewBuilder content: @escaping () -> Content) {
+    /// "See All" opening a route other than a section (My List → the favourite movies or series); nil: none.
+    init(title: LocalizedStringKey, route: AnyHashableRoute?, metrics: ShelfMetrics, @ViewBuilder content: @escaping () -> Content) {
         self.title = Text(title)
         self.seeAll = route
         self.metrics = metrics
