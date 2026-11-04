@@ -222,7 +222,10 @@ chaque changement de l'interface.
   propre fréquence d'image quand la TV est réglée pour l'adapter au contenu (Android 12 et plus) ; maintenez OK
   sur une chaîne pour l'ajouter à Ma liste ; Aide, Avec la télécommande. Les règles de
   confidentialité et la page d'aide s'ouvrent dans l'app.
-- À venir : Chromecast, téléchargements, profils et PIN, sous-titres en ligne, un second moteur
+- Sous-titres → Rechercher en ligne… pour les films et les épisodes, avec votre propre clé d'API OpenSubtitles,
+  SubDL ou SubSource (vérifiée auprès du service à l'enregistrement, gardée sur l'appareil) ou Addic7ed ; une piste
+  de sous-titres que l'appareil ne peut pas afficher est listée avec la raison.
+- À venir : Chromecast, téléchargements, profils et PIN, un second moteur
   (libVLC). Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).
 
 ## Langues

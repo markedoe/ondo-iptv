@@ -499,6 +499,12 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
         Text("TMDb", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
     }
     item(key = "tmdb") { TvTmdbToken(state, actions) }
+    actions.subtitleServices?.let { services ->
+        item(key = "subtitleServicesTitle") {
+            Text(stringResource(R.string.subtitle_services), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp))
+        }
+        item(key = "subtitleServices") { com.markedoe.ondo.ui.components.SubtitleServicesSettings(services, Modifier.padding(vertical = 4.dp)) }
+    }
     item(key = "prepareAhead") {
         SwitchRow(stringResource(R.string.prepare_ahead), stringResource(R.string.prepare_ahead_hint), Icons.Rounded.CloudDownload, state.prepareAhead, actions.onPrepareAhead, Modifier.focusMemory("settings-prepareAhead").testTag("prepareAheadSwitch"))
     }

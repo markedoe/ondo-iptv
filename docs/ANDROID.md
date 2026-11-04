@@ -82,7 +82,13 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   for 7 days.
   A 401 later (a token revoked, or one that came by sync) shows as refused in Settings, and nothing more is asked.
 - **Player** Media3 / ExoPlayer: HLS, MPEG-TS, MP4, MKV, provider headers, fallback addresses,
-  resume, picture-in-picture, MediaSession, audio and subtitle tracks, the viewer's audio and subtitle languages
+  resume, picture-in-picture, MediaSession, audio and subtitle tracks (a subtitle track the device cannot show, such
+  as a picture format without its decoder, is listed with its format and why, not hidden: `player/TrackChoices.kt`),
+  Subtitles → Search online… for films and episodes (OpenSubtitles.com, SubDL and SubSource with the viewer's own API
+  key, Addic7ed through Gestdown when turned on; by TMDb's id when the provider gives it, else by the title without
+  its tags, its year, season and episode; the viewer's subtitle language first; the subtitle chosen is loaded beside
+  the video and kept for the title on the device: `core/subtitles/`, `player/OnlineSubtitles.kt`; the keys are set in
+  Settings → Subtitle services, checked with each service when saved, and stay on the device, outside sync), the viewer's audio and subtitle languages
   learned from their choices and used first for the next streams, forced subtitles still shown with subtitles off
   (`player/TrackPreferences.kt`), separate buffers for live TV and for movies & series, never more than half of
   the memory the app has left when the player starts, so that a 4K film plays on a TV box that gives the app
@@ -156,8 +162,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   fails with every thread's stack in the log and in `build/reports/tests/hang-guard`, and each test is named as it
   starts and ends, so a test that hangs is named instead of the job waiting in silence for its timeout.
 
-Planned next (not included in v1): Chromecast, downloads, profiles and PIN, online
-subtitles, second libVLC engine; on a TV, launcher channels and voice search.
+Planned next (not included in v1): Chromecast, downloads, profiles and PIN,
+second libVLC engine; on a TV, launcher channels and voice search.
 
 ## Screenshots and regressions
 

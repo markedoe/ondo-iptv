@@ -27,6 +27,10 @@ class FakeTracksPlayer(
     private val durationMs: Long = 3_600_000,
     private val seekable: Boolean = true,
     var positionMs: Long = 600_000,
+    /** Tracks the device cannot play (indices in [formats]), as a renderer reports a format it does not handle. */
+    private val unsupported: Set<Int> = emptySet(),
+    /** False until the stream's tracks are known ([tracksArrive]), as ExoPlayer before its first `onTracksChanged`. */
+    private var tracksKnown: Boolean = true,
 ) : SimpleBasePlayer(Looper.getMainLooper()) {
     private val groups = formats.mapIndexed { index, (_, format) -> TrackGroup("group-$index", format) }
     private var parameters = TrackSelectionParameters.DEFAULT
@@ -45,11 +49,18 @@ class FakeTracksPlayer(
         return override.mediaTrackGroup == groups[index]
     }
 
-    private fun tracks() = Tracks(
+    private fun tracks() = if (!tracksKnown) Tracks.EMPTY else Tracks(
         groups.mapIndexed { index, group ->
-            Tracks.Group(group, false, intArrayOf(C.FORMAT_HANDLED), booleanArrayOf(selected(index)))
+            val support = if (index in unsupported) C.FORMAT_UNSUPPORTED_SUBTYPE else C.FORMAT_HANDLED
+            Tracks.Group(group, false, intArrayOf(support), booleanArrayOf(index !in unsupported && selected(index)))
         },
     )
+
+    /** The stream's tracks become known, as when ExoPlayer has read the start of the file. */
+    fun tracksArrive() {
+        tracksKnown = true
+        invalidateState()
+    }
 
     override fun getState(): State = State.Builder()
         .setAvailableCommands(Player.Commands.Builder().addAllCommands().build())
@@ -96,7 +107,7 @@ class FakeTracksPlayer(
         fun audio(language: String?, mimeType: String, channels: Int, label: String? = null, roles: Int = 0) =
             C.TRACK_TYPE_AUDIO to Format.Builder().setSampleMimeType(mimeType).setLanguage(language).setChannelCount(channels).setLabel(label).setRoleFlags(roles).build()
 
-        fun text(language: String?, label: String? = null, flags: Int = 0, roles: Int = 0) =
-            C.TRACK_TYPE_TEXT to Format.Builder().setSampleMimeType("text/vtt").setLanguage(language).setLabel(label).setSelectionFlags(flags).setRoleFlags(roles).build()
+        fun text(language: String?, label: String? = null, flags: Int = 0, roles: Int = 0, mimeType: String = "text/vtt") =
+            C.TRACK_TYPE_TEXT to Format.Builder().setSampleMimeType(mimeType).setLanguage(language).setLabel(label).setSelectionFlags(flags).setRoleFlags(roles).build()
     }
 }

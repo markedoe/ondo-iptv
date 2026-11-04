@@ -21,10 +21,18 @@ import kotlinx.coroutines.launch
 
 /** A panel of the player (a side panel on a TV, a sheet on a phone), opened from its button, or from a row of More ([parent]). */
 enum class PlayerPanel {
-    SUBTITLES, AUDIO, SPEED, MORE, ASPECT, SUBTITLE_SIZE, SLEEP, CHANNELS;
+    SUBTITLES, AUDIO, SPEED, MORE, ASPECT, SUBTITLE_SIZE, SLEEP, CHANNELS,
+
+    /** Subtitles → Search online…: the subtitle services' results for the film or episode playing. */
+    ONLINE_SUBTITLES,
+    ;
 
     /** The panel Back returns to, null for a panel of the button row. */
-    val parent: PlayerPanel? get() = if (this == ASPECT || this == SUBTITLE_SIZE || this == SLEEP) MORE else null
+    val parent: PlayerPanel? get() = when (this) {
+        ASPECT, SUBTITLE_SIZE, SLEEP -> MORE
+        ONLINE_SUBTITLES -> SUBTITLES
+        else -> null
+    }
 }
 
 /**

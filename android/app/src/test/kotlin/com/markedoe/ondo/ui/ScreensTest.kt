@@ -9,6 +9,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasStateDescription
@@ -259,6 +260,45 @@ class ScreensTest {
         compose.onNodeWithText("Delete this collection?").assertExists()
         compose.onNodeWithText("Delete").performClick()
         assertEquals(1, deleted)
+    }
+
+    @Test
+    fun aSharedCollectionIsMarkedAsksBeforeTakingItBackAndBeforeDeletingItForEveryone() {
+        val shares = mutableListOf<Boolean>()
+        var deleted = 0
+        val state = CollectionUiState("c1", "Weekend", movies = listOf(ShowcaseItem.MovieItem(Fixtures.glassCity)), shared = true, canShare = true)
+        compose.setContent { OndoTheme { CollectionScreen(state, CollectionActions(onShare = { shares += it }, onDelete = { deleted++ })) } }
+        compose.onNodeWithTag("sharedMark").assertExists()
+        compose.onNodeWithTag("sharedSwitch").assertIsOn().performClick()
+        compose.onNodeWithText("Stop sharing this collection?").assertExists()
+        compose.onNodeWithText("Cancel").performClick()
+        assertEquals(emptyList<Boolean>(), shares)
+        compose.onNodeWithTag("collectionMenu").performClick()
+        compose.onNodeWithTag("sharedMenuItem").performClick()
+        compose.onNodeWithTag("confirmUnshare").performClick()
+        assertEquals(listOf(false), shares)
+        compose.onNodeWithTag("collectionMenu").performClick()
+        compose.onNodeWithText("Delete collection").performClick()
+        compose.onNodeWithText("Delete this collection for every profile?").assertExists()
+        compose.onNodeWithText("Delete").performClick()
+        assertEquals(1, deleted)
+    }
+
+    @Test
+    fun anUnsharedCollectionSharesAtOnceAndMyListMarksTheSharedOnes() {
+        val shares = mutableListOf<Boolean>()
+        val state = CollectionUiState("c1", "Weekend", canShare = true)
+        compose.setContent { OndoTheme { CollectionScreen(state, CollectionActions(onShare = { shares += it })) } }
+        compose.onNodeWithTag("sharedMark").assertDoesNotExist()
+        compose.onNodeWithTag("sharedSwitch").assertIsOff().performClick()
+        assertEquals(listOf(true), shares)
+    }
+
+    @Test
+    fun myListMarksTheSharedCollections() {
+        val state = MyListUiState(collections = listOf(CollectionRow("c1", "Weekend", 3, shared = true), CollectionRow("c2", "Mine", 1)))
+        compose.setContent { OndoTheme { MyListScreen(state, MyListKind.COLLECTIONS, MyListActions()) } }
+        compose.onAllNodesWithTag("sharedMark", useUnmergedTree = true).assertCountEquals(1)
     }
 
     @Test

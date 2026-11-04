@@ -24,3 +24,15 @@ principal dans `profileData` ignorées (ses données sont celles de l’instanta
 `profiles-late-a.json` et `profiles-late-b.json` se fusionnent en `profiles-late-merged.json` : un profil supprimé sur un
 appareil à 100 pendant qu’un autre, pas encore averti, y regardait encore à 200. Les données plus récentes l’emportent
 sur la suppression, comme le contenu d’une liste (règle 7) : le profil et ses données restent.
+
+`shared-lists-a.json` et `shared-lists-b.json` se fusionnent en `shared-lists-merged.json` : les listes partagées avec
+tous les profils (`household`, règle 9). Sam a partagé « Movie night » sur un appareil pendant que l’autre, pas encore
+averti, y ajoutait un film dans les listes de Sam : la liste est partagée une seule fois, avec ce film, et n’est plus
+dans les listes de Sam (le déplacement est une marque `listmoved:` dans le `deleted` du haut, jamais une suppression de la
+copie de Sam). Une liste partagée renommée sur un appareil, dont un élément est retiré sur l’autre,
+garde les deux modifications. Une liste partagée supprimée pour tous les profils sur un appareil, et pas modifiée depuis
+sur l’autre, part (`sharedlistdeleted:`). Une liste partagée reprise dans le profil principal sur un appareil pendant que l’autre, pas encore
+averti, y ajoutait un élément : la liste est au profil principal, avec cet ajout. Les ID en majuscules sont mis en
+minuscules.
+
+`interop/` contient des instantanés écrits par chaque cœur et fusionnés par l’autre (voir son README).

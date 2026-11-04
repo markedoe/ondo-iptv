@@ -32,10 +32,36 @@ data class PlayRequest(
      * The player plays it as a film, with Back to live.
      */
     val replayStart: Long? = null,
+    /** What the Subtitles panel's online search looks for: a film or an episode; null for a channel. */
+    val subtitleSearch: SubtitleSearchHint? = null,
 ) {
     /** A channel played from its archive: its programme from the start, a past one, a live pause resumed. */
     val isReplay: Boolean get() = replayStart != null && channelId != null
 
     /** The buffer setting for this item. */
     val bufferSeconds: Int get() = PlaybackBuffer.setting(isLive, liveBuffer, vodBuffer)
+}
+
+/**
+ * A film or an episode as the subtitle services know it: its title without the provider's tags, its year, the season and
+ * episode, and TMDb's id when the provider gives it.
+ */
+@Serializable
+data class SubtitleSearchHint(
+    val title: String,
+    val year: Int? = null,
+    val season: Int? = null,
+    val episode: Int? = null,
+    val tmdbId: Int? = null,
+) {
+    fun query(languages: List<String>) = com.markedoe.ondo.core.subtitles.SubtitleQuery(title, year, season, episode, languages, tmdbId)
+
+    companion object {
+        /** "|EN| Tom Clancy's Jack Ryan (2018)" -> "Tom Clancy's Jack Ryan", 2018. */
+        fun of(title: String, year: Int?, season: Int? = null, episode: Int? = null, tmdbId: Int? = null): SubtitleSearchHint {
+            val split = com.markedoe.ondo.core.parsing.TitleParser.splitYear(title)
+            val name = com.markedoe.ondo.core.library.CatalogueMatcher.displayTitle(split.name).ifBlank { split.name }
+            return SubtitleSearchHint(name.ifBlank { title }, year ?: split.year, season, episode, tmdbId)
+        }
+    }
 }
