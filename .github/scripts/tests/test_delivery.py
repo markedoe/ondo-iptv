@@ -31,6 +31,13 @@ if args[:2] == ["workflow", "run"]:
     with open(os.environ["FAKE_GH_LOG"], "a") as log:
         log.write(" ".join(args[2:]) + "\n")
     sys.exit(0)
+if args[:1] == ["api"]:
+    with open(os.environ["FAKE_GH_API"]) as source:
+        responses = json.load(source)
+    if args[1] not in responses:
+        sys.exit(f"fake gh: unknown api {args[1]}")
+    print(json.dumps(responses[args[1]]))
+    sys.exit(0)
 if args[:2] == ["run", "list"]:
     with open(os.environ["FAKE_GH_RUNS"]) as source:
         runs = json.load(source).get(option("--workflow"), [])
@@ -95,6 +102,7 @@ class WorkflowScriptTestCase(unittest.TestCase):
         (bin_folder / "gh").chmod(0o755)
         self.environment = {**os.environ, **GIT_ENVIRONMENT, "PATH": f"{bin_folder}{os.pathsep}{os.environ['PATH']}",
                             "FAKE_GH_LOG": str(self.root / "dispatched.txt"), "FAKE_GH_RUNS": str(self.root / "runs.json"),
+                            "FAKE_GH_API": str(self.root / "api.json"),
                             "GH_TOKEN": "none", "REPO": "owner/ondo-iptv", "GITHUB_REPOSITORY": "owner/ondo-iptv"}
         self.git("init", "-q", "-b", "main")
         self.commits = {}
@@ -274,23 +282,92 @@ class TestFlightEditionAgainTests(WorkflowScriptTestCase):
         self.assertIn("already waiting", output)
 
 
-class CorePassedTests(WorkflowScriptTestCase):
-    """release.yml: a TestFlight edition run skips the core tests only when CI passed on the very commit it builds."""
+def job_block(workflow: str, job: str) -> list:
+    """The lines of [job] in .github/workflows/[workflow]."""
+    lines = (WORKFLOWS / workflow).read_text(encoding="utf-8").splitlines()
+    start = lines.index(f"  {job}:")
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("  ") and not lines[i].startswith("   ")
+                and lines[i].rstrip().endswith(":")), len(lines))
+    return lines[start:end]
 
-    def test_only_a_successful_run_on_this_very_commit_counts(self):
+
+class ReleaseScreenshotsTests(WorkflowScriptTestCase):
+    """release.yml: the listing matches the build: no release goes on without the screenshots it captured."""
+
+    def test_a_release_without_its_screenshots_stops_before_anything_is_built(self):
+        script = step_script("release.yml", "App Store screenshots captured")
+        for result, stops in (("success", False), ("failure", True), ("cancelled", True), ("skipped", True), ("", True)):
+            with self.subTest(result=result):
+                outcome = subprocess.run(["bash", "-e", "-c", script], env={**self.environment, "CAPTURE": result},
+                                         capture_output=True, text=True)
+                self.assertEqual(outcome.returncode != 0, stops, outcome.stdout + outcome.stderr)
+                if stops:
+                    self.assertIn("Re-run the App Store screenshots, then this release", outcome.stdout)
+
+    def test_the_check_covers_every_target_that_uploads_a_build_and_comes_first(self):
+        steps = [line.strip()[len("- name: "):] for line in job_block("release.yml", "deliver") if line.strip().startswith("- name: ")]
+        check = steps.index("App Store screenshots captured")
+        for later in ("Xcode", "iOS → TestFlight", "macOS → TestFlight", "App Store listing"):
+            self.assertLess(check, steps.index(later), later)
+        block = job_block("release.yml", "deliver")
+        condition = block[block.index("      - name: App Store screenshots captured") + 3].strip()
+        self.assertEqual(condition, "if: env.TARGET == 'release' || env.TARGET == 'all'")
+
+    def test_the_testflight_edition_follows_the_deliver_jobs_own_result(self):
+        # needs: deliver alone would also require the screenshots job (an implicit success() covers every needed job).
+        conditions = [line.strip() for line in job_block("release.yml", "testflight") if line.strip().startswith("if:")]
+        self.assertIn("needs.deliver.result == 'success'", conditions[0])
+        self.assertIn("github.ref_type == 'tag'", conditions[0])
+        self.assertIn("!cancelled()", conditions[0])
+
+
+class CorePassedTests(WorkflowScriptTestCase):
+    """release.yml: a TestFlight edition run skips the core tests only when CI passed, its macOS jobs run, on the very
+    commit it builds or the same tree."""
+
+    def test_only_a_full_pass_on_this_commit_or_tree_counts(self):
+        scripts = self.repository / ".github/scripts"
+        scripts.mkdir(parents=True)
+        shutil.copy(WORKFLOWS.parent / "scripts/ci_scope.py", scripts / "ci_scope.py")
         sha = self.commit("change", "App/OndoApp.swift")
+        tree = self.git("rev-parse", "HEAD^{tree}")
         output_file = self.root / "output.txt"
         script = step_script("release.yml", "CI passed on this commit")
-        cases = {"green here": ([green(sha)], "passed=true\n"),
-                 "green on the parent only": ([green("1" * 40)], ""),
-                 "failed here": ([{**green(sha), "conclusion": "failure"}], ""),
-                 "running here": ([run_in("in_progress", sha=sha, event="push")], ""),
-                 "no run": ([], "")}
-        for name, (runs, expected) in cases.items():
+        runs_path = "repos/owner/ondo-iptv/actions/workflows/ci.yml/runs?status=success&per_page=100"
+        heavy = ["Build iOS + macOS (Debug, App Store edition)", "App tests — unit + UI (iPhone simulator)"]
+
+        def ci_run(head: str, run_tree: str = "0" * 40, event: str = "push") -> dict:
+            return {"id": 7, "head_sha": head, "head_commit": {"tree_id": run_tree}, "event": event, "conclusion": "success"}
+
+        def jobs(conclusion: str) -> dict:
+            return {"jobs": [{"name": name, "conclusion": conclusion} for name in heavy]}
+
+        jobs_path = "repos/owner/ondo-iptv/actions/runs/7/jobs?filter=latest&per_page=100"
+        cases = {"green here": ([ci_run(sha)], jobs("success"), "passed=true\n"),
+                 "green on the same tree": ([ci_run("1" * 40, tree, "workflow_dispatch")], jobs("success"), "passed=true\n"),
+                 "green on the parent only": ([ci_run("1" * 40)], jobs("success"), ""),
+                 "green here with the macOS jobs skipped": ([ci_run(sha)], jobs("skipped"), ""),
+                 "a pull request here": ([ci_run(sha, event="pull_request")], jobs("success"), ""),
+                 "no run": ([], jobs("success"), "")}
+        for name, (runs, job_list, expected) in cases.items():
             with self.subTest(name):
+                (self.root / "api.json").write_text(json.dumps({runs_path: {"workflow_runs": runs}, jobs_path: job_list}),
+                                                    encoding="utf-8")
                 output_file.write_text("", encoding="utf-8")
-                self.run_script(script, {"ci.yml": runs}, GITHUB_SHA=sha, GITHUB_OUTPUT=str(output_file))
+                self.run_script(script, {}, GITHUB_SHA=sha, GITHUB_OUTPUT=str(output_file))
                 self.assertEqual(output_file.read_text(encoding="utf-8"), expected)
+
+    def test_unreadable_runs_run_the_core_tests(self):
+        scripts = self.repository / ".github/scripts"
+        scripts.mkdir(parents=True)
+        shutil.copy(WORKFLOWS.parent / "scripts/ci_scope.py", scripts / "ci_scope.py")
+        sha = self.commit("change", "App/OndoApp.swift")
+        (self.root / "api.json").write_text("{}", encoding="utf-8")
+        output_file = self.root / "output.txt"
+        output_file.write_text("", encoding="utf-8")
+        self.run_script(step_script("release.yml", "CI passed on this commit"), {}, GITHUB_SHA=sha,
+                        GITHUB_OUTPUT=str(output_file))
+        self.assertEqual(output_file.read_text(encoding="utf-8"), "")
 
 
 if __name__ == "__main__":

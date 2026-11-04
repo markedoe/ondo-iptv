@@ -294,6 +294,8 @@ cd Packages/IPTVCore && swift test
 
 ### What CI checks beyond unit tests
 
+Which workflow runs when, what decides the jobs a change runs, and the CI's costs: [docs/CI.md](docs/CI.md).
+
 Some defects only show up in real conditions, where tests on simulated data cannot see them:
 
 - **Adding a playlist end to end** (`AppTests/PlaylistOverHTTPTests.swift`, UI test
@@ -309,8 +311,9 @@ Some defects only show up in real conditions, where tests on simulated data cann
   apps, repository neutrality (no other IPTV app named, IPTV never called free, fictional channels in tests),
   and the App Store edition: no download code or dormant feature, no private API, never "beta", a listing and
   review notes App Review accepts (also checked on every change and before each release).
-- **Release build, App Store edition** (iOS and macOS): the `#if DEBUG` code and the TestFlight edition's
-  downloads (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) are left out, as in the build that is submitted.
+- **Release builds of the App Store edition** (iOS and macOS, in the job *Build iOS + macOS (Debug, App Store
+  edition)*, beside the macOS debug build and its launch): the `#if DEBUG` code and the TestFlight edition's downloads
+  (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) are left out, as in the build that is submitted.
 - **Playback lab** (`tools/playback-lab`, when the VLC engine or the playback code changes): libVLC, the library
   of the VLC engine, plays generated streams from a provider that misbehaves on purpose; freezes, film start
   and seek times, the resume position and the app's freeze verdict are checked against limits.
