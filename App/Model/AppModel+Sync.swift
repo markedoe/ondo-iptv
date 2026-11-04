@@ -38,12 +38,14 @@ struct SyncState: Codable, Equatable {
     var learned: [String: Int64] = [:]
     /// Milliseconds since 1970: the latest time sync dated or received here (`SyncClock.last`, docs/SYNC.md "Clocks").
     var clock: Int64 = 0
+    /// What sync keeps for each profile other than the main one, by profile ID (lowercase); the main one's is above.
+    var profileStates: [String: ProfileSyncState] = [:]
 
     init() {}
 
     enum CodingKeys: String, CodingKey {
         case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, people, listPeople, deleted, replaced, lastSyncedAt, peers
-        case learned, clock, rowOrders
+        case learned, clock, rowOrders, profileStates
     }
 
     init(from decoder: Decoder) throws {
@@ -61,6 +63,20 @@ struct SyncState: Codable, Equatable {
         learned = (try? c.decodeIfPresent([String: Int64].self, forKey: .learned)) ?? [:]
         clock = (try? c.decodeIfPresent(Int64.self, forKey: .clock)) ?? 0
         rowOrders = (try? c.decodeIfPresent([SyncRows].self, forKey: .rowOrders)) ?? []
+        profileStates = (try? c.decodeIfPresent([String: ProfileSyncState].self, forKey: .profileStates)) ?? [:]
+    }
+
+    /// The state a profile's records are made from: the main one's (this), or another's slice (`profileStates`).
+    func slice(for profileID: String) -> SyncState {
+        guard profileID != SyncProfile.main else { return self }
+        let profile = profileStates[profileID] ?? ProfileSyncState()
+        var state = SyncState()
+        state.deviceID = deviceID
+        state.people = profile.people
+        state.listPeople = profile.listPeople
+        state.rowOrders = profile.rowOrders
+        state.deleted = profile.deleted
+        return state
     }
 
     /// Without deletions older than the spec keeps them (180 days, and until each device seen in the last year has had
@@ -75,7 +91,50 @@ struct SyncState: Codable, Equatable {
         copy.replaced = kept.replaced
         let forgotten = now.syncMilliseconds - Int64(SyncSnapshot.peersKeptDays) * 86_400_000
         copy.peers = peers.filter { $0.value >= forgotten }
+        copy.profileStates = profileStates.mapValues { profile in
+            var profile = profile
+            profile.deleted = SyncSnapshot(device: deviceID, deleted: profile.deleted)
+                .pruned(now: now.syncMilliseconds, sessions: Array(peers.values)).deleted
+            return profile
+        }
         return copy
+    }
+}
+
+/// A merge applied off the main actor (`AppModel.applySync`): the merged snapshot, every profile's library by profile ID
+/// (lowercase; the main one's under `SyncProfile.main`), and the progress received for the items playing.
+struct SyncOutcome: Sendable {
+    let latest: SyncSnapshot
+    let libraries: [String: UserLibrary]
+    let parked: [String: HistoryEntry]
+}
+
+/// What sync keeps for a profile other than the main one (docs/SYNC.md, "Profiles"), as `SyncState` keeps it for the
+/// main one: the people passed on, the order of the rows, and what was deleted in that profile.
+struct ProfileSyncState: Codable, Equatable {
+    var people: [SyncPerson] = []
+    var listPeople: [String: [SyncPerson]] = [:]
+    var rowOrders: [SyncRows] = []
+    var deleted: [String: Int64] = [:]
+
+    init() {}
+
+    enum CodingKeys: String, CodingKey { case people, listPeople, rowOrders, deleted }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        people = (try? c.decodeIfPresent([SyncPerson].self, forKey: .people)) ?? []
+        listPeople = (try? c.decodeIfPresent([String: [SyncPerson]].self, forKey: .listPeople)) ?? [:]
+        rowOrders = (try? c.decodeIfPresent([SyncRows].self, forKey: .rowOrders)) ?? []
+        deleted = (try? c.decodeIfPresent([String: Int64].self, forKey: .deleted)) ?? [:]
+    }
+
+    /// From a profile's records as merged (its bucket).
+    init(_ bucket: SyncProfileData) {
+        people = bucket.people
+        listPeople = SyncMapping.listPeople(bucket.records())
+        rowOrders = bucket.rows
+        deleted = bucket.deleted
     }
 }
 
@@ -101,15 +160,38 @@ enum SyncMapping {
 
     /// This device's snapshot, without the deletions `SyncSnapshot.pruned` forgets at `now` (on the sync clock,
     /// `AppModel.syncNow`). Its times are those stored: never moved.
+    /// `library` is the main profile's; `others` the library of each other profile of `profiles`, by ID (lowercase): their
+    /// records travel in `profileData` (docs/SYNC.md, "Profiles").
     static func snapshot(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, deviceName: String?,
-                         now: Date) -> SyncSnapshot {
-        records(playlists: playlists, library: library, state: state, tmdbKey: tmdbKey, deviceName: deviceName, now: now)
+                         now: Date, profiles: [Profile] = [], others: [String: UserLibrary] = [:]) -> SyncSnapshot {
+        withProfiles(records(playlists: playlists, library: library, state: state, tmdbKey: tmdbKey, deviceName: deviceName, now: now),
+                     state: state, profiles: profiles, others: others, now: now)
             .pruned(now: now.syncMilliseconds, sessions: Array(state.peers.values), learned: state.learned)
     }
 
-    /// The latest time of what this device holds for sync (its records and deletions); nil without any.
-    static func latestTime(playlists: [Playlist], library: UserLibrary, state: SyncState) -> Int64? {
-        records(playlists: playlists, library: library, state: state, deviceName: nil, now: Date(timeIntervalSince1970: 0)).latestTime
+    /// The latest time of what this device holds for sync (its records and deletions, every profile's); nil without any.
+    static func latestTime(playlists: [Playlist], library: UserLibrary, state: SyncState, profiles: [Profile] = [],
+                           others: [String: UserLibrary] = [:]) -> Int64? {
+        let epoch = Date(timeIntervalSince1970: 0)
+        return withProfiles(records(playlists: playlists, library: library, state: state, deviceName: nil, now: epoch),
+                            state: state, profiles: profiles, others: others, now: epoch).latestTime
+    }
+
+    /// `snapshot` with the profiles and the records of each profile other than the main one. A profile never changed (the
+    /// main one as made) is not sent: the same "Me" made on two devices is no change.
+    private static func withProfiles(_ snapshot: SyncSnapshot, state: SyncState, profiles: [Profile], others: [String: UserLibrary],
+                                     now: Date) -> SyncSnapshot {
+        var snapshot = snapshot
+        snapshot.profiles = profiles.filter { $0.updatedAt > 0 }.map {
+            SyncProfile(id: $0.id.uuidString.lowercased(), name: $0.name, colorIndex: $0.colorIndex, symbol: $0.symbol, kids: $0.isKids,
+                        updatedAt: $0.updatedAt)
+        }.sorted { $0.id < $1.id }
+        snapshot.profileData = profiles.filter { !$0.isMain }.compactMap { profile -> SyncProfileData? in
+            let id = profile.id.uuidString.lowercased()
+            guard let library = others[id] else { return nil }
+            return SyncProfileData(profile: id, records: records(playlists: [], library: library, state: state.slice(for: id), deviceName: nil, now: now))
+        }.sorted { $0.profile < $1.profile }
+        return snapshot
     }
 
     private static func records(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, deviceName: String?,
@@ -390,8 +472,17 @@ enum SyncMapping {
 /// Sync on the local network (docs/SYNC.md), the model's side: what this device sends, and the merged snapshot it gets
 /// back applied through the app's normal paths. The network side is `LocalSync`.
 extension AppModel {
-    /// Only the main profile syncs: kids and other profiles keep their library on this device.
-    var syncsThisProfile: Bool { activeProfile.id == Profile.defaultID }
+    /// The main profile's library, and the library of each other profile by ID (lowercase): the open one's as it is, the
+    /// others' as saved (a switch writes the one left first).
+    func syncLibraries() -> (main: UserLibrary, others: [String: UserLibrary]) {
+        func library(of profile: Profile) -> UserLibrary {
+            profile.id == activeProfile.id ? library : (userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
+        }
+        let main = profiles.first(where: \.isMain).map(library(of:)) ?? (activeProfile.isMain ? library : UserLibrary())
+        var others: [String: UserLibrary] = [:]
+        for profile in profiles where !profile.isMain { others[profile.id.uuidString.lowercased()] = library(of: profile) }
+        return (main, others)
+    }
 
     /// The name other devices list this one under: the kind of device, never the name the owner gave it.
     static var syncDeviceName: String {
@@ -404,8 +495,9 @@ extension AppModel {
 
     /// `now` (the wall clock) on the sync clock: the later of it and the latest time sync dated or received.
     func syncSnapshot(now: Date = Date()) -> SyncSnapshot {
-        SyncMapping.snapshot(playlists: playlists, library: library, state: syncState, tmdbKey: secrets.get(Keychain.tmdbKey),
-                             deviceName: Self.syncDeviceName, now: syncNow(now))
+        let libraries = syncLibraries()
+        return SyncMapping.snapshot(playlists: playlists, library: libraries.main, state: syncState, tmdbKey: secrets.get(Keychain.tmdbKey),
+                                    deviceName: Self.syncDeviceName, now: syncNow(now), profiles: profiles, others: libraries.others)
     }
 
     /// The time of a change sync carries, made at `wall` (docs/SYNC.md, "Clocks"): later than everything this device
@@ -419,19 +511,21 @@ extension AppModel {
         Date(syncMilliseconds: syncClock.now(wall: wall.syncMilliseconds))
     }
 
-    /// The sync clock starts after every time this device holds (`sync.json`, and the main profile's library): after a
+    /// The sync clock starts after every time this device holds (`sync.json`, and every profile's library): after a
     /// restart with its clock back at 1970, a change is still dated after the ones it made or received before.
     func advanceSyncClockToStoredData() {
         syncClock.advance(to: syncState.clock)
         syncClock.advance(to: syncState.tmdbKeyUpdatedAt)
         syncClock.advance(to: syncState.rowOrders.map(\.updatedAt).max())
-        guard syncsThisProfile else { return }
-        syncClock.advance(to: SyncMapping.latestTime(playlists: playlists, library: library, state: syncState))
+        syncClock.advance(to: profiles.map(\.updatedAt).max())
+        let libraries = syncLibraries()
+        syncClock.advance(to: SyncMapping.latestTime(playlists: playlists, library: libraries.main, state: syncState, profiles: profiles,
+                                                     others: libraries.others))
     }
 
-    /// The snapshot to send, or nil when this device does not sync now (not started, another profile).
+    /// The snapshot to send, or nil when this device does not sync now (not started).
     func syncSnapshotForSending() -> SyncSnapshot? {
-        guard isReady, syncsThisProfile else { return nil }
+        guard isReady else { return nil }
         return syncSnapshot()
     }
 
@@ -448,9 +542,9 @@ extension AppModel {
         if foreground { resumeMetadataPrefetch() } else { pauseMetadataPrefetch() }
     }
 
-    /// Starts or stops looking for devices: only while sync is on, the app in the foreground and the main profile open.
+    /// Starts or stops looking for devices: only while sync is on and the app in the foreground (every profile syncs).
     func refreshLocalSync() {
-        if isReady, settings.syncOnLocalNetwork, isInForeground, syncsThisProfile {
+        if isReady, settings.syncOnLocalNetwork, isInForeground {
             localSync.start(deviceID: syncState.deviceID)
         } else {
             localSync.stop()
@@ -477,7 +571,30 @@ extension AppModel {
             syncState.tmdbKeyUpdatedAt = syncStamp(now).syncMilliseconds
             changed = true
         }
+        // A profile made before profiles synced has no time: it gets one now, so that it travels.
+        if profiles.contains(where: { !$0.isMain && $0.updatedAt == 0 }) {
+            profiles = profiles.map { profile in
+                guard !profile.isMain, profile.updatedAt == 0 else { return profile }
+                var stamped = profile
+                stamped.updatedAt = syncStamp(now).syncMilliseconds
+                return stamped
+            }
+            try? userStore.save(profiles, name: "profiles")
+            changed = true
+        }
         if changed { writeSyncState(now: now) }
+    }
+
+    /// Remembers for sync that `key` was deleted in the open profile, at `time` (docs/SYNC.md, "Profiles").
+    func noteDeletedForSync(_ key: String, at time: Int64) {
+        let id = activeProfile.id.uuidString.lowercased()
+        if activeProfile.isMain {
+            syncState.deleted[key] = max(syncState.deleted[key] ?? time, time)
+        } else {
+            var profile = syncState.profileStates[id] ?? ProfileSyncState()
+            profile.deleted[key] = max(profile.deleted[key] ?? time, time)
+            syncState.profileStates[id] = profile
+        }
     }
 
     /// Not before `bootstrap()` has read `sync.json`: a new device ID and no deletions would replace this device's.
@@ -528,7 +645,7 @@ extension AppModel {
     }
 
     func noteListDeletedForSync(_ id: UUID, now: Date = Date()) {
-        syncState.deleted["list:" + id.uuidString.lowercased()] = syncStamp(now).syncMilliseconds
+        noteDeletedForSync("list:" + id.uuidString.lowercased(), at: syncStamp(now).syncMilliseconds)
         saveSyncState(now: now)
         syncSoon()
     }
@@ -538,7 +655,7 @@ extension AppModel {
     func noteHistoryClearedForSync(_ entries: [HistoryEntry], now: Date = Date()) {
         let time = syncStamp(now).syncMilliseconds
         for entry in entries where entry.reference.type != .live {
-            syncState.deleted["progress:" + SyncMapping.lowercasingPlaylistID(entry.id)] = time
+            noteDeletedForSync("progress:" + SyncMapping.lowercasingPlaylistID(entry.id), at: time)
         }
         saveSyncState(now: now)
         syncSoon()
@@ -548,11 +665,11 @@ extension AppModel {
     /// their catalogue downloaded), changed ones updated, deleted ones removed, My List, favourite channels, lists and
     /// progress replaced, and the TMDb key saved or removed. Merged again with the current state first, so nothing
     /// changed during the session is lost (and an answer without keys removes none).
-    /// Returns whether the library was applied: not when this device does not sync now (another profile), nor when its
-    /// data kept changing during the merge (the next session merges then).
+    /// Every profile's data is applied to that profile (docs/SYNC.md, "Profiles"). Returns whether the libraries were
+    /// applied: not when this device's data kept changing during the merge (the next session merges then).
     @discardableResult
     func applySync(_ received: SyncSnapshot, now: Date = Date()) async -> Bool {
-        guard isReady, syncsThisProfile else { return false }
+        guard isReady else { return false }
         // Without what is dated more than a day after this device's clock; the rest goes into its sync clock, so that a
         // change made here next is dated after it (docs/SYNC.md, "Clocks"). No time is moved. Merged off the main actor:
         // the merge that is kept is the one with the data as it is at the end (below), on the main actor.
@@ -591,22 +708,31 @@ extension AppModel {
             }
         }
 
-        // The library, merged again with what changed while the playlists were applied, off the main actor; kept only
-        // if nothing it read changed meanwhile, else merged again (the next session merges after a few tries). Not when
-        // another profile was opened meanwhile: its library is not the one that synced.
-        var outcome: (latest: SyncSnapshot, library: UserLibrary, parked: [String: HistoryEntry])?
+        // The libraries, merged again with what changed while the playlists were applied, off the main actor; kept only
+        // if nothing they read changed meanwhile, else merged again (the next session merges after a few tries).
+        var outcome: SyncOutcome?
         for _ in 0..<Self.syncMergeTries {
-            guard syncsThisProfile else { break }
-            let (base, bases, state, tmdbKey, playing) = (library, playlists, syncState, secrets.get(Keychain.tmdbKey), playingKeys)
+            let libraries = syncLibraries()
+            let (base, bases, state, tmdbKey, playing, people) = (library, playlists, syncState, secrets.get(Keychain.tmdbKey), playingKeys, profiles)
+            let activeID = activeProfile.id.uuidString.lowercased()
             let name = Self.syncDeviceName
             let syncTime = syncNow(now)
-            let result = await Task.detached(priority: .utility) { () -> (SyncSnapshot, UserLibrary, [String: HistoryEntry]) in
-                let current = SyncMapping.snapshot(playlists: bases, library: base, state: state, tmdbKey: tmdbKey, deviceName: name, now: syncTime)
+            let result = await Task.detached(priority: .utility) { () -> SyncOutcome in
+                let current = SyncMapping.snapshot(playlists: bases, library: libraries.main, state: state, tmdbKey: tmdbKey, deviceName: name,
+                                                   now: syncTime, profiles: people, others: libraries.others)
                 let latest = SyncMerge.merge(current, merged)
-                let kept = SyncMapping.keepingPlayback(SyncMapping.library(base, applying: latest), local: base, playing: playing)
-                return (latest, kept.library, kept.parked)
+                var applied: [String: UserLibrary] = [SyncProfile.main: SyncMapping.library(libraries.main, applying: latest)]
+                for profile in latest.profiles where profile.id != SyncProfile.main {
+                    let bucket = latest.profileData.first { $0.profile == profile.id } ?? SyncProfileData(profile: profile.id)
+                    applied[profile.id] = SyncMapping.library(libraries.others[profile.id] ?? UserLibrary(), applying: bucket.records())
+                }
+                // The items playing here (the open profile's) keep their entry as the player left it.
+                let opened = applied[activeID] ?? base
+                let kept = SyncMapping.keepingPlayback(opened, local: base, playing: playing)
+                applied[activeID] = kept.library
+                return SyncOutcome(latest: latest, libraries: applied, parked: kept.parked)
             }.value
-            if syncsThisProfile, library == base, playlists == bases, syncState == state, playingKeys == playing {
+            if library == base, playlists == bases, syncState == state, playingKeys == playing, profiles == people {
                 outcome = result
                 break
             }
@@ -615,15 +741,18 @@ extension AppModel {
             saveSyncState()
             return false
         }
-        // The items playing here keep their entry as the player left it; what came for them waits for playback to end.
-        parkedProgress.merge(outcome.parked) { _, received in received }
-        if outcome.library != library { updateLibrary { $0 = outcome.library } }
-        applyParkedProgress()
         let latest = outcome.latest
+        applySyncedProfiles(latest, libraries: outcome.libraries)
+        // What came for the items playing here waits for playback to end.
+        parkedProgress.merge(outcome.parked) { _, received in received }
+        let activeID = activeProfile.id.uuidString.lowercased()
+        if let opened = outcome.libraries[activeID], opened != library { updateLibrary { $0 = opened } }
+        applyParkedProgress()
         applySyncedKeys(latest)
         syncState.people = latest.people
         syncState.rowOrders = latest.rows
         syncState.listPeople = SyncMapping.listPeople(latest)
+        syncState.profileStates = Dictionary(latest.profileData.map { ($0.profile, ProfileSyncState($0)) }, uniquingKeysWith: { first, _ in first })
         let time = syncNow(now).syncMilliseconds
         syncState.learned = latest.deleted.reduce(into: [:]) { learned, entry in
             if let known = syncState.learned[entry.key] {
@@ -637,6 +766,61 @@ extension AppModel {
         syncState.lastSyncedAt = now.syncMilliseconds
         saveSyncState()
         return true
+    }
+
+    /// The profiles of `merged` (docs/SYNC.md, "Profiles"): each keeps its PIN (it stays on this device); new ones are
+    /// added without one; one deleted elsewhere goes with its library (never the main one). The libraries of the
+    /// profiles not open are written here; the open one's by the caller.
+    private func applySyncedProfiles(_ merged: SyncSnapshot, libraries: [String: UserLibrary]) {
+        let records = Dictionary(merged.profiles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        var kept: [Profile] = []
+        var removed: [Profile] = []
+        for profile in profiles {
+            let id = profile.id.uuidString.lowercased()
+            if let record = records[id] {
+                var updated = profile
+                if record.updatedAt >= profile.updatedAt {
+                    updated.name = record.name
+                    updated.colorIndex = record.colorIndex
+                    updated.symbol = record.symbol
+                    updated.isKids = record.kids
+                    updated.updatedAt = record.updatedAt
+                }
+                kept.append(updated)
+            } else if !profile.isMain, let deletedAt = merged.deleted[SyncProfile.keyPrefix + id], deletedAt >= profile.updatedAt {
+                removed.append(profile)
+            } else {
+                kept.append(profile)
+            }
+        }
+        let known = Set(profiles.map { $0.id.uuidString.lowercased() })
+        for record in merged.profiles where !known.contains(record.id) && record.id != SyncProfile.main {
+            guard let id = UUID(uuidString: record.id) else { continue }
+            kept.append(Profile(id: id, name: record.name, colorIndex: record.colorIndex, symbol: record.symbol, isKids: record.kids,
+                                updatedAt: record.updatedAt))
+        }
+        let openedRemoved = removed.contains { $0.id == activeProfile.id }
+        if kept != profiles {
+            profiles = kept
+            saveProfiles()
+        }
+        for profile in kept where profile.id != activeProfile.id || openedRemoved {
+            let id = profile.isMain ? SyncProfile.main : profile.id.uuidString.lowercased()
+            guard let library = libraries[id] else { continue }
+            try? userStore.save(library, name: profile.libraryDocumentName)
+        }
+        for profile in removed {
+            libraryWriter.discard(name: profile.libraryDocumentName)
+            userStore.remove(name: profile.libraryDocumentName)
+            if settings.launchProfileID == profile.id { updateSettings { $0.launchProfileID = nil } }
+        }
+        // The open profile was deleted elsewhere: the main one opens.
+        if openedRemoved, let main = profiles.first(where: \.isMain) {
+            let opened = libraries[SyncProfile.main] ?? (userStore.load(UserLibrary.self, name: main.libraryDocumentName) ?? UserLibrary())
+            updateSettings { $0.activeProfileID = main.id }
+            updateLibrary { $0 = opened }
+            isParentalUnlocked = false
+        }
     }
 
     /// The playlists of `merged` kept here: those edited elsewhere updated, then the new ones added.

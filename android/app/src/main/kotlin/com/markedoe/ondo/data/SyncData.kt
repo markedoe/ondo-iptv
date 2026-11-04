@@ -87,7 +87,7 @@ object SyncData {
     )
 
     /** Each profile's library: [others] (as saved) with the open profile's from [state]. */
-    fun libraries(state: OndoState, others: Map<String, LibraryState>): Map<String, LibraryState> =
+    fun allLibraries(state: OndoState, others: Map<String, LibraryState>): Map<String, LibraryState> =
         others + (state.activeProfile.id to state.library)
 
     private fun main(state: OndoState, libraries: Map<String, LibraryState>): LibraryState =
@@ -97,13 +97,13 @@ object SyncData {
      * This device's snapshot, without the deletions [SyncSnapshot.pruned] forgets at [now] (this device's sync clock,
      * [com.markedoe.ondo.core.sync.SyncClock.now]). Its times are those stored: never moved.
      */
-    fun snapshot(state: OndoState, device: String, deviceName: String?, now: Long, libraries: Map<String, LibraryState> = libraries(state, emptyMap())): SyncSnapshot {
+    fun snapshot(state: OndoState, device: String, deviceName: String?, now: Long, libraries: Map<String, LibraryState> = allLibraries(state, emptyMap())): SyncSnapshot {
         val main = main(state, libraries)
         return records(state, libraries, device, deviceName, now).pruned(now, sessions = main.syncPeers.values, learned = main.syncDeletedLearned)
     }
 
     /** The latest time of what this device holds for sync (its records and deletions, every profile's); null without any. */
-    fun latestTime(state: OndoState, libraries: Map<String, LibraryState> = libraries(state, emptyMap())): Long? =
+    fun latestTime(state: OndoState, libraries: Map<String, LibraryState> = allLibraries(state, emptyMap())): Long? =
         records(state, libraries, "", null, 0).latestTime()
 
     private fun records(state: OndoState, libraries: Map<String, LibraryState>, device: String, deviceName: String?, now: Long): SyncSnapshot {
@@ -216,7 +216,7 @@ object SyncData {
     }
 
     /** [now]: when this device learns the deletions of [merged] it did not have (kept from then, docs/SYNC.md). */
-    fun apply(state: OndoState, merged: SyncSnapshot, now: Long = 0, libraries: Map<String, LibraryState> = libraries(state, emptyMap())): Applied {
+    fun apply(state: OndoState, merged: SyncSnapshot, now: Long = 0, libraries: Map<String, LibraryState> = allLibraries(state, emptyMap())): Applied {
         // The device's own IDs, whatever their case; IDs it does not know keep the merged (lowercase) form.
         val localIds = state.playlists.associateBy({ it.id.lowercase() }, { it.id })
         fun local(id: String) = localIds[id.lowercase()] ?: id

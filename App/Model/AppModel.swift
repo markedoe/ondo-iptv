@@ -88,7 +88,8 @@ final class AppModel {
     private(set) var playlists: [Playlist] = []
     private(set) var settings = AppSettings()
     private(set) var library = UserLibrary()
-    private(set) var profiles: [Profile] = []
+    /// Set by the profile actions and by sync (`AppModel+Sync`).
+    var profiles: [Profile] = []
     /// Category locks are device-wide (parental control), not per profile.
     private(set) var lockedCategoryKeys: Set<String> = []
     /// "Who's watching?" screen at launch when several profiles exist.
@@ -359,7 +360,7 @@ final class AppModel {
         profiles.first { $0.id == settings.activeProfileID } ?? profiles.first ?? Profile(id: Profile.defaultID, name: "")
     }
 
-    private func saveProfiles() {
+    func saveProfiles() {
         guard isReady else { return }
         try? userStore.save(profiles, name: "profiles")
     }
@@ -387,16 +388,25 @@ final class AppModel {
 
     @discardableResult
     func addProfile(name: String, colorIndex: Int, symbol: String, isKids: Bool, pin: String?) -> Profile {
-        let profile = Profile(name: name, colorIndex: colorIndex, symbol: symbol, isKids: isKids, pinHash: pin.map(Keychain.hash(pin:)))
+        let profile = Profile(name: name, colorIndex: colorIndex, symbol: symbol, isKids: isKids, pinHash: pin.map(Keychain.hash(pin:)),
+                              updatedAt: syncStamp().syncMilliseconds)
         profiles.append(profile)
         saveProfiles()
+        syncSoon()
         return profile
     }
 
     func updateProfile(_ profile: Profile) {
         guard let position = profiles.firstIndex(where: { $0.id == profile.id }) else { return }
-        profiles[position] = profile
+        var changed = profile
+        var withoutPIN = profile
+        withoutPIN.pinHash = profiles[position].pinHash
+        withoutPIN.updatedAt = profiles[position].updatedAt
+        // A new PIN alone is no change for sync: it stays on this device (docs/PROFILES.md, "PIN").
+        if withoutPIN != profiles[position] { changed.updatedAt = syncStamp().syncMilliseconds } else { changed.updatedAt = profiles[position].updatedAt }
+        profiles[position] = changed
         saveProfiles()
+        syncSoon()
     }
 
     /// Ticks or unticks "Always open this profile" (nil: ask who is watching at launch).
@@ -416,6 +426,12 @@ final class AppModel {
         let wasActive = settings.activeProfileID == profile.id || activeProfile.id == profile.id
         profiles.removeAll { $0.id == profile.id }
         saveProfiles()
+        // Its deletion travels, dated; its data goes with it (docs/SYNC.md, "Profiles").
+        let id = profile.id.uuidString.lowercased()
+        syncState.deleted[SyncProfile.keyPrefix + id] = syncStamp().syncMilliseconds
+        syncState.profileStates[id] = nil
+        saveSyncState()
+        syncSoon()
         // A pending save of the deleted profile's library would write its file again.
         libraryWriter.discard(name: profile.libraryDocumentName)
         userStore.remove(name: profile.libraryDocumentName)

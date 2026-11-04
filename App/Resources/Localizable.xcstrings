@@ -15277,46 +15277,6 @@
         }
       }
     },
-    "Only the main profile syncs.": {
-      "localizations": {
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Seul le profil principal se synchronise."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo se sincroniza el perfil principal."
-          }
-        },
-        "pt": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Só o perfil principal é sincronizado."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只有主个人资料会同步。"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "تتم مزامنة الملف الشخصي الرئيسي فقط."
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "सिर्फ़ मुख्य प्रोफ़ाइल सिंक होती है।"
-          }
-        }
-      }
-    },
     "Open": {
       "localizations": {
         "fr": {

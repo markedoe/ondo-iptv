@@ -22,12 +22,13 @@ This document is the specification. The Kotlin implementation is in
 
 Synced: the playlists (name, kind, address, login and password, guide address), My List and favourite channels,
 the actors and directors kept in My List, the lists (collections) with the people in them, playback progress (where each movie and episode was left, and what was finished), and the
-keys typed in Settings for outside services (the TMDb token), and the order of the rows of the Movies and Series tabs
-with the rows hidden (Settings → Row order).
+keys typed in Settings for outside services (the TMDb token), the order of the rows of the Movies and Series tabs
+with the rows hidden (Settings → Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's
+own My List, favourite channels, people, lists, progress and order of rows (docs/PROFILES.md).
 
-Stays on each device: the other settings, hidden categories, channel edits, reminders, profiles, downloads, the catalogues
-themselves (each device downloads its playlists), and file playlists (a file imported on one device is not on the
-others). On Apple devices, only the main profile syncs; kids profiles do not.
+Stays on each device: the other settings, hidden categories, channel edits, reminders, profile PINs (never sent, salted
+or not: see docs/PROFILES.md), "Always open this profile", downloads, the catalogues themselves (each device downloads
+its playlists), and file playlists (a file imported on one device is not on the others).
 
 ## Discovery
 
@@ -113,6 +114,8 @@ an iPhone, iPad or Mac sent thus passes it on to the other Android devices.
   "people": [ … ],
   "keys": [ … ],
   "rows": [ … ],
+  "profiles": [ … ],
+  "profileData": [ … ],
   "deleted": { "<key>": 1760000000000 },
   "replaced": { "<playlist id>": "<playlist id>" },
   "clock": 1760000000000
@@ -182,8 +185,22 @@ units). Readers then keep at most 2000 keys in `order` (the first) and in `hidde
 and tabs longer than 256 UTF-16 units, and keep the records of 8 tabs at most: `movie` and `series`, then the others in
 UTF-16 order (a merge keeps the same 8). A device keeps and passes on the record of a tab it does not know. A snapshot without `rows` (from an older
 version) changes nothing; no record is ever deleted. An older Android device drops `rows` from what it keeps and
-passes on: two Apple devices that sync only through it keep each their own order. On Apple devices the order is the device's, whichever profile
-is open (a kids profile cannot change it), and travels while the main profile is.
+passes on: two Apple devices that sync only through it keep each their own order. Each profile has its own order: the
+main profile's is `rows`, another profile's is in its `profileData`. The order a device kept before profiles had one
+each is the main profile's, with its time. A Kids profile cannot change its order.
+
+**Profiles** (docs/PROFILES.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` is a UUID in
+lowercase; the main profile's is `00000000-0000-0000-0000-000000000001`. `symbol` is `initial`, an icon name or an
+emoji. Never a PIN: a profile's PIN stays on its device. Key: `profile:<id>`; time: `updatedAt` (set when the profile is
+added, renamed, or its colour, avatar or Kids switch changes; a new PIN alone is no change). A profile never changed
+(the main one as each device makes it, "Me") is not sent. Deleting a profile adds `profile:<id>` to `deleted`; the main
+profile is never deleted (a deletion of it is ignored). Readers keep 16 profiles at most: the main one, then by ID.
+
+**Profile data** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "deleted"?}`: the records of a
+profile other than the main one, by the same rules as the snapshot's own, with what was deleted in that profile. The
+main profile's records are the snapshot's own: an older device, which knows nothing of profiles, reads and writes the
+main profile's data, ignores `profiles` and `profileData`, and the format version stays 1. Data sent for the main
+profile in `profileData` is ignored.
 
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for
 180 days, and longer until every device it had a session with in the last year has had a session with it after the
@@ -240,6 +257,12 @@ nothing.
    `orderedAt`, `order` and each `addedAt`. An older version still keeps a
    whole list as one record and sends no `listitem:` deletion: an item it took out comes back from a device that
    still has it.
+8. **Profiles** merge by rule 2 (tie string: `name`, `colorIndex`, `symbol`, `kids` as `1` or `0`), the main
+   profile's deletion ignored. A profile dropped (deleted at or after its `updatedAt`, or past the 16 kept) goes with
+   its data. Each profile kept other than the main one merges its data by rules 2 to 7, as a snapshot of its own
+   whose playlists are the merged ones: a favourite or progress of a deleted playlist goes, a replaced playlist's
+   becomes the one kept, and a record deleted in that profile (its `deleted`) goes. The result lists profiles and
+   profile data by ID.
 
 A device keeps the merged snapshot as its own: it adds the playlists it did not have (and downloads them),
 updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists and

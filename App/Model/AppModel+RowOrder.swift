@@ -2,7 +2,9 @@ import Foundation
 import IPTVCore
 
 /// The order of the rows of the Movies and Series tabs (Settings → Row order): the same keys and rules as on Android
-/// (`RowOrder`, IPTVCore), kept in `sync.json` and synced (docs/SYNC.md, "Rows").
+/// (`RowOrder`, IPTVCore), kept in `sync.json` and synced (docs/SYNC.md, "Rows"). Each profile has its own: the main
+/// one's is `SyncState.rowOrders` (the device's order before profiles had one each), the others' in their
+/// `ProfileSyncState` (docs/PROFILES.md).
 extension AppModel {
     /// The tab as sync names it (`SyncRows.tab`).
     static func rowTab(_ type: ContentType) -> String { type == .series ? SyncRows.series : SyncRows.movies }
@@ -10,7 +12,12 @@ extension AppModel {
     /// The order saved for a tab; nil: the default order.
     func savedRowOrder(_ type: ContentType) -> SyncRows? {
         let tab = Self.rowTab(type)
-        return syncState.rowOrders.first { $0.tab == tab }
+        return profileRowOrders.first { $0.tab == tab }
+    }
+
+    /// The open profile's records.
+    private var profileRowOrders: [SyncRows] {
+        activeProfile.isMain ? syncState.rowOrders : (syncState.profileStates[activeProfile.id.uuidString.lowercased()]?.rowOrders ?? [])
     }
 
     /// The keys of the rows of a tab in their default order: the built-in rows, then `categories` as they come.
@@ -18,7 +25,7 @@ extension AppModel {
         RowOrder.builtIns(series: type == .series) + categories.map { RowOrder.categoryKey(id: $0.id, name: $0.name) }
     }
 
-    /// Whether the open profile may change the order: not a kids profile, as the order is the device's (every profile's).
+    /// Whether the open profile may change its order: not a kids profile.
     var canChangeRowOrder: Bool { !activeProfile.isKids }
 
     /// The rows of a tab in the viewer's order, hidden or not. The categories hidden in Settings (or by a hidden
@@ -57,8 +64,16 @@ extension AppModel {
 
     private func keepRowOrder(_ record: SyncRows) {
         // Sorted by tab in UTF-16 code units, as a merge gives them: the same records compare equal.
-        syncState.rowOrders = (syncState.rowOrders.filter { $0.tab != record.tab } + [record])
+        let records = (profileRowOrders.filter { $0.tab != record.tab } + [record])
             .sorted { $0.tab.utf16.lexicographicallyPrecedes($1.tab.utf16) }
+        if activeProfile.isMain {
+            syncState.rowOrders = records
+        } else {
+            let id = activeProfile.id.uuidString.lowercased()
+            var profile = syncState.profileStates[id] ?? ProfileSyncState()
+            profile.rowOrders = records
+            syncState.profileStates[id] = profile
+        }
         saveSyncState()
         syncSoon()
     }

@@ -419,18 +419,50 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertGreaterThan(try XCTUnwrap(first.syncState.playlistUpdatedAt[key]), added)
     }
 
-    func testOnlyTheMainProfileSyncs() async throws {
+    /// Every profile syncs, whichever is open (docs/SYNC.md, "Profiles"): a profile and its data reach the other device,
+    /// never another profile there, and its PIN stays where it was set.
+    func testEveryProfileSyncsWithItsOwnData() async throws {
         let first = try await deviceWithLibrary()
         let second = try await device("second")
-        let guest = second.addProfile(name: "Guest", colorIndex: 1, symbol: "star.fill", isKids: true, pin: nil)
-        second.switchProfile(to: guest)
-        second.setSyncOnLocalNetwork(true)
-        XCTAssertNil(second.syncSnapshotForSending())
-        await second.applySync(first.syncSnapshot())
-        XCTAssertTrue(second.playlists.isEmpty)
+        let movie = try XCTUnwrap(first.content.movies.first)
+        let guest = first.addProfile(name: "Guest", colorIndex: 1, symbol: "star.fill", isKids: true, pin: "1234")
+        first.switchProfile(to: guest)
+        first.setSyncOnLocalNetwork(true)
+        XCTAssertNotNil(first.syncSnapshotForSending(), "another profile than the main one syncs too")
+        first.setSyncOnLocalNetwork(false)
+        let snapshot = first.syncSnapshot()
+        XCTAssertTrue(snapshot.profiles.contains { $0.id == guest.id.uuidString.lowercased() && $0.kids })
+        XCTAssertFalse(String(decoding: try snapshot.encoded(), as: UTF8.self).lowercased().contains("pinhash"))
+
+        await second.applySync(snapshot)
+        let arrived = try XCTUnwrap(second.profiles.first { $0.id == guest.id })
+        XCTAssertEqual(arrived.name, "Guest")
+        XCTAssertTrue(arrived.isKids)
+        XCTAssertNil(arrived.pinHash, "the PIN stays on the device where it was set")
+        // The main profile's data is the main profile's there; the guest's (none) stays empty.
+        XCTAssertTrue(second.library.favorites.contains { $0.reference.itemID == movie.id })
+        second.switchProfile(to: arrived)
         XCTAssertTrue(second.library.favorites.isEmpty)
-        XCTAssertFalse(second.localSync.isRunning, "the client does nothing while another profile is open")
-        second.setSyncOnLocalNetwork(false)
+        XCTAssertTrue(second.library.history.isEmpty)
+    }
+
+    /// A profile deleted on one device goes on the other with its data; the other profiles stay as they are.
+    func testAProfileDeletedOnOneDeviceGoesOnTheOther() async throws {
+        let first = try await deviceWithLibrary()
+        let second = try await device("second")
+        let guest = first.addProfile(name: "Guest", colorIndex: 1, symbol: "star.fill", isKids: false, pin: nil)
+        let other = first.addProfile(name: "Other", colorIndex: 2, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        await second.applySync(first.syncSnapshot())
+        XCTAssertEqual(Set(second.profiles.map(\.name)), ["Me", "Guest", "Other"])
+        let before = second.syncSnapshot()
+
+        first.deleteProfile(guest)
+        await second.applySync(first.syncSnapshot())
+        XCTAssertEqual(Set(second.profiles.map(\.name)), ["Me", "Other"])
+        XCTAssertTrue(second.profiles.contains { $0.id == other.id })
+        // A snapshot from before the deletion brings nothing back.
+        await first.applySync(before)
+        XCTAssertFalse(first.profiles.contains { $0.id == guest.id })
     }
 
     // MARK: The viewer's choices across sync and a relaunch

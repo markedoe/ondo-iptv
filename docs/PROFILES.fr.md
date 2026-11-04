@@ -34,8 +34,8 @@ eu), `library-<id>` pour les autres. Ce document contient tout ce qui est propre
 - Ma liste, les acteurs et réalisateurs suivis, les collections ;
 - les rappels de programmes ;
 - les catégories masquées, les langues et pays masqués, les styles masqués ;
-- l’ordre des rangées de l’accueil, dès qu’il existera : il vit dans le document de bibliothèque, donc il est
-  propre à chaque profil sans autre changement.
+- l’ordre des rangées des onglets Films et Séries (Réglages → Ordre des rangées) ; un profil Enfant ne peut pas changer
+  le sien.
 
 Communs à tous les profils : les playlists, le jeton TMDb et les autres clés de services, les réglages de lecture
 (mémoire tampon, image, sous-titres, langues préférées), les réglages de synchronisation, « Afficher les catégories
@@ -47,8 +47,11 @@ Rien n’est déplacé ni renommé. Un appareil sans document `profiles` a un se
 bibliothèque est le document `library` existant (le document `profiles` est écrit dès qu’un profil est ajouté ou
 modifié) : tout ce qui a été vu, gardé et masqué avant
 appartient au profil principal. Les réglages sont lus comme avant ; sans `activeProfileID`, le profil principal
-s’ouvre. Des tests sur les deux plateformes ouvrent des données écrites par une version précédente et vérifient que
-rien n’est perdu.
+s’ouvre. L’ordre des rangées enregistré avant que chaque profil ait le sien devient celui du profil principal, avec
+son instant (sur Android, il passe des réglages à la bibliothèque principale ; sur Apple, l’enregistrement de
+l’appareil dans `sync.json` est celui du profil principal). Un profil créé avant que les profils se synchronisent reçoit
+un instant au lancement suivant, pour voyager. Des tests sur les deux plateformes ouvrent des données écrites par une
+version précédente et vérifient que rien n’est perdu.
 
 ## Ouverture et changement de profil
 
@@ -75,9 +78,8 @@ Un profil peut avoir un code de 4 à 8 chiffres, demandé quand on passe sur ce 
 - **Un code ne quitte jamais l’appareil.** Un code à 4 chiffres a 10 000 valeurs : quel que soit le sel, qui reçoit
   son empreinte peut toutes les essayer en une fraction de seconde, hors des attentes de l’appareil. La
   synchronisation ne transporte donc jamais `pinHash`, salé ou non ; chaque appareil protège ses profils avec son
-  propre code. Quand les profils se synchroniseront (phase 2), un profil arrivera sans code sur un appareil où aucun
-  n’a été défini ; au plus, une indication « a un code ailleurs » pourra voyager, pour que l’appareil propose d’en
-  définir un. C’est un choix délibéré : un code protège un écran, ce n’est pas le mot de passe d’un compte.
+  propre code. Un profil arrive sans code sur un appareil où aucun n’a été défini, et rien d’un code ne voyage. C’est
+  un choix délibéré : un code protège un écran, ce n’est pas le mot de passe d’un compte.
 
 ## Profils Enfants
 
@@ -98,18 +100,20 @@ changement à part.
 
 ## Synchronisation
 
-**Phase 1 (maintenant).** Comme sur Apple jusqu’ici, seul le profil principal se synchronise : tant qu’un autre
-profil est ouvert, la synchronisation sur le réseau local est en pause, et les bibliothèques des autres profils
-restent sur l’appareil. Le format de synchronisation ne change pas.
+Chaque profil se synchronise, quel que soit le profil ouvert (docs/SYNC.fr.md, « Profils ») :
 
-**Phase 2 (après l’arrivée de l’ordre des rangées).** Les profils et leurs données se synchronisent entre appareils,
-avec l’horloge logique hybride de `docs/SYNC.fr.md` :
+- chaque profil est un enregistrement identifié par son `id`, la modification la plus récente l’emportant ; ses
+  données voyagent dans `profileData` sous le même `id`, donc ce qui est vu sur un profil n’est jamais appliqué à un
+  autre ;
+- supprimer un profil laisse une pierre tombale datée (`profile:<id>` dans `deleted`) : le profil et ses données ne
+  reviennent pas, et les autres profils ne sont pas touchés ;
+- `pinHash` n’est jamais dans un enregistrement (voir « Code »), ni « Toujours ouvrir ce profil » : les deux restent
+  sur l’appareil ;
+- un appareil plus ancien qui ne connaît pas les profils lit et écrit les données du profil principal, comme avant ;
+  il ignore les nouveaux champs, et la version du format ne change pas ;
+- les cœurs Kotlin et Swift partagent les mêmes fichiers d’exemple (`fixtures/sync/profiles-*.json`) et les mêmes
+  tests.
 
-- chaque profil est un enregistrement identifié par son `id`, le dernier qui écrit gagne ; ses données sont elles
-  aussi identifiées par l’`id` du profil, donc ce qui est vu sur un profil n’est jamais appliqué à un autre ;
-- supprimer un profil laisse une pierre tombale datée : le profil et ses données ne reviennent pas, et les autres
-  profils ne sont pas touchés ;
-- `pinHash` n’est jamais dans un enregistrement (voir « Code ») ;
-- un appareil plus ancien qui ne connaît pas les profils lit et écrit les données du profil principal, comme
-  aujourd’hui ; il ignore les nouveaux enregistrements, et la version du format ne change pas ;
-- les cœurs Kotlin et Swift partagent les mêmes fichiers d’exemple et les mêmes tests.
+Ce que chaque appareil garde pour la synchronisation : Android garde les suppressions de chaque profil dans le document
+de bibliothèque de ce profil, celles du profil principal avec les sessions ; Apple les garde dans `sync.json`, celles du
+profil principal comme avant et celles de chaque autre profil sous son ID. Ce qui voyage est identique.

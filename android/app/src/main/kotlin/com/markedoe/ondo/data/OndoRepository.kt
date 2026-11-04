@@ -321,8 +321,8 @@ class OndoRepository(
             // written once a profile is added (docs/PROFILES.md, "Migration").
             val storedProfiles = withContext(io) { store.loadProfiles() }
             val unstamped = storedProfiles.ifEmpty { listOf(Profile.main(mainProfileName)) }
-            val launch = profiles.firstOrNull { it.id == storedSettings.launchProfileId }
-            val opened = launch ?: profiles.firstOrNull { it.id == storedSettings.activeProfileId } ?: profiles.firstOrNull { it.isMain } ?: profiles.first()
+            val launch = unstamped.firstOrNull { it.id == storedSettings.launchProfileId }
+            val opened = launch ?: unstamped.firstOrNull { it.id == storedSettings.activeProfileId } ?: unstamped.firstOrNull { it.isMain } ?: unstamped.first()
             // "Always open this profile" opens that one; otherwise the one open last (none saved: the main one).
             val savedSettings = if (launch != null) storedSettings.copy(activeProfileId = launch.id) else storedSettings
             val stored = withContext(io) { store.loadLibrary(opened.libraryDocumentName) }
@@ -349,7 +349,7 @@ class OndoRepository(
             // a change is still dated after the ones it made or received before.
             syncClock.advance(savedSettings.syncClock)
             val dated = OndoState(settings = savedSettings, playlists = playlists, library = saved, profiles = unstamped)
-            syncClock.advance(SyncData.latestTime(dated, SyncData.libraries(dated, otherLibraries)))
+            syncClock.advance(SyncData.latestTime(dated, SyncData.allLibraries(dated, otherLibraries)))
             // A profile made before profiles synced has no time: it gets one now, so that it travels.
             val profiles = unstamped.map { if (!it.isMain && it.updatedAt == 0L) it.copy(updatedAt = stamp()) else it }
             val pending = pendingLibraryChanges.toList()
@@ -644,7 +644,7 @@ class OndoRepository(
     /** What this device sends to sync; null until its data is loaded. Main thread. */
     fun syncSnapshot(deviceName: String?): SyncSnapshot? {
         if (!_state.value.isReady) return null
-        return SyncData.snapshot(_state.value, syncDeviceId(), deviceName, syncNow(), SyncData.libraries(_state.value, otherLibraries))
+        return SyncData.snapshot(_state.value, syncDeviceId(), deviceName, syncNow(), SyncData.allLibraries(_state.value, otherLibraries))
     }
 
     /**
@@ -661,7 +661,7 @@ class OndoRepository(
     fun mergeSync(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
         val local = syncSnapshot(deviceName) ?: return null
         val merged = SyncMerge.merge(local, received(incoming))
-        commitSync(SyncData.apply(_state.value, merged, syncNow(), SyncData.libraries(_state.value, otherLibraries)))
+        commitSync(SyncData.apply(_state.value, merged, syncNow(), SyncData.allLibraries(_state.value, otherLibraries)))
         return merged
     }
 
@@ -674,7 +674,7 @@ class OndoRepository(
         if (!_state.value.isReady) return null
         val id = syncDeviceId()
         val base = _state.value
-        val libraries = SyncData.libraries(base, otherLibraries)
+        val libraries = SyncData.allLibraries(base, otherLibraries)
         val time = syncNow()
         return Triple(base, libraries, withContext(syncMerging) { SyncData.snapshot(base, id, deviceName, time, libraries) })
     }
@@ -688,7 +688,7 @@ class OndoRepository(
         val id = syncDeviceId()
         val leavingOut = digestLeavingOut(state)
         val time = syncNow()
-        val libraries = SyncData.libraries(state, otherLibraries)
+        val libraries = SyncData.allLibraries(state, otherLibraries)
         return withContext(syncMerging) { SyncData.snapshot(state, id, deviceName, time, libraries).contentDigest(leavingOut) }
     }
 

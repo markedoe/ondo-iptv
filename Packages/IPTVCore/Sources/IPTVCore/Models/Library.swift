@@ -223,19 +223,23 @@ public struct Profile: Identifiable, Codable, Hashable, Sendable {
     public var colorIndex: Int
     public var symbol: String
     public var isKids: Bool
-    /// SHA-256 of the profile PIN, `nil` when the profile is not protected.
+    /// SHA-256 of the profile PIN, `nil` when the profile is not protected. Never synced (docs/PROFILES.md, "PIN").
     public var pinHash: String?
+    /// When it was added or last changed, in sync's milliseconds; 0: never changed (the main one as made), not synced.
+    public var updatedAt: Int64
 
-    public init(id: UUID = UUID(), name: String, colorIndex: Int = 0, symbol: String = "person.fill", isKids: Bool = false, pinHash: String? = nil) {
+    public init(id: UUID = UUID(), name: String, colorIndex: Int = 0, symbol: String = "person.fill", isKids: Bool = false, pinHash: String? = nil,
+                updatedAt: Int64 = 0) {
         self.id = id
         self.name = name
         self.colorIndex = colorIndex
         self.symbol = symbol
         self.isKids = isKids
         self.pinHash = pinHash
+        self.updatedAt = updatedAt
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, colorIndex, symbol, isKids, pinHash }
+    enum CodingKeys: String, CodingKey { case id, name, colorIndex, symbol, isKids, pinHash, updatedAt }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -245,6 +249,7 @@ public struct Profile: Identifiable, Codable, Hashable, Sendable {
         symbol = (try? c.decodeIfPresent(String.self, forKey: .symbol)) ?? "person.fill"
         isKids = (try? c.decodeIfPresent(Bool.self, forKey: .isKids)) ?? false
         pinHash = try? c.decodeIfPresent(String.self, forKey: .pinHash)
+        updatedAt = (try? c.decodeIfPresent(Int64.self, forKey: .updatedAt)) ?? 0
     }
 
     public var isProtected: Bool { pinHash != nil }

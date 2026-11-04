@@ -37,7 +37,7 @@ extension AppModel {
                          + "\(loaded.dismissedTagSuggestions) answered tag suggestions")
         }
         lines.append("Now: \(playlists.count) playlists, \(library.hiddenCategoryTags.count) hidden tags, "
-                     + "\(settings.dismissedTagSuggestions.count) answered tag suggestions, profile \(syncsThisProfile ? "main" : "other")")
+                     + "\(settings.dismissedTagSuggestions.count) answered tag suggestions, profile \(activeProfile.isMain ? "main" : "other")")
 
         let files = DataReport.listing(of: userStore.directory)
         let setAside = files.filter { $0.name.contains(".corrupt-") }.count

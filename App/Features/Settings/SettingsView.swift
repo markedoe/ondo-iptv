@@ -503,11 +503,7 @@ private struct LocalSyncStatus: View {
 
     var body: some View {
         let sync = model.localSync
-        if !model.syncsThisProfile {
-            Label("Only the main profile syncs.", systemImage: "person.crop.circle.badge.exclamationmark")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        } else if sync.problem == .localNetworkDenied {
+        if sync.problem == .localNetworkDenied {
             Label("Ondo may not use the local network. Allow it in the system settings, in Privacy & Security, Local Network.", systemImage: "exclamationmark.triangle")
                 .font(.caption)
                 .foregroundStyle(.orange)

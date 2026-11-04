@@ -22,13 +22,15 @@ Ce document est la spécification. L’implémentation Kotlin est dans
 
 Synchronisés : les playlists (nom, type, adresse, identifiant et mot de passe, adresse du guide), Ma liste et les
 chaînes favorites, les acteurs et réalisateurs gardés dans Ma liste, les listes (collections) avec leurs personnes, la progression de lecture (où chaque film et épisode a été laissé, et
-ce qui a été terminé), les clés de services extérieurs saisies dans les Réglages (le jeton TMDb), et l’ordre des
-rangées des onglets Films et Séries avec les rangées masquées (Réglages → Ordre des rangées).
+ce qui a été terminé), les clés de services extérieurs saisies dans les Réglages (le jeton TMDb), l’ordre des
+rangées des onglets Films et Séries avec les rangées masquées (Réglages → Ordre des rangées), et les profils (nom,
+couleur, avatar, Enfant) avec, pour chaque profil, sa liste, ses chaînes favorites, ses personnes, ses listes, sa
+progression et son ordre des rangées (docs/PROFILES.fr.md).
 
 Restent sur chaque appareil : les autres réglages, les catégories masquées, les modifications de chaînes, les rappels,
-les profils, les téléchargements, les catalogues eux-mêmes (chaque appareil télécharge ses playlists), et les
-playlists fichier (un fichier importé sur un appareil n’est pas sur les autres). Sur les appareils Apple, seul le
-profil principal est synchronisé ; les profils enfants ne le sont pas.
+les codes des profils (jamais envoyés, salés ou non : voir docs/PROFILES.fr.md), « Toujours ouvrir ce profil », les
+téléchargements, les catalogues eux-mêmes (chaque appareil télécharge ses playlists), et les playlists fichier (un
+fichier importé sur un appareil n’est pas sur les autres).
 
 ## Découverte
 
@@ -125,6 +127,8 @@ appareils Android.
   "people": [ … ],
   "keys": [ … ],
   "rows": [ … ],
+  "profiles": [ … ],
+  "profileData": [ … ],
   "deleted": { "<clé>": 1760000000000 },
   "replaced": { "<id de playlist>": "<id de playlist>" },
   "clock": 1760000000000
@@ -202,8 +206,26 @@ onglets de plus de 256 unités UTF-16, et gardent les enregistrements de 8 ongle
 les autres dans l’ordre UTF-16 (une fusion garde les mêmes 8). Un appareil garde et
 transmet l’enregistrement d’un onglet qu’il ne connaît pas. Un instantané sans `rows` (d’une version plus ancienne) ne
 change rien ; aucun enregistrement n’est jamais supprimé. Un appareil Android plus ancien écarte `rows` de ce qu’il
-garde et transmet : deux appareils Apple qui ne se synchronisent qu’à travers lui gardent chacun leur ordre. Sur les appareils Apple, l’ordre est celui de l’appareil,
-quel que soit le profil ouvert (un profil enfant ne peut pas le changer), et voyage tant que le profil principal l’est.
+garde et transmet : deux appareils Apple qui ne se synchronisent qu’à travers lui gardent chacun leur ordre. Chaque
+profil a son ordre : celui du profil principal est `rows`, celui d’un autre profil est dans son `profileData`. L’ordre
+qu’un appareil gardait avant que chaque profil ait le sien devient celui du profil principal, avec son instant. Un
+profil Enfant ne peut pas changer son ordre.
+
+**Profils** (docs/PROFILES.fr.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` est un UUID
+en minuscules ; celui du profil principal est `00000000-0000-0000-0000-000000000001`. `symbol` vaut `initial`, un nom
+d’icône ou un emoji. Jamais de code : le code d’un profil reste sur son appareil. Clé : `profile:<id>` ; instant :
+`updatedAt` (fixé quand le profil est ajouté, renommé, ou que sa couleur, son avatar ou son réglage Enfant change ; un
+nouveau code seul n’est pas un changement). Un profil jamais modifié (le profil principal tel que chaque appareil le
+crée, « Moi ») n’est pas envoyé. Supprimer un profil ajoute `profile:<id>` à `deleted` ; le profil principal n’est
+jamais supprimé (une suppression de celui-ci est ignorée). Les lecteurs gardent au plus 16 profils : le principal,
+puis par ID.
+
+**Données de profil** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "deleted"?}` : les
+éléments d’un profil autre que le principal, selon les mêmes règles que ceux de l’instantané lui-même, avec ce qui a
+été supprimé dans ce profil. Les éléments du profil principal sont ceux de l’instantané lui-même : un appareil plus
+ancien, qui ne connaît pas les profils, lit et écrit les données du profil principal, ignore `profiles` et
+`profileData`, et la version du format reste 1. Les données envoyées pour le profil principal dans `profileData` sont
+ignorées.
 
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil
 garde chacune 180 jours, et plus longtemps tant que chaque appareil avec lequel il a eu une session dans l’année
@@ -268,6 +290,12 @@ change rien.
    `order` et chaque `addedAt`. Une version plus ancienne garde
    encore une liste entière comme un seul élément et n’envoie pas de suppression `listitem:` : un élément qu’elle a
    retiré revient depuis un appareil qui l’a encore.
+8. **Les profils** se fusionnent selon la règle 2 (chaîne de départage : `name`, `colorIndex`, `symbol`, `kids` en
+   `1` ou `0`), la suppression du profil principal étant ignorée. Un profil écarté (supprimé à son `updatedAt` ou
+   après, ou au-delà des 16 gardés) part avec ses données. Chaque profil gardé autre que le principal fusionne ses
+   données selon les règles 2 à 7, comme un instantané à part dont les playlists sont celles fusionnées : un favori ou
+   une progression d’une playlist supprimée part, ceux d’une playlist remplacée deviennent ceux de la playlist gardée,
+   et un élément supprimé dans ce profil (son `deleted`) part. Le résultat liste les profils et leurs données par ID.
 
 Un appareil garde l’instantané fusionné comme le sien : il ajoute les playlists qu’il n’avait pas (et les
 télécharge), met à jour celles qui ont changé, supprime celles qui ont été supprimées, et remplace Ma liste, les
