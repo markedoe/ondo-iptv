@@ -3,7 +3,8 @@ name: Release Android
 # Tests, builds the signed release bundle and sends it to Google Play. A version tag (v1.2.0: the user's go, CLAUDE.md)
 # sends it with the listing to closed testing, for review at once (managed publishing off); a push to main sends the
 # build alone to internal testing (deliver.yml); a run by hand goes to the chosen track. Every build that reaches internal
-# testing then goes to closed testing too, with its release notes, sent for review (CLAUDE.md).
+# testing then goes to closed testing too, with its release notes, sent for review (CLAUDE.md); while Google reviews
+# closed testing, Play catch-up (play-catchup.yml) sends it there once the review is over.
 on:
   push:
     tags: ["v*"]
@@ -24,11 +25,6 @@ on:
         type: choice
         default: upload
         options: [upload, skip]
-      closed_testing:
-        description: "Internal track only: yes also releases the build to closed testing (alpha), completed, with its release notes"
-        type: choice
-        default: "yes"
-        options: ["yes", "no"]
 
 # One release at a time, whatever the tag: two uploads at once would race on the same Google Play app.
 concurrency:
@@ -50,7 +46,6 @@ jobs:
       TRACK: ${{ github.event.inputs.track || 'alpha' }}
       RELEASE_STATUS: ${{ github.event.inputs.status || 'completed' }}
       LISTING: ${{ github.event.inputs.listing || 'upload' }}
-      CLOSED_TESTING: ${{ github.event.inputs.closed_testing || 'yes' }}
       # Internal testing is not reviewed: its uploads must not cancel and restart a review in progress (Fastfile).
       KEEP_PLAY_REVIEW: ${{ (github.event.inputs.track || 'alpha') == 'internal' }}
     steps:
@@ -166,9 +161,11 @@ jobs:
         run: bundle exec fastlane android deploy
       - name: Closed testing
         # The same version code, from internal testing to closed testing, completed (sent for review) with the release
-        # notes, in a second edit; only when Google Play took the internal build. A refusal (a review in progress, a
-        # language the listing lacks) turns this step red with an error, while the internal build stays delivered.
-        if: env.TRACK == 'internal' && env.CLOSED_TESTING == 'yes' && steps.upload.outputs.delivered == 'true'
+        # notes, in a second edit; only when Google Play took the internal build. It commits with ERROR_IF_IN_REVIEW
+        # (KEEP_PLAY_REVIEW): while Google reviews something, Play refuses it and the step ends with a notice, and Play
+        # catch-up sends the newest build once the review is over. Any other refusal (a language the listing lacks)
+        # turns this step red with an error, while the internal build stays delivered.
+        if: env.TRACK == 'internal' && steps.upload.outputs.delivered == 'true'
         continue-on-error: true
         env:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
@@ -179,9 +176,9 @@ jobs:
             echo "::error::The review playlist does not answer: version code $VERSION_CODE stays in internal testing only, not sent to closed testing."
             exit 1
           fi
-          if TRACK=alpha RELEASE_STATUS=completed bundle exec fastlane android promote; then
+          if TRACK=alpha RELEASE_STATUS=completed bundle exec fastlane android promote 2>&1 | tee "$RUNNER_TEMP/promote.log"; then
             echo "Closed testing: version code $VERSION_CODE released (completed, sent for review)." >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "::error::Google Play refused the closed testing release of version code $VERSION_CODE (see the log of this step): it is in internal testing only. Run Promote Android with this version code once Google Play allows it."
-            exit 1
+            # A notice when changes are in review, else an error and a red step.
+            python3 -I .github/scripts/play_catchup.py outcome "$RUNNER_TEMP/promote.log"
           fi

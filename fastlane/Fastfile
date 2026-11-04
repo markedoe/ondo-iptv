@@ -7,7 +7,7 @@
 #   beta lanes DEVELOPMENT_TEAM (Apple team ID).
 #   android lanes: PLAY_SERVICE_ACCOUNT_JSON (Google Play service account key); deploy also reads TRACK
 #   (default internal) and RELEASE_STATUS (default completed, internal track only); promote reads VERSION_CODE,
-#   TRACK and RELEASE_STATUS (default completed).
+#   TRACK, RELEASE_STATUS (default completed) and KEEP_PLAY_REVIEW (true: refused while changes are in review).
 # Apple signing is automatic: Xcode uses the API key to create/download cloud-managed certificates and profiles.
 #
 # Paths: Ruby code and `sh` run in fastlane/, actions (deliver, gym…) from the repository root.
@@ -504,8 +504,9 @@ platform :android do
   rescue FastlaneCore::Interface::FastlaneError => e
     raise unless keep_review && e.message.match?(/review/i)
     # The bundle stays in the discarded edit; the next push's delivery sends one.
-    UI.important("Google Play has changes in review: this internal build was not sent, so as not to restart that review")
-    puts "::warning::Google Play has changes in review: this internal build was not sent (#{e.message.lines.first&.strip})"
+    UI.important("Google Play has changes in review: internal paused while Google reviews closed testing; it resumes automatically")
+    puts "::warning::Google Play has changes in review: internal paused while Google reviews closed testing; it resumes " \
+         "automatically with the next push to main after the review (#{e.message.lines.first&.strip})"
   end
 
   desc "Release a version of internal testing on a test track (VERSION_CODE, TRACK, RELEASE_STATUS) with its release notes: no new build"

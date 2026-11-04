@@ -32,9 +32,10 @@ screenshots.
     `edition: app-store` builds the App Store edition. Nothing is submitted for review without the user's go: pushing a
     version tag `vX.Y.Z` is that go (it submits iOS and macOS for App Review and sends Android, with its listing, to
     closed testing for review); a push to `main` reaches TestFlight (never submitted for App Review), Google Play
-    internal testing and Google Play closed testing, where Google reviews the release (`.github/workflows/deliver.yml`,
-    `release-android.yml`). The user has given a standing go for that: once CI is green, push to `main` without
-    asking first.
+    internal testing and Google Play closed testing, where Google reviews the release: closed testing receives the
+    latest internal build once any review in progress is over, and a review is never cancelled or restarted
+    (`.github/workflows/deliver.yml`, `release-android.yml`, `play-catchup.yml`). The user has given a standing go for
+    that: once CI is green, push to `main` without asking first.
   - No private API (no class, selector or symbol looked up by name, no method swapping), no code downloaded and run.
   - The Mac sandbox has only the entitlements a feature needs; never `com.apple.security.network.server` (App Review
     refused 1.1.0 for it: a player listens to no one), so the MKV remux and its 127.0.0.1 server are iPhone and iPad only.

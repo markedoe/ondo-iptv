@@ -235,6 +235,26 @@ class DeliverTests(WorkflowScriptTestCase):
                 self.assertIn("already waiting", output)
 
 
+class PlayCatchUpQueueTests(WorkflowScriptTestCase):
+    """play-catchup.yml: the hourly catch-up never pushes out a waiting run of the release-android group."""
+
+    def queue(self, runs: dict) -> str:
+        output_file = self.root / "output.txt"
+        output_file.write_text("", encoding="utf-8")
+        self.run_script(step_script("play-catchup.yml", "Nothing waiting in the release-android group"), runs,
+                        GITHUB_OUTPUT=str(output_file))
+        return output_file.read_text(encoding="utf-8")
+
+    def test_a_running_release_leaves_the_queue_free(self):
+        # Its own run waits behind it, which pushes out nothing.
+        self.assertEqual(self.queue({"release-android.yml": [run_in("in_progress")]}), "free=true\n")
+
+    def test_a_waiting_run_is_never_replaced(self):
+        for workflow in ("release-android.yml", "promote-android.yml", "play-status.yml"):
+            with self.subTest(waiting=workflow):
+                self.assertEqual(self.queue({workflow: [run_in("pending")]}), "free=false\n")
+
+
 class TestFlightEditionAgainTests(WorkflowScriptTestCase):
     """release.yml: after a tag's release, the TestFlight edition of the tag is built again for the testers."""
 

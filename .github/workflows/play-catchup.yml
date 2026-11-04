@@ -1,0 +1,97 @@
+name: Play catch-up
+
+# Closed testing receives the latest internal build once any review in progress is over (CLAUDE.md). Every hour: when
+# internal testing holds a newer version code than closed testing, that version code goes to closed testing, completed
+# (sent for review) with the release notes, like Release Android's Closed testing step. The commit uses
+# ERROR_IF_IN_REVIEW: while Google reviews something, Google Play refuses it, the run ends with a notice and the next
+# hour tries again; the review is never cancelled or restarted. Once promoted, closed testing holds that version code and
+# the next runs do nothing, so one update at a time waits for review. No API shows the review itself
+# (.github/scripts/play_catchup.py).
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "yes: read Google Play and say what would go to closed testing, without promoting"
+        type: choice
+        default: "no"
+        options: ["no", "yes"]
+
+permissions:
+  contents: read
+
+jobs:
+  queue:
+    name: Release queue
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    outputs:
+      free: ${{ steps.queue.outputs.free }}
+    steps:
+      - name: Nothing waiting in the release-android group
+        id: queue
+        # GitHub keeps one waiting run per concurrency group and a new one cancels it: this hourly run never pushes out
+        # a waiting Release Android (a tag's among them), Promote Android or Google Play status. The next hour tries again.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          for workflow in release-android.yml promote-android.yml play-status.yml; do
+            waiting=$(gh run list --repo "$REPO" --workflow "$workflow" --limit 20 --json status \
+              --jq '[.[] | select(.status == "queued" or .status == "pending" or .status == "waiting" or .status == "requested")] | length')
+            if [ "$waiting" -gt 0 ]; then
+              echo "A $workflow run is waiting: the next hour tries again."
+              echo "free=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "free=true" >> "$GITHUB_OUTPUT"
+
+  catchup:
+    name: Google Play
+    needs: queue
+    if: needs.queue.outputs.free == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # Never during an upload or a promotion: both would edit the same Google Play app.
+    concurrency:
+      group: release-android
+      cancel-in-progress: false
+    env:
+      DRY_RUN: ${{ github.event.inputs.dry_run || 'no' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Closed testing behind internal testing
+        id: decide
+        # Reads the tracks inside an edit that is deleted, never committed.
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: python3 -I .github/scripts/play_catchup.py decide
+      - name: Review playlist answers
+        # The Google Play reviewer tests with the review playlist.
+        if: steps.decide.outputs.version_code != '' && env.DRY_RUN != 'yes'
+        run: |
+          OWNER=$(echo "${GITHUB_REPOSITORY%%/*}" | tr '[:upper:]' '[:lower:]')
+          python3 .github/scripts/check_review_playlist.py --online "https://$OWNER.github.io/ondo-iptv/review/ondo-review.m3u"
+      - uses: ruby/setup-ruby@651ff0d62c5c79bed6d53ec518387aae20e72c1a # v1.329.0
+        if: steps.decide.outputs.version_code != '' && env.DRY_RUN != 'yes'
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Promote to closed testing
+        if: steps.decide.outputs.version_code != '' && env.DRY_RUN != 'yes'
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          VERSION_CODE: ${{ steps.decide.outputs.version_code }}
+        run: |
+          if KEEP_PLAY_REVIEW=true TRACK=alpha RELEASE_STATUS=completed bundle exec fastlane android promote 2>&1 | tee "$RUNNER_TEMP/promote.log"; then
+            echo "Closed testing: version code $VERSION_CODE released (completed, sent for review)." >> "$GITHUB_STEP_SUMMARY"
+          else
+            # A notice when changes are in review (the next hour tries again), else an error and a red step.
+            python3 -I .github/scripts/play_catchup.py outcome "$RUNNER_TEMP/promote.log"
+          fi
