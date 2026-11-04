@@ -175,7 +175,7 @@ class LiveMyListTest {
     private fun waitFor(timeout: Long = 8_000, condition: () -> Boolean) {
         val deadline = System.currentTimeMillis() + timeout
         while (!condition()) {
-            check(System.currentTimeMillis() < deadline) { "timed out; the focus is on ${focused()}" }
+            check(System.currentTimeMillis() < deadline) { "timed out; the focus is on ${focused()} (${focusedTag()})" }
             settle(60)
         }
     }
@@ -243,7 +243,8 @@ class LiveMyListTest {
         waitFor { !live().showingFavorites && live().channels.size == Fixtures.channels.size }
         compose.onNodeWithTag("liveAll").assertIsSelected()
         compose.onNodeWithTag("liveMyList").assertIsNotSelected()
-        assertEquals("liveAll", focusedTag())
+        // The remote stays on the choice it made, as the channels below change.
+        waitFor(3_000) { focusedTag() == "liveAll" }
         // Down into the channels, Up again: back on the choice shown, now All.
         press(Key.DirectionDown)
         assertTrue("on a channel: ${focused()}", focusedTag() != "liveAll" && !focusedTag().startsWith("tab"))
