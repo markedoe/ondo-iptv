@@ -24,12 +24,12 @@ snapshots the other wrote in `fixtures/sync/interop/` (see its README).
 Synced: the playlists (name, kind, address, login and password, guide address), My List and favourite channels,
 the actors and directors kept in My List, the lists (collections) with the people in them, playback progress (where each movie and episode was left, and what was finished), and the
 keys typed in Settings for outside services (the TMDb token, and the subtitle services' keys and OpenSubtitles account
-with the Addic7ed switch), the order of the rows of the Home, Movies and Series
-tabs with the rows hidden (Settings → Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's
-own My List, favourite channels, people, lists, progress and order of rows (docs/PROFILES.md), and the lists shared with
-every profile.
+with the Addic7ed switch), the order of the rows of the Home, Movies and Series tabs with the rows hidden (Settings →
+Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's own My List, favourite channels,
+people, lists, progress, order of rows and hidden categories, languages and styles (docs/PROFILES.md), and the lists
+shared with every profile.
 
-Stays on each device: the other settings, hidden categories, channel edits, reminders, profile PINs (never sent, salted
+Stays on each device: the other settings, hidden channels and channel edits, the category locks (Apple), reminders, profile PINs (never sent, salted
 or not: see docs/PROFILES.md), "Always open this profile", downloads, the catalogues themselves (each device downloads
 its playlists), and file playlists (a file imported on one device is not on the others).
 
@@ -117,6 +117,7 @@ an iPhone, iPad or Mac sent thus passes it on to the other Android devices.
   "people": [ … ],
   "keys": [ … ],
   "rows": [ … ],
+  "hiddenCategories": [ … ],
   "profiles": [ … ],
   "profileData": [ … ],
   "household": { "lists": [ … ], "deleted": { … } },
@@ -216,6 +217,52 @@ passes on: two Apple devices that sync only through it keep each their own order
 main profile's is `rows`, another profile's is in its `profileData`. The order a device kept before profiles had one
 each is the main profile's, with its time. A Kids profile cannot change its order.
 
+**Hidden categories** (the categories, languages and countries, and styles a profile hides: Settings → Categories,
+"Show only your languages?") — `{"kind", "value", "hiddenAt"}`, one record for each thing hidden:
+
+- `kind` `category`: one category of a playlist; `value` is `<playlist id>|<category id>`, the playlist's ID in lowercase,
+  then the category's ID as both apps make it from the playlist: `<type>-<the provider's ID>` for Xtream (`movie-12`,
+  `live-7`), `<type>-<hash of its name>` for M3U (the same `StableHash` on both platforms), the ID the titles name for a
+  category the panel does not list. Both platforms make the same ID from the same playlist, and the playlist's ID is the
+  one sync gives it (rule 4 of the merge makes one ID of the same playlist added twice), so the key is the same on every
+  device. Not the category's name: a panel can give two categories the same name, the app's own placeholder names
+  ("Other", "Uncategorized") are shown translated, and a category the provider renames would show again.
+- `kind` `tag`: a language or country tag, hidden in every playlist; `value` is the tag as both apps read it from the
+  names, in capitals (`PT` for "|PT| Filmes", `EX-YU`).
+- `kind` `word`: a style or a word, hidden in every playlist; `value` as both apps keep it (`manga`, a word typed in
+  lowercase without accents).
+
+Key: `hide:<kind>:<value>`; time: `hiddenAt` (set when it is hidden). Showing it again removes the record and adds its key
+to `deleted`, dated then. When more than 50 categories of one playlist and type are shown again at once (Show all on a
+large panel), the device adds instead one marker for that playlist and type, `hide:category:<playlist id>|<type>-*`
+(`movie-*`, `live-*`, `series-*`), dated then: it shows again every category of that playlist whose ID starts with
+`<type>-` and whose `hiddenAt` is not later (rule 3, as for its own key), and the device dates the categories of that
+type it still hides just after it. Thousands of categories shown again thus add one key per type to `deleted`, not one
+per category; 50 or fewer add one key each. The marker reaches further than the categories the viewer chose, in two
+ways: a category of that playlist and type that another device hid before the marker, and had not synced yet, is shown
+again everywhere for good; and a device that meets this one only through an older version (which passes the marker on
+but not the categories dated after it) shows again, until it meets a newer device, the categories this one kept hidden.
+A Kids profile on a device where a parent set a PIN keeps its own (below). Each record
+merges on its own (rule 2): hiding a category on one device and showing a language
+again on another keep both changes; a showing again later than the hide wins, a hide later than the showing again wins,
+and on equal times the showing again wins (rule 3). Readers drop records whose `kind` or `value` is blank, holds a control
+character (below U+0020, or U+007F) or is longer than 256 UTF-16 units, whose `kind` holds `:`, and a `category` whose
+`value` has no `|`; they lowercase the playlist ID of a `category`, and of `hide:category:` keys in `deleted`. Readers then
+keep the 5000 keys hidden last (the later `hiddenAt` first, then the smaller key in UTF-16 code units), in the snapshot's
+list and in each profile's (a merge keeps the same 5000); the device keeps its own past that limit, unless shown again. A
+device keeps and passes on the records of a kind it does not know. A category of a deleted playlist goes with it (rule 5);
+one of a replaced playlist becomes the kept one's (rule 1). The list is left out when it is empty, in the snapshot and in
+`profileData`: a snapshot without any is written, and digested, as an older version writes it. A snapshot without
+`hiddenCategories` (from an older version) shows nothing again: only `deleted` does. An older version drops the list from
+what it keeps and passes on, but keeps the `hide:` keys of `deleted` as any other and passes them on: a showing again
+travels through it, a hide does not (it travels once the devices meet a newer one), and nothing is lost. Each profile has
+its own: the main profile's is `hiddenCategories`, another profile's is in its `profileData`. A Kids profile cannot change
+its own (a parent can, docs/PROFILES.md); on a device where a parent set a PIN, a Kids profile keeps what it hides there
+when another device (where no PIN guards it) shows it again: the merge keeps the later showing again, the device keeps its
+hide with its own time, and nothing changes from one session to the next, as for the Kids switch; a hide received always
+applies. Categories that look adult stay hidden in a Kids profile whatever the list says. The categories of a file
+playlist, on its device only, are not sent.
+
 **Profiles** (docs/PROFILES.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` is a UUID in
 lowercase; the main profile's is `00000000-0000-0000-0000-000000000001`. `symbol` is `initial`, an icon name or an
 emoji. Never a PIN: a profile's PIN stays on its device. Key: `profile:<id>`; time: `updatedAt` (set when the profile is
@@ -223,7 +270,7 @@ added, renamed, or its colour, avatar or Kids switch changes; a new PIN alone is
 (the main one as each device makes it, "Me") is not sent. Deleting a profile adds `profile:<id>` to `deleted`; the main
 profile is never deleted (a deletion of it is ignored). Readers keep 16 profiles at most: the main one, then by ID.
 
-**Profile data** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "deleted"?}`: the records of a
+**Profile data** — `{"profile", "favorites"?, "progress"?, "lists"?, "people"?, "rows"?, "hiddenCategories"?, "deleted"?}`: the records of a
 profile other than the main one, by the same rules as the snapshot's own, with what was deleted in that profile. The
 main profile's records are the snapshot's own: an older device, which knows nothing of profiles, reads and writes the
 main profile's data, ignores `profiles` and `profileData`, and the format version stays 1. Data sent for the main
@@ -316,7 +363,8 @@ nothing.
    - person: not a string first: the one with an `image` wins; then the smaller `name`, then the smaller `image`;
    - key: `value`;
    - rows: the number of keys of `order` in decimal, a line feed, then the keys of `order` and of `hidden` joined with a
-     line feed (no key holds one).
+     line feed (no key holds one);
+   - hidden category: none (two records of the same key and time are the same).
 3. A record whose time is not later than its key's deletion time is dropped (on equal times, the deletion wins).
 4. **The same playlist added twice** (on two devices before they synced): playlists of the same `kind`, `url`
    (trimmed, then compared ignoring case) and `username` are one playlist. The one with the smallest `addedAt`
@@ -324,11 +372,12 @@ nothing.
    favourite, progress and list item, `playlist:<dropped id>` is added to `deleted` with the dropped
    playlist's `updatedAt`, and `<dropped id>` → `<kept id>` to `replaced`. Records that now share a key are merged
    again by rule 2.
-5. A favourite, progress or list item whose playlist is deleted (`playlist:<id>` is in `deleted` and no kept
+5. A favourite, progress, list item or hidden category whose playlist is deleted (`playlist:<id>` is in `deleted` and no kept
    playlist has that ID) is dropped. One whose playlist is simply unknown (a file playlist of another device) is
    kept.
 6. The result lists playlists by `addedAt` then `id`, favorites by `addedAt` then key, progress by `watchedAt`
-   (latest first) then key, lists by `id`, people by `addedAt` then key, keys by `service`, and rows by `tab`.
+   (latest first) then key, lists by `id`, people by `addedAt` then key, keys by `service`, rows by `tab`, and hidden
+   categories by key.
 7. **Lists merge part by part.** A list stays unless `list:<id>` is deleted at or after its latest `updatedAt`, which
    it keeps. Its name is the one with the latest `renamedAt` (then the smaller name). Its items are those of either
    side, one per key, the latest `addedAt` winning (then the smaller tie string of `title` and `image`, optional as in
@@ -371,8 +420,9 @@ nothing.
 
 A device keeps the merged snapshot as its own: it adds the playlists it did not have (and downloads them),
 updates the ones that changed, removes the deleted ones, and replaces its My List, favourite channels, people, lists (each profile's and the shared ones) and
-progress with the merged ones, saves the keys of the services it uses (removing those deleted), and keeps the
-merged order of the rows. It keeps
+progress with the merged ones, saves the keys of the services it uses (removing those deleted), keeps the
+merged order of the rows, and hides what the merge hides (with its own past the limit of 5000, unless shown again since).
+It keeps
 whatever it does not sync. The progress of a movie or episode playing on the device is not replaced while it
 plays: the one received waits, and applies when playback ends if it is the later. Nor is the catalogue reloaded
 under the player: when the playlist in use was deleted, replaced, or its address or login changed, the catalogue
@@ -387,7 +437,7 @@ changes made on different devices. Each device keeps `last`, the latest time it 
 sync data, and at launch never earlier than any time it holds):
 
 1. **A change made on the device** (a favourite added or removed, a position, a list edited, a playlist or a key
-   saved, any deletion) is dated `max(wall clock, last + 1)`, which becomes `last`. A change made after the device
+   saved, a category, language or style hidden or shown again, any deletion) is dated `max(wall clock, last + 1)`, which becomes `last`. A change made after the device
    saw another one is thus dated after it, whatever its wall clock says: a removal made after an add wins
    everywhere, and a position saved after one received wins over it.
 2. **A snapshot received** first loses the records and deletions dated more than **one day** after the receiver's

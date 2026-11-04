@@ -43,6 +43,9 @@ class SyncInteropTest {
     @Test
     fun deletionsSyncBetweenAndroidAndApple() = check("deletions")
 
+    @Test
+    fun hiddenCategoriesSyncBetweenAndroidAndApple() = check("hidden")
+
     /**
      * An iPhone shares a list; an older Android TV (which does not share lists) relays it to an iPad: the iPad keeps the
      * list where it was, never loses it.
@@ -318,6 +321,20 @@ object InteropScenarios {
                     profileData = listOf(SyncProfileData(SAM, favorites = listOf(SyncFavorite(SPORTS, "live", "c7", "Stadium One", null, script.at(20))))),
                 )
             }
+            // Each profile's hidden categories, languages and styles.
+            "hidden" -> {
+                val drama = SyncHidden.category(HOME, "movie-12", script.at(10))
+                val portuguese = SyncHidden(SyncHidden.TAG, "PT", script.at(11))
+                val manga = SyncHidden(SyncHidden.WORD, "manga", script.at(20))
+                val horror = SyncHidden.category(HOME, "movie-horror", script.at(30))
+                SyncSnapshot(
+                    device = "",
+                    playlists = listOf(home),
+                    hiddenCategories = listOf(drama, portuguese),
+                    profiles = profiles,
+                    profileData = listOf(SyncProfileData(SAM, hiddenCategories = listOf(manga)), SyncProfileData(KIDS, hiddenCategories = listOf(horror))),
+                )
+            }
             // Sam's list, before the iPhone shares it.
             "old-relay-share" -> {
                 val first = item(HOME, "movie", "m1", "Northern Lights", script.at(20))
@@ -387,6 +404,24 @@ object InteropScenarios {
                     ),
                 )
                 snapshot = SyncSharing.deleteShared(snapshot, CARTOONS, script.at(115))
+            }
+            "hidden" -> {
+                // The main profile hides Spanish; Sam shows manga again; a parent hides a live category in the Kids profile.
+                snapshot = snapshot.copy(hiddenCategories = snapshot.hiddenCategories + SyncHidden(SyncHidden.TAG, "ES", script.at(100)))
+                // A movie category hidden before the iPhone's Show all of the movies, and not synced yet: the marker shows it too.
+                snapshot = snapshot.copy(hiddenCategories = snapshot.hiddenCategories + SyncHidden.category(HOME, "movie-77", script.at(101)))
+                val t110 = script.at(110)
+                snapshot = snapshot.copy(
+                    profileData = snapshot.profileData.map {
+                        if (it.profile == SAM) it.copy(hiddenCategories = emptyList(), deleted = it.deleted + ("${SyncHidden.KEY_PREFIX}word:manga" to t110)) else it
+                    },
+                )
+                val t120 = script.at(120)
+                snapshot = snapshot.copy(
+                    profileData = snapshot.profileData.map {
+                        if (it.profile == KIDS) it.copy(hiddenCategories = it.hiddenCategories + SyncHidden.category(HOME, "live-7", t120)) else it
+                    },
+                )
             }
             "deletions" -> {
                 // The Sports playlist is deleted: its records go with it, in every profile.

@@ -42,4 +42,13 @@ sur l’autre, part (`sharedlistdeleted:`). Une liste partagée reprise dans le 
 averti, y ajoutait un élément : la liste est au profil principal, avec cet ajout. Les ID en majuscules sont mis en
 minuscules.
 
+`hidden-a.json` et `hidden-b.json` se fusionnent en `hidden-merged.json` de la même façon : les catégories, langues et
+styles que chaque profil masque, chacun seul. Une catégorie réaffichée après avoir été masquée part, une catégorie
+masquée de nouveau après un réaffichage reste (y compris une suppression dont l’identifiant de playlist est en
+majuscules), le plus récent de deux masquages d’une langue est gardé, un style masqué après un réaffichage plus ancien
+reste ; une marque Tout afficher (`…|live-*`, son identifiant de playlist en majuscules) réaffiche une catégorie live
+masquée avant elle et laisse masquée celle masquée après elle ; une catégorie d’une playlist supprimée part ; un élément d’un type que cette version ne connaît pas est gardé ;
+les valeurs vides, un type contenant `:` et une catégorie sans sa playlist sont écartés. Dans les données d’un autre
+profil, ses propres masquages et réaffichages s’appliquent, jamais ceux du profil principal.
+
 `interop/` contient des instantanés écrits par chaque cœur et fusionnés par l’autre (voir son README).

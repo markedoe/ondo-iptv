@@ -207,8 +207,8 @@ extension HelpTopic {
 
             Everything goes directly from one device to another on your network, never through the internet. There is \
             no pairing and logins and keys travel unencrypted on the network, so turn it on at home only. \
-            Other settings, hidden categories and playlists imported from a file stay on each device. Only the main \
-            profile syncs.
+            Each profile’s hidden categories, languages and styles follow it on your devices. Other settings and \
+            playlists imported from a file stay on each device.
             """
         ),
         HelpTopic(

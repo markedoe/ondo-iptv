@@ -69,7 +69,14 @@ library is the existing `library` document (the `profiles` document is written o
 main profile's. The settings are read as before; a missing `activeProfileID` opens the main profile. The order of the
 rows saved before each profile had its own becomes the main profile's, keeping its time (on Android it moves from the
 settings into the main library; on Apple the device's record in `sync.json` is the main profile's). A profile made
-before profiles synced gets a time at the next launch, so that it travels. Tests on both platforms open a store
+before profiles synced gets a time at the next launch, so that it travels.
+
+The hidden categories, languages and styles of each profile are dated once, at the first launch after the version that
+syncs them, with one time later than everything the device holds (on Apple, their earlier dates and the times some were
+shown again included; Android kept no times). So, at the first session of two updated devices that each hid different
+things in a profile, neither one's hides can be older than a showing again of the other's: each profile ends with both
+devices' hidden sets, nothing is shown again, and a later change on either device then wins as usual. Apple notes this
+dating in `sync.json` (`hiddenDated`), Android dates any hidden item without a time. Tests on both platforms open a store
 written by an earlier version and check that nothing is lost.
 
 ## Opening and switching
@@ -137,6 +144,12 @@ Every profile syncs, whichever is open (docs/SYNC.md, "Profiles"):
   new fields, and the format version does not change;
 - a profile's deletion loses to its data changed later on a device that had not heard of it: the profile comes back
   with that data (`fixtures/sync/profiles-late-*.json`);
+- each profile's hidden categories, languages and styles travel in its data, each one merged on its own: hiding on one
+  device hides in that profile on the others, showing again shows again, and the later change wins; a Kids profile
+  cannot change its own (a parent can, and the app models refuse it too, not only the screens); on a device where a
+  parent set a PIN, what a Kids profile hides there stays hidden when another device shows it again (a hide received
+  always applies), as its Kids switch stays on; and categories that look adult stay hidden in it whatever sync brings
+  (`fixtures/sync/hidden-*.json`);
 - the first time a device receives profiles, a profile of its own made apart (before profiles synced) is one with a
   received profile of the same name, whatever its case and accents, and the same Kids switch: the smaller ID is kept
   on both devices, the other is deleted, and its data goes into the one kept;

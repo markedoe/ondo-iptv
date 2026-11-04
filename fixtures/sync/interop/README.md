@@ -1,10 +1,11 @@
 # Android and Apple sync each other
 
 Snapshots made by the two cores, each read and merged by the other: the proof that an Android device and an iPhone, iPad
-or Mac sync profiles, each profile's data, row orders, shared lists and deletions with each other, beyond the
+or Mac sync profiles, each profile's data, row orders, shared lists, hidden categories and deletions with each other, beyond the
 hand-written examples of `fixtures/sync`.
 
-For each scenario (`profiles`, `shared-lists`, `deletions`), both devices start from the same data (what they had after
+For each scenario (`profiles`, `shared-lists`, `deletions`, `hidden`: each profile's hidden categories, languages and
+styles, hidden and shown again on either side), both devices start from the same data (what they had after
 an earlier session), scripted the same way in both cores, with every time given by a `SyncClock` at a known wall time.
 Then each changes things on its own, and they have one session, the iPhone as the client:
 

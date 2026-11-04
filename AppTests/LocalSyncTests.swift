@@ -626,6 +626,156 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertFalse(first.profiles.contains { $0.id == guest.id })
     }
 
+    // MARK: Hidden categories (docs/SYNC.md, "Hidden categories")
+
+    private func hides(_ model: AppModel) -> (categories: Set<String>, tags: Set<String>, words: Set<String>) {
+        (model.library.hiddenCategoryKeys, Set(model.library.hiddenCategoryTags.keys), Set(model.library.hiddenCategoryWords.keys))
+    }
+
+    /// A category, a language and a style hidden in a profile on one device are hidden in that profile on the other, and
+    /// only there; shown again there, they are shown again on the first; hidden again later, hidden again.
+    func testHiddenCategoriesReachTheSameProfileAndShowingAgainFollows() async throws {
+        let first = try await deviceWithLibrary()
+        let second = try await device("second")
+        let playlist = try XCTUnwrap(first.activePlaylist)
+        let category = try XCTUnwrap(first.content.movieCategories.first)
+        let key = UserLibrary.categoryKey(playlistID: playlist.id, categoryID: category.id)
+        let sam = first.addProfile(name: "Sam", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        await second.applySync(first.syncSnapshot())
+        first.switchProfile(to: sam)
+        first.setHidden(true, category: category)
+        first.setHidden(true, tag: "PT")
+        first.setHidden(true, word: "manga")
+        await second.applySync(first.syncSnapshot())
+        // The second device's main profile (open) hides nothing; its Sam hides them all.
+        XCTAssertTrue(hides(second).categories.isEmpty && hides(second).tags.isEmpty && hides(second).words.isEmpty)
+        second.switchProfile(to: try XCTUnwrap(second.profiles.first { $0.id == sam.id }))
+        XCTAssertEqual(hides(second).categories, [key])
+        XCTAssertEqual(hides(second).tags, ["PT"])
+        XCTAssertEqual(hides(second).words, ["manga"])
+        // Shown again there: shown again on the first device; the style stays hidden.
+        let shownAt = second.syncStamp()
+        second.updateLibrary { library in
+            library.setHidden(false, playlistID: playlist.id, categoryID: category.id, now: shownAt)
+            library.setHidden(false, tag: "PT", now: shownAt)
+        }
+        await first.applySync(second.syncSnapshot())
+        XCTAssertTrue(hides(first).categories.isEmpty)
+        XCTAssertTrue(hides(first).tags.isEmpty)
+        XCTAssertEqual(hides(first).words, ["manga"])
+        // Hidden again on the first device after that: hidden again on the second.
+        first.setHidden(true, tag: "PT")
+        await second.applySync(first.syncSnapshot())
+        XCTAssertEqual(hides(second).tags, ["PT"])
+        // The main profile never hid anything, on either device.
+        for model in [first, second] {
+            model.switchProfile(to: try XCTUnwrap(model.profiles.first(where: \.isMain)))
+            XCTAssertTrue(hides(model).categories.isEmpty && hides(model).tags.isEmpty && hides(model).words.isEmpty)
+        }
+    }
+
+    /// Hidden sets kept before they synced are dated once, at the first launch after the update, after everything the
+    /// device holds (an earlier showing again included): at the first session two devices' sets add up, nothing is shown
+    /// again, though one device showed a language again after the other hid it.
+    func testHiddenSetsKeptBeforeTheySyncedAddUpAtTheFirstSession() async throws {
+        let playlistID = UUID()
+        let year2020 = Date(timeIntervalSince1970: 1_580_000_000), year2021 = Date(timeIntervalSince1970: 1_610_000_000)
+        var tvLibrary = UserLibrary(hiddenCategoryKeys: [UserLibrary.categoryKey(playlistID: playlistID, categoryID: "movie-1")])
+        tvLibrary.hiddenCategoryTags["PT"] = year2020
+        tvLibrary.shownCategoryTags["ES"] = year2021
+        var phoneLibrary = UserLibrary(hiddenCategoryKeys: [UserLibrary.categoryKey(playlistID: playlistID, categoryID: "movie-2")])
+        phoneLibrary.hiddenCategoryTags["ES"] = year2020
+        phoneLibrary.hiddenCategoryWords["manga"] = year2020
+        func written(_ name: String, _ library: UserLibrary) async throws -> AppModel {
+            let folder = root.appendingPathComponent(name, isDirectory: true)
+            try FileStore(directory: folder.appendingPathComponent("Support", isDirectory: true)).save(library, name: "library")
+            return try await device(name)
+        }
+        let tv = try await written("tv", tvLibrary)
+        let phone = try await written("phone", phoneLibrary)
+        // Dated at launch, after everything held, and kept so.
+        for model in [tv, phone] {
+            XCTAssertTrue(model.library.categoryHiddenAt.values.allSatisfy { $0 > year2021 })
+            XCTAssertTrue(model.library.hiddenCategoryTags.values.allSatisfy { $0 > year2021 })
+            XCTAssertTrue(model.syncState.hiddenDated)
+        }
+        await tv.applySync(phone.syncSnapshot())
+        await phone.applySync(tv.syncSnapshot())
+        for model in [tv, phone] {
+            XCTAssertEqual(hides(model).categories, [UserLibrary.categoryKey(playlistID: playlistID, categoryID: "movie-1"),
+                                                     UserLibrary.categoryKey(playlistID: playlistID, categoryID: "movie-2")])
+            XCTAssertEqual(hides(model).tags, ["PT", "ES"])
+            XCTAssertEqual(hides(model).words, ["manga"])
+        }
+        // Once: a relaunch dates nothing again.
+        let dates = tv.library.hiddenCategoryTags.mapValues(\.syncMilliseconds)
+        tv.flush()
+        let again = AppModel(storageRoot: root.appendingPathComponent("tv", isDirectory: true), secrets: InMemorySecretStore(),
+                             reminderScheduler: InMemoryReminderScheduler())
+        await again.bootstrap()
+        XCTAssertEqual(again.library.hiddenCategoryTags.mapValues(\.syncMilliseconds), dates)
+    }
+
+    /// An adult-looking category shown again by sync stays out of a Kids profile, whatever sync says (docs/PROFILES.md).
+    func testACategoryShownAgainBySyncStaysOutOfAKidsProfileWhenItLooksAdult() async throws {
+        let first = try await deviceWithLibrary()
+        let second = try await device("second")
+        let playlist = try XCTUnwrap(first.activePlaylist)
+        let adult = MediaCategory(id: "movie-99", name: "Adult XXX", type: .movie)
+        let kids = first.addProfile(name: "Kids", colorIndex: 4, symbol: Profile.initialSymbol, isKids: true, pin: nil)
+        first.switchProfile(to: kids)
+        first.isParentalUnlocked = true
+        first.setHidden(true, category: adult)
+        await second.applySync(first.syncSnapshot())
+        second.switchProfile(to: try XCTUnwrap(second.profiles.first { $0.id == kids.id }))
+        let shownAt = second.syncStamp()
+        second.updateLibrary { $0.setHidden(false, playlistID: playlist.id, categoryID: adult.id, now: shownAt) }
+        await first.applySync(second.syncSnapshot())
+        XCTAssertFalse(first.library.isHidden(playlistID: playlist.id, categoryID: adult.id), "shown again, as sync says")
+        XCTAssertTrue(first.isHiddenForKids(adult), "still out: it looks adult")
+    }
+
+    /// A parent hides "Horror" for the Kids profile on a TV with a PIN (the Kids profile alone cannot); on an iPad without
+    /// a PIN, the child shows it again. After sync the TV still hides it, and nothing changes from one session to the next;
+    /// the iPad keeps the child's choice. A hide made on the iPad still reaches the TV.
+    func testAKidsProfileKeepsWhatAParentHidOnADeviceWithAPIN() async throws {
+        let tv = try await deviceWithLibrary()
+        let ipad = try await device("second")
+        let playlist = try XCTUnwrap(tv.activePlaylist)
+        let horror = MediaCategory(id: "movie-horror", name: "Horror", type: .movie)
+        let kids = tv.addProfile(name: "Kids", colorIndex: 4, symbol: Profile.initialSymbol, isKids: true, pin: nil)
+        tv.setParentalPIN("1357")
+        tv.switchProfile(to: kids)
+        func hidesHorror(_ model: AppModel) -> Bool { model.library.isHidden(playlistID: playlist.id, categoryID: horror.id) }
+        // Locked: the Kids profile changes nothing until a parent unlocks it, whatever screen asks.
+        tv.setHidden(true, category: horror)
+        tv.setHidden(true, tag: "PT")
+        tv.setHidden(true, tags: ["ES"])
+        tv.setHidden(true, word: "manga")
+        XCTAssertTrue(hides(tv).categories.isEmpty && hides(tv).tags.isEmpty && hides(tv).words.isEmpty)
+        XCTAssertTrue(tv.verifyParentalPIN("1357"))
+        tv.setHidden(true, category: horror)
+        XCTAssertTrue(hidesHorror(tv))
+        await ipad.applySync(tv.syncSnapshot())
+        ipad.switchProfile(to: try XCTUnwrap(ipad.profiles.first { $0.id == kids.id }))
+        XCTAssertTrue(hidesHorror(ipad))
+        // No PIN on the iPad: its Kids settings open, and the child shows it again.
+        ipad.isParentalUnlocked = true
+        ipad.setHidden(false, category: horror)
+        XCTAssertFalse(hidesHorror(ipad))
+        await tv.applySync(ipad.syncSnapshot())
+        XCTAssertTrue(hidesHorror(tv), "the TV keeps the parent's choice")
+        let kept = tv.library
+        await tv.applySync(ipad.syncSnapshot())
+        XCTAssertEqual(tv.library, kept, "nothing changes from one session to the next")
+        await ipad.applySync(tv.syncSnapshot())
+        XCTAssertFalse(hidesHorror(ipad), "the iPad keeps the child's")
+        // A hide still applies on the TV.
+        ipad.setHidden(true, word: "anime")
+        await tv.applySync(ipad.syncSnapshot())
+        XCTAssertTrue(tv.library.isHidden(word: "anime"))
+    }
+
     // MARK: Review fixes (profiles)
 
     /// S5: a film keeps saving into the profile it started in after a switch, and nowhere once that profile is deleted.

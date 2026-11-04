@@ -296,6 +296,41 @@ public struct UserLibrary: Codable, Hashable, Sendable {
         }
     }
 
+    /// Hides or shows several categories at once (Hide All, Show All). More than `SyncHidden.showAllThreshold` of one type
+    /// shown again leave one "shown again" marker for that type (`<playlist>|<type>-*` in `categoryShownAt`, docs/SYNC.md "Hidden categories") instead of
+    /// one each; the categories of those types still hidden are dated `after`, so that the marker leaves them hidden on the
+    /// other devices.
+    public mutating func setHidden(_ hidden: Bool, playlistID: UUID, categoryIDs: [String], now: Date = Date(), after: Date? = nil) {
+        let keys = categoryIDs.map { Self.categoryKey(playlistID: playlistID, categoryID: $0) }
+        let shown = keys.filter { hiddenCategoryKeys.contains($0) }
+        var counts: [String: Int] = [:]
+        for key in shown { if let marker = Self.showAllMarker(key) { counts[marker, default: 0] += 1 } }
+        let markers = Set(counts.filter { $0.value > SyncHidden.showAllThreshold }.keys)
+        guard !hidden, !markers.isEmpty else {
+            for id in categoryIDs { setHidden(hidden, playlistID: playlistID, categoryID: id, now: now) }
+            return
+        }
+        for key in shown {
+            hiddenCategoryKeys.remove(key)
+            categoryHiddenAt[key] = nil
+            categoryShownAt[key] = Self.showAllMarker(key).map { markers.contains($0) } == true ? nil : now
+        }
+        for marker in markers { categoryShownAt[marker] = now }
+        let later = after ?? now.addingTimeInterval(0.001)
+        for key in hiddenCategoryKeys where Self.showAllMarker(key).map({ markers.contains($0) }) == true {
+            categoryHiddenAt[key] = later
+        }
+    }
+
+    /// The "shown again" marker of the categories of the same playlist and type as `key` (`<playlist>|<type>-<id>`):
+    /// `<playlist>|<type>-*`; nil when the category's ID has no type.
+    public static func showAllMarker(_ key: String) -> String? {
+        guard !key.hasSuffix("-*"), let bar = key.firstIndex(of: "|") else { return nil }
+        let start = key.index(after: bar)
+        guard let dash = key[start...].firstIndex(of: "-"), dash > start else { return nil }
+        return String(key[..<dash]) + "-*"
+    }
+
     /// Whether every category carrying this tag is hidden, in all playlists.
     public func isHidden(tag: String) -> Bool {
         hiddenCategoryTags[tag] != nil

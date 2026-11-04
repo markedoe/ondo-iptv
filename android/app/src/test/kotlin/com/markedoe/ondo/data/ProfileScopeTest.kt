@@ -31,8 +31,7 @@ import org.robolectric.RobolectricTestRunner
  * What is every profile's and what is each profile's own (docs/PROFILES.md), on every surface: one list of each, so that
  * a new shared or per-profile item is added here. A shared item changed or removed in a profile that is not the main one
  * is the same in every profile, here and, once synced, on the other device. A per-profile item changed in one profile
- * leaves the others alone, and syncs to the same profile on the other device (or stays on the device, as docs/SYNC.md
- * says of the hidden categories and languages).
+ * leaves the others alone, and syncs to the same profile on the other device.
  */
 @RunWith(RobolectricTestRunner::class)
 class ProfileScopeTest {
@@ -177,18 +176,20 @@ class ProfileScopeTest {
             read = { library.rowOrders.firstOrNull { it.tab == tab }?.let { it.order to it.hidden } },
         )
     } + listOf(
-        // Hidden categories and languages stay on the device (docs/SYNC.md): each profile's there.
         PerProfile(
             name = "hidden categories",
-            syncs = false,
             set = { repository.setCategoryHidden("m-drama", true) },
             read = { library.hiddenCategories.takeIf { it.isNotEmpty() } },
         ),
         PerProfile(
             name = "hidden languages",
-            syncs = false,
             set = { repository.setTagsHidden(listOf("PT"), true) },
             read = { library.hiddenTags.takeIf { "PT" in it } },
+        ),
+        PerProfile(
+            name = "hidden words",
+            set = { repository.setWordHidden("manga", true) },
+            read = { library.hiddenWords.takeIf { "manga" in it } },
         ),
         PerProfile(
             name = "My List",

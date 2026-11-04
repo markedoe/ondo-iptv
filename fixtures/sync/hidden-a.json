@@ -1,0 +1,37 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "55555555-5555-4555-8555-555555555555",
+  "deviceName": "Living room TV",
+  "playlists": [
+    { "id": "a1000000-0000-4000-8000-00000000000a", "name": "Home", "kind": "m3u", "url": "http://example.com/home.m3u", "addedAt": 10, "updatedAt": 10 },
+    { "id": "b2000000-0000-4000-8000-00000000000b", "name": "Spare", "kind": "m3u", "url": "http://example.com/spare.m3u", "addedAt": 20, "updatedAt": 20 }
+  ],
+  "hiddenCategories": [
+    { "kind": "category", "value": "a1000000-0000-4000-8000-00000000000a|movie-12", "hiddenAt": 100 },
+    { "kind": "category", "value": "a1000000-0000-4000-8000-00000000000a|live-7", "hiddenAt": 300 },
+    { "kind": "category", "value": "a1000000-0000-4000-8000-00000000000a|live-8", "hiddenAt": 100 },
+    { "kind": "category", "value": "A1000000-0000-4000-8000-00000000000A|series-3", "hiddenAt": 140 },
+    { "kind": "category", "value": "b2000000-0000-4000-8000-00000000000b|movie-1", "hiddenAt": 500 },
+    { "kind": "tag", "value": "PT", "hiddenAt": 120 },
+    { "kind": "word", "value": "manga", "hiddenAt": 130 },
+    { "kind": "channel", "value": "a1000000-0000-4000-8000-00000000000a|News 24", "hiddenAt": 160 },
+    { "kind": "tag", "value": " ", "hiddenAt": 170 },
+    { "kind": "odd:kind", "value": "x", "hiddenAt": 170 },
+    { "kind": "category", "value": "no-playlist", "hiddenAt": 170 }
+  ],
+  "profiles": [
+    { "id": "c3000000-0000-4000-8000-00000000000c", "name": "Sam", "colorIndex": 1, "symbol": "initial", "kids": false, "updatedAt": 5 }
+  ],
+  "profileData": [
+    {
+      "profile": "c3000000-0000-4000-8000-00000000000c",
+      "hiddenCategories": [
+        { "kind": "tag", "value": "ES", "hiddenAt": 100 }
+      ]
+    }
+  ],
+  "deleted": {
+    "hide:word:anime": 90
+  }
+}

@@ -5,8 +5,7 @@ import IPTVCore
 /// What is every profile's and what is each profile's own (docs/PROFILES.md), on every surface: one list of each, so that
 /// a new shared or per-profile item is added here. A shared item changed or removed in a profile that is not the main one
 /// is the same in every profile, here and, once synced, on the other device. A per-profile item changed in one profile
-/// leaves the others alone, and syncs to the same profile on the other device (or stays on the device, as docs/SYNC.md
-/// says of the hidden categories and languages).
+/// leaves the others alone, and syncs to the same profile on the other device.
 @MainActor
 final class ProfileScopeTests: XCTestCase {
     private var root: URL!
@@ -141,13 +140,15 @@ final class ProfileScopeTests: XCTestCase {
                        set: { $0.setRowOrder(tab: tab, arranged: arranged, hidden: [arranged.last!]) },
                        read: { model in Self.found(model.savedRowOrder(tab: tab).map { rows in rows.order + ["|"] + rows.hidden }) })
         } + [
-            // Hidden categories and languages stay on the device (docs/SYNC.md): each profile's there.
-            PerProfile(name: "hidden categories", syncs: false,
+            PerProfile(name: "hidden categories",
                        set: { model in model.setHidden(true, category: try XCTUnwrap(model.categories(for: .movie).first)) },
                        read: { $0.library.hiddenCategoryKeys.isEmpty ? nil : AnyHashable($0.library.hiddenCategoryKeys) }),
-            PerProfile(name: "hidden languages", syncs: false,
+            PerProfile(name: "hidden languages",
                        set: { $0.setHidden(true, tag: "PT") },
                        read: { $0.hiddenTags.contains("PT") ? AnyHashable("PT") : nil }),
+            PerProfile(name: "hidden words",
+                       set: { $0.setHidden(true, word: "manga") },
+                       read: { $0.library.hiddenCategoryWords["manga"] != nil ? AnyHashable("manga") : nil }),
             PerProfile(name: "My List",
                        set: { model in model.toggleFavorite(try XCTUnwrap(model.content.movies.first)) },
                        read: { model in Self.found(model.library.favorites.first { $0.reference.type == .movie }?.reference.itemID) }),

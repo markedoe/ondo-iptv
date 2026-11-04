@@ -29,6 +29,8 @@ final class SyncInteropTests: XCTestCase {
 
     func testDeletionsSyncBetweenAndroidAndApple() throws { try check("deletions") }
 
+    func testHiddenCategoriesSyncBetweenAndroidAndApple() throws { try check("hidden") }
+
     /// An iPhone shares a list; an older Android TV (which does not share lists) relays it to an iPad: the iPad keeps the
     /// list where it was, never loses it.
     func testAListSharedBehindAnOlderAndroidDeviceIsNotLost() throws {
@@ -372,6 +374,16 @@ enum InteropScenarios {
                 profileData: [SyncProfileData(profile: sam, lists: [movieList])],
                 household: SyncHousehold(lists: [roadList, cartoonList])
             )
+        case "hidden":
+            // Each profile's hidden categories, languages and styles.
+            let drama = SyncHidden.forCategory(playlistID: home, categoryID: "movie-12", hiddenAt: script.at(10))
+            let portuguese = SyncHidden(kind: SyncHidden.tag, value: "PT", hiddenAt: script.at(11))
+            let manga = SyncHidden(kind: SyncHidden.word, value: "manga", hiddenAt: script.at(20))
+            let horror = SyncHidden.forCategory(playlistID: home, categoryID: "movie-horror", hiddenAt: script.at(30))
+            return SyncSnapshot(
+                device: "", playlists: [homePlaylist], hiddenCategories: [drama, portuguese], profiles: profiles,
+                profileData: [SyncProfileData(profile: sam, hiddenCategories: [manga]), SyncProfileData(profile: kids, hiddenCategories: [horror])]
+            )
         case "old-relay-share", "old-relay-take-back":
             // Sam's list (before the iPhone shares it), or the same list shared (before the iPhone takes it back).
             let first = item(home, "movie", "m1", "Northern Lights", script.at(20))
@@ -442,6 +454,18 @@ enum InteropScenarios {
                 snapshot.household?.lists[index].renamedAt = t112
                 snapshot.household?.lists[index].updatedAt = t112
             }
+        case "hidden":
+            // The main profile shows Portuguese again; Sam hides a series category.
+            let t105 = script.at(105)
+            snapshot.hiddenCategories.removeAll { $0.kind == SyncHidden.tag && $0.value == "PT" }
+            snapshot.deleted[SyncHidden.keyPrefix + "tag:PT"] = t105
+            let samIndex = snapshot.profileData.firstIndex { $0.profile == sam } ?? 0
+            snapshot.profileData[samIndex].hiddenCategories.append(
+                SyncHidden.forCategory(playlistID: home, categoryID: "series-4", hiddenAt: script.at(115)))
+            // Show all of the movie categories, past the threshold: one marker, the movies hidden before it shown again.
+            let t118 = script.at(118)
+            snapshot.hiddenCategories.removeAll { $0.kind == SyncHidden.category && $0.value.hasPrefix(home + "|movie-") }
+            snapshot.deleted[SyncHidden.categoryKeyPrefix + home + "|movie" + SyncHidden.showAll] = t118
         case "old-relay-share":
             snapshot = SyncSharing.share(snapshot, list: movieNight, from: sam, removedAt: script.at(100), placedAt: script.at(101))
         case "old-relay-take-back":

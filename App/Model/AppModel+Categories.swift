@@ -113,7 +113,10 @@ extension AppModel {
     }
 
     func setHidden(_ hidden: Bool, word: String) {
-        updateLibrary { $0.setHidden(hidden, word: word) }
+        guard canChangeHiddenCategories else { return }
+        let now = syncStamp()
+        updateLibrary { $0.setHidden(hidden, word: word, now: now) }
+        syncSoon()
     }
 
     /// Words the viewer hid that are not one of the known styles, alphabetically.
@@ -150,13 +153,19 @@ extension AppModel {
     }
 
     func setHidden(_ hidden: Bool, tag: String) {
-        updateLibrary { $0.setHidden(hidden, tag: tag) }
+        guard canChangeHiddenCategories else { return }
+        let now = syncStamp()
+        updateLibrary { $0.setHidden(hidden, tag: tag, now: now) }
+        syncSoon()
     }
 
     func setHidden(_ hidden: Bool, tags: [String]) {
+        guard canChangeHiddenCategories else { return }
+        let now = syncStamp()
         updateLibrary { library in
-            for tag in tags { library.setHidden(hidden, tag: tag) }
+            for tag in tags { library.setHidden(hidden, tag: tag, now: now) }
         }
+        syncSoon()
     }
 
     /// Categories of this type hidden by the viewer (on their own or with their tag).

@@ -1,0 +1,34 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "66666666-6666-4666-8666-666666666666",
+  "deviceName": "Phone",
+  "playlists": [
+    { "id": "a1000000-0000-4000-8000-00000000000a", "name": "Home", "kind": "m3u", "url": "http://example.com/home.m3u", "addedAt": 10, "updatedAt": 10 }
+  ],
+  "hiddenCategories": [
+    { "kind": "tag", "value": "PT", "hiddenAt": 110 },
+    { "kind": "word", "value": "anime", "hiddenAt": 95 }
+  ],
+  "profiles": [
+    { "id": "c3000000-0000-4000-8000-00000000000c", "name": "Sam", "colorIndex": 1, "symbol": "initial", "kids": false, "updatedAt": 5 }
+  ],
+  "profileData": [
+    {
+      "profile": "c3000000-0000-4000-8000-00000000000c",
+      "hiddenCategories": [
+        { "kind": "category", "value": "a1000000-0000-4000-8000-00000000000a|movie-12", "hiddenAt": 120 }
+      ],
+      "deleted": {
+        "hide:tag:ES": 150
+      }
+    }
+  ],
+  "deleted": {
+    "hide:category:a1000000-0000-4000-8000-00000000000a|movie-12": 150,
+    "hide:category:a1000000-0000-4000-8000-00000000000a|live-7": 200,
+    "hide:category:A1000000-0000-4000-8000-00000000000A|live-*": 250,
+    "hide:category:A1000000-0000-4000-8000-00000000000A|series-3": 130,
+    "playlist:b2000000-0000-4000-8000-00000000000b": 400
+  }
+}

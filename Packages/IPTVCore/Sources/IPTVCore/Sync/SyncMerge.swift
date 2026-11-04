@@ -84,6 +84,16 @@ public enum SyncMerge {
         let keys = pick(left.keys + right.keys, key: \.key, time: \.updatedAt, tie: { $0.value.isBefore($1.value) }, deleted: deleted)
         // Likewise for the order of the rows: a side without it (an older version) changes none.
         let rows = pick(left.rows + right.rows, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: deleted)
+        // Each hidden category, language or style on its own: the later hiding or showing again wins; a side without them
+        // (an older version) shows none again. A category of a replaced playlist becomes the kept one's, and goes with a
+        // deleted one.
+        let hiddenCategories = SyncHidden.capped(
+            pick((left.hiddenCategories + right.hiddenCategories).map { $0.withPlaylist(id) }, key: \.key, time: \.hiddenAt,
+                 tie: { $0.key.isBefore($1.key) }, deleted: deleted)
+                .filter { hidden in hidden.playlist.map(alive) ?? true }
+                // A "Show all" marker shows again every category of its playlist and type hidden before it.
+                .filter { hidden in SyncHidden.shownAt(hidden.key, in: deleted).map { $0 < hidden.hiddenAt } ?? true }
+        )
         let keptPlaylists = kept.sorted { before(($0.addedAt, $0.id), ($1.addedAt, $1.id)) }
         // The profiles' buckets without the lists rule 9 placed, then those it placed in each, with its deletions.
         let buckets = (left.profileData + right.profileData).map { bucket in
@@ -109,6 +119,7 @@ public enum SyncMerge {
         result.people = people.sorted { before(($0.addedAt, $0.key), ($1.addedAt, $1.key)) }
         result.keys = keys.sorted { $0.service.isBefore($1.service) }
         result.rows = SyncRows.capped(rows).sorted { $0.tab.isBefore($1.tab) }
+        result.hiddenCategories = hiddenCategories.sorted { $0.key.isBefore($1.key) }
         result.profiles = profiles
         result.profileData = profileData
         result.household = household

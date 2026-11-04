@@ -2,6 +2,7 @@ package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.sync.SyncFavorite
+import com.markedoe.ondo.core.sync.SyncHidden
 import com.markedoe.ondo.core.sync.SyncHousehold
 import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncList
@@ -42,6 +43,24 @@ object SyncKeys {
         SyncList.ITEM_PREFIX + listId.lowercase() + "|" +
             (if (item.kind == ItemKind.PERSON) person(item.itemId) else "${item.playlistId.lowercase()}|${kind(item.kind)}|${item.itemId}")
     fun progress(entry: WatchEntry) = "progress:${entry.playlistId.lowercase()}|${kind(entry.kind)}|${entry.itemId}|${entry.episodeId.orEmpty()}"
+
+    /** A hidden category, tag or word (docs/SYNC.md, "Hidden categories"): `hide:category:<playlist>|<category>`, `hide:tag:<tag>`, `hide:word:<word>`. */
+    fun hiddenCategory(playlistId: String, categoryId: String) = SyncHidden.category(playlistId, categoryId, 0).key
+    fun hiddenTag(tag: String) = SyncHidden(SyncHidden.TAG, tag, 0).key
+    fun hiddenWord(word: String) = SyncHidden(SyncHidden.WORD, word, 0).key
+
+    /** The sync key of a hidden category as the library keeps it (`<playlist>|<category>`); null when it is not one. */
+    fun hiddenCategoryOf(local: String): String? = local.indexOf('|').takeIf { it > 0 }?.let { hiddenCategory(local.substring(0, it), local.substring(it + 1)) }
+
+    /** The record of [key] (`hide:<kind>:<value>`) when its kind is one this version does not know: kept to pass it on. */
+    fun otherHidden(key: String, time: Long): SyncHidden? {
+        if (!key.startsWith(SyncHidden.KEY_PREFIX)) return null
+        val colon = key.indexOf(':', SyncHidden.KEY_PREFIX.length).takeIf { it > 0 } ?: return null
+        val kind = key.substring(SyncHidden.KEY_PREFIX.length, colon)
+        return if (kind in KNOWN_HIDDEN) null else SyncHidden(kind, key.substring(colon + 1), time)
+    }
+
+    private val KNOWN_HIDDEN = setOf(SyncHidden.CATEGORY, SyncHidden.TAG, SyncHidden.WORD)
 
     /** A person kept (in My List or a list) travels as a person, whatever the playlist; the rest as a favourite. */
     fun isPerson(favorite: Favorite) = favorite.kind == ItemKind.PERSON
@@ -112,6 +131,7 @@ object SyncData {
         state.library.syncDeleted,
         state.library.history.filter(SyncKeys::syncs).map { it.key to it.isFinished },
         state.library.rowOrders,
+        state.library.hiddenAt,
         state.household.collections,
         state.household.syncDeleted,
         state.settings.serviceKeys,
@@ -188,7 +208,10 @@ object SyncData {
         )
     }
 
-    /** A profile's library as records: its My List, favourite channels, progress, lists, people, rows and deletions. */
+    /**
+     * A profile's library as records: its My List, favourite channels, progress, lists, people, rows, hidden categories
+     * and deletions.
+     */
     private fun libraryRecords(library: LibraryState, travels: (String) -> Boolean) = SyncSnapshot(
         device = "",
         favorites = library.favorites.filter { !SyncKeys.isPerson(it) && travels(it.playlistId) }.map { favorite ->
@@ -224,6 +247,7 @@ object SyncData {
         },
         people = library.favorites.filter(SyncKeys::isPerson).map(SyncKeys::syncPerson),
         rows = library.rowOrders,
+        hiddenCategories = library.hiddenRecords(travels),
         deleted = library.syncDeleted,
     )
 
@@ -307,7 +331,11 @@ object SyncData {
         val replacements = removed.mapNotNull { old -> replacement(old.id)?.let { old.id to it.id } }
         val context = Context(state, merged, ::local, removed.mapTo(HashSet()) { it.id }, replacements, now)
 
-        val mainLibrary = applyLibrary(main(state, libraries), merged, context, isMain = true)
+        // A Kids profile on a device where a parent set a PIN keeps what it hides: a showing again from another device (where
+        // no PIN guards it) does not apply here, as the Kids switch does not (docs/PROFILES.md, "Kids").
+        val parentProtected = state.profiles.any { !it.isKids && it.isProtected }
+        val mainKids = state.profiles.firstOrNull { it.isMain }?.isKids == true
+        val mainLibrary = applyLibrary(main(state, libraries), merged, context, isMain = true, keepsHidden = mainKids && parentProtected)
 
         // The profiles: the merged ones, each keeping its PIN; one deleted elsewhere goes (never the main one).
         val mergedProfiles = merged.profiles.associateBy { it.id.lowercase() }
@@ -317,7 +345,6 @@ object SyncData {
         }
         val localById = state.profiles.associateBy { it.id.lowercase() }
         // Kids lifted elsewhere stays on where a parent set a PIN (as that PIN stays here): docs/PROFILES.md, "Kids".
-        val parentProtected = state.profiles.any { !it.isKids && it.isProtected }
         val profiles = (state.profiles - removedProfiles.toSet()).map { profile ->
             val synced = mergedProfiles[profile.id.lowercase()]?.takeIf { it.updatedAt >= profile.updatedAt } ?: return@map profile
             profile.copy(
@@ -333,7 +360,7 @@ object SyncData {
         val others = profiles.filter { !it.isMain && it.id.lowercase() in mergedProfiles }.associate { profile ->
             val bucket = buckets[profile.id.lowercase()] ?: SyncProfileData(profile.id.lowercase())
             val records = bucket.records(deletedPlaylists = mergedPlaylistDeletions, replaced = merged.replaced)
-            profile.id to applyLibrary(libraries[profile.id] ?: LibraryState(), records, context, isMain = false)
+            profile.id to applyLibrary(libraries[profile.id] ?: LibraryState(), records, context, isMain = false, keepsHidden = profile.isKids && parentProtected)
         }
         // The collections shared with every profile: the household's records, by the same rules as another profile's.
         val householdRecords = (merged.household ?: SyncHousehold()).records(deletedPlaylists = mergedPlaylistDeletions, replaced = merged.replaced)
@@ -362,7 +389,7 @@ object SyncData {
      * [library] with the records of [records] (the main profile's: the merged snapshot itself; another's: its bucket):
      * My List and favourite channels, progress, lists, people, rows and deletions; what does not sync stays.
      */
-    private fun applyLibrary(library: LibraryState, records: SyncSnapshot, context: Context, isMain: Boolean): LibraryState {
+    private fun applyLibrary(library: LibraryState, records: SyncSnapshot, context: Context, isMain: Boolean, keepsHidden: Boolean = false): LibraryState {
         val local = context.local
         val filePlaylists = context.filePlaylists
         val favorites = library.favorites.filter { it.playlistId in filePlaylists && !SyncKeys.isPerson(it) } + records.favorites.mapNotNull { synced ->
@@ -406,11 +433,16 @@ object SyncData {
         }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
         // Another profile's deletions are its own (its bucket's); the main one's are the snapshot's, with the sessions.
         val deleted = if (isMain) records.deleted else records.deleted.filterKeys { !it.startsWith("playlist:") }
+        val hidden = hidden(library, records, local, keepsHidden)
         val applied = library.copy(
             favorites = favorites,
             history = history.sortedByDescending { it.lastWatchedAt }.take(LibraryState.MAX_HISTORY),
             collections = collections,
             rowOrders = records.rows,
+            hiddenCategories = hidden.hiddenCategories,
+            hiddenTags = hidden.hiddenTags,
+            hiddenWords = hidden.hiddenWords,
+            hiddenAt = hidden.hiddenAt,
             syncDeleted = deleted,
             // When this device learned each deletion made elsewhere, in every profile (kept from then, docs/SYNC.md).
             syncDeletedLearned = deleted.keys.mapNotNull { key ->
@@ -419,14 +451,63 @@ object SyncData {
             syncReplaced = if (isMain) context.merged.replaced else library.syncReplaced,
         ).let { kept -> context.removedIds.fold(kept) { result, id -> result.removingPlaylist(id, context.merged.deleted[SyncKeys.playlist(id)] ?: 0) } }
             .let { result ->
-                // The categories hidden in a replaced playlist stay hidden in its replacement, as on Apple devices.
+                // The categories hidden in a replaced playlist stay hidden in its replacement, as on Apple devices, with their time.
                 val carried = context.replacements.flatMap { (old, into) ->
-                    library.hiddenCategories.filter { it.startsWith("$old|") }.map { into + it.substring(old.length) }
+                    library.hiddenCategories.filter { it.startsWith("$old|") }.map { into + it.substring(old.length) to library.hiddenAt[SyncKeys.hiddenCategoryOf(it)] }
                 }
-                if (carried.isEmpty()) result else result.copy(hiddenCategories = result.hiddenCategories + carried)
+                if (carried.isEmpty()) {
+                    result
+                } else {
+                    result.copy(
+                        hiddenCategories = result.hiddenCategories + carried.map { it.first },
+                        hiddenAt = result.hiddenAt + carried.mapNotNull { (key, time) ->
+                            val syncKey = SyncKeys.hiddenCategoryOf(key) ?: return@mapNotNull null
+                            time?.takeIf { it > (result.hiddenAt[syncKey] ?: Long.MIN_VALUE) }?.let { syncKey to it }
+                        },
+                    )
+                }
             }
         // A removed playlist leaves its deletion in another profile's records only through the snapshot's own.
         return if (isMain) applied else applied.copy(syncDeleted = applied.syncDeleted.filterKeys { !it.startsWith("playlist:") })
+    }
+
+    /**
+     * The hidden categories, tags and words of [library] after the merge (docs/SYNC.md, "Hidden categories"): those of
+     * [records] (the merge holds this device's own), and this device's own the merge did not carry (past its cap, or of a
+     * file playlist) unless a showing again since removed them. Records of kinds this version does not know are kept in
+     * `hiddenAt` to pass them on. [keepsHidden] (a Kids profile on a device where a parent set a PIN): this device's own
+     * stay, whatever was shown again elsewhere, with their own times (the merge keeps the later showing again, and nothing
+     * changes from one session to the next); a hide received still applies.
+     */
+    private fun hidden(library: LibraryState, records: SyncSnapshot, local: (String) -> String, keepsHidden: Boolean): LibraryState {
+        fun kept(key: String?) = keepsHidden || key == null || SyncHidden.shownAt(key, records.deleted)?.let { it >= (library.hiddenAt[key] ?: 0) } != true
+        val times = HashMap<String, Long>()
+        val categories = library.hiddenCategories.filterTo(HashSet()) { kept(SyncKeys.hiddenCategoryOf(it)) }
+        val tags = library.hiddenTags.filterTo(HashSet()) { kept(SyncKeys.hiddenTag(it)) }
+        val words = library.hiddenWords.filterTo(HashSet()) { kept(SyncKeys.hiddenWord(it)) }
+        (categories.mapNotNull(SyncKeys::hiddenCategoryOf) + tags.map(SyncKeys::hiddenTag) + words.map(SyncKeys::hiddenWord))
+            .forEach { key -> library.hiddenAt[key]?.let { times[key] = it } }
+        library.hiddenAt.forEach { (key, time) -> if (SyncKeys.otherHidden(key, time) != null && kept(key)) times[key] = time }
+        for (record in records.hiddenCategories) {
+            when (record.kind) {
+                SyncHidden.CATEGORY -> {
+                    val bar = record.value.indexOf('|').takeIf { it > 0 } ?: continue
+                    val playlist = local(record.value.substring(0, bar))
+                    categories += playlist + record.value.substring(bar)
+                    times.merge(SyncKeys.hiddenCategory(playlist, record.value.substring(bar + 1)), record.hiddenAt, ::maxOf)
+                }
+                SyncHidden.TAG -> {
+                    tags += record.value
+                    times.merge(record.key, record.hiddenAt, ::maxOf)
+                }
+                SyncHidden.WORD -> {
+                    words += record.value
+                    times.merge(record.key, record.hiddenAt, ::maxOf)
+                }
+                else -> times.merge(record.key, record.hiddenAt, ::maxOf)
+            }
+        }
+        return LibraryState(hiddenCategories = categories, hiddenTags = tags, hiddenWords = words, hiddenAt = times)
     }
 
     /** The people of a snapshot as this app keeps them: one per name (whatever its case), in the order they come. */

@@ -1,15 +1,18 @@
 package com.markedoe.ondo.core.sync
 
 import java.security.MessageDigest
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 /**
  * What a device sends to sync on the local network: its playlists, My List and favourite channels, the people kept,
- * lists, playback progress, the keys of outside services and the order of the rows of the Home, Movies and Series tabs,
- * and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+ * lists, playback progress, the keys of outside services, the order of the rows of the Home, Movies and Series tabs and
+ * the hidden categories, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class SyncSnapshot(
     val type: String = TYPE,
@@ -26,6 +29,11 @@ data class SyncSnapshot(
     val keys: List<SyncKey> = emptyList(),
     /** The order of the rows of the Home, Movies and Series tabs, and the rows hidden; none from a device that does not sync them. */
     val rows: List<SyncRows> = emptyList(),
+    /**
+     * The categories, languages and styles hidden; none from a device that does not sync them. Left out when empty, so a
+     * snapshot without any reads, and has the digest, as before.
+     */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val hiddenCategories: List<SyncHidden> = emptyList(),
     /** The viewer profiles (docs/PROFILES.md, docs/SYNC.md "Profiles"); none from a device that does not sync them. */
     val profiles: List<SyncProfile> = emptyList(),
     /**
@@ -159,6 +167,7 @@ data class SyncSnapshot(
         people.forEach { yield(it.addedAt) }
         keys.forEach { yield(it.updatedAt) }
         rows.forEach { yield(it.updatedAt) }
+        hiddenCategories.forEach { yield(it.hiddenAt) }
         profiles.forEach { yield(it.updatedAt) }
         profileData.forEach { yieldAll(it.records().times()) }
         household?.let { yieldAll(it.records().times()) }
@@ -187,6 +196,7 @@ data class SyncSnapshot(
             people = people.filter { past(it.addedAt) },
             keys = keys.filter { past(it.updatedAt) },
             rows = rows.filter { past(it.updatedAt) },
+            hiddenCategories = hiddenCategories.filter { past(it.hiddenAt) },
             profiles = profiles.filter { past(it.updatedAt) },
             profileData = profileData.map { SyncProfileData.of(it.profile, it.records().withoutRecordsAfter(latest)) },
             household = household?.let { SyncHousehold.of(it.records().withoutRecordsAfter(latest)) }?.takeIf { !it.isEmpty },
@@ -234,6 +244,7 @@ data class SyncSnapshot(
             )
         },
         rows = SyncRows.capped(rows.map(SyncRows::normalized)),
+        hiddenCategories = SyncHidden.normalized(hiddenCategories),
         profiles = SyncProfile.capped(profiles.map { it.copy(id = it.id.lowercase()) }),
         profileData = profileData.map { SyncProfileData.of(it.profile.lowercase(), it.records().normalized()) },
         // No shared list is no household: an empty one is never written (an older version writes none).
@@ -266,10 +277,14 @@ internal fun saturated(a: Long, b: Long): Long {
 /**
  * The key of a deleted record with its playlist or list ID in lowercase: `playlist:<id>`, `list:<id>`, and the
  * playlist of `favorite:<playlist>|…` and `progress:<playlist>|…`; the name of `person:<name>` with A to Z in lowercase;
- * in `listitem:<list>|<item>`, the list and the item the same way. The rest (the provider's item IDs, the service of
- * `key:`) keeps its case.
+ * in `listitem:<list>|<item>`, the list and the item the same way; the playlist of `hide:category:<playlist>|…`. The rest
+ * (the provider's item IDs, the service of `key:`, a hidden tag or word) keeps its case.
  */
 internal fun lowercasingId(key: String): String {
+    if (key.startsWith(SyncHidden.CATEGORY_KEY_PREFIX)) {
+        val bar = key.indexOf('|', SyncHidden.CATEGORY_KEY_PREFIX.length).takeIf { it >= 0 } ?: return key
+        return SyncHidden.CATEGORY_KEY_PREFIX + key.substring(SyncHidden.CATEGORY_KEY_PREFIX.length, bar).lowercase() + key.substring(bar)
+    }
     if (key.startsWith(SyncPerson.KEY_PREFIX)) return SyncPerson.KEY_PREFIX + SyncPerson.folded(key.substring(SyncPerson.KEY_PREFIX.length))
     if (key.startsWith(SyncList.ITEM_PREFIX)) {
         val listEnd = key.indexOf('|', SyncList.ITEM_PREFIX.length).takeIf { it >= 0 } ?: return key.lowercase()
@@ -505,6 +520,95 @@ data class SyncRows(
 }
 
 /**
+ * What hides categories in a profile (docs/SYNC.md, "Hidden categories"): a category of a playlist ([kind] `category`,
+ * [value] `<playlist id>|<category id>`), a language or country tag (`tag`, [value] "PT"), or a style or word (`word`,
+ * [value] "manga"). Each one merges on its own: the later [hiddenAt] wins over the later showing again, which adds [key]
+ * to `deleted`.
+ */
+@Serializable
+data class SyncHidden(
+    val kind: String,
+    val value: String,
+    val hiddenAt: Long,
+) {
+    val key: String get() = "$KEY_PREFIX$kind:$value"
+
+    /** The playlist of a category; null for a tag, a word, or a kind this version does not know. */
+    val playlist: String? get() = if (kind == CATEGORY) value.substringBefore('|') else null
+
+    /** A category with its playlist through [playlist]; the others as they are. */
+    fun withPlaylist(playlist: (String) -> String): SyncHidden {
+        val bar = value.indexOf('|')
+        if (kind != CATEGORY || bar < 0) return this
+        return copy(value = playlist(value.substring(0, bar)) + value.substring(bar))
+    }
+
+    companion object {
+        const val KEY_PREFIX = "hide:"
+        const val CATEGORY = "category"
+        const val TAG = "tag"
+        const val WORD = "word"
+        const val CATEGORY_KEY_PREFIX = "$KEY_PREFIX$CATEGORY:"
+
+        /** At most this many records in a snapshot's list (each profile's), and UTF-16 units in a kind or a value. */
+        const val MAX_RECORDS = 5000
+        const val MAX_LENGTH = 256
+
+        /** The marker that shows again every category of a playlist and type at once: `hide:category:<playlist>|<type>-*`. */
+        const val SHOW_ALL = "-*"
+
+        /**
+         * A marker is written only when more than this many categories of one playlist and type are shown again at once;
+         * fewer leave one deletion each, which shows again nothing else (docs/SYNC.md, "Hidden categories").
+         */
+        const val SHOW_ALL_THRESHOLD = 50
+
+        /**
+         * The "shown again" marker covering the hidden category of [key] (`hide:category:<playlist>|<type>-<id>`), whose ID
+         * starts with its type: `hide:category:<playlist>|<type>-*`; null for another key.
+         */
+        fun showAllKey(key: String): String? {
+            if (!key.startsWith(CATEGORY_KEY_PREFIX) || key.endsWith(SHOW_ALL)) return null
+            val bar = key.indexOf('|', CATEGORY_KEY_PREFIX.length).takeIf { it >= 0 } ?: return null
+            val dash = key.indexOf('-', bar + 1).takeIf { it > bar + 1 } ?: return null
+            return key.substring(0, dash) + SHOW_ALL
+        }
+
+        /** When the item of [key] was last shown again in [deleted]: by its own key or its marker ([showAllKey]); null if never. */
+        fun shownAt(key: String, deleted: Map<String, Long>): Long? =
+            listOfNotNull(deleted[key], showAllKey(key)?.let { deleted[it] }).maxOrNull()
+
+        /** The category [categoryId] of the playlist [playlistId] (its ID in lowercase), hidden at [hiddenAt]. */
+        fun category(playlistId: String, categoryId: String, hiddenAt: Long) = SyncHidden(CATEGORY, "${playlistId.lowercase()}|$categoryId", hiddenAt)
+
+        private fun valid(text: String) = text.length <= MAX_LENGTH && text.isNotBlank() && text.none { it < ' ' || it == '\u007f' }
+
+        /**
+         * As every device keeps them: a kind and a value not blank, without control characters, of [MAX_LENGTH] UTF-16
+         * units at most, a kind without `:`, a category's value holding `|` (its playlist ID then in lowercase); then
+         * [capped].
+         */
+        fun normalized(records: List<SyncHidden>): List<SyncHidden> = capped(
+            records.filter { valid(it.kind) && ':' !in it.kind && valid(it.value) && (it.kind != CATEGORY || '|' in it.value) }
+                .map { it.withPlaylist(String::lowercase) },
+        )
+
+        /**
+         * [records] without those past the [MAX_RECORDS] keys hidden last (the later time first, then the smaller key in
+         * UTF-16 code units); the records kept stay in their order.
+         */
+        fun capped(records: List<SyncHidden>): List<SyncHidden> {
+            val latest = HashMap<String, Long>()
+            records.forEach { latest.merge(it.key, it.hiddenAt, ::maxOf) }
+            if (latest.size <= MAX_RECORDS) return records
+            val kept = latest.entries.sortedWith(compareByDescending<Map.Entry<String, Long>> { it.value }.thenBy { it.key })
+                .take(MAX_RECORDS).mapTo(HashSet()) { it.key }
+            return records.filter { it.key in kept }
+        }
+    }
+}
+
+/**
  * A viewer profile (docs/SYNC.md, "Profiles"): its name and avatar, and whether it is a Kids profile. Never its PIN,
  * which stays on each device (docs/PROFILES.md, "PIN").
  */
@@ -543,8 +647,10 @@ data class SyncProfile(
 
 /**
  * The data of a profile other than the main one (docs/SYNC.md, "Profiles"): its My List and favourite channels,
- * progress, lists, people and order of rows, with what was deleted in it, by the same keys as the snapshot's own.
+ * progress, lists, people, order of rows and hidden categories, with what was deleted in it, by the same keys as the
+ * snapshot's own.
  */
+@OptIn(ExperimentalSerializationApi::class)
 @Serializable
 data class SyncProfileData(
     val profile: String,
@@ -553,13 +659,15 @@ data class SyncProfileData(
     val lists: List<SyncList> = emptyList(),
     val people: List<SyncPerson> = emptyList(),
     val rows: List<SyncRows> = emptyList(),
+    /** Left out when empty, as the snapshot's own. */
+    @EncodeDefault(EncodeDefault.Mode.NEVER) val hiddenCategories: List<SyncHidden> = emptyList(),
     val deleted: Map<String, Long> = emptyMap(),
 ) {
     /** Its records as a snapshot of their own (to merge, normalise, date them with the snapshot's rules). */
     fun records(playlists: List<SyncPlaylist> = emptyList(), deletedPlaylists: Map<String, Long> = emptyMap(), replaced: Map<String, String> = emptyMap()) =
         SyncSnapshot(
             device = "", playlists = playlists, favorites = favorites, progress = progress, lists = lists, people = people, rows = rows,
-            deleted = deleted + deletedPlaylists, replaced = replaced,
+            hiddenCategories = hiddenCategories, deleted = deleted + deletedPlaylists, replaced = replaced,
         )
 
     companion object {
@@ -571,6 +679,7 @@ data class SyncProfileData(
             lists = records.lists,
             people = records.people,
             rows = records.rows,
+            hiddenCategories = records.hiddenCategories,
             deleted = records.deleted.filterKeys { !it.startsWith("playlist:") },
         )
     }
