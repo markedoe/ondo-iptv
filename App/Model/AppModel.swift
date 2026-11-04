@@ -155,7 +155,16 @@ final class AppModel {
     /// it no longer plays, when it is the later (`applyParkedProgress`).
     @ObservationIgnored var parkedProgress: [String: HistoryEntry] = [:]
     /// The libraries of the profiles not open, by profile, as saved (docs/PROFILES.md): sync reads them from here.
-    @ObservationIgnored var otherLibraries: [UUID: UserLibrary] = [:]
+    @ObservationIgnored var otherLibraries: [UUID: UserLibrary] = [:] {
+        didSet { otherLibrariesGeneration &+= 1 }
+    }
+    /// Counts the changes of `otherLibraries`: a merge made in the background is kept only if none happened meanwhile
+    /// (a progress save for a profile not open, a playlist deleted), as on Android.
+    @ObservationIgnored private(set) var otherLibrariesGeneration = 0
+    #if DEBUG
+    /// Tests only: runs once a background merge is made, before it is kept (to change the data meanwhile).
+    @ObservationIgnored var afterSyncMerge: (() -> Void)?
+    #endif
     /// The profile each item played was started in (`playbackKey`): its progress goes there, whichever profile is open
     /// when it is saved, and nowhere once that profile is deleted.
     @ObservationIgnored var playbackProfiles: [String: UUID] = [:]

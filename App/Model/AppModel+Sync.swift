@@ -732,6 +732,7 @@ extension AppModel {
         for _ in 0..<Self.syncMergeTries {
             let libraries = syncLibraries()
             let (base, bases, state, tmdbKey, playing, people) = (library, playlists, syncState, secrets.get(Keychain.tmdbKey), playingKeys, profiles)
+            let generation = otherLibrariesGeneration
             let activeID = activeProfile.isMain ? SyncProfile.main : activeProfile.id.uuidString.lowercased()
             let owners = playbackProfiles.mapValues { owner in owner == Profile.defaultID ? SyncProfile.main : owner.uuidString.lowercased() }
             let name = Self.syncDeviceName
@@ -757,7 +758,15 @@ extension AppModel {
                 }
                 return SyncOutcome(latest: latest, libraries: applied, parked: parked)
             }.value
-            if library == base, playlists == bases, syncState == state, playingKeys == playing, profiles == people {
+            #if DEBUG
+            if let change = afterSyncMerge {
+                afterSyncMerge = nil
+                change()
+            }
+            #endif
+            // Kept only if nothing it read changed meanwhile: the open library, and the others too (review S4).
+            if library == base, playlists == bases, syncState == state, playingKeys == playing, profiles == people,
+               otherLibrariesGeneration == generation {
                 outcome = result
                 break
             }
@@ -955,10 +964,17 @@ extension AppModel {
         let old = profiles[index]
         var renamed = old
         renamed.id = to
-        let data = old.id == activeProfile.id ? library : (otherLibraries[from] ?? UserLibrary())
-        try? userStore.save(data, name: renamed.libraryDocumentName)
+        // Its data, from memory, else from its document: never an empty library saved over it.
+        let data = old.id == activeProfile.id ? library : (otherLibraries[from] ?? userStore.load(UserLibrary.self, name: old.libraryDocumentName))
         libraryWriter.discard(name: old.libraryDocumentName)
-        userStore.remove(name: old.libraryDocumentName)
+        if let data {
+            try? userStore.save(data, name: renamed.libraryDocumentName)
+            userStore.remove(name: old.libraryDocumentName)
+            otherLibraries[from] = old.id == activeProfile.id ? nil : data
+        } else {
+            // Unreadable: the document is moved as it is, whatever it holds.
+            userStore.move(name: old.libraryDocumentName, to: renamed.libraryDocumentName)
+        }
         if let moved = otherLibraries.removeValue(forKey: from) { otherLibraries[to] = moved }
         let fromKey = from.uuidString.lowercased()
         if let state = syncState.profileStates.removeValue(forKey: fromKey) { syncState.profileStates[to.uuidString.lowercased()] = state }

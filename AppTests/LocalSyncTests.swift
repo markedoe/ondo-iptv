@@ -564,6 +564,43 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertNotNil(model.syncSnapshot().profileData.first { $0.profile == id }?.deleted[key])
     }
 
+    /// A progress save for a profile not open, made while a merge runs in the background, is kept: the merge is made
+    /// again from it (review S4, confirmation).
+    func testAProgressSaveForAProfileNotOpenDuringAMergeIsKept() async throws {
+        let model = try await deviceWithLibrary()
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        let movie = try XCTUnwrap(model.content.movies.first)
+        let item = PlaybackItem(reference: MediaReference(playlistID: playlist.id, type: .movie, itemID: movie.id), title: movie.name,
+                                streamURL: URL(string: "http://127.0.0.1:9/movie.mp4")!, isLive: false)
+        let main = try XCTUnwrap(model.profiles.first(where: \.isMain))
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        model.switchProfile(to: guest)
+        model.recordStart(item)
+        model.recordProgress(item, position: 2_000, duration: 5_400)
+        model.switchProfile(to: main)
+        model.afterSyncMerge = { model.recordProgress(item, position: 3_000, duration: 5_400) }
+        await model.applySync(SyncSnapshot(device: "tv"))
+        XCTAssertEqual(model.otherLibraries[guest.id]?.progress(for: item.reference)?.position, 3_000)
+    }
+
+    /// A profile renamed by the one-time match keeps its data when it is not in memory: read from its document, never an
+    /// empty library saved over it (review S1, confirmation).
+    func testAProfileRenamedByTheMatchKeepsItsDataNotInMemory() async throws {
+        let model = try await deviceWithLibrary()
+        let movie = try XCTUnwrap(model.content.movies.first)
+        let main = try XCTUnwrap(model.profiles.first(where: \.isMain))
+        let mine = model.addProfile(name: "Sam", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        model.switchProfile(to: mine)
+        model.toggleFavorite(movie)
+        model.switchProfile(to: main)
+        model.otherLibraries[mine.id] = nil
+        let theirs = "00000000-0000-4000-8000-000000000002"
+        await model.applySync(SyncSnapshot(device: "ipad", profiles: [SyncProfile(id: theirs, name: "Sam", updatedAt: Date().syncMilliseconds - 500)]))
+        XCTAssertEqual(model.profiles.filter { $0.name == "Sam" }.map { $0.id.uuidString.lowercased() }, [theirs])
+        let bucket = model.syncSnapshot().profileData.first { $0.profile == theirs }
+        XCTAssertEqual(bucket?.favorites.map(\.item), [movie.id])
+    }
+
     // MARK: The viewer's choices across sync and a relaunch
 
     /// A catalogue with language tags: "show only your languages?" is offered for it.

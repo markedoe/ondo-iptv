@@ -231,7 +231,9 @@ sont gardées à partir du moment où elles ont été apprises, comme celles du 
 
 Deux choix restent à chaque appareil (docs/PROFILES.fr.md) : un profil qui n’est plus Enfant ailleurs reste Enfant sur
 un appareil où un parent a défini un code, tout en prenant l’instant de l’enregistrement (son propre instantané dit
-alors Enfant à cet instant, la fusion garde le choix de l’autre appareil, et rien ne change d’une session à l’autre) ;
+alors Enfant à cet instant, la fusion garde le choix de l’autre appareil, et rien ne change d’une session à l’autre ;
+une modification ultérieure de ce profil sur l’appareil protégé le date de nouveau, et renvoie Enfant à tous les
+appareils) ;
 et, la première fois qu’un appareil reçoit des profils, un de ses profils créé à part ne fait qu’un avec un profil reçu
 du même nom (sans espaces autour, quelles que soient sa casse et ses accents) et du même réglage Enfant : le plus petit
 ID est gardé sur les deux appareils, l’autre est supprimé (daté), et ses données vont dans celui gardé.
@@ -304,7 +306,9 @@ change rien.
    l’instant le plus récent du profil ou après : son `updatedAt` et chaque instant de ses données (comme le contenu
    d’une liste, règle 7). Un appareil qui a continué à regarder dans un profil après qu’un autre l’a supprimé garde le
    profil, et le fait revenir sur l’autre. Un profil écarté (supprimé à cet instant ou après, ou au-delà des 16
-   gardés) part avec ses données. Chaque profil gardé autre que le principal fusionne ses
+   gardés) part avec ses données. Avec trois appareils, l’ordre des sessions décide si des données plus anciennes que la
+   suppression reviennent avec le profil (un appareil qui rencontre d’abord celui qui l’a supprimé les retire), mais
+   tous les appareils finissent dans le même état. Chaque profil gardé autre que le principal fusionne ses
    données selon les règles 2 à 7, comme un instantané à part dont les playlists sont celles fusionnées : un favori ou
    une progression d’une playlist supprimée part, ceux d’une playlist remplacée deviennent ceux de la playlist gardée,
    et un élément supprimé dans ce profil (son `deleted`) part. Le résultat liste les profils et leurs données par ID.
