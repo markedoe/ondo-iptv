@@ -198,7 +198,8 @@ un appareil et une autre masquée sur un autre au même moment ne gardent que le
 écartent les clés vides ou qui contiennent un caractère de contrôle (sous U+0020, ou U+007F), gardent la première des
 clés répétées dans `order`, et gardent `hidden` une fois chacune, triées (en unités UTF-16). Un appareil garde et
 transmet l’enregistrement d’un onglet qu’il ne connaît pas. Un instantané sans `rows` (d’une version plus ancienne) ne
-change rien ; aucun enregistrement n’est jamais supprimé. Sur les appareils Apple, l’ordre est celui de l’appareil,
+change rien ; aucun enregistrement n’est jamais supprimé. Un appareil Android plus ancien écarte `rows` de ce qu’il
+garde et transmet : deux appareils Apple qui ne se synchronisent qu’à travers lui gardent chacun leur ordre. Sur les appareils Apple, l’ordre est celui de l’appareil,
 quel que soit le profil ouvert, et voyage tant que le profil principal l’est.
 
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil

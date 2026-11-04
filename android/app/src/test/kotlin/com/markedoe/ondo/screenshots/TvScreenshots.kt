@@ -153,7 +153,7 @@ class TvScreenshots {
 
     private fun capture(name: String) = compose.onRoot().captureRoboImage("$BASELINES/tv/en-US/$name.png", BaselineOptions)
 
-    private fun moviesTab(onTab: Boolean = false) = show(TopLevel.MOVIES, onTab) { VodScreen(UiMappers.vod(state, series = false, title = "Movies"), VodActions()) }
+    private fun moviesTab(onTab: Boolean = false) = show(TopLevel.MOVIES, onTab) { VodScreen(UiMappers.vod(state, series = false, title = "Movies", now = now), VodActions()) }
 
     private fun press(key: Key) {
         compose.onAllNodes(isFocused()).onLast().performKeyInput { pressKey(key) }
@@ -181,7 +181,7 @@ class TvScreenshots {
 
     /** The viewer's path on the Movies or the Series tab: on the tab, Down once, Down again, each captured as [name]`-…`. */
     private fun downPath(name: String, series: Boolean) {
-        val vod = UiMappers.vod(state, series = series, title = if (series) "Series" else "Movies")
+        val vod = UiMappers.vod(state, series = series, title = if (series) "Series" else "Movies", now = now)
         val rows = shelves(vod)
         show(if (series) TopLevel.SERIES else TopLevel.MOVIES, onTab = true) { VodScreen(vod, VodActions()) }
         capture("$name-tab-focused")
@@ -312,7 +312,7 @@ class TvScreenshots {
      */
     @Test
     fun theRowsAfterBackFromACategory() {
-        val vod = UiMappers.vod(state, series = false, title = "Movies")
+        val vod = UiMappers.vod(state, series = false, title = "Movies", now = now)
         val row = vod.rows[1]
         show(TopLevel.MOVIES, tabPage = false) {
             val nav = rememberNavController()

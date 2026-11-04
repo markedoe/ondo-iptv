@@ -756,14 +756,14 @@ class OndoRepository(
             updatedAt = stamp(),
         ).normalized()
         if (previous != null && previous.order == record.order && previous.hidden == record.hidden) settings
-        else settings.copy(rowOrders = settings.rowOrders.filterNot { it.tab == record.tab } + record)
+        else settings.copy(rowOrders = (settings.rowOrders.filterNot { it.tab == record.tab } + record).sortedBy { it.tab })
     }
 
     /** Default order: the rows of the tab in their default order again, those hidden staying hidden. */
     fun resetRowOrder(series: Boolean) = updateSettings { settings ->
         val previous = settings.rowOrder(series) ?: return@updateSettings settings
         if (previous.order.isEmpty()) return@updateSettings settings
-        settings.copy(rowOrders = settings.rowOrders.filterNot { it.tab == previous.tab } + previous.copy(order = emptyList(), updatedAt = stamp()))
+        settings.copy(rowOrders = (settings.rowOrders.filterNot { it.tab == previous.tab } + previous.copy(order = emptyList(), updatedAt = stamp())).sortedBy { it.tab })
     }
 
     /** The version of a film the viewer chose on its page ([AppSettings.chosenVersions]), on this device only. */

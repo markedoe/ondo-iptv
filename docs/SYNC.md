@@ -179,7 +179,8 @@ time: `updatedAt` (set each time the viewer moves, hides or shows a row, or choo
 at the same time keep only the later change. Readers drop keys that are blank or hold a control character (below
 U+0020, or U+007F), keep the first of keys repeated in `order`, and keep `hidden` once each, sorted (UTF-16 code
 units). A device keeps and passes on the record of a tab it does not know. A snapshot without `rows` (from an older
-version) changes nothing; no record is ever deleted. On Apple devices the order is the device's, whichever profile
+version) changes nothing; no record is ever deleted. An older Android device drops `rows` from what it keeps and
+passes on: two Apple devices that sync only through it keep each their own order. On Apple devices the order is the device's, whichever profile
 is open, and travels while the main profile is.
 
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for

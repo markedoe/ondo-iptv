@@ -52,7 +52,8 @@ extension AppModel {
     }
 
     private func keepRowOrder(_ record: SyncRows) {
-        syncState.rowOrders = syncState.rowOrders.filter { $0.tab != record.tab } + [record]
+        // Sorted by tab, as a merge gives them: the same order compares equal.
+        syncState.rowOrders = (syncState.rowOrders.filter { $0.tab != record.tab } + [record]).sorted { $0.tab < $1.tab }
         saveSyncState()
         syncSoon()
     }

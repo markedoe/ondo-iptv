@@ -99,6 +99,11 @@ class RowOrderAppTest {
         // An older version sends none: the device keeps its own.
         val old = com.markedoe.ondo.core.sync.SyncMerge.merge(sent, com.markedoe.ondo.core.sync.SyncSnapshot(device = "old"))
         assertEquals(listOf(mine), com.markedoe.ondo.data.SyncData.apply(state, old).rows)
+        // Both tabs saved: a merge that changes nothing gives them back as they are kept (nothing to write again).
+        val both = listOf(mine, SyncRows(SyncRows.SERIES, listOf("all"), updatedAt = 11))
+        val kept = Fixtures.state(settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, rowOrders = both))
+        val again = com.markedoe.ondo.core.sync.SyncMerge.merge(com.markedoe.ondo.data.SyncData.snapshot(kept, "a", null, now = 20), com.markedoe.ondo.core.sync.SyncSnapshot(device = "b"))
+        assertEquals(kept.settings.rowOrders, com.markedoe.ondo.data.SyncData.apply(kept, again).rows)
     }
 
     /** A category hidden in Settings (here with its language) never shows, whatever the order saved says. */

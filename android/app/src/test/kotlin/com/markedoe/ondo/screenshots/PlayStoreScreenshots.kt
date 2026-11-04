@@ -137,7 +137,7 @@ class PlayStoreScreenshots(private val device: Device, private val locale: Strin
         Box(Modifier.tvSafeArea(tab = true)) {
             // Without the movies in progress, so that My List shows above the fold of a TV.
             val listed = if (tv) state.copy(library = state.library.copy(history = state.library.history.filter { it.kind != ItemKind.MOVIE })) else state
-            VodScreen(UiMappers.vod(listed, series = false, title = if (french) "Films" else "Movies"), VodActions())
+            VodScreen(UiMappers.vod(listed, series = false, title = if (french) "Films" else "Movies", now = now), VodActions())
         }
     }
 
