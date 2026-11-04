@@ -193,11 +193,12 @@ extension AppModel {
     }
 
     /// The kept episodes while they are recent (`DetailsArchive.seriesMaxAge`: a series gains episodes), else the
-    /// provider's; the kept ones when the provider cannot be reached. An episode the provider does not name reads in the
-    /// app's language ("Épisode 4"); the kept ones stay in IPTVCore's words, as they are saved.
+    /// provider's; the kept ones when the provider cannot be reached. Each episode shows its own title, TMDb's still
+    /// where the provider has none, and one the provider does not name reads in the app's language ("Épisode 4")
+    /// (`shown(_:of:)`); the kept ones stay as they came, as they are saved.
     func details(for series: Series) async throws -> SeriesDetails {
         let details = try await loadedDetails(for: series)
-        return PlaceholderNames.app().renaming(details)
+        return shown(details, of: series)
     }
 
     private func loadedDetails(for series: Series) async throws -> SeriesDetails {

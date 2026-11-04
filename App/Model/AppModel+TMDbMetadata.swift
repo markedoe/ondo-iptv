@@ -14,6 +14,11 @@ final class TMDbMetadata {
 
     /// Titles by key (`MetadataKey`): read from the store, or fetched this session.
     var titles: [String: TitleMetadata] = [:]
+    /// TMDb's episodes of a series' seasons (their stills and names), by the series' id, then by season number: the
+    /// episodes the provider leaves without a picture or a title get TMDb's (`AppModel.shown(_:of:)`).
+    var seasons: [String: [Int: [TMDbEpisode]]] = [:]
+    /// The seasons asked this session ("<series id>|<season>").
+    @ObservationIgnored var seasonsAsked: Set<String> = []
     /// People's photos by key (`MetadataKey.person`).
     var photos: [String: URL] = [:]
 
@@ -225,6 +230,7 @@ extension AppModel {
     func tmdbCredentialChanged() {
         let state = tmdbMetadata
         state.attempted = []
+        state.seasonsAsked = []
         if !hasTMDbKey {
             state.queue.removeAll()
             state.waiting = [:]
@@ -271,6 +277,68 @@ extension AppModel {
             store.save(rows)
             if info != nil { store.saveCredits(credits, for: savedKeys) }
         }.value
+    }
+
+    // MARK: - Seasons
+
+    /// TMDb's episodes of season `season` of `series`, whose page shows it: their stills and names, for the episodes the
+    /// provider leaves without them. Once a session; what the store kept shows at once and is asked again after
+    /// `MetadataFreshness.found`. One request for the whole season, by the series' TMDb id (asked first when unknown),
+    /// at the prefetch's pace.
+    func loadTMDbSeason(of series: Series, season: Int) async {
+        let item = ShowcaseItem.series(series)
+        let asked = "\(series.id)|\(season)"
+        guard !tmdbMetadata.seasonsAsked.contains(asked) else { return }
+        await loadTMDbMetadata(for: item)
+        guard let id = tmdbTitle(for: item)?.tmdbID, !tmdbMetadata.seasonsAsked.contains(asked) else { return }
+        tmdbMetadata.seasonsAsked.insert(asked)
+        let key = MetadataKey.season(seriesTMDbID: id, season: season)
+        let store = metadataStore
+        let stored = await Task.detached(priority: .userInitiated) { store.season(key) }.value
+        if let stored { showSeason(stored.episodes, season: season, of: series) }
+        if let stored, stored.isFresh() { return }
+        guard hasTMDbKey, !isTMDbKeyRefused, !tmdbMetadata.isPaused, let credential = secrets.get(Keychain.tmdbKey) else {
+            tmdbMetadata.seasonsAsked.remove(asked)
+            return
+        }
+        let client = TMDbClient(credential: credential, http: http, language: tmdbLanguage, pacer: tmdbMetadata.pacer)
+        do {
+            let episodes = try await client.seasonEpisodes(seriesID: id, season: season)
+            let row = SeasonEpisodes(key: key, episodes: episodes, fetchedAt: Date())
+            await Task.detached(priority: .utility) { store.saveSeason(row) }.value
+            showSeason(episodes, season: season, of: series)
+        } catch {
+            // Out of reach or cancelled: asked again the next time the season shows. TMDb refused or failed: not this session.
+            if Task.isCancelled || error is URLError { tmdbMetadata.seasonsAsked.remove(asked) }
+            noteTMDbFailure(error, credential: credential)
+        }
+    }
+
+    private func showSeason(_ episodes: [TMDbEpisode], season: Int, of series: Series) {
+        guard !episodes.isEmpty, tmdbMetadata.seasons[series.id]?[season] != episodes else { return }
+        tmdbMetadata.seasons[series.id, default: [:]][season] = episodes
+    }
+
+    /// `details` of `series` as every screen shows them (its page, the player's queue and Up next): each episode's own
+    /// title, TMDb's still and name where the provider gives none (`EpisodeTitles.merge`), in the app's words.
+    func shown(_ details: SeriesDetails, of series: Series) -> SeriesDetails {
+        PlaceholderNames.app().renaming(EpisodeTitles.merge(details, seriesName: series.name, tmdb: tmdbMetadata.seasons[series.id] ?? [:]))
+    }
+
+    /// The line of an episode in Continue Watching, "S03E02 · <title>", as its series' page shows it: from the series'
+    /// episodes when they are known, else the line kept, cleaned the same way (a line kept before this reads like a new one).
+    func episodeLine(of entry: HistoryEntry) -> String? {
+        guard entry.reference.type == .series else { return entry.subtitle }
+        let series = index.seriesByID[entry.reference.itemID]
+        if let series, let details = seriesDetailsCache[series.id],
+           let episode = details.seasons.lazy.flatMap(\.episodes).first(where: { $0.id == entry.reference.episodeID }) {
+            let shown = PlaceholderNames.app().renaming(EpisodeTitles.merge(
+                episode, seriesName: series.name,
+                tmdb: tmdbMetadata.seasons[series.id]?[episode.season]?.first { $0.number == episode.number }
+            ))
+            return "\(shown.code) · \(shown.title)"
+        }
+        return entry.subtitle.map { EpisodeTitles.cleanSubtitle($0, seriesName: series?.name ?? entry.title, names: .app()) }
     }
 
     // MARK: - People

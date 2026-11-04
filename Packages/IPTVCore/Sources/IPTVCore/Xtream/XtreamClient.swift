@@ -326,8 +326,9 @@ public struct XtreamClient: Sendable {
             let episodes = (response.episodes[number] ?? []).filter { seen.insert($0.id).inserted }.enumerated().map { index, dto in
                 Episode(
                     id: dto.id,
-                    // An English name of IPTVCore's own: the app shows it in its language (PlaceholderNames).
-                    title: dto.title.map { Self.cleanEpisodeTitle($0) } ?? "Episode \(dto.episodeNumber ?? index + 1)",
+                    // Its own title, without the series' name, tags or code; else an English name of IPTVCore's own,
+                    // which the app shows in its language (PlaceholderNames).
+                    title: EpisodeTitles.clean(dto.title ?? "", seriesName: info?.name, number: dto.episodeNumber ?? index + 1),
                     season: number,
                     number: dto.episodeNumber ?? index + 1,
                     streamURL: urls.episodeURL(episodeID: dto.id, containerExtension: dto.containerExtension),
@@ -348,14 +349,6 @@ public struct XtreamClient: Sendable {
             )
         }
         return SeriesDetails(info: details, seasons: seasons)
-    }
-
-    /// "Copper Valley - S01E01 - Pilot" -> "Pilot"
-    static func cleanEpisodeTitle(_ title: String) -> String {
-        if let parsed = TitleParser.parseEpisode(title), !parsed.episodeTitle.hasPrefix("Episode ") {
-            return parsed.episodeTitle
-        }
-        return title
     }
 
     // MARK: Guide

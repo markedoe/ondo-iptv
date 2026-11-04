@@ -60,6 +60,9 @@ data class PlaceholderNames(
         return episode.copy(title = title)
     }
 
+    /** An episode's [title] in these words when it is the core's `"Episode <number>"`, else as it is. */
+    fun episodeTitle(title: String, number: Int): String = named(title, EPISODE, number, this.episode) ?: title
+
     fun rename(details: SeriesDetails): SeriesDetails {
         val seasons = details.seasons.renamed { season ->
             val episodes = season.episodes.renamed(::rename)

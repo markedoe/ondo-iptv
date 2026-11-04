@@ -65,13 +65,18 @@ struct SeriesDetailView: View {
     @State private var errorMessage: String?
     @State private var selectedSeason: Int?
 
+    /// The episodes as they show: their own titles, TMDb's stills where the provider has none (`AppModel.shown`).
+    private var shownDetails: SeriesDetails? {
+        details.map { model.shown($0, of: series) }
+    }
+
     private var season: Season? {
-        guard let details else { return nil }
+        guard let details = shownDetails else { return nil }
         return details.seasons.first { $0.number == selectedSeason } ?? details.seasons.first
     }
 
     var body: some View {
-        let next = details.flatMap { model.nextEpisode(in: series, details: $0) }
+        let next = shownDetails.flatMap { model.nextEpisode(in: series, details: $0) }
         let nextProgress = next.flatMap { model.progress(episode: $0.episode, in: series) }
         DetailScaffold(
             title: ShowcaseItem.series(series).displayTitle,
@@ -113,7 +118,7 @@ struct SeriesDetailView: View {
             }
             .frame(maxWidth: metrics.textWidth, alignment: .leading)
             .padding(.horizontal, metrics.gutter)
-            if let details, !details.seasons.isEmpty {
+            if let details = shownDetails, !details.seasons.isEmpty {
                 episodes(details, metrics: metrics)
             }
             CastShelf(item: .series(series), details: details?.info, metrics: metrics)
@@ -149,6 +154,10 @@ struct SeriesDetailView: View {
                 errorMessage = error.localizedDescription
             }
             await model.loadTMDbMetadata(for: .series(series))
+        }
+        // The season shown: TMDb's stills and names for the episodes its provider leaves without them.
+        .task(id: season?.number) {
+            if let number = season?.number { await model.loadTMDbSeason(of: series, season: number) }
         }
     }
 
