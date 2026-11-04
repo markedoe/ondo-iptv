@@ -1,8 +1,12 @@
 package com.markedoe.ondo.screenshots
 
 import androidx.activity.ComponentActivity
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.input.InputModeManager
 import androidx.compose.ui.platform.LocalInputModeManager
@@ -74,7 +78,9 @@ class SeriesAwardsScreenshots {
             inputModes = LocalInputModeManager.current
             OndoTheme {
                 CompositionLocalProvider(LocalCarouselAutoAdvance provides false) {
-                    if (television) TelevisionFrame(content) else content()
+                    // On a phone, the app's own background (the app's scaffold gives it to every page).
+                    if (television) TelevisionFrame(content)
+                    else Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, content = content)
                 }
             }
         }

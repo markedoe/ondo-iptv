@@ -89,6 +89,9 @@ NAME_OVERRIDES = {
     ("cannes-grand-prix", "pt"): "Grande Prêmio de Cannes",
     ("cannes-grand-prix", "es"): "Gran Premio de Cannes",
     ("silver-bear-grand-jury", "pt"): "Urso de Prata, Grande Prêmio do Júri",
+    ("emmy-limited-series", "en"): "Primetime Emmy Award for Outstanding Limited or Anthology Series",
+    ("emmy-limited-series", "fr"): "Primetime Emmy Award de la meilleure mini-série ou anthologie",
+    ("bafta-tv-international", "fr"): "British Academy Television Award du meilleur programme international",
 }
 
 # Languages of the film titles kept for matching (playlists name films in their own language) and of the award
