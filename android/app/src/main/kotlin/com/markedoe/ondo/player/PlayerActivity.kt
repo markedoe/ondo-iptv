@@ -268,6 +268,16 @@ class PlayerActivity : ComponentActivity() {
     /** The episodes of the series playing, for the TV controls' Episodes row; null for a movie or a channel. */
     private var episodes by mutableStateOf<EpisodeList?>(null)
 
+    /** Subtitles → Search online… for the film or episode playing; null for a channel. */
+    private var online by mutableStateOf<OnlineSubtitles?>(null)
+
+    /** The subtitle downloaded for what plays (now or earlier), loaded with the video; selected once its track shows. */
+    private var sideLoaded: com.markedoe.ondo.data.ChosenSubtitle? = null
+    private var sideLoadPending = false
+
+    /** The downloaded subtitle was just loaded or found for the title: chosen whatever the selection says. */
+    private var sideLoadFresh = false
+
     /** Up next is on screen, near the end of an episode; null otherwise, and once the viewer declined it. */
     private var upNext by mutableStateOf<UpNext?>(null)
     private var upNextDeclined = false
@@ -345,6 +355,7 @@ class PlayerActivity : ComponentActivity() {
         onBackPressedDispatcher.addCallback(this, declineUpNextOnBack)
         nextEpisode = repository.nextEpisode(request)
         episodes = episodeList(request)
+        startOnlineSubtitles()
         val exoPlayer = buildPlayer()
         player = exoPlayer
         // Opened again alone, before the settings were read: the viewer's languages as soon as they are.
@@ -422,6 +433,7 @@ class PlayerActivity : ComponentActivity() {
                                 onWatchLive = ::watchLive,
                                 subtitles = SubtitleSizing(sizeOfSubtitles, repository::setSubtitleSize),
                                 episodes = episodes,
+                                online = online,
                             )
                         }
                     }
@@ -451,6 +463,7 @@ class PlayerActivity : ComponentActivity() {
                             onRestart = ::restartProgramme,
                             onWatchLive = ::watchLive,
                             subtitles = SubtitleSizing(sizeOfSubtitles, repository::setSubtitleSize),
+                            online = online,
                         )
                     }
                     // Not over the Episodes row, which offers the next episode too.
@@ -555,6 +568,38 @@ class PlayerActivity : ComponentActivity() {
     }
 
     /** The device's languages, the first first ("fr", "en"). */
+    /** The online search for what plays now, and the subtitle downloaded for it earlier. */
+    private fun startOnlineSubtitles() {
+        val services = (application as OndoApplication).subtitleServices
+        // The previous title's search or download stops: what it brings would be another title's.
+        online?.cancel()
+        val hint = request.subtitleSearch?.takeIf { !request.isLive }
+        val titleKey = request.progressKey
+        sideLoaded = hint?.let { services.chosen(titleKey) }
+        sideLoadFresh = sideLoaded != null
+        online = hint?.let {
+            val languages = com.markedoe.ondo.core.subtitles.SubtitleLanguages.defaults(repository.state.value.settings.preferredSubtitleLanguage, deviceLanguages())
+            OnlineSubtitles(lifecycleScope, ServicesSource(services, titleKey), it, languages) { chosen -> loadSubtitle(titleKey, chosen) }
+        }
+    }
+
+    /** A subtitle downloaded from the panel: the video starts again where it is, with it, and it shows. */
+    private fun loadSubtitle(titleKey: String?, chosen: com.markedoe.ondo.data.ChosenSubtitle) {
+        // Downloaded for a title that no longer plays: kept for it, not shown over this one.
+        if (!SideLoadedSubtitle.sameTitle(titleKey, request.progressKey)) return
+        val exoPlayer = player ?: return
+        val item = exoPlayer.currentMediaItem ?: return
+        sideLoaded = chosen
+        sideLoadFresh = true
+        sideLoadPending = true
+        reporter.note("subtitles: one downloaded from ${chosen.label} (${chosen.format})")
+        val position = exoPlayer.currentPosition
+        health.restart()
+        exoPlayer.setMediaItem(item.buildUpon().setSubtitleConfigurations(listOf(SideLoadedSubtitle.configuration(chosen))).build(), position)
+        exoPlayer.prepare()
+        controls.closePanel()
+    }
+
     private fun deviceLanguages(): List<String> {
         val locales = resources.configuration.locales
         return (0 until locales.size()).map { locales[it].language }.filter { it.isNotEmpty() }.distinct()
@@ -765,7 +810,7 @@ class PlayerActivity : ComponentActivity() {
         // A decoder that fails to start (a 4K stream beyond the TV's first one, a codec it has twice) gives way to the next.
         val renderers = DefaultRenderersFactory(this).setEnableDecoderFallback(true)
         return ExoPlayer.Builder(this, renderers)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(http))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(this).setDataSourceFactory(dataSources((application as OndoApplication).subtitleServices.folder, http)))
             .setLoadControl(loadControl())
             // A key frame within 1 s of the target, else the exact position: providers often space key frames
             // 10 s apart, and the closest one can land 5 to 10 s away from a 10 s skip.
@@ -786,6 +831,15 @@ class PlayerActivity : ComponentActivity() {
                     override fun onTrackSelectionParametersChanged(parameters: TrackSelectionParameters) {
                         val learned = TrackPreferences.learned(trackLanguages(), parameters)
                         repository.setTrackLanguages(learned.audio, learned.subtitles, learned.subtitlesOn)
+                    }
+
+                    // The subtitle downloaded for this title plays as soon as its track is there.
+                    override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                        if (!sideLoadPending) return
+                        val parameters = SideLoadedSubtitle.select(exoPlayer.trackSelectionParameters, tracks) ?: return
+                        sideLoadPending = false
+                        sideLoadFresh = false
+                        exoPlayer.trackSelectionParameters = parameters
                     }
 
                     override fun onPlayerError(error: PlaybackException) {
@@ -905,7 +959,11 @@ class PlayerActivity : ComponentActivity() {
                     .setArtworkUri(request.artworkUrl?.let(android.net.Uri::parse))
                     .build(),
             )
+            .setSubtitleConfigurations(listOfNotNull(sideLoaded?.let(SideLoadedSubtitle::configuration)))
             .build()
+        // Chosen again after the video is opened again (a retry, another address) only while the viewer keeps it: a
+        // later Off or another track stays.
+        sideLoadPending = sideLoaded != null && (sideLoadFresh || player?.let { SideLoadedSubtitle.isChosen(it.trackSelectionParameters) } == true)
         player?.apply {
             if (request.isLive || startMs <= 0) setMediaItem(item) else setMediaItem(item, startMs)
             prepare()
@@ -939,6 +997,7 @@ class PlayerActivity : ComponentActivity() {
         frameRateWait?.cancel()
         nextEpisode = repository.nextEpisode(next)
         episodes = episodeList(next)
+        startOnlineSubtitles()
         upNext = null
         upNextDeclined = false
         declineUpNextOnBack.isEnabled = false
@@ -1531,6 +1590,14 @@ class PlayerActivity : ComponentActivity() {
     }
 
     companion object {
+        /**
+         * Where the player reads from: the stream over HTTP with [http] (the player's identity, the provider's
+         * headers, the byte count), a subtitle downloaded from a service from its file in [subtitles], nothing else
+         * of the device ([PlayerDataSource]).
+         */
+        fun dataSources(subtitles: java.io.File, http: androidx.media3.datasource.DataSource.Factory): androidx.media3.datasource.DataSource.Factory =
+            PlayerDataSource.Factory(subtitles, http)
+
         private const val EXTRA_REQUEST = "request"
 
         /** Sessions opened by the players of this process, for their IDs (main thread). */

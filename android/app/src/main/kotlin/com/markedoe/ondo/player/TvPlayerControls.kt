@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Forward10
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Pause
@@ -47,6 +48,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Subtitles
@@ -142,6 +144,7 @@ fun TvPlayerOverlay(
     onWatchLive: () -> Unit = {},
     subtitles: SubtitleSizing? = null,
     episodes: EpisodeList? = null,
+    online: OnlineSubtitles? = null,
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -249,6 +252,7 @@ fun TvPlayerOverlay(
                 sleep = sleep,
                 channels = channels,
                 subtitles = subtitles,
+                online = online,
             )
         }
     }
@@ -623,6 +627,7 @@ private fun SidePanel(
     sleep: SleepTimer,
     channels: ChannelList?,
     subtitles: SubtitleSizing?,
+    online: OnlineSubtitles?,
 ) {
     val first = remember(panel) { FocusRequester() }
     Surface(
@@ -645,6 +650,7 @@ private fun SidePanel(
             PlayerPanel.SUBTITLE_SIZE -> R.string.subtitle_size
             PlayerPanel.SLEEP -> R.string.sleep_timer
             PlayerPanel.CHANNELS -> R.string.channels
+            PlayerPanel.ONLINE_SUBTITLES -> R.string.online_subtitles
         }
         Column(Modifier.fillMaxSize().padding(start = 28.dp, top = TvTokens.EdgeTop + 16.dp, end = TvTokens.EdgeEnd, bottom = TvTokens.EdgeTop)) {
             Text(stringResource(title), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 12.dp, bottom = 16.dp))
@@ -655,6 +661,9 @@ private fun SidePanel(
             val channelChoices = remember(panel, open) { if (panel == PlayerPanel.CHANNELS && open) channels?.load().orEmpty() else emptyList() }
             // Again when the tracks come (the line saying there are none goes, and had the focus).
             LaunchedEffect(panel, open, choices.isEmpty()) { if (open) takeFocus(first) }
+            // The search starts as its panel opens; the remote goes to its first row again when the list changes.
+            LaunchedEffect(panel, open) { if (open && panel == PlayerPanel.ONLINE_SUBTITLES) online?.start() }
+            LaunchedEffect(panel, open, online?.choosingLanguage) { if (open && panel == PlayerPanel.ONLINE_SUBTITLES) takeFocus(first) }
             // The list opens on the row in use: a row far down a long list is not drawn yet, and could not take the focus.
             val selectedRow = when (panel) {
                 PlayerPanel.SUBTITLES -> choices.indexOfFirst { it.selected } + 1
@@ -665,19 +674,69 @@ private fun SidePanel(
                 PlayerPanel.SUBTITLE_SIZE -> subtitles?.size?.ordinal ?: 0
                 PlayerPanel.SLEEP -> SLEEP_CHOICES.indexOf(sleep.minutes).coerceAtLeast(0)
                 PlayerPanel.CHANNELS -> channelChoices.indexOfFirst { it.playing }.coerceAtLeast(0)
+                // The language list opens on the language searched.
+                PlayerPanel.ONLINE_SUBTITLES -> if (online?.choosingLanguage == true) onlineLanguageCodes(locale).indexOf(online.languages.first()).coerceAtLeast(0) else 0
             }
-            val list = remember(panel) { LazyListState(firstVisibleItemIndex = selectedRow) }
+            val list = remember(panel, online?.choosingLanguage) { LazyListState(firstVisibleItemIndex = selectedRow) }
             LazyColumn(state = list, verticalArrangement = Arrangement.spacedBy(4.dp), contentPadding = PaddingValues(vertical = 4.dp)) {
                 when (panel) {
-                    PlayerPanel.SUBTITLES, PlayerPanel.AUDIO -> tracks(player, controls, type, choices, first)
+                    PlayerPanel.SUBTITLES, PlayerPanel.AUDIO -> tracks(player, controls, type, choices, first, online)
                     PlayerPanel.SPEED -> speeds(player, controls, locale, first)
                     PlayerPanel.MORE -> more(controls, scale, subtitles, sleep, statisticsShown, onToggleStatistics, onReportProblem, first)
                     PlayerPanel.ASPECT -> scales(controls, scale, onScale, first)
                     PlayerPanel.SUBTITLE_SIZE -> subtitles?.let { sizes(controls, it, first) }
                     PlayerPanel.SLEEP -> sleeps(controls, sleep, first)
                     PlayerPanel.CHANNELS -> channelRows(controls, channelChoices, first) { id -> channels?.onChoose?.invoke(id) }
+                    PlayerPanel.ONLINE_SUBTITLES -> online?.let { onlineRows(it, locale, words, first) }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Subtitles → Search online…: the language searched (OK changes it), then what the services found, the viewer's
+ * language first; OK on one downloads it and shows it.
+ */
+private fun LazyListScope.onlineRows(online: OnlineSubtitles, locale: Locale, words: TrackWords, first: FocusRequester) {
+    if (!online.configured) {
+        item(key = "onlineHint") {
+            // With no row to choose, the line keeps the remote in the panel.
+            Text(
+                stringResource(R.string.online_subtitles_no_service),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.focusRequester(first).focusable().padding(horizontal = 16.dp, vertical = 12.dp).testTag("onlineHint"),
+            )
+        }
+        return
+    }
+    if (online.choosingLanguage) {
+        val codes = onlineLanguageCodes(locale)
+        codes.forEachIndexed { index, code ->
+            item(key = "language-$code") {
+                val selected = code == online.languages.first()
+                ChoiceRow(onlineLanguage(code, locale), null, selected, tag = "onlineLanguage-$code", modifier = if (selected || (index == 0 && online.languages.first() !in codes)) Modifier.focusRequester(first) else Modifier) { online.chooseLanguage(code) }
+            }
+        }
+        return
+    }
+    item(key = "onlineQuery") {
+        Text(online.hint.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testTag("onlineQuery"))
+    }
+    item(key = "onlineLanguages") {
+        MoreRow(stringResource(R.string.online_subtitles_language), online.languages.joinToString(", ") { onlineLanguage(it, locale) }, Icons.Rounded.Language, tag = "onlineLanguages", modifier = Modifier.focusRequester(first)) {
+            online.choosingLanguage = true
+        }
+    }
+    onlineStatus(online).forEach { (key, text) ->
+        item(key = key) {
+            Text(text(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp).testTag(key))
+        }
+    }
+    online.results.forEachIndexed { index, subtitle ->
+        item(key = "online-${subtitle.id}") {
+            ChoiceRow(onlineLanguage(subtitle.language, locale), onlineDetail(subtitle, words), selected = false, tag = "onlineResult-$index") { online.choose(subtitle) }
         }
     }
 }
@@ -693,10 +752,11 @@ internal fun trackWords(): TrackWords {
         audioDescription = stringResource(R.string.track_audio_description),
         mono = stringResource(R.string.track_mono),
         stereo = stringResource(R.string.track_stereo),
+        unsupported = stringResource(R.string.track_unsupported),
     )
 }
 
-private fun LazyListScope.tracks(player: Player, controls: PlayerControls, type: Int, choices: List<TrackChoice>, first: FocusRequester) {
+private fun LazyListScope.tracks(player: Player, controls: PlayerControls, type: Int, choices: List<TrackChoice>, first: FocusRequester, online: OnlineSubtitles? = null) {
     val off = choices.none { it.selected }
     val choose = { choice: TrackChoice? ->
         player.trackSelectionParameters = TrackChoices.select(player.trackSelectionParameters, type, choice)
@@ -710,11 +770,18 @@ private fun LazyListScope.tracks(player: Player, controls: PlayerControls, type:
     choices.forEachIndexed { index, choice ->
         item(key = "track-$index") {
             val focusFirst = choice.selected || (type == C.TRACK_TYPE_AUDIO && index == 0 && choices.none { it.selected })
-            ChoiceRow(choice.name, choice.detail, selected = choice.selected, tag = "track-$index", modifier = if (focusFirst) Modifier.focusRequester(first) else Modifier) { choose(choice) }
+            // A track this device cannot show keeps its row (the remote passes over it); OK does nothing.
+            ChoiceRow(choice.name, choice.detail, selected = choice.selected, tag = "track-$index", modifier = if (focusFirst) Modifier.focusRequester(first) else Modifier) { if (choice.available) choose(choice) }
         }
     }
     if (type == C.TRACK_TYPE_AUDIO) {
         choices.firstOrNull { it.selected }?.let { selected -> item(key = "audioRoute") { AudioRouteLine(player, selected) } }
+    }
+    // Below the stream's own tracks (or the line saying it has none): the subtitle services.
+    if (type == C.TRACK_TYPE_TEXT && online != null) {
+        item(key = "searchOnline") {
+            MoreRow(stringResource(R.string.search_online), online.hint.label(), Icons.Rounded.Search, tag = "searchOnline") { controls.open(PlayerPanel.ONLINE_SUBTITLES) }
+        }
     }
     if (choices.isEmpty()) {
         item(key = "none") {

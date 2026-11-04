@@ -343,6 +343,43 @@ class TvPlayerControlsTest {
         compose.onNodeWithTag("tvSubtitles").assertIsFocused()
     }
 
+    /**
+     * The Subtitles panel opened before the stream's tracks are known says they are coming, then lists them once they
+     * come, without being opened again; a track the device cannot show is there, and OK on it chooses nothing.
+     */
+    @Test
+    fun theSubtitlesPanelListsTracksThatArriveWhileItIsOpen() {
+        val episode = FakeTracksPlayer(
+            listOf(
+                FakeTracksPlayer.audio("en", MimeTypes.AUDIO_AAC, channels = 2),
+                FakeTracksPlayer.text("en", mimeType = MimeTypes.APPLICATION_SUBRIP),
+                FakeTracksPlayer.text("fr", mimeType = MimeTypes.TEXT_SSA),
+                FakeTracksPlayer.text("de", mimeType = MimeTypes.APPLICATION_PGS),
+            ),
+            initiallySelected = setOf(0),
+            unsupported = setOf(3),
+            tracksKnown = false,
+        )
+        start(episode)
+        press(Key.DirectionRight, 2)
+        compose.onNodeWithTag("tvSubtitles").assertIsFocused()
+        press(Key.DirectionCenter)
+        compose.onNodeWithTag("tracksHint").assertTextContains("The tracks show once the stream plays.")
+        compose.runOnIdle { episode.tracksArrive() }
+        compose.waitForIdle()
+        compose.onNodeWithTag("tracksHint").assertDoesNotExist()
+        row("track-0").assertTextContains("English")
+        row("track-1").assertTextContains("French")
+        row("track-2").assertTextContains("German").assertTextContains("PGS · Cannot be shown on this device")
+        // Down to the German track with the remote: OK leaves the subtitles as they were and the panel open.
+        row("trackOff").assertIsFocused()
+        press(Key.DirectionDown, 3)
+        row("track-2").assertIsFocused()
+        press(Key.DirectionCenter)
+        row("track-2").assertIsFocused()
+        assertTrue(episode.trackParameters.overrides.values.none { it.type == C.TRACK_TYPE_TEXT })
+    }
+
     /** No audio track yet (a channel just opened) or none at all: the remote is still in the panel, on its line. */
     @Test
     fun anAudioPanelWithoutTracksKeepsTheRemoteInside() {

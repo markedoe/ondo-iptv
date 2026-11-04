@@ -37,9 +37,39 @@ eu), `library-<id>` pour les autres. Ce document contient tout ce qui est propre
 - l’ordre des rangées des onglets Accueil, Films et Séries (Réglages → Ordre des rangées) ; un profil Enfant ne peut pas changer
   le sien.
 
-Communs à tous les profils : les playlists, le jeton TMDb et les autres clés de services, les réglages de lecture
+Communs à tous les profils : les listes et collections partagées avec tous les profils (voir « Listes partagées »), les playlists, le jeton TMDb et les autres clés de services, les réglages de lecture
 (mémoire tampon, image, sous-titres, langues préférées), les réglages de synchronisation, « Afficher les catégories
 adultes », les verrous de catégories (Apple).
+
+## Listes partagées
+
+Une liste ou une collection peut être partagée avec tous les profils : sa page et son menu ont un interrupteur
+« Partagée avec tous les profils » (affiché dès qu’il y a deux profils ou plus).
+
+- Une liste partagée n’est dans la bibliothèque d’aucun profil : elle vit dans un espace du foyer à part, la même liste
+  pour tous les profils, et elle apparaît dans les listes de chaque profil marquée d’une petite icône « partagée » (deux
+  personnes).
+- Tout profil qui n’est pas un profil Enfant peut y ajouter ou en retirer des éléments, la renommer, la remettre en
+  ordre, la reprendre ou la supprimer. Supprimer demande d’abord, en disant que la liste est supprimée pour tous les
+  profils.
+- Un profil Enfant voit les listes partagées, sans les éléments que ses règles masquent (catégories adultes, ses
+  catégories masquées, et sur Apple celles verrouillées), et ne peut pas les modifier : ni interrupteur, ni renommage,
+  ni suppression, ni ajout ou retrait, ni remise en ordre.
+- Désactiver l’interrupteur reprend la liste dans le profil qui le désactive : les autres profils la perdent, et une
+  confirmation le dit d’abord.
+- Partager et reprendre déplacent la liste entière, sous le même ID, avec ses éléments et leurs instants : rien n’est
+  perdu. La synchronisation transporte le déplacement comme une marque datée du départ de l’espace que la liste quitte et
+  la liste, datée plus tard, dans l’espace où elle entre (docs/SYNC.fr.md, « Listes partagées »). Les appareils
+  s’accordent ; un appareil qui a encore la liste là où elle était la fusionne dans la liste là où elle est allée,
+  modifications comprises, et n’en fait pas revenir une deuxième copie.
+- Un appareil d’une version antérieure ne peut pas afficher les listes partagées : il garde une liste partagée ailleurs
+  comme la liste du profil qu’elle était et, entre deux appareils qui partagent des listes, ne leur fait jamais perdre une
+  liste.
+- Supprimer un profil laisse les listes qu’il a partagées : elles appartiennent à tous les profils.
+
+Chaque appareil garde les listes partagées dans un document à part : `household.json` sur Android (les listes, ce qui a
+été supprimé parmi elles, et quand cet appareil a appris chaque suppression), `library-household` sur les appareils
+Apple (les listes), avec ce qui a été supprimé parmi elles dans `sync.json` sous `household`.
 
 ## Migration
 
@@ -128,8 +158,12 @@ Chaque profil se synchronise, quel que soit le profil ouvert (docs/SYNC.fr.md, �
   synchronisent) ne fait qu’un avec un profil reçu du même nom, quels que soient sa casse et ses accents, et du même
   réglage Enfant : le plus petit ID est gardé sur les deux appareils, l’autre est supprimé, et ses données vont dans
   celui gardé ;
+- les listes partagées avec tous les profils voyagent dans `household`, à part des données de chaque profil ; un
+  déplacement entre un profil et le foyer est une marque datée là où était la liste et la liste, datée plus tard, là
+  où elle est allée (`fixtures/sync/shared-lists-*.json`) ; un appareil plus ancien entre deux plus récents ne fait perdre
+  aucune liste (`fixtures/sync/interop/old-relay-*`) ;
 - les cœurs Kotlin et Swift partagent les mêmes fichiers d’exemple (`fixtures/sync/profiles-*.json`) et les mêmes
-  tests.
+  tests, et chacun fusionne ce que l’autre a écrit (`fixtures/sync/interop/`).
 
 Ce que chaque appareil garde pour la synchronisation : Android garde les suppressions de chaque profil dans le document
 de bibliothèque de ce profil, celles du profil principal avec les sessions ; Apple les garde dans `sync.json`, celles du

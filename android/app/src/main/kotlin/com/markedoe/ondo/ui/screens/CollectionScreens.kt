@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.People
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
@@ -40,6 +41,7 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -72,11 +74,11 @@ import com.markedoe.ondo.ui.model.ShowcaseItem
 import com.markedoe.ondo.ui.tv.focusFrame
 import com.markedoe.ondo.ui.tv.rememberTvTextField
 
-/** A collection in My List: its name and how many items of the current playlist it holds. */
-data class CollectionRow(val id: String, val name: String, val count: Int)
+/** A collection in My List: its name, how many items of the current playlist it holds, and whether every profile shares it. */
+data class CollectionRow(val id: String, val name: String, val count: Int, val shared: Boolean = false)
 
 /** A collection offered on a movie or series page, ticked when it holds the item. */
-data class CollectionChoice(val id: String, val name: String, val contains: Boolean)
+data class CollectionChoice(val id: String, val name: String, val contains: Boolean, val shared: Boolean = false)
 
 data class CollectionUiState(
     val id: String,
@@ -86,6 +88,12 @@ data class CollectionUiState(
     val channels: List<ChannelRow> = emptyList(),
     /** The actors and directors in it, whatever the playlist. */
     val people: List<PersonRow> = emptyList(),
+    /** Shared with every profile (docs/PROFILES.md, "Shared lists"). */
+    val shared: Boolean = false,
+    /** The open profile may rename or delete it (a Kids profile only sees a shared one). */
+    val canEdit: Boolean = true,
+    /** The "Shared with all profiles" switch shows: two profiles or more (or shared), not a Kids profile. */
+    val canShare: Boolean = false,
 ) {
     val isEmpty: Boolean get() = movies.isEmpty() && series.isEmpty() && channels.isEmpty() && people.isEmpty()
 }
@@ -97,9 +105,25 @@ class CollectionActions(
     val onPerson: (String) -> Unit = {},
     val onRename: (String) -> Unit = {},
     val onDelete: () -> Unit = {},
+    /** Shares it with every profile (true), or takes it back into the open profile (false). */
+    val onShare: (Boolean) -> Unit = {},
 )
 
-/** One collection: its movies, series and channels, with Rename and Delete in the menu. */
+/** The small mark of a collection shared with every profile. */
+@Composable
+fun SharedMark(modifier: Modifier = Modifier) {
+    Icon(
+        Icons.Rounded.People,
+        contentDescription = stringResource(R.string.shared_collection),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.size(18.dp).testTag("sharedMark"),
+    )
+}
+
+/**
+ * One collection: its movies, series and channels, with Rename and Delete in the menu, and the "Shared with all profiles"
+ * switch. A Kids profile sees a shared collection without either.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CollectionScreen(state: CollectionUiState, actions: CollectionActions) {
@@ -107,6 +131,11 @@ fun CollectionScreen(state: CollectionUiState, actions: CollectionActions) {
     var menu by remember { mutableStateOf(false) }
     var renaming by rememberSaveable { mutableStateOf(false) }
     var deleting by rememberSaveable { mutableStateOf(false) }
+    var unsharing by rememberSaveable { mutableStateOf(false) }
+    // Taking it back asks first: the other profiles lose it.
+    fun share(on: Boolean) {
+        if (on) actions.onShare(true) else unsharing = true
+    }
     LazyVerticalGrid(
         columns = GridCells.Adaptive(if (metrics.compact) 108.dp else 150.dp),
         contentPadding = PaddingValues(start = metrics.gutter, end = metrics.gutter, bottom = 32.dp),
@@ -116,17 +145,30 @@ fun CollectionScreen(state: CollectionUiState, actions: CollectionActions) {
     ) {
         fullWidth {
             TopAppBar(
-                title = { Text(state.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(state.name, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                        if (state.shared) SharedMark()
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = actions.onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back)) }
                 },
                 actions = {
-                    Box {
+                    if (state.canEdit) Box {
                         IconButton(onClick = { menu = true }, modifier = Modifier.testTag("collectionMenu")) {
                             Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.more))
                         }
                         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.rename_collection)) }, onClick = { menu = false; renaming = true })
+                            if (state.canShare) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.shared_with_all_profiles)) },
+                                    trailingIcon = { Checkbox(checked = state.shared, onCheckedChange = null) },
+                                    onClick = { menu = false; share(!state.shared) },
+                                    modifier = Modifier.testTag("sharedMenuItem"),
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.delete_collection), color = MaterialTheme.colorScheme.error) },
                                 onClick = { menu = false; deleting = true },
@@ -137,6 +179,17 @@ fun CollectionScreen(state: CollectionUiState, actions: CollectionActions) {
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                 windowInsets = WindowInsets(0),
             )
+        }
+        if (state.canShare) {
+            fullWidth {
+                ListItem(
+                    headlineContent = { Text(stringResource(R.string.shared_with_all_profiles)) },
+                    leadingContent = { Icon(Icons.Rounded.People, contentDescription = null) },
+                    trailingContent = { Switch(checked = state.shared, onCheckedChange = null) },
+                    modifier = Modifier.focusFrame(RoundedCornerShape(10.dp), grow = 1.02f).clip(RoundedCornerShape(10.dp))
+                        .toggleable(value = state.shared, role = Role.Switch, onValueChange = ::share).testTag("sharedSwitch"),
+                )
+            }
         }
         posters(R.string.movies, state.movies, actions.onOpen)
         posters(R.string.series, state.series, actions.onOpen)
@@ -169,7 +222,7 @@ fun CollectionScreen(state: CollectionUiState, actions: CollectionActions) {
     if (deleting) {
         AlertDialog(
             onDismissRequest = { deleting = false },
-            title = { Text(stringResource(R.string.delete_collection_confirm)) },
+            title = { Text(stringResource(if (state.shared) R.string.delete_shared_collection_confirm else R.string.delete_collection_confirm)) },
             text = { Text(state.name) },
             confirmButton = {
                 TextButton(onClick = { deleting = false; actions.onDelete() }) {
@@ -177,6 +230,19 @@ fun CollectionScreen(state: CollectionUiState, actions: CollectionActions) {
                 }
             },
             dismissButton = { TextButton(onClick = { deleting = false }) { Text(stringResource(R.string.cancel)) } },
+        )
+    }
+    if (unsharing) {
+        AlertDialog(
+            onDismissRequest = { unsharing = false },
+            title = { Text(stringResource(R.string.unshare_collection_confirm)) },
+            text = { Text(stringResource(R.string.unshare_collection_explanation, state.name)) },
+            confirmButton = {
+                TextButton(onClick = { unsharing = false; actions.onShare(false) }, modifier = Modifier.testTag("confirmUnshare")) {
+                    Text(stringResource(R.string.stop_sharing))
+                }
+            },
+            dismissButton = { TextButton(onClick = { unsharing = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -194,7 +260,12 @@ fun LazyGridScope.collectionRows(rows: List<CollectionRow>, onOpen: (String) -> 
         ListItem(
             headlineContent = { Text(row.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
             leadingContent = { Icon(Icons.Rounded.CollectionsBookmark, contentDescription = null) },
-            trailingContent = { Text(row.count.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+            trailingContent = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (row.shared) SharedMark()
+                    Text(row.count.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
             modifier = Modifier.focusFrame(RoundedCornerShape(10.dp), grow = 1.02f).clip(RoundedCornerShape(10.dp)).clickable { onOpen(row.id) }.testTag("collection-${row.name}"),
         )
     }

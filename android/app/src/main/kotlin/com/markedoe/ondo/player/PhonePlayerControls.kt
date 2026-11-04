@@ -52,6 +52,7 @@ import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.Forward10
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
@@ -62,6 +63,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueryStats
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material.icons.rounded.Replay10
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.Subtitles
@@ -170,6 +172,7 @@ fun PhonePlayerOverlay(
     onRestart: () -> Unit = {},
     onWatchLive: () -> Unit = {},
     subtitles: SubtitleSizing? = null,
+    online: OnlineSubtitles? = null,
 ) {
     DisposableEffect(player) {
         val listener = object : Player.Listener {
@@ -363,7 +366,7 @@ fun PhonePlayerOverlay(
             contentColor = Color.White,
             modifier = Modifier.testTag("playerSheet"),
         ) {
-            PanelContent(panel, player, controls, statisticsShown, onToggleStatistics, onReportProblem, scale, onScale, sleep, channels, subtitles)
+            PanelContent(panel, player, controls, statisticsShown, onToggleStatistics, onReportProblem, scale, onScale, sleep, channels, subtitles, online)
         }
     }
 }
@@ -698,6 +701,7 @@ private fun PanelContent(
     sleep: SleepTimer,
     channels: ChannelList?,
     subtitles: SubtitleSizing?,
+    online: OnlineSubtitles?,
 ) {
     val title = when (panel) {
         PlayerPanel.SUBTITLES -> R.string.subtitles
@@ -708,8 +712,10 @@ private fun PanelContent(
         PlayerPanel.SUBTITLE_SIZE -> R.string.subtitle_size
         PlayerPanel.SLEEP -> R.string.sleep_timer
         PlayerPanel.CHANNELS -> R.string.channels
+        PlayerPanel.ONLINE_SUBTITLES -> R.string.online_subtitles
     }
     val words = trackWords()
+    LaunchedEffect(panel) { if (panel == PlayerPanel.ONLINE_SUBTITLES) online?.start() }
     val locale = LocalConfiguration.current.locales[0]
     val type = if (panel == PlayerPanel.SUBTITLES) C.TRACK_TYPE_TEXT else C.TRACK_TYPE_AUDIO
     val choices = if (panel == PlayerPanel.SUBTITLES || panel == PlayerPanel.AUDIO) TrackChoices.of(controls.tracks, type, words, locale) else emptyList()
@@ -720,19 +726,20 @@ private fun PanelContent(
         val list = remember(panel) { LazyListState(firstVisibleItemIndex = (channelChoices.indexOfFirst { it.playing } - 2).coerceAtLeast(0)) }
         LazyColumn(state = list) {
             when (panel) {
-                PlayerPanel.SUBTITLES, PlayerPanel.AUDIO -> trackRows(player, controls, type, choices)
+                PlayerPanel.SUBTITLES, PlayerPanel.AUDIO -> trackRows(player, controls, type, choices, online)
                 PlayerPanel.SPEED -> speedRows(player, controls, locale)
                 PlayerPanel.MORE -> moreRows(controls, scale, subtitles, sleep, statisticsShown, onToggleStatistics, onReportProblem)
                 PlayerPanel.ASPECT -> scaleRows(controls, scale, onScale)
                 PlayerPanel.SUBTITLE_SIZE -> subtitles?.let { sizeRows(controls, it) }
                 PlayerPanel.SLEEP -> sleepRows(controls, sleep)
                 PlayerPanel.CHANNELS -> channelRows(controls, channelChoices) { id -> channels?.onChoose?.invoke(id) }
+                PlayerPanel.ONLINE_SUBTITLES -> online?.let { onlineSheetRows(it, locale, words) }
             }
         }
     }
 }
 
-private fun LazyListScope.trackRows(player: Player, controls: PlayerControls, type: Int, choices: List<TrackChoice>) {
+private fun LazyListScope.trackRows(player: Player, controls: PlayerControls, type: Int, choices: List<TrackChoice>, online: OnlineSubtitles? = null) {
     val choose = { choice: TrackChoice? ->
         player.trackSelectionParameters = TrackChoices.select(player.trackSelectionParameters, type, choice)
         controls.closePanel()
@@ -741,7 +748,7 @@ private fun LazyListScope.trackRows(player: Player, controls: PlayerControls, ty
         item(key = "off") { SheetChoice(stringResource(R.string.off), null, selected = choices.none { it.selected }, tag = "trackOff") { choose(null) } }
     }
     choices.forEachIndexed { index, choice ->
-        item(key = "track-$index") { SheetChoice(choice.name, choice.detail, selected = choice.selected, tag = "track-$index") { choose(choice) } }
+        item(key = "track-$index") { SheetChoice(choice.name, choice.detail, selected = choice.selected, tag = "track-$index") { if (choice.available) choose(choice) } }
     }
     if (choices.isEmpty()) {
         item(key = "none") {
@@ -752,6 +759,38 @@ private fun LazyListScope.trackRows(player: Player, controls: PlayerControls, ty
             }
             Text(stringResource(hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp).testTag("tracksHint"))
         }
+    }
+    if (type == C.TRACK_TYPE_TEXT && online != null) {
+        item(key = "searchOnline") {
+            SheetRow(Icons.Rounded.Search, stringResource(R.string.search_online), online.hint.label(), tag = "searchOnline") { controls.open(PlayerPanel.ONLINE_SUBTITLES) }
+        }
+    }
+}
+
+/** Subtitles → Search online… on a phone: the language searched, then the results; a tap downloads one and shows it. */
+private fun LazyListScope.onlineSheetRows(online: OnlineSubtitles, locale: java.util.Locale, words: TrackWords) {
+    if (!online.configured) {
+        item(key = "onlineHint") {
+            Text(stringResource(R.string.online_subtitles_no_service), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp).testTag("onlineHint"))
+        }
+        return
+    }
+    if (online.choosingLanguage) {
+        com.markedoe.ondo.core.subtitles.SubtitleLanguages.codes.sortedBy { onlineLanguage(it, locale) }.forEach { code ->
+            item(key = "language-$code") { SheetChoice(onlineLanguage(code, locale), null, selected = code == online.languages.first(), tag = "onlineLanguage-$code") { online.chooseLanguage(code) } }
+        }
+        return
+    }
+    item(key = "onlineLanguages") {
+        SheetRow(Icons.Rounded.Language, stringResource(R.string.online_subtitles_language), online.languages.joinToString(", ") { onlineLanguage(it, locale) }, tag = "onlineLanguages") { online.choosingLanguage = true }
+    }
+    onlineStatus(online).forEach { (key, text) ->
+        item(key = key) {
+            Text(text(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).testTag(key))
+        }
+    }
+    online.results.forEachIndexed { index, subtitle ->
+        item(key = "online-${subtitle.id}") { SheetChoice(onlineLanguage(subtitle.language, locale), onlineDetail(subtitle, words), selected = false, tag = "onlineResult-$index") { online.choose(subtitle) } }
     }
 }
 

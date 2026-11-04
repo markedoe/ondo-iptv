@@ -33,6 +33,11 @@ data class SyncSnapshot(
      * those); none from a device that does not sync profiles.
      */
     val profileData: List<SyncProfileData> = emptyList(),
+    /**
+     * The lists shared with every profile (docs/SYNC.md, "Shared lists"), with what was deleted among them; null when there
+     * are none, and from a device that does not share lists.
+     */
+    val household: SyncHousehold? = null,
     val deleted: Map<String, Long> = emptyMap(),
     /** Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID. */
     val replaced: Map<String, String> = emptyMap(),
@@ -67,6 +72,8 @@ data class SyncSnapshot(
                     deleted = bucket.deleted.toSortedMap(),
                 )
             },
+            // No household (no list shared) is left out, as an older version writes it: the digest stays the same.
+            household = household?.takeIf { !it.isEmpty }?.let { it.copy(deleted = it.deleted.toSortedMap()) },
         )
         return MessageDigest.getInstance("SHA-256").digest(content.encoded()).joinToString("") { "%02x".format(it) }
     }
@@ -115,6 +122,8 @@ data class SyncSnapshot(
         learned: Map<String, Long> = emptyMap(),
         /** For each profile other than the main one, by ID: when this device learned the deletions made in it elsewhere. */
         profileLearned: Map<String, Map<String, Long>> = emptyMap(),
+        /** When this device learned the deletions made among the shared lists elsewhere. */
+        householdLearned: Map<String, Long> = emptyMap(),
     ): SyncSnapshot {
         val oldest = minOf(now - days * DAY_MS, sessions.filter { it >= now - PEERS_KEPT_DAYS * DAY_MS }.minOrNull() ?: Long.MAX_VALUE)
         // A deletion learned late (from a device away for months) counts from when this device learned it.
@@ -127,6 +136,10 @@ data class SyncSnapshot(
                 val learnedHere = profileLearned[bucket.profile].orEmpty()
                 bucket.copy(deleted = bucket.deleted.filter { (key, time) -> maxOf(time, learnedHere[key] ?: time) >= oldest })
             },
+            // Among the shared lists too.
+            household = household
+                ?.let { it.copy(deleted = it.deleted.filter { (key, time) -> maxOf(time, householdLearned[key] ?: time) >= oldest }) }
+                ?.takeIf { !it.isEmpty },
         )
     }
 
@@ -139,6 +152,7 @@ data class SyncSnapshot(
             yield(list.updatedAt)
             list.renamedAt?.let { yield(it) }
             list.orderedAt?.let { yield(it) }
+            list.placedAt?.let { yield(it) }
             list.items.forEach { item -> item.addedAt?.let { yield(it) } }
             list.people.forEach { yield(it.addedAt) }
         }
@@ -147,6 +161,7 @@ data class SyncSnapshot(
         rows.forEach { yield(it.updatedAt) }
         profiles.forEach { yield(it.updatedAt) }
         profileData.forEach { yieldAll(it.records().times()) }
+        household?.let { yieldAll(it.records().times()) }
         yieldAll(deleted.values)
     }
 
@@ -166,7 +181,7 @@ data class SyncSnapshot(
             playlists = playlists.filter { past(it.addedAt) && past(it.updatedAt) },
             favorites = favorites.filter { past(it.addedAt) },
             progress = progress.filter { past(it.watchedAt) },
-            lists = lists.filter { past(it.updatedAt) && past(it.nameTime) && past(it.orderTime) }.map { list ->
+            lists = lists.filter { past(it.updatedAt) && past(it.nameTime) && past(it.orderTime) && past(it.placedAt ?: it.updatedAt) }.map { list ->
                 list.copy(items = list.items.filter { past(it.addedAt ?: list.updatedAt) }, people = list.people.filter { past(it.addedAt) })
             },
             people = people.filter { past(it.addedAt) },
@@ -174,6 +189,7 @@ data class SyncSnapshot(
             rows = rows.filter { past(it.updatedAt) },
             profiles = profiles.filter { past(it.updatedAt) },
             profileData = profileData.map { SyncProfileData.of(it.profile, it.records().withoutRecordsAfter(latest)) },
+            household = household?.let { SyncHousehold.of(it.records().withoutRecordsAfter(latest)) }?.takeIf { !it.isEmpty },
             deleted = deleted.filterValues(::past),
         )
     }
@@ -220,6 +236,8 @@ data class SyncSnapshot(
         rows = SyncRows.capped(rows.map(SyncRows::normalized)),
         profiles = SyncProfile.capped(profiles.map { it.copy(id = it.id.lowercase()) }),
         profileData = profileData.map { SyncProfileData.of(it.profile.lowercase(), it.records().normalized()) },
+        // No shared list is no household: an empty one is never written (an older version writes none).
+        household = household?.let { SyncHousehold.of(it.records().normalized()) }?.takeIf { !it.isEmpty },
         deleted = deleted.entries.fold(LinkedHashMap<String, Long>()) { times, (key, time) ->
             val lowercased = lowercasingId(key)
             times[lowercased] = maxOf(times[lowercased] ?: time, time)
@@ -260,6 +278,10 @@ internal fun lowercasingId(key: String): String {
         if (item.startsWith(SyncPerson.KEY_PREFIX)) return "$list|${lowercasingId(item)}"
         val bar = item.indexOf('|').takeIf { it >= 0 } ?: return "$list|${item.lowercase()}"
         return "$list|${item.substring(0, bar).lowercase()}${item.substring(bar)}"
+    }
+    // The moves and deletions of shared lists (docs/SYNC.md, "Shared lists"): their space and list IDs.
+    for (prefix in listOf("listmoved:", "sharedlistdeleted:")) {
+        if (key.startsWith(prefix)) return prefix + key.substring(prefix.length).lowercase()
     }
     for (prefix in listOf("playlist:", "list:", "favorite:", "progress:", SyncProfile.KEY_PREFIX)) {
         if (!key.startsWith(prefix)) continue
@@ -340,6 +362,11 @@ data class SyncList(
     val orderedAt: Long? = null,
     /** The order of the items set at [orderedAt], by [SyncListItem.key]; the order of [items] when absent. */
     val order: List<String>? = null,
+    /**
+     * When the list was moved into the space it is in (shared with every profile, or taken back into a profile:
+     * docs/SYNC.md, "Shared lists"); absent for a list never moved.
+     */
+    val placedAt: Long? = null,
 ) {
     val key: String get() = "list:$id"
     val nameTime: Long get() = renamedAt ?: updatedAt
@@ -530,6 +557,31 @@ data class SyncProfileData(
             people = records.people,
             rows = records.rows,
             deleted = records.deleted.filterKeys { !it.startsWith("playlist:") },
+        )
+    }
+}
+
+/**
+ * The lists shared with every profile (docs/SYNC.md, "Shared lists"): a space of their own, apart from any profile's
+ * library, with what was deleted among them (a shared list deleted for every profile, an item taken out of one, a list
+ * taken back into a profile). Merged by the same rules as a profile's lists.
+ */
+@Serializable
+data class SyncHousehold(
+    val lists: List<SyncList> = emptyList(),
+    val deleted: Map<String, Long> = emptyMap(),
+) {
+    val isEmpty: Boolean get() = lists.isEmpty() && deleted.isEmpty()
+
+    /** Its records as a snapshot of their own (to merge, normalise, date them with the snapshot's rules). */
+    fun records(playlists: List<SyncPlaylist> = emptyList(), deletedPlaylists: Map<String, Long> = emptyMap(), replaced: Map<String, String> = emptyMap()) =
+        SyncSnapshot(device = "", playlists = playlists, lists = lists, deleted = deleted + deletedPlaylists, replaced = replaced)
+
+    companion object {
+        /** The household of [records] (only their lists and the deletions of lists and their items). */
+        fun of(records: SyncSnapshot) = SyncHousehold(
+            lists = records.lists,
+            deleted = records.deleted.filterKeys { it.startsWith("list:") || it.startsWith(SyncList.ITEM_PREFIX) },
         )
     }
 }
