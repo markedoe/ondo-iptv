@@ -91,8 +91,30 @@ class LibraryTest {
         library = library.removeHistory(library.progress(second)!!, now = t0 + 30_000)
         assertEquals(emptyList(), library.continueWatching(playlistId), "taken away")
         assertEquals(true, library.progress(third)?.isFinished, "still watched")
-        library = library.updateProgress(third, 2700.0, 2700.0, now = t0 + 40_000)
-        assertEquals(listOf(third.playbackKey), library.continueWatching(playlistId).map { it.id })
+        val fourth = ref(ContentType.SERIES, "s", "e4")
+        library = library.recordPlayback(HistoryEntry(fourth, "S", lastWatchedAt = t0 + 40_000)).updateProgress(fourth, 600.0, 2700.0, now = t0 + 40_000)
+        assertEquals(listOf(fourth.playbackKey), library.continueWatching(playlistId).map { it.id })
+    }
+
+    /**
+     * An episode watched to the end and watched again stays watched: starting it and the positions saved while it
+     * plays change nothing (the same time, so the series goes on from where it was); a movie watched again is resumed.
+     * Removed from the history, it is unwatched.
+     */
+    @Test
+    fun anEpisodeWatchedAgainStaysWatched() {
+        val t0 = 1_000_000_000L
+        val episode = ref(ContentType.SERIES, "s", "e1")
+        val movie = ref(ContentType.MOVIE, "m")
+        var library = UserLibrary()
+            .recordPlayback(HistoryEntry(episode, "S", lastWatchedAt = t0)).updateProgress(episode, 2700.0, 2700.0, now = t0)
+            .recordPlayback(HistoryEntry(movie, "M", lastWatchedAt = t0)).updateProgress(movie, 6000.0, 6000.0, now = t0)
+        val watched = library.progress(episode)!!
+        library = library.recordPlayback(HistoryEntry(episode, "S", lastWatchedAt = t0 + 10_000)).updateProgress(episode, 600.0, 2700.0, now = t0 + 20_000)
+            .recordPlayback(HistoryEntry(movie, "M", lastWatchedAt = t0 + 30_000)).updateProgress(movie, 600.0, 6000.0, now = t0 + 40_000)
+        assertEquals(watched, library.progress(episode), "still watched, at the same time")
+        assertEquals(true, library.progress(movie)?.isResumable, "a movie watched again is resumed")
+        assertNull(library.removeHistory(watched, now = t0 + 50_000).progress(episode))
     }
 
     @Test

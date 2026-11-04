@@ -60,10 +60,28 @@ class LibraryStateTest {
         assertTrue(library.progress(third.key)!!.isFinished)
         assertEquals("the one left halfway keeps its progress", 900.0, library.progress(second.key)!!.position, 0.0)
         assertEquals(listOf(third.key), library.continueWatching("p1").map { it.key })
-        // Watched again from the start: it stays the series' card, in progress.
-        val again = library.updateProgress(third.key, 600.0, 2_700.0, now = 3)
-        assertEquals(listOf(third.key), again.continueWatching("p1").map { it.key })
-        assertTrue(again.continueWatching("p1").single().isResumable)
+    }
+
+    /**
+     * An episode watched to the end and watched again stays watched: starting it and the positions saved while it
+     * plays change nothing (the same time, so the series goes on from where it was); a movie watched again is resumed.
+     * Taken out of the history, it is unwatched.
+     */
+    @Test
+    fun anEpisodeWatchedAgainStaysWatched() {
+        val episode = entry("s1", ItemKind.SERIES, "e1")
+        val movie = entry("m1")
+        val watched = LibraryState()
+            .recordStart(episode).updateProgress(episode.key, 2_700.0, 2_700.0, now = 1)
+            .recordStart(movie).updateProgress(movie.key, 6_000.0, 6_000.0, now = 2)
+        val again = watched.recordStart(episode.copy(lastWatchedAt = 3)).updateProgress(episode.key, 600.0, 2_700.0, now = 4)
+            .recordStart(movie.copy(lastWatchedAt = 5)).updateProgress(movie.key, 600.0, 6_000.0, now = 6)
+        val rewatched = again.progress(episode.key)!!
+        assertTrue("still watched", rewatched.isFinished)
+        assertEquals(watched.progress(episode.key), rewatched)
+        assertEquals("the series' card still goes on after it", listOf(episode.key), again.continueWatching("p1").filter { it.kind == ItemKind.SERIES }.map { it.key })
+        assertTrue("a movie watched again is resumed", again.progress(movie.key)!!.isResumable)
+        assertNull(again.remove(rewatched, now = 7).progress(episode.key))
     }
 
     @Test

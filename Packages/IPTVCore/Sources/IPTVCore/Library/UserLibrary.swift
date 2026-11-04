@@ -184,8 +184,11 @@ public struct UserLibrary: Codable, Hashable, Sendable {
 
     // MARK: History & progress
 
+    /// Puts `entry` first in the history; starting again without a position keeps the known resume point, and an
+    /// episode already watched stays as it is (`HistoryEntry.staysWatched`).
     public mutating func recordPlayback(_ entry: HistoryEntry) {
         if let index = history.firstIndex(where: { $0.id == entry.id }) {
+            if history[index].staysWatched { return }
             var updated = entry
             // The file's chapters stay the same: keep where its end credits start.
             if updated.creditsStart == nil { updated.creditsStart = history[index].creditsStart }
@@ -209,7 +212,8 @@ public struct UserLibrary: Codable, Hashable, Sendable {
     public mutating func updateProgress(
         _ reference: MediaReference, position: Double, duration: Double, creditsStart: Double? = nil, now: Date = Date()
     ) {
-        guard let index = history.firstIndex(where: { $0.reference.isSamePlayback(as: reference) }) else { return }
+        guard let index = history.firstIndex(where: { $0.reference.isSamePlayback(as: reference) }),
+              !history[index].staysWatched else { return }
         // NaN or infinite (a clock not known yet) has no JSON form: the library could no longer be saved.
         if position.isFinite { history[index].position = max(position, 0) }
         if duration.isFinite && duration > 0 { history[index].duration = duration }

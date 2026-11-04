@@ -77,8 +77,32 @@ final class LibraryTests: XCTestCase {
         library.removeHistory(try! XCTUnwrap(library.progress(for: ref(.series, "s", episode: "e2"))), now: t0.addingTimeInterval(30))
         XCTAssertEqual(library.continueWatching(playlistID: playlistID), [], "taken away")
         XCTAssertEqual(library.progress(for: ref(.series, "s", episode: "e3"))?.isFinished, true, "still watched")
-        library.updateProgress(ref(.series, "s", episode: "e3"), position: 2700, duration: 2700, now: t0.addingTimeInterval(40))
-        XCTAssertEqual(library.continueWatching(playlistID: playlistID).map(\.id), [ref(.series, "s", episode: "e3").playbackKey])
+        library.recordPlayback(HistoryEntry(reference: ref(.series, "s", episode: "e4"), title: "S", lastWatchedAt: t0.addingTimeInterval(40)))
+        library.updateProgress(ref(.series, "s", episode: "e4"), position: 600, duration: 2700, now: t0.addingTimeInterval(40))
+        XCTAssertEqual(library.continueWatching(playlistID: playlistID).map(\.id), [ref(.series, "s", episode: "e4").playbackKey])
+    }
+
+    /// An episode watched to the end and watched again stays watched: starting it and the positions saved while it plays
+    /// change nothing (the same time, so the series goes on from where it was); a movie watched again is resumed.
+    /// Removed from the history, it is unwatched.
+    func testAnEpisodeWatchedAgainStaysWatched() throws {
+        var library = UserLibrary()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        let episode = ref(.series, "s", episode: "e1")
+        library.recordPlayback(HistoryEntry(reference: episode, title: "S", lastWatchedAt: t0))
+        library.updateProgress(episode, position: 2700, duration: 2700, now: t0)
+        library.recordPlayback(HistoryEntry(reference: ref(.movie, "m"), title: "M", lastWatchedAt: t0))
+        library.updateProgress(ref(.movie, "m"), position: 6000, duration: 6000, now: t0)
+        let watched = try XCTUnwrap(library.progress(for: episode))
+
+        library.recordPlayback(HistoryEntry(reference: episode, title: "S", lastWatchedAt: t0.addingTimeInterval(10)))
+        library.updateProgress(episode, position: 600, duration: 2700, now: t0.addingTimeInterval(20))
+        library.recordPlayback(HistoryEntry(reference: ref(.movie, "m"), title: "M", lastWatchedAt: t0.addingTimeInterval(30)))
+        library.updateProgress(ref(.movie, "m"), position: 600, duration: 6000, now: t0.addingTimeInterval(40))
+        XCTAssertEqual(library.progress(for: episode), watched, "still watched, at the same time")
+        XCTAssertEqual(library.progress(for: ref(.movie, "m"))?.isResumable, true, "a movie watched again is resumed")
+        library.removeHistory(watched, now: t0.addingTimeInterval(50))
+        XCTAssertNil(library.progress(for: episode))
     }
 
     /// Watched with 10 minutes or less left once three quarters are seen, or at 95 %; never by time with no duration.

@@ -53,6 +53,13 @@ data class WatchEntry(
     val isResumable: Boolean get() = kind != ItemKind.CHANNEL && position > 30 && !isFinished
     val minutesLeft: Int get() = (((duration - position).coerceAtLeast(0.0)) / 60).toInt()
 
+    /**
+     * An episode watched to the end: watching it again changes nothing (no resume point, the same time), so it stays
+     * watched here and on the other devices, and the series goes on from where it was. Only taking it out of the
+     * history makes it unwatched. A movie watched again is resumed as before.
+     */
+    val staysWatched: Boolean get() = kind == ItemKind.SERIES && isFinished
+
     companion object {
         /** The movie, episode or channel a [key] stands for, without what was watched of it; null for another key. */
         fun ofKey(key: String): WatchEntry? {
@@ -165,9 +172,13 @@ data class LibraryState(
     fun favorites(playlistId: String, kind: ItemKind): List<Favorite> =
         favorites.filter { it.playlistId == playlistId && it.kind == kind }
 
-    /** Starts (or restarts) an entry; keeps the known position. */
+    /**
+     * Starts (or restarts) an entry; keeps the known position. An episode already watched stays as it is: watching it
+     * again keeps it watched and does not move where the series is at (see [updateProgress]).
+     */
     fun recordStart(entry: WatchEntry): LibraryState {
         val existing = history.firstOrNull { it.key == entry.key }
+        if (existing != null && existing.staysWatched) return this
         val updated = entry.copy(
             position = existing?.position ?: entry.position,
             duration = existing?.duration?.takeIf { it > 0 } ?: entry.duration,
@@ -181,7 +192,7 @@ data class LibraryState(
     fun updateProgress(key: String, position: Double, duration: Double, now: Long, creditsStart: Double? = null): LibraryState =
         copy(
             history = history.map {
-                if (it.key != key) return@map it
+                if (it.key != key || it.staysWatched) return@map it
                 it.copy(
                     position = position.coerceAtLeast(0.0),
                     duration = if (duration > 0) duration else it.duration,

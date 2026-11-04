@@ -103,7 +103,8 @@ class WatchedEpisodesEverywhereTest {
         // Every surface that goes on with the next episode: its id, null when there is none.
         fun nextOn(playing: PlayRequest): Map<String, String?> {
             val state = viewModel.state.value
-            fun card(cards: List<ResumeItem>) = cards.singleOrNull()?.key?.let { WatchEntry.ofKey(it)?.episodeId }
+            fun card(cards: List<ResumeItem>) = // A card's key: playlist|kind|series|episode.
+            cards.singleOrNull()?.key?.split('|')?.getOrNull(3)
             return mapOf(
                 "Home's Continue watching" to card(UiMappers.home(state, Labels(), 1_760_000_000_000L).continueWatching),
                 "Series tab's Continue watching" to card(UiMappers.vod(state, series = true, title = "").continueWatching),
@@ -154,6 +155,14 @@ class WatchedEpisodesEverywhereTest {
         assertEquals(key(episodes[3]), fromSearch.progressKey)
         finish(fromSearch)
         check("a series' Play", fromSearch, episodes.take(4).toSet(), next = episodes[4])
+
+        // The first episode watched again from the season list, stopped halfway: still watched everywhere, from its
+        // start, and the series still goes on after the last one watched.
+        val again = played { viewModel.playEpisode(series.id, episodes[0]) }
+        assertEquals(key(episodes[0]), again.progressKey)
+        assertEquals(0L, again.startPositionMs)
+        repository.recordProgress(again.progressKey!!, 1_350.0, 2_700.0)
+        check("watched again", again, episodes.take(4).toSet(), next = episodes[4])
 
         // The TV player's Episodes row: the episode chosen there; the last one, so the series leaves Continue watching.
         val chosen = repository.playRequest(series, episodes[4])!!

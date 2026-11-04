@@ -152,6 +152,15 @@ final class WatchedEpisodesEverywhereTests: XCTestCase {
         check("a series' Play", fromSearch, watched: Set(episodes.prefix(4).map(\.id)), next: episodes[4])
         model.endSession(fromSearch)
 
+        // The first episode watched again from the season list, stopped halfway: still watched everywhere, from its
+        // start, and the series still goes on after the last one watched.
+        model.play(episodes[0], in: series, season: details.seasons[0].episodes)
+        let again = try await playing(episodes[0], in: model)
+        XCTAssertNil(again.current?.startPosition, "from its start")
+        try await finish(again, at: 0.5)
+        check("watched again", again, watched: Set(episodes.prefix(4).map(\.id)), next: episodes[4])
+        model.endSession(again)
+
         // The last episode: every one watched, and the series leaves Continue Watching.
         model.play(episodes[4], in: series, season: details.seasons[1].episodes)
         let last = try await playing(episodes[4], in: model)

@@ -79,9 +79,13 @@ data class UserLibrary(
 
     // History & progress
 
-    /** Puts `entry` first in the history; starting again without a position keeps the known resume point. */
+    /**
+     * Puts `entry` first in the history; starting again without a position keeps the known resume point, and an
+     * episode already watched stays as it is ([HistoryEntry.staysWatched]).
+     */
     fun recordPlayback(entry: HistoryEntry): UserLibrary {
         val index = history.indexOfFirst { it.id == entry.id }
+        if (index >= 0 && history[index].staysWatched) return this
         var updated = entry
         if (index >= 0) {
             val existing = history[index]
@@ -121,7 +125,7 @@ data class UserLibrary(
         creditsStart: Double? = null,
     ): UserLibrary {
         val index = history.indexOfFirst { it.reference.playbackKey == reference.playbackKey }
-        if (index < 0) return this
+        if (index < 0 || history[index].staysWatched) return this
         val existing = history[index]
         val updated = existing.copy(
             position = maxOf(position, 0.0),
