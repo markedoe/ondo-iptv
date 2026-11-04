@@ -235,6 +235,12 @@
     <string name="rename_collection">संग्रह का नाम बदलें</string>
     <string name="delete_collection">संग्रह डिलीट करें</string>
     <string name="delete_collection_confirm">यह संग्रह डिलीट करें?</string>
+    <string name="shared_with_all_profiles">सभी प्रोफ़ाइलों के साथ शेयर किया गया</string>
+    <string name="shared_collection">शेयर किया गया</string>
+    <string name="delete_shared_collection_confirm">यह संग्रह हर प्रोफ़ाइल के लिए डिलीट करें?</string>
+    <string name="unshare_collection_confirm">इस संग्रह को शेयर करना बंद करें?</string>
+    <string name="unshare_collection_explanation">दूसरी प्रोफ़ाइलें अब “%1$s” नहीं देखेंगी। यह आपके संग्रहों में वापस आ जाएगा।</string>
+    <string name="stop_sharing">शेयर करना बंद करें</string>
     <string name="empty_collection">खाली संग्रह</string>
     <string name="no_collections">कोई संग्रह नहीं</string>
     <string name="collection_default_name">संग्रह %1$d</string>

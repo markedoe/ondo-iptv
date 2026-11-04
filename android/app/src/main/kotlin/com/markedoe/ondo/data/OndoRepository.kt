@@ -49,6 +49,7 @@ import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncProfile
 import com.markedoe.ondo.core.sync.SyncProfiles
+import com.markedoe.ondo.core.sync.SyncSharing
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.LivePause
@@ -131,7 +132,22 @@ data class OndoState(
     val needsProfileSelection: Boolean = false,
     /** A parent's PIN was given in this Kids profile session: its settings are open until the profile changes. */
     val kidsUnlocked: Boolean = false,
+    /**
+     * The collections shared with every profile, and what was deleted among them (docs/PROFILES.md, "Shared lists"): the
+     * same for every profile, apart from [library].
+     */
+    val household: LibraryState = LibraryState(),
 ) {
+    /** The collections the open profile sees: its own and those shared with every profile, by name. */
+    val collections: List<UserCollection>
+        get() = (library.collections + household.collections).sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
+
+    /** Whether collection [id] is shared with every profile. */
+    fun isShared(id: String): Boolean = household.collections.any { it.id == id }
+
+    /** Whether the open profile may change the shared collections: any but a Kids profile, which only sees them. */
+    val canEditShared: Boolean get() = SyncSharing.canEdit(activeProfile.isKids)
+
     val activePlaylist: SavedPlaylist? get() = playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull()
     val activePlaylistId: String? get() = activePlaylist?.id
 
@@ -349,7 +365,8 @@ class OndoRepository(
             // The sync clock starts after every time this device holds: after a restart with its clock back at 1970,
             // a change is still dated after the ones it made or received before.
             syncClock.advance(savedSettings.syncClock)
-            val dated = OndoState(settings = savedSettings, playlists = playlists, library = saved, profiles = unstamped)
+            val household = withContext(io) { store.loadLibrary(AppStore.HOUSEHOLD) }
+            val dated = OndoState(settings = savedSettings, playlists = playlists, library = saved, profiles = unstamped, household = household)
             syncClock.advance(SyncData.latestTime(dated, SyncData.allLibraries(dated, otherLibraries)))
             // A profile made before profiles synced has no time: it gets one now, so that it travels.
             val profiles = unstamped.map { if (!it.isMain && it.updatedAt == 0L) it.copy(updatedAt = stamp()) else it }
@@ -363,7 +380,7 @@ class OndoRepository(
             _state.update {
                 it.copy(
                     settings = settings, playlists = playlists, library = library, lastCrash = lastCrash, isReady = true, isRestoring = playlists.isNotEmpty(),
-                    profiles = profiles, needsProfileSelection = profiles.size > 1 && launch == null,
+                    profiles = profiles, needsProfileSelection = profiles.size > 1 && launch == null, household = household,
                 )
             }
             if (pending.isNotEmpty() || (movedRows != null && opened.isMain)) opened.libraryDocumentName.let { document -> persist { saveLibrary(library, document) } }
@@ -479,18 +496,21 @@ class OndoRepository(
         // Every profile's entries of the playlist go with it.
         val others = otherLibraries.mapValues { (_, other) -> other.removingPlaylist(id, time) }
         otherLibraries = others
+        // And those of the shared collections (whose own deletions are of collections and their items only).
+        val household = _state.value.household.removingPlaylist(id, time).let { it.copy(syncDeleted = it.syncDeleted - SyncKeys.playlist(id)) }
         val documents = _state.value.profiles.filter { it.id in others }.associate { it.libraryDocumentName to others.getValue(it.id) }
         persist {
             savePlaylists(playlists, removed)
             saveLibrary(library, document)
             documents.forEach { (other, saved) -> saveLibrary(saved, other) }
+            saveLibrary(household, AppStore.HOUSEHOLD)
             saveSettings(settings)
             deleteContent(id)
             deleteDetails(id)
             deleteGuide(id)
         }
         val wasActive = _state.value.activePlaylistId == id
-        _state.update { it.copy(playlists = playlists, library = library, settings = settings) }
+        _state.update { it.copy(playlists = playlists, library = library, settings = settings, household = household) }
         if (wasActive) {
             openJob?.cancel()
             refreshJob?.cancel()
@@ -789,7 +809,7 @@ class OndoRepository(
             }
             val current = _state.value
             if (current.playlists === base.playlists && current.library === base.library && current.settings === base.settings &&
-                current.profiles === base.profiles && otherLibraries === baseOthers
+                current.profiles === base.profiles && current.household === base.household && otherLibraries === baseOthers
             ) {
                 commitSync(applied)
                 return merged to _state.value
@@ -951,8 +971,9 @@ class OndoRepository(
             if (id == playbackId) keepingPlayback(otherLibraries[id] ?: other, other) else other
         }
         val keysChanged = applied.keys != state.settings.serviceKeys
+        val householdChanged = applied.household != state.household
         if (applied.playlists == state.playlists && library == state.library && !keysChanged && applied.profiles == state.profiles &&
-            others.all { (id, other) -> otherLibraries[id] == other } && !activeRemoved
+            others.all { (id, other) -> otherLibraries[id] == other } && !activeRemoved && !householdChanged
         ) return
         val removedPlaylistIds = applied.removed.mapTo(HashSet()) { it.id }
         // Every profile's reminders of a removed playlist, and all those of a profile deleted elsewhere, go.
@@ -984,6 +1005,7 @@ class OndoRepository(
             saveLibrary(library, document)
             changedOthers.forEach { (name, other) -> saveLibrary(other, name) }
             if (profilesChanged) saveProfiles(applied.profiles)
+            if (householdChanged) saveLibrary(applied.household, AppStore.HOUSEHOLD)
             applied.removedProfiles.forEach { deleteLibrary(it.libraryDocumentName) }
             saveSettings(settings)
             applied.removed.forEach {
@@ -1001,7 +1023,7 @@ class OndoRepository(
         _state.update { current ->
             current.copy(
                 playlists = applied.playlists, library = library, settings = settings, profiles = applied.profiles,
-                kidsUnlocked = current.kidsUnlocked && !activeRemoved,
+                kidsUnlocked = current.kidsUnlocked && !activeRemoved, household = applied.household,
             ).also { committedBySync = SyncData.changes(it) }
         }
         fun follow() {
@@ -1383,7 +1405,7 @@ class OndoRepository(
 
     /** Adds an actor or a director to a collection, or takes them out. */
     fun togglePersonInCollection(id: String, name: String, photoUrl: String?) =
-        updateLibrary { library -> stamp().let { time -> library.togglingInCollection(id, Favorite.person(name, photoUrl, time), time) } }
+        updateCollection(id) { library -> stamp().let { time -> library.togglingInCollection(id, Favorite.person(name, photoUrl, time), time) } }
 
     /** The library of the profile playback belongs to ([playbackProfileId]). */
     private fun playbackLibrary(): LibraryState {
@@ -1427,14 +1449,50 @@ class OndoRepository(
         return id
     }
 
-    fun renameCollection(id: String, name: String) = updateLibrary { it.renamingCollection(id, name, stamp()) }
+    fun renameCollection(id: String, name: String) = updateCollection(id) { it.renamingCollection(id, name, stamp()) }
 
-    fun deleteCollection(id: String) = updateLibrary { it.deletingCollection(id, stamp()) }
+    /** Deletes a collection: a shared one for every profile (the screen asked first). */
+    fun deleteCollection(id: String) = updateCollection(id) { it.deletingCollection(id, stamp()) }
 
     /** Adds an item of the current playlist to a collection, or takes it out. */
     fun toggleInCollection(id: String, kind: ItemKind, itemId: String, title: String, imageUrl: String?) {
         val playlistId = _state.value.activePlaylistId ?: return
-        updateLibrary { library -> stamp().let { time -> library.togglingInCollection(id, Favorite(playlistId, kind, itemId, title, imageUrl, time), time) } }
+        updateCollection(id) { library -> stamp().let { time -> library.togglingInCollection(id, Favorite(playlistId, kind, itemId, title, imageUrl, time), time) } }
+    }
+
+    /**
+     * Shares collection [id] of the open profile with every profile, or takes a shared one back into the open profile
+     * (docs/PROFILES.md, "Shared lists"): it moves whole, under the same ID. Not in a Kids profile.
+     */
+    fun setCollectionShared(id: String, shared: Boolean) {
+        val state = _state.value
+        if (!state.isReady || !state.canEditShared || shared == state.isShared(id)) return
+        val removedAt = stamp()
+        val placedAt = stamp()
+        if (shared) {
+            val (library, household) = SharedCollections.move(state.library, state.household, id, removedAt, placedAt) ?: return
+            updateLibrary { library }
+            updateHousehold { household }
+        } else {
+            val (household, library) = SharedCollections.move(state.household, state.library, id, removedAt, placedAt) ?: return
+            updateHousehold { household }
+            updateLibrary { library }
+        }
+    }
+
+    /** [change] made to the library collection [id] is in: the household's when it is shared (never in a Kids profile). */
+    private fun updateCollection(id: String, change: (LibraryState) -> LibraryState) {
+        val state = _state.value
+        if (!state.isShared(id)) return updateLibrary(change)
+        if (state.canEditShared) updateHousehold(change)
+    }
+
+    /** Changes the collections shared with every profile, and saves them. */
+    private fun updateHousehold(change: (LibraryState) -> LibraryState) {
+        if (!_state.value.isReady) return
+        _state.update { it.copy(household = change(it.household)) }
+        val household = _state.value.household
+        persist { saveLibrary(household, AppStore.HOUSEHOLD) }
     }
 
     private fun updateLibrary(change: (LibraryState) -> LibraryState) {
