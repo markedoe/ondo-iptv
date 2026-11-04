@@ -174,7 +174,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                             television = television,
                             onClick = actions.onFavorites,
                             icon = Icons.Rounded.Bookmarks,
-                            modifier = Modifier.testTag("liveMyList").then(if (state.showingFavorites) Modifier.focusRequester(selectedChoice) else Modifier),
+                            modifier = Modifier.testTag("liveMyList").then(choiceFocus(state.showingFavorites, selectedChoice)),
                         )
                     }
                     item(key = "choice:all") {
@@ -184,7 +184,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                             selected = selected,
                             television = television,
                             onClick = { actions.onCategory(null) },
-                            modifier = Modifier.testTag("liveAll").then(if (selected) Modifier.focusRequester(selectedChoice) else Modifier),
+                            modifier = Modifier.testTag("liveAll").then(choiceFocus(selected, selectedChoice)),
                         )
                     }
                     items(state.categories, key = { it.id }) { category ->
@@ -194,7 +194,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                             selected = selected,
                             television = television,
                             onClick = { actions.onCategory(category.id) },
-                            modifier = if (selected) Modifier.focusRequester(selectedChoice) else Modifier,
+                            modifier = choiceFocus(selected, selectedChoice),
                         )
                     }
                 }
@@ -275,6 +275,17 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
         }
     }
     }
+}
+
+/**
+ * The way a choice takes the focus: the choice shown through [selectedChoice] (where Up from the channels goes), the
+ * others through their own. Always a requester, only its target changing: a modifier added or taken away as the choice
+ * changes would rebuild the chip's focus, and the remote on it would lose it.
+ */
+@Composable
+private fun choiceFocus(selected: Boolean, selectedChoice: FocusRequester): Modifier {
+    val own = remember { FocusRequester() }
+    return Modifier.focusRequester(if (selected) selectedChoice else own)
 }
 
 /**
