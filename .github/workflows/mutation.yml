@@ -18,7 +18,7 @@ permissions:
 jobs:
   pitest:
     name: Kotlin core (Pitest)
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON((github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && vars.LINUX_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 60
     defaults:
       run:

@@ -19,7 +19,7 @@ permissions:
 jobs:
   leaks:
     name: Secrets and personal data
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON((github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && vars.LINUX_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,7 +39,7 @@ jobs:
 
   neutrality:
     name: Neutrality
-    runs-on: ubuntu-24.04
+    runs-on: ${{ fromJSON((github.event_name == 'push' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule') && vars.LINUX_RUNNER || '"ubuntu-24.04"') }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,3 +55,7 @@ jobs:
         # Here because CI skips website changes: site/review/ondo-review.m3u is what App Review plays.
         if: success() || failure()
         run: python3 .github/scripts/check_review_playlist.py
+      - name: Self-hosted runners (our own launches only, no secret on them)
+        # Here too because CI skips changes to android.yml and security.yml (docs/RUNNERS.md).
+        if: success() || failure()
+        run: python3 .github/scripts/check_runners.py

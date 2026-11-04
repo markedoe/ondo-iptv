@@ -48,9 +48,63 @@ class CheckTestCase(unittest.TestCase):
 
 class RepositoryTests(unittest.TestCase):
     def test_the_repository_passes_every_check(self):
-        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality", "awards", "app_store", "hang_guard"):
+        for check in ("translations", "privacy_manifest", "mac_entitlements", "neutrality", "awards", "app_store", "hang_guard",
+                      "runners"):
             code, output = run(check, REPOSITORY)
             self.assertEqual(code, 0, f"{check}: {output}")
+
+
+class RunnersTests(CheckTestCase):
+    SELF = ("${{ fromJSON((github.event_name == 'push' || github.event_name == 'workflow_dispatch' || "
+            "github.event_name == 'schedule') && vars.LINUX_RUNNER || '\"ubuntu-24.04\"') }}")
+
+    def workflow(self, runs_on: str, steps: str = "      - run: ./gradlew test\n", head: str = "",
+                 job_extra: str = "") -> None:
+        self.write(".github/workflows/test.yml",
+                   "name: Test\non:\n  push:\n    branches: [main]\n  pull_request:\n" + head
+                   + "permissions:\n  contents: read\n\njobs:\n"
+                   "  hosted:\n    runs-on: macos-26\n    steps:\n      - run: echo ${{ secrets.ASC_KEY_ID }}\n\n"
+                   f"  tests:\n    name: Tests\n    runs-on: {runs_on}\n{job_extra}    timeout-minutes: 5\n"
+                   f"    steps:\n{steps}")
+
+    def test_hosted_and_guarded_self_hosted_jobs_pass(self):
+        self.workflow(self.SELF, "      - run: echo ${{ secrets.GITHUB_TOKEN }} ${{ github.token }}\n")
+        self.assertPasses("runners")
+        self.workflow("ubuntu-24.04")
+        self.assertPasses("runners")
+
+    def test_a_self_hosted_job_never_reads_a_publishing_secret(self):
+        self.workflow(self.SELF, "      - run: fastlane upload\n        env:\n"
+                                 "          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}\n")
+        self.assertFails("runners", "job tests can run self-hosted, but reads a secret", "PLAY_SERVICE_ACCOUNT_JSON")
+
+    def test_a_secret_in_a_shell_comment_still_counts(self):
+        # Expressions are evaluated in the whole run block, comments included.
+        self.workflow(self.SELF, "      - run: |\n          # ${{ secrets['ASC_KEY_P8'] }}\n          true\n")
+        self.assertFails("runners", "reads a secret")
+
+    def test_workflow_env_secrets_secrets_inherit_and_environments_are_refused(self):
+        self.workflow(self.SELF, head="env:\n  KEY: ${{ secrets.STRIPE_API_KEY }}\n")
+        self.assertFails("runners", "the workflow's env reads a secret")
+        self.workflow(self.SELF, job_extra="    environment: github-pages\n")
+        self.assertFails("runners", "uses an environment")
+        self.workflow(self.SELF, "      - uses: ./.github/actions/x\n    secrets: inherit\n")
+        self.assertFails("runners", "reads a secret")
+
+    def test_a_pull_request_never_reaches_a_self_hosted_runner(self):
+        # Without the event guard, a pull request would run on the runners LINUX_RUNNER names.
+        self.workflow("${{ fromJSON(vars.LINUX_RUNNER || '\"ubuntu-24.04\"') }}")
+        self.assertFails("runners", "job tests: runs-on is")
+        self.workflow("${{ fromJSON(github.event_name != 'pull_request' && vars.LINUX_RUNNER || '\"ubuntu-24.04\"') }}")
+        self.assertFails("runners", "job tests: runs-on is")
+
+    def test_no_other_way_to_a_self_hosted_runner(self):
+        for runs_on in ("self-hosted", "[self-hosted, linux, x64]", "\n      - self-hosted\n      - linux",
+                        "${{ vars.OTHER_RUNNER }}", "${{ inputs.runner }}", "${{ matrix.os }}",
+                        "\n      group: ondo"):
+            with self.subTest(runs_on=runs_on):
+                self.workflow(runs_on)
+                self.assertFails("runners", "job tests: runs-on is")
 
 
 class HangGuardTests(CheckTestCase):
