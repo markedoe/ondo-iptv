@@ -1,5 +1,6 @@
 package com.markedoe.ondo.core.library
 
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
@@ -44,10 +45,10 @@ object RatingFill {
         var sinceResort = 0
         coroutineScope {
             val next = items.iterator()
-            val running = ArrayList<kotlinx.coroutines.Deferred<Boolean>>()
+            val running = ArrayList<Deferred<Boolean>>()
             repeat(concurrency.coerceAtLeast(1)) { if (next.hasNext()) next.next().let { item -> running += async { fetch(item) } } }
             while (running.isNotEmpty()) {
-                val done = select { running.forEach { job -> job.onAwait { job } } }
+                val done = select<Deferred<Boolean>> { running.forEach { job -> job.onAwait { job } } }
                 running.remove(done)
                 if (done.await()) {
                     rated++

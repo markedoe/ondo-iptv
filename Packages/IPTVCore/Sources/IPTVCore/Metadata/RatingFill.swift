@@ -14,7 +14,7 @@ public enum RatingFill {
     public static let concurrency = 2
 
     /// The titles to ask TMDb about: those it never answered for (`isKnown` false), in the grid's order, at most `limit`.
-    public static func toAsk<ID>(_ ids: [ID], isKnown: (ID) -> Bool, limit: Int = limit) -> [ID] {
+    public static func toAsk<ID>(_ ids: [ID], isKnown: (ID) -> Bool, limit: Int = RatingFill.limit) -> [ID] {
         Array(ids.lazy.filter { !isKnown($0) }.prefix(max(0, limit)))
     }
 
@@ -24,8 +24,8 @@ public enum RatingFill {
     @discardableResult
     public static func run(
         _ ids: [String],
-        concurrency: Int = concurrency,
-        firstBatch: Int = firstBatch,
+        concurrency: Int = RatingFill.concurrency,
+        firstBatch: Int = RatingFill.firstBatch,
         fetch: @escaping @Sendable (String) async -> Bool,
         resort: @escaping @Sendable () async -> Void
     ) async -> Int {

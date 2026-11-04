@@ -118,12 +118,17 @@ class RatingSortTest {
         assertNull("another order needs no rating", UiMappers.sortRatings(state(token = true), PosterSort.NAME, kept))
     }
 
-    /** The ratings of this session's answers count as the kept ones; nothing known: the provider's, ties by title. */
+    /**
+     * The answers of this session reach the order through the device's store at the next read, not as they come (the
+     * poster with the remote's focus would move); nothing known: the provider's rating.
+     */
     @Test
-    fun theSessionsAnswersCountAndTheProvidersRatingComesNext() {
+    fun answersAsTheyComeDoNotMoveThePosters() {
         val state = state(token = true)
         val session = state.copy(tmdbRatings = mapOf(key(Fixtures.northernLights) to TmdbRating(8.9, 10_000)))
-        assertEquals(listOf("Northern Lights", "The Long Road", "Summer in Lisbon"), surfaces(session, kept)["a movie category"])
+        assertEquals(listOf("The Long Road", "Summer in Lisbon", "Northern Lights"), surfaces(session, kept)["a movie category"])
+        val stored = kept + votes(key(Fixtures.northernLights), 8.9, 10_000)
+        assertEquals(listOf("Northern Lights", "The Long Road", "Summer in Lisbon"), surfaces(session, stored)["a movie category"])
         assertEquals(listOf("Northern Lights", "Summer in Lisbon", "The Long Road"), surfaces(state, emptyMap())["a movie category"])
     }
 }

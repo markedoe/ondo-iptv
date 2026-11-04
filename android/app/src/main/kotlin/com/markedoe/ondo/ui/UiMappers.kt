@@ -532,16 +532,16 @@ object UiMappers {
     }
 
     /**
-     * TMDb's ratings a sort by rating ranks by, by poster key: those of this session's answers, the trending titles and
-     * [kept] on the device ([OndoRepository.keptPosterFacts]). Null for another order or without the viewer's TMDb
-     * token: the provider's rating then, as before.
+     * TMDb's ratings a sort by rating ranks by, by poster key: those [kept] on the device
+     * ([OndoRepository.keptPosterFacts], read again when a page's fill brought more) and of the trending titles. Not the
+     * answers of the page's own header as they come: the poster the remote is on would move under it. Null for another
+     * order or without the viewer's TMDb token: the provider's rating then, as before.
      */
     fun sortRatings(state: OndoState, sort: PosterSort, kept: Map<String, TitleMetadata>): Map<String, TmdbRating>? {
         if (sort != PosterSort.RATING || state.settings.tmdbToken == null) return null
         val ratings = HashMap<String, TmdbRating>(kept.size * 2)
         kept.forEach { (key, title) -> title.rating?.let { ratings[key] = it } }
         for (match in state.trending) match.trending.rating?.let { ratings.putIfAbsent(match.id, it) }
-        ratings.putAll(state.tmdbRatings)
         return ratings
     }
 

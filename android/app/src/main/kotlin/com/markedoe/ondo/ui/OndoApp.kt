@@ -843,13 +843,14 @@ private fun GridDestination(viewModel: OndoViewModel, navController: NavHostCont
 
 /**
  * What TMDb said and the device kept, for a page sorted by rating with the viewer's TMDb token
- * ([UiMappers.sortRatings]): read again when a fill brought more ([OndoViewModel.ratingSortVersion]); empty otherwise.
+ * ([UiMappers.sortRatings]): read again when a fill brought more ([OndoViewModel.ratingSortVersion]), not at each
+ * answer (the poster with the remote's focus would move); empty otherwise.
  */
 @Composable
 private fun keptForRatingSort(viewModel: OndoViewModel, page: String, state: OndoState, sort: PosterSort): State<Map<String, TitleMetadata>> {
     val version by viewModel.ratingSortVersion.collectAsStateWithLifecycle()
     val token = state.settings.tmdbToken
-    return produceKept("$page-ratings", emptyMap<String, TitleMetadata>(), state.content, state.tmdbRatings, token, sort, version) {
+    return produceKept("$page-ratings", emptyMap<String, TitleMetadata>(), state.content, token, sort, version) {
         if (sort == PosterSort.RATING && token != null) viewModel.keptPosterFacts() else emptyMap()
     }
 }

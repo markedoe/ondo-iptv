@@ -390,8 +390,8 @@ class OndoViewModelTest {
                 url.startsWith("https://api.themoviedb.org/3/search/movie?") -> {
                     searched += url
                     when {
-                        "Quiet" in url -> """{"results":[{"id":11,"title":"Quiet Water","release_date":"2019-03-01"}]}"""
-                        "Long" in url -> """{"results":[{"id":12,"title":"Long Road","release_date":"2020-03-01"}]}"""
+                        url.contains("quiet", ignoreCase = true) -> """{"results":[{"id":11,"title":"Quiet Water","release_date":"2019-03-01"}]}"""
+                        url.contains("long", ignoreCase = true) -> """{"results":[{"id":12,"title":"Long Road","release_date":"2020-03-01"}]}"""
                         else -> """{"results":[]}"""
                     }
                 }
