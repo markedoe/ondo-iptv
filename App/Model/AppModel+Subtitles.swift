@@ -1,7 +1,8 @@
 import Foundation
 import IPTVCore
 
-/// Account fields of the subtitle services, kept in the keychain like the providers' passwords.
+/// Account fields of the subtitle services, kept in the keychain like the providers' passwords; sync carries each one
+/// to the user's other devices (`syncService`, docs/SYNC.md "Key").
 enum SubtitleCredential: String, CaseIterable {
     case openSubtitlesKey = "subtitles-opensubtitles-key"
     case openSubtitlesUsername = "subtitles-opensubtitles-username"
@@ -28,6 +29,25 @@ extension SubtitleCredential {
         case .addic7ed: return []
         }
     }
+
+    var service: SubtitleService {
+        switch self {
+        case .openSubtitlesKey, .openSubtitlesUsername, .openSubtitlesPassword: return .openSubtitles
+        case .subdlKey: return .subdl
+        case .subSourceKey: return .subSource
+        }
+    }
+
+    /// Its record's `service` in sync's `keys`.
+    var syncService: String {
+        switch self {
+        case .openSubtitlesKey: return SyncKey.openSubtitles
+        case .openSubtitlesUsername: return SyncKey.openSubtitlesUsername
+        case .openSubtitlesPassword: return SyncKey.openSubtitlesPassword
+        case .subdlKey: return SyncKey.subdl
+        case .subSourceKey: return SyncKey.subSource
+        }
+    }
 }
 
 /// Online subtitles: the user's own keys, the services they enable, and the query for what is playing.
@@ -46,6 +66,8 @@ extension AppModel {
             for field in fields { setSubtitleCredential(nil, for: field) }
             return nil
         }
+        subtitleChecksInFlight.insert(service)
+        defer { subtitleChecksInFlight.remove(service) }
         let check: CredentialCheck
         switch service {
         case .openSubtitles:
@@ -75,17 +97,89 @@ extension AppModel {
         secrets.get(field.rawValue)
     }
 
-    func setSubtitleCredential(_ value: String?, for field: SubtitleCredential) {
+    /// Saves a field typed here (nil or empty removes it): the other devices get the change by sync, dated now.
+    func setSubtitleCredential(_ value: String?, for field: SubtitleCredential, now: Date = Date()) {
         let trimmed = field == .openSubtitlesPassword ? value : value?.trimmingCharacters(in: .whitespacesAndNewlines)
         let stored = trimmed?.isEmpty == false ? trimmed : nil
-        guard stored != subtitleCredential(field) else { return }
-        secrets.set(stored, for: field.rawValue)
-        subtitleProviders = nil  // new credentials, new clients (and a refused login may be retried)
+        guard stored != subtitleCredential(field), storeSubtitleCredential(stored, for: field) else { return }
+        let time = syncStamp(now).syncMilliseconds
+        // A removal keeps its time too: a merge made before it cannot bring the key back.
+        syncState.subtitleKeysUpdatedAt[field.syncService] = time
+        if stored == nil { syncState.deleted["key:" + field.syncService] = time }
+        saveSyncState(now: now)
+        syncSoon()
     }
 
-    func setAddic7edSubtitles(_ enabled: Bool) {
+    /// Writes a field to the keychain (nil removes it); sync calls it without dating it again. False when the keychain
+    /// refused the write.
+    @discardableResult
+    func storeSubtitleCredential(_ value: String?, for field: SubtitleCredential) -> Bool {
+        let stored = secrets.set(value, for: field.rawValue)
+        subtitleProviders = nil  // new credentials, new clients (and a refused login may be retried)
+        return stored
+    }
+
+    func setAddic7edSubtitles(_ enabled: Bool, now: Date = Date()) {
+        guard enabled != settings.addic7edOptIn else { return }
         updateSettings { $0.addic7edOptIn = enabled }
         subtitleProviders = nil
+        syncState.subtitleKeysUpdatedAt[SyncKey.addic7ed] = syncStamp(now).syncMilliseconds
+        saveSyncState(now: now)
+        syncSoon()
+    }
+
+    /// The subtitle services' fields of the keychain and the Addic7ed switch, as sync sends them: each dated when it was
+    /// saved (here or on the device it came from); the switch only once it was turned on or off somewhere.
+    func subtitleSyncKeys() -> [SyncKey] {
+        var keys: [SyncKey] = SubtitleCredential.allCases.compactMap { field in
+            guard let value = subtitleCredential(field), !value.isEmpty else { return nil }
+            return SyncKey(service: field.syncService, value: value, updatedAt: syncState.subtitleKeysUpdatedAt[field.syncService] ?? 0)
+        }
+        if let time = syncState.subtitleKeysUpdatedAt[SyncKey.addic7ed] {
+            keys.append(SyncKey(service: SyncKey.addic7ed, value: settings.addic7edOptIn ? SyncKey.on : SyncKey.off, updatedAt: time))
+        }
+        return keys
+    }
+
+    /// The subtitle services' records of a merged snapshot: a field saved when it changed (its service checked it on the
+    /// device where it was typed, so it is not checked again), removed when it was removed elsewhere since it was saved
+    /// here; Addic7ed turned on or off. A service whose key is being checked here is left as it is: its save comes after.
+    func applySyncedSubtitleKeys(_ snapshot: SyncSnapshot) {
+        var changed = false
+        for field in SubtitleCredential.allCases where !subtitleChecksInFlight.contains(field.service) {
+            let service = field.syncService
+            let record = snapshot.keys.first { $0.service == service }
+            let current = subtitleCredential(field)
+            if let record {
+                let usable = field == .openSubtitlesPassword ? SyncMapping.isUsablePassword(record.value) : SyncMapping.isUsableKey(record.value)
+                // Saved here after the snapshot that was merged: the next session sends it.
+                guard usable, record.updatedAt >= (syncState.subtitleKeysUpdatedAt[service] ?? .min) else { continue }
+                if record.value == current {
+                    syncState.subtitleKeysUpdatedAt[service] = record.updatedAt
+                } else if storeSubtitleCredential(record.value, for: field) {
+                    // Dated as the merge dated it only once the keychain holds it.
+                    syncState.subtitleKeysUpdatedAt[service] = record.updatedAt
+                    changed = true
+                }
+            } else if let removed = snapshot.deleted["key:" + service], removed >= (syncState.subtitleKeysUpdatedAt[service] ?? 0),
+                      current != nil {
+                // Removed elsewhere: no new deletion here, the other device's time stays.
+                if storeSubtitleCredential(nil, for: field) {
+                    syncState.subtitleKeysUpdatedAt[service] = removed
+                    changed = true
+                }
+            }
+        }
+        if let record = snapshot.keys.first(where: { $0.service == SyncKey.addic7ed }), record.value == SyncKey.on || record.value == SyncKey.off,
+           record.updatedAt >= (syncState.subtitleKeysUpdatedAt[SyncKey.addic7ed] ?? .min) {
+            let on = record.value == SyncKey.on
+            if on != settings.addic7edOptIn {
+                updateSettings { $0.addic7edOptIn = on }
+                subtitleProviders = nil
+            }
+            syncState.subtitleKeysUpdatedAt[SyncKey.addic7ed] = record.updatedAt
+        }
+        if changed { subtitleCredentialsRevision += 1 }
     }
 
     /// Services that can be searched: those with a key, and Addic7ed once turned on (off by default).

@@ -22,7 +22,8 @@ This document is the specification. The Kotlin implementation is in
 
 Synced: the playlists (name, kind, address, login and password, guide address), My List and favourite channels,
 the actors and directors kept in My List, the lists (collections) with the people in them, playback progress (where each movie and episode was left, and what was finished), and the
-keys typed in Settings for outside services (the TMDb token), the order of the rows of the Movies and Series tabs
+keys typed in Settings for outside services (the TMDb token, and the subtitle services' keys and OpenSubtitles account
+with the Addic7ed switch), the order of the rows of the Movies and Series tabs
 with the rows hidden (Settings → Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's
 own My List, favourite channels, people, lists, progress and order of rows (docs/PROFILES.md).
 
@@ -166,6 +167,18 @@ saved (no spaces around it). Key: `key:<service>`; time: `updatedAt` (set when t
 devices use it as it comes, and their Settings say so when the service refuses it later. A device keeps and passes
 on the keys of services it does not know. A snapshot without `keys` (from a device that does not sync them) removes
 nothing: only `deleted` does.
+
+The subtitle services searched from the player sync the same way, one record per field, each merged on its own (the
+later save wins, a removal after it clears it on every device): `opensubtitles` (OpenSubtitles' API key),
+`opensubtitles-username` and `opensubtitles-password` (the optional account), `subdl` and `subsource` (their API
+keys), and `addic7ed`, whose `value` is `on` or `off` (turning Addic7ed off is a value, never a removal; there is no
+record until it was switched once). A password is kept as typed, spaces included; readers leave out a key that holds
+a space or a control character, and a password that holds a control character. Each device keeps them where it
+keeps these keys (the keychain on Apple, a private file of the app on Android), never in the settings it sends, and
+dates once, when it starts, those saved before they synced. Only what the user typed travels: never the session
+OpenSubtitles gives after a login. A device leaves a service whose key is being checked as it is until the check ends;
+the key then saved is dated after what sync brought. A device of an earlier version keeps and passes them on as the
+keys of services it does not know.
 
 **Rows** (the order of the rows of a tab, Settings → Row order) — `{"tab", "order", "hidden", "updatedAt"}`. `tab`
 is `movie` or `series`; `order` lists the rows of the tab by key, in the viewer's order; `hidden` the keys of the rows
@@ -326,7 +339,8 @@ home network, where devices sync every minute, that window is about a minute, bu
 
 ## Privacy
 
-Snapshots hold playlist logins and passwords, and the keys of outside services (the TMDb token), in clear, as the
+Snapshots hold playlist logins and passwords, and the keys of outside services (the TMDb token, the subtitle services'
+keys and OpenSubtitles login), in clear, as the
 trusted network was chosen over encryption. They
 travel only between Ondo devices with sync on, on the local network; Ondo sends them nowhere else. Turning sync off
 stops the server, the advertising and the browsing at once.

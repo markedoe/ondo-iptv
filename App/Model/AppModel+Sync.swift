@@ -19,6 +19,10 @@ struct SyncState: Codable, Equatable {
     var tmdbKeyUpdatedAt: Int64?
     /// The keys of services this app does not use, as other devices sent them: kept only to pass them on.
     var otherKeys: [SyncKey] = []
+    /// Milliseconds since 1970, by `SyncKey` service (`opensubtitles`, `subdl`, … `addic7ed`): when each subtitle
+    /// service's field of the keychain (or the Addic7ed switch) was saved, here or on the device it came from. Dated
+    /// when the app starts if found without a date, as the TMDb key.
+    var subtitleKeysUpdatedAt: [String: Int64] = [:]
     /// The actors and directors other devices keep in My List, and in each list (by list ID, lowercase): this app does
     /// not show them, it keeps them to pass them on, so that its own edits of a list never drop them.
     var people: [SyncPerson] = []
@@ -46,7 +50,7 @@ struct SyncState: Codable, Equatable {
     init() {}
 
     enum CodingKeys: String, CodingKey {
-        case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, people, listPeople, deleted, replaced, lastSyncedAt, peers
+        case deviceID, playlistUpdatedAt, tmdbKeyUpdatedAt, otherKeys, subtitleKeysUpdatedAt, people, listPeople, deleted, replaced, lastSyncedAt, peers
         case learned, clock, rowOrders, profileStates, profilesMatched
     }
 
@@ -56,6 +60,7 @@ struct SyncState: Codable, Equatable {
         playlistUpdatedAt = (try? c.decodeIfPresent([String: Int64].self, forKey: .playlistUpdatedAt)) ?? [:]
         tmdbKeyUpdatedAt = try? c.decodeIfPresent(Int64.self, forKey: .tmdbKeyUpdatedAt)
         otherKeys = (try? c.decodeIfPresent([SyncKey].self, forKey: .otherKeys)) ?? []
+        subtitleKeysUpdatedAt = (try? c.decodeIfPresent([String: Int64].self, forKey: .subtitleKeysUpdatedAt)) ?? [:]
         people = (try? c.decodeIfPresent([SyncPerson].self, forKey: .people)) ?? []
         listPeople = (try? c.decodeIfPresent([String: [SyncPerson]].self, forKey: .listPeople)) ?? [:]
         deleted = (try? c.decodeIfPresent([String: Int64].self, forKey: .deleted)) ?? [:]
@@ -176,9 +181,11 @@ enum SyncMapping {
     /// `AppModel.syncNow`). Its times are those stored: never moved.
     /// `library` is the main profile's; `others` the library of each other profile of `profiles`, by ID (lowercase): their
     /// records travel in `profileData` (docs/SYNC.md, "Profiles").
-    static func snapshot(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, deviceName: String?,
+    static func snapshot(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, subtitleKeys: [SyncKey] = [],
+                         deviceName: String?,
                          now: Date, profiles: [Profile] = [], others: [String: UserLibrary] = [:]) -> SyncSnapshot {
-        withProfiles(records(playlists: playlists, library: library, state: state, tmdbKey: tmdbKey, deviceName: deviceName, now: now),
+        withProfiles(records(playlists: playlists, library: library, state: state, tmdbKey: tmdbKey, subtitleKeys: subtitleKeys,
+                             deviceName: deviceName, now: now),
                      state: state, profiles: profiles, others: others, now: now)
             .pruned(now: now.syncMilliseconds, sessions: Array(state.peers.values), learned: state.learned,
                     profileLearned: state.profileStates.mapValues(\.learned))
@@ -209,7 +216,8 @@ enum SyncMapping {
         return snapshot
     }
 
-    private static func records(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, deviceName: String?,
+    private static func records(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil,
+                                subtitleKeys: [SyncKey] = [], deviceName: String?,
                                 now: Date) -> SyncSnapshot {
         var deleted = state.deleted
         func delete(_ key: String, at date: Date) {
@@ -255,7 +263,7 @@ enum SyncMapping {
                    renamedAt: list.renamedAt?.syncMilliseconds, orderedAt: list.orderedAt?.syncMilliseconds)
             },
             people: state.people,
-            keys: keys(tmdbKey: tmdbKey, state: state),
+            keys: keys(tmdbKey: tmdbKey, subtitleKeys: subtitleKeys, state: state),
             rows: state.rowOrders,
             deleted: deleted,
             replaced: state.replaced,
@@ -268,14 +276,25 @@ enum SyncMapping {
         Dictionary(snapshot.lists.filter { !$0.people.isEmpty }.map { ($0.id, $0.people) }, uniquingKeysWith: { first, _ in first })
     }
 
-    /// The keychain's TMDb key, dated when it was saved (0 only before `loadSyncState` dated it), and the keys passed on
-    /// for the services this app does not use.
-    static func keys(tmdbKey: String?, state: SyncState) -> [SyncKey] {
-        var keys = state.otherKeys.filter { $0.service != SyncKey.tmdb }
+    /// The keychain's TMDb key, dated when it was saved (0 only before `loadSyncState` dated it), the subtitle services'
+    /// fields (`AppModel.subtitleSyncKeys`), and the keys passed on for the services this app does not use.
+    static func keys(tmdbKey: String?, subtitleKeys: [SyncKey] = [], state: SyncState) -> [SyncKey] {
+        var keys = state.otherKeys.filter { !isOwnKey($0.service) }
         if let tmdbKey, !tmdbKey.isEmpty {
             keys.append(SyncKey(service: SyncKey.tmdb, value: tmdbKey, updatedAt: state.tmdbKeyUpdatedAt ?? 0))
         }
+        keys += subtitleKeys
         return keys
+    }
+
+    /// A key this app keeps itself (TMDb's, the subtitle services'), never among those it only passes on.
+    static func isOwnKey(_ service: String) -> Bool {
+        service == SyncKey.tmdb || SyncKey.subtitleServices.contains(service)
+    }
+
+    /// A password from another device as it can be used: not empty, no control characters (spaces are part of it).
+    static func isUsablePassword(_ value: String) -> Bool {
+        !value.isEmpty && value.rangeOfCharacter(from: .controlCharacters) == nil
     }
 
     /// A key from another device as it can be used: not empty, no spaces or control characters (it goes into a header
@@ -515,7 +534,8 @@ extension AppModel {
     func syncSnapshot(now: Date = Date()) -> SyncSnapshot {
         let libraries = syncLibraries()
         return SyncMapping.snapshot(playlists: playlists, library: libraries.main, state: syncState, tmdbKey: secrets.get(Keychain.tmdbKey),
-                                    deviceName: Self.syncDeviceName, now: syncNow(now), profiles: profiles, others: libraries.others)
+                                    subtitleKeys: subtitleSyncKeys(), deviceName: Self.syncDeviceName, now: syncNow(now), profiles: profiles,
+                                    others: libraries.others)
     }
 
     /// The time of a change sync carries, made at `wall` (docs/SYNC.md, "Clocks"): later than everything this device
@@ -534,6 +554,7 @@ extension AppModel {
     func advanceSyncClockToStoredData() {
         syncClock.advance(to: syncState.clock)
         syncClock.advance(to: syncState.tmdbKeyUpdatedAt)
+        syncClock.advance(to: syncState.subtitleKeysUpdatedAt.values.max())
         syncClock.advance(to: syncState.rowOrders.map(\.updatedAt).max())
         syncClock.advance(to: profiles.map(\.updatedAt).max())
         let libraries = syncLibraries()
@@ -587,6 +608,15 @@ extension AppModel {
         advanceSyncClockToStoredData()
         if syncState.tmdbKeyUpdatedAt == nil, secrets.get(Keychain.tmdbKey) != nil {
             syncState.tmdbKeyUpdatedAt = syncStamp(now).syncMilliseconds
+            changed = true
+        }
+        // The subtitle services' fields saved before sync carried them, the same way (and Addic7ed once turned on).
+        for field in SubtitleCredential.allCases where syncState.subtitleKeysUpdatedAt[field.syncService] == nil && subtitleCredential(field) != nil {
+            syncState.subtitleKeysUpdatedAt[field.syncService] = syncStamp(now).syncMilliseconds
+            changed = true
+        }
+        if settings.addic7edOptIn, syncState.subtitleKeysUpdatedAt[SyncKey.addic7ed] == nil {
+            syncState.subtitleKeysUpdatedAt[SyncKey.addic7ed] = syncStamp(now).syncMilliseconds
             changed = true
         }
         // A profile made before profiles synced has no time: it gets one now, so that it travels.
@@ -732,13 +762,15 @@ extension AppModel {
         for _ in 0..<Self.syncMergeTries {
             let libraries = syncLibraries()
             let (base, bases, state, tmdbKey, playing, people) = (library, playlists, syncState, secrets.get(Keychain.tmdbKey), playingKeys, profiles)
+            let subtitleKeys = subtitleSyncKeys()
             let generation = otherLibrariesGeneration
             let activeID = activeProfile.isMain ? SyncProfile.main : activeProfile.id.uuidString.lowercased()
             let owners = playbackProfiles.mapValues { owner in owner == Profile.defaultID ? SyncProfile.main : owner.uuidString.lowercased() }
             let name = Self.syncDeviceName
             let syncTime = syncNow(now)
             let result = await Task.detached(priority: .utility) { () -> SyncOutcome in
-                let current = SyncMapping.snapshot(playlists: bases, library: libraries.main, state: state, tmdbKey: tmdbKey, deviceName: name,
+                let current = SyncMapping.snapshot(playlists: bases, library: libraries.main, state: state, tmdbKey: tmdbKey,
+                                                   subtitleKeys: subtitleKeys, deviceName: name,
                                                    now: syncTime, profiles: people, others: libraries.others)
                 let latest = SyncMerge.merge(current, merged)
                 var applied: [String: UserLibrary] = [SyncProfile.main: SyncMapping.library(libraries.main, applying: latest)]
@@ -988,8 +1020,8 @@ extension AppModel {
     }
 
     /// The keys of the merged snapshot: TMDb's saved when it changed (TMDb checked it on the device where it was typed),
-    /// removed when it was removed elsewhere since it was saved here; those of other services kept to pass on, never
-    /// used.
+    /// removed when it was removed elsewhere since it was saved here; the subtitle services' the same way
+    /// (`applySyncedSubtitleKeys`); those of other services kept to pass on, never used.
     private func applySyncedKeys(_ snapshot: SyncSnapshot) {
         let tmdb = snapshot.keys.first(where: { $0.service == SyncKey.tmdb })
         if let tmdb, SyncMapping.isUsableKey(tmdb.value) {
@@ -1002,7 +1034,8 @@ extension AppModel {
             // Removed elsewhere: no new deletion here, the other device's time stays.
             if storeTMDbCredential(nil) { syncState.tmdbKeyUpdatedAt = nil }
         }
-        syncState.otherKeys = snapshot.keys.filter { $0.service != SyncKey.tmdb }
+        syncState.otherKeys = snapshot.keys.filter { !SyncMapping.isOwnKey($0.service) }
+        applySyncedSubtitleKeys(snapshot)
     }
 
     /// The device's own playlist that the merge found to be `record` under another ID (the same account added on two

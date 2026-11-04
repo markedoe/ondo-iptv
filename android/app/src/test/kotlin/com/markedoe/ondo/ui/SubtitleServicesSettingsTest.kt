@@ -31,7 +31,7 @@ import org.robolectric.RobolectricTestRunner
 
 /**
  * Settings → Subtitle services: each key is checked with its service when saved, and the screen says what the service
- * answered (accepted, refused, out of reach); only an accepted key is kept, on this device only.
+ * answered (accepted, refused, out of reach); only an accepted key is kept.
  */
 @RunWith(RobolectricTestRunner::class)
 class SubtitleServicesSettingsTest {

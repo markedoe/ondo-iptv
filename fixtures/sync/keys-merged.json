@@ -1,0 +1,19 @@
+{
+  "type": "ondo-sync",
+  "version": 1,
+  "device": "77777777-7777-4777-8777-777777777777",
+  "deviceName": "Living room TV",
+  "keys": [
+    { "service": "addic7ed", "value": "off", "updatedAt": 2500 },
+    { "service": "future-service", "value": "test-other-key", "updatedAt": 300 },
+    { "service": "opensubtitles", "value": "test-opensubtitles-key-b", "updatedAt": 3000 },
+    { "service": "opensubtitles-password", "value": "test-password-b", "updatedAt": 3000 },
+    { "service": "subdl", "value": "test-subdl-key-a", "updatedAt": 2000 },
+    { "service": "subsource", "value": "test-subsource-key", "updatedAt": 500 },
+    { "service": "tmdb", "value": "test-tmdb-token", "updatedAt": 100 }
+  ],
+  "deleted": {
+    "key:opensubtitles-username": 3000,
+    "key:subsource": 400
+  }
+}

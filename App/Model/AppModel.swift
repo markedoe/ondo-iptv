@@ -200,6 +200,11 @@ final class AppModel {
     /// Subtitle services built from the saved keys; rebuilt when a key changes (OpenSubtitles keeps its
     /// signed-in session in its client, so it lives as long as the credentials).
     @ObservationIgnored var subtitleProviders: [any SubtitleProvider]?
+    /// Services whose key is being checked: sync leaves their fields alone until the check ends (the save then dates
+    /// them after what sync brought).
+    @ObservationIgnored var subtitleChecksInFlight: Set<SubtitleService> = []
+    /// Changes when sync saved or removed a subtitle service's key: Settings shows the fields again.
+    var subtitleCredentialsRevision = 0
     /// Episodes are being fetched before a series starts ("Resume" on a series): shown, so the tap visibly
     /// did something while the provider answers.
     var isPreparingPlayback = false

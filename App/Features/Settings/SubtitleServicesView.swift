@@ -6,6 +6,8 @@ import IPTVCore
 struct SubtitleServicesView: View {
     @Environment(AppModel.self) private var model
     @State private var values: [SubtitleCredential: String] = [:]
+    /// The fields as last shown from the keychain: a service the user did not edit follows what sync brings.
+    @State private var shown: [SubtitleCredential: String] = [:]
     @State private var checks: [SubtitleService: SubtitleKeyCheck] = [:]
 
     var body: some View {
@@ -68,7 +70,13 @@ struct SubtitleServicesView: View {
         .formStyle(.grouped)
         .navigationTitle("Subtitles")
         .onAppear {
-            for field in SubtitleCredential.allCases { values[field] = model.subtitleCredential(field) ?? "" }
+            for field in SubtitleCredential.allCases { show(field) }
+        }
+        .onChange(of: model.subtitleCredentialsRevision) { _, _ in
+            // Sync saved or removed a key: shown again, except in a service being typed or checked here.
+            for service in [SubtitleService.openSubtitles, .subdl, .subSource] where !edited(service) && checks[service] != .checking {
+                SubtitleCredential.fields(of: service).forEach(show)
+            }
         }
         .onDisappear(perform: saveAll)
     }
@@ -141,8 +149,19 @@ struct SubtitleServicesView: View {
         Dictionary(uniqueKeysWithValues: SubtitleCredential.fields(of: service).map { ($0, values[$0] ?? "") })
     }
 
+    private func show(_ field: SubtitleCredential) {
+        let saved = model.subtitleCredential(field) ?? ""
+        values[field] = saved
+        shown[field] = saved
+    }
+
+    /// Typed here since the fields were shown (what sync saved meanwhile is no edit of the user's).
+    private func edited(_ service: SubtitleService) -> Bool {
+        SubtitleCredential.fields(of: service).contains { (values[$0] ?? "") != (shown[$0] ?? "") }
+    }
+
     private func changed(_ service: SubtitleService) -> Bool {
-        SubtitleCredential.fields(of: service).contains { (values[$0] ?? "") != (model.subtitleCredential($0) ?? "") }
+        edited(service) && SubtitleCredential.fields(of: service).contains { (values[$0] ?? "") != (model.subtitleCredential($0) ?? "") }
     }
 
     private func check(_ service: SubtitleService) {

@@ -132,6 +132,11 @@ data class OndoState(
     val needsProfileSelection: Boolean = false,
     /** A parent's PIN was given in this Kids profile session: its settings are open until the profile changes. */
     val kidsUnlocked: Boolean = false,
+    /**
+     * The keys sync carries that are kept outside the settings ([SyncedKeyStore]: the subtitle services'), as the store
+     * holds them; not saved with the state.
+     */
+    val storedKeys: List<SyncKey> = emptyList(),
 ) {
     val activePlaylist: SavedPlaylist? get() = playlists.firstOrNull { it.id == settings.activePlaylistId } ?: playlists.firstOrNull()
     val activePlaylistId: String? get() = activePlaylist?.id
@@ -191,6 +196,8 @@ class OndoRepository(
     private val guideFiles: CoroutineDispatcher = Dispatchers.IO,
     /** The main profile's name when it is made (the first launch with profiles), in the viewer's language. */
     private val mainProfileName: String = "Me",
+    /** The keys sync carries kept outside the settings (the subtitle services'); null: none. */
+    private val keyStore: SyncedKeyStore? = null,
 ) {
     private val _state = MutableStateFlow(OndoState(placeholderNames = placeholderNames))
     val state: StateFlow<OndoState> = _state.asStateFlow()
@@ -233,6 +240,18 @@ class OndoRepository(
 
     /** Now as sync dates it ([SyncClock.now]): to prune by and to note sessions, never earlier than a time it gave. */
     private fun syncNow(): Long = syncClock.now(now())
+
+    init {
+        // A key the user saves or removes in the store is dated by this device's clock, its removal travels with the main
+        // profile's deletions (as the TMDb token's), and it syncs soon.
+        keyStore?.let { store ->
+            store.listener = object : SyncedKeyStore.Listener {
+                override fun stamp(): Long = syncClock.stamp(now())
+                override fun removed(key: String, at: Long) = updateMainLibrary { it.deleting(key, at) }
+                override fun changed() = _state.update { it.copy(storedKeys = store.syncKeys()) }
+            }
+        }
+    }
 
     /** Saves run one at a time, in order: the last change is the one on disk. */
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -352,6 +371,11 @@ class OndoRepository(
             syncClock.advance(savedSettings.syncClock)
             val dated = OndoState(settings = savedSettings, playlists = playlists, library = saved, profiles = unstamped)
             syncClock.advance(SyncData.latestTime(dated, SyncData.allLibraries(dated, otherLibraries)))
+            // The store's keys too; those saved before sync carried them are dated now, once.
+            keyStore?.let { keys ->
+                syncClock.advance(keys.syncKeys().maxOfOrNull { it.updatedAt })
+                keys.dateUndated(::stamp)
+            }
             // A profile made before profiles synced has no time: it gets one now, so that it travels.
             val profiles = unstamped.map { if (!it.isMain && it.updatedAt == 0L) it.copy(updatedAt = stamp()) else it }
             val pending = pendingLibraryChanges.toList()
@@ -365,6 +389,7 @@ class OndoRepository(
                 it.copy(
                     settings = settings, playlists = playlists, library = library, lastCrash = lastCrash, isReady = true, isRestoring = playlists.isNotEmpty(),
                     profiles = profiles, needsProfileSelection = profiles.size > 1 && launch == null,
+                    storedKeys = keyStore?.syncKeys().orEmpty(),
                 )
             }
             if (pending.isNotEmpty() || (movedRows != null && opened.isMain)) opened.libraryDocumentName.let { document -> persist { saveLibrary(library, document) } }
@@ -951,7 +976,11 @@ class OndoRepository(
         val others = (otherLibraries.filterKeys { it !in removedIds } + applied.libraries).filterKeys { it != activeId }.mapValues { (id, other) ->
             if (id == playbackId) keepingPlayback(otherLibraries[id] ?: other, other) else other
         }
-        val keysChanged = applied.keys != state.settings.serviceKeys
+        // The keys the store keeps go to it (and only there), the others to the settings.
+        keyStore?.applySynced(applied.keys, applied.library.syncDeleted)
+        val storedKeys = keyStore?.syncKeys() ?: state.storedKeys
+        val serviceKeys = if (keyStore == null) applied.keys else applied.keys.filter { it.service !in keyStore.services }
+        val keysChanged = serviceKeys != state.settings.serviceKeys || storedKeys != state.storedKeys
         if (applied.playlists == state.playlists && library == state.library && !keysChanged && applied.profiles == state.profiles &&
             others.all { (id, other) -> otherLibraries[id] == other } && !activeRemoved
         ) return
@@ -967,7 +996,7 @@ class OndoRepository(
             ?: state.activePlaylistId?.let { applied.replacements[it] }
             ?: applied.playlists.firstOrNull()?.id
         val settings = state.settings.copy(
-            activePlaylistId = active, serviceKeys = applied.keys, syncClock = syncClock.last,
+            activePlaylistId = active, serviceKeys = serviceKeys, syncClock = syncClock.last,
             activeProfileId = if (activeRemoved) Profile.DEFAULT_ID else state.settings.activeProfileId,
             launchProfileId = state.settings.launchProfileId?.takeIf { id -> applied.profiles.any { it.id == id } },
         )
@@ -1002,7 +1031,7 @@ class OndoRepository(
         _state.update { current ->
             current.copy(
                 playlists = applied.playlists, library = library, settings = settings, profiles = applied.profiles,
-                kidsUnlocked = current.kidsUnlocked && !activeRemoved,
+                kidsUnlocked = current.kidsUnlocked && !activeRemoved, storedKeys = storedKeys,
             ).also { committedBySync = SyncData.changes(it) }
         }
         fun follow() {

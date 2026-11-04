@@ -198,12 +198,12 @@ extension HelpTopic {
         HelpTopic(
             id: "sync", title: "Sync Your Devices", systemImage: "arrow.triangle.2.circlepath.circle",
             body: """
-            Settings → Sync on this network keeps the same playlists, My List, collections, progress and TMDb token \
-            on your devices at home. Turn it on and keep Ondo open on each device: the devices find each other \
+            Settings → Sync on this network keeps the same playlists, My List, collections, progress, TMDb token and \
+            subtitle service keys on your devices at home. Turn it on and keep Ondo open on each device: the devices find each other \
             by themselves; iPhone, iPad and Mac sync with the network’s other Ondo devices, not with each other.
 
             Everything goes directly from one device to another on your network, never through the internet. There is \
-            no pairing and logins and the TMDb token travel unencrypted on the network, so turn it on at home only. \
+            no pairing and logins and keys travel unencrypted on the network, so turn it on at home only. \
             Other settings, hidden categories and playlists imported from a file stay on each device. Only the main \
             profile syncs.
             """
@@ -215,7 +215,8 @@ extension HelpTopic {
             your device; passwords and keys are kept in the system keychain. Posters and the movie and series pages \
             you have opened are kept on your device too, so that they show at once and open when the provider cannot \
             be reached; Settings, Clear Cache removes them. When you turn on Sync on this network, your playlists, My \
-            List, collections, progress and TMDb token also go to your other Ondo devices on the same network, never \
+            List, collections, progress, TMDb token and subtitle service keys also go to your other Ondo devices on the \
+            same network, never \
             through the internet.
 
             Ondo connects to the servers you add; once a week to GitHub, for the latest awards and festival \

@@ -409,6 +409,110 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertEqual(again.syncSnapshot().keys.first { $0.service == SyncKey.tmdb }?.updatedAt, key.updatedAt)
     }
 
+    /// `fixtures/sync/<name>` at the top of the repository (shared with the core and Android tests).
+    private func sharedExample(_ name: String) throws -> SyncSnapshot {
+        var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: directory.appendingPathComponent("fixtures/sync").path) {
+            let parent = directory.deletingLastPathComponent()
+            guard parent.path != directory.path else { throw XCTSkip("fixtures/sync not found") }
+            directory = parent
+        }
+        let data = try Data(contentsOf: directory.appendingPathComponent("fixtures/sync").appendingPathComponent(name))
+        return try XCTUnwrap(SyncSnapshot.decode(data), name)
+    }
+
+    /// The subtitle services' keys travel like the TMDb key (docs/SYNC.md, "Key"): saved in the other device's keychain
+    /// without a check, each field on its own, the Addic7ed switch too; a field cleared on one device is cleared on the
+    /// other; none of them is kept among the keys only passed on.
+    func testSubtitleKeysTravelAndSoDoesTheirRemoval() async throws {
+        let first = try await device("first")
+        let second = try await device("second")
+        first.setSubtitleCredential("test-opensubtitles-key", for: .openSubtitlesKey)
+        first.setSubtitleCredential("test-user", for: .openSubtitlesUsername)
+        first.setSubtitleCredential("test password", for: .openSubtitlesPassword)
+        first.setSubtitleCredential("test-subdl-key", for: .subdlKey)
+        first.setAddic7edSubtitles(true)
+        let snapshot = first.syncSnapshot()
+        XCTAssertEqual(Set(snapshot.keys.map(\.service)), [SyncKey.openSubtitles, SyncKey.openSubtitlesUsername, SyncKey.openSubtitlesPassword,
+                                                          SyncKey.subdl, SyncKey.addic7ed])
+
+        let revision = second.subtitleCredentialsRevision
+        await second.applySync(snapshot)
+        XCTAssertEqual(second.subtitleCredential(.openSubtitlesKey), "test-opensubtitles-key")
+        XCTAssertEqual(second.subtitleCredential(.openSubtitlesUsername), "test-user")
+        XCTAssertEqual(second.subtitleCredential(.openSubtitlesPassword), "test password", "a space inside a password is kept")
+        XCTAssertEqual(second.subtitleCredential(.subdlKey), "test-subdl-key")
+        XCTAssertTrue(second.settings.addic7edOptIn)
+        XCTAssertEqual(second.subtitleServices, [.openSubtitles, .subdl, .addic7ed])
+        XCTAssertNotEqual(second.subtitleCredentialsRevision, revision, "Settings shows them")
+        XCTAssertTrue(second.syncState.otherKeys.isEmpty, "kept in the keychain only")
+        XCTAssertEqual(Set(second.syncSnapshot().keys), Set(snapshot.keys), "sent on with the times they were saved")
+        let state = try String(contentsOf: root.appendingPathComponent("second/Support/sync.json"), encoding: .utf8)
+        XCTAssertFalse(state.contains("test-"), "never in sync.json")
+
+        // Cleared afterwards on the first device (the account, Addic7ed turned off): the same on the second.
+        try await Task.sleep(for: .milliseconds(5))
+        first.setSubtitleCredential(nil, for: .openSubtitlesUsername)
+        first.setSubtitleCredential(nil, for: .openSubtitlesPassword)
+        first.setAddic7edSubtitles(false)
+        await second.applySync(first.syncSnapshot())
+        XCTAssertNil(second.subtitleCredential(.openSubtitlesUsername))
+        XCTAssertNil(second.subtitleCredential(.openSubtitlesPassword))
+        XCTAssertEqual(second.subtitleCredential(.openSubtitlesKey), "test-opensubtitles-key")
+        XCTAssertFalse(second.settings.addic7edOptIn)
+        XCTAssertEqual(second.subtitleServices, [.openSubtitles, .subdl])
+        // A device that does not sync these keys answers without them: that removes nothing.
+        await second.applySync(SyncSnapshot(device: "old"))
+        XCTAssertEqual(second.subtitleCredential(.subdlKey), "test-subdl-key")
+    }
+
+    /// Two devices changed the subtitle keys apart (the shared example `keys-a.json` and `keys-b.json`): each field
+    /// keeps the later save, a removal after a save clears it, the key of an unknown service is only passed on.
+    func testConcurrentSubtitleKeyEditsMergeFieldByField() async throws {
+        let model = try await device("tv")
+        await model.applySync(try sharedExample("keys-a.json"))
+        XCTAssertEqual(model.subtitleCredential(.openSubtitlesUsername), "test-user")
+        await model.applySync(try sharedExample("keys-b.json"))
+        XCTAssertEqual(model.subtitleCredential(.openSubtitlesKey), "test-opensubtitles-key-b")
+        XCTAssertNil(model.subtitleCredential(.openSubtitlesUsername), "removed after it was saved")
+        XCTAssertEqual(model.subtitleCredential(.openSubtitlesPassword), "test-password-b")
+        XCTAssertEqual(model.subtitleCredential(.subdlKey), "test-subdl-key-a", "saved later than the other")
+        XCTAssertEqual(model.subtitleCredential(.subSourceKey), "test-subsource-key", "saved after its removal")
+        XCTAssertFalse(model.settings.addic7edOptIn)
+        XCTAssertEqual(model.secrets.get(Keychain.tmdbKey), "test-tmdb-token")
+        XCTAssertEqual(model.syncState.otherKeys.map(\.service), ["future-service"])
+        let expected = try sharedExample("keys-merged.json")
+        XCTAssertEqual(model.syncSnapshot().keys.sorted { $0.service < $1.service }, expected.keys)
+    }
+
+    /// A key being checked in Settings is not replaced by sync meanwhile; what sync brought applies afterwards.
+    func testSyncLeavesASubtitleKeyBeingCheckedAlone() async throws {
+        let model = try await device("phone")
+        model.subtitleChecksInFlight.insert(.subdl)
+        let received = SyncSnapshot(device: "tv", keys: [SyncKey(service: SyncKey.subdl, value: "test-subdl-key", updatedAt: 1_000)])
+        await model.applySync(received)
+        XCTAssertNil(model.subtitleCredential(.subdlKey))
+        model.subtitleChecksInFlight.remove(.subdl)
+        await model.applySync(received)
+        XCTAssertEqual(model.subtitleCredential(.subdlKey), "test-subdl-key")
+    }
+
+    /// A subtitle key saved before sync carried them is dated once at launch, as the TMDb key, so it travels and wins
+    /// over an earlier removal on another device.
+    func testAnUndatedSubtitleKeyIsDatedOnce() async throws {
+        let folder = root.appendingPathComponent("mac", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let secrets = InMemorySecretStore()
+        _ = secrets.set("test-subsource-key", for: SubtitleCredential.subSourceKey.rawValue)
+        let removedElsewhere = Date().addingTimeInterval(-3_600).syncMilliseconds
+        let mac = AppModel(storageRoot: folder, secrets: secrets, reminderScheduler: InMemoryReminderScheduler())
+        await mac.bootstrap()
+        let key = try XCTUnwrap(mac.syncSnapshot().keys.first { $0.service == SyncKey.subSource })
+        XCTAssertGreaterThan(key.updatedAt, removedElsewhere)
+        await mac.applySync(SyncSnapshot(device: "tv", deleted: ["key:" + SyncKey.subSource: removedElsewhere]))
+        XCTAssertEqual(mac.subtitleCredential(.subSourceKey), "test-subsource-key")
+    }
+
     func testOnlyAnEditOfWhatSyncCarriesDatesThePlaylist() async throws {
         let first = try await deviceWithLibrary()
         var playlist = try XCTUnwrap(first.activePlaylist)

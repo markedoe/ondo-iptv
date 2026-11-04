@@ -262,6 +262,46 @@ class SyncTest {
         assertEquals("example-tmdb-token-0", SyncMerge.merge(other, mine).keys.single().value)
     }
 
+    /**
+     * The subtitle services' keys of the shared examples (docs/SYNC.md, "Key"): each record merged on its own, the later
+     * save winning, a removal after a save dropping it, one before a save not; the same result whichever merges.
+     */
+    @Test
+    fun theSubtitleKeysOfTheSharedExamplesMergeInEitherOrder() {
+        val a = fixture("keys-a.json")
+        val b = fixture("keys-b.json")
+        val expected = fixture("keys-merged.json")
+        assertEquals(expected, SyncMerge.merge(a, b))
+        assertEquals(expected.withoutDevice(), SyncMerge.merge(b, a).withoutDevice())
+        assertEquals(expected, SyncMerge.merge(expected, b))
+        // The names both apps use, as the Apple core spells them.
+        assertEquals(
+            listOf("opensubtitles", "opensubtitles-username", "opensubtitles-password", "subdl", "subsource", "addic7ed"),
+            SyncKey.SUBTITLE_SERVICES,
+        )
+    }
+
+    /**
+     * A device of an earlier version keeps the subtitle keys as those of services it does not know: merged through it
+     * and back, they are as they were, the same digest (no session for nothing), and a removal still travels.
+     */
+    @Test
+    fun anEarlierVersionPassesTheSubtitleKeysOnUnchanged() {
+        val merged = fixture("keys-merged.json")
+        val old = SyncSnapshot(device = "old", keys = listOf(SyncKey(SyncKey.TMDB, "test-tmdb-token", 100)))
+        val relayed = SyncMerge.merge(old, merged)
+        assertEquals(merged.keys, relayed.keys)
+        assertEquals(merged.deleted, relayed.deleted)
+        assertEquals(merged.contentDigest(), relayed.contentDigest())
+        // A key cleared on a third device later reaches the first through the old one.
+        val cleared = SyncSnapshot(device = "c", deleted = mapOf("key:${SyncKey.SUBDL}" to 4000))
+        val back = SyncMerge.merge(merged, SyncMerge.merge(relayed, cleared))
+        assertTrue(back.keys.none { it.service == SyncKey.SUBDL })
+        // Without these keys, the digest is the one of before.
+        val plain = merged.copy(keys = merged.keys.filter { it.service !in SyncKey.SUBTITLE_SERVICES }, deleted = emptyMap())
+        assertEquals(plain.contentDigest(), SyncSnapshot(device = "x", keys = plain.keys).contentDigest())
+    }
+
     @Test
     fun theRowOrderOfTheSharedExamplesMergesInEitherOrder() {
         val a = fixture("rows-a.json")

@@ -9,6 +9,13 @@ récent qui gagne, des suppressions qui l’emportent sur des éléments plus an
 clés de services extérieurs (le dernier enregistrement qui gagne, une clé retirée après son enregistrement écartée,
 la clé d’un service inconnu gardée).
 
+`keys-a.json` et `keys-b.json` se fusionnent de même en `keys-merged.json` : les clés des services de sous-titres
+(docs/SYNC.fr.md, « Clé »), chaque champ seul : un enregistrement plus récent qui gagne d’un côté ou de l’autre, un
+retrait après un enregistrement qui l’écarte (l’identifiant OpenSubtitles), un retrait antérieur qui ne l’écarte pas
+(SubSource), Addic7ed désactivé plus tard qui gagne, un mot de passe avec une espace, la clé d’un service inconnu
+gardée. Les tests des apps les appliquent aussi, l’un après l’autre, aux clés gardées d’un appareil. Toutes les
+valeurs sont fictives.
+
 `rows-a.json` et `rows-b.json` se fusionnent de même en `rows-merged.json` : l’ordre des rangées des onglets Films et
 Séries, un enregistrement par onglet, le plus récent qui gagne, à temps égaux la plus petite chaîne de départage ; les
 clés vides ou qui contiennent un caractère de contrôle écartées, l’ordre sans doublons, les rangées masquées chacune une

@@ -99,7 +99,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   sa saison et son épisode ; la langue de sous-titres du spectateur d'abord ; le sous-titre choisi est chargé à côté
   de la vidéo et gardé pour le titre sur l'appareil : `core/subtitles/`, `player/OnlineSubtitles.kt` ; les clés se
   règlent dans Réglages → Services de sous-titres, sont vérifiées auprès de chaque service à l'enregistrement et
-  restent sur l'appareil, hors synchronisation), les langues de l'audio et des
+  sont gardées dans un fichier privé de l'app et synchronisées avec les autres appareils de l'utilisateur comme le
+  jeton TMDb), les langues de l'audio et des
   sous-titres apprises des choix du spectateur et utilisées d'abord pour les flux suivants, les sous-titres forcés
   toujours affichés avec les sous-titres désactivés (`player/TrackPreferences.kt`), mémoires tampons distinctes
   pour le direct et pour les films et séries, jamais plus de la moitié de la mémoire qui reste à l'app quand le

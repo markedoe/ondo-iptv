@@ -12,6 +12,7 @@ import com.markedoe.ondo.core.subtitles.SubtitleProvider
 import com.markedoe.ondo.core.subtitles.SubtitleQuery
 import com.markedoe.ondo.core.subtitles.SubtitleSearch
 import com.markedoe.ondo.core.subtitles.SubtitleService
+import com.markedoe.ondo.core.sync.SyncKey
 import java.io.File
 import java.security.MessageDigest
 import kotlinx.coroutines.CoroutineDispatcher
@@ -23,13 +24,16 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-/** A field of a subtitle service's account, named as the service names it (the Apple apps' `SubtitleCredential`). */
-enum class SubtitleCredential(val service: SubtitleService, val key: String) {
-    OPEN_SUBTITLES_KEY(SubtitleService.OPEN_SUBTITLES, "opensubtitles-key"),
-    OPEN_SUBTITLES_USERNAME(SubtitleService.OPEN_SUBTITLES, "opensubtitles-username"),
-    OPEN_SUBTITLES_PASSWORD(SubtitleService.OPEN_SUBTITLES, "opensubtitles-password"),
-    SUBDL_KEY(SubtitleService.SUBDL, "subdl-key"),
-    SUBSOURCE_KEY(SubtitleService.SUBSOURCE, "subsource-key"),
+/**
+ * A field of a subtitle service's account, named as the service names it (the Apple apps' `SubtitleCredential`); [syncService]
+ * is its record's `service` in sync's `keys` (docs/SYNC.md, "Key").
+ */
+enum class SubtitleCredential(val service: SubtitleService, val key: String, val syncService: String) {
+    OPEN_SUBTITLES_KEY(SubtitleService.OPEN_SUBTITLES, "opensubtitles-key", SyncKey.OPEN_SUBTITLES),
+    OPEN_SUBTITLES_USERNAME(SubtitleService.OPEN_SUBTITLES, "opensubtitles-username", SyncKey.OPEN_SUBTITLES_USERNAME),
+    OPEN_SUBTITLES_PASSWORD(SubtitleService.OPEN_SUBTITLES, "opensubtitles-password", SyncKey.OPEN_SUBTITLES_PASSWORD),
+    SUBDL_KEY(SubtitleService.SUBDL, "subdl-key", SyncKey.SUBDL),
+    SUBSOURCE_KEY(SubtitleService.SUBSOURCE, "subsource-key", SyncKey.SUBSOURCE),
     ;
 
     companion object {
@@ -62,8 +66,10 @@ data class ChosenSubtitle(
  * OpenSubtitles.com (API key, and an optional account), SubDL and SubSource (API key), and Addic7ed (no account, off
  * until turned on). Each key is checked with its service when it is saved, and kept only once the service accepts it.
  *
- * They stay on this device, in a private file of the app's (not in the settings sync carries, as the Apple apps keep
- * them in the keychain), and are never written to a log. The subtitles downloaded are kept here too, per title.
+ * They are kept in a private file of the app's (not in the settings, as the Apple apps keep them in the keychain), and
+ * are never written to a log. Sync carries each field and the Addic7ed switch to the user's other devices, as the TMDb
+ * token ([SyncedKeyStore], docs/SYNC.md "Key"): what the user typed, never the OpenSubtitles session. The subtitles
+ * downloaded are kept here too, per title, and stay on this device.
  */
 class SubtitleServices(
     private val prefs: SharedPreferences,
@@ -73,11 +79,16 @@ class SubtitleServices(
     /** Where downloaded subtitles are kept. */
     private val folder: File,
     private val io: CoroutineDispatcher = Dispatchers.IO,
-) {
+) : SyncedKeyStore {
     private val _state = MutableStateFlow(readState())
     val state: StateFlow<SubtitleServicesState> = _state.asStateFlow()
 
     private var search: SubtitleSearch? = null
+
+    override var listener: SyncedKeyStore.Listener? = null
+
+    /** The services whose key is being checked: sync leaves them alone until the check ends (the save comes after). */
+    private val checking: MutableSet<SubtitleService> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     private fun readState() = SubtitleServicesState(
         saved = SubtitleService.entries.filter { service -> SubtitleCredential.fields(service).firstOrNull()?.let { credential(it) } != null }.toSet(),
@@ -101,15 +112,20 @@ class SubtitleServices(
             remove(service)
             return null
         }
-        val check = withContext(io) {
-            when (service) {
-                SubtitleService.OPEN_SUBTITLES -> OpenSubtitlesClient(
-                    key, typed[SubtitleCredential.OPEN_SUBTITLES_USERNAME], typed[SubtitleCredential.OPEN_SUBTITLES_PASSWORD], userAgent, http,
-                ).checkCredentials()
-                SubtitleService.SUBDL -> SubDLClient(key, http).checkKey()
-                SubtitleService.SUBSOURCE -> SubSourceClient(key, http).checkKey()
-                SubtitleService.ADDIC7ED -> CredentialCheck.ACCEPTED
+        checking += service
+        val check = try {
+            withContext(io) {
+                when (service) {
+                    SubtitleService.OPEN_SUBTITLES -> OpenSubtitlesClient(
+                        key, typed[SubtitleCredential.OPEN_SUBTITLES_USERNAME], typed[SubtitleCredential.OPEN_SUBTITLES_PASSWORD], userAgent, http,
+                    ).checkCredentials()
+                    SubtitleService.SUBDL -> SubDLClient(key, http).checkKey()
+                    SubtitleService.SUBSOURCE -> SubSourceClient(key, http).checkKey()
+                    SubtitleService.ADDIC7ED -> CredentialCheck.ACCEPTED
+                }
             }
+        } finally {
+            checking -= service
         }
         if (check == CredentialCheck.ACCEPTED) save(typed)
         return check
@@ -119,16 +135,130 @@ class SubtitleServices(
     fun remove(service: SubtitleService) = save(SubtitleCredential.fields(service).associateWith { null })
 
     fun setAddic7ed(on: Boolean) {
-        prefs.edit().putBoolean(ADDIC7ED, on).apply()
-        changed()
-    }
-
-    private fun save(values: Map<SubtitleCredential, String?>) {
-        val editor = prefs.edit()
-        for ((field, value) in values) if (value == null) editor.remove(field.key) else editor.putString(field.key, value)
+        if (on == prefs.getBoolean(ADDIC7ED, false)) return
+        val editor = prefs.edit().putBoolean(ADDIC7ED, on)
+        listener?.let { editor.putLong(AT + SyncKey.ADDIC7ED, it.stamp()) }
         editor.apply()
         changed()
+        listener?.changed()
     }
+
+    /** Saves what the user typed: each field that changed dated now for sync, each one removed noted as deleted. */
+    private fun save(values: Map<SubtitleCredential, String?>) {
+        val editor = prefs.edit()
+        val removed = mutableListOf<SubtitleCredential>()
+        var any = false
+        for ((field, value) in values) {
+            if (value == credential(field)) continue
+            any = true
+            if (value == null) {
+                // Its time stays, as the removal's: a merge made before it cannot bring the key back.
+                editor.remove(field.key)
+                removed += field
+            } else {
+                editor.putString(field.key, value)
+                listener?.let { editor.putLong(AT + field.syncService, it.stamp()) }
+            }
+        }
+        editor.apply()
+        changed()
+        val sync = listener ?: return
+        if (!any) return
+        if (removed.isNotEmpty()) {
+            val dated = prefs.edit()
+            for (field in removed) {
+                val time = sync.stamp()
+                dated.putLong(AT + field.syncService, time)
+                sync.removed("key:${field.syncService}", time)
+            }
+            dated.apply()
+        }
+        sync.changed()
+    }
+
+    override val services: Collection<String> get() = SyncKey.SUBTITLE_SERVICES
+
+    override fun syncKeys(): List<SyncKey> = buildList {
+        for (field in SubtitleCredential.entries) {
+            val value = credential(field) ?: continue
+            add(SyncKey(field.syncService, value, prefs.getLong(AT + field.syncService, 0)))
+        }
+        if (prefs.contains(AT + SyncKey.ADDIC7ED)) {
+            add(SyncKey(SyncKey.ADDIC7ED, if (prefs.getBoolean(ADDIC7ED, false)) SyncKey.ON else SyncKey.OFF, prefs.getLong(AT + SyncKey.ADDIC7ED, 0)))
+        }
+    }
+
+    override fun dateUndated(stamp: () -> Long) {
+        val editor = prefs.edit()
+        var any = false
+        for (field in SubtitleCredential.entries) {
+            if (credential(field) == null || prefs.contains(AT + field.syncService)) continue
+            editor.putLong(AT + field.syncService, stamp())
+            any = true
+        }
+        if (prefs.getBoolean(ADDIC7ED, false) && !prefs.contains(AT + SyncKey.ADDIC7ED)) {
+            editor.putLong(AT + SyncKey.ADDIC7ED, stamp())
+            any = true
+        }
+        if (any) editor.apply()
+    }
+
+    /**
+     * Keeps the subtitle services' records of a merged snapshot: a field saved when it changed (its service checked it on
+     * the device where it was typed: not checked again), removed when it was removed elsewhere since it was saved here
+     * ([deleted]), Addic7ed turned on or off; each with the time the merge gave it. A service whose key is being checked
+     * here is left as it is.
+     */
+    override fun applySynced(keys: List<SyncKey>, deleted: Map<String, Long>): Boolean {
+        val byService = keys.associateBy { it.service }
+        val editor = prefs.edit()
+        var changed = false
+        var dated = false
+        for (field in SubtitleCredential.entries) {
+            if (field.service in checking) continue
+            val record = byService[field.syncService]
+            val current = credential(field)
+            if (record != null) {
+                // Saved here after the snapshot that was merged: the next session sends it.
+                if (!usable(field, record.value) || record.updatedAt < prefs.getLong(AT + field.syncService, Long.MIN_VALUE)) continue
+                if (record.value != current) {
+                    editor.putString(field.key, record.value)
+                    changed = true
+                }
+                if (prefs.getLong(AT + field.syncService, 0) != record.updatedAt || !prefs.contains(AT + field.syncService)) {
+                    editor.putLong(AT + field.syncService, record.updatedAt)
+                    dated = true
+                }
+            } else if (current != null) {
+                val removedAt = deleted["key:${field.syncService}"] ?: continue
+                if (removedAt >= prefs.getLong(AT + field.syncService, 0)) {
+                    editor.remove(field.key).putLong(AT + field.syncService, removedAt)
+                    changed = true
+                }
+            }
+        }
+        byService[SyncKey.ADDIC7ED]?.takeIf {
+            (it.value == SyncKey.ON || it.value == SyncKey.OFF) && it.updatedAt >= prefs.getLong(AT + SyncKey.ADDIC7ED, Long.MIN_VALUE)
+        }?.let { record ->
+            val on = record.value == SyncKey.ON
+            if (on != prefs.getBoolean(ADDIC7ED, false)) {
+                editor.putBoolean(ADDIC7ED, on)
+                changed = true
+            }
+            if (prefs.getLong(AT + SyncKey.ADDIC7ED, Long.MIN_VALUE) != record.updatedAt) {
+                editor.putLong(AT + SyncKey.ADDIC7ED, record.updatedAt)
+                dated = true
+            }
+        }
+        if (changed || dated) editor.apply()
+        if (changed) changed()
+        return changed || dated
+    }
+
+    /** A value from another device as it can be used: not empty, no control characters, and no spaces but in a password. */
+    private fun usable(field: SubtitleCredential, value: String): Boolean =
+        value.isNotEmpty() && value.none { it < ' ' || it == '\u007f' } &&
+            (field == SubtitleCredential.OPEN_SUBTITLES_PASSWORD || value.none { it.isWhitespace() })
 
     /** New credentials, new clients (a refused login may be tried again), and new searches. */
     private fun changed() {
@@ -198,6 +328,8 @@ class SubtitleServices(
         const val FILE = "subtitle_services"
         const val MAX_KEPT = 100
         private const val ADDIC7ED = "addic7ed"
+        /** Before a record's `service`: when it was saved, here or on the device it came from (milliseconds, sync's clock). */
+        private const val AT = "at:"
         private const val CHOSEN = "chosen:"
     }
 }

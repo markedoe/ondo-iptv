@@ -175,7 +175,7 @@ interface changes.
 - **Data**: posters, thumbnails and the movie and series pages stay on the device, like on Apple: they show at
   once at the next launch, and the pages still open when the provider cannot be reached.
 - **Sync on this network** (Settings, off until turned on): while Ondo is open, the Android devices of a home
-  network keep the same playlists, My List, collections, progress and TMDb token, and iPhone, iPad and Mac sync with
+  network keep the same playlists, My List, collections, progress, TMDb token and subtitle service keys, and iPhone, iPad and Mac sync with
   them; directly between the devices, to local addresses only, nothing through the internet
   ([docs/SYNC.md](docs/SYNC.md)).
 - **TMDb**, with the viewer's own token (Settings → TMDb, checked with TMDb when saved, carried by sync): a
@@ -198,7 +198,7 @@ interface changes.
   to add it to My List; Help, With the remote. The privacy policy and support pages
   open inside the app.
 - Subtitles → Search online… for films and episodes, with your own OpenSubtitles, SubDL or SubSource API key
-  (checked with the service when saved, kept on the device) or Addic7ed; a subtitle track the device cannot show is
+  (checked with the service when saved, synced with your other devices like the TMDb token) or Addic7ed; a subtitle track the device cannot show is
   listed with why.
 - Coming next: Chromecast, downloads, profiles and PIN, a second engine (libVLC).
   Details: [docs/ANDROID.md](docs/ANDROID.md).

@@ -393,7 +393,10 @@ data class SyncPerson(
     }
 }
 
-/** The key or token of an outside service, typed in Settings: [service] `tmdb` for TMDb's token (or API Key). */
+/**
+ * The key or token of an outside service, typed in Settings: [service] `tmdb` for TMDb's token (or API Key), and the
+ * subtitle services' fields ([SUBTITLE_SERVICES]), each its own record (docs/SYNC.md, "Key").
+ */
 @Serializable
 data class SyncKey(
     val service: String,
@@ -404,6 +407,18 @@ data class SyncKey(
 
     companion object {
         const val TMDB = "tmdb"
+        const val OPEN_SUBTITLES = "opensubtitles"
+        const val OPEN_SUBTITLES_USERNAME = "opensubtitles-username"
+        const val OPEN_SUBTITLES_PASSWORD = "opensubtitles-password"
+        const val SUBDL = "subdl"
+        const val SUBSOURCE = "subsource"
+        /** Whether Addic7ed is searched: [ON] or [OFF] (turning it off is a value, not a removal). */
+        const val ADDIC7ED = "addic7ed"
+        const val ON = "on"
+        const val OFF = "off"
+
+        /** The subtitle services' records, the same names on every platform. */
+        val SUBTITLE_SERVICES: List<String> = listOf(OPEN_SUBTITLES, OPEN_SUBTITLES_USERNAME, OPEN_SUBTITLES_PASSWORD, SUBDL, SUBSOURCE, ADDIC7ED)
     }
 }
 

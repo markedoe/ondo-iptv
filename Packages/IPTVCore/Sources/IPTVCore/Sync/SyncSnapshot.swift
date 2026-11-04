@@ -536,9 +536,22 @@ public struct SyncPerson: Codable, Hashable, Sendable {
     }
 }
 
-/// The key or token of an outside service, typed in Settings: `service` `tmdb` for TMDb's token (or API Key).
+/// The key or token of an outside service, typed in Settings: `service` `tmdb` for TMDb's token (or API Key), and the
+/// subtitle services' fields (`subtitleServices`), each its own record (docs/SYNC.md, "Key").
 public struct SyncKey: Codable, Hashable, Sendable {
     public static let tmdb = "tmdb"
+    public static let openSubtitles = "opensubtitles"
+    public static let openSubtitlesUsername = "opensubtitles-username"
+    public static let openSubtitlesPassword = "opensubtitles-password"
+    public static let subdl = "subdl"
+    public static let subSource = "subsource"
+    /// Whether Addic7ed is searched: `on` or `off` (turning it off is a value, not a removal).
+    public static let addic7ed = "addic7ed"
+    public static let on = "on"
+    public static let off = "off"
+
+    /// The subtitle services' records, the same names on every platform.
+    public static let subtitleServices = [openSubtitles, openSubtitlesUsername, openSubtitlesPassword, subdl, subSource, addic7ed]
 
     public var service: String
     public var value: String

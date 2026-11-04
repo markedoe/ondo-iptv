@@ -205,6 +205,34 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncMerge.merge(expected, b), expected)
     }
 
+    /// The subtitle services' keys of the shared examples (docs/SYNC.md, "Key"): each record merged on its own, the later
+    /// save winning, a removal after a save dropping it, one before a save not; the same result whichever merges.
+    func testSubtitleKeysOfTheSharedExamplesMergeInEitherOrder() throws {
+        let a = try fixture("keys-a.json")
+        let b = try fixture("keys-b.json")
+        let expected = try fixture("keys-merged.json")
+        XCTAssertEqual(SyncMerge.merge(a, b), expected)
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(b, a)), withoutDevice(expected))
+        XCTAssertEqual(SyncMerge.merge(expected, b), expected)
+        // The names both apps use, as the Android core spells them.
+        XCTAssertEqual(SyncKey.subtitleServices,
+                       ["opensubtitles", "opensubtitles-username", "opensubtitles-password", "subdl", "subsource", "addic7ed"])
+    }
+
+    /// A device of an earlier version keeps the subtitle keys as those of services it does not know: merged through it
+    /// and back, they are as they were, the same digest (no session for nothing), and a removal still travels.
+    func testAnEarlierVersionPassesTheSubtitleKeysOnUnchanged() throws {
+        let merged = try fixture("keys-merged.json")
+        let old = SyncSnapshot(device: "old", keys: [SyncKey(service: SyncKey.tmdb, value: "test-tmdb-token", updatedAt: 100)])
+        let relayed = SyncMerge.merge(old, merged)
+        XCTAssertEqual(relayed.keys, merged.keys)
+        XCTAssertEqual(relayed.deleted, merged.deleted)
+        XCTAssertEqual(try relayed.contentForDigest(), try merged.contentForDigest())
+        let cleared = SyncSnapshot(device: "c", deleted: ["key:" + SyncKey.subdl: 4000])
+        let back = SyncMerge.merge(merged, SyncMerge.merge(relayed, cleared))
+        XCTAssertFalse(back.keys.contains { $0.service == SyncKey.subdl })
+    }
+
     /// Two devices put the rows in order at about the same time: both keep the later one, whichever merges.
     func testConcurrentRowOrdersConvergeToTheLaterStamp() {
         var clockA = SyncClock(last: 1_000)

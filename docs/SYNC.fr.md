@@ -22,7 +22,8 @@ Ce document est la spécification. L’implémentation Kotlin est dans
 
 Synchronisés : les playlists (nom, type, adresse, identifiant et mot de passe, adresse du guide), Ma liste et les
 chaînes favorites, les acteurs et réalisateurs gardés dans Ma liste, les listes (collections) avec leurs personnes, la progression de lecture (où chaque film et épisode a été laissé, et
-ce qui a été terminé), les clés de services extérieurs saisies dans les Réglages (le jeton TMDb), l’ordre des
+ce qui a été terminé), les clés de services extérieurs saisies dans les Réglages (le jeton TMDb, et les clés des services de sous-titres et
+le compte OpenSubtitles avec l’interrupteur d’Addic7ed), l’ordre des
 rangées des onglets Films et Séries avec les rangées masquées (Réglages → Ordre des rangées), et les profils (nom,
 couleur, avatar, Enfant) avec, pour chaque profil, sa liste, ses chaînes favorites, ses personnes, ses listes, sa
 progression et son ordre des rangées (docs/PROFILES.fr.md).
@@ -183,6 +184,20 @@ enregistrée ; la retirer ajoute `key:<service>` à `deleted`). Une clé est vé
 l’appareil où elle est saisie ; les autres appareils l’utilisent telle qu’elle arrive, et leurs Réglages le disent
 quand le service la refuse plus tard. Un appareil garde et transmet les clés des services qu’il ne connaît pas. Un
 instantané sans `keys` (d’un appareil qui ne les synchronise pas) ne retire rien : seul `deleted` le fait.
+
+Les services de sous-titres recherchés depuis le lecteur se synchronisent de même, un élément par champ, chacun
+fusionné seul (le dernier enregistrement gagne, un retrait postérieur l’efface sur tous les appareils) :
+`opensubtitles` (la clé d’API d’OpenSubtitles), `opensubtitles-username` et `opensubtitles-password` (le compte
+facultatif), `subdl` et `subsource` (leurs clés d’API), et `addic7ed`, dont la `value` est `on` ou `off` (désactiver
+Addic7ed est une valeur, jamais un retrait ; il n’y a pas d’élément tant qu’il n’a pas été basculé une fois). Un mot
+de passe est gardé tel que saisi, espaces compris ; les lecteurs écartent une clé qui contient une espace ou un
+caractère de contrôle, et un mot de passe qui contient un caractère de contrôle. Chaque appareil les garde là où il
+garde ces clés (le trousseau sur Apple, un fichier privé de l’app sur Android), jamais dans les réglages qu’il envoie,
+et date une fois, à son démarrage, celles enregistrées avant qu’elles se synchronisent. Seul ce que l’utilisateur a
+saisi circule : jamais la session qu’OpenSubtitles donne après une connexion. Un appareil laisse tel quel un service
+dont la clé est en cours de vérification jusqu’à la fin de la vérification ; la clé alors enregistrée est datée
+après ce que la synchronisation a apporté. Un appareil d’une version antérieure les garde et les transmet comme les
+clés de services qu’il ne connaît pas.
 
 **Rangées** (l’ordre des rangées d’un onglet, Réglages → Ordre des rangées) — `{"tab", "order", "hidden",
 "updatedAt"}`. `tab` vaut `movie` ou `series` ; `order` liste les rangées de l’onglet par clé, dans l’ordre choisi ;
@@ -366,6 +381,6 @@ une minute, mais elle dure tant que le téléphone est absent.
 ## Confidentialité
 
 Les instantanés contiennent en clair les identifiants et mots de passe des playlists, et les clés des services
-extérieurs (le jeton TMDb), le réseau de confiance ayant été préféré au chiffrement. Ils ne circulent qu’entre appareils Ondo dont la synchronisation est active, sur le
+extérieurs (le jeton TMDb, les clés des services de sous-titres et le compte OpenSubtitles), le réseau de confiance ayant été préféré au chiffrement. Ils ne circulent qu’entre appareils Ondo dont la synchronisation est active, sur le
 réseau local ; Ondo ne les envoie nulle part ailleurs. Désactiver la synchronisation arrête aussitôt le serveur,
 l’annonce et la recherche.

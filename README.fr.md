@@ -124,7 +124,7 @@ chaque changement de l'interface.
   le cache efface le tout.
 - **Synchroniser sur ce réseau** (Réglages, désactivé tant qu'on ne l'active pas) : iPhone, iPad et Mac se
   connectent aux appareils Android du même réseau où Ondo est ouvert et gardent les mêmes playlists, Ma liste,
-  collections, progression et jeton TMDb (profil principal uniquement ; deux appareils Apple se synchronisent via un
+  collections, progression, jeton TMDb et clés des services de sous-titres (profil principal uniquement ; deux appareils Apple se synchronisent via un
   appareil Android). Adresses locales uniquement ([docs/SYNC.fr.md](docs/SYNC.fr.md)).
 - **Aide** dans l'app (Réglages, et Aide, Aide Ondo sur Mac) : une page par fonctionnalité, dans chaque langue.
 - **Langues** : français, anglais, espagnol, portugais, chinois (simplifié), arabe (de droite à gauche) et
@@ -222,7 +222,7 @@ chaque changement de l'interface.
   sur une chaîne pour l'ajouter à Ma liste ; Aide, Avec la télécommande. Les règles de
   confidentialité et la page d'aide s'ouvrent dans l'app.
 - Sous-titres → Rechercher en ligne… pour les films et les épisodes, avec votre propre clé d'API OpenSubtitles,
-  SubDL ou SubSource (vérifiée auprès du service à l'enregistrement, gardée sur l'appareil) ou Addic7ed ; une piste
+  SubDL ou SubSource (vérifiée auprès du service à l'enregistrement, synchronisée avec vos autres appareils comme le jeton TMDb) ou Addic7ed ; une piste
   de sous-titres que l'appareil ne peut pas afficher est listée avec la raison.
 - À venir : Chromecast, téléchargements, profils et PIN, un second moteur
   (libVLC). Détails : [docs/ANDROID.fr.md](docs/ANDROID.fr.md).

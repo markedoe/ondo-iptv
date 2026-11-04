@@ -88,7 +88,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   key, Addic7ed through Gestdown when turned on; by TMDb's id when the provider gives it, else by the title without
   its tags, its year, season and episode; the viewer's subtitle language first; the subtitle chosen is loaded beside
   the video and kept for the title on the device: `core/subtitles/`, `player/OnlineSubtitles.kt`; the keys are set in
-  Settings → Subtitle services, checked with each service when saved, and stay on the device, outside sync), the viewer's audio and subtitle languages
+  Settings → Subtitle services, checked with each service when saved, kept in a private file of the app and synced with the user's other devices like
+  the TMDb token), the viewer's audio and subtitle languages
   learned from their choices and used first for the next streams, forced subtitles still shown with subtitles off
   (`player/TrackPreferences.kt`), separate buffers for live TV and for movies & series, never more than half of
   the memory the app has left when the player starts, so that a 4K film plays on a TV box that gives the app

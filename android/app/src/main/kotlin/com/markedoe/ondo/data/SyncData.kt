@@ -62,6 +62,34 @@ object SyncKeys {
     }
 }
 
+/**
+ * Keys of outside services kept outside the settings (the subtitle services', in their own private file) that sync
+ * carries in `keys` as the TMDb token (docs/SYNC.md, "Key"): each record dated when it was saved, removed ones noted in
+ * the library's deletions through [listener].
+ */
+interface SyncedKeyStore {
+    /** The `service` of each record it keeps: never kept in the settings too. */
+    val services: Collection<String>
+
+    /** Its records, each dated when it was saved here or on the device it came from. */
+    fun syncKeys(): List<SyncKey>
+
+    /** Dates with [stamp] the values kept without a date (saved before sync carried them): undated, any removal wins. */
+    fun dateUndated(stamp: () -> Long)
+
+    /** Keeps the records of its services of a merged snapshot, and its [deleted] keys; true when something changed. */
+    fun applySynced(keys: List<SyncKey>, deleted: Map<String, Long>): Boolean
+
+    /** Set by the repository: how a change the user made here is dated, noted when removed, and synced soon. */
+    var listener: Listener?
+
+    interface Listener {
+        fun stamp(): Long
+        fun removed(key: String, at: Long)
+        fun changed()
+    }
+}
+
 /** A device sync talks to: its name, and when the last session with it worked (null: none yet). */
 data class SyncDevice(val id: String, val name: String, val syncedAt: Long?, val unreachable: Boolean)
 
@@ -84,6 +112,7 @@ object SyncData {
         state.library.history.filter(SyncKeys::syncs).map { it.key to it.isFinished },
         state.library.rowOrders,
         state.settings.serviceKeys,
+        state.storedKeys,
         state.profiles.map { it.copy(pinHash = null) },
     )
 
@@ -143,7 +172,7 @@ object SyncData {
                     updatedAt = playlist.updatedAt.takeIf { it > 0 } ?: playlist.addedAt,
                 )
             },
-            keys = state.settings.serviceKeys.filter { it.value.isNotBlank() },
+            keys = (state.storedKeys + state.settings.serviceKeys).distinctBy { it.service }.filter { it.value.isNotBlank() },
             profiles = profiles,
             profileData = profileData,
             replaced = main.syncReplaced,
