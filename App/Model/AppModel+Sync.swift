@@ -209,10 +209,29 @@ enum SyncMapping {
     /// `household`: the collections shared with every profile (docs/SYNC.md, "Shared lists").
     static func snapshot(playlists: [Playlist], library: UserLibrary, state: SyncState, tmdbKey: String? = nil, deviceName: String?,
                          now: Date, profiles: [Profile] = [], others: [String: UserLibrary] = [:], household: UserLibrary = UserLibrary()) -> SyncSnapshot {
-        withHousehold(withProfiles(records(playlists: playlists, library: library, state: state, tmdbKey: tmdbKey, deviceName: deviceName, now: now),
-                                   state: state, profiles: profiles, others: others, now: now), household: household, state: state, now: now)
+        withoutFilePlaylistHides(
+            withHousehold(withProfiles(records(playlists: playlists, library: library, state: state, tmdbKey: tmdbKey, deviceName: deviceName, now: now),
+                                       state: state, profiles: profiles, others: others, now: now), household: household, state: state, now: now),
+            playlists: playlists
+        )
             .pruned(now: now.syncMilliseconds, sessions: Array(state.peers.values), learned: state.learned,
                     profileLearned: state.profileStates.mapValues(\.learned), householdLearned: state.household.learned)
+    }
+
+    /// `snapshot` without the hidden categories of a file playlist: it is on this device only, as on Android.
+    private static func withoutFilePlaylistHides(_ snapshot: SyncSnapshot, playlists: [Playlist]) -> SyncSnapshot {
+        let files = Set(playlists.compactMap { playlist -> String? in
+            if case .local = playlist.source { return playlist.id.uuidString.lowercased() }
+            return nil
+        })
+        guard !files.isEmpty else { return snapshot }
+        func travel(_ records: [SyncHidden]) -> [SyncHidden] { records.filter { $0.playlist.map { !files.contains($0) } ?? true } }
+        var snapshot = snapshot
+        snapshot.hiddenCategories = travel(snapshot.hiddenCategories)
+        for index in snapshot.profileData.indices {
+            snapshot.profileData[index].hiddenCategories = travel(snapshot.profileData[index].hiddenCategories)
+        }
+        return snapshot
     }
 
     /// `snapshot` with the collections shared with every profile; none (no household, as before) when there are none.
@@ -348,11 +367,16 @@ enum SyncMapping {
 
     /// `base` with the hidden categories, tags and words after the merge `snapshot`: those it holds (the merge holds this
     /// device's own), and this device's own the merge did not carry (past its limit) unless shown again since. One shown
-    /// again elsewhere keeps the time it was, as this device's own showing again does.
-    static func applyingHidden(_ base: UserLibrary, _ snapshot: SyncSnapshot) -> UserLibrary {
+    /// again elsewhere keeps the time it was, as this device's own showing again does. `keepingHides` (a Kids profile on a
+    /// device where a parent can unlock): this device's own stay, whatever was shown again elsewhere, with their own times
+    /// (the merge keeps the later showing again, and nothing changes from one session to the next); a hide received still
+    /// applies.
+    static func applyingHidden(_ base: UserLibrary, _ snapshot: SyncSnapshot, keepingHides: Bool = false) -> UserLibrary {
         var library = base
         func removal(_ key: String, _ date: Date?) -> Date? {
-            guard let removed = snapshot.deleted[key], removed >= (date?.syncMilliseconds ?? 0) else { return nil }
+            guard !keepingHides, let removed = SyncHidden.shownAt(key, in: snapshot.deleted), removed >= (date?.syncMilliseconds ?? 0) else {
+                return nil
+            }
             return Date(syncMilliseconds: removed)
         }
         for key in base.hiddenCategoryKeys {
@@ -390,6 +414,10 @@ enum SyncMapping {
                 continue
             }
         }
+        // The dates of what was shown again go once sync no longer carries them (`SyncSnapshot.pruned`).
+        library.categoryShownAt = library.categoryShownAt.filter { snapshot.deleted[hiddenCategoryKey($0.key)] != nil }
+        library.shownCategoryTags = library.shownCategoryTags.filter { snapshot.deleted[hiddenKey(SyncHidden.tag, $0.key)] != nil }
+        library.shownCategoryWords = library.shownCategoryWords.filter { snapshot.deleted[hiddenKey(SyncHidden.word, $0.key)] != nil }
         return library
     }
 
@@ -515,7 +543,7 @@ enum SyncMapping {
     /// tags and words merged (`applyingHidden`). What sync does not carry stays: live channel history, hidden channels,
     /// reminders, the order of My List, the containers of episodes. Progress not later than "Clear Watch History" stays
     /// cleared.
-    static func library(_ base: UserLibrary, applying snapshot: SyncSnapshot) -> UserLibrary {
+    static func library(_ base: UserLibrary, applying snapshot: SyncSnapshot, keepingHides: Bool = false) -> UserLibrary {
         var library = base
 
         let favoritesByKey = Dictionary(base.favorites.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -595,7 +623,7 @@ enum SyncMapping {
         // The device's lists keep their place; new ones come after them.
         let kept = base.customLists.map(\.id).filter { lists[$0] != nil }
         library.customLists = (kept + order.filter { listsByID[$0] == nil }).compactMap { lists[$0] }
-        return applyingHidden(library, snapshot)
+        return applyingHidden(library, snapshot, keepingHides: keepingHides)
     }
 
     /// `applied` with the entries of the items `playing` (by `playbackKey`) as they are in `local`; the entries received
@@ -897,14 +925,19 @@ extension AppModel {
             let owners = playbackProfiles.mapValues { owner in owner == Profile.defaultID ? SyncProfile.main : owner.uuidString.lowercased() }
             let name = Self.syncDeviceName
             let syncTime = syncNow(now)
+            // The Kids profiles of a device where a parent can unlock keep what they hide (docs/PROFILES.md, "Kids").
+            let keepingHides = kidsKeepingHides()
             let result = await Task.detached(priority: .utility) { () -> SyncOutcome in
                 let current = SyncMapping.snapshot(playlists: bases, library: libraries.main, state: state, tmdbKey: tmdbKey, deviceName: name,
                                                    now: syncTime, profiles: people, others: libraries.others, household: shared)
                 let latest = SyncMerge.merge(current, merged)
-                var applied: [String: UserLibrary] = [SyncProfile.main: SyncMapping.library(libraries.main, applying: latest)]
+                var applied: [String: UserLibrary] = [
+                    SyncProfile.main: SyncMapping.library(libraries.main, applying: latest, keepingHides: keepingHides.contains(SyncProfile.main)),
+                ]
                 for profile in latest.profiles where profile.id != SyncProfile.main {
                     let bucket = latest.profileData.first { $0.profile == profile.id } ?? SyncProfileData(profile: profile.id)
-                    applied[profile.id] = SyncMapping.library(libraries.others[profile.id] ?? UserLibrary(), applying: bucket.records())
+                    applied[profile.id] = SyncMapping.library(libraries.others[profile.id] ?? UserLibrary(), applying: bucket.records(),
+                                                              keepingHides: keepingHides.contains(profile.id))
                 }
                 // The items playing here keep their entry as the player left it, in the profile each plays in.
                 var parked: [String: HistoryEntry] = [:]
@@ -973,6 +1006,14 @@ extension AppModel {
         syncState.lastSyncedAt = now.syncMilliseconds
         saveSyncState()
         return true
+    }
+
+    /// The Kids profiles (by sync ID, the main one as `SyncProfile.main`) whose hidden categories, languages and styles a
+    /// showing again from another device does not lift: all of them on a device where a parent set a PIN, as their Kids
+    /// switch (docs/PROFILES.md, "Kids"); none elsewhere.
+    func kidsKeepingHides() -> Set<String> {
+        guard hasParentalPIN || profiles.contains(where: { !$0.isKids && $0.isProtected }) else { return [] }
+        return Set(profiles.filter(\.isKids).map { $0.isMain ? SyncProfile.main : $0.id.uuidString.lowercased() })
     }
 
     /// The profiles of `merged` (docs/SYNC.md, "Profiles"): each keeps its PIN (it stays on this device); new ones are

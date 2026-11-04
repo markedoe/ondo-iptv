@@ -1,6 +1,9 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.HangGuard
+import com.markedoe.ondo.core.sync.SyncHidden
+import com.markedoe.ondo.core.sync.SyncMerge
+import com.markedoe.ondo.core.sync.SyncSnapshot
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -250,5 +253,30 @@ class LibraryStateTest {
         val again = filled.withPersonPhoto("Robin Hale", "http://img.example.com/other.jpg")
         assertEquals("http://img.example.com/robin.jpg", again.favorites.single { it.itemId == "Robin Hale" }.imageUrl)
         assertTrue("nothing changed: the same state", again === filled)
+    }
+
+    /**
+     * Show all on a large panel leaves one marker for each type of category instead of one deletion each (a library and
+     * every snapshot stay small), and the categories of those types still hidden are dated after it: on another device
+     * that hid them all, the merge shows again those shown here and keeps the others hidden.
+     */
+    @Test
+    fun showAllLeavesOneMarkerForEachTypeAndKeepsTheOthersHidden() {
+        val playlist = "p1"
+        val ids = (1..3000).map { "live-$it" } + (1..3000).map { "movie-$it" }
+        val hidden = LibraryState().settingCategoriesHidden(playlist, ids, hidden = true, now = 10)
+        val keep = listOf("movie-7", "live-9")
+        val shown = hidden.settingCategoriesHidden(playlist, ids - keep.toSet(), hidden = false, now = 20, after = 21)
+        assertEquals(setOf("hide:category:p1|live-*", "hide:category:p1|movie-*"), shown.syncDeleted.keys)
+        assertEquals(keep.map { "$playlist|$it" }.toSet(), shown.hiddenCategories)
+        assertEquals(keep.associate { SyncKeys.hiddenCategory(playlist, it) to 21L }, shown.hiddenAt)
+        // Another device that still hides all of them merges this one's records: only the two stay hidden.
+        val other = SyncSnapshot(device = "b", hiddenCategories = hidden.hiddenRecords())
+        val mine = SyncSnapshot(device = "a", hiddenCategories = shown.hiddenRecords(), deleted = shown.syncDeleted)
+        val merged = SyncMerge.merge(other, mine)
+        assertEquals(keep.map { SyncHidden.category(playlist, it, 21) }.sortedBy { it.key }, merged.hiddenCategories)
+        // One shown again alone leaves its own deletion.
+        val one = shown.settingCategoriesHidden(playlist, listOf("movie-7"), hidden = false, now = 30)
+        assertEquals(30L, one.syncDeleted[SyncKeys.hiddenCategory(playlist, "movie-7")])
     }
 }

@@ -236,7 +236,12 @@ profil Enfant ne peut pas changer son ordre.
   (`manga`, un mot saisi en minuscules sans accents).
 
 Clé : `hide:<kind>:<value>` ; instant : `hiddenAt` (fixé quand on le masque). Le réafficher retire l’élément et ajoute sa
-clé à `deleted`, datée de ce moment. Chaque élément se fusionne seul (règle 2) : masquer une catégorie sur un appareil et
+clé à `deleted`, datée de ce moment. Plusieurs catégories réaffichées d’un coup (Tout afficher) ajoutent à la place une
+marque par playlist et par type de catégorie, `hide:category:<id de playlist>|<type>-*` (`movie-*`, `live-*`, `series-*`),
+datée de ce moment : elle réaffiche chaque catégorie de cette playlist dont l’identifiant commence par `<type>-` et dont
+`hiddenAt` n’est pas postérieur (règle 3, comme pour sa propre clé), et l’appareil date les catégories de ce type qu’il
+masque encore juste après elle, pour qu’elles restent masquées partout. Un panneau de milliers de catégories réaffichées
+n’ajoute ainsi qu’une clé par type à `deleted`, pas une par catégorie. Chaque élément se fusionne seul (règle 2) : masquer une catégorie sur un appareil et
 réafficher une langue sur un autre gardent les deux changements ; un réaffichage postérieur au masquage gagne, un
 masquage postérieur au réaffichage gagne, et à instants égaux le réaffichage gagne (règle 3). Les lecteurs écartent les
 éléments dont `kind` ou `value` est vide, contient un caractère de contrôle (sous U+0020, ou U+007F) ou dépasse 256 unités
@@ -252,8 +257,12 @@ antérieure) ne réaffiche rien : seul `deleted` le fait. Une version antérieur
 transmet, mais garde les clés `hide:` de `deleted` comme les autres et les transmet : un réaffichage passe par elle, un
 masquage non (il passe quand les appareils rencontrent une version récente), et rien n’est perdu. Chaque profil a la
 sienne : celle du profil principal est `hiddenCategories`, celle d’un autre profil est dans son `profileData`. Un profil
-Enfant ne peut pas changer la sienne (un parent le peut, docs/PROFILES.fr.md), et les catégories qui semblent pour adultes
-y restent masquées quoi que dise la liste.
+Enfant ne peut pas changer la sienne (un parent le peut, docs/PROFILES.fr.md) ; sur un appareil où un parent a mis un
+code, un profil Enfant garde ce qu’il y masque quand un autre appareil (où aucun code ne le protège) le réaffiche : la
+fusion garde le réaffichage le plus récent, l’appareil garde son masquage avec son propre instant, et rien ne change d’une
+session à l’autre, comme pour l’interrupteur Enfant ; un masquage reçu s’applique toujours. Les catégories qui semblent
+pour adultes restent masquées dans un profil Enfant quoi que dise la liste. Les catégories d’une playlist fichier, sur son
+seul appareil, ne sont pas envoyées.
 
 **Profils** (docs/PROFILES.fr.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` est un UUID
 en minuscules ; celui du profil principal est `00000000-0000-0000-0000-000000000001`. `symbol` vaut `initial`, un nom

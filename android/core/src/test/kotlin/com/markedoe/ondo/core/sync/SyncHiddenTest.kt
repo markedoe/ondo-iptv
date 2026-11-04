@@ -229,6 +229,37 @@ class SyncHiddenTest {
         assertEquals(expected, profileRead.profileData.single().hiddenCategories.mapTo(HashSet()) { it.key })
     }
 
+    /**
+     * Show all leaves one marker for each playlist and type (`hide:category:<playlist>|<type>-*`) instead of one deletion for
+     * each category: it shows again every category of that playlist and type hidden at or before it, never those hidden
+     * after it, nor those of another type or playlist. Its playlist ID is read in lowercase.
+     */
+    @Test
+    fun aShowAllMarkerShowsAgainEveryCategoryOfItsTypeHiddenBeforeIt() {
+        val other = "b2000000-0000-4000-8000-00000000000b"
+        val marker = "hide:category:$playlistId|movie-*"
+        assertEquals(marker, SyncHidden.showAllKey(SyncHidden.category(playlistId, "movie-12", 0).key))
+        assertEquals(null, SyncHidden.showAllKey(marker))
+        assertEquals(null, SyncHidden.showAllKey("hide:tag:PT"))
+        assertEquals(null, SyncHidden.showAllKey("hide:category:$playlistId|nodash"))
+        val hides = listOf(
+            SyncHidden.category(playlistId, "movie-1", 10), SyncHidden.category(playlistId, "movie-2", 20),
+            SyncHidden.category(playlistId, "movie-9", 21), SyncHidden.category(playlistId, "live-3", 10),
+            SyncHidden.category(other, "movie-1", 10), SyncHidden(SyncHidden.TAG, "PT", 10),
+        )
+        val tv = SyncSnapshot(device = "tv", playlists = listOf(playlist), hiddenCategories = hides)
+        val json = """{"type":"ondo-sync","version":1,"device":"phone","deleted":{"hide:category:A1000000-0000-4000-8000-00000000000A|movie-*":20}}"""
+        val phone = requireNotNull(SyncSnapshot.decode(json.encodeToByteArray()))
+        assertEquals(setOf(marker), phone.deleted.keys)
+        val kept = listOf(
+            SyncHidden.category(playlistId, "live-3", 10), SyncHidden.category(playlistId, "movie-9", 21),
+            SyncHidden.category(other, "movie-1", 10), SyncHidden(SyncHidden.TAG, "PT", 10),
+        ).sortedBy { it.key }
+        assertEquals(kept, SyncMerge.merge(tv, phone).hiddenCategories)
+        assertEquals(kept, SyncMerge.merge(phone, tv).hiddenCategories)
+        assertEquals(20L, SyncHidden.shownAt(SyncHidden.category(playlistId, "movie-2", 0).key, phone.deleted))
+    }
+
     /** Hidden records dated far ahead of the receiver's clock are left out, as any other (docs/SYNC.md, "Clocks"). */
     @Test
     fun hiddenCategoriesDatedFarAheadAreLeftOut() {

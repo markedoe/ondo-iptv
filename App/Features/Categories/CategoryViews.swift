@@ -157,9 +157,7 @@ struct CategoryManagerView: View {
     }
 
     private func setHidden(_ hidden: Bool, _ categories: [MediaCategory]) {
-        for category in categories where model.hiddenTag(of: category) == nil && model.hiddenWord(of: category) == nil {
-            model.setHidden(hidden, category: category)
-        }
+        model.setHidden(hidden, categories: categories.filter { model.hiddenTag(of: $0) == nil && model.hiddenWord(of: $0) == nil })
     }
 }
 

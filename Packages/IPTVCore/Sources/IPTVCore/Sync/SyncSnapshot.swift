@@ -730,6 +730,27 @@ public struct SyncHidden: Codable, Hashable, Sendable {
         self.hiddenAt = hiddenAt
     }
 
+    /// The marker that shows again every category of a playlist and type at once: `hide:category:<playlist>|<type>-*`.
+    public static let showAll = "-*"
+
+    /// The "shown again" marker covering the hidden category of `key` (`hide:category:<playlist>|<type>-<id>`), whose ID
+    /// starts with its type: `hide:category:<playlist>|<type>-*`; nil for another key.
+    public static func showAllKey(_ key: String) -> String? {
+        let scalars = Array(key.unicodeScalars)
+        let prefix = Array(categoryKeyPrefix.unicodeScalars)
+        guard scalars.starts(with: prefix), !key.hasSuffix(showAll),
+              let bar = scalars[prefix.count...].firstIndex(of: "|"),
+              let dash = scalars[(bar + 1)...].firstIndex(of: "-"), dash > bar + 1 else { return nil }
+        var marker = String.UnicodeScalarView()
+        marker.append(contentsOf: scalars[..<dash])
+        return String(marker) + showAll
+    }
+
+    /// When the item of `key` was last shown again in `deleted`: by its own key or its marker (`showAllKey`); nil if never.
+    public static func shownAt(_ key: String, in deleted: [String: Int64]) -> Int64? {
+        [deleted[key], showAllKey(key).flatMap { deleted[$0] }].compactMap { $0 }.max()
+    }
+
     /// The category `categoryID` of the playlist `playlistID` (its ID in lowercase), hidden at `hiddenAt`.
     public static func forCategory(playlistID: String, categoryID: String, hiddenAt: Int64) -> SyncHidden {
         SyncHidden(kind: category, value: playlistID.lowercased() + "|" + categoryID, hiddenAt: hiddenAt)

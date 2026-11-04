@@ -232,6 +232,57 @@ final class SyncHiddenTests: XCTestCase {
         XCTAssertEqual(Set((bucket(profileRead, sam.id) ?? []).map(\.key)), expected)
     }
 
+    /// Show All leaves one marker for each playlist and type (`hide:category:<playlist>|<type>-*`) instead of one deletion
+    /// for each category: it shows again every category of that playlist and type hidden at or before it, never those
+    /// hidden after it, nor those of another type or playlist. Its playlist ID is read in lowercase.
+    func testAShowAllMarkerShowsAgainEveryCategoryOfItsTypeHiddenBeforeIt() throws {
+        let other = "b2000000-0000-4000-8000-00000000000b"
+        let marker = "hide:category:\(playlistID)|movie-*"
+        XCTAssertEqual(SyncHidden.showAllKey(SyncHidden.forCategory(playlistID: playlistID, categoryID: "movie-12", hiddenAt: 0).key), marker)
+        XCTAssertNil(SyncHidden.showAllKey(marker))
+        XCTAssertNil(SyncHidden.showAllKey("hide:tag:PT"))
+        XCTAssertNil(SyncHidden.showAllKey("hide:category:\(playlistID)|nodash"))
+        let hides: [SyncHidden] = [
+            SyncHidden.forCategory(playlistID: playlistID, categoryID: "movie-1", hiddenAt: 10),
+            SyncHidden.forCategory(playlistID: playlistID, categoryID: "movie-2", hiddenAt: 20),
+            SyncHidden.forCategory(playlistID: playlistID, categoryID: "movie-9", hiddenAt: 21),
+            SyncHidden.forCategory(playlistID: playlistID, categoryID: "live-3", hiddenAt: 10),
+            SyncHidden.forCategory(playlistID: other, categoryID: "movie-1", hiddenAt: 10),
+            SyncHidden(kind: SyncHidden.tag, value: "PT", hiddenAt: 10),
+        ]
+        let tv = SyncSnapshot(device: "tv", playlists: [playlist], hiddenCategories: hides)
+        let json = #"{"type":"ondo-sync","version":1,"device":"phone","deleted":{"hide:category:A1000000-0000-4000-8000-00000000000A|movie-*":20}}"#
+        let phone = try XCTUnwrap(SyncSnapshot.decode(Data(json.utf8)))
+        XCTAssertEqual(Set(phone.deleted.keys), [marker])
+        let kept: [SyncHidden] = [
+            SyncHidden.forCategory(playlistID: playlistID, categoryID: "live-3", hiddenAt: 10),
+            SyncHidden.forCategory(playlistID: playlistID, categoryID: "movie-9", hiddenAt: 21),
+            SyncHidden.forCategory(playlistID: other, categoryID: "movie-1", hiddenAt: 10),
+            SyncHidden(kind: SyncHidden.tag, value: "PT", hiddenAt: 10),
+        ].sorted { $0.key.isBefore($1.key) }
+        XCTAssertEqual(SyncMerge.merge(tv, phone).hiddenCategories, kept)
+        XCTAssertEqual(SyncMerge.merge(phone, tv).hiddenCategories, kept)
+        XCTAssertEqual(SyncHidden.shownAt(SyncHidden.forCategory(playlistID: playlistID, categoryID: "movie-2", hiddenAt: 0).key, in: phone.deleted), 20)
+    }
+
+    /// Show All on the library: one marker for each type, the categories of those types still hidden dated after it, and
+    /// one deletion for a category shown again alone.
+    func testShowAllInTheLibraryLeavesOneMarkerForEachType() {
+        let id = UUID()
+        var library = UserLibrary()
+        let t0 = Date(timeIntervalSince1970: 1)
+        library.setHidden(true, playlistID: id, categoryIDs: ["movie-1", "movie-2", "movie-3", "live-1", "live-2"], now: t0)
+        let now = Date(timeIntervalSince1970: 2), after = Date(timeIntervalSince1970: 3)
+        library.setHidden(false, playlistID: id, categoryIDs: ["movie-1", "movie-2", "live-1"], now: now, after: after)
+        let key = { UserLibrary.categoryKey(playlistID: id, categoryID: $0) }
+        XCTAssertEqual(library.hiddenCategoryKeys, [key("movie-3"), key("live-2")])
+        XCTAssertEqual(library.categoryShownAt, [id.uuidString + "|movie-*": now, id.uuidString + "|live-*": now])
+        XCTAssertEqual(library.categoryHiddenAt, [key("movie-3"): after, key("live-2"): after])
+        // One alone: its own deletion.
+        library.setHidden(false, playlistID: id, categoryIDs: ["movie-3"], now: after)
+        XCTAssertEqual(library.categoryShownAt[key("movie-3")], after)
+    }
+
     /// Hidden records dated far ahead of the receiver's clock are left out, as any other (docs/SYNC.md, "Clocks").
     func testHiddenCategoriesDatedFarAheadAreLeftOut() {
         let ahead = SyncHidden(kind: SyncHidden.tag, value: "PT", hiddenAt: 10_000)

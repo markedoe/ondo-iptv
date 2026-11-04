@@ -142,6 +142,27 @@ final class SyncMappingTests: XCTestCase {
         XCTAssertEqual(again.lists, snapshot.lists)
     }
 
+    /// The categories hidden in a file playlist stay on the device (it is there only, as on Android), and the date of a
+    /// category or language shown again goes once sync no longer carries it.
+    func testFilePlaylistHidesStayAndOldShowingsAgainArePruned() {
+        let (playlists, base, state) = model()
+        var library = base
+        library.setHidden(true, playlistID: fileID, categoryID: "movie-1", now: t0)
+        library.setHidden(true, playlistID: xtreamID, categoryID: "movie-2", now: t0)
+        library.shownCategoryTags["PT"] = Date(timeIntervalSince1970: 1_000)
+        let recent = UserLibrary.categoryKey(playlistID: xtreamID, categoryID: "movie-3")
+        library.categoryShownAt[recent] = t0
+        let snapshot = SyncMapping.snapshot(playlists: playlists, library: library, state: state, deviceName: nil, now: t0)
+        XCTAssertEqual(snapshot.hiddenCategories.map(\.value), [xtreamID.uuidString.lowercased() + "|movie-2"])
+        XCTAssertNil(snapshot.deleted["hide:tag:PT"], "older than sync keeps a deletion")
+        XCTAssertNotNil(snapshot.deleted["hide:category:" + xtreamID.uuidString.lowercased() + "|movie-3"])
+        let applied = SyncMapping.library(library, applying: snapshot)
+        XCTAssertTrue(applied.isHidden(playlistID: fileID, categoryID: "movie-1"), "kept on the device")
+        XCTAssertTrue(applied.isHidden(playlistID: xtreamID, categoryID: "movie-2"))
+        XCTAssertNil(applied.shownCategoryTags["PT"], "pruned")
+        XCTAssertEqual(applied.categoryShownAt[recent], t0, "still carried")
+    }
+
     func testApplyingItsOwnSnapshotChangesNothing() {
         let (playlists, library, state) = model()
         let snapshot = SyncMapping.snapshot(playlists: playlists, library: library, state: state, deviceName: nil, now: t0)

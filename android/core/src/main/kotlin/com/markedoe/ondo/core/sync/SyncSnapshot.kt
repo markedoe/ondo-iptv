@@ -536,6 +536,24 @@ data class SyncHidden(
         const val MAX_RECORDS = 5000
         const val MAX_LENGTH = 256
 
+        /** The marker that shows again every category of a playlist and type at once: `hide:category:<playlist>|<type>-*`. */
+        const val SHOW_ALL = "-*"
+
+        /**
+         * The "shown again" marker covering the hidden category of [key] (`hide:category:<playlist>|<type>-<id>`), whose ID
+         * starts with its type: `hide:category:<playlist>|<type>-*`; null for another key.
+         */
+        fun showAllKey(key: String): String? {
+            if (!key.startsWith(CATEGORY_KEY_PREFIX) || key.endsWith(SHOW_ALL)) return null
+            val bar = key.indexOf('|', CATEGORY_KEY_PREFIX.length).takeIf { it >= 0 } ?: return null
+            val dash = key.indexOf('-', bar + 1).takeIf { it > bar + 1 } ?: return null
+            return key.substring(0, dash) + SHOW_ALL
+        }
+
+        /** When the item of [key] was last shown again in [deleted]: by its own key or its marker ([showAllKey]); null if never. */
+        fun shownAt(key: String, deleted: Map<String, Long>): Long? =
+            listOfNotNull(deleted[key], showAllKey(key)?.let { deleted[it] }).maxOrNull()
+
         /** The category [categoryId] of the playlist [playlistId] (its ID in lowercase), hidden at [hiddenAt]. */
         fun category(playlistId: String, categoryId: String, hiddenAt: Long) = SyncHidden(CATEGORY, "${playlistId.lowercase()}|$categoryId", hiddenAt)
 

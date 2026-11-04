@@ -210,7 +210,12 @@ each is the main profile's, with its time. A Kids profile cannot change its orde
   lowercase without accents).
 
 Key: `hide:<kind>:<value>`; time: `hiddenAt` (set when it is hidden). Showing it again removes the record and adds its key
-to `deleted`, dated then. Each record merges on its own (rule 2): hiding a category on one device and showing a language
+to `deleted`, dated then. Several categories shown again at once (Show all) add instead one marker for each playlist and
+type of category, `hide:category:<playlist id>|<type>-*` (`movie-*`, `live-*`, `series-*`), dated then: it shows again
+every category of that playlist whose ID starts with `<type>-` and whose `hiddenAt` is not later (rule 3, as for its own
+key), and the device dates the categories of that type it still hides just after it, so that they stay hidden everywhere.
+A panel of thousands of categories shown again thus adds one key per type to `deleted`, not one per category. Each record
+merges on its own (rule 2): hiding a category on one device and showing a language
 again on another keep both changes; a showing again later than the hide wins, a hide later than the showing again wins,
 and on equal times the showing again wins (rule 3). Readers drop records whose `kind` or `value` is blank, holds a control
 character (below U+0020, or U+007F) or is longer than 256 UTF-16 units, whose `kind` holds `:`, and a `category` whose
@@ -224,7 +229,11 @@ one of a replaced playlist becomes the kept one's (rule 1). The list is left out
 what it keeps and passes on, but keeps the `hide:` keys of `deleted` as any other and passes them on: a showing again
 travels through it, a hide does not (it travels once the devices meet a newer one), and nothing is lost. Each profile has
 its own: the main profile's is `hiddenCategories`, another profile's is in its `profileData`. A Kids profile cannot change
-its own (a parent can, docs/PROFILES.md), and categories that look adult stay hidden in it whatever the list says.
+its own (a parent can, docs/PROFILES.md); on a device where a parent set a PIN, a Kids profile keeps what it hides there
+when another device (where no PIN guards it) shows it again: the merge keeps the later showing again, the device keeps its
+hide with its own time, and nothing changes from one session to the next, as for the Kids switch; a hide received always
+applies. Categories that look adult stay hidden in a Kids profile whatever the list says. The categories of a file
+playlist, on its device only, are not sent.
 
 **Profiles** (docs/PROFILES.md) — `{"id", "name", "colorIndex", "symbol", "kids", "updatedAt"}`. `id` is a UUID in
 lowercase; the main profile's is `00000000-0000-0000-0000-000000000001`. `symbol` is `initial`, an icon name or an

@@ -901,6 +901,12 @@ extension AppModel {
         return settings.parentalControlEnabled && hasParentalPIN && !isParentalUnlocked
     }
 
+    /// Whether the open profile may change what it hides: a Kids profile only once a parent unlocked it, where one can
+    /// (docs/PROFILES.md, "Kids"), as its screens ask.
+    var canChangeHiddenCategories: Bool {
+        !(activeProfile.isKids && settingsNeedParentalUnlock)
+    }
+
     /// Whether the settings that could weaken parental control (the control itself, profiles, backups) must
     /// be unlocked first. A kids profile on a device where no parent can unlock (no PIN, no other profile)
     /// stays editable, or nobody could ever leave it.
@@ -950,9 +956,18 @@ extension AppModel {
     }
 
     func setHidden(_ hidden: Bool, category: MediaCategory) {
-        guard let playlist = activePlaylist else { return }
+        guard canChangeHiddenCategories, let playlist = activePlaylist else { return }
         let now = syncStamp()
         updateLibrary { $0.setHidden(hidden, playlistID: playlist.id, categoryID: category.id, now: now) }
+        syncSoon()
+    }
+
+    /// Hide All, Show All: one change; several shown again leave one marker for each type (`UserLibrary.setHidden`).
+    func setHidden(_ hidden: Bool, categories: [MediaCategory]) {
+        guard canChangeHiddenCategories, let playlist = activePlaylist, !categories.isEmpty else { return }
+        let now = syncStamp()
+        let after = syncStamp()
+        updateLibrary { $0.setHidden(hidden, playlistID: playlist.id, categoryIDs: categories.map(\.id), now: now, after: after) }
         syncSoon()
     }
 

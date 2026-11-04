@@ -91,6 +91,8 @@ public enum SyncMerge {
             pick((left.hiddenCategories + right.hiddenCategories).map { $0.withPlaylist(id) }, key: \.key, time: \.hiddenAt,
                  tie: { $0.key.isBefore($1.key) }, deleted: deleted)
                 .filter { hidden in hidden.playlist.map(alive) ?? true }
+                // A "Show all" marker shows again every category of its playlist and type hidden before it.
+                .filter { hidden in SyncHidden.shownAt(hidden.key, in: deleted).map { $0 < hidden.hiddenAt } ?? true }
         )
         let keptPlaylists = kept.sorted { before(($0.addedAt, $0.id), ($1.addedAt, $1.id)) }
         // The profiles' buckets without the lists rule 9 placed, then those it placed in each, with its deletions.

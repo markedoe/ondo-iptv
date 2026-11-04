@@ -113,6 +113,7 @@ extension AppModel {
     }
 
     func setHidden(_ hidden: Bool, word: String) {
+        guard canChangeHiddenCategories else { return }
         let now = syncStamp()
         updateLibrary { $0.setHidden(hidden, word: word, now: now) }
         syncSoon()
@@ -152,12 +153,14 @@ extension AppModel {
     }
 
     func setHidden(_ hidden: Bool, tag: String) {
+        guard canChangeHiddenCategories else { return }
         let now = syncStamp()
         updateLibrary { $0.setHidden(hidden, tag: tag, now: now) }
         syncSoon()
     }
 
     func setHidden(_ hidden: Bool, tags: [String]) {
+        guard canChangeHiddenCategories else { return }
         let now = syncStamp()
         updateLibrary { library in
             for tag in tags { library.setHidden(hidden, tag: tag, now: now) }

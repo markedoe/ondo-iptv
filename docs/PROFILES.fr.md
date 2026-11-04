@@ -162,8 +162,10 @@ Chaque profil se synchronise, quel que soit le profil ouvert (docs/SYNC.fr.md, �
   il ignore les nouveaux champs, et la version du format ne change pas ;
 - les catégories, langues et styles masqués de chaque profil voyagent dans ses données, chacun fusionné seul : masquer
   sur un appareil masque dans ce profil sur les autres, réafficher réaffiche, et le changement le plus récent gagne ; un
-  profil Enfant ne peut pas changer les siens (un parent le peut), et les catégories qui semblent pour adultes y restent
-  masquées quoi qu’apporte la synchronisation (`fixtures/sync/hidden-*.json`) ;
+  profil Enfant ne peut pas changer les siens (un parent le peut, et les modèles des applications le refusent aussi, pas
+  seulement les écrans) ; sur un appareil où un parent a mis un code, ce qu’un profil Enfant y masque reste masqué quand un
+  autre appareil le réaffiche (un masquage reçu s’applique toujours), comme son interrupteur Enfant reste activé ; et les
+  catégories qui semblent pour adultes y restent masquées quoi qu’apporte la synchronisation (`fixtures/sync/hidden-*.json`) ;
 - la suppression d’un profil perd face à ses données modifiées plus tard sur un appareil qui n’en savait rien : le
   profil revient avec ces données (`fixtures/sync/profiles-late-*.json`) ;
 - la première fois qu’un appareil reçoit des profils, un de ses profils créé à part (avant que les profils se

@@ -142,15 +142,23 @@ data class LibraryState(
     fun settingCategoryHidden(playlistId: String, categoryId: String, hidden: Boolean): LibraryState =
         settingCategoriesHidden(playlistId, listOf(categoryId), hidden)
 
-    /** Hides or shows categories of [playlistId], dated [now] for sync (a showing again is remembered as a deletion). */
-    fun settingCategoriesHidden(playlistId: String, categoryIds: Collection<String>, hidden: Boolean, now: Long = 0): LibraryState {
+    /**
+     * Hides or shows categories of [playlistId], dated [now] for sync (a showing again is remembered as a deletion). Several
+     * shown again at once (Show all) leave one marker for each type of category instead of one deletion each
+     * (`hide:category:<playlist>|<type>-*`, docs/SYNC.md, "Hidden categories"); the categories of those types still hidden
+     * are dated [after], so that the marker leaves them hidden everywhere.
+     */
+    fun settingCategoriesHidden(playlistId: String, categoryIds: Collection<String>, hidden: Boolean, now: Long = 0, after: Long = now + 1): LibraryState {
         val keys = categoryIds.associateBy({ "$playlistId|$it" }, { SyncKeys.hiddenCategory(playlistId, it) })
-        return if (hidden) {
-            copy(hiddenCategories = hiddenCategories + keys.keys, hiddenAt = hiddenAt + keys.values.associateWith { now })
-        } else {
-            val shown = keys.filterKeys { it in hiddenCategories }
-            copy(hiddenCategories = hiddenCategories - keys.keys, hiddenAt = hiddenAt - shown.values.toSet()).deletingAll(shown.values, now)
-        }
+        if (hidden) return copy(hiddenCategories = hiddenCategories + keys.keys, hiddenAt = hiddenAt + keys.values.associateWith { now })
+        val shown = keys.filterKeys { it in hiddenCategories }
+        val markers = if (shown.size > 1) shown.values.mapNotNullTo(HashSet()) { SyncHidden.showAllKey(it) } else emptySet()
+        val remaining = hiddenCategories - keys.keys
+        val stillHidden = remaining.mapNotNull { SyncKeys.hiddenCategoryOf(it) }.filter { SyncHidden.showAllKey(it) in markers }
+        return copy(
+            hiddenCategories = remaining,
+            hiddenAt = hiddenAt - shown.values.toSet() + stillHidden.associateWith { after },
+        ).deletingAll(shown.values.filter { SyncHidden.showAllKey(it) !in markers } + markers, now)
     }
 
     fun settingTagsHidden(tags: Collection<String>, hidden: Boolean, now: Long = 0): LibraryState {

@@ -685,6 +685,49 @@ class ProfilesTest {
         assertTrue(UiMappers.vod(state, series = false, title = "Movies").categories.none { it.id == Fixtures.adultMovies.id })
     }
 
+    /**
+     * A parent hides "Thriller" for the Kids profile on a TV with a PIN (the Kids profile alone cannot); on a phone without
+     * a PIN, the child shows it again. After sync the TV still hides it, and nothing changes from one session to the next;
+     * the phone keeps the child's choice. A hide made on the phone still reaches the TV.
+     */
+    @Test
+    fun aKidsProfileKeepsWhatAParentHidOnADeviceWithAPin() = runTest {
+        val tv = device("tv")
+        val phone = device("phone")
+        tv.updateProfile(Profile.DEFAULT_ID, "Me", 0, Profile.INITIAL, isKids = false, pin = "1357", removePin = false)
+        val kids = requireNotNull(tv.addProfile("Kids", 4, Profile.INITIAL, isKids = true, pin = null))
+        switch(tv, kids)
+        val thriller = Fixtures.thriller.id
+        fun OndoRepository.hidesThriller() = state.value.library.isCategoryHidden(Fixtures.PLAYLIST_ID, thriller)
+        // Locked: the Kids profile changes nothing until a parent unlocks it, whatever screen asks.
+        tv.setCategoryHidden(thriller, hidden = true)
+        tv.setTagsHidden(listOf("PT"), hidden = true)
+        tv.setWordHidden("manga", hidden = true)
+        assertEquals(nothingHidden, tv.state.value.hides())
+        assertEquals(OndoRepository.PinCheck.OK, tv.unlockKidsSettings("1357"))
+        tv.setCategoryHidden(thriller, hidden = true)
+        session(tv, phone)
+        switch(phone, phone.profile("Kids")!!)
+        assertTrue(phone.hidesThriller())
+        // No PIN on the phone: its Kids settings are open, and the child shows it again.
+        assertFalse(phone.state.value.needsParentForSettings)
+        phone.setCategoryHidden(thriller, hidden = false)
+        assertFalse(phone.hidesThriller())
+        session(tv, phone)
+        assertTrue("the TV keeps the parent's choice", tv.hidesThriller())
+        assertFalse("the phone keeps the child's", phone.hidesThriller())
+        val kept = tv.state.value.library.let { it.hides() to it.hiddenAt }
+        session(tv, phone)
+        assertEquals("nothing changes from one session to the next", kept, tv.state.value.library.let { it.hides() to it.hiddenAt })
+        assertFalse(phone.hidesThriller())
+        // A hide still applies on the TV.
+        phone.setWordHidden("anime", hidden = true)
+        session(tv, phone)
+        assertEquals(setOf("anime"), tv.state.value.library.hiddenWords)
+    }
+
+    private fun LibraryState.hides() = Triple(hiddenCategories, hiddenTags, hiddenWords)
+
     /** Sync carries 16 profiles at most: a 17th cannot be made. */
     @Test
     fun noMoreThanSixteenProfiles() = runTest {

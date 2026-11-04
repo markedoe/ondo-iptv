@@ -1159,14 +1159,18 @@ class OndoRepository(
 
     /** Hide all / Show all: one change, one save of the library. */
     fun setCategoriesHidden(categoryIds: Collection<String>, hidden: Boolean) {
+        // A Kids profile changes what it hides only once a parent unlocked it (docs/PROFILES.md, "Kids"), as its screens ask.
+        if (_state.value.needsParentForSettings) return
         val playlistId = _state.value.activePlaylistId ?: return
         if (categoryIds.isEmpty()) return
         val time = stamp()
-        updateLibrary { it.settingCategoriesHidden(playlistId, categoryIds, hidden, time) }
+        val after = stamp()
+        updateLibrary { it.settingCategoriesHidden(playlistId, categoryIds, hidden, time, after) }
     }
 
     /** A choice about tags answers the "show only your languages?" suggestion too. */
     fun setTagsHidden(tags: Collection<String>, hidden: Boolean) {
+        if (_state.value.needsParentForSettings) return
         val time = stamp()
         updateLibrary { it.settingTagsHidden(tags, hidden, time) }
         dismissTagSuggestion()
@@ -1174,6 +1178,7 @@ class OndoRepository(
 
     /** Hides or shows the categories of a style or word ("manga"), in every playlist. */
     fun setWordHidden(word: String, hidden: Boolean) {
+        if (_state.value.needsParentForSettings) return
         val time = stamp()
         updateLibrary { it.settingWordHidden(word, hidden, time) }
     }

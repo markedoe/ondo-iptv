@@ -567,6 +567,7 @@ final class LocalSyncTests: XCTestCase {
         let adult = MediaCategory(id: "movie-99", name: "Adult XXX", type: .movie)
         let kids = first.addProfile(name: "Kids", colorIndex: 4, symbol: Profile.initialSymbol, isKids: true, pin: nil)
         first.switchProfile(to: kids)
+        first.isParentalUnlocked = true
         first.setHidden(true, category: adult)
         await second.applySync(first.syncSnapshot())
         second.switchProfile(to: try XCTUnwrap(second.profiles.first { $0.id == kids.id }))
@@ -575,6 +576,47 @@ final class LocalSyncTests: XCTestCase {
         await first.applySync(second.syncSnapshot())
         XCTAssertFalse(first.library.isHidden(playlistID: playlist.id, categoryID: adult.id), "shown again, as sync says")
         XCTAssertTrue(first.isHiddenForKids(adult), "still out: it looks adult")
+    }
+
+    /// A parent hides "Horror" for the Kids profile on a TV with a PIN (the Kids profile alone cannot); on an iPad without
+    /// a PIN, the child shows it again. After sync the TV still hides it, and nothing changes from one session to the next;
+    /// the iPad keeps the child's choice. A hide made on the iPad still reaches the TV.
+    func testAKidsProfileKeepsWhatAParentHidOnADeviceWithAPIN() async throws {
+        let tv = try await deviceWithLibrary()
+        let ipad = try await device("second")
+        let playlist = try XCTUnwrap(tv.activePlaylist)
+        let horror = MediaCategory(id: "movie-horror", name: "Horror", type: .movie)
+        let kids = tv.addProfile(name: "Kids", colorIndex: 4, symbol: Profile.initialSymbol, isKids: true, pin: nil)
+        tv.setParentalPIN("1357")
+        tv.switchProfile(to: kids)
+        func hidesHorror(_ model: AppModel) -> Bool { model.library.isHidden(playlistID: playlist.id, categoryID: horror.id) }
+        // Locked: the Kids profile changes nothing until a parent unlocks it, whatever screen asks.
+        tv.setHidden(true, category: horror)
+        tv.setHidden(true, tag: "PT")
+        tv.setHidden(true, tags: ["ES"])
+        tv.setHidden(true, word: "manga")
+        XCTAssertTrue(hides(tv).categories.isEmpty && hides(tv).tags.isEmpty && hides(tv).words.isEmpty)
+        XCTAssertTrue(tv.verifyParentalPIN("1357"))
+        tv.setHidden(true, category: horror)
+        XCTAssertTrue(hidesHorror(tv))
+        await ipad.applySync(tv.syncSnapshot())
+        ipad.switchProfile(to: try XCTUnwrap(ipad.profiles.first { $0.id == kids.id }))
+        XCTAssertTrue(hidesHorror(ipad))
+        // No PIN on the iPad: its Kids settings open, and the child shows it again.
+        ipad.isParentalUnlocked = true
+        ipad.setHidden(false, category: horror)
+        XCTAssertFalse(hidesHorror(ipad))
+        await tv.applySync(ipad.syncSnapshot())
+        XCTAssertTrue(hidesHorror(tv), "the TV keeps the parent's choice")
+        let kept = tv.library
+        await tv.applySync(ipad.syncSnapshot())
+        XCTAssertEqual(tv.library, kept, "nothing changes from one session to the next")
+        await ipad.applySync(tv.syncSnapshot())
+        XCTAssertFalse(hidesHorror(ipad), "the iPad keeps the child's")
+        // A hide still applies on the TV.
+        ipad.setHidden(true, word: "anime")
+        await tv.applySync(ipad.syncSnapshot())
+        XCTAssertTrue(tv.library.isHidden(word: "anime"))
     }
 
     // MARK: Review fixes (profiles)

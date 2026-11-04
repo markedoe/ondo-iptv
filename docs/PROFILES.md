@@ -146,7 +146,9 @@ Every profile syncs, whichever is open (docs/SYNC.md, "Profiles"):
   with that data (`fixtures/sync/profiles-late-*.json`);
 - each profile's hidden categories, languages and styles travel in its data, each one merged on its own: hiding on one
   device hides in that profile on the others, showing again shows again, and the later change wins; a Kids profile
-  cannot change its own (a parent can), and categories that look adult stay hidden in it whatever sync brings
+  cannot change its own (a parent can, and the app models refuse it too, not only the screens); on a device where a
+  parent set a PIN, what a Kids profile hides there stays hidden when another device shows it again (a hide received
+  always applies), as its Kids switch stays on; and categories that look adult stay hidden in it whatever sync brings
   (`fixtures/sync/hidden-*.json`);
 - the first time a device receives profiles, a profile of its own made apart (before profiles synced) is one with a
   received profile of the same name, whatever its case and accents, and the same Kids switch: the smaller ID is kept
