@@ -549,4 +549,6 @@
     <string name="subtitle_addic7ed">البحث في Addic7ed</string>
     <string name="subtitle_help_addic7ed">المسلسلات فقط، دون حساب (عبر خدمة Gestdown العامة).</string>
     <string name="subtitle_privacy">يُرسل البحث عنوان ما تشاهده إلى هذه الخدمات، بمفتاحك أو حسابك. لا يُرسل شيء قبل أن تبحث. تبقى مفاتيحك على هذا الجهاز.</string>
+    <string name="subtitle_limited">تم بلوغ حد الطلبات لدى %1$s حاليًا، لذلك لم يُحفظ شيء. حاول مرة أخرى لاحقًا.</string>
+    <string name="subtitle_incomplete">%1$s: أدخل اسم المستخدم وكلمة المرور معًا، أو لا تدخل أيًّا منهما.</string>
 </resources>

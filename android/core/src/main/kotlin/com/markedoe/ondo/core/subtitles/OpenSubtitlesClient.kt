@@ -90,7 +90,7 @@ class OpenSubtitlesClient(
             logIn()
             SubtitleHttp.translating(service) { requestLink(subtitle.reference) }
         }
-        val data = SubtitleHttp.translating(service) { http.get(link.first, mapOf("User-Agent" to userAgent)) }
+        val data = SubtitleHttp.translating(service) { http.getLimited(link.first, mapOf("User-Agent" to userAgent), SubtitleArchive.MAX_SUBTITLE_DOWNLOAD) }
         DownloadedSubtitle(link.second ?: "subtitle.srt", data)
     }
 
@@ -99,7 +99,8 @@ class OpenSubtitlesClient(
         val id = fileId.toIntOrNull() ?: throw SubtitleSearchException.ServiceError(service, "unknown file")
         val body = buildJsonObject { put("file_id", id) }.toString().toByteArray()
         val answer = SubtitleHttp.parse(service, http.post(url("/download"), headers(json = true), body)).obj()
-        val link = answer.string("link")?.takeIf { it.startsWith("https://") || it.startsWith("http://") }
+        // Over HTTPS only: the link is the service's answer, the file goes to the player.
+        val link = answer.string("link")?.takeIf { it.startsWith("https://") }
             ?: throw SubtitleSearchException.ServiceError(service, "invalid download link")
         return link to answer.string("file_name")
     }
@@ -115,7 +116,8 @@ class OpenSubtitlesClient(
         val data = try {
             http.post("https://$HOST/api/v1/login", headers, body)
         } catch (e: HttpException.BadStatus) {
-            if (e.code == 401) {
+            // 401 for a wrong password; 400 or 403 for a login the service will not take either.
+            if (e.code == 400 || e.code == 401 || e.code == 403) {
                 loginRefused = true
                 throw SubtitleSearchException.InvalidCredentials(service)
             }
@@ -123,7 +125,9 @@ class OpenSubtitlesClient(
         }
         val login = SubtitleHttp.parse(service, data).obj()
         val token = login.string("token") ?: throw SubtitleSearchException.ServiceError(service, "unreadable answer")
-        session = token to (login.string("base_url")?.takeIf { it.isNotBlank() && '/' !in it } ?: HOST)
+        // The host the account is served from: one of the service's own, else the usual one (the key and the session
+        // token go to it).
+        session = token to (login.string("base_url")?.takeIf(::isServiceHost) ?: HOST)
     }
 
     /**
@@ -142,5 +146,13 @@ class OpenSubtitlesClient(
 
     companion object {
         const val HOST = "api.opensubtitles.com"
+
+        private val hostName = Regex("[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*")
+
+        /** "vip-api.opensubtitles.com": a host name of the service's; not "x@evil.example", nor "evil.example". */
+        fun isServiceHost(host: String): Boolean {
+            val lower = host.lowercase()
+            return hostName.matches(lower) && (lower == "opensubtitles.com" || lower.endsWith(".opensubtitles.com"))
+        }
     }
 }

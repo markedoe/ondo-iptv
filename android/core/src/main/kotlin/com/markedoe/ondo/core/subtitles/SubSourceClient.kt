@@ -71,7 +71,7 @@ class SubSourceClient(private val apiKey: String, private val http: HttpClient) 
 
     override suspend fun download(subtitle: OnlineSubtitle, query: SubtitleQuery): DownloadedSubtitle {
         val id = subtitle.reference.toIntOrNull() ?: throw SubtitleSearchException.ServiceError(service, "unknown file")
-        val data = SubtitleHttp.translating(service) { http.get("$BASE/subtitles/$id/download", mapOf("X-API-Key" to apiKey)) }
+        val data = SubtitleHttp.translating(service) { http.getLimited("$BASE/subtitles/$id/download", mapOf("X-API-Key" to apiKey), SubtitleArchive.MAX_ARCHIVE_DOWNLOAD) }
         return SubtitleArchive.pick(data, query.episodeCode)
     }
 

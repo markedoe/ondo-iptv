@@ -74,6 +74,9 @@ sealed class SubtitleSearchException(message: String) : IOException(message) {
     /** The service's limit of searches or downloads is reached for now. */
     class QuotaReached(val service: SubtitleService) : SubtitleSearchException("${service.displayName}: limit reached")
 
+    /** The file or archive the service sent is larger than any subtitle (or than what the app reads of an archive). */
+    class TooLarge : SubtitleSearchException("The subtitle file is too large")
+
     /** The archive the service sent holds no subtitle file Ondo can show. */
     class NoSubtitleInArchive : SubtitleSearchException("The archive holds no SRT, WebVTT or ASS subtitle")
 
@@ -87,13 +90,21 @@ enum class CredentialCheck {
 
     /** The service could not be reached, or did not say (an error of its own): nothing is saved. */
     UNREACHABLE,
+
+    /** The service's limit of requests is reached for now: it said nothing of the key, nothing is saved. */
+    LIMITED,
+
+    /** What was typed is not enough to check (a username without its password, or the reverse): nothing is saved. */
+    INCOMPLETE,
     ;
 
     companion object {
-        /** What the failure of a request made with the credentials says: refused on 401 or 403, otherwise nothing. */
+        /** What the failure of a request made with the credentials says: refused on 401 or 403, limited on 429. */
         fun failure(error: Throwable): CredentialCheck = when {
             error is SubtitleSearchException.InvalidCredentials -> REFUSED
+            error is SubtitleSearchException.QuotaReached -> LIMITED
             error is HttpException.BadStatus && (error.code == 401 || error.code == 403) -> REFUSED
+            error is HttpException.BadStatus && error.code == 429 -> LIMITED
             else -> UNREACHABLE
         }
     }
@@ -187,41 +198,60 @@ object SubtitleLanguages {
 
 /**
  * The subtitle file to keep from an archive: the episode's when the archive holds a season, else the first SRT, else
- * the first WebVTT, else the first ASS.
+ * the first WebVTT, else the first ASS. Read as it streams, keeping only the best file so far, within limits an
+ * archive of subtitles never reaches ([MAX_ENTRIES] files, [MAX_FILE_BYTES] each, [MAX_TOTAL_BYTES] in all): a
+ * hostile archive that inflates to gigabytes stops there instead of filling the memory.
  */
 object SubtitleArchive {
-    /** Largest file read from an archive: subtitles are a few hundred kilobytes. */
     const val MAX_FILE_BYTES = 8 * 1024 * 1024
+    const val MAX_TOTAL_BYTES = 32L * 1024 * 1024
+    const val MAX_ENTRIES = 200
+
+    /** Largest archive downloaded (compressed), and largest plain subtitle file. */
+    const val MAX_ARCHIVE_DOWNLOAD = 16L * 1024 * 1024
+    const val MAX_SUBTITLE_DOWNLOAD = 5L * 1024 * 1024
 
     fun pick(data: ByteArray, episodeCode: String?): DownloadedSubtitle {
-        val files = ArrayList<DownloadedSubtitle>()
+        var best: DownloadedSubtitle? = null
+        var bestRank = Int.MAX_VALUE
+        var entries = 0
+        var total = 0L
+        val buffer = ByteArray(64 * 1024)
         try {
             ZipInputStream(ByteArrayInputStream(data)).use { zip ->
                 while (true) {
                     val entry = zip.nextEntry ?: break
+                    if (++entries > MAX_ENTRIES) throw SubtitleSearchException.TooLarge()
                     val name = entry.name.substringAfterLast('/')
-                    val extension = name.substringAfterLast('.', "").lowercase()
-                    if (entry.isDirectory || extension !in DownloadedSubtitle.FORMATS) continue
-                    val bytes = java.io.ByteArrayOutputStream()
-                    val buffer = ByteArray(64 * 1024)
+                    val wanted = !entry.isDirectory && name.substringAfterLast('.', "").lowercase() in DownloadedSubtitle.FORMATS
+                    val rank = if (wanted) rank(name, episodeCode) else Int.MAX_VALUE
+                    // Only a better file than the one kept is read into memory; the others are counted as they pass.
+                    val keep = wanted && (rank < bestRank || (rank == bestRank && name < best!!.fileName))
+                    val bytes = if (keep) java.io.ByteArrayOutputStream() else null
+                    var size = 0L
                     while (true) {
                         val read = zip.read(buffer)
                         if (read < 0) break
-                        bytes.write(buffer, 0, read)
-                        if (bytes.size() > MAX_FILE_BYTES) throw SubtitleSearchException.NoSubtitleInArchive()
+                        size += read
+                        total += read
+                        if (total > MAX_TOTAL_BYTES || (keep && size > MAX_FILE_BYTES)) throw SubtitleSearchException.TooLarge()
+                        bytes?.write(buffer, 0, read)
                     }
-                    files += DownloadedSubtitle(name, bytes.toByteArray())
+                    if (bytes != null) {
+                        best = DownloadedSubtitle(name, bytes.toByteArray())
+                        bestRank = rank
+                    }
                 }
             }
         } catch (e: java.util.zip.ZipException) {
             throw SubtitleSearchException.NoSubtitleInArchive()
         }
-        return files.minWithOrNull(compareBy<DownloadedSubtitle>({ rank(it, episodeCode) }, { it.fileName })) ?: throw SubtitleSearchException.NoSubtitleInArchive()
+        return best ?: throw SubtitleSearchException.NoSubtitleInArchive()
     }
 
-    private fun rank(file: DownloadedSubtitle, episodeCode: String?): Int {
-        val matchesEpisode = episodeCode != null && file.fileName.uppercase().contains(episodeCode)
-        val format = when (file.format) {
+    private fun rank(name: String, episodeCode: String?): Int {
+        val matchesEpisode = episodeCode != null && name.uppercase().contains(episodeCode)
+        val format = when (name.substringAfterLast('.', "").lowercase()) {
             "srt" -> 0
             "vtt" -> 1
             else -> 2
@@ -237,6 +267,7 @@ internal object SubtitleHttp {
     fun translate(error: Throwable, service: SubtitleService): Throwable = when {
         error is HttpException.BadStatus && (error.code == 401 || error.code == 403) -> SubtitleSearchException.InvalidCredentials(service)
         error is HttpException.BadStatus && (error.code == 406 || error.code == 429) -> SubtitleSearchException.QuotaReached(service)
+        error is HttpException.TooLarge -> SubtitleSearchException.TooLarge()
         else -> error
     }
 

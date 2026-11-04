@@ -51,7 +51,9 @@ class Addic7edClient(private val userAgent: String, private val http: HttpClient
     }
 
     override suspend fun download(subtitle: OnlineSubtitle, query: SubtitleQuery): DownloadedSubtitle {
-        val data = SubtitleHttp.translating(service) { get(subtitle.reference) }
+        val data = SubtitleHttp.translating(service) {
+            http.getLimited(BASE + subtitle.reference, mapOf("User-Agent" to userAgent), SubtitleArchive.MAX_SUBTITLE_DOWNLOAD)
+        }
         val name = listOfNotNull(query.title, query.episodeCode, subtitle.language).joinToString(".") + ".srt"
         return DownloadedSubtitle(name, data)
     }

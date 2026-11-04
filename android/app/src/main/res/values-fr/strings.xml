@@ -507,4 +507,6 @@
     <string name="subtitle_addic7ed">Rechercher sur Addic7ed</string>
     <string name="subtitle_help_addic7ed">Séries uniquement, sans compte (via le service public Gestdown).</string>
     <string name="subtitle_privacy">Une recherche envoie le titre que vous regardez à ces services, avec votre propre clé ou compte. Rien n’est envoyé avant que vous ne cherchiez. Vos clés restent sur cet appareil.</string>
+    <string name="subtitle_limited">La limite de requêtes de %1$s est atteinte pour le moment : rien n’a été enregistré. Réessayez plus tard.</string>
+    <string name="subtitle_incomplete">%1$s : saisissez le nom d’utilisateur et le mot de passe, ou aucun des deux.</string>
 </resources>

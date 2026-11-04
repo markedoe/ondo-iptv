@@ -11,3 +11,5 @@
 `(10\.0\.0\.0/8|172\.16\.0\.0/12|192\.168\.0\.0/16|169\.254\.0\.0/16|127\.0\.0\.0/8)`
 # The made-up link-local address of an Android crash log test that checks it is left out (history, 3922f99).
 \bfe80::1c2b:3cff:fe4d:5e6f\b
+# The made-up host with a user part of the OpenSubtitles host tests (a session host the client must refuse).
+\bx@evil\.example\b

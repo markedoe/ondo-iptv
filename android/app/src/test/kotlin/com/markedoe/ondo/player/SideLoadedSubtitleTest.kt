@@ -53,22 +53,47 @@ class SideLoadedSubtitleTest {
     }
 
     /**
-     * The player reads a downloaded subtitle from its file: through the stream's HTTP source alone it could not (the
-     * track showed, its cues never came).
+     * The player reads a downloaded subtitle from its file, and no other file of the app: a playlist, an HLS key or a
+     * segment naming `file:` (the subtitle services' keys, the playlists' logins), `content:` or a path out of the
+     * subtitles' folder with `..` is refused.
      */
     @Test
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-    fun thePlayerReadsADownloadedSubtitleFromItsFile() {
+    fun thePlayerReadsDownloadedSubtitlesAndNoOtherFileOfTheApp() {
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
-        val file = java.io.File(context.cacheDir, "online.srt").apply { writeText("1\n00:00:01,000 --> 00:00:02,000\nHello\n") }
-        val source = PlayerActivity.dataSources(context, androidx.media3.datasource.DefaultHttpDataSource.Factory()).createDataSource()
+        val folder = java.io.File(context.filesDir, "subtitles").apply { mkdirs() }
+        val subtitle = java.io.File(folder, "online.srt").apply { writeText("1\n00:00:01,000 --> 00:00:02,000\nHello\n") }
+        val prefs = java.io.File(context.filesDir.parentFile, "shared_prefs/subtitle_services.xml").apply { parentFile!!.mkdirs(); writeText("<map><string name=\"subdl-key\">example</string></map>") }
+        val outside = java.io.File(context.filesDir, "ondo/settings.json").apply { parentFile!!.mkdirs(); writeText("{}") }
+        val factory = PlayerActivity.dataSources(folder, androidx.media3.datasource.DefaultHttpDataSource.Factory())
+        fun read(uri: android.net.Uri): String {
+            val source = factory.createDataSource()
+            try {
+                source.open(androidx.media3.datasource.DataSpec(uri))
+                return androidx.media3.datasource.DataSourceUtil.readToEnd(source).decodeToString()
+            } finally {
+                source.close()
+            }
+        }
+        fun refused(uri: android.net.Uri) {
+            try {
+                read(uri)
+                org.junit.Assert.fail("read $uri")
+            } catch (_: java.io.IOException) {
+            }
+        }
         try {
-            source.open(androidx.media3.datasource.DataSpec(android.net.Uri.fromFile(file)))
-            val bytes = androidx.media3.datasource.DataSourceUtil.readToEnd(source)
-            assertEquals(file.readText(), bytes.decodeToString())
+            assertEquals(subtitle.readText(), read(android.net.Uri.fromFile(subtitle)))
+            refused(android.net.Uri.fromFile(prefs))
+            refused(android.net.Uri.fromFile(outside))
+            refused(android.net.Uri.parse("file://" + folder.absolutePath + "/../../shared_prefs/subtitle_services.xml"))
+            refused(android.net.Uri.parse("content://com.markedoe.ondo.files/subtitle_services.xml"))
+            refused(android.net.Uri.parse("asset:///fonts/inter.ttf"))
+            refused(android.net.Uri.parse("data:text/plain;base64,SGVsbG8="))
         } finally {
-            source.close()
-            file.delete()
+            subtitle.delete()
+            prefs.delete()
+            outside.delete()
         }
     }
 }

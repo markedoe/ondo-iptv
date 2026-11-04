@@ -90,6 +90,15 @@ class OnlineSubtitles(
         }
     }
 
+    /**
+     * Stops a search or a download under way (another title plays): a subtitle that arrives after is not loaded.
+     */
+    fun cancel() {
+        job?.cancel()
+        job = null
+        if (phase == Phase.SEARCHING || phase == Phase.DOWNLOADING) phase = Phase.IDLE
+    }
+
     /** Searches in [language] first (the second language kept after it). */
     fun chooseLanguage(language: String) {
         choosingLanguage = false

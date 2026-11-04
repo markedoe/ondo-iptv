@@ -62,4 +62,18 @@ class SubtitleServicesTest {
         File(chosen.path).delete()
         assertNull(services.chosen("playlist|series|7|9001"))
     }
+
+    /** Subtitles downloaded for no title (named after the subtitle) are bounded too: the oldest go. */
+    @Test
+    fun subtitlesOfNoTitleAreBounded() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = context.getSharedPreferences(SubtitleServices.FILE, Context.MODE_PRIVATE).apply { edit().clear().commit() }
+        prefs.edit().putString(SubtitleCredential.SUBDL_KEY.key, "example-subdl-key").commit()
+        val folder = File(context.filesDir, "bounded").apply { deleteRecursively() }
+        val services = SubtitleServices(prefs, http, "Ondo test", folder, io = Dispatchers.Unconfined, maxKept = 2)
+        val query = SubtitleQuery("Copper Valley", 2018, 3, 3, listOf("en"))
+        val last = (1..4).map { services.download(OnlineSubtitle(SubtitleService.SUBDL, "/subtitle/1-$it.zip", "en", "r$it"), query, null) }.last()
+        assertEquals(2, folder.listFiles()!!.size)
+        assertTrue(File(last.path).isFile)
+    }
 }

@@ -152,4 +152,51 @@ class SubtitleServicesSettingsTest {
         assertTrue(services.state.value.addic7ed)
         assertEquals(listOf(SubtitleService.ADDIC7ED), services.search().providers.map { it.service })
     }
+
+    /** With a key saved, a username and a password alone are checked with that key, and saved with it. */
+    @Test
+    fun anAccountIsAddedToASavedKey() {
+        prefs.edit().putString(SubtitleCredential.OPEN_SUBTITLES_KEY.key, "example-api-key").commit()
+        http.answers["https://api.opensubtitles.com/api/v1/infos/formats"] = """{"data":{"output_formats":["srt"]}}"""
+        http.answers["https://api.opensubtitles.com/api/v1/login"] = """{"token":"example-session-token","base_url":"api.opensubtitles.com"}"""
+        val services = SubtitleServices(prefs, http, "Ondo test", context.filesDir.resolve("subtitles"), io = Dispatchers.Unconfined)
+        compose.setContent {
+            OndoTheme {
+                androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) { SubtitleServicesSettings(services) }
+            }
+        }
+        compose.waitForIdle()
+        type(SubtitleCredential.OPEN_SUBTITLES_USERNAME, "example-user")
+        type(SubtitleCredential.OPEN_SUBTITLES_PASSWORD, "example-password")
+        checkAndSave(SubtitleService.OPEN_SUBTITLES)
+        status(SubtitleService.OPEN_SUBTITLES).assertTextEquals("Accepted by OpenSubtitles.")
+        assertTrue(http.asked.any { it.endsWith("/login") })
+        assertEquals("example-api-key", services.credential(SubtitleCredential.OPEN_SUBTITLES_KEY))
+        assertEquals("example-user", services.credential(SubtitleCredential.OPEN_SUBTITLES_USERNAME))
+        assertEquals("example-password", services.credential(SubtitleCredential.OPEN_SUBTITLES_PASSWORD))
+    }
+
+    /** A username without its password is not saved unchecked: the screen asks for both, the service is not asked. */
+    @Test
+    fun aUsernameWithoutItsPasswordIsNotSaved() {
+        start()
+        type(SubtitleCredential.OPEN_SUBTITLES_KEY, "example-api-key")
+        type(SubtitleCredential.OPEN_SUBTITLES_USERNAME, "example-user")
+        checkAndSave(SubtitleService.OPEN_SUBTITLES)
+        status(SubtitleService.OPEN_SUBTITLES).assertTextEquals("OpenSubtitles: enter both the username and the password, or neither.")
+        assertTrue(http.asked.isEmpty())
+        assertNull(services.credential(SubtitleCredential.OPEN_SUBTITLES_KEY))
+        assertNull(services.credential(SubtitleCredential.OPEN_SUBTITLES_USERNAME))
+    }
+
+    /** A service that answers with its limit says nothing of the key: not "refused", nothing saved. */
+    @Test
+    fun aLimitReachedIsNotARefusedKey() {
+        http.answers["https://api.subdl.com/api/v1/subtitles"] = """{"status":false,"error":"API rate limit exceeded"}"""
+        start()
+        type(SubtitleCredential.SUBDL_KEY, "example-subdl-key")
+        checkAndSave(SubtitleService.SUBDL)
+        status(SubtitleService.SUBDL).assertTextEquals("SubDL’s limit of requests is reached for now, so nothing was saved. Try again later.")
+        assertNull(services.credential(SubtitleCredential.SUBDL_KEY))
+    }
 }
