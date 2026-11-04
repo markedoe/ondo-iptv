@@ -165,7 +165,7 @@ support (public on the store listing). Website: `https://markedoe.github.io/ondo
      listing) to **internal testing**, rolled out at once, when `android/` changed (tests left out). Then the same
      job releases the same version code on **closed testing** (`alpha`), status `completed` with the release notes,
      so Google reviews it: closed testing receives the latest internal build once any review in progress is over.
-     Every commit to Google Play uses `ERROR_IF_IN_REVIEW`: by default a commit cancels the changes in review and
+     Every commit a push to `main` makes uses `ERROR_IF_IN_REVIEW`: by default a commit cancels the changes in review and
      sends them again, which would restart that review. So, while Google reviews something (closed testing, the
      listing, the Android TV opt-in), Google Play refuses the closed testing release and the *Closed testing* step
      ends with a notice, "closed testing will catch up after Google's review"; *Play catch-up* (every hour) sends

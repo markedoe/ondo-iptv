@@ -174,7 +174,7 @@ dédiée au support (publique sur la fiche). Site web : `https://markedoe.github
      en **test interne**, déployé aussitôt, quand `android/` a changé (hors tests). Puis le même job publie le même
      version code en **test fermé** (`alpha`), statut `completed` avec les notes de version, donc Google l'examine :
      le test fermé reçoit le dernier build interne dès que l'examen en cours, s'il y en a un, est terminé. Chaque
-     validation sur Google Play utilise `ERROR_IF_IN_REVIEW` : par défaut, une validation annule les modifications en
+     validation faite par un push sur `main` utilise `ERROR_IF_IN_REVIEW` : par défaut, une validation annule les modifications en
      examen et les renvoie, ce qui relancerait cet examen. Donc, pendant que Google examine quelque chose (le test
      fermé, la fiche, l'inscription Android TV), Google Play refuse la release en test fermé et l'étape *Closed
      testing* se termine par une notice, « closed testing will catch up after Google's review » ; *Play catch-up*

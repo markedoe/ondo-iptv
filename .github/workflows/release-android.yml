@@ -176,6 +176,8 @@ jobs:
             echo "::error::The review playlist does not answer: version code $VERSION_CODE stays in internal testing only, not sent to closed testing."
             exit 1
           fi
+          # fastlane's status, not tee's.
+          set -o pipefail
           if TRACK=alpha RELEASE_STATUS=completed bundle exec fastlane android promote 2>&1 | tee "$RUNNER_TEMP/promote.log"; then
             echo "Closed testing: version code $VERSION_CODE released (completed, sent for review)." >> "$GITHUB_STEP_SUMMARY"
           else

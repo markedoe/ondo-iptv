@@ -89,6 +89,8 @@ jobs:
           PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           VERSION_CODE: ${{ steps.decide.outputs.version_code }}
         run: |
+          # fastlane's status, not tee's.
+          set -o pipefail
           if KEEP_PLAY_REVIEW=true TRACK=alpha RELEASE_STATUS=completed bundle exec fastlane android promote 2>&1 | tee "$RUNNER_TEMP/promote.log"; then
             echo "Closed testing: version code $VERSION_CODE released (completed, sent for review)." >> "$GITHUB_STEP_SUMMARY"
           else
