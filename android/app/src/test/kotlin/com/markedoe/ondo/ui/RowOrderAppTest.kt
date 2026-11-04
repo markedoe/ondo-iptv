@@ -122,13 +122,22 @@ class RowOrderAppTest {
         val saved = SyncRows(SyncRows.MOVIES, listOf(sciFi, "all"), updatedAt = 1)
         val ui = UiMappers.vod(Fixtures.state(settings = settings(saved)), series = false, title = "Movies", now = Fixtures.NOW)
         var opened: Any? = "nothing"
-        compose.setContent { OndoTheme { TelevisionFrame { VodScreen(ui, VodActions(onCategory = { opened = it })) } } }
+        var inputModes: InputModeManager? = null
+        compose.setContent {
+            inputModes = LocalInputModeManager.current
+            OndoTheme { TelevisionFrame { VodScreen(ui, VodActions(onCategory = { opened = it })) } }
+        }
+        compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.waitForIdle()
         val top = { tag: String -> compose.onNodeWithTag(tag).fetchSemanticsNode().boundsInRoot.top }
         assertTrue(top("shelf:${Fixtures.sciFi.id}") < top("shelfAll"))
         // At the end of the row, after its titles.
         compose.onNode(hasScrollAction() and hasAnyAncestor(hasTestTag("shelfAll"))).performScrollToNode(hasTestTag("seeAllAll"))
-        compose.onNodeWithTag("seeAllAll").performClick()
+        // The remote's OK on it.
+        compose.onNodeWithTag("seeAllAll").requestFocus()
+        compose.waitForIdle()
+        compose.onRoot().performKeyInput { pressKey(Key.DirectionCenter) }
+        compose.waitForIdle()
         // null: every category, the grid of the whole catalogue.
         assertNull(opened)
     }
