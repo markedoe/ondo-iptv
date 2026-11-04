@@ -107,6 +107,8 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
     var focusedId by remember { mutableStateOf<String?>(null) }
     // The choice shown at the top, where Up from the channels goes.
     val selectedChoice = remember { FocusRequester() }
+    // While the remote is on the choices, the channels that a new choice brings leave it there.
+    var onChoices by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize()) {
     // On a TV the list takes the left of the screen, the channel the remote is on the right; the chips above both.
     val listWidth = if (television) 0.56f else 1f
@@ -139,6 +141,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier
                         .testTag("liveChips")
+                        .onFocusChanged { onChoices = it.hasFocus }
                         // Up from the channels reaches the choice shown, not the chip that happens to lie above.
                         .focusProperties {
                             onEnter = {
@@ -217,7 +220,7 @@ fun LiveScreen(state: LiveUiState, actions: LiveActions) {
                     .fillMaxWidth(listWidth)
                     // A remote: the frame shows the channel; holding OK toggles My List, as a long press does.
                     .focusFrame(RoundedCornerShape(12.dp), grow = 1.02f)
-                    .focusMemory("channel:${row.channel.id}", initial = index == 0)
+                    .focusMemory("channel:${row.channel.id}", initial = index == 0 && !onChoices)
                     .onFocusChanged { if (it.isFocused) focusedId = row.channel.id }
                     .clip(RoundedCornerShape(12.dp))
                     // TalkBack offers the long press under this name ("double-tap and hold to …").
