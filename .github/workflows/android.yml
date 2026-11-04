@@ -16,6 +16,8 @@ on:
     branches: [main]
     paths:
       - '**'
+      - '.*'
+      - '.*/**'
       - '!App/**'
       - '!AppTests/**'
       - '!UITests/**'
@@ -31,6 +33,8 @@ on:
   pull_request:
     paths:
       - '**'
+      - '.*'
+      - '.*/**'
       - '!App/**'
       - '!AppTests/**'
       - '!UITests/**'

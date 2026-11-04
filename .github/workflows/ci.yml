@@ -12,6 +12,8 @@ on:
     branches: [main]
     paths:
       - '**'
+      - '.*'
+      - '.*/**'
       - '!android/**'
       - '!fastlane/metadata-android/**'
       - '!site/**'
@@ -22,6 +24,8 @@ on:
   pull_request:
     paths:
       - '**'
+      - '.*'
+      - '.*/**'
       - '!android/**'
       - '!fastlane/metadata-android/**'
       - '!site/**'

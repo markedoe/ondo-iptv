@@ -9,8 +9,10 @@ Publishing is described in [RELEASE.md](RELEASE.md) (Apple) and [RELEASE-ANDROID
 
 A job is skipped only when it is certain that it would test nothing new. Any doubt runs it: an unknown path, a
 failed lookup, a branch with no difference from `main`, no `main` to compare with. The leak scan, the neutrality and
-App Store checks (`security.yml`), and the Linux job of CI (`core-linux`: SwiftLint, `check_app_store.py` and the other
-configuration checks, the Swift core tests) always run.
+App Store checks (`security.yml`) run on every push to `main` and every pull request. The Linux job of CI (`core-linux`:
+SwiftLint, `check_app_store.py` and the other configuration checks, the Swift core tests) runs in every *CI* run, never
+skipped by *What to run*; but a push or a pull request that *CI*'s path filter leaves out starts no *CI* run at all, so
+`core-linux` does not run for it (`security.yml` still runs `check_app_store.py`).
 
 ## Workflows
 
@@ -41,7 +43,9 @@ they differ.
   the repository.
 - *Android* skips: `App/**`, `AppTests/**`, `UITests/**`, `MacUITests/**`, `Packages/**`, `project.yml`,
   `fastlane/metadata/**`, `site/**`, `docs/**` and the Markdown files at the top of the repository.
-- Everything else runs both. Changes to workflows or scripts are not skipped.
+- Everything else runs both. Changes to workflows or scripts are not skipped. GitHub documents `**` as matching any
+  character including `/` but says nothing of names that start with a dot, so both lists also include `.*` and `.*/**`
+  explicitly (`.github/`, `.claude/`, `.githooks/`, `.swiftlint.yml`).
 
 **Shared paths: they always run both platforms.** No list may exclude them:
 
@@ -97,11 +101,14 @@ The only change on a working branch, and what a run by hand starts (`test_ci_sco
 *App Store screenshots* no longer runs on pushes: nothing reads its output between releases. *Release* calls it for the
 runs that upload the listing (a tag, targets `release`, `all`, `metadata*`), and the upload waits for it. One job per
 device builds once (`build-for-testing`) and captures English and French from that build (`test-without-building`):
-three macOS jobs instead of six. When an iPhone or iPad capture fails, nothing is published and the listing takes the
-screenshots already on the `appstore-screenshots` branch; when only the Mac capture fails, the Mac screenshots already on
-the branch are kept. A failed capture still makes the *Release* run red (a called workflow cannot be allowed to fail):
-the result of its *TestFlight / App Store Connect* job is the one that counts. Run it by hand to look at the
-screenshots before a release.
+three macOS jobs instead of six. When an iPhone or iPad capture fails, nothing is published; when only the Mac capture
+fails, the Mac screenshots already on the branch are kept beside the new ones.
+
+**The listing must match the build** (CLAUDE.md): when any capture fails, a tag and the targets `release` and `all` stop
+at their first step (*App Store screenshots captured*), before anything is built, uploaded or submitted, with an error
+that says to re-run the screenshots and then the release (*Re-run all jobs*). Only the `metadata*` targets, which
+submit nothing, go on with the screenshots already on the `appstore-screenshots` branch (a warning says so). Run it by
+hand to look at the screenshots before a release.
 
 What is lost: a capture test broken at run time shows at release time instead of on the push (the test is compiled by
 *CI* on every run, not run); the branch no longer shows the interface of every push (`ci-screenshots` does, from the

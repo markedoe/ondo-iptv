@@ -282,6 +282,45 @@ class TestFlightEditionAgainTests(WorkflowScriptTestCase):
         self.assertIn("already waiting", output)
 
 
+def job_block(workflow: str, job: str) -> list:
+    """The lines of [job] in .github/workflows/[workflow]."""
+    lines = (WORKFLOWS / workflow).read_text(encoding="utf-8").splitlines()
+    start = lines.index(f"  {job}:")
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].startswith("  ") and not lines[i].startswith("   ")
+                and lines[i].rstrip().endswith(":")), len(lines))
+    return lines[start:end]
+
+
+class ReleaseScreenshotsTests(WorkflowScriptTestCase):
+    """release.yml: the listing matches the build: no release goes on without the screenshots it captured."""
+
+    def test_a_release_without_its_screenshots_stops_before_anything_is_built(self):
+        script = step_script("release.yml", "App Store screenshots captured")
+        for result, stops in (("success", False), ("failure", True), ("cancelled", True), ("skipped", True), ("", True)):
+            with self.subTest(result=result):
+                outcome = subprocess.run(["bash", "-e", "-c", script], env={**self.environment, "CAPTURE": result},
+                                         capture_output=True, text=True)
+                self.assertEqual(outcome.returncode != 0, stops, outcome.stdout + outcome.stderr)
+                if stops:
+                    self.assertIn("Re-run the App Store screenshots, then this release", outcome.stdout)
+
+    def test_the_check_covers_every_target_that_uploads_a_build_and_comes_first(self):
+        steps = [line.strip()[len("- name: "):] for line in job_block("release.yml", "deliver") if line.strip().startswith("- name: ")]
+        check = steps.index("App Store screenshots captured")
+        for later in ("Xcode", "iOS → TestFlight", "macOS → TestFlight", "App Store listing"):
+            self.assertLess(check, steps.index(later), later)
+        block = job_block("release.yml", "deliver")
+        condition = block[block.index("      - name: App Store screenshots captured") + 3].strip()
+        self.assertEqual(condition, "if: env.TARGET == 'release' || env.TARGET == 'all'")
+
+    def test_the_testflight_edition_follows_the_deliver_jobs_own_result(self):
+        # needs: deliver alone would also require the screenshots job (an implicit success() covers every needed job).
+        conditions = [line.strip() for line in job_block("release.yml", "testflight") if line.strip().startswith("if:")]
+        self.assertIn("needs.deliver.result == 'success'", conditions[0])
+        self.assertIn("github.ref_type == 'tag'", conditions[0])
+        self.assertIn("!cancelled()", conditions[0])
+
+
 class CorePassedTests(WorkflowScriptTestCase):
     """release.yml: a TestFlight edition run skips the core tests only when CI passed, its macOS jobs run, on the very
     commit it builds or the same tree."""

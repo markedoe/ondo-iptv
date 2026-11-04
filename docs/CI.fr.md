@@ -10,8 +10,11 @@ faire. La publication est décrite dans [RELEASE.fr.md](RELEASE.fr.md) (Apple) e
 
 Un job n'est sauté que lorsqu'il est certain qu'il ne testerait rien de nouveau. Le moindre doute le lance : un chemin
 inconnu, une recherche qui échoue, une branche sans différence avec `main`, pas de `main` à comparer. Le contrôle des
-fuites, les contrôles de neutralité et de l'édition App Store (`security.yml`), et le job Linux de la CI (`core-linux` :
-SwiftLint, `check_app_store.py` et les autres contrôles de configuration, les tests du cœur Swift) tournent toujours.
+fuites et les contrôles de neutralité et de l'édition App Store (`security.yml`) tournent sur chaque push sur `main` et
+chaque pull request. Le job Linux de la CI (`core-linux` : SwiftLint, `check_app_store.py` et les autres contrôles de
+configuration, les tests du cœur Swift) tourne dans chaque run *CI*, jamais sauté par *What to run* ; mais un push ou
+une pull request que le filtre de chemins de *CI* écarte ne lance aucun run *CI*, donc pas `core-linux` (`security.yml`
+lance quand même `check_app_store.py`).
 
 ## Workflows
 
@@ -42,7 +45,9 @@ l'identique dans les workflows ; `test_ci_scope.py` échoue si elles diffèrent.
   du dépôt.
 - *Android* saute : `App/**`, `AppTests/**`, `UITests/**`, `MacUITests/**`, `Packages/**`, `project.yml`,
   `fastlane/metadata/**`, `site/**`, `docs/**` et les fichiers Markdown à la racine du dépôt.
-- Tout le reste lance les deux. Les changements de workflows ou de scripts ne sont pas sautés.
+- Tout le reste lance les deux. Les changements de workflows ou de scripts ne sont pas sautés. GitHub documente `**`
+  comme correspondant à n'importe quel caractère, `/` compris, sans rien dire des noms qui commencent par un point : les
+  deux listes incluent donc aussi `.*` et `.*/**` explicitement (`.github/`, `.claude/`, `.githooks/`, `.swiftlint.yml`).
 
 **Chemins partagés : ils lancent toujours les deux plateformes.** Aucune liste ne doit les exclure :
 
@@ -99,10 +104,13 @@ Le seul changement d'une branche de travail, et ce que lance un run à la main (
 pour les runs qui envoient la fiche (un tag, cibles `release`, `all`, `metadata*`), et l'envoi l'attend. Un job par
 appareil compile une fois (`build-for-testing`) et prend l'anglais et le français sur ce build
 (`test-without-building`) : trois jobs macOS au lieu de six. Quand une capture iPhone ou iPad échoue, rien n'est
-publié et la fiche prend les captures déjà sur la branche `appstore-screenshots` ; quand seule la capture Mac échoue,
-les captures Mac déjà sur la branche sont gardées. Une capture qui échoue rend quand même le run *Release* rouge (un
-workflow appelé ne peut pas être autorisé à échouer) : c'est le résultat de son job *TestFlight / App Store Connect* qui
-compte. Lancez-le à la main pour voir les captures avant une release.
+publié ; quand seule la capture Mac échoue, les captures Mac déjà sur la branche sont gardées à côté des nouvelles.
+
+**La fiche doit correspondre au build** (CLAUDE.md) : quand une capture échoue, un tag et les cibles `release` et `all`
+s'arrêtent à leur première étape (*App Store screenshots captured*), avant toute compilation, tout envoi et toute
+soumission, avec une erreur qui dit de relancer les captures puis la release (*Re-run all jobs*). Seules les cibles
+`metadata*`, qui ne soumettent rien, continuent avec les captures déjà sur la branche `appstore-screenshots` (un
+avertissement le dit). Lancez-le à la main pour voir les captures avant une release.
 
 Ce qui est perdu : un test de capture cassé à l'exécution se voit à la release plutôt qu'au push (la *CI* compile ce
 test à chaque run, sans le lancer) ; la branche ne montre plus l'interface de chaque push (`ci-screenshots` la montre,

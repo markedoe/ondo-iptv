@@ -234,8 +234,10 @@ réseau, fichiers choisis par l'utilisateur).
 4. **Captures** : iPhone 6,9", iPad 13" et Mac (1280×800) sont générées par le workflow *App Store
    screenshots* (FR/EN) sur la branche `appstore-screenshots` ; le workflow *Release* les envoie avec la
    fiche. *Release* le lance d'abord, pour un tag et les cibles `release`, `all` et `metadata*`, et l'envoi de la
-   fiche l'attend ; quand une capture échoue, les captures déjà sur la branche sont envoyées (le run apparaît alors
-rouge : c'est le résultat du job *TestFlight / App Store Connect* qui compte). Il ne tourne plus sur les
+   fiche l'attend. La fiche doit correspondre au build : quand une capture échoue, un tag et les cibles `release` et
+   `all` s'arrêtent avant toute compilation, tout envoi et toute soumission ; relancez *App Store screenshots*, puis la
+   release (*Re-run all jobs*). Seules les cibles `metadata*`, qui ne soumettent rien, continuent avec les captures déjà
+   sur la branche. Il ne tourne plus sur les
    push : lancez-le à la main pour voir les captures avant une release ([CI.fr.md](CI.fr.md#captures-app-store)).
 
    **En-tête et résultats de recherche** (iPhone et iPad sous iOS / iPadOS 27 ou plus ; pas le Mac) : l'onglet

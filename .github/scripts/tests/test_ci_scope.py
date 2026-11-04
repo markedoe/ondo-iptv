@@ -73,6 +73,21 @@ class PathFilterTests(unittest.TestCase):
                 with self.subTest(workflow=file, job=job):
                     self.assertIn(job, names)
 
+    def test_every_job_gated_on_what_to_run_proves_the_run(self):
+        # A heavy job left out of HEAVY_JOBS could fail or be skipped while the duplicate skip still trusts the run.
+        for workflow, file in ci_scope.WORKFLOW_FILES.items():
+            gated, name = [], None
+            for line in (WORKFLOWS / file).read_text(encoding="utf-8").splitlines():
+                if line.startswith("  ") and not line.startswith("   ") and line.rstrip().endswith(":"):
+                    name = None
+                elif line.startswith("    name: "):
+                    name = line.strip()[len("name: "):]
+                elif line.startswith("    if: ") and "needs.scope.outputs.run" in line:
+                    gated.append(name)
+            with self.subTest(workflow=file):
+                self.assertTrue(gated)
+                self.assertEqual(sorted(gated), sorted(ci_scope.HEAVY_JOBS[workflow]))
+
     def test_the_samples(self):
         for name, (path, apple, android) in SAMPLES.items():
             with self.subTest(name):

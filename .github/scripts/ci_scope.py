@@ -24,9 +24,12 @@ import sys
 # folder, "!" excludes. Each list is copied byte for byte into the workflow's `paths:` (test_ci_scope.py checks it).
 # A new folder read by both apps (fixtures, a shared spec) must not be excluded from either list.
 SHARED_SPECS = ["docs/SYNC*", "docs/PROFILES*"]
+# GitHub documents "**" as matching any character including "/", but says nothing of names that start with a dot:
+# ".*" and ".*/**" include the dot files and folders (.github, .claude, .githooks, .swiftlint.yml) whatever it does.
+DOT_PATHS = [".*", ".*/**"]
 PATHS = {
-    "ci": ["**", "!android/**", "!fastlane/metadata-android/**", "!site/**", "!docs/**", *SHARED_SPECS, "!*.md"],
-    "android": ["**", "!App/**", "!AppTests/**", "!UITests/**", "!MacUITests/**", "!Packages/**", "!project.yml",
+    "ci": ["**", *DOT_PATHS, "!android/**", "!fastlane/metadata-android/**", "!site/**", "!docs/**", *SHARED_SPECS, "!*.md"],
+    "android": ["**", *DOT_PATHS, "!App/**", "!AppTests/**", "!UITests/**", "!MacUITests/**", "!Packages/**", "!project.yml",
                 "!fastlane/metadata/**", "!site/**", "!docs/**", *SHARED_SPECS, "!*.md"],
 }
 WORKFLOW_FILES = {"ci": "ci.yml", "android": "android.yml"}

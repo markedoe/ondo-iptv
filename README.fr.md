@@ -336,8 +336,9 @@ Certains défauts n'apparaissent qu'en conditions réelles. Les tests sur donné
   « gratuit » pour qualifier l’IPTV, chaînes fictives dans les tests), et l'édition App Store : aucun code
   de téléchargement ni fonction dormante, aucune API privée, jamais « bêta », une fiche et des notes pour
   la review qu'App Review accepte (vérifiée aussi à chaque changement et avant chaque publication).
-- **Compilation Release, édition App Store** (iOS et macOS) : le code `#if DEBUG` et les téléchargements de
-  l'édition TestFlight (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) en sont exclus, comme dans le build soumis.
+- **Compilations Release de l'édition App Store** (iOS et macOS, dans le job *Build iOS + macOS (Debug, App Store
+  edition)*, à côté du build debug macOS et de son lancement) : le code `#if DEBUG` et les téléchargements de l'édition
+  TestFlight (`#if TESTFLIGHT_DOWNLOADS || DEBUG`) en sont exclus, comme dans le build soumis.
 - **Banc de test de la lecture** (`tools/playback-lab`, quand le moteur VLC ou le code de lecture change) :
   libVLC, la bibliothèque du moteur VLC, lit des flux générés servis par un fournisseur qui se comporte mal
   exprès ; gels, temps de démarrage et de saut des films, position de reprise et diagnostic des gels de l'app
