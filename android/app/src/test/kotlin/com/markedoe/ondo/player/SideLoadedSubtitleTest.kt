@@ -46,6 +46,7 @@ class SideLoadedSubtitleTest {
     @Test
     fun aTitleIsSearchedWithoutTheProvidersTagsAndWithItsYear() {
         assertEquals(SubtitleSearchHint("Tom Clancy's Jack Ryan", 2018, 3, 3), SubtitleSearchHint.of("Tom Clancy's Jack Ryan (2018)", null, 3, 3))
+        assertEquals(SubtitleSearchHint("Jack Ryan", 2022, 3, 4), SubtitleSearchHint.of("|FR-4K| Jack Ryan (2022)", null, 3, 4))
         assertEquals(SubtitleSearchHint("Northern Lights", 2025, tmdbId = 42), SubtitleSearchHint.of("|EN| Northern Lights", 2025, tmdbId = 42))
         assertEquals("Tom Clancy's Jack Ryan · S03E03", SubtitleSearchHint("Tom Clancy's Jack Ryan", 2018, 3, 3).label())
         assertEquals("Northern Lights (2025)", SubtitleSearchHint("Northern Lights", 2025).label())

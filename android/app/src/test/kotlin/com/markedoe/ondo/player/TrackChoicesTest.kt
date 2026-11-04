@@ -106,4 +106,21 @@ class TrackChoicesTest {
         assertEquals("ASS", TrackChoices.subtitleFormat(androidx.media3.common.Format.Builder().setSampleMimeType(MimeTypes.TEXT_SSA).build()))
         assertNull(TrackChoices.subtitleFormat(androidx.media3.common.Format.Builder().setSampleMimeType("application/x-unknown").build()))
     }
+
+    /** Tracks of one language nothing else tells apart are numbered in the stream's order; one with a detail is not. */
+    @Test
+    fun tracksNothingTellsApartAreNumbered() {
+        val player = FakeTracksPlayer(
+            listOf(
+                FakeTracksPlayer.text("ca", mimeType = MimeTypes.APPLICATION_SUBRIP),
+                FakeTracksPlayer.text("fr", mimeType = MimeTypes.APPLICATION_SUBRIP),
+                FakeTracksPlayer.text("fr", mimeType = MimeTypes.APPLICATION_SUBRIP),
+                FakeTracksPlayer.text("fr", mimeType = MimeTypes.APPLICATION_SUBRIP, flags = C.SELECTION_FLAG_FORCED),
+            ),
+            initiallySelected = emptySet(),
+        )
+        val choices = TrackChoices.of((player as Player).currentTracks, C.TRACK_TYPE_TEXT, french, Locale.FRENCH)
+        assertEquals(listOf("Catalan", "Français (1)", "Français (2)", "Français"), choices.map { it.name })
+        assertEquals(listOf(null, null, null, "Forcés"), choices.map { it.detail })
+    }
 }

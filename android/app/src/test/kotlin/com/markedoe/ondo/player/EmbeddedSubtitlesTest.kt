@@ -45,11 +45,11 @@ class EmbeddedSubtitlesTest {
         unsupported = "Cannot be shown on this device",
     )
 
-    @Test
-    fun theTextAndPictureSubtitlesOfAnMkvAreListed() {
+    /** The tracks of the test resource [name] once ExoPlayer has read the file's start, and every Tracks it reported. */
+    private fun tracksOf(name: String): Pair<Tracks, List<Tracks>> {
         val context = ApplicationProvider.getApplicationContext<Context>()
-        val file = File(context.cacheDir, "subtitles.mkv")
-        javaClass.getResourceAsStream("/media/subtitles.mkv")!!.use { input -> file.outputStream().use { input.copyTo(it) } }
+        val file = File(context.cacheDir, name)
+        javaClass.getResourceAsStream("/media/$name")!!.use { input -> file.outputStream().use { input.copyTo(it) } }
         val player = ExoPlayer.Builder(context).build()
         var error: PlaybackException? = null
         val seen = mutableListOf<Tracks>()
@@ -73,14 +73,34 @@ class EmbeddedSubtitlesTest {
                 Thread.sleep(10)
             }
             assertNull(error)
-            val choices = TrackChoices.of(player.currentTracks, C.TRACK_TYPE_TEXT, words, Locale.ENGLISH)
-            assertEquals(listOf("English", "French", "German"), choices.map { it.name })
-            assertEquals(listOf(true, true, true), choices.map { it.available })
-            // They came with onTracksChanged, which refreshes the panel (PlayerControls.refresh on each event).
-            assertTrue(seen.any { tracks -> tracks.groups.count { it.type == C.TRACK_TYPE_TEXT } == 3 })
+            return player.currentTracks to seen
         } finally {
             player.release()
             file.delete()
         }
+    }
+
+    @Test
+    fun theTextAndPictureSubtitlesOfAnMkvAreListed() {
+        val (tracks, seen) = tracksOf("subtitles.mkv")
+        val choices = TrackChoices.of(tracks, C.TRACK_TYPE_TEXT, words, Locale.ENGLISH)
+        assertEquals(listOf("English", "French", "German"), choices.map { it.name })
+        assertEquals(listOf(true, true, true), choices.map { it.available })
+        // They came with onTracksChanged, which refreshes the panel (PlayerControls.refresh on each event).
+        assertTrue(seen.any { reported -> reported.groups.count { it.type == C.TRACK_TYPE_TEXT } == 3 })
+    }
+
+    /**
+     * `media/subtitles-srt.mkv`: as a 4K episode of a provider lists them, SubRip tracks only, in Catalan then three in
+     * French (the last forced), none with a name of its own. Each is a row of its own: the two French tracks nothing
+     * tells apart are numbered.
+     */
+    @Test
+    fun severalSubRipTracksInOneLanguageAreEachListed() {
+        val (tracks, _) = tracksOf("subtitles-srt.mkv")
+        val choices = TrackChoices.of(tracks, C.TRACK_TYPE_TEXT, words, Locale.ENGLISH)
+        assertEquals(listOf("Catalan", "French (1)", "French (2)", "French"), choices.map { it.name })
+        assertEquals(listOf(null, null, null, "Forced"), choices.map { it.detail })
+        assertEquals(listOf(true, true, true, true), choices.map { it.available })
     }
 }

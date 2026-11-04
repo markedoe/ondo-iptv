@@ -79,7 +79,23 @@ object TrackChoices {
                 choices += TrackChoice(name, details.joinToString(" · ").ifEmpty { null }, available && group.isTrackSelected(index), group, index, available)
             }
         }
-        return choices
+        return numbered(choices)
+    }
+
+    /**
+     * Tracks nothing tells apart (three French subtitle tracks without a name of their own): "French (1)", "French (2)"…
+     * in the stream's order, so that each row is a choice of its own.
+     */
+    private fun numbered(choices: List<TrackChoice>): List<TrackChoice> {
+        val alike = choices.groupingBy { it.name to it.detail }.eachCount()
+        val seen = HashMap<Pair<String, String?>, Int>()
+        return choices.map { choice ->
+            val key = choice.name to choice.detail
+            if ((alike[key] ?: 0) < 2) return@map choice
+            val number = (seen[key] ?: 0) + 1
+            seen[key] = number
+            choice.copy(name = "${choice.name} ($number)")
+        }
     }
 
     /**
