@@ -46,9 +46,9 @@ enum class PlayerPanel {
 class PlayerControls(
     private val scope: CoroutineScope,
     private val clock: () -> Long = SystemClock::uptimeMillis,
-    private val onShownChange: (Boolean) -> Unit = {},
     /** The time of day ([clockMs]); a fixed one in screenshots, where the clock is drawn. */
     private val wallClock: () -> Long = System::currentTimeMillis,
+    private val onShownChange: (Boolean) -> Unit = {},
 ) {
     /** The buttons are on screen and the remote moves through them. */
     var shown by mutableStateOf(false)
