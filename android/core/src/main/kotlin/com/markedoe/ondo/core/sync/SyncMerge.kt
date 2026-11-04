@@ -59,17 +59,49 @@ object SyncMerge {
         val keys = pick(left.keys + right.keys, { it.key }, { it.updatedAt }, compareBy { it.value }, deleted)
         // Likewise for the order of the rows: a side without it (an older version) changes none.
         val rows = pick(left.rows + right.rows, { it.key }, { it.updatedAt }, compareBy { it.tie }, deleted)
+        // Profiles: the later change wins; a deleted profile goes with its data (the main one is never deleted). A side
+        // without profiles (an older version) changes none.
+        val profiles = SyncProfile.capped(
+            pick(left.profiles + right.profiles, { it.key }, { it.updatedAt }, compareBy { it.tie }, deleted.filterKeys { it != SyncProfile.KEY_PREFIX + SyncProfile.MAIN }),
+        ).sortedBy { it.id }
+        val keptPlaylists = kept.sortedWith(compareBy<SyncPlaylist> { it.addedAt }.thenBy { it.id })
+        val profileData = profileData(left.profileData + right.profileData, profiles, keptPlaylists, deleted, replaced)
         return left.copy(
-            playlists = kept.sortedWith(compareBy<SyncPlaylist> { it.addedAt }.thenBy { it.id }),
+            playlists = keptPlaylists,
             favorites = favorites.sortedWith(compareBy<SyncFavorite> { it.addedAt }.thenBy { it.key }),
             progress = progress.sortedWith(compareByDescending<SyncProgress> { it.watchedAt }.thenBy { it.key }),
             lists = lists.sortedBy { it.id },
             people = people.sortedWith(compareBy<SyncPerson> { it.addedAt }.thenBy { it.key }),
             keys = keys.sortedBy { it.service },
             rows = SyncRows.capped(rows).sortedBy { it.tab },
+            profiles = profiles,
+            profileData = profileData,
             deleted = deleted.toSortedMap(),
             replaced = replaced.toSortedMap(),
         )
+    }
+
+    /**
+     * The data of each profile kept, other than the main one (docs/SYNC.md, "Profiles"): merged as a snapshot of its own
+     * by the same rules, with the playlists as merged (a favourite of a deleted playlist goes, a replaced playlist's
+     * become the one kept). A profile deleted, or not kept, goes with its data.
+     */
+    private fun profileData(
+        buckets: List<SyncProfileData>,
+        profiles: List<SyncProfile>,
+        playlists: List<SyncPlaylist>,
+        deleted: Map<String, Long>,
+        replaced: Map<String, String>,
+    ): List<SyncProfileData> {
+        val kept = profiles.mapTo(HashSet()) { it.id }
+        val deletedPlaylists = deleted.filterKeys { it.startsWith("playlist:") }
+        return buckets.filter { it.profile != SyncProfile.MAIN && it.profile in kept }.groupBy { it.profile }.map { (profile, same) ->
+            // Merged with an empty side first: one side's bucket alone gets the playlists' outcome too.
+            val merged = same.fold(SyncProfileData(profile).records(playlists, deletedPlaylists, replaced)) { result, bucket ->
+                merge(result, bucket.records(playlists, deletedPlaylists, replaced))
+            }
+            SyncProfileData.of(profile, merged.copy(deleted = merged.deleted.toSortedMap()))
+        }.sortedBy { it.profile }
     }
 
     /**

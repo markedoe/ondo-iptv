@@ -83,8 +83,8 @@ data class AppSettings(
      */
     val serviceKeys: List<SyncKey> = emptyList(),
     /**
-     * The order of the rows of the Movies and Series tabs and the rows hidden (Settings → Row order, `RowOrder`), one
-     * record per tab with the time it was set; sync carries them (docs/SYNC.md, "Rows").
+     * Where the order of the rows was kept before it was each profile's ([LibraryState.rowOrders]): read once, moved to the
+     * main profile's library with its time (docs/PROFILES.md, "Migration"), then emptied.
      */
     val rowOrders: List<SyncRows> = emptyList(),
     /** The profile open now (docs/PROFILES.md); null: the main one. */
@@ -95,9 +95,6 @@ data class AppSettings(
     val pinFailures: Int = 0,
     val pinRetryAt: Long = 0,
 ) {
-    /** The order saved for the Movies or the Series tab; null: the default order. */
-    fun rowOrder(series: Boolean): SyncRows? = rowOrders.firstOrNull { it.tab == (if (series) SyncRows.SERIES else SyncRows.MOVIES) }
-
     /** The viewer's TMDb token (or API Key), typed here or arrived by sync. */
     val tmdbToken: String?
         get() = serviceKeys.firstOrNull { it.service == SyncKey.TMDB }?.value?.takeIf { it.isNotBlank() }

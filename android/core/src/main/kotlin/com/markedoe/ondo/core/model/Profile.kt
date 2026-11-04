@@ -20,6 +20,8 @@ data class Profile(
     val isKids: Boolean = false,
     /** SHA-256 of the profile PIN ([hashPin]), `null` when the profile is not protected. Never synced. */
     val pinHash: String? = null,
+    /** When it was added or last changed (sync's clock); 0: never changed (the main one as made), not synced. */
+    val updatedAt: Long = 0,
 ) {
     val isProtected: Boolean
         get() = pinHash != null

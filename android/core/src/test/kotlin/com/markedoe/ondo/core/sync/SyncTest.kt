@@ -272,6 +272,61 @@ class SyncTest {
         assertEquals(expected, SyncMerge.merge(expected, b))
     }
 
+    /** Profiles of the shared examples (docs/SYNC.md, "Profiles"): the same result whichever merges, and merging it again. */
+    @Test
+    fun theProfilesOfTheSharedExamplesMergeInEitherOrder() {
+        val a = fixture("profiles-a.json")
+        val b = fixture("profiles-b.json")
+        val expected = fixture("profiles-merged.json")
+        assertEquals(expected, SyncMerge.merge(a, b))
+        assertEquals(expected.withoutDevice(), SyncMerge.merge(b, a).withoutDevice())
+        assertEquals(expected, SyncMerge.merge(expected, b))
+        // The device that still has the deleted profile (and its data) does not bring it back.
+        assertEquals(expected, SyncMerge.merge(expected, a))
+    }
+
+    /** An older device knows nothing of profiles: its data is the main profile's, and the profiles stay as they are. */
+    @Test
+    fun anOlderDeviceWithoutProfilesMapsToTheMainProfile() {
+        val merged = fixture("profiles-merged.json")
+        val playlist = merged.playlists.single()
+        val older = SyncSnapshot(
+            device = "77777777-7777-4777-8777-777777777777",
+            playlists = listOf(playlist),
+            favorites = listOf(SyncFavorite(playlist.id, "movie", "m9", "Older device", addedAt = 3_500)),
+        )
+        val result = SyncMerge.merge(merged, older)
+        assertEquals(merged.profiles, result.profiles)
+        assertEquals(merged.profileData, result.profileData)
+        assertTrue(result.favorites.any { it.item == "m9" })
+        assertTrue(result.profileData.none { bucket -> bucket.favorites.any { it.item == "m9" } })
+        // And what the older device keeps (without profiles) is the main profile's alone.
+        assertEquals(result.favorites, SyncMerge.merge(older, merged).favorites)
+    }
+
+    /** A watch on one profile stays in that profile, on whichever device merges. */
+    @Test
+    fun aWatchOnOneProfileIsNeverAppliedToAnother() {
+        val playlist = SyncPlaylist("p", "Home", SyncPlaylist.M3U, "http://example.com/a.m3u", addedAt = 1, updatedAt = 1)
+        val sam = SyncProfile("11111111-1111-4111-8111-111111111111", "Sam", updatedAt = 10)
+        val ana = SyncProfile("33333333-3333-4333-8333-333333333333", "Ana", updatedAt = 10)
+        val watch = SyncProgress("p", "movie", "m1", title = "M1", position = 600.0, duration = 6000.0, watchedAt = 20)
+        val device1 = SyncSnapshot(device = "d1", playlists = listOf(playlist), profiles = listOf(sam, ana), profileData = listOf(SyncProfileData(sam.id, progress = listOf(watch))))
+        val device2 = SyncSnapshot(device = "d2", playlists = listOf(playlist), profiles = listOf(sam, ana))
+        val merged = SyncMerge.merge(device2, device1)
+        assertEquals(listOf(watch), merged.profileData.single { it.profile == sam.id }.progress)
+        assertTrue(merged.profileData.none { it.profile == ana.id })
+        assertTrue(merged.progress.isEmpty())
+    }
+
+    /** A profile's PIN never travels: the record has no field for it, and a snapshot that sends one keeps none. */
+    @Test
+    fun aProfileRecordCarriesNoPin() {
+        val json = """{"type":"ondo-sync","version":1,"device":"d","profiles":[{"id":"x","name":"Sam","pinHash":"ab","updatedAt":5}]}"""
+        val snapshot = requireNotNull(SyncSnapshot.decode(json.encodeToByteArray()))
+        assertFalse(snapshot.encoded().decodeToString().contains("pin", ignoreCase = true))
+    }
+
     /** Two devices put the rows in order at about the same time: both keep the later one, whichever merges. */
     @Test
     fun concurrentRowOrdersConvergeToTheLaterStamp() {

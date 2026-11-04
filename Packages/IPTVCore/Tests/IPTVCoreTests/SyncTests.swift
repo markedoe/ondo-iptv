@@ -77,6 +77,53 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncMerge.merge(other, mine).keys.map(\.value), ["example-tmdb-token-0"])
     }
 
+    /// Profiles of the shared examples (docs/SYNC.md, "Profiles"): the same result whichever merges, and merging it again.
+    func testTheProfilesOfTheSharedExamplesMergeInEitherOrder() throws {
+        let a = try fixture("profiles-a.json")
+        let b = try fixture("profiles-b.json")
+        let expected = try fixture("profiles-merged.json")
+        XCTAssertEqual(SyncMerge.merge(a, b), expected)
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(b, a)), withoutDevice(expected))
+        XCTAssertEqual(SyncMerge.merge(expected, b), expected)
+        // The device that still has the deleted profile (and its data) does not bring it back.
+        XCTAssertEqual(SyncMerge.merge(expected, a), expected)
+    }
+
+    /// An older device knows nothing of profiles: its data is the main profile's, and the profiles stay as they are.
+    func testAnOlderDeviceWithoutProfilesMapsToTheMainProfile() throws {
+        let merged = try fixture("profiles-merged.json")
+        let playlist = try XCTUnwrap(merged.playlists.first)
+        let older = SyncSnapshot(device: "77777777-7777-4777-8777-777777777777", playlists: [playlist],
+                                 favorites: [SyncFavorite(playlist: playlist.id, kind: "movie", item: "m9", title: "Older device", addedAt: 3_500)])
+        let result = SyncMerge.merge(merged, older)
+        XCTAssertEqual(result.profiles, merged.profiles)
+        XCTAssertEqual(result.profileData, merged.profileData)
+        XCTAssertTrue(result.favorites.contains { $0.item == "m9" })
+        XCTAssertFalse(result.profileData.contains { $0.favorites.contains { $0.item == "m9" } })
+        XCTAssertEqual(SyncMerge.merge(older, merged).favorites, result.favorites)
+    }
+
+    /// A watch on one profile stays in that profile, on whichever device merges.
+    func testAWatchOnOneProfileIsNeverAppliedToAnother() {
+        let playlist = SyncPlaylist(id: "p", name: "Home", kind: SyncPlaylist.m3u, url: "http://example.com/a.m3u", addedAt: 1, updatedAt: 1)
+        let sam = SyncProfile(id: "11111111-1111-4111-8111-111111111111", name: "Sam", updatedAt: 10)
+        let ana = SyncProfile(id: "33333333-3333-4333-8333-333333333333", name: "Ana", updatedAt: 10)
+        let watch = SyncProgress(playlist: "p", kind: "movie", item: "m1", title: "M1", position: 600, duration: 6000, watchedAt: 20)
+        let device1 = SyncSnapshot(device: "d1", playlists: [playlist], profiles: [sam, ana], profileData: [SyncProfileData(profile: sam.id, progress: [watch])])
+        let device2 = SyncSnapshot(device: "d2", playlists: [playlist], profiles: [sam, ana])
+        let merged = SyncMerge.merge(device2, device1)
+        XCTAssertEqual(merged.profileData.first { $0.profile == sam.id }?.progress, [watch])
+        XCTAssertFalse(merged.profileData.contains { $0.profile == ana.id })
+        XCTAssertTrue(merged.progress.isEmpty)
+    }
+
+    /// A profile's PIN never travels: the record has no field for it, and a snapshot that sends one keeps none.
+    func testAProfileRecordCarriesNoPIN() throws {
+        let json = #"{"type":"ondo-sync","version":1,"device":"d","profiles":[{"id":"x","name":"Sam","pinHash":"ab","updatedAt":5}]}"#
+        let snapshot = try XCTUnwrap(SyncSnapshot.decode(Data(json.utf8)))
+        XCTAssertFalse(String(decoding: try snapshot.encoded(), as: UTF8.self).lowercased().contains("pin"))
+    }
+
     func testTheRowOrderOfTheSharedExamplesMergesInEitherOrder() throws {
         let a = try fixture("rows-a.json")
         let b = try fixture("rows-b.json")

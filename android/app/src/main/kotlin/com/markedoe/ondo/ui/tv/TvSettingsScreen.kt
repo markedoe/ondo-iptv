@@ -475,7 +475,7 @@ private fun LazyListScope.catalogue(state: SettingsUiState, actions: SettingsAct
     item(key = "categories") {
         SettingRow(stringResource(R.string.languages_and_categories), Icons.Rounded.FilterList, subtitle = stringResource(R.string.categories_hint), onClick = actions.onCategories, modifier = Modifier.focusRequester(first).focusMemory("settings-categories").testTag("categoriesRow"))
     }
-    item(key = "rowOrder") {
+    if (state.canChangeRowOrder) item(key = "rowOrder") {
         SettingRow(stringResource(R.string.row_order), Icons.Rounded.Reorder, subtitle = stringResource(R.string.row_order_summary), onClick = actions.onRowOrder, modifier = Modifier.focusMemory("settings-rowOrder").testTag("rowOrderRow"))
     }
     item(key = "adult") {

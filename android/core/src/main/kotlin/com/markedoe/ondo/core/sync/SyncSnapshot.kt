@@ -26,6 +26,13 @@ data class SyncSnapshot(
     val keys: List<SyncKey> = emptyList(),
     /** The order of the rows of the Movies and Series tabs, and the rows hidden; none from a device that does not sync them. */
     val rows: List<SyncRows> = emptyList(),
+    /** The viewer profiles (docs/PROFILES.md, docs/SYNC.md "Profiles"); none from a device that does not sync them. */
+    val profiles: List<SyncProfile> = emptyList(),
+    /**
+     * The data of each profile other than the main one, whose data is the records above (an older device knows only
+     * those); none from a device that does not sync profiles.
+     */
+    val profileData: List<SyncProfileData> = emptyList(),
     val deleted: Map<String, Long> = emptyMap(),
     /** Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID. */
     val replaced: Map<String, String> = emptyMap(),
@@ -53,6 +60,13 @@ data class SyncSnapshot(
             device = "", deviceName = null, clock = null, digest = null, seen = null, probe = null, unchanged = null,
             progress = if (leavingOut.isEmpty()) progress else progress.filter { it.key !in leavingOut },
             deleted = deleted.toSortedMap(), replaced = replaced.toSortedMap(),
+            // The item playing may be any profile's: left out of each profile's progress alike.
+            profileData = profileData.map { bucket ->
+                bucket.copy(
+                    progress = if (leavingOut.isEmpty()) bucket.progress else bucket.progress.filter { it.key !in leavingOut },
+                    deleted = bucket.deleted.toSortedMap(),
+                )
+            },
         )
         return MessageDigest.getInstance("SHA-256").digest(content.encoded()).joinToString("") { "%02x".format(it) }
     }
@@ -98,7 +112,11 @@ data class SyncSnapshot(
         val oldest = minOf(now - days * DAY_MS, sessions.filter { it >= now - PEERS_KEPT_DAYS * DAY_MS }.minOrNull() ?: Long.MAX_VALUE)
         // A deletion learned late (from a device away for months) counts from when this device learned it.
         val kept = deleted.filter { (key, time) -> maxOf(time, learned[key] ?: time) >= oldest }
-        return copy(deleted = kept, replaced = replaced.filterKeys { "playlist:$it" in kept })
+        return copy(
+            deleted = kept,
+            replaced = replaced.filterKeys { "playlist:$it" in kept },
+            profileData = profileData.map { bucket -> bucket.copy(deleted = bucket.deleted.filterValues { it >= oldest }) },
+        )
     }
 
     /** Every time of the snapshot: of the records, of the items and people of the lists, and of the deletions. */
@@ -116,6 +134,8 @@ data class SyncSnapshot(
         people.forEach { yield(it.addedAt) }
         keys.forEach { yield(it.updatedAt) }
         rows.forEach { yield(it.updatedAt) }
+        profiles.forEach { yield(it.updatedAt) }
+        profileData.forEach { yieldAll(it.records().times()) }
         yieldAll(deleted.values)
     }
 
@@ -141,6 +161,8 @@ data class SyncSnapshot(
             people = people.filter { past(it.addedAt) },
             keys = keys.filter { past(it.updatedAt) },
             rows = rows.filter { past(it.updatedAt) },
+            profiles = profiles.filter { past(it.updatedAt) },
+            profileData = profileData.map { SyncProfileData.of(it.profile, it.records().withoutRecordsAfter(latest)) },
             deleted = deleted.filterValues(::past),
         )
     }
@@ -185,6 +207,8 @@ data class SyncSnapshot(
             )
         },
         rows = SyncRows.capped(rows.map(SyncRows::normalized)),
+        profiles = SyncProfile.capped(profiles.map { it.copy(id = it.id.lowercase()) }),
+        profileData = profileData.map { SyncProfileData.of(it.profile.lowercase(), it.records().normalized()) },
         deleted = deleted.entries.fold(LinkedHashMap<String, Long>()) { times, (key, time) ->
             val lowercased = lowercasingId(key)
             times[lowercased] = maxOf(times[lowercased] ?: time, time)
@@ -226,7 +250,7 @@ internal fun lowercasingId(key: String): String {
         val bar = item.indexOf('|').takeIf { it >= 0 } ?: return "$list|${item.lowercase()}"
         return "$list|${item.substring(0, bar).lowercase()}${item.substring(bar)}"
     }
-    for (prefix in listOf("playlist:", "list:", "favorite:", "progress:")) {
+    for (prefix in listOf("playlist:", "list:", "favorite:", "progress:", SyncProfile.KEY_PREFIX)) {
         if (!key.startsWith(prefix)) continue
         val bar = if (prefix == "favorite:" || prefix == "progress:") key.indexOf('|', prefix.length) else -1
         if (bar < 0) return prefix + key.substring(prefix.length).lowercase()
@@ -421,5 +445,77 @@ data class SyncRows(
             val kept = (known + (tabs - known.toSet()).sorted()).take(MAX_TABS).toHashSet()
             return valid.filter { it.tab in kept }
         }
+    }
+}
+
+/**
+ * A viewer profile (docs/SYNC.md, "Profiles"): its name and avatar, and whether it is a Kids profile. Never its PIN,
+ * which stays on each device (docs/PROFILES.md, "PIN").
+ */
+@Serializable
+data class SyncProfile(
+    val id: String,
+    val name: String = "",
+    val colorIndex: Int = 0,
+    val symbol: String = "initial",
+    val kids: Boolean = false,
+    val updatedAt: Long,
+) {
+    val key: String get() = KEY_PREFIX + id
+
+    /** The tie string of the merge (docs/SYNC.md, "Merge", rule 2). */
+    val tie: String get() = listOf(name, colorIndex.toString(), symbol, if (kids) "1" else "0").joinToString("\n")
+
+    companion object {
+        const val KEY_PREFIX = "profile:"
+
+        /** The main profile: its data is the snapshot's own records, and it is never deleted. */
+        const val MAIN = "00000000-0000-0000-0000-000000000001"
+
+        /** At most this many profiles in a snapshot: the main one first, then by ID. */
+        const val MAX_PROFILES = 16
+
+        /** [profiles] without those past the [MAX_PROFILES] first (the main one, then by ID); the others in their order. */
+        fun capped(profiles: List<SyncProfile>): List<SyncProfile> {
+            val ids = profiles.map { it.id }.distinct()
+            if (ids.size <= MAX_PROFILES) return profiles
+            val kept = ids.sortedWith(compareBy<String> { it != MAIN }.thenBy { it }).take(MAX_PROFILES).toHashSet()
+            return profiles.filter { it.id in kept }
+        }
+    }
+}
+
+/**
+ * The data of a profile other than the main one (docs/SYNC.md, "Profiles"): its My List and favourite channels,
+ * progress, lists, people and order of rows, with what was deleted in it, by the same keys as the snapshot's own.
+ */
+@Serializable
+data class SyncProfileData(
+    val profile: String,
+    val favorites: List<SyncFavorite> = emptyList(),
+    val progress: List<SyncProgress> = emptyList(),
+    val lists: List<SyncList> = emptyList(),
+    val people: List<SyncPerson> = emptyList(),
+    val rows: List<SyncRows> = emptyList(),
+    val deleted: Map<String, Long> = emptyMap(),
+) {
+    /** Its records as a snapshot of their own (to merge, normalise, date them with the snapshot's rules). */
+    fun records(playlists: List<SyncPlaylist> = emptyList(), deletedPlaylists: Map<String, Long> = emptyMap(), replaced: Map<String, String> = emptyMap()) =
+        SyncSnapshot(
+            device = "", playlists = playlists, favorites = favorites, progress = progress, lists = lists, people = people, rows = rows,
+            deleted = deleted + deletedPlaylists, replaced = replaced,
+        )
+
+    companion object {
+        /** The bucket of [profile] from [records] (the playlists, keys and playlist deletions it carries left out). */
+        fun of(profile: String, records: SyncSnapshot) = SyncProfileData(
+            profile = profile,
+            favorites = records.favorites,
+            progress = records.progress,
+            lists = records.lists,
+            people = records.people,
+            rows = records.rows,
+            deleted = records.deleted.filterKeys { !it.startsWith("playlist:") },
+        )
     }
 }

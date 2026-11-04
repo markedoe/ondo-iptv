@@ -88,6 +88,8 @@ data class PlaylistSummary(
 
 data class SettingsUiState(
     val playlists: List<PlaylistSummary> = emptyList(),
+    /** The order of the rows can be changed: not in a Kids profile (docs/PROFILES.md). */
+    val canChangeRowOrder: Boolean = true,
     val showAdultCategories: Boolean = false,
     val updateAwards: Boolean = true,
     val prepareAhead: Boolean = false,
@@ -289,7 +291,7 @@ fun SettingsScreen(state: SettingsUiState, actions: SettingsActions) {
                     modifier = Modifier.focusFrame(RoundedCornerShape(12.dp), grow = 1f).clickable(onClick = actions.onCategories).testTag("categoriesRow"),
                 )
             }
-            item {
+            if (state.canChangeRowOrder) item {
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.row_order)) },
                     supportingContent = { Text(stringResource(R.string.row_order_summary)) },

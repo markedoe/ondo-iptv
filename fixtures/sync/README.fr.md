@@ -13,3 +13,10 @@ la clé d’un service inconnu gardée).
 Séries, un enregistrement par onglet, le plus récent qui gagne, à temps égaux la plus petite chaîne de départage ; les
 clés vides ou qui contiennent un caractère de contrôle écartées, l’ordre sans doublons, les rangées masquées chacune une
 fois et triées ; l’enregistrement d’un onglet que cette version ne connaît pas gardé.
+
+`profiles-a.json` et `profiles-b.json` se fusionnent en `profiles-merged.json` de la même façon : les profils, la
+modification la plus récente l’emportant (un renommage sur un appareil), un profil ajouté sur un appareil gardé avec ses
+données, un profil supprimé sur l’autre retiré avec ses données, son ID en majuscules mis en minuscules ; les données
+de chaque profil fusionnées selon les règles de l’instantané lui-même (la progression la plus récente l’emportant, un
+favori supprimé dans ce profil retiré, un favori d’une playlist supprimée retiré) ; les données envoyées pour le profil
+principal dans `profileData` ignorées (ses données sont celles de l’instantané lui-même).

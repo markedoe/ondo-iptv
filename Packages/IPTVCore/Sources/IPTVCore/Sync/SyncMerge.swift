@@ -85,9 +85,18 @@ public enum SyncMerge {
         let keys = pick(left.keys + right.keys, key: \.key, time: \.updatedAt, tie: { $0.value.isBefore($1.value) }, deleted: deleted)
         // Likewise for the order of the rows: a side without it (an older version) changes none.
         let rows = pick(left.rows + right.rows, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: deleted)
+        // Profiles: the later change wins; a deleted profile goes with its data (the main one is never deleted). A side
+        // without profiles (an older version) changes none.
+        let profileDeletions = deleted.filter { $0.key != SyncProfile.keyPrefix + SyncProfile.main }
+        let profiles = SyncProfile.capped(
+            pick(left.profiles + right.profiles, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: profileDeletions)
+        ).sorted { $0.id.isBefore($1.id) }
+        let keptPlaylists = kept.sorted { before(($0.addedAt, $0.id), ($1.addedAt, $1.id)) }
+        let profileData = mergeProfileData(left.profileData + right.profileData, profiles: profiles, playlists: keptPlaylists,
+                                           deleted: deleted, replaced: replaced)
 
         var result = left
-        result.playlists = kept.sorted { before(($0.addedAt, $0.id), ($1.addedAt, $1.id)) }
+        result.playlists = keptPlaylists
         result.favorites = favorites.sorted { before(($0.addedAt, $0.key), ($1.addedAt, $1.key)) }
         result.progress = progress.sorted { first, second in
             first.watchedAt != second.watchedAt ? first.watchedAt > second.watchedAt : first.key.isBefore(second.key)
@@ -96,9 +105,34 @@ public enum SyncMerge {
         result.people = people.sorted { before(($0.addedAt, $0.key), ($1.addedAt, $1.key)) }
         result.keys = keys.sorted { $0.service.isBefore($1.service) }
         result.rows = SyncRows.capped(rows).sorted { $0.tab.isBefore($1.tab) }
+        result.profiles = profiles
+        result.profileData = profileData
         result.deleted = deleted
         result.replaced = replaced
         return result
+    }
+
+    /// The data of each profile kept, other than the main one (docs/SYNC.md, "Profiles"): merged as a snapshot of its own
+    /// by the same rules, with the playlists as merged (a favourite of a deleted playlist goes, a replaced playlist's
+    /// become the one kept). A profile deleted, or not kept, goes with its data.
+    private static func mergeProfileData(_ buckets: [SyncProfileData], profiles: [SyncProfile], playlists: [SyncPlaylist],
+                                         deleted: [String: Int64], replaced: [String: String]) -> [SyncProfileData] {
+        let kept = Set(profiles.map(\.id))
+        let deletedPlaylists = deleted.filter { $0.key.hasPrefix("playlist:") }
+        var byProfile: [String: [SyncProfileData]] = [:]
+        var order: [String] = []
+        for bucket in buckets where bucket.profile != SyncProfile.main && kept.contains(bucket.profile) {
+            if byProfile[bucket.profile] == nil { order.append(bucket.profile) }
+            byProfile[bucket.profile, default: []].append(bucket)
+        }
+        return order.map { profile in
+            // Merged with an empty side first: one side's bucket alone gets the playlists' outcome too.
+            var merged = SyncProfileData(profile: profile).records(playlists: playlists, deletedPlaylists: deletedPlaylists, replaced: replaced)
+            for bucket in byProfile[profile] ?? [] {
+                merged = merge(merged, bucket.records(playlists: playlists, deletedPlaylists: deletedPlaylists, replaced: replaced))
+            }
+            return SyncProfileData(profile: profile, records: merged)
+        }.sorted { $0.profile.isBefore($1.profile) }
     }
 
     /// Playlists that are the same subscription: same kind, same address (trimmed, ignoring case), same login.

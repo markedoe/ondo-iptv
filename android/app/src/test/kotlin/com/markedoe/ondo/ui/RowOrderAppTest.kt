@@ -34,7 +34,6 @@ import com.markedoe.ondo.Fixtures
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.sync.SyncRows
-import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.ui.screens.RowOrderActions
 import com.markedoe.ondo.ui.screens.RowOrderScreen
@@ -70,7 +69,8 @@ class RowOrderAppTest {
     private val sciFi = RowOrder.categoryKey(Fixtures.sciFi.id, Fixtures.sciFi.name)
     private val thriller = RowOrder.categoryKey(Fixtures.thriller.id, Fixtures.thriller.name)
 
-    private fun settings(vararg rows: SyncRows) = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, rowOrders = rows.toList())
+    /** The open profile's library with [rows] saved (each profile has its own order, docs/PROFILES.md). */
+    private fun rows(vararg rows: SyncRows) = LibraryState(rowOrders = rows.toList())
 
     @Test
     fun theMoviesTabFollowsTheOrderSavedAndAllMoviesComesFirstByDefault() {
@@ -80,12 +80,12 @@ class RowOrderAppTest {
         assertEquals(Fixtures.northernLights.id, (byDefault.all.first() as com.markedoe.ondo.ui.model.ShowcaseItem.MovieItem).movie.id)
         assertEquals(UiMappers.grid(Fixtures.state(), series = false, categoryId = null, myList = false, filter = "").size, byDefault.allCount)
         val saved = SyncRows(SyncRows.MOVIES, listOf(thriller, "all", drama), listOf(sciFi, "new"), updatedAt = 1)
-        val ordered = UiMappers.vod(Fixtures.state(settings = settings(saved)), series = false, title = "", now = Fixtures.NOW)
+        val ordered = UiMappers.vod(Fixtures.state(library = rows(saved)), series = false, title = "", now = Fixtures.NOW)
         assertEquals(listOf(thriller, "all", drama), ordered.shownRows.take(3))
         assertFalse(sciFi in ordered.shownRows)
         assertFalse("new" in ordered.shownRows)
         // The series tab keeps its own order.
-        val series = UiMappers.vod(Fixtures.state(settings = settings(saved)), series = true, title = "", now = Fixtures.NOW)
+        val series = UiMappers.vod(Fixtures.state(library = rows(saved)), series = true, title = "", now = Fixtures.NOW)
         assertEquals(RowOrder.ALL, series.shownRows.first())
     }
 
@@ -93,7 +93,7 @@ class RowOrderAppTest {
     @Test
     fun theOrderTravelsWithSyncAndTheLaterOneIsKept() {
         val mine = SyncRows(SyncRows.MOVIES, listOf(drama, "all"), updatedAt = 10)
-        val state = Fixtures.state(settings = settings(mine))
+        val state = Fixtures.state(library = rows(mine))
         val sent = com.markedoe.ondo.data.SyncData.snapshot(state, "a", null, now = 20)
         assertEquals(listOf(mine), sent.rows)
         val later = SyncRows(SyncRows.MOVIES, listOf("all", drama), listOf("trending"), updatedAt = 15)
@@ -104,9 +104,9 @@ class RowOrderAppTest {
         assertEquals(listOf(mine), com.markedoe.ondo.data.SyncData.apply(state, old).rows)
         // Both tabs saved: a merge that changes nothing gives them back as they are kept (nothing to write again).
         val both = listOf(mine, SyncRows(SyncRows.SERIES, listOf("all"), updatedAt = 11))
-        val kept = Fixtures.state(settings = AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, rowOrders = both))
+        val kept = Fixtures.state(library = LibraryState(rowOrders = both))
         val again = com.markedoe.ondo.core.sync.SyncMerge.merge(com.markedoe.ondo.data.SyncData.snapshot(kept, "a", null, now = 20), com.markedoe.ondo.core.sync.SyncSnapshot(device = "b"))
-        assertEquals(kept.settings.rowOrders, com.markedoe.ondo.data.SyncData.apply(kept, again).rows)
+        assertEquals(kept.library.rowOrders, com.markedoe.ondo.data.SyncData.apply(kept, again).rows)
     }
 
     /** A category hidden in Settings (here with its language) never shows, whatever the order saved says. */
@@ -114,8 +114,7 @@ class RowOrderAppTest {
     fun aHiddenCategoryNeverShowsWhateverTheOrder() {
         val saved = SyncRows(SyncRows.MOVIES, listOf(drama, "all"), updatedAt = 1)
         val state = Fixtures.state(
-            library = LibraryState(hiddenCategories = setOf("${Fixtures.PLAYLIST_ID}|${Fixtures.drama.id}")),
-            settings = settings(saved),
+            library = LibraryState(hiddenCategories = setOf("${Fixtures.PLAYLIST_ID}|${Fixtures.drama.id}"), rowOrders = listOf(saved)),
         )
         val vod = UiMappers.vod(state, series = false, title = "", now = Fixtures.NOW)
         assertFalse(drama in vod.shownRows)
@@ -128,7 +127,7 @@ class RowOrderAppTest {
     @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
     fun theRowsShowInTheirOrderAndAllMoviesSeeAllOpensTheWholeCatalogue() {
         val saved = SyncRows(SyncRows.MOVIES, listOf(sciFi, "all"), updatedAt = 1)
-        val ui = UiMappers.vod(Fixtures.state(settings = settings(saved)), series = false, title = "Movies", now = Fixtures.NOW)
+        val ui = UiMappers.vod(Fixtures.state(library = rows(saved)), series = false, title = "Movies", now = Fixtures.NOW)
         var opened: Any? = "nothing"
         var inputModes: InputModeManager? = null
         compose.setContent {

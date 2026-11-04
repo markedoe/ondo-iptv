@@ -27,6 +27,11 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public var keys: [SyncKey]
     /// The order of the rows of the Movies and Series tabs, and the rows hidden; none from a device that does not sync them.
     public var rows: [SyncRows]
+    /// The viewer profiles (docs/PROFILES.md, docs/SYNC.md "Profiles"); none from a device that does not sync them.
+    public var profiles: [SyncProfile]
+    /// The data of each profile other than the main one, whose data is the records above (an older device knows only
+    /// those); none from a device that does not sync profiles.
+    public var profileData: [SyncProfileData]
     public var deleted: [String: Int64]
     /// Playlist IDs that became another playlist (the same playlist added on two devices): old ID → new ID.
     public var replaced: [String: String]
@@ -56,6 +61,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         people: [SyncPerson] = [],
         keys: [SyncKey] = [],
         rows: [SyncRows] = [],
+        profiles: [SyncProfile] = [],
+        profileData: [SyncProfileData] = [],
         deleted: [String: Int64] = [:],
         replaced: [String: String] = [:],
         clock: Int64? = nil,
@@ -75,6 +82,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         self.people = people
         self.keys = keys
         self.rows = rows
+        self.profiles = profiles
+        self.profileData = profileData
         self.deleted = deleted
         self.replaced = replaced
         self.clock = clock
@@ -85,7 +94,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, rows, deleted, replaced, clock
+        case type, version, device, deviceName, playlists, favorites, progress, lists, people, keys, rows, profiles, profileData
+        case deleted, replaced, clock
         case digest, seen, probe, unchanged
     }
 
@@ -104,6 +114,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         people = try c.value(.people, default: [])
         keys = try c.value(.keys, default: [])
         rows = try c.value(.rows, default: [])
+        profiles = try c.value(.profiles, default: [])
+        profileData = try c.value(.profileData, default: [])
         deleted = try c.value(.deleted, default: [:])
         replaced = try c.value(.replaced, default: [:])
         clock = try c.decodeIfPresent(Int64.self, forKey: .clock)
@@ -123,7 +135,15 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     /// earlier ones and those a peer sent it.
     public func contentForDigest(leavingOut: Set<String> = []) throws -> Data {
         var content = self
-        if !leavingOut.isEmpty { content.progress = progress.filter { !leavingOut.contains($0.key) } }
+        if !leavingOut.isEmpty {
+            content.progress = progress.filter { !leavingOut.contains($0.key) }
+            // The item playing may be any profile's: left out of each profile's progress alike.
+            content.profileData = profileData.map { bucket in
+                var bucket = bucket
+                bucket.progress = bucket.progress.filter { !leavingOut.contains($0.key) }
+                return bucket
+            }
+        }
         content.device = ""
         content.deviceName = nil
         content.clock = nil
@@ -186,6 +206,11 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         var copy = self
         copy.deleted = kept
         copy.replaced = replaced.filter { kept["playlist:" + $0.key] != nil }
+        copy.profileData = profileData.map { bucket in
+            var bucket = bucket
+            bucket.deleted = bucket.deleted.filter { $0.value >= oldest }
+            return bucket
+        }
         return copy
     }
 
@@ -205,6 +230,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         times += people.map(\.addedAt)
         times += keys.map(\.updatedAt)
         times += rows.map(\.updatedAt)
+        times += profiles.map(\.updatedAt)
+        for bucket in profileData { times += bucket.records().times }
         times += deleted.values
         return times
     }
@@ -238,6 +265,8 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         copy.people = people.filter { past($0.addedAt) }
         copy.keys = keys.filter { past($0.updatedAt) }
         copy.rows = rows.filter { past($0.updatedAt) }
+        copy.profiles = profiles.filter { past($0.updatedAt) }
+        copy.profileData = profileData.map { SyncProfileData(profile: $0.profile, records: $0.records().withoutRecordsAfter(latest)) }
         copy.deleted = deleted.filter { past($0.value) }
         return copy
     }
@@ -273,6 +302,12 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             return list
         }
         copy.rows = SyncRows.capped(rows.map { $0.normalized() })
+        copy.profiles = SyncProfile.capped(profiles.map { profile in
+            var profile = profile
+            profile.id = profile.id.lowercased()
+            return profile
+        })
+        copy.profileData = profileData.map { SyncProfileData(profile: $0.profile.lowercased(), records: $0.records().normalized()) }
         copy.deleted = Dictionary(deleted.map { (Self.lowercasingID(ofDeleted: $0.key), $0.value) }, uniquingKeysWith: max)
         copy.replaced = Dictionary(replaced.map { ($0.key.lowercased(), $0.value.lowercased()) }, uniquingKeysWith: { _, last in last })
         return copy
@@ -295,7 +330,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             guard let bar = item.unicodeScalars.firstIndex(of: "|") else { return list + "|" + item.lowercased() }
             return list + "|" + String(item.unicodeScalars[..<bar]).lowercased() + String(item.unicodeScalars[bar...])
         }
-        for prefix in ["playlist:", "list:", "favorite:", "progress:"] where scalars.starts(with: prefix.unicodeScalars) {
+        for prefix in ["playlist:", "list:", "favorite:", "progress:", SyncProfile.keyPrefix] where scalars.starts(with: prefix.unicodeScalars) {
             let rest = String(scalars.dropFirst(prefix.unicodeScalars.count))
             guard prefix == "favorite:" || prefix == "progress:", let bar = rest.unicodeScalars.firstIndex(of: "|") else {
                 return prefix + rest.lowercased()
@@ -612,5 +647,107 @@ public struct SentSnapshot: Sendable {
     public func leaving(_ others: Set<String>, hash: (Data) -> String) throws -> SentSnapshot {
         others == leavingOut ? self
             : SentSnapshot(snapshot: snapshot, leavingOut: others, digest: hash(try snapshot.contentForDigest(leavingOut: others)))
+    }
+}
+
+/// A viewer profile (docs/SYNC.md, "Profiles"): its name and avatar, and whether it is a Kids profile. Never its PIN,
+/// which stays on each device (docs/PROFILES.md, "PIN").
+public struct SyncProfile: Codable, Hashable, Sendable {
+    public static let keyPrefix = "profile:"
+    /// The main profile: its data is the snapshot's own records, and it is never deleted.
+    public static let main = "00000000-0000-0000-0000-000000000001"
+    /// At most this many profiles in a snapshot: the main one first, then by ID.
+    public static let maxProfiles = 16
+
+    public var id: String
+    public var name: String
+    public var colorIndex: Int
+    public var symbol: String
+    public var kids: Bool
+    public var updatedAt: Int64
+
+    public var key: String { Self.keyPrefix + id }
+
+    /// The tie string of the merge (docs/SYNC.md, "Merge", rule 2).
+    var tie: String { [name, String(colorIndex), symbol, kids ? "1" : "0"].joined(separator: "\n") }
+
+    public init(id: String, name: String = "", colorIndex: Int = 0, symbol: String = "initial", kids: Bool = false, updatedAt: Int64) {
+        self.id = id
+        self.name = name
+        self.colorIndex = colorIndex
+        self.symbol = symbol
+        self.kids = kids
+        self.updatedAt = updatedAt
+    }
+
+    enum CodingKeys: String, CodingKey { case id, name, colorIndex, symbol, kids, updatedAt }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        name = try c.value(.name, default: "")
+        colorIndex = try c.value(.colorIndex, default: 0)
+        symbol = try c.value(.symbol, default: "initial")
+        kids = try c.value(.kids, default: false)
+        updatedAt = try c.decode(Int64.self, forKey: .updatedAt)
+    }
+
+    /// `profiles` without those past the `maxProfiles` first (the main one, then by ID); the others in their order.
+    static func capped(_ profiles: [SyncProfile]) -> [SyncProfile] {
+        var ids: [String] = []
+        for profile in profiles where !ids.contains(profile.id) { ids.append(profile.id) }
+        guard ids.count > maxProfiles else { return profiles }
+        let kept = Set(ids.sorted { first, second in
+            (first == main) != (second == main) ? first == main : first.isBefore(second)
+        }.prefix(maxProfiles))
+        return profiles.filter { kept.contains($0.id) }
+    }
+}
+
+/// The data of a profile other than the main one (docs/SYNC.md, "Profiles"): its My List and favourite channels,
+/// progress, lists, people and order of rows, with what was deleted in it, by the same keys as the snapshot's own.
+public struct SyncProfileData: Codable, Hashable, Sendable {
+    public var profile: String
+    public var favorites: [SyncFavorite]
+    public var progress: [SyncProgress]
+    public var lists: [SyncList]
+    public var people: [SyncPerson]
+    public var rows: [SyncRows]
+    public var deleted: [String: Int64]
+
+    public init(profile: String, favorites: [SyncFavorite] = [], progress: [SyncProgress] = [], lists: [SyncList] = [],
+                people: [SyncPerson] = [], rows: [SyncRows] = [], deleted: [String: Int64] = [:]) {
+        self.profile = profile
+        self.favorites = favorites
+        self.progress = progress
+        self.lists = lists
+        self.people = people
+        self.rows = rows
+        self.deleted = deleted
+    }
+
+    /// The bucket of `profile` from `records` (the playlists, keys and playlist deletions it carries left out).
+    public init(profile: String, records: SyncSnapshot) {
+        self.init(profile: profile, favorites: records.favorites, progress: records.progress, lists: records.lists,
+                  people: records.people, rows: records.rows, deleted: records.deleted.filter { !$0.key.hasPrefix("playlist:") })
+    }
+
+    enum CodingKeys: String, CodingKey { case profile, favorites, progress, lists, people, rows, deleted }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        profile = try c.decode(String.self, forKey: .profile)
+        favorites = try c.value(.favorites, default: [])
+        progress = try c.value(.progress, default: [])
+        lists = try c.value(.lists, default: [])
+        people = try c.value(.people, default: [])
+        rows = try c.value(.rows, default: [])
+        deleted = try c.value(.deleted, default: [:])
+    }
+
+    /// Its records as a snapshot of their own (to merge, normalise, date them with the snapshot's rules).
+    public func records(playlists: [SyncPlaylist] = [], deletedPlaylists: [String: Int64] = [:], replaced: [String: String] = [:]) -> SyncSnapshot {
+        SyncSnapshot(device: "", playlists: playlists, favorites: favorites, progress: progress, lists: lists, people: people,
+                     rows: rows, deleted: deleted.merging(deletedPlaylists) { _, playlist in playlist }, replaced: replaced)
     }
 }

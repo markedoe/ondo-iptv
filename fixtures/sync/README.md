@@ -11,3 +11,9 @@ winning, a removal after a save dropping it, the key of an unknown service kept)
 tabs, one record per tab, the later one winning, on equal times the smaller tie string; keys that are blank or hold a
 control character dropped, the order without repeats, the hidden rows each once and sorted; the record of a tab this
 version does not know kept.
+
+`profiles-a.json` and `profiles-b.json` merge into `profiles-merged.json` the same way: the profiles, the later change
+winning (a rename on one device), a profile added on one device kept with its data, a profile deleted on the other
+dropped with its data, its upper-case ID lowercased; each profile's data merged by the snapshot's own rules (a later
+progress winning, a favourite deleted in that profile dropped, a favourite of a deleted playlist dropped); the data
+sent for the main profile in `profileData` ignored (its data is the snapshot's own).

@@ -5,6 +5,9 @@ import com.markedoe.ondo.core.model.Channel
 import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Profile
+import com.markedoe.ondo.core.sync.SyncFavorite
+import com.markedoe.ondo.core.sync.SyncRows
+import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.ui.Labels
 import com.markedoe.ondo.ui.UiMappers
 import java.io.File
@@ -286,13 +289,143 @@ class ProfilesTest {
         assertTrue(UiMappers.zappingChannels(kidsState).none { it.id == night.id })
     }
 
+    // MARK: Sync (docs/SYNC.md, "Profiles")
+
+    /** A device of its own: its store in [name], the same playlist and catalogue. */
+    private suspend fun TestScope.device(name: String): OndoRepository {
+        val directory = folder.newFolder(name)
+        val store = AppStore(directory)
+        store.savePlaylists(listOf(Fixtures.playlist))
+        store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content)
+        store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, syncDeviceId = name))
+        val repository = OndoRepository(store, FakeHttp(emptyMap()), backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler), mainProfileName = "Me")
+        repository.bootstrap()
+        repository.awaitState { it.isReady && it.content.movies.isNotEmpty() }
+        return repository
+    }
+
+    /** A session both ways, as two devices on the network have. */
+    private fun TestScope.session(a: OndoRepository, b: OndoRepository) {
+        requireNotNull(b.mergeSync(requireNotNull(a.syncSnapshot("A")), "B"))
+        requireNotNull(a.mergeSync(requireNotNull(b.syncSnapshot("B")), "A"))
+        testScheduler.advanceUntilIdle()
+    }
+
+    private fun OndoRepository.profile(name: String) = state.value.profiles.firstOrNull { it.name == name }
+
     @Test
-    fun onlyTheMainProfileSyncsForNow() = runTest {
+    fun everyProfileSyncsWhicheverIsOpen() = runTest {
         val repository = started()
-        assertNotNull(repository.syncSnapshot("TV"))
         val sam = requireNotNull(repository.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
         switch(repository, sam)
-        assertNull(repository.syncSnapshot("TV"))
-        assertFalse(repository.state.value.syncsThisProfile)
+        watch(repository, "3", 900.0)
+        val snapshot = requireNotNull(repository.syncSnapshot("TV"))
+        assertTrue(snapshot.profiles.any { it.id == sam.id && it.name == "Sam" })
+        assertEquals(listOf("3"), snapshot.profileData.single { it.profile == sam.id }.progress.map { it.item })
+        assertTrue("the main profile's records are the snapshot's own", snapshot.progress.isEmpty())
+    }
+
+    @Test
+    fun twoDevicesAddAndEditDifferentProfilesAndConverge() = runTest {
+        val tv = device("tv")
+        val phone = device("phone")
+        val sam = requireNotNull(tv.addProfile("Sam", 1, "star.fill", isKids = false, pin = "2468"))
+        val ana = requireNotNull(phone.addProfile("Ana", 2, "🦊", isKids = true, pin = null))
+        switch(tv, sam)
+        watch(tv, "3", 900.0)
+        session(tv, phone)
+        for (device in listOf(tv, phone)) assertEquals(setOf("Me", "Sam", "Ana"), device.state.value.profiles.map { it.name }.toSet())
+        // The PIN stays on the device where it was set.
+        assertTrue(tv.profile("Sam")!!.isProtected)
+        assertFalse(phone.profile("Sam")!!.isProtected)
+        assertTrue(phone.profile("Ana")!!.isKids)
+        // Sam's watch reaches Sam on the phone, never the phone's main profile nor Ana.
+        assertTrue(phone.state.value.library.history.isEmpty())
+        switch(phone, phone.profile("Sam")!!)
+        assertNotNull(phone.state.value.library.progress(key("3")))
+        switch(phone, phone.profile("Ana")!!)
+        assertTrue(phone.state.value.library.history.isEmpty())
+        // A rename on the phone reaches the TV.
+        phone.updateProfile(sam.id, "Samuel", 1, "star.fill", isKids = false, pin = null, removePin = false)
+        session(tv, phone)
+        assertEquals("Samuel", tv.profile("Samuel")?.name)
+        assertTrue("its PIN kept on the TV", tv.profile("Samuel")!!.isProtected)
+        assertEquals(ana.id, tv.profile("Ana")?.id)
+    }
+
+    @Test
+    fun aProfileDeletedOnOneDeviceDisappearsOnTheOtherWithItsData() = runTest {
+        val tv = device("tv")
+        val phone = device("phone")
+        val sam = requireNotNull(tv.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        val ana = requireNotNull(tv.addProfile("Ana", 2, Profile.INITIAL, isKids = false, pin = null))
+        switch(tv, sam)
+        watch(tv, "3", 900.0)
+        switch(tv, ana)
+        watch(tv, "4", 600.0)
+        session(tv, phone)
+        val before = requireNotNull(phone.syncSnapshot("B"))
+        // Deleted on the phone while it is open there: the main profile opens.
+        switch(phone, phone.profile("Sam")!!)
+        phone.deleteProfile(sam.id)
+        assertTrue(phone.state.value.activeProfile.isMain)
+        session(tv, phone)
+        for (device in listOf(tv, phone)) assertEquals(setOf("Me", "Ana"), device.state.value.profiles.map { it.name }.toSet())
+        assertFalse(File(folder.root, "tv/library-${sam.id}.json").exists())
+        // An older snapshot of the phone, with Sam and his data, brings nothing back.
+        tv.mergeSync(before, "B")
+        testScheduler.advanceUntilIdle()
+        assertNull(tv.profile("Sam"))
+        // The other profiles are untouched: Ana keeps her watch.
+        switch(tv, tv.profile("Ana")!!)
+        assertNotNull(tv.state.value.library.progress(key("4")))
+    }
+
+    @Test
+    fun anOlderDeviceWithoutProfilesMapsToTheMainProfile() = runTest {
+        val tv = device("tv")
+        val sam = requireNotNull(tv.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        switch(tv, sam)
+        watch(tv, "3", 900.0)
+        val playlist = requireNotNull(tv.syncSnapshot("A")).playlists.single()
+        val older = SyncSnapshot(
+            device = "old",
+            playlists = listOf(playlist),
+            favorites = listOf(SyncFavorite(playlist.id, "movie", "1", "Northern Lights", addedAt = clock - 1)),
+        )
+        tv.mergeSync(older, "Old")
+        testScheduler.advanceUntilIdle()
+        assertEquals(setOf("Me", "Sam"), tv.state.value.profiles.map { it.name }.toSet())
+        // Sam (open) keeps his own data; the older device's favourite is the main profile's.
+        assertFalse(tv.state.value.library.isFavorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, "1"))
+        assertNotNull(tv.state.value.library.progress(key("3")))
+        switch(tv, tv.profile("Me")!!)
+        assertTrue(tv.state.value.library.isFavorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, "1"))
+        assertNull(tv.state.value.library.progress(key("3")))
+    }
+
+    @Test
+    fun eachProfileHasItsOwnRowOrderAndAKidsProfileCannotChangeIt() = runTest {
+        val moved = SyncRows(SyncRows.MOVIES, listOf("all", "continue"), updatedAt = 1234)
+        // The order saved before profiles (the device's) becomes the main profile's, with its time.
+        val repository = started(store(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, rowOrders = listOf(moved))))
+        assertEquals(listOf(moved), repository.state.value.library.rowOrders)
+        assertTrue(disk().loadSettings().rowOrders.isEmpty())
+        assertEquals(listOf(moved), AppStore(folder.root).loadLibrary().rowOrders)
+        val sam = requireNotNull(repository.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        val kids = requireNotNull(repository.addProfile("Kids", 4, Profile.INITIAL, isKids = true, pin = null))
+        switch(repository, sam)
+        assertNull(repository.state.value.library.rowOrder(series = false))
+        repository.setRowOrder(series = false, arranged = listOf("continue", "all"), hidden = emptyList())
+        assertEquals(listOf("continue", "all"), repository.state.value.library.rowOrder(series = false)?.order)
+        switch(repository, kids)
+        repository.setRowOrder(series = false, arranged = listOf("all", "continue"), hidden = listOf("all"))
+        assertNull(repository.state.value.library.rowOrder(series = false))
+        switch(repository, repository.profile("Me")!!)
+        assertEquals(moved, repository.state.value.library.rowOrder(series = false))
+        // Sam's order travels in Sam's data; the main one's as the snapshot's own.
+        val snapshot = requireNotNull(repository.syncSnapshot("TV"))
+        assertEquals(listOf(moved), snapshot.rows)
+        assertEquals(listOf("continue", "all"), snapshot.profileData.single { it.profile == sam.id }.rows.single().order)
     }
 }

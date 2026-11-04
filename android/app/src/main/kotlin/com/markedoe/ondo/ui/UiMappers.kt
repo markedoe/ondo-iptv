@@ -440,7 +440,7 @@ object UiMappers {
         }
         val rows = categories.mapNotNull { category -> byCategory[category.id]?.take(ROW_LENGTH)?.let { CategoryRow(category, it) } }
         val kind = if (series) ItemKind.SERIES else ItemKind.MOVIE
-        val saved = state.settings.rowOrder(series)
+        val saved = state.library.rowOrder(series)
         // The viewer's order (Settings → Row order); a row they hid never shows, nor one a hidden category or language left out.
         val order = RowOrder.arrange(tabRowKeys(categories, series), saved?.order.orEmpty(), saved?.hidden.orEmpty())
             .filter { !it.hidden }.map { it.key }
@@ -473,7 +473,7 @@ object UiMappers {
         fun tab(series: Boolean): List<RowOrderEntry> {
             val categories = (if (series) state.content.seriesCategories else state.content.movieCategories).filter { it.id !in hidden }.distinctBy { it.id }
             val names = categories.associate { RowOrder.categoryKey(it.id, it.name) to it.name }
-            val saved = state.settings.rowOrder(series)
+            val saved = state.library.rowOrder(series)
             return RowOrder.arrange(tabRowKeys(categories, series), saved?.order.orEmpty(), saved?.hidden.orEmpty())
                 .map { RowOrderEntry(it.key, names[it.key], it.hidden) }
         }
@@ -802,6 +802,7 @@ object UiMappers {
     }
 
     fun settings(state: OndoState, version: String, syncDevices: List<SyncDevice> = emptyList(), kindLabel: (Boolean) -> String): SettingsUiState = SettingsUiState(
+        canChangeRowOrder = !state.activeProfile.isKids,
         playlists = state.playlists.map { playlist ->
             val host = runCatching { java.net.URI(playlist.url.trim()).host }.getOrNull()
             val active = playlist.id == state.activePlaylistId
