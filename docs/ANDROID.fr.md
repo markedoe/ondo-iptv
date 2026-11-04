@@ -59,7 +59,11 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   rangées sont toujours la page de l'onglet : aucune catégorie n'est choisie au-dessus. Les titres d'une catégorie
   s'ouvrent depuis la carte Tout voir au bout de sa rangée, comme une page par-dessus les rangées : Retour revient à
   la même rangée et à la même carte, les rangées défilées comme avant, et l'onglet choisi dans la barre (OK dessus, ou
-  un autre onglet puis celui-ci) montre de nouveau ses rangées. La barre du haut ne porte que les onglets, Recherche et
+  un autre onglet puis celui-ci) montre de nouveau ses rangées. Chaque rangée qui peut contenir plus qu'elle n'affiche
+  finit par Tout voir, Nouveaux films, Nouvelles séries et Films primés compris (sur l'Accueil aussi) : leur page
+  liste tous les titres de la rangée dans l'ordre de la rangée (« Ordre par défaut » dans Trier ; un autre ordre choisi
+  là ne vaut que pour cette page). Continuer à regarder (des cartes de reprise) et Tendances (toujours complète) n'en
+  ont pas. La barre du haut ne porte que les onglets, Recherche et
   Réglages, aucune ligne de playlist (Réglages → Playlists indique quand chacune a été mise à jour) ; les catégories
   montrées se choisissent dans Réglages → Langues et catégories. Les titres d'une catégorie et les pages de genre,
   d'année et de prix sur TV commencent par leurs affiches juste sous l'en-tête : pas de rangée Retour (le Retour de la
@@ -205,7 +209,8 @@ libres, chaînes inventées, adresses `example.com`) :
   (`movies-tab-focused`, `movies-down-1`, `movies-down-2`, `series-…`), les titres d'une catégorie depuis l'onglet
   puis Bas (`grid-category`, `grid-down-1`), leurs puces de tri atteintes avec Haut (`grid-sort-chips`) et loin dans
   une longue grille (`grid-down-3`), les rangées après Retour depuis les titres d'une catégorie, le focus sur sa carte
-  Tout voir (`rows-after-back`), les titres d'un genre (`browse-genre`), Accueil avec la télécommande dans ses
+  Tout voir (`rows-after-back`), la carte Tout voir de la rangée Nouveaux films (`movies-new-see-all`) et la page
+  qu'elle ouvre avec ses puces de tri (`grid-new`, `grid-new-sort-chips`), les titres d'un genre (`browse-genre`), Accueil avec la télécommande dans ses
   rangées).
 
 Le workflow *Android* compare chaque capture à sa référence (`./gradlew :app:verifyRoborazziDebug`) ; au plus 0,1 %

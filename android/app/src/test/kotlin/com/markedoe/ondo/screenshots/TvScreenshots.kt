@@ -25,6 +25,9 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import com.markedoe.ondo.HangGuard
 import com.markedoe.ondo.core.TextNormalizer
 import com.markedoe.ondo.ui.Labels
+import com.markedoe.ondo.R
+import com.markedoe.ondo.ui.GridSource
+import com.markedoe.ondo.ui.Routes
 import com.markedoe.ondo.ui.TopLevel
 import com.markedoe.ondo.ui.UiMappers
 import com.markedoe.ondo.ui.components.LocalCarouselAutoAdvance
@@ -58,6 +61,7 @@ import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.ui.screens.BrowseKind
 import com.markedoe.ondo.ui.screens.BrowseScreen
 import com.markedoe.ondo.ui.screens.PosterGridScreen
+import com.markedoe.ondo.ui.screens.LocalPlaylistOrderLabel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -354,6 +358,58 @@ class TvScreenshots {
         assertTrue("back on the rows", compose.onAllNodes(hasTestTag("grid")).fetchSemanticsNodes().isEmpty())
         assertTrue("back on See all of $shelf", onSeeAll() && focusedIn(shelf))
         capture("rows-after-back")
+    }
+
+    /**
+     * The New movies row ends with a See all card like a category's; OK on it opens every new movie in the row's order
+     * ("Sort: Default order" above them, reached with Up from the first row), and Back comes back to that card.
+     */
+    @Test
+    fun theNewMoviesSeeAllAndItsGrid() {
+        val vod = UiMappers.vod(state, series = false, title = "Movies", now = now)
+        val route = Routes.Grid(series = false, source = GridSource.NEW.name)
+        show(TopLevel.MOVIES, tabPage = false) {
+            val nav = rememberNavController()
+            NavHost(nav, startDestination = "rows") {
+                composable("rows") {
+                    CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory()) {
+                        FocusEntry { VodScreen(vod, VodActions(onSeeAllRow = { if (it == GridSource.NEW) nav.navigate("grid") })) }
+                    }
+                }
+                composable("grid") {
+                    CompositionLocalProvider(LocalFocusMemory provides rememberFocusMemory(), LocalPlaylistOrderLabel provides R.string.sort_default_order) {
+                        FocusEntry {
+                            val items = remember { UiMappers.grid(state, route, now = now) }
+                            PosterGridScreen("New movies", items, filter = "", onFilter = {}, onOpen = {}, onBack = {}, sort = PosterSort.PLAYLIST, hideWatched = state.settings.hideWatchedMovies)
+                        }
+                    }
+                }
+            }
+        }
+        var presses = 0
+        while (!focusedIn("shelfNew")) {
+            check(presses++ < 12) { "Down never reached the New movies row" }
+            press(Key.DirectionDown)
+        }
+        presses = 0
+        while (!onSeeAll()) {
+            check(presses++ < 15) { "Right never reached See all" }
+            press(Key.DirectionRight)
+        }
+        assertTrue("on the New movies row's See all", focusedIn("shelfNew"))
+        capture("movies-new-see-all")
+        press(Key.DirectionCenter)
+        assertTrue("the new movies' grid", compose.onAllNodes(hasTestTag("grid")).fetchSemanticsNodes().isNotEmpty())
+        capture("grid-new")
+        press(Key.DirectionDown)
+        press(Key.DirectionUp)
+        assertTrue("Up from the first row: the Sort chip", compose.onAllNodes(isFocused() and hasTestTag(SORT_CHIP_TAG)).fetchSemanticsNodes().isNotEmpty())
+        capture("grid-new-sort-chips")
+        compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
+        advance()
+        advance()
+        assertTrue("back on the rows", compose.onAllNodes(hasTestTag("grid")).fetchSemanticsNodes().isEmpty())
+        assertTrue("back on the New movies row's See all", onSeeAll() && focusedIn("shelfNew"))
     }
 
     private fun onSeeAll() = compose.onAllNodes(isFocused() and hasTestTag("seeAll")).fetchSemanticsNodes().isNotEmpty() || focusedIn("seeAll")

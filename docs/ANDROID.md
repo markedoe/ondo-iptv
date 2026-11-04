@@ -53,7 +53,10 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   again, the next row comes up whole and the header follows. The rows are always the tab's page: no category is
   chosen above them. A category's titles open from the See all card at the end of its row, as a page over the rows:
   Back comes back to the same row and card, the rows scrolled as they were, and the tab chosen on the bar (OK on it,
-  or another tab then this one) shows its rows again. The top bar holds the tabs, Search and Settings only, no
+  or another tab then this one) shows its rows again. Every row that can hold more than it shows ends with See all,
+  New movies, New series and Award winners included (on Home too): their page lists all the row's titles in the row's
+  own order ("Default order" in Sort; another order chosen there is that page's only). Continue watching (resume
+  cards) and Trending (always whole) have none. The top bar holds the tabs, Search and Settings only, no
   playlist line (Settings → Playlists says when each was updated); which categories show is in Settings → Languages
   and categories. A category's titles and the genre, year and award pages on a TV start with their posters right
   under the header: no Back row (the remote's Back goes back), the page's name on one line above the first row, no
@@ -177,7 +180,8 @@ channels, `example.com` addresses):
   with a row focused, the path tab → Down → Down on Movies and on Series (`movies-tab-focused`, `movies-down-1`,
   `movies-down-2`, `series-…`), a category's titles from the tab then Down (`grid-category`, `grid-down-1`), their
   sort chips reached with Up (`grid-sort-chips`) and deep in a long grid (`grid-down-3`), the rows after Back from a
-  category's titles, the focus on its See all card (`rows-after-back`), a genre's titles (`browse-genre`), Home with the remote in its rows).
+  category's titles, the focus on its See all card (`rows-after-back`), the New movies row's See all card
+  (`movies-new-see-all`) and the page it opens with its sort chips (`grid-new`, `grid-new-sort-chips`), a genre's titles (`browse-genre`), Home with the remote in its rows).
 
 The *Android* workflow compares every screenshot with its reference (`./gradlew :app:verifyRoborazziDebug`); at most
 0.1 % of the pixels may differ (anti-aliasing, `screenshots/Baselines.kt`). A screenshot that changed fails the run:

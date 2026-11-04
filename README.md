@@ -97,7 +97,9 @@ interface changes.
   The filter button is on the Movies, Series and Live TV screens.
 - **Row order** (Settings): the rows of Movies and Series in the order you choose, each shown or hidden (drag
   to move); "All Movies" / "All Series" at the top by default, with the catalogue's count: the latest additions, then
-  See All. New categories go to the end, one the provider removes keeps its place, and the order syncs.
+  See All. New categories go to the end, one the provider removes keeps its place, and the order syncs. Every row
+  that holds more than it shows (New Movies, New Series, Award Winners, on Home too) ends with See All: all its
+  titles, in the row's order.
 - **Offline downloads** (movies, episodes; TestFlight edition, not the App Store one), with their speed and time left, the reason in plain words when the
   provider refuses, limits connections or sends nothing, and their details to share.
 - **Data**: JSON backup / restore, clearable cache. Posters, thumbnails and the movie and series pages stay on the
@@ -127,6 +129,8 @@ interface changes.
 - **Row order** (Settings): the rows of Movies and Series in the order you choose, each shown or hidden (drag on
   a phone; on a TV, OK picks a row up, Up and Down move it, OK puts it down, Back cancels); "All movies" / "All
   series" at the top by default, with the catalogue's count: the latest additions, then See all. The order syncs.
+  Every row that holds more than it shows (New movies, New series, Award winners, on Home too) ends with See all:
+  all its titles, in the row's order.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), watched movies hidden if you like, a film's versions grouped (badges on its page, chips on a TV;
   [docs/VERSIONS.md](docs/VERSIONS.md)), detail pages (Resume, From Start, next

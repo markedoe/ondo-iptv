@@ -176,10 +176,10 @@ fun HomeScreen(
             item { ChannelShelf(state, metrics, actions) }
         }
         if (state.newMovies.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.new_movies), state.newMovies, metrics, actions, "shelfNewMovies") }
+            item { PosterShelf(stringResource(R.string.new_movies), state.newMovies, metrics, actions, "shelfNewMovies") { actions.onSeeAllRow(GridSource.NEW, false) } }
         }
         if (state.newSeries.isNotEmpty()) {
-            item { PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions, "shelfNewSeries") }
+            item { PosterShelf(stringResource(R.string.new_series), state.newSeries, metrics, actions, "shelfNewSeries") { actions.onSeeAllRow(GridSource.NEW, true) } }
         }
         if (state.trending.isNotEmpty()) {
             item { PosterShelf(stringResource(R.string.trending), state.trending, metrics, actions, "shelfTrending") }

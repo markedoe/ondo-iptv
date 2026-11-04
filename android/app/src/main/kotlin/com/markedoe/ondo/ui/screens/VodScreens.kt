@@ -287,10 +287,12 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                 }
             }
             RowOrder.NEW_RELEASES -> item(key = "vod:new") {
-                Shelf(stringResource(if (state.series) R.string.new_series else R.string.new_movies), metrics, Modifier.row("vod:new").testTag("shelfNew")) {
-                    itemsIndexed(state.newReleases, key = { _, it -> it.key }) { index, item ->
+                val onSeeAll = { actions.onSeeAllRow(GridSource.NEW) }
+                Shelf(stringResource(if (state.series) R.string.new_series else R.string.new_movies), metrics, Modifier.row("vod:new").testTag("shelfNew"), onSeeAll = onSeeAll) {
+                    itemsIndexed(state.newReleases.take(rowLength), key = { _, it -> it.key }) { index, item ->
                         PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "new:${item.key}", initialFocus = first == key && index == 0)
                     }
+                    if (television) item(key = "seeAll") { TvSeeAllCard(onClick = onSeeAll, tall = true, width = width, modifier = Modifier.focusMemory("new:seeAll")) }
                 }
             }
             RowOrder.TRENDING -> item(key = "vod:trending") {
@@ -301,10 +303,12 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                 }
             }
             RowOrder.AWARD_WINNERS -> item(key = "vod:awards") {
-                Shelf(stringResource(R.string.award_winners), metrics, Modifier.row("vod:awards").testTag("shelfAwards")) {
-                    itemsIndexed(state.awardWinners, key = { _, it -> it.key }) { index, item ->
+                val onSeeAll = { actions.onSeeAllRow(GridSource.AWARDS) }
+                Shelf(stringResource(R.string.award_winners), metrics, Modifier.row("vod:awards").testTag("shelfAwards"), onSeeAll = onSeeAll) {
+                    itemsIndexed(state.awardWinners.take(rowLength), key = { _, it -> it.key }) { index, item ->
                         PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "awards:${item.key}", initialFocus = first == key && index == 0)
                     }
+                    if (television) item(key = "seeAll") { TvSeeAllCard(onClick = onSeeAll, tall = true, width = width, modifier = Modifier.focusMemory("awards:seeAll")) }
                 }
             }
             // Keyed apart from the items above: a category's id is the provider's, any word.
