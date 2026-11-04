@@ -26,7 +26,7 @@ RUNS_ON = ("${{ fromJSON((github.event_name == 'push' || github.event_name == 'w
            "github.event_name == 'schedule') && vars.LINUX_RUNNER || '\"ubuntu-24.04\"') }}")
 HOSTED = re.compile(r"^(ubuntu|macos|windows)-[a-z0-9.-]+$")
 # A secret is any `secrets.NAME` or `secrets['NAME']` but the run's own GITHUB_TOKEN.
-SECRET = re.compile(r"secrets\s*(?:\.\s*(?!GITHUB_TOKEN\b)[A-Za-z_]|\[)|secrets:\s*inherit")
+SECRET = re.compile(r"secrets\s*(?:\.(?!GITHUB_TOKEN\b)[A-Za-z_]|\[)|secrets:\s*inherit")
 
 
 
@@ -38,7 +38,8 @@ def blocks(lines: list[str], indent: int) -> list[tuple[str, list[str]]]:
         match = pattern.match(line)
         if match:
             found.append((match.group(1), [line]))
-        elif found and (not line.strip() or line.startswith(" " * (indent + 1))):
+        elif found and (not line.strip() or line.lstrip().startswith("#") or line.startswith(" " * (indent + 1))):
+            # A comment at any indentation stays in the block it is written in (never ends a job early).
             found[-1][1].append(line)
         elif line.strip() and found:
             found.append(("", [line]))
@@ -59,8 +60,10 @@ def runs_on(job: list[str]) -> str | None:
     return None
 
 
-def check(path: Path) -> list[str]:
+def check(path: Path) -> tuple[list[str], int]:
+    """The problems of a workflow and the number of its jobs."""
     problems = []
+    count = 0
     name = path.relative_to(ROOT).as_posix()
     # Comments are read too: an expression in a shell comment of a run block is still evaluated.
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -70,6 +73,7 @@ def check(path: Path) -> list[str]:
     for job, body in blocks(jobs, 2):
         if not job:
             continue
+        count += 1
         value = runs_on(body)
         if value is None:
             if any(re.match(r"^    uses:", line) for line in body):
@@ -90,16 +94,18 @@ def check(path: Path) -> list[str]:
                 problems.append(f"{name}: job {job} can run self-hosted, but reads a secret: {line.strip()}")
             if re.match(r"^    environment:", line):
                 problems.append(f"{name}: job {job} can run self-hosted, but uses an environment (and its secrets)")
-    return problems
+    return problems, count
 
 
 def main() -> int:
     workflows = sorted((ROOT / ".github/workflows").glob("*.y*ml"))
-    problems = [problem for path in workflows for problem in check(path)]
+    results = [check(path) for path in workflows]
+    problems = [problem for found, _ in results for problem in found]
+    jobs = sum(count for _, count in results)
     for problem in problems:
         print(f"::error::{problem}")
     if not problems:
-        print(f"{len(workflows)} workflows: self-hosted runners for our own launches only, no secret on them")
+        print(f"{len(workflows)} workflows, {jobs} jobs: self-hosted runners for our own launches only, no secret on them")
     return 1 if problems else 0
 
 

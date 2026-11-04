@@ -82,8 +82,8 @@ GitHub's `ubuntu-24.04` image comes with many tools; the moved jobs install only
 
 android.yml `app` compares the screenshots with the committed references (at most 0.1 % of the pixels may differ,
 `screenshots/Baselines.kt`). They are drawn by Robolectric's native graphics (`@GraphicsMode(NATIVE)`,
-`robolectric.pixelCopyRenderMode=hardware`): the fonts come from Robolectric's Android jar, not from the machine,
-but the native drawing libraries run on the machine's CPU and glibc, and anti-aliasing can differ by a few pixels.
+`robolectric.pixelCopyRenderMode=hardware`): the fonts should come from Robolectric's Android jar, not from the
+machine, but the native drawing libraries run on the machine's CPU and glibc, and anti-aliasing can differ by a few pixels.
 Before switching for good:
 
 1. Set `LINUX_RUNNER`, run *Android* by hand on a working branch (`record_screenshots` off) and read the result:
@@ -132,7 +132,8 @@ checks out. The expression above keeps every pull request off the VPS; these set
 ### Just-in-time runners with systemd
 
 A root service asks GitHub for a single-use runner configuration, runs one job as the unprivileged `runner` user in
-a fresh folder, and starts again. Instances `ondo-runner@1`, `ondo-runner@2`… run several jobs at once.
+a fresh folder, and starts again. Instances `ondo-runner@1`, `ondo-runner@2`… run several jobs at once. This is a
+sketch to try on the VPS, not yet run there: check each call on the first runs.
 
 `/usr/local/sbin/ondo-runner` (owned by root, mode 700):
 

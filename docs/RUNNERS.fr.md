@@ -85,8 +85,8 @@ L'image `ubuntu-24.04` de GitHub contient beaucoup d'outils ; les jobs déplacé
 
 android.yml `app` compare les captures aux références commitées (au plus 0,1 % de pixels différents,
 `screenshots/Baselines.kt`). Elles sont dessinées par le rendu natif de Robolectric (`@GraphicsMode(NATIVE)`,
-`robolectric.pixelCopyRenderMode=hardware`) : les polices viennent du jar Android de Robolectric, pas de la machine,
-mais les bibliothèques de dessin natives tournent sur le processeur et la glibc de la machine, et l'anticrénelage
+`robolectric.pixelCopyRenderMode=hardware`) : les polices devraient venir du jar Android de Robolectric, pas de la
+machine, mais les bibliothèques de dessin natives tournent sur le processeur et la glibc de la machine, et l'anticrénelage
 peut différer de quelques pixels. Avant de basculer pour de bon :
 
 1. Définir `LINUX_RUNNER`, lancer *Android* à la main sur une branche de travail (`record_screenshots` décoché) et
@@ -141,7 +141,8 @@ reste.
 
 Un service root demande à GitHub une configuration de runner à usage unique, exécute un job en tant
 qu'utilisateur non privilégié `runner` dans un dossier neuf, et recommence. Les instances `ondo-runner@1`,
-`ondo-runner@2`… exécutent plusieurs jobs à la fois.
+`ondo-runner@2`… exécutent plusieurs jobs à la fois. C'est une ébauche à essayer sur le VPS, pas encore lancée : vérifier
+chaque appel aux premiers runs.
 
 `/usr/local/sbin/ondo-runner` (appartenant à root, mode 700) :
 

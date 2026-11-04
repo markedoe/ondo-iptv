@@ -78,6 +78,18 @@ class RunnersTests(CheckTestCase):
                                  "          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}\n")
         self.assertFails("runners", "job tests can run self-hosted, but reads a secret", "PLAY_SERVICE_ACCOUNT_JSON")
 
+    def test_comments_never_hide_a_job_or_its_steps(self):
+        # A comment at the jobs' level or between a job's keys must not end the job being read.
+        for comment in ("# The tests.\n", "  # The steps.\n"):
+            with self.subTest(comment=comment):
+                self.write(".github/workflows/test.yml",
+                           "on:\n  push:\n\njobs:\n  hosted:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: true\n"
+                           + (comment if comment.startswith("#") else "")
+                           + f"  tests:\n    runs-on: {self.SELF}\n"
+                           + (comment if not comment.startswith("#") else "")
+                           + "    steps:\n      - run: echo ${{ secrets.ASC_KEY_P8 }}\n")
+                self.assertFails("runners", "job tests can run self-hosted, but reads a secret")
+
     def test_a_secret_in_a_shell_comment_still_counts(self):
         # Expressions are evaluated in the whole run block, comments included.
         self.workflow(self.SELF, "      - run: |\n          # ${{ secrets['ASC_KEY_P8'] }}\n          true\n")
