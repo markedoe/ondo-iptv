@@ -165,7 +165,8 @@ final class AppModel {
         case reload(UUID)
     }
 
-    @ObservationIgnored private let libraryWriter: LibraryWriter
+    /// Also used by sync (`AppModel+Sync`), when a profile deleted elsewhere goes.
+    @ObservationIgnored let libraryWriter: LibraryWriter
     /// What `bootstrap()` read from disk, before sync or the viewer changed anything (the diagnostic report).
     @ObservationIgnored private(set) var loadedAtLaunch: LaunchCounts?
     @ObservationIgnored private var epgTask: Task<Void, Never>?

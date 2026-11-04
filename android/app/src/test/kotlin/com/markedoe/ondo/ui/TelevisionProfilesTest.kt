@@ -167,8 +167,9 @@ class TelevisionProfilesTest {
     fun theAvatarNextToSettingsOpensTheSwitcherAndSwitchesProfile() {
         val samsList = LibraryState(favorites = listOf(Favorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, Fixtures.glassCity.name, addedAt = Fixtures.NOW)))
         // "Always open this profile" on the main one: Home opens, not "Who's watching?".
-        start(listOf(me, sam.copy(pinHash = null)), AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, launchProfileId = me.id))
+        // Sam's library as a launch finds it (each profile's library is read at launch).
         AppStore(folder.root).saveLibrary(samsList, sam.libraryDocumentName)
+        start(listOf(me, sam.copy(pinHash = null)), AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, launchProfileId = me.id))
         // The avatar is the last item of the bar, right after Settings.
         pressUntil(Key.DirectionUp, max = 40) { focusedTag().startsWith("tab") }
         pressUntil(Key.DirectionRight) { focusedTag() == SETTINGS_TAG }

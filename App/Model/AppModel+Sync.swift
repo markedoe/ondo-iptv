@@ -475,12 +475,14 @@ extension AppModel {
     /// The main profile's library, and the library of each other profile by ID (lowercase): the open one's as it is, the
     /// others' as saved (a switch writes the one left first).
     func syncLibraries() -> (main: UserLibrary, others: [String: UserLibrary]) {
-        func library(of profile: Profile) -> UserLibrary {
-            profile.id == activeProfile.id ? library : (userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
+        let opened = library
+        let openedID = activeProfile.id
+        func stored(_ profile: Profile) -> UserLibrary {
+            profile.id == openedID ? opened : (userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
         }
-        let main = profiles.first(where: \.isMain).map(library(of:)) ?? (activeProfile.isMain ? library : UserLibrary())
+        let main = profiles.first(where: \.isMain).map(stored) ?? (activeProfile.isMain ? opened : UserLibrary())
         var others: [String: UserLibrary] = [:]
-        for profile in profiles where !profile.isMain { others[profile.id.uuidString.lowercased()] = library(of: profile) }
+        for profile in profiles where !profile.isMain { others[profile.id.uuidString.lowercased()] = stored(profile) }
         return (main, others)
     }
 
