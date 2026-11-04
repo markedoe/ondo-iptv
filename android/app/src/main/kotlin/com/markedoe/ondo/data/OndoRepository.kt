@@ -7,6 +7,7 @@ import com.markedoe.ondo.core.epg.EpgIndex
 import com.markedoe.ondo.core.library.AwardsCatalogue
 import com.markedoe.ondo.core.library.CatalogueMatcher
 import com.markedoe.ondo.core.library.CreditRecord
+import com.markedoe.ondo.core.library.EpisodeTitles
 import com.markedoe.ondo.core.library.InMemoryMetadataStore
 import com.markedoe.ondo.core.library.MetadataFreshness
 import com.markedoe.ondo.core.library.MetadataKey
@@ -22,6 +23,7 @@ import com.markedoe.ondo.core.library.PlaceholderNames
 import com.markedoe.ondo.core.library.PlaybackFactory
 import com.markedoe.ondo.core.library.PlaylistLoader
 import com.markedoe.ondo.core.library.TmdbClient
+import com.markedoe.ondo.core.library.TmdbEpisode
 import com.markedoe.ondo.core.library.TmdbRating
 import com.markedoe.ondo.core.library.TrendingMatch
 import com.markedoe.ondo.core.model.Channel
@@ -123,6 +125,11 @@ data class OndoState(
      * backdrop or its cast (the trending titles carry theirs).
      */
     val tmdbRatings: Map<String, TmdbRating> = emptyMap(),
+    /**
+     * TMDb's episodes of a series' seasons (their stills and names), by the series' key (`s-<id>`), then by season
+     * number: the episodes the provider leaves without a picture or a title get TMDb's ([shownDetails]).
+     */
+    val tmdbSeasons: Map<String, Map<Int, List<TmdbEpisode>>> = emptyMap(),
     /** TMDb refused the saved token when it was used (it was checked elsewhere, or revoked since): Settings says so. */
     val tmdbRefused: Boolean = false,
     /** The viewer profiles (docs/PROFILES.md): the main one first. [library] is the active one's. */
@@ -146,6 +153,20 @@ data class OndoState(
      */
     val needsParentForSettings: Boolean
         get() = activeProfile.isKids && !kidsUnlocked && profiles.any { !it.isKids && it.isProtected }
+}
+
+/**
+ * [details] of [series] as every screen shows them (its page, the player's Episodes row and Up next): each episode's own
+ * title, TMDb's still and name where the provider gives none ([EpisodeTitles.merge], [OndoState.tmdbSeasons]), in the
+ * app's words ([OndoState.placeholderNames]).
+ */
+fun OndoState.shownDetails(series: Series, details: SeriesDetails): SeriesDetails =
+    placeholderNames.rename(EpisodeTitles.merge(details, series.name, tmdbSeasons["s-" + series.id].orEmpty()))
+
+/** [episode] of [series] as every screen shows it ([shownDetails]). */
+fun OndoState.shownEpisode(series: Series, episode: Episode): Episode {
+    val tmdb = tmdbSeasons["s-" + series.id]?.get(episode.season)?.firstOrNull { it.number == episode.number }
+    return placeholderNames.rename(EpisodeTitles.merge(episode, series.name, tmdb))
 }
 
 /** Why a playlist could not be loaded: shown in the viewer's language (see `loadErrorText`), not as the exception's text. */
@@ -1586,8 +1607,8 @@ class OndoRepository(
 
     fun playRequest(series: Series, episode: Episode): PlayRequest? {
         val playlist = _state.value.activePlaylist ?: return null
-        // The episodes of the provider's details are kept in the core's words (see OndoState.placeholderNames).
-        val shown = _state.value.placeholderNames.rename(episode)
+        // The episodes of the provider's details are kept as they came: the history keeps the title shown.
+        val shown = _state.value.shownEpisode(series, episode)
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(shown, series)
         val entry = WatchEntry(playlist.id, ItemKind.SERIES, series.id, shown.id, series.name, "${shown.code} · ${shown.title}", shown.posterUrl ?: series.coverUrl, lastWatchedAt = 0)
         return start(item, entry, fromStart = false)
@@ -1614,10 +1635,11 @@ class OndoRepository(
         val state = _state.value
         if (parts[0] != state.activePlaylistId) return null
         val series = state.content.series.firstOrNull { it.id == parts[2] } ?: return null
-        val seasons = state.seriesDetails[series.id]?.seasons
+        // As the series' page shows them: each episode's own title, TMDb's still where the provider has none.
+        val seasons = state.seriesDetails[series.id]?.let { state.shownDetails(series, it) }?.seasons
             ?.map { season -> season.copy(episodes = season.episodes.sortedBy { it.number }.distinctBy { it.id }) }
             ?: series.episodes.groupBy { it.season }.map { (number, episodes) ->
-                Season(number, name = "", episodes = episodes.sortedBy { it.number }.distinctBy { it.id })
+                Season(number, name = "", episodes = episodes.sortedBy { it.number }.distinctBy { it.id }.map { state.shownEpisode(series, it) })
             }
         return PlayingSeries(series, parts[3], seasons.sortedBy { it.number }.filter { it.episodes.isNotEmpty() })
     }
@@ -1779,7 +1801,8 @@ class OndoRepository(
         headerFetches.clear()
         genreMatches.clear()
         personMatches.clear()
-        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbRelated = emptyMap(), tmdbTrailers = emptyMap(), tmdbLogos = emptyMap(), tmdbRatings = emptyMap()) }
+        seasonsAsked.clear()
+        _state.update { it.copy(tmdbRefused = false, trending = emptyList(), tmdbBackdrops = emptyMap(), tmdbFaces = emptyMap(), tmdbRelated = emptyMap(), tmdbTrailers = emptyMap(), tmdbLogos = emptyMap(), tmdbRatings = emptyMap(), tmdbSeasons = emptyMap()) }
         loadTrending()
     }
 
@@ -1944,7 +1967,67 @@ class OndoRepository(
         return title to if (title.found) metadata.credits(title.key) else emptyList()
     }
 
+    /** The TMDb ids of the series whose metadata showed, by their key (`s-<id>`): their seasons are asked by it. */
+    private val tmdbSeriesIds = java.util.concurrent.ConcurrentHashMap<String, Int>()
+
+    /** The seasons a page showed before its series' TMDb id was known, by the series' key: asked once it is. */
+    private val seasonsWanted = java.util.concurrent.ConcurrentHashMap<String, MutableSet<Int>>()
+
+    /** The seasons asked this session ("s-<id>|<season>"). */
+    private val seasonsAsked: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
+    /**
+     * TMDb's episodes of season [season] of the series [key] (`s-<id>`) whose page shows it: their stills and names,
+     * for the episodes the provider leaves without them. Once a session; what the store kept shows at once and is asked
+     * again after [MetadataFreshness.FOUND_MS]. One request for the whole season, by the series' TMDb id: asked once
+     * that is known ([findTmdbMetadata]).
+     */
+    fun findTmdbSeason(key: String, season: Int) {
+        val id = tmdbSeriesIds[key]
+        if (id == null) {
+            seasonsWanted.getOrPut(key) { java.util.concurrent.ConcurrentHashMap.newKeySet() }.add(season)
+            return
+        }
+        if (!seasonsAsked.add("$key|$season")) return
+        val client = tmdbClient()
+        scope.launch { tmdbSeason(key, id, season, client) }
+    }
+
+    private suspend fun tmdbSeason(key: String, id: Int, season: Int, client: TmdbClient?) {
+        val storeKey = MetadataKey.season(id, season)
+        val stored = withContext(io) { metadata.season(storeKey) }
+        if (stored != null) showSeason(key, season, stored.second)
+        val maxAge = if (stored?.second.isNullOrEmpty()) MetadataFreshness.NOT_FOUND_MS else MetadataFreshness.FOUND_MS
+        if (stored != null && MetadataFreshness.isFresh(stored.first, maxAge, now())) return
+        if (client == null) return
+        val episodes = try {
+            withContext(io) { client.seasonEpisodes(id, season) }
+        } catch (e: CancellationException) {
+            seasonsAsked.remove("$key|$season")
+            throw e
+        } catch (e: Exception) {
+            // Out of reach: asked again the next time the season shows. TMDb refused or failed: not this session.
+            if (e is java.io.IOException && e !is HttpException) seasonsAsked.remove("$key|$season")
+            noteTmdbFailure(e)
+            return
+        }
+        withContext(io) { metadata.saveSeason(storeKey, now(), episodes) }
+        showSeason(key, season, episodes)
+    }
+
+    private fun showSeason(key: String, season: Int, episodes: List<TmdbEpisode>) {
+        if (episodes.isEmpty()) return
+        _state.update { state ->
+            val seasons = state.tmdbSeasons[key].orEmpty()
+            if (seasons[season] == episodes) state else state.copy(tmdbSeasons = state.tmdbSeasons + (key to seasons + (season to episodes)))
+        }
+    }
+
     private suspend fun showMetadata(key: String, title: TitleMetadata, credits: List<CreditRecord>) {
+        if (title.kind == MetadataKey.kind(series = true)) title.tmdbId?.let { id ->
+            tmdbSeriesIds[key] = id
+            seasonsWanted.remove(key)?.forEach { findTmdbSeason(key, it) }
+        }
         val faces = credits.mapNotNull { credit -> credit.photoUrl?.let { credit.personKey to it } }.distinctBy { it.first }.toMap()
         // The titles TMDb recommends with it that the playlist has, in TMDb's order.
         val recommended = title.related.orEmpty()

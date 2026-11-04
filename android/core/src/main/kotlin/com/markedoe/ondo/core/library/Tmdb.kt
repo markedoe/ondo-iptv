@@ -163,18 +163,31 @@ class TmdbClient(
         val viewer = language.substringBefore('-').lowercase()
         // Videos and logos in the viewer's language, in English, and without a language.
         val languages = listOf(viewer, "en", "null").distinct().joinToString(",")
-        // Credits, videos, logos and the titles TMDb recommends with it: one request.
+        val series = kind == "tv"
+        // Credits, videos, logos and the titles TMDb recommends with it: one request. A series' `credits` are only its
+        // latest season's: its `aggregate_credits` have the cast of every season (a page of an earlier one names them).
+        val credits = if (series) "aggregate_credits" else "credits"
         val details = get(
             "$kind/$id",
-            listOf("append_to_response" to "credits,videos,recommendations,images", "include_video_language" to languages, "include_image_language" to languages),
+            listOf("append_to_response" to "$credits,videos,recommendations,images", "include_video_language" to languages, "include_image_language" to languages),
         ) as? JsonObject
             ?: throw SerializationException("Not a TMDb answer")
         val item = TmdbItem.from(details) ?: throw SerializationException("TMDb title without id")
-        val credits = details["credits"] as? JsonObject
-        fun part(name: String) = (credits?.get(name) as? JsonArray).orEmpty()
-        val directors = part("crew").filter { ((it as? JsonObject)?.get("job") as? JsonPrimitive)?.content == "Director" }
-            .mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }.distinctBy { it.id }
-        val cast = part("cast").mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }.distinctBy { it.id }.take(TmdbTitleInfo.CAST_LIMIT)
+        val people = details[credits] as? JsonObject
+        fun part(name: String) = (people?.get(name) as? JsonArray).orEmpty()
+        fun persons(list: List<JsonElement>) = list.mapNotNull { TmdbPerson.from(it) }.filter { it.name.isNotBlank() }.distinctBy { it.id }
+        // A series' crew names its jobs in a list (`jobs: [{job}]`), a movie's in `job`.
+        fun isDirector(person: JsonElement): Boolean {
+            val o = person as? JsonObject ?: return false
+            if ((o["job"] as? JsonPrimitive)?.content == "Director") return true
+            return (o["jobs"] as? JsonArray).orEmpty().any { ((it as? JsonObject)?.get("job") as? JsonPrimitive)?.content == "Director" }
+        }
+        // A series' makers are its creators (`created_by`): the episodes' directors are not the series'.
+        val creators = if (series) persons((details["created_by"] as? JsonArray).orEmpty()) else emptyList()
+        val directors = creators.ifEmpty { persons(part("crew").filter(::isDirector)) }
+        val cast = persons(
+            part("cast").withIndex().sortedWith(compareBy({ order(it.value) }, { it.index })).map { it.value },
+        ).take(if (series) TmdbTitleInfo.SERIES_CAST_LIMIT else TmdbTitleInfo.CAST_LIMIT)
         val videos = ((details["videos"] as? JsonObject)?.get("results") as? JsonArray).orEmpty().mapNotNull { TmdbVideo.from(it) }
         val genres = (details["genres"] as? JsonArray).orEmpty().mapNotNull { TmdbGenre.from(it) }
         val ownType = if (kind == "tv") TmdbItem.MediaType.TV else TmdbItem.MediaType.MOVIE
@@ -185,6 +198,26 @@ class TmdbClient(
             .take(TmdbTitleInfo.RELATED_LIMIT)
         val logos = ((details["images"] as? JsonObject)?.get("logos") as? JsonArray).orEmpty().mapNotNull { TmdbLogo.from(it) }
         return TmdbTitleInfo(item.id, item.backdropUrl, TmdbVideo.best(videos, viewer)?.key, item.rating, directors, cast, genres, related, TmdbLogo.best(logos, viewer)?.url)
+    }
+
+    /** A person's place in a title's billing (`order`); unbilled last. */
+    private fun order(person: JsonElement): Int =
+        ((person as? JsonObject)?.get("order") as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toIntOrNull() ?: Int.MAX_VALUE
+
+    /**
+     * The episodes TMDb knows of season [season] of series [seriesId] (`/tv/{id}/season/{n}`): their number, name, still
+     * and overview, in the viewer's language. One request for a whole season. Empty when TMDb has no such season (404).
+     */
+    suspend fun seasonEpisodes(seriesId: Int, season: Int): List<TmdbEpisode> {
+        val answer = try {
+            get("tv/$seriesId/season/$season")
+        } catch (e: HttpException.BadStatus) {
+            if (e.code == 404) return emptyList()
+            throw e
+        }
+        val page = answer as? JsonObject ?: throw SerializationException("Not a TMDb answer")
+        val episodes = page["episodes"] as? JsonArray ?: throw SerializationException("TMDb season without episodes")
+        return episodes.mapNotNull { TmdbEpisode.from(it) }.distinctBy { it.number }
     }
 
     /** TMDb's genres of movies or series, in the viewer's language. */
@@ -243,7 +276,7 @@ data class TmdbTitleInfo(
     val trailerKey: String?,
     val rating: TmdbRating?,
     val directors: List<TmdbPerson>,
-    /** The first billed, [CAST_LIMIT] at most. */
+    /** The first billed, [CAST_LIMIT] at most ([SERIES_CAST_LIMIT] for a series, every season's). */
     val cast: List<TmdbPerson>,
     /** Its genres, named in the viewer's language. */
     val genres: List<TmdbGenre> = emptyList(),
@@ -254,7 +287,28 @@ data class TmdbTitleInfo(
 ) {
     companion object {
         const val CAST_LIMIT = 20
+
+        /**
+         * A series' cast is every season's (`aggregate_credits`): more of it is kept, so that the actors a provider
+         * names for an earlier season find their photos.
+         */
+        const val SERIES_CAST_LIMIT = 60
         const val RELATED_LIMIT = 20
+    }
+}
+
+/** An episode on TMDb ([TmdbClient.seasonEpisodes]): its number in its season, its name, still and overview. */
+data class TmdbEpisode(val number: Int, val name: String? = null, val stillPath: String? = null, val overview: String? = null) {
+    val stillUrl: String?
+        get() = stillPath?.let { "https://image.tmdb.org/t/p/w300$it" }?.takeIf(Urls::isValidAbsolute)
+
+    companion object {
+        internal fun from(json: JsonElement): TmdbEpisode? {
+            val o = json as? JsonObject ?: return null
+            val number = (o["episode_number"] as? JsonPrimitive)?.takeIf { !it.isString && it !is JsonNull }?.content?.toIntOrNull() ?: return null
+            fun string(key: String) = (o[key] as? JsonPrimitive)?.takeIf { it.isString }?.content?.takeIf { it.isNotBlank() }
+            return TmdbEpisode(number, string("name"), string("still_path"), string("overview"))
+        }
     }
 }
 

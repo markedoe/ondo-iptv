@@ -39,6 +39,9 @@ object MetadataKey {
 
     /** A person's key: the name without case or accents, as the cast fields are matched. */
     fun person(name: String): String = TextNormalizer.normalize(name)
+
+    /** A season of a series on TMDb ([TmdbClient.seasonEpisodes]): "tv:73375:3". */
+    fun season(seriesTmdbId: Int, season: Int): String = "tv:$seriesTmdbId:$season"
 }
 
 /** How long what TMDb said is trusted. An older entry still shows while it is fetched again. */
@@ -128,6 +131,21 @@ data class RelatedTitle(val series: Boolean, val tmdbId: Int, val title: String,
     }
 }
 
+/** TMDb's episodes of a season as the store keeps them: one "number<TAB>still<TAB>name<TAB>overview" per line. */
+object EpisodeText {
+    private fun field(text: String?): String = text.orEmpty().replace('\t', ' ').replace('\n', ' ').replace('\r', ' ')
+
+    fun encode(episodes: List<TmdbEpisode>): String =
+        episodes.joinToString("\n") { listOf(it.number.toString(), field(it.stillPath), field(it.name), field(it.overview)).joinToString("\t") }
+
+    fun decode(text: String?): List<TmdbEpisode> = text.orEmpty().lines().mapNotNull { line ->
+        val parts = line.split('\t', limit = 4)
+        val number = parts.getOrNull(0)?.toIntOrNull() ?: return@mapNotNull null
+        fun part(index: Int) = parts.getOrNull(index)?.takeIf { it.isNotBlank() }
+        TmdbEpisode(number, name = part(2), stillPath = part(1), overview = part(3))
+    }
+}
+
 /** Genres as the store keeps them: one "id<TAB>name" per line. */
 object GenreText {
     fun encode(genres: List<TmdbGenre>): String = genres.joinToString("\n") { "${it.id}\t${it.name.replace('\t', ' ').replace('\n', ' ')}" }
@@ -196,6 +214,11 @@ interface MetadataStore {
 
     fun savePersonWorks(personKey: String, fetchedAt: Long, works: List<RelatedTitle>)
 
+    /** TMDb's episodes of a season ([MetadataKey.season]), with when they were asked; null if never. */
+    fun season(key: String): Pair<Long, List<TmdbEpisode>>?
+
+    fun saveSeason(key: String, fetchedAt: Long, episodes: List<TmdbEpisode>)
+
     /** People whose name has every word of [query] starting one of its words, those credited most first. */
     fun people(query: String, limit: Int): List<IndexedPerson>
 
@@ -251,6 +274,14 @@ class InMemoryMetadataStore : MetadataStore {
         this.works[personKey] = fetchedAt to works
     }
 
+    private val seasons = HashMap<String, Pair<Long, List<TmdbEpisode>>>()
+
+    @Synchronized override fun season(key: String): Pair<Long, List<TmdbEpisode>>? = seasons[key]
+
+    @Synchronized override fun saveSeason(key: String, fetchedAt: Long, episodes: List<TmdbEpisode>) {
+        seasons[key] = fetchedAt to episodes
+    }
+
     @Synchronized override fun titlesOfGenre(genre: String, series: Boolean): List<TitleMetadata> =
         titles.values.filter { title -> title.kind == MetadataKey.kind(series) && title.genres.orEmpty().any { TextNormalizer.normalize(it.name) == genre } }
 
@@ -281,6 +312,7 @@ class InMemoryMetadataStore : MetadataStore {
         credits.clear()
         dead.clear()
         works.clear()
+        seasons.clear()
     }
 }
 
