@@ -114,38 +114,14 @@ struct CustomListsView: View {
     var body: some View {
         List {
             ForEach(model.customLists) { list in
-                NavigationLink(value: CustomListRoute(id: list.id)) {
-                    LabeledContent {
-                        HStack(spacing: 6) {
-                            if model.isShared(list.id) { SharedListMark() }
-                            Text("\(model.items(in: list).count)")
-                        }
-                    } label: {
-                        Label(list.name, systemImage: "rectangle.stack")
-                    }
-                }
-                // Swipe to delete is iOS only: the menu works everywhere (Control-click on the Mac). A shared collection is
-                // deleted from its page, which asks first: it goes for every profile.
-                .contextMenu {
-                    if model.canShareList(list.id) {
-                        Toggle("Shared with All Profiles", systemImage: "person.2", isOn: Binding(
-                            get: { model.isShared(list.id) },
-                            set: { shared in if shared { model.setListShared(list.id, true) } else { unsharing = list } }
-                        ))
-                    }
-                    if !model.isShared(list.id) {
-                        Button("Delete Collection", systemImage: "trash", role: .destructive) { model.deleteList(list.id) }
-                    }
-                }
-                .deleteDisabled(model.isShared(list.id))
+                listRow(list)
             }
             .onDelete { offsets in
                 let lists = model.customLists
                 for offset in offsets where !model.isShared(lists[offset].id) { model.deleteList(lists[offset].id) }
             }
         }
-        .confirmationDialog("Stop sharing this collection?", isPresented: Binding(get: { unsharing != nil }, set: { if !$0 { unsharing = nil } }),
-                            titleVisibility: .visible, presenting: unsharing) { list in
+        .confirmationDialog("Stop sharing this collection?", isPresented: unsharingShown, titleVisibility: .visible, presenting: unsharing) { list in
             Button("Stop Sharing") { model.setListShared(list.id, false) }
         } message: { list in
             Text("The other profiles will no longer see “\(list.name)”. It goes back to your collections.")
@@ -180,6 +156,41 @@ struct CustomListsView: View {
             Button("Cancel", role: .cancel) { newListName = "" }
         }
     }
+
+    /// A collection: its name, the shared mark, how many items it shows; its menu shares it, or deletes one of the profile.
+    private func listRow(_ list: CustomList) -> some View {
+        NavigationLink(value: CustomListRoute(id: list.id)) {
+            LabeledContent {
+                HStack(spacing: 6) {
+                    if model.isShared(list.id) { SharedListMark() }
+                    Text("\(model.items(in: list).count)")
+                }
+            } label: {
+                Label(list.name, systemImage: "rectangle.stack")
+            }
+        }
+        // Swipe to delete is iOS only: the menu works everywhere (Control-click on the Mac). A shared collection is
+        // deleted from its page, which asks first: it goes for every profile.
+        .contextMenu {
+            if model.canShareList(list.id) {
+                Toggle("Shared with All Profiles", systemImage: "person.2", isOn: sharedBinding(list))
+            }
+            if !model.isShared(list.id) {
+                Button("Delete Collection", systemImage: "trash", role: .destructive) { model.deleteList(list.id) }
+            }
+        }
+        .deleteDisabled(model.isShared(list.id))
+    }
+
+    private var unsharingShown: Binding<Bool> {
+        Binding(get: { unsharing != nil }, set: { if !$0 { unsharing = nil } })
+    }
+
+    private func sharedBinding(_ list: CustomList) -> Binding<Bool> {
+        Binding(get: { model.isShared(list.id) }, set: { shared in
+            if shared { model.setListShared(list.id, true) } else { unsharing = list }
+        })
+    }
 }
 
 struct CustomListDetailView: View {
@@ -199,38 +210,8 @@ struct CustomListDetailView: View {
     var body: some View {
         let entries = list.map { model.items(in: $0) } ?? []
         List {
-            if model.canShareList(listID) {
-                Section {
-                    Toggle(isOn: Binding(get: { shared }, set: { on in if on { model.setListShared(listID, true) } else { showingUnshare = true } })) {
-                        Label("Shared with All Profiles", systemImage: "person.2")
-                    }
-                    .accessibilityIdentifier("sharedSwitch")
-                }
-            } else if shared {
-                Label("Shared with All Profiles", systemImage: "person.2")
-                    .foregroundStyle(.secondary)
-            }
-            ForEach(entries) { entry in
-                if let item = model.libraryItem(for: entry.reference) {
-                    row(item)
-                        .contextMenu {
-                            if canEdit {
-                                Button("Remove from Collection", systemImage: "minus.circle", role: .destructive) {
-                                    model.toggle(item, inList: listID)
-                                }
-                            }
-                        }
-                }
-            }
-            .onMove(perform: canEdit ? { (source: IndexSet, destination: Int) in model.moveListItems(listID, fromOffsets: source, toOffset: destination) } : nil)
-            .deleteDisabled(!canEdit)
-            .onDelete { offsets in
-                for offset in offsets {
-                    if let item = model.libraryItem(for: entries[offset].reference) {
-                        model.toggle(item, inList: listID)
-                    }
-                }
-            }
+            sharing
+            items(entries)
         }
         .overlay {
             if entries.isEmpty {
@@ -287,6 +268,52 @@ struct CustomListDetailView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+    }
+
+    /// The "Shared with All Profiles" switch; for a Kids profile, only that the collection is shared.
+    @ViewBuilder
+    private var sharing: some View {
+        if model.canShareList(listID) {
+            Section {
+                Toggle(isOn: Binding(get: { shared }, set: { on in
+                    if on { model.setListShared(listID, true) } else { showingUnshare = true }
+                })) {
+                    Label("Shared with All Profiles", systemImage: "person.2")
+                }
+                .accessibilityIdentifier("sharedSwitch")
+            }
+        } else if shared {
+            Label("Shared with All Profiles", systemImage: "person.2")
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func items(_ entries: [FavoriteEntry]) -> some View {
+        ForEach(entries) { entry in
+            if let item = model.libraryItem(for: entry.reference) {
+                row(item)
+                    .contextMenu {
+                        if canEdit {
+                            Button("Remove from Collection", systemImage: "minus.circle", role: .destructive) {
+                                model.toggle(item, inList: listID)
+                            }
+                        }
+                    }
+            }
+        }
+        .onMove(perform: canEdit ? move : nil)
+        .deleteDisabled(!canEdit)
+        .onDelete { offsets in
+            for offset in offsets {
+                if let item = model.libraryItem(for: entries[offset].reference) {
+                    model.toggle(item, inList: listID)
+                }
+            }
+        }
+    }
+
+    private func move(_ source: IndexSet, _ destination: Int) {
+        model.moveListItems(listID, fromOffsets: source, toOffset: destination)
     }
 
     @ViewBuilder
