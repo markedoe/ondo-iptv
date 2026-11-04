@@ -64,6 +64,15 @@ class PathFilterTests(unittest.TestCase):
                 with self.subTest(workflow=file, event=event):
                     self.assertEqual(trigger_paths(file, event), ci_scope.PATHS[workflow])
 
+    def test_the_jobs_named_are_the_workflows_jobs(self):
+        # A renamed job would silently turn the duplicate skip and Release's core test skip off.
+        for workflow, file in ci_scope.WORKFLOW_FILES.items():
+            names = {line.strip()[len("name: "):] for line in (WORKFLOWS / file).read_text(encoding="utf-8").splitlines()
+                     if line.startswith("    name: ")}
+            for job in ci_scope.HEAVY_JOBS[workflow] + ci_scope.NOT_RUN_JOBS[workflow]:
+                with self.subTest(workflow=file, job=job):
+                    self.assertIn(job, names)
+
     def test_the_samples(self):
         for name, (path, apple, android) in SAMPLES.items():
             with self.subTest(name):

@@ -71,8 +71,10 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Every branch: a run by hand compares its branch with its merge-base on main.
+          # Every branch: a run by hand compares its branch with its merge-base on main. Commits and trees only: the
+          # names of the changed files need no file contents.
           fetch-depth: 0
+          filter: blob:none
           persist-credentials: false
       - name: Heavy jobs needed
         id: scope

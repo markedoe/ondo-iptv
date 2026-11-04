@@ -99,7 +99,9 @@ runs that upload the listing (a tag, targets `release`, `all`, `metadata*`), and
 device builds once (`build-for-testing`) and captures English and French from that build (`test-without-building`):
 three macOS jobs instead of six. When an iPhone or iPad capture fails, nothing is published and the listing takes the
 screenshots already on the `appstore-screenshots` branch; when only the Mac capture fails, the Mac screenshots already on
-the branch are kept. Run it by hand to look at the screenshots before a release.
+the branch are kept. A failed capture still makes the *Release* run red (a called workflow cannot be allowed to fail):
+the result of its *TestFlight / App Store Connect* job is the one that counts. Run it by hand to look at the
+screenshots before a release.
 
 What is lost: a capture test broken at run time shows at release time instead of on the push (the test is compiled by
 *CI* on every run, not run); the branch no longer shows the interface of every push (`ci-screenshots` does, from the

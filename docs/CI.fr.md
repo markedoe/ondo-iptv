@@ -100,7 +100,9 @@ pour les runs qui envoient la fiche (un tag, cibles `release`, `all`, `metadata*
 appareil compile une fois (`build-for-testing`) et prend l'anglais et le français sur ce build
 (`test-without-building`) : trois jobs macOS au lieu de six. Quand une capture iPhone ou iPad échoue, rien n'est
 publié et la fiche prend les captures déjà sur la branche `appstore-screenshots` ; quand seule la capture Mac échoue,
-les captures Mac déjà sur la branche sont gardées. Lancez-le à la main pour voir les captures avant une release.
+les captures Mac déjà sur la branche sont gardées. Une capture qui échoue rend quand même le run *Release* rouge (un
+workflow appelé ne peut pas être autorisé à échouer) : c'est le résultat de son job *TestFlight / App Store Connect* qui
+compte. Lancez-le à la main pour voir les captures avant une release.
 
 Ce qui est perdu : un test de capture cassé à l'exécution se voit à la release plutôt qu'au push (la *CI* compile ce
 test à chaque run, sans le lancer) ; la branche ne montre plus l'interface de chaque push (`ci-screenshots` la montre,

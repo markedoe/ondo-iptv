@@ -9,17 +9,17 @@ on:
   workflow_dispatch:
   workflow_call:
 
-# The release workflow's call and a run by hand never cancel each other (github.workflow is the caller's name in a call).
-concurrency:
-  group: appstore-screenshots-${{ github.workflow }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
 jobs:
   capture:
     name: ${{ matrix.device }}
+    # A newer run by hand replaces an older one; the release workflow's call is never cancelled by one (github.workflow
+    # is the caller's name in a call).
+    concurrency:
+      group: appstore-screenshots-${{ github.workflow }}-${{ matrix.device }}
+      cancel-in-progress: ${{ github.workflow == 'App Store screenshots' }}
     runs-on: macos-26
     # The Xcode the apps are built with, not the image's default (which moves with each image). When an image no
     # longer has it, the Xcode step below says so: raise it in every macOS job (ci.yml, appstore-screenshots.yml,
@@ -98,6 +98,9 @@ jobs:
 
   mac:
     name: mac
+    concurrency:
+      group: appstore-screenshots-${{ github.workflow }}-mac
+      cancel-in-progress: ${{ github.workflow == 'App Store screenshots' }}
     runs-on: macos-26
     # The Xcode the apps are built with, not the image's default (which moves with each image). When an image no
     # longer has it, the Xcode step below says so: raise it in every macOS job (ci.yml, appstore-screenshots.yml,
