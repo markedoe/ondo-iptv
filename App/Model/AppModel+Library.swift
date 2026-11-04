@@ -153,10 +153,20 @@ extension AppModel {
                 return index.moviesByID[entry.reference.itemID].map { !excluded.contains($0.categoryID) } == true ? entry : nil
             case .series:
                 guard let series = index.seriesByID[entry.reference.itemID], !excluded.contains(series.categoryID) else { return nil }
-                return entry.isFinished ? goingOn(from: entry, in: series) : entry
+                guard entry.isFinished else { return entry }
+                return removedElsewhere(since: entry) ? nil : goingOn(from: entry, in: series)
             case .live: return nil
             }
         }
+    }
+
+    /// Whether an episode of `entry`'s series was taken out of the history after it, on this device or another (the
+    /// deletions sync kept for the open profile): its card does not come back as the next episode.
+    private func removedElsewhere(since entry: HistoryEntry) -> Bool {
+        let deleted = activeProfile.isMain ? syncState.deleted : syncState.profileStates[activeProfile.id.uuidString.lowercased()]?.deleted ?? [:]
+        let prefix = "progress:" + SyncMapping.lowercasingPlaylistID(entry.reference.itemKey) + "|"
+        let watched = entry.lastWatchedAt.syncMilliseconds
+        return deleted.contains { $0.value >= watched && $0.key.hasPrefix(prefix) }
     }
 
     /// The card of `series` after its episode `finished`: the next episode, nil after the last one; `finished` itself
