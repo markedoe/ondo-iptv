@@ -57,6 +57,7 @@ class SideLoadedSubtitleTest {
      * track showed, its cues never came).
      */
     @Test
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun thePlayerReadsADownloadedSubtitleFromItsFile() {
         val context = androidx.test.core.app.ApplicationProvider.getApplicationContext<android.content.Context>()
         val file = java.io.File(context.cacheDir, "online.srt").apply { writeText("1\n00:00:01,000 --> 00:00:02,000\nHello\n") }
