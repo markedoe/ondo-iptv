@@ -677,14 +677,18 @@ object UiMappers {
                 ItemKind.CHANNEL to visibleChannels(state, hidden).mapTo(HashSet()) { it.id },
             )
         }
-        return state.library.collections.map { list ->
-            CollectionRow(list.id, list.name, list.items.count { it.kind == ItemKind.PERSON || (it.playlistId == playlistId && it.itemId in shown.getValue(it.kind)) })
+        return state.collections.map { list ->
+            CollectionRow(
+                list.id, list.name, list.items.count { it.kind == ItemKind.PERSON || (it.playlistId == playlistId && it.itemId in shown.getValue(it.kind)) },
+                shared = state.isShared(list.id),
+            )
         }
     }
 
     /** A collection's items the playlist has, in the order they were added; null once it is deleted. */
     fun collection(state: OndoState, id: String, now: Long): CollectionUiState? {
-        val list = state.library.collections.firstOrNull { it.id == id } ?: return null
+        val list = state.collections.firstOrNull { it.id == id } ?: return null
+        val shared = state.isShared(id)
         val playlistId = state.activePlaylistId.orEmpty()
         val hidden = hiddenCategoryIds(state)
         val byName = CategoryFilter.hiddenTitles(state)
@@ -700,13 +704,20 @@ object UiMappers {
             series = state.content.series.filter { it.id in series && it.categoryId !in hidden && it.id !in byName.series }.sortedBy { series[it.id] }.map { ShowcaseItem.SeriesItem(it) },
             channels = visibleChannels(state, hidden).filter { it.id in channels }.sortedBy { channels[it.id] }.map { channelRow(it, state, now) },
             people = list.items.filter { it.kind == ItemKind.PERSON }.map { PersonRow(it.title, it.imageUrl) },
+            shared = shared,
+            // A Kids profile sees a shared collection (without what its rules hide) and changes nothing of it.
+            canEdit = !shared || state.canEditShared,
+            // The switch shows once there are two profiles (or the collection is shared), never in a Kids profile.
+            canShare = state.canEditShared && (state.profiles.size > 1 || shared),
         )
     }
 
     /** The collections, ticked when they hold this item of the current playlist. */
     fun collectionChoices(state: OndoState, kind: ItemKind, itemId: String): List<CollectionChoice> {
         val playlistId = if (kind == ItemKind.PERSON) Favorite.ANY_PLAYLIST else state.activePlaylistId.orEmpty()
-        return state.library.collections.map { CollectionChoice(it.id, it.name, it.contains(playlistId, kind, itemId)) }
+        // A Kids profile cannot add to the shared collections: only its own are offered.
+        return state.collections.filter { state.canEditShared || !state.isShared(it.id) }
+            .map { CollectionChoice(it.id, it.name, it.contains(playlistId, kind, itemId), shared = state.isShared(it.id)) }
     }
 
     fun channelRow(channel: Channel, state: OndoState, now: Long): ChannelRow {
