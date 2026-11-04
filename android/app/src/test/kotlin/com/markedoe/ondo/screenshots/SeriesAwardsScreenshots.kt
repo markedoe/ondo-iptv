@@ -133,8 +133,11 @@ class SeriesAwardsScreenshots {
     fun phoneSeriesPage() {
         val page = UiMappers.seriesDetail(state, Fixtures.harborLights, null, null, Locale.US)
         show(television = false) { SeriesDetailScreen(page, DetailActions()) }
-        // The page itself, the first list (the seasons and episodes rows scroll too).
+        // The page itself, the first list (the seasons row scrolls too), the clock running while it scrolls.
+        compose.mainClock.autoAdvance = true
         compose.onAllNodes(hasScrollToNodeAction()).onFirst().performScrollToNode(hasTestTag("awards"))
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
         advance()
         capture("phone", "series-awards")
     }
