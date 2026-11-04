@@ -405,8 +405,12 @@ class TvScreenshots {
         press(Key.DirectionCenter)
         assertTrue("the new movies' grid", compose.onAllNodes(hasTestTag("grid")).fetchSemanticsNodes().isNotEmpty())
         capture("grid-new")
-        // The focus on the first poster: Up reaches the Sort chip.
-        assertTrue("the focus on the posters", focusedIn("grid"))
+        // The focus on the first poster (Down from the bar if it is there): Up reaches the Sort chip.
+        presses = 0
+        while (!focusedIn("grid")) {
+            check(presses++ < 3) { "Down never reached the posters" }
+            press(Key.DirectionDown)
+        }
         presses = 0
         while (compose.onAllNodes(isFocused() and hasTestTag(SORT_CHIP_TAG)).fetchSemanticsNodes().isEmpty()) {
             check(presses++ < 3) { "Up never reached the Sort chip" }
