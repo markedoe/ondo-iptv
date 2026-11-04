@@ -302,7 +302,6 @@ struct CustomListDetailView: View {
             }
         }
         .onMove(perform: canEdit ? move : nil)
-        .deleteDisabled(!canEdit)
         .onDelete { offsets in
             for offset in offsets {
                 if let item = model.libraryItem(for: entries[offset].reference) {
@@ -310,6 +309,7 @@ struct CustomListDetailView: View {
                 }
             }
         }
+        .deleteDisabled(!canEdit)
     }
 
     private func move(_ source: IndexSet, _ destination: Int) {
