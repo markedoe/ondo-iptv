@@ -2,6 +2,7 @@ package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.model.HistoryEntry
 import com.markedoe.ondo.core.sync.SyncHidden
+import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncRows
 import kotlinx.serialization.Serializable
 
@@ -79,6 +80,11 @@ data class UserCollection(
     val renamedAt: Long = 0,
     /** When the items were put in this order (sync); 0 when not known: [updatedAt] then. */
     val orderedAt: Long = 0,
+    /**
+     * When it was moved into the space it is in, shared with every profile or taken back into a profile (docs/SYNC.md,
+     * "Shared lists"); 0 for a collection never moved.
+     */
+    val placedAt: Long = 0,
 ) {
     fun contains(playlistId: String, kind: ItemKind, itemId: String): Boolean =
         items.any { it.playlistId == playlistId && it.kind == kind && it.itemId == itemId }
@@ -345,4 +351,32 @@ data class LibraryState(
     companion object {
         const val MAX_HISTORY = 500
     }
+}
+
+/**
+ * Collections shared with every profile (docs/PROFILES.md, "Shared lists"): the household's library holds them, apart from
+ * every profile's. A move takes a collection whole, under the same ID, from one library to the other: the one it enters
+ * has it at a later time (its `updatedAt` and `placedAt`), and the deletions of its items go with it, as `SyncSharing`
+ * does to a snapshot. The move out of the one it leaves is no deletion: the repository notes it with the main profile's
+ * deletions (`SyncSharing.movedKey`), which an older device passes on without applying.
+ */
+object SharedCollections {
+    /** The deletions of the items of collection [id] in [library] (`listitem:<id>|…`). */
+    private fun itemDeletions(library: LibraryState, id: String): Map<String, Long> =
+        library.syncDeleted.filterKeys { it.startsWith(SyncList.ITEM_PREFIX + id.lowercase() + "|") }
+
+    /**
+     * Collection [id] moved from [from] into [into], which has it from [placedAt]. Null when [from] has no such collection.
+     */
+    fun move(from: LibraryState, into: LibraryState, id: String, placedAt: Long): Pair<LibraryState, LibraryState>? {
+        val list = from.collections.firstOrNull { it.id == id } ?: return null
+        val left = from.copy(collections = from.collections.filterNot { it.id == id })
+        val moved = list.copy(updatedAt = maxOf(list.updatedAt, placedAt), placedAt = placedAt)
+        val entered = itemDeletions(from, id).entries.fold(into.copy(collections = sorted(into.collections.filterNot { it.id == id } + moved))) { library, (key, time) ->
+            library.deleting(key, time)
+        }
+        return left to entered
+    }
+
+    private fun sorted(lists: List<UserCollection>) = lists.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
 }

@@ -25,6 +25,16 @@ principal dans `profileData` ignorées (ses données sont celles de l’instanta
 appareil à 100 pendant qu’un autre, pas encore averti, y regardait encore à 200. Les données plus récentes l’emportent
 sur la suppression, comme le contenu d’une liste (règle 7) : le profil et ses données restent.
 
+`shared-lists-a.json` et `shared-lists-b.json` se fusionnent en `shared-lists-merged.json` : les listes partagées avec
+tous les profils (`household`, règle 9). Sam a partagé « Movie night » sur un appareil pendant que l’autre, pas encore
+averti, y ajoutait un film dans les listes de Sam : la liste est partagée une seule fois, avec ce film, et n’est plus
+dans les listes de Sam (le déplacement est une marque `listmoved:` dans le `deleted` du haut, jamais une suppression de la
+copie de Sam). Une liste partagée renommée sur un appareil, dont un élément est retiré sur l’autre,
+garde les deux modifications. Une liste partagée supprimée pour tous les profils sur un appareil, et pas modifiée depuis
+sur l’autre, part (`sharedlistdeleted:`). Une liste partagée reprise dans le profil principal sur un appareil pendant que l’autre, pas encore
+averti, y ajoutait un élément : la liste est au profil principal, avec cet ajout. Les ID en majuscules sont mis en
+minuscules.
+
 `hidden-a.json` et `hidden-b.json` se fusionnent en `hidden-merged.json` de la même façon : les catégories, langues et
 styles que chaque profil masque, chacun seul. Une catégorie réaffichée après avoir été masquée part, une catégorie
 masquée de nouveau après un réaffichage reste (y compris une suppression dont l’identifiant de playlist est en
@@ -32,3 +42,5 @@ majuscules), le plus récent de deux masquages d’une langue est gardé, un sty
 reste ; une catégorie d’une playlist supprimée part ; un élément d’un type que cette version ne connaît pas est gardé ;
 les valeurs vides, un type contenant `:` et une catégorie sans sa playlist sont écartés. Dans les données d’un autre
 profil, ses propres masquages et réaffichages s’appliquent, jamais ceux du profil principal.
+
+`interop/` contient des instantanés écrits par chaque cœur et fusionnés par l’autre (voir son README).

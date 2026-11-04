@@ -193,25 +193,27 @@ final class SyncHiddenTests: XCTestCase {
     /// (on equal times the smaller key, in UTF-16 code units); a kind or a value longer than `maxLength`, blank or with a
     /// control character is dropped. A merge keeps the same, whatever the order.
     func testTooManyHiddenRecordsAreTrimmedTheSameWayOnEveryDevice() throws {
-        let max = SyncHidden.maxRecords
-        let records = (0..<(max + 100)).map { index in
-            SyncHidden(kind: SyncHidden.tag, value: "T" + String(repeating: "0", count: 5 - String(index).count) + String(index),
-                       hiddenAt: Int64(index / 3))
+        let limit: Int = SyncHidden.maxRecords
+        let records: [SyncHidden] = (0..<(limit + 100)).map { (index: Int) -> SyncHidden in
+            let digits = String(index)
+            let value = "T" + String(repeating: "0", count: 5 - digits.count) + digits
+            return SyncHidden(kind: SyncHidden.tag, value: value, hiddenAt: Int64(index / 3))
         }
-        let invalid = [
+        let invalid: [SyncHidden] = [
             SyncHidden(kind: SyncHidden.word, value: String(repeating: "x", count: SyncHidden.maxLength + 1), hiddenAt: 1_000_000),
             SyncHidden(kind: SyncHidden.word, value: "a\u{7}b", hiddenAt: 1_000_000),
             SyncHidden(kind: SyncHidden.word, value: " ", hiddenAt: 1_000_000),
             SyncHidden(kind: "a:b", value: "x", hiddenAt: 1_000_000),
             SyncHidden(kind: SyncHidden.category, value: "no playlist", hiddenAt: 1_000_000),
         ]
-        let big = SyncSnapshot(device: "a", hiddenCategories: records.reversed() + invalid)
+        let big = SyncSnapshot(device: "a", hiddenCategories: Array(records.reversed()) + invalid)
         let read = try XCTUnwrap(SyncSnapshot.decode(try big.encoded()))
-        let expected = Set(records.sorted { first, second in
+        let sorted: [SyncHidden] = records.sorted { (first: SyncHidden, second: SyncHidden) -> Bool in
             first.hiddenAt != second.hiddenAt ? first.hiddenAt > second.hiddenAt : first.key.isBefore(second.key)
-        }.prefix(max).map(\.key))
-        XCTAssertEqual(read.hiddenCategories.count, max)
-        XCTAssertEqual(Set(read.hiddenCategories.map(\.key)), expected)
+        }
+        let expected: Set<String> = Set(sorted.prefix(limit).map { $0.key })
+        XCTAssertEqual(read.hiddenCategories.count, limit)
+        XCTAssertEqual(Set(read.hiddenCategories.map { $0.key }), expected)
         XCTAssertTrue(expected.contains("hide:tag:T00099") && !expected.contains("hide:tag:T00101"), "on equal times, the smaller key")
         XCTAssertEqual(try XCTUnwrap(SyncSnapshot.decode(try read.encoded())).contentForDigest(), try read.contentForDigest())
         // Hidden later on another device: in, whatever the order of the merge, in a profile's records too.
@@ -223,7 +225,7 @@ final class SyncHiddenTests: XCTestCase {
         let other = SyncSnapshot(device: "b", hiddenCategories: later)
         let merged = SyncMerge.merge(read, other)
         XCTAssertEqual(SyncMerge.merge(other, read).hiddenCategories, merged.hiddenCategories)
-        XCTAssertEqual(merged.hiddenCategories.count, max)
+        XCTAssertEqual(merged.hiddenCategories.count, limit)
         XCTAssertTrue(later.allSatisfy { merged.hiddenCategories.contains($0) })
         let inProfile = SyncSnapshot(device: "a", profiles: [sam], profileData: [SyncProfileData(profile: sam.id, hiddenCategories: records + invalid)])
         let profileRead = try XCTUnwrap(SyncSnapshot.decode(try inProfile.encoded()))

@@ -45,6 +45,14 @@ public enum SyncMerge {
             keptIDs.contains(playlist) || removed["playlist:" + playlist] == nil
         }
 
+        let profiles = mergeProfiles(left, right, deleted: deleted)
+        // Lists shared with every profile (rule 9): a list is in one space only, the household's or a profile's.
+        let mapped = { (list: SyncList) in withPlaylists(list, id) }
+        let keptProfiles = Set(profiles.map(\.id)).subtracting([SyncProfile.main])
+        let spaces = sharedSpaces(left, right, keptProfiles: keptProfiles, mainDeleted: deleted, mapped: mapped)
+        let shared = sharedLists(spaces)
+        func outside(_ lists: [SyncList]) -> [SyncList] { lists.filter { !shared.resolved.contains(Array($0.key.utf16)) } }
+
         let favorites = pick(
             (left.favorites + right.favorites).map { favorite in
                 var favorite = favorite
@@ -63,16 +71,7 @@ public enum SyncMerge {
             key: \.key, time: \.watchedAt, tie: progressOrder, deleted: deleted
         ).filter { alive($0.playlist) }
         let lists = mergeLists(
-            (left.lists + right.lists).map { list in
-                var list = list
-                list.items = list.items.map { item in
-                    var item = item
-                    item.playlist = id(item.playlist)
-                    return item
-                }
-                list.order = list.order?.map { SyncListItem.withPlaylist($0, id) }
-                return list
-            },
+            outside((left.lists + right.lists).map(mapped)) + (shared.lists[.main] ?? []),
             deleted: deleted
         ).map { list in
             var list = list
@@ -93,25 +92,20 @@ public enum SyncMerge {
                  tie: { $0.key.isBefore($1.key) }, deleted: deleted)
                 .filter { hidden in hidden.playlist.map(alive) ?? true }
         )
-        // Profiles: the later change wins; a deleted profile goes with its data (the main one is never deleted). A side
-        // without profiles (an older version) changes none.
-        // A profile's deletion loses to its data changed after it, as a list's does (rule 7): data added on a device that
-        // had not heard of the deletion brings the profile back, never goes with it.
-        var activity: [String: Int64] = [:]
-        for bucket in left.profileData + right.profileData {
-            if let latest = bucket.records().latestTime { activity[bucket.profile] = max(activity[bucket.profile] ?? latest, latest) }
-        }
-        let profileDeletions = deleted.filter { key, time in
-            guard key != SyncProfile.keyPrefix + SyncProfile.main else { return false }
-            guard key.hasPrefix(SyncProfile.keyPrefix) else { return true }
-            return (activity[String(key.dropFirst(SyncProfile.keyPrefix.count))] ?? .min) <= time
-        }
-        let profiles = SyncProfile.capped(
-            pick(left.profiles + right.profiles, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: profileDeletions)
-        ).sorted { $0.id.isBefore($1.id) }
         let keptPlaylists = kept.sorted { before(($0.addedAt, $0.id), ($1.addedAt, $1.id)) }
-        let profileData = mergeProfileData(left.profileData + right.profileData, profiles: profiles, playlists: keptPlaylists,
-                                           deleted: deleted, replaced: replaced)
+        // The profiles' buckets without the lists rule 9 placed, then those it placed in each, with its deletions.
+        let buckets = (left.profileData + right.profileData).map { bucket in
+            var bucket = bucket
+            bucket.lists = outside(bucket.lists.map(mapped))
+            return bucket
+        } + keptProfiles.sorted { $0.isBefore($1) }.compactMap { profile -> SyncProfileData? in
+            let lists = shared.lists[.profile(profile)] ?? []
+            return lists.isEmpty ? nil : SyncProfileData(profile: profile, lists: lists)
+        }
+        let profileData = mergeProfileData(buckets, profiles: profiles, playlists: keptPlaylists, deleted: deleted, replaced: replaced)
+        // The household: its lists merged by the same rules, as a space of their own.
+        let household = mergeHousehold(left.household, right.household, placed: shared.lists[.household],
+                                       playlists: keptPlaylists, deleted: deleted, replaced: replaced) { outside($0.map(mapped)) }
 
         var result = left
         result.playlists = keptPlaylists
@@ -126,9 +120,186 @@ public enum SyncMerge {
         result.hiddenCategories = hiddenCategories.sorted { $0.key.isBefore($1.key) }
         result.profiles = profiles
         result.profileData = profileData
+        result.household = household
         result.deleted = deleted
         result.replaced = replaced
         return result
+    }
+
+    /// Rule 8: the profiles of both sides, the later change winning; a profile's deletion wins only at or after its latest
+    /// time (its `updatedAt` and every time of its data); the main profile is never deleted.
+    private static func mergeProfiles(_ left: SyncSnapshot, _ right: SyncSnapshot, deleted: [String: Int64]) -> [SyncProfile] {
+        // Profiles: the later change wins; a deleted profile goes with its data (the main one is never deleted). A side
+        // without profiles (an older version) changes none.
+        // A profile's deletion loses to its data changed after it, as a list's does (rule 7): data added on a device that
+        // had not heard of the deletion brings the profile back, never goes with it.
+        var activity: [String: Int64] = [:]
+        for bucket in left.profileData + right.profileData {
+            if let latest = bucket.records().latestTime { activity[bucket.profile] = max(activity[bucket.profile] ?? latest, latest) }
+        }
+        let profileDeletions = deleted.filter { key, time in
+            guard key != SyncProfile.keyPrefix + SyncProfile.main else { return false }
+            guard key.hasPrefix(SyncProfile.keyPrefix) else { return true }
+            return (activity[String(key.dropFirst(SyncProfile.keyPrefix.count))] ?? .min) <= time
+        }
+        return SyncProfile.capped(
+            pick(left.profiles + right.profiles, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: profileDeletions)
+        ).sorted { $0.id.isBefore($1.id) }
+    }
+
+    /// `list` with the playlist of each item, and of each key of its order, through `id` (rule 1).
+    private static func withPlaylists(_ list: SyncList, _ id: (String) -> String) -> SyncList {
+        var list = list
+        list.items = list.items.map { item in
+            var item = item
+            item.playlist = id(item.playlist)
+            return item
+        }
+        list.order = list.order?.map { SyncListItem.withPlaylist($0, id) }
+        return list
+    }
+
+    /// The spaces a list can be in (rule 9), each with its lists from both sides (playlists replaced by `mapped`) and its
+    /// deletions: the household, the main profile (whose deletions are `mainDeleted`), and each profile of `keptProfiles`.
+    private static func sharedSpaces(_ left: SyncSnapshot, _ right: SyncSnapshot, keptProfiles: Set<String>, mainDeleted: [String: Int64],
+                                     mapped: (SyncList) -> SyncList) -> [Space] {
+        let leftHousehold = left.household ?? SyncHousehold(), rightHousehold = right.household ?? SyncHousehold()
+        var spaces = [Space(id: .household, lists: (leftHousehold.lists + rightHousehold.lists).map(mapped),
+                            deleted: leftHousehold.deleted.merging(rightHousehold.deleted, uniquingKeysWith: max)),
+                      Space(id: .main, lists: (left.lists + right.lists).map(mapped), deleted: mainDeleted)]
+        var profileSpaces: [String: Int] = [:]
+        for bucket in left.profileData + right.profileData where keptProfiles.contains(bucket.profile) {
+            if let index = profileSpaces[bucket.profile] {
+                spaces[index].lists += bucket.lists.map(mapped)
+                spaces[index].deleted.merge(bucket.deleted, uniquingKeysWith: max)
+            } else {
+                profileSpaces[bucket.profile] = spaces.count
+                spaces.append(Space(id: .profile(bucket.profile), lists: bucket.lists.map(mapped), deleted: bucket.deleted))
+            }
+        }
+        return spaces
+    }
+
+    /// The household of the merge: both sides' lists (without those rule 9 placed: `outside`), then those it placed there,
+    /// merged by rules 2 to 7 as a snapshot of their own whose playlists are the merged ones. None when neither side has
+    /// one (no list shared, or an older version) and rule 9 placed none there.
+    private static func mergeHousehold(_ left: SyncHousehold?, _ right: SyncHousehold?, placed: [SyncList]?, playlists: [SyncPlaylist],
+                                       deleted: [String: Int64], replaced: [String: String],
+                                       outside: ([SyncList]) -> [SyncList]) -> SyncHousehold? {
+        guard left != nil || right != nil || placed != nil else { return nil }
+        let deletedPlaylists = deleted.filter { $0.key.hasPrefix("playlist:") }
+        let sides = [left, right].compactMap { $0 }.map { side -> SyncHousehold in
+            var side = side
+            side.lists = outside(side.lists)
+            return side
+        } + [SyncHousehold(lists: placed ?? [])]
+        // Merged with an empty side first, as a profile's data: one side alone gets the playlists' outcome too.
+        let records = sides.reduce(SyncHousehold().records(playlists: playlists, deletedPlaylists: deletedPlaylists, replaced: replaced)) { result, side in
+            merge(result, side.records(playlists: playlists, deletedPlaylists: deletedPlaylists, replaced: replaced))
+        }
+        let household = SyncHousehold(records: records)
+        return household.isEmpty ? nil : household
+    }
+
+    /// Where a list is: the household (shared with every profile), the main profile, or another profile. Ties between
+    /// spaces go in this order (the household, the main profile, then the others by ID).
+    enum SpaceID: Hashable {
+        case household
+        case main
+        case profile(String)
+
+        /// The space as `listmoved:<space>|<id>` names it: `household`, the main profile's ID, or the profile's ID.
+        var name: String {
+            switch self {
+            case .household: return "household"
+            case .main: return SyncProfile.main
+            case .profile(let id): return id
+            }
+        }
+
+        func isBefore(_ other: SpaceID) -> Bool {
+            switch (self, other) {
+            case (.household, .household), (.main, .main): return false
+            case (.household, _): return true
+            case (_, .household): return false
+            case (.main, _): return true
+            case (_, .main): return false
+            case let (.profile(first), .profile(second)): return first.isBefore(second)
+            }
+        }
+    }
+
+    /// The lists of one space from both sides (playlists already replaced), and its deletions.
+    struct Space {
+        let id: SpaceID
+        var lists: [SyncList]
+        var deleted: [String: Int64]
+    }
+
+    /// What rule 9 decides: the lists it resolved (by key, as UTF-16), each placed in one space.
+    struct SharedOutcome {
+        var resolved: Set<[UInt16]> = []
+        var lists: [SpaceID: [SyncList]] = [:]
+    }
+
+    /// Rule 9 of the merge (docs/SYNC.md, "Shared lists"): a list found in two spaces or more (moved between a profile and
+    /// the household on one device while another still had it where it was), or while the list is deleted for every
+    /// profile, ends in one space, and no copy is lost unless it was deleted.
+    /// - A space's copies are deleted when their latest `updatedAt` is not after that space's `list:<id>` deletion or,
+    ///   outside the household, not after the deletion for every profile (`sharedlistdeleted:<id>`, or the household's
+    ///   `list:<id>`).
+    /// - Of the spaces left, those whose copies are later than the list's move out of them (`listmoved:<space>|<id>`, kept
+    ///   with the top-level deletions so that an older device passes it on) keep it; the one it was moved into last wins
+    ///   (the latest `placedAt`, then the household, the main profile, the other profiles by ID). When every space left was
+    ///   moved out of (the copy where it went did not reach this device, through an older one), the list stays where it
+    ///   is, by the same order: a move never loses a list.
+    /// - The list there is every copy of the spaces left merged by rule 7 (a change made where it was, before or after the
+    ///   move, is carried), without the items taken out in any space.
+    static func sharedLists(_ spaces: [Space]) -> SharedOutcome {
+        var outcome = SharedOutcome()
+        guard let household = spaces.first(where: { $0.id == .household }),
+              let top = spaces.first(where: { $0.id == .main })?.deleted else { return outcome }
+        var copies: [[UInt16]: [SpaceID: [SyncList]]] = [:]
+        var keys: [[UInt16]] = []
+        for space in spaces {
+            for list in space.lists {
+                let key = Array(list.key.utf16)
+                if copies[key] == nil { keys.append(key) }
+                copies[key, default: [:]][space.id, default: []].append(list)
+            }
+        }
+        for key in keys {
+            guard let bySpace = copies[key], let first = bySpace.values.first?.first else { continue }
+            let forAll = [household.deleted[first.key], top[SyncSharing.deletedForAllKey(first.id)]].compactMap { $0 }.max()
+            guard bySpace.count >= 2 || forAll != nil else { continue }
+            outcome.resolved.insert(key)
+            func latest(_ space: Space) -> Int64 { bySpace[space.id]?.map(\.updatedAt).max() ?? .min }
+            let left = spaces.filter { space in
+                guard bySpace[space.id] != nil else { return false }
+                let time = latest(space)
+                if let removed = space.deleted[first.key], time <= removed { return false }
+                if let forAll, time <= forAll { return false }
+                return true
+            }
+            let keeping = left.filter { space in
+                top[SyncSharing.movedKey(space: space.id.name, list: first.id)].map { latest(space) > $0 } ?? true
+            }
+            func placed(_ space: Space) -> Int64 { bySpace[space.id]?.compactMap(\.placedAt).max() ?? 0 }
+            guard let winner = (keeping.isEmpty ? left : keeping).min(by: { a, b in
+                placed(a) != placed(b) ? placed(a) > placed(b) : a.id.isBefore(b.id)
+            }) else { continue }
+            // The items taken out of the list in any space (its ID is in their keys).
+            let itemPrefix = SyncList.itemPrefix + first.id + "|"
+            var itemDeletions: [String: Int64] = [:]
+            for space in spaces {
+                for (deletion, time) in space.deleted where deletion.utf16.starts(with: itemPrefix.utf16) {
+                    itemDeletions[deletion] = max(itemDeletions[deletion] ?? time, time)
+                }
+            }
+            let merged = mergeLists(left.flatMap { bySpace[$0.id] ?? [] }, deleted: itemDeletions)
+            outcome.lists[winner.id, default: []] += merged
+        }
+        return outcome
     }
 
     /// The data of each profile kept, other than the main one (docs/SYNC.md, "Profiles"): merged as a snapshot of its own
@@ -241,6 +412,8 @@ public enum SyncMerge {
             list.renamedAt = named.nameTime
             list.orderedAt = ordered.orderTime
             list.order = order
+            // When it was last moved into this space, if ever (rule 9).
+            list.placedAt = same.compactMap(\.placedAt).max()
             return list
         }
     }

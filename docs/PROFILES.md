@@ -34,8 +34,33 @@ for the others. That document holds everything per profile:
 - the hidden categories, the hidden languages and countries, the hidden styles;
 - the order of the rows of the Movies and Series tabs (Settings → Row order); a Kids profile cannot change its own.
 
-Shared by every profile: the playlists, the TMDb token and the other service keys, the playback settings (buffers,
+Shared by every profile: the lists and collections shared with every profile (see "Shared lists"), the playlists, the TMDb token and the other service keys, the playback settings (buffers,
 picture, subtitles, preferred languages), the sync settings, "Show adult categories", the category locks (Apple).
+
+## Shared lists
+
+A list or a collection can be shared with every profile: its page and its menu have a "Shared with all profiles" switch
+(shown once there are two profiles or more).
+
+- A shared list is in no profile's library: it lives in a household space of its own, the same list for every profile,
+  and it appears in every profile's lists marked with a small "shared" icon (two people).
+- Any profile that is not a Kids profile can add or take out items, rename it, put it in order, take it back, or delete
+  it. Deleting asks first, saying it deletes the list for every profile.
+- A Kids profile sees the shared lists, without the items its rules hide (adult categories, its hidden categories, and
+  on Apple the locked ones), and cannot change them: no switch, no rename, no delete, no add or remove, no reordering.
+- Turning the switch off takes the list back into the profile that turns it off: the other profiles lose it, and a
+  confirmation says so first.
+- Sharing and taking back move the list whole, under the same ID, with its items and their times: nothing is lost. Sync
+  carries the move as a dated marker of the move out of the space the list leaves and the list, dated later, in the space
+  it enters (docs/SYNC.md, "Shared lists"). Devices agree; a device that still has the list where it was merges it into
+  the list where it went, changes included, and does not bring back a second copy.
+- A device of an earlier version cannot show shared lists: it keeps a list shared elsewhere as the profile's list it was,
+  and, between two devices that share lists, it never makes one lose a list.
+- Deleting a profile leaves the lists it shared: they belong to every profile.
+
+Each device keeps the shared lists in a document of their own: `household.json` on Android (the lists, what was deleted
+among them, and when this device learned each deletion), `library-household` on Apple devices (the lists), with what
+was deleted among them in `sync.json` under `household`.
 
 ## Migration
 
@@ -126,7 +151,12 @@ Every profile syncs, whichever is open (docs/SYNC.md, "Profiles"):
 - the first time a device receives profiles, a profile of its own made apart (before profiles synced) is one with a
   received profile of the same name, whatever its case and accents, and the same Kids switch: the smaller ID is kept
   on both devices, the other is deleted, and its data goes into the one kept;
-- the Kotlin and Swift cores share the same fixtures (`fixtures/sync/profiles-*.json`) and the same tests.
+- the lists shared with every profile travel in `household`, apart from every profile's data; a move between a profile
+  and the household is a dated marker where the list was and the list, dated later, where it went
+  (`fixtures/sync/shared-lists-*.json`); an older device between two newer ones loses no list
+  (`fixtures/sync/interop/old-relay-*`);
+- the Kotlin and Swift cores share the same fixtures (`fixtures/sync/profiles-*.json`) and the same tests, and each
+  merges what the other wrote (`fixtures/sync/interop/`).
 
 What each device keeps for sync: Android keeps each profile's deletions in that profile's library document, the main
 profile's with the sessions; Apple keeps them in `sync.json`, the main profile's as before and each other profile's

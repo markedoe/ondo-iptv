@@ -22,9 +22,19 @@ sent for the main profile in `profileData` ignored (its data is the snapshot's o
 at 100 while another, not yet told, kept watching in it at 200. The later data wins over the deletion, as a list's
 content does (rule 7): the profile and its data stay.
 
+`shared-lists-a.json` and `shared-lists-b.json` merge into `shared-lists-merged.json`: the lists shared with every profile
+(`household`, rule 9). Sam shared Movie night on one device while the other, not told yet, added a movie to it in Sam's
+lists: the list is shared once, with that movie, and gone from Sam's lists (the move is a `listmoved:` marker in the
+top-level `deleted`, never a deletion of Sam's copy). A shared list renamed on one
+device and an item taken out of it on the other keep both changes. A shared list deleted for every profile on one device
+and not changed since on the other goes (`sharedlistdeleted:`). A shared list taken back into the main profile on one device while the other,
+not told yet, added to it: the list is the main profile's, with that addition. IDs in upper case are lowercased.
+
 `hidden-a.json` and `hidden-b.json` merge into `hidden-merged.json` the same way: the categories, languages and styles each
 profile hides, each one on its own. A category shown again after it was hidden goes, one hidden again after it was
 shown again stays (a deletion with its playlist ID in uppercase included), the later of two hides of a language is kept,
 a style hidden after an older showing again stays; a category of a deleted playlist goes; a record of a kind this version
 does not know is kept; blank values, a kind holding `:` and a category without its playlist are dropped. In another
 profile's data, its own hides and showings again apply, never the main profile's.
+
+`interop/` holds snapshots written by each core and merged by the other (see its README).
