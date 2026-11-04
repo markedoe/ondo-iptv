@@ -113,6 +113,16 @@ class OndoApplication : Application(), SingletonImageLoader.Factory {
     /** The optional tips of Settings, through Google Play (they unlock nothing). */
     val tips: TipJar by lazy { TipJar(PlayTipBilling(this), CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)) }
 
+    /** The viewer's keys for the subtitle services searched from the player (on this device only, never synced). */
+    val subtitleServices: com.markedoe.ondo.data.SubtitleServices by lazy {
+        com.markedoe.ondo.data.SubtitleServices(
+            prefs = getSharedPreferences(com.markedoe.ondo.data.SubtitleServices.FILE, MODE_PRIVATE),
+            http = OkHttpClientAdapter(okHttp),
+            userAgent = "Ondo v${BuildConfig.VERSION_NAME}",
+            folder = filesDir.resolve("subtitles"),
+        )
+    }
+
     val repository: OndoRepository by lazy {
         OndoRepository(
             store = AppStore(filesDir.resolve("ondo")),

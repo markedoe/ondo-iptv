@@ -697,7 +697,8 @@ private fun RemindersDestination(viewModel: OndoViewModel, navController: NavHos
 @Composable
 private fun CollectionDestination(viewModel: OndoViewModel, navController: NavHostController, id: String) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val exists = state.library.collections.any { it.id == id }
+    // Its own or shared with every profile (moved from one to the other, it stays open).
+    val exists = state.collections.any { it.id == id }
     // Deleted (here or by a restore): back to My List.
     LaunchedEffect(exists) { if (!exists) navController.popBackStack() }
     if (!exists) return
@@ -714,6 +715,7 @@ private fun CollectionDestination(viewModel: OndoViewModel, navController: NavHo
             onPerson = { navController.navigate(Routes.Person(it)) },
             onRename = { viewModel.renameCollection(id, it) },
             onDelete = { viewModel.deleteCollection(id) },
+            onShare = { viewModel.setCollectionShared(id, it) },
         ),
     )
 }
@@ -895,6 +897,7 @@ private fun SettingsDestination(viewModel: OndoViewModel, navController: NavHost
             onCheckTmdbToken = viewModel::checkAndSaveTmdbToken,
             onRemoveTmdbToken = viewModel::removeTmdbToken,
             onOpenTmdbApiPage = { context.browse(TMDB_API_PAGE) },
+            subtitleServices = (context.applicationContext as? com.markedoe.ondo.OndoApplication)?.subtitleServices,
             onTip = { tip -> activity?.let { tipJar?.purchase(it, tip) } },
         )
     if (isTelevision()) {
