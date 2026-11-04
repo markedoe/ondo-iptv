@@ -26163,82 +26163,82 @@
         }
       }
     },
-    "Order the Rows of Movies and Series": {
+    "Order the Rows of Home, Movies and Series": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ordonner les rangées de Films et Séries"
+            "value": "Ordonner les rangées de l’Accueil, Films et Séries"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ordenar las filas de Películas y Series"
+            "value": "Ordenar las filas de Inicio, Películas y Series"
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ordenar as fileiras de Filmes e Séries"
+            "value": "Ordenar as fileiras de Início, Filmes e Séries"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "调整“电影”和“剧集”的行顺序"
+            "value": "调整“首页”“电影”和“剧集”的行顺序"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "ترتيب صفوف الأفلام والمسلسلات"
+            "value": "ترتيب صفوف الرئيسية والأفلام والمسلسلات"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़िल्मों और सीरीज़ की पंक्तियों का क्रम"
+            "value": "होम, फ़िल्मों और सीरीज़ की पंक्तियों का क्रम"
           }
         }
       }
     },
-    "The Movies and Series tabs start with All Movies (or All Series): the latest additions, then See All, which opens the whole catalogue with its sort and Hide watched movies. Then come Continue Watching, My List, the new titles, Trending, Award Winners and each category of your provider.\n\nSettings → Row Order sets their order and which ones show: drag a row to move it, and turn its switch off to hide it. Default Order puts the rows back as they come. A category new to your playlist goes to the end; one your provider removes keeps its place for when it comes back. Hidden languages and categories stay hidden whatever the order. With Sync on this network, the order follows on your other devices.": {
+    "The Movies and Series tabs start with All Movies (or All Series): the latest additions, then See All, which opens the whole catalogue with its sort and Hide watched movies. Then come Continue Watching, My List, the new titles, Trending, Award Winners and each category of your provider.\n\nSettings → Row Order sets their order and which ones show: drag a row to move it, and turn its switch off to hide it. Default Order puts the rows back as they come. A category new to your playlist goes to the end; one your provider removes keeps its place for when it comes back. Hidden languages and categories stay hidden whatever the order. With Sync on this network, the order follows on your other devices.\n\nHome’s rows (movies and series in progress, My List, the new titles, Trending, your collections and the channels) are set the same way, under Home; the carousel stays at the top.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Films primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, et désactivez son interrupteur pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils."
+            "value": "Les onglets Films et Séries commencent par Tous les films (ou Toutes les séries) : les derniers ajouts, puis Tout voir, qui ouvre tout le catalogue avec son tri et Masquer les films déjà vus. Viennent ensuite Continuer à regarder, Ma liste, les nouveautés, Tendances, Films primés et chaque catégorie de votre fournisseur.\n\nRéglages → Ordre des rangées choisit leur ordre et celles qui s’affichent : faites glisser une rangée pour la déplacer, et désactivez son interrupteur pour la masquer. Ordre par défaut remet les rangées comme elles viennent. Une catégorie nouvelle dans votre playlist va à la fin ; celle que votre fournisseur retire garde sa place pour son retour. Les langues et catégories masquées le restent, quel que soit l’ordre. Avec la synchronisation sur ce réseau, l’ordre suit sur vos autres appareils.\n\nLes rangées de l’Accueil (films et séries en cours, Ma liste, les nouveautés, Tendances, vos collections et les chaînes) se règlent de la même façon, sous Accueil ; le carrousel reste en haut."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Películas premiadas y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla y desactiva su interruptor para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos."
+            "value": "Las pestañas Películas y Series empiezan con Todas las películas (o Todas las series): lo último añadido y luego Ver todo, que abre el catálogo completo con su orden y Ocultar películas vistas. Luego vienen Seguir viendo, Mi lista, las novedades, Tendencias, Películas premiadas y cada categoría de tu proveedor.\n\nAjustes → Orden de las filas elige su orden y cuáles se muestran: arrastra una fila para moverla y desactiva su interruptor para ocultarla. Orden predeterminado devuelve las filas tal como vienen. Una categoría nueva en tu lista va al final; la que tu proveedor quita guarda su sitio para cuando vuelva. Los idiomas y categorías ocultos siguen ocultos sea cual sea el orden. Con la sincronización en esta red, el orden se aplica en tus otros dispositivos.\n\nLas filas de Inicio (películas y series en curso, Mi lista, las novedades, Tendencias, tus colecciones y los canales) se ajustan igual, en Inicio; el carrusel se queda arriba."
           }
         },
         "pt": {
           "stringUnit": {
             "state": "translated",
-            "value": "As abas Filmes e Séries começam com Todos os filmes (ou Todas as séries): as últimas adições e depois Ver tudo, que abre o catálogo inteiro com sua ordenação e Ocultar filmes assistidos. Depois vêm Continuar assistindo, Minha lista, as novidades, Em alta, Filmes premiados e cada categoria do seu provedor.\n\nAjustes → Ordem das fileiras escolhe a ordem e quais aparecem: arraste uma fileira para movê-la e desative o botão para ocultá-la. Ordem padrão devolve as fileiras como elas vêm. Uma categoria nova na sua playlist vai para o fim; a que o seu provedor remove guarda o lugar para quando voltar. Idiomas e categorias ocultos continuam ocultos, seja qual for a ordem. Com a sincronização nesta rede, a ordem vale nos seus outros dispositivos."
+            "value": "As abas Filmes e Séries começam com Todos os filmes (ou Todas as séries): as últimas adições e depois Ver tudo, que abre o catálogo inteiro com sua ordenação e Ocultar filmes assistidos. Depois vêm Continuar assistindo, Minha lista, as novidades, Em alta, Filmes premiados e cada categoria do seu provedor.\n\nAjustes → Ordem das fileiras escolhe a ordem e quais aparecem: arraste uma fileira para movê-la e desative o botão para ocultá-la. Ordem padrão devolve as fileiras como elas vêm. Uma categoria nova na sua playlist vai para o fim; a que o seu provedor remove guarda o lugar para quando voltar. Idiomas e categorias ocultos continuam ocultos, seja qual for a ordem. Com a sincronização nesta rede, a ordem vale nos seus outros dispositivos.\n\nAs fileiras de Início (filmes e séries em andamento, Minha lista, as novidades, Em alta, suas coleções e os canais) se ajustam do mesmo jeito, em Início; o carrossel fica no topo."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖电影”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动，关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。"
+            "value": "“电影”和“剧集”标签页以“所有电影”（或“所有剧集”）开头：先是最新添加的内容，然后是“查看全部”，可打开整个片库，并提供排序和“隐藏已看过的电影”。接着是“继续观看”“我的片单”、新片、“热门”“获奖电影”以及提供商的每个分类。\n\n“设置”→“行顺序”可设定它们的顺序以及显示哪些行：拖动一行即可移动，关闭某行的开关即可隐藏该行。“默认顺序”会把各行恢复为原有顺序。播放列表中新出现的分类排在最后；提供商移除的分类会保留位置，等它回来。已隐藏的语言和分类无论顺序如何都保持隐藏。开启“在此网络上同步”后，顺序会同步到你的其他设备。\n\n“首页”的各行（正在观看的电影和剧集、“我的片单”、新片、“热门”、你的合集和频道）也在“首页”下以同样方式设置；轮播始终在顶部。"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تبدأ علامتا التبويب الأفلام والمسلسلات بصف كل الأفلام (أو كل المسلسلات): أحدث الإضافات، ثم عرض الكل الذي يفتح الكتالوج كاملًا مع الترتيب وإخفاء الأفلام التي شاهدتها. بعدها تأتي متابعة المشاهدة وقائمتي والجديد والرائج والأفلام الفائزة بجوائز وكل فئة من فئات مزوّدك.\n\nتحدد الإعدادات ← ترتيب الصفوف ترتيبها والصفوف المعروضة: اسحب صفًا لنقله، وأوقف مفتاحه لإخفائه. يعيد الترتيب الافتراضي الصفوف كما تأتي. تذهب الفئة الجديدة في قائمة التشغيل إلى النهاية؛ وتحتفظ الفئة التي يزيلها مزوّدك بمكانها حتى تعود. تبقى اللغات والفئات المخفية مخفية مهما كان الترتيب. مع المزامنة على هذه الشبكة، ينتقل الترتيب إلى أجهزتك الأخرى."
+            "value": "تبدأ علامتا التبويب الأفلام والمسلسلات بصف كل الأفلام (أو كل المسلسلات): أحدث الإضافات، ثم عرض الكل الذي يفتح الكتالوج كاملًا مع الترتيب وإخفاء الأفلام التي شاهدتها. بعدها تأتي متابعة المشاهدة وقائمتي والجديد والرائج والأفلام الفائزة بجوائز وكل فئة من فئات مزوّدك.\n\nتحدد الإعدادات ← ترتيب الصفوف ترتيبها والصفوف المعروضة: اسحب صفًا لنقله، وأوقف مفتاحه لإخفائه. يعيد الترتيب الافتراضي الصفوف كما تأتي. تذهب الفئة الجديدة في قائمة التشغيل إلى النهاية؛ وتحتفظ الفئة التي يزيلها مزوّدك بمكانها حتى تعود. تبقى اللغات والفئات المخفية مخفية مهما كان الترتيب. مع المزامنة على هذه الشبكة، ينتقل الترتيب إلى أجهزتك الأخرى.\n\nتُضبط صفوف الرئيسية (الأفلام والمسلسلات قيد المشاهدة، وقائمتي، والجديد، والرائج، ومجموعاتك، والقنوات) بالطريقة نفسها، تحت الرئيسية؛ ويبقى العرض الدوّار في الأعلى."
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "फ़िल्में और सीरीज़ टैब सभी फ़िल्में (या सभी सीरीज़) से शुरू होते हैं: सबसे नई जोड़ी गई चीज़ें, फिर सभी देखें, जो पूरा कैटलॉग उसकी छँटाई और देखी गई फ़िल्में छिपाएँ के साथ खोलता है। उसके बाद देखना जारी रखें, मेरी सूची, नए टाइटल, ट्रेंडिंग, पुरस्कार विजेता फ़िल्में और आपके प्रदाता की हर श्रेणी आती है।\n\nसेटिंग्स → पंक्तियों का क्रम उनका क्रम और कौन-सी दिखें, यह तय करता है: किसी पंक्ति को खींचकर हटाएँ, और उसे छिपाने के लिए उसका स्विच बंद करें। डिफ़ॉल्ट क्रम पंक्तियों को वैसे ही लौटा देता है जैसे वे आती हैं। आपकी प्लेलिस्ट में नई श्रेणी अंत में जाती है; जिसे आपका प्रदाता हटाता है, वह लौटने तक अपनी जगह रखती है। छिपी भाषाएँ और श्रेणियाँ, क्रम कुछ भी हो, छिपी रहती हैं। इस नेटवर्क पर सिंक चालू होने पर क्रम आपके दूसरे डिवाइस पर भी लागू होता है।"
+            "value": "फ़िल्में और सीरीज़ टैब सभी फ़िल्में (या सभी सीरीज़) से शुरू होते हैं: सबसे नई जोड़ी गई चीज़ें, फिर सभी देखें, जो पूरा कैटलॉग उसकी छँटाई और देखी गई फ़िल्में छिपाएँ के साथ खोलता है। उसके बाद देखना जारी रखें, मेरी सूची, नए टाइटल, ट्रेंडिंग, पुरस्कार विजेता फ़िल्में और आपके प्रदाता की हर श्रेणी आती है।\n\nसेटिंग्स → पंक्तियों का क्रम उनका क्रम और कौन-सी दिखें, यह तय करता है: किसी पंक्ति को खींचकर हटाएँ, और उसे छिपाने के लिए उसका स्विच बंद करें। डिफ़ॉल्ट क्रम पंक्तियों को वैसे ही लौटा देता है जैसे वे आती हैं। आपकी प्लेलिस्ट में नई श्रेणी अंत में जाती है; जिसे आपका प्रदाता हटाता है, वह लौटने तक अपनी जगह रखती है। छिपी भाषाएँ और श्रेणियाँ, क्रम कुछ भी हो, छिपी रहती हैं। इस नेटवर्क पर सिंक चालू होने पर क्रम आपके दूसरे डिवाइस पर भी लागू होता है।\n\nहोम की पंक्तियाँ (देखी जा रही फ़िल्में और सीरीज़, मेरी सूची, नए टाइटल, ट्रेंडिंग, आपके संग्रह और चैनल) भी इसी तरह, होम के नीचे सेट होती हैं; कैरोसेल सबसे ऊपर रहता है।"
           }
         }
       }

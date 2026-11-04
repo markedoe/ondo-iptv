@@ -1,7 +1,7 @@
 import SwiftUI
 import IPTVCore
 
-/// Settings → Row order: the rows of Movies, then of Series, in the viewer's order. Each row moves with the list's own
+/// Settings → Row order: the rows of Home, Movies, then Series, in the viewer's order. Each row moves with the list's own
 /// reordering (its handle on iPhone and iPad, a drag on the Mac) and shows or hides with its switch; Default Order puts
 /// a tab's rows back as they come.
 struct RowOrderView: View {
@@ -14,6 +14,7 @@ struct RowOrderView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
+            home
             tab(.movie)
             tab(.series)
         }
@@ -23,6 +24,55 @@ struct RowOrderView: View {
         #endif
         .navigationTitle("Row Order")
         .accessibilityIdentifier("rowOrder")
+    }
+
+    /// Home's rows (below its carousel, which stays at the top).
+    private var home: some View {
+        let rows = model.arrangedHomeRows()
+        let tab = SyncRows.home
+        return Section {
+            ForEach(rows, id: \.key) { row in
+                Toggle(isOn: Binding(
+                    get: { !row.hidden },
+                    set: { shown in
+                        model.setRowOrder(tab: tab, arranged: rows.map(\.key),
+                                          hidden: rows.filter { $0.key == row.key ? !shown : $0.hidden }.map(\.key))
+                    }
+                )) {
+                    homeName(row.key)
+                }
+                .accessibilityIdentifier("row-\(tab)-\(row.key)")
+            }
+            .onMove { from, to in
+                var moved = rows
+                moved.move(fromOffsets: from, toOffset: to)
+                model.setRowOrder(tab: tab, arranged: moved.map(\.key), hidden: moved.filter(\.hidden).map(\.key))
+            }
+        } header: {
+            HStack {
+                Text("Home")
+                Spacer()
+                Button("Default Order") { model.resetRowOrder(tab: tab) }
+                    .font(.footnote)
+                    .textCase(nil)
+                    .accessibilityIdentifier("rowOrderDefault-\(tab)")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func homeName(_ key: String) -> some View {
+        switch key {
+        case RowOrder.homeContinueMovies: Text("Movies in Progress")
+        case RowOrder.homeContinueSeries: Text("Series in Progress")
+        case RowOrder.myList: Text("My List")
+        case RowOrder.homeNewMovies: Text("New Movies")
+        case RowOrder.homeNewSeries: Text("New Series")
+        case RowOrder.trending: Text("Trending")
+        case RowOrder.homeCollections: Text("Collections")
+        case RowOrder.homeChannels: Text("Live TV")
+        default: Text(verbatim: key)
+        }
     }
 
     private func tab(_ type: ContentType) -> some View {
