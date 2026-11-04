@@ -28,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import com.markedoe.ondo.HangGuard
 
 /**
  * Reference screenshots of profiles (docs/PROFILES.md): on a TV, "Who's watching?", the switcher, a profile's page and
@@ -38,6 +39,7 @@ import org.robolectric.annotation.GraphicsMode
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(qualifiers = "en-rUS-w960dp-h540dp-land-television-xhdpi")
 class ProfileScreenshots {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private val me = Profile.main("Me")

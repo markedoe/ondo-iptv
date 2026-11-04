@@ -23,9 +23,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import com.markedoe.ondo.HangGuard
 
 /** Viewer profiles (docs/PROFILES.md): the upgrade of an existing store, isolation, PIN, Kids, deletion, launch. */
 class ProfilesTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
     @get:Rule val folder = TemporaryFolder()
 
     private val clock = Fixtures.NOW

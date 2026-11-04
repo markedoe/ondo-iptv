@@ -6,9 +6,12 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.markedoe.ondo.core.HangGuard
+import org.junit.Rule
 
 /** The profile record both platforms share (docs/PROFILES.md). */
 class ProfileTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
     @Test
     fun thePinHashIsApplesOne() {
         // SHA-256 of "ondo:1234", as Apple's `Keychain.hash(pin:)` keeps it.

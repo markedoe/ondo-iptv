@@ -52,6 +52,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import com.markedoe.ondo.HangGuard
 
 /**
  * Android TV / Google TV: profiles with the remote's keys only (docs/PROFILES.md) — the avatar next to Settings opens
@@ -61,6 +62,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w960dp-h540dp-land-television-xhdpi")
 class TelevisionProfilesTest {
+    @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
     @get:Rule val folder = TemporaryFolder()
 
