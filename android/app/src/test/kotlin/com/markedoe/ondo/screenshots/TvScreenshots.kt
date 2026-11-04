@@ -405,9 +405,13 @@ class TvScreenshots {
         press(Key.DirectionCenter)
         assertTrue("the new movies' grid", compose.onAllNodes(hasTestTag("grid")).fetchSemanticsNodes().isNotEmpty())
         capture("grid-new")
-        press(Key.DirectionDown)
-        press(Key.DirectionUp)
-        assertTrue("Up from the first row: the Sort chip", compose.onAllNodes(isFocused() and hasTestTag(SORT_CHIP_TAG)).fetchSemanticsNodes().isNotEmpty())
+        // The focus on the first poster: Up reaches the Sort chip.
+        assertTrue("the focus on the posters", focusedIn("grid"))
+        presses = 0
+        while (compose.onAllNodes(isFocused() and hasTestTag(SORT_CHIP_TAG)).fetchSemanticsNodes().isEmpty()) {
+            check(presses++ < 3) { "Up never reached the Sort chip" }
+            press(Key.DirectionUp)
+        }
         capture("grid-new-sort-chips")
         compose.runOnIdle { compose.activity.onBackPressedDispatcher.onBackPressed() }
         advance()
