@@ -2,6 +2,7 @@ package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.sync.SyncFavorite
+import com.markedoe.ondo.core.sync.SyncHousehold
 import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncList
 import com.markedoe.ondo.core.sync.SyncListItem
@@ -111,6 +112,8 @@ object SyncData {
         state.library.syncDeleted,
         state.library.history.filter(SyncKeys::syncs).map { it.key to it.isFinished },
         state.library.rowOrders,
+        state.household.collections,
+        state.household.syncDeleted,
         state.settings.serviceKeys,
         state.storedKeys,
         state.profiles.map { it.copy(pinHash = null) },
@@ -134,7 +137,10 @@ object SyncData {
             libraries[profile.id]?.syncDeletedLearned?.takeIf { it.isNotEmpty() }?.let { profile.id.lowercase() to it }
         }.toMap()
         return records(state, libraries, device, deviceName, now)
-            .pruned(now, sessions = main.syncPeers.values, learned = main.syncDeletedLearned, profileLearned = profileLearned)
+            .pruned(
+                now, sessions = main.syncPeers.values, learned = main.syncDeletedLearned, profileLearned = profileLearned,
+                householdLearned = state.household.syncDeletedLearned,
+            )
     }
 
     /** The latest time of what this device holds for sync (its records and deletions, every profile's); null without any. */
@@ -175,6 +181,8 @@ object SyncData {
             keys = (state.storedKeys + state.settings.serviceKeys).distinctBy { it.service }.filter { it.value.isNotBlank() },
             profiles = profiles,
             profileData = profileData,
+            // The collections shared with every profile (docs/SYNC.md, "Shared lists"); none: no household, as before.
+            household = SyncHousehold.of(libraryRecords(state.household, ::travels)).takeIf { !it.isEmpty },
             replaced = main.syncReplaced,
             clock = now,
         )
@@ -211,6 +219,7 @@ object SyncData {
                 updatedAt = list.updatedAt,
                 renamedAt = list.renamedAt.takeIf { it > 0 },
                 orderedAt = list.orderedAt.takeIf { it > 0 },
+                placedAt = list.placedAt.takeIf { it > 0 },
             )
         },
         people = library.favorites.filter(SyncKeys::isPerson).map(SyncKeys::syncPerson),
@@ -236,6 +245,8 @@ object SyncData {
         val libraries: Map<String, LibraryState> = emptyMap(),
         /** The profiles deleted on another device: their libraries go. */
         val removedProfiles: List<Profile> = emptyList(),
+        /** The collections shared with every profile, and what was deleted among them. */
+        val household: LibraryState = LibraryState(),
     ) {
         /** The library to show for [profileId]. */
         fun library(profileId: String): LibraryState? = libraries[profileId]
@@ -324,9 +335,13 @@ object SyncData {
             val records = bucket.records(deletedPlaylists = mergedPlaylistDeletions, replaced = merged.replaced)
             profile.id to applyLibrary(libraries[profile.id] ?: LibraryState(), records, context, isMain = false)
         }
+        // The collections shared with every profile: the household's records, by the same rules as another profile's.
+        val householdRecords = (merged.household ?: SyncHousehold()).records(deletedPlaylists = mergedPlaylistDeletions, replaced = merged.replaced)
+        val household = applyLibrary(state.household, householdRecords, context, isMain = false)
         return Applied(
             playlists, removed, mainLibrary, replacements.toMap(), merged.keys,
             profiles = profiles, libraries = others + (Profile.DEFAULT_ID to mainLibrary), removedProfiles = removedProfiles,
+            household = household,
         )
     }
 
@@ -386,6 +401,7 @@ object SyncData {
                 updatedAt = synced.updatedAt,
                 renamedAt = synced.renamedAt ?: 0,
                 orderedAt = synced.orderedAt ?: 0,
+                placedAt = synced.placedAt ?: 0,
             )
         }.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER, UserCollection::name).thenBy { it.id })
         // Another profile's deletions are its own (its bucket's); the main one's are the snapshot's, with the sessions.

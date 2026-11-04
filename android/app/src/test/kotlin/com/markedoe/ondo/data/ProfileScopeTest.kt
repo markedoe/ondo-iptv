@@ -124,6 +124,12 @@ class ProfileScopeTest {
             read = { state.playlists.firstOrNull { it.name == "Extra" }?.let { it.id to it.url } },
         ),
         Shared(
+            name = "list shared with every profile",
+            set = { repository.setCollectionShared(repository.createCollection("Family"), true) },
+            clear = { repository.deleteCollection(state.household.collections.first { it.name == "Family" }.id) },
+            read = { state.household.collections.firstOrNull { it.name == "Family" }?.id },
+        ),
+        Shared(
             name = "TMDb token",
             set = { repository.checkAndSaveTmdbToken("GOOD") },
             clear = { repository.removeTmdbToken() },

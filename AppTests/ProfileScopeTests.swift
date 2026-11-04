@@ -105,6 +105,10 @@ final class ProfileScopeTests: XCTestCase {
                        await model.deletePlaylist(edited)
                    },
                    read: { model in Self.found(model.playlists.first { $0.name == "Extra renamed" }?.id) }),
+            Shared(name: "list shared with every profile",
+                   set: { model in model.setListShared(model.createList(named: "Family"), true) },
+                   clear: { model in model.deleteList(try XCTUnwrap(model.household.customLists.first { $0.name == "Family" }).id) },
+                   read: { model in Self.found(model.household.customLists.first { $0.name == "Family" }?.id) }),
             Shared(name: "TMDb token",
                    set: { $0.setTMDbCredential("test-tmdb-token") },
                    clear: { $0.setTMDbCredential(nil) },

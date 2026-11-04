@@ -6237,6 +6237,46 @@
         }
       }
     },
+    "Delete this collection for every profile?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer cette collection pour tous les profils ?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar esta colección para todos los perfiles?"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar esta coleção para todos os perfis?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要为所有个人资料删除此合集吗？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف هذه المجموعة لكل الملفات الشخصية؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह संग्रह हर प्रोफ़ाइल के लिए डिलीट करें?"
+          }
+        }
+      }
+    },
     "Delete this collection?": {
       "localizations": {
         "fr": {
@@ -6313,6 +6353,46 @@
           "stringUnit": {
             "state": "translated",
             "value": "यह प्लेलिस्ट डिलीट करें?"
+          }
+        }
+      }
+    },
+    "Deleting it takes it away from every profile.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La supprimer la retire de tous les profils."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminarla la quita de todos los perfiles."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagá-la a remove de todos os perfis."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除后，所有个人资料都将不再有它。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذفها يزيلها من كل الملفات الشخصية."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इसे डिलीट करने से यह हर प्रोफ़ाइल से हट जाएगा।"
           }
         }
       }
@@ -17357,6 +17437,86 @@
         }
       }
     },
+    "Shared": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partagée"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartida"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartilhada"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已共享"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشتركة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शेयर किया गया"
+          }
+        }
+      }
+    },
+    "Shared with All Profiles": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partagée avec tous les profils"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartida con todos los perfiles"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compartilhada com todos os perfis"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "与所有个人资料共享"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشتركة مع كل الملفات الشخصية"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सभी प्रोफ़ाइलों के साथ शेयर किया गया"
+          }
+        }
+      }
+    },
     "Small tip": {
       "localizations": {
         "fr": {
@@ -17513,6 +17673,126 @@
           "stringUnit": {
             "state": "translated",
             "value": "टिप लोड हो रही हैं…"
+          }
+        }
+      }
+    },
+    "Stop Sharing": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus partager"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dejar de compartir"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parar de compartilhar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止共享"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إيقاف المشاركة"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "शेयर करना बंद करें"
+          }
+        }
+      }
+    },
+    "Stop sharing this collection?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus partager cette collection ?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Dejar de compartir esta colección?"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parar de compartilhar esta coleção?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要停止共享此合集吗？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إيقاف مشاركة هذه المجموعة؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस संग्रह को शेयर करना बंद करें?"
+          }
+        }
+      }
+    },
+    "The other profiles will no longer see “%@”. It goes back to your collections.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les autres profils ne verront plus « %@ ». Elle revient dans vos collections."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los demás perfiles ya no verán «%@». Vuelve a tus colecciones."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Os outros perfis não verão mais “%@”. Ela volta para as suas coleções."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他个人资料将不再看到“%@”。它会回到你的合集中。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لن ترى الملفات الشخصية الأخرى «%@» بعد الآن. ستعود إلى مجموعاتك."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "दूसरी प्रोफ़ाइलें अब “%@” नहीं देखेंगी। यह आपके संग्रहों में वापस आ जाएगा।"
           }
         }
       }
