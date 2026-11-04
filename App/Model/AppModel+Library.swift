@@ -59,14 +59,24 @@ extension AppModel {
     }
 
     func renameList(_ id: UUID, to name: String) {
+        guard canEditList(id) else { return }
         let time = syncStamp()
-        updateLibrary { $0.renameList(id, to: name, now: time) }
+        updateList(id) { $0.renameList(id, to: name, now: time) }
         syncSoon()
     }
 
+    /// Deletes a collection: a shared one for every profile (the screen asked first).
     func deleteList(_ id: UUID) {
-        updateLibrary { $0.deleteList(id) }
-        noteListDeletedForSync(id)
+        guard isShared(id) else {
+            updateLibrary { $0.deleteList(id) }
+            noteListDeletedForSync(id)
+            return
+        }
+        guard canEditSharedLists else { return }
+        updateHousehold { $0.deleteList(id) }
+        noteHouseholdDeletedForSync("list:" + id.uuidString.lowercased(), at: syncStamp().syncMilliseconds)
+        saveSyncState()
+        syncSoon()
     }
 
     func toggle(_ item: LibraryItem, inList id: UUID) {
@@ -75,8 +85,9 @@ extension AppModel {
             if case .channel(let channel) = item { return self.logoURL(for: channel) }
             return item.imageURL
         }()
+        guard canEditList(id) else { return }
         let time = syncStamp()
-        updateLibrary { $0.toggle(ref, title: item.title, imageURL: image, inList: id, now: time) }
+        updateList(id) { $0.toggle(ref, title: item.title, imageURL: image, inList: id, now: time) }
         syncSoon()
     }
 
@@ -100,10 +111,10 @@ extension AppModel {
     }
 
     func moveListItems(_ id: UUID, fromOffsets source: IndexSet, toOffset destination: Int) {
-        guard let list = library.customLists.first(where: { $0.id == id }) else { return }
+        guard canEditList(id), let list = customLists.first(where: { $0.id == id }) else { return }
         let move = Self.storedMove(visible: items(in: list), stored: list.items, fromOffsets: source, toOffset: destination)
         let time = syncStamp()
-        updateLibrary { $0.moveItems(inList: id, fromOffsets: move.source, toOffset: move.destination, now: time) }
+        updateList(id) { $0.moveItems(inList: id, fromOffsets: move.source, toOffset: move.destination, now: time) }
         syncSoon()
     }
 
