@@ -513,6 +513,59 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertEqual(mac.subtitleCredential(.subSourceKey), "test-subsource-key")
     }
 
+    /// A key and its account are saved as one: changing only the password dates the key and the username with it, so a
+    /// concurrent edit on another device never pairs one device's username with the other's password.
+    func testAnOpenSubtitlesAccountTravelsAsOne() async throws {
+        let model = try await device("phone")
+        model.saveSubtitleCredentials([.openSubtitlesKey: "test-key", .openSubtitlesUsername: "test-user", .openSubtitlesPassword: "test-password"])
+        try await Task.sleep(for: .milliseconds(5))
+        // Settings sends the fields not edited as saved, the password as typed.
+        model.saveSubtitleCredentials([.openSubtitlesKey: "test-key", .openSubtitlesUsername: "test-user", .openSubtitlesPassword: "test-password-2"])
+        let sent = Dictionary(uniqueKeysWithValues: model.syncSnapshot().keys.map { ($0.service, $0) })
+        XCTAssertEqual(sent[SyncKey.openSubtitlesPassword]?.value, "test-password-2")
+        let times = Set([SyncKey.openSubtitles, SyncKey.openSubtitlesUsername, SyncKey.openSubtitlesPassword].compactMap { sent[$0]?.updatedAt })
+        XCTAssertEqual(times.count, 1, "dated together")
+        // Another device saved its own account a little earlier: none of its fields win alone.
+        let earlier = try XCTUnwrap(times.first) - 1
+        await model.applySync(SyncSnapshot(device: "tv", keys: [
+            SyncKey(service: SyncKey.openSubtitlesUsername, value: "other-user", updatedAt: earlier),
+            SyncKey(service: SyncKey.openSubtitlesPassword, value: "other-password", updatedAt: earlier),
+        ]))
+        XCTAssertEqual(model.subtitleCredential(.openSubtitlesUsername), "test-user")
+        XCTAssertEqual(model.subtitleCredential(.openSubtitlesPassword), "test-password-2")
+    }
+
+    /// An earlier version kept the subtitle keys it passed on in sync.json (`otherKeys`): at the first launch of this one
+    /// they move to the keychain, and leave sync.json.
+    func testSubtitleKeysAnEarlierVersionKeptMoveToTheKeychain() async throws {
+        let first = try await device("mac")
+        let relayed = SyncKey(service: SyncKey.subdl, value: "test-subdl-key", updatedAt: 1_000)
+        let other = SyncKey(service: "future-service", value: "test-other-key", updatedAt: 300)
+        first.syncState.otherKeys = [relayed, other]
+        first.saveSyncState()
+        let again = AppModel(storageRoot: root.appendingPathComponent("mac", isDirectory: true), secrets: first.secrets,
+                             reminderScheduler: InMemoryReminderScheduler())
+        await again.bootstrap()
+        XCTAssertEqual(again.subtitleCredential(.subdlKey), "test-subdl-key")
+        XCTAssertEqual(again.syncState.otherKeys, [other])
+        XCTAssertEqual(again.syncSnapshot().keys.first { $0.service == SyncKey.subdl }, relayed)
+        let state = try String(contentsOf: root.appendingPathComponent("mac/Support/sync.json"), encoding: .utf8)
+        XCTAssertFalse(state.contains("test-subdl-key"), "gone from sync.json")
+    }
+
+    /// Settings saves what the user changed as typed, and the other fields as saved now: a key sync brought while the
+    /// user typed a username is not replaced by the one the screen showed before.
+    func testSettingsSavesOnlyTheFieldsTheUserChanged() {
+        let saved: [SubtitleCredential: String] = [.openSubtitlesKey: "synced-key"]
+        let fields = SubtitleServicesView.fieldsToSave(
+            SubtitleCredential.fields(of: .openSubtitles),
+            typed: [.openSubtitlesKey: "shown-key", .openSubtitlesUsername: "new-user", .openSubtitlesPassword: "new-password"],
+            shown: [.openSubtitlesKey: "shown-key", .openSubtitlesUsername: "", .openSubtitlesPassword: ""],
+            saved: { saved[$0] }
+        )
+        XCTAssertEqual(fields, [.openSubtitlesKey: "synced-key", .openSubtitlesUsername: "new-user", .openSubtitlesPassword: "new-password"])
+    }
+
     func testOnlyAnEditOfWhatSyncCarriesDatesThePlaylist() async throws {
         let first = try await deviceWithLibrary()
         var playlist = try XCTUnwrap(first.activePlaylist)

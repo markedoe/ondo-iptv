@@ -190,4 +190,72 @@ class SubtitleKeysSyncTest {
         repository.mergeSync(SyncSnapshot(device = "tv", deleted = mapOf("key:${SyncKey.SUBSOURCE}" to time - 3_600_000)), "mac")
         assertEquals("test-subsource-key", services.credential(SubtitleCredential.SUBSOURCE_KEY))
     }
+
+    /**
+     * A key and its account are saved as one: changing only the password dates the key and the username with it, so a
+     * concurrent edit on another device never pairs one device's username with the other's password.
+     */
+    @Test
+    fun anAccountTravelsAsOne() = runTest {
+        val http = object : HttpClient {
+            override suspend fun get(url: String, headers: Map<String, String>): ByteArray =
+                if (url.startsWith("https://api.opensubtitles.com/api/v1/infos/formats")) """{"data":{"output_formats":["srt"]}}""".toByteArray() else throw HttpException.BadStatus(404)
+
+            override suspend fun post(url: String, headers: Map<String, String>, body: ByteArray, contentType: String): ByteArray =
+                """{"token":"test-session","base_url":"api.opensubtitles.com"}""".toByteArray()
+        }
+        val prefs = context.getSharedPreferences("subtitle_services_account", Context.MODE_PRIVATE).apply { edit().clear().commit() }
+        val services = SubtitleServices(prefs, http, "Ondo test", File(folder.root, "account"), io = Dispatchers.Unconfined)
+        val repository = OndoRepository(
+            AppStore(folder.newFolder("account")), http, backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler), keyStore = services,
+        )
+        Device(repository, services).ready()
+        val account = mapOf(
+            SubtitleCredential.OPEN_SUBTITLES_KEY to "test-key",
+            SubtitleCredential.OPEN_SUBTITLES_USERNAME to "test-user",
+            SubtitleCredential.OPEN_SUBTITLES_PASSWORD to "test-password",
+        )
+        assertEquals(CredentialCheck.ACCEPTED, services.checkAndSave(SubtitleService.OPEN_SUBTITLES, account))
+        time += 1_000
+        // Only the password typed: the key and username kept, all three dated together.
+        assertEquals(
+            CredentialCheck.ACCEPTED,
+            services.checkAndSave(SubtitleService.OPEN_SUBTITLES, mapOf(SubtitleCredential.OPEN_SUBTITLES_PASSWORD to "test-password-2")),
+        )
+        val sent = repository.syncSnapshot("account")!!.keys.associateBy { it.service }
+        assertEquals("test-password-2", sent.getValue(SyncKey.OPEN_SUBTITLES_PASSWORD).value)
+        assertEquals(1, setOf(SyncKey.OPEN_SUBTITLES, SyncKey.OPEN_SUBTITLES_USERNAME, SyncKey.OPEN_SUBTITLES_PASSWORD).map { sent.getValue(it).updatedAt }.toSet().size)
+        // Another device saved its own account a little earlier: none of its fields win alone.
+        val other = SyncSnapshot(
+            device = "phone",
+            keys = listOf(
+                SyncKey(SyncKey.OPEN_SUBTITLES_USERNAME, "other-user", time - 100),
+                SyncKey(SyncKey.OPEN_SUBTITLES_PASSWORD, "other-password", time - 100),
+            ),
+        )
+        repository.mergeSync(other, "account")
+        assertEquals("test-user", services.credential(SubtitleCredential.OPEN_SUBTITLES_USERNAME))
+        assertEquals("test-password-2", services.credential(SubtitleCredential.OPEN_SUBTITLES_PASSWORD))
+    }
+
+    /**
+     * An earlier version kept the subtitle keys it passed on among the settings' keys (settings.json): at the first launch
+     * of this one they move to the services' private file, and leave the settings.
+     */
+    @Test
+    fun keysAnEarlierVersionKeptInTheSettingsMoveToTheStore() = runTest {
+        val store = AppStore(folder.newFolder("old"))
+        val relayed = SyncKey(SyncKey.SUBDL, "test-subdl-key", time - 1_000)
+        val tmdb = SyncKey(SyncKey.TMDB, "test-tmdb-token", time - 1_000)
+        store.saveSettings(AppSettings(serviceKeys = listOf(tmdb, relayed)))
+        val prefs = context.getSharedPreferences("subtitle_services_old", Context.MODE_PRIVATE).apply { edit().clear().commit() }
+        val services = SubtitleServices(prefs, Http(), "Ondo test", File(folder.root, "old-subtitles"), io = Dispatchers.Unconfined)
+        val repository = OndoRepository(store, Http(), backgroundScope, now = { time }, io = StandardTestDispatcher(testScheduler), keyStore = services)
+        Device(repository, services).ready()
+        assertEquals("test-subdl-key", services.credential(SubtitleCredential.SUBDL_KEY))
+        assertEquals(listOf(tmdb), repository.state.value.settings.serviceKeys)
+        assertEquals(relayed, repository.syncSnapshot("old")!!.keys.single { it.service == SyncKey.SUBDL })
+        testScheduler.advanceUntilIdle()
+        assertEquals("gone from the settings file", listOf(tmdb), AppStore(folder.root.resolve("old")).loadSettings().serviceKeys)
+    }
 }

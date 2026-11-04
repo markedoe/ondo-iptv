@@ -193,7 +193,12 @@ Addic7ed est une valeur, jamais un retrait ; il n’y a pas d’élément tant q
 de passe est gardé tel que saisi, espaces compris ; les lecteurs écartent une clé qui contient une espace ou un
 caractère de contrôle, et un mot de passe qui contient un caractère de contrôle. Chaque appareil les garde là où il
 garde ces clés (le trousseau sur Apple, un fichier privé de l’app sur Android), jamais dans les réglages qu’il envoie,
-et date une fois, à son démarrage, celles enregistrées avant qu’elles se synchronisent. Seul ce que l’utilisateur a
+et date une fois, à son démarrage, celles enregistrées avant qu’elles se synchronisent. Un enregistrement date tous les
+champs du service d’un même instant (la clé et le compte circulent ensemble, jamais appariés à ceux d’un autre
+appareil), quel que soit le champ modifié. Un appareil qui, avant cette version, gardait ces éléments parmi les clés
+qu’il ne fait que transmettre les déplace, une fois, là où il les garde, à son démarrage. Ces clés, comme le jeton
+TMDb, sont celles de tous les profils : un retrait va dans `deleted` (celui de l’instantané), quel que soit le profil
+ouvert. Seul ce que l’utilisateur a
 saisi circule : jamais la session qu’OpenSubtitles donne après une connexion. Un appareil laisse tel quel un service
 dont la clé est en cours de vérification jusqu’à la fin de la vérification ; la clé alors enregistrée est datée
 après ce que la synchronisation a apporté. Un appareil d’une version antérieure les garde et les transmet comme les

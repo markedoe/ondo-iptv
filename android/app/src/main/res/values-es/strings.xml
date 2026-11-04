@@ -349,14 +349,14 @@
     <string name="stats_player">Los datos llegan a tiempo: las congelaciones o imágenes perdidas vienen del reproductor o del dispositivo.</string>
     <string name="sync_section">Sincronización</string>
     <string name="sync_title">Sincronizar en esta red</string>
-    <string name="sync_summary">Playlists, Mi lista, colecciones, progreso y token de TMDb</string>
+    <string name="sync_summary">Playlists, Mi lista, colecciones, progreso, token de TMDb y claves de subtítulos</string>
     <string name="sync_hint">Mientras Ondo está abierto, los dispositivos de esta red con este ajuste activado mantienen las mismas playlists, Mi lista, colecciones, progreso, token de TMDb y claves de los servicios de subtítulos. iPhone, iPad y Mac se sincronizan a través de un dispositivo Android. Nada sale de la red local, pero los datos de acceso de las playlists y las claves viajan sin cifrar por ella: actívalo solo en casa.</string>
     <string name="sync_looking">Buscando otros dispositivos con Ondo abierto…</string>
     <string name="sync_synced_at">Sincronizado a las %1$s</string>
     <string name="sync_not_reached">Inaccesible, se volverá a intentar</string>
     <string name="sync_found">Encontrado</string>
     <string name="help_sync_title">Sincroniza tus dispositivos</string>
-    <string name="help_sync_body">Ajustes → Sincronizar en esta red mantiene las mismas playlists, Mi lista, colecciones, progreso y token de TMDb en tus dispositivos de casa. Actívalo en cada dispositivo y mantén Ondo abierto en ellos: una TV, un teléfono o una tableta Android encuentra los demás por sí solo; iPhone, iPad y Mac se sincronizan a través de un dispositivo Android. Un dispositivo sin playlists puede recibir las tuyas así: actívalo desde la pantalla de bienvenida.\n\nTodo va directamente de un dispositivo a otro por tu red, nunca por internet. No hay emparejamiento y los datos de acceso y el token de TMDb viajan sin cifrar por la red: actívalo solo en casa. Los demás ajustes, las categorías ocultas y las playlists importadas de un archivo se quedan en cada dispositivo.</string>
+    <string name="help_sync_body">Ajustes → Sincronizar en esta red mantiene las mismas playlists, Mi lista, colecciones, progreso, token de TMDb y claves de los servicios de subtítulos en tus dispositivos de casa. Actívalo en cada dispositivo y mantén Ondo abierto en ellos: una TV, un teléfono o una tableta Android encuentra los demás por sí solo; iPhone, iPad y Mac se sincronizan a través de un dispositivo Android. Un dispositivo sin playlists puede recibir las tuyas así: actívalo desde la pantalla de bienvenida.\n\nTodo va directamente de un dispositivo a otro por tu red, nunca por internet. No hay emparejamiento y los datos de acceso y las claves viajan sin cifrar por la red: actívalo solo en casa. Los demás ajustes, las categorías ocultas y las playlists importadas de un archivo se quedan en cada dispositivo.</string>
     <string name="last_crash">Último cierre inesperado: %1$s</string>
     <string name="last_crash_hint">Registrado en este dispositivo cuando Ondo se cerró. Una foto ayuda a corregir el problema; no incluye direcciones ni datos de acceso.</string>
     <string name="web_page_unavailable">Esta página no se puede abrir en este dispositivo. Visita %1$s desde un teléfono o un ordenador.</string>

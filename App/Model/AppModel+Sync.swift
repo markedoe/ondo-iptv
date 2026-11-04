@@ -619,6 +619,14 @@ extension AppModel {
             syncState.subtitleKeysUpdatedAt[SyncKey.addic7ed] = syncStamp(now).syncMilliseconds
             changed = true
         }
+        // Subtitle keys an earlier version kept among those it only passed on (in sync.json): moved to the keychain once
+        // (the later one kept), and gone from sync.json.
+        let relayed = syncState.otherKeys.filter { SyncKey.subtitleServices.contains($0.service) }
+        if !relayed.isEmpty {
+            applySyncedSubtitleKeys(SyncSnapshot(device: syncState.deviceID, keys: relayed))
+            syncState.otherKeys.removeAll { SyncKey.subtitleServices.contains($0.service) }
+            changed = true
+        }
         // A profile made before profiles synced has no time: it gets one now, so that it travels.
         if profiles.contains(where: { !$0.isMain && $0.updatedAt == 0 }) {
             profiles = profiles.map { profile in

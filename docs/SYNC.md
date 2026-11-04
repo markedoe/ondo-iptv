@@ -175,7 +175,11 @@ keys), and `addic7ed`, whose `value` is `on` or `off` (turning Addic7ed off is a
 record until it was switched once). A password is kept as typed, spaces included; readers leave out a key that holds
 a space or a control character, and a password that holds a control character. Each device keeps them where it
 keeps these keys (the keychain on Apple, a private file of the app on Android), never in the settings it sends, and
-dates once, when it starts, those saved before they synced. Only what the user typed travels: never the session
+dates once, when it starts, those saved before they synced. A save dates every field of the service with one same time
+(the key and the account travel as one, never paired with another device's), whichever field changed. A device that
+kept these records, before this version, among the keys it only passes on moves them to where it keeps them when it
+starts, once. These keys, like the TMDb token, are every profile's: a removal goes into `deleted` (the snapshot's own),
+whichever profile is open. Only what the user typed travels: never the session
 OpenSubtitles gives after a login. A device leaves a service whose key is being checked as it is until the check ends;
 the key then saved is dated after what sync brought. A device of an earlier version keeps and passes them on as the
 keys of services it does not know.

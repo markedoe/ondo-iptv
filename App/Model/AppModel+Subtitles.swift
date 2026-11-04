@@ -63,7 +63,7 @@ extension AppModel {
         }
         guard let firstField = fields.first else { return nil }
         guard let key = value(firstField) else {
-            for field in fields { setSubtitleCredential(nil, for: field) }
+            saveSubtitleCredentials(Dictionary(uniqueKeysWithValues: fields.map { ($0, String?.none) }))
             return nil
         }
         subtitleChecksInFlight.insert(service)
@@ -84,7 +84,7 @@ extension AppModel {
         }
         switch check {
         case .accepted:
-            for field in fields { setSubtitleCredential(value(field), for: field) }
+            saveSubtitleCredentials(Dictionary(uniqueKeysWithValues: fields.map { ($0, value($0)) }))
             return .accepted
         case .refused:
             return .refused
@@ -99,13 +99,28 @@ extension AppModel {
 
     /// Saves a field typed here (nil or empty removes it): the other devices get the change by sync, dated now.
     func setSubtitleCredential(_ value: String?, for field: SubtitleCredential, now: Date = Date()) {
-        let trimmed = field == .openSubtitlesPassword ? value : value?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let stored = trimmed?.isEmpty == false ? trimmed : nil
-        guard stored != subtitleCredential(field), storeSubtitleCredential(stored, for: field) else { return }
+        saveSubtitleCredentials([field: value], now: now)
+    }
+
+    /// Saves fields typed here (nil or empty removes one). When any changed, every field given is dated with one same
+    /// time (a key and its account travel as one, never paired with another device's), and each one removed is noted
+    /// as deleted at that time: the other devices get the change by sync.
+    func saveSubtitleCredentials(_ values: [SubtitleCredential: String?], now: Date = Date()) {
+        // A list, not a dictionary: a nil value (a removal) must stay in it.
+        let cleaned: [(field: SubtitleCredential, value: String?)] = values.map { field, value in
+            let trimmed = field == .openSubtitlesPassword ? value : value?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (field, trimmed?.isEmpty == false ? trimmed : nil)
+        }
+        guard cleaned.contains(where: { $0.value != subtitleCredential($0.field) }) else { return }
         let time = syncStamp(now).syncMilliseconds
-        // A removal keeps its time too: a merge made before it cannot bring the key back.
-        syncState.subtitleKeysUpdatedAt[field.syncService] = time
-        if stored == nil { syncState.deleted["key:" + field.syncService] = time }
+        for (field, value) in cleaned {
+            let had = subtitleCredential(field) != nil
+            if value == nil && !had { continue }
+            if value != subtitleCredential(field) { guard storeSubtitleCredential(value, for: field) else { continue } }
+            // A removal keeps its time too: a merge made before it cannot bring the key back.
+            syncState.subtitleKeysUpdatedAt[field.syncService] = time
+            if value == nil { syncState.deleted["key:" + field.syncService] = time }
+        }
         saveSyncState(now: now)
         syncSoon()
     }

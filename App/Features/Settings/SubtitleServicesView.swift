@@ -144,9 +144,18 @@ struct SubtitleServicesView: View {
         }
     }
 
-    /// The fields of `service` as typed.
+    /// The fields of `service` to check and save: those the user changed as typed, the others as saved now (what sync
+    /// brought meanwhile included, never the value the screen showed before).
     private func typed(_ service: SubtitleService) -> [SubtitleCredential: String] {
-        Dictionary(uniqueKeysWithValues: SubtitleCredential.fields(of: service).map { ($0, values[$0] ?? "") })
+        Self.fieldsToSave(SubtitleCredential.fields(of: service), typed: values, shown: shown, saved: model.subtitleCredential)
+    }
+
+    static func fieldsToSave(_ fields: [SubtitleCredential], typed: [SubtitleCredential: String], shown: [SubtitleCredential: String],
+                             saved: (SubtitleCredential) -> String?) -> [SubtitleCredential: String] {
+        Dictionary(uniqueKeysWithValues: fields.map { field in
+            let value = typed[field] ?? ""
+            return (field, value != (shown[field] ?? "") ? value : (saved(field) ?? ""))
+        })
     }
 
     private func show(_ field: SubtitleCredential) {
@@ -169,7 +178,10 @@ struct SubtitleServicesView: View {
         let fields = typed(service)
         checks[service] = .checking
         Task {
-            checks[service] = await model.checkAndSaveSubtitleCredentials(service, values: fields)
+            let answer = await model.checkAndSaveSubtitleCredentials(service, values: fields)
+            checks[service] = answer
+            // Saved: the fields show what is saved, no edit left.
+            if answer == .accepted { SubtitleCredential.fields(of: service).forEach(show) }
         }
     }
 

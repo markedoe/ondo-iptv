@@ -376,6 +376,10 @@ class OndoRepository(
                 syncClock.advance(keys.syncKeys().maxOfOrNull { it.updatedAt })
                 keys.dateUndated(::stamp)
             }
+            // Keys of the store an earlier version kept among those it only passed on (in the settings file): moved to
+            // the store once (the later one kept), and gone from the settings.
+            val relayedKeys = keyStore?.let { keys -> savedSettings.serviceKeys.filter { it.service in keys.services } }.orEmpty()
+            if (relayedKeys.isNotEmpty()) keyStore?.applySynced(relayedKeys, emptyMap())
             // A profile made before profiles synced has no time: it gets one now, so that it travels.
             val profiles = unstamped.map { if (!it.isMain && it.updatedAt == 0L) it.copy(updatedAt = stamp()) else it }
             val pending = pendingLibraryChanges.toList()
@@ -383,7 +387,8 @@ class OndoRepository(
             val library = pending.fold(saved) { library, change -> change(library) }
             val pendingSettings = pendingSettingsChanges.toList()
             pendingSettingsChanges.clear()
-            val settings = pendingSettings.fold(if (movedRows != null) savedSettings.copy(rowOrders = emptyList()) else savedSettings) { settings, change -> change(settings) }
+            val base = savedSettings.let { if (relayedKeys.isEmpty()) it else it.copy(serviceKeys = it.serviceKeys - relayedKeys.toSet()) }
+            val settings = pendingSettings.fold(if (movedRows != null) base.copy(rowOrders = emptyList()) else base) { settings, change -> change(settings) }
             // With a playlist, its saved catalogue is read next: restoring from the same update (no "empty" moment).
             _state.update {
                 it.copy(
@@ -395,7 +400,7 @@ class OndoRepository(
             if (pending.isNotEmpty() || (movedRows != null && opened.isMain)) opened.libraryDocumentName.let { document -> persist { saveLibrary(library, document) } }
             if (movedRows != null && !opened.isMain) otherLibraries[Profile.DEFAULT_ID]?.let { main -> persist { saveLibrary(main, AppStore.MAIN_LIBRARY) } }
             if (profiles != unstamped) persist { saveProfiles(profiles) }
-            if (pendingSettings.isNotEmpty() || movedRows != null) persist { saveSettings(settings) }
+            if (pendingSettings.isNotEmpty() || movedRows != null || relayedKeys.isNotEmpty()) persist { saveSettings(settings) }
             _state.value.activePlaylist?.let { open(it) }
             awardsSource?.let { source ->
                 val awards = withContext(io) { runCatching { source()?.let(AwardsCatalogue::parse) }.getOrNull() }
@@ -1800,7 +1805,8 @@ class OndoRepository(
     fun removeTmdbToken() {
         if (_state.value.settings.serviceKeys.none { it.service == SyncKey.TMDB }) return
         updateSettings { settings -> settings.copy(serviceKeys = settings.serviceKeys.filterNot { it.service == SyncKey.TMDB }) }
-        updateLibrary { it.deleting("key:${SyncKey.TMDB}", stamp()) }
+        // A key is every profile's: its removal travels with the main profile's deletions, the snapshot's own.
+        updateMainLibrary { it.deleting("key:${SyncKey.TMDB}", stamp()) }
         tmdbTokenChanged()
     }
 

@@ -160,36 +160,36 @@ class SubtitleServices(
         listener?.changed()
     }
 
-    /** Saves what the user typed: each field that changed dated now for sync, each one removed noted as deleted. */
+    /**
+     * Saves what the user typed. When anything changed, every field of [values] is dated with one same time for sync (a
+     * key and its account travel as one, never paired with another device's), and each one removed is noted as deleted
+     * at that time.
+     */
     private fun save(values: Map<SubtitleCredential, String?>) {
+        if (values.all { (field, value) -> value == credential(field) }) {
+            changed()
+            return
+        }
+        val time = listener?.stamp()
         val editor = prefs.edit()
         val removed = mutableListOf<SubtitleCredential>()
-        var any = false
         for ((field, value) in values) {
-            if (value == credential(field)) continue
-            any = true
+            val had = credential(field) != null
             if (value == null) {
-                // Its time stays, as the removal's: a merge made before it cannot bring the key back.
+                if (!had) continue
                 editor.remove(field.key)
                 removed += field
             } else {
                 editor.putString(field.key, value)
-                listener?.let { editor.putLong(AT + field.syncService, it.stamp()) }
             }
+            // A removal keeps its time too: a merge made before it cannot bring the key back.
+            if (time != null) editor.putLong(AT + field.syncService, time)
         }
         editor.apply()
         changed()
         val sync = listener ?: return
-        if (!any) return
-        if (removed.isNotEmpty()) {
-            val dated = prefs.edit()
-            for (field in removed) {
-                val time = sync.stamp()
-                dated.putLong(AT + field.syncService, time)
-                sync.removed("key:${field.syncService}", time)
-            }
-            dated.apply()
-        }
+        val at = time ?: return
+        removed.forEach { sync.removed("key:${it.syncService}", at) }
         sync.changed()
     }
 
