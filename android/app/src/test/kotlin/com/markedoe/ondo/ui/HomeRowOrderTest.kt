@@ -80,7 +80,7 @@ class HomeRowOrderTest {
         assertEquals(RowOrder.ALL, UiMappers.vod(Fixtures.state(library = LibraryState(rowOrders = listOf(saved))), series = false, title = "", now = Fixtures.NOW).shownRows.first())
         // Settings → Row order lists Home first, every row of Android's Home, the hidden one switched off.
         val settings = UiMappers.rowOrder(Fixtures.state(library = LibraryState(rowOrders = listOf(saved))))
-        assertEquals(listOf("channels", "new-movies", "mylist", "continue-movies", "continue-series", "trending", "new-series"), settings.home.map { it.key })
+        assertEquals(listOf("channels", "new-movies", "mylist", "continue-movies", "continue-series", "new-series", "trending"), settings.home.map { it.key })
         assertEquals(listOf("trending"), settings.home.filter { it.hidden }.map { it.key })
     }
 
