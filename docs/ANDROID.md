@@ -202,7 +202,9 @@ Series with the header on the focused title before its wait, a top bar of tabs, 
 name whole on its line, a category's and a genre's titles with no row of their own above the posters, Down from the
 tab on the first poster and never on a sort chip, the order chosen with the Sort chip reached by Up from the first row,
 a category's grid five posters a row scrolled by whole rows down and up, and a Movies row about five posters across);
-`TelevisionFocusTest` (See all opens a category's titles and Back comes back to the same row and card, scrolled as
+`SeeAllEverywhereTest` (every row of Home, Movies and Series, on a TV and on a phone: See all where the
+row can hold more than it shows, opening the grid that starts with the row's titles in its order; the rows without one
+named with the reason); `TelevisionFocusTest` (See all opens a category's titles and Back comes back to the same row and card, scrolled as
 before; another tab then Movies again shows the rows; Ondo started anew shows the rows).
 
 ### Before changing a TV screen (regressions checklist)

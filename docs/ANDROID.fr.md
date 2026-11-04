@@ -234,7 +234,10 @@ onglets, Recherche et Réglages, le nom d'une catégorie entier sur sa ligne, le
 sans rangée à eux au-dessus des affiches, Bas depuis l'onglet sur la première affiche et jamais sur une puce de tri,
 l'ordre choisi avec la puce Tri atteinte par Haut depuis la première rangée, la grille d'une catégorie à cinq affiches
 par rangée qui défile par rangées entières vers le bas et vers le haut, et une rangée de Films d'environ cinq affiches
-de large) ; `TelevisionFocusTest` (Tout voir ouvre les titres d'une catégorie et Retour revient à la même rangée et à
+de large) ; `SeeAllEverywhereTest` (chaque rangée de l'Accueil, de Films et de
+Séries, sur une TV et sur un téléphone : Tout voir là où la rangée peut contenir plus qu'elle n'affiche, qui ouvre la
+grille commençant par les titres de la rangée dans son ordre ; les rangées sans Tout voir nommées avec la raison) ;
+`TelevisionFocusTest` (Tout voir ouvre les titres d'une catégorie et Retour revient à la même rangée et à
 la même carte, défilées comme avant ; un autre onglet puis Films de nouveau montre les rangées ; Ondo relancé montre
 les rangées).
 

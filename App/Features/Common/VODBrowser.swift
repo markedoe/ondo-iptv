@@ -176,7 +176,7 @@ struct VODBrowser: View {
     }
 
     /// A category's row: its first titles, in the playlist's order.
-    static func items(in category: MediaCategory, type: ContentType, model: AppModel) -> [ShowcaseItem] {
+    @MainActor static func items(in category: MediaCategory, type: ContentType, model: AppModel) -> [ShowcaseItem] {
         if type == .movie {
             return model.movies(in: category, sort: .playlist).prefix(rowLength).map(ShowcaseItem.movie)
         }

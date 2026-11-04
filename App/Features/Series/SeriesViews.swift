@@ -16,7 +16,7 @@ struct SeriesGridView: View {
 
     /// The series of `category`'s grid: a category, All, My List, or every title of a row Ondo picks, in the row's order
     /// (`rowSort`, `.playlist` keeping it).
-    static func series(_ category: MediaCategory, model: AppModel, rowSort: PosterSort = .playlist) -> [Series] {
+    @MainActor static func series(_ category: MediaCategory, model: AppModel, rowSort: PosterSort = .playlist) -> [Series] {
         switch category.id {
         case PseudoCategory.all: return model.series(in: nil, sort: model.settings.posterSort)
         case PseudoCategory.favorites: return model.favorites(.series).compactMap { model.index.seriesByID[$0.reference.itemID] }

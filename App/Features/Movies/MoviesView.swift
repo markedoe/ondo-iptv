@@ -53,7 +53,7 @@ struct MovieGridView: View {
 
     /// The movies of `category`'s grid: a category, All, My List, or every title of a row Ondo picks, in the row's order
     /// (`rowSort`, `.playlist` keeping it).
-    static func movies(_ category: MediaCategory, model: AppModel, rowSort: PosterSort = .playlist) -> [Movie] {
+    @MainActor static func movies(_ category: MediaCategory, model: AppModel, rowSort: PosterSort = .playlist) -> [Movie] {
         switch category.id {
         case PseudoCategory.all: return model.movies(in: nil, sort: model.settings.posterSort)
         case PseudoCategory.favorites: return model.favorites(.movie).compactMap { model.index.moviesByID[$0.reference.itemID] }
