@@ -1,6 +1,8 @@
 package com.markedoe.ondo.screenshots
 
 import androidx.activity.ComponentActivity
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.app.ApplicationProvider
@@ -31,7 +33,7 @@ import org.robolectric.annotation.GraphicsMode
 /**
  * Reference screenshots of a collection shared with every profile (docs/PROFILES.md, "Shared lists"), on a phone, from the
  * demo catalogue: its page with the "Shared with all profiles" switch and the shared mark by its name, and My List's
- * collections with the mark on the shared one.
+ * collections with the mark on the shared one. On the app's background, as its scaffold draws it.
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -66,7 +68,7 @@ class SharedCollectionScreenshots {
     @Test
     fun sharedCollectionPage() {
         val page = requireNotNull(UiMappers.collection(state(), "c-shared", ShowcaseCatalogue.NOW))
-        compose.setContent { OndoTheme { CollectionScreen(page, CollectionActions()) } }
+        compose.setContent { OndoTheme { Surface(color = MaterialTheme.colorScheme.background) { CollectionScreen(page, CollectionActions()) } } }
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$BASELINES/phone/en-US/collection-shared.png", BaselineOptions)
     }
@@ -74,7 +76,7 @@ class SharedCollectionScreenshots {
     @Test
     fun sharedMarkInMyList() {
         val myList = UiMappers.myList(state(), ShowcaseCatalogue.NOW)
-        compose.setContent { OndoTheme { MyListScreen(myList, MyListKind.COLLECTIONS, MyListActions()) } }
+        compose.setContent { OndoTheme { Surface(color = MaterialTheme.colorScheme.background) { MyListScreen(myList, MyListKind.COLLECTIONS, MyListActions()) } } }
         compose.waitForIdle()
         compose.onRoot().captureRoboImage("$BASELINES/phone/en-US/my-list-shared-collection.png", BaselineOptions)
     }
