@@ -182,8 +182,12 @@ final class LocalSyncTests: XCTestCase {
         let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
         model.switchProfile(to: kid)
         XCTAssertFalse(model.canChangeRowOrder)
+        // Each profile has its own order (docs/PROFILES.md): the kids profile has none, and cannot set one.
+        XCTAssertNil(model.savedRowOrder(.movie))
         model.setRowOrder(.movie, arranged: ["all", "mylist"], hidden: ["all"])
         model.resetRowOrder(.movie)
+        XCTAssertNil(model.savedRowOrder(.movie))
+        model.switchProfile(to: try XCTUnwrap(model.profiles.first(where: \.isMain)))
         XCTAssertEqual(model.savedRowOrder(.movie), saved)
     }
 
@@ -240,17 +244,17 @@ final class LocalSyncTests: XCTestCase {
 
     /// A session counts only when its answer was applied: on another profile nothing is, and the caller is told so
     /// (it then keeps sending everything until one is).
-    func testAnAnswerNotAppliedIsReportedAsSuch() async throws {
+    /// Every profile syncs (docs/SYNC.md, "Profiles"): an answer is applied whichever profile is open, and the main
+    /// profile's records stay the main profile's.
+    func testAnAnswerIsAppliedWhicheverProfileIsOpen() async throws {
         let model = try await device("first")
         let person = SyncPerson(name: "Ada Example", addedAt: Date().syncMilliseconds - 1_000)
         let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
         model.switchProfile(to: kid)
-        let skipped = await model.applySync(SyncSnapshot(device: "tv", people: [person]))
-        XCTAssertFalse(skipped)
-        model.switchProfile(to: try XCTUnwrap(model.profiles.first { $0.id == Profile.defaultID }))
         let applied = await model.applySync(SyncSnapshot(device: "tv", people: [person]))
         XCTAssertTrue(applied)
         XCTAssertEqual(model.syncSnapshot().people, [person])
+        XCTAssertEqual(model.syncSnapshot().profileData.first { $0.profile == kid.id.uuidString.lowercased() }?.people ?? [], [])
     }
 
     /// Times go out as they were stored, even ahead of the clock (sync never moves a time); a deletion learned late is
