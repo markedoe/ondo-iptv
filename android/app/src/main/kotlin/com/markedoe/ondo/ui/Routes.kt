@@ -70,7 +70,7 @@ enum class GridSource {
     /** New movies or series: released this year or last year, the newest first (`Showcase.newMovies`). */
     NEW,
 
-    /** Award winners: the most recent award first ([MovieAwards.winners]). */
+    /** Award winners, films or series: the most recent award first ([MovieAwards.winners], [MovieAwards.seriesWinners]). */
     AWARDS,
     ;
 

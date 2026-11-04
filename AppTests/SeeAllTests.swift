@@ -11,7 +11,8 @@ final class SeeAllTests: XCTestCase {
 
     nonisolated private static let thisYear = Calendar.current.component(.year, from: .now)
 
-    /// New movies and series, a movie with an award (Pulp Fiction, in the bundled awards), and a hidden category's new movie.
+    /// New movies and series, a movie and a series with an award (Pulp Fiction, Breaking Bad, in the bundled awards), and a
+    /// hidden category's new movie.
     nonisolated private static let catalogue = """
     #EXTM3U
     #EXTINF:-1 tvg-id="news.test" group-title="News",Test News
@@ -28,6 +29,8 @@ final class SeeAllTests: XCTestCase {
     http://127.0.0.1:9/h101.mp4
     #EXTINF:2700 group-title="Series | Drama",Old Show (\(thisYear - 4)) S01E01
     http://127.0.0.1:9/old101.mp4
+    #EXTINF:2700 tvg-type="series" group-title="Series | Drama",Breaking Bad (2008) S01E01
+    http://127.0.0.1:9/series/bb/1/1.mp4
     """
 
     private enum Surface: CaseIterable { case home, movies, series }
@@ -104,6 +107,7 @@ final class SeeAllTests: XCTestCase {
         XCTAssertEqual(newGrid, ["Bright Side", "Quiet Water"])
         XCTAssertEqual(MovieGridView.movies(PseudoCategory.awardWinners(.movie), model: model).map(\.name), ["Pulp Fiction"])
         XCTAssertEqual(SeriesGridView.series(PseudoCategory.newReleases(.series), model: model).map(\.name), ["Harbor"])
+        XCTAssertEqual(SeriesGridView.series(PseudoCategory.awardWinners(.series), model: model).map(\.name), ["Breaking Bad"])
     }
 
     /// `route` opens a grid whose first titles are the row's (`row`, not empty), in its order.

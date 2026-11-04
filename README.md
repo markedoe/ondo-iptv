@@ -57,7 +57,8 @@ interface changes.
 - **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
   **actors and directors by name**, **filtered by release years** and **by festival or ceremony** (winners only if you like).
 - **Awards**: Palme d'Or, Oscars, Golden Lion, Golden Bear, Césars, BAFTAs, Golden Globes… on movie pages
-  (won, in competition or nominated) and an "Award Winners" row in Movies. The data comes from
+  (won, in competition or nominated), Emmys, Golden Globes, BAFTA TV Awards, International Emmys and Peabody Awards
+  on series pages (won or nominated), and an "Award Winners" row in Movies and in Series. The data comes from
   [Wikidata](https://www.wikidata.org) (CC0), is bundled with the app and matched on the device; a monthly
   workflow refreshes it and the apps fetch the newer file once a week, unless turned off in Settings
   ([tools/awards](tools/awards/README.md)).
@@ -156,7 +157,7 @@ interface changes.
 - **Categories**: hidden by language or country code (`|PT|`, `FR:`…), by style or word (manga, Bollywood…) or one
   by one, like on Apple.
 - **Help** in Settings.
-- **Awards** on movie pages and an "Award winners" row in Movies, from the same bundled data, updated once a
+- **Awards** on movie and series pages and an "Award winners" row in Movies and in Series, from the same bundled data, updated once a
   week unless turned off in Settings.
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin
   and tested with the same cases).

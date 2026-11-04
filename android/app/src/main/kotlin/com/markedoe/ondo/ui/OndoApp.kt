@@ -630,10 +630,12 @@ private fun SeriesDestination(viewModel: OndoViewModel, navController: NavHostCo
     val errors by viewModel.seriesErrors.collectAsStateWithLifecycle()
     var season by rememberSaveable { mutableStateOf<Int?>(null) }
     LaunchedEffect(id) { viewModel.loadSeries(id) }
-    // Off the main thread: finding the series, its similar titles and hidden categories go through the whole catalogue.
+    // Off the main thread: finding the series, its similar titles, awards and hidden categories go through the whole
+    // catalogue.
     var gone by remember { mutableStateOf(false) }
-    val detail by produceKept<SeriesDetailUiState?>("series", null, state, id) {
-        withContext(Dispatchers.Default) { UiMappers.series(state, id)?.let { UiMappers.seriesDetail(state, it, null, null) } }
+    val locale = LocalConfiguration.current.locales[0]
+    val detail by produceKept<SeriesDetailUiState?>("series", null, state, id, locale) {
+        withContext(Dispatchers.Default) { UiMappers.series(state, id)?.let { UiMappers.seriesDetail(state, it, null, null, locale) } }
             .also { gone = it == null && !state.isLoading && !state.isRestoring }
     }
     BackWhenGone(gone, navController)

@@ -97,7 +97,8 @@ extension AppModel {
     func rowTitles(_ row: String, type: ContentType, limit: Int = .max) -> [ShowcaseItem] {
         switch row {
         case PseudoCategory.newReleases: return type == .series ? newSeries(limit: limit) : newMovies(limit: limit)
-        case PseudoCategory.awardWinners: return type == .movie ? awardWinners(limit: limit).map(ShowcaseItem.movie) : []
+        case PseudoCategory.awardWinners:
+            return type == .movie ? awardWinners(limit: limit).map(ShowcaseItem.movie) : seriesAwardWinners(limit: limit).map(ShowcaseItem.series)
         default: return []
         }
     }

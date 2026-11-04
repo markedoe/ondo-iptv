@@ -67,12 +67,16 @@ class SeeAllEverywhereTest {
 
     private val labels = Labels("Movie", "Series", Locale.US)
 
-    // Every kind of row has titles: something in progress of each type, My List, new titles, trending ones, award winners.
+    // Every kind of row has titles: something in progress of each type, My List, new titles, trending ones, award winners
+    // (films and series).
     private val awards = AwardsCatalogue.parse(
         """
         {"awards":[{"id":"palme-dor","group":"cannes","names":{"en":"Palme d'Or"}}],
          "films":[{"titles":["Glass City"],"year":2024,"awards":[["palme-dor",2024,1]]},
-                  {"titles":["The Long Road"],"year":2021,"awards":[["palme-dor",2021,1]]}]}
+                  {"titles":["The Long Road"],"year":2021,"awards":[["palme-dor",2021,1]]}],
+         "seriesAwards":[{"id":"emmy-drama-series","group":"emmys","names":{"en":"Primetime Emmy Award for Outstanding Drama Series"}}],
+         "series":[{"titles":["Harbor Lights"],"year":2025,"awards":[["emmy-drama-series",2025,1]]},
+                   {"titles":["Blue Horizon"],"year":2023,"awards":[["emmy-drama-series",2023,1]]}]}
         """.trimIndent(),
     )
     private val movieInProgress = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.silentHarbor.id, title = "Silent Harbor", lastWatchedAt = 1)

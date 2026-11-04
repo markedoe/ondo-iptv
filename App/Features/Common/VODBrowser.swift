@@ -151,6 +151,7 @@ struct VODBrowser: View {
                 }
             }
         case RowOrder.awardWinners:
+            // Films in Movies, series in Series; no row when none of the playlist's titles won.
             let winners = model.rowTitles(PseudoCategory.awardWinners, type: type, limit: Self.rowLength)
             if !winners.isEmpty {
                 Shelf(title: "Award Winners", route: Self.seeAll(key, type: type), metrics: metrics) {

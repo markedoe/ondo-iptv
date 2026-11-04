@@ -197,7 +197,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                 posterUrl = details?.posterUrl ?: series.coverUrl,
                 backdropUrl = state.backdropUrl,
                 onBackdropFailed = actions.onBackdropFailed,
-                award = null,
+                award = state.awards.firstOrNull(),
                 facts = facts,
                 badges = listOfNotNull(MediaFormat.label(state.seasons.flatMap { s -> s.episodes.map { it.streamUrl } })),
                 plot = details?.plot ?: series.plot,
@@ -248,6 +248,7 @@ fun TvSeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
         }
         exploreShelf(details?.genre ?: series.genre, series.year, actions)
         peopleShelf(details?.director ?: series.director, details?.cast ?: series.cast, state.faces, actions)
+        awardsShelf(state.awards, actions)
         similarShelf(state.similar, actions)
     }
     if (picking) TvCollectionDialog(state.collections, actions.onToggleCollection, actions.onNewCollection, onDismiss = { picking = false })
