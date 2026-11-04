@@ -197,7 +197,10 @@ interface changes.
   rate when the TV is set to match the content (Android 12 and later); hold OK on a channel
   to add it to My List; Help, With the remote. The privacy policy and support pages
   open inside the app.
-- Coming next: Chromecast, downloads, profiles and PIN, online subtitles, a second engine (libVLC).
+- Subtitles → Search online… for films and episodes, with your own OpenSubtitles, SubDL or SubSource API key
+  (checked with the service when saved, kept on the device) or Addic7ed; a subtitle track the device cannot show is
+  listed with why.
+- Coming next: Chromecast, downloads, profiles and PIN, a second engine (libVLC).
   Details: [docs/ANDROID.md](docs/ANDROID.md).
 
 ## Languages

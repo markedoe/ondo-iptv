@@ -46,6 +46,18 @@ class OkHttpClientAdapterTest {
 
     /** The image loader calls the shared client directly, without the adapter's headers. */
     @Test
+    fun postSendsItsBodyWithItsType(): Unit = runBlocking(Dispatchers.IO) {
+        server.enqueue(MockResponse().setBody("{\"token\":\"t\"}"))
+        val body = client.post(server.url("/api/v1/login").toString(), mapOf("Api-Key" to "example-key"), "{\"username\":\"u\"}".toByteArray())
+        assertEquals("{\"token\":\"t\"}", body.decodeToString())
+        val request = server.takeRequest(5, TimeUnit.SECONDS)!!
+        assertEquals("POST", request.method)
+        assertEquals("{\"username\":\"u\"}", request.body.readUtf8())
+        assertEquals("example-key", request.getHeader("Api-Key"))
+        assertTrue(request.getHeader("Content-Type")!!.startsWith("application/json"))
+    }
+
+    @Test
     fun theSharedClientSendsThePlayerUserAgentToo(): Unit = runBlocking(Dispatchers.IO) {
         server.enqueue(MockResponse().setBody("png"))
         OkHttpClientAdapter.defaultClient().newCall(okhttp3.Request.Builder().url(server.url("/logo.png")).build()).execute().close()

@@ -16,8 +16,11 @@ import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Headers
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 
 /**
@@ -32,6 +35,9 @@ class OkHttpClientAdapter(
     override suspend fun get(url: String, headers: Map<String, String>): ByteArray =
         fetch(url, headers) { body, length -> readLimited(body, MAX_BODY_SIZE, length) }
 
+    override suspend fun post(url: String, headers: Map<String, String>, body: ByteArray, contentType: String): ByteArray =
+        fetch(url, headers, body.toRequestBody(contentType.toMediaTypeOrNull())) { stream, length -> readLimited(stream, MAX_BODY_SIZE, length) }
+
     /** Streams the answer to [file]: a large guide never sits whole in memory. */
     override suspend fun download(url: String, headers: Map<String, String>, file: File) =
         fetch(url, headers) { body, _ -> copyLimited(body, file, MAX_BODY_SIZE) }
@@ -40,8 +46,8 @@ class OkHttpClientAdapter(
      * Opens `url` (http, https or file) and hands its body to [consume], on the I/O thread that reads it, with its
      * length when it is known (-1 otherwise).
      */
-    private suspend fun <T> fetch(url: String, headers: Map<String, String>, consume: (InputStream, Long) -> T): T {
-        if (url.startsWith("file:", ignoreCase = true)) {
+    private suspend fun <T> fetch(url: String, headers: Map<String, String>, body: RequestBody? = null, consume: (InputStream, Long) -> T): T {
+        if (body == null && url.startsWith("file:", ignoreCase = true)) {
             val file = try {
                 File(URI(url))
             } catch (e: IllegalArgumentException) {
@@ -52,7 +58,7 @@ class OkHttpClientAdapter(
             return withContext(ioDispatcher) { file.inputStream().let { consume(it, file.length()) } }
         }
         val httpUrl = url.toHttpUrlOrNull() ?: throw HttpException.InvalidUrl(url)
-        val request = Request.Builder().url(httpUrl).headers(requestHeaders(headers)).build()
+        val request = Request.Builder().url(httpUrl).headers(requestHeaders(headers)).apply { if (body != null) post(body) }.build()
         val call = client.newCall(request)
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { call.cancel() }
