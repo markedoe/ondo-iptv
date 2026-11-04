@@ -21,6 +21,11 @@ data class TrackChoice(
     val selected: Boolean,
     val group: Tracks.Group,
     val index: Int,
+    /**
+     * Whether this device can show it. A subtitle track the player cannot render (a picture format without its
+     * decoder, a format it does not know) is still listed, with why, rather than hidden: the stream has it.
+     */
+    val available: Boolean = true,
 )
 
 /** The words of the track rows, in the app's language. */
@@ -32,6 +37,8 @@ data class TrackWords(
     val audioDescription: String,
     val mono: String,
     val stereo: String,
+    /** "Cannot be shown on this device", for a subtitle track the player cannot render. */
+    val unsupported: String,
 )
 
 /**
@@ -46,7 +53,9 @@ object TrackChoices {
         for (group in tracks.groups) {
             if (group.type != type) continue
             for (index in 0 until group.length) {
-                if (!group.isTrackSupported(index)) continue
+                // An audio track the device cannot play is left out; a subtitle track is listed, as unavailable.
+                val available = group.isTrackSupported(index)
+                if (!available && type != C.TRACK_TYPE_TEXT) continue
                 val format = group.getTrackFormat(index)
                 val language = languageName(format.language, locale)
                 val name = language ?: format.label?.takeIf { it.isNotBlank() } ?: words.track(choices.size + 1)
@@ -62,11 +71,31 @@ object TrackChoices {
                     if (format.roleFlags and C.ROLE_FLAG_DESCRIBES_MUSIC_AND_SOUND != 0) add(words.hearingImpaired)
                     if (format.roleFlags and C.ROLE_FLAG_COMMENTARY != 0) add(words.commentary)
                     if (format.roleFlags and C.ROLE_FLAG_DESCRIBES_VIDEO != 0) add(words.audioDescription)
+                    if (!available) {
+                        subtitleFormat(format)?.let(::add)
+                        add(words.unsupported)
+                    }
                 }.filterNot { label?.contains(it, ignoreCase = true) == true }
-                choices += TrackChoice(name, details.joinToString(" · ").ifEmpty { null }, group.isTrackSelected(index), group, index)
+                choices += TrackChoice(name, details.joinToString(" · ").ifEmpty { null }, available && group.isTrackSelected(index), group, index, available)
             }
         }
         return choices
+    }
+
+    /**
+     * The usual name of a subtitle format ("PGS", "VobSub"…), from its own type or, once Media3 has read it into cues
+     * while extracting, from the type it came in ([Format.codecs]).
+     */
+    fun subtitleFormat(format: Format): String? = when (format.codecs?.takeIf { format.sampleMimeType == MimeTypes.APPLICATION_MEDIA3_CUES } ?: format.sampleMimeType) {
+        MimeTypes.APPLICATION_PGS -> "PGS"
+        MimeTypes.APPLICATION_VOBSUB -> "VobSub"
+        MimeTypes.APPLICATION_DVBSUBS -> "DVB"
+        MimeTypes.TEXT_SSA -> "ASS"
+        MimeTypes.APPLICATION_SUBRIP -> "SRT"
+        MimeTypes.TEXT_VTT -> "WebVTT"
+        MimeTypes.APPLICATION_TTML -> "TTML"
+        MimeTypes.APPLICATION_TX3G -> "TX3G"
+        else -> null
     }
 
     /** Whether no track of [type] plays: subtitles off. */

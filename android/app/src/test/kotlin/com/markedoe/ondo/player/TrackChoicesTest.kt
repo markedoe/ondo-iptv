@@ -25,6 +25,7 @@ class TrackChoicesTest {
         audioDescription = "Audiodescription",
         mono = "Mono",
         stereo = "Stéréo",
+        unsupported = "Ne peut pas s’afficher sur cet appareil",
     )
 
     @Test
@@ -70,5 +71,39 @@ class TrackChoicesTest {
         assertEquals(AudioRoute.DECODED, TrackChoices.route(dts, dolbyAmplifier, attributes))
         assertEquals(AudioRoute.DECODED, TrackChoices.route(eac3, speakersOnly, attributes))
         assertNull(TrackChoices.route(aac, dolbyAmplifier, attributes))
+    }
+
+    /**
+     * A subtitle track the player cannot render (PGS without its decoder, a format Media3 does not know) is listed as
+     * unavailable, with why, rather than hidden: the panel said "This stream has no subtitles" for a stream that has
+     * some. An audio track the device cannot play stays out of the list.
+     */
+    @Test
+    fun aSubtitleTrackTheDeviceCannotShowIsListedAsUnavailable() {
+        val player = FakeTracksPlayer(
+            listOf(
+                FakeTracksPlayer.text("en", mimeType = MimeTypes.APPLICATION_SUBRIP),
+                FakeTracksPlayer.text("de", mimeType = MimeTypes.APPLICATION_PGS),
+                FakeTracksPlayer.audio("en", MimeTypes.AUDIO_TRUEHD, channels = 8),
+            ),
+            initiallySelected = setOf(1),
+            unsupported = setOf(1, 2),
+        )
+        val tracks = (player as Player).currentTracks
+        val subtitles = TrackChoices.of(tracks, C.TRACK_TYPE_TEXT, french, Locale.FRENCH)
+        assertEquals(listOf("Anglais", "Allemand"), subtitles.map { it.name })
+        assertEquals(listOf(true, false), subtitles.map { it.available })
+        assertEquals("PGS · Ne peut pas s’afficher sur cet appareil", subtitles[1].detail)
+        assertEquals(listOf(false, false), subtitles.map { it.selected })
+        assertEquals(emptyList<String>(), TrackChoices.of(tracks, C.TRACK_TYPE_AUDIO, french, Locale.FRENCH).map { it.name })
+    }
+
+    /** A track read into cues while extracting keeps the name of the format it came in. */
+    @Test
+    fun aSubtitleFormatIsNamedFromWhatItCameIn() {
+        val cues = androidx.media3.common.Format.Builder().setSampleMimeType(MimeTypes.APPLICATION_MEDIA3_CUES).setCodecs(MimeTypes.APPLICATION_VOBSUB).build()
+        assertEquals("VobSub", TrackChoices.subtitleFormat(cues))
+        assertEquals("ASS", TrackChoices.subtitleFormat(androidx.media3.common.Format.Builder().setSampleMimeType(MimeTypes.TEXT_SSA).build()))
+        assertNull(TrackChoices.subtitleFormat(androidx.media3.common.Format.Builder().setSampleMimeType("application/x-unknown").build()))
     }
 }

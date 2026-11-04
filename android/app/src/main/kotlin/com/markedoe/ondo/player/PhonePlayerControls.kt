@@ -741,7 +741,7 @@ private fun LazyListScope.trackRows(player: Player, controls: PlayerControls, ty
         item(key = "off") { SheetChoice(stringResource(R.string.off), null, selected = choices.none { it.selected }, tag = "trackOff") { choose(null) } }
     }
     choices.forEachIndexed { index, choice ->
-        item(key = "track-$index") { SheetChoice(choice.name, choice.detail, selected = choice.selected, tag = "track-$index") { choose(choice) } }
+        item(key = "track-$index") { SheetChoice(choice.name, choice.detail, selected = choice.selected, tag = "track-$index") { if (choice.available) choose(choice) } }
     }
     if (choices.isEmpty()) {
         item(key = "none") {

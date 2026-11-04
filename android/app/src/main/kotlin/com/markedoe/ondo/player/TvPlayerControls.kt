@@ -693,6 +693,7 @@ internal fun trackWords(): TrackWords {
         audioDescription = stringResource(R.string.track_audio_description),
         mono = stringResource(R.string.track_mono),
         stereo = stringResource(R.string.track_stereo),
+        unsupported = stringResource(R.string.track_unsupported),
     )
 }
 
@@ -710,7 +711,8 @@ private fun LazyListScope.tracks(player: Player, controls: PlayerControls, type:
     choices.forEachIndexed { index, choice ->
         item(key = "track-$index") {
             val focusFirst = choice.selected || (type == C.TRACK_TYPE_AUDIO && index == 0 && choices.none { it.selected })
-            ChoiceRow(choice.name, choice.detail, selected = choice.selected, tag = "track-$index", modifier = if (focusFirst) Modifier.focusRequester(first) else Modifier) { choose(choice) }
+            // A track this device cannot show keeps its row (the remote passes over it); OK does nothing.
+            ChoiceRow(choice.name, choice.detail, selected = choice.selected, tag = "track-$index", modifier = if (focusFirst) Modifier.focusRequester(first) else Modifier) { if (choice.available) choose(choice) }
         }
     }
     if (type == C.TRACK_TYPE_AUDIO) {
