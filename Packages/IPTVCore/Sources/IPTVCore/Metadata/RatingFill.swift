@@ -15,7 +15,9 @@ public enum RatingFill {
 
     /// The titles to ask TMDb about: those it never answered for (`isKnown` false), in the grid's order, at most `limit`.
     public static func toAsk<ID>(_ ids: [ID], isKnown: (ID) -> Bool, limit: Int = RatingFill.limit) -> [ID] {
-        Array(ids.lazy.filter { !isKnown($0) }.prefix(max(0, limit)))
+        var result: [ID] = []
+        for id in ids where result.count < limit && !isKnown(id) { result.append(id) }
+        return result
     }
 
     /// Asks `fetch` about each id, `concurrency` at a time, in order. `fetch` answers whether TMDb gave a rating;
