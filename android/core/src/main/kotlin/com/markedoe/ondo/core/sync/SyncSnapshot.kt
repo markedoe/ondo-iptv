@@ -108,14 +108,25 @@ data class SyncSnapshot(
      * in the last [PEERS_KEPT_DAYS] days: a deletion goes only once every such device has had it (docs/SYNC.md,
      * "Deleted").
      */
-    fun pruned(now: Long, days: Int = DELETIONS_KEPT_DAYS, sessions: Collection<Long> = emptyList(), learned: Map<String, Long> = emptyMap()): SyncSnapshot {
+    fun pruned(
+        now: Long,
+        days: Int = DELETIONS_KEPT_DAYS,
+        sessions: Collection<Long> = emptyList(),
+        learned: Map<String, Long> = emptyMap(),
+        /** For each profile other than the main one, by ID: when this device learned the deletions made in it elsewhere. */
+        profileLearned: Map<String, Map<String, Long>> = emptyMap(),
+    ): SyncSnapshot {
         val oldest = minOf(now - days * DAY_MS, sessions.filter { it >= now - PEERS_KEPT_DAYS * DAY_MS }.minOrNull() ?: Long.MAX_VALUE)
         // A deletion learned late (from a device away for months) counts from when this device learned it.
         val kept = deleted.filter { (key, time) -> maxOf(time, learned[key] ?: time) >= oldest }
         return copy(
             deleted = kept,
             replaced = replaced.filterKeys { "playlist:$it" in kept },
-            profileData = profileData.map { bucket -> bucket.copy(deleted = bucket.deleted.filterValues { it >= oldest }) },
+            // In each profile too, a deletion learned late counts from when this device learned it.
+            profileData = profileData.map { bucket ->
+                val learnedHere = profileLearned[bucket.profile].orEmpty()
+                bucket.copy(deleted = bucket.deleted.filter { (key, time) -> maxOf(time, learnedHere[key] ?: time) >= oldest })
+            },
         )
     }
 

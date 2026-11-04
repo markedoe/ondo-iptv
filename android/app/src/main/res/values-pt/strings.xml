@@ -455,7 +455,7 @@
     <string name="edit_profile">Editar perfil</string>
     <string name="new_profile">Novo perfil</string>
     <string name="delete_profile">Apagar perfil</string>
-    <string name="delete_profile_confirm">Apagar este perfil com seu histórico, Minha lista e suas coleções?</string>
+    <string name="delete_profile_confirm">Apagar este perfil com seu histórico, Minha lista e suas coleções em todos os seus dispositivos?</string>
     <string name="profile_color">Cor</string>
     <string name="profile_avatar">Avatar</string>
     <string name="profile_initial">Inicial</string>
@@ -479,4 +479,5 @@
     <string name="done">OK</string>
     <string name="current_profile">Atual</string>
     <string name="always_open_profile">Sempre abrir este perfil</string>
+    <string name="profiles_limit">Até 16 perfis são sincronizados entre seus dispositivos; os demais ficam neste dispositivo. Apague um para adicionar outro.</string>
 </resources>

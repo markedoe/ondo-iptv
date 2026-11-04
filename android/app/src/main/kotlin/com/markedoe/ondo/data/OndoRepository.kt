@@ -48,6 +48,7 @@ import com.markedoe.ondo.core.sync.SyncClock
 import com.markedoe.ondo.core.sync.SyncKey
 import com.markedoe.ondo.core.sync.SyncMerge
 import com.markedoe.ondo.core.sync.SyncProfile
+import com.markedoe.ondo.core.sync.SyncProfiles
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.LivePause
@@ -469,7 +470,8 @@ class OndoRepository(
     fun delete(id: String) {
         val removed = _state.value.playlists.firstOrNull { it.id == id } ?: return
         val playlists = _state.value.playlists.filterNot { it.id == id }
-        _state.value.library.reminders.filter { it.playlistId == id }.forEach(reminderScheduler::cancel)
+        // Every profile's reminders of the playlist go with it.
+        (otherLibraries.values + _state.value.library).flatMap { it.reminders }.filter { it.playlistId == id }.forEach(reminderScheduler::cancel)
         val time = stamp()
         val library = _state.value.library.removingPlaylist(id, time)
         val settings = _state.value.settings.let { if (it.activePlaylistId == id) it.copy(activePlaylistId = playlists.firstOrNull()?.id) else it }
@@ -557,7 +559,8 @@ class OndoRepository(
 
     /** A new profile, with its own empty library; [pin] already checked ([Profile.isValidPin]) or null. */
     fun addProfile(name: String, colorIndex: Int, symbol: String, isKids: Boolean, pin: String?): Profile? {
-        if (!_state.value.isReady || name.isBlank()) return null
+        // No more than sync carries: a 17th profile would never reach the other devices.
+        if (!_state.value.isReady || name.isBlank() || _state.value.profiles.size >= Profile.MAX_PROFILES) return null
         val profile = Profile(name = name.trim(), colorIndex = colorIndex, symbol = symbol, isKids = isKids, pinHash = pin?.let(Profile::hashPin), updatedAt = stamp())
         otherLibraries = otherLibraries + (profile.id to LibraryState())
         keepProfiles(_state.value.profiles + profile)
@@ -590,6 +593,8 @@ class OndoRepository(
         val profile = state.profiles.firstOrNull { it.id == id } ?: return
         if (profile.isMain || state.profiles.size <= 1) return
         if (state.settings.launchProfileId == id) updateSettings { it.copy(launchProfileId = null) }
+        // Its reminders go with it.
+        (if (state.activeProfile.id == id) state.library else otherLibraries[id])?.reminders?.forEach(reminderScheduler::cancel)
         if (state.activeProfile.id == id) switchProfile(Profile.DEFAULT_ID)
         // Its deletion travels, dated (docs/SYNC.md, "Profiles"): it is kept with the main profile's deletions.
         val time = stamp()
@@ -601,6 +606,61 @@ class OndoRepository(
         persist {
             saveProfiles(profiles)
             deleteLibrary(profile.libraryDocumentName)
+        }
+    }
+
+    /**
+     * The first time this device receives profiles (docs/PROFILES.md, "Sync"): a profile of its own made apart, before
+     * profiles synced, is one with a received profile of the same name (whatever its case and accents) and the same Kids
+     * switch. The smaller ID is kept on both devices, the other is deleted (dated), and its data goes into the one kept:
+     * a received one into this device's profile, or this device's profile renamed to the received ID. Once only.
+     * Returns [incoming] as it is merged then. Main thread.
+     */
+    private fun matchingProfilesOnce(incoming: SyncSnapshot): SyncSnapshot {
+        val state = _state.value
+        if (!state.isReady || state.settings.profilesMatched || incoming.profiles.isEmpty()) return incoming
+        updateSettings { it.copy(profilesMatched = true) }
+        val local = state.profiles.filter { !it.isMain }.map { SyncProfile(it.id.lowercase(), it.name, it.colorIndex, it.symbol, it.isKids, it.updatedAt) }
+        val localIds = local.mapTo(HashSet()) { it.id }
+        var taken = incoming
+        for ((dropped, kept) in SyncProfiles.matches(local, incoming.profiles)) {
+            val time = stamp()
+            updateMainLibrary { it.deleting(SyncProfile.KEY_PREFIX + dropped, time) }
+            if (kept in localIds) {
+                taken = taken.copy(
+                    profiles = taken.profiles.filterNot { it.id == dropped },
+                    profileData = taken.profileData.map { if (it.profile == dropped) it.copy(profile = kept) else it },
+                )
+            } else {
+                renameProfile(dropped, kept)
+            }
+        }
+        return taken
+    }
+
+    /** This device's profile [from] (any case) under the ID [to], with its library, PIN and the settings naming it. */
+    private fun renameProfile(from: String, to: String) {
+        val state = _state.value
+        val profile = state.profiles.firstOrNull { it.id.equals(from, ignoreCase = true) } ?: return
+        val renamed = profile.copy(id = to)
+        val wasActive = state.activeProfile.id == profile.id
+        val library = if (wasActive) state.library else otherLibraries[profile.id] ?: LibraryState()
+        if (!wasActive) otherLibraries = otherLibraries - profile.id + (to to library)
+        if (playbackProfileId == profile.id) playbackProfileId = to
+        val profiles = state.profiles.map { if (it.id == profile.id) renamed else it }
+        val settings = state.settings.let { current ->
+            current.copy(
+                activeProfileId = if (current.activeProfileId == profile.id) to else current.activeProfileId,
+                launchProfileId = if (current.launchProfileId == profile.id) to else current.launchProfileId,
+            )
+        }
+        _state.update { it.copy(profiles = profiles, settings = settings) }
+        // After any save of the former document still pending: its data is under the new one.
+        persist {
+            saveLibrary(library, renamed.libraryDocumentName)
+            deleteLibrary(profile.libraryDocumentName)
+            saveProfiles(profiles)
+            saveSettings(settings)
         }
     }
 
@@ -659,8 +719,10 @@ class OndoRepository(
      * [mergeSyncInBackground].
      */
     fun mergeSync(incoming: SyncSnapshot, deviceName: String?): SyncSnapshot? {
+        if (!_state.value.isReady) return null
+        val taken = matchingProfilesOnce(received(incoming))
         val local = syncSnapshot(deviceName) ?: return null
-        val merged = SyncMerge.merge(local, received(incoming))
+        val merged = SyncMerge.merge(local, taken)
         commitSync(SyncData.apply(_state.value, merged, syncNow(), SyncData.allLibraries(_state.value, otherLibraries)))
         return merged
     }
@@ -716,7 +778,7 @@ class OndoRepository(
      */
     private suspend fun mergeInBackground(incoming: SyncSnapshot, deviceName: String?): Pair<SyncSnapshot, OndoState>? {
         if (!_state.value.isReady) return null
-        val taken = received(incoming)
+        val taken = matchingProfilesOnce(received(incoming))
         repeat(MERGE_TRIES) {
             val baseOthers = otherLibraries
             val (base, libraries, local) = syncBaseInBackground(deviceName) ?: return null
@@ -807,13 +869,33 @@ class OndoRepository(
     private fun applyParked() {
         val key = playingKey ?: return
         val parked = parkedProgress.remove(key) ?: return
-        val library = _state.value.library
-        val stored = library.progress(key)
-        val removedAt = library.syncDeleted[SyncKeys.progress(parked)]
-        if ((stored != null && stored.lastWatchedAt >= parked.lastWatchedAt) || (removedAt != null && removedAt >= parked.lastWatchedAt)) return
-        updateLibrary { current ->
-            current.copy(history = (current.history.filterNot { it.key == key } + parked).sortedByDescending { it.lastWatchedAt }.take(LibraryState.MAX_HISTORY))
+        // In the profile the item plays in (review S5), whichever is open now.
+        updatePlaybackLibrary { current ->
+            val stored = current.progress(key)
+            val removedAt = current.syncDeleted[SyncKeys.progress(parked)]
+            if ((stored != null && stored.lastWatchedAt >= parked.lastWatchedAt) || (removedAt != null && removedAt >= parked.lastWatchedAt)) current
+            else current.copy(history = (current.history.filterNot { it.key == key } + parked).sortedByDescending { it.lastWatchedAt }.take(LibraryState.MAX_HISTORY))
         }
+    }
+
+    /**
+     * The profile the item playing (or played last) was started in: its progress goes there, whichever profile is open
+     * when it is saved (a switch, a deletion by sync while it plays). Null: the open one. Main thread.
+     */
+    private var playbackProfileId: String? = null
+
+    /**
+     * Changes the library of the profile playback belongs to ([playbackProfileId]): the open one's, another's kept at
+     * hand, or nothing when that profile was deleted meanwhile (never the main one's in its place).
+     */
+    private fun updatePlaybackLibrary(change: (LibraryState) -> LibraryState) {
+        val state = _state.value
+        val id = playbackProfileId
+        if (id == null || !state.isReady || id == state.activeProfile.id) return updateLibrary(change)
+        val profile = state.profiles.firstOrNull { it.id == id } ?: return
+        val library = change(otherLibraries[id] ?: LibraryState())
+        otherLibraries = otherLibraries + (id to library)
+        persist { saveLibrary(library, profile.libraryDocumentName) }
     }
 
     /**
@@ -860,17 +942,24 @@ class OndoRepository(
         val activeRemoved = applied.removedProfiles.any { it.id == state.activeProfile.id }
         val activeId = if (activeRemoved) Profile.DEFAULT_ID else state.activeProfile.id
         val appliedActive = applied.library(activeId) ?: state.library
-        // The item playing is the open profile's: its progress received waits until playback ends.
-        val library = if (activeRemoved) appliedActive else keepingPlayback(state.library, appliedActive)
+        // The item playing keeps its entry in the profile it plays in: what was received for it waits until playback ends.
+        val playbackId = playbackProfileId ?: state.activeProfile.id
+        val library = if (activeRemoved || playbackId != activeId) appliedActive else keepingPlayback(state.library, appliedActive)
         // A profile the merge left as it was (not in it) keeps its library; one deleted elsewhere goes.
         val removedIds = applied.removedProfiles.mapTo(HashSet()) { it.id }
-        val others = (otherLibraries.filterKeys { it !in removedIds } + applied.libraries).filterKeys { it != activeId }
+        val others = (otherLibraries.filterKeys { it !in removedIds } + applied.libraries).filterKeys { it != activeId }.mapValues { (id, other) ->
+            if (id == playbackId) keepingPlayback(otherLibraries[id] ?: other, other) else other
+        }
         val keysChanged = applied.keys != state.settings.serviceKeys
         if (applied.playlists == state.playlists && library == state.library && !keysChanged && applied.profiles == state.profiles &&
             others.all { (id, other) -> otherLibraries[id] == other } && !activeRemoved
         ) return
         val removedPlaylistIds = applied.removed.mapTo(HashSet()) { it.id }
-        state.library.reminders.filter { it.playlistId in removedPlaylistIds }.forEach(reminderScheduler::cancel)
+        // Every profile's reminders of a removed playlist, and all those of a profile deleted elsewhere, go.
+        (otherLibraries.values + state.library).flatMap { it.reminders }.filter { it.playlistId in removedPlaylistIds }.forEach(reminderScheduler::cancel)
+        applied.removedProfiles.forEach { removed ->
+            (if (removed.id == state.activeProfile.id) state.library else otherLibraries[removed.id])?.reminders?.forEach(reminderScheduler::cancel)
+        }
         // The playlist in use stays unless it was deleted, or becomes the same one from another device that replaced it;
         // a device without one takes the first that arrived.
         val active = state.settings.activePlaylistId?.takeIf { id -> applied.playlists.any { it.id == id } }
@@ -1296,9 +1385,15 @@ class OndoRepository(
     fun togglePersonInCollection(id: String, name: String, photoUrl: String?) =
         updateLibrary { library -> stamp().let { time -> library.togglingInCollection(id, Favorite.person(name, photoUrl, time), time) } }
 
+    /** The library of the profile playback belongs to ([playbackProfileId]). */
+    private fun playbackLibrary(): LibraryState {
+        val id = playbackProfileId
+        return if (id == null || id == _state.value.activeProfile.id) _state.value.library else otherLibraries[id] ?: LibraryState()
+    }
+
     /** [creditsStart]: where the end credits start, when the player found them in the file's chapters. */
     fun recordProgress(key: String, position: Double, duration: Double, creditsStart: Double? = null) {
-        updateLibrary { it.updateProgress(key, position, duration, stamp(), creditsStart) }
+        updatePlaybackLibrary { it.updateProgress(key, position, duration, stamp(), creditsStart) }
     }
 
     /** Takes a "Continue watching" card away: the movie, or the series' episodes in progress. */
@@ -1601,8 +1696,11 @@ class OndoRepository(
 
     /** [entry] starts now: dated by [stamp] when it is kept (after the sync clock is set up, at a launch). */
     private fun start(item: PlaybackItem, entry: WatchEntry, fromStart: Boolean): PlayRequest {
-        updateLibrary { it.recordStart(entry.copy(lastWatchedAt = stamp())) }
-        val known = _state.value.library.progress(entry.key)
+        // A title started from the screens belongs to the profile open; the next one started in the player (an episode,
+        // a channel) to the profile the playback began in.
+        if (!inPlayback || playbackProfileId == null) playbackProfileId = _state.value.activeProfile.id.takeIf { _state.value.isReady }
+        updatePlaybackLibrary { it.recordStart(entry.copy(lastWatchedAt = stamp())) }
+        val known = playbackLibrary().progress(entry.key)
         val resumeAt = if (!fromStart && known?.isResumable == true) (known.position * 1000).toLong() else 0L
         return PlayRequest(
             title = item.title,

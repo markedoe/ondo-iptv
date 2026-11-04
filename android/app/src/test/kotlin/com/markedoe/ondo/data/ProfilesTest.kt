@@ -6,6 +6,10 @@ import com.markedoe.ondo.core.model.ContentType
 import com.markedoe.ondo.core.model.MediaCategory
 import com.markedoe.ondo.core.model.Profile
 import com.markedoe.ondo.core.sync.SyncFavorite
+import com.markedoe.ondo.core.sync.SyncProfile
+import com.markedoe.ondo.core.sync.SyncProfileData
+import com.markedoe.ondo.core.sync.SyncProfiles
+import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncRows
 import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.ui.Labels
@@ -42,13 +46,13 @@ class ProfilesTest {
         return store
     }
 
-    private fun TestScope.repository(store: AppStore = AppStore(folder.root)) =
-        OndoRepository(store, FakeHttp(emptyMap()), backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler), mainProfileName = "Me")
+    private fun TestScope.repository(store: AppStore = AppStore(folder.root), reminders: ReminderScheduler = NoReminderScheduler) =
+        OndoRepository(store, FakeHttp(emptyMap()), backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler), mainProfileName = "Me", reminderScheduler = reminders)
 
     private suspend fun OndoRepository.awaitState(condition: (OndoState) -> Boolean): OndoState = state.first(condition)
 
-    private suspend fun TestScope.started(store: AppStore = store()): OndoRepository {
-        val repository = repository(store)
+    private suspend fun TestScope.started(store: AppStore = store(), reminders: ReminderScheduler = NoReminderScheduler): OndoRepository {
+        val repository = repository(store, reminders)
         repository.bootstrap()
         repository.awaitState { it.isReady && it.content.movies.isNotEmpty() }
         return repository
@@ -429,5 +433,148 @@ class ProfilesTest {
         val snapshot = requireNotNull(repository.syncSnapshot("TV"))
         assertEquals(listOf(moved), snapshot.rows)
         assertEquals(listOf("continue", "all"), snapshot.profileData.single { it.profile == sam.id }.rows.single().order)
+    }
+
+    // MARK: Review fixes
+
+    /** S5: a film keeps saving into the profile it started in, after a switch; once that profile is gone, nowhere. */
+    @Test
+    fun aPlaybackSavesIntoTheProfileItStartedInWhicheverIsOpen() = runTest {
+        val repository = started()
+        val main = repository.state.value.activeProfile
+        watch(repository, "3", 600.0)
+        val sam = requireNotNull(repository.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        switch(repository, sam)
+        watch(repository, "3", 900.0)
+        repository.playbackStarted(key("3"))
+        // Another profile opens while the film plays (picture in picture): the next saves are still Sam's.
+        switch(repository, main)
+        repository.recordProgress(key("3"), 3_000.0, 6_000.0)
+        assertEquals(600.0, repository.state.value.library.progress(key("3"))!!.position, 0.0)
+        switch(repository, sam)
+        assertEquals(3_000.0, repository.state.value.library.progress(key("3"))!!.position, 0.0)
+        switch(repository, main)
+        // Sam deleted while the film still plays: its saves go nowhere, never into the main profile.
+        repository.deleteProfile(sam.id)
+        repository.recordProgress(key("3"), 4_000.0, 6_000.0)
+        repository.playbackEnded()
+        assertEquals(600.0, repository.state.value.library.progress(key("3"))!!.position, 0.0)
+        assertEquals(600.0, disk().loadLibrary().progress(key("3"))!!.position, 0.0)
+    }
+
+    /** S2: a profile deleted on one device while another kept watching in it later stays, with that watch. */
+    @Test
+    fun aProfileDeletedWhileAnotherDeviceKeptWatchingInItStays() = runTest {
+        val phone = device("phone")
+        val sam = requireNotNull(phone.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        val before = requireNotNull(phone.syncSnapshot("B"))
+        phone.deleteProfile(sam.id)
+        val deletedAt = requireNotNull(requireNotNull(phone.syncSnapshot("B")).deleted[SyncProfile.KEY_PREFIX + sam.id])
+        // The TV, not yet told, watched in Sam after that.
+        val playlist = before.playlists.single()
+        val watch = SyncProgress(playlist.id, "movie", "3", title = "Silent Harbor", position = 900.0, duration = 6_000.0, watchedAt = deletedAt + 1_000)
+        val tv = before.copy(device = "tv", profileData = listOf(SyncProfileData(sam.id, progress = listOf(watch))))
+        phone.mergeSync(tv, "TV")
+        testScheduler.advanceUntilIdle()
+        assertNotNull(phone.profile("Sam"))
+        switch(phone, phone.profile("Sam")!!)
+        assertNotNull(phone.state.value.library.progress(key("3")))
+    }
+
+    /** S3: Kids lifted on a device without a parent PIN stays on where a parent set one, and sessions settle. */
+    @Test
+    fun kidsLiftedOnAnUnprotectedDeviceStaysOnWhereAParentSetAPin() = runTest {
+        val tv = device("tv")
+        val phone = device("phone")
+        tv.updateProfile(Profile.DEFAULT_ID, "Me", 0, Profile.INITIAL, isKids = false, pin = "1357", removePin = false)
+        val kid = requireNotNull(tv.addProfile("Kid", 4, Profile.INITIAL, isKids = true, pin = null))
+        session(tv, phone)
+        assertTrue(phone.profile("Kid")!!.isKids)
+        phone.updateProfile(kid.id, "Kid", 4, Profile.INITIAL, isKids = false, pin = null, removePin = false)
+        session(tv, phone)
+        assertFalse(phone.profile("Kid")!!.isKids)
+        assertTrue("a parent set a PIN on the TV", tv.profile("Kid")!!.isKids)
+        // Nothing changes from one session to the next.
+        val tvProfiles = tv.state.value.profiles
+        val tvDigest = requireNotNull(tv.syncSnapshot("A")).contentDigest()
+        session(tv, phone)
+        assertEquals(tvProfiles, tv.state.value.profiles)
+        assertEquals(tvDigest, requireNotNull(tv.syncSnapshot("A")).contentDigest())
+        // Made Kids again elsewhere: it applies everywhere.
+        phone.updateProfile(kid.id, "Kid", 4, Profile.INITIAL, isKids = true, pin = null, removePin = false)
+        session(tv, phone)
+        assertTrue(phone.profile("Kid")!!.isKids)
+        assertTrue(tv.profile("Kid")!!.isKids)
+    }
+
+    /** S1: "Sam" made apart on two devices becomes one profile, the smaller ID, with the data of both. */
+    @Test
+    fun profilesOfTheSameNameMadeApartBecomeOne() = runTest {
+        val tv = device("tv")
+        val phone = device("phone")
+        val onTv = requireNotNull(tv.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        val onPhone = requireNotNull(phone.addProfile(" sam", 2, "star.fill", isKids = false, pin = "2468"))
+        switch(tv, onTv)
+        watch(tv, "3", 900.0)
+        switch(phone, onPhone)
+        phone.toggleFavorite(ItemKind.MOVIE, "4", "The Last Signal", null)
+        session(tv, phone)
+        session(tv, phone)
+        val kept = minOf(onTv.id.lowercase(), onPhone.id.lowercase())
+        for (device in listOf(tv, phone)) {
+            val sams = device.state.value.profiles.filter { SyncProfiles.normalizedName(it.name) == "sam" }
+            assertEquals(listOf(kept), sams.map { it.id.lowercase() })
+            switch(device, sams.single())
+            assertNotNull(device.state.value.library.progress(key("3")))
+            assertTrue(device.state.value.library.isFavorite(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, "4"))
+        }
+        // The phone's PIN stays on the phone.
+        assertTrue(phone.state.value.profiles.single { it.id.lowercase() == kept }.isProtected)
+    }
+
+    /** S6: a deletion in a profile learned from another device is dated when it was learned, as the main profile's. */
+    @Test
+    fun aDeletionInAProfileLearnedFromAnotherDeviceIsDatedWhenLearned() = runTest {
+        val tv = device("tv")
+        val sam = requireNotNull(tv.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        val snapshot = requireNotNull(tv.syncSnapshot("A"))
+        val removed = "favorite:${Fixtures.PLAYLIST_ID}|movie|9"
+        tv.mergeSync(snapshot.copy(device = "phone", profileData = listOf(SyncProfileData(sam.id, deleted = mapOf(removed to clock - 300L * 86_400_000)))), "Phone")
+        testScheduler.advanceUntilIdle()
+        switch(tv, sam)
+        assertTrue(removed in tv.state.value.library.syncDeletedLearned)
+        // Old as it is, it still travels: it was learned now.
+        assertTrue(removed in requireNotNull(tv.syncSnapshot("A")).profileData.single { it.profile == sam.id }.deleted)
+    }
+
+    /** Reminders of every profile go with their playlist, and those of a deleted profile with it. */
+    @Test
+    fun everyProfilesRemindersGoWithTheirPlaylistOrTheirProfile() = runTest {
+        val sam = Profile(id = "11111111-1111-4111-8111-111111111111", name = "Sam", updatedAt = 1)
+        val ana = Profile(id = "33333333-3333-4333-8333-333333333333", name = "Ana", updatedAt = 1)
+        val store = store()
+        store.saveProfiles(listOf(Profile.main("Me"), sam, ana))
+        fun reminder(title: String) = Reminder(Fixtures.PLAYLIST_ID, "c1", "Ondo News", title, clock + 3_600_000, clock + 7_200_000)
+        store.saveLibrary(LibraryState(reminders = listOf(reminder("Sam's"))), sam.libraryDocumentName)
+        store.saveLibrary(LibraryState(reminders = listOf(reminder("Ana's"))), ana.libraryDocumentName)
+        val cancelled = mutableListOf<String>()
+        val scheduler = object : ReminderScheduler {
+            override fun schedule(reminder: Reminder, now: Long) = Unit
+            override fun cancel(reminder: Reminder) { cancelled += reminder.title }
+        }
+        val repository = started(store, scheduler)
+        repository.deleteProfile(ana.id)
+        assertEquals(listOf("Ana's"), cancelled)
+        repository.delete(Fixtures.PLAYLIST_ID)
+        assertEquals(listOf("Ana's", "Sam's"), cancelled)
+    }
+
+    /** Sync carries 16 profiles at most: a 17th cannot be made. */
+    @Test
+    fun noMoreThanSixteenProfiles() = runTest {
+        val repository = started()
+        repeat(Profile.MAX_PROFILES - 1) { assertNotNull(repository.addProfile("P$it", 0, Profile.INITIAL, isKids = false, pin = null)) }
+        assertNull(repository.addProfile("One too many", 0, Profile.INITIAL, isKids = false, pin = null))
+        assertEquals(Profile.MAX_PROFILES, repository.state.value.profiles.size)
     }
 }

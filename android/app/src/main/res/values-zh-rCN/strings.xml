@@ -427,7 +427,7 @@
     <string name="edit_profile">编辑个人资料</string>
     <string name="new_profile">新建个人资料</string>
     <string name="delete_profile">删除个人资料</string>
-    <string name="delete_profile_confirm">删除此个人资料及其观看记录、我的片单和合集？</string>
+    <string name="delete_profile_confirm">要在你的所有设备上删除此个人资料及其观看记录、我的片单和合集吗？</string>
     <string name="profile_color">颜色</string>
     <string name="profile_avatar">头像</string>
     <string name="profile_initial">首字母</string>
@@ -451,4 +451,5 @@
     <string name="done">完成</string>
     <string name="current_profile">当前</string>
     <string name="always_open_profile">始终打开此个人资料</string>
+    <string name="profiles_limit">最多 16 个个人资料会在你的设备间同步，其余的仅保留在此设备上。删除一个即可添加新的。</string>
 </resources>

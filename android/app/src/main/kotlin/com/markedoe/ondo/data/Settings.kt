@@ -94,6 +94,8 @@ data class AppSettings(
     /** Wrong profile PINs in a row, and the time before which no PIN is checked ([com.markedoe.ondo.core.model.Profile.pinDelayMs]). */
     val pinFailures: Int = 0,
     val pinRetryAt: Long = 0,
+    /** The one-time match of profiles of the same name made apart was done (the first profiles received by sync). */
+    val profilesMatched: Boolean = false,
 ) {
     /** The viewer's TMDb token (or API Key), typed here or arrived by sync. */
     val tmdbToken: String?

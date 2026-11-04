@@ -87,7 +87,17 @@ public enum SyncMerge {
         let rows = pick(left.rows + right.rows, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: deleted)
         // Profiles: the later change wins; a deleted profile goes with its data (the main one is never deleted). A side
         // without profiles (an older version) changes none.
-        let profileDeletions = deleted.filter { $0.key != SyncProfile.keyPrefix + SyncProfile.main }
+        // A profile's deletion loses to its data changed after it, as a list's does (rule 7): data added on a device that
+        // had not heard of the deletion brings the profile back, never goes with it.
+        var activity: [String: Int64] = [:]
+        for bucket in left.profileData + right.profileData {
+            if let latest = bucket.records().latestTime { activity[bucket.profile] = max(activity[bucket.profile] ?? latest, latest) }
+        }
+        let profileDeletions = deleted.filter { key, time in
+            guard key != SyncProfile.keyPrefix + SyncProfile.main else { return false }
+            guard key.hasPrefix(SyncProfile.keyPrefix) else { return true }
+            return (activity[String(key.dropFirst(SyncProfile.keyPrefix.count))] ?? .min) <= time
+        }
         let profiles = SyncProfile.capped(
             pick(left.profiles + right.profiles, key: \.key, time: \.updatedAt, tie: { $0.tie.isBefore($1.tie) }, deleted: profileDeletions)
         ).sorted { $0.id.isBefore($1.id) }

@@ -198,6 +198,8 @@ extension AppModel {
     func recordStart(_ item: PlaybackItem) {
         let container = item.streamURL.pathExtension.lowercased()
         let time = syncStamp()
+        // The item belongs to the profile open as it starts (review S5).
+        playbackProfiles[item.reference.playbackKey] = activeProfile.id
         updateLibrary {
             $0.recordPlayback(HistoryEntry(
                 reference: item.reference,
@@ -215,7 +217,24 @@ extension AppModel {
         // Replays belong to the channel's history entry, not to a resumable position.
         guard !item.isCatchup else { return }
         let time = syncStamp()
-        updateLibrary { $0.updateProgress(item.reference, position: position, duration: duration, creditsStart: creditsStart, now: time) }
+        updatePlaybackLibrary(of: item.reference.playbackKey) {
+            $0.updateProgress(item.reference, position: position, duration: duration, creditsStart: creditsStart, now: time)
+        }
+    }
+
+    /// Changes the library of the profile `playbackKey` was started in (`playbackProfiles`): the open one's, another's kept
+    /// at hand (written at once), or nothing when that profile was deleted meanwhile, never the main one's in its place.
+    func updatePlaybackLibrary(of playbackKey: String, _ change: (inout UserLibrary) -> Void) {
+        let owner = playbackProfiles[playbackKey] ?? activeProfile.id
+        if owner == activeProfile.id {
+            updateLibrary(change)
+            return
+        }
+        guard let profile = profiles.first(where: { $0.id == owner }) else { return }
+        var other = otherLibraries[owner] ?? (userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
+        change(&other)
+        otherLibraries[owner] = other
+        try? userStore.save(other, name: profile.libraryDocumentName)
     }
 
     func resumePosition(for item: PlaybackItem) -> Double? {

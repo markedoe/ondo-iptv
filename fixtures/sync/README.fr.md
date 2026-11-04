@@ -20,3 +20,7 @@ données, un profil supprimé sur l’autre retiré avec ses données, son ID en
 de chaque profil fusionnées selon les règles de l’instantané lui-même (la progression la plus récente l’emportant, un
 favori supprimé dans ce profil retiré, un favori d’une playlist supprimée retiré) ; les données envoyées pour le profil
 principal dans `profileData` ignorées (ses données sont celles de l’instantané lui-même).
+
+`profiles-late-a.json` et `profiles-late-b.json` se fusionnent en `profiles-late-merged.json` : un profil supprimé sur un
+appareil à 100 pendant qu’un autre, pas encore averti, y regardait encore à 200. Les données plus récentes l’emportent
+sur la suppression, comme le contenu d’une liste (règle 7) : le profil et ses données restent.

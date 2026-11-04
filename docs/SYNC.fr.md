@@ -225,7 +225,16 @@ puis par ID.
 été supprimé dans ce profil. Les éléments du profil principal sont ceux de l’instantané lui-même : un appareil plus
 ancien, qui ne connaît pas les profils, lit et écrit les données du profil principal, ignore `profiles` et
 `profileData`, et la version du format reste 1. Les données envoyées pour le profil principal dans `profileData` sont
-ignorées.
+ignorées. Les profils ne passent pas par un appareil plus ancien : deux appareils qui ne se rencontrent qu’à travers
+lui ne partagent que les données du profil principal. Les suppressions de chaque profil apprises d’un autre appareil
+sont gardées à partir du moment où elles ont été apprises, comme celles du profil principal (voir **Supprimés**).
+
+Deux choix restent à chaque appareil (docs/PROFILES.fr.md) : un profil qui n’est plus Enfant ailleurs reste Enfant sur
+un appareil où un parent a défini un code, tout en prenant l’instant de l’enregistrement (son propre instantané dit
+alors Enfant à cet instant, la fusion garde le choix de l’autre appareil, et rien ne change d’une session à l’autre) ;
+et, la première fois qu’un appareil reçoit des profils, un de ses profils créé à part ne fait qu’un avec un profil reçu
+du même nom (sans espaces autour, quelles que soient sa casse et ses accents) et du même réglage Enfant : le plus petit
+ID est gardé sur les deux appareils, l’autre est supprimé (daté), et ses données vont dans celui gardé.
 
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil
 garde chacune 180 jours, et plus longtemps tant que chaque appareil avec lequel il a eu une session dans l’année
@@ -291,8 +300,11 @@ change rien.
    encore une liste entière comme un seul élément et n’envoie pas de suppression `listitem:` : un élément qu’elle a
    retiré revient depuis un appareil qui l’a encore.
 8. **Les profils** se fusionnent selon la règle 2 (chaîne de départage : `name`, `colorIndex`, `symbol`, `kids` en
-   `1` ou `0`), la suppression du profil principal étant ignorée. Un profil écarté (supprimé à son `updatedAt` ou
-   après, ou au-delà des 16 gardés) part avec ses données. Chaque profil gardé autre que le principal fusionne ses
+   `1` ou `0`), la suppression du profil principal étant ignorée. La suppression d’un profil ne l’emporte qu’à
+   l’instant le plus récent du profil ou après : son `updatedAt` et chaque instant de ses données (comme le contenu
+   d’une liste, règle 7). Un appareil qui a continué à regarder dans un profil après qu’un autre l’a supprimé garde le
+   profil, et le fait revenir sur l’autre. Un profil écarté (supprimé à cet instant ou après, ou au-delà des 16
+   gardés) part avec ses données. Chaque profil gardé autre que le principal fusionne ses
    données selon les règles 2 à 7, comme un instantané à part dont les playlists sont celles fusionnées : un favori ou
    une progression d’une playlist supprimée part, ceux d’une playlist remplacée deviennent ceux de la playlist gardée,
    et un élément supprimé dans ce profil (son `deleted`) part. Le résultat liste les profils et leurs données par ID.

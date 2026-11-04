@@ -441,7 +441,7 @@
     <string name="edit_profile">प्रोफ़ाइल संपादित करें</string>
     <string name="new_profile">नई प्रोफ़ाइल</string>
     <string name="delete_profile">प्रोफ़ाइल डिलीट करें</string>
-    <string name="delete_profile_confirm">इस प्रोफ़ाइल को इसके इतिहास, मेरी सूची और कलेक्शन के साथ डिलीट करें?</string>
+    <string name="delete_profile_confirm">इस प्रोफ़ाइल को इसके इतिहास, मेरी सूची और कलेक्शन के साथ आपके सभी डिवाइसों से डिलीट करें?</string>
     <string name="profile_color">रंग</string>
     <string name="profile_avatar">अवतार</string>
     <string name="profile_initial">पहला अक्षर</string>
@@ -465,4 +465,5 @@
     <string name="done">हो गया</string>
     <string name="current_profile">वर्तमान</string>
     <string name="always_open_profile">हमेशा यह प्रोफ़ाइल खोलें</string>
+    <string name="profiles_limit">आपके डिवाइसों के बीच अधिकतम 16 प्रोफ़ाइल सिंक होती हैं; बाकी इसी डिवाइस पर रहती हैं। नई जोड़ने के लिए कोई एक डिलीट करें।</string>
 </resources>

@@ -89,6 +89,78 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncMerge.merge(expected, a), expected)
     }
 
+    /// A profile deleted on one device at 100 while another kept watching in it at 200: the watch wins (review S2).
+    func testAProfileDeletionLosesToDataAddedAfterIt() throws {
+        let a = try fixture("profiles-late-a.json")
+        let b = try fixture("profiles-late-b.json")
+        let expected = try fixture("profiles-late-merged.json")
+        XCTAssertEqual(SyncMerge.merge(a, b), expected)
+        XCTAssertEqual(withoutDevice(SyncMerge.merge(b, a)), withoutDevice(expected))
+        XCTAssertEqual(SyncMerge.merge(expected, a), expected)
+        var older = b
+        older.profileData = b.profileData.map { bucket in
+            var bucket = bucket
+            bucket.progress = bucket.progress.map { progress in
+                var progress = progress
+                progress.watchedAt = 100
+                return progress
+            }
+            return bucket
+        }
+        let merged = SyncMerge.merge(a, older)
+        XCTAssertTrue(merged.profiles.isEmpty)
+        XCTAssertTrue(merged.profileData.isEmpty)
+    }
+
+    /// A deletion in a profile learned late is kept from when it was learned, as the main profile's are (review S6).
+    func testADeletionLearnedLateInAProfileIsKeptFromWhenItWasLearned() {
+        let day: Int64 = 86_400_000
+        let now = 400 * day
+        let old = now - 200 * day
+        let key = "favorite:p|movie|m1"
+        let profile = "11111111-1111-4111-8111-111111111111"
+        let snapshot = SyncSnapshot(device: "x", profiles: [SyncProfile(id: profile, updatedAt: 1)],
+                                    profileData: [SyncProfileData(profile: profile, deleted: [key: old])], deleted: [key: old])
+        let pruned = snapshot.pruned(now: now, learned: [key: now - day], profileLearned: [profile: [key: now - day]])
+        XCTAssertEqual(pruned.deleted.count, 1)
+        XCTAssertEqual(pruned.profileData.first?.deleted.count, 1)
+        XCTAssertEqual(snapshot.pruned(now: now).profileData.first?.deleted.count, 0)
+    }
+
+    /// Kids lifted on an unprotected device does not lift it where a parent set a PIN; a device keeps Kids, takes the
+    /// record's time, and the next sessions change nothing (review S3).
+    func testKidsLiftedElsewhereStaysOnWhereAParentSetAPIN() throws {
+        XCTAssertTrue(SyncProfiles.keptKids(local: true, received: false, parentProtected: true))
+        XCTAssertFalse(SyncProfiles.keptKids(local: true, received: false, parentProtected: false))
+        XCTAssertTrue(SyncProfiles.keptKids(local: false, received: true, parentProtected: false))
+        XCTAssertTrue(SyncProfiles.keptKids(local: false, received: true, parentProtected: true))
+        let id = "11111111-1111-4111-8111-111111111111"
+        let tv = SyncSnapshot(device: "tv", profiles: [SyncProfile(id: id, name: "Kid", kids: true, updatedAt: 100)])
+        let ipad = SyncSnapshot(device: "ipad", profiles: [SyncProfile(id: id, name: "Kid", kids: false, updatedAt: 101)])
+        let merged = SyncMerge.merge(tv, ipad)
+        XCTAssertEqual(merged.profiles.first?.kids, false)
+        var kept = try XCTUnwrap(merged.profiles.first)
+        kept.kids = SyncProfiles.keptKids(local: true, received: kept.kids, parentProtected: true)
+        var tvAfter = tv
+        tvAfter.profiles = [kept]
+        XCTAssertEqual(SyncMerge.merge(tvAfter, ipad).profiles, merged.profiles)
+        XCTAssertEqual(SyncMerge.merge(SyncMerge.merge(tvAfter, ipad), tvAfter), SyncMerge.merge(tvAfter, ipad))
+    }
+
+    /// Profiles of the same name made apart on two devices are matched once; the smaller ID is kept (review S1).
+    func testProfilesOfTheSameNameMadeApartAreMatchedOnce() {
+        let small = "11111111-1111-4111-8111-111111111111"
+        let large = "22222222-2222-4222-8222-222222222222"
+        let first = SyncProfiles.matches(local: [SyncProfile(id: small, name: "Sam", updatedAt: 10)], received: [SyncProfile(id: large, name: "Sam", updatedAt: 11)])
+        XCTAssertEqual(first.map(\.dropped), [large])
+        XCTAssertEqual(first.map(\.kept), [small])
+        let accented = SyncProfiles.matches(local: [SyncProfile(id: large, name: " ZOÉ ", updatedAt: 10)], received: [SyncProfile(id: small, name: "zoe", updatedAt: 11)])
+        XCTAssertEqual(accented.map(\.dropped), [large])
+        XCTAssertEqual(accented.map(\.kept), [small])
+        XCTAssertTrue(SyncProfiles.matches(local: [SyncProfile(id: small, name: "Sam", kids: true, updatedAt: 1)], received: [SyncProfile(id: large, name: "Sam", updatedAt: 1)]).isEmpty)
+        XCTAssertTrue(SyncProfiles.matches(local: [SyncProfile(id: SyncProfile.main, name: "Me", updatedAt: 1)], received: [SyncProfile(id: large, name: "Me", updatedAt: 1)]).isEmpty)
+    }
+
     /// An older device knows nothing of profiles: its data is the main profile's, and the profiles stay as they are.
     func testAnOlderDeviceWithoutProfilesMapsToTheMainProfile() throws {
         let merged = try fixture("profiles-merged.json")

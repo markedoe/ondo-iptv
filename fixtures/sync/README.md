@@ -17,3 +17,7 @@ winning (a rename on one device), a profile added on one device kept with its da
 dropped with its data, its upper-case ID lowercased; each profile's data merged by the snapshot's own rules (a later
 progress winning, a favourite deleted in that profile dropped, a favourite of a deleted playlist dropped); the data
 sent for the main profile in `profileData` ignored (its data is the snapshot's own).
+
+`profiles-late-a.json` and `profiles-late-b.json` merge into `profiles-late-merged.json`: a profile deleted on one device
+at 100 while another, not yet told, kept watching in it at 200. The later data wins over the deletion, as a list's
+content does (rule 7): the profile and its data stay.

@@ -26322,6 +26322,86 @@
           }
         }
       }
+    },
+    "Delete this profile with its history, My List and collections on all your devices?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer ce profil avec son historique, Ma liste et ses collections sur tous vos appareils ?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar este perfil con su historial, Mi lista y sus colecciones en todos tus dispositivos?"
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apagar este perfil com seu histórico, Minha lista e suas coleções em todos os seus dispositivos?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要在你的所有设备上删除此个人资料及其观看记录、我的片单和合集吗？"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "هل تريد حذف هذا الملف الشخصي مع سجله وقائمتي ومجموعاته على جميع أجهزتك؟"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "इस प्रोफ़ाइल को इसके इतिहास, मेरी सूची और कलेक्शन के साथ आपके सभी डिवाइसों से डिलीट करें?"
+          }
+        }
+      }
+    },
+    "Up to 16 profiles sync between your devices; others stay on this device. Delete one to add another.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jusqu’à 16 profils se synchronisent entre vos appareils ; les autres restent sur cet appareil. Supprimez-en un pour en ajouter un autre."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hasta 16 perfiles se sincronizan entre tus dispositivos; los demás se quedan en este dispositivo. Elimina uno para añadir otro."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Até 16 perfis são sincronizados entre seus dispositivos; os demais ficam neste dispositivo. Apague um para adicionar outro."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最多 16 个个人资料会在你的设备间同步，其余的仅保留在此设备上。删除一个即可添加新的。"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تتم مزامنة 16 ملفًا شخصيًا كحد أقصى بين أجهزتك، وتبقى الملفات الأخرى على هذا الجهاز. احذف ملفًا لإضافة آخر."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "आपके डिवाइसों के बीच अधिकतम 16 प्रोफ़ाइल सिंक होती हैं; बाकी इसी डिवाइस पर रहती हैं। नई जोड़ने के लिए कोई एक डिलीट करें।"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

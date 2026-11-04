@@ -61,8 +61,16 @@ object SyncMerge {
         val rows = pick(left.rows + right.rows, { it.key }, { it.updatedAt }, compareBy { it.tie }, deleted)
         // Profiles: the later change wins; a deleted profile goes with its data (the main one is never deleted). A side
         // without profiles (an older version) changes none.
+        // A profile's deletion loses to its data changed after it, as a list's does (rule 7): data added on a device that
+        // had not heard of the deletion brings the profile back, never goes with it.
+        val activity = HashMap<String, Long>()
+        (left.profileData + right.profileData).forEach { bucket -> bucket.records().latestTime()?.let { activity.merge(bucket.profile, it, ::maxOf) } }
+        val profileDeletions = deleted.filter { (key, time) ->
+            key != SyncProfile.KEY_PREFIX + SyncProfile.MAIN &&
+                (!key.startsWith(SyncProfile.KEY_PREFIX) || (activity[key.removePrefix(SyncProfile.KEY_PREFIX)] ?: Long.MIN_VALUE) <= time)
+        }
         val profiles = SyncProfile.capped(
-            pick(left.profiles + right.profiles, { it.key }, { it.updatedAt }, compareBy { it.tie }, deleted.filterKeys { it != SyncProfile.KEY_PREFIX + SyncProfile.MAIN }),
+            pick(left.profiles + right.profiles, { it.key }, { it.updatedAt }, compareBy { it.tie }, profileDeletions),
         ).sortedBy { it.id }
         val keptPlaylists = kept.sortedWith(compareBy<SyncPlaylist> { it.addedAt }.thenBy { it.id })
         val profileData = profileData(left.profileData + right.profileData, profiles, keptPlaylists, deleted, replaced)

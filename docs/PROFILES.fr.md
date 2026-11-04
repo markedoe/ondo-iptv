@@ -65,7 +65,14 @@ version précédente et vérifient que rien n’est perdu.
 - Le profil principal ne peut pas être supprimé : c’est celui dont les données datent d’avant les profils, et
   celui auquel est associé un appareil plus ancien sans profils (voir « Synchronisation »). Tout autre profil peut
   être supprimé avec sa bibliothèque ; le dernier profil restant ne peut pas l’être.
-- Supprimer une playlist retire ses entrées de la bibliothèque de chaque profil.
+- Supprimer une playlist retire ses entrées de la bibliothèque de chaque profil, et ses rappels.
+- Supprimer un profil demande confirmation : cela supprime son historique, Ma liste et ses collections sur tous les
+  appareils du spectateur.
+- Au plus 16 profils : autant que la synchronisation en transporte. À 16, on ne peut plus en ajouter ; les profils créés
+  à part au-delà de 16 (sur plusieurs appareils avant leur synchronisation) restent sur leur appareil.
+- Une lecture appartient au profil où elle a commencé : ses positions et marques « vu » vont dans la bibliothèque de ce
+  profil, même si un autre profil s’ouvre entre-temps (image dans l’image, autre fenêtre), et nulle part si ce profil
+  est supprimé pendant la lecture.
 
 ## Code
 
@@ -94,6 +101,10 @@ Un profil Enfants ne voit que ce qui est permis :
   un profil Enfants sur Android. Un appareil où aucun parent ne peut déverrouiller (aucun code) les laisse ouverts :
   sinon personne ne pourrait jamais quitter un profil Enfants.
 
+Un profil qui n’est plus Enfant sur un autre appareil reste Enfant sur un appareil où un parent a défini un code (le
+code parental sur Apple, le code d’un profil qui n’est pas un profil Enfant sur Android), comme ce code reste lui aussi
+sur son appareil ; devenu Enfant ailleurs, il devient Enfant partout.
+
 Android n’a pas de verrous de catégories ; sur Android, « permis » veut dire : qui ne semble pas adulte et qui n’est
 pas masqué dans le profil Enfants. Cette différence est connue et assumée : ajouter des verrous à Android est un
 changement à part.
@@ -111,6 +122,12 @@ Chaque profil se synchronise, quel que soit le profil ouvert (docs/SYNC.fr.md, �
   sur l’appareil ;
 - un appareil plus ancien qui ne connaît pas les profils lit et écrit les données du profil principal, comme avant ;
   il ignore les nouveaux champs, et la version du format ne change pas ;
+- la suppression d’un profil perd face à ses données modifiées plus tard sur un appareil qui n’en savait rien : le
+  profil revient avec ces données (`fixtures/sync/profiles-late-*.json`) ;
+- la première fois qu’un appareil reçoit des profils, un de ses profils créé à part (avant que les profils se
+  synchronisent) ne fait qu’un avec un profil reçu du même nom, quels que soient sa casse et ses accents, et du même
+  réglage Enfant : le plus petit ID est gardé sur les deux appareils, l’autre est supprimé, et ses données vont dans
+  celui gardé ;
 - les cœurs Kotlin et Swift partagent les mêmes fichiers d’exemple (`fixtures/sync/profiles-*.json`) et les mêmes
   tests.
 

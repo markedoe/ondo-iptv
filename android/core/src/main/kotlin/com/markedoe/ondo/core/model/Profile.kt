@@ -50,6 +50,9 @@ data class Profile(
         /** The emoji offered for an avatar (any single emoji received is drawn too). */
         val EMOJI = listOf("🦊", "🐼", "🦄", "🐙", "🚀", "🌈")
 
+        /** At most this many profiles: as many as sync carries (`SyncProfile.MAX_PROFILES`). */
+        const val MAX_PROFILES = 16
+
         /** How many colours the palette has. */
         const val COLOR_COUNT = 8
 

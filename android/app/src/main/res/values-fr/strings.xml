@@ -455,7 +455,7 @@
     <string name="edit_profile">Modifier le profil</string>
     <string name="new_profile">Nouveau profil</string>
     <string name="delete_profile">Supprimer le profil</string>
-    <string name="delete_profile_confirm">Supprimer ce profil avec son historique, Ma liste et ses collections ?</string>
+    <string name="delete_profile_confirm">Supprimer ce profil avec son historique, Ma liste et ses collections sur tous vos appareils ?</string>
     <string name="profile_color">Couleur</string>
     <string name="profile_avatar">Avatar</string>
     <string name="profile_initial">Initiale</string>
@@ -479,4 +479,5 @@
     <string name="done">OK</string>
     <string name="current_profile">Actuel</string>
     <string name="always_open_profile">Toujours ouvrir ce profil</string>
+    <string name="profiles_limit">Jusqu’à 16 profils se synchronisent entre vos appareils ; les autres restent sur cet appareil. Supprimez-en un pour en ajouter un autre.</string>
 </resources>

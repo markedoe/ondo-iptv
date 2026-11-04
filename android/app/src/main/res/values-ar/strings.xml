@@ -497,7 +497,7 @@
     <string name="edit_profile">تعديل الملف الشخصي</string>
     <string name="new_profile">ملف شخصي جديد</string>
     <string name="delete_profile">حذف الملف الشخصي</string>
-    <string name="delete_profile_confirm">هل تريد حذف هذا الملف الشخصي مع سجله وقائمتي ومجموعاته؟</string>
+    <string name="delete_profile_confirm">هل تريد حذف هذا الملف الشخصي مع سجله وقائمتي ومجموعاته على جميع أجهزتك؟</string>
     <string name="profile_color">اللون</string>
     <string name="profile_avatar">الصورة الرمزية</string>
     <string name="profile_initial">الحرف الأول</string>
@@ -521,4 +521,5 @@
     <string name="done">تم</string>
     <string name="current_profile">الحالي</string>
     <string name="always_open_profile">افتح هذا الملف الشخصي دائمًا</string>
+    <string name="profiles_limit">تتم مزامنة 16 ملفًا شخصيًا كحد أقصى بين أجهزتك، وتبقى الملفات الأخرى على هذا الجهاز. احذف ملفًا لإضافة آخر.</string>
 </resources>

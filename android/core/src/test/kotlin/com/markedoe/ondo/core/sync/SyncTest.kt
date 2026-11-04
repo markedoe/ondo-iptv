@@ -285,6 +285,75 @@ class SyncTest {
         assertEquals(expected, SyncMerge.merge(expected, a))
     }
 
+    /** A profile deleted on one device at 100 while another kept watching in it at 200: the watch wins (review S2). */
+    @Test
+    fun aProfileDeletionLosesToDataAddedAfterIt() {
+        val a = fixture("profiles-late-a.json")
+        val b = fixture("profiles-late-b.json")
+        val expected = fixture("profiles-late-merged.json")
+        assertEquals(expected, SyncMerge.merge(a, b))
+        assertEquals(expected.withoutDevice(), SyncMerge.merge(b, a).withoutDevice())
+        assertEquals(expected, SyncMerge.merge(expected, a))
+        // Data no later than the deletion goes with the profile.
+        val older = b.copy(profileData = b.profileData.map { bucket -> bucket.copy(progress = bucket.progress.map { it.copy(watchedAt = 100) }) })
+        val merged = SyncMerge.merge(a, older)
+        assertTrue(merged.profiles.isEmpty())
+        assertTrue(merged.profileData.isEmpty())
+    }
+
+    /** A deletion in a profile learned late is kept from when it was learned, as the main profile's are (review S6). */
+    @Test
+    fun aDeletionLearnedLateInAProfileIsKeptFromWhenItWasLearned() {
+        val day = 86_400_000L
+        val now = 400 * day
+        val old = now - 200 * day
+        val key = "favorite:p|movie|m1"
+        val profile = "11111111-1111-4111-8111-111111111111"
+        val snapshot = SyncSnapshot(
+            device = "x", profiles = listOf(SyncProfile(profile, updatedAt = 1)),
+            profileData = listOf(SyncProfileData(profile, deleted = mapOf(key to old))), deleted = mapOf(key to old),
+        )
+        val pruned = snapshot.pruned(now, learned = mapOf(key to now - day), profileLearned = mapOf(profile to mapOf(key to now - day)))
+        assertEquals(1, pruned.deleted.size)
+        assertEquals(1, pruned.profileData.single().deleted.size)
+        assertTrue(snapshot.pruned(now).profileData.single().deleted.isEmpty())
+    }
+
+    /**
+     * Kids lifted on an unprotected device does not lift it where a parent set a PIN; a device keeps Kids, takes the
+     * record's time, and the next sessions change nothing (review S3).
+     */
+    @Test
+    fun kidsLiftedElsewhereStaysOnWhereAParentSetAPin() {
+        assertTrue(SyncProfiles.keptKids(local = true, received = false, parentProtected = true))
+        assertFalse(SyncProfiles.keptKids(local = true, received = false, parentProtected = false))
+        assertTrue(SyncProfiles.keptKids(local = false, received = true, parentProtected = false))
+        assertTrue(SyncProfiles.keptKids(local = false, received = true, parentProtected = true))
+        val id = "11111111-1111-4111-8111-111111111111"
+        val tv = SyncSnapshot(device = "tv", profiles = listOf(SyncProfile(id, "Kid", kids = true, updatedAt = 100)))
+        val ipad = SyncSnapshot(device = "ipad", profiles = listOf(SyncProfile(id, "Kid", kids = false, updatedAt = 101)))
+        val merged = SyncMerge.merge(tv, ipad)
+        assertFalse(merged.profiles.single().kids)
+        // The TV keeps Kids with the received time: what it sends next is stable, and so is its digest.
+        val kept = merged.profiles.single().let { it.copy(kids = SyncProfiles.keptKids(true, it.kids, parentProtected = true)) }
+        val tvAfter = tv.copy(profiles = listOf(kept))
+        assertEquals(merged.profiles, SyncMerge.merge(tvAfter, ipad).profiles)
+        assertEquals(SyncMerge.merge(tvAfter, ipad), SyncMerge.merge(SyncMerge.merge(tvAfter, ipad), tvAfter))
+        assertEquals(tvAfter.contentDigest(), tvAfter.copy(profiles = listOf(kept)).contentDigest())
+    }
+
+    /** Profiles of the same name made apart on two devices are matched once; the smaller ID is kept (review S1). */
+    @Test
+    fun profilesOfTheSameNameMadeApartAreMatchedOnce() {
+        val small = "11111111-1111-4111-8111-111111111111"
+        val large = "22222222-2222-4222-8222-222222222222"
+        assertEquals(listOf(large to small), SyncProfiles.matches(listOf(SyncProfile(small, "Sam", updatedAt = 10)), listOf(SyncProfile(large, "Sam", updatedAt = 11))))
+        assertEquals(listOf(large to small), SyncProfiles.matches(listOf(SyncProfile(large, " ZOÉ ", updatedAt = 10)), listOf(SyncProfile(small, "zoe", updatedAt = 11))))
+        // A Kids profile is not matched with one that is not, nor the main profile with anything.
+        assertTrue(SyncProfiles.matches(listOf(SyncProfile(small, "Sam", kids = true, updatedAt = 1)), listOf(SyncProfile(large, "Sam", updatedAt = 1))).isEmpty())
+        assertTrue(SyncProfiles.matches(listOf(SyncProfile(SyncProfile.MAIN, "Me", updatedAt = 1)), listOf(SyncProfile(large, "Me", updatedAt = 1))).isEmpty())
+    }
+
     /** An older device knows nothing of profiles: its data is the main profile's, and the profiles stay as they are. */
     @Test
     fun anOlderDeviceWithoutProfilesMapsToTheMainProfile() {

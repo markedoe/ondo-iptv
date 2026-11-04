@@ -237,7 +237,17 @@ private fun ProfilesPage(
                     modifier = (if (index == 0) Modifier.focusRequester(first) else Modifier).testTag("profile-${profile.id}"),
                 )
             }
-            if (!whoIsWatching && !editing) AddProfileTile(actions.onAdd)
+            if (!whoIsWatching && !editing && profiles.size < Profile.MAX_PROFILES) AddProfileTile(actions.onAdd)
+        }
+        // At the cap, no more can be added, and the ones beyond it (made apart on several devices) stay on each device.
+        if (!whoIsWatching && profiles.size >= Profile.MAX_PROFILES) {
+            Text(
+                stringResource(R.string.profiles_limit),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.widthIn(max = 560.dp).testTag("profilesLimit"),
+            )
         }
         FocusOnOpen(first)
         if (whoIsWatching) {

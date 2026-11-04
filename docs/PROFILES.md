@@ -58,7 +58,13 @@ written by an earlier version and check that nothing is lost.
 - The main profile cannot be deleted: it is the one whose data predates profiles, and the one an older device
   without profiles is matched with (see "Sync"). Any other profile can be deleted with its library; the last
   remaining profile cannot.
-- Deleting a playlist removes its entries from every profile's library.
+- Deleting a playlist removes its entries from every profile's library, and its reminders.
+- Deleting a profile asks first: it deletes its history, My List and collections on all the viewer's devices.
+- At most 16 profiles: as many as sync carries. At 16, no more can be added; profiles made apart beyond 16 (on several
+  devices before they synced) stay on their device.
+- A playback belongs to the profile it started in: its positions and watched marks go to that profile's library,
+  even if another profile opens meanwhile (picture in picture, another window), and nowhere if that profile is
+  deleted while it plays.
 
 ## PIN
 
@@ -86,6 +92,10 @@ A Kids profile only sees what is allowed:
   Android. A device where no parent can unlock (no PIN at all) leaves them open: otherwise nobody could ever leave
   a Kids profile.
 
+A profile made not Kids on another device stays Kids on a device where a parent set a PIN (the parental PIN on Apple,
+a PIN of a profile that is not a Kids one on Android), as that PIN stays on its device too; made Kids elsewhere, it
+becomes Kids everywhere.
+
 Android has no category locks of its own; on Android, "allowed" means: not adult-looking and not hidden in the
 Kids profile. This difference is known and kept: adding locks to Android is a separate change.
 
@@ -100,6 +110,11 @@ Every profile syncs, whichever is open (docs/SYNC.md, "Profiles"):
 - `pinHash` is never in a record (see "PIN"), nor "Always open this profile": both stay on the device;
 - an older device that knows nothing of profiles reads and writes the main profile's data, as before; it ignores the
   new fields, and the format version does not change;
+- a profile's deletion loses to its data changed later on a device that had not heard of it: the profile comes back
+  with that data (`fixtures/sync/profiles-late-*.json`);
+- the first time a device receives profiles, a profile of its own made apart (before profiles synced) is one with a
+  received profile of the same name, whatever its case and accents, and the same Kids switch: the smaller ID is kept
+  on both devices, the other is deleted, and its data goes into the one kept;
 - the Kotlin and Swift cores share the same fixtures (`fixtures/sync/profiles-*.json`) and the same tests.
 
 What each device keeps for sync: Android keeps each profile's deletions in that profile's library document, the main

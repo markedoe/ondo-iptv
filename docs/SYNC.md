@@ -200,7 +200,16 @@ profile is never deleted (a deletion of it is ignored). Readers keep 16 profiles
 profile other than the main one, by the same rules as the snapshot's own, with what was deleted in that profile. The
 main profile's records are the snapshot's own: an older device, which knows nothing of profiles, reads and writes the
 main profile's data, ignores `profiles` and `profileData`, and the format version stays 1. Data sent for the main
-profile in `profileData` is ignored.
+profile in `profileData` is ignored. Profiles do not travel through an older device: two devices that only meet
+through one share the main profile's data alone. Each profile's deletions learned from another device are kept from
+when they were learned, as the main profile's are (see **Deleted**).
+
+Two choices stay with each device (docs/PROFILES.md): a profile made not Kids elsewhere stays Kids on a device where a
+parent set a PIN, though it takes the record's time (its own snapshot then says Kids at that time, the merge keeps the
+other device's choice, and nothing changes from one session to the next); and, the first time a device receives
+profiles, a profile of its own made apart is one with a received profile of the same name (trimmed, whatever its case
+and accents) and the same Kids switch: the smaller ID is kept on both devices, the other is deleted (dated), and its
+data goes into the one kept.
 
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for
 180 days, and longer until every device it had a session with in the last year has had a session with it after the
@@ -258,8 +267,10 @@ nothing.
    whole list as one record and sends no `listitem:` deletion: an item it took out comes back from a device that
    still has it.
 8. **Profiles** merge by rule 2 (tie string: `name`, `colorIndex`, `symbol`, `kids` as `1` or `0`), the main
-   profile's deletion ignored. A profile dropped (deleted at or after its `updatedAt`, or past the 16 kept) goes with
-   its data. Each profile kept other than the main one merges its data by rules 2 to 7, as a snapshot of its own
+   profile's deletion ignored. A profile's deletion wins only at or after the profile's latest time: its `updatedAt`
+   and every time in its data (as a list's content does, rule 7). A device that kept watching in a profile after
+   another deleted it keeps the profile, and brings it back on the other. A profile dropped (deleted at or after that
+   time, or past the 16 kept) goes with its data. Each profile kept other than the main one merges its data by rules 2 to 7, as a snapshot of its own
    whose playlists are the merged ones: a favourite or progress of a deleted playlist goes, a replaced playlist's
    becomes the one kept, and a record deleted in that profile (its `deleted`) goes. The result lists profiles and
    profile data by ID.

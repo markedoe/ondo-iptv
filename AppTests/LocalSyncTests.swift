@@ -469,6 +469,101 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertFalse(first.profiles.contains { $0.id == guest.id })
     }
 
+    // MARK: Review fixes (profiles)
+
+    /// S5: a film keeps saving into the profile it started in after a switch, and nowhere once that profile is deleted.
+    func testAPlaybackSavesIntoTheProfileItStartedIn() async throws {
+        let model = try await deviceWithLibrary()
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        let movie = try XCTUnwrap(model.content.movies.first)
+        let item = PlaybackItem(reference: MediaReference(playlistID: playlist.id, type: .movie, itemID: movie.id), title: movie.name,
+                                streamURL: URL(string: "http://127.0.0.1:9/movie.mp4")!, isLive: false)
+        let main = try XCTUnwrap(model.profiles.first(where: \.isMain))
+        XCTAssertEqual(model.library.progress(for: item.reference)?.position, 1_200)
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        model.switchProfile(to: guest)
+        model.recordStart(item)
+        model.recordProgress(item, position: 2_000, duration: 5_400)
+        // Another profile opens while the film plays (picture in picture, another window).
+        model.switchProfile(to: main)
+        model.recordProgress(item, position: 3_000, duration: 5_400)
+        XCTAssertEqual(model.library.progress(for: item.reference)?.position, 1_200)
+        XCTAssertEqual(model.otherLibraries[guest.id]?.progress(for: item.reference)?.position, 3_000)
+        // The guest deleted while it plays: its saves go nowhere, never into the main profile.
+        model.deleteProfile(guest)
+        model.recordProgress(item, position: 4_000, duration: 5_400)
+        XCTAssertEqual(model.library.progress(for: item.reference)?.position, 1_200)
+    }
+
+    /// S4: a session reads the other profiles' libraries from memory, not from disk.
+    func testASessionReadsTheOtherProfilesFromMemory() async throws {
+        let model = try await deviceWithLibrary()
+        let movie = try XCTUnwrap(model.content.movies.first)
+        let main = try XCTUnwrap(model.profiles.first(where: \.isMain))
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        model.switchProfile(to: guest)
+        model.toggleFavorite(movie)
+        model.switchProfile(to: main)
+        // Its document gone from disk, the session still has the guest's data: it never reads it there.
+        try? FileManager.default.removeItem(at: root.appendingPathComponent("first/Support/\(guest.libraryDocumentName).json"))
+        let bucket = model.syncSnapshot().profileData.first { $0.profile == guest.id.uuidString.lowercased() }
+        XCTAssertEqual(bucket?.favorites.map(\.item), [movie.id])
+    }
+
+    /// S3: Kids lifted on another device stays on where a parent set a PIN; made Kids again, it applies.
+    func testKidsLiftedElsewhereStaysOnWhereAParentSetAPIN() async throws {
+        let model = try await device("first")
+        let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
+        model.setParentalPIN("1357")
+        let id = kid.id.uuidString.lowercased()
+        let later = Date().syncMilliseconds + 1_000
+        await model.applySync(SyncSnapshot(device: "ipad", profiles: [SyncProfile(id: id, name: "Kid", kids: false, updatedAt: later)]))
+        XCTAssertEqual(model.profiles.first { $0.id == kid.id }?.isKids, true)
+        XCTAssertEqual(model.profiles.first { $0.id == kid.id }?.updatedAt, later)
+        // Without a parent PIN, the change applies.
+        let other = try await device("second")
+        let kid2 = other.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
+        await other.applySync(SyncSnapshot(device: "ipad", profiles: [SyncProfile(id: kid2.id.uuidString.lowercased(), name: "Kid", kids: false,
+                                                                                  updatedAt: Date().syncMilliseconds + 1_000)]))
+        XCTAssertEqual(other.profiles.first { $0.id == kid2.id }?.isKids, false)
+    }
+
+    /// S1: "Sam" made apart on two devices becomes one profile, the smaller ID, with the data of both.
+    func testProfilesOfTheSameNameMadeApartBecomeOne() async throws {
+        let model = try await deviceWithLibrary()
+        let movie = try XCTUnwrap(model.content.movies.first)
+        let playlist = try XCTUnwrap(model.activePlaylist)
+        let mine = model.addProfile(name: "Sam", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: "2468")
+        model.switchProfile(to: mine)
+        model.toggleFavorite(movie)
+        let theirs = UUID()
+        let theirsID = theirs.uuidString.lowercased()
+        let favorite = SyncFavorite(playlist: playlist.id.uuidString.lowercased(), kind: "movie", item: "elsewhere", title: "Elsewhere",
+                                    addedAt: Date().syncMilliseconds - 1_000)
+        await model.applySync(SyncSnapshot(device: "ipad", profiles: [SyncProfile(id: theirsID, name: " SAM", updatedAt: Date().syncMilliseconds - 500)],
+                                           profileData: [SyncProfileData(profile: theirsID, favorites: [favorite])]))
+        let kept = min(mine.id.uuidString.lowercased(), theirsID)
+        let sams = model.profiles.filter { SyncProfiles.normalizedName($0.name) == "sam" }
+        XCTAssertEqual(sams.map { $0.id.uuidString.lowercased() }, [kept])
+        XCTAssertNotNil(sams.first?.pinHash, "the PIN stays on this device")
+        let bucket = model.syncSnapshot().profileData.first { $0.profile == kept }
+        XCTAssertEqual(Set(bucket?.favorites.map(\.item) ?? []), [movie.id, "elsewhere"])
+        XCTAssertNotNil(model.syncSnapshot().deleted[SyncProfile.keyPrefix + (kept == theirsID ? mine.id.uuidString.lowercased() : theirsID)])
+    }
+
+    /// S6: a deletion in a profile learned from another device is dated when it was learned, and still travels.
+    func testADeletionInAProfileLearnedLateIsKeptFromWhenItWasLearned() async throws {
+        let model = try await device("first")
+        let guest = model.addProfile(name: "Guest", colorIndex: 1, symbol: Profile.initialSymbol, isKids: false, pin: nil)
+        let id = guest.id.uuidString.lowercased()
+        let key = "favorite:" + UUID().uuidString.lowercased() + "|movie|m1"
+        let old = Date().syncMilliseconds - 300 * 86_400_000
+        await model.applySync(SyncSnapshot(device: "tv", profiles: [SyncProfile(id: id, name: "Guest", updatedAt: guest.updatedAt)],
+                                           profileData: [SyncProfileData(profile: id, deleted: [key: old])]))
+        XCTAssertNotNil(model.syncState.profileStates[id]?.learned[key])
+        XCTAssertNotNil(model.syncSnapshot().profileData.first { $0.profile == id }?.deleted[key])
+    }
+
     // MARK: The viewer's choices across sync and a relaunch
 
     /// A catalogue with language tags: "show only your languages?" is offered for it.

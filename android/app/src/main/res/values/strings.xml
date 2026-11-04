@@ -450,7 +450,7 @@
     <string name="edit_profile">Edit Profile</string>
     <string name="new_profile">New Profile</string>
     <string name="delete_profile">Delete Profile</string>
-    <string name="delete_profile_confirm">Delete this profile with its history, My List and collections?</string>
+    <string name="delete_profile_confirm">Delete this profile with its history, My List and collections on all your devices?</string>
     <string name="profile_color">Color</string>
     <string name="profile_avatar">Avatar</string>
     <string name="profile_initial">Initial</string>
@@ -474,4 +474,5 @@
     <string name="done">Done</string>
     <string name="current_profile">Current</string>
     <string name="always_open_profile">Always open this profile</string>
+    <string name="profiles_limit">Up to 16 profiles sync between your devices; others stay on this device. Delete one to add another.</string>
 </resources>

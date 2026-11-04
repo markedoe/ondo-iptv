@@ -9,6 +9,7 @@ import com.markedoe.ondo.core.sync.SyncPerson
 import com.markedoe.ondo.core.sync.SyncPlaylist
 import com.markedoe.ondo.core.sync.SyncProfile
 import com.markedoe.ondo.core.sync.SyncProfileData
+import com.markedoe.ondo.core.sync.SyncProfiles
 import com.markedoe.ondo.core.sync.SyncProgress
 import com.markedoe.ondo.core.sync.SyncRows
 import com.markedoe.ondo.core.sync.SyncSnapshot
@@ -99,7 +100,12 @@ object SyncData {
      */
     fun snapshot(state: OndoState, device: String, deviceName: String?, now: Long, libraries: Map<String, LibraryState> = allLibraries(state, emptyMap())): SyncSnapshot {
         val main = main(state, libraries)
-        return records(state, libraries, device, deviceName, now).pruned(now, sessions = main.syncPeers.values, learned = main.syncDeletedLearned)
+        // Each profile's late-learned deletions are kept from when they were learned, as the main profile's are.
+        val profileLearned = state.profiles.filter { !it.isMain }.mapNotNull { profile ->
+            libraries[profile.id]?.syncDeletedLearned?.takeIf { it.isNotEmpty() }?.let { profile.id.lowercase() to it }
+        }.toMap()
+        return records(state, libraries, device, deviceName, now)
+            .pruned(now, sessions = main.syncPeers.values, learned = main.syncDeletedLearned, profileLearned = profileLearned)
     }
 
     /** The latest time of what this device holds for sync (its records and deletions, every profile's); null without any. */
@@ -270,9 +276,14 @@ object SyncData {
                 (merged.deleted[SyncProfile.KEY_PREFIX + profile.id.lowercase()]?.let { it >= profile.updatedAt } == true)
         }
         val localById = state.profiles.associateBy { it.id.lowercase() }
+        // Kids lifted elsewhere stays on where a parent set a PIN (as that PIN stays here): docs/PROFILES.md, "Kids".
+        val parentProtected = state.profiles.any { !it.isKids && it.isProtected }
         val profiles = (state.profiles - removedProfiles.toSet()).map { profile ->
             val synced = mergedProfiles[profile.id.lowercase()]?.takeIf { it.updatedAt >= profile.updatedAt } ?: return@map profile
-            profile.copy(name = synced.name, colorIndex = synced.colorIndex, symbol = synced.symbol, isKids = synced.kids, updatedAt = synced.updatedAt)
+            profile.copy(
+                name = synced.name, colorIndex = synced.colorIndex, symbol = synced.symbol, updatedAt = synced.updatedAt,
+                isKids = SyncProfiles.keptKids(profile.isKids, synced.kids, parentProtected),
+            )
         } + merged.profiles.filter { it.id.lowercase() !in localById && it.id != SyncProfile.MAIN }.map { synced ->
             Profile(id = synced.id, name = synced.name, colorIndex = synced.colorIndex, symbol = synced.symbol, isKids = synced.kids, updatedAt = synced.updatedAt)
         }
@@ -356,7 +367,8 @@ object SyncData {
             collections = collections,
             rowOrders = records.rows,
             syncDeleted = deleted,
-            syncDeletedLearned = if (!isMain) library.syncDeletedLearned.filterKeys { it in deleted } else deleted.keys.mapNotNull { key ->
+            // When this device learned each deletion made elsewhere, in every profile (kept from then, docs/SYNC.md).
+            syncDeletedLearned = deleted.keys.mapNotNull { key ->
                 (library.syncDeletedLearned[key] ?: context.now.takeIf { key !in library.syncDeleted && it > 0 })?.let { key to it }
             }.toMap(),
             syncReplaced = if (isMain) context.merged.replaced else library.syncReplaced,

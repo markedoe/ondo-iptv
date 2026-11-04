@@ -197,8 +197,10 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     /// than the last session with each device of `sessions` (when it last synced with this one), for the devices seen
     /// in the last `peersKeptDays` days: a deletion goes only once every such device has had it (docs/SYNC.md,
     /// "Deleted").
+    /// `profileLearned`: for each profile other than the main one, by ID, when this device learned the deletions made in
+    /// it elsewhere.
     public func pruned(now: Int64, days: Int = SyncSnapshot.deletionsKeptDays, sessions: [Int64] = [],
-                       learned: [String: Int64] = [:]) -> SyncSnapshot {
+                       learned: [String: Int64] = [:], profileLearned: [String: [String: Int64]] = [:]) -> SyncSnapshot {
         let recent = sessions.filter { $0 >= now - Int64(Self.peersKeptDays) * Self.dayMilliseconds }
         let oldest = min(now - Int64(days) * Self.dayMilliseconds, recent.min() ?? .max)
         // A deletion learned late (from a device away for months) counts from when this device learned it.
@@ -206,9 +208,11 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
         var copy = self
         copy.deleted = kept
         copy.replaced = replaced.filter { kept["playlist:" + $0.key] != nil }
+        // In each profile too, a deletion learned late counts from when this device learned it.
         copy.profileData = profileData.map { bucket in
             var bucket = bucket
-            bucket.deleted = bucket.deleted.filter { $0.value >= oldest }
+            let learnedHere = profileLearned[bucket.profile] ?? [:]
+            bucket.deleted = bucket.deleted.filter { max($0.value, learnedHere[$0.key] ?? $0.value) >= oldest }
             return bucket
         }
         return copy

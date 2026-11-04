@@ -184,6 +184,10 @@ struct ProfilesSettingsView: View {
     @Environment(AppModel.self) private var model
     @State private var editing: Profile?
     @State private var adding = false
+    @State private var deleting: Profile?
+
+    /// Sync carries 16 profiles at most (docs/SYNC.md, "Profiles"): no more are made here.
+    static let maxProfiles = 16
 
     var body: some View {
         List {
@@ -210,9 +214,24 @@ struct ProfilesSettingsView: View {
                 .buttonStyle(.plain)
             }
             .onDelete { offsets in
-                // Never the main profile (`canDelete`).
-                for profile in offsets.map({ model.profiles[$0] }) { model.deleteProfile(profile) }
+                // Never the main profile (`canDelete`); asked first, as it goes from every device.
+                deleting = offsets.map { model.profiles[$0] }.first { model.canDelete($0) }
             }
+            if model.profiles.count >= Self.maxProfiles {
+                Text("Up to 16 profiles sync between your devices; others stay on this device. Delete one to add another.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .confirmationDialog("Delete Profile", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
+                            titleVisibility: .visible) {
+            Button("Delete Profile", role: .destructive) {
+                if let profile = deleting { model.deleteProfile(profile) }
+                deleting = nil
+            }
+            Button("Cancel", role: .cancel) { deleting = nil }
+        } message: {
+            Text("Delete this profile with its history, My List and collections on all your devices?")
         }
         .navigationTitle("Profiles")
         .toolbar {
@@ -222,6 +241,7 @@ struct ProfilesSettingsView: View {
                 } label: {
                     Label("Add Profile", systemImage: "plus")
                 }
+                .disabled(model.profiles.count >= Self.maxProfiles)
             }
         }
         .sheet(item: $editing) { profile in
@@ -244,6 +264,7 @@ struct ProfileEditView: View {
     @State private var isKids = false
     @State private var pin = ""
     @State private var removePIN = false
+    @State private var confirmingDelete = false
 
     var body: some View {
         Form {
@@ -297,10 +318,16 @@ struct ProfileEditView: View {
             }
             if let profile, model.canDelete(profile) {
                 Section {
-                    Button("Delete Profile", role: .destructive) {
-                        model.deleteProfile(profile)
-                        dismiss()
-                    }
+                    Button("Delete Profile", role: .destructive) { confirmingDelete = true }
+                        .confirmationDialog("Delete Profile", isPresented: $confirmingDelete, titleVisibility: .visible) {
+                            Button("Delete Profile", role: .destructive) {
+                                model.deleteProfile(profile)
+                                dismiss()
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("Delete this profile with its history, My List and collections on all your devices?")
+                        }
                 }
             }
         }

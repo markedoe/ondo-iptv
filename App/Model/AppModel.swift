@@ -154,6 +154,11 @@ final class AppModel {
     /// Where other devices left an item playing here, received during its playback (by `playbackKey`): applied once
     /// it no longer plays, when it is the later (`applyParkedProgress`).
     @ObservationIgnored var parkedProgress: [String: HistoryEntry] = [:]
+    /// The libraries of the profiles not open, by profile, as saved (docs/PROFILES.md): sync reads them from here.
+    @ObservationIgnored var otherLibraries: [UUID: UserLibrary] = [:]
+    /// The profile each item played was started in (`playbackKey`): its progress goes there, whichever profile is open
+    /// when it is saved, and nowhere once that profile is deleted.
+    @ObservationIgnored var playbackProfiles: [String: UUID] = [:]
     /// What sync changed in the playlist in use while something played: the catalogue follows once playback ends
     /// (`endSession`, `followSyncedContent`), never under the player.
     @ObservationIgnored var contentAfterPlayback: ContentAfterPlayback?
@@ -256,6 +261,11 @@ final class AppModel {
         let launchProfile = profiles.first { $0.id == settings.launchProfileID }
         if let launchProfile { settings.activeProfileID = launchProfile.id }
         library = userStore.load(UserLibrary.self, name: activeProfile.libraryDocumentName) ?? UserLibrary()
+        // The other profiles' libraries are kept at hand, read once here: sync carries them all, and reading them at each
+        // session would decode them on the main actor (docs/PROFILES.md, "Sync").
+        otherLibraries = Dictionary(profiles.filter { $0.id != activeProfile.id }.map { profile in
+            (profile.id, userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
+        }, uniquingKeysWith: { first, _ in first })
         if let locks = userStore.load(Set<String>.self, name: "parental-locks") {
             lockedCategoryKeys = locks
         } else {
@@ -369,8 +379,13 @@ final class AppModel {
     func switchProfile(to profile: Profile) {
         guard profiles.contains(where: { $0.id == profile.id }) else { return }
         flush()
+        // The profile left joins the others kept at hand; the other's comes out (its document is as kept).
+        let left = activeProfile.id
+        let opened = otherLibraries.removeValue(forKey: profile.id)
+            ?? (userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary())
+        if left != profile.id { otherLibraries[left] = library }
         updateSettings { $0.activeProfileID = profile.id }
-        library = userStore.load(UserLibrary.self, name: profile.libraryDocumentName) ?? UserLibrary()
+        library = opened
         if isReady { advanceSyncClockToStoredData() }
         isParentalUnlocked = false
         needsProfileSelection = false
@@ -392,6 +407,7 @@ final class AppModel {
         let profile = Profile(name: name, colorIndex: colorIndex, symbol: symbol, isKids: isKids, pinHash: pin.map(Keychain.hash(pin:)),
                               updatedAt: syncStamp().syncMilliseconds)
         profiles.append(profile)
+        otherLibraries[profile.id] = UserLibrary()
         saveProfiles()
         syncSoon()
         return profile
@@ -436,8 +452,10 @@ final class AppModel {
         // A pending save of the deleted profile's library would write its file again.
         libraryWriter.discard(name: profile.libraryDocumentName)
         userStore.remove(name: profile.libraryDocumentName)
+        otherLibraries[profile.id] = nil
         if wasActive, let first = profiles.first(where: \.isMain) ?? profiles.first {
-            library = userStore.load(UserLibrary.self, name: first.libraryDocumentName) ?? UserLibrary()
+            library = otherLibraries.removeValue(forKey: first.id)
+                ?? (userStore.load(UserLibrary.self, name: first.libraryDocumentName) ?? UserLibrary())
             updateSettings { $0.activeProfileID = first.id }
             if isReady { advanceSyncClockToStoredData() }
             refreshLocalSync()
@@ -601,8 +619,10 @@ final class AppModel {
         // Every profile's entries of the playlist go with it. Written at once: the writer keeps one pending library,
         // the open profile's (the others have none pending: a switch flushes it).
         for profile in profiles where profile.id != activeProfile.id {
-            guard var other = userStore.load(UserLibrary.self, name: profile.libraryDocumentName) else { continue }
+            guard var other = otherLibraries[profile.id] else { continue }
             other.removeData(for: playlist.id)
+            guard other != otherLibraries[profile.id] else { continue }
+            otherLibraries[profile.id] = other
             try? userStore.save(other, name: profile.libraryDocumentName)
         }
         if settings.activePlaylistID == playlist.id || activePlaylist == nil {
