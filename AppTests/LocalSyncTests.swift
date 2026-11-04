@@ -174,6 +174,31 @@ final class LocalSyncTests: XCTestCase {
         XCTAssertEqual(first.savedRowOrder(.series)?.hidden, ["mylist"])
     }
 
+    /// The order is the device's: a kids profile cannot change it, and the settings do not offer it there.
+    func testAKidsProfileCannotChangeTheRowOrder() async throws {
+        let model = try await device("first")
+        model.setRowOrder(.movie, arranged: ["mylist", "all"], hidden: [])
+        let saved = model.savedRowOrder(.movie)
+        let kid = model.addProfile(name: "Kid", colorIndex: 2, symbol: "face.smiling", isKids: true, pin: nil)
+        model.switchProfile(to: kid)
+        XCTAssertFalse(model.canChangeRowOrder)
+        model.setRowOrder(.movie, arranged: ["all", "mylist"], hidden: ["all"])
+        model.resetRowOrder(.movie)
+        XCTAssertEqual(model.savedRowOrder(.movie), saved)
+    }
+
+    /// The records are kept sorted by tab in UTF-16 code units, as the merge sorts them (Swift's `<` puts U+FF5E before
+    /// U+1F600, UTF-16 after it): a merge that changes nothing gives them back equal.
+    func testRowOrdersAreSortedByTabAsTheMergeSortsThem() async throws {
+        let model = try await device("first")
+        let wide = SyncRows(tab: "\u{FF5E}tab", order: ["all"], updatedAt: 1)
+        let emoji = SyncRows(tab: "\u{1F600}tab", order: ["all"], updatedAt: 1)
+        model.syncState.rowOrders = [wide, emoji]
+        model.setRowOrder(.movie, arranged: ["all"], hidden: [])
+        XCTAssertEqual(model.syncState.rowOrders.map(\.tab), ["movie", "\u{1F600}tab", "\u{FF5E}tab"])
+        XCTAssertEqual(SyncMerge.merge(model.syncSnapshot(), SyncSnapshot(device: "old")).rows, model.syncState.rowOrders)
+    }
+
     /// The tab's rows follow the order saved; a category the playlist no longer has keeps its place in it.
     func testTheTabFollowsTheRowOrder() async throws {
         let model = try await deviceWithLibrary()

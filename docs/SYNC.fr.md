@@ -196,11 +196,14 @@ retour. Les catégories et langues masquées le restent, quel que soit l’ordre
 ce qui écrit un `order` vide et garde `hidden`). Tout l’enregistrement est un seul changement : une rangée déplacée sur
 un appareil et une autre masquée sur un autre au même moment ne gardent que le changement le plus tardif. Les lecteurs
 écartent les clés vides ou qui contiennent un caractère de contrôle (sous U+0020, ou U+007F), gardent la première des
-clés répétées dans `order`, et gardent `hidden` une fois chacune, triées (en unités UTF-16). Un appareil garde et
+clés répétées dans `order`, et gardent `hidden` une fois chacune, triées (en unités UTF-16). Ils gardent ensuite au
+plus 2000 clés dans `order` (les premières) et dans `hidden` (les premières une fois triées), écartent les clés et les
+onglets de plus de 256 unités UTF-16, et gardent les enregistrements de 8 onglets au plus : `movie` et `series`, puis
+les autres dans l’ordre UTF-16 (une fusion garde les mêmes 8). Un appareil garde et
 transmet l’enregistrement d’un onglet qu’il ne connaît pas. Un instantané sans `rows` (d’une version plus ancienne) ne
 change rien ; aucun enregistrement n’est jamais supprimé. Un appareil Android plus ancien écarte `rows` de ce qu’il
 garde et transmet : deux appareils Apple qui ne se synchronisent qu’à travers lui gardent chacun leur ordre. Sur les appareils Apple, l’ordre est celui de l’appareil,
-quel que soit le profil ouvert, et voyage tant que le profil principal l’est.
+quel que soit le profil ouvert (un profil enfant ne peut pas le changer), et voyage tant que le profil principal l’est.
 
 **Supprimés** — la clé de chaque élément supprimé sur un appareil, avec l’instant de la suppression. Un appareil
 garde chacune 180 jours, et plus longtemps tant que chaque appareil avec lequel il a eu une session dans l’année

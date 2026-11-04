@@ -18,6 +18,9 @@ extension AppModel {
         RowOrder.builtIns(series: type == .series) + categories.map { RowOrder.categoryKey(id: $0.id, name: $0.name) }
     }
 
+    /// Whether the open profile may change the order: not a kids profile, as the order is the device's (every profile's).
+    var canChangeRowOrder: Bool { !activeProfile.isKids }
+
     /// The rows of a tab in the viewer's order, hidden or not. The categories hidden in Settings (or by a hidden
     /// language) are not among them: they never show, whatever the order.
     func arrangedRows(_ type: ContentType, categories: [MediaCategory]? = nil) -> [RowOrder.Row] {
@@ -30,6 +33,7 @@ extension AppModel {
     /// The rows the tab no longer has (a category gone from the playlist) keep their place and their choice; the record
     /// is dated for sync.
     func setRowOrder(_ type: ContentType, arranged: [String], hidden: [String]) {
+        guard canChangeRowOrder else { return }
         let previous = savedRowOrder(type)
         let record = SyncRows(
             tab: Self.rowTab(type),
@@ -45,15 +49,16 @@ extension AppModel {
 
     /// Default order: the rows of the tab in their default order again, those hidden staying hidden.
     func resetRowOrder(_ type: ContentType) {
-        guard var record = savedRowOrder(type), !record.order.isEmpty else { return }
+        guard canChangeRowOrder, var record = savedRowOrder(type), !record.order.isEmpty else { return }
         record.order = []
         record.updatedAt = syncStamp().syncMilliseconds
         keepRowOrder(record)
     }
 
     private func keepRowOrder(_ record: SyncRows) {
-        // Sorted by tab, as a merge gives them: the same order compares equal.
-        syncState.rowOrders = (syncState.rowOrders.filter { $0.tab != record.tab } + [record]).sorted { $0.tab < $1.tab }
+        // Sorted by tab in UTF-16 code units, as a merge gives them: the same records compare equal.
+        syncState.rowOrders = (syncState.rowOrders.filter { $0.tab != record.tab } + [record])
+            .sorted { $0.tab.utf16.lexicographicallyPrecedes($1.tab.utf16) }
         saveSyncState()
         syncSoon()
     }

@@ -136,6 +136,34 @@ final class SyncTests: XCTestCase {
         XCTAssertNotEqual(hash(try shown.contentForDigest()), digest)
     }
 
+    /// A record too large is trimmed as it is read, the same way on every device (as in Kotlin), and its digest is that
+    /// of the trimmed record.
+    func testAnOversizedRowsRecordIsTrimmedTheSameWayEachTime() throws {
+        let hash: (Data) -> String = { $0.base64EncodedString() }
+        let keys = (0..<2100).map { "k" + String(format: "%04d", $0) }
+        let long = String(repeating: "x", count: SyncRows.maxKeyLength + 1)
+        let tabs = (0...9).reversed().map { "t\($0)" } + [SyncRows.movies, long]
+        let big = SyncSnapshot(device: "a", rows: tabs.map {
+            SyncRows(tab: $0, order: [long] + keys + [keys[0]], hidden: keys.reversed(), updatedAt: 5)
+        })
+        let read = try XCTUnwrap(SyncSnapshot.decode(try big.encoded()))
+        XCTAssertEqual(read.rows.map(\.tab), ["t6", "t5", "t4", "t3", "t2", "t1", "t0", "movie"])
+        for rows in read.rows {
+            XCTAssertEqual(rows.order, Array(keys.prefix(SyncRows.maxKeys)))
+            XCTAssertEqual(rows.hidden, Array(keys.prefix(SyncRows.maxKeys)))
+        }
+        XCTAssertEqual(SyncSnapshot.decode(try read.encoded()), read)
+        let again = try XCTUnwrap(SyncSnapshot.decode(try big.encoded()))
+        XCTAssertEqual(hash(try again.contentForDigest()), hash(try read.contentForDigest()))
+        let once = SyncMerge.merge(read, read)
+        XCTAssertEqual(hash(try SyncMerge.merge(once, big).contentForDigest()), hash(try once.contentForDigest()))
+        // Two sides of eight tabs each merge into eight.
+        let other = SyncSnapshot(device: "b", rows: (0..<8).map { SyncRows(tab: "u\($0)", order: ["all"], updatedAt: 1) })
+        let merged = SyncMerge.merge(read, other)
+        XCTAssertEqual(merged.rows.map(\.tab), ["movie", "t0", "t1", "t2", "t3", "t4", "t5", "t6"])
+        XCTAssertEqual(SyncMerge.merge(other, read).rows, merged.rows)
+    }
+
     /// A record dated far ahead of the receiver's clock is left out, as any other (docs/SYNC.md, "Clocks").
     func testRowsDatedFarAheadAreLeftOut() {
         let ahead = SyncSnapshot(device: "b", rows: [SyncRows(tab: SyncRows.movies, order: ["all"], updatedAt: 10_000)])

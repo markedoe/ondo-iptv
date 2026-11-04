@@ -184,7 +184,7 @@ data class SyncSnapshot(
                 order = list.order?.map { key -> SyncListItem.withPlaylist(key) { it.lowercase() } },
             )
         },
-        rows = rows.map(SyncRows::normalized),
+        rows = SyncRows.capped(rows.map(SyncRows::normalized)),
         deleted = deleted.entries.fold(LinkedHashMap<String, Long>()) { times, (key, time) ->
             val lowercased = lowercasingId(key)
             times[lowercased] = maxOf(times[lowercased] ?: time, time)
@@ -394,14 +394,32 @@ data class SyncRows(
      * each once and sorted (UTF-16 code units).
      */
     fun normalized(): SyncRows = copy(
-        order = order.filter(::valid).distinct(),
-        hidden = hidden.filter(::valid).distinct().sorted(),
+        order = order.filter(::valid).distinct().take(MAX_KEYS),
+        hidden = hidden.filter(::valid).distinct().sorted().take(MAX_KEYS),
     )
 
     companion object {
         const val MOVIES = "movie"
         const val SERIES = "series"
 
-        private fun valid(key: String) = key.isNotBlank() && key.none { it < ' ' || it == '\u007f' }
+        /** At most this many tabs in a snapshot, keys in `order` and in `hidden`, and UTF-16 units in a key or a tab. */
+        const val MAX_TABS = 8
+        const val MAX_KEYS = 2000
+        const val MAX_KEY_LENGTH = 256
+
+        private fun valid(key: String) = key.length <= MAX_KEY_LENGTH && key.isNotBlank() && key.none { it < ' ' || it == '\u007f' }
+
+        /**
+         * [rows] without the records of a tab that is not a valid key, and of the tabs past the [MAX_TABS] first
+         * (`movie` and `series` first, then the others by UTF-16 code units); the records kept stay in their order.
+         */
+        fun capped(rows: List<SyncRows>): List<SyncRows> {
+            val valid = rows.filter { valid(it.tab) }
+            val tabs = valid.map { it.tab }.distinct()
+            if (tabs.size <= MAX_TABS) return valid
+            val known = listOf(MOVIES, SERIES).filter { it in tabs }
+            val kept = (known + (tabs - known.toSet()).sorted()).take(MAX_TABS).toHashSet()
+            return valid.filter { it.tab in kept }
+        }
     }
 }

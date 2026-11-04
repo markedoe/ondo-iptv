@@ -158,12 +158,15 @@ struct SettingsView: View {
                 } label: {
                     Label("Languages and Categories", systemImage: "line.3.horizontal.decrease.circle")
                 }
-                NavigationLink {
-                    RowOrderView()
-                } label: {
-                    Label("Row Order", systemImage: "list.bullet.indent")
+                // The order is the device's: a kids profile does not change it.
+                if model.canChangeRowOrder {
+                    NavigationLink {
+                        RowOrderView()
+                    } label: {
+                        Label("Row Order", systemImage: "list.bullet.indent")
+                    }
+                    .accessibilityIdentifier("rowOrderRow")
                 }
-                .accessibilityIdentifier("rowOrderRow")
                 NavigationLink {
                     HiddenChannelsView()
                 } label: {

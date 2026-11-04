@@ -314,6 +314,37 @@ class SyncTest {
         assertTrue(digest != snapshot.copy(rows = listOf(rows.copy(hidden = emptyList()))).contentDigest())
     }
 
+    /**
+     * A record too large is trimmed as it is read, the same way on every device: 8 tabs (`movie` and `series` first,
+     * then by UTF-16 code units), 2000 keys in `order` (the first) and in `hidden` (the smallest), keys of 256 UTF-16
+     * units at most; its digest is that of the trimmed record.
+     */
+    @Test
+    fun anOversizedRowsRecordIsTrimmedTheSameWayEachTime() {
+        val keys = (0 until 2100).map { "k" + it.toString().padStart(4, '0') }
+        val long = "x".repeat(SyncRows.MAX_KEY_LENGTH + 1)
+        val tabs = (9 downTo 0).map { "t$it" } + SyncRows.MOVIES + long
+        val big = SyncSnapshot(
+            device = "a",
+            rows = tabs.map { SyncRows(it, listOf(long) + keys + keys.first(), keys.reversed(), updatedAt = 5) },
+        )
+        val read = requireNotNull(SyncSnapshot.decode(big.encoded()))
+        assertEquals(listOf("t6", "t5", "t4", "t3", "t2", "t1", "t0", "movie"), read.rows.map { it.tab })
+        read.rows.forEach { rows ->
+            assertEquals(keys.take(SyncRows.MAX_KEYS), rows.order)
+            assertEquals(keys.take(SyncRows.MAX_KEYS), rows.hidden)
+        }
+        assertEquals(read, SyncSnapshot.decode(read.encoded()))
+        assertEquals(read.contentDigest(), requireNotNull(SyncSnapshot.decode(big.encoded())).contentDigest())
+        val once = SyncMerge.merge(read, read)
+        assertEquals(once.contentDigest(), SyncMerge.merge(once, big).contentDigest())
+        // Two sides of eight tabs each merge into eight.
+        val other = SyncSnapshot(device = "b", rows = (0 until 8).map { SyncRows("u$it", listOf("all"), updatedAt = 1) })
+        val merged = SyncMerge.merge(read, other)
+        assertEquals(listOf("movie", "t0", "t1", "t2", "t3", "t4", "t5", "t6"), merged.rows.map { it.tab })
+        assertEquals(merged.rows, SyncMerge.merge(other, read).rows)
+    }
+
     /** A record dated far ahead of the receiver's clock is left out, as any other (docs/SYNC.md, "Clocks"). */
     @Test
     fun rowsDatedFarAheadAreLeftOut() {

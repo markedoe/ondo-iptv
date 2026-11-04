@@ -66,7 +66,7 @@ object SyncMerge {
             lists = lists.sortedBy { it.id },
             people = people.sortedWith(compareBy<SyncPerson> { it.addedAt }.thenBy { it.key }),
             keys = keys.sortedBy { it.service },
-            rows = rows.sortedBy { it.tab },
+            rows = SyncRows.capped(rows).sortedBy { it.tab },
             deleted = deleted.toSortedMap(),
             replaced = replaced.toSortedMap(),
         )

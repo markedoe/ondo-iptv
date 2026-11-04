@@ -95,7 +95,7 @@ public enum SyncMerge {
         result.lists = lists.sorted { $0.id.isBefore($1.id) }
         result.people = people.sorted { before(($0.addedAt, $0.key), ($1.addedAt, $1.key)) }
         result.keys = keys.sorted { $0.service.isBefore($1.service) }
-        result.rows = rows.sorted { $0.tab.isBefore($1.tab) }
+        result.rows = SyncRows.capped(rows).sorted { $0.tab.isBefore($1.tab) }
         result.deleted = deleted
         result.replaced = replaced
         return result

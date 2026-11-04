@@ -178,10 +178,12 @@ time: `updatedAt` (set each time the viewer moves, hides or shows a row, or choo
 `order` and keeps `hidden`). The whole record is one change: a row moved on one device and another hidden on another
 at the same time keep only the later change. Readers drop keys that are blank or hold a control character (below
 U+0020, or U+007F), keep the first of keys repeated in `order`, and keep `hidden` once each, sorted (UTF-16 code
-units). A device keeps and passes on the record of a tab it does not know. A snapshot without `rows` (from an older
+units). Readers then keep at most 2000 keys in `order` (the first) and in `hidden` (the first once sorted), drop keys
+and tabs longer than 256 UTF-16 units, and keep the records of 8 tabs at most: `movie` and `series`, then the others in
+UTF-16 order (a merge keeps the same 8). A device keeps and passes on the record of a tab it does not know. A snapshot without `rows` (from an older
 version) changes nothing; no record is ever deleted. An older Android device drops `rows` from what it keeps and
 passes on: two Apple devices that sync only through it keep each their own order. On Apple devices the order is the device's, whichever profile
-is open, and travels while the main profile is.
+is open (a kids profile cannot change it), and travels while the main profile is.
 
 **Deleted** — the key of each record removed on a device, with the time it was removed. A device keeps each one for
 180 days, and longer until every device it had a session with in the last year has had a session with it after the

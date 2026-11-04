@@ -272,7 +272,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
             list.order = list.order?.map { SyncListItem.withPlaylist($0) { $0.lowercased() } }
             return list
         }
-        copy.rows = rows.map { $0.normalized() }
+        copy.rows = SyncRows.capped(rows.map { $0.normalized() })
         copy.deleted = Dictionary(deleted.map { (Self.lowercasingID(ofDeleted: $0.key), $0.value) }, uniquingKeysWith: max)
         copy.replaced = Dictionary(replaced.map { ($0.key.lowercased(), $0.value.lowercased()) }, uniquingKeysWith: { _, last in last })
         return copy
@@ -554,15 +554,36 @@ public struct SyncRows: Codable, Hashable, Sendable {
     public func normalized() -> SyncRows {
         var copy = self
         var seen = Set<[UInt16]>()
-        copy.order = order.filter { Self.isValid($0) && seen.insert(Array($0.utf16)).inserted }
+        copy.order = Array(order.filter { Self.isValid($0) && seen.insert(Array($0.utf16)).inserted }.prefix(Self.maxKeys))
         var seenHidden = Set<[UInt16]>()
-        copy.hidden = hidden.filter { Self.isValid($0) && seenHidden.insert(Array($0.utf16)).inserted }.sorted { $0.isBefore($1) }
+        copy.hidden = Array(hidden.filter { Self.isValid($0) && seenHidden.insert(Array($0.utf16)).inserted }
+            .sorted { $0.isBefore($1) }.prefix(Self.maxKeys))
         return copy
     }
 
-    /// Not blank (as Kotlin's `isNotBlank`), and no control characters (below U+0020, and U+007F).
+    /// At most this many tabs in a snapshot, keys in `order` and in `hidden`, and UTF-16 units in a key or a tab.
+    public static let maxTabs = 8
+    public static let maxKeys = 2000
+    public static let maxKeyLength = 256
+
+    /// Not longer than `maxKeyLength` UTF-16 units, not blank (as Kotlin's `isNotBlank`), and no control characters
+    /// (below U+0020, and U+007F).
     static func isValid(_ key: String) -> Bool {
-        !key.utf16.contains { $0 < 0x20 || $0 == 0x7F } && !SyncMerge.kotlinTrimmed(key).isEmpty
+        key.utf16.count <= maxKeyLength && !key.utf16.contains { $0 < 0x20 || $0 == 0x7F } && !SyncMerge.kotlinTrimmed(key).isEmpty
+    }
+
+    /// `rows` without the records of a tab that is not a valid key, and of the tabs past the `maxTabs` first (`movie`
+    /// and `series` first, then the others by UTF-16 code units); the records kept stay in their order.
+    static func capped(_ rows: [SyncRows]) -> [SyncRows] {
+        let valid = rows.filter { isValid($0.tab) }
+        var tabs: [String] = []
+        var seen = Set<[UInt16]>()
+        for row in valid where seen.insert(Array(row.tab.utf16)).inserted { tabs.append(row.tab) }
+        guard tabs.count > maxTabs else { return valid }
+        let known = [movies, series].filter { tab in tabs.contains { $0.utf16.elementsEqual(tab.utf16) } }
+        let others = tabs.filter { tab in !known.contains { $0.utf16.elementsEqual(tab.utf16) } }.sorted { $0.isBefore($1) }
+        let kept = Set((known + others).prefix(maxTabs).map { Array($0.utf16) })
+        return valid.filter { kept.contains(Array($0.tab.utf16)) }
     }
 }
 
