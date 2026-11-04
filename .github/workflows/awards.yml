@@ -1,6 +1,6 @@
 name: Awards data
 
-# Refreshes the awards and festival selections from Wikidata (CC0) once a month and publishes awards.json on the
+# Refreshes the awards and festival selections of films and the awards of series from Wikidata (CC0) once a month and publishes awards.json on the
 # `awards-data` branch, which the apps download once a week unless the viewer turns it off in Settings. The copies
 # bundled with the apps (App/Resources, android assets) are refreshed by hand with the same script.
 on:
@@ -28,8 +28,15 @@ jobs:
         with:
           persist-credentials: false
       - name: Query Wikidata
-        # The script fails if a known winner is missing (the award items are the ones it expects).
+        # The script fails if a known winner (a film, a series) is missing (the award items are the ones it expects).
         run: python3 -I tools/awards/generate_awards.py --pause 10 --output build/awards-data/awards.json
+      - name: Check the file
+        # Well formed, and no series award where the apps released before series read films.
+        run: |
+          mkdir -p check/App/Resources check/android/app/src/main/assets
+          cp build/awards-data/awards.json check/App/Resources/awards.json
+          cp build/awards-data/awards.json check/android/app/src/main/assets/awards.json
+          python3 -I .github/scripts/check_awards.py check
       - name: Compare with the published file
         # A sharp drop means Wikidata answered partly: the published file stays.
         run: |
@@ -42,6 +49,11 @@ jobs:
           print(f"{before} films published, {after} now, generated {new['generated']}")
           if after < before * 0.9:
               sys.exit(f"::error::{after} films instead of {before}: not published")
+          # Series, once a published file has them (the files made before series have none).
+          before, after = len(old.get("series", [])), len(new.get("series", []))
+          print(f"{before} series published, {after} now")
+          if after < before * 0.9:
+              sys.exit(f"::error::{after} series instead of {before}: not published")
           EOF
       - name: Publish
         env:

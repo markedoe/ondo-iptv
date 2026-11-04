@@ -144,11 +144,14 @@ struct VODBrowser: View {
                 }
             }
         case RowOrder.awardWinners:
-            let winners = type == .movie ? model.awardWinners(limit: Self.rowLength) : []
+            // Films in Movies, series in Series; no row when none of the playlist's titles won.
+            let winners = type == .movie
+                ? model.awardWinners(limit: Self.rowLength).map(ShowcaseItem.movie)
+                : model.seriesAwardWinners(limit: Self.rowLength).map(ShowcaseItem.series)
             if !winners.isEmpty {
                 Shelf(title: "Award Winners", metrics: metrics) {
-                    ForEach(winners) { movie in
-                        ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
+                    ForEach(winners) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
                     }
                 }
             }

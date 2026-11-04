@@ -59,7 +59,8 @@ chaque changement de l'interface.
 - **Recherche** (la loupe en haut de chaque onglet sur iPhone) : chaînes, programmes, films et séries,
   **acteurs et réalisateurs par leur nom**, **filtrables par années de sortie** et **par festival ou cérémonie** (lauréats seulement si vous voulez).
 - **Prix** : Palme d'or, Oscars, Lion d'or, Ours d'or, César, BAFTA, Golden Globes… sur les fiches des films
-  (lauréat, en compétition ou nommé) et une rangée « Films primés » dans Films. Les données viennent de
+  (lauréat, en compétition ou nommé), Emmy, Golden Globes, BAFTA TV, International Emmy et prix Peabody sur les
+  fiches des séries (lauréate ou nommée), et une rangée « Titres primés » dans Films et dans Séries. Les données viennent de
   [Wikidata](https://www.wikidata.org) (CC0), sont embarquées dans l'app et rapprochées sur l'appareil ; un
   workflow mensuel les rafraîchit et les apps récupèrent le fichier plus récent une fois par semaine, sauf si
   c'est désactivé dans les Réglages ([tools/awards](tools/awards/README.fr.md)).
@@ -168,7 +169,7 @@ chaque changement de l'interface.
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…), par style ou par mot (manga,
   Bollywood…) ou une par une, comme sur Apple.
 - **Aide** dans les Réglages.
-- **Prix** sur les fiches des films et une rangée « Films primés » dans Films, avec les mêmes données
+- **Prix** sur les fiches des films et des séries et une rangée « Titres primés » dans Films et dans Séries, avec les mêmes données
   embarquées, mises à jour une fois par semaine sauf si c'est désactivé dans les Réglages.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
   testé avec les mêmes cas).

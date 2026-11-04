@@ -166,6 +166,8 @@ data class SeriesDetailUiState(
     val inMyList: Boolean = false,
     val similar: List<ShowcaseItem> = emptyList(),
     val error: String? = null,
+    /** Its awards (Emmys, Golden Globes…), wins first. */
+    val awards: List<AwardRow> = emptyList(),
     val collections: List<CollectionChoice> = emptyList(),
 )
 
@@ -356,6 +358,8 @@ fun SeriesDetailScreen(state: SeriesDetailUiState, actions: DetailActions) {
                     EpisodeRow(episode, state.episodeProgress[episode.id], metrics) { actions.onPlayEpisode(episode) }
                 }
             }
+            // After the episodes, which the page is for; an award opens the other series of the playlist that have it.
+            if (state.awards.isNotEmpty()) item { AwardsBlock(state.awards, metrics) { actions.onBrowse(BrowseKind.AWARD, it) } }
             similarRow(state.similar, metrics, actions)
         },
     )

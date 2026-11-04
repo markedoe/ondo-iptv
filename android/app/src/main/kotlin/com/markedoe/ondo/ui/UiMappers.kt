@@ -450,7 +450,8 @@ object UiMappers {
             continueWatching = showcase.continueWatching().filter { it.kind == kind }.map { resume(it, state) },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
-            awardWinners = if (series) emptyList() else MovieAwards.winners(state, hidden, ROW_LENGTH, watched + byName.movies, films(state)).map { ShowcaseItem.MovieItem(it) },
+            awardWinners = if (series) MovieAwards.seriesWinners(state, hidden, ROW_LENGTH, byName.series).map { ShowcaseItem.SeriesItem(it) }
+            else MovieAwards.winners(state, hidden, ROW_LENGTH, watched + byName.movies, films(state)).map { ShowcaseItem.MovieItem(it) },
             all = all,
             allCount = allCount,
             newReleases = if (series) showcase.newSeries(now, ROW_LENGTH) else showcase.newMovies(now, ROW_LENGTH),
@@ -769,7 +770,7 @@ object UiMappers {
         )
     }
 
-    fun seriesDetail(state: OndoState, series: Series, selectedSeason: Int?, error: String?): SeriesDetailUiState {
+    fun seriesDetail(state: OndoState, series: Series, selectedSeason: Int?, error: String?, locale: Locale = Locale.getDefault()): SeriesDetailUiState {
         val showcase = showcase(state)
         val item = ShowcaseItem.SeriesItem(series)
         // The provider's episodes as they came (they are saved): an episode it does not name reads in the app's words.
@@ -797,6 +798,7 @@ object UiMappers {
             similar = showcase.similarSeries(series, related = state.tmdbRelated[item.key].orEmpty().mapNotNull { (it as? TrendingMatch.SeriesMatch)?.series }) { state.seriesDetails[it]?.info }
                 .map { ShowcaseItem.SeriesItem(it) },
             error = error,
+            awards = MovieAwards.rows(state, series, locale),
             collections = collectionChoices(state, ItemKind.SERIES, series.id),
         )
     }
@@ -864,6 +866,7 @@ object UiMappers {
         val movies = state.content.movies.filter { it.categoryId !in hidden && it.id !in watched && it.id !in byName.movies }
         val series = state.content.series.filter { it.categoryId !in hidden && it.id !in byName.series }
         val awards = MovieAwards.of(state)
+        val seriesAwards = MovieAwards.ofSeries(state)
         val films = films(state)
         // Each film once, the first of its versions in the page's order standing for it.
         fun items(list: List<Movie>) = films.distinct(list).map { ShowcaseItem.MovieItem(it) }
@@ -874,11 +877,20 @@ object UiMappers {
                 // Winners first, then the most recent.
                 val found = movies.mapNotNull { movie -> awards[movie.id]?.firstOrNull { it.awardId == value }?.let { movie to it } }
                     .sortedWith(compareByDescending<Pair<Movie, AwardsCatalogue.Entry>> { it.second.won }.thenByDescending { it.second.year }.thenBy { it.first.name })
-                BrowseUiState(kind, value, award?.name(language) ?: value, movies = items(found.map { it.first }), festival = award?.group)
+                val foundSeries = series.mapNotNull { show -> seriesAwards[show.id]?.firstOrNull { it.awardId == value }?.let { show to it } }
+                    .sortedWith(compareByDescending<Pair<Series, AwardsCatalogue.Entry>> { it.second.won }.thenByDescending { it.second.year }.thenBy { it.first.name })
+                BrowseUiState(
+                    kind, value, award?.name(language) ?: value, movies = items(found.map { it.first }),
+                    series = foundSeries.map { ShowcaseItem.SeriesItem(it.first) }, festival = award?.group,
+                )
             }
             BrowseKind.FESTIVAL -> {
                 val found = movies.filter { movie -> awards[movie.id].orEmpty().any { state.awards.award(it.awardId)?.group == value } }
-                BrowseUiState(kind, value, movies = sorted(items(found), PosterSort.RELEASE))
+                val foundSeries = series.filter { show -> seriesAwards[show.id].orEmpty().any { state.awards.award(it.awardId)?.group == value } }
+                BrowseUiState(
+                    kind, value, movies = sorted(items(found), PosterSort.RELEASE),
+                    series = sorted(foundSeries.map { ShowcaseItem.SeriesItem(it) }, PosterSort.RELEASE),
+                )
             }
             BrowseKind.YEAR -> {
                 val year = value.toIntOrNull()
@@ -1093,13 +1105,15 @@ object UiMappers {
         val years = filters.years
         fun released(year: Int?) = years == null || (year != null && year in years)
         val awards = MovieAwards.of(state)
-        fun awarded(movie: Movie) = filters.awardGroup == null || awards[movie.id].orEmpty().any { entry ->
+        val seriesAwards = MovieAwards.ofSeries(state)
+        fun awarded(entries: List<AwardsCatalogue.Entry>?) = filters.awardGroup == null || entries.orEmpty().any { entry ->
             (!filters.winnersOnly || entry.won) && state.awards.award(entry.awardId)?.group == filters.awardGroup
         }
         // Each version by its own year; each film once.
-        val movies = films.distinct(index.movies.find().filter { released(it.year) && awarded(it) }.toList()).map { ShowcaseItem.MovieItem(it) }
-        // Awards are given to films: series are left out. Release years and awards are not about channels.
-        val series = if (filters.awardGroup != null) emptyList() else index.series.find().filter { released(it.year) }.map { ShowcaseItem.SeriesItem(it) }.toList()
+        val movies = films.distinct(index.movies.find().filter { released(it.year) && awarded(awards[it.id]) }.toList()).map { ShowcaseItem.MovieItem(it) }
+        // Films by their film awards, series by their series awards (a ceremony can have both: the Golden Globes). Release
+        // years and awards are not about channels.
+        val series = index.series.find().filter { released(it.year) && awarded(seriesAwards[it.id]) }.map { ShowcaseItem.SeriesItem(it) }.toList()
         return empty.copy(
             movies = sorted(movies, PosterSort.RELEASE).take(FILTERED_LIMIT),
             series = sorted(series, PosterSort.RELEASE).take(FILTERED_LIMIT),
@@ -1128,11 +1142,15 @@ object UiMappers {
         return found
     }
 
-    /** The festivals and ceremonies some visible movie took part in, in the order of the awards file. */
+    /** The festivals and ceremonies some visible movie or series took part in, in the order of the awards file. */
     private fun awardGroups(index: SearchIndex, state: OndoState): List<String> {
         val present = HashSet<String>()
         for ((id, entries) in MovieAwards.of(state)) {
             if (id !in index.movieIds) continue
+            entries.mapNotNullTo(present) { state.awards.award(it.awardId)?.group }
+        }
+        for ((id, entries) in MovieAwards.ofSeries(state)) {
+            if (id !in index.seriesIds) continue
             entries.mapNotNullTo(present) { state.awards.award(it.awardId)?.group }
         }
         return state.awards.groups.filter { it in present }

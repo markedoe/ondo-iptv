@@ -10,7 +10,7 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   playback items), tested with the same cases as the Swift tests.
 - **App** `android/app` (Compose, Material 3, type-safe Navigation, tab bar or rail depending on the screen):
   home (carousel, Movies in Progress, Series in Progress, My List, New Movies, New Series, channels),
-  Movies and Series tabs (Continue Watching, My List, Award winners in Movies, one row per category, filterable
+  Movies and Series tabs (Continue Watching, My List, Award winners, one row per category, filterable
   grids), a long press that takes a card in progress out of Home or Continue Watching (a menu on a phone, OK held
   and a question on a TV: `ui/components/Shelves.kt`), movie and series pages (Resume, From Start, next episode,
   seasons, More Like This, awards, tappable cast and director), live TV (categories, My List, current and next programme), TV guide grid with programme

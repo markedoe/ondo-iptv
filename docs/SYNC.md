@@ -170,7 +170,8 @@ nothing: only `deleted` does.
 **Rows** (the order of the rows of a tab, Settings → Row order) — `{"tab", "order", "hidden", "updatedAt"}`. `tab`
 is `movie` or `series`; `order` lists the rows of the tab by key, in the viewer's order; `hidden` the keys of the rows
 the viewer hid. A row's key is `all` (All movies or All series), `continue` (Continue Watching), `mylist`, `new` (new
-movies or series), `trending`, `awards` (award winners, Movies only), or `cat:<category id>|<name>` for a provider
+movies or series), `trending`, `awards` (award winners: films in Movies, series in
+Series), or `cat:<category id>|<name>` for a provider
 category: its ID as the playlist gives it (`movie-12`, without control characters or `|`), then its name trimmed, runs
 of spaces and control characters made one space, A to Z in lowercase (other letters keep their case). A device finds a
 category by the same key, else by its ID, else by its name: a category the provider renumbers or renames keeps its

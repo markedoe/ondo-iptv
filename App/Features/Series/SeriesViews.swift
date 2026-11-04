@@ -101,6 +101,7 @@ struct SeriesDetailView: View {
                     ExpandablePlot(text: plot)
                 }
                 InfoLines(details: details?.info, year: series.year, genre: details?.info.genre ?? series.genre)
+                AwardsList(awards: model.awards(for: series))
                 if let errorMessage {
                     Label(errorMessage, systemImage: "exclamationmark.triangle")
                         .foregroundStyle(.secondary)
