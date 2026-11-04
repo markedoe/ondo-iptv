@@ -278,7 +278,7 @@ Android (`android/gradle/libs.versions.toml`), all under the Apache 2.0 licence:
 - [Coil](https://github.com/coil-kt/coil) 3.6, loading and caching of logos and posters.
 - [OkHttp](https://github.com/square/okhttp) 5.5, network requests.
 - [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines) 1.11 and
-  [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) 1.11.
+  [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) 1.12.
 
 Core tests:
 
