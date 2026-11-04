@@ -260,6 +260,49 @@ class UiMappersTest {
         )
     }
 
+    /**
+     * A series whose episode was watched to the end goes on in Continue watching with the next one (the next season's
+     * first after a season's last), from its start, a card that cannot be taken away; with the next one started
+     * earlier, its own progress; after the last episode, the series leaves. Its seasons not fetched yet: the series'
+     * card plays the next one.
+     */
+    @Test
+    fun continueWatchingGoesOnWithTheNextEpisodeOfAFinishedOne() {
+        val series = Fixtures.harborLights
+        // The first season's last episode, and the next season's first.
+        val first = series.episodes.single { it.season == 1 && it.number == 3 }
+        val second = series.episodes.single { it.season == 2 && it.number == 1 }
+        fun key(id: String) = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, series.id, id, title = series.name, lastWatchedAt = 0).key
+        val finished = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, series.id, first.id, title = series.name, subtitle = "${first.code} · ${first.title}", lastWatchedAt = 1)
+        val library = LibraryState().recordStart(finished).updateProgress(finished.key, 2_700.0, 2_700.0, now = 2)
+
+        val card = UiMappers.home(Fixtures.state(library), labels, Fixtures.NOW).continueWatching.single()
+        assertEquals(key(second.id), card.key)
+        assertEquals("${second.code} · ${second.title}", card.subtitle)
+        assertEquals(0f, card.progress, 0f)
+        assertEquals(listOf(key(second.id)), UiMappers.vod(Fixtures.state(library), series = true, title = "").continueWatching.map { it.key })
+
+        // Its seasons not fetched yet: the series, under the finished episode's key, not named as if to resume it.
+        val unknown = UiMappers.home(Fixtures.state(library).copy(seriesDetails = emptyMap()), labels, Fixtures.NOW).continueWatching.single()
+        assertEquals(finished.key, unknown.key)
+        assertNull(unknown.subtitle)
+        assertEquals(0f, unknown.progress, 0f)
+
+        // The next one was started before: its own progress.
+        val started = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, series.id, second.id, title = series.name, lastWatchedAt = 0)
+        val earlier = LibraryState().recordStart(started).updateProgress(started.key, 900.0, 2_700.0, now = 1)
+            .recordStart(finished.copy(lastWatchedAt = 2)).updateProgress(finished.key, 2_700.0, 2_700.0, now = 3)
+        val resumed = UiMappers.home(Fixtures.state(earlier), labels, Fixtures.NOW).continueWatching.single()
+        assertEquals(key(second.id), resumed.key)
+        assertEquals(1f / 3, resumed.progress, 0.001f)
+
+        // The last episode watched: the series leaves.
+        val last = series.episodes.maxWith(compareBy({ it.season }, { it.number }))
+        val ended = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.SERIES, series.id, last.id, title = series.name, lastWatchedAt = 1)
+        val done = LibraryState().recordStart(ended).updateProgress(ended.key, 2_700.0, 2_700.0, now = 2)
+        assertTrue(UiMappers.home(Fixtures.state(done), labels, Fixtures.NOW).continueWatching.isEmpty())
+    }
+
     @Test
     fun vodTabHasOneRowPerCategoryAndItsContinueWatching() {
         val entry = WatchEntry(Fixtures.PLAYLIST_ID, ItemKind.MOVIE, Fixtures.glassCity.id, title = "Glass City", lastWatchedAt = 1)
