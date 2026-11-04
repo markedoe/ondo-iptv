@@ -345,6 +345,53 @@ class SyncDataTest {
         assertEquals(2, bedroom.state.value.library.collections.single().items.size)
     }
 
+    /**
+     * An episode watched to the end on one box and watched again on the other stays watched on both: watching it
+     * again sends nothing that would undo it, and the next episode's position, later, still arrives.
+     */
+    @Test
+    fun anEpisodeWatchedAgainStaysWatchedOnBothBoxes() = runTest {
+        val shows = "http://provider.example.com/shows.m3u"
+        val http = FakeHttp(
+            mapOf(
+                shows to """
+                    #EXTM3U
+                    #EXTINF:2700 group-title="Series | Drama",Harbor S01E01
+                    http://provider.example.com/h101.mp4
+                    #EXTINF:2700 group-title="Series | Drama",Harbor S01E02
+                    http://provider.example.com/h102.mp4
+                """.trimIndent(),
+            ),
+        )
+        val living = device("living", http).ready()
+        val bedroom = device("bedroom", http).ready()
+        living.addPlaylist("Shows", shows)
+        session(bedroom, living)
+        bedroom.state.first { it.content.series.isNotEmpty() }
+        fun OndoRepository.series() = state.value.content.series.single()
+        fun OndoRepository.episodes() = series().episodes.sortedBy { it.number }
+        val firstKey = requireNotNull(living.playRequest(living.series(), living.episodes()[0])?.progressKey)
+        time += 60_000
+        living.recordProgress(firstKey, 2_700.0, 2_700.0)
+        session(bedroom, living)
+        assertTrue(bedroom.state.value.library.progress(firstKey)!!.isFinished)
+
+        // Watched again on the bedroom box, stopped halfway; then the next episode on the living-room box.
+        time += 60_000
+        assertEquals(firstKey, bedroom.playRequest(bedroom.series(), bedroom.episodes()[0])?.progressKey)
+        time += 60_000
+        bedroom.recordProgress(firstKey, 1_350.0, 2_700.0)
+        time += 60_000
+        val secondKey = requireNotNull(living.playRequest(living.series(), living.episodes()[1])?.progressKey)
+        living.recordProgress(secondKey, 900.0, 2_700.0)
+        session(bedroom, living)
+        session(living, bedroom)
+        for (box in listOf(living, bedroom)) {
+            assertTrue("watched on both", box.state.value.library.progress(firstKey)!!.isFinished)
+            assertEquals(900.0, box.state.value.library.progress(secondKey)!!.position, 0.0)
+        }
+    }
+
     /** Two boxes playing two films, with sessions both ways in between: each position moves only forward. */
     @Test
     fun twoBoxesPlayingTwoFilmsKeepBothPositions() = runTest {

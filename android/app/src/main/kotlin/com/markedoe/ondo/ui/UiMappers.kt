@@ -218,6 +218,10 @@ object UiMappers {
 
     fun series(state: OndoState, id: String): Series? = index(state.content).series[id]
 
+    /** The seasons Continue watching finds a series' next episode in: those already fetched, in the app's words. */
+    private fun nextEpisodeDetails(state: OndoState): (String) -> SeriesDetails? =
+        { id -> state.seriesDetails[id]?.let { state.placeholderNames.rename(it) } }
+
     /**
      * The line of an episode in Continue watching, `"S03E02 · <title>"`, as its series' page shows it: from the series'
      * episodes when they are known ([shownEpisode]: TMDb's name too), else the line kept, cleaned the same way.
@@ -230,6 +234,8 @@ object UiMappers {
     }
 
     fun resume(entry: WatchEntry, state: OndoState): ResumeItem {
+        // A series that goes on with its next episode: none of it seen yet, and no finished episode named as if to resume.
+        val upNext = entry.kind == ItemKind.SERIES && !entry.isResumable
         val backdrop = when (entry.kind) {
             ItemKind.MOVIE -> backdrop(state, ItemKind.MOVIE, entry.itemId)
             ItemKind.SERIES -> backdrop(state, ItemKind.SERIES, entry.itemId)
@@ -246,10 +252,11 @@ object UiMappers {
         return ResumeItem(
             key = entry.key,
             title = entry.title,
-            subtitle = version ?: subtitle,
+            subtitle = version ?: subtitle.takeUnless { upNext && entry.isFinished },
             imageUrl = backdrop ?: entry.imageUrl,
-            progress = entry.progress.toFloat(),
-            minutesLeft = entry.minutesLeft,
+            progress = if (upNext) 0f else entry.progress.toFloat(),
+            minutesLeft = if (upNext) 0 else entry.minutesLeft,
+            upNext = upNext,
             isSeries = entry.kind == ItemKind.SERIES,
             hasPage = entry.kind != ItemKind.CHANNEL,
             showcase = when (entry.kind) {
@@ -413,7 +420,7 @@ object UiMappers {
             updatedAt = state.content.fetchedAt.takeIf { it > 0 && !state.content.isEmpty },
             now = now,
             hero = hero,
-            continueWatching = showcase.continueWatching().map { resume(it, state) },
+            continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).map { resume(it, state) },
             myList = showcase.myList(),
             newMovies = showcase.newMovies(now),
             newSeries = showcase.newSeries(now),
@@ -463,7 +470,7 @@ object UiMappers {
         return VodUiState(
             title = title,
             categories = rows.map { it.category },
-            continueWatching = showcase.continueWatching().filter { it.kind == kind }.map { resume(it, state) },
+            continueWatching = showcase.continueWatching(nextEpisodeDetails(state)).filter { it.kind == kind }.map { resume(it, state) },
             myList = showcase.myList().filter { (it is ShowcaseItem.SeriesItem) == series },
             rows = rows,
             awardWinners = rowTitles(state, GridSource.AWARDS, series, now, ROW_LENGTH, showcase),

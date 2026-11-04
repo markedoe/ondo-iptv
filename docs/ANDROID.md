@@ -12,7 +12,8 @@ v1 lives in `android/` and is released following [RELEASE-ANDROID.md](RELEASE-AN
   home (carousel, Movies in Progress, Series in Progress, My List, New Movies, New Series, channels),
   Movies and Series tabs (Continue Watching, My List, Award winners, one row per category, filterable
   grids), a long press that takes a card in progress out of Home or Continue Watching (a menu on a phone, OK held
-  and a question on a TV: `ui/components/Shelves.kt`), movie and series pages (Resume, From Start, next episode,
+  and a question on a TV: `ui/components/Shelves.kt`; a series whose last episode watched was finished goes on with the
+  next one, a card that stays until that one is started), movie and series pages (Resume, From Start, next episode,
   seasons, More Like This, awards, tappable cast and director), live TV (categories, My List, current and next programme), TV guide grid with programme
   reminders (WorkManager notifications), My List tab with collections, search (channels, movies, series, actors
   and directors; filters by release years and by festival or ceremony), categories hidden by language or

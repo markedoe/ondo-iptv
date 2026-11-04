@@ -12,7 +12,8 @@ La v1 est dans `android/` et se publie avec [RELEASE-ANDROID.fr.md](RELEASE-ANDR
   accueil (carrousel, Films en cours, Séries en cours, Ma liste, Nouveaux films, Nouvelles séries, chaînes),
   onglets Films et Séries (Continuer à regarder, Ma liste, Titres primés, une rangée par catégorie,
   grilles filtrables), un appui long qui retire une carte en cours de l'Accueil ou de Continuer à regarder (un menu
-  sur un téléphone, OK maintenu et une question sur une TV : `ui/components/Shelves.kt`), fiches film et série
+  sur un téléphone, OK maintenu et une question sur une TV : `ui/components/Shelves.kt` ; une série dont le dernier
+  épisode vu a été fini continue avec le suivant, une carte qui reste jusqu'à ce qu'il soit commencé), fiches film et série
   (reprise, depuis le début, épisode suivant, saisons, titres similaires, prix, casting et réalisation
   cliquables), TV en direct (catégories, Ma liste, programme en cours
   et suivant), grille du guide TV avec rappels de programmes (notifications WorkManager), onglet Ma liste avec
