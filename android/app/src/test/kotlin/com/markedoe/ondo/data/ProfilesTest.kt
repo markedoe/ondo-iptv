@@ -297,13 +297,23 @@ class ProfilesTest {
 
     // MARK: Sync (docs/SYNC.md, "Profiles")
 
-    /** A device of its own: its store in [name], the same playlist and catalogue. */
-    private suspend fun TestScope.device(name: String): OndoRepository {
+    /**
+     * A device of its own: its store in [name], the same playlist and catalogue; [libraries] written before it starts, by
+     * profile (as an earlier version left them), with [profiles] besides the main one.
+     */
+    private suspend fun TestScope.device(
+        name: String,
+        showAdult: Boolean = false,
+        profiles: List<Profile> = emptyList(),
+        libraries: Map<Profile, LibraryState> = emptyMap(),
+    ): OndoRepository {
         val directory = folder.newFolder(name)
         val store = AppStore(directory)
         store.savePlaylists(listOf(Fixtures.playlist))
         store.saveContent(Fixtures.PLAYLIST_ID, Fixtures.content)
-        store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, syncDeviceId = name))
+        store.saveSettings(AppSettings(activePlaylistId = Fixtures.PLAYLIST_ID, syncDeviceId = name, showAdultCategories = showAdult))
+        if (profiles.isNotEmpty()) store.saveProfiles(listOf(Profile.main("Me")) + profiles)
+        libraries.forEach { (profile, library) -> store.saveLibrary(library, profile.libraryDocumentName) }
         val repository = OndoRepository(store, FakeHttp(emptyMap()), backgroundScope, now = { clock }, io = StandardTestDispatcher(testScheduler), mainProfileName = "Me")
         repository.bootstrap()
         repository.awaitState { it.isReady && it.content.movies.isNotEmpty() }
@@ -567,6 +577,110 @@ class ProfilesTest {
         assertEquals(listOf("Ana's"), cancelled)
         repository.delete(Fixtures.PLAYLIST_ID)
         assertEquals(listOf("Ana's", "Sam's"), cancelled)
+    }
+
+    // MARK: Hidden categories in sync (docs/SYNC.md, "Hidden categories")
+
+    private fun OndoState.hides() = Triple(library.hiddenCategories, library.hiddenTags, library.hiddenWords)
+
+    private val nothingHidden = Triple(emptySet<String>(), emptySet<String>(), emptySet<String>())
+
+    /**
+     * Categories, a language and a style hidden in a profile on the TV are hidden in that profile on the phone, and only
+     * there; shown again on the phone, they are shown again on the TV; hidden again later, hidden again.
+     */
+    @Test
+    fun hiddenCategoriesReachTheSameProfileOnTheOtherDeviceAndShowingAgainFollows() = runTest {
+        val tv = device("tv")
+        val phone = device("phone")
+        val sam = requireNotNull(tv.addProfile("Sam", 1, Profile.INITIAL, isKids = false, pin = null))
+        session(tv, phone)
+        val drama = Fixtures.drama.id
+        switch(tv, sam)
+        tv.setCategoryHidden(drama, hidden = true)
+        tv.setTagsHidden(listOf("PT"), hidden = true)
+        tv.setWordHidden("manga", hidden = true)
+        session(tv, phone)
+        // The phone's main profile (open) hides nothing; its Sam hides them all.
+        assertEquals(nothingHidden, phone.state.value.hides())
+        switch(phone, phone.profile("Sam")!!)
+        assertEquals(Triple(setOf("${Fixtures.PLAYLIST_ID}|$drama"), setOf("PT"), setOf("manga")), phone.state.value.hides())
+        assertTrue(drama in UiMappers.hiddenCategoryIds(phone.state.value))
+        // Shown again on the phone: shown again on the TV; the style stays hidden.
+        phone.setCategoryHidden(drama, hidden = false)
+        phone.setTagsHidden(listOf("PT"), hidden = false)
+        session(tv, phone)
+        assertEquals(Triple(emptySet<String>(), emptySet<String>(), setOf("manga")), tv.state.value.hides())
+        assertFalse(drama in UiMappers.hiddenCategoryIds(tv.state.value))
+        // Hidden again on the TV, after that: hidden again on the phone.
+        tv.setTagsHidden(listOf("PT"), hidden = true)
+        session(tv, phone)
+        assertEquals(setOf("PT"), phone.state.value.library.hiddenTags)
+        // The main profile never hid anything, on either device.
+        switch(tv, tv.profile("Me")!!)
+        switch(phone, phone.profile("Me")!!)
+        assertEquals(nothingHidden, tv.state.value.hides())
+        assertEquals(nothingHidden, phone.state.value.hides())
+    }
+
+    /**
+     * Hidden sets kept before they synced have no time: the first launch after the update dates them, after everything the
+     * device holds, and saves them. At the first session, two devices' sets add up in each profile: nothing is shown again.
+     */
+    @Test
+    fun hiddenSetsKeptBeforeTheySyncedAddUpAtTheFirstSession() = runTest {
+        val sam = Profile(id = "c3000000-0000-4000-8000-00000000000c", name = "Sam", symbol = Profile.INITIAL, updatedAt = clock - 10)
+        val main = Profile.main("Me")
+        val p = Fixtures.PLAYLIST_ID
+        val tv = device(
+            "tv", profiles = listOf(sam),
+            libraries = mapOf(
+                main to LibraryState(hiddenCategories = setOf("$p|${Fixtures.drama.id}"), hiddenTags = setOf("PT")),
+                sam to LibraryState(hiddenWords = setOf("manga")),
+            ),
+        )
+        val phone = device(
+            "phone", profiles = listOf(sam),
+            libraries = mapOf(
+                main to LibraryState(hiddenCategories = setOf("$p|${Fixtures.sciFi.id}"), hiddenTags = setOf("ES")),
+                sam to LibraryState(hiddenWords = setOf("anime"), hiddenTags = setOf("PT")),
+            ),
+        )
+        // Dated at launch, and saved so.
+        testScheduler.advanceUntilIdle()
+        for (name in listOf("tv", "phone")) {
+            val store = AppStore(File(folder.root, name))
+            for (library in listOf(store.loadLibrary(), store.loadLibrary(sam.libraryDocumentName))) {
+                assertFalse("$name: ${library.hiddenAt}", library.hasUndatedHidden())
+                assertTrue(library.hiddenAt.values.all { it >= clock })
+            }
+        }
+        session(tv, phone)
+        session(tv, phone)
+        for (device in listOf(tv, phone)) {
+            switch(device, device.profile("Me")!!)
+            assertEquals(Triple(setOf("$p|${Fixtures.drama.id}", "$p|${Fixtures.sciFi.id}"), setOf("PT", "ES"), emptySet<String>()), device.state.value.hides())
+            switch(device, device.profile("Sam")!!)
+            assertEquals(Triple(emptySet<String>(), setOf("PT"), setOf("manga", "anime")), device.state.value.hides())
+        }
+    }
+
+    /** An adult-looking category shown again by sync stays out of a Kids profile, whatever sync says (docs/PROFILES.md). */
+    @Test
+    fun aCategoryShownAgainBySyncStaysOutOfAKidsProfileWhenItLooksAdult() = runTest {
+        val tv = device("tv", showAdult = true)
+        val phone = device("phone", showAdult = true)
+        val kids = requireNotNull(tv.addProfile("Kids", 4, Profile.INITIAL, isKids = true, pin = null))
+        switch(tv, kids)
+        tv.setCategoryHidden(Fixtures.adultMovies.id, hidden = true)
+        session(tv, phone)
+        switch(phone, phone.profile("Kids")!!)
+        phone.setCategoryHidden(Fixtures.adultMovies.id, hidden = false)
+        session(tv, phone)
+        val state = tv.state.value
+        assertFalse("shown again, as sync says", state.library.isCategoryHidden(Fixtures.PLAYLIST_ID, Fixtures.adultMovies.id))
+        assertTrue("still out: it looks adult", Fixtures.adultMovies.id in UiMappers.hiddenCategoryIds(state))
+        assertTrue(UiMappers.vod(state, series = false, title = "Movies").categories.none { it.id == Fixtures.adultMovies.id })
     }
 
     /** Sync carries 16 profiles at most: a 17th cannot be made. */

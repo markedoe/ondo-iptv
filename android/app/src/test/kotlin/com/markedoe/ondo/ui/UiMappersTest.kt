@@ -18,6 +18,9 @@ import com.markedoe.ondo.core.model.Movie
 import com.markedoe.ondo.core.model.PlaylistContent
 import com.markedoe.ondo.core.model.Series
 import com.markedoe.ondo.core.model.SeriesDetails
+import com.markedoe.ondo.core.sync.SyncHidden
+import com.markedoe.ondo.core.sync.SyncMerge
+import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.data.OndoState
 import com.markedoe.ondo.data.AppSettings
 import com.markedoe.ondo.data.Favorite
@@ -25,6 +28,8 @@ import com.markedoe.ondo.data.ItemKind
 import com.markedoe.ondo.data.LibraryState
 import com.markedoe.ondo.data.PosterSort
 import com.markedoe.ondo.data.Reminder
+import com.markedoe.ondo.data.SyncData
+import com.markedoe.ondo.data.SyncKeys
 import com.markedoe.ondo.data.WatchEntry
 import com.markedoe.ondo.ui.model.PersonRow
 import com.markedoe.ondo.ui.model.PosterFacts
@@ -508,7 +513,8 @@ class UiMappersTest {
 
     /**
      * Regression guard for hidden categories, on every list of titles at once. A language hidden in Settings (as a
-     * language, or its categories one by one) leaves none of its titles, channels or people in:
+     * language, or its categories one by one, on this device or on another one and applied by sync) leaves none of its
+     * titles, channels or people in:
      *  - Home: carousel, new movies, new series, trending, channels;
      *  - Movies and Series: rows and grids (every category);
      *  - Search: movies, series, channels and people, with and without filters;
@@ -584,13 +590,32 @@ class UiMappersTest {
         }
         // Categories hidden one by one hide those categories only: the language itself is not hidden.
         assertTrue("one by one, a title of a visible category stays", byName in surfaces(oneByOne).getValue("movies rows"))
-        for ((how, state) in listOf("as a language" to byLanguage, "one by one" to oneByOne)) {
+        // Hidden on another device in this profile, and applied by sync (docs/SYNC.md, "Hidden categories").
+        fun synced(state: OndoState, received: SyncSnapshot): OndoState =
+            state.copy(library = SyncData.apply(state, SyncMerge.merge(SyncData.snapshot(state, "tv", null, Fixtures.NOW), received)).library)
+        val syncedLanguage = synced(base, SyncSnapshot(device = "phone", hiddenCategories = listOf(SyncHidden(SyncHidden.TAG, "PT", 5))))
+        val syncedOneByOne = synced(
+            base, SyncSnapshot(device = "phone", hiddenCategories = HiddenLanguage.categories.map { SyncHidden.category(Fixtures.PLAYLIST_ID, it.id, 5) }),
+        )
+        surfaces(syncedLanguage).forEach { (surface, text) -> assertFalse("hidden as a language by sync, $surface still shows a title named with it: $text", byName in text) }
+        val states = listOf(
+            "as a language" to byLanguage, "one by one" to oneByOne,
+            "as a language on another device" to syncedLanguage, "one by one on another device" to syncedOneByOne,
+        )
+        for ((how, state) in states) {
             surfaces(state).forEach { (surface, text) -> assertFalse("hidden $how, $surface still shows it: $text", marker in text) }
             // The exception: Continue watching keeps the title already started; My List does not keep the saved one.
             val home = UiMappers.home(state, labels, Fixtures.NOW)
             assertEquals("hidden $how", listOf(HiddenLanguage.started.name), home.continueWatching.filter { marker in it.title }.map { it.title })
             assertTrue("hidden $how, My List leaves it out", home.myList.none { marker in it.title })
         }
+        // Shown again on another device after it was hidden here: every list shows it again.
+        val hiddenHere = base.copy(library = base.library.settingTagsHidden(listOf("PT"), hidden = true, now = 5))
+        val shownAgain = synced(hiddenHere, SyncSnapshot(device = "phone", deleted = mapOf(SyncKeys.hiddenTag("PT") to 10)))
+        assertTrue(shownAgain.library.hiddenTags.isEmpty())
+        val again = surfaces(shownAgain)
+        listOf("movies rows", "series rows", "movie grids", "series grids", "my list", "search", "filtered search", "person", "genre", "year", "similar movies", "similar series", "live", "guide")
+            .forEach { assertTrue("$it lists the language once shown again on another device", marker in again.getValue(it)) }
     }
 
     @Test

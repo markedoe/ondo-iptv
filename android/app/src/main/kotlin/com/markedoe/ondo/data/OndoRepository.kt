@@ -352,11 +352,18 @@ class OndoRepository(
             syncClock.advance(savedSettings.syncClock)
             val dated = OndoState(settings = savedSettings, playlists = playlists, library = saved, profiles = unstamped)
             syncClock.advance(SyncData.latestTime(dated, SyncData.allLibraries(dated, otherLibraries)))
+            // The categories, languages and styles hidden before they synced get a time now, after everything this device
+            // holds: two devices' hidden sets add up at their first session (docs/PROFILES.md, "Migration").
+            val undatedOthers = otherLibraries.filterValues { it.hasUndatedHidden() }
+            val hiddenTime = if (saved.hasUndatedHidden() || undatedOthers.isNotEmpty()) stamp() else 0L
+            val opening = if (saved.hasUndatedHidden()) saved.datingHidden(hiddenTime) else saved
+            val datedOthers = undatedOthers.mapValues { it.value.datingHidden(hiddenTime) }
+            otherLibraries = otherLibraries + datedOthers
             // A profile made before profiles synced has no time: it gets one now, so that it travels.
             val profiles = unstamped.map { if (!it.isMain && it.updatedAt == 0L) it.copy(updatedAt = stamp()) else it }
             val pending = pendingLibraryChanges.toList()
             pendingLibraryChanges.clear()
-            val library = pending.fold(saved) { library, change -> change(library) }
+            val library = pending.fold(opening) { library, change -> change(library) }
             val pendingSettings = pendingSettingsChanges.toList()
             pendingSettingsChanges.clear()
             val settings = pendingSettings.fold(if (movedRows != null) savedSettings.copy(rowOrders = emptyList()) else savedSettings) { settings, change -> change(settings) }
@@ -367,7 +374,8 @@ class OndoRepository(
                     profiles = profiles, needsProfileSelection = profiles.size > 1 && launch == null,
                 )
             }
-            if (pending.isNotEmpty() || (movedRows != null && opened.isMain)) opened.libraryDocumentName.let { document -> persist { saveLibrary(library, document) } }
+            if (pending.isNotEmpty() || (movedRows != null && opened.isMain) || opening !== saved) opened.libraryDocumentName.let { document -> persist { saveLibrary(library, document) } }
+            datedOthers.forEach { (id, dated) -> unstamped.firstOrNull { it.id == id }?.let { profile -> persist { saveLibrary(dated, profile.libraryDocumentName) } } }
             if (movedRows != null && !opened.isMain) otherLibraries[Profile.DEFAULT_ID]?.let { main -> persist { saveLibrary(main, AppStore.MAIN_LIBRARY) } }
             if (profiles != unstamped) persist { saveProfiles(profiles) }
             if (pendingSettings.isNotEmpty() || movedRows != null) persist { saveSettings(settings) }
@@ -1131,17 +1139,22 @@ class OndoRepository(
     fun setCategoriesHidden(categoryIds: Collection<String>, hidden: Boolean) {
         val playlistId = _state.value.activePlaylistId ?: return
         if (categoryIds.isEmpty()) return
-        updateLibrary { it.settingCategoriesHidden(playlistId, categoryIds, hidden) }
+        val time = stamp()
+        updateLibrary { it.settingCategoriesHidden(playlistId, categoryIds, hidden, time) }
     }
 
     /** A choice about tags answers the "show only your languages?" suggestion too. */
     fun setTagsHidden(tags: Collection<String>, hidden: Boolean) {
-        updateLibrary { it.settingTagsHidden(tags, hidden) }
+        val time = stamp()
+        updateLibrary { it.settingTagsHidden(tags, hidden, time) }
         dismissTagSuggestion()
     }
 
     /** Hides or shows the categories of a style or word ("manga"), in every playlist. */
-    fun setWordHidden(word: String, hidden: Boolean) = updateLibrary { it.settingWordHidden(word, hidden) }
+    fun setWordHidden(word: String, hidden: Boolean) {
+        val time = stamp()
+        updateLibrary { it.settingWordHidden(word, hidden, time) }
+    }
 
     fun dismissTagSuggestion() {
         val playlistId = _state.value.activePlaylistId ?: return

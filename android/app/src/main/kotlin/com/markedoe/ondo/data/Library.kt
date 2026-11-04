@@ -1,6 +1,7 @@
 package com.markedoe.ondo.data
 
 import com.markedoe.ondo.core.model.HistoryEntry
+import com.markedoe.ondo.core.sync.SyncHidden
 import com.markedoe.ondo.core.sync.SyncRows
 import kotlinx.serialization.Serializable
 
@@ -117,6 +118,12 @@ data class LibraryState(
      * record per tab with the time it was set: this profile's (docs/PROFILES.md); sync carries them (docs/SYNC.md, "Rows").
      */
     val rowOrders: List<SyncRows> = emptyList(),
+    /**
+     * Sync (docs/SYNC.md, "Hidden categories"): when each hidden category, tag and word was hidden, here or on another
+     * device, by its sync key (`hide:…`); showing one again remembers its key in [syncDeleted]. Also the hidden records of
+     * kinds this version does not know, kept to pass them on. Empty before hidden categories synced: the launch dates them.
+     */
+    val hiddenAt: Map<String, Long> = emptyMap(),
 ) {
     /** The order saved for the Movies or the Series tab; null: the default order. */
     fun rowOrder(series: Boolean): SyncRows? = rowOrders.firstOrNull { it.tab == (if (series) SyncRows.SERIES else SyncRows.MOVIES) }
@@ -129,16 +136,68 @@ data class LibraryState(
     fun settingCategoryHidden(playlistId: String, categoryId: String, hidden: Boolean): LibraryState =
         settingCategoriesHidden(playlistId, listOf(categoryId), hidden)
 
-    fun settingCategoriesHidden(playlistId: String, categoryIds: Collection<String>, hidden: Boolean): LibraryState {
-        val keys = categoryIds.mapTo(HashSet()) { "$playlistId|$it" }
-        return copy(hiddenCategories = if (hidden) hiddenCategories + keys else hiddenCategories - keys)
+    /** Hides or shows categories of [playlistId], dated [now] for sync (a showing again is remembered as a deletion). */
+    fun settingCategoriesHidden(playlistId: String, categoryIds: Collection<String>, hidden: Boolean, now: Long = 0): LibraryState {
+        val keys = categoryIds.associateBy({ "$playlistId|$it" }, { SyncKeys.hiddenCategory(playlistId, it) })
+        return if (hidden) {
+            copy(hiddenCategories = hiddenCategories + keys.keys, hiddenAt = hiddenAt + keys.values.associateWith { now })
+        } else {
+            val shown = keys.filterKeys { it in hiddenCategories }
+            copy(hiddenCategories = hiddenCategories - keys.keys, hiddenAt = hiddenAt - shown.values.toSet()).deletingAll(shown.values, now)
+        }
     }
 
-    fun settingTagsHidden(tags: Collection<String>, hidden: Boolean): LibraryState =
-        copy(hiddenTags = if (hidden) hiddenTags + tags else hiddenTags - tags.toSet())
+    fun settingTagsHidden(tags: Collection<String>, hidden: Boolean, now: Long = 0): LibraryState {
+        val keys = tags.associateWith(SyncKeys::hiddenTag)
+        return if (hidden) {
+            copy(hiddenTags = hiddenTags + tags, hiddenAt = hiddenAt + keys.values.associateWith { now })
+        } else {
+            val shown = keys.filterKeys { it in hiddenTags }
+            copy(hiddenTags = hiddenTags - tags.toSet(), hiddenAt = hiddenAt - shown.values.toSet()).deletingAll(shown.values, now)
+        }
+    }
 
-    fun settingWordHidden(word: String, hidden: Boolean): LibraryState =
-        copy(hiddenWords = if (hidden) hiddenWords + word else hiddenWords - word)
+    fun settingWordHidden(word: String, hidden: Boolean, now: Long = 0): LibraryState {
+        val key = SyncKeys.hiddenWord(word)
+        return when {
+            hidden -> copy(hiddenWords = hiddenWords + word, hiddenAt = hiddenAt + (key to now))
+            word in hiddenWords -> copy(hiddenWords = hiddenWords - word, hiddenAt = hiddenAt - key).deleting(key, now)
+            else -> this
+        }
+    }
+
+    /**
+     * Every hidden category, tag and word without a time gets [time] (docs/PROFILES.md, "Migration"): the hidden sets kept
+     * before they synced travel, dated after everything the device held. The same state when none lacks a time.
+     */
+    fun datingHidden(time: Long): LibraryState {
+        val undated = undatedHidden()
+        return if (undated.isEmpty()) this else copy(hiddenAt = hiddenAt + undated.associateWith { time })
+    }
+
+    /** Whether a hidden category, tag or word has no time yet ([datingHidden]). */
+    fun hasUndatedHidden(): Boolean = undatedHidden().isNotEmpty()
+
+    private fun undatedHidden(): List<String> =
+        (hiddenCategories.mapNotNull(SyncKeys::hiddenCategoryOf) + hiddenTags.map(SyncKeys::hiddenTag) + hiddenWords.map(SyncKeys::hiddenWord))
+            .filter { it !in hiddenAt }
+
+    /**
+     * What this profile hides, as sync records: its categories (those of the playlists [travels] lets travel), tags and
+     * words, each with its time (0 when it has none), and the records of other kinds kept to pass them on.
+     */
+    fun hiddenRecords(travels: (String) -> Boolean = { true }): List<SyncHidden> {
+        val categories = hiddenCategories.mapNotNull { local ->
+            val bar = local.indexOf('|').takeIf { it > 0 } ?: return@mapNotNull null
+            val playlist = local.substring(0, bar)
+            if (!travels(playlist)) return@mapNotNull null
+            SyncHidden.category(playlist, local.substring(bar + 1), 0).let { it.copy(hiddenAt = hiddenAt[it.key] ?: 0) }
+        }
+        val tags = hiddenTags.map { SyncHidden(SyncHidden.TAG, it, hiddenAt[SyncKeys.hiddenTag(it)] ?: 0) }
+        val words = hiddenWords.map { SyncHidden(SyncHidden.WORD, it, hiddenAt[SyncKeys.hiddenWord(it)] ?: 0) }
+        val others = hiddenAt.mapNotNull { (key, time) -> SyncKeys.otherHidden(key, time) }
+        return (categories + tags + words + others).distinctBy { it.key }.sortedBy { it.key }
+    }
 
     fun isFavorite(playlistId: String, kind: ItemKind, itemId: String): Boolean =
         favorites.any { it.playlistId == playlistId && it.kind == kind && it.itemId == itemId }
@@ -231,6 +290,7 @@ data class LibraryState(
         favorites = favorites.filterNot { it.playlistId == playlistId },
         history = history.filterNot { it.playlistId == playlistId },
         hiddenCategories = hiddenCategories.filterNot { it.startsWith("$playlistId|") }.toSet(),
+        hiddenAt = hiddenAt.filterKeys { !it.startsWith(SyncHidden.CATEGORY_KEY_PREFIX + playlistId.lowercase() + "|") },
         collections = collections.map { list -> list.copy(items = list.items.filterNot { it.playlistId == playlistId }) },
         reminders = reminders.filterNot { it.playlistId == playlistId },
     )
@@ -260,6 +320,8 @@ data class LibraryState(
     /** Remembers for sync that [key] was removed at [time] (the later time is kept). */
     fun deleting(key: String, time: Long): LibraryState =
         if ((syncDeleted[key] ?: Long.MIN_VALUE) >= time) this else copy(syncDeleted = syncDeleted + (key to time))
+
+    private fun deletingAll(keys: Collection<String>, time: Long): LibraryState = keys.fold(this) { library, key -> library.deleting(key, time) }
 
     /** Adds the item to the collection, or takes it out if it is there (remembered for sync at [now]). */
     fun togglingInCollection(id: String, item: Favorite, now: Long): LibraryState {
