@@ -1106,16 +1106,17 @@ class OndoRepository(
     fun setGroupVersions(group: Boolean) = updateSettings { it.copy(groupVersions = group) }
 
     /**
-     * Saves the order of the rows of the Movies or Series tab as the viewer set it in Settings → Row order: [arranged],
-     * the keys of the tab's rows now (`RowOrder`), [hidden] those hidden. The rows the tab no longer has (a category gone
-     * from the playlist) keep their place and their choice (`RowOrder.saving`); the record is dated for sync.
+     * Saves the order of the rows of a tab ([tab] as sync names it: `movie`, `series`, `home`) as the viewer set it in
+     * Settings → Row order: [arranged], the keys of the tab's rows now (`RowOrder`), [hidden] those hidden. The rows the
+     * tab no longer has (a category gone from the playlist, a row of Home this device does not show) keep their place
+     * and their choice (`RowOrder.saving`); the record is dated for sync.
      */
-    fun setRowOrder(series: Boolean, arranged: List<String>, hidden: Collection<String>) {
+    fun setRowOrder(tab: String, arranged: List<String>, hidden: Collection<String>) {
         // A Kids profile cannot change it, as on Apple devices (`AppModel.canChangeRowOrder`).
         if (_state.value.activeProfile.isKids) return
-        val previous = _state.value.library.rowOrder(series)
+        val previous = _state.value.library.rowOrder(tab)
         val record = SyncRows(
-            tab = if (series) SyncRows.SERIES else SyncRows.MOVIES,
+            tab = tab,
             order = RowOrder.saving(arranged, previous?.order.orEmpty()),
             hidden = RowOrder.savingHidden(arranged, hidden, previous?.hidden.orEmpty()),
             updatedAt = 0,
@@ -1125,10 +1126,14 @@ class OndoRepository(
         updateLibrary { it.keepingRowOrder(dated) }
     }
 
+    /** The Movies ([series] false) or Series tab's: [setRowOrder] with its tab. */
+    fun setRowOrder(series: Boolean, arranged: List<String>, hidden: Collection<String>) =
+        setRowOrder(if (series) SyncRows.SERIES else SyncRows.MOVIES, arranged, hidden)
+
     /** Default order: the rows of the tab in their default order again, those hidden staying hidden. */
-    fun resetRowOrder(series: Boolean) {
+    fun resetRowOrder(tab: String) {
         if (_state.value.activeProfile.isKids) return
-        val previous = _state.value.library.rowOrder(series) ?: return
+        val previous = _state.value.library.rowOrder(tab) ?: return
         if (previous.order.isEmpty()) return
         val dated = previous.copy(order = emptyList(), updatedAt = stamp())
         updateLibrary { it.keepingRowOrder(dated) }

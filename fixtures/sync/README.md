@@ -13,8 +13,8 @@ OpenSubtitles username), one before a save not (SubSource), Addic7ed turned off 
 the key of an unknown service kept. The apps' tests also apply them, in turn, to a device's stored keys. All values are
 fake.
 
-`rows-a.json` and `rows-b.json` merge into `rows-merged.json` the same way: the order of the rows of the Movies and Series
-tabs, one record per tab, the later one winning, on equal times the smaller tie string; keys that are blank or hold a
+`rows-a.json` and `rows-b.json` merge into `rows-merged.json` the same way: the order of the rows of the Home, Movies and
+Series tabs, one record per tab, the later one winning, on equal times the smaller tie string; keys that are blank or hold a
 control character dropped, the order without repeats, the hidden rows each once and sorted; the record of a tab this
 version does not know kept.
 

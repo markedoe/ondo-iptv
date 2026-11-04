@@ -32,7 +32,7 @@ for the others. That document holds everything per profile:
 - My List, the followed actors and directors, the collections;
 - the programme reminders;
 - the hidden categories, the hidden languages and countries, the hidden styles;
-- the order of the rows of the Movies and Series tabs (Settings → Row order); a Kids profile cannot change its own.
+- the order of the rows of the Home, Movies and Series tabs (Settings → Row order); a Kids profile cannot change its own.
 
 Shared by every profile: the lists and collections shared with every profile (see "Shared lists"), the playlists, the TMDb token and the other service keys, the playback settings (buffers,
 picture, subtitles, preferred languages), the sync settings, "Show adult categories", the category locks (Apple).

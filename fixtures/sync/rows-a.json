@@ -5,6 +5,12 @@
   "deviceName": "Living room TV",
   "rows": [
     {
+      "tab": "home",
+      "order": ["channels", "continue-movies", "mylist"],
+      "hidden": ["trending"],
+      "updatedAt": 2500
+    },
+    {
       "tab": "movie",
       "order": ["all", "cat:movie-1|action", "continue"],
       "hidden": ["trending", "cat:movie-9|kids"],

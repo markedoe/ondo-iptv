@@ -218,10 +218,9 @@ class TvScreenshots {
     @Test
     fun rowOrderWithARowPickedUp() {
         var rows by mutableStateOf(UiMappers.rowOrder(state))
-        val actions = RowOrderActions(onSave = { series, arranged, hidden ->
-            val byKey = (if (series) rows.series else rows.movies).associateBy { it.key }
-            val next = arranged.map { byKey.getValue(it).copy(hidden = it in hidden) }
-            rows = if (series) rows.copy(series = next) else rows.copy(movies = next)
+        val actions = RowOrderActions(onSave = { tab, arranged, hidden ->
+            val byKey = rows.rows(tab).associateBy { it.key }
+            rows = rows.with(tab, arranged.map { byKey.getValue(it).copy(hidden = it in hidden) })
         })
         // A page of Settings: no top bar above it.
         var inputModes: InputModeManager? = null
@@ -232,7 +231,7 @@ class TvScreenshots {
         compose.runOnIdle { inputModes?.requestInputMode(InputMode.Keyboard) }
         compose.mainClock.autoAdvance = false
         advance()
-        compose.onNodeWithTag("row-movies-mylist").requestFocus()
+        compose.onNodeWithTag("row-home-mylist").requestFocus()
         advance()
         press(Key.DirectionCenter)
         press(Key.DirectionUp)

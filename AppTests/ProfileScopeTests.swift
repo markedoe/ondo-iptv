@@ -129,13 +129,17 @@ final class ProfileScopeTests: XCTestCase {
     }
 
     /// The tabs whose rows the viewer orders: a new one is added here.
-    private static let rowTabs: [ContentType] = [.movie, .series]
+    private static let rowTabs: [(tab: String, arranged: [String])] = [
+        (SyncRows.movies, ["continue", "all"]),
+        (SyncRows.series, ["continue", "all"]),
+        (SyncRows.home, ["continue-movies", "channels"]),
+    ]
 
     private var perProfile: [PerProfile] {
-        Self.rowTabs.map { type in
-            PerProfile(name: "row order: \(type.rawValue)",
-                       set: { $0.setRowOrder(type, arranged: ["continue", "all"], hidden: ["new"]) },
-                       read: { model in Self.found(model.savedRowOrder(type).map { rows in rows.order + ["|"] + rows.hidden }) })
+        Self.rowTabs.map { tab, arranged in
+            PerProfile(name: "row order: \(tab)",
+                       set: { $0.setRowOrder(tab: tab, arranged: arranged, hidden: [arranged.last!]) },
+                       read: { model in Self.found(model.savedRowOrder(tab: tab).map { rows in rows.order + ["|"] + rows.hidden }) })
         } + [
             // Hidden categories and languages stay on the device (docs/SYNC.md): each profile's there.
             PerProfile(name: "hidden categories", syncs: false,

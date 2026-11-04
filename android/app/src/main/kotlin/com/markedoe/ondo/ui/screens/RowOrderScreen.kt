@@ -53,31 +53,86 @@ import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.ui.theme.ondoSwitchColors
 import kotlin.math.abs
 
-/** A row of the Movies or Series tab in Settings → Row order: its key ([RowOrder]), the category's name (null: a built-in row), whether it is hidden. */
+/** A row of the Home, Movies or Series tab in Settings → Row order: its key ([RowOrder]), the category's name (null: a built-in row), whether it is hidden. */
 data class RowOrderEntry(val key: String, val category: String?, val hidden: Boolean)
 
-/** The rows of the Movies and Series tabs, in the viewer's order. */
-data class RowOrderUiState(val movies: List<RowOrderEntry> = emptyList(), val series: List<RowOrderEntry> = emptyList())
+/** The rows of the Home, Movies and Series tabs, in the viewer's order. */
+data class RowOrderUiState(
+    val movies: List<RowOrderEntry> = emptyList(),
+    val series: List<RowOrderEntry> = emptyList(),
+    val home: List<RowOrderEntry> = emptyList(),
+) {
+    /** The rows of a [tab] as sync names it ([RowOrder.HOME], [RowOrder.MOVIES], [RowOrder.SERIES]). */
+    fun rows(tab: String): List<RowOrderEntry> = when (tab) {
+        RowOrder.HOME -> home
+        RowOrder.SERIES -> series
+        else -> movies
+    }
+
+    /** This state with the rows of [tab] as [rows]. */
+    fun with(tab: String, rows: List<RowOrderEntry>): RowOrderUiState = when (tab) {
+        RowOrder.HOME -> copy(home = rows)
+        RowOrder.SERIES -> copy(series = rows)
+        else -> copy(movies = rows)
+    }
+
+    companion object {
+        /** The tabs of Settings → Row order, in the order of the app's tabs. */
+        val TABS = listOf(RowOrder.HOME, RowOrder.MOVIES, RowOrder.SERIES)
+
+        /** A tab's name in test tags: `home`, `movies`, `series`. */
+        fun tag(tab: String): String = when (tab) {
+            RowOrder.HOME -> "home"
+            RowOrder.SERIES -> "series"
+            else -> "movies"
+        }
+    }
+}
 
 class RowOrderActions(
     val onBack: () -> Unit = {},
-    /** The rows of a tab in their new order, and those hidden: saved at once. */
-    val onSave: (series: Boolean, arranged: List<String>, hidden: List<String>) -> Unit = { _, _, _ -> },
+    /** The rows of a tab (as sync names it: [RowOrder.HOME], [RowOrder.MOVIES], [RowOrder.SERIES]) in their new order, and those hidden: saved at once. */
+    val onSave: (tab: String, arranged: List<String>, hidden: List<String>) -> Unit = { _, _, _ -> },
     /** Default order: the tab's rows in their default order again. */
-    val onReset: (series: Boolean) -> Unit = {},
+    val onReset: (tab: String) -> Unit = {},
+)
+
+/** The name of a tab in Settings → Row order. */
+@Composable
+fun tabName(tab: String): String = stringResource(
+    when (tab) {
+        RowOrder.HOME -> R.string.home
+        RowOrder.SERIES -> R.string.series
+        else -> R.string.movies
+    },
 )
 
 /** The name of a row of the tab: a built-in row's, else its category's. */
 @Composable
-fun rowName(entry: RowOrderEntry, series: Boolean): String = entry.category ?: stringResource(
-    when (entry.key) {
-        RowOrder.ALL -> if (series) R.string.all_series else R.string.all_movies
-        RowOrder.CONTINUE_WATCHING -> R.string.continue_watching
-        RowOrder.MY_LIST -> R.string.my_list
-        RowOrder.NEW_RELEASES -> if (series) R.string.new_series else R.string.new_movies
-        RowOrder.TRENDING -> R.string.trending
-        RowOrder.AWARD_WINNERS -> R.string.award_winners
-        else -> R.string.categories
+fun rowName(entry: RowOrderEntry, tab: String): String = entry.category ?: stringResource(
+    if (tab == RowOrder.HOME) {
+        when (entry.key) {
+            RowOrder.HOME_CONTINUE_MOVIES -> R.string.movies_in_progress
+            RowOrder.HOME_CONTINUE_SERIES -> R.string.series_in_progress
+            RowOrder.MY_LIST -> R.string.my_list
+            RowOrder.HOME_NEW_MOVIES -> R.string.new_movies
+            RowOrder.HOME_NEW_SERIES -> R.string.new_series
+            RowOrder.TRENDING -> R.string.trending
+            RowOrder.HOME_CHANNELS -> R.string.live_tv
+            RowOrder.HOME_COLLECTIONS -> R.string.collections
+            else -> R.string.home
+        }
+    } else {
+        val series = tab == RowOrder.SERIES
+        when (entry.key) {
+            RowOrder.ALL -> if (series) R.string.all_series else R.string.all_movies
+            RowOrder.CONTINUE_WATCHING -> R.string.continue_watching
+            RowOrder.MY_LIST -> R.string.my_list
+            RowOrder.NEW_RELEASES -> if (series) R.string.new_series else R.string.new_movies
+            RowOrder.TRENDING -> R.string.trending
+            RowOrder.AWARD_WINNERS -> R.string.award_winners
+            else -> R.string.categories
+        }
     },
 )
 
@@ -88,11 +143,11 @@ fun <T> List<T>.moving(from: Int, to: Int): List<T> {
 }
 
 /** Saves [rows] of a tab with [actions]: their keys in order, and those hidden. */
-internal fun RowOrderActions.save(series: Boolean, rows: List<RowOrderEntry>) =
-    onSave(series, rows.map { it.key }, rows.filter { it.hidden }.map { it.key })
+internal fun RowOrderActions.save(tab: String, rows: List<RowOrderEntry>) =
+    onSave(tab, rows.map { it.key }, rows.filter { it.hidden }.map { it.key })
 
 /**
- * Settings → Row order, on a phone or a tablet: the rows of Movies, then of Series, each with a handle to drag it
+ * Settings → Row order, on a phone or a tablet: the rows of Home, Movies, then Series, each with a handle to drag it
  * (long press anywhere on the row, or the handle at once) and a switch to show or hide it; Default order puts the tab's
  * rows back as they come. TalkBack moves a row with its Move up and Move down actions.
  */
@@ -100,7 +155,7 @@ internal fun RowOrderActions.save(series: Boolean, rows: List<RowOrderEntry>) =
 @Composable
 fun RowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
     // The order being dragged, before it is saved; the saved one otherwise.
-    var dragged by remember { mutableStateOf<Pair<Boolean, List<RowOrderEntry>>?>(null) }
+    var dragged by remember { mutableStateOf<Pair<String, List<RowOrderEntry>>?>(null) }
     val list = rememberLazyListState()
     LaunchedEffect(state) { dragged = null }
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).windowInsetsPadding(WindowInsets.safeDrawing).testTag("rowOrder")) {
@@ -120,34 +175,34 @@ fun RowOrderScreen(state: RowOrderUiState, actions: RowOrderActions) {
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
             }
-            for (series in listOf(false, true)) {
-                val rows = dragged?.takeIf { it.first == series }?.second ?: if (series) state.series else state.movies
-                tab(series, rows, list, actions, onDrag = { dragged = it?.let { series to it } })
+            for (syncTab in RowOrderUiState.TABS) {
+                val rows = dragged?.takeIf { it.first == syncTab }?.second ?: state.rows(syncTab)
+                tab(syncTab, rows, list, actions, onDrag = { dragged = it?.let { syncTab to it } })
             }
         }
     }
 }
 
 private fun LazyListScope.tab(
-    series: Boolean,
+    syncTab: String,
     rows: List<RowOrderEntry>,
     list: LazyListState,
     actions: RowOrderActions,
     onDrag: (List<RowOrderEntry>?) -> Unit,
 ) {
-    val tab = if (series) "series" else "movies"
+    val tab = RowOrderUiState.tag(syncTab)
     item(key = "title-$tab") {
         ListItem(
             headlineContent = {
-                Text(stringResource(if (series) R.string.series else R.string.movies), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Text(tabName(syncTab), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
             },
             trailingContent = {
-                TextButton(onClick = { actions.onReset(series) }, modifier = Modifier.testTag("rowOrderDefault-$tab")) { Text(stringResource(R.string.row_order_default)) }
+                TextButton(onClick = { actions.onReset(syncTab) }, modifier = Modifier.testTag("rowOrderDefault-$tab")) { Text(stringResource(R.string.row_order_default)) }
             },
         )
     }
     items(rows, key = { "$tab|${it.key}" }) { entry ->
-        val name = rowName(entry, series)
+        val name = rowName(entry, syncTab)
         val index = rows.indexOf(entry)
         val latest by rememberUpdatedState(rows)
         var offset by remember { mutableFloatStateOf(0f) }
@@ -160,7 +215,7 @@ private fun LazyListScope.tab(
         val end = { done: Boolean ->
             dragging = false
             offset = 0f
-            if (done && current != original) actions.save(series, current) else onDrag(null)
+            if (done && current != original) actions.save(syncTab, current) else onDrag(null)
         }
         val step = { delta: Float ->
             offset += delta
@@ -199,7 +254,7 @@ private fun LazyListScope.tab(
             trailingContent = {
                 Switch(
                     checked = !entry.hidden,
-                    onCheckedChange = { shown -> actions.save(series, rows.map { if (it.key == entry.key) it.copy(hidden = !shown) else it }) },
+                    onCheckedChange = { shown -> actions.save(syncTab, rows.map { if (it.key == entry.key) it.copy(hidden = !shown) else it }) },
                     colors = ondoSwitchColors(),
                     modifier = Modifier.testTag("rowSwitch-$tab-${entry.key}").semantics { contentDescription = name },
                 )
@@ -214,8 +269,8 @@ private fun LazyListScope.tab(
                 .fillMaxWidth()
                 .semantics {
                     customActions = listOfNotNull(
-                        CustomAccessibilityAction(moveUp) { actions.save(series, rows.moving(index, index - 1)); true }.takeIf { index > 0 },
-                        CustomAccessibilityAction(moveDown) { actions.save(series, rows.moving(index, index + 1)); true }.takeIf { index < rows.lastIndex },
+                        CustomAccessibilityAction(moveUp) { actions.save(syncTab, rows.moving(index, index - 1)); true }.takeIf { index > 0 },
+                        CustomAccessibilityAction(moveDown) { actions.save(syncTab, rows.moving(index, index + 1)); true }.takeIf { index < rows.lastIndex },
                     )
                 }
                 .testTag("row-$tab-${entry.key}"),

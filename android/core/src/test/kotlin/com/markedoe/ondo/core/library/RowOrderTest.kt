@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
-/** The order of the rows of the Movies and Series tabs (the same cases as the Swift `RowOrderTests`). */
+/** The order of the rows of the Home, Movies and Series tabs (the same cases as the Swift `RowOrderTests`). */
 class RowOrderTest {
     @get:Rule(order = Int.MIN_VALUE) val hangGuard = HangGuard()
 
@@ -75,5 +75,35 @@ class RowOrderTest {
         val rows = RowOrder.arrange(current, listOf(action, action, "all", "all", "cat:movie-1|other"), emptyList())
         assertEquals(listOf(action, "all"), keys(rows))
         assertEquals(listOf("all", action), RowOrder.saving(listOf("all", action), listOf("", "all", action)))
+    }
+
+    @Test
+    fun homeRowsComeInTheirDefaultOrderTheChannelsLastUnlessThePlaylistIsLiveOnly() {
+        assertEquals(
+            listOf("continue-movies", "continue-series", "mylist", "new-movies", "new-series", "trending", "collections", "channels"),
+            RowOrder.homeBuiltIns(hasVod = true, collections = true),
+        )
+        assertEquals(
+            listOf("continue-movies", "continue-series", "mylist", "channels", "new-movies", "new-series", "trending"),
+            RowOrder.homeBuiltIns(hasVod = false, collections = false),
+        )
+        // No Home key is taken for a category, nor for a Movies or Series row of another meaning.
+        RowOrder.homeBuiltIns(hasVod = true, collections = true).forEach {
+            assertEquals(false, it.startsWith(RowOrder.CATEGORY_PREFIX))
+            assertEquals(true, RowOrder.isValidKey(it))
+        }
+    }
+
+    @Test
+    fun homeFollowsTheSavedOrderAndARowItDoesNotNameKeepsItsDefaultPlace() {
+        val current = RowOrder.homeBuiltIns(hasVod = true, collections = false)
+        // Saved on a device that shows collections: the rows the order does not name come after, in their default order.
+        val rows = RowOrder.arrange(current, listOf("channels", "collections", "mylist", "continue-series"), listOf("new-movies", "collections"))
+        assertEquals(listOf("channels", "mylist", "continue-series", "continue-movies", "new-movies", "new-series", "trending"), keys(rows))
+        assertEquals(listOf("new-movies"), rows.filter { it.hidden }.map { it.key })
+        // Saved again here, the collections a device without them does not show keep their place and their choice.
+        val arranged = keys(rows)
+        assertEquals(listOf("channels", "collections", "mylist", "continue-series", "continue-movies", "new-movies", "new-series", "trending"), RowOrder.saving(arranged, listOf("channels", "collections", "mylist", "continue-series")))
+        assertEquals(listOf("collections", "new-movies"), RowOrder.savingHidden(arranged, listOf("new-movies"), listOf("new-movies", "collections")))
     }
 }

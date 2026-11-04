@@ -1,7 +1,7 @@
 import Foundation
 
-/// The rows of the Movies or Series tab in the order the viewer chose, and those they hid (Settings → Row order). A row
-/// is known by a key that survives a playlist refresh: a built-in row by its name (`all`, `continueWatching`…), a
+/// The rows of the Home, Movies or Series tab in the order the viewer chose, and those they hid (Settings → Row order).
+/// A row is known by a key that survives a playlist refresh: a built-in row by its name (`all`, `continueWatching`…), a
 /// provider category by its ID and its name (`categoryKey`), so that a category the provider numbers anew is still
 /// found by its name. The same rules as the Kotlin `RowOrder` (android/core); the order syncs (docs/SYNC.md, "Rows").
 public enum RowOrder {
@@ -14,6 +14,28 @@ public enum RowOrder {
     /// Movies only.
     public static let awardWinners = "awards"
     public static let categoryPrefix = "cat:"
+
+    /// Home's rows (below its carousel, which stays at the top): movies and series in progress, …
+    public static let homeContinueMovies = "continue-movies"
+    public static let homeContinueSeries = "continue-series"
+    public static let homeNewMovies = "new-movies"
+    public static let homeNewSeries = "new-series"
+    /// Live TV: the channels in My List, or those watched lately.
+    public static let homeChannels = "channels"
+    /// The viewer's own lists (Apple devices only).
+    public static let homeCollections = "collections"
+
+    /// Home's rows in their default order: movies and series in progress, My List, the new movies and series,
+    /// Trending, the collections (`collections`: the platforms that show them), the channels last; on a playlist
+    /// without movies or series (`hasVOD` false), the channels right after My List.
+    public static func homeBuiltIns(hasVOD: Bool, collections: Bool) -> [String] {
+        var keys = [homeContinueMovies, homeContinueSeries, myList]
+        if !hasVOD { keys.append(homeChannels) }
+        keys += [homeNewMovies, homeNewSeries, trending]
+        if collections { keys.append(homeCollections) }
+        if hasVOD { keys.append(homeChannels) }
+        return keys
+    }
 
     /// The built-in rows of a tab, in their default order, above the categories.
     public static func builtIns(series: Bool) -> [String] {

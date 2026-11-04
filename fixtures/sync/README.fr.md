@@ -16,8 +16,8 @@ retrait après un enregistrement qui l’écarte (l’identifiant OpenSubtitles)
 gardée. Les tests des apps les appliquent aussi, l’un après l’autre, aux clés gardées d’un appareil. Toutes les
 valeurs sont fictives.
 
-`rows-a.json` et `rows-b.json` se fusionnent de même en `rows-merged.json` : l’ordre des rangées des onglets Films et
-Séries, un enregistrement par onglet, le plus récent qui gagne, à temps égaux la plus petite chaîne de départage ; les
+`rows-a.json` et `rows-b.json` se fusionnent de même en `rows-merged.json` : l’ordre des rangées des onglets Accueil,
+Films et Séries, un enregistrement par onglet, le plus récent qui gagne, à temps égaux la plus petite chaîne de départage ; les
 clés vides ou qui contiennent un caractère de contrôle écartées, l’ordre sans doublons, les rangées masquées chacune une
 fois et triées ; l’enregistrement d’un onglet que cette version ne connaît pas gardé.
 

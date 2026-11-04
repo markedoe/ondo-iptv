@@ -1,7 +1,7 @@
 import Foundation
 import IPTVCore
 
-/// The order of the rows of the Movies and Series tabs (Settings → Row order): the same keys and rules as on Android
+/// The order of the rows of the Home, Movies and Series tabs (Settings → Row order): the same keys and rules as on Android
 /// (`RowOrder`, IPTVCore), kept in `sync.json` and synced (docs/SYNC.md, "Rows"). Each profile has its own: the main
 /// one's is `SyncState.rowOrders` (the device's order before profiles had one each), the others' in their
 /// `ProfileSyncState` (docs/PROFILES.md).
@@ -10,10 +10,10 @@ extension AppModel {
     static func rowTab(_ type: ContentType) -> String { type == .series ? SyncRows.series : SyncRows.movies }
 
     /// The order saved for a tab; nil: the default order.
-    func savedRowOrder(_ type: ContentType) -> SyncRows? {
-        let tab = Self.rowTab(type)
-        return profileRowOrders.first { $0.tab == tab }
-    }
+    func savedRowOrder(_ type: ContentType) -> SyncRows? { savedRowOrder(tab: Self.rowTab(type)) }
+
+    /// The order saved for a tab as sync names it (`movie`, `series`, `home`); nil: the default order.
+    func savedRowOrder(tab: String) -> SyncRows? { profileRowOrders.first { $0.tab == tab } }
 
     /// The open profile's records.
     private var profileRowOrders: [SyncRows] {
@@ -40,10 +40,15 @@ extension AppModel {
     /// The rows the tab no longer has (a category gone from the playlist) keep their place and their choice; the record
     /// is dated for sync.
     func setRowOrder(_ type: ContentType, arranged: [String], hidden: [String]) {
+        setRowOrder(tab: Self.rowTab(type), arranged: arranged, hidden: hidden)
+    }
+
+    /// The same for a tab as sync names it (`movie`, `series`, `home`).
+    func setRowOrder(tab: String, arranged: [String], hidden: [String]) {
         guard canChangeRowOrder else { return }
-        let previous = savedRowOrder(type)
+        let previous = savedRowOrder(tab: tab)
         let record = SyncRows(
-            tab: Self.rowTab(type),
+            tab: tab,
             order: RowOrder.saving(arranged: arranged, previous: previous?.order ?? []),
             hidden: RowOrder.savingHidden(current: arranged, hiddenNow: hidden, previous: previous?.hidden ?? []),
             updatedAt: 0
@@ -55,8 +60,11 @@ extension AppModel {
     }
 
     /// Default order: the rows of the tab in their default order again, those hidden staying hidden.
-    func resetRowOrder(_ type: ContentType) {
-        guard canChangeRowOrder, var record = savedRowOrder(type), !record.order.isEmpty else { return }
+    func resetRowOrder(_ type: ContentType) { resetRowOrder(tab: Self.rowTab(type)) }
+
+    /// The same for a tab as sync names it (`movie`, `series`, `home`).
+    func resetRowOrder(tab: String) {
+        guard canChangeRowOrder, var record = savedRowOrder(tab: tab), !record.order.isEmpty else { return }
         record.order = []
         record.updatedAt = syncStamp().syncMilliseconds
         keepRowOrder(record)
@@ -77,6 +85,24 @@ extension AppModel {
         saveSyncState()
         syncSoon()
     }
+
+    // MARK: - Home
+
+    /// Whether the playlist has movies or series to show: without, Home's channels come right after My List.
+    var homeHasVOD: Bool { !content.movies.isEmpty || !content.series.isEmpty }
+
+    /// The keys of Home's rows in their default order (`RowOrder.homeBuiltIns`): on Apple devices, with the collections.
+    static func homeRowKeys(hasVOD: Bool) -> [String] { RowOrder.homeBuiltIns(hasVOD: hasVOD, collections: true) }
+
+    /// Home's rows in the viewer's order, hidden or not (Settings → Row order). The carousel stays above them.
+    func arrangedHomeRows() -> [RowOrder.Row] {
+        let saved = savedRowOrder(tab: SyncRows.home)
+        return RowOrder.arrange(current: Self.homeRowKeys(hasVOD: homeHasVOD), order: saved?.order ?? [], hidden: saved?.hidden ?? [])
+    }
+
+    /// The keys of the rows Home shows, in their order: those the viewer hid are left out on iPhone, iPad and Mac alike
+    /// (one `HomeView`); an empty row shows nothing.
+    func homeRowKeysShown() -> [String] { arrangedHomeRows().filter { !$0.hidden }.map(\.key) }
 
     /// All movies (or series): the `limit` latest additions, each film once, as the grid of the whole catalogue lists
     /// them (the same list, kept once per catalogue and order: no other copy of the catalogue).

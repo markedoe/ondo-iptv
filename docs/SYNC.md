@@ -24,8 +24,8 @@ snapshots the other wrote in `fixtures/sync/interop/` (see its README).
 Synced: the playlists (name, kind, address, login and password, guide address), My List and favourite channels,
 the actors and directors kept in My List, the lists (collections) with the people in them, playback progress (where each movie and episode was left, and what was finished), and the
 keys typed in Settings for outside services (the TMDb token, and the subtitle services' keys and OpenSubtitles account
-with the Addic7ed switch), the order of the rows of the Movies and Series tabs
-with the rows hidden (Settings → Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's
+with the Addic7ed switch), the order of the rows of the Home, Movies and Series
+tabs with the rows hidden (Settings → Row order), and the viewer profiles (name, colour, avatar, Kids) with each profile's
 own My List, favourite channels, people, lists, progress and order of rows (docs/PROFILES.md), and the lists shared with
 every profile.
 
@@ -189,11 +189,16 @@ the key then saved is dated after what sync brought. A device of an earlier vers
 keys of services it does not know.
 
 **Rows** (the order of the rows of a tab, Settings → Row order) — `{"tab", "order", "hidden", "updatedAt"}`. `tab`
-is `movie` or `series`; `order` lists the rows of the tab by key, in the viewer's order; `hidden` the keys of the rows
-the viewer hid. A row's key is `all` (All movies or All series), `continue` (Continue Watching), `mylist`, `new` (new
-movies or series), `trending`, `awards` (award winners, Movies only), or `cat:<category id>|<name>` for a provider
-category: its ID as the playlist gives it (`movie-12`, without control characters or `|`), then its name trimmed, runs
-of spaces and control characters made one space, A to Z in lowercase (other letters keep their case). A device finds a
+is `movie`, `series` or `home`; `order` lists the rows of the tab by key, in the viewer's order; `hidden` the keys of
+the rows the viewer hid. In Movies and Series, a row's key is `all` (All movies or All series), `continue` (Continue
+Watching), `mylist`, `new` (new movies or series), `trending`, `awards` (award winners, Movies only), or
+`cat:<category id>|<name>` for a provider category. Home's rows (below its carousel, which stays at the top) are
+`continue-movies` and `continue-series` (the movies and series in progress), `mylist`, `new-movies`, `new-series`,
+`trending`, `collections` (the viewer's lists, on Apple devices) and `channels` (the channels in My List, or those
+watched lately); by default in that order, `channels` right after `mylist` on a playlist without movies or series. A
+device that does not show a row of Home keeps its key where it is, as for a category gone. A category's key holds its
+ID as the playlist gives it (`movie-12`, without control characters or `|`), then its name trimmed, runs of spaces and
+control characters made one space, A to Z in lowercase (other letters keep their case). A device finds a
 category by the same key, else by its ID, else by its name: a category the provider renumbers or renames keeps its
 place. Rows the tab has but `order` does not name come after, as they come (a category new to the playlist goes to the
 end); keys no row has (a category gone from the playlist, or of another playlist) are kept, after the row they
@@ -204,7 +209,8 @@ at the same time keep only the later change. Readers drop keys that are blank or
 U+0020, or U+007F), keep the first of keys repeated in `order`, and keep `hidden` once each, sorted (UTF-16 code
 units). Readers then keep at most 2000 keys in `order` (the first) and in `hidden` (the first once sorted), drop keys
 and tabs longer than 256 UTF-16 units, and keep the records of 8 tabs at most: `movie` and `series`, then the others in
-UTF-16 order (a merge keeps the same 8). A device keeps and passes on the record of a tab it does not know. A snapshot without `rows` (from an older
+UTF-16 order (a merge keeps the same 8; `home` is among the others). A device keeps and passes on the record of a tab it
+does not know: a version from before Home's order passes `rows:home` on as it came. A snapshot without `rows` (from an older
 version) changes nothing; no record is ever deleted. An older Android device drops `rows` from what it keeps and
 passes on: two Apple devices that sync only through it keep each their own order. Each profile has its own order: the
 main profile's is `rows`, another profile's is in its `profileData`. The order a device kept before profiles had one

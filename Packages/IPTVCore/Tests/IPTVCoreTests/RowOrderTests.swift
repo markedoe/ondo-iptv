@@ -1,7 +1,7 @@
 import XCTest
 @testable import IPTVCore
 
-/// The order of the rows of the Movies and Series tabs (the same cases as the Kotlin `RowOrderTest`).
+/// The order of the rows of the Home, Movies and Series tabs (the same cases as the Kotlin `RowOrderTest`).
 final class RowOrderTests: XCTestCase {
     private let action = RowOrder.categoryKey(id: "movie-1", name: "Action")
     private let drama = RowOrder.categoryKey(id: "movie-2", name: "  Drama   FR ")
@@ -61,5 +61,32 @@ final class RowOrderTests: XCTestCase {
         let rows = RowOrder.arrange(current: ["all", action], order: [action, action, "all", "all", "cat:movie-1|other"], hidden: [])
         XCTAssertEqual(keys(rows), [action, "all"])
         XCTAssertEqual(RowOrder.saving(arranged: ["all", action], previous: ["", "all", action]), ["all", action])
+    }
+
+    func testHomeRowsComeInTheirDefaultOrderTheChannelsLastUnlessThePlaylistIsLiveOnly() {
+        XCTAssertEqual(RowOrder.homeBuiltIns(hasVOD: true, collections: true),
+                       ["continue-movies", "continue-series", "mylist", "new-movies", "new-series", "trending", "collections", "channels"])
+        XCTAssertEqual(RowOrder.homeBuiltIns(hasVOD: false, collections: false),
+                       ["continue-movies", "continue-series", "mylist", "channels", "new-movies", "new-series", "trending"])
+        // No Home key is taken for a category.
+        for key in RowOrder.homeBuiltIns(hasVOD: true, collections: true) {
+            XCTAssertFalse(key.hasPrefix(RowOrder.categoryPrefix))
+            XCTAssertTrue(RowOrder.isValidKey(key))
+        }
+    }
+
+    func testHomeFollowsTheSavedOrderAndARowItDoesNotNameKeepsItsDefaultPlace() {
+        let current = RowOrder.homeBuiltIns(hasVOD: true, collections: false)
+        // Saved on a device that shows collections: the rows the order does not name come after, in their default order.
+        let rows = RowOrder.arrange(current: current, order: ["channels", "collections", "mylist", "continue-series"],
+                                    hidden: ["new-movies", "collections"])
+        XCTAssertEqual(keys(rows), ["channels", "mylist", "continue-series", "continue-movies", "new-movies", "new-series", "trending"])
+        XCTAssertEqual(rows.filter(\.hidden).map(\.key), ["new-movies"])
+        // Saved again here, the collections a device without them does not show keep their place and their choice.
+        let arranged = keys(rows)
+        XCTAssertEqual(RowOrder.saving(arranged: arranged, previous: ["channels", "collections", "mylist", "continue-series"]),
+                       ["channels", "collections", "mylist", "continue-series", "continue-movies", "new-movies", "new-series", "trending"])
+        XCTAssertEqual(RowOrder.savingHidden(current: arranged, hiddenNow: ["new-movies"], previous: ["new-movies", "collections"]),
+                       ["collections", "new-movies"])
     }
 }

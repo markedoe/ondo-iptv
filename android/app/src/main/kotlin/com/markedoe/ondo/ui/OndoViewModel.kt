@@ -115,7 +115,7 @@ class OndoViewModel(
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
 
-    /** Settings → Row order: the rows of the Movies and Series tabs in the viewer's order. */
+    /** Settings → Row order: the rows of the Home, Movies and Series tabs in the viewer's order. */
     val rowOrder: StateFlow<RowOrderUiState?> = state.map { UiMappers.rowOrder(it) }
         .flowOn(computation)
         .stateIn(viewModelScope, sharing, null)
@@ -589,9 +589,9 @@ class OndoViewModel(
 
     fun setGroupVersions(group: Boolean) = repository.setGroupVersions(group)
 
-    fun setRowOrder(series: Boolean, arranged: List<String>, hidden: Collection<String>) = repository.setRowOrder(series, arranged, hidden)
+    fun setRowOrder(tab: String, arranged: List<String>, hidden: Collection<String>) = repository.setRowOrder(tab, arranged, hidden)
 
-    fun resetRowOrder(series: Boolean) = repository.resetRowOrder(series)
+    fun resetRowOrder(tab: String) = repository.resetRowOrder(tab)
 
     fun setSyncOnLocalNetwork(on: Boolean) = repository.setSyncOnLocalNetwork(on)
 

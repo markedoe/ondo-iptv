@@ -1,8 +1,8 @@
 import Foundation
 
 /// What a device sends to sync on the local network: its playlists, My List and favourite channels, the people kept,
-/// lists, playback progress, the keys of outside services and the order of the rows of the Movies and Series tabs, and
-/// what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
+/// lists, playback progress, the keys of outside services and the order of the rows of the Home, Movies and Series
+/// tabs, and what it deleted (docs/SYNC.md). Times are milliseconds since 1970.
 ///
 /// The same document as the Kotlin `SyncSnapshot` (android/core): both read the examples of `fixtures/sync`.
 public struct SyncSnapshot: Codable, Hashable, Sendable {
@@ -25,7 +25,7 @@ public struct SyncSnapshot: Codable, Hashable, Sendable {
     public var people: [SyncPerson]
     /// The keys typed in Settings for outside services (the TMDb token); none from a device that does not sync them.
     public var keys: [SyncKey]
-    /// The order of the rows of the Movies and Series tabs, and the rows hidden; none from a device that does not sync them.
+    /// The order of the rows of the Home, Movies and Series tabs, and the rows hidden; none from a device that does not sync them.
     public var rows: [SyncRows]
     /// The viewer profiles (docs/PROFILES.md, docs/SYNC.md "Profiles"); none from a device that does not sync them.
     public var profiles: [SyncProfile]
@@ -603,12 +603,14 @@ public struct SyncKey: Codable, Hashable, Sendable {
     public var key: String { "key:" + service }
 }
 
-/// The rows of a tab of the Movies or Series tabs (`tab` `movie` or `series`) in the order the viewer set (`order`, keys
-/// of `RowOrder`: `all`, `continue`, … and `cat:<id>|<name>` for a category), and the rows they hid (`hidden`). One
-/// record per tab, the whole of it set at once: the later `updatedAt` wins (docs/SYNC.md, "Rows").
+/// The rows of a tab (`tab` `movie`, `series` or `home`) in the order the viewer set (`order`, keys of `RowOrder`:
+/// `all`, `continue`, … and `cat:<id>|<name>` for a category), and the rows they hid (`hidden`). One record per tab, the
+/// whole of it set at once: the later `updatedAt` wins (docs/SYNC.md, "Rows"). A tab a device does not know is kept and
+/// passed on as it comes.
 public struct SyncRows: Codable, Hashable, Sendable {
     public static let movies = "movie"
     public static let series = "series"
+    public static let home = "home"
 
     public var tab: String
     public var order: [String]
@@ -669,6 +671,7 @@ public struct SyncRows: Codable, Hashable, Sendable {
         var seen = Set<[UInt16]>()
         for row in valid where seen.insert(Array(row.tab.utf16)).inserted { tabs.append(row.tab) }
         guard tabs.count > maxTabs else { return valid }
+        // `home` ranks among the others, as on a device from before it: every version keeps the same 8.
         let known = [movies, series].filter { tab in tabs.contains { $0.utf16.elementsEqual(tab.utf16) } }
         let others = tabs.filter { tab in !known.contains { $0.utf16.elementsEqual(tab.utf16) } }.sorted { $0.isBefore($1) }
         let kept = Set((known + others).prefix(maxTabs).map { Array($0.utf16) })

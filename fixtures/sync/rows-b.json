@@ -5,6 +5,12 @@
   "deviceName": "Phone",
   "rows": [
     {
+      "tab": "home",
+      "order": ["new-movies"],
+      "hidden": ["channels"],
+      "updatedAt": 1500
+    },
+    {
       "tab": "movie",
       "order": ["cat:movie-2|drama", "all", "cat:movie-2|drama", "", "bad\u0001key"],
       "updatedAt": 3000

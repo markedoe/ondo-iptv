@@ -105,7 +105,7 @@ extension HelpTopic {
             """
         ),
         HelpTopic(
-            id: "rows", title: "Order the Rows of Movies and Series", systemImage: "list.bullet.indent",
+            id: "rows", title: "Order the Rows of Home, Movies and Series", systemImage: "list.bullet.indent",
             body: """
             The Movies and Series tabs start with All Movies (or All Series): the latest additions, then See All, \
             which opens the whole catalogue with its sort and Hide watched movies. Then come Continue Watching, My \
@@ -116,6 +116,9 @@ extension HelpTopic {
             the end; one your provider removes keeps its place for when it comes back. Hidden languages and \
             categories stay hidden whatever the order. With Sync on this network, the order follows on your other \
             devices.
+
+            Home’s rows (movies and series in progress, My List, the new titles, Trending, your collections and the \
+            channels) are set the same way, under Home; the carousel stays at the top.
             """
         ),
         HelpTopic(

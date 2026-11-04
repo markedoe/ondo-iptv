@@ -264,6 +264,88 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(SyncSnapshot.decode(try mine.encoded()), mine)
     }
 
+    /// The order of Home's rows (`rows:home`) from a newer device, and a tab no version knows yet, in the main
+    /// profile's records and in another profile's: a device reads, merges and sends them on as they came, with nothing
+    /// in this code naming a tab but `movie` and `series` for the cap (docs/SYNC.md, "Rows"). As in Kotlin.
+    func testTheHomeTabAndATabNoVersionKnowsArePassedOnAsTheyCome() throws {
+        let kid = "00000000-0000-4000-8000-0000000000aa"
+        let json = """
+        {"type":"ondo-sync","version":1,"device":"newer",
+        "rows":[{"tab":"home","order":["channels","mylist","continue-movies"],"hidden":["trending"],"updatedAt":900},
+                {"tab":"later","order":["some-row"],"updatedAt":800}],
+        "profiles":[{"id":"\(kid)","name":"Kid","kids":true,"updatedAt":100}],
+        "profileData":[{"profile":"\(kid)","rows":[{"tab":"home","order":["mylist"],"hidden":["channels"],"updatedAt":700}]}]}
+        """
+        let newer = try XCTUnwrap(SyncSnapshot.decode(Data(json.utf8)))
+        let home = SyncRows(tab: "home", order: ["channels", "mylist", "continue-movies"], hidden: ["trending"], updatedAt: 900)
+        let later = SyncRows(tab: "later", order: ["some-row"], updatedAt: 800)
+        let kidHome = SyncRows(tab: "home", order: ["mylist"], hidden: ["channels"], updatedAt: 700)
+        let movies = SyncRows(tab: SyncRows.movies, order: ["all"], updatedAt: 500)
+        // A device with only the Movies order of its own (and no profile data) merges what it receives, then sends it.
+        let older = SyncSnapshot(device: "older", rows: [movies])
+        let merged = SyncMerge.merge(older, newer)
+        let sent = try XCTUnwrap(SyncSnapshot.decode(try merged.encoded()))
+        XCTAssertEqual(sent.rows, [home, later, movies])
+        XCTAssertEqual(sent.profileData.first { $0.profile == kid }?.rows, [kidHome])
+        // Back on the newer device, nothing changed but the Movies order it did not have.
+        let back = SyncMerge.merge(newer, sent)
+        XCTAssertEqual(back.rows, newer.rows + [movies])
+        let hash: (Data) -> String = { $0.base64EncodedString() }
+        XCTAssertEqual(hash(try SyncMerge.merge(back, sent).contentForDigest()), hash(try back.contentForDigest()))
+        // A later change of Home's order from another device still wins, as for any record.
+        let moved = SyncSnapshot(device: "other", rows: [SyncRows(tab: "home", order: ["mylist"], updatedAt: 950)])
+        XCTAssertEqual(SyncMerge.merge(sent, moved).rows.first { $0.tab == SyncRows.home }?.order, ["mylist"])
+    }
+
+    /// Each profile has its own Home order: the main one's in `rows`, another's in its `profileData`; each merges alone.
+    func testEachProfileKeepsItsOwnHomeOrder() {
+        let kid = "00000000-0000-4000-8000-0000000000aa"
+        let profile = SyncProfile(id: kid, name: "Kid", kids: true, updatedAt: 1)
+        func device(_ name: String, main: Int64, other: Int64) -> SyncSnapshot {
+            SyncSnapshot(
+                device: name,
+                rows: [SyncRows(tab: SyncRows.home, order: ["mylist", "\(name)-\(main)"], updatedAt: main)],
+                profiles: [profile],
+                profileData: [SyncProfileData(profile: kid, rows: [SyncRows(tab: SyncRows.home, order: ["trending", "\(name)-\(other)"], updatedAt: other)])]
+            )
+        }
+        let a = device("a", main: 10, other: 5)
+        let b = device("b", main: 4, other: 20)
+        for merged in [SyncMerge.merge(a, b), SyncMerge.merge(b, a)] {
+            XCTAssertEqual(merged.rows.map(\.order), [["mylist", "a-10"]])
+            XCTAssertEqual(merged.profileData.map { $0.rows.map(\.order) }, [[["trending", "b-20"]]])
+        }
+    }
+
+    /// A snapshot without a Home record keeps the digest it had: Home's record is only one more record of `rows` (the
+    /// encoding is unchanged); with one, the digest follows it. As in Kotlin.
+    func testTheDigestStaysTheSameWithoutAHomeRecordAndFollowsOne() throws {
+        let hash: (Data) -> String = { $0.base64EncodedString() }
+        let movies = SyncRows(tab: SyncRows.movies, order: ["all", "cat:movie-1|action"], hidden: ["awards"], updatedAt: 900)
+        let snapshot = SyncSnapshot(device: "a", rows: [movies])
+        let digest = hash(try snapshot.contentForDigest())
+        XCTAssertEqual(hash(try XCTUnwrap(SyncSnapshot.decode(try snapshot.encoded())).contentForDigest()), digest)
+        XCTAssertEqual(hash(try SyncMerge.merge(snapshot, SyncSnapshot(device: "old")).contentForDigest()), digest)
+        var other = snapshot
+        other.device = "b"
+        XCTAssertEqual(hash(try SyncMerge.merge(snapshot, other).contentForDigest()), digest)
+        // The shared examples' Movies and Series records alone: read and written again, the same digest, no trace of Home.
+        var withoutHome = try fixture("rows-merged.json")
+        withoutHome.rows = withoutHome.rows.filter { $0.tab != SyncRows.home }
+        XCTAssertEqual(hash(try XCTUnwrap(SyncSnapshot.decode(try withoutHome.encoded())).contentForDigest()),
+                       hash(try withoutHome.contentForDigest()))
+        XCTAssertFalse(String(decoding: try withoutHome.encoded(), as: UTF8.self).contains("home"))
+        let home = SyncRows(tab: SyncRows.home, order: ["channels", "mylist"], hidden: ["trending"], updatedAt: 950)
+        var withHome = snapshot
+        withHome.rows = [home, movies]
+        let homeDigest = hash(try withHome.contentForDigest())
+        XCTAssertNotEqual(homeDigest, digest)
+        XCTAssertEqual(hash(try SyncMerge.merge(withHome, snapshot).contentForDigest()), homeDigest)
+        var shown = withHome
+        shown.rows = [SyncRows(tab: SyncRows.home, order: home.order, updatedAt: home.updatedAt), movies]
+        XCTAssertNotEqual(hash(try shown.contentForDigest()), homeDigest)
+    }
+
     func testTheDigestOfTheRowsIsStableAndFollowsAChange() throws {
         let hash: (Data) -> String = { $0.base64EncodedString() }
         let rows = SyncRows(tab: SyncRows.movies, order: ["all", "cat:movie-1|action"], hidden: ["awards"], updatedAt: 900)

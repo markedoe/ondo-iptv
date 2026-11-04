@@ -2,7 +2,8 @@ import SwiftUI
 import IPTVCore
 
 /// Home: a carousel of featured movies and series, then shelves (movies in progress, series in progress,
-/// My List, new movies, new series), with live TV last.
+/// My List, new movies, new series, Trending, collections), with live TV last; the shelves in the viewer's order
+/// (Settings → Row Order), those hidden left out.
 struct HomeView: View {
     @Environment(AppModel.self) private var model
     #if os(iOS)
@@ -59,13 +60,7 @@ struct HomeView: View {
     @ViewBuilder
     private func content(hero: [ShowcaseItem], width: CGFloat) -> some View {
         let metrics = ShelfMetrics(compact: compact)
-        let resumeMovies = model.continueWatching(.movie)
-        let resumeSeries = model.continueWatching(.series)
-        let myList = model.myList()
-        let newMovies = model.newMovies()
-        let newSeries = model.newSeries()
-        let trending = model.trendingTitles()
-        let hasVOD = !model.content.movies.isEmpty || !model.content.series.isEmpty
+        let rows = model.homeRowKeysShown()
 
         VStack(alignment: .leading, spacing: compact ? 26 : 34) {
             if !hero.isEmpty {
@@ -81,62 +76,9 @@ struct HomeView: View {
                     .padding(.horizontal, metrics.gutter)
             }
 
-            if !resumeMovies.isEmpty {
-                Shelf(title: "Movies in Progress", metrics: metrics) {
-                    ForEach(resumeMovies) { entry in
-                        ContinueCard(entry: entry, width: metrics.wideCardWidth)
-                    }
-                }
+            ForEach(rows, id: \.self) { key in
+                row(key, metrics: metrics)
             }
-
-            if !resumeSeries.isEmpty {
-                Shelf(title: "Series in Progress", metrics: metrics) {
-                    ForEach(resumeSeries) { entry in
-                        ContinueCard(entry: entry, width: metrics.wideCardWidth)
-                    }
-                }
-            }
-
-            if !myList.isEmpty {
-                Shelf(title: "My List", route: .favorites(FavoritesRoute(type: myList[0].contentType)), metrics: metrics) {
-                    ForEach(myList) { item in
-                        ShowcasePoster(item: item, width: metrics.posterWidth)
-                    }
-                }
-            }
-
-            if !hasVOD { liveShelves(metrics: metrics, emphasised: true) }
-
-            if !newMovies.isEmpty {
-                Shelf(title: "New Movies", metrics: metrics) {
-                    ForEach(newMovies) { item in
-                        ShowcasePoster(item: item, width: metrics.posterWidth)
-                    }
-                }
-            }
-
-            if !newSeries.isEmpty {
-                Shelf(title: "New Series", metrics: metrics) {
-                    ForEach(newSeries) { item in
-                        ShowcasePoster(item: item, width: metrics.posterWidth)
-                    }
-                }
-            }
-
-            if !trending.isEmpty {
-                Shelf(title: "Trending", metrics: metrics) {
-                    ForEach(trending) { match in
-                        switch match {
-                        case .movie(let movie, _): ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
-                        case .series(let series, _): ShowcasePoster(item: .series(series), width: metrics.posterWidth)
-                        }
-                    }
-                }
-            }
-
-            customLists(metrics: metrics)
-
-            if hasVOD { liveShelves(metrics: metrics, emphasised: false) }
 
             reminders
                 .padding(.horizontal, metrics.gutter)
@@ -147,6 +89,63 @@ struct HomeView: View {
         }
         .padding(.top, hero.isEmpty ? 12 : 8)
         .padding(.bottom, 32)
+    }
+
+    /// A row of Home by its key (`RowOrder.homeBuiltIns`); an empty one shows nothing.
+    @ViewBuilder
+    private func row(_ key: String, metrics: ShelfMetrics) -> some View {
+        switch key {
+        case RowOrder.homeContinueMovies: resumeShelf("Movies in Progress", entries: model.continueWatching(.movie), metrics: metrics)
+        case RowOrder.homeContinueSeries: resumeShelf("Series in Progress", entries: model.continueWatching(.series), metrics: metrics)
+        case RowOrder.myList:
+            let myList = model.myList()
+            if !myList.isEmpty {
+                Shelf(title: "My List", route: .favorites(FavoritesRoute(type: myList[0].contentType)), metrics: metrics) {
+                    ForEach(myList) { item in
+                        ShowcasePoster(item: item, width: metrics.posterWidth)
+                    }
+                }
+            }
+        case RowOrder.homeNewMovies: posterShelf("New Movies", items: model.newMovies(), metrics: metrics)
+        case RowOrder.homeNewSeries: posterShelf("New Series", items: model.newSeries(), metrics: metrics)
+        case RowOrder.trending:
+            let trending = model.trendingTitles()
+            if !trending.isEmpty {
+                Shelf(title: "Trending", metrics: metrics) {
+                    ForEach(trending) { match in
+                        switch match {
+                        case .movie(let movie, _): ShowcasePoster(item: .movie(movie), width: metrics.posterWidth)
+                        case .series(let series, _): ShowcasePoster(item: .series(series), width: metrics.posterWidth)
+                        }
+                    }
+                }
+            }
+        case RowOrder.homeCollections: customLists(metrics: metrics)
+        case RowOrder.homeChannels: liveShelves(metrics: metrics, emphasised: !model.homeHasVOD)
+        default: EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func resumeShelf(_ title: LocalizedStringKey, entries: [HistoryEntry], metrics: ShelfMetrics) -> some View {
+        if !entries.isEmpty {
+            Shelf(title: title, metrics: metrics) {
+                ForEach(entries) { entry in
+                    ContinueCard(entry: entry, width: metrics.wideCardWidth)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func posterShelf(_ title: LocalizedStringKey, items: [ShowcaseItem], metrics: ShelfMetrics) -> some View {
+        if !items.isEmpty {
+            Shelf(title: title, metrics: metrics) {
+                ForEach(items) { item in
+                    ShowcasePoster(item: item, width: metrics.posterWidth)
+                }
+            }
+        }
     }
 
     /// Live TV comes last on a VOD playlist; on a live-only playlist it leads, with a way into the channels.

@@ -164,12 +164,16 @@ class ProfileScopeTest {
     private class PerProfile(val name: String, val syncs: Boolean = true, val set: suspend Device.() -> Unit, val read: Device.() -> Any?)
 
     /** The tabs whose rows the viewer orders: a new one is added here. */
-    private val rowTabs = listOf(false to SyncRows.MOVIES, true to SyncRows.SERIES)
+    private val rowTabs = listOf(
+        SyncRows.MOVIES to listOf("continue", "all"),
+        SyncRows.SERIES to listOf("continue", "all"),
+        SyncRows.HOME to listOf("continue-movies", "channels"),
+    )
 
-    private val perProfile = rowTabs.map { (series, tab) ->
+    private val perProfile = rowTabs.map { (tab, arranged) ->
         PerProfile(
             name = "row order: $tab",
-            set = { repository.setRowOrder(series, listOf("continue", "all"), listOf("new")) },
+            set = { repository.setRowOrder(tab, arranged, listOf(arranged.last())) },
             read = { library.rowOrders.firstOrNull { it.tab == tab }?.let { it.order to it.hidden } },
         )
     } + listOf(
