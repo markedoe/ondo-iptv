@@ -303,7 +303,7 @@ Android (`android/gradle/libs.versions.toml`), tous sous licence Apache 2.0 :
 - [Coil](https://github.com/coil-kt/coil) 3.6, chargement et cache des logos et affiches.
 - [OkHttp](https://github.com/square/okhttp) 5.5, requêtes réseau.
 - [kotlinx.coroutines](https://github.com/Kotlin/kotlinx.coroutines) 1.11 et
-  [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) 1.11.
+  [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) 1.12.
 
 Tests du cœur :
 
