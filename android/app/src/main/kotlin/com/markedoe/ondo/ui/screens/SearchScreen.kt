@@ -309,6 +309,10 @@ fun awardGroupName(group: String): String = when (group) {
     "european-film-awards" -> stringResource(R.string.award_group_european_film_awards)
     "san-sebastian" -> stringResource(R.string.award_group_san_sebastian)
     "locarno" -> stringResource(R.string.award_group_locarno)
+    "emmys" -> stringResource(R.string.award_group_emmys)
+    "bafta-tv" -> stringResource(R.string.award_group_bafta_tv)
+    "international-emmys" -> stringResource(R.string.award_group_international_emmys)
+    "peabody" -> stringResource(R.string.award_group_peabody)
     else -> group
 }
 

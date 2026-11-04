@@ -46,6 +46,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +69,7 @@ import com.markedoe.ondo.core.library.RowOrder
 import com.markedoe.ondo.core.model.MediaCategory
 import java.text.NumberFormat
 import com.markedoe.ondo.data.PosterSort
+import com.markedoe.ondo.ui.GridSource
 import com.markedoe.ondo.ui.components.ContinueCard
 import com.markedoe.ondo.ui.components.PosterCard
 import com.markedoe.ondo.ui.components.Shelf
@@ -158,6 +161,8 @@ class VodActions(
     val onOpenResume: (ResumeItem) -> Unit = {},
     val onCategory: (MediaCategory?) -> Unit = {},
     val onSeeAllMyList: () -> Unit = {},
+    /** See all of a row Ondo picks (New, Award winners): every title of the row, in its order. */
+    val onSeeAllRow: (GridSource) -> Unit = {},
     val onSearch: () -> Unit = {},
     val onCategories: () -> Unit = {},
 )
@@ -282,10 +287,12 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                 }
             }
             RowOrder.NEW_RELEASES -> item(key = "vod:new") {
-                Shelf(stringResource(if (state.series) R.string.new_series else R.string.new_movies), metrics, Modifier.row("vod:new").testTag("shelfNew")) {
-                    itemsIndexed(state.newReleases, key = { _, it -> it.key }) { index, item ->
+                val onSeeAll = { actions.onSeeAllRow(GridSource.NEW) }
+                Shelf(stringResource(if (state.series) R.string.new_series else R.string.new_movies), metrics, Modifier.row("vod:new").testTag("shelfNew"), onSeeAll = onSeeAll) {
+                    itemsIndexed(state.newReleases.take(rowLength), key = { _, it -> it.key }) { index, item ->
                         PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "new:${item.key}", initialFocus = first == key && index == 0)
                     }
+                    if (television) item(key = "seeAll") { TvSeeAllCard(onClick = onSeeAll, tall = true, width = width, modifier = Modifier.focusMemory("new:seeAll")) }
                 }
             }
             RowOrder.TRENDING -> item(key = "vod:trending") {
@@ -296,10 +303,12 @@ private fun VodRows(state: VodUiState, actions: VodActions, modifier: Modifier, 
                 }
             }
             RowOrder.AWARD_WINNERS -> item(key = "vod:awards") {
-                Shelf(stringResource(R.string.award_winners), metrics, Modifier.row("vod:awards").testTag("shelfAwards")) {
-                    itemsIndexed(state.awardWinners, key = { _, it -> it.key }) { index, item ->
+                val onSeeAll = { actions.onSeeAllRow(GridSource.AWARDS) }
+                Shelf(stringResource(R.string.award_winners), metrics, Modifier.row("vod:awards").testTag("shelfAwards"), onSeeAll = onSeeAll) {
+                    itemsIndexed(state.awardWinners.take(rowLength), key = { _, it -> it.key }) { index, item ->
                         PosterCard(item, width, onClick = { actions.onOpen(item) }, focusKey = "awards:${item.key}", initialFocus = first == key && index == 0)
                     }
+                    if (television) item(key = "seeAll") { TvSeeAllCard(onClick = onSeeAll, tall = true, width = width, modifier = Modifier.focusMemory("awards:seeAll")) }
                 }
             }
             // Keyed apart from the items above: a category's id is the provider's, any word.
@@ -473,10 +482,17 @@ internal fun SortButton(sort: PosterSort, onSort: (PosterSort) -> Unit, hideWatc
     }
 }
 
+/**
+ * What the Sort menus call [PosterSort.PLAYLIST]: the playlist's order, or on the grid of a row Ondo picks (New, Award
+ * winners) the row's own order, its default.
+ */
+val LocalPlaylistOrderLabel = staticCompositionLocalOf { R.string.sort_playlist_order }
+
 /** The name of an order in the Sort menus (a phone's, the TV's Sort chip). */
 internal val PosterSort.label: Int
+    @Composable @ReadOnlyComposable
     get() = when (this) {
-        PosterSort.PLAYLIST -> R.string.sort_playlist_order
+        PosterSort.PLAYLIST -> LocalPlaylistOrderLabel.current
         PosterSort.NAME -> R.string.name
         PosterSort.RECENT -> R.string.recently_added
         PosterSort.RELEASE -> R.string.sort_release_date

@@ -57,7 +57,8 @@ interface changes.
 - **Search** (the magnifying glass at the top of each iPhone tab): channels, programmes, movies and series,
   **actors and directors by name**, **filtered by release years** and **by festival or ceremony** (winners only if you like).
 - **Awards**: Palme d'Or, Oscars, Golden Lion, Golden Bear, Césars, BAFTAs, Golden Globes… on movie pages
-  (won, in competition or nominated) and an "Award Winners" row in Movies. The data comes from
+  (won, in competition or nominated), Emmys, Golden Globes, BAFTA TV Awards, International Emmys and Peabody Awards
+  on series pages (won or nominated), and an "Award Winners" row in Movies and in Series. The data comes from
   [Wikidata](https://www.wikidata.org) (CC0), is bundled with the app and matched on the device; a monthly
   workflow refreshes it and the apps fetch the newer file once a week, unless turned off in Settings
   ([tools/awards](tools/awards/README.md)).
@@ -97,7 +98,9 @@ interface changes.
   The filter button is on the Movies, Series and Live TV screens.
 - **Row order** (Settings): the rows of Movies and Series in the order you choose, each shown or hidden (drag
   to move); "All Movies" / "All Series" at the top by default, with the catalogue's count: the latest additions, then
-  See All. New categories go to the end, one the provider removes keeps its place, and the order syncs.
+  See All. New categories go to the end, one the provider removes keeps its place, and the order syncs. Every row
+  that holds more than it shows (New Movies, New Series, Award Winners, on Home too) ends with See All: all its
+  titles, in the row's order.
 - **Offline downloads** (movies, episodes; TestFlight edition, not the App Store one), with their speed and time left, the reason in plain words when the
   provider refuses, limits connections or sends nothing, and their details to share.
 - **Data**: JSON backup / restore, clearable cache. Posters, thumbnails and the movie and series pages stay on the
@@ -129,6 +132,8 @@ interface changes.
 - **Row order** (Settings): the rows of Movies and Series in the order you choose, each shown or hidden (drag on
   a phone; on a TV, OK picks a row up, Up and Down move it, OK puts it down, Back cancels); "All movies" / "All
   series" at the top by default, with the catalogue's count: the latest additions, then See all. The order syncs.
+  Every row that holds more than it shows (New movies, New series, Award winners, on Home too) ends with See all:
+  all its titles, in the row's order.
 - **Movies & series**: one row per category, filterable grids sorted like on Apple (release date
   included), watched movies hidden if you like, a film's versions grouped (badges on its page, chips on a TV;
   [docs/VERSIONS.md](docs/VERSIONS.md)), detail pages (Resume, From Start, next
@@ -154,7 +159,7 @@ interface changes.
 - **Categories**: hidden by language or country code (`|PT|`, `FR:`…), by style or word (manga, Bollywood…) or one
   by one, like on Apple.
 - **Help** in Settings.
-- **Awards** on movie pages and an "Award winners" row in Movies, from the same bundled data, updated once a
+- **Awards** on movie and series pages and an "Award winners" row in Movies and in Series, from the same bundled data, updated once a
   week unless turned off in Settings.
 - **Sources**: M3U / M3U8, XSPF, JSON playlists and **Xtream Codes** accounts (same core, ported to Kotlin
   and tested with the same cases).

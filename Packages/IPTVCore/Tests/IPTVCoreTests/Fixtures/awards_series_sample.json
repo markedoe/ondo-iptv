@@ -1,0 +1,12 @@
+{"source":"test","generated":"2026-11-04","awards":[{"id":"palme-dor","group":"cannes","names":{"en":"Palme d'Or","fr":"Palme d'or"}},{"id":"golden-globe-drama","group":"golden-globes","names":{"en":"Golden Globe Award for Best Motion Picture – Drama"}}],
+"films":[
+{"titles":["Fargo"],"year":1996,"tmdb":275,"awards":[["palme-dor",1996,0]]},
+{"titles":["The Third Man"],"year":1949,"awards":[["palme-dor",1949,1]]}
+],
+"seriesAwards":[{"id":"emmy-drama-series","group":"emmys","names":{"en":"Primetime Emmy Award for Outstanding Drama Series","fr":"Primetime Emmy Award de la meilleure série télévisée dramatique"}},{"id":"golden-globe-tv-drama","group":"golden-globes","names":{"en":"Golden Globe Award for Best Television Series – Drama"}},{"id":"emmy-limited-series","group":"emmys","names":{"en":"Primetime Emmy Award for Outstanding Limited or Anthology Series"}}],
+"series":[
+{"titles":["Fargo"],"year":2014,"tmdb":60622,"awards":[["emmy-limited-series",2014,1],["golden-globe-tv-drama",2015,0]]},
+{"titles":["Breaking Bad","Breaking Bad – Reazioni collaterali"],"year":2008,"tmdb":1396,"awards":[["emmy-drama-series",2013,1],["emmy-drama-series",2014,1],["golden-globe-tv-drama",2014,1]]},
+{"titles":["The Office"],"year":2001,"awards":[["golden-globe-tv-drama",2004,0]]},
+{"titles":["The Office"],"year":2005,"awards":[["golden-globe-tv-drama",2006,0]]}
+]}

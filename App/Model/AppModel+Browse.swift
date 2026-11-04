@@ -58,7 +58,7 @@ extension AppModel {
         return sorted
     }
 
-    private static func sorted(_ list: [Movie], by sort: PosterSort) -> [Movie] {
+    static func sorted(_ list: [Movie], by sort: PosterSort) -> [Movie] {
         switch sort {
         case .playlist: return list
         case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
@@ -102,7 +102,7 @@ extension AppModel {
         return list
     }
 
-    private static func sorted(_ list: [Series], by sort: PosterSort) -> [Series] {
+    static func sorted(_ list: [Series], by sort: PosterSort) -> [Series] {
         switch sort {
         case .playlist: return list
         case .name: return list.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }

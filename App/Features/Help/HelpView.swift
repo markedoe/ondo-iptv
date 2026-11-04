@@ -77,8 +77,8 @@ extension HelpTopic {
             the sidebar.
 
             In Search, the filter button keeps the movies and series released in the years you choose, or the movies \
-            of a festival or ceremony (Winners Only, if you like). The grids sort by playlist order, name, date \
-            added, release date or rating.
+            and series of a festival or ceremony (Winners Only, if you like). The grids sort by playlist order, name, \
+            date added, release date or rating.
 
             On a movie or series page, tap the name of a director or an actor to see their other movies and series \
             in your playlist. With your TMDb API Read Access Token (Settings), all of them are found; without it, \

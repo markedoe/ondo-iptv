@@ -23,6 +23,9 @@ final class AwardsAppTests: XCTestCase {
         XCTAssertNotNil(catalogue.award("palme-dor"))
         XCTAssertGreaterThan(catalogue.films.count, 1000)
         XCTAssertTrue(catalogue.groups.contains("oscars"))
+        XCTAssertNotNil(catalogue.award("emmy-drama-series"))
+        XCTAssertFalse(catalogue.series.isEmpty)
+        XCTAssertTrue(catalogue.groups.contains("emmys"))
     }
 
     func testAMovieOfThePlaylistGetsItsAwards() async throws {
@@ -73,6 +76,53 @@ final class AwardsAppTests: XCTestCase {
         model.movieDetailsCache[pulp.id] = MediaDetails(title: "Pulp Fiction", genre: "Crime, Drama")
         XCTAssertEqual(model.titles(for: .genre("crime")).movies.map(\.name), ["Pulp Fiction"])
         XCTAssertEqual(AppModel.genres(in: "Action / Adventure, Sci-Fi"), ["Action", "Adventure", "Sci-Fi"])
+    }
+
+    func testASeriesOfThePlaylistGetsItsAwardsAndAFilmOfTheSameNameDoesNot() async throws {
+        let file = root.appendingPathComponent("list.m3u")
+        try Data("""
+        #EXTM3U
+        #EXTINF:2700 tvg-type="series" group-title="Series | Drama",Breaking Bad (2008) S01E01
+        http://127.0.0.1:9/series/bb/1/1.mp4
+        #EXTINF:2700 tvg-type="series" group-title="Series | Drama",Quiet Valley (2025) S01E01
+        http://127.0.0.1:9/series/qv/1/1.mp4
+        #EXTINF:5400 group-title="Movies | Drama",Breaking Bad (2008)
+        http://127.0.0.1:9/movie/bb.mp4
+        """.utf8).write(to: file)
+        let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        await model.bootstrap()
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(file), autoRefreshHours: 0))
+        await model.awardsTask?.value
+
+        let show = try XCTUnwrap(model.content.series.first { $0.name == "Breaking Bad" })
+        let awards = model.awards(for: show)
+        XCTAssertTrue(awards.contains { $0.awardID == "emmy-drama-series" && $0.year == 2013 && $0.won && !$0.isFestival }, "Emmy 2013")
+        let quiet = try XCTUnwrap(model.content.series.first { $0.name == "Quiet Valley" })
+        XCTAssertTrue(model.awards(for: quiet).isEmpty)
+        // The Series tab's row, the award's and the ceremony's pages, the search filter.
+        XCTAssertEqual(model.seriesAwardWinners().map(\.name), ["Breaking Bad"])
+        XCTAssertTrue(model.awardGroups().contains("emmys"))
+        XCTAssertEqual(model.titles(for: .award("emmy-drama-series")).series.map(\.name), ["Breaking Bad"])
+        XCTAssertEqual(model.entry(of: show, for: .award("emmy-drama-series"))?.won, true)
+        XCTAssertEqual(model.titles(for: .festival("emmys")).series.map(\.name), ["Breaking Bad"])
+        XCTAssertEqual(model.search("", releasedIn: nil, awardGroup: "emmys", winnersOnly: true).series.map(\.name), ["Breaking Bad"])
+        // A movie of the same name and year is not the series: no award, no row.
+        let movie = try XCTUnwrap(model.content.movies.first { $0.name == "Breaking Bad" })
+        XCTAssertTrue(model.awards(for: movie).isEmpty)
+        XCTAssertTrue(model.awardWinners().isEmpty)
+        XCTAssertTrue(model.titles(for: .award("emmy-drama-series")).movies.isEmpty)
+    }
+
+    func testNoSeriesWonNoSeriesRow() async throws {
+        let file = root.appendingPathComponent("list.m3u")
+        try Data("#EXTM3U\n#EXTINF:2700 tvg-type=\"series\" group-title=\"Series\",Quiet Valley (2025) S01E01\nhttp://127.0.0.1:9/series/qv/1/1.mp4\n".utf8).write(to: file)
+        let model = AppModel(storageRoot: root, secrets: InMemorySecretStore(), reminderScheduler: InMemoryReminderScheduler())
+        await model.bootstrap()
+        try await model.addPlaylist(Playlist(name: "Test", source: .remote(file), autoRefreshHours: 0))
+        await model.awardsTask?.value
+        XCTAssertTrue(model.seriesAwardWinners().isEmpty)
+        // The row has its key in Settings → Row order, the same as in Movies.
+        XCTAssertTrue(RowOrder.builtIns(series: true).contains(RowOrder.awardWinners))
     }
 
     /// A newer file than the bundled one: "Northern Lights" won the Golden Bear in 2099, and a thousand other films.

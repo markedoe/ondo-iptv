@@ -59,7 +59,8 @@ chaque changement de l'interface.
 - **Recherche** (la loupe en haut de chaque onglet sur iPhone) : chaînes, programmes, films et séries,
   **acteurs et réalisateurs par leur nom**, **filtrables par années de sortie** et **par festival ou cérémonie** (lauréats seulement si vous voulez).
 - **Prix** : Palme d'or, Oscars, Lion d'or, Ours d'or, César, BAFTA, Golden Globes… sur les fiches des films
-  (lauréat, en compétition ou nommé) et une rangée « Films primés » dans Films. Les données viennent de
+  (lauréat, en compétition ou nommé), Emmy, Golden Globes, BAFTA TV, International Emmy et prix Peabody sur les
+  fiches des séries (lauréate ou nommée), et une rangée « Titres primés » dans Films et dans Séries. Les données viennent de
   [Wikidata](https://www.wikidata.org) (CC0), sont embarquées dans l'app et rapprochées sur l'appareil ; un
   workflow mensuel les rafraîchit et les apps récupèrent le fichier plus récent une fois par semaine, sauf si
   c'est désactivé dans les Réglages ([tools/awards](tools/awards/README.fr.md)).
@@ -104,7 +105,9 @@ chaque changement de l'interface.
 - **Ordre des rangées** (Réglages) : les rangées de Films et Séries dans l'ordre choisi, chacune affichée ou
   masquée (glisser pour déplacer) ; « Tous les films » / « Toutes les séries » en tête par défaut, avec le nombre de
   titres du catalogue : les derniers ajouts, puis Tout voir. Les nouvelles catégories vont à la fin, celle que le
-  fournisseur retire garde sa place, et l'ordre se synchronise.
+  fournisseur retire garde sa place, et l'ordre se synchronise. Chaque rangée qui contient plus qu'elle n'affiche
+  (Nouveaux films, Nouvelles séries, Titres primés, sur l'Accueil aussi) finit par Tout voir : tous ses titres, dans
+  l'ordre de la rangée.
 - **Téléchargements** hors ligne (films, épisodes ; édition TestFlight, pas celle de l'App Store), avec leur vitesse et le temps restant, la raison en clair
   quand le fournisseur refuse, limite les connexions ou n'envoie rien, et leurs détails à partager.
 - **Données** : sauvegarde / restauration JSON, cache vidable. Les affiches, les vignettes et les pages des films et
@@ -142,7 +145,9 @@ chaque changement de l'interface.
 - **Ordre des rangées** (Réglages) : les rangées de Films et Séries dans l'ordre choisi, chacune affichée ou
   masquée (glisser sur un téléphone ; sur une TV, OK prend une rangée, Haut et Bas la déplacent, OK la pose, Retour
   annule) ; « Tous les films » / « Toutes les séries » en tête par défaut, avec le nombre de titres du catalogue :
-  les derniers ajouts, puis Tout voir. L'ordre se synchronise.
+  les derniers ajouts, puis Tout voir. L'ordre se synchronise. Chaque rangée qui contient plus qu'elle n'affiche
+  (Nouveaux films, Nouvelles séries, Titres primés, sur l'Accueil aussi) finit par Tout voir : tous ses titres, dans
+  l'ordre de la rangée.
 - **Films & séries** : une rangée par catégorie, grilles filtrables et triées comme sur Apple (date de
   sortie comprise), films déjà vus masqués si vous le souhaitez, versions d'un film regroupées (badges sur sa fiche,
   pastilles sur une TV ; [docs/VERSIONS.fr.md](docs/VERSIONS.fr.md)), fiches (Reprendre, Depuis le début,
@@ -170,7 +175,7 @@ chaque changement de l'interface.
 - **Catégories** : masquées par code de langue ou de pays (`|PT|`, `FR:`…), par style ou par mot (manga,
   Bollywood…) ou une par une, comme sur Apple.
 - **Aide** dans les Réglages.
-- **Prix** sur les fiches des films et une rangée « Films primés » dans Films, avec les mêmes données
+- **Prix** sur les fiches des films et des séries et une rangée « Titres primés » dans Films et dans Séries, avec les mêmes données
   embarquées, mises à jour une fois par semaine sauf si c'est désactivé dans les Réglages.
 - **Sources** : playlists M3U / M3U8, XSPF, JSON et comptes **Xtream Codes** (même cœur, porté en Kotlin et
   testé avec les mêmes cas).
