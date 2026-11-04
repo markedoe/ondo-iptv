@@ -114,7 +114,8 @@ class EpisodeSurfacesTest {
         // The page opens on season 3: TMDb's episodes of it are asked once the series' TMDb id is known.
         viewModel.wantSeason(series.id, 3)
         viewModel.loadSeries(series.id)
-        fun page() = UiMappers.seriesDetail(viewModel.state.value, series, 3, null).seasons.single().episodes
+        // Empty until the provider's details arrive.
+        fun page() = UiMappers.seriesDetail(viewModel.state.value, series, 3, null).seasons.singleOrNull()?.episodes.orEmpty()
         settleUntil { page().getOrNull(1)?.posterUrl?.contains("tmdb") == true }
 
         val titles = listOf("Falcon", "Paralysis", "Episode 3", "Ghosts", "Episode 5")
