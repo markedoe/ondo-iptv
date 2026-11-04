@@ -54,6 +54,7 @@ import com.markedoe.ondo.core.sync.SyncSnapshot
 import com.markedoe.ondo.core.xtream.XtreamClient
 import com.markedoe.ondo.player.LivePause
 import com.markedoe.ondo.player.PlayRequest
+import com.markedoe.ondo.player.SubtitleSearchHint
 import com.markedoe.ondo.ui.UiMappers
 import java.io.File
 import java.util.Locale
@@ -1652,7 +1653,8 @@ class OndoRepository(
         val playlist = _state.value.activePlaylist ?: return null
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(movie)
         val entry = WatchEntry(playlist.id, ItemKind.MOVIE, movie.id, null, movie.name, movie.year?.toString(), movie.posterUrl, lastWatchedAt = 0)
-        return start(item, entry, fromStart)
+        val tmdbId = movie.tmdbId ?: _state.value.movieDetails[movie.id]?.tmdbId?.toIntOrNull()
+        return start(item, entry, fromStart).copy(subtitleSearch = SubtitleSearchHint.of(movie.name, movie.year, tmdbId = tmdbId))
     }
 
     fun playRequest(series: Series, episode: Episode): PlayRequest? {
@@ -1661,7 +1663,8 @@ class OndoRepository(
         val shown = _state.value.placeholderNames.rename(episode)
         val item = PlaybackFactory(playlist.toCorePlaylist()).item(shown, series)
         val entry = WatchEntry(playlist.id, ItemKind.SERIES, series.id, shown.id, series.name, "${shown.code} · ${shown.title}", shown.posterUrl ?: series.coverUrl, lastWatchedAt = 0)
-        return start(item, entry, fromStart = false)
+        val hint = SubtitleSearchHint.of(series.name, series.year, episode.season, episode.number, _state.value.seriesDetails[series.id]?.info?.tmdbId?.toIntOrNull())
+        return start(item, entry, fromStart = false).copy(subtitleSearch = hint)
     }
 
     /**
